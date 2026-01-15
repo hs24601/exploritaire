@@ -1,5 +1,5 @@
 import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, MetaCard, Move, Suit, Element } from './types';
-import { GAME_CONFIG, ELEMENT_TO_SUIT } from './constants';
+import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT } from './constants';
 import { createDeck, shuffleDeck } from './deck';
 import { canPlayCard, checkKarmaDealing } from './rules';
 import { createInitialProgress, clearAllProgress as clearAllProgressFn, clearPhaseProgress as clearPhaseProgressFn } from './challenges';
@@ -51,11 +51,13 @@ function createActorFoundationCard(actor: Actor): Card {
 
   // Use actor's suit, or neutral star if no elemental affinity
   const suit: Suit = definition.suit || '⭐';
+  const element: Element = definition.element || SUIT_TO_ELEMENT[suit];
   const rank = actor.currentValue;
 
   return {
     rank,
     suit,
+    element,
     id: `actor-${actor.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
   };
 }

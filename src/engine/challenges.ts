@@ -1,4 +1,5 @@
 import type { Card, Challenge, ChallengeProgress, Suit } from './types';
+import { SUITS } from './constants';
 
 export const CHALLENGES: Challenge[] = [
   {
@@ -13,9 +14,15 @@ export const CHALLENGES: Challenge[] = [
 ];
 
 export function createInitialProgress(): ChallengeProgress {
+  const collected = SUITS.reduce((acc, suit) => {
+    acc[suit] = 0;
+    return acc;
+  }, {} as Record<Suit, number>);
+
   return {
     challengeId: 1,
     collected: {
+      ...collected,
       '💨': 0,
       '⛰️': 0,
       '🔥': 0,
