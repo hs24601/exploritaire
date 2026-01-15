@@ -23,7 +23,6 @@ export default function App() {
     noValidMoves,
     tableauCanPlay,
     validFoundationsForSelected,
-    canAdventure,
     actions,
   } = useGameEngine();
 
@@ -231,14 +230,12 @@ export default function App() {
           metaCards={gameState.metaCards}
           availableActors={gameState.availableActors}
           adventureQueue={gameState.adventureQueue}
-          canAdventure={canAdventure}
           onStartAdventure={actions.startAdventure}
           onStartBiome={actions.startBiome}
           onAssignCardToBuildPile={actions.assignCardToBuildPile}
           onAssignCardToMetaCardSlot={actions.assignCardToMetaCardSlot}
           onAssignActorToQueue={actions.assignActorToQueue}
           onAssignActorToMetaCardHome={actions.assignActorToMetaCardHome}
-          onRemoveActorFromQueue={actions.removeActorFromQueue}
           onClearBuildPileProgress={actions.clearBuildPileProgress}
           onClearMetaCardProgress={actions.clearMetaCardProgress}
           onClearAllProgress={actions.clearAllProgress}

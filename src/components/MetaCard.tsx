@@ -9,8 +9,6 @@ import { ActorHomeSlot } from './ActorHomeSlot';
 interface MetaCardProps {
   metaCard: MetaCardType;
   availableActors: Actor[];
-  isPinned: boolean;
-  onPinnedChange: (pinned: boolean) => void;
   activeDropSlot: string | null;
   cameraScale?: number;
   onClear?: () => void;
@@ -21,8 +19,6 @@ interface MetaCardProps {
 export const MetaCard = memo(function MetaCard({
   metaCard,
   availableActors,
-  isPinned,
-  onPinnedChange,
   activeDropSlot,
   cameraScale = 1,
   onClear,
@@ -49,14 +45,6 @@ export const MetaCard = memo(function MetaCard({
 
   // Check if Forest has at least one actor assigned
   const hasActors = isForest && metaCard.actorHomeSlots.some(slot => slot.actorId !== null);
-
-  // Determine if we should stack actor slots or show them all
-  // Stack when zoomed out (< 1.2) OR when we have multiple slots that won't fit
-  const shouldStackSlots = cameraScale < 1.2 || metaCard.actorHomeSlots.length > 1;
-
-  // Count filled slots
-  const filledSlotsCount = metaCard.actorHomeSlots.filter(slot => slot.actorId !== null).length;
-  const totalSlotsCount = metaCard.actorHomeSlots.length;
 
   // Split name into words for intentional two-line layout
   const displayName = getMetaCardDisplayName(metaCard).toUpperCase();

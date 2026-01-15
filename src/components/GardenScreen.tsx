@@ -24,14 +24,12 @@ interface GardenScreenProps {
   metaCards: MetaCardType[];
   availableActors: Actor[];
   adventureQueue: (Actor | null)[];
-  canAdventure: boolean;
   onStartAdventure: () => void;
   onStartBiome: (biomeId: string) => void;
   onAssignCardToBuildPile: (cardId: string, buildPileId: string) => void;
   onAssignCardToMetaCardSlot: (cardId: string, metaCardId: string, slotId: string) => void;
   onAssignActorToQueue: (actorId: string, slotIndex: number) => void;
   onAssignActorToMetaCardHome: (actorId: string, metaCardId: string, slotId: string) => void;
-  onRemoveActorFromQueue: (slotIndex: number) => void;
   onClearBuildPileProgress: (buildPileId: string) => void;
   onClearMetaCardProgress: (metaCardId: string) => void;
   onClearAllProgress: () => void;
@@ -140,40 +138,6 @@ const ActorCard = memo(function ActorCard({
         {getActorValueDisplay(actor.currentValue)}
       </span>
     </motion.div>
-  );
-});
-
-// Adventure queue slot
-const AdventureSlot = memo(function AdventureSlot({
-  actor,
-  slotIndex,
-  isDropTarget,
-  onRemove,
-}: {
-  actor: Actor | null;
-  slotIndex: number;
-  isDropTarget: boolean;
-  onRemove: () => void;
-}) {
-  return (
-    <div
-      data-adventure-slot={slotIndex}
-      style={{
-        width: CARD_SIZE.width,
-        height: CARD_SIZE.height,
-        borderColor: isDropTarget ? '#7fdbca' : actor ? '#7fdbca66' : '#8b5cf644',
-        backgroundColor: isDropTarget ? 'rgba(127, 219, 202, 0.1)' : 'transparent',
-        boxShadow: isDropTarget ? '0 0 15px rgba(127, 219, 202, 0.5)' : 'none',
-        transform: isDropTarget ? 'scale(1.05)' : 'scale(1)',
-      }}
-      className="rounded-lg border-2 border-dashed flex items-center justify-center transition-all"
-    >
-      {actor ? (
-        <ActorCard actor={actor} isDragging={false} onClick={onRemove} />
-      ) : (
-        <span className="text-game-purple opacity-40 text-2xl">+</span>
-      )}
-    </div>
   );
 });
 
@@ -287,14 +251,12 @@ export const GardenScreen = memo(function GardenScreen({
   metaCards,
   availableActors,
   adventureQueue,
-  canAdventure,
   onStartAdventure,
   onStartBiome,
   onAssignCardToBuildPile,
   onAssignCardToMetaCardSlot,
   onAssignActorToQueue,
   onAssignActorToMetaCardHome,
-  onRemoveActorFromQueue,
   onClearBuildPileProgress,
   onClearMetaCardProgress,
   onClearAllProgress,
@@ -345,8 +307,6 @@ export const GardenScreen = memo(function GardenScreen({
   });
 
   // Pinned meta-card state
-  const [pinnedMetaCardId, setPinnedMetaCardId] = useState<string | null>(null);
-
   // Active drop target for meta-card slots (when tooltip is pinned)
   const [activeMetaCardSlot, setActiveMetaCardSlot] = useState<string | null>(null);
 
@@ -369,7 +329,6 @@ export const GardenScreen = memo(function GardenScreen({
   onUpdateActorPositionRef.current = onUpdateActorPosition;
   const onRemoveActorFromMetaCardHomeRef = useRef(onRemoveActorFromMetaCardHome);
   onRemoveActorFromMetaCardHomeRef.current = onRemoveActorFromMetaCardHome;
-  const contentRefForDrop = useRef<HTMLDivElement | null>(null);
 
   // Start drag for card
   const startCardDrag = useCallback((card: Card, clientX: number, clientY: number, rect: DOMRect) => {
@@ -755,8 +714,6 @@ export const GardenScreen = memo(function GardenScreen({
                   <MetaCard
                     metaCard={metaCard}
                     availableActors={availableActors}
-                    isPinned={pinnedMetaCardId === metaCard.id}
-                    onPinnedChange={(pinned) => setPinnedMetaCardId(pinned ? metaCard.id : null)}
                     activeDropSlot={activeMetaCardSlot}
                     cameraScale={cameraState.scale}
                     onClear={() => onClearMetaCardProgress(metaCard.id)}
