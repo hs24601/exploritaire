@@ -1,7 +1,7 @@
-import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, MetaCard, Move, Suit, Element } from './types';
-import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT } from './constants';
+import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot } from './types';
+import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, GARDEN_GRID, ALL_ELEMENTS, MAX_KARMA_DEALING_ATTEMPTS, TOKEN_PROXIMITY_THRESHOLD, randomIdSuffix } from './constants';
 import { createDeck, shuffleDeck } from './deck';
-import { canPlayCard, checkKarmaDealing } from './rules';
+import { canPlayCard, canPlayCardWithWild, checkKarmaDealing } from './rules';
 import { createInitialProgress, clearAllProgress as clearAllProgressFn, clearPhaseProgress as clearPhaseProgressFn } from './challenges';
 import {
   createInitialBuildPileProgress,
@@ -12,31 +12,342 @@ import {
 } from './buildPiles';
 import {
   createInitialActors,
-  createEmptyAdventureQueue,
-  addActorToQueue,
-  removeActorFromQueue,
+  createActor,
   getActorDefinition,
-  getQueuedActors,
 } from './actors';
+import { createActorDeckStateWithOrim } from './actorDecks';
+import { ORIM_DEFINITIONS } from './orims';
+import { canActivateOrim } from './orimTriggers';
 import {
-  createInitialMetaCards,
-  addCardToMetaCard,
+  createInitialTiles,
+  createTile,
+  addCardToTile,
   findSlotById,
   canAddCardToSlot,
-  clearMetaCardProgress as clearMetaCardProgressFn,
+  clearTileProgress as clearTileProgressFn,
   canAssignActorToHomeSlot,
-  upgradeMetaCard,
-} from './metaCards';
+  upgradeTile,
+  isForestPuzzleTile,
+} from './tiles';
+import { createInitialTokens, createToken } from './tokens';
 import { getBiomeDefinition } from './biomes';
+import { getNodePattern } from './nodePatterns';
+import { generateNodeTableau, playCardFromNode } from './nodeTableau';
 
+const NO_REGRET_ORIM_ID = 'no-regret';
+const NO_REGRET_COOLDOWN = 5;
+
+function tickNoRegretCooldowns(cooldowns: Record<string, number> | undefined): Record<string, number> {
+  if (!cooldowns) return {};
+  const next: Record<string, number> = {};
+  Object.entries(cooldowns).forEach(([actorId, value]) => {
+    const remaining = Math.max(0, (value ?? 0) - 1);
+    next[actorId] = remaining;
+  });
+  return next;
+}
+
+function stripLastCardSnapshot(state: GameState): Omit<GameState, 'lastCardActionSnapshot'> {
+  return { ...state, lastCardActionSnapshot: undefined } as Omit<GameState, 'lastCardActionSnapshot'>;
+}
+
+function recordCardAction(prev: GameState, next: GameState): GameState {
+  const snapshot = stripLastCardSnapshot(prev);
+  const baseCooldowns = next.noRegretCooldowns ?? prev.noRegretCooldowns ?? {};
+  return {
+    ...next,
+    lastCardActionSnapshot: snapshot,
+    noRegretCooldowns: tickNoRegretCooldowns(baseCooldowns),
+  };
+}
+
+function actorHasNoRegret(state: GameState, actorId: string): boolean {
+  const actor = findActorById(state, actorId);
+  if (!actor) return false;
+  const hasActorSlot = (actor.orimSlots ?? []).some((slot) => {
+    if (!slot.orimId) return false;
+    const instance = state.orimInstances[slot.orimId];
+    return instance?.definitionId === NO_REGRET_ORIM_ID;
+  });
+  if (hasActorSlot) return true;
+  const deck = state.actorDecks[actorId];
+  if (!deck) return false;
+  return deck.cards.some((card) =>
+    card.slots.some((slot) => {
+      if (!slot.orimId) return false;
+      const instance = state.orimInstances[slot.orimId];
+      return instance?.definitionId === NO_REGRET_ORIM_ID;
+    })
+  );
+}
+
+function normalizeStack(actors: Actor[], stackId: string): Actor[] {
+  const stackActors = actors
+    .filter(actor => actor.stackId === stackId)
+    .sort((a, b) => (a.stackIndex ?? 0) - (b.stackIndex ?? 0));
+
+  if (stackActors.length <= 1) {
+    return actors.map(actor =>
+      actor.stackId === stackId ? { ...actor, stackId: undefined, stackIndex: undefined } : actor
+    );
+  }
+
+  const stackMap = new Map(stackActors.map((actor, index) => [actor.id, index]));
+  return actors.map(actor =>
+    actor.stackId === stackId
+      ? { ...actor, stackIndex: stackMap.get(actor.id) ?? actor.stackIndex }
+      : actor
+  );
+}
+
+function removeActorFromStack(actors: Actor[], actorId: string): Actor[] {
+  const actor = actors.find(item => item.id === actorId);
+  if (!actor?.stackId) return actors;
+  const stackId = actor.stackId;
+
+  const clearedActors = actors.map(item =>
+    item.id === actorId ? { ...item, stackId: undefined, stackIndex: undefined } : item
+  );
+
+  return normalizeStack(clearedActors, stackId);
+}
+
+function applyStackOrder(
+  actors: Actor[],
+  stackId: string,
+  orderedIds: string[],
+  gridPosition?: { col: number; row: number }
+): Actor[] {
+  const orderMap = new Map(orderedIds.map((id, index) => [id, index]));
+  return actors.map(actor => {
+    if (!orderMap.has(actor.id)) return actor;
+    return {
+      ...actor,
+      stackId,
+      stackIndex: orderMap.get(actor.id),
+      gridPosition: gridPosition ?? actor.gridPosition,
+    };
+  });
+}
+
+function updateItemInArray<T extends { id: string }>(
+  array: T[], id: string, updater: (item: T) => T
+): T[] {
+  const index = array.findIndex(item => item.id === id);
+  if (index === -1) return array;
+  const updated = updater(array[index]);
+  return [...array.slice(0, index), updated, ...array.slice(index + 1)];
+}
+
+function findOpenGridPosition(occupied: Set<string>): { col: number; row: number } {
+  for (let row = 0; row < GARDEN_GRID.rows; row += 1) {
+    for (let col = 0; col < GARDEN_GRID.cols; col += 1) {
+      const key = `${col},${row}`;
+      if (!occupied.has(key)) {
+        return { col, row };
+      }
+    }
+  }
+  return { col: 0, row: 0 };
+}
+
+function getOccupiedPositions(
+  ...sources: Array<{ gridPosition?: { col: number; row: number } }[]>
+): Set<string> {
+  const occupied = new Set<string>();
+  for (const source of sources) {
+    for (const item of source) {
+      const pos = item.gridPosition;
+      if (pos) occupied.add(`${Math.round(pos.col)},${Math.round(pos.row)}`);
+    }
+  }
+  return occupied;
+}
+
+function createEmptyTokenCounts(): Record<Element, number> {
+  return {
+    W: 0,
+    E: 0,
+    A: 0,
+    F: 0,
+    D: 0,
+    L: 0,
+    N: 0,
+  };
+}
+
+function getOrimDefinitionById(definitions: OrimDefinition[], definitionId?: string) {
+  if (!definitionId) return null;
+  return definitions.find((item) => item.id === definitionId) || null;
+}
+
+function isOrimLocked(slot?: OrimSlot | null): boolean {
+  return !!slot?.locked;
+}
+
+const BASE_STAMINA = 3;
+
+function applyBaseStamina(actor: Actor): Actor {
+  const prevMax = actor.staminaMax ?? BASE_STAMINA;
+  const nextMax = BASE_STAMINA;
+  const delta = nextMax - prevMax;
+  const current = actor.stamina ?? nextMax;
+  const nextStamina = Math.min(nextMax, Math.max(0, current + delta));
+  return {
+    ...actor,
+    staminaMax: nextMax,
+    stamina: nextStamina,
+  };
+}
+
+function normalizeActors(actors: Actor[], actorIds?: Set<string>): Actor[] {
+  return actors.map((actor) => {
+    if (actorIds && !actorIds.has(actor.id)) return actor;
+    return applyBaseStamina(actor);
+  });
+}
+
+function applyActorNormalization(
+  state: GameState,
+  actorIds?: string[]
+): Pick<GameState, 'availableActors' | 'tileParties'> {
+  const actorIdSet = actorIds ? new Set(actorIds) : undefined;
+  return {
+    availableActors: normalizeActors(state.availableActors, actorIdSet),
+    tileParties: Object.fromEntries(
+      Object.entries(state.tileParties).map(([tileId, actors]) => ([
+        tileId,
+        normalizeActors(actors, actorIdSet),
+      ]))
+    ),
+  };
+}
+
+function addTokenCounts(
+  base: Record<Element, number>,
+  delta: Record<Element, number>
+): Record<Element, number> {
+  return {
+    W: (base.W || 0) + (delta.W || 0),
+    E: (base.E || 0) + (delta.E || 0),
+    A: (base.A || 0) + (delta.A || 0),
+    F: (base.F || 0) + (delta.F || 0),
+    D: (base.D || 0) + (delta.D || 0),
+    L: (base.L || 0) + (delta.L || 0),
+    N: (base.N || 0) + (delta.N || 0),
+  };
+}
+
+function adjustTokenCount(
+  base: Record<Element, number>,
+  element: Element,
+  delta: number
+): Record<Element, number> {
+  return {
+    ...base,
+    [element]: Math.max(0, (base[element] || 0) + delta),
+  };
+}
+
+function applyTokenReward(
+  collectedTokens: Record<Element, number>,
+  card: Card
+): Record<Element, number> {
+  if (!card.tokenReward) return collectedTokens;
+  return {
+    ...collectedTokens,
+    [card.tokenReward]: (collectedTokens[card.tokenReward] || 0) + 1,
+  };
+}
+
+export function addTokenInstanceToGarden(
+  state: GameState,
+  token: Token
+): GameState {
+  return {
+    ...state,
+    tokens: [...state.tokens, token],
+  };
+}
+
+export function depositTokenToStash(
+  state: GameState,
+  tokenId: string
+): GameState {
+  const token = state.tokens.find((item) => item.id === tokenId);
+  if (!token) return state;
+  if (token.quantity !== 1) return state;
+
+  const updatedStash = adjustTokenCount(
+    state.resourceStash || createEmptyTokenCounts(),
+    token.element,
+    1
+  );
+
+  return {
+    ...state,
+    tokens: state.tokens.filter((item) => item.id !== tokenId),
+    resourceStash: updatedStash,
+  };
+}
+
+export function withdrawTokenFromStash(
+  state: GameState,
+  element: Element,
+  token: Token
+): GameState {
+  const stash = state.resourceStash || createEmptyTokenCounts();
+  if ((stash[element] || 0) <= 0) return state;
+
+  return {
+    ...state,
+    resourceStash: adjustTokenCount(stash, element, -1),
+    tokens: [...state.tokens, token],
+  };
+}
+
+function getTokenGridPosition(token: Token): { col: number; row: number } {
+  return token.gridPosition ?? { col: 0, row: 0 };
+}
+
+function findOpenTilePosition(tiles: Tile[]): { col: number; row: number } {
+  return findOpenGridPosition(getOccupiedPositions(tiles));
+}
+
+function findOpenActorPosition(tiles: Tile[], actors: Actor[]): { col: number; row: number } {
+  return findOpenGridPosition(getOccupiedPositions(tiles, actors));
+}
+
+function getPartyForTile(state: GameState, tileId?: string): Actor[] {
+  if (!tileId) return [];
+  return state.tileParties[tileId] ?? [];
+}
+
+function findActorById(state: GameState, actorId: string): Actor | null {
+  const available = state.availableActors.find((actor) => actor.id === actorId);
+  if (available) return available;
+  for (const party of Object.values(state.tileParties)) {
+    const match = party.find((actor) => actor.id === actorId);
+    if (match) return match;
+  }
+  return null;
+}
 export interface PersistedState {
   challengeProgress: ChallengeProgress;
   buildPileProgress: BuildPileProgress[];
   pendingCards: Card[];
   interactionMode: InteractionMode;
   availableActors: Actor[];
-  adventureQueue: (Actor | null)[];
-  metaCards: MetaCard[];
+  tileParties: Record<string, Actor[]>;
+  activeSessionTileId?: string;
+  tokens: Token[];
+  resourceStash: Record<Element, number>;
+  orimDefinitions: OrimDefinition[];
+  orimStash: OrimInstance[];
+  orimInstances: Record<string, OrimInstance>;
+  actorDecks: Record<string, ActorDeckState>;
+  noRegretCooldowns?: Record<string, number>;
+  tiles: Tile[];
 }
 
 /**
@@ -58,33 +369,220 @@ function createActorFoundationCard(actor: Actor): Card {
     rank,
     suit,
     element,
-    id: `actor-${actor.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `actor-${actor.id}-${Date.now()}-${randomIdSuffix()}`,
   };
+}
+
+function createInitialOrimState(actors: Actor[], orimDefinitions: OrimDefinition[]): {
+  actorDecks: Record<string, ActorDeckState>;
+  orimInstances: Record<string, OrimInstance>;
+} {
+  const actorDecks: Record<string, ActorDeckState> = {};
+  const orimInstances: Record<string, OrimInstance> = {};
+  actors.forEach((actor) => {
+    const { deck, orimInstances: instances } = createActorDeckStateWithOrim(
+      actor.id,
+      actor.definitionId,
+      orimDefinitions
+    );
+    actorDecks[actor.id] = deck;
+    instances.forEach((instance) => {
+      orimInstances[instance.id] = instance;
+    });
+  });
+  return { actorDecks, orimInstances };
 }
 
 /**
  * Initializes a fresh game state, starting in the garden phase
  */
-export function initializeGame(persisted?: Partial<PersistedState>): GameState {
+export function initializeGame(
+  persisted?: Partial<PersistedState>,
+  options?: { startPhase?: GamePhase }
+): GameState {
   // Don't deal cards yet - we start in the garden
-  return {
+  const persistedKeys = persisted ? Object.keys(persisted) : [];
+  const isFreshStart = persistedKeys.length === 0 || persistedKeys.every((key) => key === 'orimDefinitions');
+  const ensureActorLevel = (actor: Actor): Actor => ({
+    ...actor,
+    level: actor.level ?? 1,
+  });
+  const ensureActorEnergy = (actor: Actor): Actor => ({
+    ...actor,
+    energyMax: actor.energyMax ?? 3,
+    energy: actor.energy ?? (actor.energyMax ?? 3),
+  });
+  const ensureActorHp = (actor: Actor): Actor => ({
+    ...actor,
+    hpMax: actor.hpMax ?? 10,
+    hp: actor.hp ?? (actor.hpMax ?? 10),
+    damageTaken: actor.damageTaken ?? 0,
+  });
+  const ensureActorPower = (actor: Actor): Actor => ({
+    ...actor,
+    powerMax: actor.powerMax ?? 3,
+    power: actor.power ?? 0,
+  });
+  const applyActorOrimTemplates = (
+    actors: Actor[],
+    orimDefinitions: OrimDefinition[]
+  ): { actors: Actor[]; instances: Record<string, OrimInstance> } => {
+    const instances: Record<string, OrimInstance> = {};
+    const nextActors = actors.map((actor) => {
+      if (!isFreshStart && actor.orimSlots && actor.orimSlots.length > 0) {
+        return actor;
+      }
+      const definition = getActorDefinition(actor.definitionId);
+      const templateSlots = definition?.orimSlots ?? [];
+      if (templateSlots.length === 0) return actor;
+      const slots: OrimSlot[] = templateSlots.map((slot, index) => {
+        let orimInstanceId: string | null = null;
+        if (slot.orimId) {
+          const def = orimDefinitions.find((item) => item.id === slot.orimId);
+          if (def) {
+            const instance: OrimInstance = {
+              id: `orim-${def.id}-${Date.now()}-${randomIdSuffix()}`,
+              definitionId: def.id,
+            };
+            instances[instance.id] = instance;
+            orimInstanceId = instance.id;
+          }
+        }
+        return {
+          id: `${actor.id}-orim-slot-${index + 1}`,
+          orimId: orimInstanceId,
+          locked: slot.locked ?? false,
+        };
+      });
+      return { ...actor, orimSlots: slots };
+    });
+    return { actors: nextActors, instances };
+  };
+  const ensureActorOrimSlots = (actor: Actor): Actor => {
+    if (actor.orimSlots && actor.orimSlots.length > 0) return actor;
+    return {
+      ...actor,
+      orimSlots: [
+        {
+          id: `${actor.id}-orim-slot-1`,
+          orimId: null,
+          locked: false,
+        },
+      ],
+    };
+  };
+  const migrateActorDefinitionId = (actor: Actor): Actor => {
+    if (actor.definitionId !== 'fennec') return actor;
+    return { ...actor, definitionId: 'fox' };
+  };
+  const mergeOrimDefinitions = (
+    baseDefinitions: OrimDefinition[],
+    persistedDefinitions?: OrimDefinition[]
+  ): OrimDefinition[] => {
+    if (!persistedDefinitions || persistedDefinitions.length === 0) {
+      return baseDefinitions;
+    }
+    const merged = new Map<string, OrimDefinition>();
+    baseDefinitions.forEach((definition) => merged.set(definition.id, definition));
+    persistedDefinitions.forEach((definition) => merged.set(definition.id, definition));
+    return Array.from(merged.values());
+  };
+  const orimDefinitions = mergeOrimDefinitions(ORIM_DEFINITIONS, persisted?.orimDefinitions);
+  const baseActors = (persisted?.availableActors || createInitialActors()).map((actor) =>
+    ensureActorPower(
+      ensureActorHp(
+        ensureActorEnergy(
+          ensureActorLevel(migrateActorDefinitionId(actor))
+        )
+      )
+    )
+  );
+  const templatedActors = applyActorOrimTemplates(baseActors, orimDefinitions);
+  const finalizedActors = templatedActors.actors.map(ensureActorOrimSlots);
+  const orimState = createInitialOrimState(finalizedActors, orimDefinitions);
+  const actorDecksRaw = persisted?.actorDecks ?? orimState.actorDecks;
+  const actorDecks = Object.fromEntries(
+    Object.entries(actorDecksRaw).map(([actorId, deck]) => ([
+      actorId,
+      {
+        ...deck,
+        cards: deck.cards.map((card) => ({
+          ...card,
+          cooldown: card.cooldown ?? 0,
+          maxCooldown: card.maxCooldown ?? 5,
+        })),
+      },
+    ]))
+  );
+  const orimInstances = persisted?.orimInstances ?? {
+    ...orimState.orimInstances,
+    ...templatedActors.instances,
+  };
+  const baseParties = persisted?.tileParties
+    ? Object.fromEntries(
+      Object.entries(persisted.tileParties).map(([tileId, actors]) => ([
+        tileId,
+        actors.map((actor) => ensureActorPower(
+          ensureActorHp(
+            ensureActorEnergy(
+              ensureActorLevel(
+                ensureActorOrimSlots(migrateActorDefinitionId(actor))
+              )
+            )
+          )
+        )),
+      ]))
+    )
+    : {};
+  const baseState: GameState = {
     tableaus: [],
     foundations: [],
     stock: [],
     activeEffects: [],
     turnCount: 0,
-    collectedCards: [],
     pendingCards: persisted?.pendingCards || [],
-    phase: 'garden', // Start in garden
+    phase: options?.startPhase ?? 'garden', // Start in garden unless overridden
     challengeProgress: persisted?.challengeProgress || createInitialProgress(),
     buildPileProgress: persisted?.buildPileProgress || createInitialBuildPileProgress(),
     interactionMode: persisted?.interactionMode || 'click',
-    availableActors: persisted?.availableActors || createInitialActors(),
-    adventureQueue: persisted?.adventureQueue || createEmptyAdventureQueue(),
-    metaCards: persisted?.metaCards || createInitialMetaCards(),
+    availableActors: finalizedActors,
+    tileParties: baseParties,
+    activeSessionTileId: persisted?.activeSessionTileId,
+    tokens: persisted?.tokens || createInitialTokens(),
+    collectedTokens: createEmptyTokenCounts(),
+    resourceStash: persisted?.resourceStash || createEmptyTokenCounts(),
+    orimDefinitions,
+    orimStash: persisted?.orimStash || [],
+    orimInstances,
+    actorDecks,
+    noRegretCooldowns: persisted?.noRegretCooldowns || {},
+    lastCardActionSnapshot: undefined,
+    tiles: persisted?.tiles || createInitialTiles(),
     blueprints: [], // Player's blueprint library
     pendingBlueprintCards: [], // Blueprints in chaos state
   };
+
+  if (!isFreshStart) return baseState;
+
+  const randomWildsTile = baseState.tiles.find((tile) => tile.definitionId === 'random_wilds') || null;
+  if (!randomWildsTile) return baseState;
+
+  const fennec = baseState.availableActors.find((actor) => actor.definitionId === 'fox') || null;
+  if (!fennec) return baseState;
+
+  const queuedActorIds = new Set([fennec.id]);
+  const queuedActors = [fennec];
+
+  const prequeuedState: GameState = {
+    ...baseState,
+    availableActors: baseState.availableActors.filter((actor) => !queuedActorIds.has(actor.id)),
+    tileParties: {
+      ...baseState.tileParties,
+      [randomWildsTile.id]: queuedActors,
+    },
+  };
+
+  return startBiome(prequeuedState, randomWildsTile.id, 'random_wilds');
 }
 
 /**
@@ -92,27 +590,77 @@ export function initializeGame(persisted?: Partial<PersistedState>): GameState {
  * Foundations are created based on the actors in the adventure party
  * Uses karma dealing to ensure a minimum number of playable moves
  */
-export function startAdventure(state: GameState): GameState {
+export function startAdventure(state: GameState, tileId: string): GameState {
+  if (state.activeSessionTileId && state.activeSessionTileId !== tileId) return state;
+  const partyActors = getPartyForTile(state, tileId);
+  if (partyActors.length === 0) return state;
+  const tile = state.tiles.find((entry) => entry.id === tileId);
+  const isForest01 = isForestPuzzleTile(tile?.definitionId);
+
   // Create foundations based on the adventure party (these don't change between redeals)
-  const queuedActors = getQueuedActors(state.adventureQueue);
-  const foundations: Card[][] = queuedActors.map(actor => [
-    createActorFoundationCard(actor),
-  ]);
+  const foundations: Card[][] = isForest01
+    ? [[createCardFromElement('N', 9)]]
+    : partyActors.map(actor => [
+      createActorFoundationCard(actor),
+    ]);
 
-  // Keep dealing until karma requirements are met
-  let tableaus: Card[][];
-  let stock: Card[];
-  let attempts = 0;
-  const maxAttempts = 100; // Safety limit to prevent infinite loops
+  let tableaus: Card[][] = [];
+  let stock: Card[] = [];
 
-  do {
-    const deck = shuffleDeck(createDeck());
-    tableaus = Array.from({ length: GAME_CONFIG.tableauCount }, () =>
-      deck.splice(0, GAME_CONFIG.cardsPerTableau)
-    );
-    stock = deck;
-    attempts++;
-  } while (!checkKarmaDealing(tableaus, foundations, state.activeEffects) && attempts < maxAttempts);
+  if (isForest01) {
+    const row1 = [
+      { rank: 11, element: 'N' as Element },
+      { rank: 12, element: 'N' as Element },
+      { rank: 13, element: 'N' as Element },
+      { rank: 1, element: 'E' as Element },
+      { rank: 2, element: 'N' as Element },
+      { rank: 3, element: 'W' as Element },
+    ];
+    const row2 = [
+      { rank: 10, element: 'E' as Element },
+      { rank: 9, element: 'N' as Element },
+      { rank: 8, element: 'N' as Element },
+      { rank: 7, element: 'N' as Element },
+      { rank: 6, element: 'N' as Element },
+      null,
+    ];
+    const row3 = [
+      { rank: 8, element: 'N' as Element },
+      { rank: 7, element: 'N' as Element },
+      { rank: 6, element: 'N' as Element },
+      { rank: 5, element: 'N' as Element },
+      { rank: 4, element: 'N' as Element },
+      { rank: 5, element: 'W' as Element },
+    ];
+
+    const buildCard = (entry: { rank: number; element: Element }) => {
+      const card = createCardFromElement(entry.element, entry.rank);
+      return entry.element !== 'N' ? { ...card, tokenReward: entry.element } : card;
+    };
+
+    tableaus = row1.map((entry, index) => {
+      const stack: Card[] = [];
+      if (entry) stack.push(buildCard(entry));
+      const mid = row2[index];
+      if (mid) stack.push(buildCard(mid));
+      const top = row3[index];
+      if (top) stack.push(buildCard(top));
+      return stack;
+    });
+    stock = [];
+  } else {
+    // Keep dealing until karma requirements are met
+    let attempts = 0;
+
+    do {
+      const deck = shuffleDeck(createDeck());
+      tableaus = Array.from({ length: GAME_CONFIG.tableauCount }, () =>
+        deck.splice(0, GAME_CONFIG.cardsPerTableau)
+      );
+      stock = deck;
+      attempts++;
+    } while (!checkKarmaDealing(tableaus, foundations, state.activeEffects) && attempts < MAX_KARMA_DEALING_ATTEMPTS);
+  }
 
   return {
     ...state,
@@ -120,8 +668,9 @@ export function startAdventure(state: GameState): GameState {
     foundations,
     stock,
     phase: 'playing',
+    activeSessionTileId: tileId,
     turnCount: 0,
-    collectedCards: [],
+    collectedTokens: createEmptyTokenCounts(),
   };
 }
 
@@ -142,6 +691,10 @@ export function playCard(
   const tableau = state.tableaus[tableauIndex];
   if (tableau.length === 0) return null;
 
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const foundationActor = partyActors[foundationIndex];
+  if (!card.sourceActorId && foundationActor && foundationActor.stamina <= 0) return null;
+
   const card = tableau[tableau.length - 1];
   const foundationTop = state.foundations[foundationIndex][state.foundations[foundationIndex].length - 1];
 
@@ -157,12 +710,137 @@ export function playCard(
     i === foundationIndex ? [...f, card] : f
   );
 
-  return {
+  const nextState = {
     ...state,
     tableaus: newTableaus,
     foundations: newFoundations,
     activeEffects: processEffects(state.activeEffects),
     turnCount: state.turnCount + 1,
+    collectedTokens: applyTokenReward(
+      state.collectedTokens || createEmptyTokenCounts(),
+      card
+    ),
+  };
+  return recordCardAction(state, nextState);
+}
+
+export function playCardFromHand(
+  state: GameState,
+  card: Card,
+  foundationIndex: number,
+  useWild = false
+): GameState | null {
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const foundationActor = partyActors[foundationIndex];
+  // Cooldown disabled for now.
+
+  const foundation = state.foundations[foundationIndex];
+  const foundationCount = state.foundations.length;
+
+  const newFoundations = state.foundations.map((f, i) =>
+    i === foundationIndex ? [...f, card] : f
+  );
+
+  const combos = incrementFoundationCombos(state, foundationIndex);
+  const cooldownTicked = foundationActor
+    ? reduceDeckCooldowns(
+      { ...state, actorDecks: state.actorDecks },
+      foundationActor.id,
+      1
+    )
+    : state.actorDecks;
+  const updatedDecks = card.sourceActorId && card.sourceDeckCardId
+    ? setDeckCardCooldown({ ...state, actorDecks: cooldownTicked }, card.sourceActorId, card.sourceDeckCardId)
+    : cooldownTicked;
+
+  if (!useWild) {
+    const nextState = {
+      ...state,
+      foundations: newFoundations,
+      activeEffects: processEffects(state.activeEffects),
+      turnCount: state.turnCount + 1,
+      collectedTokens: applyTokenReward(
+        state.collectedTokens || createEmptyTokenCounts(),
+        card
+      ),
+      foundationCombos: combos,
+      actorDecks: updatedDecks,
+    };
+    return recordCardAction(state, nextState);
+  }
+
+  const newCombos = combos;
+
+  const tokensSeed = state.foundationTokens && state.foundationTokens.length === foundationCount
+    ? state.foundationTokens
+    : Array.from({ length: foundationCount }, () => createEmptyTokenCounts());
+  const newFoundationTokens = tokensSeed.map((tokens, i) => {
+    if (i !== foundationIndex || !card.tokenReward) return { ...tokens };
+    return {
+      ...tokens,
+      [card.tokenReward]: (tokens[card.tokenReward] || 0) + 1,
+    };
+  });
+
+  const newCollectedTokens = applyTokenReward(
+    state.collectedTokens || createEmptyTokenCounts(),
+    card
+  );
+
+  const nextState = {
+    ...state,
+    foundations: newFoundations,
+    activeEffects: processEffects(state.activeEffects),
+    turnCount: state.turnCount + 1,
+    biomeMovesCompleted: (state.biomeMovesCompleted || 0) + 1,
+    collectedTokens: newCollectedTokens,
+    foundationCombos: newCombos,
+    foundationTokens: newFoundationTokens,
+    actorDecks: updatedDecks,
+  };
+  return recordCardAction(state, nextState);
+}
+
+export function playCardFromStock(
+  state: GameState,
+  foundationIndex: number,
+  useWild = false,
+  force = false
+): GameState | null {
+  const stockCard = state.stock[state.stock.length - 1];
+  if (!stockCard) return null;
+
+  if (!force) {
+    const foundationTop = state.foundations[foundationIndex][state.foundations[foundationIndex].length - 1];
+    const canPlay = useWild
+      ? canPlayCardWithWild(stockCard, foundationTop, state.activeEffects)
+      : canPlayCard(stockCard, foundationTop, state.activeEffects);
+    if (!canPlay) return null;
+  }
+
+  const nextState = playCardFromHand(state, stockCard, foundationIndex, useWild);
+  if (!nextState) return null;
+
+  return {
+    ...nextState,
+    stock: state.stock.slice(0, -1),
+  };
+}
+
+export function rewindLastCardAction(state: GameState, actorId: string): GameState {
+  const snapshot = state.lastCardActionSnapshot;
+  if (!snapshot) return state;
+  if (!actorHasNoRegret(state, actorId)) return state;
+  const currentCooldown = state.noRegretCooldowns?.[actorId] ?? 0;
+  if (currentCooldown > 0) return state;
+
+  const nextCooldowns = { ...(snapshot.noRegretCooldowns ?? {}) };
+  nextCooldowns[actorId] = NO_REGRET_COOLDOWN;
+
+  return {
+    ...snapshot,
+    noRegretCooldowns: nextCooldowns,
+    lastCardActionSnapshot: undefined,
   };
 }
 
@@ -217,70 +895,181 @@ export function getValidFoundationsForCard(
 }
 
 export function returnToGarden(state: GameState): GameState {
-  // Collect ALL cards from foundations, including initial actor cards
-  // This preserves elemental cards when actors have suit affinities
-  const allCards = state.foundations.flatMap((f) => f);
+  const updatedResourceStash = addTokenCounts(
+    state.resourceStash || createEmptyTokenCounts(),
+    state.collectedTokens || createEmptyTokenCounts()
+  );
 
-  // Return actors from adventure queue back to available
-  const returningActors = state.adventureQueue.filter((a): a is Actor => a !== null);
-  const newAvailableActors = [...state.availableActors, ...returningActors];
+  const activeParty = getPartyForTile(state, state.activeSessionTileId);
+  const updatedTileParties = state.activeSessionTileId
+    ? { ...state.tileParties, [state.activeSessionTileId]: [] }
+    : state.tileParties;
+  const newAvailableActors = activeParty.length > 0
+    ? [...state.availableActors, ...activeParty]
+    : state.availableActors;
 
   return {
     ...state,
     tableaus: [],
     foundations: [],
     stock: [],
-    collectedCards: allCards,
-    // Cards from this run go to pending - player must manually assign them
-    pendingCards: allCards,
+    pendingCards: [],
     phase: 'garden',
     availableActors: newAvailableActors,
-    adventureQueue: createEmptyAdventureQueue(),
+    tileParties: updatedTileParties,
+    activeSessionTileId: undefined,
+    collectedTokens: createEmptyTokenCounts(),
+    resourceStash: updatedResourceStash,
+    currentBiome: undefined,
+    biomeMovesCompleted: undefined,
+    nodeTableau: undefined,
+    pendingBlueprintCards: [],
+    foundationCombos: undefined,
+    foundationTokens: undefined,
+    randomBiomeTurnNumber: undefined,
+  };
+}
+
+export function abandonSession(state: GameState): GameState {
+  const activeParty = getPartyForTile(state, state.activeSessionTileId);
+  const updatedTileParties = state.activeSessionTileId
+    ? { ...state.tileParties, [state.activeSessionTileId]: [] }
+    : state.tileParties;
+  const newAvailableActors = activeParty.length > 0
+    ? [...state.availableActors, ...activeParty]
+    : state.availableActors;
+
+  return {
+    ...state,
+    tableaus: [],
+    foundations: [],
+    stock: [],
+    phase: 'garden',
+    availableActors: newAvailableActors,
+    tileParties: updatedTileParties,
+    activeSessionTileId: undefined,
+    collectedTokens: createEmptyTokenCounts(),
+    currentBiome: undefined,
+    biomeMovesCompleted: undefined,
+    nodeTableau: undefined,
+    pendingBlueprintCards: [],
+    foundationCombos: undefined,
+    foundationTokens: undefined,
+    randomBiomeTurnNumber: undefined,
   };
 }
 
 /**
- * Moves an actor from available to a specific adventure queue slot
+ * Assigns an actor (or their stack) to the party slot
  */
-export function assignActorToQueue(
+export function assignActorToParty(
   state: GameState,
-  actorId: string,
-  slotIndex: number
+  tileId: string,
+  actorId: string
 ): GameState | null {
-  const actorIndex = state.availableActors.findIndex(a => a.id === actorId);
-  if (actorIndex === -1) return null;
+  const actor = state.availableActors.find(a => a.id === actorId);
+  if (!actor) return null;
 
-  const actor = state.availableActors[actorIndex];
-  const newQueue = addActorToQueue(state.adventureQueue, actor, slotIndex);
-  if (!newQueue) return null;
+  const selectedActors = actor.stackId
+    ? state.availableActors
+        .filter(a => a.stackId === actor.stackId)
+        .sort((a, b) => (a.stackIndex ?? 0) - (b.stackIndex ?? 0))
+    : [actor];
 
-  // Remove from available
-  const newAvailable = [
-    ...state.availableActors.slice(0, actorIndex),
-    ...state.availableActors.slice(actorIndex + 1),
+  const selectedIds = new Set(selectedActors.map(a => a.id));
+  const remainingAvailable = state.availableActors.filter(a => !selectedIds.has(a.id));
+
+  const updatedTileParties = Object.entries(state.tileParties).reduce<Record<string, Actor[]>>(
+    (acc, [id, party]) => {
+      acc[id] = party.filter((partyActor) => !selectedIds.has(partyActor.id));
+      return acc;
+    },
+    {}
+  );
+
+  const updatedParty = selectedActors.map(a => ({
+    ...a,
+    homeTileId: undefined,
+  }));
+  const priorParty = getPartyForTile(state, tileId);
+  const mergedParty = [...priorParty, ...updatedParty].filter(
+    (value, index, self) => self.findIndex((actorItem) => actorItem.id === value.id) === index
+  );
+
+  const updatedTiles = state.tiles.map(tile => {
+    const hasSelected = tile.actorHomeSlots.some(slot =>
+      selectedIds.has(slot.actorId ?? '')
+    );
+    if (!hasSelected) return tile;
+
+    const updatedHomeSlots = tile.actorHomeSlots.map(slot =>
+      selectedIds.has(slot.actorId ?? '') ? { ...slot, actorId: null } : slot
+    );
+    return { ...tile, actorHomeSlots: updatedHomeSlots };
+  });
+
+  return {
+    ...state,
+    availableActors: remainingAvailable,
+    tileParties: {
+      ...updatedTileParties,
+      [tileId]: mergedParty,
+    },
+    tiles: updatedTiles,
+  };
+}
+
+/**
+ * Clears the current party back to available actors
+ */
+export function clearParty(
+  state: GameState,
+  tileId: string
+): GameState {
+  const party = getPartyForTile(state, tileId);
+  if (party.length === 0) return state;
+  return {
+    ...state,
+    availableActors: [...state.availableActors, ...party],
+    tileParties: {
+      ...state.tileParties,
+      [tileId]: [],
+    },
+  };
+}
+
+/**
+ * Removes a single actor from the party back to available, with a new grid position.
+ */
+export function detachActorFromParty(
+  state: GameState,
+  tileId: string,
+  actorId: string,
+  col: number,
+  row: number
+): GameState {
+  const party = getPartyForTile(state, tileId);
+  const actorIndex = party.findIndex(actor => actor.id === actorId);
+  if (actorIndex === -1) return state;
+
+  const actor = party[actorIndex];
+  const updatedParty = [
+    ...party.slice(0, actorIndex),
+    ...party.slice(actorIndex + 1),
   ];
 
-  return {
-    ...state,
-    availableActors: newAvailable,
-    adventureQueue: newQueue,
+  const updatedActor = {
+    ...actor,
+    gridPosition: { col, row },
   };
-}
-
-/**
- * Removes an actor from adventure queue back to available
- */
-export function removeActorFromQueueState(
-  state: GameState,
-  slotIndex: number
-): GameState {
-  const { actor, newQueue } = removeActorFromQueue(state.adventureQueue, slotIndex);
-  if (!actor) return state;
 
   return {
     ...state,
-    availableActors: [...state.availableActors, actor],
-    adventureQueue: newQueue,
+    tileParties: {
+      ...state.tileParties,
+      [tileId]: updatedParty,
+    },
+    availableActors: [...state.availableActors, updatedActor],
   };
 }
 
@@ -391,6 +1180,10 @@ export function applyMoves(state: GameState, moves: Move[]): GameState {
       tableaus: newTableaus,
       foundations: newFoundations,
       turnCount: currentState.turnCount + 1,
+      collectedTokens: applyTokenReward(
+        currentState.collectedTokens || createEmptyTokenCounts(),
+        move.card
+      ),
     };
   }
 
@@ -436,30 +1229,30 @@ export function clearBuildPileGameProgress(state: GameState, buildPileId: string
 }
 
 /**
- * Assigns a pending card to a meta-card slot.
+ * Assigns a pending card to a tile slot.
  * Returns null if card cannot be added to the slot.
  */
-export function assignCardToMetaCardSlot(
+export function assignCardToTileSlot(
   state: GameState,
   cardId: string,
-  metaCardId: string,
+  tileId: string,
   slotId: string
 ): GameState | null {
   const cardIndex = state.pendingCards.findIndex((c) => c.id === cardId);
   if (cardIndex === -1) return null;
 
   const card = state.pendingCards[cardIndex];
-  const metaCardIndex = state.metaCards.findIndex((mc) => mc.id === metaCardId);
-  if (metaCardIndex === -1) return null;
+  const tileIndex = state.tiles.findIndex((mc) => mc.id === tileId);
+  if (tileIndex === -1) return null;
 
-  const metaCard = state.metaCards[metaCardIndex];
+  const tile = state.tiles[tileIndex];
 
   // Validate slot exists and card can be added
-  const slot = findSlotById(metaCard, slotId);
+  const slot = findSlotById(tile, slotId);
   if (!slot || !canAddCardToSlot(card, slot)) return null;
 
-  const updatedMetaCard = addCardToMetaCard(metaCard, slotId, card);
-  if (!updatedMetaCard) return null;
+  const updatedTile = addCardToTile(tile, slotId, card);
+  if (!updatedTile) return null;
 
   // Remove card from pending
   const newPendingCards = [
@@ -467,160 +1260,239 @@ export function assignCardToMetaCardSlot(
     ...state.pendingCards.slice(cardIndex + 1),
   ];
 
-  // Check if metacard was just completed - trigger upgrade
-  const finalMetaCard = updatedMetaCard.isComplete
-    ? upgradeMetaCard(updatedMetaCard)
-    : updatedMetaCard;
+  // Check if tile was just completed - trigger upgrade
+  const finalTile = updatedTile.isComplete
+    ? upgradeTile(updatedTile)
+    : updatedTile;
 
-  // Update meta-cards array
-  const newMetaCards = [
-    ...state.metaCards.slice(0, metaCardIndex),
-    finalMetaCard,
-    ...state.metaCards.slice(metaCardIndex + 1),
+  // Update tiles array
+  const newTiles = [
+    ...state.tiles.slice(0, tileIndex),
+    finalTile,
+    ...state.tiles.slice(tileIndex + 1),
   ];
 
   return {
     ...state,
     pendingCards: newPendingCards,
-    metaCards: newMetaCards,
+    tiles: newTiles,
   };
 }
 
 /**
- * Clears progress for a specific meta-card.
+ * Assigns a token to a tile slot.
+ * Returns null if token cannot be added to the slot.
  */
-export function clearMetaCardGameProgress(state: GameState, metaCardId: string): GameState {
-  return {
-    ...state,
-    metaCards: clearMetaCardProgressFn(state.metaCards, metaCardId),
-  };
-}
-
-/**
- * Assigns an actor to a meta-card home slot
- */
-export function assignActorToMetaCardHome(
+export function assignTokenToTileSlot(
   state: GameState,
-  actorId: string,
-  metaCardId: string,
+  tokenId: string,
+  tileId: string,
   slotId: string
 ): GameState | null {
-  const actorIndex = state.availableActors.findIndex(a => a.id === actorId);
-  if (actorIndex === -1) return null;
+  const tokenIndex = state.tokens.findIndex((t) => t.id === tokenId);
+  if (tokenIndex === -1) return null;
 
-  const metaCardIndex = state.metaCards.findIndex(mc => mc.id === metaCardId);
-  if (metaCardIndex === -1) return null;
+  const token = state.tokens[tokenIndex];
+  if (token.quantity !== 1) return null;
 
-  const metaCard = state.metaCards[metaCardIndex];
-  if (!canAssignActorToHomeSlot(metaCard, slotId)) return null;
+  const tileIndex = state.tiles.findIndex((mc) => mc.id === tileId);
+  if (tileIndex === -1) return null;
 
-  const actor = state.availableActors[actorIndex];
-  const isForest = metaCard.definitionId === 'forest';
+  const tile = state.tiles[tileIndex];
+  const slot = findSlotById(tile, slotId);
+  if (!slot) return null;
 
-  // Update actor to track home (only for non-Forest metacards)
-  const updatedActors = [...state.availableActors];
-  if (!isForest) {
-    updatedActors[actorIndex] = {
-      ...updatedActors[actorIndex],
-      homeMetaCardId: metaCardId,
-    };
-  }
-
-  // Update metacard home slot
-  const updatedHomeSlots = metaCard.actorHomeSlots.map(slot =>
-    slot.id === slotId ? { ...slot, actorId } : slot
-  );
-
-  const updatedMetaCards = [...state.metaCards];
-  updatedMetaCards[metaCardIndex] = {
-    ...metaCard,
-    actorHomeSlots: updatedHomeSlots,
+  const suit = ELEMENT_TO_SUIT[token.element];
+  const tokenCard: Card = {
+    id: `token-slot-${token.id}`,
+    rank: 1,
+    suit,
+    element: token.element,
   };
 
-  // If this is the Forest metacard, also sync to adventureQueue
-  let updatedAdventureQueue = state.adventureQueue;
-  if (isForest) {
-    // Find the slot index in the Forest's actorHomeSlots
-    const slotIndex = metaCard.actorHomeSlots.findIndex(s => s.id === slotId);
-    if (slotIndex >= 0 && slotIndex < state.adventureQueue.length) {
-      updatedAdventureQueue = [...state.adventureQueue];
-      updatedAdventureQueue[slotIndex] = actor;
-    }
-  }
+  if (!canAddCardToSlot(tokenCard, slot)) return null;
 
-  return {
-    ...state,
-    availableActors: updatedActors,
-    metaCards: updatedMetaCards,
-    adventureQueue: updatedAdventureQueue,
-  };
-}
+  const updatedTile = addCardToTile(tile, slotId, tokenCard);
+  if (!updatedTile) return null;
 
-/**
- * Removes an actor from all metacard home slots (particularly Forest)
- */
-export function removeActorFromMetaCardHome(
-  state: GameState,
-  actorId: string
-): GameState {
-  const updatedMetaCards = state.metaCards.map(metaCard => {
-    // Check if this metacard has the actor in any of its home slots
-    const hasActor = metaCard.actorHomeSlots.some(slot => slot.actorId === actorId);
-    if (!hasActor) return metaCard;
+  const finalTile = updatedTile.isComplete
+    ? upgradeTile(updatedTile)
+    : updatedTile;
 
-    // Remove actor from home slots
-    const updatedHomeSlots = metaCard.actorHomeSlots.map(slot =>
-      slot.actorId === actorId ? { ...slot, actorId: null } : slot
-    );
+  const newTiles = [
+    ...state.tiles.slice(0, tileIndex),
+    finalTile,
+    ...state.tiles.slice(tileIndex + 1),
+  ];
 
-    return {
-      ...metaCard,
-      actorHomeSlots: updatedHomeSlots,
-    };
-  });
-
-  // Also sync with adventureQueue for Forest metacard
-  const forestMetaCard = updatedMetaCards.find(mc => mc.definitionId === 'forest');
-  let updatedAdventureQueue = state.adventureQueue;
-  if (forestMetaCard) {
-    updatedAdventureQueue = state.adventureQueue.map((queuedActor) =>
-      queuedActor?.id === actorId ? null : queuedActor
-    );
-  }
-
-  return {
-    ...state,
-    metaCards: updatedMetaCards,
-    adventureQueue: updatedAdventureQueue,
-  };
-}
-
-/**
- * Updates the grid position of a meta-card
- */
-export function updateMetaCardPosition(
-  state: GameState,
-  metaCardId: string,
-  col: number,
-  row: number
-): GameState {
-  const metaCardIndex = state.metaCards.findIndex(mc => mc.id === metaCardId);
-  if (metaCardIndex === -1) return state;
-
-  const updatedMetaCard = {
-    ...state.metaCards[metaCardIndex],
-    gridPosition: { col, row },
-  };
-
-  const newMetaCards = [
-    ...state.metaCards.slice(0, metaCardIndex),
-    updatedMetaCard,
-    ...state.metaCards.slice(metaCardIndex + 1),
+  const newTokens = [
+    ...state.tokens.slice(0, tokenIndex),
+    ...state.tokens.slice(tokenIndex + 1),
   ];
 
   return {
     ...state,
-    metaCards: newMetaCards,
+    tokens: newTokens,
+    tiles: newTiles,
+  };
+}
+
+/**
+ * Clears progress for a specific tile.
+ */
+export function clearTileGameProgress(state: GameState, tileId: string): GameState {
+  return {
+    ...state,
+    tiles: clearTileProgressFn(state.tiles, tileId),
+  };
+}
+
+/**
+ * Assigns an actor to a tile home slot
+ */
+export function assignActorToTileHome(
+  state: GameState,
+  actorId: string,
+  tileId: string,
+  slotId: string
+): GameState | null {
+  const detachedActors = removeActorFromStack(state.availableActors, actorId);
+  const actorIndex = detachedActors.findIndex(a => a.id === actorId);
+  if (actorIndex === -1) return null;
+
+  const tileIndex = state.tiles.findIndex(mc => mc.id === tileId);
+  if (tileIndex === -1) return null;
+
+  const tile = state.tiles[tileIndex];
+  if (!canAssignActorToHomeSlot(tile, slotId)) return null;
+
+  // Update actor to track home
+  const updatedActors = [...detachedActors];
+  updatedActors[actorIndex] = {
+    ...updatedActors[actorIndex],
+    homeTileId: tileId,
+  };
+
+  // Update tile home slot
+  const updatedHomeSlots = tile.actorHomeSlots.map(slot =>
+    slot.id === slotId ? { ...slot, actorId } : slot
+  );
+
+  const updatedTiles = [...state.tiles];
+  updatedTiles[tileIndex] = {
+    ...tile,
+    actorHomeSlots: updatedHomeSlots,
+  };
+
+  return {
+    ...state,
+    availableActors: updatedActors,
+    tiles: updatedTiles,
+  };
+}
+
+/**
+ * Removes an actor from all tile home slots (particularly Forest)
+ */
+export function removeActorFromTileHome(
+  state: GameState,
+  actorId: string
+): GameState {
+  const updatedTiles = state.tiles.map(tile => {
+    // Check if this tile has the actor in any of its home slots
+    const hasActor = tile.actorHomeSlots.some(slot => slot.actorId === actorId);
+    if (!hasActor) return tile;
+
+    // Remove actor from home slots
+    const updatedHomeSlots = tile.actorHomeSlots.map(slot =>
+      slot.actorId === actorId ? { ...slot, actorId: null } : slot
+    );
+
+    return {
+      ...tile,
+      actorHomeSlots: updatedHomeSlots,
+    };
+  });
+
+  return {
+    ...state,
+    tiles: updatedTiles,
+  };
+}
+
+/**
+ * Updates the grid position of a tile
+ */
+export function updateTilePosition(
+  state: GameState,
+  tileId: string,
+  col: number,
+  row: number
+): GameState {
+  const tiles = updateItemInArray(state.tiles, tileId, tile => ({
+    ...tile,
+    gridPosition: { col: Math.round(col), row: Math.round(row) },
+  }));
+  return tiles === state.tiles ? state : { ...state, tiles };
+}
+
+export function updateTileWatercolorConfig(
+  state: GameState,
+  tileId: string,
+  watercolorConfig: Tile['watercolorConfig']
+): GameState {
+  const tiles = updateItemInArray(state.tiles, tileId, tile => ({
+    ...tile,
+    watercolorConfig: watercolorConfig ?? null,
+  }));
+  return tiles === state.tiles ? state : { ...state, tiles };
+}
+
+/**
+ * Toggles a tile's lock state.
+ */
+export function toggleTileLock(
+  state: GameState,
+  tileId: string
+): GameState {
+  const tileIndex = state.tiles.findIndex(mc => mc.id === tileId);
+  if (tileIndex === -1) return state;
+
+  const current = state.tiles[tileIndex];
+  const isLocked = current.isLocked !== false;
+  const updatedTile = {
+    ...current,
+    isLocked: !isLocked,
+  };
+
+  const newTiles = [
+    ...state.tiles.slice(0, tileIndex),
+    updatedTile,
+    ...state.tiles.slice(tileIndex + 1),
+  ];
+
+  return {
+    ...state,
+    tiles: newTiles,
+  };
+}
+
+export function removeTileFromGarden(state: GameState, tileId: string): GameState {
+  const tile = state.tiles.find((entry) => entry.id === tileId);
+  if (!tile) return state;
+  const updatedTiles = state.tiles.filter((entry) => entry.id !== tileId);
+  const updatedParties = { ...state.tileParties };
+  delete updatedParties[tileId];
+  const updatedActors = state.availableActors.map((actor) => {
+    if (actor.homeTileId !== tileId) return actor;
+    return { ...actor, homeTileId: undefined };
+  });
+  return {
+    ...state,
+    tiles: updatedTiles,
+    tileParties: updatedParties,
+    activeSessionTileId: state.activeSessionTileId === tileId ? undefined : state.activeSessionTileId,
+    availableActors: updatedActors,
   };
 }
 
@@ -636,8 +1508,19 @@ export function updateActorPosition(
   const actorIndex = state.availableActors.findIndex(a => a.id === actorId);
   if (actorIndex === -1) return state;
 
+  const actor = state.availableActors[actorIndex];
+  if (actor.stackId) {
+    const updatedActors = state.availableActors.map((item) =>
+      item.stackId === actor.stackId ? { ...item, gridPosition: { col, row } } : item
+    );
+    return {
+      ...state,
+      availableActors: updatedActors,
+    };
+  }
+
   const updatedActor = {
-    ...state.availableActors[actorIndex],
+    ...actor,
     gridPosition: { col, row },
   };
 
@@ -650,6 +1533,437 @@ export function updateActorPosition(
   return {
     ...state,
     availableActors: newAvailableActors,
+  };
+}
+
+/**
+ * Updates the grid position of a token
+ */
+export function updateTokenPosition(
+  state: GameState,
+  tokenId: string,
+  col: number,
+  row: number
+): GameState {
+  const tokens = updateItemInArray(state.tokens, tokenId, token => ({
+    ...token,
+    gridPosition: { col, row },
+  }));
+  return tokens === state.tokens ? state : { ...state, tokens };
+}
+
+export function addTileToGarden(
+  state: GameState,
+  definitionId: string
+): GameState {
+  return addTileToGardenAt(state, definitionId);
+}
+
+export function addTileToGardenAt(
+  state: GameState,
+  definitionId: string,
+  position?: { col: number; row: number }
+): GameState {
+  const tile = createTile(definitionId);
+  if (!tile) return state;
+  tile.isLocked = false;
+  tile.gridPosition = position ?? findOpenTilePosition(state.tiles);
+  return {
+    ...state,
+    tiles: [...state.tiles, tile],
+  };
+}
+
+export function addActorToGarden(
+  state: GameState,
+  definitionId: string
+): GameState {
+  const actor = createActor(definitionId);
+  if (!actor) return state;
+  actor.gridPosition = findOpenActorPosition(state.tiles, state.availableActors);
+  return {
+    ...state,
+    availableActors: [...state.availableActors, actor],
+  };
+}
+
+export function addTokenToGarden(
+  state: GameState,
+  element: Element,
+  count = 1
+): GameState {
+  if (count <= 0) return state;
+
+  const base = findOpenActorPosition(state.tiles, state.availableActors);
+  const offsets = [
+    { col: 0, row: 0 },
+    { col: 0.2, row: 0 },
+    { col: 0, row: 0.2 },
+    { col: 0.2, row: 0.2 },
+    { col: 0.4, row: 0 },
+    { col: 0, row: 0.4 },
+  ];
+  const newTokens = Array.from({ length: count }, (_, index) => {
+    const offset = offsets[index % offsets.length];
+    return {
+      ...createToken(element, 1),
+      gridPosition: { col: base.col + offset.col, row: base.row + offset.row },
+    };
+  });
+
+  return {
+    ...state,
+    tokens: [...state.tokens, ...newTokens],
+  };
+}
+
+export function stackTokenOnToken(
+  state: GameState,
+  draggedTokenId: string,
+  targetTokenId: string
+): GameState {
+  if (draggedTokenId === targetTokenId) return state;
+
+  const draggedToken = state.tokens.find(token => token.id === draggedTokenId);
+  const targetToken = state.tokens.find(token => token.id === targetTokenId);
+  if (!draggedToken || !targetToken) return state;
+  if (draggedToken.element !== targetToken.element) return state;
+  if (draggedToken.quantity === 5 || targetToken.quantity === 5) return state;
+
+  const anchorPosition = getTokenGridPosition(targetToken);
+  const proximityThreshold = TOKEN_PROXIMITY_THRESHOLD;
+  const candidateTokens = state.tokens.filter((token) => {
+    if (token.element !== targetToken.element || token.quantity !== 1) return false;
+    const pos = getTokenGridPosition(token);
+    const dx = pos.col - anchorPosition.col;
+    const dy = pos.row - anchorPosition.row;
+    return Math.hypot(dx, dy) <= proximityThreshold;
+  });
+
+  const clusterIds = new Set(candidateTokens.map((token) => token.id));
+  clusterIds.add(draggedToken.id);
+  clusterIds.add(targetToken.id);
+  const cluster = state.tokens.filter((token) => clusterIds.has(token.id) && token.quantity === 1);
+
+  if (cluster.length < 5) {
+    const clusterCount = cluster.length;
+    const offsetPatterns = [
+      { x: 0.18, y: 0 },
+      { x: -0.18, y: 0 },
+      { x: 0, y: 0.18 },
+      { x: 0, y: -0.18 },
+      { x: 0.22, y: 0.22 },
+    ];
+    const offset = offsetPatterns[clusterCount % offsetPatterns.length];
+    const newPosition = {
+      col: anchorPosition.col + offset.x,
+      row: anchorPosition.row + offset.y,
+    };
+    const updatedTokens = state.tokens.map((token) =>
+      token.id === draggedToken.id
+        ? { ...token, gridPosition: newPosition }
+        : token
+    );
+    return {
+      ...state,
+      tokens: updatedTokens,
+    };
+  }
+
+  const mergeTokens = cluster.slice(0, 5);
+  const mergedIds = new Set(mergeTokens.map((token) => token.id));
+  const newToken = {
+    ...createToken(targetToken.element, 5),
+    gridPosition: anchorPosition,
+  };
+
+  return {
+    ...state,
+    tokens: [
+      ...state.tokens.filter((token) => !mergedIds.has(token.id)),
+      newToken,
+    ],
+  };
+}
+
+function updateActorDeckSlot(
+  state: GameState,
+  actorId: string,
+  cardId: string,
+  slotId: string,
+  updater: (slot: ActorDeckState['cards'][number]['slots'][number]) => ActorDeckState['cards'][number]['slots'][number]
+): { nextDecks: Record<string, ActorDeckState>; slot?: ActorDeckState['cards'][number]['slots'][number] } | null {
+  const deck = state.actorDecks[actorId];
+  if (!deck) return null;
+  const cardIndex = deck.cards.findIndex((card) => card.id === cardId);
+  if (cardIndex === -1) return null;
+  const card = deck.cards[cardIndex];
+  const slotIndex = card.slots.findIndex((slot) => slot.id === slotId);
+  if (slotIndex === -1) return null;
+  const slot = card.slots[slotIndex];
+  const updatedSlot = updater(slot);
+  const updatedCard = {
+    ...card,
+    slots: [
+      ...card.slots.slice(0, slotIndex),
+      updatedSlot,
+      ...card.slots.slice(slotIndex + 1),
+    ],
+  };
+  const updatedDeck = {
+    ...deck,
+    cards: [
+      ...deck.cards.slice(0, cardIndex),
+      updatedCard,
+      ...deck.cards.slice(cardIndex + 1),
+    ],
+  };
+  return {
+    nextDecks: {
+      ...state.actorDecks,
+      [actorId]: updatedDeck,
+    },
+    slot: slot,
+  };
+}
+
+function setDeckCardCooldown(
+  state: GameState,
+  actorId: string,
+  cardId: string
+): Record<string, ActorDeckState> {
+  const deck = state.actorDecks[actorId];
+  if (!deck) return state.actorDecks;
+  const cardIndex = deck.cards.findIndex((card) => card.id === cardId);
+  if (cardIndex === -1) return state.actorDecks;
+  const card = deck.cards[cardIndex];
+  const updatedCard = {
+    ...card,
+    cooldown: card.maxCooldown ?? 5,
+  };
+  return {
+    ...state.actorDecks,
+    [actorId]: {
+      ...deck,
+      cards: [
+        ...deck.cards.slice(0, cardIndex),
+        updatedCard,
+        ...deck.cards.slice(cardIndex + 1),
+      ],
+    },
+  };
+}
+
+function reduceDeckCooldowns(
+  state: GameState,
+  actorId: string,
+  amount: number
+): Record<string, ActorDeckState> {
+  const deck = state.actorDecks[actorId];
+  if (!deck || amount <= 0) return state.actorDecks;
+  const updatedCards = deck.cards.map((card) => ({
+    ...card,
+    cooldown: Math.max(0, (card.cooldown ?? 0) - amount),
+  }));
+  return {
+    ...state.actorDecks,
+    [actorId]: {
+      ...deck,
+      cards: updatedCards,
+    },
+  };
+}
+
+function incrementFoundationCombos(
+  state: GameState,
+  foundationIndex: number
+): number[] {
+  const foundationCount = state.foundations.length;
+  const comboSeed = state.foundationCombos && state.foundationCombos.length === foundationCount
+    ? state.foundationCombos
+    : Array.from({ length: foundationCount }, () => 0);
+  const newCombos = [...comboSeed];
+  newCombos[foundationIndex] = (newCombos[foundationIndex] || 0) + 1;
+  return newCombos;
+}
+
+export function equipOrimFromStash(
+  state: GameState,
+  actorId: string,
+  cardId: string,
+  slotId: string,
+  orimId: string
+): GameState {
+  const orim = state.orimInstances[orimId];
+  if (!orim) return state;
+  if (!state.orimStash.some((item) => item.id === orimId)) return state;
+  const definition = state.orimDefinitions.find((item) => item.id === orim.definitionId) || null;
+  if (!canActivateOrim(state, actorId, definition, 'equip')) return state;
+  const update = updateActorDeckSlot(state, actorId, cardId, slotId, (slot) => {
+    if (slot.orimId) return slot;
+    return { ...slot, orimId };
+  });
+  if (!update) return state;
+  const wasAssigned = update.slot && !update.slot.orimId;
+  if (!wasAssigned) return state;
+  return {
+    ...state,
+    actorDecks: update.nextDecks,
+    orimStash: state.orimStash.filter((item) => item.id !== orimId),
+  };
+}
+
+export function moveOrimBetweenSlots(
+  state: GameState,
+  fromActorId: string,
+  fromCardId: string,
+  fromSlotId: string,
+  toActorId: string,
+  toCardId: string,
+  toSlotId: string
+): GameState {
+  const fromUpdate = updateActorDeckSlot(state, fromActorId, fromCardId, fromSlotId, (slot) => slot);
+  if (!fromUpdate?.slot?.orimId) return state;
+  const orimId = fromUpdate.slot.orimId;
+  const orim = state.orimInstances[orimId];
+  if (!orim || isOrimLocked(fromUpdate.slot)) return state;
+  const definition = state.orimDefinitions.find((item) => item.id === orim.definitionId) || null;
+  if (!canActivateOrim(state, toActorId, definition, 'equip')) return state;
+  const toUpdate = updateActorDeckSlot(
+    { ...state, actorDecks: fromUpdate.nextDecks },
+    toActorId,
+    toCardId,
+    toSlotId,
+    (slot) => {
+      if (slot.orimId) return slot;
+      return { ...slot, orimId };
+    }
+  );
+  if (!toUpdate) return state;
+  const didAssign = toUpdate.slot && !toUpdate.slot.orimId;
+  if (!didAssign) return state;
+  const clearedFrom = updateActorDeckSlot(
+    { ...state, actorDecks: toUpdate.nextDecks },
+    fromActorId,
+    fromCardId,
+    fromSlotId,
+    (slot) => ({ ...slot, orimId: null })
+  );
+  if (!clearedFrom) return state;
+  return {
+    ...state,
+    actorDecks: clearedFrom.nextDecks,
+  };
+}
+
+export function returnOrimToStash(
+  state: GameState,
+  actorId: string,
+  cardId: string,
+  slotId: string
+): GameState {
+  const update = updateActorDeckSlot(state, actorId, cardId, slotId, (slot) => slot);
+  if (!update?.slot?.orimId) return state;
+  const orimId = update.slot.orimId;
+  const orim = state.orimInstances[orimId];
+  if (!orim || isOrimLocked(update.slot)) return state;
+  const cleared = updateActorDeckSlot(
+    state,
+    actorId,
+    cardId,
+    slotId,
+    (slot) => ({ ...slot, orimId: null })
+  );
+  if (!cleared) return state;
+  return {
+    ...state,
+    actorDecks: cleared.nextDecks,
+    orimStash: [...state.orimStash, orim],
+  };
+}
+
+export function stackActorOnActor(
+  state: GameState,
+  draggedActorId: string,
+  targetActorId: string
+): GameState {
+  if (draggedActorId === targetActorId) return state;
+
+  const draggedActor = state.availableActors.find(actor => actor.id === draggedActorId);
+  const targetActor = state.availableActors.find(actor => actor.id === targetActorId);
+  if (!draggedActor || !targetActor) return state;
+  if (draggedActor.stackId && draggedActor.stackId === targetActor.stackId) return state;
+
+  const targetStackId = targetActor.stackId || draggedActor.stackId || `stack-${Date.now()}-${randomIdSuffix()}`;
+  const targetStackActors = targetActor.stackId
+    ? state.availableActors
+        .filter(actor => actor.stackId === targetStackId)
+        .slice()
+        .sort((a, b) => (a.stackIndex ?? 0) - (b.stackIndex ?? 0))
+    : [targetActor];
+  const draggedStackActors = draggedActor.stackId
+    ? state.availableActors
+        .filter(actor => actor.stackId === draggedActor.stackId)
+        .slice()
+        .sort((a, b) => (a.stackIndex ?? 0) - (b.stackIndex ?? 0))
+    : [draggedActor];
+
+  const orderedIds = [
+    ...draggedStackActors.map(actor => actor.id),
+    ...targetStackActors.map(actor => actor.id).filter(id => !draggedStackActors.some(dragged => dragged.id === id)),
+  ];
+
+  const anchorPosition = targetActor.gridPosition;
+  const stackedActors = applyStackOrder(state.availableActors, targetStackId, orderedIds, anchorPosition);
+
+  return {
+    ...state,
+    availableActors: stackedActors,
+  };
+}
+
+export function detachActorFromStack(
+  state: GameState,
+  actorId: string,
+  col: number,
+  row: number
+): GameState {
+  const detachedActors = removeActorFromStack(state.availableActors, actorId);
+  const actorIndex = detachedActors.findIndex(actor => actor.id === actorId);
+  if (actorIndex === -1) return state;
+
+  const updatedActor = {
+    ...detachedActors[actorIndex],
+    gridPosition: { col, row },
+  };
+
+  const newAvailableActors = [
+    ...detachedActors.slice(0, actorIndex),
+    updatedActor,
+    ...detachedActors.slice(actorIndex + 1),
+  ];
+
+  return {
+    ...state,
+    availableActors: newAvailableActors,
+  };
+}
+
+export function reorderActorStack(
+  state: GameState,
+  stackId: string,
+  orderedActorIds: string[]
+): GameState {
+  if (orderedActorIds.length <= 1) return state;
+  const stackActors = state.availableActors.filter(actor => actor.stackId === stackId);
+  if (stackActors.length <= 1) return state;
+
+  const anchorPosition = stackActors[0]?.gridPosition;
+  const updatedActors = applyStackOrder(state.availableActors, stackId, orderedActorIds, anchorPosition);
+
+  return {
+    ...state,
+    availableActors: updatedActors,
   };
 }
 
@@ -698,7 +2012,13 @@ function createCardFromElement(element: Element, rank: number): Card {
     rank,
     suit,
     element,
-    id: `biome-${element}-${rank}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    orimSlots: [
+      {
+        id: `orim-slot-${element}-${rank}-${Date.now()}-${randomIdSuffix()}`,
+        orimId: element !== 'N' ? `element-${element}` : null,
+      },
+    ],
+    id: `biome-${element}-${rank}-${Date.now()}-${randomIdSuffix()}`,
   };
 }
 
@@ -720,16 +2040,298 @@ function getChaosRotation(): number {
 }
 
 /**
+ * Generates a single random card with random rank, element, and tokenReward.
+ */
+function generateRandomCard(): Card {
+  const rank = 1 + Math.floor(Math.random() * 13);
+  const elementalElements = ALL_ELEMENTS.filter((entry) => entry !== 'N');
+  const hasOrim = Math.random() < 0.75;
+  const element = hasOrim
+    ? elementalElements[Math.floor(Math.random() * elementalElements.length)]
+    : 'N';
+  const suit = ELEMENT_TO_SUIT[element];
+  return {
+    rank,
+    suit,
+    element,
+    tokenReward: element !== 'N' ? element : undefined,
+    orimSlots: [
+      {
+        id: `orim-slot-${element}-${rank}-${Date.now()}-${randomIdSuffix()}`,
+        orimId: element !== 'N' ? `element-${element}` : null,
+      },
+    ],
+    id: `rbiome-${Date.now()}-${randomIdSuffix()}`,
+  };
+}
+
+/**
+ * Generates random tableaus for a randomly generated biome.
+ * Each card gets a random rank (1-13), random element from all 7,
+ * suit derived from element, and tokenReward matching its element.
+ */
+function generateRandomTableaus(tableauCount: number = 7, cardsPerTableau: number = 4): Card[][] {
+  const tableaus: Card[][] = [];
+  for (let t = 0; t < tableauCount; t++) {
+    const cards: Card[] = [];
+    for (let c = 0; c < cardsPerTableau; c++) {
+      cards.push(generateRandomCard());
+    }
+    tableaus.push(cards);
+  }
+  return tableaus;
+}
+
+function generateShowcaseTableaus(tableauCount: number = 7, cardsPerTableau: number = 4): Card[][] {
+  const tableaus = generateRandomTableaus(tableauCount, cardsPerTableau);
+  const requiredElements: Element[] = ['A', 'E', 'W', 'F', 'D', 'L'];
+  requiredElements.forEach((element, index) => {
+    if (index >= tableaus.length) return;
+    const stack = tableaus[index];
+    if (stack.length === 0) return;
+    const rank = Math.floor(Math.random() * 13) + 1;
+    stack[stack.length - 1] = createCardFromElement(element, rank);
+  });
+  return tableaus;
+}
+
+function generateRandomStock(size: number = 20): Card[] {
+  return Array.from({ length: size }, () => generateRandomCard());
+}
+
+/**
+ * Backfills a tableau by inserting a new random card at the bottom (index 0).
+ * Used by infinite biomes to keep tableaus populated after a card is played.
+ */
+function backfillTableau(tableau: Card[]): Card[] {
+  return [generateRandomCard(), ...tableau];
+}
+
+/**
+ * Starts a randomly generated biome.
+ * Creates foundations based on the adventure party and random tableaus.
+ */
+function startRandomBiome(
+  state: GameState,
+  tileId: string,
+  biomeId: string,
+  partyActors: Actor[]
+): GameState {
+  const biomeDef = getBiomeDefinition(biomeId);
+  if (!biomeDef || !biomeDef.randomlyGenerated) return state;
+  if (partyActors.length === 0) return state;
+
+  const tableaus = generateShowcaseTableaus(7);
+  const stock = generateRandomStock(20);
+  const foundations: Card[][] = partyActors.map(actor => [
+    createActorFoundationCard(actor),
+  ]);
+  const foundationCombos = foundations.map(() => 0);
+  const foundationTokens = foundations.map(() => createEmptyTokenCounts());
+
+  return {
+    ...state,
+    phase: 'biome',
+    currentBiome: biomeId,
+    activeSessionTileId: tileId,
+    biomeMovesCompleted: 0,
+    tableaus,
+    foundations,
+    stock,
+    activeEffects: [],
+    turnCount: 0,
+    collectedTokens: createEmptyTokenCounts(),
+    pendingBlueprintCards: [],
+    foundationCombos,
+    foundationTokens,
+    randomBiomeTurnNumber: 1,
+  };
+}
+
+/**
+ * Plays a card in a randomly generated biome.
+ * Tracks per-foundation combos and tokens.
+ */
+export function playCardInRandomBiome(
+  state: GameState,
+  tableauIndex: number,
+  foundationIndex: number
+): GameState | null {
+  const tableau = state.tableaus[tableauIndex];
+  if (!tableau || tableau.length === 0) return null;
+
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const foundationActor = partyActors[foundationIndex];
+  if (foundationActor && foundationActor.stamina <= 0) return null;
+
+  const card = tableau[tableau.length - 1];
+  const foundation = state.foundations[foundationIndex];
+  const foundationTop = foundation[foundation.length - 1];
+
+  if (!canPlayCardWithWild(card, foundationTop, state.activeEffects)) {
+    return null;
+  }
+
+  // Check if biome is infinite for backfill
+  const biomeDef = state.currentBiome ? getBiomeDefinition(state.currentBiome) : null;
+  const isInfinite = !!biomeDef?.infinite;
+
+  const newTableaus = state.tableaus.map((t, i) => {
+    if (i !== tableauIndex) return t;
+    const remaining = t.slice(0, -1);
+    return isInfinite ? backfillTableau(remaining) : remaining;
+  });
+
+  const newFoundations = state.foundations.map((f, i) =>
+    i === foundationIndex ? [...f, card] : f
+  );
+
+  // Update per-foundation combos
+  const foundationCount = state.foundations.length;
+  const comboSeed = state.foundationCombos && state.foundationCombos.length === foundationCount
+    ? state.foundationCombos
+    : Array.from({ length: foundationCount }, () => 0);
+  const newCombos = [...comboSeed];
+  newCombos[foundationIndex] = (newCombos[foundationIndex] || 0) + 1;
+
+  // Update per-foundation tokens
+  const tokensSeed = state.foundationTokens && state.foundationTokens.length === foundationCount
+    ? state.foundationTokens
+    : Array.from({ length: foundationCount }, () => createEmptyTokenCounts());
+  const newFoundationTokens = tokensSeed.map((tokens, i) => {
+    if (i !== foundationIndex || !card.tokenReward) return { ...tokens };
+    return {
+      ...tokens,
+      [card.tokenReward]: (tokens[card.tokenReward] || 0) + 1,
+    };
+  });
+
+  // Update global collected tokens
+  const newCollectedTokens = applyTokenReward(
+    state.collectedTokens || createEmptyTokenCounts(),
+    card
+  );
+
+  const nextState = {
+    ...state,
+    tableaus: newTableaus,
+    foundations: newFoundations,
+    activeEffects: processEffects(state.activeEffects),
+    turnCount: state.turnCount + 1,
+    biomeMovesCompleted: (state.biomeMovesCompleted || 0) + 1,
+    collectedTokens: newCollectedTokens,
+    foundationCombos: newCombos,
+    foundationTokens: newFoundationTokens,
+    actorDecks: foundationActor
+      ? reduceDeckCooldowns({ ...state, actorDecks: state.actorDecks }, foundationActor.id, 1)
+      : state.actorDecks,
+  };
+  return recordCardAction(state, nextState);
+}
+
+/**
+ * Ends a turn in a randomly generated biome.
+ * Resets foundations to the adventure party, generates fresh tableaus,
+ * clears per-foundation combos and tokens. Does NOT clear collectedTokens.
+ */
+export function endRandomBiomeTurn(state: GameState): GameState {
+  if (!state.currentBiome) return state;
+  const biomeDef = getBiomeDefinition(state.currentBiome);
+  if (!biomeDef?.randomlyGenerated) return state;
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  if (partyActors.length === 0) return state;
+
+  const tableaus = generateShowcaseTableaus(7);
+  const stock = generateRandomStock(20);
+  const foundations: Card[][] = partyActors.map(actor => [
+    createActorFoundationCard(actor),
+  ]);
+  const foundationCombos = foundations.map(() => 0);
+  const foundationTokens = foundations.map(() => createEmptyTokenCounts());
+  const updatedParty = partyActors.map((actor) => ({
+    ...actor,
+    stamina: Math.max(0, (actor.stamina ?? 0) - 1),
+  }));
+  const updatedDecks = applyBideCooldowns(state, partyActors);
+
+  return {
+    ...state,
+    tableaus,
+    foundations,
+    stock,
+    foundationCombos,
+    foundationTokens,
+    tileParties: state.activeSessionTileId
+      ? { ...state.tileParties, [state.activeSessionTileId]: updatedParty }
+      : state.tileParties,
+    randomBiomeTurnNumber: (state.randomBiomeTurnNumber || 1) + 1,
+    actorDecks: updatedDecks,
+  };
+}
+
+function applyBideCooldowns(state: GameState, partyActors: Actor[]): Record<string, ActorDeckState> {
+  const nextDecks: Record<string, ActorDeckState> = { ...state.actorDecks };
+  partyActors.forEach((actor) => {
+    const deck = state.actorDecks[actor.id];
+    if (!deck) return;
+    const actorHasBide = (actor.orimSlots ?? []).some((slot) => {
+      if (!slot.orimId) return false;
+      const instance = state.orimInstances[slot.orimId];
+      return instance?.definitionId === 'bide';
+    });
+    if (!actorHasBide) {
+      const hasCardBide = deck.cards.some((card) =>
+        card.slots.some((slot) => {
+          if (!slot.orimId) return false;
+          const instance = state.orimInstances[slot.orimId];
+          return instance?.definitionId === 'bide';
+        })
+      );
+      if (!hasCardBide) return;
+    }
+    const updatedCards = deck.cards.map((card) => {
+      const cardHasBide = card.slots.some((slot) => {
+        if (!slot.orimId) return false;
+        const instance = state.orimInstances[slot.orimId];
+        return instance?.definitionId === 'bide';
+      });
+      const reduction = (actorHasBide ? 1 : 0) + (cardHasBide ? 2 : 0);
+      if (reduction === 0) return card;
+      return {
+        ...card,
+        cooldown: Math.max(0, (card.cooldown ?? 0) - reduction),
+      };
+    });
+    nextDecks[actor.id] = { ...deck, cards: updatedCards };
+  });
+  return nextDecks;
+}
+
+/**
  * Starts a biome adventure with predefined layout
  */
 export function startBiome(
   state: GameState,
+  tileId: string,
   biomeId: string
 ): GameState {
+  if (state.activeSessionTileId && state.activeSessionTileId !== tileId) return state;
   const biomeDef = getBiomeDefinition(biomeId);
   if (!biomeDef) return state;
+  const partyActors = getPartyForTile(state, tileId);
+  if (partyActors.length === 0) return state;
 
-  // Create tableaus from biome layout
+  // Route to random biome handler
+  if (biomeDef.randomlyGenerated) {
+    return startRandomBiome(state, tileId, biomeId, partyActors);
+  }
+
+  // Route based on biome mode
+  if (biomeDef.mode === 'node-edge') {
+    return startNodeEdgeBiome(state, biomeDef, partyActors, tileId);
+  }
+
+  // Create tableaus from biome layout (traditional mode)
   const tableaus: Card[][] = biomeDef.layout.tableaus.map((ranks, idx) => {
     const elements = biomeDef.layout.elements[idx];
     return ranks.map((rank, cardIdx) => {
@@ -738,25 +2340,126 @@ export function startBiome(
     });
   });
 
-  // Create foundations based on queued actors (or empty if none)
-  const queuedActors = getQueuedActors(state.adventureQueue);
-  const foundations: Card[][] = queuedActors.map(actor => [
+  // Create foundations based on party actors
+  const foundations: Card[][] = partyActors.map(actor => [
     createActorFoundationCard(actor),
   ]);
+  const foundationCombos = foundations.map(() => 0);
 
   return {
     ...state,
     phase: 'biome',
     currentBiome: biomeId,
+    activeSessionTileId: tileId,
     biomeMovesCompleted: 0,
     tableaus,
     foundations,
     stock: [],
     activeEffects: [],
     turnCount: 0,
-    collectedCards: [],
+    collectedTokens: createEmptyTokenCounts(),
     pendingBlueprintCards: [],
+    foundationCombos,
   };
+}
+
+/**
+ * Starts a node-edge biome adventure with spatial pattern layout
+ */
+function startNodeEdgeBiome(
+  state: GameState,
+  biomeDef: import('./types').BiomeDefinition,
+  partyActors: Actor[],
+  tileId: string
+): GameState {
+  if (!biomeDef.nodePattern) return state;
+
+  const pattern = getNodePattern(biomeDef.nodePattern);
+  if (!pattern) return state;
+
+  const nodeTableau = generateNodeTableau(pattern, biomeDef.seed);
+
+  // Create foundations from adventure party
+  const foundations: Card[][] = partyActors.map(actor => [
+    createActorFoundationCard(actor),
+  ]);
+  const foundationCombos = foundations.map(() => 0);
+
+  // Ensure at least one foundation exists for golf solitaire gameplay
+  if (foundations.length === 0) {
+    const isPyramidRuins = biomeDef.id === 'pyramid_ruins';
+    // Add a default starter foundation with a neutral card
+    const starterCard: Card = {
+      rank: isPyramidRuins ? 8 : 7, // Middle rank for flexibility
+      suit: '⭐',
+      element: isPyramidRuins ? 'N' : 'L',
+      id: `foundation-starter-${Date.now()}`,
+    };
+    foundations.push([starterCard]);
+  }
+
+  return {
+    ...state,
+    phase: 'biome',
+    currentBiome: biomeDef.id,
+    activeSessionTileId: tileId,
+    biomeMovesCompleted: 0,
+    nodeTableau,
+    tableaus: [],                                // Empty for node-edge
+    foundations,
+    stock: [],
+    activeEffects: [],
+    turnCount: 0,
+    collectedTokens: createEmptyTokenCounts(),
+    pendingBlueprintCards: [],
+    foundationCombos,
+  };
+}
+
+/**
+ * Plays a card from a node-edge tableau in biome mode
+ */
+export function playCardInNodeBiome(
+  state: GameState,
+  nodeId: string,
+  foundationIndex: number
+): GameState | null {
+  if (!state.nodeTableau) return null;
+
+  const node = state.nodeTableau.find(n => n.id === nodeId);
+  if (!node || !node.revealed || node.cards.length === 0) return null;
+
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const foundationActor = partyActors[foundationIndex];
+  if (foundationActor && foundationActor.stamina <= 0) return null;
+
+  const card = node.cards[node.cards.length - 1];
+  const foundationTop = state.foundations[foundationIndex][
+    state.foundations[foundationIndex].length - 1
+  ];
+
+  if (!canPlayCard(card, foundationTop, state.activeEffects)) {
+    return null;
+  }
+
+  // Remove card from node
+  const result = playCardFromNode(state.nodeTableau, nodeId);
+  if (!result) return null;
+
+  // Update foundations
+  const newFoundations = state.foundations.map((f, i) =>
+    i === foundationIndex ? [...f, result.card] : f
+  );
+
+  const nextState = {
+    ...state,
+    nodeTableau: result.nodes,
+    foundations: newFoundations,
+    activeEffects: processEffects(state.activeEffects),
+    turnCount: state.turnCount + 1,
+    biomeMovesCompleted: (state.biomeMovesCompleted || 0) + 1,
+  };
+  return recordCardAction(state, nextState);
 }
 
 /**
@@ -792,10 +2495,18 @@ export function playCardInBiome(
     pendingBlueprintCards = [...pendingBlueprintCards, blueprintCard];
   }
 
+  const partyActors = getPartyForTile(newState, newState.activeSessionTileId);
+  const foundationActor = partyActors[foundationIndex];
+  const newCombos = incrementFoundationCombos(newState, foundationIndex);
+  const nextDecks = foundationActor
+    ? reduceDeckCooldowns({ ...newState, actorDecks: newState.actorDecks }, foundationActor.id, 1)
+    : newState.actorDecks;
   return {
     ...newState,
     biomeMovesCompleted: movesCompleted,
     pendingBlueprintCards,
+    foundationCombos: newCombos,
+    actorDecks: nextDecks,
   };
 }
 
@@ -807,6 +2518,8 @@ export function completeBiome(state: GameState): GameState {
 
   const biomeDef = getBiomeDefinition(state.currentBiome);
   if (!biomeDef) return state;
+  const activeTileId = state.activeSessionTileId;
+  const activeParty = getPartyForTile(state, activeTileId);
 
   // Create reward cards
   const rewardCards: Card[] = [];
@@ -841,13 +2554,19 @@ export function completeBiome(state: GameState): GameState {
     ...state,
     phase: 'garden',
     currentBiome: undefined,
+    activeSessionTileId: undefined,
     biomeMovesCompleted: undefined,
     pendingCards: [...state.pendingCards, ...rewardCards],
-    collectedCards: [...state.collectedCards, ...rewardCards],
     blueprints: updatedBlueprints,
     pendingBlueprintCards: [],
     tableaus: [],
     foundations: [],
     stock: [],
+    tileParties: activeTileId
+      ? { ...state.tileParties, [activeTileId]: [] }
+      : state.tileParties,
+    availableActors: activeParty.length > 0
+      ? [...state.availableActors, ...activeParty]
+      : state.availableActors,
   };
 }

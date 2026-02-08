@@ -4,9 +4,10 @@ import { EffectsDisplay } from './EffectsDisplay';
 
 interface StatsPanelProps {
   gameState: GameState;
+  showGraphics: boolean;
 }
 
-export const StatsPanel = memo(function StatsPanel({ gameState }: StatsPanelProps) {
+export const StatsPanel = memo(function StatsPanel({ gameState, showGraphics }: StatsPanelProps) {
   const cardsRemaining = gameState.tableaus.reduce((sum, t) => sum + t.length, 0);
 
   return (
@@ -14,7 +15,7 @@ export const StatsPanel = memo(function StatsPanel({ gameState }: StatsPanelProp
       <div>Cards Remaining: {cardsRemaining}</div>
       <div>Stock: {gameState.stock.length}</div>
       <div>Turn: {gameState.turnCount}</div>
-      <EffectsDisplay effects={gameState.activeEffects} />
+      <EffectsDisplay effects={gameState.activeEffects} showGraphics={showGraphics} />
     </div>
   );
 });

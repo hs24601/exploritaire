@@ -1,5 +1,5 @@
 import type { Card } from './types';
-import { SUITS, SUIT_TO_ELEMENT } from './constants';
+import { SUITS, SUIT_TO_ELEMENT, randomIdSuffix } from './constants';
 import { SeededRandom } from './seededRandom';
 
 export function createDeck(): Card[] {
@@ -13,7 +13,13 @@ export function createDeck(): Card[] {
         rank,
         suit,
         element: SUIT_TO_ELEMENT[suit],
-        id: `${suitIndex}-${rank}-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
+        orimSlots: [
+          {
+            id: `orim-slot-${suitIndex}-${rank}-${timestamp}-${randomIdSuffix()}`,
+            orimId: `element-${SUIT_TO_ELEMENT[suit]}`,
+          },
+        ],
+        id: `${suitIndex}-${rank}-${timestamp}-${randomIdSuffix()}`,
       });
     }
   }

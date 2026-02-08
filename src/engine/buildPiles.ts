@@ -1,5 +1,6 @@
 import type { Card, BuildPileDefinition, BuildPileProgress, Suit } from './types';
 import { ELEMENT_CYCLE } from './lighting';
+import { getRankDisplay } from './rules';
 
 // Build pile definitions - these define the goals
 export const BUILD_PILE_DEFINITIONS: BuildPileDefinition[] = [
@@ -168,19 +169,6 @@ export function autoAddCardsToBuildPiles(
  */
 export function getNextNeededRank(progress: BuildPileProgress): number | null {
   return progress.currentRank;
-}
-
-/**
- * Gets display string for a rank
- */
-export function getRankDisplay(rank: number): string {
-  switch (rank) {
-    case 1: return 'A';
-    case 11: return 'J';
-    case 12: return 'Q';
-    case 13: return 'K';
-    default: return String(rank);
-  }
 }
 
 /**

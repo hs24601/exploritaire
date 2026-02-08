@@ -3,8 +3,10 @@ import { useState } from 'react';
 interface GameButtonProps {
   onClick: () => void;
   children: React.ReactNode;
-  color?: 'gold' | 'purple' | 'pink' | 'teal';
+  color?: 'gold' | 'purple' | 'pink' | 'teal' | 'red';
   size?: 'sm' | 'md';
+  className?: string;
+  disabled?: boolean;
 }
 
 const colorClasses = {
@@ -24,6 +26,10 @@ const colorClasses = {
     base: 'text-game-teal border-game-teal/40',
     hover: 'hover:border-game-teal hover:shadow-neon-teal',
   },
+  red: {
+    base: 'text-game-red border-game-red/40',
+    hover: 'hover:border-game-red hover:shadow-neon-red',
+  },
 };
 
 export function GameButton({
@@ -31,6 +37,8 @@ export function GameButton({
   children,
   color = 'gold',
   size = 'md',
+  className = '',
+  disabled = false,
 }: GameButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const classes = colorClasses[color];
@@ -41,16 +49,18 @@ export function GameButton({
 
   return (
     <button
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
+      onClick={disabled ? undefined : onClick}
+      onMouseEnter={() => !disabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      disabled={disabled}
       className={`
-        bg-transparent border-2 rounded-md cursor-pointer font-mono
+        bg-transparent border-2 rounded-md cursor-pointer font-mono inline-flex items-center justify-center w-auto
         transition-all duration-200
         ${sizeClasses}
         ${classes.base}
-        ${classes.hover}
-        ${isHovered ? 'shadow-lg' : ''}
+        ${disabled ? 'opacity-40 cursor-not-allowed border-white/10 text-white/40' : classes.hover}
+        ${isHovered && !disabled ? 'shadow-lg' : ''}
+        ${className}
       `}
     >
       {children}

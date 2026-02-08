@@ -2,39 +2,37 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 
 interface WinScreenProps {
-  onNewGame: () => void;
+  className?: string;
 }
 
-export const WinScreen = memo(function WinScreen({ onNewGame }: WinScreenProps) {
+export const WinScreen = memo(function WinScreen({ className }: WinScreenProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-game-bg-dark px-16 py-10 rounded-xl border-2 border-game-gold text-center"
-      style={{
-        boxShadow: '0 0 60px rgba(230, 179, 30, 0.4), inset 0 0 40px rgba(230, 179, 30, 0.07)',
-      }}
+      initial={{ opacity: 0, scale: 0.6, rotate: -6 }}
+      animate={{ opacity: 1, scale: 1, rotate: 6 }}
+      className={`absolute z-[9400] pointer-events-none ${className || ''}`}
     >
-      <motion.div
-        animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-        className="text-5xl mb-5"
-      >
-        &#127942;
-      </motion.div>
-      <div
-        className="text-2xl mb-5 text-game-gold tracking-[4px]"
-        style={{ textShadow: '0 0 20px #e6b31e' }}
-      >
-        YOU WIN!
+      <div className="relative">
+        <svg
+          width="120"
+          height="120"
+          viewBox="0 0 120 120"
+          className="drop-shadow-[0_0_20px_rgba(230,179,30,0.6)]"
+        >
+          <polygon
+            points="60,6 72,38 106,38 78,58 90,92 60,72 30,92 42,58 14,38 48,38"
+            fill="#0a0a0a"
+            stroke="#e6b31e"
+            strokeWidth="4"
+          />
+        </svg>
+        <div
+          className="absolute inset-0 flex items-center justify-center text-xs font-bold tracking-[3px]"
+          style={{ color: '#e6b31e', textShadow: '0 0 12px rgba(230, 179, 30, 0.9)' }}
+        >
+          COMPLETE!
+        </div>
       </div>
-      <button
-        onClick={onNewGame}
-        className="bg-transparent text-game-gold border-2 border-game-gold py-3 px-6 text-base font-mono font-bold rounded-md cursor-pointer tracking-widest hover:shadow-neon-gold transition-shadow"
-        style={{ textShadow: '0 0 10px #e6b31e' }}
-      >
-        NEW GAME
-      </button>
     </motion.div>
   );
 });

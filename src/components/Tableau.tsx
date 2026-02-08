@@ -14,6 +14,8 @@ interface TableauProps {
   interactionMode: InteractionMode;
   onDragStart?: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
   draggingCardId?: string | null;
+  showGraphics: boolean;
+  cardScale?: number;
 }
 
 export const Tableau = memo(function Tableau({
@@ -27,9 +29,20 @@ export const Tableau = memo(function Tableau({
   interactionMode,
   onDragStart,
   draggingCardId,
+  showGraphics,
+  cardScale = 1,
 }: TableauProps) {
   const isSelected = selectedCard?.tableauIndex === tableauIndex;
   const guidanceActive = guidanceMoves.length > 0;
+  const cardWidth = CARD_SIZE.width * cardScale;
+  const cardHeight = CARD_SIZE.height * cardScale;
+  const topVisibleIndex = (() => {
+    if (!draggingCardId) return cards.length - 1;
+    for (let i = cards.length - 1; i >= 0; i -= 1) {
+      if (cards[i].id !== draggingCardId) return i;
+    }
+    return -1;
+  })();
 
   const isNextGuidanceMove = useMemo(() => {
     if (cards.length === 0 || guidanceMoves.length === 0) return false;
@@ -49,12 +62,12 @@ export const Tableau = memo(function Tableau({
 
   return (
     <div
-      style={{ width: CARD_SIZE.width, minHeight: 180 }}
+      style={{ width: cardWidth, minHeight: 180 * cardScale }}
       className="relative"
     >
       {cards.map((card, index) => {
-        const isTopCard = index === cards.length - 1;
-        const stackOffset = Math.min(index * 3, 20);
+        const isTopCard = index === topVisibleIndex;
+        const stackOffset = Math.min(index * 3 * cardScale, 20 * cardScale);
         const isDragging = card.id === draggingCardId;
 
         return (
@@ -65,6 +78,7 @@ export const Tableau = memo(function Tableau({
           >
             <Card
               card={card}
+              size={{ width: cardWidth, height: cardHeight }}
               faceDown={!isTopCard}
               canPlay={isTopCard && canPlay}
               isSelected={isTopCard && isSelected}
@@ -81,18 +95,14 @@ export const Tableau = memo(function Tableau({
               isDragging={isDragging}
               isGuidanceTarget={isTopCard && isNextGuidanceMove}
               isDimmed={guidanceActive && isTopCard && !isNextGuidanceMove}
+              showGraphics={showGraphics}
             />
           </div>
         );
       })}
 
       {cards.length === 0 && (
-        <div
-          style={{ width: CARD_SIZE.width, height: CARD_SIZE.height }}
-          className="border-2 border-dashed border-game-purple-faded rounded-lg flex items-center justify-center text-3xl text-game-purple"
-        >
-          <span style={{ textShadow: '0 0 10px #8b5cf6' }}>&#10003;</span>
-        </div>
+        <div style={{ width: cardWidth, height: cardHeight }} />
       )}
     </div>
   );

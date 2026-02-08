@@ -1,7 +1,8 @@
 import type { Card, Effect } from './types';
-import { EFFECT_IDS, KARMA_DEALING_MIN_CARDS } from './constants';
+import { EFFECT_IDS, KARMA_DEALING_MIN_CARDS, WILD_SENTINEL_RANK } from './constants';
 
 export function getRankDisplay(rank: number): string {
+  if (rank === 0) return '?'; // Wild sentinel
   const faceCards: Record<number, string> = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
   return faceCards[rank] || rank.toString();
 }
@@ -15,6 +16,11 @@ export function hasElementMatchBuff(effects: Effect[]): boolean {
   return effects.some(
     (effect) => effect.id === EFFECT_IDS.ELEMENT_MATCHING && effect.duration !== 0
   );
+}
+
+export function canPlayCardWithWild(card: Card, foundationTop: Card, effects: Effect[] = []): boolean {
+  if (foundationTop.rank === WILD_SENTINEL_RANK) return true;
+  return canPlayCard(card, foundationTop, effects);
 }
 
 export function canPlayCard(card: Card, foundationTop: Card, effects: Effect[] = []): boolean {

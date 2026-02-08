@@ -2,7 +2,7 @@ import { memo, useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import type { Card, ChallengeProgress, BuildPileProgress, Suit } from '../engine/types';
-import { SUIT_COLORS } from '../engine/constants';
+import { SUIT_COLORS, getSuitDisplay } from '../engine/constants';
 import {
   getCurrentChallenge,
   getRequirementProgress,
@@ -17,7 +17,6 @@ import { Sapling } from './Sapling';
 import { AmbientVignette } from './LightRenderer';
 
 interface CampScreenProps {
-  collectedCards: Card[];
   pendingCards: Card[];
   challengeProgress: ChallengeProgress;
   buildPileProgress: BuildPileProgress[];
@@ -26,6 +25,8 @@ interface CampScreenProps {
   onAssignCardToBuildPile: (cardId: string, buildPileId: string) => void;
   onClearPhaseProgress: (phaseId: number) => void;
   onClearBuildPileProgress: (buildPileId: string) => void;
+  showGraphics?: boolean;
+  showLighting?: boolean;
 }
 
 interface DragState {
@@ -41,16 +42,20 @@ const ElementCard = memo(function ElementCard({
   filled,
   isDropTarget,
   dropKey,
+  showGraphics,
 }: {
   suit: Suit;
   filled: boolean;
   isDropTarget: boolean;
   dropKey: string;
+  showGraphics: boolean;
 }) {
   const suitColor = SUIT_COLORS[suit];
+  const suitDisplay = getSuitDisplay(suit, showGraphics);
 
   return (
     <div
+      data-card-face
       data-drop-target={dropKey}
       data-drop-suit={suit}
       className="w-12 h-16 rounded-md border-2 flex items-center justify-center transition-all"
@@ -72,7 +77,7 @@ const ElementCard = memo(function ElementCard({
           filter: filled ? 'none' : 'grayscale(50%)',
         }}
       >
-        {suit}
+        {suitDisplay}
       </span>
     </div>
   );
@@ -83,19 +88,23 @@ const PendingCard = memo(function PendingCard({
   card,
   isNeeded,
   isDragging,
+  showGraphics,
   onMouseDown,
   onTouchStart,
 }: {
   card: Card;
   isNeeded: boolean;
   isDragging: boolean;
+  showGraphics: boolean;
   onMouseDown: (e: React.MouseEvent) => void;
   onTouchStart: (e: React.TouchEvent) => void;
 }) {
   const suitColor = SUIT_COLORS[card.suit];
+  const suitDisplay = getSuitDisplay(card.suit, showGraphics);
 
   return (
     <motion.div
+      data-card-face
       onMouseDown={onMouseDown}
       onTouchStart={onTouchStart}
       whileHover={{ scale: 1.1 }}
@@ -108,7 +117,7 @@ const PendingCard = memo(function PendingCard({
         touchAction: 'none',
       }}
     >
-      <span className="text-lg">{card.suit}</span>
+      <span className="text-lg">{suitDisplay}</span>
       <span
         className="text-xs font-bold"
         style={{ color: suitColor }}
@@ -120,14 +129,46 @@ const PendingCard = memo(function PendingCard({
 });
 
 // Drag preview portal
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
 const DragPreview = memo(function DragPreview({
   card,
   position,
+  offset,
+  showText,
+  showGraphics,
 }: {
   card: Card;
   position: { x: number; y: number };
+  offset: { x: number; y: number };
+  showText: boolean;
+  showGraphics: boolean;
 }) {
   const suitColor = SUIT_COLORS[card.suit];
+  const suitDisplay = getSuitDisplay(card.suit, showGraphics);
+  const [rotation, setRotation] = useState(0);
+  const lastRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  useEffect(() => {
+    const now = performance.now();
+    const pointerX = position.x + offset.x;
+    const pointerY = position.y + offset.y;
+    const grabTilt = ((offset.x - 24) / 48) * -10;
+    const last = lastRef.current;
+    if (last) {
+      const dt = Math.max(16, now - last.t);
+      const vx = (pointerX - last.x) / dt;
+      const vy = (pointerY - last.y) / dt;
+      const momentumTilt = clamp(vx * 120, -6, 6) + clamp(vy * -40, -3, 3);
+      const target = clamp(grabTilt + momentumTilt, -10, 10);
+      setRotation((prev) => prev + (target - prev) * 0.35);
+    } else {
+      setRotation(grabTilt);
+    }
+    lastRef.current = { x: pointerX, y: pointerY, t: now };
+  }, [position.x, position.y, offset.x, offset.y]);
 
   return createPortal(
     <div
@@ -137,8 +178,10 @@ const DragPreview = memo(function DragPreview({
         top: position.y,
         zIndex: 9999,
         pointerEvents: 'none',
-        transform: 'rotate(5deg) scale(1.1)',
+        transform: `rotate(${rotation}deg) scale(1.05)`,
+        transformOrigin: `${offset.x}px ${offset.y}px`,
       }}
+      className={showText ? '' : 'textless-mode'}
     >
       <div
         className="w-12 h-16 rounded-md border-2 flex flex-col items-center justify-center bg-game-bg-dark"
@@ -146,8 +189,9 @@ const DragPreview = memo(function DragPreview({
           borderColor: suitColor,
           boxShadow: `0 8px 30px rgba(0,0,0,0.5), 0 0 15px ${suitColor}66`,
         }}
+        data-card-face
       >
-        <span className="text-lg">{card.suit}</span>
+        <span className="text-lg">{suitDisplay}</span>
         <span className="text-xs font-bold" style={{ color: suitColor }}>
           {card.rank === 1 ? 'A' : card.rank === 11 ? 'J' : card.rank === 12 ? 'Q' : card.rank === 13 ? 'K' : card.rank}
         </span>
@@ -177,7 +221,6 @@ const CameraInfo = memo(function CameraInfo({
 });
 
 export const CampScreen = memo(function CampScreen({
-  collectedCards,
   pendingCards,
   challengeProgress,
   buildPileProgress,
@@ -186,6 +229,8 @@ export const CampScreen = memo(function CampScreen({
   onAssignCardToBuildPile,
   onClearPhaseProgress,
   onClearBuildPileProgress,
+  showGraphics = false,
+  showLighting = true,
 }: CampScreenProps) {
   const currentChallenge = getCurrentChallenge(challengeProgress);
   const isComplete = currentChallenge
@@ -195,27 +240,52 @@ export const CampScreen = memo(function CampScreen({
   // Camera controls
   const {
     cameraState,
+    effectiveScale,
     containerRef,
     contentRef,
     isPanning,
-    centerOn,
+    setCameraState,
   } = useCameraControls({
-    minScale: 0.5,
+    minScale: 0.0167,
     maxScale: 2,
     zoomSensitivity: 0.002,
+    baseScale: 3,
   });
 
   // Ref to the Phase 1 challenge section for centering
   const phase1Ref = useRef<HTMLDivElement>(null);
+  const hasCenteredRef = useRef(false);
+  const effectiveScaleRef = useRef(effectiveScale);
+  effectiveScaleRef.current = effectiveScale;
 
   // Center on Phase 1 when component mounts
   useEffect(() => {
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      centerOn(phase1Ref.current);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [centerOn]);
+    if (hasCenteredRef.current) return;
+    let timer = 0;
+    const attemptCenter = () => {
+      const container = containerRef.current;
+      const content = contentRef.current;
+      const phase = phase1Ref.current;
+      if (!container || !content || !phase) {
+        timer = window.setTimeout(attemptCenter, 100);
+        return;
+      }
+      const containerRect = container.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const phaseRect = phase.getBoundingClientRect();
+      const phaseCenterX = phaseRect.left - contentRect.left + phaseRect.width / 2;
+      const phaseCenterY = phaseRect.top - contentRect.top + phaseRect.height / 2;
+      const scale = effectiveScaleRef.current;
+      setCameraState((prev) => ({
+        ...prev,
+        x: containerRect.width / 2 - phaseCenterX * scale,
+        y: containerRect.height / 2 - phaseCenterY * scale,
+      }));
+      hasCenteredRef.current = true;
+    };
+    timer = window.setTimeout(attemptCenter, 100);
+    return () => window.clearTimeout(timer);
+  }, [containerRef, contentRef, setCameraState]);
 
   // DND state
   const [dragState, setDragState] = useState<DragState>({
@@ -412,7 +482,6 @@ export const CampScreen = memo(function CampScreen({
         <div
           ref={contentRef as React.RefObject<HTMLDivElement>}
           style={{
-            transform: `translate(${cameraState.x}px, ${cameraState.y}px) scale(${cameraState.scale})`,
             transformOrigin: '0 0',
             willChange: 'transform',
           }}
@@ -488,6 +557,7 @@ export const CampScreen = memo(function CampScreen({
                                 filled={isFilled}
                                 isDropTarget={isDropTarget}
                                 dropKey={dropKey}
+                                showGraphics={showGraphics}
                               />
                             );
                           })}
@@ -543,6 +613,7 @@ export const CampScreen = memo(function CampScreen({
                     progress={pile}
                     isDropTarget={isBuildPileDropTarget}
                     draggedCard={dragState.card}
+                    showGraphics={showGraphics}
                     onClear={() => onClearBuildPileProgress(pile.definitionId)}
                   />
                 );
@@ -566,6 +637,7 @@ export const CampScreen = memo(function CampScreen({
                         card={card}
                         isNeeded={isNeeded}
                         isDragging={isDragging}
+                        showGraphics={showGraphics}
                         onMouseDown={(e) => {
                           // Only start drag on left mouse button
                           if (e.button !== 0) return;
@@ -586,52 +658,27 @@ export const CampScreen = memo(function CampScreen({
               </div>
             )}
 
-            {/* This Round Summary */}
-            <div className="text-sm mb-4 text-center opacity-60 text-game-white">
-              This Round: +{collectedCards.length} cards
-            </div>
-
-            <div className="flex justify-center gap-4 mb-6">
-              {(['💨', '⛰️', '🔥', '💧'] as Suit[]).map((suit) => {
-                const count = collectedCards.filter((c) => c.suit === suit).length;
-                const suitColor = SUIT_COLORS[suit];
-
-                return (
-                  <div
-                    key={suit}
-                    className="text-center p-3 bg-transparent rounded-lg min-w-[60px]"
-                    style={{
-                      border: `1px solid ${suitColor}44`,
-                      boxShadow: count > 0 ? `0 0 8px ${suitColor}33` : 'none',
-                      opacity: count > 0 ? 1 : 0.4,
-                    }}
-                  >
-                    <div className="text-2xl mb-1">{suit}</div>
-                    <div
-                      className="text-lg font-bold"
-                      style={{ color: suitColor, textShadow: `0 0 8px ${suitColor}` }}
-                    >
-                      +{count}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
           </div>
         </div>
       </div>
 
       {/* Ambient vignette overlay for atmosphere */}
-      <AmbientVignette intensity={0.6} color="#0a0a15" />
+      {showLighting && <AmbientVignette intensity={0.6} color="#0a0a15" />}
 
       {/* Camera info overlay (fixed position, outside camera transform) */}
       <CameraInfo scale={cameraState.scale} isPanning={isPanning} />
 
       {/* Drag preview (fixed position portal) */}
       {dragState.isDragging && dragState.card && (
-        <DragPreview card={dragState.card} position={dragState.position} />
+        <DragPreview
+          card={dragState.card}
+          position={dragState.position}
+          offset={dragState.offset}
+          showText={true}
+          showGraphics={showGraphics}
+        />
       )}
     </motion.div>
   );
 });
+

@@ -3,10 +3,12 @@ import type { Effect } from '../engine/types';
 
 interface EffectsDisplayProps {
   effects: Effect[];
+  showGraphics: boolean;
 }
 
 export const EffectsDisplay = memo(function EffectsDisplay({
   effects,
+  showGraphics,
 }: EffectsDisplayProps) {
   if (effects.length === 0) return null;
 
@@ -24,7 +26,7 @@ export const EffectsDisplay = memo(function EffectsDisplay({
           style={{ textShadow: '0 0 8px currentColor' }}
         >
           <span>{effect.name}</span>
-          <span>{effect.duration === -1 ? '\u221E' : effect.duration}</span>
+          <span>{effect.duration === -1 ? (showGraphics ? '\u221E' : 'INF') : effect.duration}</span>
         </div>
       ))}
     </div>

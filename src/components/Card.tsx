@@ -1,108 +1,981 @@
-import { memo, useRef, useCallback } from 'react';
+import { memo, useRef, useCallback, useMemo, useState, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
-import type { Card as CardType } from '../engine/types';
+import type { Card as CardType, OrimDefinition } from '../engine/types';
 import { getRankDisplay } from '../engine/rules';
-import { SUIT_COLORS, CARD_SIZE } from '../engine/constants';
+import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT } from '../engine/constants';
+import { CardFrame } from './card/CardFrame';
+import { Tooltip } from './Tooltip';
+import { neonGlow } from '../utils/styles';
+import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
+import { WatercolorContext } from '../watercolor/useWatercolorEnabled';
+import { getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
+import { getElementCardWatercolor } from '../watercolor/elementCardWatercolor';
+import type { WatercolorConfig } from '../watercolor/types';
+
+const CARD_WATERCOLOR_CANVAS_SCALE = 1.35;
+const CARD_WATERCOLOR_OVERALL_SCALE_MULTIPLIER = 1 / CARD_WATERCOLOR_CANVAS_SCALE;
 
 interface CardProps {
   card: CardType | null;
   faceDown?: boolean;
   isFoundation?: boolean;
+  size?: { width: number; height: number };
   canPlay?: boolean;
+  hasExpansion?: boolean;
+  isExpansionOpen?: boolean;
+  onToggleExpansion?: () => void;
   onClick?: () => void;
   isSelected?: boolean;
   isGuidanceTarget?: boolean;
   isDimmed?: boolean;
+  borderColorOverride?: string;
+  boxShadowOverride?: string;
+  frameClassName?: string;
   isDragging?: boolean;
   onDragStart?: (card: CardType, clientX: number, clientY: number, rect: DOMRect) => void;
+  showGraphics: boolean;
+  suitDisplayOverride?: string;
+  suitFontSizeOverride?: number;
+  orimDefinitions?: OrimDefinition[];
+  cardWatercolor?: WatercolorConfig | null;
+  watercolorShadowGlyph?: string;
+  valueWatercolor?: WatercolorConfig | null;
 }
 
 export const Card = memo(function Card({
   card,
   faceDown = false,
   isFoundation = false,
+  size,
   canPlay = false,
+  hasExpansion = false,
+  isExpansionOpen = false,
+  onToggleExpansion,
   onClick,
   isSelected = false,
   isGuidanceTarget = false,
   isDimmed = false,
+  borderColorOverride,
+  boxShadowOverride,
+  frameClassName,
   isDragging = false,
   onDragStart,
+  showGraphics,
+  suitDisplayOverride,
+  suitFontSizeOverride,
+  orimDefinitions,
+  cardWatercolor,
+  watercolorShadowGlyph,
+  valueWatercolor,
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [shimmer, setShimmer] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!onDragStart || !card || faceDown) return;
     if (!cardRef.current) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget && 'setPointerCapture' in e.currentTarget) {
+      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    }
     const rect = cardRef.current.getBoundingClientRect();
     onDragStart(card, e.clientX, e.clientY, rect);
   }, [onDragStart, card, faceDown]);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!onDragStart || !card || faceDown) return;
-    if (!cardRef.current) return;
-    if (e.touches.length !== 1) return;
-    const touch = e.touches[0];
-    const rect = cardRef.current.getBoundingClientRect();
-    onDragStart(card, touch.clientX, touch.clientY, rect);
-  }, [onDragStart, card, faceDown]);
   const suitColor = card ? SUIT_COLORS[card.suit] : '#f0f0f0';
+  const elementKey = card
+    ? (card.element ?? (card.suit ? SUIT_TO_ELEMENT[card.suit] : undefined))
+    : undefined;
+  const isWaterElement = elementKey === 'W' || card?.suit === '💧';
+  const suitDisplay = card
+    ? (suitDisplayOverride
+      ?? (isWaterElement ? 'W' : getSuitDisplay(card.suit, showGraphics)))
+    : '';
+  const frameSize = size ?? CARD_SIZE;
+  const orimDisplay = card?.orimDisplay ?? [];
+  const hasOrimSlots = orimDisplay.length > 0 || !!card?.orimSlots?.length;
+  const orimSlots = card?.orimSlots ?? [];
+  const orimSlotSize = Math.max(6, Math.round(frameSize.width * 0.32));
+  const cooldownValue = card?.cooldown ?? 0;
+  const cooldownMax = card?.maxCooldown ?? 0;
+  const cooldownProgress = cooldownMax > 0 ? Math.max(0, Math.min(1, (cooldownMax - cooldownValue) / cooldownMax)) : 0;
 
   const getBorderColor = () => {
+    if (borderColorOverride !== undefined) return borderColorOverride;
     if (isSelected) return '#e6b31e'; // gold
     if (faceDown) return 'rgba(139, 92, 246, 0.3)'; // purple faded
     return isDimmed ? `${suitColor}44` : suitColor;
   };
 
   const getBoxShadow = () => {
+    if (boxShadowOverride !== undefined) return boxShadowOverride;
     if (isDimmed) return 'none';
     if (isSelected) return `0 0 20px #e6b31e, inset 0 0 20px rgba(230, 179, 30, 0.13)`;
     if (isFoundation) return `0 0 15px ${suitColor}66, inset 0 0 15px ${suitColor}11`;
     return `0 0 10px ${suitColor}33`;
   };
+  const expansionGlyph = showGraphics ? '+' : 'EXP';
+
+  const elementWatercolor = showGraphics && !cardWatercolor && card && !faceDown
+    ? (elementKey === 'W' || elementKey === 'L' || elementKey === 'F' || elementKey === 'A' || elementKey === 'D'
+      ? null
+      : getElementCardWatercolor(elementKey))
+    : null;
+  const cardWatercolorConfig = (cardWatercolor ?? elementWatercolor)
+    ? {
+      ...(cardWatercolor ?? elementWatercolor),
+      overallScale: ((cardWatercolor ?? elementWatercolor)?.overallScale ?? 1) * CARD_WATERCOLOR_OVERALL_SCALE_MULTIPLIER,
+    }
+    : null;
+  const forceWatercolor = !!elementWatercolor && !cardWatercolor;
+  const overlayBlendMode = forceWatercolor
+    ? 'normal'
+    : (cardWatercolorConfig?.splotches?.[0]?.blendMode as CSSProperties['mixBlendMode']) || 'normal';
+  const showWaterDepthOverlay = !!elementWatercolor && isWaterElement && !faceDown;
+  const showWaterArtOverlay = showGraphics && isWaterElement && !faceDown;
+  const showLightArtOverlay = showGraphics && elementKey === 'L' && !faceDown;
+  const showFireArtOverlay = showGraphics && elementKey === 'F' && !faceDown;
+  const showAirArtOverlay = showGraphics && elementKey === 'A' && !faceDown;
+  const showDarkArtOverlay = showGraphics && elementKey === 'D' && !faceDown;
+  const valueWatercolorConfig = valueWatercolor
+    ? {
+      ...valueWatercolor,
+      overallScale: Math.max(0.2, (valueWatercolor.overallScale ?? 1) * 0.6),
+    }
+    : null;
+
+  useEffect(() => {
+    if (!showLightArtOverlay) return;
+    const interval = setInterval(() => {
+      setShimmer((prev) => (prev + 0.05) % 100);
+    }, 50);
+    return () => clearInterval(interval);
+  }, [showLightArtOverlay]);
+
+  const waterFish = useMemo(() => {
+    if (!showWaterArtOverlay || !card) return [];
+    const seedBase = card.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    let seed = seedBase || 1;
+    const rand = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    return Array.from({ length: 25 }).map((_, index) => ({
+      id: `${card.id}-fish-${index}`,
+      top: 25 + rand() * 45,
+      left: 15 + rand() * 70,
+      width: 2 + rand() * 8,
+      height: 1 + rand() * 3,
+      rotate: rand() * 30 - 15,
+      opacity: 0.6 + rand() * 0.2,
+    }));
+  }, [showWaterArtOverlay, card]);
+
+  const darkJaggedPath = useMemo(() => {
+    if (!showDarkArtOverlay || !card) return '';
+    let seed = card.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) || 1;
+    const rand = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    const points: string[] = [];
+    const steps = 32;
+    const variance = 1.3;
+    for (let i = 0; i <= steps; i++) points.push(`${(i / steps) * 100}% ${rand() * variance}%`);
+    for (let i = 1; i <= steps; i++) points.push(`${100 - (rand() * variance)}% ${(i / steps) * 100}%`);
+    for (let i = 1; i <= steps; i++) points.push(`${100 - (i / steps) * 100}% ${100 - (rand() * variance)}%`);
+    for (let i = 1; i < steps; i++) points.push(`${rand() * variance}% ${100 - (i / steps) * 100}%`);
+    return `polygon(${points.join(', ')})`;
+  }, [showDarkArtOverlay, card]);
+
+  const darkStars = useMemo(() => {
+    if (!showDarkArtOverlay || !card) return [];
+    let seed = card.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) || 1;
+    const rand = () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    return Array.from({ length: 140 }).map((_, index) => ({
+      id: `${card.id}-star-${index}`,
+      left: `${rand() * 100}%`,
+      top: `${rand() * 100}%`,
+      size: rand() * 1.5 + 0.5,
+      opacity: rand() * 0.7 + 0.3,
+      delay: `${rand() * 5}s`,
+      type: rand() > 0.95 ? 'sparkle' : rand() > 0.82 ? 'glow' : 'dot',
+      rotate: rand() * 30 - 15,
+      duration: 2 + rand() * 4,
+    }));
+  }, [showDarkArtOverlay, card]);
 
   return (
-    <motion.div
+    <CardFrame
       ref={cardRef}
+      size={frameSize}
+      borderColor={getBorderColor()}
+      boxShadow={getBoxShadow()}
       onClick={onClick}
-      onMouseDown={onDragStart ? handleMouseDown : undefined}
-      onTouchStart={onDragStart ? handleTouchStart : undefined}
-      whileHover={!faceDown && !onDragStart && (canPlay || onClick) ? { scale: 1.05, y: -5 } : {}}
+      onPointerDown={onDragStart ? handlePointerDown : undefined}
+      whileHover={!faceDown && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
       whileTap={!faceDown && !onDragStart && onClick ? { scale: 0.98 } : {}}
-      style={{
-        width: CARD_SIZE.width,
-        height: CARD_SIZE.height,
-        borderColor: getBorderColor(),
-        boxShadow: getBoxShadow(),
-        color: faceDown ? 'transparent' : (isDimmed ? `${suitColor}44` : suitColor),
-        visibility: isDragging ? 'hidden' : 'visible',
-      }}
+      initial={false}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={`
-        bg-game-bg-dark border-2 rounded-lg
-        flex flex-col items-center justify-center gap-1
-        text-3xl font-bold select-none relative
-        transition-all duration-200
+        flex flex-col items-center justify-center gap-0
+        text-2xl font-bold px-2 py-1
         ${onClick && !faceDown ? 'cursor-pointer' : ''}
         ${onDragStart && !faceDown ? 'cursor-grab' : ''}
         ${!onClick && !onDragStart ? 'cursor-default' : ''}
         ${isDimmed ? 'opacity-50' : 'opacity-100'}
+        ${frameClassName ?? ''}
       `}
+      style={{
+        color: faceDown ? 'transparent' : (isDimmed ? `${suitColor}44` : suitColor),
+        visibility: isDragging ? 'hidden' : 'visible',
+        willChange: 'transform',
+        imageRendering: 'crisp-edges',
+      }}
     >
-      {!faceDown && card && (
-        <>
-          <div style={{ textShadow: isDimmed ? 'none' : `0 0 10px ${suitColor}` }}>
-            {getRankDisplay(card.rank)}
+      {cardWatercolorConfig && (
+        <WatercolorContext.Provider value={forceWatercolor}>
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 0,
+              borderRadius: 10,
+              mixBlendMode: overlayBlendMode,
+            }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{
+                transform: `scale(${CARD_WATERCOLOR_CANVAS_SCALE})`,
+                transformOrigin: 'center',
+              }}
+            >
+              <WatercolorOverlay config={cardWatercolorConfig} />
+            </div>
+            {watercolorShadowGlyph && (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  color: '#050505',
+                  opacity: 0.35,
+                  mixBlendMode: 'multiply',
+                  fontSize: Math.round(frameSize.width * 0.55),
+                  filter: 'blur(1px)',
+                  transform: 'translateY(1px)',
+                }}
+              >
+                {watercolorShadowGlyph}
+              </div>
+            )}
           </div>
-          <div className="text-xl">{card.suit}</div>
-        </>
+        </WatercolorContext.Provider>
+      )}
+      {showWaterArtOverlay && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 1, borderRadius: 10, filter: 'url(#watercard-filter)' }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0ea5e9] via-[#075985] to-[#020617]" />
+          <div
+            className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[90%] h-[40%] opacity-95"
+            style={{
+              background: 'radial-gradient(circle at center, white 0%, rgba(255,255,255,0.8) 30%, transparent 70%)',
+              filter: 'blur(30px)',
+            }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none opacity-60 mix-blend-screen"
+            style={{
+              background: `
+                conic-gradient(
+                  from 150deg at 50% 0%,
+                  transparent 0deg,
+                  rgba(255, 255, 255, 0.4) 15deg,
+                  transparent 25deg,
+                  rgba(255, 255, 255, 0.6) 30deg,
+                  transparent 35deg,
+                  rgba(255, 255, 255, 0.5) 45deg,
+                  transparent 55deg,
+                  rgba(255, 255, 255, 0.4) 60deg,
+                  transparent 75deg
+                )
+              `,
+              maskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.8) 20%, transparent 90%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.8) 20%, transparent 90%)',
+              filter: 'blur(8px)',
+            }}
+          />
+          <div
+            className="absolute bottom-[-5%] left-[-10%] w-[70%] h-[50%] bg-[#020617] blur-[35px] opacity-70"
+            style={{ clipPath: 'circle(50% at 30% 80%)' }}
+          />
+          <div
+            className="absolute bottom-0 left-[-5%] w-[60%] h-[40%] opacity-80"
+            style={{
+              clipPath: 'polygon(0% 100%, 80% 100%, 70% 60%, 40% 40%, 10% 30%)',
+              background: 'linear-gradient(45deg, #1e1b4b, #4c1d95, #7c3aed)',
+              filter: 'blur(15px)',
+            }}
+          />
+          <div
+            className="absolute bottom-0 left-[-2%] w-[55%] h-[35%] opacity-90"
+            style={{
+              clipPath: 'polygon(0% 100%, 100% 100%, 90% 70%, 75% 50%, 40% 80%, 15% 40%)',
+              background: 'linear-gradient(to top, #0f172a, #2e1065, #5b21b6)',
+              filter: 'blur(5px)',
+            }}
+          />
+          <div
+            className="absolute bottom-[-5%] right-[-10%] w-[60%] h-[55%] bg-[#020617] blur-[40px] opacity-80"
+            style={{ clipPath: 'circle(50% at 70% 80%)' }}
+          />
+          <div
+            className="absolute bottom-0 right-[-5%] w-[50%] h-[50%] opacity-80"
+            style={{
+              clipPath: 'polygon(100% 100%, 0% 100%, 20% 60%, 50% 30%, 85% 50%)',
+              background: 'linear-gradient(135deg, #1e1b4b, #312e81, #701a75)',
+              filter: 'blur(18px)',
+            }}
+          />
+          <div
+            className="absolute bottom-0 right-0 w-[45%] h-[45%] opacity-90"
+            style={{
+              clipPath: 'polygon(100% 100%, 0% 100%, 30% 65%, 60% 35%, 90% 55%)',
+              background: 'linear-gradient(to top, #020617, #1e1b4b, #3730a3)',
+              filter: 'blur(4px)',
+            }}
+          />
+          <div
+            className="absolute bottom-[-5%] left-1/4 w-[50%] h-[30%] opacity-70 blur-[20px]"
+            style={{ background: 'radial-gradient(circle, #facc15 0%, #ca8a04 50%, transparent 80%)' }}
+          />
+          <div
+            className="absolute bottom-0 left-1/4 w-[55%] h-[28%] opacity-85"
+            style={{
+              clipPath: 'polygon(0% 100%, 100% 100%, 85% 40%, 50% 75%, 15% 35%)',
+              background: 'linear-gradient(to top, #082f49, #155e75, #a16207)',
+              filter: 'blur(8px)',
+            }}
+          />
+          {waterFish.map((fish) => (
+            <div
+              key={fish.id}
+              className="absolute bg-[#020617]"
+              style={{
+                top: `${fish.top}%`,
+                left: `${fish.left}%`,
+                width: `${fish.width}px`,
+                height: `${fish.height}px`,
+                borderRadius: '50%',
+                filter: 'blur(1px)',
+                opacity: fish.opacity,
+                transform: `rotate(${fish.rotate}deg)`,
+              }}
+            />
+          ))}
+          <div className="absolute inset-0 opacity-[0.25] pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
+          <div className="absolute inset-0 opacity-[0.12] pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/rough-canvas.png')]" />
+          <svg width="0" height="0" className="absolute">
+            <defs>
+              <filter id="watercard-filter" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.025"
+                  numOctaves="6"
+                  seed="12"
+                  result="noise"
+                />
+                <feDisplacementMap
+                  in="SourceGraphic"
+                  in2="noise"
+                  scale="45"
+                  xChannelSelector="R"
+                  yChannelSelector="G"
+                />
+              </filter>
+            </defs>
+          </svg>
+        </div>
+      )}
+      {showLightArtOverlay && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 1, borderRadius: 10, filter: 'url(#lightcard-filter)' }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1a202c] via-[#2d3748] to-[#2d3748]" />
+          <div
+            className="absolute inset-0 opacity-90 mix-blend-screen"
+            style={{
+              background: 'radial-gradient(circle at 70% 40%, #fbd38d 0%, #feb2b2 30%, #b794f4 60%, transparent 90%)',
+            }}
+          />
+          <div
+            className="absolute bottom-0 left-0 w-full h-1/2 opacity-60 mix-blend-screen"
+            style={{ background: 'linear-gradient(to top, #feb2b2 0%, transparent 100%)' }}
+          />
+          <div
+            className="absolute -top-32 -right-32 w-[140%] h-[100%] rounded-full blur-[120px]"
+            style={{
+              background: 'radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 254, 235, 0.9) 25%, rgba(255, 245, 180, 0.5) 55%, transparent 85%)',
+              opacity: 1,
+            }}
+          />
+          <div className="absolute top-[-15%] right-[-15%] w-[70%] h-[50%] rounded-full blur-[50px] bg-white opacity-95 mix-blend-overlay" />
+          <div className="absolute top-[-5%] right-[-5%] w-[40%] h-[30%] rounded-full blur-[20px] bg-white opacity-100 mix-blend-screen" />
+          <div className="absolute top-[2%] right-[2%] w-[15%] h-[15%] rounded-full blur-[5px] bg-white opacity-100" />
+          <div
+            className="absolute inset-[-150%] pointer-events-none mix-blend-screen opacity-90"
+            style={{
+              background: `repeating-linear-gradient(
+                ${150 + Math.sin(shimmer) * 1.5}deg,
+                transparent 0%,
+                transparent 1%,
+                rgba(255, 255, 255, 0.8) 2%,
+                rgba(255, 255, 255, 0.1) 4%,
+                transparent 7%
+              )`,
+              maskImage: 'radial-gradient(circle at 95% 5%, black 0%, transparent 95%)',
+              WebkitMaskImage: 'radial-gradient(circle at 95% 5%, black 0%, transparent 95%)',
+            }}
+          />
+          <div
+            className="absolute inset-[-150%] pointer-events-none mix-blend-overlay opacity-50"
+            style={{
+              background: `repeating-linear-gradient(
+                ${145 + Math.sin(shimmer * 0.8) * 1}deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.4) 10%,
+                transparent 20%
+              )`,
+              maskImage: 'radial-gradient(circle at 95% 5%, black 0%, transparent 90%)',
+              WebkitMaskImage: 'radial-gradient(circle at 95% 5%, black 0%, transparent 90%)',
+            }}
+          />
+          <div
+            className="absolute top-[-10%] left-[-10%] w-[60%] h-[40%] rounded-full blur-[80px] mix-blend-multiply opacity-80"
+            style={{ background: 'radial-gradient(circle, #0a101f, transparent)' }}
+          />
+          <div
+            className="absolute bottom-[10%] right-[-20%] w-[70%] h-[30%] rounded-full blur-[70px] mix-blend-multiply opacity-40"
+            style={{ background: 'radial-gradient(circle, #162238, transparent)' }}
+          />
+          <div className="absolute inset-0 opacity-[0.32] pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
+          <div className="absolute inset-0 border border-white/20 rounded-[2rem] pointer-events-none shadow-inner" />
+          <svg width="0" height="0" className="absolute">
+            <defs>
+              <filter id="lightcard-filter" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.016"
+                  numOctaves="5"
+                  seed="55"
+                  result="noise"
+                />
+                <feDisplacementMap
+                  in="SourceGraphic"
+                  in2="noise"
+                  scale="45"
+                  xChannelSelector="R"
+                  yChannelSelector="G"
+                />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="soft" />
+                <feComposite in="soft" in2="SourceGraphic" operator="over" />
+              </filter>
+            </defs>
+          </svg>
+        </div>
+      )}
+      {showFireArtOverlay && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 1, borderRadius: 10, filter: 'url(#firecard-filter)' }}
+        >
+          <div className="absolute inset-0 bg-[#4d0000]" />
+          <div
+            className="absolute top-[-10%] left-[-20%] w-[140%] h-[100%] opacity-80 mix-blend-screen blur-[60px]"
+            style={{ background: 'radial-gradient(circle at 30% 40%, #ff4500 0%, #ff8c00 40%, transparent 80%)' }}
+          />
+          <div
+            className="absolute bottom-[-10%] right-[-10%] w-[120%] h-[80%] opacity-70 mix-blend-overlay blur-[50px]"
+            style={{ background: 'radial-gradient(circle at 70% 60%, #ff0000 0%, #8b0000 50%, transparent 90%)' }}
+          />
+          <div
+            className="absolute top-[20%] right-[10%] w-[50%] h-[40%] opacity-90 mix-blend-screen blur-[45px]"
+            style={{ background: 'radial-gradient(circle at center, #fff700 0%, #ffea00 30%, transparent 75%)' }}
+          />
+          <div
+            className="absolute bottom-[20%] left-[15%] w-[40%] h-[30%] opacity-80 mix-blend-hard-light blur-[35px]"
+            style={{ background: 'radial-gradient(circle at center, #ffffff 0%, #ffd700 40%, transparent 85%)' }}
+          />
+          <div className="absolute top-[40%] left-[10%] w-[80%] h-[20%] rotate-[-15deg] bg-gradient-to-r from-transparent via-[#ff8c00] to-transparent opacity-40 mix-blend-screen blur-[20px]" />
+          <div className="absolute bottom-[30%] right-[5%] w-[70%] h-[15%] rotate-[25deg] bg-gradient-to-r from-transparent via-[#ff0000] to-transparent opacity-30 mix-blend-color-dodge blur-[15px]" />
+          <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30 mix-blend-overlay">
+            <path d="M 50 100 Q 150 250 100 400 T 250 600" stroke="#ffd700" fill="transparent" strokeWidth="4" filter="blur(8px)" />
+            <path d="M 300 50 Q 200 200 350 350 T 150 650" stroke="#ff4500" fill="transparent" strokeWidth="6" filter="blur(12px)" />
+          </svg>
+          <div className="absolute inset-0 opacity-[0.45] pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
+          <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(255,69,0,0.2)] pointer-events-none rounded-[2.5rem]" />
+          <svg width="0" height="0" className="absolute">
+            <defs>
+              <filter id="firecard-filter" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.03"
+                  numOctaves="6"
+                  seed="999"
+                  result="noise"
+                />
+                <feDisplacementMap
+                  in="SourceGraphic"
+                  in2="noise"
+                  scale="60"
+                  xChannelSelector="R"
+                  yChannelSelector="G"
+                  result="distorted"
+                />
+                <feGaussianBlur in="distorted" stdDeviation="1.2" result="soft" />
+                <feComposite in="soft" in2="SourceGraphic" operator="over" />
+              </filter>
+            </defs>
+          </svg>
+        </div>
+      )}
+      {showAirArtOverlay && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 1, borderRadius: 10, filter: 'url(#aircard-filter)' }}
+        >
+          <div className="absolute inset-0 bg-[#ffffff]" />
+          <div
+            className="absolute top-[-10%] right-[-10%] w-[80%] h-[50%] bg-[#1e3a8a] mix-blend-multiply opacity-90"
+            style={{
+              clipPath: 'polygon(100% 0%, 100% 100%, 70% 80%, 40% 90%, 20% 60%, 40% 20%, 60% 0%)',
+              filter: 'blur(5px)',
+            }}
+          />
+          <div
+            className="absolute top-[10%] left-[-15%] w-[70%] h-[80%] bg-[#2563eb] mix-blend-multiply opacity-70"
+            style={{
+              clipPath: 'polygon(0% 0%, 60% 10%, 80% 40%, 50% 70%, 70% 90%, 0% 100%)',
+              filter: 'blur(8px)',
+            }}
+          />
+          <div
+            className="absolute bottom-[-10%] right-[-5%] w-[60%] h-[50%] bg-[#60a5fa] mix-blend-multiply opacity-50"
+            style={{
+              clipPath: 'polygon(100% 100%, 20% 100%, 40% 70%, 70% 50%, 100% 60%)',
+              filter: 'blur(15px)',
+            }}
+          />
+          <div
+            className="absolute inset-0 mix-blend-multiply opacity-40 pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle at 40% 40%, transparent 30%, #1d4ed8 70%)',
+              filter: 'blur(20px)',
+            }}
+          />
+          <div className="absolute top-[35%] left-[30%] w-[40%] h-[30%] bg-[#93c5fd] mix-blend-multiply opacity-20 blur-[30px] rounded-full" />
+          <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30 mix-blend-multiply">
+            <path
+              d="M 250 50 Q 200 150 280 250 T 350 400"
+              stroke="#1e40af"
+              fill="transparent"
+              strokeWidth="15"
+              filter="blur(15px)"
+            />
+            <path
+              d="M 50 300 Q 120 400 80 550"
+              stroke="#1e3a8a"
+              fill="transparent"
+              strokeWidth="10"
+              filter="blur(12px)"
+            />
+          </svg>
+          <div className="absolute inset-0 opacity-[0.45] pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
+          <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(30,58,138,0.05)] pointer-events-none rounded-[2.5rem]" />
+          <svg width="0" height="0" className="absolute">
+            <defs>
+              <filter id="aircard-filter" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.035"
+                  numOctaves="6"
+                  seed="444"
+                  result="noise"
+                />
+                <feDisplacementMap
+                  in="SourceGraphic"
+                  in2="noise"
+                  scale="55"
+                  xChannelSelector="R"
+                  yChannelSelector="G"
+                  result="distorted"
+                />
+                <feGaussianBlur in="distorted" stdDeviation="0.6" result="soft" />
+                <feComposite in="soft" in2="SourceGraphic" operator="over" />
+              </filter>
+            </defs>
+          </svg>
+        </div>
+      )}
+      {showDarkArtOverlay && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 1, borderRadius: 10 }}
+        >
+          {/* Heavy edge vignette */}
+          <div
+            className="absolute inset-0"
+            style={{
+              zIndex: 4,
+              background: 'linear-gradient(90deg, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.8) 18%, rgba(0,0,0,0.0) 50%, rgba(0,0,0,0.8) 82%, rgba(0,0,0,0.98) 100%)',
+              mixBlendMode: 'multiply',
+            }}
+          />
+          <div className="absolute inset-0 bg-neutral-200" style={{ clipPath: darkJaggedPath }} />
+          <div
+            className="absolute inset-[2.5px] bg-[#030108] overflow-hidden"
+            style={{ clipPath: darkJaggedPath }}
+          >
+          <div className="absolute inset-0 bg-[#05030b]" />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(90deg, rgba(5,3,11,0.98) 0%, rgba(5,3,11,0.7) 18%, rgba(5,3,11,0.15) 50%, rgba(5,3,11,0.7) 82%, rgba(5,3,11,0.98) 100%)',
+            }}
+          />
+          <div className="absolute inset-0 bg-radial-at-c from-[#3f1d6b]/55 via-transparent to-transparent opacity-55" />
+            <div className="absolute inset-0 flex flex-col items-center justify-around pointer-events-none">
+                {[
+                  { top: '6%', scaleX: 0.55, scaleY: 1.2, color: '#2a0f54', opacity: 0.22 },
+                  { top: '24%', scaleX: 0.75, scaleY: 1.4, color: '#4b136f', opacity: 0.32 },
+                  { top: '48%', scaleX: 0.85, scaleY: 1.7, color: '#6d1fb0', opacity: 0.45 },
+                  { top: '72%', scaleX: 0.75, scaleY: 1.4, color: '#4b136f', opacity: 0.32 },
+                  { top: '92%', scaleX: 0.55, scaleY: 1.15, color: '#2a0f54', opacity: 0.22 },
+                ].map((puff, index) => (
+                <div
+                  key={`nebula-${index}`}
+                  className="absolute left-1/2 -translate-x-1/2 w-[160px] h-[280px] rounded-full mix-blend-screen"
+                  style={{
+                    top: puff.top,
+                    background: `radial-gradient(circle, ${puff.color} 0%, transparent 80%)`,
+                    opacity: puff.opacity,
+                    transform: `translateX(-50%) scale(${puff.scaleX}, ${puff.scaleY})`,
+                    filter: 'blur(28px)',
+                  }}
+                />
+              ))}
+              <div
+                className="absolute w-12 h-[95%] bg-[#f5d0fe] mix-blend-screen opacity-30"
+                style={{
+                  filter: 'blur(22px)',
+                  boxShadow: '0 0 70px 12px rgba(160, 60, 200, 0.25)',
+                }}
+              />
+              <div className="absolute w-6 h-[85%] bg-white/50 mix-blend-screen" style={{ filter: 'blur(32px)' }} />
+              <div className="absolute w-2 h-[70%] bg-white opacity-35 blur-[14px]" />
+            </div>
+            {darkStars.map((star) => {
+              if (star.type === 'sparkle') {
+                return (
+                  <svg
+                    key={star.id}
+                    viewBox="0 0 24 24"
+                    className="absolute pointer-events-none"
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      left: star.left,
+                      top: star.top,
+                      filter: 'drop-shadow(0 0 5px rgba(255,255,255,0.8))',
+                      transform: `scale(${star.size * 0.4})`,
+                      animation: isHovered ? `twinkle ${star.duration}s infinite ease-in-out ${star.delay}` : 'none',
+                    }}
+                  >
+                    <path
+                      fill="white"
+                      d="M12 0L13.5 10.5L24 12L13.5 13.5L12 24L10.5 13.5L0 12L10.5 10.5L12 0Z"
+                    />
+                  </svg>
+                );
+              }
+              return (
+                <div
+                  key={star.id}
+                  className="absolute rounded-full bg-white pointer-events-none"
+                  style={{
+                    left: star.left,
+                    top: star.top,
+                    width: `${star.size}px`,
+                    height: `${star.size}px`,
+                    opacity: star.opacity,
+                    boxShadow: star.type === 'glow' ? '0 0 8px 1px rgba(255, 255, 255, 0.6)' : 'none',
+                    transform: `rotate(${star.rotate}deg)`,
+                    animation: isHovered ? `twinkle ${star.duration}s infinite ease-in-out ${star.delay}` : 'none',
+                  }}
+                />
+              );
+            })}
+            <div className="absolute inset-0 opacity-[0.1] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+          </div>
+          <div
+            className="absolute inset-0 opacity-[0.14] pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/felt.png')]"
+            style={{ clipPath: darkJaggedPath }}
+          />
+          <style>{`
+            @keyframes twinkle {
+              0%, 100% { opacity: 0.4; transform: scale(1); }
+              50% { opacity: 1; transform: scale(1.1); }
+            }
+          `}</style>
+        </div>
+      )}
+      {showWaterDepthOverlay && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            zIndex: 1,
+            borderRadius: 10,
+            background: 'linear-gradient(180deg, rgba(6, 48, 110, 0) 0%, rgba(6, 48, 110, 0.45) 20%, rgba(2, 24, 64, 0.85) 45%, rgba(1, 16, 44, 0.98) 75%, rgba(0, 8, 28, 1) 100%)',
+            mixBlendMode: 'multiply',
+          }}
+        />
+      )}
+      {elementKey === 'E' && !faceDown && (
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 2 }}>
+          <svg viewBox="0 0 100 140" className="absolute inset-0 w-full h-full">
+            <g
+              fill="none"
+              stroke="#0a0603"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.75"
+            >
+              <path d="M10 96 L26 66 L42 78 L58 48 L70 68 L86 40" />
+              <path d="M8 112 L28 92 L44 102 L60 84 L78 100 L92 76" />
+              <path d="M14 54 L30 34 L46 44 L56 28 L70 40 L86 22" />
+              <path d="M18 126 L36 114 L48 120 L62 108 L80 118" />
+            </g>
+          </svg>
+        </div>
+      )}
+      {!faceDown && card && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center"
+          style={{ zIndex: 3 }}
+        >
+          {card.actorGlyph && (
+            <div
+              className="absolute top-1 left-1 rounded-full border border-game-teal/50 bg-game-bg-dark/70 flex items-center justify-center"
+              style={{
+                width: Math.max(12, Math.round(frameSize.width * 0.18)),
+                height: Math.max(12, Math.round(frameSize.width * 0.18)),
+                fontSize: Math.max(8, Math.round(frameSize.width * 0.14)),
+                color: suitColor,
+              }}
+            >
+              {card.actorGlyph}
+            </div>
+          )}
+          {cooldownValue > 0 && cooldownMax > 0 && (
+            <div className="absolute inset-0 flex flex-col pointer-events-none">
+              {Array.from({ length: cooldownMax }).map((_, index) => {
+                const readySegments = cooldownMax - cooldownValue;
+                const isReady = index < readySegments;
+                return (
+                  <div
+                    key={`cooldown-segment-${index}`}
+                    className="flex-1"
+                    style={{
+                      backgroundColor: isReady ? 'transparent' : 'rgba(40, 44, 47, 0.65)',
+                      borderBottom: index === cooldownMax - 1 ? 'none' : '1px solid rgba(90, 98, 103, 0.35)',
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+          <div
+            className="force-sharp absolute"
+            style={{
+              top: Math.max(6, Math.round(frameSize.height * 0.07)),
+              left: 0,
+              right: 0,
+              textAlign: 'center',
+              textShadow: isDimmed ? 'none' : `0 0 10px ${suitColor}`,
+              WebkitFontSmoothing: 'subpixel-antialiased',
+              textRendering: 'geometricPrecision',
+              fontSmooth: 'always',
+              pointerEvents: 'none',
+            }}
+          >
+            {valueWatercolorConfig && (
+              <div
+                className="absolute left-1/2 top-1/2"
+                style={{
+                  width: Math.round(frameSize.width),
+                  height: Math.round(frameSize.height),
+                  transform: 'translate(-50%, -50%)',
+                  opacity: 1,
+                  filter: 'blur(0.2px)',
+                  mixBlendMode: 'screen',
+                  pointerEvents: 'none',
+                }}
+              >
+                <WatercolorOverlay config={valueWatercolorConfig} />
+              </div>
+            )}
+            <span
+              className="relative z-[2]"
+              style={{
+                color: '#050505',
+                fontWeight: 800,
+                WebkitTextStroke: '0px transparent',
+                textShadow: `
+                  0 0 1px rgba(255, 255, 255, 0.85),
+                  0 0 2px rgba(255, 255, 255, 0.6),
+                  1px 0 0 rgba(255, 255, 255, 0.95),
+                  -1px 0 0 rgba(255, 255, 255, 0.95),
+                  0 1px 0 rgba(255, 255, 255, 0.95),
+                  0 -1px 0 rgba(255, 255, 255, 0.95)
+                `,
+              }}
+            >
+              {getRankDisplay(card.rank)}
+            </span>
+          </div>
+          {hasOrimSlots ? (
+            <div className="flex items-center justify-center gap-1">
+              {orimDisplay.length > 0
+                ? orimDisplay.map((slot) => {
+                  const hasTooltip = !!(slot.title || slot.description || (slot.meta && slot.meta.length > 0));
+                  const content = (
+                    <div className="text-xs text-game-white">
+                      {slot.title && <div className="text-game-teal font-bold mb-1">{slot.title}</div>}
+                      {slot.meta && slot.meta.length > 0 && (
+                        <div className="flex flex-wrap gap-2 text-[10px] text-game-white/70 mb-1">
+                          {slot.meta.map((entry, index) => (
+                            <span key={`${slot.id}-meta-${index}`}>{entry}</span>
+                          ))}
+                        </div>
+                      )}
+                      {slot.description && (
+                        <div className="text-[10px] text-game-white/60">
+                          {slot.description}
+                        </div>
+                      )}
+                    </div>
+                  );
+                  const definition = slot.definitionId && orimDefinitions
+                    ? orimDefinitions.find((item) => item.id === slot.definitionId) ?? null
+                    : null;
+                  const orimConfig = getOrimWatercolorConfig(definition, slot.definitionId);
+                  const glyphNode = (
+                    <div
+                      className="relative flex items-center justify-center rounded-full"
+                      style={{
+                        width: orimSlotSize,
+                        height: orimSlotSize,
+                        borderWidth: 1,
+                        borderStyle: 'solid',
+                        borderColor: slot.color ?? '#7fdbca',
+                        color: slot.color ?? '#7fdbca',
+                        fontSize: Math.max(6, Math.round(orimSlotSize * 0.7)),
+                        opacity: slot.dim ? 0.4 : 1,
+                      }}
+                    >
+                      {orimConfig && (
+                        <div
+                          className="absolute"
+                          style={{
+                            zIndex: 0,
+                            pointerEvents: 'none',
+                            width: orimSlotSize * ORIM_WATERCOLOR_CANVAS_SCALE,
+                            height: orimSlotSize * ORIM_WATERCOLOR_CANVAS_SCALE,
+                            left: (orimSlotSize - orimSlotSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
+                            top: (orimSlotSize - orimSlotSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
+                          }}
+                        >
+                          <WatercolorOverlay config={orimConfig} />
+                        </div>
+                      )}
+                      <span style={{ zIndex: 1 }}>{slot.glyph}</span>
+                    </div>
+                  );
+                  if (!hasTooltip) return <div key={slot.id}>{glyphNode}</div>;
+                  return (
+                    <Tooltip key={slot.id} content={content} pinnable>
+                      {glyphNode}
+                    </Tooltip>
+                  );
+                })
+                : orimSlots.map((slot, index) => {
+                  const element = index === 0
+                    ? (card.tokenReward ?? (card.element !== 'N' ? card.element : undefined))
+                    : undefined;
+                  const suit = element ? ELEMENT_TO_SUIT[element] : null;
+                  const slotColor = suit
+                    ? (suit === '💧' ? '#050505' : SUIT_COLORS[suit])
+                    : '#7fdbca';
+                  const slotDisplay = suit
+                    ? (suit === '💧' ? 'W' : getSuitDisplay(suit, showGraphics))
+                    : (showGraphics ? '◌' : '-');
+                  return (
+                    <div
+                      key={slot.id}
+                      className="flex items-center justify-center rounded-full"
+                      style={{
+                        width: orimSlotSize,
+                        height: orimSlotSize,
+                        borderWidth: 1,
+                        borderStyle: 'solid',
+                        borderColor: slotColor,
+                        color: slotColor,
+                        fontSize: Math.max(6, Math.round(orimSlotSize * 0.7)),
+                        opacity: suit ? 1 : 0.5,
+                      }}
+                    >
+                      {slotDisplay}
+                    </div>
+                  );
+                })}
+            </div>
+          ) : (
+            <div
+              className="text-xs force-sharp"
+              style={{
+                transform: 'translateZ(0)',
+                WebkitFontSmoothing: 'subpixel-antialiased',
+                fontSize: suitFontSizeOverride ? `${suitFontSizeOverride}px` : undefined,
+                color: isWaterElement ? '#050505' : undefined,
+                textShadow: isWaterElement ? 'none' : undefined,
+                mixBlendMode: isWaterElement ? 'normal' : undefined,
+              }}
+            >
+              {suitDisplay}
+            </div>
+          )}
+          {cooldownValue > 0 && cooldownMax > 0 && (
+            <div className="absolute bottom-1 left-1 right-1 text-[9px] text-game-white/70 pointer-events-none">
+              <span>Cooling down</span>
+            </div>
+          )}
+        </div>
       )}
 
       {faceDown && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div
             className="w-10 h-10 border-2 border-game-purple rounded-full"
-            style={{ boxShadow: '0 0 10px rgba(139, 92, 246, 0.4)' }}
+            style={neonGlow('rgba(139, 92, 246, 0.4)')}
           />
         </div>
       )}
@@ -113,7 +986,7 @@ export const Card = memo(function Card({
           animate={{ opacity: [0.3, 0.7, 0.3] }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute -inset-1 border-2 border-game-gold rounded-[10px] pointer-events-none"
-          style={{ boxShadow: '0 0 15px #e6b31e' }}
+          style={neonGlow('#e6b31e', 15)}
         />
       )}
 
@@ -123,9 +996,23 @@ export const Card = memo(function Card({
           animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.02, 1] }}
           transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute -inset-1 border-[3px] border-game-teal rounded-[10px] pointer-events-none"
-          style={{ boxShadow: '0 0 15px #7fdbca' }}
+          style={neonGlow('#7fdbca', 15)}
         />
       )}
-    </motion.div>
+
+      {/* Expansion toggle stub */}
+      {hasExpansion && onToggleExpansion && !faceDown && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleExpansion();
+          }}
+          className="absolute bottom-1 right-1 text-[8px] text-game-teal border border-game-teal rounded px-1 py-[1px] opacity-70 hover:opacity-100 transition-opacity"
+          title="Toggle card expansion"
+        >
+          {isExpansionOpen ? 'X' : expansionGlyph}
+        </button>
+      )}
+    </CardFrame>
   );
 });

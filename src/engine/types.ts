@@ -1,12 +1,75 @@
+import type { WatercolorConfig } from '../watercolor/types';
+
 export type Suit = '💨' | '⛰️' | '🔥' | '💧' | '⭐' | '🌙' | '☀️';
 
 export type Element = 'W' | 'E' | 'A' | 'F' | 'L' | 'D' | 'N';
+
+export type OrimCategory = 'ability' | 'utility' | 'trait';
+
+export type OrimRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
+
+export interface OrimDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  artSrc?: string;
+  category: OrimCategory;
+  rarity: OrimRarity;
+  powerCost: number;
+  grantsWild?: boolean; // Wild placement effect
+  damage?: number; // Basic effect placeholder
+  affinity?: Partial<Record<Element, number>>;
+  activationCondition?: TriggerGroup;
+  activationTiming?: TriggerTiming[];
+}
+
+export interface OrimInstance {
+  id: string;
+  definitionId: string;
+}
+
+export interface OrimSlot {
+  id: string;
+  linkedGroupId?: string;
+  orimId?: string | null;
+  locked?: boolean;
+}
+
+export interface DeckCardInstance {
+  id: string;
+  value: number;
+  slots: OrimSlot[];
+  cooldown: number;
+  maxCooldown: number;
+}
+
+export interface ActorDeckState {
+  actorId: string;
+  cards: DeckCardInstance[];
+}
 
 export interface Card {
   rank: number;
   suit: Suit;
   element: Element;
   id: string;
+  tokenReward?: Element;
+  orimSlots?: OrimSlot[];
+  orimDisplay?: {
+    id: string;
+    glyph: string;
+    color?: string;
+    dim?: boolean;
+    definitionId?: string;
+    title?: string;
+    meta?: string[];
+    description?: string;
+  }[];
+  actorGlyph?: string;
+  sourceActorId?: string;
+  sourceDeckCardId?: string;
+  cooldown?: number;
+  maxCooldown?: number;
 }
 
 export type GamePhase = 'playing' | 'garden' | 'biome';
@@ -36,6 +99,8 @@ export interface ActorDefinition {
   suit?: Suit; // Optional elemental affinity
   element?: Element; // Optional element encoding
   sprite: string; // Emoji or sprite identifier
+  artSrc?: string;
+  aliases?: string[]; // Legacy ids or alternate identifiers
 }
 
 export interface GridPosition {
@@ -47,9 +112,31 @@ export interface Actor {
   definitionId: string;
   id: string; // Unique instance ID
   currentValue: number; // Can be modified by effects
+  level: number; // Actor level (1+)
+  stamina: number; // Current stamina pips
+  staminaMax: number; // Max stamina pips
+  energy: number; // Current energy pips
+  energyMax: number; // Max energy pips
+  hp: number; // Current health
+  hpMax: number; // Max health
+  damageTaken?: number; // Damage taken this bout
+  power: number; // Current power usage
+  powerMax: number; // Max power capacity
+  orimSlots: OrimSlot[]; // Actor-level ORIM slots
   gridPosition?: GridPosition; // Position in garden grid (available actors only)
-  homeMetaCardId?: string; // ID of metacard where this actor is homed
+  homeTileId?: string; // ID of tile where this actor is homed
+  stackId?: string; // Stack identifier for grouped actors
+  stackIndex?: number; // Order within stack (0 = top)
   // Future: stats, traits, equipment, etc.
+}
+
+export interface Token {
+  id: string;
+  element: Element;
+  quantity: number; // 1 or 5
+  gridPosition?: GridPosition;
+  stackId?: string;
+  stackIndex?: number;
 }
 
 export interface GameState {
@@ -58,7 +145,6 @@ export interface GameState {
   stock: Card[];
   activeEffects: Effect[];
   turnCount: number;
-  collectedCards: Card[]; // Cards collected this round
   pendingCards: Card[]; // Cards available to assign to challenges/build piles
   phase: GamePhase;
   challengeProgress: ChallengeProgress;
@@ -66,15 +152,31 @@ export interface GameState {
   interactionMode: InteractionMode;
   // Actor system
   availableActors: Actor[]; // Actors in the garden
-  adventureQueue: (Actor | null)[]; // 3 slots for adventure party
-  // Meta-card system
-  metaCards: MetaCard[]; // Active meta-cards in the garden
+  tileParties: Record<string, Actor[]>; // Party per adventure tile
+  activeSessionTileId?: string; // Tile currently running a puzzle session
+  tokens: Token[]; // Resource tokens in the garden
+  collectedTokens: Record<Element, number>; // Tokens collected during a run
+  resourceStash: Record<Element, number>; // Banked tokens in garden
+  orimDefinitions: OrimDefinition[];
+  orimStash: OrimInstance[]; // Shared stash for ORIM
+  orimInstances: Record<string, OrimInstance>; // All ORIM instances by id
+  actorDecks: Record<string, ActorDeckState>; // Actor decks with ORIM slots
+  noRegretCooldowns?: Record<string, number>; // ActorId -> cooldown turns remaining
+  lastCardActionSnapshot?: Omit<GameState, 'lastCardActionSnapshot'>;
+  // Tile system
+  tiles: Tile[]; // Active tiles in the garden
   // Blueprint system
   blueprints: Blueprint[]; // Unlocked blueprints in player's library
   pendingBlueprintCards: BlueprintCard[]; // Blueprints in chaos state to collect
   // Biome system
   currentBiome?: string; // Active biome ID (during biome phase)
   biomeMovesCompleted?: number; // Track progress in biome
+  // Node-edge tableau system
+  nodeTableau?: TableauNode[]; // Only populated when biome mode === 'node-edge'
+  // Random biome state
+  foundationCombos?: number[]; // Combo count per foundation this turn
+  foundationTokens?: Record<Element, number>[]; // Tokens collected per foundation this turn
+  randomBiomeTurnNumber?: number; // Current turn number in random biome
 }
 
 export interface Move {
@@ -93,6 +195,42 @@ export interface GameConfig {
   cardsPerTableau: number;
   foundationCount: number;
 }
+
+export type TriggerTiming = 'equip' | 'play' | 'turn-start' | 'turn-end';
+
+export type TriggerOperator = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte';
+
+export type TriggerField =
+  | `actor.affinity.${Element}`
+  | 'actor.combo'
+  | 'actor.hp'
+  | 'actor.hpMax'
+  | 'actor.energy'
+  | 'actor.energyMax'
+  | 'actor.stamina'
+  | 'actor.staminaMax'
+  | 'actor.damageTaken'
+  | 'bout.turn';
+
+export type TriggerOperand =
+  | { type: 'field'; field: TriggerField }
+  | { type: 'number'; value: number };
+
+export interface TriggerCondition {
+  type: 'condition';
+  left: TriggerOperand;
+  operator: TriggerOperator;
+  right: TriggerOperand;
+}
+
+export interface TriggerGroup {
+  type: 'group';
+  op: 'and' | 'or';
+  not?: boolean;
+  clauses: TriggerNode[];
+}
+
+export type TriggerNode = TriggerCondition | TriggerGroup;
 
 export interface ChallengeRequirement {
   suit: Suit;
@@ -135,9 +273,9 @@ export interface BuildPileProgress {
   isComplete: boolean; // For perpetual piles, this stays false
 }
 
-// === META-CARD (CARDCEPTION) SYSTEM ===
+// === TILE (CARDCEPTION) SYSTEM ===
 
-// Actor home slot within a meta-card
+// Actor home slot within a tile
 export interface ActorHomeSlot {
   id: string;
   actorId: string | null; // ID of homed actor, or null if empty
@@ -150,7 +288,7 @@ export interface CardSlotRequirement {
   maxRank?: number; // Optional maximum rank
 }
 
-// A slot that can hold a card within a meta-card
+// A slot that can hold a card within a tile
 export interface CardSlot {
   id: string;
   requirement: CardSlotRequirement;
@@ -163,11 +301,18 @@ export interface CardSlotGroup {
   label?: string;
 }
 
-// Template definition for a meta-card type
-export interface MetaCardDefinition {
+// Template definition for a tile type
+export interface TileDefinition {
   id: string;
   name: string;
   description: string;
+  isBiome?: boolean;
+  isProp?: boolean; // Non-interactive scenery tile
+  lockable?: boolean; // Whether lock toggle is available
+  blocksLight?: boolean; // Fully blocks light rays
+  lightFilter?: 'grove'; // Partial light filter (tree trunks with gaps)
+  lightBlockerShape?: 'card' | 'tile'; // Shape footprint for light blockers
+  buildPileId?: string; // Build pile linkage (e.g., sapling)
   slotGroups: {
     requirement: CardSlotRequirement;
     count: number;
@@ -175,15 +320,18 @@ export interface MetaCardDefinition {
   }[];
 }
 
-// Instance of a meta-card with current progress
-export interface MetaCard {
+// Instance of a tile with current progress
+export interface Tile {
   definitionId: string;
   id: string;
+  createdAt?: number;
   slotGroups: CardSlotGroup[];
   isComplete: boolean;
+  isLocked: boolean;
   gridPosition?: GridPosition; // Position in garden grid
   upgradeLevel: number; // 0, 1, 2, etc.
   actorHomeSlots: ActorHomeSlot[]; // Creature housing slots
+  watercolorConfig?: WatercolorConfig | null;
 }
 
 // === BLUEPRINT SYSTEM ===
@@ -239,8 +387,56 @@ export interface BiomeDefinition {
   name: string;
   description: string;
   seed: string; // Deterministic seed for RNG
+  mode?: 'traditional' | 'node-edge'; // Defaults to 'traditional'
+  randomlyGenerated?: boolean; // Random tableau generation each turn
+  infinite?: boolean; // Tableaus backfill with new random cards when cards are removed
+  nodePattern?: string; // NodeEdgePattern ID (for node-edge biomes)
   layout: BiomeLayout;
   rewards: BiomeReward;
   blueprintSpawn?: BiomeBlueprintSpawn;
   requiredMoves: number; // Total moves to complete
+}
+
+// === NODE-EDGE TABLEAU SYSTEM ===
+
+// Node in a node-edge tableau with spatial positioning and blocking relationships
+export interface TableauNode {
+  id: string;
+  position: { x: number; y: number; z: number }; // x,y spatial coords, z for visual layering
+  cards: Card[]; // Stack of cards at this node (top = last element)
+  blockedBy: string[]; // IDs of nodes that block this node
+  revealed: boolean; // Whether top card is face-up and playable
+}
+
+// Definition of a single node within a pattern template
+export interface NodePatternDefinition {
+  id: string;
+  position: { x: number; y: number; z: number };
+  cardCount: number; // Number of cards to stack at this node
+  blockedBy: string[]; // IDs of other nodes in pattern that block this one
+}
+
+// Pattern template for node-edge tableaus
+export interface NodeEdgePattern {
+  id: string;
+  name: string;
+  description: string;
+  nodes: NodePatternDefinition[];
+  totalCards: number; // Total cards to deal across all nodes
+}
+
+// === DICE SYSTEM ===
+
+export type DieValue = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface Die {
+  id: string; // Unique instance ID
+  value: DieValue; // Current face value (1-6)
+  locked: boolean; // Whether this die is locked from rerolling
+  rolling: boolean; // Animation state - whether currently rolling
+}
+
+export interface DicePool {
+  dice: Die[]; // Collection of dice in this pool
+  rollCount: number; // Number of times the pool has been rolled
 }

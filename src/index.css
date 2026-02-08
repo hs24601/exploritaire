@@ -6,6 +6,8 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
 }
 
 html,
@@ -13,9 +15,386 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  text-rendering: geometricPrecision;
+  font-feature-settings: "kern" 1;
 }
 
 #root {
   width: 100%;
   height: 100%;
+}
+
+/* Force GPU acceleration and sharp rendering */
+.motion-div,
+[data-framer-motion] {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Ensure text stays sharp when scaled */
+div, span, p, h1, h2, h3, h4, h5, h6 {
+  -webkit-font-smoothing: subpixel-antialiased;
+  text-rendering: geometricPrecision;
+  font-smooth: always;
+  -webkit-text-stroke: 0.1px rgba(0, 0, 0, 0.1);
+}
+
+/* Force constant GPU repainting for sharp rendering */
+@keyframes force-repaint {
+  0%, 100% { transform: translateZ(0) scale(1.00001); }
+  50% { transform: translateZ(0) scale(1); }
+}
+
+.force-sharp {
+  animation: force-repaint 3s infinite;
+  will-change: transform;
+}
+
+.token-pop-shake {
+  animation: token-pop-shake 0.6s ease-in-out;
+}
+
+.token-pop-zoom {
+  animation: token-pop-zoom 0.6s ease-out;
+  transform-origin: center;
+}
+
+.token-pop-flash {
+  animation: token-pop-flash 0.5s ease-out;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.35) 0%, rgba(10, 10, 10, 0) 70%);
+}
+
+.token-pop-confetti {
+  position: absolute;
+  top: -20px;
+  border-radius: 2px;
+  animation: token-pop-confetti 2.2s ease-in forwards;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes token-pop-shake {
+  0% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+  15% { transform: translateX(-50%) translateY(-2px) rotate(-1deg); }
+  30% { transform: translateX(-50%) translateY(2px) rotate(1.5deg); }
+  45% { transform: translateX(-50%) translateY(-3px) rotate(-1.2deg); }
+  60% { transform: translateX(-50%) translateY(2px) rotate(1deg); }
+  75% { transform: translateX(-50%) translateY(-1px) rotate(-0.6deg); }
+  100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+}
+
+@keyframes token-pop-zoom {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.03); }
+  60% { transform: scale(0.99); }
+  100% { transform: scale(1); }
+}
+
+@keyframes token-pop-flash {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes token-pop-confetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(120vh) rotate(360deg); opacity: 0; }
+}
+
+/* ── Watercolor engine animations ── */
+
+.wc-main-mass {
+  animation: wc-breathe var(--wc-breathe-dur, 10s) ease-in-out infinite;
+}
+
+.wc-highlight {
+  animation: wc-highlight-shift var(--wc-hl-dur, 8s) ease-in-out infinite alternate;
+}
+
+.wc-tendril {
+  animation: wc-sway 8s ease-in-out infinite alternate;
+}
+
+.wc-satellite {
+  animation: wc-drift 15s ease-in-out infinite;
+}
+
+.wc-splotch-group {
+  isolation: isolate;
+}
+
+@keyframes wc-breathe {
+  0%, 100% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(var(--wc-breathe-scale, 1.04)) translate(3px, -2px); }
+}
+
+@keyframes wc-sway {
+  0% { transform: rotate(calc(-1 * var(--wc-sway-angle, 3deg))) scaleY(1); }
+  100% { transform: rotate(var(--wc-sway-angle, 3deg)) scaleY(1.08); }
+}
+
+@keyframes wc-drift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(var(--wc-drift-x1, 6px), var(--wc-drift-y1, -4px)); }
+  50% { transform: translate(var(--wc-drift-x2, -4px), var(--wc-drift-y2, 8px)); }
+  75% { transform: translate(var(--wc-drift-x3, 5px), var(--wc-drift-y3, 2px)); }
+}
+
+@keyframes wc-highlight-shift {
+  0% { transform: translate(-4px, -3px) scale(0.96); opacity: 0.35; }
+  100% { transform: translate(4px, 3px) scale(1.02); opacity: 0.55; }
+}
+
+body[data-light-editor="on"] [data-tile-title],
+html[data-light-editor="on"] [data-tile-title],
+[data-light-editor="on"] [data-tile-title],
+#root[data-light-editor="on"] [data-tile-title],
+[data-light-editor="on"] [data-tile-title] {
+  display: none !important;
+}
+
+body[data-light-editor="on"] [data-tile-text],
+html[data-light-editor="on"] [data-tile-text],
+[data-light-editor="on"] [data-tile-text],
+#root[data-light-editor="on"] [data-tile-text],
+[data-light-editor="on"] [data-tile-text] {
+  display: none !important;
+}
+
+.textless-mode [data-card-face],
+.textless-mode [data-tile-face],
+.textless-mode [data-token-face] {
+  color: transparent !important;
+  text-shadow: none !important;
+}
+
+.textless-mode [data-card-face] *,
+.textless-mode [data-tile-face] *,
+.textless-mode [data-token-face] * {
+  color: transparent !important;
+  text-shadow: none !important;
+}
+
+.command-button {
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .command-button {
+    font-size: 22px;
+    padding: 8px 16px;
+  }
+}
+
+.menu-text.text-\[9px\],
+.menu-text .text-\[9px\] {
+  font-size: 11px !important;
+}
+
+.menu-text.text-\[10px\],
+.menu-text .text-\[10px\] {
+  font-size: 12px !important;
+}
+
+.menu-text.text-\[11px\],
+.menu-text .text-\[11px\] {
+  font-size: 13px !important;
+}
+
+.menu-text.text-\[12px\],
+.menu-text .text-\[12px\] {
+  font-size: 14px !important;
+}
+
+.menu-text.text-xs,
+.menu-text .text-xs {
+  font-size: 14px !important;
+}
+
+.menu-text.text-sm,
+.menu-text .text-sm {
+  font-size: 16px !important;
+}
+
+.wild-foundation-train {
+  position: absolute;
+  inset: -3px;
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.wild-foundation-train rect {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.35));
+}
+
+.tooltip-surface {
+  --tooltip-font-size: 14px;
+  --tooltip-line: 1.5;
+  --tooltip-gap: 6px;
+  font-size: var(--tooltip-font-size);
+}
+
+.tooltip-content {
+  font-size: inherit;
+  line-height: var(--tooltip-line);
+}
+
+.tooltip-content > * + * {
+  margin-top: var(--tooltip-gap);
+}
+
+.tooltip-content .meta + .desc {
+  margin-top: var(--tooltip-gap);
+}
+
+.tooltip-hint {
+  line-height: var(--tooltip-line);
+  font-size: inherit;
+}
+
+@keyframes orim-tooltip-progress {
+  from {
+    stroke-dashoffset: 88;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@property --reveal-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes orim-splotch-reveal {
+  from {
+    --reveal-angle: 0deg;
+  }
+  to {
+    --reveal-angle: 360deg;
+  }
+}
+
+.orim-splotch-reveal {
+  --reveal-angle: 0deg;
+  -webkit-mask-image: conic-gradient(from 0deg, #000 0deg, #000 var(--reveal-angle), transparent var(--reveal-angle));
+  mask-image: conic-gradient(from 0deg, #000 0deg, #000 var(--reveal-angle), transparent var(--reveal-angle));
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: cover;
+  mask-size: cover;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+@keyframes card-tooltip-progress {
+  from {
+    stroke-dashoffset: 472;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@property --card-reveal-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes card-aura-reveal {
+  from {
+    --card-reveal-angle: 0deg;
+  }
+  to {
+    --card-reveal-angle: 360deg;
+  }
+}
+
+.card-aura-reveal {
+  --card-reveal-angle: 0deg;
+  --card-border: 10px;
+  animation: card-aura-reveal 1.25s linear forwards;
+  -webkit-mask-image:
+    conic-gradient(from -90deg, #000 0deg, #000 var(--card-reveal-angle), transparent var(--card-reveal-angle)),
+    linear-gradient(#000 0 0),
+    linear-gradient(#000 0 0);
+  -webkit-mask-size:
+    cover,
+    calc(100% - (var(--card-border) * 2)) calc(100% - (var(--card-border) * 2)),
+    100% 100%;
+  -webkit-mask-position: center, center, center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-composite: source-in, destination-out;
+  mask-image: none;
+}
+
+/* Rectangular perimeter aura reveal - animates stroke around card border */
+@keyframes card-aura-stroke-reveal {
+  from {
+    stroke-dashoffset: 480;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.card-aura-rect-reveal {
+  overflow: visible;
+}
+
+.card-aura-rect-reveal .aura-mask-stroke {
+  stroke-dasharray: 472;
+  stroke-dashoffset: 472;
+  animation: card-aura-stroke-reveal 1.25s linear forwards;
+}
+
+/* Card placement splash effect - individual splotches flying outward */
+/* Smooth fluid motion: fast burst out, gentle deceleration */
+@keyframes splash-splotch-fly {
+  0% {
+    opacity: 0.9;
+    transform:
+      rotate(calc(var(--splash-angle) - 90deg))
+      translateY(0px)
+      translateX(0px)
+      rotate(calc(-1 * (var(--splash-angle) - 90deg)))
+      scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform:
+      rotate(calc(var(--splash-angle) - 90deg))
+      translateY(calc(var(--splash-distance) * -1))
+      translateX(var(--splash-arc))
+      rotate(calc(-1 * (var(--splash-angle) - 90deg)))
+      scale(0.9);
+  }
+}
+
+/* Separate opacity animation for smooth fade */
+@keyframes splash-splotch-fade {
+  0% { opacity: 0; }
+  5% { opacity: 0.95; }
+  60% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+.splash-splotch {
+  --splash-angle: 0deg;
+  --splash-distance: 100px;
+  --splash-delay: 0ms;
+  --splash-arc: 0px;
+  --splash-duration: 3.25s; /* Default duration (slowed 5x for debug: 0.65s -> 3.25s) */
+  /* Smooth ease-out: fast initial burst, gradual slowdown like real paint */
+  animation:
+    splash-splotch-fly var(--splash-duration) cubic-bezier(0.15, 0.6, 0.2, 1) forwards,
+    splash-splotch-fade var(--splash-duration) ease-out forwards;
+  animation-delay: calc(var(--splash-delay) * 5);
+  opacity: 0;
+  transform-origin: center center;
+  will-change: transform, opacity;
 }

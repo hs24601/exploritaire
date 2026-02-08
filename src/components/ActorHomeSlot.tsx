@@ -1,26 +1,32 @@
 import { memo, useRef, useCallback } from 'react';
 import type { ActorHomeSlot as ActorHomeSlotType, Actor } from '../engine/types';
-import { getActorDefinition } from '../engine/actors';
+import { getActorDisplayGlyph } from '../engine/actors';
+import { GARDEN_GRID } from '../engine/constants';
+import { GAME_BORDER_WIDTH } from '../utils/styles';
 
 interface ActorHomeSlotProps {
   slot: ActorHomeSlotType;
-  metaCardId: string;
+  tileId: string;
   homedActor: Actor | null; // The actor homed here, if any
   isDropTarget: boolean;
   useSimpleSquare?: boolean; // New prop for simple square design
   onDragOut?: (actor: Actor, clientX: number, clientY: number, rect: DOMRect) => void; // Allow dragging out
+  showGraphics: boolean;
 }
 
 export const ActorHomeSlot = memo(function ActorHomeSlot({
   slot,
-  metaCardId,
+  tileId,
   homedActor,
   isDropTarget,
   useSimpleSquare = false,
   onDragOut,
+  showGraphics,
 }: ActorHomeSlotProps) {
   const isEmpty = slot.actorId === null;
   const slotRef = useRef<HTMLDivElement>(null);
+  const homeIndicator = showGraphics ? '??' : 'H';
+  const emptyIndicator = showGraphics ? '??' : 'E';
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!onDragOut || !homedActor || !slotRef.current) return;
@@ -40,21 +46,23 @@ export const ActorHomeSlot = memo(function ActorHomeSlot({
   }, [onDragOut, homedActor]);
 
   if (useSimpleSquare) {
-    // Simple square design for Forest metacard
-    const dimensions = { width: 20, height: 20 };
+    // Simple square design for Forest tile
+    const size = Math.round(GARDEN_GRID.cellSize * 0.28);
+    const dimensions = { width: size, height: size };
 
     return (
       <div
         ref={slotRef}
         data-actor-home-slot
-        data-meta-card-id={metaCardId}
+        data-tile-id={tileId}
         data-slot-id={slot.id}
         onMouseDown={homedActor ? handleMouseDown : undefined}
         onTouchStart={homedActor ? handleTouchStart : undefined}
-        className="rounded border-2 flex items-center justify-center transition-all"
+        className="rounded flex items-center justify-center transition-all"
         style={{
           width: dimensions.width,
           height: dimensions.height,
+          borderWidth: GAME_BORDER_WIDTH,
           borderColor: isEmpty ? 'rgba(127, 219, 202, 0.4)' : '#7fdbca',
           borderStyle: isEmpty ? 'dashed' : 'solid',
           backgroundColor: isEmpty ? 'transparent' : 'rgba(127, 219, 202, 0.2)',
@@ -67,7 +75,7 @@ export const ActorHomeSlot = memo(function ActorHomeSlot({
       >
         {homedActor && (
           <span className="text-[12px]">
-            {getActorDefinition(homedActor.definitionId)?.sprite}
+            {getActorDisplayGlyph(homedActor.definitionId, showGraphics)}
           </span>
         )}
       </div>
@@ -81,14 +89,15 @@ export const ActorHomeSlot = memo(function ActorHomeSlot({
     <div
       ref={slotRef}
       data-actor-home-slot
-      data-meta-card-id={metaCardId}
+      data-tile-id={tileId}
       data-slot-id={slot.id}
       onMouseDown={homedActor && onDragOut ? handleMouseDown : undefined}
       onTouchStart={homedActor && onDragOut ? handleTouchStart : undefined}
-      className="rounded-md border-2 flex flex-col items-center justify-center transition-all relative"
+      className="rounded-md flex flex-col items-center justify-center transition-all relative"
       style={{
         width: dimensions.width,
         height: dimensions.height,
+        borderWidth: GAME_BORDER_WIDTH,
         borderColor: isEmpty ? 'rgba(127, 219, 202, 0.4)' : '#7fdbca',
         borderStyle: isEmpty ? 'dashed' : 'solid',
         backgroundColor: isEmpty ? 'transparent' : 'rgba(127, 219, 202, 0.1)',
@@ -103,19 +112,23 @@ export const ActorHomeSlot = memo(function ActorHomeSlot({
         // Show home indicator (not full actor)
         <>
           <span className="text-2xl">
-            {getActorDefinition(homedActor.definitionId)?.sprite}
+            {getActorDisplayGlyph(homedActor.definitionId, showGraphics)}
           </span>
           <div
             className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-game-teal flex items-center justify-center"
             style={{ boxShadow: '0 0 8px #7fdbca' }}
           >
-            <span className="text-[10px]">🏠</span>
+            <span className="text-[10px]">{homeIndicator}</span>
           </div>
         </>
       ) : (
         // Empty slot
-        <span className="text-2xl opacity-40">🏠</span>
+        <span className="text-2xl opacity-40">{emptyIndicator}</span>
       )}
     </div>
   );
 });
+
+
+
+

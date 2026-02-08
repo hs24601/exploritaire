@@ -1,4 +1,4 @@
-import type { Suit, GameConfig, Element } from './types';
+import type { Suit, GameConfig, Element, Card } from './types';
 
 export const SUITS: Suit[] = ['💨', '⛰️', '🔥', '💧', '⭐', '🌙', '☀️'];
 
@@ -9,8 +9,25 @@ export const GAME_CONFIG: GameConfig = {
 };
 
 export const CARD_SIZE = {
-  width: 80,
+  width: 64,
   height: 90,
+} as const;
+
+/** Sentinel tableauIndex value indicating a card dragged from the hand */
+export const HAND_SOURCE_INDEX = -1;
+
+export const ACTOR_CARD_SIZE = {
+  width: 16,
+  height: 23,
+} as const;
+
+export const TOKEN_SIZE = {
+  width: 28,
+  height: 28,
+} as const;
+
+export const Z_INDEX = {
+  FLYOUT: 10000,
 } as const;
 
 export const COLORS = {
@@ -50,23 +67,52 @@ export const ELEMENT_TO_SUIT: Record<Element, Suit> = {
   L: '☀️',
 };
 
+export function getSuitDisplay(suit: Suit, showGraphics: boolean): string {
+  return showGraphics ? suit : SUIT_TO_ELEMENT[suit];
+}
+
 export const SUIT_COLORS: Record<Suit, string> = {
   '💨': '#f0f0f0', // Air - white
   '💧': '#8b5cf6', // Water - purple
-  '🔥': '#e6b31e', // Fire - gold
+  '🔥': '#e6b31e', // Fire - warm gold/amber
   '⛰️': '#d946ef', // Earth - pink
   '⭐': '#7fdbca', // Neutral - teal
   '🌙': '#4c1d95', // Darkness - deep purple
-  '☀️': '#fbbf24', // Light - bright yellow
+  '☀️': '#fff5cc', // Light - bright cream/pale gold (distinct from Fire)
 };
 
 export const EFFECT_IDS = {
   ELEMENT_MATCHING: 'element_matching',
 } as const;
 
+// Wild sentinel for randomly generated biome foundations
+export const WILD_SENTINEL_RANK = 0;
+
+export function createWildSentinel(index: number): Card {
+  return {
+    rank: WILD_SENTINEL_RANK,
+    suit: '⭐',
+    element: 'N',
+    id: `wild-sentinel-${index}-${Date.now()}`,
+  };
+}
+
+export const ALL_ELEMENTS: Element[] = ['W', 'E', 'A', 'F', 'L', 'D', 'N'];
+
 // Karma dealing: minimum number of tableau top cards that must be playable
 // to any foundation for a deal to be considered valid
 export const KARMA_DEALING_MIN_CARDS = 3;
+
+// Maximum attempts for karma dealing before accepting the current deal
+export const MAX_KARMA_DEALING_ATTEMPTS = 100;
+
+// Distance threshold for token cluster proximity detection
+export const TOKEN_PROXIMITY_THRESHOLD = 0.5;
+
+// Standardized random ID suffix generation
+export function randomIdSuffix(): string {
+  return Math.random().toString(36).slice(2, 11);
+}
 
 // Garden grid configuration
 export const GARDEN_GRID = {

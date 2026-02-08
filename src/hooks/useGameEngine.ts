@@ -1,47 +1,87 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import type { GameState, SelectedCard, Move, EffectType } from '../engine/types';
+import type { GameState, SelectedCard, Move, EffectType, Element, Token, Card, Actor } from '../engine/types';
 import {
   initializeGame,
   playCard,
   addEffect as addEffectToState,
   checkWin,
-  checkNoValidMoves,
-  getTableauCanPlay,
   getValidFoundationsForCard,
   returnToGarden as returnToGardenState,
   startAdventure as startAdventureState,
+  abandonSession as abandonSessionState,
   applyMoves,
+  playCardFromHand as playCardFromHandFn,
+  playCardFromStock as playCardFromStockFn,
   assignCardToChallenge as assignCardToChallengeFn,
   assignCardToBuildPile as assignCardToBuildPileFn,
-  assignActorToQueue as assignActorToQueueFn,
-  removeActorFromQueueState,
+  assignActorToParty as assignActorToPartyFn,
+  clearParty as clearPartyFn,
   toggleInteractionMode as toggleInteractionModeFn,
   clearAllGameProgress,
   clearPhaseGameProgress,
   clearBuildPileGameProgress,
-  assignCardToMetaCardSlot as assignCardToMetaCardSlotFn,
-  clearMetaCardGameProgress,
-  updateMetaCardPosition,
+  assignCardToTileSlot as assignCardToTileSlotFn,
+  assignTokenToTileSlot as assignTokenToTileSlotFn,
+  clearTileGameProgress,
+  updateTilePosition,
+  updateTileWatercolorConfig as updateTileWatercolorConfigFn,
+  toggleTileLock as toggleTileLockFn,
   updateActorPosition,
-  assignActorToMetaCardHome as assignActorToMetaCardHomeFn,
-  removeActorFromMetaCardHome as removeActorFromMetaCardHomeFn,
+  stackActorOnActor as stackActorOnActorFn,
+  reorderActorStack as reorderActorStackFn,
+  detachActorFromStack as detachActorFromStackFn,
+  detachActorFromParty as detachActorFromPartyFn,
+  assignActorToTileHome as assignActorToTileHomeFn,
+  removeActorFromTileHome as removeActorFromTileHomeFn,
   startBiome as startBiomeFn,
   playCardInBiome as playCardInBiomeFn,
+  playCardInNodeBiome as playCardInNodeBiomeFn,
+  playCardInRandomBiome as playCardInRandomBiomeFn,
+  rewindLastCardAction as rewindLastCardActionFn,
+  endRandomBiomeTurn as endRandomBiomeTurnFn,
   completeBiome as completeBiomeFn,
   collectBlueprint as collectBlueprintFn,
+  addTileToGarden as addTileToGardenFn,
+  addTileToGardenAt as addTileToGardenAtFn,
+  addActorToGarden as addActorToGardenFn,
+  removeTileFromGarden as removeTileFromGardenFn,
+  addTokenToGarden as addTokenToGardenFn,
+  addTokenInstanceToGarden as addTokenInstanceToGardenFn,
+  depositTokenToStash as depositTokenToStashFn,
+  withdrawTokenFromStash as withdrawTokenFromStashFn,
+  updateTokenPosition as updateTokenPositionFn,
+  stackTokenOnToken as stackTokenOnTokenFn,
+  equipOrimFromStash as equipOrimFromStashFn,
+  moveOrimBetweenSlots as moveOrimBetweenSlotsFn,
+  returnOrimToStash as returnOrimToStashFn,
 } from '../engine/game';
 import { findBestMoveSequence, solveOptimally } from '../engine/guidance';
-import { canStartAdventure } from '../engine/actors';
+import { canPlayCardWithWild } from '../engine/rules';
+import { getBiomeDefinition } from '../engine/biomes';
 
-export function useGameEngine() {
+const ORIM_STORAGE_KEY = 'orimEditorDefinitions';
+
+export function useGameEngine(initialState?: GameState | null) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedCard, setSelectedCard] = useState<SelectedCard | null>(null);
   const [guidanceMoves, setGuidanceMoves] = useState<Move[]>([]);
+  const [showGraphics, setShowGraphics] = useState(false);
 
-  // Initialize game on mount
+  // Initialize game on mount or when initial state is provided
   useEffect(() => {
+    if (gameState) return;
+    if (initialState) {
+      setGameState(initialState);
+      return;
+    }
     setGameState(initializeGame());
-  }, []);
+  }, [gameState, initialState]);
+
+  useEffect(() => {
+    if (!gameState) return;
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(ORIM_STORAGE_KEY, JSON.stringify(gameState.orimDefinitions, null, 2));
+  }, [gameState?.orimDefinitions]);
 
   // Derived state
   const derivedState = useMemo(() => {
@@ -51,26 +91,126 @@ export function useGameEngine() {
         noValidMoves: false,
         tableauCanPlay: [] as boolean[],
         validFoundationsForSelected: [] as boolean[],
-        canAdventure: false,
       };
     }
 
     const isWon = gameState.phase === 'playing' ? checkWin(gameState) : false;
-    const noValidMoves = gameState.phase === 'playing' ? checkNoValidMoves(gameState) : false;
-    const tableauCanPlay = gameState.phase === 'playing' ? getTableauCanPlay(gameState) : [];
-    const validFoundationsForSelected = selectedCard
-      ? getValidFoundationsForCard(gameState, selectedCard.card)
-      : [];
-    const canAdventure = canStartAdventure(gameState.adventureQueue);
+    const currentBiomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
+    const isRandomBiome = !!currentBiomeDef?.randomlyGenerated;
 
+    const partyActors = gameState.activeSessionTileId
+      ? gameState.tileParties[gameState.activeSessionTileId] ?? []
+      : [];
+    const hasFoundationStamina = (index: number) =>
+      (partyActors[index]?.stamina ?? 1) > 0;
+
+    const noValidMoves = (() => {
+      if (gameState.phase === 'playing') {
+        return !gameState.tableaus.some((tableau) => {
+          if (tableau.length === 0) return false;
+          const topCard = tableau[tableau.length - 1];
+          return gameState.foundations.some((foundation, index) =>
+            hasFoundationStamina(index) &&
+            canPlayCard(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+          );
+        });
+      }
+      if (gameState.phase === 'biome' && gameState.tableaus.length > 0) {
+        if (isRandomBiome) {
+          return !gameState.tableaus.some(tableau => {
+            if (tableau.length === 0) return false;
+            const topCard = tableau[tableau.length - 1];
+            return gameState.foundations.some((foundation, index) =>
+              hasFoundationStamina(index) &&
+              canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+            );
+          });
+        }
+        return !gameState.tableaus.some((tableau) => {
+          if (tableau.length === 0) return false;
+          const topCard = tableau[tableau.length - 1];
+          return gameState.foundations.some((foundation, index) =>
+            hasFoundationStamina(index) &&
+            canPlayCard(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+          );
+        });
+      }
+      return false;
+    })();
+
+    const tableauCanPlay = (() => {
+      if (gameState.phase === 'playing') {
+        return gameState.tableaus.map((tableau) => {
+          if (tableau.length === 0) return false;
+          const topCard = tableau[tableau.length - 1];
+          return gameState.foundations.some((foundation, index) =>
+            hasFoundationStamina(index) &&
+            canPlayCard(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+          );
+        });
+      }
+      if (gameState.phase === 'biome' && isRandomBiome) {
+        return gameState.tableaus.map(tableau => {
+          if (tableau.length === 0) return false;
+          const topCard = tableau[tableau.length - 1];
+          return gameState.foundations.some((foundation, index) =>
+            hasFoundationStamina(index) &&
+            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+          );
+        });
+      }
+      return [];
+    })();
+
+    const validFoundationsForSelected = (() => {
+      if (!selectedCard) return [];
+      if (isRandomBiome) {
+        return gameState.foundations.map((foundation, index) =>
+          hasFoundationStamina(index) &&
+          canPlayCardWithWild(selectedCard.card, foundation[foundation.length - 1], gameState.activeEffects)
+        );
+      }
+      return getValidFoundationsForCard(gameState, selectedCard.card).map(
+        (canPlay, index) => canPlay && hasFoundationStamina(index)
+      );
+    })();
     return {
       isWon,
       noValidMoves,
       tableauCanPlay,
       validFoundationsForSelected,
-      canAdventure,
     };
   }, [gameState, selectedCard]);
+
+  const noRegretStatus = useMemo(() => {
+    if (!gameState || !gameState.lastCardActionSnapshot) {
+      return { canRewind: false, cooldown: 0, actorId: null as string | null };
+    }
+    const partyActors: Actor[] = gameState.activeSessionTileId
+      ? gameState.tileParties[gameState.activeSessionTileId] ?? []
+      : [];
+    const hasNoRegret = (actor: Actor): boolean => {
+      const actorSlotMatch = (actor.orimSlots ?? []).some((slot) => {
+        if (!slot.orimId) return false;
+        const instance = gameState.orimInstances[slot.orimId];
+        return instance?.definitionId === 'no-regret';
+      });
+      if (actorSlotMatch) return true;
+      const deck = gameState.actorDecks[actor.id];
+      if (!deck) return false;
+      return deck.cards.some((card) =>
+        card.slots.some((slot) => {
+          if (!slot.orimId) return false;
+          const instance = gameState.orimInstances[slot.orimId];
+          return instance?.definitionId === 'no-regret';
+        })
+      );
+    };
+    const actor = partyActors.find(hasNoRegret) ?? null;
+    if (!actor) return { canRewind: false, cooldown: 0, actorId: null as string | null };
+    const cooldown = gameState.noRegretCooldowns?.[actor.id] ?? 0;
+    return { canRewind: cooldown <= 0, cooldown, actorId: actor.id };
+  }, [gameState]);
 
   // Actions
   const newGame = useCallback((preserveProgress = true) => {
@@ -81,11 +221,20 @@ export function useGameEngine() {
           pendingCards: [],
           interactionMode: gameState.interactionMode,
           availableActors: gameState.availableActors,
-          adventureQueue: gameState.adventureQueue,
-          metaCards: gameState.metaCards,
+          tileParties: gameState.tileParties,
+          activeSessionTileId: gameState.activeSessionTileId,
+          tiles: gameState.tiles,
+          tokens: gameState.tokens,
+          resourceStash: gameState.resourceStash,
+          orimDefinitions: gameState.orimDefinitions,
+          orimStash: gameState.orimStash,
+          orimInstances: gameState.orimInstances,
+          actorDecks: gameState.actorDecks,
+          noRegretCooldowns: gameState.noRegretCooldowns,
         }
       : undefined;
-    setGameState(initializeGame(persisted));
+    const startPhase = gameState?.phase;
+    setGameState(initializeGame(persisted, startPhase ? { startPhase } : undefined));
     setSelectedCard(null);
     setGuidanceMoves([]);
   }, [gameState]);
@@ -132,6 +281,69 @@ export function useGameEngine() {
     [selectedCard, gameState, guidanceMoves]
   );
 
+  const playCardDirect = useCallback(
+    (tableauIndex: number, foundationIndex: number) => {
+      if (!gameState) return false;
+
+      const newState = playCard(gameState, tableauIndex, foundationIndex);
+
+      if (!newState) {
+        return false;
+      }
+
+      setGameState(newState);
+
+      if (guidanceMoves.length > 0) {
+        const firstMove = guidanceMoves[0];
+        if (
+          firstMove.tableauIndex === tableauIndex &&
+          firstMove.foundationIndex === foundationIndex
+        ) {
+          setGuidanceMoves(guidanceMoves.slice(1));
+        } else {
+          setGuidanceMoves([]);
+        }
+      }
+
+      setSelectedCard(null);
+      return true;
+    },
+    [gameState, guidanceMoves]
+  );
+
+  const playFromHand = useCallback(
+    (card: Card, foundationIndex: number, useWild = false) => {
+      if (!gameState) return false;
+      const newState = playCardFromHandFn(gameState, card, foundationIndex, useWild);
+      if (!newState) return false;
+      setGameState(newState);
+      return true;
+    },
+    [gameState]
+  );
+
+  const playFromStock = useCallback(
+    (foundationIndex: number, useWild = false, force = false) => {
+      if (!gameState) return false;
+      const newState = playCardFromStockFn(gameState, foundationIndex, useWild, force);
+      if (!newState) return false;
+      setGameState(newState);
+      return true;
+    },
+    [gameState]
+  );
+
+  const rewindLastCard = useCallback(() => {
+    if (!gameState || !noRegretStatus.actorId) return false;
+    if (!noRegretStatus.canRewind) return false;
+    const newState = rewindLastCardActionFn(gameState, noRegretStatus.actorId);
+    if (newState === gameState) return false;
+    setGameState(newState);
+    setSelectedCard(null);
+    setGuidanceMoves([]);
+    return true;
+  }, [gameState, noRegretStatus]);
+
   const addEffect = useCallback(
     (effectId: string, name: string, type: EffectType, duration: number) => {
       if (!gameState) return;
@@ -165,9 +377,9 @@ export function useGameEngine() {
     setGuidanceMoves([]);
   }, [gameState]);
 
-  const startAdventure = useCallback(() => {
-    if (!gameState || !canStartAdventure(gameState.adventureQueue)) return;
-    setGameState(startAdventureState(gameState));
+  const startAdventure = useCallback((tileId: string) => {
+    if (!gameState) return;
+    setGameState(startAdventureState(gameState, tileId));
     setSelectedCard(null);
     setGuidanceMoves([]);
   }, [gameState]);
@@ -205,17 +417,17 @@ export function useGameEngine() {
     }
   }, [gameState]);
 
-  const assignActorToQueue = useCallback((actorId: string, slotIndex: number) => {
+  const assignActorToParty = useCallback((tileId: string, actorId: string) => {
     if (!gameState) return;
-    const newState = assignActorToQueueFn(gameState, actorId, slotIndex);
+    const newState = assignActorToPartyFn(gameState, tileId, actorId);
     if (newState) {
       setGameState(newState);
     }
   }, [gameState]);
 
-  const removeActorFromQueue = useCallback((slotIndex: number) => {
+  const clearParty = useCallback((tileId: string) => {
     if (!gameState) return;
-    setGameState(removeActorFromQueueState(gameState, slotIndex));
+    setGameState(clearPartyFn(gameState, tileId));
   }, [gameState]);
 
   const toggleInteractionMode = useCallback(() => {
@@ -238,30 +450,48 @@ export function useGameEngine() {
     setGameState(clearBuildPileGameProgress(gameState, buildPileId));
   }, [gameState]);
 
-  const assignCardToMetaCardSlot = useCallback((cardId: string, metaCardId: string, slotId: string) => {
+  const assignCardToTileSlot = useCallback((cardId: string, tileId: string, slotId: string) => {
     if (!gameState) return;
-    const newState = assignCardToMetaCardSlotFn(gameState, cardId, metaCardId, slotId);
+    const newState = assignCardToTileSlotFn(gameState, cardId, tileId, slotId);
     if (newState) {
       setGameState(newState);
     }
   }, [gameState]);
 
-  const assignActorToMetaCardHome = useCallback((actorId: string, metaCardId: string, slotId: string) => {
+  const assignTokenToTileSlot = useCallback((tokenId: string, tileId: string, slotId: string) => {
     if (!gameState) return;
-    const newState = assignActorToMetaCardHomeFn(gameState, actorId, metaCardId, slotId);
+    const newState = assignTokenToTileSlotFn(gameState, tokenId, tileId, slotId);
     if (newState) {
       setGameState(newState);
     }
   }, [gameState]);
 
-  const clearMetaCardProgress = useCallback((metaCardId: string) => {
+  const assignActorToTileHome = useCallback((actorId: string, tileId: string, slotId: string) => {
     if (!gameState) return;
-    setGameState(clearMetaCardGameProgress(gameState, metaCardId));
+    const newState = assignActorToTileHomeFn(gameState, actorId, tileId, slotId);
+    if (newState) {
+      setGameState(newState);
+    }
   }, [gameState]);
 
-  const updateMetaCardGridPosition = useCallback((metaCardId: string, col: number, row: number) => {
+  const clearTileProgress = useCallback((tileId: string) => {
     if (!gameState) return;
-    setGameState(updateMetaCardPosition(gameState, metaCardId, col, row));
+    setGameState(clearTileGameProgress(gameState, tileId));
+  }, [gameState]);
+
+  const updateTileGridPosition = useCallback((tileId: string, col: number, row: number) => {
+    if (!gameState) return;
+    setGameState(updateTilePosition(gameState, tileId, col, row));
+  }, [gameState]);
+
+  const updateTileWatercolorConfig = useCallback((tileId: string, watercolorConfig: GameState['tiles'][number]['watercolorConfig']) => {
+    if (!gameState) return;
+    setGameState(updateTileWatercolorConfigFn(gameState, tileId, watercolorConfig));
+  }, [gameState]);
+
+  const toggleTileLock = useCallback((tileId: string) => {
+    if (!gameState) return;
+    setGameState(toggleTileLockFn(gameState, tileId));
   }, [gameState]);
 
   const updateActorGridPosition = useCallback((actorId: string, col: number, row: number) => {
@@ -269,14 +499,67 @@ export function useGameEngine() {
     setGameState(updateActorPosition(gameState, actorId, col, row));
   }, [gameState]);
 
-  const removeActorFromMetaCardHome = useCallback((actorId: string) => {
+  const updateTokenGridPosition = useCallback((tokenId: string, col: number, row: number) => {
     if (!gameState) return;
-    setGameState(removeActorFromMetaCardHomeFn(gameState, actorId));
+    setGameState(updateTokenPositionFn(gameState, tokenId, col, row));
   }, [gameState]);
 
-  const startBiome = useCallback((biomeId: string) => {
+  const stackTokenOnToken = useCallback((draggedTokenId: string, targetTokenId: string) => {
     if (!gameState) return;
-    setGameState(startBiomeFn(gameState, biomeId));
+    setGameState(stackTokenOnTokenFn(gameState, draggedTokenId, targetTokenId));
+  }, [gameState]);
+
+  const stackActorOnActor = useCallback((draggedActorId: string, targetActorId: string) => {
+    if (!gameState) return;
+    setGameState(stackActorOnActorFn(gameState, draggedActorId, targetActorId));
+  }, [gameState]);
+
+  const reorderActorStack = useCallback((stackId: string, orderedActorIds: string[]) => {
+    if (!gameState) return;
+    setGameState(reorderActorStackFn(gameState, stackId, orderedActorIds));
+  }, [gameState]);
+
+  const detachActorFromStack = useCallback((actorId: string, col: number, row: number) => {
+    if (!gameState) return;
+    setGameState(detachActorFromStackFn(gameState, actorId, col, row));
+  }, [gameState]);
+
+  const removeActorFromTileHome = useCallback((actorId: string) => {
+    if (!gameState) return;
+    setGameState(removeActorFromTileHomeFn(gameState, actorId));
+  }, [gameState]);
+
+  const detachActorFromParty = useCallback((tileId: string, actorId: string, col: number, row: number) => {
+    if (!gameState) return;
+    setGameState(detachActorFromPartyFn(gameState, tileId, actorId, col, row));
+  }, [gameState]);
+
+  const startBiome = useCallback((tileId: string, biomeId: string) => {
+    if (!gameState) return;
+    setGameState(startBiomeFn(gameState, tileId, biomeId));
+    setSelectedCard(null);
+    setGuidanceMoves([]);
+  }, [gameState]);
+
+  const autoSolveBiome = useCallback(() => {
+    if (!gameState || gameState.phase !== 'biome' || gameState.tableaus.length === 0) return;
+
+    const optimalMoves = solveOptimally(
+      gameState.tableaus,
+      gameState.foundations,
+      gameState.activeEffects
+    );
+
+    if (optimalMoves.length === 0) return;
+
+    let nextState = gameState;
+    for (const move of optimalMoves) {
+      const updated = playCardInBiomeFn(nextState, move.tableauIndex, move.foundationIndex);
+      if (!updated) break;
+      nextState = updated;
+    }
+
+    setGameState(nextState);
     setSelectedCard(null);
     setGuidanceMoves([]);
   }, [gameState]);
@@ -299,9 +582,54 @@ export function useGameEngine() {
     [selectedCard, gameState]
   );
 
+  const playFromTableau = useCallback(
+    (tableauIndex: number, foundationIndex: number) => {
+      if (!gameState) return false;
+      const newState = playCard(gameState, tableauIndex, foundationIndex);
+      if (!newState) return false;
+      setGameState(newState);
+      setSelectedCard(null);
+      return true;
+    },
+    [gameState]
+  );
+
+  const playCardInNodeBiome = useCallback((nodeId: string, foundationIndex: number) => {
+    if (!gameState || gameState.phase !== 'biome') return;
+    const newState = playCardInNodeBiomeFn(gameState, nodeId, foundationIndex);
+    if (newState) {
+      setGameState(newState);
+    }
+  }, [gameState]);
+
+  const playCardInRandomBiome = useCallback(
+    (tableauIndex: number, foundationIndex: number) => {
+      if (!gameState || gameState.phase !== 'biome') return false;
+      const newState = playCardInRandomBiomeFn(gameState, tableauIndex, foundationIndex);
+      if (!newState) return false;
+      setGameState(newState);
+      setSelectedCard(null);
+      return true;
+    },
+    [gameState]
+  );
+
+  const endRandomBiomeTurn = useCallback(() => {
+    if (!gameState) return;
+    setGameState(endRandomBiomeTurnFn(gameState));
+    setSelectedCard(null);
+  }, [gameState]);
+
   const completeBiome = useCallback(() => {
     if (!gameState) return;
     setGameState(completeBiomeFn(gameState));
+    setSelectedCard(null);
+    setGuidanceMoves([]);
+  }, [gameState]);
+
+  const abandonSession = useCallback(() => {
+    if (!gameState) return;
+    setGameState(abandonSessionState(gameState));
     setSelectedCard(null);
     setGuidanceMoves([]);
   }, [gameState]);
@@ -311,39 +639,143 @@ export function useGameEngine() {
     setGameState(collectBlueprintFn(gameState, blueprintCardId));
   }, [gameState]);
 
+  const addTileToGarden = useCallback((definitionId: string) => {
+    if (!gameState) return;
+    setGameState(addTileToGardenFn(gameState, definitionId));
+  }, [gameState]);
+
+  const addTileToGardenAt = useCallback((definitionId: string, col: number, row: number) => {
+    if (!gameState) return;
+    setGameState(addTileToGardenAtFn(gameState, definitionId, { col, row }));
+  }, [gameState]);
+
+  const removeTileFromGarden = useCallback((tileId: string) => {
+    if (!gameState) return;
+    setGameState(removeTileFromGardenFn(gameState, tileId));
+  }, [gameState]);
+
+  const addActorToGarden = useCallback((definitionId: string) => {
+    if (!gameState) return;
+    setGameState(addActorToGardenFn(gameState, definitionId));
+  }, [gameState]);
+
+  const addTokenToGarden = useCallback((element: Element, count = 1) => {
+    if (!gameState) return;
+    setGameState(addTokenToGardenFn(gameState, element, count));
+  }, [gameState]);
+
+  const addTokenInstanceToGarden = useCallback((token: Token) => {
+    if (!gameState) return;
+    setGameState(addTokenInstanceToGardenFn(gameState, token));
+  }, [gameState]);
+
+  const depositTokenToStash = useCallback((tokenId: string) => {
+    if (!gameState) return;
+    setGameState(depositTokenToStashFn(gameState, tokenId));
+  }, [gameState]);
+
+  const withdrawTokenFromStash = useCallback((element: Element, token: Token) => {
+    if (!gameState) return;
+    setGameState(withdrawTokenFromStashFn(gameState, element, token));
+  }, [gameState]);
+
+  const equipOrimFromStash = useCallback((actorId: string, cardId: string, slotId: string, orimId: string) => {
+    if (!gameState) return;
+    setGameState(equipOrimFromStashFn(gameState, actorId, cardId, slotId, orimId));
+  }, [gameState]);
+
+  const moveOrimBetweenSlots = useCallback((
+    fromActorId: string,
+    fromCardId: string,
+    fromSlotId: string,
+    toActorId: string,
+    toCardId: string,
+    toSlotId: string
+  ) => {
+    if (!gameState) return;
+    setGameState(moveOrimBetweenSlotsFn(gameState, fromActorId, fromCardId, fromSlotId, toActorId, toCardId, toSlotId));
+  }, [gameState]);
+
+  const returnOrimToStash = useCallback((actorId: string, cardId: string, slotId: string) => {
+    if (!gameState) return;
+    setGameState(returnOrimToStashFn(gameState, actorId, cardId, slotId));
+  }, [gameState]);
+
+  const updateOrimDefinitions = useCallback((definitions: GameState['orimDefinitions']) => {
+    setGameState((prev) => (prev ? { ...prev, orimDefinitions: definitions } : prev));
+  }, []);
+
+  const toggleGraphics = useCallback(() => {
+    setShowGraphics((prev) => !prev);
+  }, []);
+
   return {
     gameState,
     selectedCard,
     guidanceMoves,
+    showGraphics,
+    noRegretStatus,
     ...derivedState,
     actions: {
       newGame,
       selectCard,
       playToFoundation,
+      playCardDirect,
+      playFromTableau,
+      playFromHand,
+      playFromStock,
+      rewindLastCard,
       addEffect,
       activateGuidance,
       clearGuidance,
       returnToGarden,
       startAdventure,
       autoPlay,
+      autoSolveBiome,
       assignCardToChallenge,
       assignCardToBuildPile,
-      assignActorToQueue,
-      removeActorFromQueue,
+      assignActorToParty,
+      clearParty,
       toggleInteractionMode,
       clearAllProgress,
       clearPhaseProgress,
       clearBuildPileProgress,
-      assignCardToMetaCardSlot,
-      assignActorToMetaCardHome,
-      clearMetaCardProgress,
-      updateMetaCardGridPosition,
+      assignCardToTileSlot,
+      assignTokenToTileSlot,
+      assignActorToTileHome,
+      clearTileProgress,
+      updateTileGridPosition,
+      updateTileWatercolorConfig,
+      toggleTileLock,
       updateActorGridPosition,
-      removeActorFromMetaCardHome,
+      updateTokenGridPosition,
+      stackActorOnActor,
+      stackTokenOnToken,
+      reorderActorStack,
+      detachActorFromStack,
+      detachActorFromParty,
+      removeActorFromTileHome,
       startBiome,
       playToBiomeFoundation,
+      playCardInNodeBiome,
+      playCardInRandomBiome,
+      endRandomBiomeTurn,
       completeBiome,
       collectBlueprint,
+      abandonSession,
+      addTileToGarden,
+      addTileToGardenAt,
+      removeTileFromGarden,
+      addActorToGarden,
+      addTokenToGarden,
+      addTokenInstanceToGarden,
+      depositTokenToStash,
+      withdrawTokenFromStash,
+      equipOrimFromStash,
+      moveOrimBetweenSlots,
+      returnOrimToStash,
+      updateOrimDefinitions,
+      toggleGraphics,
     },
   };
 }

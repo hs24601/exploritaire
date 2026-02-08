@@ -1,34 +1,61 @@
 import type { Actor, ActorDefinition } from './types';
+import { randomIdSuffix } from './constants';
 
 // Actor definitions - templates for creating actor instances
+// ACTOR_DEFINITIONS_START
 export const ACTOR_DEFINITIONS: ActorDefinition[] = [
   {
-    id: 'fennec',
-    name: 'Fennec',
-    titles: ['Fennec', 'Fox'],
+    id: 'fox',
+    name: 'Fox',
+    titles: ["Fennec","Fox"],
     description: 'A curious fennec fox with keen senses',
     type: 'adventurer',
-    value: 9, // Base value for card matching
-    element: 'N', // Non-elemental
-    sprite: '🦊', // Fennec fox emoji
+    value: 2,
+    suit: undefined,
+    element: 'N',
+    sprite: '🦊',
+    orimSlots: [
+      { orimId: 'scratch', locked: true },
+      { orimId: 'bide' },
+    ],
   },
   {
-    id: 'zeev',
-    name: "Ze'ev",
-    titles: ["Ze'ev", 'Wolf'],
+    id: 'wolf',
+    name: 'Wolf',
+    titles: ["Ze'ev","Wolf"],
     description: 'A fierce wolf with unwavering loyalty',
     type: 'adventurer',
-    value: 1, // Ace value
-    element: 'N', // Non-elemental
-    sprite: '🐺', // Wolf emoji
+    value: 7,
+    suit: undefined,
+    element: 'N',
+    sprite: '🐺',
+    orimSlots: [
+      { orimId: 'bite', locked: true },
+    ],
   },
 ];
+// ACTOR_DEFINITIONS_END
 
 /**
  * Gets an actor definition by ID
  */
 export function getActorDefinition(definitionId: string): ActorDefinition | null {
-  return ACTOR_DEFINITIONS.find(d => d.id === definitionId) || null;
+  const direct = ACTOR_DEFINITIONS.find((definition) => definition.id === definitionId);
+  if (direct) return direct;
+  return ACTOR_DEFINITIONS.find((definition) => definition.aliases?.includes(definitionId)) || null;
+}
+
+function getActorLetter(definition: ActorDefinition): string {
+  const titleSource = definition.titles[definition.titles.length - 1] || definition.name;
+  const cleaned = titleSource.replace(/[^A-Za-z0-9]/g, '');
+  const fallback = cleaned[0] || definition.name.replace(/[^A-Za-z0-9]/g, '')[0] || '?';
+  return fallback.toUpperCase();
+}
+
+export function getActorDisplayGlyph(definitionId: string, showGraphics: boolean): string {
+  const definition = getActorDefinition(definitionId);
+  if (!definition) return '?';
+  return showGraphics ? definition.sprite : getActorLetter(definition);
 }
 
 /**
@@ -38,10 +65,28 @@ export function createActor(definitionId: string): Actor | null {
   const definition = getActorDefinition(definitionId);
   if (!definition) return null;
 
+  const actorId = `${definitionId}-${Date.now()}-${randomIdSuffix()}`;
+  const baseSlots = definition.orimSlots?.length ? definition.orimSlots : [{ locked: false }];
+  const orimSlots = baseSlots.map((slot, index) => ({
+    id: `${actorId}-orim-slot-${index + 1}`,
+    orimId: null,
+    locked: slot.locked ?? false,
+  }));
   return {
     definitionId,
-    id: `${definitionId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: actorId,
     currentValue: definition.value,
+    level: 1,
+    stamina: 3,
+    staminaMax: 3,
+    energy: 3,
+    energyMax: 3,
+    hp: 10,
+    hpMax: 10,
+    damageTaken: 0,
+    power: 0,
+    powerMax: 3,
+    orimSlots,
   };
 }
 
@@ -51,77 +96,26 @@ export function createActor(definitionId: string): Actor | null {
 export function createInitialActors(): Actor[] {
   const actors: Actor[] = [];
 
-  // Fennec at default position
-  const fennec = createActor('fennec');
-  if (fennec) {
-    fennec.gridPosition = { col: 3, row: 2 };
-    actors.push(fennec);
+  const fox = createActor('fox');
+  if (fox) {
+    fox.gridPosition = { col: 3, row: 2 };
+    actors.push(fox);
   }
 
-  // Ze'ev at nearby position
-  const zeev = createActor('zeev');
-  if (zeev) {
-    zeev.gridPosition = { col: 4, row: 2 };
-    actors.push(zeev);
+  const wolf = createActor('wolf');
+  if (wolf) {
+    wolf.gridPosition = { col: 4, row: 2 };
+    actors.push(wolf);
   }
 
   return actors;
 }
 
 /**
- * Creates an empty adventure queue (3 slots)
+ * Checks if the party has at least one actor
  */
-export function createEmptyAdventureQueue(): (Actor | null)[] {
-  return [null, null, null];
-}
-
-/**
- * Adds an actor to the adventure queue
- * Returns the new queue or null if failed
- */
-export function addActorToQueue(
-  queue: (Actor | null)[],
-  actor: Actor,
-  slotIndex: number
-): (Actor | null)[] | null {
-  if (slotIndex < 0 || slotIndex >= queue.length) return null;
-  if (queue[slotIndex] !== null) return null; // Slot occupied
-
-  const newQueue = [...queue];
-  newQueue[slotIndex] = actor;
-  return newQueue;
-}
-
-/**
- * Removes an actor from the adventure queue
- * Returns the actor and new queue
- */
-export function removeActorFromQueue(
-  queue: (Actor | null)[],
-  slotIndex: number
-): { actor: Actor | null; newQueue: (Actor | null)[] } {
-  if (slotIndex < 0 || slotIndex >= queue.length) {
-    return { actor: null, newQueue: queue };
-  }
-
-  const actor = queue[slotIndex];
-  const newQueue = [...queue];
-  newQueue[slotIndex] = null;
-  return { actor, newQueue };
-}
-
-/**
- * Checks if the adventure queue has at least one actor
- */
-export function canStartAdventure(queue: (Actor | null)[]): boolean {
-  return queue.some(slot => slot !== null);
-}
-
-/**
- * Gets all actors currently in the queue
- */
-export function getQueuedActors(queue: (Actor | null)[]): Actor[] {
-  return queue.filter((slot): slot is Actor => slot !== null);
+export function canStartAdventure(party: Actor[]): boolean {
+  return party.length > 0;
 }
 
 /**
@@ -129,10 +123,15 @@ export function getQueuedActors(queue: (Actor | null)[]): Actor[] {
  */
 export function getActorValueDisplay(value: number): string {
   switch (value) {
-    case 1: return 'A';
-    case 11: return 'J';
-    case 12: return 'Q';
-    case 13: return 'K';
-    default: return String(value);
+    case 1:
+      return 'A';
+    case 11:
+      return 'J';
+    case 12:
+      return 'Q';
+    case 13:
+      return 'K';
+    default:
+      return String(value);
   }
 }

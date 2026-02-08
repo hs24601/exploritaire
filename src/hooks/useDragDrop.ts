@@ -19,7 +19,18 @@ const initialDragState: DragState = {
 
 export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: number) => void) {
   const [dragState, setDragState] = useState<DragState>(initialDragState);
+  const [lastDragEndAt, setLastDragEndAt] = useState(0);
+  const dragStateRef = useRef(dragState);
+  const onDropRef = useRef(onDrop);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    dragStateRef.current = dragState;
+  }, [dragState]);
+
+  useEffect(() => {
+    onDropRef.current = onDrop;
+  }, [onDrop]);
 
   const startDrag = useCallback((
     card: Card,
@@ -53,9 +64,22 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
   }, []);
 
   const endDrag = useCallback((clientX: number, clientY: number) => {
-    if (!dragState.card || dragState.tableauIndex === null) {
+    const current = dragStateRef.current;
+    if (!current.card || current.tableauIndex === null) {
+      setLastDragEndAt(Date.now());
       setDragState(initialDragState);
       return;
+    }
+
+    const dropX = clientX;
+    const dropY = clientY;
+    if (import.meta.env.DEV) {
+      console.debug('[drag] end', {
+        cardId: current.card.id,
+        tableauIndex: current.tableauIndex,
+        dropX,
+        dropY,
+      });
     }
 
     // Check if dropped on a foundation
@@ -65,21 +89,26 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
 
       const rect = ref.getBoundingClientRect();
       if (
-        clientX >= rect.left &&
-        clientX <= rect.right &&
-        clientY >= rect.top &&
-        clientY <= rect.bottom
+        dropX >= rect.left &&
+        dropX <= rect.right &&
+        dropY >= rect.top &&
+        dropY <= rect.bottom
       ) {
-        onDrop(dragState.tableauIndex, i);
+        if (import.meta.env.DEV) {
+          console.debug('[drag] hit foundation', { index: i, rect });
+        }
+        onDropRef.current(current.tableauIndex, i);
         break;
       }
     }
 
     setDragState(initialDragState);
-  }, [dragState.card, dragState.tableauIndex, onDrop]);
+    setLastDragEndAt(Date.now());
+  }, []);
 
   const cancelDrag = useCallback(() => {
     setDragState(initialDragState);
+    setLastDragEndAt(Date.now());
   }, []);
 
   const setFoundationRef = useCallback((index: number, ref: HTMLDivElement | null) => {
@@ -88,18 +117,19 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
 
   // Global mouse/touch move and up handlers
   useEffect(() => {
-    if (!dragState.isDragging) return;
-
     const handleMouseMove = (e: MouseEvent) => {
+      if (!dragStateRef.current.isDragging) return;
       e.preventDefault();
       updateDrag(e.clientX, e.clientY);
     };
 
     const handleMouseUp = (e: MouseEvent) => {
+      if (!dragStateRef.current.isDragging) return;
       endDrag(e.clientX, e.clientY);
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      if (!dragStateRef.current.isDragging) return;
       if (e.touches.length !== 1) return;
       e.preventDefault();
       const touch = e.touches[0];
@@ -107,6 +137,7 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
+      if (!dragStateRef.current.isDragging) return;
       if (e.changedTouches.length !== 1) {
         cancelDrag();
         return;
@@ -119,24 +150,46 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
       cancelDrag();
     };
 
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!dragStateRef.current.isDragging) return;
+      updateDrag(e.clientX, e.clientY);
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (!dragStateRef.current.isDragging) return;
+      endDrag(e.clientX, e.clientY);
+    };
+
+    const handlePointerCancel = () => {
+      if (!dragStateRef.current.isDragging) return;
+      cancelDrag();
+    };
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
-    document.addEventListener('touchcancel', handleTouchCancel);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
+    document.addEventListener('touchend', handleTouchEnd, { capture: true });
+    document.addEventListener('touchcancel', handleTouchCancel, { capture: true });
+    document.addEventListener('pointermove', handlePointerMove, { capture: true });
+    document.addEventListener('pointerup', handlePointerUp, { capture: true });
+    document.addEventListener('pointercancel', handlePointerCancel, { capture: true });
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-      document.removeEventListener('touchcancel', handleTouchCancel);
+      document.removeEventListener('touchmove', handleTouchMove, { capture: true });
+      document.removeEventListener('touchend', handleTouchEnd, { capture: true });
+      document.removeEventListener('touchcancel', handleTouchCancel, { capture: true });
+      document.removeEventListener('pointermove', handlePointerMove, { capture: true });
+      document.removeEventListener('pointerup', handlePointerUp, { capture: true });
+      document.removeEventListener('pointercancel', handlePointerCancel, { capture: true });
     };
-  }, [dragState.isDragging, updateDrag, endDrag, cancelDrag]);
+  }, [updateDrag, endDrag, cancelDrag]);
 
   return {
     dragState,
     startDrag,
     setFoundationRef,
+    lastDragEndAt,
   };
 }

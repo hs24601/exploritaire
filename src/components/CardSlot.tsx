@@ -1,24 +1,31 @@
 import { memo } from 'react';
 import type { CardSlot as CardSlotType } from '../engine/types';
-import { SUIT_COLORS } from '../engine/constants';
+import { SUIT_COLORS, getSuitDisplay } from '../engine/constants';
+import { GAME_BORDER_WIDTH } from '../utils/styles';
 
 interface CardSlotProps {
   slot: CardSlotType;
-  metaCardId: string;
+  tileId: string;
   isDropTarget: boolean;
   size?: 'sm' | 'md';
+  showGraphics: boolean;
 }
 
 export const CardSlot = memo(function CardSlot({
   slot,
-  metaCardId,
+  tileId,
   isDropTarget,
   size = 'sm',
+  showGraphics,
 }: CardSlotProps) {
   const isFilled = slot.card !== null;
   const suitColor = slot.requirement.suit
     ? SUIT_COLORS[slot.requirement.suit]
     : '#7fdbca';
+  const requirementDisplay = slot.requirement.suit
+    ? getSuitDisplay(slot.requirement.suit, showGraphics)
+    : (showGraphics ? '?' : 'N');
+  const cardSuitDisplay = slot.card ? getSuitDisplay(slot.card.suit, showGraphics) : '';
 
   const dimensions = size === 'sm'
     ? { width: 48, height: 64 }
@@ -26,14 +33,16 @@ export const CardSlot = memo(function CardSlot({
 
   return (
     <div
-      data-meta-card-slot
-      data-meta-card-id={metaCardId}
+      data-card-face
+      data-tile-slot
+      data-tile-id={tileId}
       data-slot-id={slot.id}
       data-slot-suit={slot.requirement.suit || ''}
-      className="rounded-md border-2 flex flex-col items-center justify-center transition-all"
+      className="rounded-md flex flex-col items-center justify-center transition-all"
       style={{
         width: dimensions.width,
         height: dimensions.height,
+        borderWidth: GAME_BORDER_WIDTH,
         borderColor: isFilled ? suitColor : `${suitColor}66`,
         borderStyle: isFilled ? 'solid' : 'dashed',
         backgroundColor: isFilled ? `${suitColor}22` : 'transparent',
@@ -48,7 +57,7 @@ export const CardSlot = memo(function CardSlot({
       {isFilled && slot.card ? (
         // Show filled card
         <>
-          <span className="text-lg">{slot.card.suit}</span>
+          <span className="text-lg">{cardSuitDisplay}</span>
           <span
             className="text-xs font-bold"
             style={{ color: SUIT_COLORS[slot.card.suit] }}
@@ -65,7 +74,7 @@ export const CardSlot = memo(function CardSlot({
             filter: 'grayscale(50%)',
           }}
         >
-          {slot.requirement.suit || '?'}
+          {requirementDisplay}
         </span>
       )}
     </div>
