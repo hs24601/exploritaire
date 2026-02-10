@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { useGraphics } from '../contexts/GraphicsContext';
 import type { GameState, Card as CardType, Move, SelectedCard, Actor } from '../engine/types';
 import type { DragState } from '../hooks/useDragDrop';
@@ -7,6 +7,7 @@ import { Tableau } from './Tableau';
 import { FoundationActor } from './FoundationActor';
 import { StatsPanel } from './StatsPanel';
 import { canPlayCard } from '../engine/rules';
+import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { CARD_SIZE } from '../engine/constants';
 import { getActorDefinition } from '../engine/actors';
 import { NO_MOVES_BADGE_STYLE, NEON_COLORS } from '../utils/styles';
@@ -54,6 +55,14 @@ export const PlayingScreen = memo(function PlayingScreen({
 }: PlayingScreenProps) {
   const showGraphics = useGraphics();
   const foundationOffset = CARD_SIZE.height * 1.25;
+  const foundationOffsetAdjusted = cloudSightActive ? foundationOffset * 0.6 : foundationOffset;
+  const foundationHasActor = (gameState.foundations[0]?.length ?? 0) > 0;
+  const cloudSightActive = useMemo(() => {
+    if (!foundationHasActor) return false;
+    const foundationActor = activeParty[0];
+    if (!foundationActor) return false;
+    return actorHasOrimDefinition(gameState, foundationActor.id, 'cloud_sight');
+  }, [activeParty, gameState, foundationHasActor]);
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       {/* Decorative SVG */}
@@ -100,12 +109,13 @@ export const PlayingScreen = memo(function PlayingScreen({
               draggingCardId={dragState.isDragging ? dragState.card?.id : null}
               showGraphics={showGraphics}
               cardScale={1.25}
+              revealNextRow={cloudSightActive}
             />
           ))}
         </div>
 
         {/* Foundations */}
-        <div className="flex flex-col items-center gap-4" style={{ marginTop: -foundationOffset }}>
+        <div className="flex flex-col items-center gap-4" style={{ marginTop: -foundationOffsetAdjusted }}>
           <div className="text-xs opacity-80 text-center text-game-purple tracking-widest">
             FOUNDATIONS
           </div>
@@ -124,7 +134,7 @@ export const PlayingScreen = memo(function PlayingScreen({
                 isGuidedFoundation && (isFollowingGuidance || !selectedCard);
               const shouldDim = guidanceActive && !isGuidedFoundation;
 
-              const actor = activeParty[idx];
+              const actor = (idx === 0 && !foundationHasActor) ? null : activeParty[idx];
               const actorName = actor ? getActorDefinition(actor.definitionId)?.name : undefined;
               const hasStamina = (actor?.stamina ?? 0) > 0;
               const canReceiveDrag =
@@ -165,21 +175,23 @@ export const PlayingScreen = memo(function PlayingScreen({
               );
             })}
           </div>
-          <div className="mt-2">
-            <div className="relative inline-flex items-center gap-2">
+          <div className="mt-2 pointer-events-auto relative z-[100]">
+            <div className="relative inline-flex items-center gap-2 z-[100] pointer-events-auto">
               <GameButton onClick={actions.returnToGarden} color="teal" size="sm" className="w-16 text-center">
                 {'<-'}
               </GameButton>
-              <GameButton
-                onClick={actions.rewindLastCard}
-                color="purple"
-                size="sm"
-                className="w-16 text-center"
-                disabled={!noRegretStatus.canRewind}
-                title={noRegretStatus.cooldown > 0 ? `Cooldown: ${noRegretStatus.cooldown}` : 'Rewind last card'}
-              >
-                {noRegretStatus.cooldown > 0 ? `R${noRegretStatus.cooldown}` : 'REW'}
-              </GameButton>
+              {noRegretStatus.actorId && (
+                <GameButton
+                  onClick={actions.rewindLastCard}
+                  color="purple"
+                  size="sm"
+                  className="w-16 text-center pointer-events-auto"
+                  disabled={!noRegretStatus.canRewind}
+                  title={noRegretStatus.cooldown > 0 ? `Cooldown: ${noRegretStatus.cooldown}` : 'Rewind last card'}
+                >
+                  {noRegretStatus.cooldown > 0 ? `R${noRegretStatus.cooldown}` : 'REW'}
+                </GameButton>
+              )}
               <GameButton onClick={actions.autoPlay} color="gold" size="sm" className="w-16 text-center">
                 ?
               </GameButton>

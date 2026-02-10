@@ -18,6 +18,7 @@ import {
 import { createActorDeckStateWithOrim } from './actorDecks';
 import { ORIM_DEFINITIONS } from './orims';
 import { canActivateOrim } from './orimTriggers';
+import { applyOrimTiming, actorHasOrimDefinition } from './orimEffects';
 import {
   createInitialTiles,
   createTile,
@@ -37,14 +38,8 @@ import { generateNodeTableau, playCardFromNode } from './nodeTableau';
 const NO_REGRET_ORIM_ID = 'no-regret';
 const NO_REGRET_COOLDOWN = 5;
 
-function tickNoRegretCooldowns(cooldowns: Record<string, number> | undefined): Record<string, number> {
-  if (!cooldowns) return {};
-  const next: Record<string, number> = {};
-  Object.entries(cooldowns).forEach(([actorId, value]) => {
-    const remaining = Math.max(0, (value ?? 0) - 1);
-    next[actorId] = remaining;
-  });
-  return next;
+function tickNoRegretCooldown(cooldown: number | undefined): number {
+  return Math.max(0, (cooldown ?? 0) - 1);
 }
 
 function stripLastCardSnapshot(state: GameState): Omit<GameState, 'lastCardActionSnapshot'> {
@@ -53,32 +48,16 @@ function stripLastCardSnapshot(state: GameState): Omit<GameState, 'lastCardActio
 
 function recordCardAction(prev: GameState, next: GameState): GameState {
   const snapshot = stripLastCardSnapshot(prev);
-  const baseCooldowns = next.noRegretCooldowns ?? prev.noRegretCooldowns ?? {};
+  const baseCooldown = next.noRegretCooldown ?? prev.noRegretCooldown;
   return {
     ...next,
     lastCardActionSnapshot: snapshot,
-    noRegretCooldowns: tickNoRegretCooldowns(baseCooldowns),
+    noRegretCooldown: tickNoRegretCooldown(baseCooldown),
   };
 }
 
 function actorHasNoRegret(state: GameState, actorId: string): boolean {
-  const actor = findActorById(state, actorId);
-  if (!actor) return false;
-  const hasActorSlot = (actor.orimSlots ?? []).some((slot) => {
-    if (!slot.orimId) return false;
-    const instance = state.orimInstances[slot.orimId];
-    return instance?.definitionId === NO_REGRET_ORIM_ID;
-  });
-  if (hasActorSlot) return true;
-  const deck = state.actorDecks[actorId];
-  if (!deck) return false;
-  return deck.cards.some((card) =>
-    card.slots.some((slot) => {
-      if (!slot.orimId) return false;
-      const instance = state.orimInstances[slot.orimId];
-      return instance?.definitionId === NO_REGRET_ORIM_ID;
-    })
-  );
+  return actorHasOrimDefinition(state, actorId, NO_REGRET_ORIM_ID);
 }
 
 function normalizeStack(actors: Actor[], stackId: string): Actor[] {
@@ -347,6 +326,7 @@ export interface PersistedState {
   orimInstances: Record<string, OrimInstance>;
   actorDecks: Record<string, ActorDeckState>;
   noRegretCooldowns?: Record<string, number>;
+  noRegretCooldown?: number;
   tiles: Tile[];
 }
 
@@ -484,7 +464,16 @@ export function initializeGame(
     }
     const merged = new Map<string, OrimDefinition>();
     baseDefinitions.forEach((definition) => merged.set(definition.id, definition));
-    persistedDefinitions.forEach((definition) => merged.set(definition.id, definition));
+    const legacyCombatIds = new Set(['scratch', 'bite', 'claw']);
+    persistedDefinitions.forEach((definition) => {
+      const base = merged.get(definition.id);
+      const legacyDomain = legacyCombatIds.has(definition.id) ? 'combat' : 'puzzle';
+      merged.set(definition.id, {
+        ...(base ?? definition),
+        ...definition,
+        domain: definition.domain ?? base?.domain ?? legacyDomain,
+      });
+    });
     return Array.from(merged.values());
   };
   const orimDefinitions = mergeOrimDefinitions(ORIM_DEFINITIONS, persisted?.orimDefinitions);
@@ -555,7 +544,10 @@ export function initializeGame(
     orimStash: persisted?.orimStash || [],
     orimInstances,
     actorDecks,
-    noRegretCooldowns: persisted?.noRegretCooldowns || {},
+    actorCombos: persisted?.actorCombos ?? {},
+    noRegretCooldown: typeof persisted?.noRegretCooldown === 'number'
+      ? persisted.noRegretCooldown
+      : Math.max(0, ...Object.values(persisted?.noRegretCooldowns ?? {})),
     lastCardActionSnapshot: undefined,
     tiles: persisted?.tiles || createInitialTiles(),
     blueprints: [], // Player's blueprint library
@@ -567,11 +559,13 @@ export function initializeGame(
   const randomWildsTile = baseState.tiles.find((tile) => tile.definitionId === 'random_wilds') || null;
   if (!randomWildsTile) return baseState;
 
-  const fennec = baseState.availableActors.find((actor) => actor.definitionId === 'fox') || null;
-  if (!fennec) return baseState;
+  const partyDefinitionIds = ['fox', 'wolf', 'bear', 'cat', 'owl'];
+  const queuedActors = baseState.availableActors.filter((actor) =>
+    partyDefinitionIds.includes(actor.definitionId)
+  );
+  if (queuedActors.length === 0) return baseState;
 
-  const queuedActorIds = new Set([fennec.id]);
-  const queuedActors = [fennec];
+  const queuedActorIds = new Set(queuedActors.map((actor) => actor.id));
 
   const prequeuedState: GameState = {
     ...baseState,
@@ -721,7 +715,12 @@ export function playCard(
       card
     ),
   };
-  return recordCardAction(state, nextState);
+  const recorded = recordCardAction(state, nextState);
+  if (!foundationActor) return recorded;
+  return applyOrimTiming(recorded, 'play', foundationActor.id, {
+    card,
+    foundationIndex,
+  });
 }
 
 export function playCardFromHand(
@@ -766,7 +765,12 @@ export function playCardFromHand(
       foundationCombos: combos,
       actorDecks: updatedDecks,
     };
-    return recordCardAction(state, nextState);
+    const recorded = recordCardAction(state, nextState);
+    if (!foundationActor) return recorded;
+    return applyOrimTiming(recorded, 'play', foundationActor.id, {
+      card,
+      foundationIndex,
+    });
   }
 
   const newCombos = combos;
@@ -798,14 +802,20 @@ export function playCardFromHand(
     foundationTokens: newFoundationTokens,
     actorDecks: updatedDecks,
   };
-  return recordCardAction(state, nextState);
+  const recorded = recordCardAction(state, nextState);
+  if (!foundationActor) return recorded;
+  return applyOrimTiming(recorded, 'play', foundationActor.id, {
+    card,
+    foundationIndex,
+  });
 }
 
 export function playCardFromStock(
   state: GameState,
   foundationIndex: number,
   useWild = false,
-  force = false
+  force = false,
+  consumeStock = true
 ): GameState | null {
   const stockCard = state.stock[state.stock.length - 1];
   if (!stockCard) return null;
@@ -821,25 +831,25 @@ export function playCardFromStock(
   const nextState = playCardFromHand(state, stockCard, foundationIndex, useWild);
   if (!nextState) return null;
 
+  if (!consumeStock) {
+    return nextState;
+  }
+
   return {
     ...nextState,
     stock: state.stock.slice(0, -1),
   };
 }
 
-export function rewindLastCardAction(state: GameState, actorId: string): GameState {
+export function rewindLastCardAction(state: GameState): GameState {
   const snapshot = state.lastCardActionSnapshot;
   if (!snapshot) return state;
-  if (!actorHasNoRegret(state, actorId)) return state;
-  const currentCooldown = state.noRegretCooldowns?.[actorId] ?? 0;
+  const currentCooldown = state.noRegretCooldown ?? 0;
   if (currentCooldown > 0) return state;
-
-  const nextCooldowns = { ...(snapshot.noRegretCooldowns ?? {}) };
-  nextCooldowns[actorId] = NO_REGRET_COOLDOWN;
 
   return {
     ...snapshot,
-    noRegretCooldowns: nextCooldowns,
+    noRegretCooldown: NO_REGRET_COOLDOWN,
     lastCardActionSnapshot: undefined,
   };
 }
@@ -1882,6 +1892,130 @@ export function returnOrimToStash(
   };
 }
 
+/**
+ * Swaps the party lead (foundation index 0) with another party member.
+ */
+export function swapPartyLead(
+  state: GameState,
+  actorId: string
+): GameState {
+  const activeTileId = state.activeSessionTileId;
+  if (!activeTileId) return state;
+  const party = getPartyForTile(state, activeTileId);
+  if (party.length <= 1) return state;
+  const targetIndex = party.findIndex((actor) => actor.id === actorId);
+  if (targetIndex < 0) return state;
+
+  const nextParty = [...party];
+  if (targetIndex > 0) {
+    [nextParty[0], nextParty[targetIndex]] = [nextParty[targetIndex], nextParty[0]];
+  }
+
+  const nextFoundations = state.foundations.length
+    ? [...state.foundations]
+    : state.foundations;
+  if (Array.isArray(nextFoundations)) {
+    if (nextFoundations.length > targetIndex) {
+      if (targetIndex === 0 && nextFoundations[0].length === 0) {
+        nextFoundations[0] = [createActorFoundationCard(nextParty[0])];
+      } else {
+      [nextFoundations[0], nextFoundations[targetIndex]] = [
+        nextFoundations[targetIndex],
+        nextFoundations[0],
+      ];
+      }
+    } else if (nextFoundations.length === 1) {
+      if (nextFoundations[0].length === 0 || targetIndex >= 0) {
+        nextFoundations[0] = [createActorFoundationCard(nextParty[0])];
+      }
+    }
+  }
+
+  const nextCombos = state.foundationCombos ? [...state.foundationCombos] : state.foundationCombos;
+  if (Array.isArray(nextCombos)) {
+    if (nextCombos.length > targetIndex) {
+      if (targetIndex === 0 && nextFoundations.length === 1) {
+        nextCombos[0] = 0;
+      } else {
+        [nextCombos[0], nextCombos[targetIndex]] = [nextCombos[targetIndex], nextCombos[0]];
+      }
+    } else if (nextCombos.length === 1) {
+      nextCombos[0] = 0;
+    }
+  }
+
+  const nextTokens = state.foundationTokens ? [...state.foundationTokens] : state.foundationTokens;
+  if (Array.isArray(nextTokens)) {
+    if (nextTokens.length > targetIndex) {
+      if (targetIndex === 0 && nextFoundations.length === 1) {
+        nextTokens[0] = createEmptyTokenCounts();
+      } else {
+        [nextTokens[0], nextTokens[targetIndex]] = [nextTokens[targetIndex], nextTokens[0]];
+      }
+    } else if (nextTokens.length === 1) {
+      nextTokens[0] = createEmptyTokenCounts();
+    }
+  }
+
+  return {
+    ...state,
+    tileParties: {
+      ...state.tileParties,
+      [activeTileId]: nextParty,
+    },
+    foundations: nextFoundations,
+    foundationCombos: nextCombos,
+    foundationTokens: nextTokens,
+  };
+}
+
+export function devInjectOrimToActor(
+  state: GameState,
+  actorId: string,
+  orimDefinitionId: string
+): GameState {
+  const actor = findActorById(state, actorId);
+  if (!actor) return state;
+  const definition = state.orimDefinitions.find((item) => item.id === orimDefinitionId);
+  if (!definition) return state;
+
+  const instanceId = `orim-${definition.id}-${Date.now()}-${randomIdSuffix()}`;
+  const nextInstances = {
+    ...state.orimInstances,
+    [instanceId]: { id: instanceId, definitionId: definition.id },
+  };
+
+  const nextSlots = [...(actor.orimSlots ?? [])];
+  const emptyIndex = nextSlots.findIndex((slot) => !slot.orimId && !slot.locked);
+  if (emptyIndex >= 0) {
+    nextSlots[emptyIndex] = { ...nextSlots[emptyIndex], orimId: instanceId };
+  } else {
+    nextSlots.push({
+      id: `orim-slot-${actorId}-${Date.now()}-${randomIdSuffix()}`,
+      orimId: instanceId,
+      locked: false,
+    });
+  }
+
+  const updateActor = (item: Actor) =>
+    item.id === actorId ? { ...item, orimSlots: nextSlots } : item;
+
+  const nextAvailable = state.availableActors.map(updateActor);
+  const nextParties = Object.fromEntries(
+    Object.entries(state.tileParties).map(([tileId, party]) => [
+      tileId,
+      party.map(updateActor),
+    ])
+  );
+
+  return {
+    ...state,
+    orimInstances: nextInstances,
+    availableActors: nextAvailable,
+    tileParties: nextParties,
+  };
+}
+
 export function stackActorOnActor(
   state: GameState,
   draggedActorId: string,
@@ -2121,13 +2255,42 @@ function startRandomBiome(
   if (!biomeDef || !biomeDef.randomlyGenerated) return state;
   if (partyActors.length === 0) return state;
 
+  const equipAllOrims = false; // TEMP: disable sandbox auto-equip; use actor defaults
+  let sandboxActors = partyActors;
+  let sandboxInstances: Record<string, OrimInstance> | null = null;
+  if (equipAllOrims) {
+    sandboxInstances = {};
+    sandboxActors = partyActors.map((actor, index) => {
+      if (index !== 0) return actor;
+      const slots: OrimSlot[] = state.orimDefinitions.map((definition, index) => {
+        const instance: OrimInstance = {
+          id: `orim-${definition.id}-${actor.id}-${randomIdSuffix()}`,
+          definitionId: definition.id,
+        };
+        sandboxInstances![instance.id] = instance;
+        return {
+          id: `${actor.id}-orim-slot-${index + 1}`,
+          orimId: instance.id,
+          locked: false,
+        };
+      });
+      return { ...actor, orimSlots: slots };
+    });
+  }
+
   const tableaus = generateShowcaseTableaus(7);
   const stock = generateRandomStock(20);
-  const foundations: Card[][] = partyActors.map(actor => [
-    createActorFoundationCard(actor),
-  ]);
+  const foundations: Card[][] = biomeId === 'random_wilds'
+    ? [[]]
+    : sandboxActors.map(actor => [
+      createActorFoundationCard(actor),
+    ]);
   const foundationCombos = foundations.map(() => 0);
   const foundationTokens = foundations.map(() => createEmptyTokenCounts());
+  const actorCombos = {
+    ...(state.actorCombos ?? {}),
+    ...Object.fromEntries(partyActors.map((actor) => [actor.id, state.actorCombos?.[actor.id] ?? 0])),
+  };
 
   return {
     ...state,
@@ -2143,8 +2306,15 @@ function startRandomBiome(
     collectedTokens: createEmptyTokenCounts(),
     pendingBlueprintCards: [],
     foundationCombos,
+    actorCombos,
     foundationTokens,
     randomBiomeTurnNumber: 1,
+    tileParties: equipAllOrims
+      ? { ...state.tileParties, [tileId]: sandboxActors }
+      : state.tileParties,
+    orimInstances: sandboxInstances
+      ? { ...state.orimInstances, ...sandboxInstances }
+      : state.orimInstances,
   };
 }
 
@@ -2193,6 +2363,12 @@ export function playCardInRandomBiome(
     : Array.from({ length: foundationCount }, () => 0);
   const newCombos = [...comboSeed];
   newCombos[foundationIndex] = (newCombos[foundationIndex] || 0) + 1;
+  const newActorCombos = foundationActor
+    ? {
+      ...(state.actorCombos ?? {}),
+      [foundationActor.id]: (state.actorCombos?.[foundationActor.id] ?? 0) + 1,
+    }
+    : (state.actorCombos ?? {});
 
   // Update per-foundation tokens
   const tokensSeed = state.foundationTokens && state.foundationTokens.length === foundationCount
@@ -2221,6 +2397,7 @@ export function playCardInRandomBiome(
     biomeMovesCompleted: (state.biomeMovesCompleted || 0) + 1,
     collectedTokens: newCollectedTokens,
     foundationCombos: newCombos,
+    actorCombos: newActorCombos,
     foundationTokens: newFoundationTokens,
     actorDecks: foundationActor
       ? reduceDeckCooldowns({ ...state, actorDecks: state.actorDecks }, foundationActor.id, 1)
@@ -2252,60 +2429,29 @@ export function endRandomBiomeTurn(state: GameState): GameState {
     ...actor,
     stamina: Math.max(0, (actor.stamina ?? 0) - 1),
   }));
-  const updatedDecks = applyBideCooldowns(state, partyActors);
-
-  return {
+  const resetActorCombos = {
+    ...(state.actorCombos ?? {}),
+    ...Object.fromEntries(updatedParty.map((actor) => [actor.id, 0])),
+  };
+  let nextState: GameState = {
     ...state,
     tableaus,
     foundations,
     stock,
     foundationCombos,
+    actorCombos: resetActorCombos,
     foundationTokens,
     tileParties: state.activeSessionTileId
       ? { ...state.tileParties, [state.activeSessionTileId]: updatedParty }
       : state.tileParties,
     randomBiomeTurnNumber: (state.randomBiomeTurnNumber || 1) + 1,
-    actorDecks: updatedDecks,
   };
+  partyActors.forEach((actor) => {
+    nextState = applyOrimTiming(nextState, 'turn-end', actor.id);
+  });
+  return nextState;
 }
 
-function applyBideCooldowns(state: GameState, partyActors: Actor[]): Record<string, ActorDeckState> {
-  const nextDecks: Record<string, ActorDeckState> = { ...state.actorDecks };
-  partyActors.forEach((actor) => {
-    const deck = state.actorDecks[actor.id];
-    if (!deck) return;
-    const actorHasBide = (actor.orimSlots ?? []).some((slot) => {
-      if (!slot.orimId) return false;
-      const instance = state.orimInstances[slot.orimId];
-      return instance?.definitionId === 'bide';
-    });
-    if (!actorHasBide) {
-      const hasCardBide = deck.cards.some((card) =>
-        card.slots.some((slot) => {
-          if (!slot.orimId) return false;
-          const instance = state.orimInstances[slot.orimId];
-          return instance?.definitionId === 'bide';
-        })
-      );
-      if (!hasCardBide) return;
-    }
-    const updatedCards = deck.cards.map((card) => {
-      const cardHasBide = card.slots.some((slot) => {
-        if (!slot.orimId) return false;
-        const instance = state.orimInstances[slot.orimId];
-        return instance?.definitionId === 'bide';
-      });
-      const reduction = (actorHasBide ? 1 : 0) + (cardHasBide ? 2 : 0);
-      if (reduction === 0) return card;
-      return {
-        ...card,
-        cooldown: Math.max(0, (card.cooldown ?? 0) - reduction),
-      };
-    });
-    nextDecks[actor.id] = { ...deck, cards: updatedCards };
-  });
-  return nextDecks;
-}
 
 /**
  * Starts a biome adventure with predefined layout

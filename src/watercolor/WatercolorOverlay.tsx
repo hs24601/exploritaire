@@ -24,14 +24,23 @@ type RendererType = 'webgl2' | 'webgl' | 'canvas2d' | 'none';
 
 type Renderer = {
   type: RendererType;
-  render: (timeSeconds: number, blooms: Bloom[], grain: WatercolorConfig['grain']) => void;
+  render: (timeSeconds: number, blooms: Bloom[], grain: WatercolorConfig['grain'], glowStrength: number) => void;
   resize: (width: number, height: number, dpr: number) => void;
   dispose: () => void;
 };
 
+type OverlayRegistration = {
+  canvas: HTMLCanvasElement;
+  getBlooms: () => Bloom[];
+  getGrain: () => WatercolorConfig['grain'];
+  getGlowStrength: () => number;
+  getActive: () => boolean;
+  clear: () => void;
+};
+
 const MAX_BLOOMS = 64;
-const MAX_WEBGL_OVERLAYS = 6;
-let activeWebglOverlays = 0;
+const TARGET_FPS = 30;
+const FRAME_INTERVAL_MS = 1000 / TARGET_FPS;
 
 const vertexShaderSource = `
   attribute vec2 position;
@@ -54,6 +63,7 @@ const fragmentShaderSource = `
   uniform int uBloomCount;
   uniform float uGrainIntensity;
   uniform float uGrainFrequency;
+  uniform float uGlowStrength;
 
   float hash(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
@@ -148,7 +158,9 @@ const fragmentShaderSource = `
       vec3 pigment = uColors[i];
       color = mix(color, pigment, bloomAlpha);
       color = mix(color, pigment * 0.85, edge * intensity);
-      totalAlpha = max(totalAlpha, bloomAlpha);
+      float glow = bloomAlpha * uGlowStrength;
+      color += pigment * glow;
+      totalAlpha = max(totalAlpha, bloomAlpha + glow * 0.35);
     }
 
     // Strong alpha output
@@ -273,8 +285,9 @@ function createWebglRenderer(canvas: HTMLCanvasElement): Renderer {
   const uCountLoc = gl.getUniformLocation(program, 'uBloomCount');
   const uGrainIntensityLoc = gl.getUniformLocation(program, 'uGrainIntensity');
   const uGrainFrequencyLoc = gl.getUniformLocation(program, 'uGrainFrequency');
+  const uGlowStrengthLoc = gl.getUniformLocation(program, 'uGlowStrength');
 
-  const render = (timeSeconds: number, blooms: Bloom[], grain: WatercolorConfig['grain']) => {
+  const render = (timeSeconds: number, blooms: Bloom[], grain: WatercolorConfig['grain'], glowStrength: number) => {
     if (!uTimeLoc || !uResLoc || !uBloomsLoc || !uColorsLoc || !uCountLoc || !uGrainIntensityLoc || !uGrainFrequencyLoc) {
       return;
     }
@@ -316,6 +329,9 @@ function createWebglRenderer(canvas: HTMLCanvasElement): Renderer {
     gl.uniform1i(uCountLoc, bloomCount);
     gl.uniform1f(uGrainIntensityLoc, grain.enabled ? grain.intensity : 0);
     gl.uniform1f(uGrainFrequencyLoc, grain.frequency);
+    if (uGlowStrengthLoc) {
+      gl.uniform1f(uGlowStrengthLoc, glowStrength);
+    }
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   };
@@ -355,7 +371,7 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): Renderer {
     };
   }
 
-  const render = (_timeSeconds: number, blooms: Bloom[], grain: WatercolorConfig['grain']) => {
+  const render = (_timeSeconds: number, blooms: Bloom[], grain: WatercolorConfig['grain'], glowStrength: number) => {
     const width = canvas.width;
     const height = canvas.height;
     ctx.clearRect(0, 0, width, height);
@@ -373,6 +389,18 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): Renderer {
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
+
+      if (glowStrength > 0.01) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowBlur = Math.max(4, radius * 0.5 * glowStrength);
+        ctx.shadowColor = `rgba(${Math.round(bloom.color[0] * 255)}, ${Math.round(bloom.color[1] * 255)}, ${Math.round(bloom.color[2] * 255)}, ${0.6 * glowStrength})`;
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius * (1 + glowStrength * 0.2), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     });
 
     if (grain.enabled && grain.intensity > 0) {
@@ -404,6 +432,83 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): Renderer {
   };
 }
 
+type SharedRenderer = {
+  canvas: HTMLCanvasElement;
+  renderer: Renderer;
+  dispose: () => void;
+};
+
+let sharedRenderer: SharedRenderer | null = null;
+let overlayLoopHandle: number | null = null;
+let lastFrameTime = 0;
+const overlays = new Set<OverlayRegistration>();
+
+function getSharedRenderer(): SharedRenderer {
+  if (sharedRenderer) return sharedRenderer;
+  const canvas = document.createElement('canvas');
+  const renderer = createWebglRenderer(canvas);
+  const dispose = () => {
+    renderer.dispose();
+  };
+  sharedRenderer = { canvas, renderer, dispose };
+  return sharedRenderer;
+}
+
+function releaseSharedRenderer() {
+  if (!sharedRenderer) return;
+  sharedRenderer.dispose();
+  sharedRenderer = null;
+}
+
+function ensureOverlayLoop() {
+  if (overlayLoopHandle !== null) return;
+  overlayLoopHandle = requestAnimationFrame(renderAllOverlays);
+}
+
+function renderAllOverlays(time: number) {
+  overlayLoopHandle = null;
+  if (overlays.size === 0) {
+    releaseSharedRenderer();
+    return;
+  }
+
+  if (time - lastFrameTime < FRAME_INTERVAL_MS) {
+    overlayLoopHandle = requestAnimationFrame(renderAllOverlays);
+    return;
+  }
+  lastFrameTime = time;
+
+  const { canvas: sharedCanvas, renderer } = getSharedRenderer();
+  const timeSeconds = time * 0.001;
+
+  overlays.forEach((overlay) => {
+    if (!overlay.getActive()) {
+      overlay.clear();
+      return;
+    }
+    const rect = overlay.canvas.getBoundingClientRect();
+    if (rect.width <= 1 || rect.height <= 1) return;
+    const dpr = window.devicePixelRatio || 1;
+
+    renderer.resize(rect.width, rect.height, dpr);
+    renderer.render(timeSeconds, overlay.getBlooms(), overlay.getGrain(), overlay.getGlowStrength());
+
+    const targetWidth = Math.floor(rect.width * dpr);
+    const targetHeight = Math.floor(rect.height * dpr);
+    if (overlay.canvas.width !== targetWidth || overlay.canvas.height !== targetHeight) {
+      overlay.canvas.width = targetWidth;
+      overlay.canvas.height = targetHeight;
+    }
+
+    const ctx = overlay.canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, overlay.canvas.width, overlay.canvas.height);
+    ctx.drawImage(sharedCanvas, 0, 0, overlay.canvas.width, overlay.canvas.height);
+  });
+
+  overlayLoopHandle = requestAnimationFrame(renderAllOverlays);
+}
+
 export const WatercolorOverlay = memo(function WatercolorOverlay({
   config,
   className,
@@ -411,18 +516,18 @@ export const WatercolorOverlay = memo(function WatercolorOverlay({
 }: WatercolorOverlayProps) {
   const watercolorEnabled = useWatercolorEnabled();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const rendererRef = useRef<Renderer | null>(null);
-  const usesWebglRef = useRef(false);
   const blooms = useMemo(() => buildBlooms(config), [config]);
   const bloomsRef = useRef<Bloom[]>(blooms);
   const grainRef = useRef(config.grain);
-  const animRef = useRef<number | null>(null);
   const activeRef = useRef(true);
+  const glowStrengthRef = useRef(0.6);
 
   useEffect(() => {
     bloomsRef.current = blooms;
     grainRef.current = config.grain;
-  }, [blooms, config.grain]);
+    const glowStrength = config.luminous === false ? 0 : (config.luminousStrength ?? 0.6);
+    glowStrengthRef.current = Math.max(0, Math.min(1.5, glowStrength));
+  }, [blooms, config.grain, config.luminous, config.luminousStrength]);
 
   useEffect(() => {
     activeRef.current = watercolorEnabled;
@@ -434,86 +539,26 @@ export const WatercolorOverlay = memo(function WatercolorOverlay({
       console.warn('[WatercolorOverlay] No canvas ref');
       return;
     }
-
-    if (activeWebglOverlays >= MAX_WEBGL_OVERLAYS) {
-      rendererRef.current = createCanvas2dRenderer(canvas);
-    } else {
-      rendererRef.current = createWebglRenderer(canvas);
-    }
-    usesWebglRef.current = rendererRef.current?.type === 'webgl2' || rendererRef.current?.type === 'webgl';
-    if (usesWebglRef.current) {
-      activeWebglOverlays += 1;
-    } else {
-      console.warn('[WatercolorOverlay] WebGL not available, using fallback:', rendererRef.current?.type);
-    }
-
-    const handleResize = () => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      rendererRef.current?.resize(rect.width, rect.height, dpr);
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-
-    const handleContextLost = (event: Event) => {
-      event.preventDefault();
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-      rendererRef.current?.dispose();
-      if (usesWebglRef.current) {
-        activeWebglOverlays = Math.max(0, activeWebglOverlays - 1);
-        usesWebglRef.current = false;
-      }
-      rendererRef.current = null;
-    };
-
-    const handleContextRestored = () => {
-      if (activeWebglOverlays >= MAX_WEBGL_OVERLAYS) {
-        rendererRef.current = createCanvas2dRenderer(canvas);
-      } else {
-        rendererRef.current = createWebglRenderer(canvas);
-      }
-      usesWebglRef.current = rendererRef.current?.type === 'webgl2' || rendererRef.current?.type === 'webgl';
-      if (usesWebglRef.current) {
-        activeWebglOverlays += 1;
-      }
-      handleResize();
-      animRef.current = requestAnimationFrame(render);
-    };
-
-    canvas.addEventListener('webglcontextlost', handleContextLost, false);
-    canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
-
-    const render = (time: number) => {
-      const timeSeconds = time * 0.001;
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        const dpr = window.devicePixelRatio || 1;
-        if (canvas.width !== Math.floor(rect.width * dpr) || canvas.height !== Math.floor(rect.height * dpr)) {
-          rendererRef.current?.resize(rect.width, rect.height, dpr);
+    const registration: OverlayRegistration = {
+      canvas,
+      getBlooms: () => bloomsRef.current,
+      getGrain: () => grainRef.current,
+      getGlowStrength: () => glowStrengthRef.current,
+      getActive: () => activeRef.current,
+      clear: () => {
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        if (canvas.width > 0 && canvas.height > 0) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
-      }
-
-      if (activeRef.current) {
-        rendererRef.current?.render(timeSeconds, bloomsRef.current, grainRef.current);
-      }
-
-      animRef.current = requestAnimationFrame(render);
+      },
     };
 
-    animRef.current = requestAnimationFrame(render);
+    overlays.add(registration);
+    ensureOverlayLoop();
 
     return () => {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-      window.removeEventListener('resize', handleResize);
-      canvas.removeEventListener('webglcontextlost', handleContextLost);
-      canvas.removeEventListener('webglcontextrestored', handleContextRestored);
-      rendererRef.current?.dispose();
-      if (usesWebglRef.current) {
-        activeWebglOverlays = Math.max(0, activeWebglOverlays - 1);
-        usesWebglRef.current = false;
-      }
-      rendererRef.current = null;
+      overlays.delete(registration);
     };
   }, []);
 

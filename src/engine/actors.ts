@@ -7,7 +7,7 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
   {
     id: 'fox',
     name: 'Fox',
-    titles: ["Fennec","Fox"],
+    titles: ['Fennec', 'Fox'],
     description: 'A curious fennec fox with keen senses',
     type: 'adventurer',
     value: 2,
@@ -15,22 +15,65 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     element: 'N',
     sprite: '🦊',
     orimSlots: [
-      { orimId: 'scratch', locked: true },
+      { orimId: 'claw', locked: true },
       { orimId: 'bide' },
     ],
   },
   {
     id: 'wolf',
     name: 'Wolf',
-    titles: ["Ze'ev","Wolf"],
+    titles: ["Ze'ev", 'Wolf'],
     description: 'A fierce wolf with unwavering loyalty',
     type: 'adventurer',
-    value: 7,
+    value: 3,
     suit: undefined,
     element: 'N',
     sprite: '🐺',
     orimSlots: [
       { orimId: 'bite', locked: true },
+      { orimId: 'teamwork' },
+    ],
+  },
+  {
+    id: 'bear',
+    name: 'Bear',
+    titles: ['Ursus', 'Bear'],
+    description: 'A steady bear with quiet strength',
+    type: 'adventurer',
+    value: 7,
+    suit: undefined,
+    element: 'N',
+    sprite: '🐻',
+    orimSlots: [
+      { orimId: 'claw', locked: true },
+    ],
+  },
+  {
+    id: 'cat',
+    name: 'Cat',
+    titles: ['Felis', 'Cat'],
+    description: 'A nimble cat with watchful curiosity',
+    type: 'adventurer',
+    value: 1,
+    suit: undefined,
+    element: 'N',
+    sprite: '🐱',
+    orimSlots: [
+      { orimId: 'scratch', locked: true },
+    ],
+  },
+  {
+    id: 'owl',
+    name: 'Owl',
+    titles: ['Strix', 'Owl'],
+    description: 'A calm owl with patient insight',
+    type: 'adventurer',
+    value: 10,
+    suit: undefined,
+    element: 'N',
+    sprite: '🦉',
+    orimSlots: [
+      { orimId: 'cloud_sight', locked: true },
     ],
   },
 ];
@@ -106,6 +149,24 @@ export function createInitialActors(): Actor[] {
   if (wolf) {
     wolf.gridPosition = { col: 4, row: 2 };
     actors.push(wolf);
+  }
+
+  const bear = createActor('bear');
+  if (bear) {
+    bear.gridPosition = { col: 5, row: 2 };
+    actors.push(bear);
+  }
+
+  const cat = createActor('cat');
+  if (cat) {
+    cat.gridPosition = { col: 3, row: 3 };
+    actors.push(cat);
+  }
+
+  const owl = createActor('owl');
+  if (owl) {
+    owl.gridPosition = { col: 4, row: 3 };
+    actors.push(owl);
   }
 
   return actors;

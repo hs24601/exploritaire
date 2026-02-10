@@ -3,6 +3,7 @@ import type {
   Element,
   OrimCategory,
   OrimDefinition,
+  OrimDomain,
   OrimRarity,
   TriggerCondition,
   TriggerGroup,
@@ -17,6 +18,7 @@ import { WatercolorOverrideEditor } from './WatercolorOverrideEditor';
 
 const ELEMENTS: Element[] = ['W', 'E', 'A', 'F', 'L', 'D', 'N'];
 const CATEGORIES: OrimCategory[] = ['ability', 'utility', 'trait'];
+const DOMAINS: OrimDomain[] = ['puzzle', 'combat'];
 const CATEGORY_GLYPHS: Record<OrimCategory, string> = {
   ability: '⚡️',
   utility: '💫',
@@ -57,6 +59,7 @@ const createBlankOrim = (name = 'New Orim'): OrimDefinition => ({
   name,
   description: '',
   category: 'ability',
+  domain: 'puzzle',
   rarity: 'common',
   powerCost: 0,
   damage: 0,
@@ -76,6 +79,7 @@ const serializeOrimDefinitions = (definitions: OrimDefinition[]) => {
       lines.push(`    artSrc: '${orim.artSrc.replace(/'/g, "\\'")}',`);
     }
     lines.push(`    category: '${orim.category}',`);
+    lines.push(`    domain: '${orim.domain}',`);
     lines.push(`    rarity: '${orim.rarity}',`);
     lines.push(`    powerCost: ${orim.powerCost ?? 0},`);
     if (orim.damage !== undefined) {
@@ -421,6 +425,22 @@ export function OrimEditor({
                             {CATEGORY_GLYPHS[category]}
                           </button>
                         ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-game-white/60">Domain</span>
+                        <div className="flex items-center gap-2">
+                          {DOMAINS.map((domain) => (
+                            <button
+                              key={domain}
+                              type="button"
+                              onClick={() => updateSelected((prev) => ({ ...prev, domain }))}
+                              className={`w-8 h-8 flex items-center justify-center rounded border text-sm ${selected.domain === domain ? 'border-game-gold text-game-gold' : 'border-game-teal/30 text-game-white/70'}`}
+                              title={domain}
+                            >
+                              {domain === 'puzzle' ? '🧩' : '⚔'}
+                            </button>
+                          ))}
                         </div>
                       </div>
                       <div className="flex flex-col gap-1">

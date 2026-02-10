@@ -11,6 +11,8 @@ interface HandProps {
   onCardClick?: (card: CardType) => void;
   stockCount?: number;
   onStockClick?: () => void;
+  infiniteStockEnabled?: boolean;
+  onToggleInfiniteStock?: () => void;
   draggingCardId?: string | null;
   showGraphics: boolean;
   interactionMode: InteractionMode;
@@ -54,6 +56,8 @@ export const Hand = memo(function Hand({
   onCardClick,
   stockCount = 0,
   onStockClick,
+  infiniteStockEnabled = false,
+  onToggleInfiniteStock,
   draggingCardId,
   showGraphics,
   interactionMode,
@@ -114,6 +118,7 @@ export const Hand = memo(function Hand({
             const cooldownScale = isOnCooldown ? 0.67 : 1;
             const baseScale = isHovered ? FAN.hoverScale : 1;
             const finalScale = isHovered ? baseScale : baseScale * cooldownScale;
+            const canDrag = interactionMode === 'dnd' && !isOnCooldown;
 
             return (
               <motion.div
@@ -147,7 +152,7 @@ export const Hand = memo(function Hand({
                       ? () => onCardClick(card)
                       : undefined
                   }
-                  onDragStart={!isOnCooldown ? handleDragStart : undefined}
+                  onDragStart={canDrag ? handleDragStart : undefined}
                   showGraphics={showGraphics}
                   isDimmed={isOnCooldown}
                   orimDefinitions={orimDefinitions}
@@ -196,6 +201,27 @@ export const Hand = memo(function Hand({
           >
             {stockCount}
           </div>
+          {onToggleInfiniteStock && (
+            <button
+              type="button"
+              className={`absolute left-1/2 top-full mt-2 px-2 py-1 rounded text-[10px] font-bold tracking-wider border ${
+                infiniteStockEnabled
+                  ? 'text-game-gold border-game-gold'
+                  : 'text-game-teal border-game-teal/60'
+              }`}
+              style={{
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(10, 10, 10, 0.75)',
+                boxShadow: infiniteStockEnabled
+                  ? '0 0 10px rgba(230, 179, 30, 0.5)'
+                  : '0 0 8px rgba(127, 219, 202, 0.4)',
+              }}
+              onClick={onToggleInfiniteStock}
+              title="Toggle infinite stock"
+            >
+              ∞
+            </button>
+          )}
         </div>
       )}
     </div>

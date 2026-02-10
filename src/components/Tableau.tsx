@@ -16,6 +16,7 @@ interface TableauProps {
   draggingCardId?: string | null;
   showGraphics: boolean;
   cardScale?: number;
+  revealNextRow?: boolean;
 }
 
 export const Tableau = memo(function Tableau({
@@ -31,11 +32,16 @@ export const Tableau = memo(function Tableau({
   draggingCardId,
   showGraphics,
   cardScale = 1,
+  revealNextRow = false,
 }: TableauProps) {
   const isSelected = selectedCard?.tableauIndex === tableauIndex;
   const guidanceActive = guidanceMoves.length > 0;
   const cardWidth = CARD_SIZE.width * cardScale;
   const cardHeight = CARD_SIZE.height * cardScale;
+  const revealOffset = revealNextRow ? Math.round(cardHeight * 0.18) + 5 : 0;
+  const stackStep = (revealNextRow ? 8 : 3) * cardScale;
+  const stackCap = (revealNextRow ? 80 : 20) * cardScale;
+  const maxStackOffset = Math.min(Math.max(0, cards.length - 1) * stackStep, stackCap);
   const topVisibleIndex = (() => {
     if (!draggingCardId) return cards.length - 1;
     for (let i = cards.length - 1; i >= 0; i -= 1) {
@@ -43,6 +49,7 @@ export const Tableau = memo(function Tableau({
     }
     return -1;
   })();
+  const secondVisibleIndex = revealNextRow ? Math.max(-1, topVisibleIndex - 1) : -1;
 
   const isNextGuidanceMove = useMemo(() => {
     if (cards.length === 0 || guidanceMoves.length === 0) return false;
@@ -62,24 +69,25 @@ export const Tableau = memo(function Tableau({
 
   return (
     <div
-      style={{ width: cardWidth, minHeight: 180 * cardScale }}
+      style={{ width: cardWidth, minHeight: cardHeight + maxStackOffset + revealOffset + 60 * cardScale }}
       className="relative"
     >
       {cards.map((card, index) => {
         const isTopCard = index === topVisibleIndex;
-        const stackOffset = Math.min(index * 3 * cardScale, 20 * cardScale);
+        const isSecondCard = index === secondVisibleIndex;
+        const stackOffset = Math.min(index * stackStep, stackCap);
         const isDragging = card.id === draggingCardId;
 
         return (
           <div
             key={card.id}
             className="absolute left-0"
-            style={{ top: stackOffset }}
+            style={{ top: stackOffset + (isTopCard ? revealOffset : 0) }}
           >
             <Card
               card={card}
               size={{ width: cardWidth, height: cardHeight }}
-              faceDown={!isTopCard}
+              faceDown={!isTopCard && !isSecondCard}
               canPlay={isTopCard && canPlay}
               isSelected={isTopCard && isSelected}
               onClick={

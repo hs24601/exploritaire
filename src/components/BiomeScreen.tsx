@@ -1,6 +1,6 @@
-import { memo } from 'react';
+import { memo, useEffect, useState, useMemo, useCallback } from 'react';
 import { useGraphics } from '../contexts/GraphicsContext';
-import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor } from '../engine/types';
+import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition } from '../engine/types';
 import type { DragState } from '../hooks/useDragDrop';
 import { GameButton } from './GameButton';
 import { Tableau } from './Tableau';
@@ -9,10 +9,16 @@ import { NodeEdgeBiomeScreen } from './NodeEdgeBiomeScreen';
 import { FoundationTokenGrid } from './FoundationTokenGrid';
 import { CARD_SIZE, WILD_SENTINEL_RANK } from '../engine/constants';
 import { Hand } from './Hand';
-import { canPlayCard, canPlayCardWithWild } from '../engine/rules';
+import { PartyBench } from './PartyBench';
+import { canPlayCard, canPlayCardWithWild, isSequential } from '../engine/rules';
+import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { getActorDefinition } from '../engine/actors';
+import { getOrimAccentColor, getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
+import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
 import { getBiomeDefinition } from '../engine/biomes';
 import { NO_MOVES_BADGE_STYLE } from '../utils/styles';
+import { SplatterPatternModal } from './SplatterPatternModal';
+import { Tooltip } from './Tooltip';
 
 interface BiomeScreenProps {
   gameState: GameState;
@@ -23,6 +29,15 @@ interface BiomeScreenProps {
   isWon: boolean;
   guidanceMoves: Move[];
   activeParty: Actor[];
+  sandboxOrimIds?: string[];
+  orimTrayDevMode?: boolean;
+  orimTrayTab?: 'puzzle' | 'combat';
+  onOrimTrayTabChange?: (tab: 'puzzle' | 'combat') => void;
+  sandboxOrimSearch?: string;
+  onSandboxOrimSearchChange?: (next: string) => void;
+  sandboxOrimResults?: Array<{ id: string; name: string; domain: 'puzzle' | 'combat' }>;
+  onAddSandboxOrim?: (id: string) => void;
+  onRemoveSandboxOrim?: (id: string) => void;
   hasCollectedLoot: boolean;
   dragState: DragState;
   handleDragStart: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
@@ -32,6 +47,8 @@ interface BiomeScreenProps {
   handleExitBiome: (mode: 'return' | 'abandon') => void;
   useGhostBackground: boolean;
   lightingEnabled: boolean;
+  infiniteStockEnabled: boolean;
+  onToggleInfiniteStock: () => void;
   noRegretStatus: { canRewind: boolean; cooldown: number; actorId: string | null };
   actions: {
     selectCard: (card: CardType, tableauIndex: number) => void;
@@ -45,7 +62,12 @@ interface BiomeScreenProps {
     playCardInNodeBiome: (nodeId: string, foundationIndex: number) => void;
     endRandomBiomeTurn: () => void;
     rewindLastCard: () => boolean;
+    swapPartyLead: (actorId: string) => void;
   };
+  benchSwapCount?: number;
+  infiniteBenchSwapsEnabled?: boolean;
+  onToggleInfiniteBenchSwaps?: () => void;
+  onConsumeBenchSwap?: () => void;
 }
 
 export const BiomeScreen = memo(function BiomeScreen({
@@ -57,6 +79,15 @@ export const BiomeScreen = memo(function BiomeScreen({
   isWon,
   guidanceMoves,
   activeParty,
+  sandboxOrimIds = [],
+  orimTrayDevMode = false,
+  orimTrayTab = 'puzzle',
+  onOrimTrayTabChange,
+  sandboxOrimSearch = '',
+  onSandboxOrimSearchChange,
+  sandboxOrimResults = [],
+  onAddSandboxOrim,
+  onRemoveSandboxOrim,
   hasCollectedLoot,
   dragState,
   handleDragStart,
@@ -66,16 +97,318 @@ export const BiomeScreen = memo(function BiomeScreen({
   handleExitBiome,
   useGhostBackground,
   lightingEnabled,
+  infiniteStockEnabled,
+  onToggleInfiniteStock,
   noRegretStatus,
   actions,
+  benchSwapCount = 0,
+  infiniteBenchSwapsEnabled = false,
+  onToggleInfiniteBenchSwaps,
+  onConsumeBenchSwap,
 }: BiomeScreenProps) {
   const showGraphics = useGraphics();
+  const [splatterModalOpen, setSplatterModalOpen] = useState(false);
   const biomeDef = gameState.currentBiome
     ? getBiomeDefinition(gameState.currentBiome)
     : null;
   const overlayOpacity = lightingEnabled ? 0.68 : 0.85;
   const foundationOffset = CARD_SIZE.height * 1.25;
   const handOffset = Math.max(12, Math.round(CARD_SIZE.height * 0.35));
+  const handCardScale = 1.1;
+  const handSlotStyle = {
+    height: CARD_SIZE.height * handCardScale + 12,
+    minWidth: CARD_SIZE.width * handCardScale * 2,
+    marginTop: 8 - Math.round(CARD_SIZE.height * handCardScale),
+  };
+  const PARTY_BENCH_ENABLED = true;
+  const foundationHasActor = (gameState.foundations[0]?.length ?? 0) > 0;
+  const cloudSightActive = useMemo(() => {
+    if (!foundationHasActor) return false;
+    const foundationActor = activeParty[0];
+    if (!foundationActor) return false;
+    return actorHasOrimDefinition(gameState, foundationActor.id, 'cloud_sight');
+  }, [activeParty, gameState, foundationHasActor]);
+  const teamworkActive = useMemo(() => {
+    return activeParty.some((actor) => actorHasOrimDefinition(gameState, actor.id, 'teamwork'));
+  }, [activeParty, gameState]);
+  const foundationOffsetAdjusted = cloudSightActive ? foundationOffset * 0.6 : foundationOffset;
+  const CATEGORY_GLYPHS: Record<string, string> = {
+    ability: '⚡️',
+    utility: '💫',
+    trait: '🧬',
+  };
+  const LEGACY_COMBAT_ORIMS = new Set(['scratch', 'bite', 'claw']);
+  const orimChipSize = Math.max(22, Math.round(CARD_SIZE.width * 0.66));
+  const orimFontSize = Math.max(12, Math.round(orimChipSize * 0.55));
+  const foundationActor = foundationHasActor ? activeParty[0] ?? null : null;
+  const equippedOrims = useMemo(() => {
+    if (!foundationActor) return [];
+    const entries = [foundationActor].flatMap((actor) => {
+      const actorName = getActorDefinition(actor.definitionId)?.name ?? actor.definitionId;
+      return (actor.orimSlots ?? []).flatMap((slot) => {
+        if (!slot.orimId) return [];
+        const instance = gameState.orimInstances?.[slot.orimId];
+        if (!instance) return [];
+        const definition = gameState.orimDefinitions.find((item) => item.id === instance.definitionId);
+        if (!definition) return [];
+        if (!orimTrayDevMode && (definition.domain === 'combat' || LEGACY_COMBAT_ORIMS.has(definition.id))) return [];
+        const watercolor = getOrimWatercolorConfig(definition, instance.definitionId);
+        return [{
+          id: slot.id,
+          definitionId: definition.id,
+          name: definition.name,
+          domain: definition.domain,
+          category: definition.category,
+          rarity: definition.rarity,
+          description: definition.description,
+          actorName,
+          glyph: CATEGORY_GLYPHS[definition.category] ?? '◌',
+          color: getOrimAccentColor(definition, instance.definitionId),
+          watercolor,
+          isSandbox: false,
+        }];
+      });
+    });
+    return entries;
+  }, [foundationActor, gameState.orimDefinitions, gameState.orimInstances, orimTrayDevMode]);
+
+  const sandboxOrims = useMemo(() => {
+    if (!sandboxOrimIds.length) return [];
+    return sandboxOrimIds.flatMap((id) => {
+      const definition = gameState.orimDefinitions.find((item) => item.id === id);
+      if (!definition) return [];
+      if (!orimTrayDevMode && (definition.domain === 'combat' || LEGACY_COMBAT_ORIMS.has(definition.id))) return [];
+      return [{
+        id: `sandbox-${id}`,
+        definitionId: definition.id,
+        name: definition.name,
+        domain: definition.domain,
+        category: definition.category,
+        rarity: definition.rarity,
+        description: definition.description,
+        actorName: 'Sandbox',
+        glyph: CATEGORY_GLYPHS[definition.category] ?? '◌',
+        color: getOrimAccentColor(definition, id),
+        watercolor: getOrimWatercolorConfig(definition, id),
+        isSandbox: true,
+      }];
+    });
+  }, [sandboxOrimIds, gameState.orimDefinitions, orimTrayDevMode]);
+
+  const displayOrims = useMemo(() => ([
+    ...equippedOrims,
+    ...sandboxOrims,
+  ]), [equippedOrims, sandboxOrims]);
+
+  const filteredDisplayOrims = useMemo(() => {
+    if (!orimTrayDevMode) return displayOrims;
+    return displayOrims.filter((orim) => {
+      if (orim.domain !== orimTrayTab) return false;
+      if (orimTrayTab === 'puzzle' && LEGACY_COMBAT_ORIMS.has(orim.definitionId)) return false;
+      return true;
+    });
+  }, [displayOrims, orimTrayDevMode, orimTrayTab]);
+
+  const partyBenchActors = useMemo(() => {
+    const partySlice = foundationHasActor ? activeParty.slice(1, 6) : activeParty.slice(0, 5);
+    return partySlice
+      .map((actor) => {
+        const definition = getActorDefinition(actor.definitionId);
+        if (!definition) return null;
+        return { actorId: actor.id, definition };
+      })
+      .filter((entry): entry is { actorId: string; definition: ActorDefinition } => Boolean(entry));
+  }, [activeParty, foundationHasActor]);
+  const actorComboCounts = gameState.actorCombos ?? {};
+  const partyComboTotal = useMemo(() => {
+    if (!activeParty.length) return 0;
+    return activeParty.reduce((sum, actor) => sum + (actorComboCounts[actor.id] ?? 0), 0);
+  }, [activeParty, actorComboCounts]);
+  const freeSwapActorIds = useMemo(() => {
+    if (!teamworkActive) return new Set<string>();
+    const foundationRank = gameState.foundations[0]?.[gameState.foundations[0].length - 1]?.rank;
+    if (!foundationRank) return new Set<string>();
+    const freebies = new Set<string>();
+    partyBenchActors.forEach((entry) => {
+      if (isSequential(entry.definition.value, foundationRank)) {
+        freebies.add(entry.actorId);
+      }
+    });
+    return freebies;
+  }, [teamworkActive, gameState.foundations, partyBenchActors]);
+  const handleBenchActorClick = useCallback((actorId: string) => {
+    const isFree = freeSwapActorIds.has(actorId);
+    if (!isFree && !infiniteBenchSwapsEnabled && benchSwapCount <= 0) return;
+    if (!isFree && !infiniteBenchSwapsEnabled) {
+      onConsumeBenchSwap?.();
+    }
+    actions.swapPartyLead(actorId);
+  }, [actions, benchSwapCount, infiniteBenchSwapsEnabled, onConsumeBenchSwap, freeSwapActorIds]);
+
+  const equippedOrimRow = (
+    <div
+      className="flex flex-wrap items-center justify-center gap-2 pointer-events-auto rounded-2xl px-3 py-2"
+      style={{
+        marginTop: Math.round(handOffset * 0.1),
+        marginBottom: Math.round(handOffset * 0.1),
+        border: orimTrayDevMode ? '1px solid #39ff14' : '1px solid transparent',
+        boxShadow: orimTrayDevMode ? '0 0 14px rgba(57, 255, 20, 0.35)' : 'none',
+      }}
+      data-orim-row
+    >
+      {orimTrayDevMode && (
+        <div className="flex items-center gap-2 w-full justify-center">
+          <button
+            type="button"
+            className="text-xs font-mono px-2 py-1 rounded border"
+            onClick={() => onOrimTrayTabChange?.('puzzle')}
+            style={{
+              borderColor: orimTrayTab === 'puzzle' ? '#39ff14' : 'rgba(127, 219, 202, 0.4)',
+              color: orimTrayTab === 'puzzle' ? '#39ff14' : 'rgba(127, 219, 202, 0.8)',
+              boxShadow: orimTrayTab === 'puzzle' ? '0 0 8px rgba(57, 255, 20, 0.35)' : 'none',
+            }}
+            title="Puzzle Orims"
+          >
+            🧩
+          </button>
+          <button
+            type="button"
+            className="text-xs font-mono px-2 py-1 rounded border"
+            onClick={() => onOrimTrayTabChange?.('combat')}
+            style={{
+              borderColor: orimTrayTab === 'combat' ? '#39ff14' : 'rgba(127, 219, 202, 0.4)',
+              color: orimTrayTab === 'combat' ? '#39ff14' : 'rgba(127, 219, 202, 0.8)',
+              boxShadow: orimTrayTab === 'combat' ? '0 0 8px rgba(57, 255, 20, 0.35)' : 'none',
+            }}
+            title="Combat Orims"
+          >
+            ⚔
+          </button>
+        </div>
+      )}
+      {filteredDisplayOrims.map((orim) => {
+        const tooltipContent = (
+          <div className="space-y-2">
+            <div className="text-game-white text-sm tracking-[2px]">{orim.name}</div>
+            <div className="text-[10px] text-game-teal/80 uppercase tracking-[2px]">
+              {orim.category} • {orim.rarity}
+            </div>
+            <div className="text-[10px] text-game-white/70">{orim.actorName}</div>
+            {orim.description && (
+              <div className="text-xs text-game-white/80 leading-relaxed">
+                {orim.description}
+              </div>
+            )}
+          </div>
+        );
+        const chip = (
+          <div
+            className="relative flex items-center justify-center rounded-full"
+            style={{
+              width: orimChipSize,
+              height: orimChipSize,
+              borderWidth: 1,
+              borderStyle: 'solid',
+              borderColor: orim.color,
+              color: orim.color,
+              fontSize: orimFontSize,
+            }}
+          >
+            {orimTrayDevMode && orim.isSandbox && (
+              <button
+                type="button"
+                className="absolute -top-2 -right-2 text-[9px] rounded-full w-4 h-4 flex items-center justify-center border border-game-pink bg-game-bg-dark"
+                style={{ color: '#ff7bb8' }}
+                onClick={() => {
+                  if (!onRemoveSandboxOrim) return;
+                  onRemoveSandboxOrim(orim.id.replace('sandbox-', ''));
+                }}
+                title="Remove from tray"
+              >
+                x
+              </button>
+            )}
+            {orim.watercolor && (
+              <div
+                className="absolute"
+                style={{
+                  zIndex: 0,
+                  pointerEvents: 'none',
+                  width: orimChipSize * ORIM_WATERCOLOR_CANVAS_SCALE,
+                  height: orimChipSize * ORIM_WATERCOLOR_CANVAS_SCALE,
+                  left: (orimChipSize - orimChipSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
+                  top: (orimChipSize - orimChipSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
+                }}
+              >
+                <WatercolorOverlay config={orim.watercolor} />
+              </div>
+            )}
+            <span style={{ position: 'relative', zIndex: 1 }}>{orim.glyph}</span>
+          </div>
+        );
+        return (
+          <Tooltip key={`${orim.id}-${orim.actorName}`} content={tooltipContent} disabled={tooltipSuppressed}>
+            <div
+              className="flex items-center gap-2"
+              title={`${orim.name} — ${orim.actorName}`}
+            >
+              {chip}
+              {/* TEMP: hide orim text labels while iterating on new presentation */}
+            </div>
+          </Tooltip>
+        );
+      })}
+      {orimTrayDevMode && (
+        <div className="w-full flex flex-col gap-2 mt-2">
+          <div className="text-[10px] text-game-teal/80 font-mono tracking-[2px]">
+            ORIM SEARCH
+          </div>
+          <input
+            className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-game-white"
+            placeholder="Search orim..."
+            value={sandboxOrimSearch}
+            onChange={(e) => onSandboxOrimSearchChange?.(e.target.value)}
+          />
+          <div className="max-h-32 overflow-y-auto border border-game-teal/20 rounded">
+            {sandboxOrimResults.map((orim) => (
+              <button
+                key={`tray-${orim.id}`}
+                type="button"
+                className="w-full text-left text-[10px] font-mono px-2 py-1 border-b border-game-teal/10 hover:bg-game-bg-dark/60"
+                onClick={() => onAddSandboxOrim?.(orim.id)}
+              >
+                {orim.name} ({orim.id})
+              </button>
+            ))}
+            {sandboxOrimResults.length === 0 && (
+              <div className="text-[10px] text-game-white/40 px-2 py-1">No matches</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (e.key !== '\\') return;
+      e.preventDefault();
+      setSplatterModalOpen((prev) => !prev);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const splatterModal = (
+    <SplatterPatternModal
+      isOpen={splatterModalOpen}
+      onClose={() => setSplatterModalOpen(false)}
+    />
+  );
 
   // Random biome rendering
   if (biomeDef?.randomlyGenerated) {
@@ -138,9 +471,9 @@ export const BiomeScreen = memo(function BiomeScreen({
       actions.playFromStock(fallbackIndex, true, true);
     };
     return (
-      <div className="relative w-full h-full flex flex-col gap-10 items-center pointer-events-none">
-        <div className="relative w-full h-full flex flex-col gap-10 items-center justify-center pointer-events-none">
-        <div className="flex flex-col gap-10 items-center pointer-events-auto" data-biome-ui>
+      <div className="relative w-full h-full flex flex-col gap-10 items-center pointer-events-auto">
+      <div className="relative w-full h-full flex flex-col gap-12 items-center justify-center pointer-events-auto">
+      <div className="flex flex-col gap-12 items-center pointer-events-auto" data-biome-ui>
         <div className="flex items-center gap-3">
           <div className="text-sm text-game-teal tracking-[4px]" data-card-face>
             {biomeDef.name?.toUpperCase() ?? 'RANDOM BIOME'}
@@ -167,20 +500,34 @@ export const BiomeScreen = memo(function BiomeScreen({
               draggingCardId={dragState.isDragging ? dragState.card?.id : null}
               showGraphics={showGraphics}
               cardScale={1.25}
+              revealNextRow={cloudSightActive}
 
             />
           ))}
         </div>
 
         {/* Foundations + End Turn button */}
-        <div className="relative z-20 flex flex-col items-center gap-4" style={{ marginTop: -foundationOffset }}>
+        <div className="relative z-20 flex flex-col items-center gap-4" style={{ marginTop: -foundationOffsetAdjusted }}>
+          {partyComboTotal > 0 && (
+            <div
+              className="text-[12px] tracking-[3px] font-bold px-2 py-1 rounded border"
+              style={{
+                color: '#0a0a0a',
+                backgroundColor: 'rgba(230, 179, 30, 0.95)',
+                borderColor: 'rgba(255, 229, 120, 0.9)',
+                boxShadow: '0 0 12px rgba(230, 179, 30, 0.65)',
+              }}
+            >
+              PARTY COMBO {partyComboTotal}
+            </div>
+          )}
           <div className="flex justify-center">
             <div className="flex items-start" style={{ gap: '20px' }}>
               <div className="w-20" aria-hidden="true" />
               {gameState.foundations.map((foundation, idx) => {
                 const isWild = foundation.length === 1 && foundation[0].rank === WILD_SENTINEL_RANK;
                 const showGoldHighlight = !!(selectedCard && validFoundationsForSelected[idx]);
-                const actor = activeParty[idx];
+                const actor = (idx === 0 && !foundationHasActor) ? null : activeParty[idx];
                 const hasStamina = (actor?.stamina ?? 0) > 0;
                 const canReceiveDrag =
                   dragState.isDragging &&
@@ -242,21 +589,25 @@ export const BiomeScreen = memo(function BiomeScreen({
               })}
 
               {/* End Turn button - affixed to foundations */}
-              <div className="w-20 flex flex-col items-center gap-2">
-                <GameButton
-                  onClick={actions.rewindLastCard}
-                  color="purple"
-                  size="sm"
-                  disabled={!noRegretStatus.canRewind}
-                  title={noRegretStatus.cooldown > 0 ? `Cooldown: ${noRegretStatus.cooldown}` : 'Rewind last card'}
-                >
-                  {noRegretStatus.cooldown > 0 ? `REW ${noRegretStatus.cooldown}` : 'REWIND'}
-                </GameButton>
+              <div className="w-20 flex flex-col items-center gap-2 pointer-events-auto z-[100] relative">
+                {noRegretStatus.actorId && (
+                  <GameButton
+                    onClick={actions.rewindLastCard}
+                    color="purple"
+                    size="sm"
+                    className="pointer-events-auto"
+                    disabled={!noRegretStatus.canRewind}
+                    title={noRegretStatus.cooldown > 0 ? `Cooldown: ${noRegretStatus.cooldown}` : 'Rewind last card'}
+                  >
+                    {noRegretStatus.cooldown > 0 ? `REW ${noRegretStatus.cooldown}` : 'REWIND'}
+                  </GameButton>
+                )}
                 <GameButton
                   onClick={actions.endRandomBiomeTurn}
                   color="gold"
                   size="sm"
                   disabled={false}
+                  className="bg-game-bg-dark/80 shadow-neon-gold"
                 >
                   END TURN
                 </GameButton>
@@ -264,6 +615,7 @@ export const BiomeScreen = memo(function BiomeScreen({
                   onClick={() => handleExitBiome('return')}
                   color="teal"
                   size="sm"
+                  className="bg-game-bg-dark/80 shadow-neon-teal"
                 >
                   EXIT
                 </GameButton>
@@ -272,25 +624,26 @@ export const BiomeScreen = memo(function BiomeScreen({
           </div>
         </div>
 
-        {/* Hand */}
-        {handCards.length > 0 && (
-          <div className="relative z-40" style={{ marginTop: handOffset }}>
-            <Hand
-              cards={handCards}
-              cardScale={1.25}
-              onDragStart={handleDragStart}
-              onCardClick={handleHandClick}
-              stockCount={gameState.stock.length}
-              onStockClick={handleStockClick}
-              draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+        {equippedOrimRow}
+
+        {/* Hand (temporarily hidden) */}
+        {PARTY_BENCH_ENABLED && (
+          <div className="relative z-40 flex justify-center" style={handSlotStyle}>
+            <PartyBench
+              benchActors={partyBenchActors}
               showGraphics={showGraphics}
-              interactionMode={gameState.interactionMode}
-              orimDefinitions={gameState.orimDefinitions}
+              onBenchActorClick={handleBenchActorClick}
+              swapCount={benchSwapCount}
+              infiniteSwapsEnabled={infiniteBenchSwapsEnabled}
+              onToggleInfiniteSwaps={onToggleInfiniteBenchSwaps}
+              freeSwapActorIds={freeSwapActorIds}
+              actorComboCounts={actorComboCounts}
             />
           </div>
         )}
         </div>
         </div>
+        {splatterModal}
       </div>
     );
   }
@@ -319,6 +672,7 @@ export const BiomeScreen = memo(function BiomeScreen({
           showGraphics={showGraphics}
         />
         </div>
+        {splatterModal}
       </div>
     );
   }
@@ -385,7 +739,7 @@ export const BiomeScreen = memo(function BiomeScreen({
   };
   // Track container size for watercolor canvas
   return (
-    <div className="relative w-full h-full flex flex-col gap-10 items-center pointer-events-none">
+    <div className="relative w-full h-full flex flex-col gap-10 items-center pointer-events-auto">
       <div
         className="absolute inset-0"
         style={{
@@ -394,8 +748,8 @@ export const BiomeScreen = memo(function BiomeScreen({
             : `rgba(0, 0, 0, ${overlayOpacity})`,
         }}
       />
-      <div className="relative w-full h-full flex flex-col gap-10 items-center justify-center pointer-events-none" style={{ zIndex: 2 }}>
-      <div className="flex flex-col gap-10 items-center pointer-events-auto" data-biome-ui>
+      <div className="relative w-full h-full flex flex-col gap-12 items-center justify-center pointer-events-auto" style={{ zIndex: 2 }}>
+      <div className="flex flex-col gap-12 items-center pointer-events-auto" data-biome-ui>
       <div className="flex items-center gap-3">
         <div className="text-sm text-game-teal tracking-[4px]" data-card-face>
           {biomeDef?.name?.toUpperCase() ?? 'BIOME'}
@@ -419,6 +773,7 @@ export const BiomeScreen = memo(function BiomeScreen({
               draggingCardId={dragState.isDragging ? dragState.card?.id : null}
               showGraphics={showGraphics}
               cardScale={1.25}
+              revealNextRow={cloudSightActive}
 
             />
           ))}
@@ -440,6 +795,7 @@ export const BiomeScreen = memo(function BiomeScreen({
               draggingCardId={dragState.isDragging ? dragState.card?.id : null}
               showGraphics={showGraphics}
               cardScale={1.25}
+              revealNextRow={cloudSightActive}
 
             />
           ))}
@@ -447,12 +803,25 @@ export const BiomeScreen = memo(function BiomeScreen({
       )}
 
       {/* Foundations */}
-      <div className="flex flex-col items-center gap-4" style={{ marginTop: -foundationOffset }}>
+      <div className="flex flex-col items-center gap-4" style={{ marginTop: -foundationOffsetAdjusted }}>
+        {partyComboTotal > 0 && (
+          <div
+            className="text-[12px] tracking-[3px] font-bold px-2 py-1 rounded border"
+            style={{
+              color: '#0a0a0a',
+              backgroundColor: 'rgba(230, 179, 30, 0.95)',
+              borderColor: 'rgba(255, 229, 120, 0.9)',
+              boxShadow: '0 0 12px rgba(230, 179, 30, 0.65)',
+            }}
+          >
+            PARTY COMBO {partyComboTotal}
+          </div>
+        )}
         <div className="flex" style={{ gap: '10px' }}>
-          {gameState.foundations.map((foundation, idx) => {
-            const showGoldHighlight =
-              !!(selectedCard && validFoundationsForSelected[idx]);
-            const actor = activeParty[idx];
+            {gameState.foundations.map((foundation, idx) => {
+              const showGoldHighlight =
+                !!(selectedCard && validFoundationsForSelected[idx]);
+            const actor = (idx === 0 && !foundationHasActor) ? null : activeParty[idx];
             const hasStamina = (actor?.stamina ?? 0) > 0;
 
             const canReceiveDrag =
@@ -496,26 +865,28 @@ export const BiomeScreen = memo(function BiomeScreen({
           })}
         </div>
 
-        <div className="mt-2">
-          <div className="flex items-center gap-2">
+        <div className="mt-2 pointer-events-auto relative z-[100]">
+          <div className="flex items-center gap-2 pointer-events-auto z-[100] relative">
             <GameButton
               onClick={() => handleExitBiome(hasCollectedLoot ? 'return' : 'abandon')}
               color={hasCollectedLoot ? 'teal' : 'red'}
               size="sm"
-              className="w-16 text-center"
+              className={`w-16 text-center bg-game-bg-dark/80 ${hasCollectedLoot ? 'shadow-neon-teal' : 'shadow-neon-red'}`}
             >
               {hasCollectedLoot ? '<-' : 'ABANDON'}
             </GameButton>
-            <GameButton
-              onClick={actions.rewindLastCard}
-              color="purple"
-              size="sm"
-              className="w-16 text-center"
-              disabled={!noRegretStatus.canRewind}
-              title={noRegretStatus.cooldown > 0 ? `Cooldown: ${noRegretStatus.cooldown}` : 'Rewind last card'}
-            >
-              {noRegretStatus.cooldown > 0 ? `R${noRegretStatus.cooldown}` : 'REW'}
-            </GameButton>
+            {noRegretStatus.actorId && (
+              <GameButton
+                onClick={actions.rewindLastCard}
+                color="purple"
+                size="sm"
+                className="w-16 text-center pointer-events-auto"
+                disabled={!noRegretStatus.canRewind}
+                title={noRegretStatus.cooldown > 0 ? `Cooldown: ${noRegretStatus.cooldown}` : 'Rewind last card'}
+              >
+                {noRegretStatus.cooldown > 0 ? `R${noRegretStatus.cooldown}` : 'REW'}
+              </GameButton>
+            )}
             <GameButton onClick={actions.autoSolveBiome} color="gold" size="sm" className="w-16 text-center">
               ?
             </GameButton>
@@ -538,25 +909,26 @@ export const BiomeScreen = memo(function BiomeScreen({
         )}
       </div>
 
-      {/* Hand */}
-      {handCards.length > 0 && (
-        <div style={{ marginTop: handOffset }}>
-          <Hand
-            cards={handCards}
-            cardScale={1.25}
-            onDragStart={handleDragStart}
-            onCardClick={handleHandClick}
-            stockCount={gameState.stock.length}
-            onStockClick={handleStockClick}
-            draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+      {equippedOrimRow}
+
+      {/* Hand (temporarily hidden) */}
+      {PARTY_BENCH_ENABLED && (
+        <div className="relative z-40 flex justify-center" style={handSlotStyle}>
+          <PartyBench
+            benchActors={partyBenchActors}
             showGraphics={showGraphics}
-            interactionMode={gameState.interactionMode}
-            orimDefinitions={gameState.orimDefinitions}
+            onBenchActorClick={handleBenchActorClick}
+            swapCount={benchSwapCount}
+            infiniteSwapsEnabled={infiniteBenchSwapsEnabled}
+            onToggleInfiniteSwaps={onToggleInfiniteBenchSwaps}
+            freeSwapActorIds={freeSwapActorIds}
+            actorComboCounts={actorComboCounts}
           />
         </div>
       )}
       </div>
       </div>
+      {splatterModal}
     </div>
   );
 });

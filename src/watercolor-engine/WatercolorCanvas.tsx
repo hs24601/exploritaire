@@ -23,7 +23,9 @@ import {
   RenderTexture,
   Application as PixiApplication,
   BlurFilter,
+  Filter,
 } from 'pixi.js';
+import type { BLEND_MODES } from 'pixi.js';
 import type {
   WatercolorCanvasProps,
   WatercolorEngineAPI,
@@ -40,7 +42,10 @@ import {
   DEFAULT_SPLASH_CONFIG,
   cssToHex,
 } from './types';
+import { getSplatterPattern } from './splatterPatterns';
+import type { SplatterPatternArc } from './splatterPatterns';
 import { useRegisterWatercolorEngine } from './WatercolorContext';
+import { pixelArtVertexShader, pixelArtFragmentShader } from './shaders/PixelArtShader';
 
 console.log('[WatercolorCanvas] module loaded');
 
@@ -122,15 +127,41 @@ function generateSplashParticles(config: SplashConfig): SplashParticle[] {
   // Primary direction with some variance
   const primaryDir = config.direction * (Math.PI / 180);
   const secondaryDir = primaryDir + Math.PI; // Opposite direction
+  const pattern = getSplatterPattern(config.patternId);
+  const intensityScale = Math.max(0.35, config.intensity);
+
+  const pickArc = (arcs: SplatterPatternArc[]): SplatterPatternArc => {
+    const total = arcs.reduce((sum, arc) => sum + arc.weight, 0);
+    let roll = Math.random() * total;
+    for (const arc of arcs) {
+      roll -= arc.weight;
+      if (roll <= 0) return arc;
+    }
+    return arcs[0];
+  };
+
+  const sampleAngle = (baseDir: number, arc: SplatterPatternArc) => {
+    const halfSpread = arc.spreadDeg * 0.5;
+    const uniformOffset = Math.random() * arc.spreadDeg - halfSpread;
+    const jitter = gaussianRandom(0, arc.spreadDeg * 0.15);
+    return baseDir + (arc.offsetDeg + uniformOffset + jitter) * (Math.PI / 180);
+  };
 
   // Main splotches
   for (let i = 0; i < splotchCount; i++) {
-    const usePrimary = Math.random() < 0.65;
-    const baseAngle = usePrimary ? primaryDir : secondaryDir;
-    const angleVariance = gaussianRandom(0, 0.6);
-    const angle = baseAngle + angleVariance;
-
-    const distance = 60 + Math.random() * 80 * config.intensity;
+    let angle = 0;
+    let distance = 0;
+    if (pattern) {
+      const arc = pickArc(pattern.splotchArcs);
+      angle = sampleAngle(primaryDir, arc);
+      distance = (arc.distanceMin + Math.random() * (arc.distanceMax - arc.distanceMin)) * intensityScale;
+    } else {
+      const usePrimary = Math.random() < 0.65;
+      const baseAngle = usePrimary ? primaryDir : secondaryDir;
+      const angleVariance = gaussianRandom(0, 0.6);
+      angle = baseAngle + angleVariance;
+      distance = 60 + Math.random() * 80 * config.intensity;
+    }
     const arcAmount = (Math.random() - 0.5) * 40;
 
     const endX = config.origin.x + Math.cos(angle) * distance;
@@ -158,8 +189,16 @@ function generateSplashParticles(config: SplashConfig): SplashParticle[] {
 
   // Small drizzle drops
   for (let i = 0; i < drizzleCount; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const distance = 30 + Math.random() * 100 * config.intensity;
+    let angle = 0;
+    let distance = 0;
+    if (pattern) {
+      const arc = pickArc(pattern.drizzleArcs);
+      angle = sampleAngle(primaryDir, arc);
+      distance = (arc.distanceMin + Math.random() * (arc.distanceMax - arc.distanceMin)) * intensityScale;
+    } else {
+      angle = Math.random() * Math.PI * 2;
+      distance = 30 + Math.random() * 100 * config.intensity;
+    }
 
     const endX = config.origin.x + Math.cos(angle) * distance;
     const endY = config.origin.y + Math.sin(angle) * distance;
@@ -186,9 +225,11 @@ function generateSplashParticles(config: SplashConfig): SplashParticle[] {
 interface AnimatedSplashesProps {
   splashes: ActiveSplash[];
   onComplete: (splashId: string) => void;
+  luminousEnabled: boolean;
+  luminousStrength: number;
 }
 
-function AnimatedSplashes({ splashes, onComplete }: AnimatedSplashesProps) {
+function AnimatedSplashes({ splashes, onComplete, luminousEnabled, luminousStrength }: AnimatedSplashesProps) {
   const graphicsRef = useRef<Graphics | null>(null);
   const lastFrameRef = useRef(0);
   const frameInterval = 1000 / 30;
@@ -203,6 +244,8 @@ function AnimatedSplashes({ splashes, onComplete }: AnimatedSplashesProps) {
     lastFrameRef.current = now;
 
     g.clear();
+    const splashBlendMode: BLEND_MODES = luminousEnabled ? 'add' : 'normal';
+    g.blendMode = splashBlendMode;
 
     if (splashes.length === 0) return;
 
@@ -237,7 +280,10 @@ function AnimatedSplashes({ splashes, onComplete }: AnimatedSplashesProps) {
                   t * t * particle.endPos.y;
 
         // Fade out near end
-        const alpha = particleProgress < 0.5 ? 0.9 : 0.9 * (1 - (particleProgress - 0.5) * 2);
+        const alphaBase = particleProgress < 0.5 ? 0.9 : 0.9 * (1 - (particleProgress - 0.5) * 2);
+        const alpha = luminousEnabled
+          ? Math.min(1, alphaBase * (1 + luminousStrength * 0.35))
+          : alphaBase;
         const scale = particle.scale * (0.4 + eased * 0.6);
 
         g.setFillStyle({ color: particle.colorHex, alpha });
@@ -272,7 +318,7 @@ function AnimatedSplashes({ splashes, onComplete }: AnimatedSplashesProps) {
         g.fill();
       });
     });
-  }, [splashes, onComplete]);
+  }, [splashes, onComplete, luminousEnabled, luminousStrength]);
 
   // Run animation on every tick
   useTick(animate, splashes.length > 0);
@@ -291,7 +337,18 @@ interface WatercolorCanvasHandle {
 
 export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCanvasProps>(
   function WatercolorCanvas(
-    { width, height, paperConfig: paperConfigProp, onReady, className, style },
+    {
+      width,
+      height,
+      paperConfig: paperConfigProp,
+      luminous = true,
+      luminousStrength = 0.6,
+      pixelArtEnabled = false,
+      pixelSize = 4,
+      onReady,
+      className,
+      style,
+    },
     ref
   ) {
     const [ready, setReady] = useState(false);
@@ -305,6 +362,8 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
     const appRef = useRef<PixiApplication | null>(null);
     const persistentTextureRef = useRef<RenderTexture | null>(null);
     const persistentContainerRef = useRef<Container | null>(null);
+    const persistentSpriteRef = useRef<Sprite | null>(null);
+    const pixelArtFilterRef = useRef<Filter | null>(null);
 
     // Register with context when available
     const registerEngine = useRegisterWatercolorEngine();
@@ -339,7 +398,12 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
       const variedColor = varyColor(config.color, config.shapeSeed);
 
       // Draw organic watercolor splotch
-      graphics.setFillStyle({ color: variedColor, alpha: config.alpha });
+      const alpha = luminous
+        ? Math.min(1, config.alpha * (1 + luminousStrength * 0.35))
+        : config.alpha;
+      graphics.setFillStyle({ color: variedColor, alpha });
+      const markBlendMode: BLEND_MODES = luminous ? 'add' : 'normal';
+      graphics.blendMode = markBlendMode;
 
       // Create irregular circle shape
       const baseRadius = 18 * config.scale;
@@ -386,7 +450,7 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
       }
 
       // Apply blur for soft edges
-      graphics.filters = [new BlurFilter({ strength: 3 })];
+      graphics.filters = [new BlurFilter({ strength: luminous ? 6 : 3 })];
 
       // Render to persistent texture
       container.addChild(graphics);
@@ -399,7 +463,7 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
       graphics.destroy();
 
       setPaintMarkCount(prev => prev + 1);
-    }, []);
+    }, [luminous, luminousStrength]);
 
     const clearPaint = useCallback(() => {
       if (persistentTextureRef.current && appRef.current) {
@@ -510,6 +574,31 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
       return () => clearInterval(checkInterval);
     }, [activeSplashes.length, addPaintMark]);
 
+    // Update pixel art filter
+    useEffect(() => {
+      if (!persistentSpriteRef.current) return;
+
+      if (pixelArtEnabled) {
+        // Create or update pixel art filter
+        if (!pixelArtFilterRef.current) {
+          pixelArtFilterRef.current = new Filter(
+            pixelArtVertexShader,
+            pixelArtFragmentShader,
+            {
+              pixelSize: pixelSize / Math.max(1, window.devicePixelRatio || 1),
+            }
+          );
+        } else {
+          // Update pixel size uniform
+          pixelArtFilterRef.current.uniforms.pixelSize = pixelSize / Math.max(1, window.devicePixelRatio || 1);
+        }
+        persistentSpriteRef.current.filters = [pixelArtFilterRef.current];
+      } else {
+        // Disable pixel art filter
+        persistentSpriteRef.current.filters = null;
+      }
+    }, [pixelArtEnabled, pixelSize]);
+
     // Draw paper texture
     const drawPaper = useCallback((g: Graphics) => {
       g.clear();
@@ -567,12 +656,19 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
 
           {/* Persistent paint layer - rendered via sprite from RenderTexture */}
           {persistentTextureRef.current && (
-            <pixiSprite texture={persistentTextureRef.current} />
+            <pixiSprite
+              ref={(sprite: Sprite | null) => {
+                persistentSpriteRef.current = sprite;
+              }}
+              texture={persistentTextureRef.current}
+            />
           )}
 
           {/* Active animation layer */}
           <AnimatedSplashes
             splashes={activeSplashes}
+            luminousEnabled={luminous}
+            luminousStrength={luminousStrength}
             onComplete={(splashId) => {
               // Find the splash and bake its particles to persistent layer
               const completedSplash = activeSplashes.find(s => s.id === splashId);

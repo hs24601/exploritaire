@@ -103,4 +103,8 @@ export interface WatercolorConfig {
   grain: GrainConfig;
   /** Overall scale multiplier for the entire effect */
   overallScale: number;
+  /** Enable luminous/blacklight-style glow */
+  luminous?: boolean;
+  /** Glow strength multiplier (0-1.5) */
+  luminousStrength?: number;
 }

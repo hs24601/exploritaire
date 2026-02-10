@@ -8,6 +8,7 @@ import { getActorDisplayGlyph, getActorDefinition } from '../engine/actors';
 import { Tooltip } from './Tooltip';
 import { ActorCardTooltipContent } from './ActorCardTooltipContent';
 import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
+import { CardFrame } from './card/CardFrame';
 import { getOrimAccentColor, getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
 import { useWatercolorEnabled } from '../watercolor/useWatercolorEnabled';
 import { useWatercolorEngine } from '../watercolor-engine';
@@ -168,9 +169,21 @@ export const FoundationActor = memo(function FoundationActor({
   const foundationRef = useRef<HTMLDivElement>(null);
   const watercolorEnabled = useWatercolorEnabled();
   const watercolorEngine = useWatercolorEngine();
+  const splatterPatternIds = useMemo(
+    () => [
+      'splatter_fan_left',
+      'splatter_streak_right',
+      'splatter_drip_down',
+      'splatter_round_burst',
+      'splatter_blob_drip',
+      'splatter_crown',
+    ],
+    []
+  );
   const pendingSplashRef = useRef<{
     origin: { x: number; y: number };
     direction: number;
+    patternId: string;
     color: string;
     intensity: number;
     splotchCount: number;
@@ -178,6 +191,8 @@ export const FoundationActor = memo(function FoundationActor({
     duration: number;
     sizeScale: number;
   } | null>(null);
+
+  const showEmptyFoundation = cards.length === 0;
 
   useEffect(() => {
     if (!watercolorEngine || !pendingSplashRef.current || disableFoundationSplashes) return;
@@ -205,6 +220,7 @@ export const FoundationActor = memo(function FoundationActor({
       const splotchCount = 8 + comboBoost;
       const drizzleCount = 12 + comboBoost * 2;
       const duration = Math.max(350, 650 - comboBoost * 25);
+      const patternId = splatterPatternIds[Math.floor(Math.random() * splatterPatternIds.length)] ?? 'splatter_round_burst';
 
       // Use new PixiJS engine if available (queue if not ready yet)
       console.log('[FoundationActor] Card placed, watercolorEngine:', !!watercolorEngine, 'foundationRef:', !!foundationRef.current);
@@ -228,6 +244,7 @@ export const FoundationActor = memo(function FoundationActor({
         const splashPayload = {
           origin: { x: centerX, y: centerY },
           direction: primaryDir,
+          patternId,
           color: cardColor,
           intensity,
           splotchCount,
@@ -437,6 +454,25 @@ export const FoundationActor = memo(function FoundationActor({
     return foundationOffsetRef.current.get(cardId) ?? getFoundationOffset(cardId);
   }, []);
 
+  if (showEmptyFoundation) {
+    return (
+      <div className="relative" ref={(el) => setDropRef?.(index, el)}>
+        <CardFrame
+          size={{ width: cardWidth, height: cardHeight }}
+          borderColor={showHighlight ? highlightColor : 'rgba(127, 219, 202, 0.4)'}
+          boxShadow={showHighlight ? `0 0 12px ${highlightColor}66` : 'none'}
+          onClick={() => onFoundationClick(index)}
+          className="flex items-center justify-center"
+          style={{
+            borderStyle: 'dashed',
+            backgroundColor: 'rgba(10, 10, 10, 0.6)',
+          }}
+        >
+          <div className="text-[9px] tracking-[3px] text-game-teal/70">EMPTY</div>
+        </CardFrame>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -814,7 +850,7 @@ export const FoundationActor = memo(function FoundationActor({
             </div>
         </motion.div>
       </Tooltip>
-      {actorOrimDisplay.length > 0 && (
+              {false && actorOrimDisplay.length > 0 && ( // TEMP: hide orim presentation while iterating on new card/orim UI
         <div className="flex justify-center">
           <div
             className="grid justify-items-center"

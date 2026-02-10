@@ -14,7 +14,7 @@ import { PlayingScreen } from './components/PlayingScreen';
 import { OrimEditor } from './components/OrimEditor';
 import { ActorEditor } from './components/ActorEditor';
 import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element } from './engine/types';
-import { ACTOR_DEFINITIONS, getActorDisplayGlyph } from './engine/actors';
+import { ACTOR_DEFINITIONS, getActorDisplayGlyph, getActorDefinition } from './engine/actors';
 import { getOrimAccentColor } from './watercolor/orimWatercolor';
 import { ACTOR_DECK_TEMPLATES } from './engine/actorDecks';
 import { canPlayCard, canPlayCardWithWild } from './engine/rules';
@@ -77,11 +77,23 @@ export default function App() {
   const [lightingEnabled, setLightingEnabled] = useState(false);
   const [watercolorEnabled, setWatercolorEnabled] = useState(true);
   const [discoveryEnabled, setDiscoveryEnabled] = useState(false);
+  const [devNoRegretEnabled, setDevNoRegretEnabled] = useState(false);
+  const [sandboxOrimIds, setSandboxOrimIds] = useState<string[]>([]);
+  const [sandboxOrimSearch, setSandboxOrimSearch] = useState('');
+  const [orimTrayDevMode, setOrimTrayDevMode] = useState(false);
+  const [orimTrayTab, setOrimTrayTab] = useState<'puzzle' | 'combat'>('puzzle');
+  const [orimInjectorOpen, setOrimInjectorOpen] = useState(false);
+  const [injectOrimId, setInjectOrimId] = useState('no-regret');
+  const [injectActorId, setInjectActorId] = useState<string | null>(null);
+  const [infiniteStockEnabled, setInfiniteStockEnabled] = useState(false);
+  const [benchSwapCount, setBenchSwapCount] = useState(4);
+  const [infiniteBenchSwapsEnabled, setInfiniteBenchSwapsEnabled] = useState(false);
   const [cameraDebugOpen, setCameraDebugOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
   const [toolingTab, setToolingTab] = useState<'orim' | 'actor'>('actor');
   const [useGhostBackground, setUseGhostBackground] = useState(false);
+  const [pixelArtEnabled, setPixelArtEnabled] = useState(false);
   const showPuzzleOverlay = true;
   const [actorDefinitions, setActorDefinitions] = useState(ACTOR_DEFINITIONS);
   const [actorDeckTemplates, setActorDeckTemplates] = useState(ACTOR_DECK_TEMPLATES);
@@ -150,7 +162,7 @@ export default function App() {
     validFoundationsForSelected,
     noRegretStatus,
     actions,
-  } = useGameEngine(initialGameState);
+  } = useGameEngine(initialGameState, { devNoRegretEnabled });
   const ghostBackgroundEnabled = false;
 
   useEffect(() => {
@@ -240,10 +252,14 @@ export default function App() {
       if (key === 'w') {
         setWatercolorEnabled((prev) => !prev);
       }
+      if (key === ' ') {
+        event.preventDefault();
+        actions.rewindLastCard(true);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [actions]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -457,13 +473,28 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'o') return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      e.preventDefault();
+      setOrimInjectorOpen((prev) => !prev);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== '`') return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
       e.preventDefault();
-      setCommandVisible((prev) => !prev);
+      setOrimTrayDevMode((prev) => !prev);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -494,6 +525,21 @@ export default function App() {
       }
       e.preventDefault();
       setLightingEnabled((prev) => !prev);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== '[') return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      e.preventDefault();
+      setPixelArtEnabled((prev) => !prev);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -616,6 +662,10 @@ export default function App() {
     const activeParty = gameState.activeSessionTileId
       ? gameState.tileParties[gameState.activeSessionTileId] ?? []
       : [];
+    const foundationHasActor = (gameState.foundations[0]?.length ?? 0) > 0;
+    const handParty = gameState.currentBiome === 'random_wilds'
+      ? (foundationHasActor ? activeParty.slice(0, 1) : [])
+      : activeParty;
     const partyKey = activeParty.map((actor) => actor.id).join('|');
     if (gameState.phase !== 'biome') {
       setHandCards([]);
@@ -623,7 +673,7 @@ export default function App() {
       return;
     }
     lastPartyKeyRef.current = partyKey;
-    const nextHand = activeParty.flatMap((actor) => {
+    const nextHand = handParty.flatMap((actor) => {
       const deck = gameState.actorDecks[actor.id];
       if (!deck) return [];
       const buildDisplay = (slotId: string, definitionId?: string, fallbackId?: string) => {
@@ -687,6 +737,48 @@ export default function App() {
     setHandCards(nextHand);
   }, [gameState, showGraphics]);
 
+  const injectorOrims = useMemo(() => {
+    if (!gameState?.orimDefinitions) return [];
+    const legacyCombatIds = new Set(['scratch', 'bite', 'claw']);
+    if (orimTrayDevMode) return gameState.orimDefinitions;
+    return gameState.orimDefinitions.filter((orim) => (
+      orim.domain !== 'combat' && !legacyCombatIds.has(orim.id)
+    ));
+  }, [gameState, orimTrayDevMode]);
+  const injectorActors = useMemo(() => {
+    if (!gameState?.activeSessionTileId) return [];
+    return gameState.tileParties[gameState.activeSessionTileId] ?? [];
+  }, [gameState]);
+  const sandboxOrimResults = useMemo(() => {
+    if (!gameState?.orimDefinitions) return [];
+    const legacyCombatIds = new Set(['scratch', 'bite', 'claw']);
+    const query = sandboxOrimSearch.trim().toLowerCase();
+    return gameState.orimDefinitions.filter((orim) => {
+      if (!orimTrayDevMode && (orim.domain === 'combat' || legacyCombatIds.has(orim.id))) return false;
+      if (orimTrayDevMode && orim.domain !== orimTrayTab) return false;
+      if (orimTrayDevMode && orimTrayTab === 'puzzle' && legacyCombatIds.has(orim.id)) return false;
+      if (!query) return true;
+      return orim.name.toLowerCase().includes(query) || orim.id.toLowerCase().includes(query);
+    });
+  }, [gameState, sandboxOrimSearch, orimTrayDevMode, orimTrayTab]);
+
+  useEffect(() => {
+    if (!injectorOrims.length) return;
+    if (!injectorOrims.some((orim) => orim.id === injectOrimId)) {
+      setInjectOrimId(injectorOrims[0].id);
+    }
+  }, [injectorOrims, injectOrimId]);
+
+  useEffect(() => {
+    if (!injectorActors.length) {
+      setInjectActorId(null);
+      return;
+    }
+    if (!injectorActors.some((actor) => actor.id === injectActorId)) {
+      setInjectActorId(injectorActors[0].id);
+    }
+  }, [injectorActors, injectActorId]);
+
   if (!gameState) return null;
 
   const guidanceActive = guidanceMoves.length > 0;
@@ -719,7 +811,7 @@ export default function App() {
         } as React.CSSProperties}
       >
         <div
-          className="fixed top-4 right-4 z-[10050] text-[10px] font-mono px-2 py-1 rounded border"
+          className="fixed top-4 right-4 z-[10050] text-[10px] font-mono px-3 py-2 rounded border"
           style={{
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
             borderColor: 'rgba(127, 219, 202, 0.4)',
@@ -727,7 +819,19 @@ export default function App() {
             pointerEvents: 'none',
           }}
         >
-          phase: {gameState?.phase ?? 'unknown'} | ghost: {ghostBackgroundEnabled ? 'on' : 'off'}
+          <div className="text-[9px] tracking-[4px]">HOTKEYS</div>
+          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
+            <div><span className="text-game-teal">A</span> actor editor</div>
+            <div><span className="text-game-teal">W</span> watercolor</div>
+            <div><span className="text-game-teal">G</span> graphics</div>
+            <div><span className="text-game-teal">P</span> ghost bg</div>
+            <div><span className="text-game-teal">D</span> drag/click</div>
+            <div><span className="text-game-teal">`</span> orim dev</div>
+            <div><span className="text-game-teal">T</span> text</div>
+            <div><span className="text-game-teal">L</span> lighting</div>
+            <div><span className="text-game-teal">[</span> pixel art</div>
+            <div><span className="text-game-teal">\\</span> splatters</div>
+          </div>
         </div>
         <div className="fixed bottom-4 left-4 z-[9999] flex flex-col gap-2 menu-text">
           {import.meta.env.DEV && (
@@ -901,6 +1005,114 @@ export default function App() {
                   >
                     🧰 Tooling
                   </button>
+                  <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
+                    <div className="text-[10px] text-game-white/70 tracking-[2px]">HOTKEYS</div>
+                    <div className="text-[10px] text-game-teal/80 font-mono">P — Background toggle</div>
+                    <div className="text-[10px] text-game-teal/80 font-mono">G — Graphics toggle</div>
+                    <div className="text-[10px] text-game-teal/80 font-mono">D — Touch vs Drag</div>
+                    <div className="text-[10px] text-game-teal/80 font-mono">` — Orim Tray Dev</div>
+                    <div className="text-[10px] text-game-teal/80 font-mono">O — Orim Injector</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {orimInjectorOpen && (
+          <div className="fixed inset-0 z-[10025]">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <div className="relative w-full h-full flex items-start justify-start p-6">
+              <div className="relative bg-game-bg-dark border border-game-teal/40 rounded-lg p-4 w-[360px] max-h-[90vh] overflow-y-auto text-game-white menu-text">
+                <button
+                  onClick={() => setOrimInjectorOpen(false)}
+                  className="absolute top-3 right-3 text-xs text-game-pink border border-game-pink rounded w-6 h-6 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
+                  title="Close"
+                >
+                  x
+                </button>
+                <div className="text-xs text-game-teal tracking-[4px] mb-3">
+                  ORIM INJECTOR
+                </div>
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
+                    <div className="text-[10px] text-game-white/70 tracking-[2px]">NO REGRET (DEV)</div>
+                    <button
+                      type="button"
+                      onClick={() => setDevNoRegretEnabled((prev) => !prev)}
+                      className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
+                      style={{
+                        color: devNoRegretEnabled ? '#e6b31e' : '#7fdbca',
+                        borderColor: devNoRegretEnabled ? 'rgba(230, 179, 30, 0.6)' : 'rgba(127, 219, 202, 0.6)',
+                      }}
+                      title="Force-enable No Regret for active party"
+                      disabled={injectorActors.length === 0}
+                    >
+                      {devNoRegretEnabled ? '∞ NO REGRET: ON' : '∞ NO REGRET: OFF'}
+                    </button>
+                    <div className="text-[10px] text-game-white/60">
+                      Active party only. Ignores slot/equip requirements.
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
+                    <div className="text-[10px] text-game-white/70 tracking-[2px]">ORIM TRAY (DEV)</div>
+                    <button
+                      type="button"
+                      onClick={() => setOrimTrayDevMode((prev) => !prev)}
+                      className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
+                      style={{
+                        color: orimTrayDevMode ? '#39ff14' : '#7fdbca',
+                        borderColor: orimTrayDevMode ? 'rgba(57, 255, 20, 0.6)' : 'rgba(127, 219, 202, 0.6)',
+                      }}
+                      title="Toggle Orim Tray Dev Mode"
+                    >
+                      {orimTrayDevMode ? 'ORIM TRAY: DEV ON' : 'ORIM TRAY: DEV OFF'}
+                    </button>
+                    <div className="text-[10px] text-game-white/60">
+                      Shows tabs in the tray and filters by domain.
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
+                    <div className="text-[10px] text-game-white/70 tracking-[2px]">INJECT ORIM</div>
+                    <label className="text-[10px] text-game-teal/80">Orim</label>
+                    <select
+                      className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-white"
+                      value={injectOrimId}
+                      onChange={(e) => setInjectOrimId(e.target.value)}
+                    >
+                      {injectorOrims.map((orim) => (
+                        <option key={orim.id} value={orim.id}>
+                          {orim.name} ({orim.id})
+                        </option>
+                      ))}
+                    </select>
+                    <div className="text-[10px] text-game-white/50">
+                      Orim tray search now lives on the tray (dev mode).
+                    </div>
+                    <label className="text-[10px] text-game-teal/80">Actor (Active Party)</label>
+                    <select
+                      className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-white"
+                      value={injectActorId ?? ''}
+                      onChange={(e) => setInjectActorId(e.target.value)}
+                      disabled={injectorActors.length === 0}
+                    >
+                      {injectorActors.map((actor) => (
+                        <option key={actor.id} value={actor.id}>
+                          {getActorDefinition(actor.definitionId)?.name ?? actor.definitionId}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
+                      onClick={() => {
+                        if (!injectActorId) return;
+                        actions.devInjectOrimToActor(injectActorId, injectOrimId);
+                      }}
+                      disabled={!injectActorId || injectorOrims.length === 0}
+                    >
+                      Inject Orim
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1031,6 +1243,19 @@ export default function App() {
                 isWon={isWon}
                 guidanceMoves={guidanceMoves}
                 activeParty={activeParty}
+                sandboxOrimIds={sandboxOrimIds}
+                orimTrayDevMode={orimTrayDevMode}
+                orimTrayTab={orimTrayTab}
+                onOrimTrayTabChange={setOrimTrayTab}
+                sandboxOrimSearch={sandboxOrimSearch}
+                onSandboxOrimSearchChange={setSandboxOrimSearch}
+                sandboxOrimResults={sandboxOrimResults}
+                onAddSandboxOrim={(id) => {
+                  setSandboxOrimIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+                }}
+                onRemoveSandboxOrim={(id) => {
+                  setSandboxOrimIds((prev) => prev.filter((entry) => entry !== id));
+                }}
                 hasCollectedLoot={hasCollectedLoot}
                 dragState={dragState}
                 handleDragStart={handleDragStart}
@@ -1040,6 +1265,12 @@ export default function App() {
                 handleExitBiome={handleExitBiome}
                 useGhostBackground={ghostBackgroundEnabled}
                 lightingEnabled={lightingEnabled}
+                infiniteStockEnabled={infiniteStockEnabled}
+                onToggleInfiniteStock={() => setInfiniteStockEnabled((prev) => !prev)}
+                benchSwapCount={benchSwapCount}
+                infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
+                onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
+                onConsumeBenchSwap={() => setBenchSwapCount((prev) => Math.max(0, prev - 1))}
                 noRegretStatus={noRegretStatus}
                 actions={{
                   selectCard: actions.selectCard,
@@ -1047,12 +1278,14 @@ export default function App() {
                   playCardDirect: actions.playCardDirect,
                   playCardInRandomBiome: actions.playCardInRandomBiome,
                   playFromHand: actions.playFromHand,
-                  playFromStock: actions.playFromStock,
+                  playFromStock: (foundationIndex: number, useWild = false, force = false) =>
+                    actions.playFromStock(foundationIndex, useWild, force, !infiniteStockEnabled),
                   completeBiome: actions.completeBiome,
                   autoSolveBiome: actions.autoSolveBiome,
                   playCardInNodeBiome: actions.playCardInNodeBiome,
                   endRandomBiomeTurn: actions.endRandomBiomeTurn,
                   rewindLastCard: actions.rewindLastCard,
+                  swapPartyLead: actions.swapPartyLead,
                 }}
               />
             )}
@@ -1083,6 +1316,7 @@ export default function App() {
         disableZoom={gameState.phase !== 'garden' && gameState.phase !== 'biome'}
         allowWindowPan={gameState.phase === 'biome'}
         showWatercolorCanvas={gameState.phase === 'garden'}
+        pixelArtEnabled={pixelArtEnabled}
         onStartAdventure={handleStartAdventure}
         onStartBiome={handleStartBiome}
         onAssignCardToBuildPile={actions.assignCardToBuildPile}

@@ -8,12 +8,15 @@ export type OrimCategory = 'ability' | 'utility' | 'trait';
 
 export type OrimRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
+export type OrimDomain = 'puzzle' | 'combat';
+
 export interface OrimDefinition {
   id: string;
   name: string;
   description?: string;
   artSrc?: string;
   category: OrimCategory;
+  domain: OrimDomain;
   rarity: OrimRarity;
   powerCost: number;
   grantsWild?: boolean; // Wild placement effect
@@ -161,7 +164,8 @@ export interface GameState {
   orimStash: OrimInstance[]; // Shared stash for ORIM
   orimInstances: Record<string, OrimInstance>; // All ORIM instances by id
   actorDecks: Record<string, ActorDeckState>; // Actor decks with ORIM slots
-  noRegretCooldowns?: Record<string, number>; // ActorId -> cooldown turns remaining
+  noRegretCooldowns?: Record<string, number>; // ActorId -> cooldown turns remaining (legacy)
+  noRegretCooldown?: number; // Global cooldown turns remaining
   lastCardActionSnapshot?: Omit<GameState, 'lastCardActionSnapshot'>;
   // Tile system
   tiles: Tile[]; // Active tiles in the garden
@@ -175,6 +179,7 @@ export interface GameState {
   nodeTableau?: TableauNode[]; // Only populated when biome mode === 'node-edge'
   // Random biome state
   foundationCombos?: number[]; // Combo count per foundation this turn
+  actorCombos?: Record<string, number>; // Combo count per actor this turn
   foundationTokens?: Record<Element, number>[]; // Tokens collected per foundation this turn
   randomBiomeTurnNumber?: number; // Current turn number in random biome
 }

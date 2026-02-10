@@ -37,6 +37,9 @@ export {
   cssToRgba,
 } from './types';
 
+// Splatter patterns
+export { SPLATTER_PATTERNS, getSplatterPattern } from './splatterPatterns';
+
 // Layers (for advanced usage)
 export { PaperTextureLayer, usePaperTexture } from './layers/PaperTextureLayer';
 

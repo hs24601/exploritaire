@@ -53,6 +53,8 @@ export interface SplashConfig {
   origin: Point;
   /** Primary splash direction in degrees (0 = right, 90 = down) */
   direction: number;
+  /** Optional splatter pattern id (see splatterPatterns) */
+  patternId?: string;
   /** Color for all splash particles */
   color: CSSColor;
   /** Intensity multiplier (affects count and distance) */
@@ -186,6 +188,14 @@ export interface WatercolorCanvasProps {
   height: number;
   /** Optional paper configuration override */
   paperConfig?: Partial<PaperConfig>;
+  /** Enable luminous/blacklight glow */
+  luminous?: boolean;
+  /** Glow strength multiplier (0-1.5) */
+  luminousStrength?: number;
+  /** Enable pixel art filter effect */
+  pixelArtEnabled?: boolean;
+  /** Pixel size for pixelation effect (default: 4) */
+  pixelSize?: number;
   /** Callback when engine is ready */
   onReady?: (api: WatercolorEngineAPI) => void;
   /** Optional className for positioning */

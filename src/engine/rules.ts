@@ -18,12 +18,14 @@ export function hasElementMatchBuff(effects: Effect[]): boolean {
   );
 }
 
-export function canPlayCardWithWild(card: Card, foundationTop: Card, effects: Effect[] = []): boolean {
+export function canPlayCardWithWild(card: Card, foundationTop?: Card, effects: Effect[] = []): boolean {
+  if (!foundationTop) return false;
   if (foundationTop.rank === WILD_SENTINEL_RANK) return true;
   return canPlayCard(card, foundationTop, effects);
 }
 
-export function canPlayCard(card: Card, foundationTop: Card, effects: Effect[] = []): boolean {
+export function canPlayCard(card: Card, foundationTop?: Card, effects: Effect[] = []): boolean {
+  if (!foundationTop) return false;
   // Standard rule: sequential ranks
   if (isSequential(card.rank, foundationTop.rank)) {
     return true;
@@ -52,9 +54,10 @@ export function countPlayableTableauTops(
     if (tableau.length === 0) continue;
 
     const topCard = tableau[tableau.length - 1];
-    const canPlay = foundations.some((foundation) =>
-      canPlayCard(topCard, foundation[foundation.length - 1], effects)
-    );
+    const canPlay = foundations.some((foundation) => {
+      if (foundation.length === 0) return false;
+      return canPlayCard(topCard, foundation[foundation.length - 1], effects);
+    });
 
     if (canPlay) {
       count++;

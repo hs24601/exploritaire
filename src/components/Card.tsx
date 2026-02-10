@@ -748,25 +748,7 @@ export const Card = memo(function Card({
           }}
         />
       )}
-      {elementKey === 'E' && !faceDown && (
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 2 }}>
-          <svg viewBox="0 0 100 140" className="absolute inset-0 w-full h-full">
-            <g
-              fill="none"
-              stroke="#0a0603"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.75"
-            >
-              <path d="M10 96 L26 66 L42 78 L58 48 L70 68 L86 40" />
-              <path d="M8 112 L28 92 L44 102 L60 84 L78 100 L92 76" />
-              <path d="M14 54 L30 34 L46 44 L56 28 L70 40 L86 22" />
-              <path d="M18 126 L36 114 L48 120 L62 108 L80 118" />
-            </g>
-          </svg>
-        </div>
-      )}
+      {/* TEMP: earth card SVG lines hidden */}
       {!faceDown && card && (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center"
@@ -852,7 +834,7 @@ export const Card = memo(function Card({
               {getRankDisplay(card.rank)}
             </span>
           </div>
-          {hasOrimSlots ? (
+          {false && hasOrimSlots ? ( // TEMP: hide orim presentation while iterating on new card/orim UI
             <div className="flex items-center justify-center gap-1">
               {orimDisplay.length > 0
                 ? orimDisplay.map((slot) => {
@@ -923,7 +905,9 @@ export const Card = memo(function Card({
                     : undefined;
                   const suit = element ? ELEMENT_TO_SUIT[element] : null;
                   const slotColor = suit
-                    ? (suit === '💧' ? '#050505' : SUIT_COLORS[suit])
+                    ? (suit === '💧'
+                      ? (showGraphics ? '#050505' : '#f8f8ff')
+                      : SUIT_COLORS[suit])
                     : '#7fdbca';
                   const slotDisplay = suit
                     ? (suit === '💧' ? 'W' : getSuitDisplay(suit, showGraphics))
@@ -955,7 +939,7 @@ export const Card = memo(function Card({
                 transform: 'translateZ(0)',
                 WebkitFontSmoothing: 'subpixel-antialiased',
                 fontSize: suitFontSizeOverride ? `${suitFontSizeOverride}px` : undefined,
-                color: isWaterElement ? '#050505' : undefined,
+                color: isWaterElement ? (showGraphics ? '#050505' : '#f8f8ff') : undefined,
                 textShadow: isWaterElement ? 'none' : undefined,
                 mixBlendMode: isWaterElement ? 'normal' : undefined,
               }}

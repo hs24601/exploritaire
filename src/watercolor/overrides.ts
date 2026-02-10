@@ -539,6 +539,176 @@ export const ORIM_WATERCOLOR_OVERRIDES: OrimWatercolorOverride[] = [
       },
       "overallScale": 1
     }
+  },
+  {
+    "orimId": "cloud_sight",
+    "baseColor": "#3a3f41",
+    "template": {
+      "splotches": [
+        {
+          "gradientScale": 0.6,
+          "scale": 0.7,
+          "offset": [
+            0,
+            0
+          ],
+          "blendMode": "screen",
+          "opacity": 0,
+          "shape": "circle",
+          "tendrils": {
+            "count": 2,
+            "lengthMin": 80,
+            "lengthMax": 140,
+            "strokeWidth": 5,
+            "swayDuration": 8,
+            "swayAngle": 3
+          },
+          "satellites": {
+            "count": 2,
+            "radiusMin": 10,
+            "radiusMax": 18,
+            "orbitRadius": 120,
+            "driftDuration": 15
+          },
+          "animation": {
+            "breatheDuration": 11,
+            "breatheScale": 1.03,
+            "highlightShiftDuration": 9
+          }
+        },
+        {
+          "gradientScale": 0.4,
+          "scale": 0.45,
+          "offset": [
+            0.05,
+            -0.08
+          ],
+          "blendMode": "screen",
+          "opacity": 0,
+          "shape": "circle",
+          "tendrils": {
+            "count": 1,
+            "lengthMin": 50,
+            "lengthMax": 80,
+            "strokeWidth": 4,
+            "swayDuration": 8,
+            "swayAngle": 3
+          },
+          "satellites": {
+            "count": 1,
+            "radiusMin": 8,
+            "radiusMax": 14,
+            "orbitRadius": 90,
+            "driftDuration": 15
+          },
+          "animation": {
+            "breatheDuration": 13,
+            "breatheScale": 1.02,
+            "highlightShiftDuration": 11
+          }
+        },
+        {
+          "gradientScale": 0.4,
+          "scale": 0.45,
+          "offset": [
+            0.05,
+            -0.08
+          ],
+          "blendMode": "screen",
+          "opacity": 0,
+          "shape": "circle",
+          "tendrils": {
+            "count": 1,
+            "lengthMin": 50,
+            "lengthMax": 80,
+            "strokeWidth": 4,
+            "swayDuration": 8,
+            "swayAngle": 3
+          },
+          "satellites": {
+            "count": 1,
+            "radiusMin": 8,
+            "radiusMax": 14,
+            "orbitRadius": 90,
+            "driftDuration": 15
+          },
+          "animation": {
+            "breatheDuration": 13,
+            "breatheScale": 1.02,
+            "highlightShiftDuration": 11
+          }
+        },
+        {
+          "gradientScale": 0.4,
+          "scale": 0.45,
+          "offset": [
+            0.05,
+            -0.08
+          ],
+          "blendMode": "screen",
+          "opacity": 0,
+          "shape": "circle",
+          "tendrils": {
+            "count": 1,
+            "lengthMin": 50,
+            "lengthMax": 80,
+            "strokeWidth": 4,
+            "swayDuration": 8,
+            "swayAngle": 3
+          },
+          "satellites": {
+            "count": 1,
+            "radiusMin": 8,
+            "radiusMax": 14,
+            "orbitRadius": 90,
+            "driftDuration": 15
+          },
+          "animation": {
+            "breatheDuration": 13,
+            "breatheScale": 1.02,
+            "highlightShiftDuration": 11
+          }
+        },
+        {
+          "gradientScale": 0.4,
+          "scale": 0.45,
+          "offset": [
+            0.05,
+            -0.08
+          ],
+          "blendMode": "screen",
+          "opacity": 0,
+          "shape": "circle",
+          "tendrils": {
+            "count": 1,
+            "lengthMin": 50,
+            "lengthMax": 80,
+            "strokeWidth": 4,
+            "swayDuration": 8,
+            "swayAngle": 3
+          },
+          "satellites": {
+            "count": 1,
+            "radiusMin": 8,
+            "radiusMax": 14,
+            "orbitRadius": 90,
+            "driftDuration": 15
+          },
+          "animation": {
+            "breatheDuration": 13,
+            "breatheScale": 1.02,
+            "highlightShiftDuration": 11
+          }
+        }
+      ],
+      "grain": {
+        "enabled": true,
+        "intensity": 0.04,
+        "frequency": 0.08,
+        "blendMode": "soft-light"
+      },
+      "overallScale": 1
+    }
   }
 ];
 // ORIM_WATERCOLOR_OVERRIDES_END

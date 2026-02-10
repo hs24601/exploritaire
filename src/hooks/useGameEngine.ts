@@ -31,6 +31,7 @@ import {
   reorderActorStack as reorderActorStackFn,
   detachActorFromStack as detachActorFromStackFn,
   detachActorFromParty as detachActorFromPartyFn,
+  swapPartyLead as swapPartyLeadFn,
   assignActorToTileHome as assignActorToTileHomeFn,
   removeActorFromTileHome as removeActorFromTileHomeFn,
   startBiome as startBiomeFn,
@@ -54,18 +55,24 @@ import {
   equipOrimFromStash as equipOrimFromStashFn,
   moveOrimBetweenSlots as moveOrimBetweenSlotsFn,
   returnOrimToStash as returnOrimToStashFn,
+  devInjectOrimToActor as devInjectOrimToActorFn,
 } from '../engine/game';
+import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { findBestMoveSequence, solveOptimally } from '../engine/guidance';
 import { canPlayCardWithWild } from '../engine/rules';
 import { getBiomeDefinition } from '../engine/biomes';
 
 const ORIM_STORAGE_KEY = 'orimEditorDefinitions';
 
-export function useGameEngine(initialState?: GameState | null) {
+export function useGameEngine(
+  initialState?: GameState | null,
+  options?: { devNoRegretEnabled?: boolean }
+) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedCard, setSelectedCard] = useState<SelectedCard | null>(null);
   const [guidanceMoves, setGuidanceMoves] = useState<Move[]>([]);
   const [showGraphics, setShowGraphics] = useState(false);
+  const devNoRegretEnabled = options?.devNoRegretEnabled ?? false;
 
   // Initialize game on mount or when initial state is provided
   useEffect(() => {
@@ -186,31 +193,26 @@ export function useGameEngine(initialState?: GameState | null) {
     if (!gameState || !gameState.lastCardActionSnapshot) {
       return { canRewind: false, cooldown: 0, actorId: null as string | null };
     }
+
     const partyActors: Actor[] = gameState.activeSessionTileId
       ? gameState.tileParties[gameState.activeSessionTileId] ?? []
       : [];
-    const hasNoRegret = (actor: Actor): boolean => {
-      const actorSlotMatch = (actor.orimSlots ?? []).some((slot) => {
-        if (!slot.orimId) return false;
-        const instance = gameState.orimInstances[slot.orimId];
-        return instance?.definitionId === 'no-regret';
-      });
-      if (actorSlotMatch) return true;
-      const deck = gameState.actorDecks[actor.id];
-      if (!deck) return false;
-      return deck.cards.some((card) =>
-        card.slots.some((slot) => {
-          if (!slot.orimId) return false;
-          const instance = gameState.orimInstances[slot.orimId];
-          return instance?.definitionId === 'no-regret';
-        })
-      );
-    };
-    const actor = partyActors.find(hasNoRegret) ?? null;
+    const fallbackActors = partyActors.length > 0
+      ? partyActors
+      : Object.values(gameState.tileParties ?? {}).flat();
+    const candidateActors = fallbackActors.length > 0 ? fallbackActors : gameState.availableActors;
+
+    if (devNoRegretEnabled && candidateActors.length > 0) {
+      return { canRewind: true, cooldown: 0, actorId: candidateActors[0].id };
+    }
+
+    const hasNoRegret = (actor: Actor): boolean =>
+      actorHasOrimDefinition(gameState, actor.id, 'no-regret');
+    const actor = candidateActors.find(hasNoRegret) ?? null;
     if (!actor) return { canRewind: false, cooldown: 0, actorId: null as string | null };
-    const cooldown = gameState.noRegretCooldowns?.[actor.id] ?? 0;
+    const cooldown = gameState.noRegretCooldown ?? 0;
     return { canRewind: cooldown <= 0, cooldown, actorId: actor.id };
-  }, [gameState]);
+  }, [gameState, devNoRegretEnabled]);
 
   // Actions
   const newGame = useCallback((preserveProgress = true) => {
@@ -230,7 +232,7 @@ export function useGameEngine(initialState?: GameState | null) {
           orimStash: gameState.orimStash,
           orimInstances: gameState.orimInstances,
           actorDecks: gameState.actorDecks,
-          noRegretCooldowns: gameState.noRegretCooldowns,
+          noRegretCooldown: gameState.noRegretCooldown,
         }
       : undefined;
     const startPhase = gameState?.phase;
@@ -323,9 +325,9 @@ export function useGameEngine(initialState?: GameState | null) {
   );
 
   const playFromStock = useCallback(
-    (foundationIndex: number, useWild = false, force = false) => {
+    (foundationIndex: number, useWild = false, force = false, consumeStock = true) => {
       if (!gameState) return false;
-      const newState = playCardFromStockFn(gameState, foundationIndex, useWild, force);
+      const newState = playCardFromStockFn(gameState, foundationIndex, useWild, force, consumeStock);
       if (!newState) return false;
       setGameState(newState);
       return true;
@@ -333,10 +335,10 @@ export function useGameEngine(initialState?: GameState | null) {
     [gameState]
   );
 
-  const rewindLastCard = useCallback(() => {
-    if (!gameState || !noRegretStatus.actorId) return false;
-    if (!noRegretStatus.canRewind) return false;
-    const newState = rewindLastCardActionFn(gameState, noRegretStatus.actorId);
+  const rewindLastCard = useCallback((force = false) => {
+    if (!gameState) return false;
+    if (!force && !noRegretStatus.canRewind) return false;
+    const newState = rewindLastCardActionFn(gameState);
     if (newState === gameState) return false;
     setGameState(newState);
     setSelectedCard(null);
@@ -534,6 +536,11 @@ export function useGameEngine(initialState?: GameState | null) {
     setGameState(detachActorFromPartyFn(gameState, tileId, actorId, col, row));
   }, [gameState]);
 
+  const swapPartyLead = useCallback((actorId: string) => {
+    if (!gameState) return;
+    setGameState(swapPartyLeadFn(gameState, actorId));
+  }, [gameState]);
+
   const startBiome = useCallback((tileId: string, biomeId: string) => {
     if (!gameState) return;
     setGameState(startBiomeFn(gameState, tileId, biomeId));
@@ -701,6 +708,11 @@ export function useGameEngine(initialState?: GameState | null) {
     setGameState(returnOrimToStashFn(gameState, actorId, cardId, slotId));
   }, [gameState]);
 
+  const devInjectOrimToActor = useCallback((actorId: string, orimDefinitionId: string) => {
+    if (!gameState) return;
+    setGameState(devInjectOrimToActorFn(gameState, actorId, orimDefinitionId));
+  }, [gameState]);
+
   const updateOrimDefinitions = useCallback((definitions: GameState['orimDefinitions']) => {
     setGameState((prev) => (prev ? { ...prev, orimDefinitions: definitions } : prev));
   }, []);
@@ -724,7 +736,7 @@ export function useGameEngine(initialState?: GameState | null) {
       playFromTableau,
       playFromHand,
       playFromStock,
-      rewindLastCard,
+    rewindLastCard,
       addEffect,
       activateGuidance,
       clearGuidance,
@@ -754,6 +766,7 @@ export function useGameEngine(initialState?: GameState | null) {
       reorderActorStack,
       detachActorFromStack,
       detachActorFromParty,
+      swapPartyLead,
       removeActorFromTileHome,
       startBiome,
       playToBiomeFoundation,
@@ -774,6 +787,7 @@ export function useGameEngine(initialState?: GameState | null) {
       equipOrimFromStash,
       moveOrimBetweenSlots,
       returnOrimToStash,
+      devInjectOrimToActor,
       updateOrimDefinitions,
       toggleGraphics,
     },

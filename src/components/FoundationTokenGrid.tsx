@@ -19,8 +19,13 @@ export const FoundationTokenGrid = memo(function FoundationTokenGrid({
     <div className="flex flex-col items-center gap-1 mt-1">
       {comboCount > 0 && (
         <div
-          className="text-[12px] tracking-wider font-bold"
-          style={{ color: '#e6b31e' }}
+          className="text-[12px] tracking-[3px] font-bold px-2 py-1 rounded border"
+          style={{
+            color: '#0a0a0a',
+            backgroundColor: 'rgba(230, 179, 30, 0.95)',
+            borderColor: 'rgba(255, 229, 120, 0.9)',
+            boxShadow: '0 0 12px rgba(230, 179, 30, 0.65)',
+          }}
         >
           COMBO {comboCount}
         </div>

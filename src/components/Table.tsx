@@ -123,6 +123,7 @@ interface TableProps {
   disableZoom?: boolean;
   allowWindowPan?: boolean;
   showWatercolorCanvas?: boolean;
+  pixelArtEnabled?: boolean;
   serverAlive?: boolean;
   fps?: number;
   onStartAdventure: (tileId: string) => void;
@@ -1055,6 +1056,7 @@ export const Table = memo(function Table({
   onDetachActorFromParty,
   onRemoveActorFromTileHome,
   showWatercolorCanvas,
+  pixelArtEnabled,
 }: TableProps) {
   const watercolorEnabled = useWatercolorEnabled();
   const allowWatercolorCanvas = (showWatercolorCanvas ?? true) && watercolorEnabled;
@@ -1083,7 +1085,7 @@ export const Table = memo(function Table({
     const elements = document.elementsFromPoint(clientX, clientY);
     return !elements.some((element) =>
       (element as HTMLElement).closest(
-        'button,[data-biome-ui],[data-actor-card-id],[data-stack-order],[data-tile-card],[data-pending-card],[data-tile-slot],[data-token-slot],[data-actor-home-slot],[data-party-slot],[data-build-pile-target],[data-token-id],[data-orim-slot]'
+        'button,input,textarea,select,[contenteditable],[data-biome-ui],[data-actor-card-id],[data-stack-order],[data-tile-card],[data-pending-card],[data-tile-slot],[data-token-slot],[data-actor-home-slot],[data-party-slot],[data-build-pile-target],[data-token-id],[data-orim-slot],.menu-text'
       )
     );
   }, []);
@@ -4087,6 +4089,8 @@ export const Table = memo(function Table({
                   width={gridDimensions.width}
                   height={gridDimensions.height}
                   paperConfig={{ baseColor: '#0a0a0a', grainIntensity: 0.08 }}
+                  pixelArtEnabled={pixelArtEnabled ?? false}
+                  pixelSize={4}
                   onReady={(api) => {
                     watercolorEngineRef.current = api;
                   }}
