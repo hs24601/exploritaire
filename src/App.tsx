@@ -9,7 +9,7 @@ import { Table } from './components/Table';
 import { WinScreen } from './components/WinScreen';
 import { DragPreview } from './components/DragPreview';
 import { DebugConsole } from './components/DebugConsole';
-import { BiomeScreen } from './components/BiomeScreen';
+import { CombatGolf } from './components/CombatGolf';
 import { PlayingScreen } from './components/PlayingScreen';
 import { OrimEditor } from './components/OrimEditor';
 import { ActorEditor } from './components/ActorEditor';
@@ -1326,7 +1326,7 @@ export default function App() {
 
             {/* Biome screen */}
             {gameState.phase === 'biome' && (
-                <BiomeScreen
+                <CombatGolf
                 gameState={gameState}
                 selectedCard={selectedCard}
                 validFoundationsForSelected={validFoundationsForSelected}
@@ -1390,7 +1390,7 @@ export default function App() {
                   swapPartyLead: actions.swapPartyLead,
                   playWildAnalysisSequence: actions.playWildAnalysisSequence,
                 }}
-              />
+                />
             )}
             </div>
           </div>

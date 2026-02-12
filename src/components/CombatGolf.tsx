@@ -32,8 +32,10 @@ import { getBiomeDefinition } from '../engine/biomes';
 import { NO_MOVES_BADGE_STYLE } from '../utils/styles';
 import { SplatterPatternModal } from './SplatterPatternModal';
 import { Tooltip } from './Tooltip';
+import { PauseOverlay } from './combat/PauseOverlay';
+import { buildUnlockedBattleHandCards } from './combat/battleHandUnlocks';
 
-interface BiomeScreenProps {
+interface CombatGolfProps {
   gameState: GameState;
   selectedCard: SelectedCard | null;
   validFoundationsForSelected: boolean[];
@@ -94,7 +96,7 @@ interface BiomeScreenProps {
   onConsumeBenchSwap?: () => void;
 }
 
-export const BiomeScreen = memo(function BiomeScreen({
+export const CombatGolf = memo(function CombatGolf({
   gameState,
   selectedCard,
   validFoundationsForSelected,
@@ -136,7 +138,7 @@ export const BiomeScreen = memo(function BiomeScreen({
   infiniteBenchSwapsEnabled = false,
   onToggleInfiniteBenchSwaps,
   onConsumeBenchSwap,
-}: BiomeScreenProps) {
+}: CombatGolfProps) {
   const showGraphics = useGraphics();
   const [splatterModalOpen, setSplatterModalOpen] = useState(false);
   const [ctrlHeld, setCtrlHeld] = useState(false);
@@ -382,13 +384,7 @@ export const BiomeScreen = memo(function BiomeScreen({
   }, [activeParty, actorComboCounts]);
   const unlockedBattleHandCards = useMemo<CardType[]>(() => {
     if (!isPartyBattleVariant) return [];
-    const unlockCount = Math.max(0, Math.floor(partyComboTotal / 2));
-    return Array.from({ length: unlockCount }, (_, index) => ({
-      id: `battle-hand-unlock-${index + 1}`,
-      rank: 2,
-      element: 'N',
-      suit: ELEMENT_TO_SUIT.N,
-    }));
+    return buildUnlockedBattleHandCards(partyComboTotal / 2);
   }, [isPartyBattleVariant, partyComboTotal]);
   const showPartyComboCounter = activeParty.length > 0;
   const freeSwapActorIds = useMemo(() => {
@@ -451,40 +447,6 @@ export const BiomeScreen = memo(function BiomeScreen({
     0,
     Math.min(100, (enemyTurnRemainingMs / ENEMY_TURN_TIME_BUDGET_MS) * 100)
   )}%`;
-  const pauseOverlay = isGamePaused ? (
-    <div
-      className="absolute inset-0 z-[10080] flex items-center justify-center pointer-events-none"
-      style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        backdropFilter: 'blur(1.5px)',
-      }}
-    >
-      <div
-        className="flex items-center justify-center rounded-full border-2"
-        style={{
-          width: 132,
-          height: 132,
-          borderColor: 'rgba(255, 229, 120, 0.9)',
-          backgroundColor: 'rgba(10, 8, 6, 0.8)',
-          boxShadow: '0 0 28px rgba(230, 179, 30, 0.45)',
-        }}
-      >
-        <span
-          className="font-bold tracking-[8px]"
-          style={{
-            color: '#f7d24b',
-            fontSize: '56px',
-            textShadow: '0 0 14px rgba(230, 179, 30, 0.65)',
-            transform: 'translateX(4px)',
-            lineHeight: 1,
-          }}
-        >
-          ||
-        </span>
-      </div>
-    </div>
-  ) : null;
-
   useEffect(() => {
     if (!isEnemyTurn) {
       setEnemyTurnRemainingMs(ENEMY_TURN_TIME_BUDGET_MS);
@@ -1998,7 +1960,7 @@ export const BiomeScreen = memo(function BiomeScreen({
             />
           </div>
         )}
-        {pauseOverlay}
+        <PauseOverlay paused={isGamePaused} />
         </div>
         </div>
         {splatterModal}
@@ -2034,7 +1996,7 @@ export const BiomeScreen = memo(function BiomeScreen({
           showGraphics={showGraphics}
         />
         </div>
-        {pauseOverlay}
+        <PauseOverlay paused={isGamePaused} />
         {splatterModal}
       </div>
     );
@@ -2623,7 +2585,7 @@ export const BiomeScreen = memo(function BiomeScreen({
           />
         </div>
       )}
-      {pauseOverlay}
+      <PauseOverlay paused={isGamePaused} />
       </div>
       </div>
       {splatterModal}
