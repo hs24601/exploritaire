@@ -17,6 +17,8 @@ interface TableauProps {
   showGraphics: boolean;
   cardScale?: number;
   revealNextRow?: boolean;
+  revealAllCards?: boolean;
+  dimTopCard?: boolean;
 }
 
 export const Tableau = memo(function Tableau({
@@ -33,6 +35,8 @@ export const Tableau = memo(function Tableau({
   showGraphics,
   cardScale = 1,
   revealNextRow = false,
+  revealAllCards = false,
+  dimTopCard = false,
 }: TableauProps) {
   const isSelected = selectedCard?.tableauIndex === tableauIndex;
   const guidanceActive = guidanceMoves.length > 0;
@@ -83,12 +87,15 @@ export const Tableau = memo(function Tableau({
           <div
             key={card.id}
             className="absolute left-0"
-            style={{ top: stackOffset + (isTopCard ? revealOffset : 0) }}
+            style={{
+              top: stackOffset + (isTopCard ? revealOffset : 0),
+              filter: dimTopCard && isTopCard ? 'brightness(0.38) saturate(0.55)' : undefined,
+            }}
           >
             <Card
               card={card}
               size={{ width: cardWidth, height: cardHeight }}
-              faceDown={!isTopCard && !isSecondCard}
+              faceDown={!revealAllCards && !isTopCard && !isSecondCard}
               canPlay={isTopCard && canPlay}
               isSelected={isTopCard && isSelected}
               onClick={
@@ -103,9 +110,18 @@ export const Tableau = memo(function Tableau({
               }
               isDragging={isDragging}
               isGuidanceTarget={isTopCard && isNextGuidanceMove}
-              isDimmed={guidanceActive && isTopCard && !isNextGuidanceMove}
+              isDimmed={(guidanceActive && isTopCard && !isNextGuidanceMove) || (dimTopCard && isTopCard)}
               showGraphics={showGraphics}
             />
+            {dimTopCard && isTopCard && (
+              <div
+                className="absolute inset-0 rounded-lg pointer-events-none"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.45)',
+                  boxShadow: 'inset 0 0 18px rgba(0, 0, 0, 0.55)',
+                }}
+              />
+            )}
           </div>
         );
       })}

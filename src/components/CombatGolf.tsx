@@ -33,7 +33,8 @@ import { NO_MOVES_BADGE_STYLE } from '../utils/styles';
 import { SplatterPatternModal } from './SplatterPatternModal';
 import { Tooltip } from './Tooltip';
 import { PauseOverlay } from './combat/PauseOverlay';
-import { buildUnlockedBattleHandCards } from './combat/battleHandUnlocks';
+import { createRandomBattleHandRewardCard, getBattleHandRewardThreshold } from './combat/battleHandUnlocks';
+import { StartMatchOverlay, type StartOverlayPhase } from './combat/StartMatchOverlay';
 
 interface CombatGolfProps {
   gameState: GameState;
@@ -143,7 +144,8 @@ export const CombatGolf = memo(function CombatGolf({
   const [splatterModalOpen, setSplatterModalOpen] = useState(false);
   const [ctrlHeld, setCtrlHeld] = useState(false);
   const [comboPaused, setComboPaused] = useState(false);
-  const [comboLocked, setComboLocked] = useState(false);
+  const [rewardedBattleHandCards, setRewardedBattleHandCards] = useState<CardType[]>([]);
+  const rewardCardIdRef = useRef(0);
   const [comboExpiryTokens, setComboExpiryTokens] = useState<Array<{ id: number; value: number }>>([]);
   const comboTokenIdRef = useRef(0);
   const [ambientDarkness, setAmbientDarkness] = useState(0.85);
@@ -163,6 +165,7 @@ export const CombatGolf = memo(function CombatGolf({
     id: string;
     from: { x: number; y: number };
     to: { x: number; y: number };
+    tableauIndex: number;
     rank: number;
     suit: string;
   }>>([]);
@@ -173,6 +176,7 @@ export const CombatGolf = memo(function CombatGolf({
   // Runtime-tunable speed scaffold; downstream systems can update this mid-match.
   const [enemyDragSpeedFactor] = useState(() => ENEMY_DRAG_SPEED_FACTOR * 2);
   const isGamePausedRef = useRef(isGamePaused);
+  const introBiomeRef = useRef(gameState.currentBiome ?? 'none');
   const enemyRevealTimers = useRef<Record<number, number>>({});
   const matchLineContainerRef = useRef<HTMLDivElement | null>(null);
   const tableauRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -207,11 +211,17 @@ export const CombatGolf = memo(function CombatGolf({
   const isPartyBattleVariant = playtestVariant === 'party-battle';
   const isPartyFoundationsVariant = playtestVariant === 'party-foundations' || isPartyBattleVariant;
   const isEnemyTurn = isPartyBattleVariant && gameState.randomBiomeActiveSide === 'enemy';
+  const [startOverlayPhase, setStartOverlayPhase] = useState<StartOverlayPhase>('ready');
+  const [startCountdown, setStartCountdown] = useState(3);
+  const [startTriggeredByPlay, setStartTriggeredByPlay] = useState(false);
+  const introBlocking = startOverlayPhase !== 'done';
+  const revealAllCardsForIntro = startOverlayPhase === 'countdown' || startOverlayPhase === 'go';
   const showWildAnalysis = isPartyFoundationsVariant && biomeDef?.id === 'random_wilds';
   const wildAnalysisCount = wildAnalysis?.maxCount ?? 0;
   const wildAnalysisReady = showWildAnalysis && wildAnalysisCount > 0;
   const wildAnalysisLabel = wildAnalysis ? String(wildAnalysisCount) : '--';
   const foundationGapPx = Math.max(2, Math.round((isPartyFoundationsVariant ? 4 : 20) * globalCardScale));
+  const foundationAccessoryGapPx = Math.max(10, Math.round(cardWidth * 0.18));
   const enemyFoundations = isPartyBattleVariant ? (gameState.enemyFoundations ?? []) : [];
   const enemyDifficulty = gameState.enemyDifficulty ?? biomeDef?.enemyDifficulty ?? 'normal';
   const difficultyLabels: Record<string, string> = {
@@ -276,6 +286,7 @@ export const CombatGolf = memo(function CombatGolf({
   const showPartyOrimsSection = showPartyOrims && !isPartyBattleVariant;
   const MAX_COMBO_FLASH = 15;
   const TOKEN_ORDER: Element[] = ['W', 'E', 'A', 'F', 'D', 'L', 'N'];
+  const SHOW_FOUNDATION_TOKEN_BADGES = false;
   const ACTOR_LINE_COLORS: Record<string, string> = {
     fox: '#e6b31e',
     wolf: '#f0f0f0',
@@ -377,15 +388,43 @@ export const CombatGolf = memo(function CombatGolf({
   }, [activeParty, foundationHasActor, isSingleFoundationVariant]);
   const foundationOrimInstances = isPartyBattleVariant ? undefined : gameState.orimInstances;
   const foundationOrimDefinitions = isPartyBattleVariant ? undefined : gameState.orimDefinitions;
+  const leftFoundationAccessoryStyle = {
+    left: `calc(50% - ${foundationRowWidth / 2}px)`,
+    top: '50%',
+    transform: `translate(calc(-100% - ${foundationAccessoryGapPx}px), -50%)`,
+  } as const;
+  const enemyDraggingTableauIndexes = useMemo(
+    () => new Set(enemyMoveAnims.map((anim) => anim.tableauIndex)),
+    [enemyMoveAnims]
+  );
+  const rightFoundationAccessoryStyle = {
+    left: `calc(50% + ${foundationRowWidth / 2}px)`,
+    top: '50%',
+    transform: `translate(${foundationAccessoryGapPx}px, -50%)`,
+  } as const;
   const actorComboCounts = gameState.actorCombos ?? {};
   const partyComboTotal = useMemo(() => {
     if (!activeParty.length) return 0;
     return activeParty.reduce((sum, actor) => sum + (actorComboCounts[actor.id] ?? 0), 0);
   }, [activeParty, actorComboCounts]);
+  useEffect(() => {
+    if (!isPartyBattleVariant) {
+      setRewardedBattleHandCards([]);
+      return;
+    }
+    setRewardedBattleHandCards((prev) => {
+      const nextCards = [...prev];
+      while (partyComboTotal >= getBattleHandRewardThreshold(nextCards.length)) {
+        rewardCardIdRef.current += 1;
+        nextCards.push(createRandomBattleHandRewardCard(nextCards.length + 1, rewardCardIdRef.current));
+      }
+      return nextCards.length === prev.length ? prev : nextCards;
+    });
+  }, [isPartyBattleVariant, partyComboTotal]);
   const unlockedBattleHandCards = useMemo<CardType[]>(() => {
     if (!isPartyBattleVariant) return [];
-    return buildUnlockedBattleHandCards(partyComboTotal / 2);
-  }, [isPartyBattleVariant, partyComboTotal]);
+    return rewardedBattleHandCards;
+  }, [isPartyBattleVariant, rewardedBattleHandCards]);
   const showPartyComboCounter = activeParty.length > 0;
   const freeSwapActorIds = useMemo(() => {
     if (!teamworkActive) return new Set<string>();
@@ -414,21 +453,32 @@ export const CombatGolf = memo(function CombatGolf({
     clientY: number,
     rect: DOMRect
   ) => {
+    if (introBlocking) return;
     if (isGamePaused) return;
     if (isEnemyTurn) return;
-    if (comboLocked) return;
     handleDragStart(card, tableauIndex, clientX, clientY, rect);
-  }, [comboLocked, handleDragStart, isEnemyTurn, isGamePaused]);
+  }, [handleDragStart, introBlocking, isEnemyTurn, isGamePaused]);
   useEffect(() => {
+    if (!isPartyBattleVariant) return;
     const wasEnemyTurn = prevEnemyTurnRef.current;
     if (!wasEnemyTurn && isEnemyTurn) {
-      setComboPaused(false);
-    }
-    if (wasEnemyTurn && !isEnemyTurn) {
+      // Pause player combo timer while enemy is taking actions.
       setComboPaused(true);
     }
+    if (wasEnemyTurn && !isEnemyTurn) {
+      // Enemy finished: immediately resume player combo timer when non-zen.
+      setComboPaused(zenModeEnabled);
+    }
     prevEnemyTurnRef.current = isEnemyTurn;
-  }, [isEnemyTurn]);
+  }, [isEnemyTurn, isPartyBattleVariant, zenModeEnabled]);
+
+  useEffect(() => {
+    if (introBlocking) return;
+    if (!isPartyBattleVariant) return;
+    if (zenModeEnabled) return;
+    if (isEnemyTurn) return;
+    setComboPaused(false);
+  }, [introBlocking, isEnemyTurn, isPartyBattleVariant, zenModeEnabled]);
   const registerEnemyReveal = useCallback((foundationIndex: number, value: number) => {
     setEnemyRevealMap((prev) => ({ ...prev, [foundationIndex]: value }));
     const existing = enemyRevealTimers.current[foundationIndex];
@@ -440,7 +490,17 @@ export const CombatGolf = memo(function CombatGolf({
   const handleComboExpire = useCallback((value: number) => {
     const id = comboTokenIdRef.current++;
     setComboExpiryTokens((current) => [...current, { id, value }]);
-  }, []);
+    if (isPartyBattleVariant && !zenModeEnabled && !isEnemyTurn) {
+      setComboPaused(true);
+      (actions.advanceRandomBiomeTurn ?? actions.endRandomBiomeTurn)();
+    }
+  }, [
+    actions.advanceRandomBiomeTurn,
+    actions.endRandomBiomeTurn,
+    isEnemyTurn,
+    isPartyBattleVariant,
+    zenModeEnabled,
+  ]);
   const comboTimersEnabled = !zenModeEnabled;
   const enemyMoveDurationMs = getEnemyMoveAnimationMs(enemyDragSpeedFactor);
   const enemyTurnFillPercent = `${Math.max(
@@ -456,6 +516,16 @@ export const CombatGolf = memo(function CombatGolf({
   useEffect(() => {
     isGamePausedRef.current = isGamePaused;
   }, [isGamePaused]);
+
+  useEffect(() => {
+    const biomeId = gameState.currentBiome ?? 'none';
+    if (introBiomeRef.current === biomeId) return;
+    introBiomeRef.current = biomeId;
+    setRewardedBattleHandCards([]);
+    rewardCardIdRef.current = 0;
+    setStartOverlayPhase('ready');
+    setStartCountdown(3);
+  }, [gameState.currentBiome]);
 
   const equippedOrimRow = (
     <div
@@ -845,6 +915,60 @@ export const CombatGolf = memo(function CombatGolf({
     ]);
   };
 
+  const triggerIntroGoFlash = useCallback(() => {
+    const containerRect = biomeContainerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+    setCardPlayFlashes((prev) => [
+      ...prev,
+      {
+        id: `intro-go-${performance.now()}`,
+        x: containerRect.width / 2,
+        y: containerRect.height / 2,
+        startTime: performance.now(),
+        duration: 1900,
+        combo: MAX_COMBO_FLASH,
+      },
+    ]);
+  }, []);
+
+  useEffect(() => {
+    if (startOverlayPhase !== 'countdown') return;
+    const timeoutId = window.setTimeout(() => {
+      setStartCountdown((prev) => {
+        if (prev <= 1) {
+          setStartOverlayPhase('go');
+          return 1;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearTimeout(timeoutId);
+  }, [startOverlayPhase, startCountdown]);
+
+  useEffect(() => {
+    if (startOverlayPhase !== 'go') return;
+    triggerIntroGoFlash();
+    const timeoutId = window.setTimeout(() => {
+      setStartOverlayPhase('done');
+      if (startTriggeredByPlay && isPartyBattleVariant && !zenModeEnabled && !isEnemyTurn) {
+        setComboPaused(false);
+      }
+      setStartTriggeredByPlay(false);
+    }, 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [isEnemyTurn, isPartyBattleVariant, startOverlayPhase, startTriggeredByPlay, triggerIntroGoFlash, zenModeEnabled]);
+
+  const handleStartMatch = useCallback(() => {
+    if (startOverlayPhase !== 'ready') return;
+    setStartTriggeredByPlay(true);
+    setStartCountdown(3);
+    setStartOverlayPhase('countdown');
+  }, [startOverlayPhase]);
+  const handleSkipIntro = useCallback(() => {
+    setStartTriggeredByPlay(false);
+    setStartOverlayPhase('done');
+  }, []);
+
   // Watch for card plays via autoPlayNextMove by detecting foundation changes
   const prevFoundationsRef = useRef<typeof gameState.foundations | null>(null);
   useEffect(() => {
@@ -855,6 +979,10 @@ export const CombatGolf = memo(function CombatGolf({
       // Detect which foundation gained a card
       for (let i = 0; i < current.length; i++) {
         if (current[i].length > prev[i].length) {
+          const topCard = current[i][current[i].length - 1];
+          if (topCard?.id?.startsWith('battle-hand-reward-')) {
+            setRewardedBattleHandCards((cards) => cards.filter((card) => card.id !== topCard.id));
+          }
           triggerCardPlayFlash(i, partyComboTotal);
         }
       }
@@ -943,9 +1071,9 @@ export const CombatGolf = memo(function CombatGolf({
   // Random biome rendering
   if (biomeDef?.randomlyGenerated) {
     const handleTableauClick = (card: CardType, tableauIndex: number) => {
+      if (introBlocking) return;
       if (isGamePaused) return;
       if (isEnemyTurn) return;
-      if (comboLocked) return;
       if (gameState.interactionMode !== 'click') {
         actions.selectCard(card, tableauIndex);
         return;
@@ -986,9 +1114,9 @@ export const CombatGolf = memo(function CombatGolf({
       triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
     };
     const handleHandClick = (card: CardType) => {
+      if (introBlocking) return;
       if (isGamePaused) return;
       if (isEnemyTurn) return;
-      if (comboLocked) return;
       if (gameState.interactionMode !== 'click') return;
       if (noValidMoves) return;
 
@@ -1003,11 +1131,14 @@ export const CombatGolf = memo(function CombatGolf({
       });
 
       if (foundationIndex === -1) return;
-      actions.playFromHand(card, foundationIndex, true);
+      const played = actions.playFromHand(card, foundationIndex, true);
+      if (played && card.id.startsWith('battle-hand-reward-')) {
+        setRewardedBattleHandCards((cards) => cards.filter((entry) => entry.id !== card.id));
+      }
     };
     const handleStockClick = () => {
+      if (introBlocking) return;
       if (isEnemyTurn) return;
-      if (comboLocked) return;
       if (gameState.interactionMode !== 'click') return;
       if (gameState.stock.length === 0) return;
       const stockCard = gameState.stock[gameState.stock.length - 1];
@@ -1030,10 +1161,9 @@ export const CombatGolf = memo(function CombatGolf({
     return (
       <ComboTimerController
         partyComboTotal={partyComboTotal}
-        paused={isGamePaused || comboPaused || !comboTimersEnabled}
+        paused={isGamePaused || introBlocking || comboPaused || !comboTimersEnabled}
         disabled={!comboTimersEnabled}
         onExpire={handleComboExpire}
-        onLockChange={setComboLocked}
       >
         {(combo) => {
           const displayedPartyComboTotal = combo.displayedCombo;
@@ -1046,7 +1176,7 @@ export const CombatGolf = memo(function CombatGolf({
           gap: 'clamp(6px, 1.4vh, 20px)',
           paddingTop: 'clamp(6px, 1.2vh, 10px)',
           paddingBottom: 'clamp(6px, 1.2vh, 10px)',
-          pointerEvents: isGamePaused ? 'none' : 'auto',
+          pointerEvents: (isGamePaused || introBlocking) ? 'none' : 'auto',
         }}
       >
         {fpsOverlay}
@@ -1101,7 +1231,7 @@ export const CombatGolf = memo(function CombatGolf({
             state={gameState}
             difficulty={gameState.enemyDifficulty ?? biomeDef?.enemyDifficulty ?? 'normal'}
             timedMode={comboTimersEnabled}
-            paused={isGamePaused}
+            paused={isGamePaused || introBlocking}
             speedFactor={enemyDragSpeedFactor}
             onTimerUpdate={(remainingMs) => {
               setEnemyTurnRemainingMs(remainingMs);
@@ -1130,7 +1260,14 @@ export const CombatGolf = memo(function CombatGolf({
                     x: eRect.left - containerRect.left + eRect.width / 2,
                     y: eRect.top - containerRect.top + eRect.height / 2,
                   };
-                  setEnemyMoveAnims((prev) => [...prev, { id: animationId, from, to, rank: card.rank, suit: card.suit }]);
+                  setEnemyMoveAnims((prev) => [...prev, {
+                    id: animationId,
+                    from,
+                    to,
+                    tableauIndex,
+                    rank: card.rank,
+                    suit: card.suit,
+                  }]);
                 }
 
                 let elapsedMs = 0;
@@ -1260,11 +1397,47 @@ export const CombatGolf = memo(function CombatGolf({
         {/* Enemy Foundations + Tableaus */}
         <div className="relative z-30 flex flex-col items-center">
           {isPartyBattleVariant && (
-            <div className="flex items-center justify-center gap-4" style={{ marginBottom: 50, marginTop: -35 }}>
+            <div className="relative w-full flex justify-center" style={{ marginBottom: 50, marginTop: -35 }}>
+              <div className="flex items-center justify-center gap-4">
+                {enemyFoundations.map((cards, idx) => (
+                  <div key={`enemy-foundation-${idx}`} className="relative flex flex-col items-center">
+                    <Foundation
+                      cards={cards}
+                      index={idx}
+                      onFoundationClick={() => {}}
+                      canReceive={false}
+                      interactionMode={gameState.interactionMode}
+                      showGraphics={showGraphics}
+                      isDimmed={false}
+                      isDragTarget={false}
+                      showCompleteSticker={false}
+                      countPosition="none"
+                      maskValue={false}
+                      revealValue={enemyRevealMap[idx] ?? null}
+                      setDropRef={(foundationIndex, ref) => {
+                        enemyFoundationRefs.current[foundationIndex] = ref;
+                      }}
+                    />
+                    {((gameState.enemyFoundationCombos || [])[idx] ?? 0) > 0 && (
+                      <div
+                        className="mt-1 px-2 py-0.5 rounded border text-[10px] font-bold tracking-[2px]"
+                        style={{
+                          color: '#f7d24b',
+                          borderColor: 'rgba(255, 229, 120, 0.9)',
+                          backgroundColor: 'rgba(10, 8, 6, 0.92)',
+                          boxShadow: '0 0 10px rgba(230, 179, 30, 0.5)',
+                        }}
+                      >
+                        COMBO {((gameState.enemyFoundationCombos || [])[idx] ?? 0)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={() => actions.setEnemyDifficulty?.(nextEnemyDifficulty(enemyDifficulty))}
-                className="flex flex-col items-center justify-center px-3 py-2 rounded border text-[10px] tracking-[3px] font-bold"
+                className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center px-3 py-2 rounded border text-[10px] tracking-[3px] font-bold"
                 style={{
                   borderColor: 'rgba(127, 219, 202, 0.6)',
                   color: '#7fdbca',
@@ -1275,40 +1448,6 @@ export const CombatGolf = memo(function CombatGolf({
               >
                 <span>{(difficultyLabels[enemyDifficulty] ?? 'NORMAL').slice(0, 1)}</span>
               </button>
-              {enemyFoundations.map((cards, idx) => (
-                <div key={`enemy-foundation-${idx}`} className="relative flex flex-col items-center">
-                  <Foundation
-                    cards={cards}
-                    index={idx}
-                    onFoundationClick={() => {}}
-                    canReceive={false}
-                    interactionMode={gameState.interactionMode}
-                    showGraphics={showGraphics}
-                    isDimmed={false}
-                    isDragTarget={false}
-                    showCompleteSticker={false}
-                    countPosition="none"
-                    maskValue={false}
-                    revealValue={enemyRevealMap[idx] ?? null}
-                    setDropRef={(foundationIndex, ref) => {
-                      enemyFoundationRefs.current[foundationIndex] = ref;
-                    }}
-                  />
-                  {((gameState.enemyFoundationCombos || [])[idx] ?? 0) > 0 && (
-                    <div
-                      className="mt-1 px-2 py-0.5 rounded border text-[10px] font-bold tracking-[2px]"
-                      style={{
-                        color: '#f7d24b',
-                        borderColor: 'rgba(255, 229, 120, 0.9)',
-                        backgroundColor: 'rgba(10, 8, 6, 0.92)',
-                        boxShadow: '0 0 10px rgba(230, 179, 30, 0.5)',
-                      }}
-                    >
-                      COMBO {((gameState.enemyFoundationCombos || [])[idx] ?? 0)}
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
           )}
           {isPartyBattleVariant && isEnemyTurn && comboTimersEnabled && (
@@ -1373,6 +1512,8 @@ export const CombatGolf = memo(function CombatGolf({
                   showGraphics={showGraphics}
                   cardScale={foundationCardScale}
                   revealNextRow={cloudSightActive}
+                  revealAllCards={revealAllCardsForIntro}
+                  dimTopCard={enemyDraggingTableauIndexes.has(idx)}
                 />
               </div>
             ))}
@@ -1456,8 +1597,7 @@ export const CombatGolf = memo(function CombatGolf({
         <div className="relative z-20 flex flex-col items-center gap-3 w-full" style={{ marginTop: foundationsStackMarginTop }}>
           <div className="relative w-full flex justify-center items-center">
             {isPartyFoundationsVariant && (
-              <div className="flex items-center justify-center" style={{ gap: `${foundationGapPx}px` }}>
-                {wildAnalysisButton}
+              <div className="relative w-full flex items-center justify-center min-h-[180px]">
                 <div
                   ref={foundationRowRef}
                   className="flex items-center justify-center"
@@ -1532,6 +1672,7 @@ export const CombatGolf = memo(function CombatGolf({
                           </div>
                         )}
                         {(() => {
+                          if (!SHOW_FOUNDATION_TOKEN_BADGES) return null;
                           const tokenCounts = (gameState.foundationTokens || [])[idx] || emptyTokens;
                           const tokenList = TOKEN_ORDER.flatMap((element) =>
                             Array.from({ length: tokenCounts[element] || 0 }, () => element)
@@ -1586,7 +1727,15 @@ export const CombatGolf = memo(function CombatGolf({
                     );
                   })}
                 </div>
-                <div className="flex flex-col items-center justify-center gap-2 pointer-events-auto z-[100]">
+                {wildAnalysisButton && (
+                  <div className="absolute" style={leftFoundationAccessoryStyle}>
+                    {wildAnalysisButton}
+                  </div>
+                )}
+                <div
+                  className="absolute flex flex-col items-center justify-center gap-2 pointer-events-auto z-[100]"
+                  style={rightFoundationAccessoryStyle}
+                >
                   {noRegretStatus.actorId && (
                     <GameButton
                       onClick={actions.rewindLastCard}
@@ -1619,17 +1768,6 @@ export const CombatGolf = memo(function CombatGolf({
                     >
                       {isEnemyTurn ? 'READY' : 'END TURN'}
                     </GameButton>
-                    {comboLocked && (
-                      <button
-                        type="button"
-                        onClick={combo.unlock}
-                        className="px-2 py-1 rounded border text-xs font-bold"
-                        style={NO_MOVES_BADGE_STYLE}
-                        title="Unlock tableaus"
-                      >
-                        🔒
-                      </button>
-                    )}
                     {noValidMoves && (
                       <div
                         className="px-2 py-1 rounded border text-xs font-bold"
@@ -1718,6 +1856,7 @@ export const CombatGolf = memo(function CombatGolf({
                       </div>
                     )}
                     {(() => {
+                      if (!SHOW_FOUNDATION_TOKEN_BADGES) return null;
                       const tokenCounts = (gameState.foundationTokens || [])[idx] || emptyTokens;
                       const tokenList = TOKEN_ORDER.flatMap((element) =>
                         Array.from({ length: tokenCounts[element] || 0 }, () => element)
@@ -1816,17 +1955,6 @@ export const CombatGolf = memo(function CombatGolf({
                       !
                     </div>
                   )}
-                  {comboLocked && (
-                    <button
-                      type="button"
-                      onClick={combo.unlock}
-                      className="px-2 py-1 rounded border text-xs font-bold"
-                      style={NO_MOVES_BADGE_STYLE}
-                      title="Unlock tableaus"
-                    >
-                      🔒
-                    </button>
-                  )}
                 </div>
                 <GameButton
                   onClick={() => handleExitBiome('return')}
@@ -1856,7 +1984,7 @@ export const CombatGolf = memo(function CombatGolf({
                 interactive={false}
               />
             )}
-            {(showPartyComboCounter && displayedPartyComboTotal > 0 && !isEnemyTurn) && (
+            {(showPartyComboCounter && !isEnemyTurn && (displayedPartyComboTotal > 0 || (isPartyBattleVariant && comboTimersEnabled))) && (
               <div className="relative flex items-center gap-3">
                 {comboPaused && (
                   <div
@@ -1960,6 +2088,7 @@ export const CombatGolf = memo(function CombatGolf({
             />
           </div>
         )}
+        <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />
         <PauseOverlay paused={isGamePaused} />
         </div>
         </div>
@@ -1996,6 +2125,7 @@ export const CombatGolf = memo(function CombatGolf({
           showGraphics={showGraphics}
         />
         </div>
+        <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />
         <PauseOverlay paused={isGamePaused} />
         {splatterModal}
       </div>
@@ -2007,8 +2137,8 @@ export const CombatGolf = memo(function CombatGolf({
 
   // Traditional biome rendering
   const handleTableauClick = (card: CardType, tableauIndex: number) => {
+    if (introBlocking) return;
     if (isGamePaused) return;
-    if (comboLocked) return;
     if (gameState.interactionMode !== 'click') {
       actions.selectCard(card, tableauIndex);
       return;
@@ -2049,8 +2179,8 @@ export const CombatGolf = memo(function CombatGolf({
     triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
   };
   const handleHandClick = (card: CardType) => {
+    if (introBlocking) return;
     if (isGamePaused) return;
-    if (comboLocked) return;
     if (gameState.interactionMode !== 'click') return;
     if (noValidMoves) return;
 
@@ -2065,11 +2195,15 @@ export const CombatGolf = memo(function CombatGolf({
     });
 
     if (foundationIndex === -1) return;
-    actions.playFromHand(card, foundationIndex, false);
+    const played = actions.playFromHand(card, foundationIndex, false);
+    if (!played) return;
+    if (card.id.startsWith('battle-hand-reward-')) {
+      setRewardedBattleHandCards((cards) => cards.filter((entry) => entry.id !== card.id));
+    }
     triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
   };
     const handleStockClick = () => {
-      if (comboLocked) return;
+      if (introBlocking) return;
       if (gameState.interactionMode !== 'click') return;
       if (gameState.stock.length === 0) return;
       const stockCard = gameState.stock[gameState.stock.length - 1];
@@ -2093,21 +2227,21 @@ export const CombatGolf = memo(function CombatGolf({
   return (
     <ComboTimerController
       partyComboTotal={partyComboTotal}
-      paused={isGamePaused || comboPaused}
+      paused={isGamePaused || introBlocking || comboPaused}
       onExpire={handleComboExpire}
-      onLockChange={setComboLocked}
     >
       {(combo) => {
         const displayedPartyComboTotal = combo.displayedCombo;
         const timerRef = combo.timerRef;
         return (
     <div
+      ref={biomeContainerRef as any}
       className="relative w-full h-full flex flex-col items-center pointer-events-auto overflow-hidden"
       style={{
         gap: 'clamp(16px, 3.5vh, 40px)',
         paddingTop: 'clamp(10px, 2vh, 20px)',
         paddingBottom: 'clamp(10px, 2vh, 20px)',
-        pointerEvents: isGamePaused ? 'none' : 'auto',
+        pointerEvents: (isGamePaused || introBlocking) ? 'none' : 'auto',
       }}
     >
       {fpsOverlay}
@@ -2122,7 +2256,7 @@ export const CombatGolf = memo(function CombatGolf({
       <div
         ref={biomeContainerRef as any}
         className="relative w-full h-full flex flex-col items-center justify-center pointer-events-auto"
-      style={{ zIndex: 2, gap: 'clamp(6px, 1.8vh, 22px)', pointerEvents: isGamePaused ? 'none' : 'auto' }}
+      style={{ zIndex: 2, gap: 'clamp(6px, 1.8vh, 22px)', pointerEvents: (isGamePaused || introBlocking) ? 'none' : 'auto' }}
       >
       {/* Light shadow overlay – shows drag light while dragging, normal lights otherwise */}
       {lightingEnabled && containerSize.width > 0 && (() => {
@@ -2238,6 +2372,8 @@ export const CombatGolf = memo(function CombatGolf({
                 showGraphics={showGraphics}
                 cardScale={foundationCardScale}
                 revealNextRow={cloudSightActive}
+                revealAllCards={revealAllCardsForIntro}
+                dimTopCard={enemyDraggingTableauIndexes.has(idx)}
               />
             </div>
           ))}
@@ -2260,6 +2396,8 @@ export const CombatGolf = memo(function CombatGolf({
                 showGraphics={showGraphics}
                 cardScale={foundationCardScale}
                 revealNextRow={cloudSightActive}
+                revealAllCards={revealAllCardsForIntro}
+                dimTopCard={enemyDraggingTableauIndexes.has(idx)}
               />
             </div>
           ))}
@@ -2399,6 +2537,7 @@ export const CombatGolf = memo(function CombatGolf({
                     : ((gameState.foundationCombos || [])[idx] || 0)) : 0}
                 />
                 {(() => {
+                  if (!SHOW_FOUNDATION_TOKEN_BADGES) return null;
                   const tokenCounts = (gameState.foundationTokens || [])[idx] || emptyTokens;
                   const tokenList = TOKEN_ORDER.flatMap((element) =>
                     Array.from({ length: tokenCounts[element] || 0 }, () => element)
@@ -2471,17 +2610,6 @@ export const CombatGolf = memo(function CombatGolf({
             <GameButton onClick={actions.autoSolveBiome} color="gold" size="sm" className="w-16 text-center">
               ?
             </GameButton>
-            {comboLocked && (
-              <button
-                type="button"
-                onClick={combo.unlock}
-                className="px-2 py-1 rounded border text-xs font-bold"
-                style={NO_MOVES_BADGE_STYLE}
-                title="Unlock tableaus"
-              >
-                🔒
-              </button>
-            )}
             {noValidMoves && (
               <div
                 className="px-2 py-1 rounded border text-xs font-bold"
@@ -2585,6 +2713,7 @@ export const CombatGolf = memo(function CombatGolf({
           />
         </div>
       )}
+      <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />
       <PauseOverlay paused={isGamePaused} />
       </div>
       </div>

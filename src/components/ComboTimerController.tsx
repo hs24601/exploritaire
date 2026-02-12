@@ -5,11 +5,8 @@ interface ComboTimerControllerProps {
   paused: boolean;
   disabled?: boolean;
   onExpire: (value: number) => void;
-  onLockChange?: (locked: boolean) => void;
   children: (state: {
     displayedCombo: number;
-    locked: boolean;
-    unlock: () => void;
     timerRef: RefObject<HTMLDivElement>;
   }) => ReactNode;
 }
@@ -21,11 +18,9 @@ export function ComboTimerController({
   paused,
   disabled = false,
   onExpire,
-  onLockChange,
   children,
 }: ComboTimerControllerProps) {
   const [displayedCombo, setDisplayedCombo] = useState(0);
-  const [locked, setLocked] = useState(false);
   const timerRef = useRef<HTMLDivElement | null>(null);
   const comboEndRef = useRef<number | null>(null);
   const pausedRemainingRef = useRef<number>(COMBO_TIMER_MS);
@@ -39,8 +34,6 @@ export function ComboTimerController({
   useEffect(() => {
     if (disabled) {
       setDisplayedCombo(partyComboTotal);
-      setLocked(false);
-      onLockChange?.(false);
       comboEndRef.current = null;
       if (timerRef.current) {
         timerRef.current.style.setProperty('--combo-fill', '100%');
@@ -48,7 +41,6 @@ export function ComboTimerController({
       prevPartyComboRef.current = partyComboTotal;
       return;
     }
-    if (locked) return;
     if (partyComboTotal > prevPartyComboRef.current) {
       const delta = partyComboTotal - prevPartyComboRef.current;
       setDisplayedCombo((prev) => prev + delta);
@@ -58,7 +50,7 @@ export function ComboTimerController({
       comboEndRef.current = null;
     }
     prevPartyComboRef.current = partyComboTotal;
-  }, [partyComboTotal, locked]);
+  }, [disabled, partyComboTotal]);
 
   useEffect(() => {
     if (disabled) return;
@@ -72,7 +64,6 @@ export function ComboTimerController({
     if (disabled) return;
     const interval = window.setInterval(() => {
       if (!timerRef.current) return;
-      if (locked || displayedComboRef.current === 0) return;
       const now = performance.now();
       if (comboEndRef.current === null) {
         comboEndRef.current = now + COMBO_TIMER_MS;
@@ -87,8 +78,6 @@ export function ComboTimerController({
           onExpire(achieved);
         }
         setDisplayedCombo(0);
-        setLocked(true);
-        onLockChange?.(true);
         comboEndRef.current = null;
         timerRef.current.style.setProperty('--combo-fill', '100%');
         return;
@@ -98,28 +87,17 @@ export function ComboTimerController({
       timerRef.current.style.setProperty('--combo-fill', `${fill * 100}%`);
     }, 100);
     return () => window.clearInterval(interval);
-  }, [disabled, locked, onExpire, onLockChange, paused]);
+  }, [disabled, onExpire, paused]);
 
   useEffect(() => {
     if (disabled) return;
-    if (locked) return;
     if (paused) {
       const now = performance.now();
       pausedRemainingRef.current = Math.max(0, (comboEndRef.current ?? now) - now);
     } else {
       comboEndRef.current = performance.now() + pausedRemainingRef.current;
     }
-  }, [disabled, paused, locked]);
+  }, [disabled, paused]);
 
-  const unlock = () => {
-    setLocked(false);
-    setDisplayedCombo(0);
-    comboEndRef.current = null;
-    onLockChange?.(false);
-    if (timerRef.current) {
-      timerRef.current.style.setProperty('--combo-fill', '100%');
-    }
-  };
-
-  return <>{children({ displayedCombo, locked, unlock, timerRef })}</>;
+  return <>{children({ displayedCombo, timerRef })}</>;
 }

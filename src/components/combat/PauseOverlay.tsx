@@ -1,20 +1,14 @@
 import { memo } from 'react';
+import type { CombatOverlayBaseProps } from './CombatOverlayFrame';
+import { CombatOverlayFrame } from './CombatOverlayFrame';
 
-interface PauseOverlayProps {
+interface PauseOverlayProps extends Omit<CombatOverlayBaseProps, 'visible' | 'children' | 'interactive'> {
   paused: boolean;
 }
 
-export const PauseOverlay = memo(function PauseOverlay({ paused }: PauseOverlayProps) {
-  if (!paused) return null;
-
+export const PauseOverlay = memo(function PauseOverlay({ paused, zIndex }: PauseOverlayProps) {
   return (
-    <div
-      className="absolute inset-0 z-[10080] flex items-center justify-center pointer-events-none"
-      style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        backdropFilter: 'blur(1.5px)',
-      }}
-    >
+    <CombatOverlayFrame visible={paused} interactive={false} zIndex={zIndex}>
       <div
         className="flex items-center justify-center rounded-full border-2"
         style={{
@@ -38,6 +32,6 @@ export const PauseOverlay = memo(function PauseOverlay({ paused }: PauseOverlayP
           ||
         </span>
       </div>
-    </div>
+    </CombatOverlayFrame>
   );
 });

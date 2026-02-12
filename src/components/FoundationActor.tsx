@@ -286,9 +286,8 @@ export const FoundationActor = memo(function FoundationActor({
   const badgeRing = Math.max(2, Math.round(badgeSize * 0.18));
   const tokenStrokeColor = 'rgba(255, 255, 255, 0.75)';
   const sideOffset = Math.round(tokenDiameter * 0.45);
-  const comboBadgeFont = Math.max(9, Math.round(cardWidth * 0.22));
-  const comboBadgePaddingX = Math.max(6, Math.round(cardWidth * 0.12));
-  const comboBadgePaddingY = Math.max(2, Math.round(cardHeight * 0.04));
+  const comboBadgeSize = Math.max(24, Math.round(cardWidth * 0.34));
+  const comboBadgeFont = Math.max(9, Math.round(comboBadgeSize * 0.44));
   const suitFontSize = Math.max(10, Math.round(cardHeight * 0.22));
   const actorOrimSize = Math.max(16, Math.round(cardWidth * 0.48));
   const actorOrimFont = Math.max(8, Math.round(actorOrimSize * 0.6));
@@ -805,7 +804,7 @@ export const FoundationActor = memo(function FoundationActor({
               </div>
             </div>
           )}
-          {actor && (
+          {actor && (comboCount ?? 0) > 1 && (
             <div
               className="absolute left-1/2"
               style={{
@@ -817,7 +816,12 @@ export const FoundationActor = memo(function FoundationActor({
               <div
                 className="rounded-full border border-game-teal/60 bg-game-bg-dark/80 text-game-teal font-bold tracking-[2px]"
                 style={{
-                  padding: `${comboBadgePaddingY}px ${comboBadgePaddingX}px`,
+                  width: comboBadgeSize,
+                  height: comboBadgeSize,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 1,
                   fontSize: comboBadgeFont,
                   boxShadow: '0 0 10px rgba(127, 219, 202, 0.45)',
                 }}

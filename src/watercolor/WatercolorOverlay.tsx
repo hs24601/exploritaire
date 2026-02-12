@@ -50,6 +50,7 @@ const WE_DRAG_DEGRADE_DISABLE_KEY = 'exploritaire.we.dragDegradeDisabled';
 const DRAG_GLOW_FACTOR = 0.45;
 const DRAG_GRAIN_INTENSITY_FACTOR = 0.55;
 const DRAG_GRAIN_FREQUENCY_FACTOR = 0.85;
+const MAX_OVERLAYS_WHILE_DRAG_DEGRADED = 18;
 
 let watercolorInteractionDegraded = false;
 
@@ -57,6 +58,25 @@ function getFrameIntervalMs(overlayCount: number): number {
   if (overlayCount >= 40) return 1000 / 24;
   if (overlayCount >= 20) return 1000 / 30;
   return BASE_FRAME_INTERVAL_MS;
+}
+
+function isOverlayRenderable(overlay: OverlayRegistration): boolean {
+  const canvas = overlay.canvas;
+  const cssWidth = canvas.clientWidth;
+  const cssHeight = canvas.clientHeight;
+  if (cssWidth <= 1 || cssHeight <= 1) return false;
+
+  // Fast reject when detached/hidden via layout (except fixed overlays).
+  if (canvas.offsetParent === null) {
+    const style = window.getComputedStyle(canvas);
+    if (style.position !== 'fixed') return false;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 1 || rect.height <= 1) return false;
+  if (rect.bottom < 0 || rect.top > window.innerHeight) return false;
+  if (rect.right < 0 || rect.left > window.innerWidth) return false;
+  return true;
 }
 
 function readDragDegradeDisabledFlag(): boolean {
@@ -572,6 +592,23 @@ function renderAllOverlays(time: number) {
   const timeSinceLastFrame = time - lastFrameTime;
   const isTimeToRender = timeSinceLastFrame >= frameIntervalMs;
 
+  const renderableOverlays: OverlayRegistration[] = [];
+  overlays.forEach((overlay) => {
+    if (!overlay.getActive()) {
+      overlay.clear();
+      return;
+    }
+    if (!isOverlayRenderable(overlay)) {
+      overlay.clear();
+      return;
+    }
+    renderableOverlays.push(overlay);
+  });
+
+  const overlaysToRender = dragDegradeActive && renderableOverlays.length > MAX_OVERLAYS_WHILE_DRAG_DEGRADED
+    ? renderableOverlays.slice(0, MAX_OVERLAYS_WHILE_DRAG_DEGRADED)
+    : renderableOverlays;
+
   if (isTimeToRender) {
     lastFrameTime = time;
 
@@ -581,11 +618,7 @@ function renderAllOverlays(time: number) {
     let lastResizeWidth = -1;
     let lastResizeHeight = -1;
 
-    overlays.forEach((overlay) => {
-      if (!overlay.getActive()) {
-        overlay.clear();
-        return;
-      }
+    overlaysToRender.forEach((overlay) => {
       const cssWidth = overlay.canvas.clientWidth;
       const cssHeight = overlay.canvas.clientHeight;
       if (cssWidth <= 1 || cssHeight <= 1) return;
@@ -617,6 +650,12 @@ function renderAllOverlays(time: number) {
       ctx.clearRect(0, 0, targetWidth, targetHeight);
       ctx.drawImage(sharedCanvas, 0, 0, targetWidth, targetHeight);
     });
+
+    if (dragDegradeActive && renderableOverlays.length > overlaysToRender.length) {
+      for (let i = overlaysToRender.length; i < renderableOverlays.length; i += 1) {
+        renderableOverlays[i].clear();
+      }
+    }
   }
 
   // Only reschedule if we have active overlays AND haven't exceeded idle timeout

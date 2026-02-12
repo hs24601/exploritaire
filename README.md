@@ -14,3 +14,10 @@
   - or in console for current session: `window.__EXPLORITAIRE_DISABLE_WE_DRAG_DEGRADE__ = true`
 - Re-enable:
   - `localStorage.removeItem('exploritaire.we.dragDegradeDisabled'); location.reload();`
+
+## Performance Baseline
+- Target drag performance: `60 FPS` locked.
+- `Clean canvas` definition:
+  - No watercolor paint marks deployed (zero WE persistent paint).
+  - No extra transient light sources beyond baseline scene lighting (no combo flashes, no paint luminosity lights).
+  - Single-card drag interaction used for baseline LE/WE drag profiling.

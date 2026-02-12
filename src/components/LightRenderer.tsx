@@ -76,6 +76,14 @@ export const ShadowCanvas = memo(function ShadowCanvas({
   height,
 }: ShadowCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const emptyScreenBlockersRef = useRef<Array<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    castHeight?: number;
+    softness?: number;
+  }>>([]);
 
   // Store latest props in a ref so the RAF loop always reads current values
   const dataRef = useRef({
@@ -126,17 +134,27 @@ export const ShadowCanvas = memo(function ShadowCanvas({
         return;
       }
 
-      const containerRect = container.getBoundingClientRect();
-      const anchorRect = anchor.getBoundingClientRect();
-      const scale = useCameraTransform && cameraScale != null
-        ? cameraScale
-        : anchorRect.width / d.worldWidth;
-      const offsetX = useCameraTransform && cameraOffsetX != null
-        ? cameraOffsetX
-        : anchorRect.left - containerRect.left;
-      const offsetY = useCameraTransform && cameraOffsetY != null
-        ? cameraOffsetY
-        : anchorRect.top - containerRect.top;
+      const staticOverlayFastPath = !useCameraTransform
+        && container === anchor
+        && d.worldWidth === width
+        && d.worldHeight === height;
+
+      let scale = 1;
+      let offsetX = 0;
+      let offsetY = 0;
+      let containerRect: DOMRect | null = null;
+
+      if (useCameraTransform && cameraScale != null) {
+        scale = cameraScale;
+        offsetX = cameraOffsetX ?? 0;
+        offsetY = cameraOffsetY ?? 0;
+      } else if (!staticOverlayFastPath) {
+        containerRect = container.getBoundingClientRect();
+        const anchorRect = anchor.getBoundingClientRect();
+        scale = anchorRect.width / d.worldWidth;
+        offsetX = anchorRect.left - containerRect.left;
+        offsetY = anchorRect.top - containerRect.top;
+      }
 
       let lightX = d.lightX;
       let lightY = d.lightY;
@@ -144,6 +162,9 @@ export const ShadowCanvas = memo(function ShadowCanvas({
       let anchorScreenY: number | null = null;
       const lightAnchor = lightAnchorRef?.current;
       if (lightAnchor) {
+        if (!containerRect) {
+          containerRect = container.getBoundingClientRect();
+        }
         const lightRect = lightAnchor.getBoundingClientRect();
         const screenX = lightRect.left - containerRect.left + lightRect.width / 2;
         const screenY = lightRect.top - containerRect.top + lightRect.height / 2;
@@ -154,15 +175,17 @@ export const ShadowCanvas = memo(function ShadowCanvas({
           lightY = (screenY - offsetY) / scale;
         }
       }
-      const screenBlockers = d.blockers.map((b) => ({
-        x: offsetX + b.x * scale,
-        y: offsetY + b.y * scale,
-        width: b.width * scale,
-        height: b.height * scale,
-        castHeight: b.castHeight,
-        softness: b.softness,
-      }));
-      const visibilityBlockers: typeof screenBlockers = [];
+      const screenBlockers = d.blockers.length > 0
+        ? d.blockers.map((b) => ({
+          x: offsetX + b.x * scale,
+          y: offsetY + b.y * scale,
+          width: b.width * scale,
+          height: b.height * scale,
+          castHeight: b.castHeight,
+          softness: b.softness,
+        }))
+        : emptyScreenBlockersRef.current;
+      const visibilityBlockers = screenBlockers;
 
       let lightScreenX = offsetX + lightX * scale;
       let lightScreenY = offsetY + lightY * scale;
@@ -174,15 +197,20 @@ export const ShadowCanvas = memo(function ShadowCanvas({
         lightScreenX = width - lightScreenX;
       }
 
-      const bKey = visibilityBlockers.map(b => `${b.x},${b.y},${b.width},${b.height}`).join('|');
-      const cacheKey = `${lightScreenX},${lightScreenY},${width},${height},${bKey}`;
-      if (cacheKey !== polyCache.current.key) {
-        polyCache.current = {
-          key: cacheKey,
-          polygon: computeVisibilityPolygon(lightScreenX, lightScreenY, visibilityBlockers, width, height),
-        };
+      const bKey = visibilityBlockers.length > 0
+        ? visibilityBlockers.map(b => `${b.x},${b.y},${b.width},${b.height}`).join('|')
+        : '';
+      let polygon = polyCache.current.polygon;
+      if (visibilityBlockers.length > 0) {
+        const cacheKey = `${lightScreenX},${lightScreenY},${width},${height},${bKey}`;
+        if (cacheKey !== polyCache.current.key) {
+          polyCache.current = {
+            key: cacheKey,
+            polygon: computeVisibilityPolygon(lightScreenX, lightScreenY, visibilityBlockers, width, height),
+          };
+        }
+        polygon = polyCache.current.polygon;
       }
-      const polygon = polyCache.current.polygon;
 
       // --- Draw ---
 
