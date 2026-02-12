@@ -27,6 +27,7 @@ import { createDie, setRolling } from './engine/dice';
 import { WatercolorContext } from './watercolor/useWatercolorEnabled';
 import { WatercolorCanvas, WatercolorProvider } from './watercolor-engine';
 import { initializeGame } from './engine/game';
+import { CardScaleProvider } from './contexts/CardScaleContext';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -74,8 +75,9 @@ export default function App() {
   const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
   const [showText, setShowText] = useState(true);
   const [commandVisible, setCommandVisible] = useState(true);
-  const [lightingEnabled, setLightingEnabled] = useState(false);
+  const [lightingEnabled, setLightingEnabled] = useState(true);
   const [watercolorEnabled, setWatercolorEnabled] = useState(true);
+  const [paintLuminosityEnabled, setPaintLuminosityEnabled] = useState(true);
   const [discoveryEnabled, setDiscoveryEnabled] = useState(false);
   const [devNoRegretEnabled, setDevNoRegretEnabled] = useState(false);
   const [sandboxOrimIds, setSandboxOrimIds] = useState<string[]>([]);
@@ -90,10 +92,14 @@ export default function App() {
   const [infiniteBenchSwapsEnabled, setInfiniteBenchSwapsEnabled] = useState(false);
   const [cameraDebugOpen, setCameraDebugOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [hotkeysExpanded, setHotkeysExpanded] = useState(false);
+  const [zenModeEnabled, setZenModeEnabled] = useState(false);
+  const [isGamePaused, setIsGamePaused] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
   const [toolingTab, setToolingTab] = useState<'orim' | 'actor'>('actor');
   const [useGhostBackground, setUseGhostBackground] = useState(false);
   const [pixelArtEnabled, setPixelArtEnabled] = useState(false);
+  const [cardScale, setCardScale] = useState(1);
   const showPuzzleOverlay = true;
   const [actorDefinitions, setActorDefinitions] = useState(ACTOR_DEFINITIONS);
   const [actorDeckTemplates, setActorDeckTemplates] = useState(ACTOR_DECK_TEMPLATES);
@@ -139,6 +145,10 @@ export default function App() {
     const startPhase = mode === 'biome' || mode === 'playing' || mode === 'garden'
       ? mode
       : undefined;
+    const variantParam = params.get('var');
+    const playtestVariant = variantParam === 'sf'
+      ? 'single-foundation'
+      : (variantParam === 'pb' ? 'party-battle' : 'party-foundations');
     const stored = window.localStorage.getItem('orimEditorDefinitions');
     const orimDefinitions = stored ? (() => {
       try {
@@ -148,7 +158,13 @@ export default function App() {
         return undefined;
       }
     })() : undefined;
-    return initializeGame(orimDefinitions ? { orimDefinitions } : undefined, startPhase ? { startPhase } : undefined);
+    return initializeGame(
+      orimDefinitions ? { orimDefinitions } : undefined,
+      {
+        startPhase,
+        playtestVariant,
+      }
+    );
   }, []);
 
   const {
@@ -161,6 +177,7 @@ export default function App() {
     tableauCanPlay,
     validFoundationsForSelected,
     noRegretStatus,
+    analysis,
     actions,
   } = useGameEngine(initialGameState, { devNoRegretEnabled });
   const ghostBackgroundEnabled = false;
@@ -244,6 +261,20 @@ export default function App() {
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
+      if (event.code !== 'Space') return;
+      event.preventDefault();
+      setIsGamePaused((prev) => !prev);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
       const key = event.key.toLowerCase();
       if (key === 'a') {
         setToolingOpen((prev) => !prev);
@@ -252,9 +283,9 @@ export default function App() {
       if (key === 'w') {
         setWatercolorEnabled((prev) => !prev);
       }
-      if (key === ' ') {
+      if (event.code === 'Enter') {
         event.preventDefault();
-        actions.rewindLastCard(true);
+        actions.autoPlayNextMove();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -328,7 +359,7 @@ export default function App() {
     [gameState, actions]
   );
 
-  const { dragState, startDrag, setFoundationRef, lastDragEndAt } = useDragDrop(handleDrop);
+  const { dragState, startDrag, setFoundationRef, lastDragEndAt } = useDragDrop(handleDrop, isGamePaused);
   const [tooltipSuppressed, setTooltipSuppressed] = useState(false);
 
   const handleDragStart = useCallback(
@@ -458,6 +489,15 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'h') {
+        const target = e.target as HTMLElement | null;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        setHotkeysExpanded((prev) => !prev);
+        return;
+      }
       if (e.key.toLowerCase() !== 'd') return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
@@ -525,6 +565,21 @@ export default function App() {
       }
       e.preventDefault();
       setLightingEnabled((prev) => !prev);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'z') return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      e.preventDefault();
+      setZenModeEnabled((prev) => !prev);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -801,6 +856,7 @@ export default function App() {
     <GraphicsContext.Provider value={showGraphics}>
     <InteractionModeContext.Provider value={gameState.interactionMode}>
     <WatercolorContext.Provider value={watercolorEnabled}>
+    <CardScaleProvider value={cardScale}>
     <WatercolorProvider>
     <ErrorBoundary>
       <div
@@ -811,7 +867,7 @@ export default function App() {
         } as React.CSSProperties}
       >
         <div
-          className="fixed top-4 right-4 z-[10050] text-[10px] font-mono px-3 py-2 rounded border"
+          className="fixed top-4 right-4 z-[10050] text-[13px] font-mono px-3 py-2 rounded border"
           style={{
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
             borderColor: 'rgba(127, 219, 202, 0.4)',
@@ -819,35 +875,37 @@ export default function App() {
             pointerEvents: 'none',
           }}
         >
-          <div className="text-[9px] tracking-[4px]">HOTKEYS</div>
-          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
-            <div><span className="text-game-teal">A</span> actor editor</div>
-            <div><span className="text-game-teal">W</span> watercolor</div>
-            <div><span className="text-game-teal">G</span> graphics</div>
-            <div><span className="text-game-teal">P</span> ghost bg</div>
-            <div><span className="text-game-teal">D</span> drag/click</div>
-            <div><span className="text-game-teal">`</span> orim dev</div>
-            <div><span className="text-game-teal">T</span> text</div>
-            <div><span className="text-game-teal">L</span> lighting</div>
-            <div><span className="text-game-teal">[</span> pixel art</div>
-            <div><span className="text-game-teal">\\</span> splatters</div>
-          </div>
+          <div className="text-[10px] tracking-[4px]">HOTKEYS (H)</div>
+          {hotkeysExpanded && (
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[13px]">
+              <div><span className="text-game-teal">A</span> actor editor</div>
+              <div><span className="text-game-teal">W</span> watercolor</div>
+              <div><span className="text-game-teal">G</span> graphics</div>
+              <div><span className="text-game-teal">P</span> ghost bg</div>
+              <div><span className="text-game-teal">D</span> drag/click</div>
+              <div><span className="text-game-teal">⏎</span> auto move</div>
+              <div><span className="text-game-teal">`</span> orim dev</div>
+              <div><span className="text-game-teal">T</span> text</div>
+              <div><span className="text-game-teal">L</span> lighting</div>
+              <div><span className="text-game-teal">Z</span> zen mode</div>
+              <div><span className="text-game-teal">[</span> pixel art</div>
+              <div><span className="text-game-teal">\\</span> splatters</div>
+            </div>
+          )}
         </div>
         <div className="fixed bottom-4 left-4 z-[9999] flex flex-col gap-2 menu-text">
           {import.meta.env.DEV && (
             <button
               type="button"
-              onClick={handleCopyRestart}
+              onClick={() => actions.autoPlayNextMove()}
               className="text-[10px] font-mono bg-game-bg-dark/80 border px-2 py-1 rounded cursor-pointer"
               style={{
-                color: serverAlive ? '#7fdbca' : '#ff6b6b',
-                borderColor: serverAlive ? 'rgba(127, 219, 202, 0.6)' : 'rgba(255, 107, 107, 0.6)',
+                color: '#7fdbca',
+                borderColor: 'rgba(127, 219, 202, 0.6)',
               }}
-              title="Copy restart command"
+              title="Play next available move"
             >
-              {restartCopied
-                ? 'restart copied'
-                : (serverAlive ? 'copy restart' : 'dev server: down')}
+              action
             </button>
           )}
         </div>
@@ -859,11 +917,29 @@ export default function App() {
         >
           ⚙️
         </button>
+        <div className="fixed top-[112px] left-4 z-[10010] flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCardScale((prev) => Math.min(1.4, Math.round((prev + 0.05) * 100) / 100))}
+            className="command-button font-mono text-xs bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded cursor-pointer text-game-teal"
+            title="Increase card scale"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={() => setCardScale((prev) => Math.max(0.6, Math.round((prev - 0.05) * 100) / 100))}
+            className="command-button font-mono text-xs bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded cursor-pointer text-game-teal"
+            title="Decrease card scale"
+          >
+            -
+          </button>
+        </div>
         {settingsOpen && (
           <div className="fixed inset-0 z-[10020]">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
             <div className="relative w-full h-full flex items-start justify-start p-6">
-              <div className="relative bg-game-bg-dark border border-game-teal/40 rounded-lg p-4 w-[360px] max-h-[90vh] overflow-y-auto text-game-white menu-text">
+              <div className="relative bg-game-bg-dark border border-game-teal/40 rounded-lg p-4 w-[360px] h-[calc(100vh-3rem)] max-h-none overflow-y-auto text-game-white menu-text">
                 <button
                   onClick={() => setSettingsOpen(false)}
                   className="absolute top-3 right-3 text-xs text-game-pink border border-game-pink rounded w-6 h-6 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
@@ -938,6 +1014,10 @@ export default function App() {
                     type="button"
                     onClick={() => setLightingEnabled((prev) => !prev)}
                     className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
+                    style={{
+                      color: lightingEnabled ? '#7fdbca' : '#ff6b6b',
+                      borderColor: lightingEnabled ? 'rgba(127, 219, 202, 0.6)' : 'rgba(255, 107, 107, 0.6)',
+                    }}
                     title="Toggle lighting"
                   >
                     💡 Lighting
@@ -953,6 +1033,18 @@ export default function App() {
                     title="Toggle discovery mode"
                   >
                     🧭 Discovery
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZenModeEnabled((prev) => !prev)}
+                    className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
+                    style={{
+                      color: zenModeEnabled ? '#7fdbca' : '#ff6b6b',
+                      borderColor: zenModeEnabled ? 'rgba(127, 219, 202, 0.6)' : 'rgba(255, 107, 107, 0.6)',
+                    }}
+                    title="Toggle Zen Mode (disable countdown timers)"
+                  >
+                    🧘 Zen Mode
                   </button>
                   <button
                     type="button"
@@ -1234,7 +1326,7 @@ export default function App() {
 
             {/* Biome screen */}
             {gameState.phase === 'biome' && (
-              <BiomeScreen
+                <BiomeScreen
                 gameState={gameState}
                 selectedCard={selectedCard}
                 validFoundationsForSelected={validFoundationsForSelected}
@@ -1265,6 +1357,8 @@ export default function App() {
                 handleExitBiome={handleExitBiome}
                 useGhostBackground={ghostBackgroundEnabled}
                 lightingEnabled={lightingEnabled}
+                fps={fps}
+                serverAlive={serverAlive}
                 infiniteStockEnabled={infiniteStockEnabled}
                 onToggleInfiniteStock={() => setInfiniteStockEnabled((prev) => !prev)}
                 benchSwapCount={benchSwapCount}
@@ -1272,11 +1366,17 @@ export default function App() {
                 onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
                 onConsumeBenchSwap={() => setBenchSwapCount((prev) => Math.max(0, prev - 1))}
                 noRegretStatus={noRegretStatus}
+                paintLuminosityEnabled={paintLuminosityEnabled}
+                onTogglePaintLuminosity={() => setPaintLuminosityEnabled((prev) => !prev)}
+                zenModeEnabled={zenModeEnabled}
+                isGamePaused={isGamePaused}
+                wildAnalysis={analysis.wild}
                 actions={{
                   selectCard: actions.selectCard,
                   playToFoundation: actions.playToFoundation,
                   playCardDirect: actions.playCardDirect,
                   playCardInRandomBiome: actions.playCardInRandomBiome,
+                  playEnemyCardInRandomBiome: actions.playEnemyCardInRandomBiome,
                   playFromHand: actions.playFromHand,
                   playFromStock: (foundationIndex: number, useWild = false, force = false) =>
                     actions.playFromStock(foundationIndex, useWild, force, !infiniteStockEnabled),
@@ -1284,8 +1384,11 @@ export default function App() {
                   autoSolveBiome: actions.autoSolveBiome,
                   playCardInNodeBiome: actions.playCardInNodeBiome,
                   endRandomBiomeTurn: actions.endRandomBiomeTurn,
+                  advanceRandomBiomeTurn: actions.advanceRandomBiomeTurn,
+                  setEnemyDifficulty: actions.setEnemyDifficulty,
                   rewindLastCard: actions.rewindLastCard,
                   swapPartyLead: actions.swapPartyLead,
+                  playWildAnalysisSequence: actions.playWildAnalysisSequence,
                 }}
               />
             )}
@@ -1295,63 +1398,65 @@ export default function App() {
       )}
 
       {/* Garden screen */}
-      <Table
-        pendingCards={gameState.pendingCards}
-        buildPileProgress={gameState.buildPileProgress}
-        tiles={gameState.tiles}
-        availableActors={gameState.availableActors}
-        tileParties={gameState.tileParties}
-        activeSessionTileId={gameState.activeSessionTileId}
-        tokens={gameState.tokens}
-        resourceStash={gameState.resourceStash}
-        collectedTokens={gameState.collectedTokens}
-        orimDefinitions={gameState.orimDefinitions}
-        orimStash={gameState.orimStash}
-        orimInstances={gameState.orimInstances}
-        actorDecks={gameState.actorDecks}
-        tokenReturnNotice={tokenReturnNotice}
-        showTokenTray={gameState.phase === 'garden'}
-        showLighting={lightingEnabled}
-        discoveryEnabled={discoveryEnabled}
-        disableZoom={gameState.phase !== 'garden' && gameState.phase !== 'biome'}
-        allowWindowPan={gameState.phase === 'biome'}
-        showWatercolorCanvas={gameState.phase === 'garden'}
-        pixelArtEnabled={pixelArtEnabled}
-        onStartAdventure={handleStartAdventure}
-        onStartBiome={handleStartBiome}
-        onAssignCardToBuildPile={actions.assignCardToBuildPile}
-        onAssignCardToTileSlot={actions.assignCardToTileSlot}
-        onAssignTokenToTileSlot={actions.assignTokenToTileSlot}
-        onAssignActorToParty={actions.assignActorToParty}
-        onAssignActorToTileHome={actions.assignActorToTileHome}
-        onClearBuildPileProgress={actions.clearBuildPileProgress}
-        onClearTileProgress={actions.clearTileProgress}
-        onClearAllProgress={actions.clearAllProgress}
-        onResetGame={() => actions.newGame(false)}
-        onUpdateTilePosition={actions.updateTileGridPosition}
-        onUpdateTileWatercolorConfig={actions.updateTileWatercolorConfig}
-        onAddTileToGardenAt={actions.addTileToGardenAt}
-        onRemoveTile={actions.removeTileFromGarden}
-        onToggleTileLock={actions.toggleTileLock}
-        onUpdateActorPosition={actions.updateActorGridPosition}
-        onUpdateTokenPosition={actions.updateTokenGridPosition}
-        onStackActors={actions.stackActorOnActor}
-        onStackTokens={actions.stackTokenOnToken}
-        onEquipOrimFromStash={actions.equipOrimFromStash}
-        onMoveOrimBetweenSlots={actions.moveOrimBetweenSlots}
-        onReturnOrimToStash={actions.returnOrimToStash}
-        onAddTokenInstance={actions.addTokenInstanceToGarden}
-        onDepositTokenToStash={actions.depositTokenToStash}
-        onWithdrawTokenFromStash={actions.withdrawTokenFromStash}
-        onReorderActorStack={actions.reorderActorStack}
-        onDetachActorFromStack={actions.detachActorFromStack}
-        onDetachActorFromParty={actions.detachActorFromParty}
-        onRemoveActorFromTileHome={actions.removeActorFromTileHome}
-        showText={showText}
-        showGraphics={showGraphics}
-        serverAlive={serverAlive}
-        fps={fps}
-      />
+      {gameState.playtestVariant !== 'party-foundations' && gameState.playtestVariant !== 'party-battle' && (
+        <Table
+          pendingCards={gameState.pendingCards}
+          buildPileProgress={gameState.buildPileProgress}
+          tiles={gameState.tiles}
+          availableActors={gameState.availableActors}
+          tileParties={gameState.tileParties}
+          activeSessionTileId={gameState.activeSessionTileId}
+          tokens={gameState.tokens}
+          resourceStash={gameState.resourceStash}
+          collectedTokens={gameState.collectedTokens}
+          orimDefinitions={gameState.orimDefinitions}
+          orimStash={gameState.orimStash}
+          orimInstances={gameState.orimInstances}
+          actorDecks={gameState.actorDecks}
+          tokenReturnNotice={tokenReturnNotice}
+          showTokenTray={gameState.phase === 'garden'}
+          showLighting={lightingEnabled}
+          discoveryEnabled={discoveryEnabled}
+          disableZoom={gameState.phase !== 'garden' && gameState.phase !== 'biome'}
+          allowWindowPan={gameState.phase === 'biome'}
+          showWatercolorCanvas={gameState.phase === 'garden'}
+          pixelArtEnabled={pixelArtEnabled}
+          onStartAdventure={handleStartAdventure}
+          onStartBiome={handleStartBiome}
+          onAssignCardToBuildPile={actions.assignCardToBuildPile}
+          onAssignCardToTileSlot={actions.assignCardToTileSlot}
+          onAssignTokenToTileSlot={actions.assignTokenToTileSlot}
+          onAssignActorToParty={actions.assignActorToParty}
+          onAssignActorToTileHome={actions.assignActorToTileHome}
+          onClearBuildPileProgress={actions.clearBuildPileProgress}
+          onClearTileProgress={actions.clearTileProgress}
+          onClearAllProgress={actions.clearAllProgress}
+          onResetGame={() => actions.newGame(false)}
+          onUpdateTilePosition={actions.updateTileGridPosition}
+          onUpdateTileWatercolorConfig={actions.updateTileWatercolorConfig}
+          onAddTileToGardenAt={actions.addTileToGardenAt}
+          onRemoveTile={actions.removeTileFromGarden}
+          onToggleTileLock={actions.toggleTileLock}
+          onUpdateActorPosition={actions.updateActorGridPosition}
+          onUpdateTokenPosition={actions.updateTokenGridPosition}
+          onStackActors={actions.stackActorOnActor}
+          onStackTokens={actions.stackTokenOnToken}
+          onEquipOrimFromStash={actions.equipOrimFromStash}
+          onMoveOrimBetweenSlots={actions.moveOrimBetweenSlots}
+          onReturnOrimToStash={actions.returnOrimToStash}
+          onAddTokenInstance={actions.addTokenInstanceToGarden}
+          onDepositTokenToStash={actions.depositTokenToStash}
+          onWithdrawTokenFromStash={actions.withdrawTokenFromStash}
+          onReorderActorStack={actions.reorderActorStack}
+          onDetachActorFromStack={actions.detachActorFromStack}
+          onDetachActorFromParty={actions.detachActorFromParty}
+          onRemoveActorFromTileHome={actions.removeActorFromTileHome}
+          showText={showText}
+          showGraphics={showGraphics}
+          serverAlive={serverAlive}
+          fps={fps}
+        />
+      )}
 
       {returnModal.open && (
         <div className="fixed inset-0 z-[9500]">
@@ -1547,6 +1652,7 @@ export default function App() {
       </div>
     </ErrorBoundary>
     </WatercolorProvider>
+    </CardScaleProvider>
     </WatercolorContext.Provider>
     </InteractionModeContext.Provider>
     </GraphicsContext.Provider>

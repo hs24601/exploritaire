@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Card as CardType, InteractionMode } from '../engine/types';
 import { CARD_SIZE } from '../engine/constants';
+import { useCardScale } from '../contexts/CardScaleContext';
 import { Card } from './Card';
 import { NEON_COLORS } from '../utils/styles';
 
@@ -19,6 +20,9 @@ interface FoundationProps {
   showGraphics: boolean;
   manualPlayCounter?: number;
   showCompleteSticker?: boolean;
+  countPosition?: 'above' | 'below' | 'none';
+  maskValue?: boolean;
+  revealValue?: number | null;
 }
 
 const FOUNDATION_TILT_MAX_DEG = 2.4;
@@ -63,7 +67,13 @@ export const Foundation = memo(function Foundation({
   showGraphics,
   manualPlayCounter = 0,
   showCompleteSticker = false,
+  countPosition = 'below',
+  maskValue = false,
+  revealValue = null,
 }: FoundationProps) {
+  const globalScale = useCardScale();
+  const cardWidth = CARD_SIZE.width * globalScale;
+  const cardHeight = CARD_SIZE.height * globalScale;
   const showClickHighlight = interactionMode === 'click' && (canReceive || isGuidanceTarget);
   const showDragHighlight = interactionMode === 'dnd' && isDragTarget;
   const showHighlight = showClickHighlight || showDragHighlight;
@@ -109,6 +119,13 @@ export const Foundation = memo(function Foundation({
 
   return (
     <div className="flex flex-col items-center gap-2 transition-opacity duration-300">
+      {countPosition === 'above' && (
+        <div
+          className={`relative z-20 text-xs text-game-white ${isDimmed ? 'opacity-30' : 'opacity-60'}`}
+        >
+          {cards.length - 1}
+        </div>
+      )}
       <motion.div
         ref={refCallback}
         onClick={interactionMode === 'click' ? () => onFoundationClick(index) : undefined}
@@ -255,7 +272,7 @@ export const Foundation = memo(function Foundation({
             }}
           />
         )}
-        <div className="relative" style={{ width: CARD_SIZE.width, height: CARD_SIZE.height }}>
+        <div className="relative" style={{ width: cardWidth, height: cardHeight }}>
           {stackCards.map((card, stackIndex) => {
             const isTop = stackIndex === stackCards.length - 1;
             const tilt = stackCards.length <= 1 && isTop ? 0 : getTiltForCard(card.id);
@@ -269,12 +286,34 @@ export const Foundation = memo(function Foundation({
                   transform: `translate(${offset.x}px, ${offset.y}px) rotate(${tilt.toFixed(2)}deg)`,
                   transformOrigin: 'center',
                   zIndex: 2 + stackIndex,
+                  opacity: maskValue ? 0 : 1,
+                  transition: 'opacity 0.4s ease',
                 }}
               >
                 <Card card={card} isFoundation isDimmed={isDimmed} showGraphics={showGraphics} />
               </div>
             );
           })}
+          {maskValue && (
+            <div
+              className="absolute inset-0 rounded-lg flex items-center justify-center"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.85)',
+              }}
+            >
+              <div
+                className="text-lg font-bold tracking-[2px]"
+                style={{
+                  color: '#f7d24b',
+                  opacity: revealValue != null ? 1 : 0,
+                  transition: 'opacity 0.9s ease',
+                  textShadow: '0 0 8px rgba(230, 179, 30, 0.6)',
+                }}
+              >
+                {revealValue}
+              </div>
+            </div>
+          )}
         </div>
       </motion.div>
       {actorName && (
@@ -284,11 +323,13 @@ export const Foundation = memo(function Foundation({
           {actorName.toUpperCase()}
         </div>
       )}
-      <div
-        className={`relative z-20 text-xs text-game-white ${isDimmed ? 'opacity-30' : 'opacity-60'}`}
-      >
-        {cards.length - 1}
-      </div>
+      {countPosition === 'below' && (
+        <div
+          className={`relative z-20 text-xs text-game-white ${isDimmed ? 'opacity-30' : 'opacity-60'}`}
+        >
+          {cards.length - 1}
+        </div>
+      )}
     </div>
   );
 });

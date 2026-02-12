@@ -165,6 +165,20 @@ export interface WatercolorEngineState {
 /**
  * Engine API exposed to game components
  */
+/** A baked paint mark position, used for lighting integration */
+export interface PaintMarkRecord {
+  /** X position in canvas pixels */
+  x: number;
+  /** Y position in canvas pixels */
+  y: number;
+  /** CSS hex color string */
+  color: string;
+  /** Approximate radius in canvas pixels (based on scale * baseRadius) */
+  radius: number;
+  /** Opacity at time of baking (0–1) */
+  alpha: number;
+}
+
 export interface WatercolorEngineAPI {
   /** Trigger a splash animation at the given position */
   splash: (config: SplashConfig) => void;
@@ -176,6 +190,8 @@ export interface WatercolorEngineAPI {
   getState: () => WatercolorEngineState;
   /** Update paper texture configuration */
   setPaperConfig: (config: Partial<PaperConfig>) => void;
+  /** Get all baked paint mark positions (for lighting integration) */
+  getPaintMarks: () => PaintMarkRecord[];
 }
 
 /**

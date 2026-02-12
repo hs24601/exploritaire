@@ -23,7 +23,7 @@ export const PartyBench = memo(function PartyBench({
   freeSwapActorIds,
   actorComboCounts,
 }: PartyBenchProps) {
-  const benchSlots = Array.from({ length: 5 }, (_, idx) => benchActors[idx] ?? null);
+  const benchSlots = Array.from({ length: 2 }, (_, idx) => benchActors[idx] ?? null);
   const renderCard = (entry: { actorId: string; definition: ActorDefinition } | null) => {
     const cardSize = 'w-16 h-24';
     const glyphSize = 'text-2xl';

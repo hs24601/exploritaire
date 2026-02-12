@@ -35,34 +35,6 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     ],
   },
   {
-    id: 'bear',
-    name: 'Bear',
-    titles: ['Ursus', 'Bear'],
-    description: 'A steady bear with quiet strength',
-    type: 'adventurer',
-    value: 7,
-    suit: undefined,
-    element: 'N',
-    sprite: '🐻',
-    orimSlots: [
-      { orimId: 'claw', locked: true },
-    ],
-  },
-  {
-    id: 'cat',
-    name: 'Cat',
-    titles: ['Felis', 'Cat'],
-    description: 'A nimble cat with watchful curiosity',
-    type: 'adventurer',
-    value: 1,
-    suit: undefined,
-    element: 'N',
-    sprite: '🐱',
-    orimSlots: [
-      { orimId: 'scratch', locked: true },
-    ],
-  },
-  {
     id: 'owl',
     name: 'Owl',
     titles: ['Strix', 'Owl'],
@@ -149,18 +121,6 @@ export function createInitialActors(): Actor[] {
   if (wolf) {
     wolf.gridPosition = { col: 4, row: 2 };
     actors.push(wolf);
-  }
-
-  const bear = createActor('bear');
-  if (bear) {
-    bear.gridPosition = { col: 5, row: 2 };
-    actors.push(bear);
-  }
-
-  const cat = createActor('cat');
-  if (cat) {
-    cat.gridPosition = { col: 3, row: 3 };
-    actors.push(cat);
   }
 
   const owl = createActor('owl');

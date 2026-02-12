@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import type { Element } from '../engine/types';
 import { ELEMENT_TO_SUIT, SUIT_COLORS, getSuitDisplay, Z_INDEX } from '../engine/constants';
@@ -11,6 +11,10 @@ interface ResourceStashProps {
   showTokenNotice: boolean;
   tokenNoticeCount: number;
   onTokenGrab: (element: Element, clientX: number, clientY: number) => void;
+  position?: 'fixed' | 'relative' | 'absolute';
+  style?: CSSProperties;
+  className?: string;
+  interactive?: boolean;
 }
 
 const STASH_ORDER: Element[] = ['W', 'E', 'A', 'F', 'D', 'L'];
@@ -32,18 +36,27 @@ export const ResourceStash = memo(function ResourceStash({
   showTokenNotice,
   tokenNoticeCount,
   onTokenGrab,
+  position = 'fixed',
+  style,
+  className,
+  interactive = true,
 }: ResourceStashProps) {
   const tokenTextColor = '#0a0a0a';
-  return (
-    <div
-      data-token-stash
-      className={`fixed bg-game-bg-dark/90 border border-game-teal/30 px-3 py-1 rounded flex gap-3 items-center relative w-max select-none${showTokenNotice ? ' token-pop-shake' : ''}`}
-      style={{
+  const positionClass = position === 'fixed' ? 'fixed' : position === 'absolute' ? 'absolute' : 'relative';
+  const baseStyle: CSSProperties = position === 'fixed'
+    ? {
         left: '50%',
         bottom: 'calc(var(--cli-offset, 32px) + 96px)',
         transform: 'translateX(-50%)',
         zIndex: Z_INDEX.FLYOUT,
-      }}
+      }
+    : { zIndex: Z_INDEX.FLYOUT };
+  const mergedStyle: CSSProperties = { ...baseStyle, ...style };
+  return (
+    <div
+      data-token-stash
+      className={`${positionClass} bg-game-bg-dark/90 border border-game-teal/30 px-3 py-1 rounded flex gap-3 items-center relative w-max select-none${showTokenNotice ? ' token-pop-shake' : ''}${className ? ` ${className}` : ''}`}
+      style={mergedStyle}
     >
       <span className="text-[9px] text-game-teal opacity-70 tracking-widest">RES</span>
       {STASH_ORDER.map((element) => {
@@ -62,15 +75,15 @@ export const ResourceStash = memo(function ResourceStash({
                 borderStyle: 'solid',
                 borderColor: trayColor.border,
                 color: trayColor.text,
-                cursor: count > 0 ? 'grab' : 'default',
+                cursor: interactive && count > 0 ? 'grab' : 'default',
                 boxShadow: `0 0 0 1px #ffffff, inset 0 0 0 1px #ffffff${trayColor.glow ? `, 0 0 8px ${trayColor.glow}` : ''}`,
               }}
               onMouseDown={(e) => {
-                if (e.button !== 0 || count <= 0) return;
+                if (!interactive || e.button !== 0 || count <= 0) return;
                 onTokenGrab(element, e.clientX, e.clientY);
               }}
               onTouchStart={(e) => {
-                if (e.touches.length !== 1 || count <= 0) return;
+                if (!interactive || e.touches.length !== 1 || count <= 0) return;
                 const touch = e.touches[0];
                 onTokenGrab(element, touch.clientX, touch.clientY);
               }}

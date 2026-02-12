@@ -128,6 +128,7 @@ interface FoundationActorProps {
   tooltipDisabled?: boolean;
   disableFoundationSplashes?: boolean;
   comboCount?: number;
+  showTokenEdgeOverlay?: boolean;
 }
 
 export const FoundationActor = memo(function FoundationActor({
@@ -152,13 +153,15 @@ export const FoundationActor = memo(function FoundationActor({
   tooltipDisabled = false,
   disableFoundationSplashes = false,
   comboCount = 0,
+  showTokenEdgeOverlay = true,
 }: FoundationActorProps) {
+  const effectiveScale = cardScale;
   const showClickHighlight = interactionMode === 'click' && (canReceive || isGuidanceTarget);
   const showDragHighlight = interactionMode === 'dnd' && isDragTarget;
   const showHighlight = showClickHighlight || showDragHighlight;
   const highlightColor = isGuidanceTarget ? '#7fdbca' : '#e6b31e';
-  const cardWidth = CARD_SIZE.width * cardScale;
-  const cardHeight = CARD_SIZE.height * cardScale;
+  const cardWidth = CARD_SIZE.width * effectiveScale;
+  const cardHeight = CARD_SIZE.height * effectiveScale;
   const [activeOrimId, setActiveOrimId] = useState<string | null>(null);
   const [orimHoverToken, setOrimHoverToken] = useState(0);
   const [isCardHovering, setIsCardHovering] = useState(false);
@@ -239,8 +242,10 @@ export const FoundationActor = memo(function FoundationActor({
           height: window.innerHeight,
         };
 
-        const centerX = foundationRect.left - canvasRect.left + foundationRect.width / 2;
-        const centerY = foundationRect.top - canvasRect.top + foundationRect.height / 2;
+        const rawX = foundationRect.left - canvasRect.left + foundationRect.width / 2;
+        const rawY = foundationRect.top - canvasRect.top + foundationRect.height / 2;
+        const centerX = Math.min(Math.max(0, rawX), canvasRect.width);
+        const centerY = Math.min(Math.max(0, rawY), canvasRect.height);
         const splashPayload = {
           origin: { x: centerX, y: centerY },
           direction: primaryDir,
@@ -273,7 +278,7 @@ export const FoundationActor = memo(function FoundationActor({
       }
     });
   }, [cards]);
-  const tokenGridGap = Math.max(2, Math.round(4 * cardScale));
+  const tokenGridGap = Math.max(2, Math.round(4 * effectiveScale));
   const tokenDiameter = Math.max(16, Math.round(cardWidth * 0.34));
   const tokenFontSize = Math.max(8, Math.round(tokenDiameter * 0.52));
   const badgeSize = Math.max(10, Math.round(tokenDiameter * 0.6));
@@ -281,11 +286,9 @@ export const FoundationActor = memo(function FoundationActor({
   const badgeRing = Math.max(2, Math.round(badgeSize * 0.18));
   const tokenStrokeColor = 'rgba(255, 255, 255, 0.75)';
   const sideOffset = Math.round(tokenDiameter * 0.45);
-  const staminaMax = actor?.staminaMax ?? 0;
-  const staminaCurrent = actor?.stamina ?? 0;
-  const staminaCount = Math.max(0, staminaMax);
-  const staminaPipSize = Math.max(5, Math.round(cardWidth * 0.1));
-  const staminaGap = Math.max(2, Math.round(staminaPipSize * 0.35));
+  const comboBadgeFont = Math.max(9, Math.round(cardWidth * 0.22));
+  const comboBadgePaddingX = Math.max(6, Math.round(cardWidth * 0.12));
+  const comboBadgePaddingY = Math.max(2, Math.round(cardHeight * 0.04));
   const suitFontSize = Math.max(10, Math.round(cardHeight * 0.22));
   const actorOrimSize = Math.max(16, Math.round(cardWidth * 0.48));
   const actorOrimFont = Math.max(8, Math.round(actorOrimSize * 0.6));
@@ -327,61 +330,46 @@ export const FoundationActor = memo(function FoundationActor({
     if (!topCard) return null;
     const baseColor = '#1e90ff';
     const config = buildActorWatercolorConfig(baseColor, ACTOR_WATERCOLOR_TEMPLATE);
+    const baseSplotches = config.splotches.map((splotch) => ({
+      ...splotch,
+      blendMode: 'normal',
+      opacity: 1,
+      gradient: {
+        ...splotch.gradient,
+        light: '#6ec6ff',
+        mid: '#1e90ff',
+        dark: '#0b4f9a',
+        lightOpacity: 1,
+        midOpacity: 1,
+        darkOpacity: 1,
+      },
+    }));
+    const extraSplotches = [
+      [0.36, -0.18],
+      [0.18, -0.36],
+      [-0.32, -0.22],
+      [-0.28, 0.28],
+      [0.24, 0.34],
+    ].map(([x, y], index) => ({
+      ...config.splotches[0],
+      scale: 0.22 + index * 0.01,
+      offset: [x, y] as [number, number],
+      blendMode: 'normal',
+      opacity: 0.95,
+      gradient: {
+        ...config.splotches[0].gradient,
+        light: '#1a5bb0',
+        mid: '#0c3f86',
+        dark: '#062a5e',
+        lightOpacity: 0.9,
+        midOpacity: 0.95,
+        darkOpacity: 1,
+      },
+    }));
     return {
       ...config,
-      splotches: config.splotches.map((splotch) => ({
-        ...splotch,
-        blendMode: 'normal',
-        opacity: 1,
-        gradient: {
-          ...splotch.gradient,
-          light: '#6ec6ff',
-          mid: '#1e90ff',
-          dark: '#0b4f9a',
-          lightOpacity: 1,
-          midOpacity: 1,
-          darkOpacity: 1,
-        },
-      })),
+      splotches: [...baseSplotches, ...extraSplotches],
       grain: { ...config.grain, enabled: false, intensity: 0 },
-      splotches: [
-        ...config.splotches.map((splotch) => ({
-          ...splotch,
-          blendMode: 'normal',
-          opacity: 1,
-          gradient: {
-            ...splotch.gradient,
-            light: '#6ec6ff',
-            mid: '#1e90ff',
-            dark: '#0b4f9a',
-            lightOpacity: 1,
-            midOpacity: 1,
-            darkOpacity: 1,
-          },
-        })),
-        ...[
-          [0.36, -0.18],
-          [0.18, -0.36],
-          [-0.32, -0.22],
-          [-0.28, 0.28],
-          [0.24, 0.34],
-        ].map(([x, y], index) => ({
-          ...config.splotches[0],
-          scale: 0.22 + index * 0.01,
-          offset: [x, y] as [number, number],
-          blendMode: 'normal',
-          opacity: 0.95,
-          gradient: {
-            ...config.splotches[0].gradient,
-            light: '#1a5bb0',
-            mid: '#0c3f86',
-            dark: '#062a5e',
-            lightOpacity: 0.9,
-            midOpacity: 0.95,
-            darkOpacity: 1,
-          },
-        })),
-      ],
       overallScale: 0.64,
     };
   }, [topCard]);
@@ -698,8 +686,9 @@ export const FoundationActor = memo(function FoundationActor({
                 COMPLETE
               </div>
             )}
-            </div>
-            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 6 }}>
+          </div>
+          {showTokenEdgeOverlay && (
+            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 20 }}>
               <div
                 className="absolute top-1/2 flex flex-col"
                 style={{
@@ -708,55 +697,55 @@ export const FoundationActor = memo(function FoundationActor({
                   gap: tokenGridGap,
                 }}
               >
-              {ELEMENT_ORDER.slice(0, 3).filter((element) => elementCounts[element] > 0).map((element) => {
-                const suit = ELEMENT_TO_SUIT[element];
-                const suitColor = SUIT_COLORS[suit];
-                const count = elementCounts[element];
-                const isActive = count > 0;
-                return (
-                  <div
-                    key={element}
-                    className="relative flex items-center justify-center font-bold"
-                    style={{
-                      width: tokenDiameter,
-                      height: tokenDiameter,
-                      color: isActive ? suitColor : '#b7c7ee',
-                      fontSize: tokenFontSize,
-                    }}
-                  >
+                {ELEMENT_ORDER.slice(0, 3).filter((element) => elementCounts[element] > 0).map((element) => {
+                  const suit = ELEMENT_TO_SUIT[element];
+                  const suitColor = SUIT_COLORS[suit];
+                  const count = elementCounts[element];
+                  const isActive = count > 0;
+                  return (
                     <div
-                      className="flex items-center justify-center rounded-full font-bold"
+                      key={element}
+                      className="relative flex items-center justify-center font-bold"
                       style={{
                         width: tokenDiameter,
                         height: tokenDiameter,
-                        backgroundColor: isActive ? suitColor : '#1c1b29',
-                        color: getTextColor(suitColor),
-                        boxShadow: `${isActive ? `0 0 8px ${suitColor}99` : `0 0 6px ${suitColor}66`}, 0 0 0 1px ${tokenStrokeColor}`,
+                        color: isActive ? suitColor : '#b7c7ee',
+                        fontSize: tokenFontSize,
                       }}
                     >
-                      {getSuitDisplay(suit, showGraphics)}
-                    </div>
-                    {isActive && count > 1 && (
-                      <span
-                        className="absolute rounded-full font-bold flex items-center justify-center"
+                      <div
+                        className="flex items-center justify-center rounded-full font-bold"
                         style={{
-                          top: -badgeOffset,
-                          left: -badgeOffset,
-                          width: badgeSize,
-                          height: badgeSize,
-                          fontSize: Math.max(8, Math.round(badgeSize * 0.6)),
-                          backgroundColor: suitColor,
-                          color: '#0a0a0a',
-                          boxShadow: `0 0 8px ${suitColor}99, 0 0 0 ${badgeRing}px ${suitColor}, 0 0 0 ${badgeRing + 1}px ${tokenStrokeColor}`,
+                          width: tokenDiameter,
+                          height: tokenDiameter,
+                          backgroundColor: isActive ? suitColor : '#1c1b29',
+                          color: getTextColor(suitColor),
+                          boxShadow: `${isActive ? `0 0 8px ${suitColor}99` : `0 0 6px ${suitColor}66`}, 0 0 0 1px ${tokenStrokeColor}`,
                         }}
                       >
-                        {count}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                        {getSuitDisplay(suit, showGraphics)}
+                      </div>
+                      {isActive && count > 1 && (
+                        <span
+                          className="absolute rounded-full font-bold flex items-center justify-center"
+                          style={{
+                            top: -badgeOffset,
+                            left: -badgeOffset,
+                            width: badgeSize,
+                            height: badgeSize,
+                            fontSize: Math.max(8, Math.round(badgeSize * 0.6)),
+                            backgroundColor: suitColor,
+                            color: '#0a0a0a',
+                            boxShadow: `0 0 8px ${suitColor}99, 0 0 0 ${badgeRing}px ${suitColor}, 0 0 0 ${badgeRing + 1}px ${tokenStrokeColor}`,
+                          }}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
               <div
                 className="absolute top-1/2 flex flex-col"
                 style={{
@@ -765,89 +754,78 @@ export const FoundationActor = memo(function FoundationActor({
                   gap: tokenGridGap,
                 }}
               >
-              {ELEMENT_ORDER.slice(3).filter((element) => elementCounts[element] > 0).map((element) => {
-                const suit = ELEMENT_TO_SUIT[element];
-                const suitColor = SUIT_COLORS[suit];
-                const count = elementCounts[element];
-                const isActive = count > 0;
-                return (
-                  <div
-                    key={element}
-                    className="relative flex items-center justify-center font-bold"
-                    style={{
-                      width: tokenDiameter,
-                      height: tokenDiameter,
-                      color: isActive ? suitColor : '#b7c7ee',
-                      fontSize: tokenFontSize,
-                    }}
-                  >
+                {ELEMENT_ORDER.slice(3).filter((element) => elementCounts[element] > 0).map((element) => {
+                  const suit = ELEMENT_TO_SUIT[element];
+                  const suitColor = SUIT_COLORS[suit];
+                  const count = elementCounts[element];
+                  const isActive = count > 0;
+                  return (
                     <div
-                      className="flex items-center justify-center rounded-full font-bold"
+                      key={element}
+                      className="relative flex items-center justify-center font-bold"
                       style={{
                         width: tokenDiameter,
                         height: tokenDiameter,
-                        backgroundColor: isActive ? suitColor : '#1c1b29',
-                        color: getTextColor(suitColor),
-                        boxShadow: `${isActive ? `0 0 8px ${suitColor}99` : `0 0 6px ${suitColor}66`}, 0 0 0 1px ${tokenStrokeColor}`,
+                        color: isActive ? suitColor : '#b7c7ee',
+                        fontSize: tokenFontSize,
                       }}
                     >
-                      {getSuitDisplay(suit, showGraphics)}
-                    </div>
-                    {isActive && count > 1 && (
-                      <span
-                        className="absolute rounded-full font-bold flex items-center justify-center"
+                      <div
+                        className="flex items-center justify-center rounded-full font-bold"
                         style={{
-                          top: -badgeOffset,
-                          right: -badgeOffset,
-                          width: badgeSize,
-                          height: badgeSize,
-                          fontSize: Math.max(8, Math.round(badgeSize * 0.6)),
-                          backgroundColor: suitColor,
-                          color: '#0a0a0a',
-                          boxShadow: `0 0 8px ${suitColor}99, 0 0 0 ${badgeRing}px ${suitColor}, 0 0 0 ${badgeRing + 1}px ${tokenStrokeColor}`,
+                          width: tokenDiameter,
+                          height: tokenDiameter,
+                          backgroundColor: isActive ? suitColor : '#1c1b29',
+                          color: getTextColor(suitColor),
+                          boxShadow: `${isActive ? `0 0 8px ${suitColor}99` : `0 0 6px ${suitColor}66`}, 0 0 0 1px ${tokenStrokeColor}`,
                         }}
                       >
-                        {count}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-              </div>
-              {staminaCount > 0 && (
-                <div
-                  className="absolute left-1/2"
-                  style={{
-                    bottom: Math.max(4, Math.round(cardHeight * 0.06)),
-                    transform: 'translateX(-50%)',
-                  }}
-                >
-                  <div
-                    className="flex items-center justify-center"
-                    style={{ gap: staminaGap }}
-                  >
-                    {Array.from({ length: staminaCount }).map((_, index) => {
-                      const usedCount = Math.max(0, staminaCount - Math.max(0, staminaCurrent));
-                      const isEmpty = index < usedCount;
-                      return (
+                        {getSuitDisplay(suit, showGraphics)}
+                      </div>
+                      {isActive && count > 1 && (
                         <span
-                          key={`sta-${index}`}
+                          className="absolute rounded-full font-bold flex items-center justify-center"
                           style={{
-                            width: staminaPipSize,
-                            height: staminaPipSize,
-                            borderRadius: '999px',
-                            border: `1.5px solid ${isEmpty ? 'rgba(127, 219, 202, 0.35)' : '#7fdbca'}`,
-                            backgroundColor: isEmpty ? 'transparent' : '#7fdbca',
-                            boxShadow: isEmpty ? 'none' : '0 0 6px rgba(127, 219, 202, 0.6)',
-                            display: 'inline-block',
+                            top: -badgeOffset,
+                            right: -badgeOffset,
+                            width: badgeSize,
+                            height: badgeSize,
+                            fontSize: Math.max(8, Math.round(badgeSize * 0.6)),
+                            backgroundColor: suitColor,
+                            color: '#0a0a0a',
+                            boxShadow: `0 0 8px ${suitColor}99, 0 0 0 ${badgeRing}px ${suitColor}, 0 0 0 ${badgeRing + 1}px ${tokenStrokeColor}`,
                           }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+          )}
+          {actor && (
+            <div
+              className="absolute left-1/2"
+              style={{
+                bottom: Math.max(4, Math.round(cardHeight * 0.06)),
+                transform: 'translateX(-50%)',
+                zIndex: 20,
+              }}
+            >
+              <div
+                className="rounded-full border border-game-teal/60 bg-game-bg-dark/80 text-game-teal font-bold tracking-[2px]"
+                style={{
+                  padding: `${comboBadgePaddingY}px ${comboBadgePaddingX}px`,
+                  fontSize: comboBadgeFont,
+                  boxShadow: '0 0 10px rgba(127, 219, 202, 0.45)',
+                }}
+              >
+                {comboCount ?? 0}
+              </div>
+            </div>
+          )}
         </motion.div>
       </Tooltip>
               {false && actorOrimDisplay.length > 0 && ( // TEMP: hide orim presentation while iterating on new card/orim UI

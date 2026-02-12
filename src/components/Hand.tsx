@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Card as CardType, Element, InteractionMode, OrimDefinition } from '../engine/types';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
 import { Card } from './Card';
+import { useCardScale } from '../contexts/CardScaleContext';
 
 interface HandProps {
   cards: CardType[];
@@ -64,8 +65,10 @@ export const Hand = memo(function Hand({
   orimDefinitions,
 }: HandProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const cardWidth = CARD_SIZE.width * cardScale;
-  const cardHeight = CARD_SIZE.height * cardScale;
+  const globalScale = useCardScale();
+  const effectiveScale = cardScale * globalScale;
+  const cardWidth = CARD_SIZE.width * effectiveScale;
+  const cardHeight = CARD_SIZE.height * effectiveScale;
   const minCenterDistance = cardWidth;
   const maxCenterDistance = cardWidth * 1.5;
   const positions = useMemo(

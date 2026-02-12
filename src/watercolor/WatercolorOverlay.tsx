@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import type { CSSProperties } from 'react';
 import type { WatercolorConfig } from './types';
 import { useWatercolorEnabled } from './useWatercolorEnabled';
@@ -7,6 +7,10 @@ interface WatercolorOverlayProps {
   config: WatercolorConfig;
   className?: string;
   style?: CSSProperties;
+}
+
+export interface WatercolorOverlayHandle {
+  getBlooms: () => Bloom[];
 }
 
 type Bloom = {
@@ -36,11 +40,60 @@ type OverlayRegistration = {
   getGlowStrength: () => number;
   getActive: () => boolean;
   clear: () => void;
+  ctx: CanvasRenderingContext2D | null;
 };
 
 const MAX_BLOOMS = 64;
-const TARGET_FPS = 30;
-const FRAME_INTERVAL_MS = 1000 / TARGET_FPS;
+const BASE_FRAME_INTERVAL_MS = 1000 / 60;
+const DRAG_DEGRADED_MIN_FRAME_INTERVAL_MS = 1000 / 22;
+const WE_DRAG_DEGRADE_DISABLE_KEY = 'exploritaire.we.dragDegradeDisabled';
+const DRAG_GLOW_FACTOR = 0.45;
+const DRAG_GRAIN_INTENSITY_FACTOR = 0.55;
+const DRAG_GRAIN_FREQUENCY_FACTOR = 0.85;
+
+let watercolorInteractionDegraded = false;
+
+function getFrameIntervalMs(overlayCount: number): number {
+  if (overlayCount >= 40) return 1000 / 24;
+  if (overlayCount >= 20) return 1000 / 30;
+  return BASE_FRAME_INTERVAL_MS;
+}
+
+function readDragDegradeDisabledFlag(): boolean {
+  if (typeof window === 'undefined') return false;
+  const globalOverride = (window as any).__EXPLORITAIRE_DISABLE_WE_DRAG_DEGRADE__;
+  if (typeof globalOverride === 'boolean') return globalOverride;
+  try {
+    return window.localStorage.getItem(WE_DRAG_DEGRADE_DISABLE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setWatercolorInteractionDegraded(enabled: boolean) {
+  watercolorInteractionDegraded = enabled;
+  ensureOverlayLoop();
+}
+
+export function setWatercolorDragDegradeDisabled(disabled: boolean) {
+  if (typeof window !== 'undefined') {
+    (window as any).__EXPLORITAIRE_DISABLE_WE_DRAG_DEGRADE__ = disabled;
+    try {
+      if (disabled) {
+        window.localStorage.setItem(WE_DRAG_DEGRADE_DISABLE_KEY, '1');
+      } else {
+        window.localStorage.removeItem(WE_DRAG_DEGRADE_DISABLE_KEY);
+      }
+    } catch {
+      // Ignore storage failures in restricted environments.
+    }
+  }
+  ensureOverlayLoop();
+}
+
+export function isWatercolorDragDegradeDisabled(): boolean {
+  return readDragDegradeDisabledFlag();
+}
 
 const vertexShaderSource = `
   attribute vec2 position;
@@ -292,11 +345,11 @@ function createWebglRenderer(canvas: HTMLCanvasElement): Renderer {
       return;
     }
 
-    const bloomData = new Float32Array(MAX_BLOOMS * 4);
-    const colorData = new Float32Array(MAX_BLOOMS * 3);
-    const shapesData = new Float32Array(MAX_BLOOMS);
+    const bloomData = arrayPool.acquire(MAX_BLOOMS * 4);
+    const colorData = arrayPool.acquire(MAX_BLOOMS * 3);
+    const shapesData = arrayPool.acquire(MAX_BLOOMS);
     const bloomCount = Math.min(blooms.length, MAX_BLOOMS);
-    const innerData = new Float32Array(MAX_BLOOMS * 2);
+    const innerData = arrayPool.acquire(MAX_BLOOMS * 2);
 
     for (let i = 0; i < bloomCount; i += 1) {
       const bloom = blooms[i];
@@ -334,6 +387,12 @@ function createWebglRenderer(canvas: HTMLCanvasElement): Renderer {
     }
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    // Return arrays to pool for reuse
+    arrayPool.release(bloomData);
+    arrayPool.release(colorData);
+    arrayPool.release(shapesData);
+    arrayPool.release(innerData);
   };
 
   const resize = (width: number, height: number, dpr: number) => {
@@ -443,6 +502,40 @@ let overlayLoopHandle: number | null = null;
 let lastFrameTime = 0;
 const overlays = new Set<OverlayRegistration>();
 
+// Typed array pool to reduce GC pressure
+class TypedArrayPool {
+  private floatArrays: Map<number, Float32Array[]> = new Map();
+
+  acquire(size: number): Float32Array {
+    const key = size;
+    if (!this.floatArrays.has(key)) {
+      this.floatArrays.set(key, []);
+    }
+    const pool = this.floatArrays.get(key)!;
+    const array = pool.pop();
+    if (array) {
+      // Zero out the array before reusing
+      array.fill(0);
+      return array;
+    }
+    return new Float32Array(size);
+  }
+
+  release(array: Float32Array) {
+    const key = array.length;
+    if (!this.floatArrays.has(key)) {
+      this.floatArrays.set(key, []);
+    }
+    const pool = this.floatArrays.get(key)!;
+    // Keep up to 10 arrays of each size in the pool
+    if (pool.length < 10) {
+      pool.push(array);
+    }
+  }
+}
+
+const arrayPool = new TypedArrayPool();
+
 function getSharedRenderer(): SharedRenderer {
   if (sharedRenderer) return sharedRenderer;
   const canvas = document.createElement('canvas');
@@ -472,48 +565,75 @@ function renderAllOverlays(time: number) {
     return;
   }
 
-  if (time - lastFrameTime < FRAME_INTERVAL_MS) {
-    overlayLoopHandle = requestAnimationFrame(renderAllOverlays);
-    return;
-  }
-  lastFrameTime = time;
+  const dragDegradeActive = watercolorInteractionDegraded && !readDragDegradeDisabledFlag();
+  const frameIntervalMs = dragDegradeActive
+    ? Math.max(getFrameIntervalMs(overlays.size), DRAG_DEGRADED_MIN_FRAME_INTERVAL_MS)
+    : getFrameIntervalMs(overlays.size);
+  const timeSinceLastFrame = time - lastFrameTime;
+  const isTimeToRender = timeSinceLastFrame >= frameIntervalMs;
 
-  const { canvas: sharedCanvas, renderer } = getSharedRenderer();
-  const timeSeconds = time * 0.001;
+  if (isTimeToRender) {
+    lastFrameTime = time;
 
-  overlays.forEach((overlay) => {
-    if (!overlay.getActive()) {
-      overlay.clear();
-      return;
-    }
-    const rect = overlay.canvas.getBoundingClientRect();
-    if (rect.width <= 1 || rect.height <= 1) return;
+    const { canvas: sharedCanvas, renderer } = getSharedRenderer();
+    const timeSeconds = time * 0.001;
     const dpr = window.devicePixelRatio || 1;
+    let lastResizeWidth = -1;
+    let lastResizeHeight = -1;
 
-    renderer.resize(rect.width, rect.height, dpr);
-    renderer.render(timeSeconds, overlay.getBlooms(), overlay.getGrain(), overlay.getGlowStrength());
+    overlays.forEach((overlay) => {
+      if (!overlay.getActive()) {
+        overlay.clear();
+        return;
+      }
+      const cssWidth = overlay.canvas.clientWidth;
+      const cssHeight = overlay.canvas.clientHeight;
+      if (cssWidth <= 1 || cssHeight <= 1) return;
+      const targetWidth = Math.floor(cssWidth * dpr);
+      const targetHeight = Math.floor(cssHeight * dpr);
+      if (overlay.canvas.width !== targetWidth || overlay.canvas.height !== targetHeight) {
+        overlay.canvas.width = targetWidth;
+        overlay.canvas.height = targetHeight;
+      }
+      if (lastResizeWidth !== targetWidth || lastResizeHeight !== targetHeight) {
+        renderer.resize(cssWidth, cssHeight, dpr);
+        lastResizeWidth = targetWidth;
+        lastResizeHeight = targetHeight;
+      }
+      const grain = overlay.getGrain();
+      const effectiveGrain = dragDegradeActive && grain.enabled
+        ? {
+          ...grain,
+          intensity: grain.intensity * DRAG_GRAIN_INTENSITY_FACTOR,
+          frequency: grain.frequency * DRAG_GRAIN_FREQUENCY_FACTOR,
+        }
+        : grain;
+      const effectiveGlow = dragDegradeActive
+        ? overlay.getGlowStrength() * DRAG_GLOW_FACTOR
+        : overlay.getGlowStrength();
+      renderer.render(timeSeconds, overlay.getBlooms(), effectiveGrain, effectiveGlow);
+      const ctx = overlay.ctx;
+      if (!ctx) return;
+      ctx.clearRect(0, 0, targetWidth, targetHeight);
+      ctx.drawImage(sharedCanvas, 0, 0, targetWidth, targetHeight);
+    });
+  }
 
-    const targetWidth = Math.floor(rect.width * dpr);
-    const targetHeight = Math.floor(rect.height * dpr);
-    if (overlay.canvas.width !== targetWidth || overlay.canvas.height !== targetHeight) {
-      overlay.canvas.width = targetWidth;
-      overlay.canvas.height = targetHeight;
-    }
-
-    const ctx = overlay.canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, overlay.canvas.width, overlay.canvas.height);
-    ctx.drawImage(sharedCanvas, 0, 0, overlay.canvas.width, overlay.canvas.height);
-  });
-
-  overlayLoopHandle = requestAnimationFrame(renderAllOverlays);
+  // Only reschedule if we have active overlays AND haven't exceeded idle timeout
+  if (overlays.size > 0 && timeSinceLastFrame < frameIntervalMs * 2) {
+    overlayLoopHandle = requestAnimationFrame(renderAllOverlays);
+  } else if (overlays.size > 0) {
+    // If we've been idle for 2+ frames, try again next frame but don't lock in the loop
+    overlayLoopHandle = requestAnimationFrame(renderAllOverlays);
+  }
 }
 
-export const WatercolorOverlay = memo(function WatercolorOverlay({
+export const WatercolorOverlay = memo(forwardRef<WatercolorOverlayHandle, WatercolorOverlayProps>(
+function WatercolorOverlay({
   config,
   className,
   style,
-}: WatercolorOverlayProps) {
+}, ref) {
   const watercolorEnabled = useWatercolorEnabled();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const blooms = useMemo(() => buildBlooms(config), [config]);
@@ -521,6 +641,10 @@ export const WatercolorOverlay = memo(function WatercolorOverlay({
   const grainRef = useRef(config.grain);
   const activeRef = useRef(true);
   const glowStrengthRef = useRef(0.6);
+
+  useImperativeHandle(ref, () => ({
+    getBlooms: () => bloomsRef.current,
+  }), []);
 
   useEffect(() => {
     bloomsRef.current = blooms;
@@ -539,14 +663,15 @@ export const WatercolorOverlay = memo(function WatercolorOverlay({
       console.warn('[WatercolorOverlay] No canvas ref');
       return;
     }
+    const ctx = canvas.getContext('2d');
     const registration: OverlayRegistration = {
       canvas,
+      ctx,
       getBlooms: () => bloomsRef.current,
       getGrain: () => grainRef.current,
       getGlowStrength: () => glowStrengthRef.current,
       getActive: () => activeRef.current,
       clear: () => {
-        const ctx = canvas.getContext('2d');
         if (!ctx) return;
         if (canvas.width > 0 && canvas.height > 0) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -559,6 +684,12 @@ export const WatercolorOverlay = memo(function WatercolorOverlay({
 
     return () => {
       overlays.delete(registration);
+      // If no more overlays, cancel the loop and clean up
+      if (overlays.size === 0 && overlayLoopHandle !== null) {
+        cancelAnimationFrame(overlayLoopHandle);
+        overlayLoopHandle = null;
+        releaseSharedRenderer();
+      }
     };
   }, []);
 
@@ -581,4 +712,4 @@ export const WatercolorOverlay = memo(function WatercolorOverlay({
       />
     </div>
   );
-});
+}));

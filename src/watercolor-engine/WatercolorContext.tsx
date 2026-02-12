@@ -5,8 +5,31 @@
  * enabling any component to trigger splashes and paint marks.
  */
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { WatercolorEngineAPI, SplashConfig } from './types';
+
+// Global paint-mark subscriber set – lets any component react when a mark is baked
+type PaintMarkListener = (count: number) => void;
+const paintMarkListeners = new Set<PaintMarkListener>();
+
+/** Called by WatercolorCanvas every time a mark is baked to the persistent layer */
+export function notifyPaintMarkAdded(count: number) {
+  paintMarkListeners.forEach((fn) => fn(count));
+}
+
+/**
+ * Returns a reactive paint-mark count that updates whenever a new mark lands.
+ * Components can use this as a dependency to re-run effects tied to the paint state.
+ */
+export function usePaintMarkCount(): number {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const listener: PaintMarkListener = (c) => setCount(c);
+    paintMarkListeners.add(listener);
+    return () => { paintMarkListeners.delete(listener); };
+  }, []);
+  return count;
+}
 
 interface WatercolorEngineContextValue {
   /** Engine API (null if not ready) */

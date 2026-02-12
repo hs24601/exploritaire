@@ -32,6 +32,7 @@ import type {
   WatercolorEngineState,
   SplashConfig,
   PaintMarkConfig,
+  PaintMarkRecord,
   PaperConfig,
   ActiveSplash,
   SplashParticle,
@@ -44,10 +45,22 @@ import {
 } from './types';
 import { getSplatterPattern } from './splatterPatterns';
 import type { SplatterPatternArc } from './splatterPatterns';
-import { useRegisterWatercolorEngine } from './WatercolorContext';
+import { useRegisterWatercolorEngine, notifyPaintMarkAdded } from './WatercolorContext';
 import { pixelArtVertexShader, pixelArtFragmentShader } from './shaders/PixelArtShader';
 
-console.log('[WatercolorCanvas] module loaded');
+const WATERCOLOR_ENGINE_DEBUG_LOGS = false;
+const debugLog = (...args: unknown[]) => {
+  if (WATERCOLOR_ENGINE_DEBUG_LOGS) {
+    console.log(...args);
+  }
+};
+const debugWarn = (...args: unknown[]) => {
+  if (WATERCOLOR_ENGINE_DEBUG_LOGS) {
+    console.warn(...args);
+  }
+};
+
+debugLog('[WatercolorCanvas] module loaded');
 
 // Extend PixiJS components for JSX usage
 extend({ Container, Graphics, Sprite });
@@ -362,18 +375,79 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
     const appRef = useRef<PixiApplication | null>(null);
     const persistentTextureRef = useRef<RenderTexture | null>(null);
     const persistentContainerRef = useRef<Container | null>(null);
+    // Registry of baked paint marks for lighting integration
+    const paintMarksRegistryRef = useRef<PaintMarkRecord[]>([]);
     const persistentSpriteRef = useRef<Sprite | null>(null);
     const pixelArtFilterRef = useRef<Filter | null>(null);
+    const paperGrainTextureRef = useRef<RenderTexture | null>(null);
+    const cachedPaperConfigRef = useRef<{ baseColor: number; grainIntensity: number } | null>(null);
 
     // Register with context when available
     const registerEngine = useRegisterWatercolorEngine();
 
+    // Generate or reuse cached paper grain texture
+    const generatePaperGrainTexture = useCallback((app: PixiApplication) => {
+      const baseColor = paperConfig.baseColor || DEFAULT_PAPER_CONFIG.baseColor;
+      let baseHex = cssToHex(baseColor);
+      if (Number.isNaN(baseHex)) {
+        baseHex = cssToHex(DEFAULT_PAPER_CONFIG.baseColor);
+      }
+
+      const grainIntensity = Number.isFinite(paperConfig.grainIntensity)
+        ? paperConfig.grainIntensity
+        : DEFAULT_PAPER_CONFIG.grainIntensity;
+
+      // Check if we can reuse cached texture
+      const cacheKey = { baseColor: baseHex, grainIntensity };
+      if (
+        paperGrainTextureRef.current &&
+        cachedPaperConfigRef.current &&
+        cachedPaperConfigRef.current.baseColor === cacheKey.baseColor &&
+        cachedPaperConfigRef.current.grainIntensity === cacheKey.grainIntensity
+      ) {
+        return paperGrainTextureRef.current;
+      }
+
+      // Generate new grain texture
+      const g = new Graphics();
+      g.setFillStyle({ color: baseHex });
+      g.rect(0, 0, width, height);
+      g.fill();
+
+      // Add grain noise
+      const grainCount = Math.floor(width * height * grainIntensity * 0.0001);
+      for (let i = 0; i < grainCount; i += 1) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const alpha = Math.random() * 0.1;
+        const size = 1 + Math.random() * 2;
+        const brightness = Math.random() > 0.5 ? 0xffffff : 0x000000;
+
+        g.setFillStyle({ color: brightness, alpha });
+        g.circle(x, y, size);
+        g.fill();
+      }
+
+      // Destroy old texture if it exists
+      if (paperGrainTextureRef.current) {
+        paperGrainTextureRef.current.destroy();
+      }
+
+      // Create texture from graphics
+      const texture = app.renderer.generateTexture(g);
+      g.destroy();
+
+      paperGrainTextureRef.current = texture;
+      cachedPaperConfigRef.current = cacheKey;
+      return texture;
+    }, [width, height, paperConfig]);
+
     // API methods
   const splash = useCallback((config: SplashConfig) => {
-      console.log('[WatercolorCanvas] splash() called with config:', config);
-      console.log('[WatercolorCanvas] splash canvas size', width, height);
+      debugLog('[WatercolorCanvas] splash() called with config:', config);
+      debugLog('[WatercolorCanvas] splash canvas size', width, height);
       if (config.origin.x < 0 || config.origin.y < 0 || config.origin.x > width || config.origin.y > height) {
-        console.warn('[WatercolorCanvas] splash origin out of bounds', config.origin, 'size', { width, height });
+        debugWarn('[WatercolorCanvas] splash origin out of bounds', config.origin, 'size', { width, height });
       }
       const newSplash: ActiveSplash = {
         id: generateSplashId(),
@@ -462,7 +536,25 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
       container.removeChild(graphics);
       graphics.destroy();
 
-      setPaintMarkCount(prev => prev + 1);
+      // Record mark position for lighting integration (baseRadius already declared above)
+      paintMarksRegistryRef.current.push({
+        x: config.x,
+        y: config.y,
+        color: config.color,
+        radius: baseRadius,
+        alpha: config.alpha,
+      });
+
+      const nextCount = paintMarksRegistryRef.current.length;
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => {
+          notifyPaintMarkAdded(nextCount);
+          setPaintMarkCount(nextCount);
+        });
+      } else {
+        notifyPaintMarkAdded(nextCount);
+        setPaintMarkCount(nextCount);
+      }
     }, [luminous, luminousStrength]);
 
     const clearPaint = useCallback(() => {
@@ -475,8 +567,13 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
           clear: true,
         });
         emptyContainer.destroy();
+        paintMarksRegistryRef.current = [];
         setPaintMarkCount(0);
       }
+    }, []);
+
+    const getPaintMarks = useCallback((): PaintMarkRecord[] => {
+      return paintMarksRegistryRef.current;
     }, []);
 
     const getState = useCallback((): WatercolorEngineState => ({
@@ -497,6 +594,7 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
       clearPaint,
       getState,
       setPaperConfig: setPaperConfigFn,
+      getPaintMarks,
     });
 
     // Update API ref when callbacks change
@@ -507,8 +605,9 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
         clearPaint,
         getState,
         setPaperConfig: setPaperConfigFn,
+        getPaintMarks,
       };
-    }, [splash, addPaintMark, clearPaint, getState, setPaperConfigFn]);
+    }, [splash, addPaintMark, clearPaint, getState, setPaperConfigFn, getPaintMarks]);
 
     // Expose API via ref
     useImperativeHandle(ref, () => ({
@@ -530,11 +629,14 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
       // Create container for temporary render operations
       persistentContainerRef.current = new Container();
 
+      // Generate paper grain texture once at initialization
+      generatePaperGrainTexture(app);
+
       setReady(true);
-      console.log('[WatercolorCanvas] Engine ready, registering with context');
+      debugLog('[WatercolorCanvas] Engine ready, registering with context');
       onReady?.(api.current);
       registerEngine(api.current);
-    }, [width, height, onReady, registerEngine]);
+    }, [width, height, onReady, registerEngine, generatePaperGrainTexture]);
 
     // Clean up splashes that have completed
     useEffect(() => {
@@ -599,38 +701,6 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
       }
     }, [pixelArtEnabled, pixelSize]);
 
-    // Draw paper texture
-    const drawPaper = useCallback((g: Graphics) => {
-      g.clear();
-
-      // Base paper color
-      const baseColor = paperConfig.baseColor || DEFAULT_PAPER_CONFIG.baseColor;
-      let baseHex = cssToHex(baseColor);
-      if (Number.isNaN(baseHex)) {
-        baseHex = cssToHex(DEFAULT_PAPER_CONFIG.baseColor);
-      }
-      g.setFillStyle({ color: baseHex });
-      g.rect(0, 0, width, height);
-      g.fill();
-
-      // Add grain noise (simplified for now - will be enhanced with shader)
-      const grainIntensity = Number.isFinite(paperConfig.grainIntensity)
-        ? paperConfig.grainIntensity
-        : DEFAULT_PAPER_CONFIG.grainIntensity;
-      const grainCount = Math.floor(width * height * grainIntensity * 0.0001);
-      for (let i = 0; i < grainCount; i++) {
-        const x = Math.random() * width;
-        const y = Math.random() * height;
-        const alpha = Math.random() * 0.1;
-        const size = 1 + Math.random() * 2;
-        const brightness = Math.random() > 0.5 ? 0xffffff : 0x000000;
-
-        g.setFillStyle({ color: brightness, alpha });
-        g.circle(x, y, size);
-        g.fill();
-      }
-    }, [width, height, paperConfig]);
-
     return (
       <div
         className={className}
@@ -651,8 +721,12 @@ export const WatercolorCanvas = forwardRef<WatercolorCanvasHandle, WatercolorCan
           antialias={false}
           onInit={handleInit}
         >
-          {/* Paper texture layer */}
-          <pixiGraphics draw={drawPaper} />
+          {/* Paper grain texture layer - cached sprite */}
+          {paperGrainTextureRef.current && (
+            <pixiSprite
+              texture={paperGrainTextureRef.current}
+            />
+          )}
 
           {/* Persistent paint layer - rendered via sprite from RenderTexture */}
           {persistentTextureRef.current && (

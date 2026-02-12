@@ -11,6 +11,7 @@ import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { CARD_SIZE } from '../engine/constants';
 import { getActorDefinition } from '../engine/actors';
 import { NO_MOVES_BADGE_STYLE, NEON_COLORS } from '../utils/styles';
+import { useCardScale } from '../contexts/CardScaleContext';
 
 interface PlayingScreenProps {
   gameState: GameState;
@@ -54,7 +55,9 @@ export const PlayingScreen = memo(function PlayingScreen({
   actions,
 }: PlayingScreenProps) {
   const showGraphics = useGraphics();
-  const foundationOffset = CARD_SIZE.height * 1.25;
+  const globalCardScale = useCardScale();
+  const foundationCardScale = globalCardScale;
+  const foundationOffset = CARD_SIZE.height * foundationCardScale;
   const foundationOffsetAdjusted = cloudSightActive ? foundationOffset * 0.6 : foundationOffset;
   const foundationHasActor = (gameState.foundations[0]?.length ?? 0) > 0;
   const cloudSightActive = useMemo(() => {
@@ -108,7 +111,7 @@ export const PlayingScreen = memo(function PlayingScreen({
               onDragStart={handleDragStart}
               draggingCardId={dragState.isDragging ? dragState.card?.id : null}
               showGraphics={showGraphics}
-              cardScale={1.25}
+              cardScale={foundationCardScale}
               revealNextRow={cloudSightActive}
             />
           ))}
@@ -169,7 +172,7 @@ export const PlayingScreen = memo(function PlayingScreen({
                   orimDefinitions={gameState.orimDefinitions}
                   isPartied
                   showCompleteSticker={isWon}
-                  cardScale={1.25}
+                  cardScale={foundationCardScale}
                   comboCount={gameState.foundationCombos?.[idx] ?? 0}
                 />
               );

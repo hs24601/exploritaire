@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { Card as CardType, OrimDefinition } from '../engine/types';
 import { getRankDisplay } from '../engine/rules';
 import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT } from '../engine/constants';
+import { useCardScale } from '../contexts/CardScaleContext';
 import { CardFrame } from './card/CardFrame';
 import { Tooltip } from './Tooltip';
 import { neonGlow } from '../utils/styles';
@@ -94,7 +95,11 @@ export const Card = memo(function Card({
     ? (suitDisplayOverride
       ?? (isWaterElement ? 'W' : getSuitDisplay(card.suit, showGraphics)))
     : '';
-  const frameSize = size ?? CARD_SIZE;
+  const globalScale = useCardScale();
+  const frameSize = size ?? {
+    width: CARD_SIZE.width * globalScale,
+    height: CARD_SIZE.height * globalScale,
+  };
   const orimDisplay = card?.orimDisplay ?? [];
   const hasOrimSlots = orimDisplay.length > 0 || !!card?.orimSlots?.length;
   const orimSlots = card?.orimSlots ?? [];
@@ -236,6 +241,11 @@ export const Card = memo(function Card({
       style={{
         color: faceDown ? 'transparent' : (isDimmed ? `${suitColor}44` : suitColor),
         visibility: isDragging ? 'hidden' : 'visible',
+        // Prevent the browser from claiming touch gestures as scroll when the card
+        // is draggable. Without this, a downward drag on mobile lets the browser
+        // decide at touchstart time that it owns the gesture (before JS runs),
+        // resulting in pointercancel and the card snapping back to its origin.
+        touchAction: onDragStart && !faceDown ? 'none' : undefined,
         willChange: 'transform',
         imageRendering: 'crisp-edges',
       }}

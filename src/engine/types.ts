@@ -145,6 +145,7 @@ export interface Token {
 export interface GameState {
   tableaus: Card[][];
   foundations: Card[][];
+  enemyFoundations?: Card[][];
   stock: Card[];
   activeEffects: Effect[];
   turnCount: number;
@@ -181,7 +182,13 @@ export interface GameState {
   foundationCombos?: number[]; // Combo count per foundation this turn
   actorCombos?: Record<string, number>; // Combo count per actor this turn
   foundationTokens?: Record<Element, number>[]; // Tokens collected per foundation this turn
+  enemyFoundationCombos?: number[]; // Combo count per enemy foundation this turn
+  enemyFoundationTokens?: Record<Element, number>[]; // Tokens collected per enemy foundation this turn
   randomBiomeTurnNumber?: number; // Current turn number in random biome
+  randomBiomeActiveSide?: 'player' | 'enemy';
+  enemyDifficulty?: EnemyDifficulty;
+  enemyBackfillQueues?: Card[][]; // Pre-seeded backfill queues used on enemy turns
+  playtestVariant?: 'single-foundation' | 'party-foundations' | 'party-battle';
 }
 
 export interface Move {
@@ -200,6 +207,8 @@ export interface GameConfig {
   cardsPerTableau: number;
   foundationCount: number;
 }
+
+export type EnemyDifficulty = 'easy' | 'normal' | 'hard' | 'divine';
 
 export type TriggerTiming = 'equip' | 'play' | 'turn-start' | 'turn-end';
 
@@ -396,6 +405,7 @@ export interface BiomeDefinition {
   randomlyGenerated?: boolean; // Random tableau generation each turn
   infinite?: boolean; // Tableaus backfill with new random cards when cards are removed
   nodePattern?: string; // NodeEdgePattern ID (for node-edge biomes)
+  enemyDifficulty?: EnemyDifficulty;
   layout: BiomeLayout;
   rewards: BiomeReward;
   blueprintSpawn?: BiomeBlueprintSpawn;

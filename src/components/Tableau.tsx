@@ -36,11 +36,12 @@ export const Tableau = memo(function Tableau({
 }: TableauProps) {
   const isSelected = selectedCard?.tableauIndex === tableauIndex;
   const guidanceActive = guidanceMoves.length > 0;
-  const cardWidth = CARD_SIZE.width * cardScale;
-  const cardHeight = CARD_SIZE.height * cardScale;
+  const effectiveScale = cardScale;
+  const cardWidth = CARD_SIZE.width * effectiveScale;
+  const cardHeight = CARD_SIZE.height * effectiveScale;
   const revealOffset = revealNextRow ? Math.round(cardHeight * 0.18) + 5 : 0;
-  const stackStep = (revealNextRow ? 8 : 3) * cardScale;
-  const stackCap = (revealNextRow ? 80 : 20) * cardScale;
+  const stackStep = (revealNextRow ? 8 : 3) * effectiveScale;
+  const stackCap = (revealNextRow ? 80 : 20) * effectiveScale;
   const maxStackOffset = Math.min(Math.max(0, cards.length - 1) * stackStep, stackCap);
   const topVisibleIndex = (() => {
     if (!draggingCardId) return cards.length - 1;
@@ -69,7 +70,7 @@ export const Tableau = memo(function Tableau({
 
   return (
     <div
-      style={{ width: cardWidth, minHeight: cardHeight + maxStackOffset + revealOffset + 60 * cardScale }}
+      style={{ width: cardWidth, minHeight: cardHeight + maxStackOffset + revealOffset + 60 * effectiveScale }}
       className="relative"
     >
       {cards.map((card, index) => {

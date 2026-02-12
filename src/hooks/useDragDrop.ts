@@ -17,12 +17,18 @@ const initialDragState: DragState = {
   isDragging: false,
 };
 
-export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: number) => void) {
+export function useDragDrop(
+  onDrop: (tableauIndex: number, foundationIndex: number) => void,
+  paused = false
+) {
   const [dragState, setDragState] = useState<DragState>(initialDragState);
   const [lastDragEndAt, setLastDragEndAt] = useState(0);
   const dragStateRef = useRef(dragState);
   const onDropRef = useRef(onDrop);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const pendingPosRef = useRef<{ x: number; y: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const pausedRef = useRef(paused);
 
   useEffect(() => {
     dragStateRef.current = dragState;
@@ -32,6 +38,20 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
     onDropRef.current = onDrop;
   }, [onDrop]);
 
+  useEffect(() => {
+    pausedRef.current = paused;
+    if (!paused) return;
+    if (!dragStateRef.current.isDragging) return;
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    pendingPosRef.current = null;
+    dragStateRef.current = initialDragState;
+    setDragState(initialDragState);
+    setLastDragEndAt(Date.now());
+  }, [paused]);
+
   const startDrag = useCallback((
     card: Card,
     tableauIndex: number,
@@ -39,28 +59,46 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
     clientY: number,
     cardRect: DOMRect
   ) => {
+    if (pausedRef.current) return;
     const offset = {
       x: clientX - cardRect.left,
       y: clientY - cardRect.top,
     };
 
-    setDragState({
+    const next: DragState = {
       card,
       tableauIndex,
       position: { x: clientX - offset.x, y: clientY - offset.y },
       offset,
       isDragging: true,
-    });
+    };
+    // Sync the ref immediately — before React re-renders and before useEffect runs —
+    // so that pointermove / pointercancel / touchmove handlers see isDragging = true
+    // from the very first event after the drag begins.
+    dragStateRef.current = next;
+    setDragState(next);
   }, []);
 
   const updateDrag = useCallback((clientX: number, clientY: number) => {
-    setDragState((prev) => ({
-      ...prev,
-      position: {
-        x: clientX - prev.offset.x,
-        y: clientY - prev.offset.y,
-      },
-    }));
+    if (pausedRef.current) return;
+    pendingPosRef.current = { x: clientX, y: clientY };
+    if (rafRef.current !== null) return;
+    rafRef.current = window.requestAnimationFrame(() => {
+      rafRef.current = null;
+      const pending = pendingPosRef.current;
+      const current = dragStateRef.current;
+      if (!pending || !current.isDragging) return;
+      const nextX = pending.x - current.offset.x;
+      const nextY = pending.y - current.offset.y;
+      setDragState((prev) => {
+        if (!prev.isDragging) return prev;
+        if (prev.position.x === nextX && prev.position.y === nextY) return prev;
+        return {
+          ...prev,
+          position: { x: nextX, y: nextY },
+        };
+      });
+    });
   }, []);
 
   const endDrag = useCallback((clientX: number, clientY: number) => {
@@ -70,6 +108,11 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
       setDragState(initialDragState);
       return;
     }
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    pendingPosRef.current = null;
 
     const dropX = clientX;
     const dropY = clientY;
@@ -107,6 +150,12 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
   }, []);
 
   const cancelDrag = useCallback(() => {
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    pendingPosRef.current = null;
+    dragStateRef.current = initialDragState;
     setDragState(initialDragState);
     setLastDragEndAt(Date.now());
   }, []);
@@ -117,6 +166,8 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
 
   // Global mouse/touch move and up handlers
   useEffect(() => {
+    const supportsPointer = typeof window !== 'undefined' && 'PointerEvent' in window;
+
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragStateRef.current.isDragging) return;
       e.preventDefault();
@@ -152,6 +203,10 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
 
     const handlePointerMove = (e: PointerEvent) => {
       if (!dragStateRef.current.isDragging) return;
+      // Prevent the browser from claiming the gesture as a scroll while we own the drag.
+      // Without this, a downward swipe on mobile fires pointercancel (scroll wins) and
+      // snaps the card back to its origin before it ever leaves the source column.
+      e.preventDefault();
       updateDrag(e.clientX, e.clientY);
     };
 
@@ -165,24 +220,44 @@ export function useDragDrop(onDrop: (tableauIndex: number, foundationIndex: numb
       cancelDrag();
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
-    document.addEventListener('touchend', handleTouchEnd, { capture: true });
-    document.addEventListener('touchcancel', handleTouchCancel, { capture: true });
-    document.addEventListener('pointermove', handlePointerMove, { capture: true });
-    document.addEventListener('pointerup', handlePointerUp, { capture: true });
-    document.addEventListener('pointercancel', handlePointerCancel, { capture: true });
+    // On touch devices that support Pointer Events, the browser still fires the
+    // underlying touchmove stream and uses it to decide whether to scroll.
+    // preventDefault() on pointermove has NO effect on this decision — only
+    // preventDefault() on touchmove suppresses scroll. Without this, any vertical
+    // drag fires pointercancel (browser claims the gesture for scroll) and the
+    // card snaps back to its origin.
+    const handleTouchMoveSuppressScroll = (e: TouchEvent) => {
+      if (dragStateRef.current.isDragging) {
+        e.preventDefault();
+      }
+    };
+
+    if (supportsPointer) {
+      document.addEventListener('pointermove', handlePointerMove, { capture: true, passive: false });
+      document.addEventListener('pointerup', handlePointerUp, { capture: true });
+      document.addEventListener('pointercancel', handlePointerCancel, { capture: true });
+      document.addEventListener('touchmove', handleTouchMoveSuppressScroll, { passive: false, capture: true });
+    } else {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
+      document.addEventListener('touchend', handleTouchEnd, { capture: true });
+      document.addEventListener('touchcancel', handleTouchCancel, { capture: true });
+    }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove, { capture: true });
-      document.removeEventListener('touchend', handleTouchEnd, { capture: true });
-      document.removeEventListener('touchcancel', handleTouchCancel, { capture: true });
-      document.removeEventListener('pointermove', handlePointerMove, { capture: true });
-      document.removeEventListener('pointerup', handlePointerUp, { capture: true });
-      document.removeEventListener('pointercancel', handlePointerCancel, { capture: true });
+      if (supportsPointer) {
+        document.removeEventListener('pointermove', handlePointerMove, { capture: true });
+        document.removeEventListener('pointerup', handlePointerUp, { capture: true });
+        document.removeEventListener('pointercancel', handlePointerCancel, { capture: true });
+        document.removeEventListener('touchmove', handleTouchMoveSuppressScroll, { capture: true });
+      } else {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove, { capture: true });
+        document.removeEventListener('touchend', handleTouchEnd, { capture: true });
+        document.removeEventListener('touchcancel', handleTouchCancel, { capture: true });
+      }
     };
   }, [updateDrag, endDrag, cancelDrag]);
 

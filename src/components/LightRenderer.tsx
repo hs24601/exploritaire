@@ -10,6 +10,7 @@ interface ShadowCanvasProps {
   lightRadius: number;
   lightIntensity: number;
   lightColor: string;
+  ambientDarkness?: number;
   flickerSpeed?: number;
   flickerAmount?: number;
   actorLights?: Array<{
@@ -18,6 +19,7 @@ interface ShadowCanvasProps {
     radius: number;
     intensity: number;
     color: string;
+    castShadows?: boolean; // defaults true; set false for lights that glow without shadow casting
     flicker?: {
       enabled: boolean;
       speed: number;
@@ -53,6 +55,7 @@ export const ShadowCanvas = memo(function ShadowCanvas({
   lightRadius,
   lightIntensity,
   lightColor,
+  ambientDarkness = 0.93,
   flickerSpeed = 0.5,
   flickerAmount = 0.1,
   actorLights = [],
@@ -76,11 +79,11 @@ export const ShadowCanvas = memo(function ShadowCanvas({
 
   // Store latest props in a ref so the RAF loop always reads current values
   const dataRef = useRef({
-    lightX, lightY, lightRadius, lightIntensity, lightColor,
+    lightX, lightY, lightRadius, lightIntensity, lightColor, ambientDarkness,
     flickerSpeed, flickerAmount, actorLights, blockers, actorGlows, worldWidth, worldHeight, tileSize,
   });
   dataRef.current = {
-    lightX, lightY, lightRadius, lightIntensity, lightColor,
+    lightX, lightY, lightRadius, lightIntensity, lightColor, ambientDarkness,
     flickerSpeed, flickerAmount, actorLights, blockers, actorGlows, worldWidth, worldHeight, tileSize,
   };
 
@@ -98,8 +101,17 @@ export const ShadowCanvas = memo(function ShadowCanvas({
 
     let animId: number;
     const t0 = performance.now();
+    // Throttle to 30fps – shadows are mostly static so 30fps is imperceptible,
+    // and halves the Canvas 2D destination-out compositing cost.
+    const FRAME_MS = 1000 / 30;
+    let lastRender = 0;
 
     const render = (now: number) => {
+      if (now - lastRender < FRAME_MS) {
+        animId = requestAnimationFrame(render);
+        return;
+      }
+      lastRender = now;
       const d = dataRef.current;
       const elapsed = (now - t0) / 1000;
 
@@ -178,7 +190,8 @@ export const ShadowCanvas = memo(function ShadowCanvas({
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, width, height);
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = 'rgba(8, 8, 24, 0.93)';
+      const darkness = Math.min(1, Math.max(0.2, d.ambientDarkness ?? 0.93));
+      ctx.fillStyle = `rgba(8, 8, 24, ${darkness})`;
       ctx.fillRect(0, 0, width, height);
 
       // 2) Erase lit areas inside visibility polygons
@@ -192,26 +205,12 @@ export const ShadowCanvas = memo(function ShadowCanvas({
         lightFlicker?: { enabled: boolean; speed: number; amount: number }
       ) => {
         if (screenRadius <= 0 || lightIntensity <= 0) return;
-        const lightKey = `${screenX},${screenY},${width},${height},${bKey}`;
-        const lightPolygon = lightKey === polyCache.current.key
-          ? polygon
-          : computeVisibilityPolygon(screenX, screenY, visibilityBlockers, width, height);
-        if (lightPolygon.length <= 2) return;
 
         let finalIntensity = lightIntensity;
         if (lightFlicker?.enabled) {
           const flickerOffset = Math.sin(elapsed * lightFlicker.speed * 10) * lightFlicker.amount;
           finalIntensity = Math.min(1, lightIntensity * (1 + flickerOffset));
         }
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(lightPolygon[0].x, lightPolygon[0].y);
-        for (let i = 1; i < lightPolygon.length; i++) {
-          ctx.lineTo(lightPolygon[i].x, lightPolygon[i].y);
-        }
-        ctx.closePath();
-        ctx.clip();
 
         const grad = ctx.createRadialGradient(
           screenX, screenY, 0,
@@ -222,6 +221,32 @@ export const ShadowCanvas = memo(function ShadowCanvas({
         grad.addColorStop(0.75, `rgba(255,255,255,${finalIntensity * 0.2})`);
         grad.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = grad;
+
+        // Fast path: no blockers → skip polygon raycasting and canvas clip.
+        // The gradient already fades to alpha=0 at the radius, so no clip needed.
+        if (visibilityBlockers.length === 0) {
+          ctx.fillRect(
+            screenX - screenRadius, screenY - screenRadius,
+            screenRadius * 2, screenRadius * 2,
+          );
+          return;
+        }
+
+        // Slow path: clip to visibility polygon so light doesn't bleed through walls.
+        const lightKey = `${screenX},${screenY},${width},${height},${bKey}`;
+        const lightPolygon = lightKey === polyCache.current.key
+          ? polygon
+          : computeVisibilityPolygon(screenX, screenY, visibilityBlockers, width, height);
+        if (lightPolygon.length <= 2) return;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(lightPolygon[0].x, lightPolygon[0].y);
+        for (let i = 1; i < lightPolygon.length; i++) {
+          ctx.lineTo(lightPolygon[i].x, lightPolygon[i].y);
+        }
+        ctx.closePath();
+        ctx.clip();
         ctx.fillRect(0, 0, width, height);
         ctx.restore();
       };
@@ -314,6 +339,14 @@ export const ShadowCanvas = memo(function ShadowCanvas({
         const shadowMin = 0.25;
         const shadowMax = 3;
         const screenTileSize = d.tileSize * scale;
+
+        // Pseudo-random seed based on elapsed time for consistent scatter
+        const seed = elapsed * 100;
+        const pseudoRandom = (idx: number) => {
+          const x = Math.sin(seed + idx * 12.9898) * 43758.5453;
+          return x - Math.floor(x);
+        };
+
         for (const blocker of screenBlockers) {
           if (
             lightX >= blocker.x &&
@@ -325,31 +358,46 @@ export const ShadowCanvas = memo(function ShadowCanvas({
           }
           const heightValue = clampShadowValue(blocker.castHeight);
           const softnessValue = clampShadowValue(blocker.softness);
-          const shadowStrength = (softnessValue / 9) * Math.max(0.25, intensityValue);
+        const darknessScale = 0.6 + darkness * 0.8;
+        const shadowStrength = (softnessValue / 9) * Math.max(0.25, intensityValue) * darknessScale;
           const heightRatio = (heightValue - 1) / 8;
           const shadowLength = screenTileSize * (shadowMin + heightRatio * (shadowMax - shadowMin));
           if (shadowLength <= 1) continue;
 
           const quad = buildShadowQuad(blocker, lightX, lightY, shadowLength);
+
+          // Add scatter/noise to far edge for feathering (not near edge)
+          const scatterAmount = 4;
+          const quad0 = { x: quad[0].x, y: quad[0].y };
+          const quad1 = { x: quad[1].x, y: quad[1].y };
+          const quad2 = {
+            x: quad[2].x + (pseudoRandom(0) - 0.5) * scatterAmount,
+            y: quad[2].y + (pseudoRandom(1) - 0.5) * scatterAmount
+          };
+          const quad3 = {
+            x: quad[3].x + (pseudoRandom(2) - 0.5) * scatterAmount,
+            y: quad[3].y + (pseudoRandom(3) - 0.5) * scatterAmount
+          };
+
           const nearMid = {
-            x: (quad[0].x + quad[1].x) / 2,
-            y: (quad[0].y + quad[1].y) / 2,
+            x: (quad0.x + quad1.x) / 2,
+            y: (quad0.y + quad1.y) / 2,
           };
           const farMid = {
-            x: (quad[2].x + quad[3].x) / 2,
-            y: (quad[2].y + quad[3].y) / 2,
+            x: (quad2.x + quad3.x) / 2,
+            y: (quad2.y + quad3.y) / 2,
           };
           const alpha = 0.12 + shadowStrength * 0.55;
-          const edgeStop = 0.25 + shadowStrength * 0.55;
+          const edgeStop = Math.min(0.95, 0.25 + shadowStrength * 0.55);
           const grad = ctx.createLinearGradient(nearMid.x, nearMid.y, farMid.x, farMid.y);
           grad.addColorStop(0, `rgba(0,0,0,${alpha})`);
           grad.addColorStop(edgeStop, `rgba(0,0,0,${alpha * 0.6})`);
           grad.addColorStop(1, 'rgba(0,0,0,0)');
           ctx.beginPath();
-          ctx.moveTo(quad[0].x, quad[0].y);
-          ctx.lineTo(quad[1].x, quad[1].y);
-          ctx.lineTo(quad[2].x, quad[2].y);
-          ctx.lineTo(quad[3].x, quad[3].y);
+          ctx.moveTo(quad0.x, quad0.y);
+          ctx.lineTo(quad1.x, quad1.y);
+          ctx.lineTo(quad2.x, quad2.y);
+          ctx.lineTo(quad3.x, quad3.y);
           ctx.closePath();
           ctx.fillStyle = grad;
           ctx.fill();
@@ -359,6 +407,7 @@ export const ShadowCanvas = memo(function ShadowCanvas({
       drawShadowsForLight(lightScreenX, lightScreenY, d.lightRadius * scale, intensity);
 
       for (const actorLight of d.actorLights) {
+        if (actorLight.castShadows === false) continue;
         const actorScreenX = offsetX + actorLight.x * scale;
         const actorScreenY = offsetY + actorLight.y * scale;
         drawShadowsForLight(actorScreenX, actorScreenY, actorLight.radius * scale, actorLight.intensity);

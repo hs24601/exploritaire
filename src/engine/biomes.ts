@@ -180,6 +180,7 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
     seed: 'RANDOM_WILDS_001',
     randomlyGenerated: true,
     infinite: true,
+    enemyDifficulty: 'normal',
     layout: { tableaus: [], elements: [] },
     rewards: { cards: [] },
     requiredMoves: 0,

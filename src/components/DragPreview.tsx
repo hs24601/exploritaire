@@ -4,6 +4,7 @@ import { useGraphics } from '../contexts/GraphicsContext';
 import type { Card as CardType } from '../engine/types';
 import { getRankDisplay } from '../engine/rules';
 import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT } from '../engine/constants';
+import { useCardScale } from '../contexts/CardScaleContext';
 import { CardFrame } from './card/CardFrame';
 
 interface DragPreviewProps {
@@ -19,11 +20,14 @@ function clamp(value: number, min: number, max: number) {
 
 export const DragPreview = memo(function DragPreview({ card, position, offset, showText }: DragPreviewProps) {
   const showGraphics = useGraphics();
+  const globalScale = useCardScale();
+  const cardWidth = CARD_SIZE.width * globalScale;
+  const cardHeight = CARD_SIZE.height * globalScale;
   const suitColor = SUIT_COLORS[card.suit];
   const suitDisplay = getSuitDisplay(card.suit, showGraphics);
   const hasOrimSlots = !!card.orimSlots?.length;
   const orimSlots = card.orimSlots ?? [];
-  const orimSlotSize = Math.max(6, Math.round(CARD_SIZE.width * 0.16));
+  const orimSlotSize = Math.max(6, Math.round(cardWidth * 0.16));
   const [rotation, setRotation] = useState(0);
   const lastRef = useRef<{ x: number; y: number; t: number } | null>(null);
 
@@ -31,7 +35,7 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
     const now = performance.now();
     const pointerX = position.x + offset.x;
     const pointerY = position.y + offset.y;
-    const grabTilt = ((offset.x - CARD_SIZE.width / 2) / CARD_SIZE.width) * -10;
+    const grabTilt = ((offset.x - cardWidth / 2) / cardWidth) * -10;
     const last = lastRef.current;
     if (last) {
       const dt = Math.max(16, now - last.t);
@@ -52,8 +56,8 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
         position: 'fixed',
         left: position.x,
         top: position.y,
-        width: CARD_SIZE.width,
-        height: CARD_SIZE.height,
+        width: cardWidth,
+        height: cardHeight,
         zIndex: 9999,
         pointerEvents: 'none',
         transform: `rotate(${rotation}deg)`,
@@ -62,7 +66,7 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
       className={showText ? '' : 'textless-mode'}
     >
       <CardFrame
-        size={CARD_SIZE}
+        size={{ width: cardWidth, height: cardHeight }}
         borderColor={suitColor}
         boxShadow={`0 10px 40px rgba(0,0,0,0.5), 0 0 20px ${suitColor}66`}
         className="flex flex-col items-center justify-center gap-1 text-2xl font-bold"

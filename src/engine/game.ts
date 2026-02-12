@@ -37,6 +37,15 @@ import { generateNodeTableau, playCardFromNode } from './nodeTableau';
 
 const NO_REGRET_ORIM_ID = 'no-regret';
 const NO_REGRET_COOLDOWN = 5;
+const PARTY_FOUNDATION_LIMIT = 3;
+const DEFAULT_ENEMY_FOUNDATION_SEEDS: Array<{ id: string; rank: number; suit: Suit; element: Element }> = [
+  { id: 'enemy-shadow', rank: 12, suit: '🌙', element: 'D' },
+  { id: 'enemy-sun', rank: 8, suit: '☀️', element: 'L' },
+];
+
+function clampPartyForFoundations(partyActors: Actor[]): Actor[] {
+  return partyActors.slice(0, PARTY_FOUNDATION_LIMIT);
+}
 
 function tickNoRegretCooldown(cooldown: number | undefined): number {
   return Math.max(0, (cooldown ?? 0) - 1);
@@ -378,7 +387,7 @@ function createInitialOrimState(actors: Actor[], orimDefinitions: OrimDefinition
  */
 export function initializeGame(
   persisted?: Partial<PersistedState>,
-  options?: { startPhase?: GamePhase }
+  options?: { startPhase?: GamePhase; playtestVariant?: GameState['playtestVariant'] }
 ): GameState {
   // Don't deal cards yet - we start in the garden
   const persistedKeys = persisted ? Object.keys(persisted) : [];
@@ -533,7 +542,9 @@ export function initializeGame(
     phase: options?.startPhase ?? 'garden', // Start in garden unless overridden
     challengeProgress: persisted?.challengeProgress || createInitialProgress(),
     buildPileProgress: persisted?.buildPileProgress || createInitialBuildPileProgress(),
-    interactionMode: persisted?.interactionMode || 'click',
+    interactionMode: (options?.playtestVariant === 'party-foundations' || options?.playtestVariant === 'party-battle'
+      ? 'dnd'
+      : (persisted?.interactionMode || 'click')),
     availableActors: finalizedActors,
     tileParties: baseParties,
     activeSessionTileId: persisted?.activeSessionTileId,
@@ -552,6 +563,7 @@ export function initializeGame(
     tiles: persisted?.tiles || createInitialTiles(),
     blueprints: [], // Player's blueprint library
     pendingBlueprintCards: [], // Blueprints in chaos state
+    playtestVariant: options?.playtestVariant ?? 'party-foundations',
   };
 
   if (!isFreshStart) return baseState;
@@ -559,7 +571,7 @@ export function initializeGame(
   const randomWildsTile = baseState.tiles.find((tile) => tile.definitionId === 'random_wilds') || null;
   if (!randomWildsTile) return baseState;
 
-  const partyDefinitionIds = ['fox', 'wolf', 'bear', 'cat', 'owl'];
+  const partyDefinitionIds = ['fox', 'wolf', 'owl'];
   const queuedActors = baseState.availableActors.filter((actor) =>
     partyDefinitionIds.includes(actor.definitionId)
   );
@@ -587,14 +599,15 @@ export function initializeGame(
 export function startAdventure(state: GameState, tileId: string): GameState {
   if (state.activeSessionTileId && state.activeSessionTileId !== tileId) return state;
   const partyActors = getPartyForTile(state, tileId);
-  if (partyActors.length === 0) return state;
+  const foundationActors = clampPartyForFoundations(partyActors);
+  if (foundationActors.length === 0) return state;
   const tile = state.tiles.find((entry) => entry.id === tileId);
   const isForest01 = isForestPuzzleTile(tile?.definitionId);
 
   // Create foundations based on the adventure party (these don't change between redeals)
   const foundations: Card[][] = isForest01
     ? [[createCardFromElement('N', 9)]]
-    : partyActors.map(actor => [
+    : foundationActors.map(actor => [
       createActorFoundationCard(actor),
     ]);
 
@@ -721,6 +734,19 @@ export function playCard(
     card,
     foundationIndex,
   });
+}
+
+function createEnemyFoundationCard(seed: { id: string; rank: number; suit: Suit; element: Element }): Card {
+  return {
+    rank: seed.rank,
+    suit: seed.suit,
+    element: seed.element,
+    id: `${seed.id}-${Date.now()}-${randomIdSuffix()}`,
+  };
+}
+
+function createDefaultEnemyFoundations(): Card[][] {
+  return DEFAULT_ENEMY_FOUNDATION_SEEDS.map((seed) => [createEnemyFoundationCard(seed)]);
 }
 
 export function playCardFromHand(
@@ -2241,6 +2267,18 @@ function backfillTableau(tableau: Card[]): Card[] {
   return [generateRandomCard(), ...tableau];
 }
 
+function backfillTableauFromQueue(tableau: Card[], queue: Card[] | undefined): { tableau: Card[]; queue: Card[] } {
+  if (!queue || queue.length === 0) {
+    return { tableau: backfillTableau(tableau), queue: [] };
+  }
+  const [next, ...rest] = queue;
+  return { tableau: [next, ...tableau], queue: rest };
+}
+
+function createEnemyBackfillQueues(tableaus: Card[][], sizePerTableau: number): Card[][] {
+  return tableaus.map(() => Array.from({ length: sizePerTableau }, () => generateRandomCard()));
+}
+
 /**
  * Starts a randomly generated biome.
  * Creates foundations based on the adventure party and random tableaus.
@@ -2280,13 +2318,22 @@ function startRandomBiome(
 
   const tableaus = generateShowcaseTableaus(7);
   const stock = generateRandomStock(20);
+  const playtestVariant = state.playtestVariant ?? 'single-foundation';
+  const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle';
+  const useEnemyFoundations = playtestVariant === 'party-battle';
+  const foundationActors = clampPartyForFoundations(sandboxActors);
   const foundations: Card[][] = biomeId === 'random_wilds'
-    ? [[]]
-    : sandboxActors.map(actor => [
+    ? (usePartyFoundations
+      ? foundationActors.map((actor) => [createActorFoundationCard(actor)])
+      : [[]])
+    : foundationActors.map(actor => [
       createActorFoundationCard(actor),
     ]);
   const foundationCombos = foundations.map(() => 0);
   const foundationTokens = foundations.map(() => createEmptyTokenCounts());
+  const enemyFoundations = useEnemyFoundations ? createDefaultEnemyFoundations() : undefined;
+  const enemyFoundationCombos = enemyFoundations ? enemyFoundations.map(() => 0) : undefined;
+  const enemyFoundationTokens = enemyFoundations ? enemyFoundations.map(() => createEmptyTokenCounts()) : undefined;
   const actorCombos = {
     ...(state.actorCombos ?? {}),
     ...Object.fromEntries(partyActors.map((actor) => [actor.id, state.actorCombos?.[actor.id] ?? 0])),
@@ -2308,7 +2355,13 @@ function startRandomBiome(
     foundationCombos,
     actorCombos,
     foundationTokens,
+    enemyFoundations,
+    enemyFoundationCombos,
+    enemyFoundationTokens,
+    enemyBackfillQueues: undefined,
     randomBiomeTurnNumber: 1,
+    randomBiomeActiveSide: useEnemyFoundations ? 'player' : undefined,
+    enemyDifficulty: useEnemyFoundations ? (biomeDef.enemyDifficulty ?? 'normal') : undefined,
     tileParties: equipAllOrims
       ? { ...state.tileParties, [tileId]: sandboxActors }
       : state.tileParties,
@@ -2407,6 +2460,111 @@ export function playCardInRandomBiome(
 }
 
 /**
+ * Plays a card in a randomly generated biome for the enemy foundations.
+ * Uses the same tableau rules but applies cards to enemyFoundations.
+ */
+export function playEnemyCardInRandomBiome(
+  state: GameState,
+  tableauIndex: number,
+  enemyFoundationIndex: number
+): GameState | null {
+  const enemyFoundations = state.enemyFoundations;
+  if (!enemyFoundations || enemyFoundations.length === 0) return null;
+  const tableau = state.tableaus[tableauIndex];
+  if (!tableau || tableau.length === 0) return null;
+  const enemyFoundation = enemyFoundations[enemyFoundationIndex];
+  if (!enemyFoundation) return null;
+
+  const card = tableau[tableau.length - 1];
+  const foundationTop = enemyFoundation[enemyFoundation.length - 1];
+  if (!foundationTop) return null;
+
+  if (!canPlayCardWithWild(card, foundationTop, state.activeEffects)) {
+    return null;
+  }
+
+  const biomeDef = state.currentBiome ? getBiomeDefinition(state.currentBiome) : null;
+  const isInfinite = !!biomeDef?.infinite;
+  const useQueue = state.randomBiomeActiveSide === 'enemy';
+  let nextQueues = state.enemyBackfillQueues ? state.enemyBackfillQueues.map((q) => [...q]) : undefined;
+  const newTableaus = state.tableaus.map((t, i) => {
+    if (i !== tableauIndex) return t;
+    const remaining = t.slice(0, -1);
+    if (!isInfinite) return remaining;
+    if (useQueue) {
+      const queue = nextQueues?.[i] ?? [];
+      const result = backfillTableauFromQueue(remaining, queue);
+      if (nextQueues) nextQueues[i] = result.queue;
+      return result.tableau;
+    }
+    return backfillTableau(remaining);
+  });
+
+  const newEnemyFoundations = enemyFoundations.map((f, i) =>
+    i === enemyFoundationIndex ? [...f, card] : f
+  );
+
+  const foundationCount = newEnemyFoundations.length;
+  const comboSeed = state.enemyFoundationCombos && state.enemyFoundationCombos.length === foundationCount
+    ? state.enemyFoundationCombos
+    : Array.from({ length: foundationCount }, () => 0);
+  const newCombos = [...comboSeed];
+  newCombos[enemyFoundationIndex] = (newCombos[enemyFoundationIndex] || 0) + 1;
+
+  const tokensSeed = state.enemyFoundationTokens && state.enemyFoundationTokens.length === foundationCount
+    ? state.enemyFoundationTokens
+    : Array.from({ length: foundationCount }, () => createEmptyTokenCounts());
+  const newEnemyTokens = tokensSeed.map((tokens, i) => {
+    if (i !== enemyFoundationIndex || !card.tokenReward) return { ...tokens };
+    return {
+      ...tokens,
+      [card.tokenReward]: (tokens[card.tokenReward] || 0) + 1,
+    };
+  });
+
+  return {
+    ...state,
+    tableaus: newTableaus,
+    enemyFoundations: newEnemyFoundations,
+    enemyFoundationCombos: newCombos,
+    enemyFoundationTokens: newEnemyTokens,
+    enemyBackfillQueues: nextQueues,
+    turnCount: state.turnCount + 1,
+  };
+}
+
+/**
+ * Advances a random biome turn. If an enemy side exists, switch to it first.
+ * Otherwise, end the turn immediately.
+ */
+export function advanceRandomBiomeTurn(state: GameState): GameState {
+  if (!state.currentBiome) return state;
+  const biomeDef = getBiomeDefinition(state.currentBiome);
+  if (!biomeDef?.randomlyGenerated) return state;
+  const useEnemyFoundations = state.playtestVariant === 'party-battle'
+    && (state.enemyFoundations?.length ?? 0) > 0;
+  if (!useEnemyFoundations) {
+    return endRandomBiomeTurn(state);
+  }
+  const activeSide = state.randomBiomeActiveSide ?? 'player';
+  if (activeSide === 'player') {
+    const ensuredEnemyFoundations =
+      !state.enemyFoundations || state.enemyFoundations.some((foundation) => foundation.length === 0)
+        ? createDefaultEnemyFoundations()
+        : state.enemyFoundations;
+    return {
+      ...state,
+      randomBiomeActiveSide: 'enemy',
+      enemyBackfillQueues: createEnemyBackfillQueues(state.tableaus, 10),
+      enemyFoundations: ensuredEnemyFoundations,
+      enemyFoundationCombos: ensuredEnemyFoundations.map(() => 0),
+      enemyFoundationTokens: ensuredEnemyFoundations.map(() => createEmptyTokenCounts()),
+    };
+  }
+  return endRandomBiomeTurn(state);
+}
+
+/**
  * Ends a turn in a randomly generated biome.
  * Resets foundations to the adventure party, generates fresh tableaus,
  * clears per-foundation combos and tokens. Does NOT clear collectedTokens.
@@ -2420,11 +2578,18 @@ export function endRandomBiomeTurn(state: GameState): GameState {
 
   const tableaus = generateShowcaseTableaus(7);
   const stock = generateRandomStock(20);
-  const foundations: Card[][] = partyActors.map(actor => [
-    createActorFoundationCard(actor),
-  ]);
+  const playtestVariant = state.playtestVariant ?? 'single-foundation';
+  const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle';
+  const useEnemyFoundations = playtestVariant === 'party-battle';
+  const foundationActors = clampPartyForFoundations(partyActors);
+  const foundations: Card[][] = usePartyFoundations
+    ? foundationActors.map(actor => [createActorFoundationCard(actor)])
+    : [[]];
   const foundationCombos = foundations.map(() => 0);
   const foundationTokens = foundations.map(() => createEmptyTokenCounts());
+  const enemyFoundations = useEnemyFoundations ? createDefaultEnemyFoundations() : undefined;
+  const enemyFoundationCombos = enemyFoundations ? enemyFoundations.map(() => 0) : undefined;
+  const enemyFoundationTokens = enemyFoundations ? enemyFoundations.map(() => createEmptyTokenCounts()) : undefined;
   const updatedParty = partyActors.map((actor) => ({
     ...actor,
     stamina: Math.max(0, (actor.stamina ?? 0) - 1),
@@ -2441,10 +2606,16 @@ export function endRandomBiomeTurn(state: GameState): GameState {
     foundationCombos,
     actorCombos: resetActorCombos,
     foundationTokens,
+    enemyFoundations,
+    enemyFoundationCombos,
+    enemyFoundationTokens,
+    enemyBackfillQueues: undefined,
     tileParties: state.activeSessionTileId
       ? { ...state.tileParties, [state.activeSessionTileId]: updatedParty }
       : state.tileParties,
     randomBiomeTurnNumber: (state.randomBiomeTurnNumber || 1) + 1,
+    randomBiomeActiveSide: useEnemyFoundations ? 'player' : undefined,
+    enemyDifficulty: useEnemyFoundations ? (state.enemyDifficulty ?? biomeDef.enemyDifficulty ?? 'normal') : undefined,
   };
   partyActors.forEach((actor) => {
     nextState = applyOrimTiming(nextState, 'turn-end', actor.id);
@@ -2487,7 +2658,8 @@ export function startBiome(
   });
 
   // Create foundations based on party actors
-  const foundations: Card[][] = partyActors.map(actor => [
+  const foundationActors = clampPartyForFoundations(partyActors);
+  const foundations: Card[][] = foundationActors.map(actor => [
     createActorFoundationCard(actor),
   ]);
   const foundationCombos = foundations.map(() => 0);
@@ -2526,7 +2698,8 @@ function startNodeEdgeBiome(
   const nodeTableau = generateNodeTableau(pattern, biomeDef.seed);
 
   // Create foundations from adventure party
-  const foundations: Card[][] = partyActors.map(actor => [
+  const foundationActors = clampPartyForFoundations(partyActors);
+  const foundations: Card[][] = foundationActors.map(actor => [
     createActorFoundationCard(actor),
   ]);
   const foundationCombos = foundations.map(() => 0);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 interface GameButtonProps {
   onClick: () => void;
@@ -6,6 +6,7 @@ interface GameButtonProps {
   color?: 'gold' | 'purple' | 'pink' | 'teal' | 'red';
   size?: 'sm' | 'md';
   className?: string;
+  style?: CSSProperties;
   disabled?: boolean;
 }
 
@@ -38,6 +39,7 @@ export function GameButton({
   color = 'gold',
   size = 'md',
   className = '',
+  style,
   disabled = false,
 }: GameButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -53,6 +55,7 @@ export function GameButton({
       onMouseEnter={() => !disabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       disabled={disabled}
+      style={style}
       className={`
         bg-transparent border-2 rounded-md cursor-pointer font-mono inline-flex items-center justify-center w-auto
         transition-all duration-200

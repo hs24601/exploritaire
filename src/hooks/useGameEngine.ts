@@ -38,8 +38,10 @@ import {
   playCardInBiome as playCardInBiomeFn,
   playCardInNodeBiome as playCardInNodeBiomeFn,
   playCardInRandomBiome as playCardInRandomBiomeFn,
+  playEnemyCardInRandomBiome as playEnemyCardInRandomBiomeFn,
   rewindLastCardAction as rewindLastCardActionFn,
   endRandomBiomeTurn as endRandomBiomeTurnFn,
+  advanceRandomBiomeTurn as advanceRandomBiomeTurnFn,
   completeBiome as completeBiomeFn,
   collectBlueprint as collectBlueprintFn,
   addTileToGarden as addTileToGardenFn,
@@ -59,10 +61,33 @@ import {
 } from '../engine/game';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { findBestMoveSequence, solveOptimally } from '../engine/guidance';
-import { canPlayCardWithWild } from '../engine/rules';
+import { canPlayCard, canPlayCardWithWild } from '../engine/rules';
 import { getBiomeDefinition } from '../engine/biomes';
+import { analyzeOptimalSequence, computeAnalysisKey } from '../engine/analysis';
 
 const ORIM_STORAGE_KEY = 'orimEditorDefinitions';
+
+const normalizeOrimId = (value: string) => value
+  .toLowerCase()
+  .replace(/[’']/g, '')
+  .replace(/[^a-z0-9]+/g, '_')
+  .replace(/^_+|_+$/g, '');
+
+const dedupeOrimDefinitions = (definitions: GameState['orimDefinitions']): GameState['orimDefinitions'] => {
+  const seen = new Set<string>();
+  const next: GameState['orimDefinitions'] = [];
+  definitions.forEach((definition) => {
+    const normalizedId = normalizeOrimId(definition.id || definition.name || '');
+    if (!normalizedId || seen.has(normalizedId)) return;
+    seen.add(normalizedId);
+    if (definition.id === normalizedId) {
+      next.push(definition);
+      return;
+    }
+    next.push({ ...definition, id: normalizedId });
+  });
+  return next;
+};
 
 export function useGameEngine(
   initialState?: GameState | null,
@@ -72,6 +97,11 @@ export function useGameEngine(
   const [selectedCard, setSelectedCard] = useState<SelectedCard | null>(null);
   const [guidanceMoves, setGuidanceMoves] = useState<Move[]>([]);
   const [showGraphics, setShowGraphics] = useState(false);
+  const [wildAnalysis, setWildAnalysis] = useState<{
+    key: string;
+    sequence: Move[];
+    maxCount: number;
+  } | null>(null);
   const devNoRegretEnabled = options?.devNoRegretEnabled ?? false;
 
   // Initialize game on mount or when initial state is provided
@@ -104,6 +134,8 @@ export function useGameEngine(
     const isWon = gameState.phase === 'playing' ? checkWin(gameState) : false;
     const currentBiomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
     const isRandomBiome = !!currentBiomeDef?.randomlyGenerated;
+    const isEnemyTurn = gameState.randomBiomeActiveSide === 'enemy';
+    const allowPlayerMoves = !isEnemyTurn;
 
     const partyActors = gameState.activeSessionTileId
       ? gameState.tileParties[gameState.activeSessionTileId] ?? []
@@ -124,6 +156,7 @@ export function useGameEngine(
       }
       if (gameState.phase === 'biome' && gameState.tableaus.length > 0) {
         if (isRandomBiome) {
+          if (!allowPlayerMoves) return false;
           return !gameState.tableaus.some(tableau => {
             if (tableau.length === 0) return false;
             const topCard = tableau[tableau.length - 1];
@@ -157,6 +190,7 @@ export function useGameEngine(
         });
       }
       if (gameState.phase === 'biome' && isRandomBiome) {
+        if (!allowPlayerMoves) return gameState.tableaus.map(() => false);
         return gameState.tableaus.map(tableau => {
           if (tableau.length === 0) return false;
           const topCard = tableau[tableau.length - 1];
@@ -171,6 +205,7 @@ export function useGameEngine(
 
     const validFoundationsForSelected = (() => {
       if (!selectedCard) return [];
+      if (!allowPlayerMoves) return [];
       if (isRandomBiome) {
         return gameState.foundations.map((foundation, index) =>
           hasFoundationStamina(index) &&
@@ -213,6 +248,41 @@ export function useGameEngine(
     const cooldown = gameState.noRegretCooldown ?? 0;
     return { canRewind: cooldown <= 0, cooldown, actorId: actor.id };
   }, [gameState, devNoRegretEnabled]);
+
+  useEffect(() => {
+    if (!gameState || gameState.phase !== 'biome') {
+      if (wildAnalysis) setWildAnalysis(null);
+      return;
+    }
+    const biomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
+    const isRandomWilds = biomeDef?.id === 'random_wilds' && !!biomeDef.randomlyGenerated;
+    if (!isRandomWilds) {
+      if (wildAnalysis) setWildAnalysis(null);
+      return;
+    }
+
+    const key = computeAnalysisKey(
+      gameState.tableaus,
+      gameState.foundations,
+      gameState.activeEffects,
+      'wild'
+    );
+    if (wildAnalysis?.key === key) return;
+    const result = analyzeOptimalSequence({
+      tableaus: gameState.tableaus,
+      foundations: gameState.foundations,
+      activeEffects: gameState.activeEffects,
+      mode: 'wild',
+    });
+    setWildAnalysis(result);
+  }, [
+    gameState?.phase,
+    gameState?.currentBiome,
+    gameState?.tableaus,
+    gameState?.foundations,
+    gameState?.activeEffects,
+    wildAnalysis,
+  ]);
 
   // Actions
   const newGame = useCallback((preserveProgress = true) => {
@@ -536,6 +606,62 @@ export function useGameEngine(
     setGameState(detachActorFromPartyFn(gameState, tileId, actorId, col, row));
   }, [gameState]);
 
+  const autoPlayNextMove = useCallback(() => {
+    if (!gameState) return;
+
+    if (gameState.phase === 'playing') {
+      const sequence = findBestMoveSequence(
+        gameState.tableaus,
+        gameState.foundations,
+        gameState.activeEffects,
+        1
+      );
+      const move = sequence[0];
+      if (!move) return;
+      const newState = playCard(gameState, move.tableauIndex, move.foundationIndex);
+      if (!newState) return;
+      setGameState(newState);
+      setSelectedCard(null);
+      setGuidanceMoves([]);
+      return;
+    }
+
+    if (gameState.phase !== 'biome') return;
+
+    const biomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
+    const useWild = !!biomeDef?.randomlyGenerated;
+    const partyActors = gameState.activeSessionTileId
+      ? gameState.tileParties[gameState.activeSessionTileId] ?? []
+      : [];
+
+    for (let tIdx = 0; tIdx < gameState.tableaus.length; tIdx += 1) {
+      const tableau = gameState.tableaus[tIdx];
+      if (!tableau || tableau.length === 0) continue;
+      const card = tableau[tableau.length - 1];
+
+      for (let fIdx = 0; fIdx < gameState.foundations.length; fIdx += 1) {
+        const actor = partyActors[fIdx];
+        const hasStamina = (actor?.stamina ?? 0) > 0;
+        if (!hasStamina) continue;
+        const foundation = gameState.foundations[fIdx];
+        const top = foundation[foundation.length - 1];
+        const canPlay = useWild
+          ? canPlayCardWithWild(card, top, gameState.activeEffects)
+          : canPlayCard(card, top, gameState.activeEffects);
+        if (!canPlay) continue;
+
+        const newState = useWild
+          ? playCardInRandomBiomeFn(gameState, tIdx, fIdx)
+          : playCardInBiomeFn(gameState, tIdx, fIdx);
+        if (!newState) return;
+        setGameState(newState);
+        setSelectedCard(null);
+        setGuidanceMoves([]);
+        return;
+      }
+    }
+  }, [gameState]);
+
   const swapPartyLead = useCallback((actorId: string) => {
     if (!gameState) return;
     setGameState(swapPartyLeadFn(gameState, actorId));
@@ -570,6 +696,23 @@ export function useGameEngine(
     setSelectedCard(null);
     setGuidanceMoves([]);
   }, [gameState]);
+
+  const playWildAnalysisSequence = useCallback(() => {
+    if (!gameState || gameState.phase !== 'biome' || !wildAnalysis?.sequence.length) return;
+    const biomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
+    if (!biomeDef?.randomlyGenerated || biomeDef.id !== 'random_wilds') return;
+
+    let nextState = gameState;
+    for (const move of wildAnalysis.sequence) {
+      const updated = playCardInRandomBiomeFn(nextState, move.tableauIndex, move.foundationIndex);
+      if (!updated) break;
+      nextState = updated;
+    }
+
+    setGameState(nextState);
+    setSelectedCard(null);
+    setGuidanceMoves([]);
+  }, [gameState, wildAnalysis]);
 
   const playToBiomeFoundation = useCallback(
     (foundationIndex: number) => {
@@ -612,7 +755,20 @@ export function useGameEngine(
   const playCardInRandomBiome = useCallback(
     (tableauIndex: number, foundationIndex: number) => {
       if (!gameState || gameState.phase !== 'biome') return false;
+      if (gameState.randomBiomeActiveSide === 'enemy') return false;
       const newState = playCardInRandomBiomeFn(gameState, tableauIndex, foundationIndex);
+      if (!newState) return false;
+      setGameState(newState);
+      setSelectedCard(null);
+      return true;
+    },
+    [gameState]
+  );
+
+  const playEnemyCardInRandomBiome = useCallback(
+    (tableauIndex: number, foundationIndex: number) => {
+      if (!gameState || gameState.phase !== 'biome') return false;
+      const newState = playEnemyCardInRandomBiomeFn(gameState, tableauIndex, foundationIndex);
       if (!newState) return false;
       setGameState(newState);
       setSelectedCard(null);
@@ -624,6 +780,12 @@ export function useGameEngine(
   const endRandomBiomeTurn = useCallback(() => {
     if (!gameState) return;
     setGameState(endRandomBiomeTurnFn(gameState));
+    setSelectedCard(null);
+  }, [gameState]);
+
+  const advanceRandomBiomeTurn = useCallback(() => {
+    if (!gameState) return;
+    setGameState(advanceRandomBiomeTurnFn(gameState));
     setSelectedCard(null);
   }, [gameState]);
 
@@ -714,7 +876,12 @@ export function useGameEngine(
   }, [gameState]);
 
   const updateOrimDefinitions = useCallback((definitions: GameState['orimDefinitions']) => {
-    setGameState((prev) => (prev ? { ...prev, orimDefinitions: definitions } : prev));
+    const cleaned = dedupeOrimDefinitions(definitions);
+    setGameState((prev) => (prev ? { ...prev, orimDefinitions: cleaned } : prev));
+  }, []);
+
+  const setEnemyDifficulty = useCallback((difficulty: GameState['enemyDifficulty']) => {
+    setGameState((prev) => (prev ? { ...prev, enemyDifficulty: difficulty } : prev));
   }, []);
 
   const toggleGraphics = useCallback(() => {
@@ -727,6 +894,9 @@ export function useGameEngine(
     guidanceMoves,
     showGraphics,
     noRegretStatus,
+    analysis: {
+      wild: wildAnalysis,
+    },
     ...derivedState,
     actions: {
       newGame,
@@ -742,8 +912,10 @@ export function useGameEngine(
       clearGuidance,
       returnToGarden,
       startAdventure,
-      autoPlay,
+    autoPlay,
+    autoPlayNextMove,
       autoSolveBiome,
+      playWildAnalysisSequence,
       assignCardToChallenge,
       assignCardToBuildPile,
       assignActorToParty,
@@ -772,7 +944,9 @@ export function useGameEngine(
       playToBiomeFoundation,
       playCardInNodeBiome,
       playCardInRandomBiome,
+      playEnemyCardInRandomBiome,
       endRandomBiomeTurn,
+      advanceRandomBiomeTurn,
       completeBiome,
       collectBlueprint,
       abandonSession,
@@ -789,6 +963,7 @@ export function useGameEngine(
       returnOrimToStash,
       devInjectOrimToActor,
       updateOrimDefinitions,
+      setEnemyDifficulty,
       toggleGraphics,
     },
   };

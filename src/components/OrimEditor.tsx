@@ -65,6 +65,22 @@ const createBlankOrim = (name = 'New Orim'): OrimDefinition => ({
   damage: 0,
 });
 
+const dedupeOrimDefinitions = (definitions: OrimDefinition[]): OrimDefinition[] => {
+  const seen = new Set<string>();
+  const next: OrimDefinition[] = [];
+  definitions.forEach((definition) => {
+    const normalizedId = normalizeOrimId(definition.id || definition.name || '');
+    if (!normalizedId || seen.has(normalizedId)) return;
+    seen.add(normalizedId);
+    if (definition.id === normalizedId) {
+      next.push(definition);
+      return;
+    }
+    next.push({ ...definition, id: normalizedId });
+  });
+  return next;
+};
+
 const serializeOrimDefinitions = (definitions: OrimDefinition[]) => {
   const lines: string[] = [];
   lines.push('export const ORIM_DEFINITIONS: OrimDefinition[] = [');
@@ -140,12 +156,12 @@ export function OrimEditor({
   const showGraphics = useGraphics();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'details' | 'ability' | 'affinity' | 'activation'>('details');
-  const [definitions, setDefinitions] = useState<OrimDefinition[]>(definitionsProp);
-  const [selectedId, setSelectedId] = useState<string | null>(() => (definitionsProp[0]?.id ?? null));
+  const [definitions, setDefinitions] = useState<OrimDefinition[]>(() => dedupeOrimDefinitions(definitionsProp));
+  const [selectedId, setSelectedId] = useState<string | null>(() => (dedupeOrimDefinitions(definitionsProp)[0]?.id ?? null));
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    setDefinitions(definitionsProp);
+    setDefinitions(dedupeOrimDefinitions(definitionsProp));
   }, [definitionsProp]);
 
   useEffect(() => {
@@ -166,8 +182,9 @@ export function OrimEditor({
   }, [definitions, selectedId]);
 
   const commitDefinitions = useCallback((next: OrimDefinition[]) => {
-    setDefinitions(next);
-    onChange(next);
+    const cleaned = dedupeOrimDefinitions(next);
+    setDefinitions(cleaned);
+    onChange(cleaned);
   }, [onChange]);
 
   const updateSelected = useCallback((updater: (prev: OrimDefinition) => OrimDefinition) => {
@@ -350,9 +367,9 @@ export function OrimEditor({
             <div className="border border-game-teal/20 rounded p-2 max-h-[140px] overflow-y-auto">
               <div className="text-[10px] text-game-white/60 mb-1">Load Orim</div>
               <div className="flex flex-col gap-1">
-                {filtered.map((item) => (
+                {filtered.map((item, index) => (
                   <button
-                    key={item.id}
+                    key={`orim-search-${item.id}-${index}`}
                     type="button"
                     onClick={() => {
                       setSelectedId(item.id);

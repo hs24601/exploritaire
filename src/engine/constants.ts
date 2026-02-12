@@ -9,8 +9,8 @@ export const GAME_CONFIG: GameConfig = {
 };
 
 export const CARD_SIZE = {
-  width: 64,
-  height: 90,
+  width: 62,
+  height: 88,
 } as const;
 
 /** Sentinel tableauIndex value indicating a card dragged from the hand */
