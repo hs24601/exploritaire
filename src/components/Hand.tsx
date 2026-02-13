@@ -4,6 +4,7 @@ import type { Card as CardType, Element, InteractionMode, OrimDefinition } from 
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
 import { Card } from './Card';
 import { useCardScale } from '../contexts/CardScaleContext';
+import { Tooltip } from './Tooltip';
 
 interface HandProps {
   cards: CardType[];
@@ -18,6 +19,8 @@ interface HandProps {
   showGraphics: boolean;
   interactionMode: InteractionMode;
   orimDefinitions?: OrimDefinition[];
+  tooltipEnabled?: boolean;
+  upgradedCardIds?: string[];
 }
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -63,6 +66,8 @@ export const Hand = memo(function Hand({
   showGraphics,
   interactionMode,
   orimDefinitions,
+  tooltipEnabled = false,
+  upgradedCardIds = [],
 }: HandProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const globalScale = useCardScale();
@@ -103,6 +108,62 @@ export const Hand = memo(function Hand({
     },
     [onDragStart],
   );
+  const renderTooltipContent = useCallback((card: CardType) => {
+    const levelMatch = card.id.match(/-lvl-(\d+)-/);
+    const level = levelMatch ? Number(levelMatch[1]) : 0;
+    if (card.id.startsWith('rpg-scratch-')) {
+      return (
+        <div className="text-xs text-game-white">
+          <div className="text-game-gold font-bold mb-1 tracking-[2px]">SCRATCH</div>
+          <div className="text-game-pink font-bold">Power {card.rank}</div>
+          <div className="text-[10px] text-game-white/60 mt-1">
+            Deal damage to target actor.{level > 0 ? ` Level ${level}.` : ''} Scales automatically while held.
+          </div>
+        </div>
+      );
+    }
+    if (card.id.startsWith('rpg-peck-')) {
+      return (
+        <div className="text-xs text-game-white">
+          <div className="text-game-teal font-bold mb-1 tracking-[2px]">PECK</div>
+          <div className="text-game-pink font-bold">Power {card.rank}</div>
+          <div className="text-[10px] text-game-white/60 mt-1">
+            Scales automatically while held.{level > 0 ? ` Level ${level}.` : ''}
+          </div>
+        </div>
+      );
+    }
+    if (card.id.startsWith('rpg-bite-')) {
+      const hasViceGrip = level >= 3 || card.id.startsWith('rpg-vice-bite-');
+      const hasBleed = level >= 5;
+      return (
+        <div className="text-xs text-game-white">
+          <div className="text-game-teal font-bold mb-1 tracking-[2px]">BITE</div>
+          <div className="text-game-pink font-bold">Power {card.rank}</div>
+          <div className="text-[10px] text-game-white/60 mt-1">
+            {hasBleed
+              ? 'Vice Grip active. 20% bleed chance.'
+              : (hasViceGrip ? 'Vice Grip active.' : 'Scales automatically while held.')}
+          </div>
+        </div>
+      );
+    }
+    if (card.id.startsWith('rpg-vice-bite-')) {
+      return (
+        <div className="text-xs text-game-white">
+          <div className="text-game-teal font-bold mb-1 tracking-[2px]">BITE</div>
+          <div className="text-game-pink font-bold">1 damage/sec for 3s</div>
+          <div className="text-[10px] text-game-white/60 mt-1">Vice Grip legacy card. Applies heavy slow.</div>
+        </div>
+      );
+    }
+    return (
+      <div className="text-xs text-game-white">
+        <div className="text-game-teal font-bold mb-1 tracking-[2px]">HAND CARD</div>
+        <div>Value {card.rank}</div>
+      </div>
+    );
+  }, []);
 
   if (cards.length === 0 && stockCount === 0) return null;
 
@@ -117,6 +178,12 @@ export const Hand = memo(function Hand({
             if (!pos) return null;
             const isHovered = hoveredId === card.id;
             const isDragging = card.id === draggingCardId;
+            const isUpgraded = upgradedCardIds.includes(card.id);
+            let cardHash = 0;
+            for (let h = 0; h < card.id.length; h += 1) {
+              cardHash = ((cardHash << 5) - cardHash + card.id.charCodeAt(h)) | 0;
+            }
+            const flashOffsetSec = (Math.abs(cardHash) % 120) / 100;
             const isOnCooldown = (card.cooldown ?? 0) > 0;
             const cooldownScale = isOnCooldown ? 0.67 : 1;
             const baseScale = isHovered ? FAN.hoverScale : 1;
@@ -145,25 +212,49 @@ export const Hand = memo(function Hand({
                 onHoverStart={() => setHoveredId(card.id)}
                 onHoverEnd={() => setHoveredId(null)}
               >
-                <Card
-                  card={card}
-                  size={{ width: cardWidth, height: cardHeight }}
-                  canPlay={!isOnCooldown}
-                  isDragging={isDragging}
-                  onClick={
-                    interactionMode === 'click' && !isOnCooldown && onCardClick
-                      ? () => onCardClick(card)
-                      : undefined
-                  }
-                  onDragStart={canDrag ? handleDragStart : undefined}
-                  showGraphics={showGraphics}
-                  isDimmed={isOnCooldown}
-                  orimDefinitions={orimDefinitions}
-                />
+                {isUpgraded && (
+                  <div
+                    className="absolute inset-[-8px] rounded-xl pointer-events-none"
+                    style={{
+                      background: 'radial-gradient(circle, rgba(127, 219, 202, 0.5) 0%, rgba(127, 219, 202, 0.18) 45%, rgba(127, 219, 202, 0) 75%)',
+                      filter: 'blur(1px)',
+                      animation: 'hand-upgrade-flash 1.6s ease-in-out infinite',
+                      animationDelay: `${-flashOffsetSec}s`,
+                    }}
+                  />
+                )}
+                <Tooltip
+                  content={renderTooltipContent(card)}
+                  pinnable
+                  disabled={!tooltipEnabled}
+                >
+                  <Card
+                    card={card}
+                    size={{ width: cardWidth, height: cardHeight }}
+                    canPlay={!isOnCooldown}
+                    isDragging={isDragging}
+                    onClick={
+                      interactionMode === 'click' && !isOnCooldown && onCardClick
+                        ? () => onCardClick(card)
+                        : undefined
+                    }
+                    onDragStart={canDrag ? handleDragStart : undefined}
+                    showGraphics={showGraphics}
+                    isDimmed={isOnCooldown}
+                    orimDefinitions={orimDefinitions}
+                  />
+                </Tooltip>
               </motion.div>
             );
           })}
         </AnimatePresence>
+      <style>{`
+        @keyframes hand-upgrade-flash {
+          0% { opacity: 0.15; transform: scale(0.96); }
+          50% { opacity: 0.95; transform: scale(1.04); }
+          100% { opacity: 0.15; transform: scale(0.96); }
+        }
+      `}</style>
       {stockCount > 0 && (
         <div
           className="absolute"

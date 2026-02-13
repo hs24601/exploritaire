@@ -9,6 +9,11 @@ export interface DragState {
   isDragging: boolean;
 }
 
+export interface DragMomentum {
+  x: number;
+  y: number;
+}
+
 const initialDragState: DragState = {
   card: null,
   tableauIndex: null,
@@ -18,7 +23,12 @@ const initialDragState: DragState = {
 };
 
 export function useDragDrop(
-  onDrop: (tableauIndex: number, foundationIndex: number) => void,
+  onDrop: (
+    tableauIndex: number,
+    foundationIndex: number,
+    dropPoint?: { x: number; y: number },
+    momentum?: DragMomentum
+  ) => void,
   paused = false
 ) {
   const [dragState, setDragState] = useState<DragState>(initialDragState);
@@ -27,6 +37,7 @@ export function useDragDrop(
   const onDropRef = useRef(onDrop);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const pendingPosRef = useRef<{ x: number; y: number } | null>(null);
+  const samplePointsRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
   const rafRef = useRef<number | null>(null);
   const pausedRef = useRef(paused);
 
@@ -47,6 +58,7 @@ export function useDragDrop(
       rafRef.current = null;
     }
     pendingPosRef.current = null;
+    samplePointsRef.current = [];
     dragStateRef.current = initialDragState;
     setDragState(initialDragState);
     setLastDragEndAt(Date.now());
@@ -77,11 +89,16 @@ export function useDragDrop(
     // from the very first event after the drag begins.
     dragStateRef.current = next;
     setDragState(next);
+    samplePointsRef.current = [{ x: clientX, y: clientY, t: performance.now() }];
   }, []);
 
   const updateDrag = useCallback((clientX: number, clientY: number) => {
     if (pausedRef.current) return;
     pendingPosRef.current = { x: clientX, y: clientY };
+    samplePointsRef.current.push({ x: clientX, y: clientY, t: performance.now() });
+    if (samplePointsRef.current.length > 8) {
+      samplePointsRef.current.shift();
+    }
     if (rafRef.current !== null) return;
     rafRef.current = window.requestAnimationFrame(() => {
       rafRef.current = null;
@@ -113,6 +130,18 @@ export function useDragDrop(
       rafRef.current = null;
     }
     pendingPosRef.current = null;
+    let momentum: DragMomentum | undefined;
+    const samples = samplePointsRef.current;
+    if (samples.length >= 2) {
+      const latest = samples[samples.length - 1];
+      const earliestWindow = latest.t - 80;
+      const anchor = [...samples].reverse().find((entry) => entry.t <= earliestWindow) ?? samples[0];
+      const dx = latest.x - anchor.x;
+      const dy = latest.y - anchor.y;
+      if (Math.abs(dx) + Math.abs(dy) > 0.01) {
+        momentum = { x: dx, y: dy };
+      }
+    }
 
     const dropX = clientX;
     const dropY = clientY;
@@ -140,13 +169,14 @@ export function useDragDrop(
         if (import.meta.env.DEV) {
           console.debug('[drag] hit foundation', { index: i, rect });
         }
-        onDropRef.current(current.tableauIndex, i);
+        onDropRef.current(current.tableauIndex, i, { x: dropX, y: dropY }, momentum);
         break;
       }
     }
 
     setDragState(initialDragState);
     setLastDragEndAt(Date.now());
+    samplePointsRef.current = [];
   }, []);
 
   const cancelDrag = useCallback(() => {
@@ -155,6 +185,7 @@ export function useDragDrop(
       rafRef.current = null;
     }
     pendingPosRef.current = null;
+    samplePointsRef.current = [];
     dragStateRef.current = initialDragState;
     setDragState(initialDragState);
     setLastDragEndAt(Date.now());

@@ -129,6 +129,9 @@ interface FoundationActorProps {
   disableFoundationSplashes?: boolean;
   comboCount?: number;
   showTokenEdgeOverlay?: boolean;
+  maskValue?: boolean;
+  splashDirectionDeg?: number;
+  splashDirectionToken?: number;
 }
 
 export const FoundationActor = memo(function FoundationActor({
@@ -154,6 +157,9 @@ export const FoundationActor = memo(function FoundationActor({
   disableFoundationSplashes = false,
   comboCount = 0,
   showTokenEdgeOverlay = true,
+  maskValue = false,
+  splashDirectionDeg,
+  splashDirectionToken,
 }: FoundationActorProps) {
   const effectiveScale = cardScale;
   const showClickHighlight = interactionMode === 'click' && (canReceive || isGuidanceTarget);
@@ -215,8 +221,10 @@ export const FoundationActor = memo(function FoundationActor({
     if (currentCount > prevCount && watercolorEnabled && !disableFoundationSplashes) {
       const newCard = cards[cards.length - 1];
       const cardColor = newCard?.element ? SUIT_COLORS[ELEMENT_TO_SUIT[newCard.element]] : '#7fdbca';
-      // Random primary splash direction
-      const primaryDir = Math.random() * 360;
+      // Follow drag momentum when available; fallback to randomized direction.
+      const primaryDir = Number.isFinite(splashDirectionDeg)
+        ? ((splashDirectionDeg as number) + 360) % 360
+        : Math.random() * 360;
       const comboBoost = Math.min(Math.max(comboCount, 0), 10);
       const intensity = 0.8 + comboBoost * 0.08;
       const sizeScale = 1 + comboBoost * 0.06;
@@ -267,7 +275,7 @@ export const FoundationActor = memo(function FoundationActor({
         }
       }
     }
-  }, [cards.length, cards, watercolorEnabled, watercolorEngine]);
+  }, [cards.length, cards, watercolorEnabled, watercolorEngine, splashDirectionDeg, splashDirectionToken]);
   useEffect(() => {
     cards.forEach((card) => {
       if (!foundationTiltRef.current.has(card.id)) {
@@ -572,6 +580,7 @@ export const FoundationActor = memo(function FoundationActor({
                   cardWatercolor={isTop && watercolorEnabled ? baseActorWatercolor : null}
                   watercolorShadowGlyph={isTop && watercolorEnabled ? watercolorShadowGlyph : undefined}
                   valueWatercolor={isTop ? valueWatercolor : null}
+                  maskValue={maskValue}
                 />
               </div>
             );

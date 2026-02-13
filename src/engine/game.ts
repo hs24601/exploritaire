@@ -38,10 +38,20 @@ import { generateNodeTableau, playCardFromNode } from './nodeTableau';
 const NO_REGRET_ORIM_ID = 'no-regret';
 const NO_REGRET_COOLDOWN = 5;
 const PARTY_FOUNDATION_LIMIT = 3;
+const RPG_VICE_BITE_DOT_POWER = 1;
+const RPG_VICE_BITE_TICKS = 3;
+const RPG_VICE_BITE_INTERVAL_MS = 1000;
+const RPG_VICE_BITE_SLOW_MS = 3000;
+const RPG_BITE_BLEED_CHANCE = 0.2;
+const RPG_BITE_BLEED_DOT_POWER = 1;
+const RPG_BITE_BLEED_TICKS = 3;
+const RPG_BITE_BLEED_INTERVAL_MS = 1000;
+const RPG_CLOUD_SIGHT_MS = 10000;
 const DEFAULT_ENEMY_FOUNDATION_SEEDS: Array<{ id: string; rank: number; suit: Suit; element: Element }> = [
   { id: 'enemy-shadow', rank: 12, suit: '🌙', element: 'D' },
   { id: 'enemy-sun', rank: 8, suit: '☀️', element: 'L' },
 ];
+const DEFAULT_ENEMY_ACTOR_IDS = ['shadowcub', 'shadowkit'] as const;
 
 function clampPartyForFoundations(partyActors: Actor[]): Actor[] {
   return partyActors.slice(0, PARTY_FOUNDATION_LIMIT);
@@ -49,6 +59,15 @@ function clampPartyForFoundations(partyActors: Actor[]): Actor[] {
 
 function tickNoRegretCooldown(cooldown: number | undefined): number {
   return Math.max(0, (cooldown ?? 0) - 1);
+}
+
+function isActorCombatEnabled(actor: Actor | null | undefined): boolean {
+  if (!actor) return false;
+  return (actor.stamina ?? 0) > 0 && (actor.hp ?? 0) > 0;
+}
+
+function clampPercent(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 function stripLastCardSnapshot(state: GameState): Omit<GameState, 'lastCardActionSnapshot'> {
@@ -314,6 +333,8 @@ function getPartyForTile(state: GameState, tileId?: string): Actor[] {
 function findActorById(state: GameState, actorId: string): Actor | null {
   const available = state.availableActors.find((actor) => actor.id === actorId);
   if (available) return available;
+  const enemy = state.enemyActors?.find((actor) => actor.id === actorId);
+  if (enemy) return enemy;
   for (const party of Object.values(state.tileParties)) {
     const match = party.find((actor) => actor.id === actorId);
     if (match) return match;
@@ -407,6 +428,12 @@ export function initializeGame(
     hp: actor.hp ?? (actor.hpMax ?? 10),
     damageTaken: actor.damageTaken ?? 0,
   });
+  const ensureActorCombatStats = (actor: Actor): Actor => ({
+    ...actor,
+    armor: actor.armor ?? 0,
+    evasion: actor.evasion ?? 0,
+    accuracy: actor.accuracy ?? 100,
+  });
   const ensureActorPower = (actor: Actor): Actor => ({
     ...actor,
     powerMax: actor.powerMax ?? 3,
@@ -487,10 +514,12 @@ export function initializeGame(
   };
   const orimDefinitions = mergeOrimDefinitions(ORIM_DEFINITIONS, persisted?.orimDefinitions);
   const baseActors = (persisted?.availableActors || createInitialActors()).map((actor) =>
-    ensureActorPower(
-      ensureActorHp(
-        ensureActorEnergy(
-          ensureActorLevel(migrateActorDefinitionId(actor))
+    ensureActorCombatStats(
+      ensureActorPower(
+        ensureActorHp(
+          ensureActorEnergy(
+            ensureActorLevel(migrateActorDefinitionId(actor))
+          )
         )
       )
     )
@@ -521,10 +550,12 @@ export function initializeGame(
       Object.entries(persisted.tileParties).map(([tileId, actors]) => ([
         tileId,
         actors.map((actor) => ensureActorPower(
-          ensureActorHp(
-            ensureActorEnergy(
-              ensureActorLevel(
-                ensureActorOrimSlots(migrateActorDefinitionId(actor))
+          ensureActorCombatStats(
+            ensureActorHp(
+              ensureActorEnergy(
+                ensureActorLevel(
+                  ensureActorOrimSlots(migrateActorDefinitionId(actor))
+                )
               )
             )
           )
@@ -542,7 +573,7 @@ export function initializeGame(
     phase: options?.startPhase ?? 'garden', // Start in garden unless overridden
     challengeProgress: persisted?.challengeProgress || createInitialProgress(),
     buildPileProgress: persisted?.buildPileProgress || createInitialBuildPileProgress(),
-    interactionMode: (options?.playtestVariant === 'party-foundations' || options?.playtestVariant === 'party-battle'
+    interactionMode: (options?.playtestVariant === 'party-foundations' || options?.playtestVariant === 'party-battle' || options?.playtestVariant === 'rpg'
       ? 'dnd'
       : (persisted?.interactionMode || 'click')),
     availableActors: finalizedActors,
@@ -700,7 +731,7 @@ export function playCard(
 
   const partyActors = getPartyForTile(state, state.activeSessionTileId);
   const foundationActor = partyActors[foundationIndex];
-  if (!card.sourceActorId && foundationActor && foundationActor.stamina <= 0) return null;
+  if (foundationActor && !isActorCombatEnabled(foundationActor)) return null;
 
   const card = tableau[tableau.length - 1];
   const foundationTop = state.foundations[foundationIndex][state.foundations[foundationIndex].length - 1];
@@ -749,17 +780,245 @@ function createDefaultEnemyFoundations(): Card[][] {
   return DEFAULT_ENEMY_FOUNDATION_SEEDS.map((seed) => [createEnemyFoundationCard(seed)]);
 }
 
+function createDefaultEnemyActors(): Actor[] {
+  const actors = DEFAULT_ENEMY_ACTOR_IDS
+    .map((definitionId) => createActor(definitionId))
+    .filter((actor): actor is Actor => Boolean(actor))
+    .slice(0, DEFAULT_ENEMY_FOUNDATION_SEEDS.length)
+    .map((actor) => ({
+      ...actor,
+      hpMax: 10,
+      hp: 10,
+      armor: 0,
+      evasion: 5,
+      accuracy: 90,
+      staminaMax: 3,
+      stamina: 3,
+      energyMax: 3,
+      energy: 3,
+    }));
+  return actors;
+}
+
+function ensureEnemyActorsForFoundations(
+  existingActors: Actor[] | undefined,
+  foundationCount: number
+): Actor[] {
+  const defaults = createDefaultEnemyActors();
+  const result: Actor[] = [];
+  for (let i = 0; i < foundationCount; i += 1) {
+    const existing = existingActors?.[i];
+    if (existing) {
+      result.push(existing);
+      continue;
+    }
+    const fallback = defaults[i] ?? defaults[defaults.length - 1];
+    result.push({
+      ...fallback,
+      id: `${fallback.id}-${randomIdSuffix()}`,
+    });
+  }
+  return result;
+}
+
+type RpcFamily = 'scratch' | 'bite' | 'peck';
+
+type RpcProfile = {
+  damage: number;
+  viceGrip: boolean;
+  bleedChance: number;
+};
+
+function getRpcProfile(family: RpcFamily, count: number): RpcProfile {
+  const safeCount = Math.max(1, count);
+  if (family !== 'bite') {
+    return {
+      damage: safeCount,
+      viceGrip: false,
+      bleedChance: 0,
+    };
+  }
+  if (safeCount <= 1) {
+    return { damage: 1, viceGrip: false, bleedChance: 0 };
+  }
+  if (safeCount === 2) {
+    return { damage: 2, viceGrip: false, bleedChance: 0 };
+  }
+  if (safeCount === 3) {
+    return { damage: 3, viceGrip: true, bleedChance: 0 };
+  }
+  if (safeCount === 4) {
+    return { damage: 5, viceGrip: true, bleedChance: 0 };
+  }
+  return { damage: 6, viceGrip: true, bleedChance: RPG_BITE_BLEED_CHANCE };
+}
+
+function getRpcFamily(card: Card): RpcFamily | null {
+  if (card.id.startsWith('rpg-scratch-')) return 'scratch';
+  if (card.id.startsWith('rpg-bite-') || card.id.startsWith('rpg-vice-bite-')) return 'bite';
+  if (card.id.startsWith('rpg-peck-') || card.id.startsWith('rpg-blinding-peck-')) return 'peck';
+  return null;
+}
+
+function warnOnUnexpectedHpIncrease(prev: GameState, next: GameState, context: string): void {
+  const collectById = (state: GameState): Map<string, number> => {
+    const map = new Map<string, number>();
+    const playerParty = getPartyForTile(state, state.activeSessionTileId);
+    playerParty.forEach((actor) => {
+      map.set(actor.id, actor.hp ?? 0);
+    });
+    (state.enemyActors ?? []).forEach((actor) => {
+      map.set(actor.id, actor.hp ?? 0);
+    });
+    return map;
+  };
+
+  const prevHpById = collectById(prev);
+  const nextHpById = collectById(next);
+  const increases: Array<{ actorId: string; from: number; to: number }> = [];
+
+  prevHpById.forEach((from, actorId) => {
+    const to = nextHpById.get(actorId);
+    if (to === undefined) return;
+    if (to > from) {
+      increases.push({ actorId, from, to });
+    }
+  });
+
+  if (increases.length === 0) return;
+  console.warn('[Invariant][HP Increase]', context, increases);
+}
+
+function getRpcCount(card: Card): number {
+  if (card.id.startsWith('rpg-scratch-lvl-') || card.id.startsWith('rpg-bite-lvl-') || card.id.startsWith('rpg-peck-lvl-')) {
+    const match = card.id.match(/-lvl-(\d+)-/);
+    const parsed = match ? Number(match[1]) : NaN;
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  if (card.id.startsWith('rpg-vice-bite-')) return 3;
+  if (card.id.startsWith('rpg-blinding-peck-')) return 3;
+  if (card.id.startsWith('rpg-scratch-') || card.id.startsWith('rpg-bite-') || card.id.startsWith('rpg-peck-')) return 1;
+  return 0;
+}
+
+function createRpcCard(family: RpcFamily, sourceActorId: string, count: number): Card {
+  const safeCount = Math.max(1, count);
+  const profile = getRpcProfile(family, safeCount);
+  const actorGlyph = family === 'scratch'
+    ? 'F'
+    : (family === 'bite' ? 'W' : 'O');
+  return {
+    id: `rpg-${family}-lvl-${safeCount}-${Date.now()}-${randomIdSuffix()}`,
+    rank: profile.damage,
+    element: 'N',
+    suit: ELEMENT_TO_SUIT.N,
+    sourceActorId,
+    actorGlyph,
+  };
+}
+
+function createRpgScratchCard(sourceActorId: string): Card {
+  return createRpcCard('scratch', sourceActorId, 1);
+}
+
+function createRpgBiteCard(sourceActorId: string): Card {
+  return createRpcCard('bite', sourceActorId, 1);
+}
+
+function createRpgCloudSightCard(sourceActorId: string): Card {
+  return {
+    id: `rpg-cloud-sight-${Date.now()}-${randomIdSuffix()}`,
+    rank: 0,
+    element: 'N',
+    suit: ELEMENT_TO_SUIT.N,
+    sourceActorId,
+    actorGlyph: 'O',
+  };
+}
+
+function createRpgPeckCard(sourceActorId: string): Card {
+  return createRpcCard('peck', sourceActorId, 1);
+}
+
+function upgradeRpgHandCards(cards: Card[]): Card[] {
+  const passthrough: Card[] = [];
+  const counts: Record<RpcFamily, number> = { scratch: 0, bite: 0, peck: 0 };
+  const sourceByFamily: Partial<Record<RpcFamily, string>> = {};
+
+  cards.forEach((card) => {
+    const family = getRpcFamily(card);
+    if (!family) {
+      passthrough.push(card);
+      return;
+    }
+    const count = getRpcCount(card);
+    if (count <= 0) return;
+    counts[family] += count;
+    if (!sourceByFamily[family] && card.sourceActorId) {
+      sourceByFamily[family] = card.sourceActorId;
+    }
+  });
+
+  const normalized: Card[] = [...passthrough];
+  (['scratch', 'bite', 'peck'] as RpcFamily[]).forEach((family) => {
+    const count = counts[family];
+    if (count <= 0) return;
+    normalized.push(createRpcCard(family, sourceByFamily[family] ?? 'unknown', count));
+  });
+  return normalized;
+}
+
+function canAwardPlayerActorCards(
+  state: GameState,
+  options?: { allowEnemyDefault?: boolean; sourceSide?: 'player' | 'enemy' }
+): boolean {
+  if (state.playtestVariant !== 'rpg') return false;
+  const sourceSide = options?.sourceSide ?? (state.randomBiomeActiveSide ?? 'player');
+  if (sourceSide === 'enemy') return !!options?.allowEnemyDefault;
+  return true;
+}
+
+function awardActorComboCards(
+  state: GameState,
+  foundationIndex: number,
+  nextActorCombos: Record<string, number>,
+  options?: { allowEnemyDefault?: boolean; sourceSide?: 'player' | 'enemy' }
+): Card[] | undefined {
+  if (!canAwardPlayerActorCards(state, options)) return state.rpgHandCards;
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const foundationActor = partyActors[foundationIndex];
+  if (!foundationActor) return state.rpgHandCards;
+  const combo = nextActorCombos[foundationActor.id] ?? 0;
+  if (combo <= 0) return state.rpgHandCards;
+
+  const rewards: Card[] = [];
+  if (foundationActor.definitionId === 'fox') {
+    rewards.push(createRpgScratchCard(foundationActor.id));
+  }
+  if (foundationActor.definitionId === 'wolf') {
+    if (combo % 3 === 0) rewards.push(createRpgBiteCard(foundationActor.id));
+  }
+  if (foundationActor.definitionId === 'owl') {
+    if (combo % 2 === 0) rewards.push(createRpgPeckCard(foundationActor.id));
+    if (combo % 3 === 0) rewards.push(createRpgCloudSightCard(foundationActor.id));
+  }
+  const base = rewards.length > 0 ? [...(state.rpgHandCards ?? []), ...rewards] : (state.rpgHandCards ?? []);
+  return upgradeRpgHandCards(base);
+}
+
 export function playCardFromHand(
   state: GameState,
   card: Card,
   foundationIndex: number,
   useWild = false
 ): GameState | null {
+  if (state.playtestVariant === 'rpg' && card.id.startsWith('rpg-')) {
+    return null;
+  }
   const partyActors = getPartyForTile(state, state.activeSessionTileId);
   const foundationActor = partyActors[foundationIndex];
   // Cooldown disabled for now.
 
-  const foundation = state.foundations[foundationIndex];
   const foundationCount = state.foundations.length;
 
   const newFoundations = state.foundations.map((f, i) =>
@@ -767,6 +1026,12 @@ export function playCardFromHand(
   );
 
   const combos = incrementFoundationCombos(state, foundationIndex);
+  const nextActorCombos = foundationActor
+    ? {
+      ...(state.actorCombos ?? {}),
+      [foundationActor.id]: (state.actorCombos?.[foundationActor.id] ?? 0) + 1,
+    }
+    : (state.actorCombos ?? {});
   const cooldownTicked = foundationActor
     ? reduceDeckCooldowns(
       { ...state, actorDecks: state.actorDecks },
@@ -789,7 +1054,15 @@ export function playCardFromHand(
         card
       ),
       foundationCombos: combos,
+      actorCombos: nextActorCombos,
       actorDecks: updatedDecks,
+      rpgHandCards: awardActorComboCards({
+        ...state,
+        actorCombos: nextActorCombos,
+        rpgHandCards: state.playtestVariant === 'rpg'
+          ? (state.rpgHandCards ?? []).filter((entry) => entry.id !== card.id)
+          : state.rpgHandCards,
+      }, foundationIndex, nextActorCombos, { sourceSide: 'player' }),
     };
     const recorded = recordCardAction(state, nextState);
     if (!foundationActor) return recorded;
@@ -825,8 +1098,16 @@ export function playCardFromHand(
     biomeMovesCompleted: (state.biomeMovesCompleted || 0) + 1,
     collectedTokens: newCollectedTokens,
     foundationCombos: newCombos,
+    actorCombos: nextActorCombos,
     foundationTokens: newFoundationTokens,
     actorDecks: updatedDecks,
+    rpgHandCards: awardActorComboCards({
+      ...state,
+      actorCombos: nextActorCombos,
+      rpgHandCards: state.playtestVariant === 'rpg'
+        ? (state.rpgHandCards ?? []).filter((entry) => entry.id !== card.id)
+        : state.rpgHandCards,
+    }, foundationIndex, nextActorCombos, { sourceSide: 'player' }),
   };
   const recorded = recordCardAction(state, nextState);
   if (!foundationActor) return recorded;
@@ -2319,8 +2600,8 @@ function startRandomBiome(
   const tableaus = generateShowcaseTableaus(7);
   const stock = generateRandomStock(20);
   const playtestVariant = state.playtestVariant ?? 'single-foundation';
-  const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle';
-  const useEnemyFoundations = playtestVariant === 'party-battle';
+  const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle' || playtestVariant === 'rpg';
+  const useEnemyFoundations = playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const foundationActors = clampPartyForFoundations(sandboxActors);
   const foundations: Card[][] = biomeId === 'random_wilds'
     ? (usePartyFoundations
@@ -2332,6 +2613,9 @@ function startRandomBiome(
   const foundationCombos = foundations.map(() => 0);
   const foundationTokens = foundations.map(() => createEmptyTokenCounts());
   const enemyFoundations = useEnemyFoundations ? createDefaultEnemyFoundations() : undefined;
+  const enemyActors = useEnemyFoundations
+    ? ensureEnemyActorsForFoundations(state.enemyActors, enemyFoundations?.length ?? 0)
+    : undefined;
   const enemyFoundationCombos = enemyFoundations ? enemyFoundations.map(() => 0) : undefined;
   const enemyFoundationTokens = enemyFoundations ? enemyFoundations.map(() => createEmptyTokenCounts()) : undefined;
   const actorCombos = {
@@ -2356,12 +2640,23 @@ function startRandomBiome(
     actorCombos,
     foundationTokens,
     enemyFoundations,
+    enemyActors,
     enemyFoundationCombos,
     enemyFoundationTokens,
     enemyBackfillQueues: undefined,
     randomBiomeTurnNumber: 1,
     randomBiomeActiveSide: useEnemyFoundations ? 'player' : undefined,
     enemyDifficulty: useEnemyFoundations ? (biomeDef.enemyDifficulty ?? 'normal') : undefined,
+    rpgHandCards: state.playtestVariant === 'rpg' ? [] : state.rpgHandCards,
+    rpgDots: [],
+    rpgEnemyDragSlowUntil: 0,
+    rpgEnemyDragSlowActorId: undefined,
+    rpgCloudSightUntil: 0,
+    rpgCloudSightActorId: undefined,
+    rpgBlindedPlayerLevel: 0,
+    rpgBlindedPlayerUntil: 0,
+    rpgBlindedEnemyLevel: 0,
+    rpgBlindedEnemyUntil: 0,
     tileParties: equipAllOrims
       ? { ...state.tileParties, [tileId]: sandboxActors }
       : state.tileParties,
@@ -2385,7 +2680,7 @@ export function playCardInRandomBiome(
 
   const partyActors = getPartyForTile(state, state.activeSessionTileId);
   const foundationActor = partyActors[foundationIndex];
-  if (foundationActor && foundationActor.stamina <= 0) return null;
+  if (foundationActor && !isActorCombatEnabled(foundationActor)) return null;
 
   const card = tableau[tableau.length - 1];
   const foundation = state.foundations[foundationIndex];
@@ -2452,6 +2747,7 @@ export function playCardInRandomBiome(
     foundationCombos: newCombos,
     actorCombos: newActorCombos,
     foundationTokens: newFoundationTokens,
+    rpgHandCards: awardActorComboCards(state, foundationIndex, newActorCombos, { sourceSide: 'player' }),
     actorDecks: foundationActor
       ? reduceDeckCooldowns({ ...state, actorDecks: state.actorDecks }, foundationActor.id, 1)
       : state.actorDecks,
@@ -2469,11 +2765,13 @@ export function playEnemyCardInRandomBiome(
   enemyFoundationIndex: number
 ): GameState | null {
   const enemyFoundations = state.enemyFoundations;
+  const enemyActors = state.enemyActors ?? [];
   if (!enemyFoundations || enemyFoundations.length === 0) return null;
   const tableau = state.tableaus[tableauIndex];
   if (!tableau || tableau.length === 0) return null;
   const enemyFoundation = enemyFoundations[enemyFoundationIndex];
   if (!enemyFoundation) return null;
+  if (enemyActors[enemyFoundationIndex] && !isActorCombatEnabled(enemyActors[enemyFoundationIndex])) return null;
 
   const card = tableau[tableau.length - 1];
   const foundationTop = enemyFoundation[enemyFoundation.length - 1];
@@ -2541,7 +2839,7 @@ export function advanceRandomBiomeTurn(state: GameState): GameState {
   if (!state.currentBiome) return state;
   const biomeDef = getBiomeDefinition(state.currentBiome);
   if (!biomeDef?.randomlyGenerated) return state;
-  const useEnemyFoundations = state.playtestVariant === 'party-battle'
+  const useEnemyFoundations = (state.playtestVariant === 'party-battle' || state.playtestVariant === 'rpg')
     && (state.enemyFoundations?.length ?? 0) > 0;
   if (!useEnemyFoundations) {
     return endRandomBiomeTurn(state);
@@ -2552,14 +2850,21 @@ export function advanceRandomBiomeTurn(state: GameState): GameState {
       !state.enemyFoundations || state.enemyFoundations.some((foundation) => foundation.length === 0)
         ? createDefaultEnemyFoundations()
         : state.enemyFoundations;
-    return {
+    const ensuredEnemyActors = ensureEnemyActorsForFoundations(
+      state.enemyActors,
+      ensuredEnemyFoundations.length
+    );
+    const nextState = {
       ...state,
       randomBiomeActiveSide: 'enemy',
       enemyBackfillQueues: createEnemyBackfillQueues(state.tableaus, 10),
       enemyFoundations: ensuredEnemyFoundations,
+      enemyActors: ensuredEnemyActors,
       enemyFoundationCombos: ensuredEnemyFoundations.map(() => 0),
       enemyFoundationTokens: ensuredEnemyFoundations.map(() => createEmptyTokenCounts()),
     };
+    warnOnUnexpectedHpIncrease(state, nextState, 'advanceRandomBiomeTurn:player->enemy');
+    return nextState;
   }
   return endRandomBiomeTurn(state);
 }
@@ -2579,8 +2884,8 @@ export function endRandomBiomeTurn(state: GameState): GameState {
   const tableaus = generateShowcaseTableaus(7);
   const stock = generateRandomStock(20);
   const playtestVariant = state.playtestVariant ?? 'single-foundation';
-  const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle';
-  const useEnemyFoundations = playtestVariant === 'party-battle';
+  const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle' || playtestVariant === 'rpg';
+  const useEnemyFoundations = playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const foundationActors = clampPartyForFoundations(partyActors);
   const foundations: Card[][] = usePartyFoundations
     ? foundationActors.map(actor => [createActorFoundationCard(actor)])
@@ -2588,6 +2893,9 @@ export function endRandomBiomeTurn(state: GameState): GameState {
   const foundationCombos = foundations.map(() => 0);
   const foundationTokens = foundations.map(() => createEmptyTokenCounts());
   const enemyFoundations = useEnemyFoundations ? createDefaultEnemyFoundations() : undefined;
+  const enemyActors = useEnemyFoundations
+    ? ensureEnemyActorsForFoundations(state.enemyActors, enemyFoundations?.length ?? 0)
+    : undefined;
   const enemyFoundationCombos = enemyFoundations ? enemyFoundations.map(() => 0) : undefined;
   const enemyFoundationTokens = enemyFoundations ? enemyFoundations.map(() => createEmptyTokenCounts()) : undefined;
   const updatedParty = partyActors.map((actor) => ({
@@ -2607,6 +2915,7 @@ export function endRandomBiomeTurn(state: GameState): GameState {
     actorCombos: resetActorCombos,
     foundationTokens,
     enemyFoundations,
+    enemyActors,
     enemyFoundationCombos,
     enemyFoundationTokens,
     enemyBackfillQueues: undefined,
@@ -2616,11 +2925,266 @@ export function endRandomBiomeTurn(state: GameState): GameState {
     randomBiomeTurnNumber: (state.randomBiomeTurnNumber || 1) + 1,
     randomBiomeActiveSide: useEnemyFoundations ? 'player' : undefined,
     enemyDifficulty: useEnemyFoundations ? (state.enemyDifficulty ?? biomeDef.enemyDifficulty ?? 'normal') : undefined,
+    rpgHandCards: state.rpgHandCards ?? [],
+    rpgDots: state.rpgDots ?? [],
+    rpgEnemyDragSlowUntil: state.rpgEnemyDragSlowUntil ?? 0,
+    rpgEnemyDragSlowActorId: state.rpgEnemyDragSlowActorId,
+    rpgCloudSightUntil: state.rpgCloudSightUntil ?? 0,
+    rpgCloudSightActorId: state.rpgCloudSightActorId,
+    rpgBlindedPlayerLevel: state.rpgBlindedPlayerLevel ?? 0,
+    rpgBlindedPlayerUntil: state.rpgBlindedPlayerUntil ?? 0,
+    rpgBlindedEnemyLevel: state.rpgBlindedEnemyLevel ?? 0,
+    rpgBlindedEnemyUntil: state.rpgBlindedEnemyUntil ?? 0,
   };
   partyActors.forEach((actor) => {
     nextState = applyOrimTiming(nextState, 'turn-end', actor.id);
   });
+  warnOnUnexpectedHpIncrease(state, nextState, 'endRandomBiomeTurn');
   return nextState;
+}
+
+export function playRpgHandCardOnActor(
+  state: GameState,
+  cardId: string,
+  side: 'player' | 'enemy',
+  actorIndex: number
+): GameState {
+  if (state.playtestVariant !== 'rpg') return state;
+  const hand = state.rpgHandCards ?? [];
+  const card = hand.find((entry) => entry.id === cardId);
+  if (!card) return state;
+  const rpcFamily = getRpcFamily(card);
+  const rpcCount = rpcFamily ? getRpcCount(card) : 0;
+  const rpcProfile = rpcFamily ? getRpcProfile(rpcFamily, rpcCount) : null;
+  const isCloudSight = card.id.startsWith('rpg-cloud-sight-');
+  if (!rpcFamily && !isCloudSight) return state;
+  const sourceActor = card.sourceActorId ? findActorById(state, card.sourceActorId) : null;
+  const attackerAccuracy = sourceActor?.accuracy ?? 100;
+
+  const resolveDirectDamage = (target: Actor, baseDamage: number): Actor => {
+    if ((target.hp ?? 0) <= 0) return target;
+    const targetEvasion = target.evasion ?? 0;
+    const targetArmor = target.armor ?? 0;
+    const hitChance = clampPercent(attackerAccuracy - targetEvasion, 5, 95);
+    const didHit = Math.random() * 100 < hitChance;
+    if (!didHit) return target;
+    const damage = Math.max(0, baseDamage - targetArmor);
+    if (damage <= 0) return target;
+    const hpBefore = target.hp ?? target.hpMax ?? 0;
+    return {
+      ...target,
+      hp: Math.max(0, hpBefore - damage),
+      damageTaken: (target.damageTaken ?? 0) + damage,
+    };
+  };
+
+  const now = Date.now();
+  const createDot = (
+    targetSide: 'player' | 'enemy',
+    targetActorId: string,
+    damagePerTick: number,
+    ticks: number,
+    intervalMs: number,
+    effectKind: 'vice_grip' | 'bleed'
+  ) => ({
+    id: `rpg-dot-${Date.now()}-${randomIdSuffix()}`,
+    sourceActorId: sourceActor?.id,
+    targetSide,
+    targetActorId,
+    damagePerTick,
+    initialTicks: ticks,
+    remainingTicks: ticks,
+    nextTickAt: now + intervalMs,
+    intervalMs,
+    effectKind,
+  });
+  const stripCardFromHand = (next: GameState): GameState => ({
+    ...next,
+    rpgHandCards: upgradeRpgHandCards(hand.filter((entry) => entry.id !== cardId)),
+  });
+
+  if (side === 'enemy') {
+    const enemyActors = state.enemyActors ?? [];
+    if (actorIndex < 0 || actorIndex >= enemyActors.length) return state;
+    if (!isActorCombatEnabled(enemyActors[actorIndex])) return state;
+    if (isCloudSight) return state;
+    const baseDamage = rpcProfile?.damage ?? 0;
+    const updatedEnemyActors = enemyActors.map((actor, index) =>
+      index === actorIndex ? resolveDirectDamage(actor, baseDamage) : actor
+    );
+    let damagedState: GameState = {
+      ...state,
+      enemyActors: updatedEnemyActors,
+    };
+    if (rpcFamily === 'bite' && rpcProfile?.viceGrip) {
+      const targetActor = enemyActors[actorIndex];
+      damagedState = {
+        ...damagedState,
+        rpgDots: [
+          ...(damagedState.rpgDots ?? []),
+          createDot('enemy', targetActor.id, RPG_VICE_BITE_DOT_POWER, RPG_VICE_BITE_TICKS, RPG_VICE_BITE_INTERVAL_MS, 'vice_grip'),
+        ],
+        rpgEnemyDragSlowUntil: Math.max(damagedState.rpgEnemyDragSlowUntil ?? 0, now + RPG_VICE_BITE_SLOW_MS),
+        rpgEnemyDragSlowActorId: targetActor.id,
+      };
+      if ((rpcProfile.bleedChance ?? 0) > 0 && Math.random() < (rpcProfile.bleedChance ?? 0)) {
+        damagedState = {
+          ...damagedState,
+          rpgDots: [
+            ...(damagedState.rpgDots ?? []),
+            createDot('enemy', targetActor.id, RPG_BITE_BLEED_DOT_POWER, RPG_BITE_BLEED_TICKS, RPG_BITE_BLEED_INTERVAL_MS, 'bleed'),
+          ],
+        };
+      }
+    }
+    return stripCardFromHand(damagedState);
+  }
+
+  if (!state.activeSessionTileId) return state;
+  const party = state.tileParties[state.activeSessionTileId] ?? [];
+  if (actorIndex < 0 || actorIndex >= party.length) return state;
+  if (!isActorCombatEnabled(party[actorIndex])) return state;
+
+  if (isCloudSight) {
+    const target = party[actorIndex];
+    if (target.definitionId !== 'owl') return state;
+    if (sourceActor?.id && sourceActor.id !== target.id) return state;
+    return stripCardFromHand({
+      ...state,
+      rpgCloudSightUntil: Math.max(state.rpgCloudSightUntil ?? 0, now + RPG_CLOUD_SIGHT_MS),
+      rpgCloudSightActorId: target.id,
+    });
+  }
+
+  const baseDamage = rpcProfile?.damage ?? 0;
+  const updatedParty = party.map((actor, index) =>
+    index === actorIndex ? resolveDirectDamage(actor, baseDamage) : actor
+  );
+
+  let damagedState: GameState = {
+    ...state,
+    tileParties: {
+      ...state.tileParties,
+      [state.activeSessionTileId]: updatedParty,
+    },
+  };
+  if (rpcFamily === 'bite' && rpcProfile?.viceGrip) {
+    const target = party[actorIndex];
+    damagedState = {
+      ...damagedState,
+      rpgDots: [
+        ...(damagedState.rpgDots ?? []),
+        createDot('player', target.id, RPG_VICE_BITE_DOT_POWER, RPG_VICE_BITE_TICKS, RPG_VICE_BITE_INTERVAL_MS, 'vice_grip'),
+      ],
+    };
+    if ((rpcProfile.bleedChance ?? 0) > 0 && Math.random() < (rpcProfile.bleedChance ?? 0)) {
+      damagedState = {
+        ...damagedState,
+        rpgDots: [
+          ...(damagedState.rpgDots ?? []),
+          createDot('player', target.id, RPG_BITE_BLEED_DOT_POWER, RPG_BITE_BLEED_TICKS, RPG_BITE_BLEED_INTERVAL_MS, 'bleed'),
+        ],
+      };
+    }
+  }
+  return stripCardFromHand(damagedState);
+}
+
+export function tickRpgCombat(state: GameState, now: number = Date.now()): GameState {
+  if (state.playtestVariant !== 'rpg') return state;
+  const slowExpired = (state.rpgEnemyDragSlowUntil ?? 0) > 0 && now >= (state.rpgEnemyDragSlowUntil ?? 0);
+  const cloudExpired = (state.rpgCloudSightUntil ?? 0) > 0 && now >= (state.rpgCloudSightUntil ?? 0);
+  const blindedEnemyExpired = (state.rpgBlindedEnemyUntil ?? 0) > 0 && now >= (state.rpgBlindedEnemyUntil ?? 0);
+  const blindedPlayerExpired = (state.rpgBlindedPlayerUntil ?? 0) > 0 && now >= (state.rpgBlindedPlayerUntil ?? 0);
+  const dots = state.rpgDots ?? [];
+  if (dots.length === 0 && !slowExpired && !cloudExpired && !blindedEnemyExpired && !blindedPlayerExpired) return state;
+
+  let changed = false;
+  let nextState: GameState = state;
+  const nextDots = dots.map((dot) => ({ ...dot }));
+
+  if (slowExpired) {
+    nextState = { ...nextState, rpgEnemyDragSlowUntil: 0, rpgEnemyDragSlowActorId: undefined };
+    changed = true;
+  }
+  if (cloudExpired) {
+    nextState = { ...nextState, rpgCloudSightUntil: 0, rpgCloudSightActorId: undefined };
+    changed = true;
+  }
+  if (blindedEnemyExpired) {
+    nextState = { ...nextState, rpgBlindedEnemyLevel: 0, rpgBlindedEnemyUntil: 0 };
+    changed = true;
+  }
+  if (blindedPlayerExpired) {
+    nextState = { ...nextState, rpgBlindedPlayerLevel: 0, rpgBlindedPlayerUntil: 0 };
+    changed = true;
+  }
+
+  const applyTickDamage = (
+    actor: Actor,
+    sourceActor: Actor | null,
+    baseDamage: number
+  ): Actor => {
+    if ((actor.hp ?? 0) <= 0) return actor;
+    const targetArmor = actor.armor ?? 0;
+    const sourceAccuracy = sourceActor?.accuracy ?? 100;
+    const targetEvasion = actor.evasion ?? 0;
+    const hitChance = clampPercent(sourceAccuracy - targetEvasion, 5, 95);
+    const didHit = Math.random() * 100 < hitChance;
+    if (!didHit) return actor;
+    const damage = Math.max(0, baseDamage - targetArmor);
+    if (damage <= 0) return actor;
+    return {
+      ...actor,
+      hp: Math.max(0, (actor.hp ?? actor.hpMax ?? 0) - damage),
+      damageTaken: (actor.damageTaken ?? 0) + damage,
+    };
+  };
+
+  nextDots.forEach((dot) => {
+    if (dot.remainingTicks <= 0) return;
+    if (now < dot.nextTickAt) return;
+    const sourceActor = dot.sourceActorId ? findActorById(nextState, dot.sourceActorId) : null;
+
+    if (dot.targetSide === 'enemy') {
+      const enemyActors = nextState.enemyActors ?? [];
+      const idx = enemyActors.findIndex((actor) => actor.id === dot.targetActorId);
+      if (idx !== -1) {
+        const updatedEnemyActors = enemyActors.map((actor, index) =>
+          index === idx ? applyTickDamage(actor, sourceActor, dot.damagePerTick) : actor
+        );
+        nextState = { ...nextState, enemyActors: updatedEnemyActors };
+        changed = true;
+      }
+    } else if (nextState.activeSessionTileId) {
+      const party = nextState.tileParties[nextState.activeSessionTileId] ?? [];
+      const idx = party.findIndex((actor) => actor.id === dot.targetActorId);
+      if (idx !== -1) {
+        const updatedParty = party.map((actor, index) =>
+          index === idx ? applyTickDamage(actor, sourceActor, dot.damagePerTick) : actor
+        );
+        nextState = {
+          ...nextState,
+          tileParties: {
+            ...nextState.tileParties,
+            [nextState.activeSessionTileId]: updatedParty,
+          },
+        };
+        changed = true;
+      }
+    }
+
+    dot.remainingTicks -= 1;
+    dot.nextTickAt += dot.intervalMs;
+  });
+
+  const filteredDots = nextDots.filter((dot) => dot.remainingTicks > 0);
+  if (filteredDots.length !== dots.length) changed = true;
+  if (!changed) return state;
+  return {
+    ...nextState,
+    rpgDots: filteredDots,
+  };
 }
 
 
@@ -2750,7 +3314,7 @@ export function playCardInNodeBiome(
 
   const partyActors = getPartyForTile(state, state.activeSessionTileId);
   const foundationActor = partyActors[foundationIndex];
-  if (foundationActor && foundationActor.stamina <= 0) return null;
+  if (foundationActor && !isActorCombatEnabled(foundationActor)) return null;
 
   const card = node.cards[node.cards.length - 1];
   const foundationTop = state.foundations[foundationIndex][

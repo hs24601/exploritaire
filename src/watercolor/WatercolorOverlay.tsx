@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
+import { memo, useEffect, useMemo, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { WatercolorConfig } from './types';
 import { useWatercolorEnabled } from './useWatercolorEnabled';
@@ -50,13 +50,16 @@ const WE_DRAG_DEGRADE_DISABLE_KEY = 'exploritaire.we.dragDegradeDisabled';
 const DRAG_GLOW_FACTOR = 0.45;
 const DRAG_GRAIN_INTENSITY_FACTOR = 0.55;
 const DRAG_GRAIN_FREQUENCY_FACTOR = 0.85;
-const MAX_OVERLAYS_WHILE_DRAG_DEGRADED = 18;
+const MAX_OVERLAYS_WHILE_DRAG_DEGRADED = 8;
+const FREEZE_OVERLAYS_WHILE_DRAG_DEGRADED = true;
 
 let watercolorInteractionDegraded = false;
+const interactionDegradeListeners = new Set<(enabled: boolean) => void>();
 
 function getFrameIntervalMs(overlayCount: number): number {
-  if (overlayCount >= 40) return 1000 / 24;
-  if (overlayCount >= 20) return 1000 / 30;
+  if (overlayCount >= 32) return 1000 / 20;
+  if (overlayCount >= 16) return 1000 / 24;
+  if (overlayCount >= 10) return 1000 / 30;
   return BASE_FRAME_INTERVAL_MS;
 }
 
@@ -91,7 +94,9 @@ function readDragDegradeDisabledFlag(): boolean {
 }
 
 export function setWatercolorInteractionDegraded(enabled: boolean) {
+  if (watercolorInteractionDegraded === enabled) return;
   watercolorInteractionDegraded = enabled;
+  interactionDegradeListeners.forEach((listener) => listener(enabled));
   ensureOverlayLoop();
 }
 
@@ -113,6 +118,13 @@ export function setWatercolorDragDegradeDisabled(disabled: boolean) {
 
 export function isWatercolorDragDegradeDisabled(): boolean {
   return readDragDegradeDisabledFlag();
+}
+
+function subscribeInteractionDegrade(listener: (enabled: boolean) => void): () => void {
+  interactionDegradeListeners.add(listener);
+  return () => {
+    interactionDegradeListeners.delete(listener);
+  };
 }
 
 const vertexShaderSource = `
@@ -609,6 +621,11 @@ function renderAllOverlays(time: number) {
     ? renderableOverlays.slice(0, MAX_OVERLAYS_WHILE_DRAG_DEGRADED)
     : renderableOverlays;
 
+  if (dragDegradeActive && FREEZE_OVERLAYS_WHILE_DRAG_DEGRADED) {
+    overlayLoopHandle = requestAnimationFrame(renderAllOverlays);
+    return;
+  }
+
   if (isTimeToRender) {
     lastFrameTime = time;
 
@@ -651,11 +668,6 @@ function renderAllOverlays(time: number) {
       ctx.drawImage(sharedCanvas, 0, 0, targetWidth, targetHeight);
     });
 
-    if (dragDegradeActive && renderableOverlays.length > overlaysToRender.length) {
-      for (let i = overlaysToRender.length; i < renderableOverlays.length; i += 1) {
-        renderableOverlays[i].clear();
-      }
-    }
   }
 
   // Only reschedule if we have active overlays AND haven't exceeded idle timeout
@@ -674,6 +686,7 @@ function WatercolorOverlay({
   style,
 }, ref) {
   const watercolorEnabled = useWatercolorEnabled();
+  const [dragDegraded, setDragDegraded] = useState(() => watercolorInteractionDegraded);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const blooms = useMemo(() => buildBlooms(config), [config]);
   const bloomsRef = useRef<Bloom[]>(blooms);
@@ -693,8 +706,17 @@ function WatercolorOverlay({
   }, [blooms, config.grain, config.luminous, config.luminousStrength]);
 
   useEffect(() => {
-    activeRef.current = watercolorEnabled;
-  }, [watercolorEnabled]);
+    const unsubscribe = subscribeInteractionDegrade(setDragDegraded);
+    return unsubscribe;
+  }, []);
+
+  const overlaysHiddenForDrag = dragDegraded
+    && FREEZE_OVERLAYS_WHILE_DRAG_DEGRADED
+    && !readDragDegradeDisabledFlag();
+
+  useEffect(() => {
+    activeRef.current = watercolorEnabled && !overlaysHiddenForDrag;
+  }, [overlaysHiddenForDrag, watercolorEnabled]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -741,7 +763,7 @@ function WatercolorOverlay({
         pointerEvents: 'none',
         overflow: 'hidden',
         zIndex: 0,
-        opacity: watercolorEnabled ? 1 : 0,
+        opacity: watercolorEnabled && !overlaysHiddenForDrag ? 1 : 0,
         ...style,
       }}
     >

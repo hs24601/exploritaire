@@ -122,6 +122,9 @@ export interface Actor {
   energyMax: number; // Max energy pips
   hp: number; // Current health
   hpMax: number; // Max health
+  armor?: number; // Flat incoming damage reduction
+  evasion?: number; // Chance to avoid incoming hits
+  accuracy?: number; // Chance to land outgoing hits
   damageTaken?: number; // Damage taken this bout
   power: number; // Current power usage
   powerMax: number; // Max power capacity
@@ -142,10 +145,25 @@ export interface Token {
   stackIndex?: number;
 }
 
+export interface RpgDotEffect {
+  id: string;
+  sourceActorId?: string;
+  targetSide: 'player' | 'enemy';
+  targetActorId: string;
+  damagePerTick: number;
+  initialTicks: number;
+  remainingTicks: number;
+  nextTickAt: number;
+  intervalMs: number;
+  effectKind?: 'vice_grip' | 'bleed';
+}
+
 export interface GameState {
   tableaus: Card[][];
   foundations: Card[][];
   enemyFoundations?: Card[][];
+  enemyActors?: Actor[];
+  rpgHandCards?: Card[];
   stock: Card[];
   activeEffects: Effect[];
   turnCount: number;
@@ -188,7 +206,16 @@ export interface GameState {
   randomBiomeActiveSide?: 'player' | 'enemy';
   enemyDifficulty?: EnemyDifficulty;
   enemyBackfillQueues?: Card[][]; // Pre-seeded backfill queues used on enemy turns
-  playtestVariant?: 'single-foundation' | 'party-foundations' | 'party-battle';
+  rpgDots?: RpgDotEffect[];
+  rpgEnemyDragSlowUntil?: number;
+  rpgEnemyDragSlowActorId?: string;
+  rpgCloudSightUntil?: number;
+  rpgCloudSightActorId?: string;
+  rpgBlindedPlayerLevel?: number;
+  rpgBlindedPlayerUntil?: number;
+  rpgBlindedEnemyLevel?: number;
+  rpgBlindedEnemyUntil?: number;
+  playtestVariant?: 'single-foundation' | 'party-foundations' | 'party-battle' | 'rpg';
 }
 
 export interface Move {

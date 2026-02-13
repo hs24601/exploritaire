@@ -19,6 +19,8 @@ interface TableauProps {
   revealNextRow?: boolean;
   revealAllCards?: boolean;
   dimTopCard?: boolean;
+  hiddenTopCard?: boolean;
+  maskTopValue?: boolean;
 }
 
 export const Tableau = memo(function Tableau({
@@ -37,6 +39,8 @@ export const Tableau = memo(function Tableau({
   revealNextRow = false,
   revealAllCards = false,
   dimTopCard = false,
+  hiddenTopCard = false,
+  maskTopValue = false,
 }: TableauProps) {
   const isSelected = selectedCard?.tableauIndex === tableauIndex;
   const guidanceActive = guidanceMoves.length > 0;
@@ -95,16 +99,16 @@ export const Tableau = memo(function Tableau({
             <Card
               card={card}
               size={{ width: cardWidth, height: cardHeight }}
-              faceDown={!revealAllCards && !isTopCard && !isSecondCard}
-              canPlay={isTopCard && canPlay}
+              faceDown={hiddenTopCard && isTopCard ? true : (!revealAllCards && !isTopCard && !isSecondCard)}
+              canPlay={isTopCard && canPlay && !hiddenTopCard}
               isSelected={isTopCard && isSelected}
               onClick={
-                interactionMode === 'click' && isTopCard && !noValidMoves
+                interactionMode === 'click' && isTopCard && !noValidMoves && !hiddenTopCard
                   ? () => onCardSelect(card, tableauIndex)
                   : undefined
               }
               onDragStart={
-                interactionMode === 'dnd' && isTopCard && !noValidMoves
+                interactionMode === 'dnd' && isTopCard && !noValidMoves && !hiddenTopCard
                   ? handleDragStart
                   : undefined
               }
@@ -112,6 +116,7 @@ export const Tableau = memo(function Tableau({
               isGuidanceTarget={isTopCard && isNextGuidanceMove}
               isDimmed={(guidanceActive && isTopCard && !isNextGuidanceMove) || (dimTopCard && isTopCard)}
               showGraphics={showGraphics}
+              maskValue={maskTopValue && (isTopCard || isSecondCard)}
             />
             {dimTopCard && isTopCard && (
               <div

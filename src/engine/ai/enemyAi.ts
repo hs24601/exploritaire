@@ -2,6 +2,7 @@ import type { GameState, Move, EnemyDifficulty } from '../types';
 import { analyzeOptimalSequence } from '../analysis';
 import { canPlayCard, canPlayCardWithWild } from '../rules';
 import { getBiomeDefinition } from '../biomes';
+import { getActiveBlindLevel, getBlindedHiddenTableauIndexes } from '../rpgBlind';
 
 type DifficultyProfile = {
   optimalChance: number;
@@ -24,13 +25,19 @@ function getMode(state: GameState): 'standard' | 'wild' {
 
 export function getEnemyPlayableMoves(state: GameState): Move[] {
   const foundations = state.enemyFoundations ?? [];
+  const enemyActors = state.enemyActors ?? [];
   if (!foundations.length) return [];
   const canPlay = getMode(state) === 'wild' ? canPlayCardWithWild : canPlayCard;
+  const blindLevel = getActiveBlindLevel(state, 'enemy');
+  const hiddenTableaus = new Set(getBlindedHiddenTableauIndexes(blindLevel));
   const moves: Move[] = [];
   state.tableaus.forEach((tableau, tableauIndex) => {
+    if (hiddenTableaus.has(tableauIndex)) return;
     if (tableau.length === 0) return;
     const card = tableau[tableau.length - 1];
     foundations.forEach((foundation, foundationIndex) => {
+      const foundationActor = enemyActors[foundationIndex];
+      if (foundationActor && (((foundationActor.hp ?? 0) <= 0) || ((foundationActor.stamina ?? 0) <= 0))) return;
       const top = foundation[foundation.length - 1];
       if (!top) return;
       if (canPlay(card, top, state.activeEffects)) {
@@ -52,15 +59,25 @@ export function selectEnemyMove(
 ): Move | null {
   const playable = getEnemyPlayableMoves(state);
   if (playable.length === 0) return null;
+  const blindLevel = getActiveBlindLevel(state, 'enemy');
 
   const profile = DIFFICULTY_PROFILES[difficulty];
   if (movesMade > 0 && Math.random() < profile.earlyStopChance) {
     return null;
   }
 
+  if (blindLevel >= 4) {
+    // Blind IV removes value visibility; enemy acts with no optimization.
+    return pickRandom(playable);
+  }
+
   const mode = getMode(state);
+  const hiddenTableaus = new Set(getBlindedHiddenTableauIndexes(blindLevel));
+  const analysisTableaus = hiddenTableaus.size > 0
+    ? state.tableaus.map((tableau, idx) => (hiddenTableaus.has(idx) ? [] : tableau))
+    : state.tableaus;
   const analysis = analyzeOptimalSequence({
-    tableaus: state.tableaus,
+    tableaus: analysisTableaus,
     foundations: state.enemyFoundations ?? [],
     activeEffects: state.activeEffects,
     mode,

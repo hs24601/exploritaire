@@ -42,6 +42,8 @@ import {
   rewindLastCardAction as rewindLastCardActionFn,
   endRandomBiomeTurn as endRandomBiomeTurnFn,
   advanceRandomBiomeTurn as advanceRandomBiomeTurnFn,
+  playRpgHandCardOnActor as playRpgHandCardOnActorFn,
+  tickRpgCombat as tickRpgCombatFn,
   completeBiome as completeBiomeFn,
   collectBlueprint as collectBlueprintFn,
   addTileToGarden as addTileToGardenFn,
@@ -141,7 +143,7 @@ export function useGameEngine(
       ? gameState.tileParties[gameState.activeSessionTileId] ?? []
       : [];
     const hasFoundationStamina = (index: number) =>
-      (partyActors[index]?.stamina ?? 1) > 0;
+      (partyActors[index]?.stamina ?? 1) > 0 && (partyActors[index]?.hp ?? 1) > 0;
 
     const noValidMoves = (() => {
       if (gameState.phase === 'playing') {
@@ -641,7 +643,7 @@ export function useGameEngine(
 
       for (let fIdx = 0; fIdx < gameState.foundations.length; fIdx += 1) {
         const actor = partyActors[fIdx];
-        const hasStamina = (actor?.stamina ?? 0) > 0;
+        const hasStamina = (actor?.stamina ?? 0) > 0 && (actor?.hp ?? 0) > 0;
         if (!hasStamina) continue;
         const foundation = gameState.foundations[fIdx];
         const top = foundation[foundation.length - 1];
@@ -787,6 +789,26 @@ export function useGameEngine(
     if (!gameState) return;
     setGameState(advanceRandomBiomeTurnFn(gameState));
     setSelectedCard(null);
+  }, [gameState]);
+
+  const playRpgHandCardOnActor = useCallback((
+    cardId: string,
+    side: 'player' | 'enemy',
+    actorIndex: number
+  ) => {
+    if (!gameState) return false;
+    const newState = playRpgHandCardOnActorFn(gameState, cardId, side, actorIndex);
+    if (newState === gameState) return false;
+    setGameState(newState);
+    return true;
+  }, [gameState]);
+
+  const tickRpgCombat = useCallback((nowMs: number) => {
+    if (!gameState) return false;
+    const newState = tickRpgCombatFn(gameState, nowMs);
+    if (newState === gameState) return false;
+    setGameState(newState);
+    return true;
   }, [gameState]);
 
   const completeBiome = useCallback(() => {
@@ -947,6 +969,8 @@ export function useGameEngine(
       playEnemyCardInRandomBiome,
       endRandomBiomeTurn,
       advanceRandomBiomeTurn,
+      playRpgHandCardOnActor,
+      tickRpgCombat,
       completeBiome,
       collectBlueprint,
       abandonSession,

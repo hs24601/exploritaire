@@ -42,6 +42,7 @@ interface CardProps {
   cardWatercolor?: WatercolorConfig | null;
   watercolorShadowGlyph?: string;
   valueWatercolor?: WatercolorConfig | null;
+  maskValue?: boolean;
 }
 
 export const Card = memo(function Card({
@@ -69,6 +70,7 @@ export const Card = memo(function Card({
   cardWatercolor,
   watercolorShadowGlyph,
   valueWatercolor,
+  maskValue = false,
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [shimmer, setShimmer] = useState(0);
@@ -107,6 +109,70 @@ export const Card = memo(function Card({
   const cooldownValue = card?.cooldown ?? 0;
   const cooldownMax = card?.maxCooldown ?? 0;
   const cooldownProgress = cooldownMax > 0 ? Math.max(0, Math.min(1, (cooldownMax - cooldownValue) / cooldownMax)) : 0;
+  const rpgLevel = useMemo(() => {
+    if (!card) return 0;
+    const match = card.id.match(/-lvl-(\d+)-/);
+    const parsed = match ? Number(match[1]) : NaN;
+    return Number.isFinite(parsed) ? parsed : 0;
+  }, [card]);
+  const rpgCardMeta = useMemo(() => {
+    if (!card || !card.id.startsWith('rpg-')) return null;
+    if (card.id.startsWith('rpg-scratch-')) {
+      return {
+        title: 'SCRATCH',
+        subtitle: `PWR ${card.rank ?? 0}${rpgLevel > 0 ? `  LV ${rpgLevel}` : ''}`,
+        titleColor: '#f7d24b',
+        subtitleColor: '#ffb3b3',
+      };
+    }
+    if (card.id.startsWith('rpg-bite-')) {
+      const hasViceGrip = rpgLevel >= 3 || card.id.startsWith('rpg-vice-bite-');
+      const hasBleed = rpgLevel >= 5;
+      return {
+        title: 'BITE',
+        subtitle: hasBleed
+          ? `PWR ${card.rank ?? 0}  BLEED 20%`
+          : (hasViceGrip ? `PWR ${card.rank ?? 0}  VICE GRIP` : `PWR ${card.rank ?? 0}`),
+        titleColor: '#f0f0f0',
+        subtitleColor: '#ff9d9d',
+      };
+    }
+    if (card.id.startsWith('rpg-vice-bite-')) {
+      return { title: 'BITE', subtitle: `PWR ${card.rank ?? 0}  VICE GRIP`, titleColor: '#ffd7d7', subtitleColor: '#ff6b6b' };
+    }
+    if (card.id.startsWith('rpg-cloud-sight-')) {
+      return { title: 'CLOUD SIGHT', subtitle: 'SELF 10S', titleColor: '#9de3ff', subtitleColor: '#d4f3ff' };
+    }
+    if (card.id.startsWith('rpg-peck-')) {
+      return {
+        title: 'PECK',
+        subtitle: `PWR ${card.rank ?? 1}${rpgLevel > 0 ? `  LV ${rpgLevel}` : ''}`,
+        titleColor: '#d4f3ff',
+        subtitleColor: '#ffb3b3',
+      };
+    }
+    if (card.id.startsWith('rpg-blinding-peck-')) {
+      return { title: 'BLINDING PECK', subtitle: `PWR ${card.rank ?? 4}`, titleColor: '#eaf8ff', subtitleColor: '#ff9d9d' };
+    }
+    return null;
+  }, [card, rpgLevel]);
+  const isUpgradedRpgCard = !!card && (
+    card.id.startsWith('rpg-vice-bite-')
+    || card.id.startsWith('rpg-blinding-peck-')
+    || (rpgLevel >= 3 && (
+      card.id.startsWith('rpg-bite-')
+      || card.id.startsWith('rpg-peck-')
+      || card.id.startsWith('rpg-scratch-')
+    ))
+  );
+  const upgradedSheenOffsetSec = useMemo(() => {
+    if (!card) return 0;
+    let hash = 0;
+    for (let i = 0; i < card.id.length; i += 1) {
+      hash = ((hash << 5) - hash + card.id.charCodeAt(i)) | 0;
+    }
+    return (Math.abs(hash) % 260) / 100;
+  }, [card]);
 
   const getBorderColor = () => {
     if (borderColorOverride !== undefined) return borderColorOverride;
@@ -758,6 +824,38 @@ export const Card = memo(function Card({
           }}
         />
       )}
+      {!faceDown && isUpgradedRpgCard && (
+        <>
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 2,
+              borderRadius: 10,
+              background: 'linear-gradient(120deg, rgba(255,255,255,0) 8%, rgba(255,255,255,0.35) 20%, rgba(160,255,255,0.28) 33%, rgba(255,170,255,0.24) 47%, rgba(255,255,255,0) 60%)',
+              transform: 'translateX(-120%)',
+              animation: 'rpg-holo-sheen 2.8s ease-in-out infinite',
+              animationDelay: `${-upgradedSheenOffsetSec}s`,
+              mixBlendMode: 'screen',
+            }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 2,
+              borderRadius: 10,
+              boxShadow: 'inset 0 0 16px rgba(180, 255, 255, 0.25), inset 0 0 26px rgba(255, 190, 255, 0.2)',
+            }}
+          />
+          <style>{`
+            @keyframes rpg-holo-sheen {
+              0% { transform: translateX(-120%); opacity: 0.2; }
+              40% { opacity: 0.95; }
+              55% { transform: translateX(120%); opacity: 0.25; }
+              100% { transform: translateX(120%); opacity: 0.2; }
+            }
+          `}</style>
+        </>
+      )}
       {/* TEMP: earth card SVG lines hidden */}
       {!faceDown && card && (
         <div
@@ -795,55 +893,84 @@ export const Card = memo(function Card({
               })}
             </div>
           )}
-          <div
-            className="force-sharp absolute"
-            style={{
-              top: Math.max(6, Math.round(frameSize.height * 0.07)),
-              left: 0,
-              right: 0,
-              textAlign: 'center',
-              textShadow: isDimmed ? 'none' : `0 0 10px ${suitColor}`,
-              WebkitFontSmoothing: 'subpixel-antialiased',
-              textRendering: 'geometricPrecision',
-              fontSmooth: 'always',
-              pointerEvents: 'none',
-            }}
-          >
-            {valueWatercolorConfig && (
-              <div
-                className="absolute left-1/2 top-1/2"
-                style={{
-                  width: Math.round(frameSize.width),
-                  height: Math.round(frameSize.height),
-                  transform: 'translate(-50%, -50%)',
-                  opacity: 1,
-                  filter: 'blur(0.2px)',
-                  mixBlendMode: 'screen',
-                  pointerEvents: 'none',
-                }}
-              >
-                <WatercolorOverlay config={valueWatercolorConfig} />
-              </div>
-            )}
-            <span
-              className="relative z-[2]"
+          {!maskValue && (
+            <div
+              className="force-sharp absolute"
               style={{
-                color: '#050505',
-                fontWeight: 800,
-                WebkitTextStroke: '0px transparent',
-                textShadow: `
-                  0 0 1px rgba(255, 255, 255, 0.85),
-                  0 0 2px rgba(255, 255, 255, 0.6),
-                  1px 0 0 rgba(255, 255, 255, 0.95),
-                  -1px 0 0 rgba(255, 255, 255, 0.95),
-                  0 1px 0 rgba(255, 255, 255, 0.95),
-                  0 -1px 0 rgba(255, 255, 255, 0.95)
-                `,
+                top: Math.max(6, Math.round(frameSize.height * 0.07)),
+                left: 0,
+                right: 0,
+                textAlign: 'center',
+                textShadow: isDimmed ? 'none' : `0 0 10px ${suitColor}`,
+                WebkitFontSmoothing: 'subpixel-antialiased',
+                textRendering: 'geometricPrecision',
+                fontSmooth: 'always',
+                pointerEvents: 'none',
               }}
             >
-              {getRankDisplay(card.rank)}
-            </span>
-          </div>
+              {valueWatercolorConfig && (
+                <div
+                  className="absolute left-1/2 top-1/2"
+                  style={{
+                    width: Math.round(frameSize.width),
+                    height: Math.round(frameSize.height),
+                    transform: 'translate(-50%, -50%)',
+                    opacity: 1,
+                    filter: 'blur(0.2px)',
+                    mixBlendMode: 'screen',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <WatercolorOverlay config={valueWatercolorConfig} />
+                </div>
+              )}
+              {rpgCardMeta ? (
+                <div className="relative z-[2] flex flex-col items-center gap-0.5">
+                  <span
+                    style={{
+                      color: rpgCardMeta.titleColor,
+                      fontWeight: 800,
+                      fontSize: Math.max(9, Math.round(frameSize.width * 0.11)),
+                      letterSpacing: '0.16em',
+                      textShadow: `0 0 8px ${rpgCardMeta.titleColor}88`,
+                    }}
+                  >
+                    {rpgCardMeta.title}
+                  </span>
+                  <span
+                    style={{
+                      color: rpgCardMeta.subtitleColor,
+                      fontWeight: 800,
+                      fontSize: Math.max(9, Math.round(frameSize.width * 0.1)),
+                      letterSpacing: '0.12em',
+                      textShadow: `0 0 8px ${rpgCardMeta.subtitleColor}88`,
+                    }}
+                  >
+                    {rpgCardMeta.subtitle}
+                  </span>
+                </div>
+              ) : (
+                <span
+                  className="relative z-[2]"
+                  style={{
+                    color: '#050505',
+                    fontWeight: 800,
+                    WebkitTextStroke: '0px transparent',
+                    textShadow: `
+                      0 0 1px rgba(255, 255, 255, 0.85),
+                      0 0 2px rgba(255, 255, 255, 0.6),
+                      1px 0 0 rgba(255, 255, 255, 0.95),
+                      -1px 0 0 rgba(255, 255, 255, 0.95),
+                      0 1px 0 rgba(255, 255, 255, 0.95),
+                      0 -1px 0 rgba(255, 255, 255, 0.95)
+                    `,
+                  }}
+                >
+                  {getRankDisplay(card.rank)}
+                </span>
+              )}
+            </div>
+          )}
           {false && hasOrimSlots ? ( // TEMP: hide orim presentation while iterating on new card/orim UI
             <div className="flex items-center justify-center gap-1">
               {orimDisplay.length > 0
@@ -942,7 +1069,7 @@ export const Card = memo(function Card({
                   );
                 })}
             </div>
-          ) : (
+          ) : (!maskValue && !rpgCardMeta) ? (
             <div
               className="text-xs force-sharp"
               style={{
@@ -956,7 +1083,7 @@ export const Card = memo(function Card({
             >
               {suitDisplay}
             </div>
-          )}
+          ) : null}
           {cooldownValue > 0 && cooldownMax > 0 && (
             <div className="absolute bottom-1 left-1 right-1 text-[9px] text-game-white/70 pointer-events-none">
               <span>Cooling down</span>

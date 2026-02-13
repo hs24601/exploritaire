@@ -95,6 +95,7 @@ export default function App() {
   const [hotkeysExpanded, setHotkeysExpanded] = useState(false);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [isGamePaused, setIsGamePaused] = useState(false);
+  const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
   const [toolingTab, setToolingTab] = useState<'orim' | 'actor'>('actor');
   const [useGhostBackground, setUseGhostBackground] = useState(false);
@@ -148,7 +149,9 @@ export default function App() {
     const variantParam = params.get('var');
     const playtestVariant = variantParam === 'sf'
       ? 'single-foundation'
-      : (variantParam === 'pb' ? 'party-battle' : 'party-foundations');
+      : (variantParam === 'pb'
+        ? 'party-battle'
+        : (variantParam === 'rpg' ? 'rpg' : 'party-foundations'));
     const stored = window.localStorage.getItem('orimEditorDefinitions');
     const orimDefinitions = stored ? (() => {
       try {
@@ -198,6 +201,17 @@ export default function App() {
 
   const draggedHandCardRef = useRef<CardType | null>(null);
   const [handCards, setHandCards] = useState<CardType[]>([]);
+  const [foundationSplashHint, setFoundationSplashHint] = useState<{
+    foundationIndex: number;
+    directionDeg: number;
+    token: number;
+  } | null>(null);
+  const [rpgImpactSplashHint, setRpgImpactSplashHint] = useState<{
+    side: 'player' | 'enemy';
+    foundationIndex: number;
+    directionDeg: number;
+    token: number;
+  } | null>(null);
   const lastPartyKeyRef = useRef<string>('');
 
   useEffect(() => {
@@ -261,9 +275,30 @@ export default function App() {
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
+      if (event.repeat) return;
       if (event.code !== 'Space') return;
       event.preventDefault();
+      setHidePauseOverlay(false);
       setIsGamePaused((prev) => !prev);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (event.repeat) return;
+      if (event.code !== 'AltLeft') return;
+      event.preventDefault();
+      setIsGamePaused((prev) => {
+        const next = !prev;
+        setHidePauseOverlay(next);
+        return next;
+      });
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -309,18 +344,24 @@ export default function App() {
 
   // Handle drop from DND
   const handleDrop = useCallback(
-    (tableauIndex: number, foundationIndex: number) => {
+    (
+      tableauIndex: number,
+      foundationIndex: number,
+      dropPoint?: { x: number; y: number },
+      momentum?: { x: number; y: number }
+    ) => {
       if (!gameState) return;
-
-      const foundation = gameState.foundations[foundationIndex];
-      const foundationTop = foundation[foundation.length - 1];
+      const applySplashHint = () => {
+        if (!momentum || (Math.abs(momentum.x) + Math.abs(momentum.y)) <= 0.1) return;
+        const directionDeg = (Math.atan2(momentum.y, momentum.x) * 180) / Math.PI;
+        setFoundationSplashHint({
+          foundationIndex,
+          directionDeg,
+          token: Date.now(),
+        });
+      };
       const currentBiomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
       const useWild = !!currentBiomeDef?.randomlyGenerated;
-      const validate = useWild ? canPlayCardWithWild : canPlayCard;
-      const partyActors = gameState.activeSessionTileId
-        ? gameState.tileParties[gameState.activeSessionTileId] ?? []
-        : [];
-      const foundationActor = partyActors[foundationIndex];
 
       // Hand source: validate and remove from hand
       if (tableauIndex === HAND_SOURCE_INDEX) {
@@ -333,12 +374,42 @@ export default function App() {
           });
         }
         if (card) {
+          if (gameState.playtestVariant === 'rpg' && card.id.startsWith('rpg-')) {
+            const point = dropPoint;
+            if (point) {
+              const actorTarget = document
+                .elementsFromPoint(point.x, point.y)
+                .find((entry) => entry instanceof HTMLElement && entry.dataset.rpgActorTarget === 'true') as HTMLElement | undefined;
+              const side = actorTarget?.dataset.rpgActorSide;
+              const actorIndexRaw = actorTarget?.dataset.rpgActorIndex;
+              const actorIndex = actorIndexRaw !== undefined ? Number(actorIndexRaw) : NaN;
+              if ((side === 'player' || side === 'enemy') && Number.isInteger(actorIndex)) {
+                const played = actions.playRpgHandCardOnActor(card.id, side, actorIndex);
+                if (played && momentum && (Math.abs(momentum.x) + Math.abs(momentum.y)) > 0.1) {
+                  const directionDeg = (Math.atan2(momentum.y, momentum.x) * 180) / Math.PI;
+                  setRpgImpactSplashHint({
+                    side,
+                    foundationIndex: actorIndex,
+                    directionDeg,
+                    token: Date.now(),
+                  });
+                }
+              }
+            }
+            draggedHandCardRef.current = null;
+            return;
+          }
           const played = actions.playFromHand(card, foundationIndex, useWild);
+          if (played) applySplashHint();
           void played;
         }
         draggedHandCardRef.current = null;
         return;
       }
+
+      const foundation = gameState.foundations[foundationIndex];
+      if (!foundation) return;
+      const foundationTop = foundation[foundation.length - 1];
 
       const tableau = gameState.tableaus[tableauIndex];
       if (tableau.length === 0) return;
@@ -347,13 +418,15 @@ export default function App() {
 
       if (useWild) {
         if (canPlayCardWithWild(card, foundationTop, gameState.activeEffects)) {
-          actions.playCardInRandomBiome(tableauIndex, foundationIndex);
+          const played = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
+          if (played) applySplashHint();
         }
         return;
       }
 
       if (canPlayCard(card, foundationTop, gameState.activeEffects)) {
-        actions.playFromTableau(tableauIndex, foundationIndex);
+        const played = actions.playFromTableau(tableauIndex, foundationIndex);
+        if (played) applySplashHint();
       }
     },
     [gameState, actions]
@@ -1352,6 +1425,8 @@ export default function App() {
                 dragState={dragState}
                 handleDragStart={handleDragStart}
                 setFoundationRef={setFoundationRef}
+                foundationSplashHint={foundationSplashHint}
+                rpgImpactSplashHint={rpgImpactSplashHint}
                 handCards={handCards}
                 tooltipSuppressed={tooltipSuppressed}
                 handleExitBiome={handleExitBiome}
@@ -1370,6 +1445,11 @@ export default function App() {
                 onTogglePaintLuminosity={() => setPaintLuminosityEnabled((prev) => !prev)}
                 zenModeEnabled={zenModeEnabled}
                 isGamePaused={isGamePaused}
+                hidePauseOverlay={hidePauseOverlay}
+                onTogglePause={() => {
+                  setHidePauseOverlay(false);
+                  setIsGamePaused((prev) => !prev);
+                }}
                 wildAnalysis={analysis.wild}
                 actions={{
                   selectCard: actions.selectCard,
@@ -1385,6 +1465,7 @@ export default function App() {
                   playCardInNodeBiome: actions.playCardInNodeBiome,
                   endRandomBiomeTurn: actions.endRandomBiomeTurn,
                   advanceRandomBiomeTurn: actions.advanceRandomBiomeTurn,
+                  tickRpgCombat: actions.tickRpgCombat,
                   setEnemyDifficulty: actions.setEnemyDifficulty,
                   rewindLastCard: actions.rewindLastCard,
                   swapPartyLead: actions.swapPartyLead,
@@ -1398,7 +1479,7 @@ export default function App() {
       )}
 
       {/* Garden screen */}
-      {gameState.playtestVariant !== 'party-foundations' && gameState.playtestVariant !== 'party-battle' && (
+      {gameState.playtestVariant !== 'party-foundations' && gameState.playtestVariant !== 'party-battle' && gameState.playtestVariant !== 'rpg' && (
         <Table
           pendingCards={gameState.pendingCards}
           buildPileProgress={gameState.buildPileProgress}
