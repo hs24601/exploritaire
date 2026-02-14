@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import type { GameState, SelectedCard, Move, EffectType, Element, Token, Card, Actor } from '../engine/types';
+import type { GameState, SelectedCard, Move, EffectType, Element, Token, Card, Actor, RelicCombatEvent } from '../engine/types';
 import {
   initializeGame,
   playCard,
@@ -36,13 +36,17 @@ import {
   removeActorFromTileHome as removeActorFromTileHomeFn,
   startBiome as startBiomeFn,
   playCardInBiome as playCardInBiomeFn,
-  playCardInNodeBiome as playCardInNodeBiomeFn,
   playCardInRandomBiome as playCardInRandomBiomeFn,
   playEnemyCardInRandomBiome as playEnemyCardInRandomBiomeFn,
   rewindLastCardAction as rewindLastCardActionFn,
   endRandomBiomeTurn as endRandomBiomeTurnFn,
+  endExplorationTurnInRandomBiome as endExplorationTurnInRandomBiomeFn,
   advanceRandomBiomeTurn as advanceRandomBiomeTurnFn,
+  rerollRandomBiomeDeal as rerollRandomBiomeDealFn,
+  spawnRandomEnemyInRandomBiome as spawnRandomEnemyInRandomBiomeFn,
   playRpgHandCardOnActor as playRpgHandCardOnActorFn,
+  playEnemyRpgHandCardOnActor as playEnemyRpgHandCardOnActorFn,
+  adjustRpgHandCardRarity as adjustRpgHandCardRarityFn,
   tickRpgCombat as tickRpgCombatFn,
   completeBiome as completeBiomeFn,
   collectBlueprint as collectBlueprintFn,
@@ -60,14 +64,18 @@ import {
   moveOrimBetweenSlots as moveOrimBetweenSlotsFn,
   returnOrimToStash as returnOrimToStashFn,
   devInjectOrimToActor as devInjectOrimToActorFn,
+  updateRelicDefinitions as updateRelicDefinitionsFn,
+  updateEquippedRelics as updateEquippedRelicsFn,
+  processRelicCombatEvent as processRelicCombatEventFn,
 } from '../engine/game';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { findBestMoveSequence, solveOptimally } from '../engine/guidance';
-import { canPlayCard, canPlayCardWithWild } from '../engine/rules';
+import { canPlayCardWithWild } from '../engine/rules';
 import { getBiomeDefinition } from '../engine/biomes';
 import { analyzeOptimalSequence, computeAnalysisKey } from '../engine/analysis';
 
 const ORIM_STORAGE_KEY = 'orimEditorDefinitions';
+const RELIC_STORAGE_KEY = 'relicEditorDefinitions';
 
 const normalizeOrimId = (value: string) => value
   .toLowerCase()
@@ -122,6 +130,12 @@ export function useGameEngine(
     window.localStorage.setItem(ORIM_STORAGE_KEY, JSON.stringify(gameState.orimDefinitions, null, 2));
   }, [gameState?.orimDefinitions]);
 
+  useEffect(() => {
+    if (!gameState) return;
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(RELIC_STORAGE_KEY, JSON.stringify(gameState.relicDefinitions, null, 2));
+  }, [gameState?.relicDefinitions]);
+
   // Derived state
   const derivedState = useMemo(() => {
     if (!gameState) {
@@ -152,7 +166,7 @@ export function useGameEngine(
           const topCard = tableau[tableau.length - 1];
           return gameState.foundations.some((foundation, index) =>
             hasFoundationStamina(index) &&
-            canPlayCard(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
           );
         });
       }
@@ -164,7 +178,7 @@ export function useGameEngine(
             const topCard = tableau[tableau.length - 1];
             return gameState.foundations.some((foundation, index) =>
               hasFoundationStamina(index) &&
-              canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+              canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
             );
           });
         }
@@ -173,7 +187,7 @@ export function useGameEngine(
           const topCard = tableau[tableau.length - 1];
           return gameState.foundations.some((foundation, index) =>
             hasFoundationStamina(index) &&
-            canPlayCard(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
           );
         });
       }
@@ -187,7 +201,7 @@ export function useGameEngine(
           const topCard = tableau[tableau.length - 1];
           return gameState.foundations.some((foundation, index) =>
             hasFoundationStamina(index) &&
-            canPlayCard(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
           );
         });
       }
@@ -198,7 +212,7 @@ export function useGameEngine(
           const topCard = tableau[tableau.length - 1];
           return gameState.foundations.some((foundation, index) =>
             hasFoundationStamina(index) &&
-            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects)
+            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
           );
         });
       }
@@ -211,7 +225,7 @@ export function useGameEngine(
       if (isRandomBiome) {
         return gameState.foundations.map((foundation, index) =>
           hasFoundationStamina(index) &&
-          canPlayCardWithWild(selectedCard.card, foundation[foundation.length - 1], gameState.activeEffects)
+          canPlayCardWithWild(selectedCard.card, foundation[foundation.length - 1], gameState.activeEffects, foundation)
         );
       }
       return getValidFoundationsForCard(gameState, selectedCard.card).map(
@@ -246,9 +260,26 @@ export function useGameEngine(
     const hasNoRegret = (actor: Actor): boolean =>
       actorHasOrimDefinition(gameState, actor.id, 'no-regret');
     const actor = candidateActors.find(hasNoRegret) ?? null;
-    if (!actor) return { canRewind: false, cooldown: 0, actorId: null as string | null };
     const cooldown = gameState.noRegretCooldown ?? 0;
-    return { canRewind: cooldown <= 0, cooldown, actorId: actor.id };
+    if (actor && cooldown <= 0) {
+      return { canRewind: true, cooldown, actorId: actor.id };
+    }
+
+    const hindsightRelic = gameState.relicDefinitions.find((definition) => definition.behaviorId === 'hindsight_v1');
+    const hindsightInstance = hindsightRelic
+      ? gameState.equippedRelics.find((instance) => instance.relicId === hindsightRelic.id && instance.enabled)
+      : null;
+    if (hindsightInstance) {
+      const restCount = gameState.globalRestCount ?? 0;
+      const runtime = gameState.relicRuntimeState[hindsightInstance.instanceId] ?? {};
+      const lastUsedRestCount = runtime.counters?.hindsightLastUsedRestCount;
+      const hindsightReady = typeof lastUsedRestCount !== 'number' || lastUsedRestCount !== restCount;
+      if (hindsightReady) {
+        return { canRewind: true, cooldown: 0, actorId: 'hindsight' };
+      }
+    }
+    if (!actor) return { canRewind: false, cooldown: 0, actorId: null as string | null };
+    return { canRewind: false, cooldown, actorId: actor.id };
   }, [gameState, devNoRegretEnabled]);
 
   useEffect(() => {
@@ -301,6 +332,9 @@ export function useGameEngine(
           tokens: gameState.tokens,
           resourceStash: gameState.resourceStash,
           orimDefinitions: gameState.orimDefinitions,
+          relicDefinitions: gameState.relicDefinitions,
+          equippedRelics: gameState.equippedRelics,
+          relicRuntimeState: gameState.relicRuntimeState,
           orimStash: gameState.orimStash,
           orimInstances: gameState.orimInstances,
           actorDecks: gameState.actorDecks,
@@ -647,9 +681,7 @@ export function useGameEngine(
         if (!hasStamina) continue;
         const foundation = gameState.foundations[fIdx];
         const top = foundation[foundation.length - 1];
-        const canPlay = useWild
-          ? canPlayCardWithWild(card, top, gameState.activeEffects)
-          : canPlayCard(card, top, gameState.activeEffects);
+        const canPlay = canPlayCardWithWild(card, top, gameState.activeEffects, foundation);
         if (!canPlay) continue;
 
         const newState = useWild
@@ -747,12 +779,14 @@ export function useGameEngine(
   );
 
   const playCardInNodeBiome = useCallback((nodeId: string, foundationIndex: number) => {
-    if (!gameState || gameState.phase !== 'biome') return;
-    const newState = playCardInNodeBiomeFn(gameState, nodeId, foundationIndex);
+    if (!gameState || gameState.phase !== 'biome' || !selectedCard) return;
+    void nodeId;
+    const newState = playCardInBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex);
     if (newState) {
       setGameState(newState);
+      setSelectedCard(null);
     }
-  }, [gameState]);
+  }, [gameState, selectedCard]);
 
   const playCardInRandomBiome = useCallback(
     (tableauIndex: number, foundationIndex: number) => {
@@ -780,16 +814,41 @@ export function useGameEngine(
   );
 
   const endRandomBiomeTurn = useCallback(() => {
+    setGameState((prev) => (prev ? endRandomBiomeTurnFn(prev) : prev));
+    setSelectedCard(null);
+  }, []);
+
+  const endExplorationTurnInRandomBiome = useCallback(() => {
+    setGameState((prev) => (prev ? endExplorationTurnInRandomBiomeFn(prev) : prev));
+    setSelectedCard(null);
+  }, []);
+
+  const advanceRandomBiomeTurn = useCallback(() => {
+    setGameState((prev) => (prev ? advanceRandomBiomeTurnFn(prev) : prev));
+    setSelectedCard(null);
+  }, []);
+
+  const rerollRandomBiomeDeal = useCallback(() => {
     if (!gameState) return;
-    setGameState(endRandomBiomeTurnFn(gameState));
+    setGameState(rerollRandomBiomeDealFn(gameState));
     setSelectedCard(null);
   }, [gameState]);
 
-  const advanceRandomBiomeTurn = useCallback(() => {
-    if (!gameState) return;
-    setGameState(advanceRandomBiomeTurnFn(gameState));
+  const spawnRandomEnemyInRandomBiome = useCallback(() => {
+    setGameState((prev) => (prev ? spawnRandomEnemyInRandomBiomeFn(prev) : prev));
     setSelectedCard(null);
-  }, [gameState]);
+  }, []);
+
+  const setBiomeTableaus = useCallback((tableaus: Card[][]) => {
+    setGameState((prev) => {
+      if (!prev || prev.phase !== 'biome') return prev;
+      return {
+        ...prev,
+        tableaus,
+      };
+    });
+    setSelectedCard(null);
+  }, []);
 
   const playRpgHandCardOnActor = useCallback((
     cardId: string,
@@ -802,6 +861,57 @@ export function useGameEngine(
     setGameState(newState);
     return true;
   }, [gameState]);
+
+  const playEnemyRpgHandCardOnActor = useCallback((
+    enemyActorIndex: number,
+    cardId: string,
+    targetActorIndex: number
+  ) => {
+    if (!gameState) return false;
+    const newState = playEnemyRpgHandCardOnActorFn(gameState, enemyActorIndex, cardId, targetActorIndex);
+    if (newState === gameState) return false;
+    setGameState(newState);
+    return true;
+  }, [gameState]);
+
+  const adjustRpgHandCardRarity = useCallback((
+    cardId: string,
+    delta: -1 | 1
+  ) => {
+    if (!gameState) return false;
+    const newState = adjustRpgHandCardRarityFn(gameState, cardId, delta);
+    if (newState === gameState) return false;
+    setGameState(newState);
+    return true;
+  }, [gameState]);
+  const addRpgHandCard = useCallback((card: Card) => {
+    let added = false;
+    setGameState((prev) => {
+      if (!prev) return prev;
+      if (prev.playtestVariant !== 'rpg') return prev;
+      added = true;
+      return {
+        ...prev,
+        rpgHandCards: [...(prev.rpgHandCards ?? []), card],
+      };
+    });
+    return added;
+  }, []);
+  const removeRpgHandCardById = useCallback((cardId: string) => {
+    let removed = false;
+    setGameState((prev) => {
+      if (!prev) return prev;
+      if (prev.playtestVariant !== 'rpg') return prev;
+      const hand = prev.rpgHandCards ?? [];
+      if (!hand.some((card) => card.id === cardId)) return prev;
+      removed = true;
+      return {
+        ...prev,
+        rpgHandCards: hand.filter((card) => card.id !== cardId),
+      };
+    });
+    return removed;
+  }, []);
 
   const tickRpgCombat = useCallback((nowMs: number) => {
     if (!gameState) return false;
@@ -902,6 +1012,18 @@ export function useGameEngine(
     setGameState((prev) => (prev ? { ...prev, orimDefinitions: cleaned } : prev));
   }, []);
 
+  const updateRelicDefinitions = useCallback((definitions: GameState['relicDefinitions']) => {
+    setGameState((prev) => (prev ? updateRelicDefinitionsFn(prev, definitions) : prev));
+  }, []);
+
+  const updateEquippedRelics = useCallback((equippedRelics: GameState['equippedRelics']) => {
+    setGameState((prev) => (prev ? updateEquippedRelicsFn(prev, equippedRelics) : prev));
+  }, []);
+
+  const processRelicCombatEvent = useCallback((event: RelicCombatEvent) => {
+    setGameState((prev) => (prev ? processRelicCombatEventFn(prev, event) : prev));
+  }, []);
+
   const setEnemyDifficulty = useCallback((difficulty: GameState['enemyDifficulty']) => {
     setGameState((prev) => (prev ? { ...prev, enemyDifficulty: difficulty } : prev));
   }, []);
@@ -968,8 +1090,16 @@ export function useGameEngine(
       playCardInRandomBiome,
       playEnemyCardInRandomBiome,
       endRandomBiomeTurn,
+      endExplorationTurnInRandomBiome,
       advanceRandomBiomeTurn,
+      rerollRandomBiomeDeal,
+      spawnRandomEnemyInRandomBiome,
+      setBiomeTableaus,
       playRpgHandCardOnActor,
+      playEnemyRpgHandCardOnActor,
+      adjustRpgHandCardRarity,
+      addRpgHandCard,
+      removeRpgHandCardById,
       tickRpgCombat,
       completeBiome,
       collectBlueprint,
@@ -987,6 +1117,9 @@ export function useGameEngine(
       returnOrimToStash,
       devInjectOrimToActor,
       updateOrimDefinitions,
+      updateRelicDefinitions,
+      updateEquippedRelics,
+      processRelicCombatEvent,
       setEnemyDifficulty,
       toggleGraphics,
     },

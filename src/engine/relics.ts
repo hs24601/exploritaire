@@ -1,0 +1,69 @@
+import type { RelicDefinition } from './types';
+
+// RELIC_DEFINITIONS_START
+export const RELIC_DEFINITIONS: RelicDefinition[] = [
+  {
+    id: 'turtles_bide',
+    name: "Turtle's Bide",
+    description: 'Each 5s banked by ending turn early grants +1 armor to each party member.',
+    rarity: 'rare',
+    passive: true,
+    scope: 'party',
+    behaviorId: 'turtle_bide_v1',
+    params: {
+      msPerArmor: 5000,
+      armorPerProc: 1,
+    },
+  },
+  {
+    id: 'sunk_cost',
+    name: 'Sunk Cost',
+    description: 'This conch shell will sound a warning when there are no more playable moves this turn.',
+    rarity: 'uncommon',
+    passive: true,
+    scope: 'party',
+    behaviorId: 'sunk_cost_v1',
+    params: {},
+  },
+  {
+    id: 'koi_coin',
+    name: "Koi's Coin",
+    description: 'Enables bad-luck prevention die. Re-roll to redeal tableaus.',
+    rarity: 'rare',
+    passive: true,
+    scope: 'party',
+    behaviorId: 'koi_coin_v1',
+    params: {},
+  },
+  {
+    id: 'heart_of_the_wild',
+    name: 'Heart of the Wild',
+    description: 'Once per rest, when no playable moves remain while exploring, place a full wild on each party foundation.',
+    rarity: 'epic',
+    passive: true,
+    scope: 'party',
+    behaviorId: 'heart_of_wild_v1',
+    params: {},
+  },
+  {
+    id: 'hindsight',
+    name: 'Hindsight',
+    description: 'Allows 1 rewind action (undo) per rest.',
+    rarity: 'epic',
+    passive: true,
+    scope: 'party',
+    behaviorId: 'hindsight_v1',
+    params: {},
+  },
+  {
+    id: 'controlled_dragonfire',
+    name: 'Controlled Dragonfire',
+    description: 'Click relic to add a Dragonfire card to party leader hand. Playing it on the leader burns the current facing tableau top row.',
+    rarity: 'legendary',
+    passive: true,
+    scope: 'party',
+    behaviorId: 'controlled_dragonfire_v1',
+    params: {},
+  },
+];
+// RELIC_DEFINITIONS_END
