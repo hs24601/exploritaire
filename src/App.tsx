@@ -152,7 +152,9 @@ export default function App() {
       ? 'single-foundation'
       : (variantParam === 'pb'
         ? 'party-battle'
-        : (variantParam === 'rpg' ? 'rpg' : 'party-foundations'));
+        : (variantParam === 'og'
+          ? 'party-foundations'
+          : 'rpg'));
     const stored = window.localStorage.getItem('orimEditorDefinitions');
     const orimDefinitions = stored ? (() => {
       try {
