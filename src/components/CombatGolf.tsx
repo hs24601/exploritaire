@@ -427,6 +427,7 @@ export const CombatGolf = memo(function CombatGolf({
   const [owlExplorationRevealByNode, setOwlExplorationRevealByNode] = useState<Record<string, Record<number, string | null>>>({});
   const [overwatchClockMs, setOverwatchClockMs] = useState(() => Date.now());
   const [comboPaused, setComboPaused] = useState(false);
+  const [mapVisible, setMapVisible] = useState(false);
   const [bankedTurnMs, setBankedTurnMs] = useState(0);
   const [bankedTimerBonusMs, setBankedTimerBonusMs] = useState(0);
   const [bankedTimerBonusToken, setBankedTimerBonusToken] = useState<number | undefined>(undefined);
@@ -830,7 +831,7 @@ export const CombatGolf = memo(function CombatGolf({
     const idx = Math.max(0, order.indexOf(current));
     return order[(idx + 1) % order.length] as GameState['enemyDifficulty'];
   };
-  const showFpsOverlay = false;
+  const showFpsOverlay = true;
   const fpsOverlay = showFpsOverlay ? (
     <div
       className="fixed top-4 left-4 text-base font-mono z-[9999] pointer-events-none bg-game-bg-dark/80 border px-4 py-2 rounded"
@@ -2078,14 +2079,16 @@ export const CombatGolf = memo(function CombatGolf({
     };
     actions.addRpgHandCard(card);
   }, [actions.addRpgHandCard, partyLeaderActor]);
-  const bottomRelicTray = (
+  const relicTray = (
     <div
       className="fixed z-[10034] rounded border pointer-events-none"
       style={{
-        left: '90px',
-        right: '132px',
-        bottom: '16px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        top: '40px',
         height: '34px',
+        minWidth: '240px',
+        maxWidth: '70%',
         borderColor: 'rgba(127, 219, 202, 0.7)',
         backgroundColor: 'rgba(10, 10, 10, 0.72)',
         boxShadow: '0 0 10px rgba(127, 219, 202, 0.28)',
@@ -2330,6 +2333,58 @@ export const CombatGolf = memo(function CombatGolf({
   const hasSpawnedEnemies = !isRpgVariant || enemyFoundations.some((foundation) => foundation.length > 0);
   const isExplorationMode = isRpgVariant && !hasSpawnedEnemies;
   const showActorComboCounts = !isRpgVariant || hasSpawnedEnemies;
+  useEffect(() => {
+    if ((hasSpawnedEnemies || !isRpgVariant) && mapVisible) {
+      setMapVisible(false);
+    }
+  }, [hasSpawnedEnemies, isRpgVariant, mapVisible]);
+  const mapToggleButton = isRpgVariant && !hasSpawnedEnemies ? (
+    <button
+      type="button"
+      onClick={() => setMapVisible((prev) => !prev)}
+      className="fixed left-4 z-[10035] rounded border border-game-teal/70 bg-game-bg-dark/90 px-3 py-2 text-[12px] font-bold tracking-[1px] text-game-teal shadow-neon-teal"
+      style={{
+        bottom: '148px',
+        boxShadow: mapVisible ? '0 0 12px rgba(127, 219, 202, 0.55)' : undefined,
+      }}
+      title="Toggle exploration map"
+      aria-pressed={mapVisible}
+    >
+      🗺 {mapVisible ? 'HIDE' : 'MAP'}
+    </button>
+  ) : null;
+  const spawnButton = isRpgVariant ? (
+    <button
+      type="button"
+      onClick={() => actions.spawnRandomEnemyInRandomBiome?.()}
+      disabled={!actions.spawnRandomEnemyInRandomBiome}
+      className="fixed left-4 z-[10035] rounded border border-game-red/70 bg-game-bg-dark/90 px-3 py-2 text-[14px] font-bold tracking-[1px] text-game-red shadow-neon-red disabled:opacity-50"
+      style={{ bottom: '104px' }}
+      title="Spawn enemy"
+    >
+      ⚔
+    </button>
+  ) : null;
+  const pauseButton = (
+    <button
+      type="button"
+      onClick={onTogglePause}
+      disabled={!onTogglePause}
+      className="fixed left-4 z-[10035] rounded border border-game-gold/70 bg-game-bg-dark/90 px-4 py-2 text-[12px] font-bold tracking-[2px] text-game-gold shadow-neon-gold disabled:opacity-50"
+      style={{ bottom: '60px' }}
+      title={isGamePaused ? 'Resume' : 'Pause'}
+      aria-label={isGamePaused ? 'Resume' : 'Pause'}
+    >
+      {isGamePaused ? '▶' : '⏸'}
+    </button>
+  );
+  const controlButtons = !isInspectOverlayActive ? (
+    <>
+      {mapToggleButton}
+      {spawnButton}
+      {pauseButton}
+    </>
+  ) : null;
   const activeTravelDirection = (explorationHeading.length === 1 ? explorationHeading : explorationHeading[0]) as MajorDirection;
   const travelRowsPerStep = Math.max(1, explorationRowsPerStep);
   const currentDirectionMoves = explorationMovesByDirection[activeTravelDirection] ?? 0;
@@ -4059,7 +4114,7 @@ export const CombatGolf = memo(function CombatGolf({
               cursor={!isEnemyTurn && canTriggerEndTurnFromCombo ? 'pointer' : 'default'}
             />
           )}
-          {isRpgVariant && !hasSpawnedEnemies && (
+          {isRpgVariant && !hasSpawnedEnemies && mapVisible && (
             <div className="w-full px-2 sm:px-3 mb-2">
               <div
                 className="relative mx-auto"
@@ -4702,34 +4757,8 @@ export const CombatGolf = memo(function CombatGolf({
         {rpgCardInspectOverlay}
         {actorInspectOverlay}
         {timerBankVisuals}
-        {bottomRelicTray}
-        {!isInspectOverlayActive && (
-          <>
-            {isRpgVariant && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => actions.spawnRandomEnemyInRandomBiome?.()}
-                  disabled={!actions.spawnRandomEnemyInRandomBiome}
-                  className="fixed right-4 z-[10035] rounded border border-game-red/70 bg-game-bg-dark/90 px-3 py-2 text-[14px] font-bold tracking-[1px] text-game-red shadow-neon-red disabled:opacity-50"
-                  style={{ bottom: '58px' }}
-                title="Spawn enemy"
-              >
-                ⚔
-              </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={onTogglePause}
-              disabled={!onTogglePause}
-              className="fixed right-4 z-[10035] rounded border border-game-gold/70 bg-game-bg-dark/90 px-4 py-2 text-[12px] font-bold tracking-[2px] text-game-gold shadow-neon-gold disabled:opacity-50"
-              style={{ bottom: '16px' }}
-            >
-              {isGamePaused ? 'RESUME' : 'PAUSE'}
-            </button>
-          </>
-        )}
+        {relicTray}
+        {controlButtons}
         </div>
         </div>
         {splatterModal}
@@ -4770,34 +4799,8 @@ export const CombatGolf = memo(function CombatGolf({
         {rpgCardInspectOverlay}
         {actorInspectOverlay}
         {timerBankVisuals}
-        {bottomRelicTray}
-        {!isInspectOverlayActive && (
-          <>
-            {isRpgVariant && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => actions.spawnRandomEnemyInRandomBiome?.()}
-                  disabled={!actions.spawnRandomEnemyInRandomBiome}
-                  className="fixed right-4 z-[10035] rounded border border-game-red/70 bg-game-bg-dark/90 px-3 py-2 text-[14px] font-bold tracking-[1px] text-game-red shadow-neon-red disabled:opacity-50"
-                  style={{ bottom: '58px' }}
-                title="Spawn enemy"
-              >
-                ⚔
-              </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={onTogglePause}
-              disabled={!onTogglePause}
-              className="fixed right-4 z-[10035] rounded border border-game-gold/70 bg-game-bg-dark/90 px-4 py-2 text-[12px] font-bold tracking-[2px] text-game-gold shadow-neon-gold disabled:opacity-50"
-              style={{ bottom: '16px' }}
-            >
-              {isGamePaused ? 'RESUME' : 'PAUSE'}
-            </button>
-          </>
-        )}
+        {relicTray}
+        {controlButtons}
         {splatterModal}
       </div>
     );
@@ -5412,34 +5415,8 @@ export const CombatGolf = memo(function CombatGolf({
       {rpgCardInspectOverlay}
       {actorInspectOverlay}
       {timerBankVisuals}
-      {bottomRelicTray}
-      {!isInspectOverlayActive && (
-        <>
-          {isRpgVariant && (
-            <>
-              <button
-                type="button"
-                onClick={() => actions.spawnRandomEnemyInRandomBiome?.()}
-                disabled={!actions.spawnRandomEnemyInRandomBiome}
-                className="fixed right-4 z-[10035] rounded border border-game-red/70 bg-game-bg-dark/90 px-3 py-2 text-[14px] font-bold tracking-[1px] text-game-red shadow-neon-red disabled:opacity-50"
-                style={{ bottom: '58px' }}
-                title="Spawn enemy"
-              >
-                ⚔
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={onTogglePause}
-            disabled={!onTogglePause}
-            className="fixed right-4 z-[10035] rounded border border-game-gold/70 bg-game-bg-dark/90 px-4 py-2 text-[12px] font-bold tracking-[2px] text-game-gold shadow-neon-gold disabled:opacity-50"
-            style={{ bottom: '16px' }}
-          >
-            {isGamePaused ? 'RESUME' : 'PAUSE'}
-          </button>
-        </>
-      )}
+      {relicTray}
+      {controlButtons}
       </div>
       </div>
       {splatterModal}

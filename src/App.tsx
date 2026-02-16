@@ -66,6 +66,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     return this.props.children;
   }
 }
+const TIME_SCALE_OPTIONS = [0.5, 1, 1.5, 2];
 
 export default function App() {
   const buildStamp = useMemo(() => new Date().toLocaleString(), []);
@@ -92,7 +93,6 @@ export default function App() {
   const [infiniteBenchSwapsEnabled, setInfiniteBenchSwapsEnabled] = useState(false);
   const [cameraDebugOpen, setCameraDebugOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [hotkeysExpanded, setHotkeysExpanded] = useState(false);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [isGamePaused, setIsGamePaused] = useState(false);
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
@@ -101,6 +101,7 @@ export default function App() {
   const [useGhostBackground, setUseGhostBackground] = useState(false);
   const [pixelArtEnabled, setPixelArtEnabled] = useState(false);
   const [cardScale, setCardScale] = useState(1);
+  const [timeScale, setTimeScale] = useState(TIME_SCALE_OPTIONS[1]);
   const showPuzzleOverlay = true;
   const [actorDefinitions, setActorDefinitions] = useState(ACTOR_DEFINITIONS);
   const [actorDeckTemplates, setActorDeckTemplates] = useState(ACTOR_DECK_TEMPLATES);
@@ -562,15 +563,6 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'h') {
-        const target = e.target as HTMLElement | null;
-        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-          return;
-        }
-        e.preventDefault();
-        setHotkeysExpanded((prev) => !prev);
-        return;
-      }
       if (e.key.toLowerCase() !== 'd') return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
@@ -583,6 +575,23 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [actions]);
+
+  useEffect(() => {
+    const handleContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+
+    window.addEventListener('contextmenu', handleContextMenu);
+    return () => window.removeEventListener('contextmenu', handleContextMenu);
+  }, []);
+
+  const handleCycleTimeScale = useCallback(() => {
+    setTimeScale((current) => {
+      const currentIndex = TIME_SCALE_OPTIONS.indexOf(current);
+      const nextIndex = (currentIndex + 1) % TIME_SCALE_OPTIONS.length;
+      return TIME_SCALE_OPTIONS[nextIndex];
+    });
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -939,48 +948,20 @@ export default function App() {
           backgroundColor: ghostBackgroundEnabled ? 'ghostwhite' : 'black',
         } as React.CSSProperties}
       >
-        <div
-          className="fixed top-4 right-4 z-[10050] text-[13px] font-mono px-3 py-2 rounded border"
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            borderColor: 'rgba(127, 219, 202, 0.4)',
-            color: '#7fdbca',
-            pointerEvents: 'none',
-          }}
-        >
-          <div className="text-[10px] tracking-[4px]">HOTKEYS (H)</div>
-          {hotkeysExpanded && (
-            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[13px]">
-              <div><span className="text-game-teal">A</span> actor editor</div>
-              <div><span className="text-game-teal">W</span> watercolor</div>
-              <div><span className="text-game-teal">G</span> graphics</div>
-              <div><span className="text-game-teal">P</span> ghost bg</div>
-              <div><span className="text-game-teal">D</span> drag/click</div>
-              <div><span className="text-game-teal">⏎</span> auto move</div>
-              <div><span className="text-game-teal">`</span> orim dev</div>
-              <div><span className="text-game-teal">T</span> text</div>
-              <div><span className="text-game-teal">L</span> lighting</div>
-              <div><span className="text-game-teal">Z</span> zen mode</div>
-              <div><span className="text-game-teal">[</span> pixel art</div>
-              <div><span className="text-game-teal">\\</span> splatters</div>
-            </div>
-          )}
-        </div>
         <div className="fixed bottom-4 left-4 z-[9999] flex flex-col gap-2 menu-text">
-          {import.meta.env.DEV && (
-            <button
-              type="button"
-              onClick={() => actions.autoPlayNextMove()}
-              className="text-[10px] font-mono bg-game-bg-dark/80 border px-2 py-1 rounded cursor-pointer"
-              style={{
-                color: '#7fdbca',
-                borderColor: 'rgba(127, 219, 202, 0.6)',
-              }}
-              title="Play next available move"
-            >
-              action
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleCycleTimeScale}
+            className="text-[10px] font-mono bg-game-bg-dark/80 border px-3 py-1 rounded cursor-pointer tracking-[1px]"
+            style={{
+              color: '#7fdbca',
+              borderColor: 'rgba(127, 219, 202, 0.6)',
+              textTransform: 'uppercase',
+            }}
+            title="Cycle time scale"
+          >
+            ⏱ x{timeScale.toFixed(1)}
+          </button>
         </div>
         <button
           type="button"
@@ -1445,6 +1426,7 @@ export default function App() {
                 onTogglePaintLuminosity={() => setPaintLuminosityEnabled((prev) => !prev)}
                 zenModeEnabled={zenModeEnabled}
                 isGamePaused={isGamePaused}
+                timeScale={timeScale}
                 hidePauseOverlay={hidePauseOverlay}
                 onTogglePause={() => {
                   setHidePauseOverlay(false);
