@@ -168,6 +168,7 @@ export const FoundationActor = memo(function FoundationActor({
   const highlightColor = isGuidanceTarget ? '#7fdbca' : '#e6b31e';
   const cardWidth = CARD_SIZE.width * effectiveScale;
   const cardHeight = CARD_SIZE.height * effectiveScale;
+  const cardSize = useMemo(() => ({ width: cardWidth, height: cardHeight }), [cardWidth, cardHeight]);
   const [activeOrimId, setActiveOrimId] = useState<string | null>(null);
   const [orimHoverToken, setOrimHoverToken] = useState(0);
   const [isCardHovering, setIsCardHovering] = useState(false);
@@ -453,7 +454,7 @@ export const FoundationActor = memo(function FoundationActor({
     return (
       <div className="relative" ref={(el) => setDropRef?.(index, el)}>
         <CardFrame
-          size={{ width: cardWidth, height: cardHeight }}
+          size={cardSize}
           borderColor={showHighlight ? highlightColor : 'rgba(127, 219, 202, 0.4)'}
           boxShadow={showHighlight ? `0 0 12px ${highlightColor}66` : 'none'}
           onClick={() => onFoundationClick(index)}
@@ -568,7 +569,7 @@ export const FoundationActor = memo(function FoundationActor({
                 )}
                 <Card
                   card={card}
-                  size={{ width: cardWidth, height: cardHeight }}
+                  size={cardSize}
                   isFoundation
                   borderColorOverride={isTop && isWildFoundation ? 'transparent' : undefined}
                   boxShadowOverride={isTop && isWildFoundation ? 'none' : undefined}

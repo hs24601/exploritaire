@@ -97,6 +97,10 @@ export function createWildSentinel(index: number): Card {
   };
 }
 
+export function createFullWildSentinel(index: number): Card {
+  return createWildSentinel(index);
+}
+
 export const ALL_ELEMENTS: Element[] = ['W', 'E', 'A', 'F', 'L', 'D', 'N'];
 
 // Karma dealing: minimum number of tableau top cards that must be playable

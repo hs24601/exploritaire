@@ -92,6 +92,7 @@ interface CombatGolfProps {
   onTogglePaintLuminosity?: () => void;
   fps?: number;
   serverAlive?: boolean;
+  onOpenSettings?: () => void;
   infiniteStockEnabled: boolean;
   onToggleInfiniteStock: () => void;
   noRegretStatus: { canRewind: boolean; cooldown: number; actorId: string | null };
@@ -132,6 +133,7 @@ interface CombatGolfProps {
   infiniteBenchSwapsEnabled?: boolean;
   onToggleInfiniteBenchSwaps?: () => void;
   onConsumeBenchSwap?: () => void;
+  explorationStepRef?: { current: (() => void) | null };
 }
 
 interface TurnTimerRailProps {
@@ -186,8 +188,9 @@ function TurnTimerRail({
 
   return (
     <div
-      className="fixed left-3 z-[10012] pointer-events-auto"
+      className="fixed z-[10012] pointer-events-auto"
       style={{
+        left: 12,
         top: 74,
         bottom: 76,
       }}
@@ -397,6 +400,8 @@ export const CombatGolf = memo(function CombatGolf({
   infiniteBenchSwapsEnabled = false,
   onToggleInfiniteBenchSwaps,
   onConsumeBenchSwap,
+  onOpenSettings,
+  explorationStepRef,
 }: CombatGolfProps) {
   const showGraphics = useGraphics();
   const [splatterModalOpen, setSplatterModalOpen] = useState(false);
@@ -427,7 +432,7 @@ export const CombatGolf = memo(function CombatGolf({
   const [owlExplorationRevealByNode, setOwlExplorationRevealByNode] = useState<Record<string, Record<number, string | null>>>({});
   const [overwatchClockMs, setOverwatchClockMs] = useState(() => Date.now());
   const [comboPaused, setComboPaused] = useState(false);
-  const [mapVisible, setMapVisible] = useState(false);
+  const [mapVisible, setMapVisible] = useState(true);
   const [bankedTurnMs, setBankedTurnMs] = useState(0);
   const [bankedTimerBonusMs, setBankedTimerBonusMs] = useState(0);
   const [bankedTimerBonusToken, setBankedTimerBonusToken] = useState<number | undefined>(undefined);
@@ -782,6 +787,7 @@ export const CombatGolf = memo(function CombatGolf({
     setActorNodeAssignments((prev) => {
       const next: Record<string, Record<string, string>> = { ...prev };
       [...activeParty, ...enemyActors].forEach((actor) => {
+        if (!actor) return;
         if (next[actor.id]) return;
         const definition = getActorDefinition(actor.definitionId);
         next[actor.id] = { ...(definition?.orimEnhancements ?? {}) };
@@ -831,20 +837,6 @@ export const CombatGolf = memo(function CombatGolf({
     const idx = Math.max(0, order.indexOf(current));
     return order[(idx + 1) % order.length] as GameState['enemyDifficulty'];
   };
-  const showFpsOverlay = true;
-  const fpsOverlay = showFpsOverlay ? (
-    <div
-      className="fixed top-4 left-4 text-base font-mono z-[9999] pointer-events-none bg-game-bg-dark/80 border px-4 py-2 rounded"
-      style={{
-        color: serverAlive === false ? '#ff6b6b' : '#7fdbca',
-        borderColor: serverAlive === false
-          ? 'rgba(255, 107, 107, 0.6)'
-          : 'rgba(127, 219, 202, 0.6)',
-      }}
-    >
-      {serverAlive === false ? 'server down' : `${Math.round(fps)}fps`}
-    </div>
-  ) : null;
   const foundationHasActor = (gameState.foundations[0]?.length ?? 0) > 0;
   const cloudSightActive = useMemo(() => {
     if (isRpgVariant) {
@@ -1959,6 +1951,7 @@ export const CombatGolf = memo(function CombatGolf({
             showGraphics={showGraphics}
             interactionMode="click"
             draggingCardId={null}
+            isAnyCardDragging={dragState.isDragging}
             hideElements={isRpgVariant}
           />
         </div>
@@ -2081,14 +2074,10 @@ export const CombatGolf = memo(function CombatGolf({
   }, [actions.addRpgHandCard, partyLeaderActor]);
   const relicTray = (
     <div
-      className="fixed z-[10034] rounded border pointer-events-none"
+      className="rounded border pointer-events-none w-full max-w-[640px]"
       style={{
-        left: '50%',
-        transform: 'translateX(-50%)',
-        top: '40px',
         height: '34px',
         minWidth: '240px',
-        maxWidth: '70%',
         borderColor: 'rgba(127, 219, 202, 0.7)',
         backgroundColor: 'rgba(10, 10, 10, 0.72)',
         boxShadow: '0 0 10px rgba(127, 219, 202, 0.28)',
@@ -2342,9 +2331,8 @@ export const CombatGolf = memo(function CombatGolf({
     <button
       type="button"
       onClick={() => setMapVisible((prev) => !prev)}
-      className="fixed left-4 z-[10035] rounded border border-game-teal/70 bg-game-bg-dark/90 px-3 py-2 text-[12px] font-bold tracking-[1px] text-game-teal shadow-neon-teal"
+      className="rounded border border-game-teal/70 bg-game-bg-dark/90 px-3 py-2 text-[12px] font-bold tracking-[1px] text-game-teal shadow-neon-teal"
       style={{
-        bottom: '148px',
         boxShadow: mapVisible ? '0 0 12px rgba(127, 219, 202, 0.55)' : undefined,
       }}
       title="Toggle exploration map"
@@ -2358,8 +2346,7 @@ export const CombatGolf = memo(function CombatGolf({
       type="button"
       onClick={() => actions.spawnRandomEnemyInRandomBiome?.()}
       disabled={!actions.spawnRandomEnemyInRandomBiome}
-      className="fixed left-4 z-[10035] rounded border border-game-red/70 bg-game-bg-dark/90 px-3 py-2 text-[14px] font-bold tracking-[1px] text-game-red shadow-neon-red disabled:opacity-50"
-      style={{ bottom: '104px' }}
+      className="rounded border border-game-red/70 bg-game-bg-dark/90 px-3 py-2 text-[14px] font-bold tracking-[1px] text-game-red shadow-neon-red disabled:opacity-50"
       title="Spawn enemy"
     >
       ⚔
@@ -2370,20 +2357,25 @@ export const CombatGolf = memo(function CombatGolf({
       type="button"
       onClick={onTogglePause}
       disabled={!onTogglePause}
-      className="fixed left-4 z-[10035] rounded border border-game-gold/70 bg-game-bg-dark/90 px-4 py-2 text-[12px] font-bold tracking-[2px] text-game-gold shadow-neon-gold disabled:opacity-50"
-      style={{ bottom: '60px' }}
+      className="rounded border border-game-gold/70 bg-game-bg-dark/90 px-4 py-2 text-[12px] font-bold tracking-[2px] text-game-gold shadow-neon-gold disabled:opacity-50"
       title={isGamePaused ? 'Resume' : 'Pause'}
       aria-label={isGamePaused ? 'Resume' : 'Pause'}
     >
       {isGamePaused ? '▶' : '⏸'}
     </button>
   );
-  const controlButtons = !isInspectOverlayActive ? (
-    <>
+  const leftControlColumn = !isInspectOverlayActive ? (
+    <div
+      className="fixed z-[10035] flex flex-col items-start gap-3"
+      style={{
+        left: 12,
+        bottom: 90,
+      }}
+    >
       {mapToggleButton}
       {spawnButton}
       {pauseButton}
-    </>
+    </div>
   ) : null;
   const activeTravelDirection = (explorationHeading.length === 1 ? explorationHeading : explorationHeading[0]) as MajorDirection;
   const travelRowsPerStep = Math.max(1, explorationRowsPerStep);
@@ -2452,10 +2444,14 @@ export const CombatGolf = memo(function CombatGolf({
     setExplorationHeading(direction);
   }, [hasSpawnedEnemies, isRpgVariant, triggerExplorationTableauSlide]);
   const advanceExplorationMap = useCallback((direction: Direction) => {
+    const compassDelta: Record<Direction, { dx: number; dy: number }> = {
+      N: { dx: 0, dy: -1 }, NE: { dx: 1, dy: -1 }, E: { dx: 1, dy: 0 }, SE: { dx: 1, dy: 1 },
+      S: { dx: 0, dy: 1 }, SW: { dx: -1, dy: 1 }, W: { dx: -1, dy: 0 }, NW: { dx: -1, dy: -1 },
+    };
     setExplorationNodes((prevNodes) => {
       const currentNode = prevNodes.find((node) => node.id === explorationCurrentNodeIdRef.current) ?? prevNodes[0];
       if (!currentNode) return prevNodes;
-      const { dx, dy } = getHeadingDelta(direction);
+      const { dx, dy } = compassDelta[direction] ?? { dx: 0, dy: -1 };
       const targetX = currentNode.x + dx;
       const targetY = currentNode.y + dy;
       const existingIndex = prevNodes.findIndex((node) => node.x === targetX && node.y === targetY);
@@ -2467,7 +2463,7 @@ export const CombatGolf = memo(function CombatGolf({
           index === existingIndex ? { ...node, visits: node.visits + 1, heading: direction } : node
         ));
       } else {
-        const newId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const newId = `node-${targetX}-${targetY}`;
         targetNodeId = newId;
         const depth = Math.min(6, Math.floor(prevNodes.length / 3));
         nextNodes = [...prevNodes, { id: newId, heading: direction, x: targetX, y: targetY, z: depth, visits: 1 }];
@@ -2487,7 +2483,7 @@ export const CombatGolf = memo(function CombatGolf({
       });
       return nextNodes;
     });
-  }, [getHeadingDelta]);
+  }, []);
   useEffect(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
     const sources = getColumnSourcesForDirection(explorationHeading);
@@ -2641,6 +2637,18 @@ export const CombatGolf = memo(function CombatGolf({
     hasSpawnedEnemies,
     isRpgVariant,
   ]);
+  const stepExplorationOnPlay = useCallback(() => {
+    if (!isExplorationMode) return;
+    advanceExplorationMap(explorationHeading);
+    setExplorationAppliedTraversalByDirection((prev) => ({
+      ...prev,
+      [activeTravelDirection]: (prev[activeTravelDirection] ?? 0) + 1,
+    }));
+    setExplorationTotalTraversalCount((prev) => prev + 1);
+  }, [activeTravelDirection, advanceExplorationMap, explorationHeading, isExplorationMode]);
+  useEffect(() => {
+    if (explorationStepRef) explorationStepRef.current = stepExplorationOnPlay;
+  }, [explorationStepRef, stepExplorationOnPlay]);
   const runDevTraversePulse = useCallback(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
     if (!actions.setBiomeTableaus) return;
@@ -2814,10 +2822,40 @@ export const CombatGolf = memo(function CombatGolf({
             {actorHandCount}
           </div>
           </button>
-        </div>
       </div>
-    );
+    </div>
+  );
   };
+
+  const fpsLabel = serverAlive === false
+    ? 'server down'
+    : `${Math.round(Math.max(0, Math.floor(fps ?? 0)))}fps`;
+  const overlayToolbar = (
+    <div
+      className="fixed z-[10034] left-1/2 flex items-center gap-4"
+      style={{
+        top: 32,
+        transform: 'translateX(-50%)',
+        width: 'min(90vw, 960px)',
+        justifyContent: 'center',
+      }}
+    >
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        disabled={!onOpenSettings}
+        className="rounded border border-game-teal/70 bg-game-bg-dark/90 px-3 py-1 text-[20px] font-mono tracking-[1px] text-game-teal shadow-neon-teal"
+        style={{
+          minWidth: 86,
+          opacity: onOpenSettings ? 1 : 0.5,
+        }}
+        title="Open settings / report fps"
+      >
+        {fpsLabel}
+      </button>
+      {relicTray}
+    </div>
+  );
   const handleSkipWithBank = useCallback((remainingMs: number) => {
     if (!isRpgVariant || !canTriggerEndTurnFromCombo) return;
     const bankMs = Math.max(0, Math.round(remainingMs));
@@ -3465,6 +3503,7 @@ export const CombatGolf = memo(function CombatGolf({
           if (!played) return;
           triggerCardPlayFlash(armedFoundationIndex, partyComboTotal + 1);
           maybeGainSupplyFromValidMove();
+          stepExplorationOnPlay();
           setArmedFoundationIndex(null);
           return;
         }
@@ -3473,6 +3512,7 @@ export const CombatGolf = memo(function CombatGolf({
           if (!played) return;
           triggerCardPlayFlash(validFoundations[0], partyComboTotal + 1);
           maybeGainSupplyFromValidMove();
+          stepExplorationOnPlay();
         }
         return;
       }
@@ -3483,6 +3523,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (!played) return;
       triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
       maybeGainSupplyFromValidMove();
+      stepExplorationOnPlay();
     };
     const handleHandClick = (card: CardType) => {
       if (introBlocking) return;
@@ -3585,7 +3626,6 @@ export const CombatGolf = memo(function CombatGolf({
           pointerEvents: introBlocking ? 'none' : 'auto',
         }}
       >
-        {fpsOverlay}
         {enemyMoveAnims.map((anim) => (
           <div
             key={anim.id}
@@ -4133,6 +4173,7 @@ export const CombatGolf = memo(function CombatGolf({
                   stepCost={travelRowsPerStep}
                   onStepCostDecrease={() => setExplorationRowsPerStep((current) => Math.max(1, current - 1))}
                   onStepCostIncrease={() => setExplorationRowsPerStep((current) => Math.min(12, current + 1))}
+                  onHeadingChange={handleExplorationHeadingChange}
                 />
                 <button
                   type="button"
@@ -4745,6 +4786,7 @@ export const CombatGolf = memo(function CombatGolf({
               showGraphics={showGraphics}
               interactionMode={gameState.interactionMode}
               draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+              isAnyCardDragging={dragState.isDragging}
               tooltipEnabled={isGamePaused && !isRpgVariant && !inspectedRpgCard}
               upgradedCardIds={upgradedHandCardIds}
               hideElements={isRpgVariant}
@@ -4757,8 +4799,8 @@ export const CombatGolf = memo(function CombatGolf({
         {rpgCardInspectOverlay}
         {actorInspectOverlay}
         {timerBankVisuals}
-        {relicTray}
-        {controlButtons}
+        {overlayToolbar}
+        {leftControlColumn}
         </div>
         </div>
         {splatterModal}
@@ -4772,7 +4814,6 @@ export const CombatGolf = memo(function CombatGolf({
   if (biomeDef?.mode === 'node-edge') {
     return (
       <div className="relative w-full h-full pointer-events-none">
-        {fpsOverlay}
         <div
           className="absolute inset-0"
           style={{
@@ -4799,8 +4840,8 @@ export const CombatGolf = memo(function CombatGolf({
         {rpgCardInspectOverlay}
         {actorInspectOverlay}
         {timerBankVisuals}
-        {relicTray}
-        {controlButtons}
+        {overlayToolbar}
+        {leftControlColumn}
         {splatterModal}
       </div>
     );
@@ -4838,12 +4879,14 @@ export const CombatGolf = memo(function CombatGolf({
         if (!validFoundations.includes(armedFoundationIndex)) return;
         actions.playCardDirect(tableauIndex, armedFoundationIndex);
         triggerCardPlayFlash(armedFoundationIndex, partyComboTotal + 1);
+        stepExplorationOnPlay();
         setArmedFoundationIndex(null);
         return;
       }
       if (validFoundations.length === 1) {
         actions.playCardDirect(tableauIndex, validFoundations[0]);
         triggerCardPlayFlash(validFoundations[0], partyComboTotal + 1);
+        stepExplorationOnPlay();
       }
       return;
     }
@@ -4852,6 +4895,7 @@ export const CombatGolf = memo(function CombatGolf({
     if (foundationIndex === -1) return;
     actions.playCardDirect(tableauIndex, foundationIndex);
     triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
+    stepExplorationOnPlay();
   };
   const handleHandClick = (card: CardType) => {
     if (introBlocking) return;
@@ -4947,7 +4991,6 @@ export const CombatGolf = memo(function CombatGolf({
         pointerEvents: introBlocking ? 'none' : 'auto',
       }}
     >
-      {fpsOverlay}
       {showSharedTurnTimer && (
         <TurnTimerRail
           label={sharedTimerLabel}
@@ -5415,8 +5458,8 @@ export const CombatGolf = memo(function CombatGolf({
       {rpgCardInspectOverlay}
       {actorInspectOverlay}
       {timerBankVisuals}
-      {relicTray}
-      {controlButtons}
+      {overlayToolbar}
+      {leftControlColumn}
       </div>
       </div>
       {splatterModal}
@@ -5426,3 +5469,5 @@ export const CombatGolf = memo(function CombatGolf({
     </ComboTimerController>
   );
 });
+
+export default CombatGolf;

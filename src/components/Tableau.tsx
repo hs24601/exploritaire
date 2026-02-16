@@ -14,6 +14,7 @@ interface TableauProps {
   interactionMode: InteractionMode;
   onDragStart?: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
   draggingCardId?: string | null;
+  isAnyCardDragging?: boolean;
   showGraphics: boolean;
   cardScale?: number;
   revealNextRow?: boolean;
@@ -34,6 +35,7 @@ export const Tableau = memo(function Tableau({
   interactionMode,
   onDragStart,
   draggingCardId,
+  isAnyCardDragging = false,
   showGraphics,
   cardScale = 1,
   revealNextRow = false,
@@ -47,6 +49,7 @@ export const Tableau = memo(function Tableau({
   const effectiveScale = cardScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
   const cardHeight = CARD_SIZE.height * effectiveScale;
+  const cardSize = useMemo(() => ({ width: cardWidth, height: cardHeight }), [cardWidth, cardHeight]);
   const revealOffset = revealNextRow ? Math.round(cardHeight * 0.18) + 5 : 0;
   const stackStep = (revealNextRow ? 8 : 3) * effectiveScale;
   const stackCap = (revealNextRow ? 80 : 20) * effectiveScale;
@@ -98,7 +101,7 @@ export const Tableau = memo(function Tableau({
           >
             <Card
               card={card}
-              size={{ width: cardWidth, height: cardHeight }}
+              size={cardSize}
               faceDown={hiddenTopCard && isTopCard ? true : (!revealAllCards && !isTopCard && !isSecondCard)}
               canPlay={isTopCard && canPlay && !hiddenTopCard}
               isSelected={isTopCard && isSelected}
@@ -113,6 +116,7 @@ export const Tableau = memo(function Tableau({
                   : undefined
               }
               isDragging={isDragging}
+              isAnyCardDragging={isAnyCardDragging}
               isGuidanceTarget={isTopCard && isNextGuidanceMove}
               isDimmed={(guidanceActive && isTopCard && !isNextGuidanceMove) || (dimTopCard && isTopCard)}
               showGraphics={showGraphics}

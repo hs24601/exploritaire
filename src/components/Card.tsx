@@ -34,6 +34,7 @@ interface CardProps {
   boxShadowOverride?: string;
   frameClassName?: string;
   isDragging?: boolean;
+  isAnyCardDragging?: boolean;
   onDragStart?: (card: CardType, clientX: number, clientY: number, rect: DOMRect) => void;
   showGraphics: boolean;
   suitDisplayOverride?: string;
@@ -62,6 +63,7 @@ export const Card = memo(function Card({
   boxShadowOverride,
   frameClassName,
   isDragging = false,
+  isAnyCardDragging = false,
   onDragStart,
   showGraphics,
   suitDisplayOverride,
@@ -205,12 +207,12 @@ export const Card = memo(function Card({
   const overlayBlendMode = forceWatercolor
     ? 'normal'
     : (cardWatercolorConfig?.splotches?.[0]?.blendMode as CSSProperties['mixBlendMode']) || 'normal';
-  const showWaterDepthOverlay = !!elementWatercolor && isWaterElement && !faceDown;
-  const showWaterArtOverlay = showGraphics && isWaterElement && !faceDown;
-  const showLightArtOverlay = showGraphics && elementKey === 'L' && !faceDown;
-  const showFireArtOverlay = showGraphics && elementKey === 'F' && !faceDown;
-  const showAirArtOverlay = showGraphics && elementKey === 'A' && !faceDown;
-  const showDarkArtOverlay = showGraphics && elementKey === 'D' && !faceDown;
+  const showWaterDepthOverlay = !!elementWatercolor && isWaterElement && !faceDown && !isAnyCardDragging;
+  const showWaterArtOverlay = showGraphics && isWaterElement && !faceDown && !isAnyCardDragging;
+  const showLightArtOverlay = showGraphics && elementKey === 'L' && !faceDown && !isAnyCardDragging;
+  const showFireArtOverlay = showGraphics && elementKey === 'F' && !faceDown && !isAnyCardDragging;
+  const showAirArtOverlay = showGraphics && elementKey === 'A' && !faceDown && !isAnyCardDragging;
+  const showDarkArtOverlay = showGraphics && elementKey === 'D' && !faceDown && !isAnyCardDragging;
   const valueWatercolorConfig = valueWatercolor
     ? {
       ...valueWatercolor,
@@ -290,8 +292,8 @@ export const Card = memo(function Card({
       boxShadow={getBoxShadow()}
       onClick={onClick}
       onPointerDown={onDragStart ? handlePointerDown : undefined}
-      whileHover={!faceDown && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
-      whileTap={!faceDown && !onDragStart && onClick ? { scale: 0.98 } : {}}
+      whileHover={!faceDown && !isAnyCardDragging && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
+      whileTap={!faceDown && !isAnyCardDragging && !onDragStart && onClick ? { scale: 0.98 } : {}}
       initial={false}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -312,7 +314,6 @@ export const Card = memo(function Card({
         // decide at touchstart time that it owns the gesture (before JS runs),
         // resulting in pointercancel and the card snapping back to its origin.
         touchAction: onDragStart && !faceDown ? 'none' : undefined,
-        willChange: 'transform',
         imageRendering: 'crisp-edges',
       }}
     >
@@ -1102,7 +1103,7 @@ export const Card = memo(function Card({
       )}
 
       {/* Playable indicator */}
-      {canPlay && !faceDown && !isGuidanceTarget && !isDimmed && (
+      {canPlay && !faceDown && !isGuidanceTarget && !isDimmed && !isAnyCardDragging && (
         <motion.div
           animate={{ opacity: [0.3, 0.7, 0.3] }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
@@ -1112,7 +1113,7 @@ export const Card = memo(function Card({
       )}
 
       {/* Guidance target indicator */}
-      {isGuidanceTarget && (
+      {isGuidanceTarget && !isAnyCardDragging && (
         <motion.div
           animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.02, 1] }}
           transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}

@@ -1,7 +1,6 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { useGraphics } from '../contexts/GraphicsContext';
 import type { GameState, Card as CardType, Move, SelectedCard, Actor } from '../engine/types';
-import type { DragState } from '../hooks/useDragDrop';
 import { GameButton } from './GameButton';
 import { Tableau } from './Tableau';
 import { FoundationActor } from './FoundationActor';
@@ -24,7 +23,8 @@ interface PlayingScreenProps {
   guidanceActive: boolean;
   activeParty: Actor[];
   activeTileName: string;
-  dragState: DragState;
+  isDragging: boolean;
+  draggingCard: CardType | null;
   noRegretStatus: { canRewind: boolean; cooldown: number; actorId: string | null };
   handleDragStart: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
   setFoundationRef: (index: number, el: HTMLDivElement | null) => void;
@@ -48,7 +48,8 @@ export const PlayingScreen = memo(function PlayingScreen({
   guidanceActive,
   activeParty,
   activeTileName,
-  dragState,
+  isDragging,
+  draggingCard,
   noRegretStatus,
   handleDragStart,
   setFoundationRef,
@@ -56,9 +57,11 @@ export const PlayingScreen = memo(function PlayingScreen({
 }: PlayingScreenProps) {
   const showGraphics = useGraphics();
   const globalCardScale = useCardScale();
+  const handleFoundationClick = useCallback((foundationIndex: number) => {
+    actions.playToFoundation(foundationIndex);
+  }, [actions.playToFoundation]);
   const foundationCardScale = globalCardScale;
   const foundationOffset = CARD_SIZE.height * foundationCardScale;
-  const foundationOffsetAdjusted = cloudSightActive ? foundationOffset * 0.6 : foundationOffset;
   const foundationHasActor = (gameState.foundations[0]?.length ?? 0) > 0;
   const cloudSightActive = useMemo(() => {
     if (!foundationHasActor) return false;
@@ -66,6 +69,7 @@ export const PlayingScreen = memo(function PlayingScreen({
     if (!foundationActor) return false;
     return actorHasOrimDefinition(gameState, foundationActor.id, 'cloud_sight');
   }, [activeParty, gameState, foundationHasActor]);
+  const foundationOffsetAdjusted = cloudSightActive ? foundationOffset * 0.6 : foundationOffset;
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       {/* Decorative SVG */}
@@ -109,7 +113,8 @@ export const PlayingScreen = memo(function PlayingScreen({
               guidanceMoves={guidanceMoves}
               interactionMode={gameState.interactionMode}
               onDragStart={handleDragStart}
-              draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+              draggingCardId={isDragging ? draggingCard?.id : null}
+              isAnyCardDragging={isDragging}
               showGraphics={showGraphics}
               cardScale={foundationCardScale}
               revealNextRow={cloudSightActive}
@@ -141,10 +146,10 @@ export const PlayingScreen = memo(function PlayingScreen({
               const actorName = actor ? getActorDefinition(actor.definitionId)?.name : undefined;
               const hasStamina = (actor?.stamina ?? 0) > 0;
               const canReceiveDrag =
-                dragState.isDragging &&
-                dragState.card &&
+                isDragging &&
+                draggingCard &&
                 canPlayCard(
-                  dragState.card,
+                  draggingCard,
                   foundation[foundation.length - 1],
                   gameState.activeEffects
                 ) &&
@@ -155,9 +160,7 @@ export const PlayingScreen = memo(function PlayingScreen({
                   key={idx}
                   cards={foundation}
                   index={idx}
-                  onFoundationClick={(foundationIndex) => {
-                    actions.playToFoundation(foundationIndex);
-                  }}
+                  onFoundationClick={handleFoundationClick}
                   canReceive={showGoldHighlight && hasStamina}
                   isGuidanceTarget={showTealHighlight}
                   isDimmed={shouldDim || !hasStamina}

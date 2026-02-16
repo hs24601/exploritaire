@@ -66,7 +66,7 @@ export const CardFrame = forwardRef<HTMLDivElement, CardFrameProps>(function Car
       onTouchStart={onTouchStart}
       onPointerDown={onPointerDown}
       onClick={onClick}
-      className={`rounded-lg border-solid bg-game-bg-dark transition-all select-none relative overflow-hidden${className ? ` ${className}` : ''}`}
+      className={`rounded-lg border-solid bg-game-bg-dark transition-[border-color,box-shadow,opacity] select-none relative overflow-hidden${className ? ` ${className}` : ''}`}
       style={baseStyle}
       {...dataAttributes}
       {...motionProps}

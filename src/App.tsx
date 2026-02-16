@@ -16,6 +16,7 @@ import { ActorEditor } from './components/ActorEditor';
 import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element } from './engine/types';
 import { ACTOR_DEFINITIONS, getActorDisplayGlyph, getActorDefinition } from './engine/actors';
 import { getOrimAccentColor } from './watercolor/orimWatercolor';
+import { setWatercolorInteractionDegraded } from './watercolor/WatercolorOverlay';
 import { ACTOR_DECK_TEMPLATES } from './engine/actorDecks';
 import { canPlayCard, canPlayCardWithWild } from './engine/rules';
 import { ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from './engine/constants';
@@ -216,6 +217,7 @@ export default function App() {
     token: number;
   } | null>(null);
   const lastPartyKeyRef = useRef<string>('');
+  const explorationStepRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -422,7 +424,10 @@ export default function App() {
       if (useWild) {
         if (canPlayCardWithWild(card, foundationTop, gameState.activeEffects)) {
           const played = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
-          if (played) applySplashHint();
+          if (played) {
+            applySplashHint();
+            explorationStepRef.current?.();
+          }
         }
         return;
       }
@@ -491,6 +496,20 @@ export default function App() {
     const timeout = window.setTimeout(() => setTooltipSuppressed(false), 450);
     return () => window.clearTimeout(timeout);
   }, [dragState.isDragging, lastDragEndAt]);
+
+  // Degrade watercolor effects during drag for better FPS
+  useEffect(() => {
+    setWatercolorInteractionDegraded(dragState.isDragging);
+  }, [dragState.isDragging]);
+
+  // Stable actions object for PlayingScreen — prevents memo() busting on every App render
+  const playingScreenActions = useMemo(() => ({
+    selectCard: actions.selectCard,
+    playToFoundation: actions.playToFoundation,
+    returnToGarden: actions.returnToGarden,
+    autoPlay: actions.autoPlay,
+    rewindLastCard: actions.rewindLastCard,
+  }), [actions.selectCard, actions.playToFoundation, actions.returnToGarden, actions.autoPlay, actions.rewindLastCard]);
 
   const handleDieMouseDown = useCallback((e: React.MouseEvent) => {
     if (dieAnimating) return; // Don't drag during animation
@@ -965,32 +984,6 @@ export default function App() {
             ⏱ x{timeScale.toFixed(1)}
           </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          className="fixed top-16 left-4 z-[10010] command-button font-mono text-base bg-game-bg-dark/80 border border-game-teal/40 px-4 py-2 rounded cursor-pointer text-game-teal"
-          title="Open settings"
-        >
-          ⚙️
-        </button>
-        <div className="fixed top-[112px] left-4 z-[10010] flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setCardScale((prev) => Math.min(1.4, Math.round((prev + 0.05) * 100) / 100))}
-            className="command-button font-mono text-xs bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded cursor-pointer text-game-teal"
-            title="Increase card scale"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onClick={() => setCardScale((prev) => Math.max(0.6, Math.round((prev - 0.05) * 100) / 100))}
-            className="command-button font-mono text-xs bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded cursor-pointer text-game-teal"
-            title="Decrease card scale"
-          >
-            -
-          </button>
-        </div>
         {settingsOpen && (
           <div className="fixed inset-0 z-[10020]">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
@@ -1366,17 +1359,12 @@ export default function App() {
                 guidanceActive={guidanceActive}
                 activeParty={activeParty}
                 activeTileName={activeTileName}
-                dragState={dragState}
+                isDragging={dragState.isDragging}
+                draggingCard={dragState.card}
                 noRegretStatus={noRegretStatus}
                 handleDragStart={handleDragStart}
                 setFoundationRef={setFoundationRef}
-                actions={{
-                  selectCard: actions.selectCard,
-                  playToFoundation: actions.playToFoundation,
-                  returnToGarden: actions.returnToGarden,
-                  autoPlay: actions.autoPlay,
-                  rewindLastCard: actions.rewindLastCard,
-                }}
+                actions={playingScreenActions}
               />
             )}
 
@@ -1430,6 +1418,7 @@ export default function App() {
                 isGamePaused={isGamePaused}
                 timeScale={timeScale}
                 hidePauseOverlay={hidePauseOverlay}
+                onOpenSettings={() => setSettingsOpen(true)}
                 onTogglePause={() => {
                   setHidePauseOverlay(false);
                   setIsGamePaused((prev) => !prev);
@@ -1449,12 +1438,14 @@ export default function App() {
                   playCardInNodeBiome: actions.playCardInNodeBiome,
                   endRandomBiomeTurn: actions.endRandomBiomeTurn,
                   advanceRandomBiomeTurn: actions.advanceRandomBiomeTurn,
-                  tickRpgCombat: actions.tickRpgCombat,
-                  setEnemyDifficulty: actions.setEnemyDifficulty,
-                  rewindLastCard: actions.rewindLastCard,
-                  swapPartyLead: actions.swapPartyLead,
-                  playWildAnalysisSequence: actions.playWildAnalysisSequence,
-                }}
+                tickRpgCombat: actions.tickRpgCombat,
+                setEnemyDifficulty: actions.setEnemyDifficulty,
+                rewindLastCard: actions.rewindLastCard,
+                swapPartyLead: actions.swapPartyLead,
+                playWildAnalysisSequence: actions.playWildAnalysisSequence,
+                spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
+              }}
+                explorationStepRef={explorationStepRef}
                 />
             )}
             </div>

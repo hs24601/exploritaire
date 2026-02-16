@@ -201,7 +201,6 @@ export function useDragDrop(
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragStateRef.current.isDragging) return;
-      e.preventDefault();
       updateDrag(e.clientX, e.clientY);
     };
 
@@ -265,15 +264,15 @@ export function useDragDrop(
 
     if (supportsPointer) {
       document.addEventListener('pointermove', handlePointerMove, { capture: true, passive: false });
-      document.addEventListener('pointerup', handlePointerUp, { capture: true });
-      document.addEventListener('pointercancel', handlePointerCancel, { capture: true });
+      document.addEventListener('pointerup', handlePointerUp, { capture: true, passive: true });
+      document.addEventListener('pointercancel', handlePointerCancel, { capture: true, passive: true });
       document.addEventListener('touchmove', handleTouchMoveSuppressScroll, { passive: false, capture: true });
     } else {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('mousemove', handleMouseMove, { passive: true });
+      document.addEventListener('mouseup', handleMouseUp, { passive: true });
       document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
-      document.addEventListener('touchend', handleTouchEnd, { capture: true });
-      document.addEventListener('touchcancel', handleTouchCancel, { capture: true });
+      document.addEventListener('touchend', handleTouchEnd, { capture: true, passive: true });
+      document.addEventListener('touchcancel', handleTouchCancel, { capture: true, passive: true });
     }
 
     return () => {

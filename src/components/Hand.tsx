@@ -16,6 +16,7 @@ interface HandProps {
   infiniteStockEnabled?: boolean;
   onToggleInfiniteStock?: () => void;
   draggingCardId?: string | null;
+  isAnyCardDragging?: boolean;
   showGraphics: boolean;
   interactionMode: InteractionMode;
   orimDefinitions?: OrimDefinition[];
@@ -63,6 +64,7 @@ export const Hand = memo(function Hand({
   infiniteStockEnabled = false,
   onToggleInfiniteStock,
   draggingCardId,
+  isAnyCardDragging = false,
   showGraphics,
   interactionMode,
   orimDefinitions,
@@ -74,6 +76,7 @@ export const Hand = memo(function Hand({
   const effectiveScale = cardScale * globalScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
   const cardHeight = CARD_SIZE.height * effectiveScale;
+  const cardSize = useMemo(() => ({ width: cardWidth, height: cardHeight }), [cardWidth, cardHeight]);
   const minCenterDistance = cardWidth;
   const maxCenterDistance = cardWidth * 1.5;
   const positions = useMemo(
@@ -230,9 +233,10 @@ export const Hand = memo(function Hand({
                 >
                   <Card
                     card={card}
-                    size={{ width: cardWidth, height: cardHeight }}
+                    size={cardSize}
                     canPlay={!isOnCooldown}
                     isDragging={isDragging}
+                    isAnyCardDragging={isAnyCardDragging}
                     onClick={
                       interactionMode === 'click' && !isOnCooldown && onCardClick
                         ? () => onCardClick(card)
@@ -268,7 +272,7 @@ export const Hand = memo(function Hand({
         >
           <Card
             card={stockCard}
-            size={{ width: cardWidth, height: cardHeight }}
+            size={cardSize}
             faceDown
             canPlay={false}
             onClick={
