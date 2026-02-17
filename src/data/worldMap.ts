@@ -2,23 +2,46 @@
 import type { WorldMapDefinition } from '../engine/worldMapTypes';
 
 /**
- * A hand-crafted world map for testing and initial development.
- * This defines the layout, POIs, and player start for the 'main_world'.
+ * Hand-authored test world map.
+ * Coordinates are world-space and can be negative.
  */
 export const mainWorldMap: WorldMapDefinition = {
   id: 'main_world',
   name: 'Exploritaire World',
-  size: { cols: 3, rows: 3 },
-  defaultSpawnPosition: { col: 1, row: 1 },
-
-  // Define all Points of Interest that exist in this world
+  size: { cols: 11, rows: 11 },
+  defaultSpawnPosition: { col: 0, row: 0 },
   pointsOfInterest: [
     {
       id: 'poi_start',
       name: 'Quiet Clearing',
-      description: 'The journey begins here. Paths lead in all directions.',
+      description: 'Initial actions row 0,0.',
       type: 'biome',
-      biomeId: 'starting_area', // Links to the BiomeDefinition
+      biomeId: 'random_wilds',
+      tableauPresetId: 'initial_actions_00',
+    },
+    {
+      id: 'poi_initial_01',
+      name: 'Initial Actions 0,1',
+      description: 'Initial actions row 0,1.',
+      type: 'biome',
+      biomeId: 'random_wilds',
+      tableauPresetId: 'initial_actions_01',
+    },
+    {
+      id: 'poi_initial_02',
+      name: 'Initial Actions 0,2',
+      description: 'Initial actions row 0,2.',
+      type: 'biome',
+      biomeId: 'random_wilds',
+      tableauPresetId: 'initial_actions_02',
+    },
+    {
+      id: 'poi_oasis_a',
+      name: 'Oasis A',
+      description: 'Tutorial oasis that introduces sequencing and golf transitions.',
+      type: 'biome',
+      biomeId: 'random_wilds',
+      tableauPresetId: 'oasis_a_tutorial',
     },
     {
       id: 'poi_battle_arena',
@@ -35,32 +58,26 @@ export const mainWorldMap: WorldMapDefinition = {
       biomeId: 'supply_cache_biome',
     },
     {
-        id: 'poi_random_wilds',
-        name: 'Whispering Wilds',
-        description: 'An untamed wilderness stretches before you.',
-        type: 'biome',
-        biomeId: 'random_wilds',
+      id: 'poi_random_wilds',
+      name: 'Whispering Wilds',
+      description: 'An untamed wilderness stretches before you.',
+      type: 'biome',
+      biomeId: 'random_wilds',
     },
     {
-        id: 'poi_empty',
-        name: 'Empty Field',
-        description: 'There is nothing of interest here.',
-        type: 'empty',
-    }
+      id: 'poi_empty',
+      name: 'Empty Field',
+      description: 'There is nothing of interest here.',
+      type: 'empty',
+    },
   ],
-
-  // Define the grid cells and which POI they contain
   cells: [
-    { gridPosition: { col: 0, row: 0 }, poiId: 'poi_empty', traversalDifficulty: 1 },
-    { gridPosition: { col: 1, row: 0 }, poiId: 'poi_battle_arena', traversalDifficulty: 5 },
-    { gridPosition: { col: 2, row: 0 }, poiId: 'poi_empty', traversalDifficulty: 1 },
-    
-    { gridPosition: { col: 0, row: 1 }, poiId: 'poi_empty', traversalDifficulty: 1 },
-    { gridPosition: { col: 1, row: 1 }, poiId: 'poi_start', traversalDifficulty: 1 },
-    { gridPosition: { col: 2, row: 1 }, poiId: 'poi_random_wilds', traversalDifficulty: 2 },
-    
-    { gridPosition: { col: 0, row: 2 }, poiId: 'poi_empty', traversalDifficulty: 1 },
-    { gridPosition: { col: 1, row: 2 }, poiId: 'poi_supply_cache', traversalDifficulty: 1 },
-    { gridPosition: { col: 2, row: 2 }, poiId: 'poi_empty', traversalDifficulty: 1 },
+    { gridPosition: { col: 0, row: 0 }, poiId: 'poi_start', traversalDifficulty: 1 },
+    { gridPosition: { col: 0, row: 1 }, poiId: 'poi_initial_01', traversalDifficulty: 1 },
+    { gridPosition: { col: 0, row: 2 }, poiId: 'poi_initial_02', traversalDifficulty: 1 },
+    { gridPosition: { col: 0, row: -2 }, poiId: 'poi_oasis_a', traversalDifficulty: 1 },
+    { gridPosition: { col: 1, row: 0 }, poiId: 'poi_random_wilds', traversalDifficulty: 2 },
+    { gridPosition: { col: 1, row: 1 }, poiId: 'poi_battle_arena', traversalDifficulty: 5 },
+    { gridPosition: { col: -1, row: 1 }, poiId: 'poi_supply_cache', traversalDifficulty: 1 },
   ],
 };

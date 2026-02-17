@@ -68,6 +68,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 }
 const TIME_SCALE_OPTIONS = [0.5, 1, 1.5, 2];
+const DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED = false;
 
 export default function App() {
   const buildStamp = useMemo(() => new Date().toLocaleString(), []);
@@ -357,6 +358,7 @@ export default function App() {
     ) => {
       if (!gameState) return;
       const applySplashHint = () => {
+        if (!DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED) return;
         if (!momentum || (Math.abs(momentum.x) + Math.abs(momentum.y)) <= 0.1) return;
         const directionDeg = (Math.atan2(momentum.y, momentum.x) * 180) / Math.PI;
         setFoundationSplashHint({
@@ -390,7 +392,12 @@ export default function App() {
               const actorIndex = actorIndexRaw !== undefined ? Number(actorIndexRaw) : NaN;
               if ((side === 'player' || side === 'enemy') && Number.isInteger(actorIndex)) {
                 const played = actions.playRpgHandCardOnActor(card.id, side, actorIndex);
-                if (played && momentum && (Math.abs(momentum.x) + Math.abs(momentum.y)) > 0.1) {
+                if (
+                  DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED
+                  && played
+                  && momentum
+                  && (Math.abs(momentum.x) + Math.abs(momentum.y)) > 0.1
+                ) {
                   const directionDeg = (Math.atan2(momentum.y, momentum.x) * 180) / Math.PI;
                   setRpgImpactSplashHint({
                     side,
@@ -1437,14 +1444,17 @@ export default function App() {
                   autoSolveBiome: actions.autoSolveBiome,
                   playCardInNodeBiome: actions.playCardInNodeBiome,
                   endRandomBiomeTurn: actions.endRandomBiomeTurn,
+                  endExplorationTurnInRandomBiome: actions.endExplorationTurnInRandomBiome,
                   advanceRandomBiomeTurn: actions.advanceRandomBiomeTurn,
-                tickRpgCombat: actions.tickRpgCombat,
-                setEnemyDifficulty: actions.setEnemyDifficulty,
-                rewindLastCard: actions.rewindLastCard,
-                swapPartyLead: actions.swapPartyLead,
-                playWildAnalysisSequence: actions.playWildAnalysisSequence,
-                spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
-              }}
+                  tickRpgCombat: actions.tickRpgCombat,
+                  setEnemyDifficulty: actions.setEnemyDifficulty,
+                  rewindLastCard: actions.rewindLastCard,
+                  swapPartyLead: actions.swapPartyLead,
+                  playWildAnalysisSequence: actions.playWildAnalysisSequence,
+                  spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
+                  setBiomeTableaus: actions.setBiomeTableaus,
+                  addRpgHandCard: actions.addRpgHandCard,
+                }}
                 explorationStepRef={explorationStepRef}
                 />
             )}

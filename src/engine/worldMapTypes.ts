@@ -12,6 +12,8 @@ export interface PointOfInterest {
   type: 'biome' | 'village' | 'shop' | 'empty';
   /** If the POI is a biome, this links to the specific BiomeDefinition ID from biomes.ts */
   biomeId?: string;
+  /** Optional deterministic tableau preset used when this POI is active. */
+  tableauPresetId?: string;
 }
 
 /**

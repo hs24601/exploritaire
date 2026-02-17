@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from 'react';
+import { memo, useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import type { Direction } from './Compass';
 import { DIRECTIONS } from './Compass';
 import { WatercolorSplotch } from '../watercolor/WatercolorSplotch';
@@ -29,27 +29,29 @@ interface ExplorationMapProps {
   currentNodeId: string | null;
   trailNodeIds?: string[];
   travelLabel?: string;
+  actionPoints?: number;
   traversalCount?: number;
   stepCost?: number;
   onStepCostDecrease?: () => void;
   onStepCostIncrease?: () => void;
   onHeadingChange?: (direction: Direction) => void;
+  onTeleport?: (x: number, y: number) => void;
+  poiMarkers?: Array<{ id: string; x: number; y: number; label?: string }>;
 }
 
 const WIDTH = 190;
 const HEIGHT = 190;
 const CELL_SIZE = 26;
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 5;
+const ZOOM_FACTOR = 1.15;
 
-// Cardinal directions in clockwise order for chevron cycling
-const CARDINAL = ['N', 'E', 'S', 'W'] as const;
-type CardinalDir = typeof CARDINAL[number];
-
-
-function nearestCardinal(h: Direction): CardinalDir {
-  const m: Record<Direction, CardinalDir> = {
-    N: 'N', NE: 'E', E: 'E', SE: 'S', S: 'S', SW: 'W', W: 'W', NW: 'N',
-  };
-  return m[h];
+function getNextHeadingFromDirection(heading: Direction, clockwise: boolean): Direction {
+  const startIndex = DIRECTIONS.indexOf(heading);
+  if (startIndex < 0) return 'N';
+  const delta = clockwise ? 1 : -1;
+  const idx = (startIndex + delta + DIRECTIONS.length) % DIRECTIONS.length;
+  return DIRECTIONS[idx];
 }
 
 export const ExplorationMap = memo(function ExplorationMap({
@@ -60,16 +62,36 @@ export const ExplorationMap = memo(function ExplorationMap({
   currentNodeId,
   trailNodeIds = [],
   travelLabel,
+  actionPoints,
   traversalCount = 0,
   stepCost,
   onStepCostDecrease,
   onStepCostIncrease,
   onHeadingChange,
+  onTeleport,
+  poiMarkers = [],
 }: ExplorationMapProps) {
   const [mouseCoord, setMouseCoord] = useState<{ x: number; y: number } | null>(null);
+  const [isTeleportActive, setIsTeleportActive] = useState(false);
+  const [teleportValue, setTeleportValue] = useState('');
+  const [view, setView] = useState({ zoom: 1, panX: 0, panY: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const lastPointerRef = useRef({ x: 0, y: 0 });
+  const svgRef = useRef<SVGSVGElement>(null);
+  // Mirror view into a ref so callbacks can read current values without stale closures
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
+  void stepCost;
+  void onStepCostDecrease;
+  void onStepCostIncrease;
 
   const cx = width / 2;
   const cy = HEIGHT / 2;
+
+  const { zoom, panX, panY } = view;
+  const cellSizeZ = CELL_SIZE * zoom;
 
   const currentNode = useMemo(
     () => nodes.find((n) => n.id === currentNodeId) ?? null,
@@ -77,30 +99,41 @@ export const ExplorationMap = memo(function ExplorationMap({
   );
   const camX = currentNode?.x ?? 0;
   const camY = currentNode?.y ?? 0;
+  // Mirror camX/camY into refs for use in callbacks
+  const camXRef = useRef(camX);
+  const camYRef = useRef(camY);
+  camXRef.current = camX;
+  camYRef.current = camY;
 
   const projected = useMemo(() => nodes.map((node) => ({
     ...node,
-    px: cx + (node.x - camX) * CELL_SIZE,
-    py: cy + (node.y - camY) * CELL_SIZE,
-  })), [nodes, cx, camX, camY]);
+    px: cx + (node.x - camX) * cellSizeZ + panX,
+    py: cy + (node.y - camY) * cellSizeZ + panY,
+  })), [nodes, cx, cy, camX, camY, cellSizeZ, panX, panY]);
+
+  const projectedPoiMarkers = useMemo(() => poiMarkers.map((poi) => ({
+    ...poi,
+    px: cx + (poi.x - camX) * cellSizeZ + panX,
+    py: cy + (poi.y - camY) * cellSizeZ + panY,
+  })), [poiMarkers, cx, cy, camX, camY, cellSizeZ, panX, panY]);
 
   const projectedById = useMemo(
     () => new Map(projected.map((n) => [n.id, n] as const)),
     [projected],
   );
 
-  // Grid line ranges — offset by camera position so grid stays aligned to world coords
+  // Grid line ranges — account for zoom and pan
   const gridXRange = useMemo(() => {
-    const min = Math.ceil(camX - cx / CELL_SIZE);
-    const max = Math.floor(camX + (width - cx) / CELL_SIZE);
+    const min = Math.floor(camX + (-cx - panX) / cellSizeZ) - 1;
+    const max = Math.ceil(camX + (width - cx - panX) / cellSizeZ) + 1;
     return Array.from({ length: max - min + 1 }, (_, i) => min + i);
-  }, [camX, cx, width]);
+  }, [camX, cx, width, cellSizeZ, panX]);
 
   const gridYRange = useMemo(() => {
-    const min = Math.ceil(camY - cy / CELL_SIZE);
-    const max = Math.floor(camY + (HEIGHT - cy) / CELL_SIZE);
+    const min = Math.floor(camY + (-cy - panY) / cellSizeZ) - 1;
+    const max = Math.ceil(camY + (HEIGHT - cy - panY) / cellSizeZ) + 1;
     return Array.from({ length: max - min + 1 }, (_, i) => min + i);
-  }, [camY, cy]);
+  }, [camY, cy, cellSizeZ, panY]);
 
   const trailSegments = useMemo(() => {
     if (trailNodeIds.length < 2) return [];
@@ -180,28 +213,110 @@ export const ExplorationMap = memo(function ExplorationMap({
     };
   }, [currentNodeId, heading]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+  // Non-passive wheel event for zoom centered on cursor
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = svg.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) * (width / rect.width);
+      const my = (e.clientY - rect.top) * (HEIGHT / rect.height);
+      setView((prev) => {
+        const factor = e.deltaY < 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
+        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev.zoom * factor));
+        const zoomRatio = newZoom / prev.zoom;
+        const halfW = width / 2;
+        const halfH = HEIGHT / 2;
+        return {
+          zoom: newZoom,
+          panX: (mx - halfW) - (mx - halfW - prev.panX) * zoomRatio,
+          panY: (my - halfH) - (my - halfH - prev.panY) * zoomRatio,
+        };
+      });
+    };
+    svg.addEventListener('wheel', handleWheel, { passive: false });
+    return () => svg.removeEventListener('wheel', handleWheel);
+  }, [width]);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    lastPointerRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const px = (e.clientX - rect.left) * (width / rect.width);
-    const py = (e.clientY - rect.top) * (HEIGHT / rect.height);
-    setMouseCoord({
-      x: Math.round((px - cx) / CELL_SIZE) + camX,
-      y: Math.round((py - cy) / CELL_SIZE) + camY,
-    });
-  }, [cx, cy, camX, camY, width]);
+    const scaleX = width / rect.width;
+    const scaleY = HEIGHT / rect.height;
+    if (isDraggingRef.current) {
+      const dx = (e.clientX - lastPointerRef.current.x) * scaleX;
+      const dy = (e.clientY - lastPointerRef.current.y) * scaleY;
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
+      setView((prev) => ({ ...prev, panX: prev.panX + dx, panY: prev.panY + dy }));
+    } else {
+      const { zoom: z, panX: px0, panY: py0 } = viewRef.current;
+      const cs = CELL_SIZE * z;
+      const halfW = width / 2;
+      const halfH = HEIGHT / 2;
+      const svgX = (e.clientX - rect.left) * scaleX;
+      const svgY = (e.clientY - rect.top) * scaleY;
+      setMouseCoord({
+        x: Math.round((svgX - halfW - px0) / cs) + camXRef.current,
+        y: Math.round((svgY - halfH - py0) / cs) + camYRef.current,
+      });
+    }
+  }, [width]);
+
+  const handlePointerUp = useCallback(() => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+  }, []);
+
+  const handlePointerLeave = useCallback(() => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    setMouseCoord(null);
+  }, []);
+
+  const handleDoubleClick = useCallback(() => {
+    setView({ zoom: 1, panX: 0, panY: 0 });
+  }, []);
+
+  const handleCoordDoubleClick = useCallback(() => {
+    if (!onTeleport) return;
+    setTeleportValue(currentNode ? `${currentNode.x},${currentNode.y}` : '0,0');
+    setIsTeleportActive(true);
+  }, [onTeleport, currentNode]);
+
+  const handleTeleportCommit = useCallback(() => {
+    if (!onTeleport) return;
+    const parts = teleportValue.split(/[\s,]+/).map((s) => parseInt(s.trim(), 10));
+    if (parts.length >= 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+      onTeleport(parts[0], parts[1]);
+    }
+    setIsTeleportActive(false);
+  }, [onTeleport, teleportValue]);
+
+  const handleTeleportKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTeleportCommit();
+    } else if (e.key === 'Escape') {
+      setIsTeleportActive(false);
+    }
+  }, [handleTeleportCommit]);
 
   const handleLeftChevron = useCallback(() => {
     if (!onHeadingChange) return;
-    const card = nearestCardinal(heading);
-    const idx = CARDINAL.indexOf(card);
-    onHeadingChange(CARDINAL[(idx - 1 + 4) % 4]);
+    onHeadingChange(getNextHeadingFromDirection(heading, false));
   }, [heading, onHeadingChange]);
 
   const handleRightChevron = useCallback(() => {
     if (!onHeadingChange) return;
-    const card = nearestCardinal(heading);
-    const idx = CARDINAL.indexOf(card);
-    onHeadingChange(CARDINAL[(idx + 1) % 4]);
+    onHeadingChange(getNextHeadingFromDirection(heading, true));
   }, [heading, onHeadingChange]);
 
   return (
@@ -231,15 +346,21 @@ export const ExplorationMap = memo(function ExplorationMap({
 
       <div style={{ position: 'relative', width, height: HEIGHT }} className="block">
         <svg
+          ref={svgRef}
           width={width}
           height={HEIGHT}
           className="absolute inset-0"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setMouseCoord(null)}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerLeave}
+          onPointerLeave={handlePointerLeave}
+          onDoubleClick={handleDoubleClick}
         >
           {/* Vertical grid lines */}
           {gridXRange.map((x) => {
-            const sx = cx + (x - camX) * CELL_SIZE;
+            const sx = cx + (x - camX) * cellSizeZ + panX;
             return (
               <line
                 key={`gx-${x}`}
@@ -252,7 +373,7 @@ export const ExplorationMap = memo(function ExplorationMap({
           })}
           {/* Horizontal grid lines */}
           {gridYRange.map((y) => {
-            const sy = cy + (y - camY) * CELL_SIZE;
+            const sy = cy + (y - camY) * cellSizeZ + panY;
             return (
               <line
                 key={`gy-${y}`}
@@ -265,7 +386,7 @@ export const ExplorationMap = memo(function ExplorationMap({
           })}
           {/* X-axis coordinate labels along bottom */}
           {gridXRange.map((x) => {
-            const sx = cx + (x - camX) * CELL_SIZE;
+            const sx = cx + (x - camX) * cellSizeZ + panX;
             return (
               <text
                 key={`xl-${x}`}
@@ -281,7 +402,7 @@ export const ExplorationMap = memo(function ExplorationMap({
           })}
           {/* Y-axis coordinate labels along left */}
           {gridYRange.map((y) => {
-            const sy = cy + (y - camY) * CELL_SIZE;
+            const sy = cy + (y - camY) * cellSizeZ + panY;
             return (
               <text
                 key={`yl-${y}`}
@@ -374,6 +495,27 @@ export const ExplorationMap = memo(function ExplorationMap({
               </g>
             );
           })}
+          {/* POI markers */}
+          {projectedPoiMarkers.map((poi) => (
+            <g key={poi.id} transform={`translate(${poi.px}, ${poi.py})`}>
+              <circle
+                r={4.2}
+                fill="rgba(10, 8, 6, 0.9)"
+                stroke="rgba(247, 210, 75, 0.95)"
+                strokeWidth={1}
+              />
+              <text
+                x={0}
+                y={2.4}
+                textAnchor="middle"
+                fontSize={7}
+                fontWeight={700}
+                fill="#f7d24b"
+              >
+                {poi.label ?? '?'}
+              </text>
+            </g>
+          ))}
           {/* Mouse coordinate display — lower-right corner */}
           {mouseCoord && (
             <text
@@ -385,6 +527,19 @@ export const ExplorationMap = memo(function ExplorationMap({
               style={{ fontFamily: 'monospace' }}
             >
               {mouseCoord.x}, {mouseCoord.y}
+            </text>
+          )}
+          {/* Zoom level indicator — lower-left corner, only when not at 1x */}
+          {Math.abs(zoom - 1) > 0.05 && (
+            <text
+              x={4}
+              y={HEIGHT - 3}
+              textAnchor="start"
+              fontSize={7}
+              fill="rgba(127, 219, 202, 0.55)"
+              style={{ fontFamily: 'monospace' }}
+            >
+              {zoom.toFixed(1)}×
             </text>
           )}
         </svg>
@@ -406,83 +561,89 @@ export const ExplorationMap = memo(function ExplorationMap({
             </div>
           ))}
         </div>
+        {typeof actionPoints === 'number' && (
+          <div
+            className="absolute right-1 bottom-1 px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-[1px] pointer-events-none"
+            style={{
+              borderColor: 'rgba(247, 210, 75, 0.8)',
+              color: '#f7d24b',
+              backgroundColor: 'rgba(10, 8, 6, 0.92)',
+              textShadow: '0 0 4px rgba(230, 179, 30, 0.45)',
+            }}
+            title="Available action points"
+          >
+            AP {Math.max(0, Math.floor(actionPoints))}
+          </div>
+        )}
       </div>
 
-      {/* Direction chevrons */}
-      {onHeadingChange && (
-        <div className="flex items-center justify-center gap-2 mt-1.5">
-          <button
-            type="button"
-            onClick={handleLeftChevron}
-            className="px-2 py-0.5 rounded border font-bold leading-none select-none"
-            style={{
-              fontSize: 15,
-              borderColor: 'rgba(127, 219, 202, 0.65)',
-              color: '#7fdbca',
-              backgroundColor: 'rgba(10, 10, 10, 0.8)',
-            }}
-            title="Counterclockwise to previous cardinal direction"
-          >
-            ‹
-          </button>
-          <div
-            className="px-2 py-0.5 rounded border font-bold tracking-[2px] text-center"
-            style={{
-              fontSize: 10,
-              minWidth: 26,
-              borderColor: 'rgba(247, 210, 75, 0.7)',
-              color: '#f7d24b',
-              backgroundColor: 'rgba(10, 10, 10, 0.75)',
-              textShadow: '0 0 6px rgba(247, 210, 75, 0.45)',
-            }}
-          >
-            {nearestCardinal(heading)}
-          </div>
-          <button
-            type="button"
-            onClick={handleRightChevron}
-            className="px-2 py-0.5 rounded border font-bold leading-none select-none"
-            style={{
-              fontSize: 15,
-              borderColor: 'rgba(127, 219, 202, 0.65)',
-              color: '#7fdbca',
-              backgroundColor: 'rgba(10, 10, 10, 0.8)',
-            }}
-            title="Clockwise to next cardinal direction"
-          >
-            ›
-          </button>
-        </div>
-      )}
-
-      {/* Step cost controls */}
-      {typeof stepCost === 'number' && (
-        <div className="mt-1 flex items-center justify-center gap-1">
-          <button
-            type="button"
-            onClick={onStepCostDecrease}
-            className="px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-[1px]"
-            style={{ borderColor: 'rgba(127, 219, 202, 0.65)', color: '#7fdbca', backgroundColor: 'rgba(10, 10, 10, 0.8)' }}
-            title="Decrease rows required per travel step"
-          >
-            -
-          </button>
-          <div
-            className="px-2 py-0.5 rounded border text-[9px] font-bold tracking-[1px]"
-            style={{ borderColor: 'rgba(127, 219, 202, 0.55)', color: '#7fdbca', backgroundColor: 'rgba(10, 10, 10, 0.75)' }}
-            title="Rows required to travel one map step"
-          >
-            STEP COST {stepCost}
-          </div>
-          <button
-            type="button"
-            onClick={onStepCostIncrease}
-            className="px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-[1px]"
-            style={{ borderColor: 'rgba(127, 219, 202, 0.65)', color: '#7fdbca', backgroundColor: 'rgba(10, 10, 10, 0.8)' }}
-            title="Increase rows required per travel step"
-          >
-            +
-          </button>
+      {/* Bottom row: heading chevrons + coordinate display */}
+      {(onHeadingChange || (currentNode && onTeleport)) && (
+        <div className="mt-1 flex items-center justify-center gap-2">
+          {onHeadingChange && (
+            <button
+              type="button"
+              onClick={handleLeftChevron}
+              className="px-2 py-0.5 rounded border font-bold leading-none select-none"
+              style={{ borderColor: 'rgba(127, 219, 202, 0.65)', color: '#7fdbca', backgroundColor: 'rgba(10, 10, 10, 0.8)' }}
+              title="Counterclockwise to previous direction"
+            >
+              ‹
+            </button>
+          )}
+          {/* Coordinate display / teleport input */}
+          {currentNode && (
+            isTeleportActive ? (
+              <input
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+                type="text"
+                value={teleportValue}
+                onChange={(e) => setTeleportValue(e.target.value)}
+                onKeyDown={handleTeleportKeyDown}
+                onBlur={handleTeleportCommit}
+                className="rounded border text-center text-[10px] font-mono font-bold"
+                style={{
+                  width: 68,
+                  borderColor: 'rgba(247, 210, 75, 0.85)',
+                  color: '#f7d24b',
+                  backgroundColor: 'rgba(10, 8, 6, 0.95)',
+                  outline: 'none',
+                  padding: '1px 4px',
+                }}
+                placeholder="x,y"
+              />
+            ) : (
+              <span
+                onDoubleClick={handleCoordDoubleClick}
+                className="text-[10px] font-mono font-bold select-none"
+                style={{
+                  color: onTeleport ? 'rgba(247, 210, 75, 0.75)' : 'rgba(127, 219, 202, 0.5)',
+                  cursor: onTeleport ? 'pointer' : 'default',
+                  minWidth: 68,
+                  textAlign: 'center',
+                  display: 'inline-block',
+                  padding: '1px 4px',
+                  borderRadius: 3,
+                  border: onTeleport ? '1px solid rgba(247, 210, 75, 0.2)' : '1px solid transparent',
+                }}
+                title={onTeleport ? 'Double-click to teleport' : undefined}
+              >
+                {currentNode.x},{currentNode.y}
+              </span>
+            )
+          )}
+          {onHeadingChange && (
+            <button
+              type="button"
+              onClick={handleRightChevron}
+              className="px-2 py-0.5 rounded border font-bold leading-none select-none"
+              style={{ borderColor: 'rgba(127, 219, 202, 0.65)', color: '#7fdbca', backgroundColor: 'rgba(10, 10, 10, 0.8)' }}
+              title="Clockwise to next direction"
+            >
+              ›
+            </button>
+          )}
         </div>
       )}
     </div>

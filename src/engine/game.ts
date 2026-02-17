@@ -2862,13 +2862,16 @@ function startRandomBiome(
   const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const useEnemyFoundations = playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const foundationActors = clampPartyForFoundations(sandboxActors);
-  const foundations: Card[][] = biomeId === 'random_wilds'
-    ? (usePartyFoundations
-      ? foundationActors.map((actor) => [createActorFoundationCard(actor)])
-      : [[]])
-    : foundationActors.map(actor => [
-      createActorFoundationCard(actor),
-    ]);
+  const useSingleWildFoundation = playtestVariant === 'rpg' && biomeId === 'random_wilds';
+  const foundations: Card[][] = useSingleWildFoundation
+    ? [[createFullWildSentinel(0)]]
+    : biomeId === 'random_wilds'
+      ? (usePartyFoundations
+        ? foundationActors.map((actor) => [createActorFoundationCard(actor)])
+        : [[]])
+      : foundationActors.map((actor) => [
+        createActorFoundationCard(actor),
+      ]);
   const foundationCombos = foundations.map(() => 0);
   const foundationTokens = foundations.map(() => createEmptyTokenCounts());
   const enemyFoundations = useEnemyFoundations
@@ -3171,9 +3174,12 @@ export function endRandomBiomeTurn(state: GameState): GameState {
   const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const useEnemyFoundations = playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const foundationActors = clampPartyForFoundations(partyActors);
-  const foundations: Card[][] = usePartyFoundations
-    ? foundationActors.map(actor => [createActorFoundationCard(actor)])
-    : [[]];
+  const useSingleWildFoundation = playtestVariant === 'rpg' && biomeDef.id === 'random_wilds';
+  const foundations: Card[][] = useSingleWildFoundation
+    ? [[createFullWildSentinel(0)]]
+    : (usePartyFoundations
+      ? foundationActors.map((actor) => [createActorFoundationCard(actor)])
+      : [[]]);
   const foundationCombos = foundations.map(() => 0);
   const foundationTokens = foundations.map(() => createEmptyTokenCounts());
   const enemyFoundations = useEnemyFoundations

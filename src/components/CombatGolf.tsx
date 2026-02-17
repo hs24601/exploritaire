@@ -22,7 +22,16 @@ import {
   getEnemyMoveAnimationMs,
   ENEMY_TURN_TIME_BUDGET_MS,
 } from './EnemyAiController';
-import { CARD_SIZE, ELEMENT_TO_SUIT, getSuitDisplay, HAND_SOURCE_INDEX, SUIT_COLORS, WILD_SENTINEL_RANK } from '../engine/constants';
+import {
+  CARD_SIZE,
+  ELEMENT_TO_SUIT,
+  createWildSentinel,
+  getSuitDisplay,
+  HAND_SOURCE_INDEX,
+  randomIdSuffix,
+  SUIT_COLORS,
+  WILD_SENTINEL_RANK,
+} from '../engine/constants';
 import { useCardScale } from '../contexts/CardScaleContext';
 import { Hand } from './Hand';
 import { PartyBench } from './PartyBench';
@@ -36,6 +45,9 @@ import { useWatercolorEngine, usePaintMarkCount } from '../watercolor-engine/Wat
 import { getBiomeDefinition } from '../engine/biomes';
 import { createDie } from '../engine/dice';
 import { NO_MOVES_BADGE_STYLE } from '../utils/styles';
+import { useDevModeFlag } from '../utils/devMode';
+import { mainWorldMap } from '../data/worldMap';
+import { createPoiTableauPreset, type PoiTableauPresetId } from '../data/poiTableaus';
 import { SplatterPatternModal } from './SplatterPatternModal';
 import { Tooltip } from './Tooltip';
 import { createRandomBattleHandRewardCard, getBattleHandRewardThreshold } from './combat/battleHandUnlocks';
@@ -46,7 +58,6 @@ import { ActorInspectOverlay } from './combat/ActorInspectOverlay';
 
 const CONTROLLED_DRAGONFIRE_BEHAVIOR_ID = 'controlled_dragonfire_v1';
 const CONTROLLED_DRAGONFIRE_CARD_ID_PREFIX = 'relic-controlled-dragonfire-';
-const DEV_TRAVERSE_HOLD_ENABLED = true;
 const DEV_TRAVERSE_HOLD_DELAY_MS = 260;
 const DEV_TRAVERSE_HOLD_INTERVAL_MS = 190;
 
@@ -440,6 +451,7 @@ export const CombatGolf = memo(function CombatGolf({
   const [enemyTurnEndCallouts, setEnemyTurnEndCallouts] = useState<Array<{ id: number }>>([]);
   const [bankSmashFx, setBankSmashFx] = useState<{ id: number; ms: number } | null>(null);
   const [explorationSupplies, setExplorationSupplies] = useState(10);
+  const [explorationApLockFloor, setExplorationApLockFloor] = useState<number | null>(null);
   const [explorationRowsPerStep, setExplorationRowsPerStep] = useState(1);
   const [tableauSlideOffsetPx, setTableauSlideOffsetPx] = useState(0);
   const [tableauSlideAnimating, setTableauSlideAnimating] = useState(false);
@@ -492,6 +504,9 @@ export const CombatGolf = memo(function CombatGolf({
   const prevEnemyTurnForBankRef = useRef<boolean>(false);
   const explorationCurrentNodeIdRef = useRef<string>('origin');
   const explorationHeadingRef = useRef<Direction>('N');
+  const explorationNodesRef = useRef<ExplorationMapNode[]>([{ id: 'origin', heading: 'N', x: 0, y: 0, z: 0, visits: 1 }]);
+  const explorationEdgesRef = useRef<ExplorationMapEdge[]>([]);
+  const explorationTrailNodeIdsRef = useRef<string[]>(['origin']);
   const tableauSlideRafRef = useRef<number | null>(null);
   const devTraverseHoldTimeoutRef = useRef<number | null>(null);
   const devTraverseHoldIntervalRef = useRef<number | null>(null);
@@ -499,11 +514,11 @@ export const CombatGolf = memo(function CombatGolf({
   const devTraverseHoldStartAtRef = useRef<number>(0);
   const devTraverseTriggeredHoldRef = useRef(false);
   const [devTraverseHoldProgress, setDevTraverseHoldProgress] = useState(0);
-  const explorationClearedRowsByContextRef = useRef<Record<string, number>>({});
   const explorationLastTopCardIdBySourceRef = useRef<Record<string, string>>({});
   const explorationDisplayedContextRef = useRef<{ nodeId: string; heading: Direction } | null>(null);
   const explorationMajorTableauCacheRef = useRef<Record<string, CardType[][]>>({});
   const explorationMinorCenterCacheRef = useRef<Record<string, CardType[]>>({});
+  const explorationPoiTableauCacheRef = useRef<Record<string, CardType[][]>>({});
   const enemyFoundationRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [enemyRevealMap, setEnemyRevealMap] = useState<Record<number, number | null>>({});
   const [enemyTurnRemainingMs, setEnemyTurnRemainingMs] = useState(ENEMY_TURN_TIME_BUDGET_MS);
@@ -574,6 +589,67 @@ export const CombatGolf = memo(function CombatGolf({
   const cloneTableaus = useCallback((tableaus: CardType[][]): CardType[][] => (
     tableaus.map((stack) => stack.map((card) => cloneCard(card)))
   ), [cloneCard]);
+  const poiByCoordinateKey = useMemo(() => {
+    const poiById = new Map(mainWorldMap.pointsOfInterest.map((poi) => [poi.id, poi]));
+    const map = new Map<string, PoiTableauPresetId>();
+    mainWorldMap.cells.forEach((cell) => {
+      const poi = poiById.get(cell.poiId);
+      if (!poi?.tableauPresetId) return;
+      map.set(`${cell.gridPosition.col},${cell.gridPosition.row}`, poi.tableauPresetId as PoiTableauPresetId);
+    });
+    return map;
+  }, []);
+  const poiPresenceByCoordinateKey = useMemo(() => {
+    const poiById = new Map(mainWorldMap.pointsOfInterest.map((poi) => [poi.id, poi]));
+    const map = new Map<string, { id: string; name: string }>();
+    mainWorldMap.cells.forEach((cell) => {
+      const poi = poiById.get(cell.poiId);
+      if (!poi || poi.type === 'empty') return;
+      map.set(`${cell.gridPosition.col},${cell.gridPosition.row}`, { id: poi.id, name: poi.name });
+    });
+    return map;
+  }, []);
+  const explorationPoiMarkers = useMemo(() => {
+    const entries = Array.from(poiPresenceByCoordinateKey.entries());
+    return entries.map(([coordKey, poi]) => {
+      const [xRaw, yRaw] = coordKey.split(',');
+      return {
+        id: poi.id,
+        x: Number(xRaw),
+        y: Number(yRaw),
+        label: '?',
+      };
+    });
+  }, [poiPresenceByCoordinateKey]);
+  const getExplorationNodeCoordinates = useCallback((nodeId: string): { x: number; y: number } | null => {
+    if (nodeId === 'origin') return { x: 0, y: 0 };
+    const parsed = /^node-(-?\d+)-(-?\d+)$/.exec(nodeId);
+    if (!parsed) return null;
+    return { x: Number(parsed[1]), y: Number(parsed[2]) };
+  }, []);
+  const getPoiTableauPresetForNode = useCallback((nodeId: string): PoiTableauPresetId | null => {
+    const coords = getExplorationNodeCoordinates(nodeId);
+    if (!coords) return null;
+    return poiByCoordinateKey.get(`${coords.x},${coords.y}`) ?? null;
+  }, [getExplorationNodeCoordinates, poiByCoordinateKey]);
+  const hasPoiForNode = useCallback((nodeId: string): boolean => {
+    const coords = getExplorationNodeCoordinates(nodeId);
+    if (!coords) return false;
+    return poiPresenceByCoordinateKey.has(`${coords.x},${coords.y}`);
+  }, [getExplorationNodeCoordinates, poiPresenceByCoordinateKey]);
+  const ensurePoiPresetTableaus = useCallback((nodeId: string): CardType[][] | null => {
+    const presetId = getPoiTableauPresetForNode(nodeId);
+    if (!presetId) return null;
+    const cacheKey = `${nodeId}|poi|${presetId}`;
+    const cached = explorationPoiTableauCacheRef.current[cacheKey];
+    let generated = cached ?? createPoiTableauPreset(presetId);
+    const coords = getExplorationNodeCoordinates(nodeId);
+    if (coords && coords.x === 0 && (coords.y === 0 || coords.y === 1 || coords.y === 2)) {
+      generated = generated.slice(0, 7).map((stack) => (stack.length > 0 ? [stack[stack.length - 1]] : []));
+    }
+    explorationPoiTableauCacheRef.current[cacheKey] = generated;
+    return generated;
+  }, [getExplorationNodeCoordinates, getPoiTableauPresetForNode]);
   const hashString = useCallback((value: string) => {
     let hash = 2166136261 >>> 0;
     for (let index = 0; index < value.length; index += 1) {
@@ -638,6 +714,13 @@ export const CombatGolf = memo(function CombatGolf({
     return generated;
   }, [createDeterministicTableaus, getMinorCenterCacheKey]);
   const getDisplayTableausForHeading = useCallback((nodeId: string, direction: Direction): CardType[][] => {
+    if (!hasPoiForNode(nodeId)) {
+      return [];
+    }
+    const poiPresetTableaus = ensurePoiPresetTableaus(nodeId);
+    if (poiPresetTableaus) {
+      return cloneTableaus(poiPresetTableaus);
+    }
     if (direction.length === 1) {
       return cloneTableaus(ensureMajorDirectionTableaus(nodeId, direction as MajorDirection));
     }
@@ -650,8 +733,29 @@ export const CombatGolf = memo(function CombatGolf({
       return ensureMinorCenterTableau(nodeId, source.direction);
     });
     return cloneTableaus(columns);
-  }, [cloneTableaus, ensureMajorDirectionTableaus, ensureMinorCenterTableau]);
+  }, [cloneTableaus, ensureMajorDirectionTableaus, ensureMinorCenterTableau, ensurePoiPresetTableaus, hasPoiForNode]);
   const commitDisplayedTableausToCaches = useCallback((nodeId: string, direction: Direction, displayed: CardType[][]) => {
+    const presetId = getPoiTableauPresetForNode(nodeId);
+    if (presetId) {
+      const cacheKey = `${nodeId}|poi|${presetId}`;
+      if (presetId === 'initial_actions_00' || presetId === 'initial_actions_01' || presetId === 'initial_actions_02') {
+        const previous = explorationPoiTableauCacheRef.current[cacheKey] ?? createPoiTableauPreset(presetId);
+        const next = Array.from({ length: 7 }, (_, index) => {
+          const prevTop = previous[index]?.[0];
+          const currentTop = displayed[index]?.[displayed[index].length - 1];
+          // Initial-actions POIs are single-row only: a column may keep its same card
+          // or become empty, but never reveal a different card behind it.
+          if (!prevTop) return [];
+          if (!currentTop) return [];
+          if (currentTop.id !== prevTop.id) return [];
+          return [cloneCard(currentTop)];
+        });
+        explorationPoiTableauCacheRef.current[cacheKey] = next;
+        return;
+      }
+      explorationPoiTableauCacheRef.current[cacheKey] = displayed.map((stack) => stack.map((card) => cloneCard(card)));
+      return;
+    }
     const sources = getColumnSourcesForDirection(direction);
     sources.forEach((source, index) => {
       const stack = displayed[index] ?? [];
@@ -666,7 +770,7 @@ export const CombatGolf = memo(function CombatGolf({
       const minorKey = getMinorCenterCacheKey(nodeId, source.direction);
       explorationMinorCenterCacheRef.current[minorKey] = stack.map((card) => cloneCard(card));
     });
-  }, [cloneCard, ensureMajorDirectionTableaus, getMajorCacheKey, getMinorCenterCacheKey]);
+  }, [cloneCard, ensureMajorDirectionTableaus, getMajorCacheKey, getMinorCenterCacheKey, getPoiTableauPresetForNode]);
   const areTableausEquivalent = useCallback((left: CardType[][], right: CardType[][]) => {
     if (left.length !== right.length) return false;
     for (let col = 0; col < left.length; col += 1) {
@@ -724,6 +828,18 @@ export const CombatGolf = memo(function CombatGolf({
     ? Math.max(0.52, tableauAvailableWidth / tableauRequiredWidth)
     : 1;
   const tableauCardScale = foundationCardScale * tableauFitScale;
+  const tableauCardHeight = CARD_SIZE.height * tableauCardScale;
+  const explorationTableauMaxDepth = gameState.tableaus.reduce(
+    (maxDepth, tableau) => Math.max(maxDepth, tableau.length),
+    0
+  );
+  const explorationTableauEdgeStepPx = Math.max(2, Math.round(3 * tableauCardScale));
+  const explorationTableauSingleRowBufferPx = Math.max(6, Math.round(8 * tableauCardScale));
+  const explorationTableauRowHeightPx = Math.round(
+    tableauCardHeight
+      + explorationTableauSingleRowBufferPx
+      + (Math.max(0, explorationTableauMaxDepth - 1) * explorationTableauEdgeStepPx)
+  );
   const explorationMapWidth = Math.max(
     320,
     Math.min(
@@ -2271,9 +2387,6 @@ export const CombatGolf = memo(function CombatGolf({
       setComboExpiryTokens((current) => [...current, { id, value }]);
     }
     if (isPartyBattleVariant && !zenModeEnabled && !isEnemyTurn) {
-      if (isRpgVariant) {
-        setExplorationSupplies((current) => Math.max(0, current - 1));
-      }
       setComboPaused(true);
       (actions.advanceRandomBiomeTurn ?? actions.endRandomBiomeTurn)();
     }
@@ -2382,9 +2495,20 @@ export const CombatGolf = memo(function CombatGolf({
   const currentDirectionMoves = explorationMovesByDirection[activeTravelDirection] ?? 0;
   const consumedDirectionRows = (explorationAppliedTraversalByDirection[activeTravelDirection] ?? 0) * travelRowsPerStep;
   const pendingDirectionRows = Math.max(0, currentDirectionMoves - consumedDirectionRows);
-  const explorationTravelProgress = Math.min(travelRowsPerStep, pendingDirectionRows);
-  const canStepForwardInExploration = pendingDirectionRows >= travelRowsPerStep;
+  const isDevModeHashEnabled = useDevModeFlag();
+  const devTraverseHoldEnabled = isDevModeHashEnabled;
+  const isExplorationApLocked = explorationApLockFloor !== null;
+  const availableExplorationActionPoints = isExplorationApLocked
+    ? Math.max(pendingDirectionRows, explorationApLockFloor ?? 0)
+    : pendingDirectionRows;
+  const explorationTravelProgress = Math.min(travelRowsPerStep, availableExplorationActionPoints);
+  const canStepForwardInExploration = availableExplorationActionPoints >= travelRowsPerStep;
   const explorationAppliedTraversalCount = explorationTotalTraversalCount;
+  useEffect(() => {
+    if (!isDevModeHashEnabled) {
+      setExplorationApLockFloor(null);
+    }
+  }, [isDevModeHashEnabled]);
   const getDisplayedStepIndexForColumn = useCallback((columnIndex: number) => {
     const sources = getColumnSourcesForDirection(explorationHeading);
     const source = sources[columnIndex];
@@ -2410,10 +2534,13 @@ export const CombatGolf = memo(function CombatGolf({
   useEffect(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
     setExplorationNodes([{ id: 'origin', heading: 'N', x: 0, y: 0, z: 0, visits: 1 }]);
+    explorationNodesRef.current = [{ id: 'origin', heading: 'N', x: 0, y: 0, z: 0, visits: 1 }];
     setExplorationEdges([]);
+    explorationEdgesRef.current = [];
     setExplorationCurrentNodeId('origin');
     explorationCurrentNodeIdRef.current = 'origin';
     setExplorationTrailNodeIds(['origin']);
+    explorationTrailNodeIdsRef.current = ['origin'];
     setExplorationHeading('N');
     explorationHeadingRef.current = 'N';
     setExplorationStepOffsetBySource({});
@@ -2430,12 +2557,13 @@ export const CombatGolf = memo(function CombatGolf({
       W: 0,
     });
     setExplorationTotalTraversalCount(0);
-    explorationClearedRowsByContextRef.current = {};
     explorationLastTopCardIdBySourceRef.current = {};
     explorationDisplayedContextRef.current = null;
     explorationMajorTableauCacheRef.current = {};
     explorationMinorCenterCacheRef.current = {};
+    explorationPoiTableauCacheRef.current = {};
     setOwlExplorationRevealByNode({});
+    setExplorationApLockFloor(null);
   }, [gameState.currentBiome, hasSpawnedEnemies, isRpgVariant]);
   const handleExplorationHeadingChange = useCallback((direction: Direction) => {
     if (isRpgVariant && !hasSpawnedEnemies) {
@@ -2443,73 +2571,98 @@ export const CombatGolf = memo(function CombatGolf({
     }
     setExplorationHeading(direction);
   }, [hasSpawnedEnemies, isRpgVariant, triggerExplorationTableauSlide]);
+  const handleExplorationHeadingStep = useCallback((clockwise: boolean) => {
+    const idx = DIRECTIONS.indexOf(explorationHeading);
+    if (idx < 0) return;
+    const next = DIRECTIONS[(idx + (clockwise ? 1 : -1) + DIRECTIONS.length) % DIRECTIONS.length];
+    handleExplorationHeadingChange(next);
+  }, [explorationHeading, handleExplorationHeadingChange]);
+  const explorationCurrentCoordsLabel = useMemo(() => {
+    const coords = getExplorationNodeCoordinates(explorationCurrentNodeId);
+    if (!coords) return '?,?';
+    return `${coords.x},${coords.y}`;
+  }, [explorationCurrentNodeId, getExplorationNodeCoordinates]);
   const advanceExplorationMap = useCallback((direction: Direction) => {
     const compassDelta: Record<Direction, { dx: number; dy: number }> = {
       N: { dx: 0, dy: -1 }, NE: { dx: 1, dy: -1 }, E: { dx: 1, dy: 0 }, SE: { dx: 1, dy: 1 },
       S: { dx: 0, dy: 1 }, SW: { dx: -1, dy: 1 }, W: { dx: -1, dy: 0 }, NW: { dx: -1, dy: -1 },
     };
-    setExplorationNodes((prevNodes) => {
-      const currentNode = prevNodes.find((node) => node.id === explorationCurrentNodeIdRef.current) ?? prevNodes[0];
-      if (!currentNode) return prevNodes;
-      const { dx, dy } = compassDelta[direction] ?? { dx: 0, dy: -1 };
-      const targetX = currentNode.x + dx;
-      const targetY = currentNode.y + dy;
-      const existingIndex = prevNodes.findIndex((node) => node.x === targetX && node.y === targetY);
-      let nextNodes = prevNodes;
-      let targetNodeId: string;
-      if (existingIndex >= 0) {
-        targetNodeId = prevNodes[existingIndex].id;
-        nextNodes = prevNodes.map((node, index) => (
-          index === existingIndex ? { ...node, visits: node.visits + 1, heading: direction } : node
-        ));
-      } else {
-        const newId = `node-${targetX}-${targetY}`;
-        targetNodeId = newId;
-        const depth = Math.min(6, Math.floor(prevNodes.length / 3));
-        nextNodes = [...prevNodes, { id: newId, heading: direction, x: targetX, y: targetY, z: depth, visits: 1 }];
-      }
-      explorationCurrentNodeIdRef.current = targetNodeId;
-      setExplorationCurrentNodeId(targetNodeId);
-      setExplorationTrailNodeIds((prevTrail) => [...prevTrail, targetNodeId]);
-      const edgeKey = `${currentNode.id}->${targetNodeId}`;
-      setExplorationEdges((prevEdges) => {
-        const found = prevEdges.find((edge) => edge.id === edgeKey);
-        if (!found) {
-          return [...prevEdges, { id: edgeKey, fromId: currentNode.id, toId: targetNodeId, traversals: 1 }];
-        }
-        return prevEdges.map((edge) => (
-          edge.id === edgeKey ? { ...edge, traversals: edge.traversals + 1 } : edge
-        ));
-      });
-      return nextNodes;
-    });
+    const prevNodes = explorationNodesRef.current;
+    const currentNode = prevNodes.find((node) => node.id === explorationCurrentNodeIdRef.current) ?? prevNodes[0];
+    if (!currentNode) return;
+    const { dx, dy } = compassDelta[direction] ?? { dx: 0, dy: -1 };
+    const targetX = currentNode.x + dx;
+    const targetY = currentNode.y + dy;
+    const existingIndex = prevNodes.findIndex((node) => node.x === targetX && node.y === targetY);
+    let nextNodes: ExplorationMapNode[];
+    let targetNodeId: string;
+    if (existingIndex >= 0) {
+      targetNodeId = prevNodes[existingIndex].id;
+      nextNodes = prevNodes.map((node, index) => (
+        index === existingIndex ? { ...node, visits: node.visits + 1, heading: direction } : node
+      ));
+    } else {
+      const newId = `node-${targetX}-${targetY}`;
+      targetNodeId = newId;
+      const depth = Math.min(6, Math.floor(prevNodes.length / 3));
+      nextNodes = [...prevNodes, { id: newId, heading: direction, x: targetX, y: targetY, z: depth, visits: 1 }];
+    }
+    const edgeKey = `${currentNode.id}->${targetNodeId}`;
+    const prevEdges = explorationEdgesRef.current;
+    const foundEdge = prevEdges.find((edge) => edge.id === edgeKey);
+    const nextEdges = foundEdge
+      ? prevEdges.map((edge) => (edge.id === edgeKey ? { ...edge, traversals: edge.traversals + 1 } : edge))
+      : [...prevEdges, { id: edgeKey, fromId: currentNode.id, toId: targetNodeId, traversals: 1 }];
+    const nextTrail = [...explorationTrailNodeIdsRef.current, targetNodeId];
+    // Update refs synchronously before calling setters
+    explorationCurrentNodeIdRef.current = targetNodeId;
+    explorationNodesRef.current = nextNodes;
+    explorationEdgesRef.current = nextEdges;
+    explorationTrailNodeIdsRef.current = nextTrail;
+    // Call all setters at top level — no nesting, no functional updaters
+    setExplorationNodes(nextNodes);
+    setExplorationCurrentNodeId(targetNodeId);
+    setExplorationTrailNodeIds(nextTrail);
+    setExplorationEdges(nextEdges);
   }, []);
-  useEffect(() => {
-    if (!(isRpgVariant && !hasSpawnedEnemies)) return;
-    const sources = getColumnSourcesForDirection(explorationHeading);
-    if (sources.length === 0) return;
-    const offsets = sources.map((source) => {
-      const sourceKey = getExplorationSourceKey(explorationCurrentNodeId, source);
-      return explorationStepOffsetBySource[sourceKey] ?? 0;
-    });
-    const fullyClearedRows = offsets.length > 0 ? Math.min(...offsets) : 0;
-    const contextKey = `${explorationCurrentNodeId}|${explorationHeading}`;
-    const previousClearedRows = explorationClearedRowsByContextRef.current[contextKey] ?? 0;
-    if (fullyClearedRows <= previousClearedRows) return;
-    const deltaRows = fullyClearedRows - previousClearedRows;
-    explorationClearedRowsByContextRef.current[contextKey] = fullyClearedRows;
-    const majorDirection = (explorationHeading.length === 1 ? explorationHeading : explorationHeading[0]) as MajorDirection;
+  const teleportToExplorationNode = useCallback((targetX: number, targetY: number) => {
+    const prevNodes = explorationNodesRef.current;
+    const existingIndex = prevNodes.findIndex((n) => n.x === targetX && n.y === targetY);
+    let nextNodes: ExplorationMapNode[];
+    let targetNodeId: string;
+    if (existingIndex >= 0) {
+      targetNodeId = prevNodes[existingIndex].id;
+      nextNodes = prevNodes.map((n, i) =>
+        i === existingIndex ? { ...n, visits: n.visits + 1 } : n,
+      );
+    } else {
+      targetNodeId = `node-${targetX}-${targetY}`;
+      const depth = Math.min(6, Math.floor(prevNodes.length / 3));
+      nextNodes = [...prevNodes, {
+        id: targetNodeId,
+        heading: explorationHeadingRef.current,
+        x: targetX,
+        y: targetY,
+        z: depth,
+        visits: 1,
+      }];
+    }
+    const nextTrail = [...explorationTrailNodeIdsRef.current, targetNodeId];
+    explorationCurrentNodeIdRef.current = targetNodeId;
+    explorationNodesRef.current = nextNodes;
+    explorationTrailNodeIdsRef.current = nextTrail;
+    setExplorationNodes(nextNodes);
+    setExplorationCurrentNodeId(targetNodeId);
+    setExplorationTrailNodeIds(nextTrail);
+  }, []);
+  const awardExplorationActionPoint = useCallback((points = 1) => {
+    if (!isExplorationMode) return;
+    if (points <= 0) return;
     setExplorationMovesByDirection((prev) => ({
       ...prev,
-      [majorDirection]: (prev[majorDirection] ?? 0) + deltaRows,
+      [activeTravelDirection]: (prev[activeTravelDirection] ?? 0) + points,
     }));
-  }, [
-    explorationCurrentNodeId,
-    explorationHeading,
-    explorationStepOffsetBySource,
-    hasSpawnedEnemies,
-    isRpgVariant,
-  ]);
+  }, [activeTravelDirection, isExplorationMode]);
   useEffect(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
     if (!actions.setBiomeTableaus) return;
@@ -2519,8 +2672,6 @@ export const CombatGolf = memo(function CombatGolf({
     const displayedContext = explorationDisplayedContextRef.current;
     if (displayedContext) {
       commitDisplayedTableausToCaches(displayedContext.nodeId, displayedContext.heading, currentDisplay);
-    } else {
-      commitDisplayedTableausToCaches(nodeId, heading, currentDisplay);
     }
     const desiredDisplay = getDisplayTableausForHeading(nodeId, heading);
     if (!areTableausEquivalent(currentDisplay, desiredDisplay)) {
@@ -2647,8 +2798,21 @@ export const CombatGolf = memo(function CombatGolf({
     setExplorationTotalTraversalCount((prev) => prev + 1);
   }, [activeTravelDirection, advanceExplorationMap, explorationHeading, isExplorationMode]);
   useEffect(() => {
-    if (explorationStepRef) explorationStepRef.current = stepExplorationOnPlay;
-  }, [explorationStepRef, stepExplorationOnPlay]);
+    if (explorationStepRef) explorationStepRef.current = () => {
+      awardExplorationActionPoint();
+    };
+  }, [awardExplorationActionPoint, explorationStepRef]);
+  useEffect(() => {
+    if (!isExplorationMode) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        stepExplorationOnPlay();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isExplorationMode, stepExplorationOnPlay]);
   const runDevTraversePulse = useCallback(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
     if (!actions.setBiomeTableaus) return;
@@ -2693,7 +2857,7 @@ export const CombatGolf = memo(function CombatGolf({
     setDevTraverseHoldProgress(0);
   }, []);
   const handleTraversalButtonPointerDown = useCallback(() => {
-    if (!DEV_TRAVERSE_HOLD_ENABLED) return;
+    if (!devTraverseHoldEnabled) return;
     clearDevTraverseHold();
     devTraverseTriggeredHoldRef.current = false;
     devTraverseHoldStartAtRef.current = performance.now();
@@ -2717,7 +2881,7 @@ export const CombatGolf = memo(function CombatGolf({
         runDevTraversePulse();
       }, DEV_TRAVERSE_HOLD_INTERVAL_MS);
     }, DEV_TRAVERSE_HOLD_DELAY_MS);
-  }, [clearDevTraverseHold, runDevTraversePulse]);
+  }, [clearDevTraverseHold, devTraverseHoldEnabled, runDevTraversePulse]);
   const handleTraversalButtonPointerUp = useCallback(() => {
     clearDevTraverseHold();
   }, [clearDevTraverseHold]);
@@ -2731,11 +2895,29 @@ export const CombatGolf = memo(function CombatGolf({
   useEffect(() => () => {
     clearDevTraverseHold();
   }, [clearDevTraverseHold]);
+  const handleExplorationUseSupply = useCallback(() => {
+    if (!(isRpgVariant && !hasSpawnedEnemies)) return;
+    if (explorationSupplies <= 0) return;
+    setExplorationSupplies((current) => Math.max(0, current - 1));
+    const supplyWild = createWildSentinel(explorationSupplies);
+    supplyWild.id = `supply-wild-${Date.now()}-${randomIdSuffix()}`;
+    actions.addRpgHandCard?.(supplyWild);
+    awardExplorationActionPoint(20);
+  }, [
+    actions.addRpgHandCard,
+    awardExplorationActionPoint,
+    explorationSupplies,
+    hasSpawnedEnemies,
+    isRpgVariant,
+  ]);
+  const handleToggleExplorationApLock = useCallback(() => {
+    if (!isDevModeHashEnabled) return;
+    setExplorationApLockFloor((current) => (
+      current === null ? availableExplorationActionPoints : null
+    ));
+  }, [availableExplorationActionPoints, isDevModeHashEnabled]);
   const handleExplorationEndTurn = useCallback(() => {
     if (!canTriggerEndTurnFromCombo) return;
-    if (isRpgVariant) {
-      setExplorationSupplies((current) => Math.max(0, current - 1));
-    }
     setComboPaused(true);
     if (isRpgVariant && !hasSpawnedEnemies && actions.endExplorationTurnInRandomBiome) {
       actions.endExplorationTurnInRandomBiome();
@@ -3503,7 +3685,7 @@ export const CombatGolf = memo(function CombatGolf({
           if (!played) return;
           triggerCardPlayFlash(armedFoundationIndex, partyComboTotal + 1);
           maybeGainSupplyFromValidMove();
-          stepExplorationOnPlay();
+          awardExplorationActionPoint();
           setArmedFoundationIndex(null);
           return;
         }
@@ -3512,7 +3694,7 @@ export const CombatGolf = memo(function CombatGolf({
           if (!played) return;
           triggerCardPlayFlash(validFoundations[0], partyComboTotal + 1);
           maybeGainSupplyFromValidMove();
-          stepExplorationOnPlay();
+          awardExplorationActionPoint();
         }
         return;
       }
@@ -3523,7 +3705,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (!played) return;
       triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
       maybeGainSupplyFromValidMove();
-      stepExplorationOnPlay();
+      awardExplorationActionPoint();
     };
     const handleHandClick = (card: CardType) => {
       if (introBlocking) return;
@@ -3564,6 +3746,7 @@ export const CombatGolf = memo(function CombatGolf({
       }
       if (played) {
         maybeGainSupplyFromValidMove();
+        awardExplorationActionPoint();
       }
     };
     const handleStockClick = () => {
@@ -3591,6 +3774,7 @@ export const CombatGolf = memo(function CombatGolf({
       const played = actions.playFromStock(fallbackIndex, true, true);
       if (played) {
         maybeGainSupplyFromValidMove();
+        awardExplorationActionPoint();
       }
     };
     return (
@@ -4168,35 +4352,103 @@ export const CombatGolf = memo(function CombatGolf({
                   alignmentMode={explorationMapAlignment}
                   currentNodeId={explorationCurrentNodeId}
                   trailNodeIds={explorationTrailNodeIds}
-                  travelLabel={`TRAVEL ${explorationTravelProgress}/${travelRowsPerStep}`}
+                  poiMarkers={explorationPoiMarkers}
+                  travelLabel={`AP ${explorationTravelProgress}/${travelRowsPerStep}`}
                   traversalCount={explorationAppliedTraversalCount}
                   stepCost={travelRowsPerStep}
                   onStepCostDecrease={() => setExplorationRowsPerStep((current) => Math.max(1, current - 1))}
                   onStepCostIncrease={() => setExplorationRowsPerStep((current) => Math.min(12, current + 1))}
-                  onHeadingChange={handleExplorationHeadingChange}
+                  onTeleport={teleportToExplorationNode}
                 />
-                <button
-                  type="button"
-                  onClick={handleExplorationEndTurn}
-                  disabled={!canTriggerEndTurnFromCombo}
-                  className="absolute left-2 bottom-2 rounded border border-game-gold/70 bg-game-bg-dark/90 px-1 py-1 text-[14px] leading-none text-game-gold shadow-neon-gold disabled:opacity-50 z-30"
-                  title={`Rest (${explorationSupplies} supplies)`}
-                  aria-label="Rest"
-                >
-                  <span aria-hidden="true">💤</span>
-                  <span
-                    className="absolute -right-1.5 -top-1.5 min-w-[16px] h-4 px-1 rounded-full border text-[9px] font-bold leading-[14px] text-center"
-                    style={{
-                      borderColor: 'rgba(255, 229, 120, 0.9)',
-                      backgroundColor: 'rgba(10, 8, 6, 0.98)',
-                      color: '#f7d24b',
-                      textShadow: '0 0 4px rgba(230, 179, 30, 0.55)',
-                    }}
-                    aria-label={`Supplies ${explorationSupplies}`}
+                <div className="mt-1 flex items-center justify-between gap-2 px-1 z-20 pointer-events-auto">
+                  <button
+                    type="button"
+                    onClick={handleExplorationUseSupply}
+                    disabled={explorationSupplies <= 0}
+                    className="relative rounded border border-game-gold/70 bg-game-bg-dark/90 px-1 py-1 text-[14px] leading-none text-game-gold shadow-neon-gold disabled:opacity-50"
+                    title={`Use supply (+20 AP). ${explorationSupplies} remaining`}
+                    aria-label="Use supply"
                   >
-                    {explorationSupplies}
-                  </span>
-                </button>
+                    <span aria-hidden="true">💤</span>
+                    <span
+                      className="absolute -right-1.5 -top-1.5 min-w-[16px] h-4 px-1 rounded-full border text-[9px] font-bold leading-[14px] text-center"
+                      style={{
+                        borderColor: 'rgba(255, 229, 120, 0.9)',
+                        backgroundColor: 'rgba(10, 8, 6, 0.98)',
+                        color: '#f7d24b',
+                        textShadow: '0 0 4px rgba(230, 179, 30, 0.55)',
+                      }}
+                      aria-label={`Supplies ${explorationSupplies}`}
+                    >
+                      {explorationSupplies}
+                    </span>
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleExplorationHeadingStep(false)}
+                      className="px-2 py-0.5 rounded border font-bold leading-none select-none"
+                      style={{
+                        borderColor: 'rgba(127, 219, 202, 0.65)',
+                        color: '#7fdbca',
+                        backgroundColor: 'rgba(10, 10, 10, 0.8)',
+                      }}
+                      title="Counterclockwise to previous direction"
+                    >
+                      ‹
+                    </button>
+                    <div
+                      className="px-2 py-0.5 rounded border text-[10px] font-bold tracking-[1px] tabular-nums select-none"
+                      style={{
+                        borderColor: 'rgba(127, 219, 202, 0.45)',
+                        color: '#d7fff8',
+                        backgroundColor: 'rgba(10, 10, 10, 0.8)',
+                      }}
+                      title="Current exploration coordinates (col,row)"
+                    >
+                      {explorationCurrentCoordsLabel}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleExplorationHeadingStep(true)}
+                      className="px-2 py-0.5 rounded border font-bold leading-none select-none"
+                      style={{
+                        borderColor: 'rgba(127, 219, 202, 0.65)',
+                        color: '#7fdbca',
+                        backgroundColor: 'rgba(10, 10, 10, 0.8)',
+                      }}
+                      title="Clockwise to next direction"
+                    >
+                      ›
+                    </button>
+                  </div>
+                  <div
+                    role={isDevModeHashEnabled ? 'button' : undefined}
+                    tabIndex={isDevModeHashEnabled ? 0 : undefined}
+                    onClick={isDevModeHashEnabled ? handleToggleExplorationApLock : undefined}
+                    onKeyDown={isDevModeHashEnabled ? ((event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleToggleExplorationApLock();
+                      }
+                    }) : undefined}
+                    className="px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-[1px] select-none"
+                    style={{
+                      borderColor: isExplorationApLocked ? 'rgba(255, 158, 72, 0.86)' : 'rgba(247, 210, 75, 0.8)',
+                      color: isExplorationApLocked ? '#ffb26b' : '#f7d24b',
+                      backgroundColor: 'rgba(10, 8, 6, 0.92)',
+                      textShadow: '0 0 4px rgba(230, 179, 30, 0.45)',
+                      cursor: isDevModeHashEnabled ? 'pointer' : 'default',
+                    }}
+                    title={isDevModeHashEnabled
+                      ? (isExplorationApLocked
+                        ? `AP lock active at ${explorationApLockFloor}. Click to unlock.`
+                        : `AP unlocked (${availableExplorationActionPoints}). Click to lock.`)
+                      : 'Available action points'}
+                  >
+                    AP {Math.max(0, Math.floor(availableExplorationActionPoints))}{isExplorationApLocked ? ' LOCK' : ''}
+                  </div>
+                </div>
                 <div
                   className="absolute top-0 right-0 z-20 pointer-events-auto"
                   style={{ transform: 'scale(0.75)', transformOrigin: 'top right' }}
@@ -4216,6 +4468,9 @@ export const CombatGolf = memo(function CombatGolf({
           <div
             className="flex w-full justify-center gap-3 px-2 sm:px-3"
             style={{
+              alignItems: 'flex-start',
+              height: `${explorationTableauRowHeightPx}px`,
+              overflow: 'hidden',
               transform: `translateX(${tableauSlideOffsetPx}px)`,
               transition: tableauSlideAnimating ? `transform ${EXPLORATION_SLIDE_ANIMATION_MS}ms cubic-bezier(0.2, 0.9, 0.25, 1)` : 'none',
               willChange: 'transform',
@@ -4353,6 +4608,7 @@ export const CombatGolf = memo(function CombatGolf({
                               ? foundationSplashHint.token
                               : undefined
                           }
+                          disableFoundationSplashes
                           comboCount={showActorComboCounts && actor ? (isPartyFoundationsVariant
                             ? (actorComboCounts[actor.id] ?? 0)
                             : ((gameState.foundationCombos || [])[idx] || 0)) : 0}
@@ -4555,6 +4811,7 @@ export const CombatGolf = memo(function CombatGolf({
                           ? foundationSplashHint.token
                           : undefined
                       }
+                      disableFoundationSplashes
                       comboCount={showActorComboCounts && actor ? (isPartyFoundationsVariant
                         ? (actorComboCounts[actor.id] ?? 0)
                         : ((gameState.foundationCombos || [])[idx] || 0)) : 0}
@@ -4643,7 +4900,7 @@ export const CombatGolf = memo(function CombatGolf({
                   onPointerUp={handleTraversalButtonPointerUp}
                   onPointerLeave={handleTraversalButtonPointerUp}
                   onPointerCancel={handleTraversalButtonPointerUp}
-                  disabled={!canStepForwardInExploration && !DEV_TRAVERSE_HOLD_ENABLED}
+                  disabled={!canStepForwardInExploration && !devTraverseHoldEnabled}
                   className="relative rounded border font-bold leading-none shadow-neon-gold disabled:opacity-40"
                   style={{
                     width: 48,
@@ -4656,13 +4913,13 @@ export const CombatGolf = memo(function CombatGolf({
                     textShadow: '0 0 6px rgba(230, 179, 30, 0.65)',
                   }}
                   title={canStepForwardInExploration
-                    ? 'Step forward'
-                    : (DEV_TRAVERSE_HOLD_ENABLED
-                      ? 'Dev hold: force-clear and step forward'
-                      : `Clear the full front row (${travelRowsPerStep} row${travelRowsPerStep === 1 ? '' : 's'}) before stepping`)}
+                      ? 'Step forward'
+                      : (devTraverseHoldEnabled
+                        ? 'Dev hold: force-clear and step forward'
+                      : `Need ${travelRowsPerStep} AP to step (${availableExplorationActionPoints} available)`)}
                   aria-label="Step forward"
                 >
-                  {DEV_TRAVERSE_HOLD_ENABLED && devTraverseHoldProgress > 0 && (
+                  {devTraverseHoldEnabled && devTraverseHoldProgress > 0 && (
                     <>
                       <div
                         className="absolute -top-5 left-1/2 -translate-x-1/2 pointer-events-none rounded border px-2 py-[2px] text-[10px] font-bold tracking-[1px]"
@@ -4879,14 +5136,14 @@ export const CombatGolf = memo(function CombatGolf({
         if (!validFoundations.includes(armedFoundationIndex)) return;
         actions.playCardDirect(tableauIndex, armedFoundationIndex);
         triggerCardPlayFlash(armedFoundationIndex, partyComboTotal + 1);
-        stepExplorationOnPlay();
+        awardExplorationActionPoint();
         setArmedFoundationIndex(null);
         return;
       }
       if (validFoundations.length === 1) {
         actions.playCardDirect(tableauIndex, validFoundations[0]);
         triggerCardPlayFlash(validFoundations[0], partyComboTotal + 1);
-        stepExplorationOnPlay();
+        awardExplorationActionPoint();
       }
       return;
     }
@@ -4895,7 +5152,7 @@ export const CombatGolf = memo(function CombatGolf({
     if (foundationIndex === -1) return;
     actions.playCardDirect(tableauIndex, foundationIndex);
     triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
-    stepExplorationOnPlay();
+    awardExplorationActionPoint();
   };
   const handleHandClick = (card: CardType) => {
     if (introBlocking) return;
@@ -4935,6 +5192,7 @@ export const CombatGolf = memo(function CombatGolf({
       setRewardedBattleHandCards((cards) => cards.filter((entry) => entry.id !== card.id));
     }
     triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
+    awardExplorationActionPoint();
   };
     const handleStockClick = () => {
       if (introBlocking) return;
@@ -4957,7 +5215,10 @@ export const CombatGolf = memo(function CombatGolf({
     const fallbackIndex = foundationIndex !== -1
       ? foundationIndex
       : Math.max(0, activeParty.findIndex((actor) => (actor?.stamina ?? 0) > 0));
-    actions.playFromStock(fallbackIndex, false, true);
+    const played = actions.playFromStock(fallbackIndex, false, true);
+    if (played) {
+      awardExplorationActionPoint();
+    }
   };
   // Track container size for watercolor canvas
   return (
@@ -5277,6 +5538,7 @@ export const CombatGolf = memo(function CombatGolf({
                       ? foundationSplashHint.token
                       : undefined
                   }
+                  disableFoundationSplashes
                   comboCount={showActorComboCounts && actor ? (isPartyFoundationsVariant
                     ? (actorComboCounts[actor.id] ?? 0)
                     : ((gameState.foundationCombos || [])[idx] || 0)) : 0}
