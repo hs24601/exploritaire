@@ -617,7 +617,7 @@ export const ExplorationMap = memo(function ExplorationMap({
       >
         {travelLabel ?? 'UNKNOWN'}
       </div>
-      <div className="text-center mb-1" style={{ paddingRight: 96 }}>
+      <div className="text-center mb-1">
         {currentNode && (
           isTeleportActive ? (
             <input

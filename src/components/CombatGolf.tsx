@@ -44,7 +44,6 @@ import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
 import { useWatercolorEngine, usePaintMarkCount } from '../watercolor-engine/WatercolorContext';
 import { getBiomeDefinition } from '../engine/biomes';
 import { createDie } from '../engine/dice';
-import { NO_MOVES_BADGE_STYLE } from '../utils/styles';
 import { useDevModeFlag } from '../utils/devMode';
 import { mainWorldMap } from '../data/worldMap';
 import { createPoiTableauPreset, type PoiTableauPresetId } from '../data/poiTableaus';
@@ -457,6 +456,9 @@ export const CombatGolf = memo(function CombatGolf({
   const [bankSmashFx, setBankSmashFx] = useState<{ id: number; ms: number } | null>(null);
   const [explorationSupplies, setExplorationSupplies] = useState(10);
   const [explorationRowsPerStep, setExplorationRowsPerStep] = useState(1);
+  const [sunkCostPulseStartedAt, setSunkCostPulseStartedAt] = useState<number | null>(null);
+  const [sunkCostPulseNowMs, setSunkCostPulseNowMs] = useState<number>(0);
+  const sunkCostPulseArmedRef = useRef(false);
   const [tableauSlideOffsetPx, setTableauSlideOffsetPx] = useState(0);
   const [tableauSlideAnimating, setTableauSlideAnimating] = useState(false);
   const [inspectedRpgCard, setInspectedRpgCard] = useState<CardType | null>(null);
@@ -920,6 +922,15 @@ export const CombatGolf = memo(function CombatGolf({
   const isPartyBattleVariant = playtestVariant === 'party-battle' || isRpgVariant;
   const isPartyFoundationsVariant = playtestVariant === 'party-foundations' || isPartyBattleVariant;
   const isEnemyTurn = isPartyBattleVariant && gameState.randomBiomeActiveSide === 'enemy';
+  const sunkCostRelicEquipped = useMemo(() => {
+    const sunkCostDefinition = (gameState.relicDefinitions ?? []).find((definition) => definition.behaviorId === 'sunk_cost_v1');
+    if (!sunkCostDefinition) return false;
+    return (gameState.equippedRelics ?? []).some((instance) => instance.enabled && instance.relicId === sunkCostDefinition.id);
+  }, [gameState.equippedRelics, gameState.relicDefinitions]);
+  const hasUnclearedVisibleTableaus = useMemo(
+    () => gameState.tableaus.some((tableau) => tableau.length > 0),
+    [gameState.tableaus]
+  );
   const [startOverlayPhase, setStartOverlayPhase] = useState<StartOverlayPhase>('ready');
   const [startCountdown, setStartCountdown] = useState(3);
   const [startTriggeredByPlay, setStartTriggeredByPlay] = useState(false);
@@ -2217,23 +2228,22 @@ export const CombatGolf = memo(function CombatGolf({
       .map((instance) => {
         const definition = definitionsById.get(instance.relicId);
         if (!definition) return null;
-        const glyph = definition.behaviorId === 'turtle_bide_v1'
-          ? '🛡'
-          : (definition.behaviorId === 'heart_of_wild_v1'
-            ? '🐾'
-          : (definition.behaviorId === CONTROLLED_DRAGONFIRE_BEHAVIOR_ID
-            ? '🐉'
-          : (definition.behaviorId === 'koi_coin_v1' ? '🪙' : (
-            definition.behaviorId === 'hindsight_v1' ? '⌛' : (
-            definition.behaviorId === SUMMON_DARKSPAWN_BEHAVIOR_ID ? '⚔' : (
-            definition.name
-              .split(/\s+/)
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((chunk) => chunk[0]?.toUpperCase() ?? '')
-              .join('') || 'R'
-            )
-          )))));
+        const knownGlyphByBehaviorId: Record<string, string> = {
+          turtle_bide_v1: '🛡',
+          heart_of_wild_v1: '🐾',
+          sunk_cost_v1: '🐚',
+          [CONTROLLED_DRAGONFIRE_BEHAVIOR_ID]: '🐉',
+          koi_coin_v1: '🪙',
+          hindsight_v1: '⌛',
+          [SUMMON_DARKSPAWN_BEHAVIOR_ID]: '⚔',
+        };
+        const fallbackGlyph = definition.name
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((chunk) => (chunk.length > 0 ? chunk.charAt(0).toUpperCase() : ''))
+          .join('');
+        const glyph = knownGlyphByBehaviorId[definition.behaviorId] ?? (fallbackGlyph || 'R');
         return { instance, definition, glyph };
       })
       .filter((entry): entry is { instance: NonNullable<GameState['equippedRelics']>[number]; definition: NonNullable<GameState['relicDefinitions']>[number]; glyph: string } => !!entry);
@@ -2861,6 +2871,47 @@ export const CombatGolf = memo(function CombatGolf({
       side: 'player',
     });
   }, [actions, hasSpawnedEnemies, isRpgVariant, noValidMoves]);
+  useEffect(() => {
+    const shouldPulse = noValidMoves && sunkCostRelicEquipped && hasUnclearedVisibleTableaus;
+    if (!shouldPulse) {
+      sunkCostPulseArmedRef.current = false;
+      return;
+    }
+    if (sunkCostPulseArmedRef.current) return;
+    sunkCostPulseArmedRef.current = true;
+    const now = Date.now();
+    setSunkCostPulseStartedAt(now);
+    setSunkCostPulseNowMs(now);
+  }, [hasUnclearedVisibleTableaus, noValidMoves, sunkCostRelicEquipped]);
+  useEffect(() => {
+    if (sunkCostPulseStartedAt === null) return;
+    const intervalId = window.setInterval(() => {
+      setSunkCostPulseNowMs(Date.now());
+    }, 50);
+    const timeoutId = window.setTimeout(() => {
+      setSunkCostPulseStartedAt(null);
+    }, 4000);
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [sunkCostPulseStartedAt]);
+  const sunkCostTableauPulseStyle = useMemo(() => {
+    if (sunkCostPulseStartedAt === null) return null;
+    const elapsed = Math.max(0, sunkCostPulseNowMs - sunkCostPulseStartedAt);
+    if (elapsed >= 4000) return null;
+    const t = Math.min(1, elapsed / 4000);
+    const decay = 1 - t;
+    const flash = Math.max(0, Math.sin(t * Math.PI * 8)) * decay;
+    const borderAlpha = Math.min(0.95, 0.3 + (decay * 0.5) + (flash * 0.25));
+    const glowAlpha = Math.min(0.9, 0.2 + (decay * 0.45) + (flash * 0.25));
+    return {
+      border: `2px solid rgba(255, 62, 62, ${borderAlpha})`,
+      borderRadius: 10,
+      boxShadow: `0 0 ${6 + (decay * 12)}px rgba(255, 45, 45, ${glowAlpha}), inset 0 0 ${4 + (decay * 8)}px rgba(255, 45, 45, ${glowAlpha * 0.9})`,
+      transition: 'none',
+    } as const;
+  }, [sunkCostPulseNowMs, sunkCostPulseStartedAt]);
   const dynamicAmbientDarkness = useMemo(() => {
     const tableauCount = gameState.tableaus.length;
     const foundationCount = gameState.foundations.length;
@@ -3098,7 +3149,7 @@ export const CombatGolf = memo(function CombatGolf({
     const previewHeight = Math.max(30, Math.round(cardHeight * 0.3));
     return (
       <div
-        className="absolute pointer-events-auto"
+        className="absolute pointer-events-none"
         style={{
           left: '50%',
           top: 0,
@@ -3123,7 +3174,7 @@ export const CombatGolf = memo(function CombatGolf({
               event.stopPropagation();
               handlePlayerFoundationClickInBiome(foundationIndex);
             }}
-            className="relative block cursor-pointer"
+            className="relative block cursor-pointer pointer-events-auto"
             aria-label={`Toggle ${getActorDefinition(actor.definitionId)?.name ?? 'actor'} hand`}
             title="Toggle actor hand"
           >
@@ -3171,7 +3222,7 @@ export const CombatGolf = memo(function CombatGolf({
         event.preventDefault();
       }}
       aria-disabled={!onOpenSettings}
-      className="fixed z-[10034] left-3 top-3 h-[30px] rounded border border-game-teal/70 bg-game-bg-dark/90 px-2 text-[12px] font-mono tracking-[0.5px] text-game-teal shadow-neon-teal"
+      className="h-[30px] rounded border border-game-teal/70 bg-game-bg-dark/90 px-2 text-[12px] font-mono tracking-[0.5px] text-game-teal shadow-neon-teal"
       style={{ opacity: onOpenSettings ? 1 : 0.8, WebkitTouchCallout: 'none' }}
       title="Open settings / report fps"
     >
@@ -3182,7 +3233,7 @@ export const CombatGolf = memo(function CombatGolf({
     <button
       type="button"
       onClick={handleToggleSound}
-      className="fixed z-[10034] right-3 top-3 h-[30px] min-w-[30px] rounded border border-game-gold/70 bg-game-bg-dark/90 px-2 text-[14px] leading-none font-bold text-game-gold shadow-neon-gold flex items-center justify-center"
+      className="h-[30px] min-w-[30px] rounded border border-game-gold/70 bg-game-bg-dark/90 px-2 text-[14px] leading-none font-bold text-game-gold shadow-neon-gold flex items-center justify-center"
       title={soundMuted ? 'Sound off. Click to enable.' : 'Sound on. Click to mute.'}
       aria-label={soundMuted ? 'Enable sound' : 'Mute sound'}
       aria-pressed={soundMuted}
@@ -3190,17 +3241,19 @@ export const CombatGolf = memo(function CombatGolf({
       {soundMuted ? '🔇' : '🔊'}
     </button>
   );
-  const overlayToolbar = (
-    <div
-      className="fixed z-[10034] left-1/2 flex items-center gap-4"
-      style={{
-        top: 36,
-        transform: 'translateX(-50%)',
-        width: 'min(90vw, 960px)',
-        justifyContent: 'center',
-      }}
-    >
-      {relicTray}
+  const topHudBar = (
+    <div className="fixed top-2 left-0 right-0 z-[10034] px-3 pointer-events-none">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <div className="justify-self-start pointer-events-auto">
+          {topLeftFpsCounter}
+        </div>
+        <div className="justify-self-center w-full max-w-[min(90vw,960px)]">
+          {relicTray}
+        </div>
+        <div className="justify-self-end pointer-events-auto">
+          {topRightSoundToggle}
+        </div>
+      </div>
     </div>
   );
   const handleSkipWithBank = useCallback((remainingMs: number) => {
@@ -4569,7 +4622,11 @@ export const CombatGolf = memo(function CombatGolf({
             }}
           >
             {gameState.tableaus.map((tableau, idx) => (
-              <div key={idx} ref={(el) => { tableauRefs.current[idx] = el; }}>
+              <div
+                key={idx}
+                ref={(el) => { tableauRefs.current[idx] = el; }}
+                style={tableau.length > 0 && sunkCostTableauPulseStyle ? sunkCostTableauPulseStyle : undefined}
+              >
                 <Tableau
                   cards={tableau}
                   tableauIndex={idx}
@@ -4809,14 +4866,6 @@ export const CombatGolf = memo(function CombatGolf({
                       >
                         {isEnemyTurn ? 'READY' : 'END TURN'}
                       </GameButton>
-                    )}
-                    {noValidMoves && (
-                      <div
-                        className="px-2 py-1 rounded border text-xs font-bold"
-                        style={NO_MOVES_BADGE_STYLE}
-                      >
-                        !
-                      </div>
                     )}
                   </div>
                 </div>
@@ -5070,14 +5119,6 @@ export const CombatGolf = memo(function CombatGolf({
                   >
                     {isEnemyTurn ? 'READY' : 'END TURN'}
                   </GameButton>
-                  {noValidMoves && (
-                    <div
-                      className="px-2 py-1 rounded border text-xs font-bold"
-                      style={NO_MOVES_BADGE_STYLE}
-                    >
-                      !
-                    </div>
-                  )}
                 </div>
                 <GameButton
                   onClick={() => handleExitBiome('return')}
@@ -5149,9 +5190,7 @@ export const CombatGolf = memo(function CombatGolf({
         {rpgCardInspectOverlay}
         {actorInspectOverlay}
         {timerBankVisuals}
-        {overlayToolbar}
-        {topLeftFpsCounter}
-        {topRightSoundToggle}
+        {topHudBar}
         {leftControlColumn}
         </div>
         </div>
@@ -5192,9 +5231,7 @@ export const CombatGolf = memo(function CombatGolf({
         {rpgCardInspectOverlay}
         {actorInspectOverlay}
         {timerBankVisuals}
-        {overlayToolbar}
-        {topLeftFpsCounter}
-        {topRightSoundToggle}
+        {topHudBar}
         {leftControlColumn}
         {splatterModal}
       </div>
@@ -5484,7 +5521,11 @@ export const CombatGolf = memo(function CombatGolf({
       {isGardenGrove ? (
         <div className="grid grid-cols-6 gap-x-3 px-2 sm:px-3" style={{ rowGap: '15px' }}>
           {gameState.tableaus.map((tableau, idx) => (
-            <div key={idx} ref={(el) => { tableauRefs.current[idx] = el; }}>
+            <div
+              key={idx}
+              ref={(el) => { tableauRefs.current[idx] = el; }}
+              style={tableau.length > 0 && sunkCostTableauPulseStyle ? sunkCostTableauPulseStyle : undefined}
+            >
               <Tableau
                 cards={tableau}
                 tableauIndex={idx}
@@ -5514,7 +5555,11 @@ export const CombatGolf = memo(function CombatGolf({
       ) : (
         <div className="flex w-full justify-center gap-3 px-2 sm:px-3">
           {gameState.tableaus.map((tableau, idx) => (
-            <div key={idx} ref={(el) => { tableauRefs.current[idx] = el; }}>
+            <div
+              key={idx}
+              ref={(el) => { tableauRefs.current[idx] = el; }}
+              style={tableau.length > 0 && sunkCostTableauPulseStyle ? sunkCostTableauPulseStyle : undefined}
+            >
               <Tableau
                 cards={tableau}
                 tableauIndex={idx}
@@ -5709,14 +5754,6 @@ export const CombatGolf = memo(function CombatGolf({
             <GameButton onClick={actions.autoSolveBiome} color="gold" size="sm" className="w-16 text-center">
               ?
             </GameButton>
-            {noValidMoves && (
-              <div
-                className="px-2 py-1 rounded border text-xs font-bold"
-                style={NO_MOVES_BADGE_STYLE}
-              >
-                !
-              </div>
-            )}
           </div>
         </div>
 
@@ -5817,9 +5854,7 @@ export const CombatGolf = memo(function CombatGolf({
       {rpgCardInspectOverlay}
       {actorInspectOverlay}
       {timerBankVisuals}
-      {overlayToolbar}
-      {topLeftFpsCounter}
-      {topRightSoundToggle}
+      {topHudBar}
       {leftControlColumn}
       </div>
       </div>

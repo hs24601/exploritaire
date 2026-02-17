@@ -18,7 +18,7 @@ export const RELIC_DEFINITIONS: RelicDefinition[] = [
   {
     id: 'sunk_cost',
     name: 'Sunk Cost',
-    description: 'This conch shell will sound a warning when there are no more playable moves this turn.',
+    description: 'Sounds the horn when there are no playable moves left.',
     rarity: 'uncommon',
     passive: true,
     scope: 'party',

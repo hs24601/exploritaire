@@ -588,10 +588,11 @@ export default function App() {
   useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault();
+      event.stopPropagation();
     };
 
-    window.addEventListener('contextmenu', handleContextMenu);
-    return () => window.removeEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('contextmenu', handleContextMenu, { capture: true });
+    return () => window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
   }, []);
 
   const handleCycleTimeScale = useCallback(() => {

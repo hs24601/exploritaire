@@ -1,10 +1,11 @@
-import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { memo, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Card as CardType, Element, InteractionMode, OrimDefinition } from '../engine/types';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
 import { Card } from './Card';
 import { useCardScale } from '../contexts/CardScaleContext';
 import { Tooltip } from './Tooltip';
+import { useLongPressStateMachine } from '../hooks/useLongPressStateMachine';
 
 interface HandProps {
   cards: CardType[];
@@ -34,6 +35,7 @@ const FAN = {
   hoverLiftY: -30,
   hoverScale: 1.1,
 } as const;
+const INSPECT_HOLD_MS = 1000;
 
 function computeFanPositions(n: number, minCenterDistance: number, maxCenterDistance: number) {
   if (n === 0) return [];
@@ -74,9 +76,6 @@ export const Hand = memo(function Hand({
   upgradedCardIds = [],
 }: HandProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const longPressTimerRef = useRef<number | null>(null);
-  const longPressCardIdRef = useRef<string | null>(null);
-  const consumedClickCardIdsRef = useRef(new Set<string>());
   const globalScale = useCardScale();
   const effectiveScale = cardScale * globalScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
@@ -173,17 +172,13 @@ export const Hand = memo(function Hand({
     );
   }, []);
 
-  const clearLongPress = useCallback(() => {
-    if (longPressTimerRef.current !== null) {
-      window.clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    longPressCardIdRef.current = null;
-  }, []);
-
-  useEffect(() => () => {
-    clearLongPress();
-  }, [clearLongPress]);
+  const handleLongPressInspect = useCallback((card: CardType) => {
+    onCardLongPress?.(card);
+  }, [onCardLongPress]);
+  const longPressInspect = useLongPressStateMachine<CardType>({
+    holdMs: INSPECT_HOLD_MS,
+    onLongPress: handleLongPressInspect,
+  });
 
   if (cards.length === 0 && stockCount === 0) return null;
 
@@ -209,25 +204,25 @@ export const Hand = memo(function Hand({
             const baseScale = isHovered ? FAN.hoverScale : 1;
             const finalScale = isHovered ? baseScale : baseScale * cooldownScale;
             const canDrag = interactionMode === 'dnd' && !isOnCooldown;
+            const inspectProgress = longPressInspect.getProgressForId(card.id);
+            const isInspecting = longPressInspect.isPressingId(card.id);
             const handlePressStart = (event: React.PointerEvent) => {
               if (!onCardLongPress) return;
-              if (interactionMode !== 'click') return;
               if (isOnCooldown) return;
-              if (event.pointerType === 'mouse' && event.button !== 0) return;
-              clearLongPress();
-              longPressCardIdRef.current = card.id;
-              const holdMs = event.pointerType === 'mouse' ? 520 : 420;
-              longPressTimerRef.current = window.setTimeout(() => {
-                consumedClickCardIdsRef.current.add(card.id);
-                onCardLongPress(card);
-              }, holdMs);
+              longPressInspect.startLongPress({
+                id: card.id,
+                payload: card,
+                event,
+              });
+            };
+            const handlePressMove = (event: React.PointerEvent) => {
+              longPressInspect.handlePointerMove(event);
             };
             const handlePressEnd = () => {
-              clearLongPress();
+              longPressInspect.handlePointerEnd();
             };
             const handleCardClick = () => {
-              if (consumedClickCardIdsRef.current.has(card.id)) {
-                consumedClickCardIdsRef.current.delete(card.id);
+              if (longPressInspect.shouldSuppressClick(card.id)) {
                 return;
               }
               onCardClick?.(card);
@@ -251,12 +246,13 @@ export const Hand = memo(function Hand({
                   position: 'absolute',
                   transformOrigin: 'bottom center',
                   zIndex: isHovered ? 100 : i,
+                  touchAction: 'none',
                 }}
                 onHoverStart={() => setHoveredId(card.id)}
                 onHoverEnd={() => setHoveredId(null)}
                 onPointerDown={handlePressStart}
+                onPointerMove={handlePressMove}
                 onPointerUp={handlePressEnd}
-                onPointerLeave={handlePressEnd}
                 onPointerCancel={handlePressEnd}
               >
                 {isUpgraded && (
@@ -292,6 +288,27 @@ export const Hand = memo(function Hand({
                     orimDefinitions={orimDefinitions}
                   />
                 </Tooltip>
+                {isInspecting && (
+                  <svg
+                    className="absolute -inset-1 pointer-events-none z-[100]"
+                    viewBox="0 0 100 140"
+                    preserveAspectRatio="none"
+                  >
+                    <rect
+                      x="1"
+                      y="1"
+                      width="98"
+                      height="138"
+                      rx="9"
+                      ry="9"
+                      fill="none"
+                      stroke="rgba(127, 219, 202, 0.95)"
+                      strokeWidth="4"
+                      strokeDasharray="472"
+                      strokeDashoffset={472 * (1 - inspectProgress)}
+                    />
+                  </svg>
+                )}
               </motion.div>
             );
           })}

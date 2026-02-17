@@ -14,6 +14,7 @@ import { useWatercolorEnabled } from '../watercolor/useWatercolorEnabled';
 import { useWatercolorEngine } from '../watercolor-engine';
 import { getActorCardWatercolor } from '../watercolor/actorCardWatercolor';
 import { ACTOR_WATERCOLOR_TEMPLATE, buildActorWatercolorConfig } from '../watercolor/presets';
+import { useLongPressStateMachine } from '../hooks/useLongPressStateMachine';
 
 const ELEMENT_ORDER: Element[] = ['A', 'W', 'E', 'F', 'L', 'D'];
 const CARD_WATERCOLOR_CANVAS_SCALE = 1.35;
@@ -24,6 +25,7 @@ const CATEGORY_GLYPHS: Record<string, string> = {
   utility: '💫',
   trait: '🧬',
 };
+const INSPECT_HOLD_MS = 1000;
 
 const hexToRgb = (hex: string) => {
   const clean = hex.replace('#', '');
@@ -175,8 +177,6 @@ export const FoundationActor = memo(function FoundationActor({
   const [orimHoverToken, setOrimHoverToken] = useState(0);
   const [isCardHovering, setIsCardHovering] = useState(false);
   const [cardHoverToken, setCardHoverToken] = useState(0);
-  const longPressTimerRef = useRef<number | null>(null);
-  const longPressFiredRef = useRef(false);
   const prevCardCountRef = useRef(cards.length);
   const foundationTiltRef = useRef(new Map<string, number>());
   const foundationOffsetRef = useRef(new Map<string, { x: number; y: number }>());
@@ -207,40 +207,36 @@ export const FoundationActor = memo(function FoundationActor({
   } | null>(null);
 
   const showEmptyFoundation = cards.length === 0;
-
-  const clearLongPress = useCallback(() => {
-    if (longPressTimerRef.current !== null) {
-      window.clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => () => {
-    clearLongPress();
-  }, [clearLongPress]);
-
+  const handleActorLongPressPayload = useCallback((payload: { actor: Actor }) => {
+    onActorLongPress?.(payload);
+  }, [onActorLongPress]);
+  const longPressInspect = useLongPressStateMachine<{ actor: Actor }>({
+    holdMs: INSPECT_HOLD_MS,
+    onLongPress: handleActorLongPressPayload,
+  });
   const handleFoundationPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (!actor || !onActorLongPress) return;
-    clearLongPress();
-    longPressFiredRef.current = false;
-    const holdMs = event.pointerType === 'mouse' ? 520 : 420;
-    longPressTimerRef.current = window.setTimeout(() => {
-      longPressFiredRef.current = true;
-      onActorLongPress({ actor });
-    }, holdMs);
-  }, [actor, clearLongPress, onActorLongPress]);
-
+    longPressInspect.startLongPress({
+      id: actor.id,
+      payload: { actor },
+      event,
+    });
+  }, [actor, longPressInspect, onActorLongPress]);
+  const handleFoundationPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!onActorLongPress) return;
+    longPressInspect.handlePointerMove(event);
+  }, [longPressInspect, onActorLongPress]);
   const handleFoundationPointerEnd = useCallback(() => {
-    clearLongPress();
-  }, [clearLongPress]);
+    if (!onActorLongPress) return;
+    longPressInspect.handlePointerEnd();
+  }, [longPressInspect, onActorLongPress]);
 
   const handleFoundationClick = useCallback(() => {
-    if (longPressFiredRef.current) {
-      longPressFiredRef.current = false;
+    if (actor && onActorLongPress && longPressInspect.shouldSuppressClick(actor.id)) {
       return;
     }
     onFoundationClick(index);
-  }, [index, onFoundationClick]);
+  }, [actor, index, longPressInspect, onActorLongPress, onFoundationClick]);
 
   useEffect(() => {
     if (!watercolorEngine || !pendingSplashRef.current || disableFoundationSplashes) return;
@@ -481,6 +477,9 @@ export const FoundationActor = memo(function FoundationActor({
     }
     : null;
   const stackCards = useMemo(() => cards.slice(-7), [cards]);
+  const actorInspectId = actor?.id ?? null;
+  const isActorInspecting = actorInspectId ? longPressInspect.isPressingId(actorInspectId) : false;
+  const actorInspectProgress = actorInspectId ? longPressInspect.getProgressForId(actorInspectId) : 0;
   const getTiltForCard = useCallback((cardId: string) => {
     return foundationTiltRef.current.get(cardId) ?? getFoundationTilt(cardId);
   }, []);
@@ -519,8 +518,8 @@ export const FoundationActor = memo(function FoundationActor({
           ref={refCallback}
           onClick={interactionMode === 'click' ? handleFoundationClick : undefined}
           onPointerDown={onActorLongPress ? handleFoundationPointerDown : undefined}
+          onPointerMove={onActorLongPress ? handleFoundationPointerMove : undefined}
           onPointerUp={onActorLongPress ? handleFoundationPointerEnd : undefined}
-          onPointerLeave={onActorLongPress ? handleFoundationPointerEnd : undefined}
           onPointerCancel={onActorLongPress ? handleFoundationPointerEnd : undefined}
           onMouseEnter={() => {
             if (tooltipDisabled) return;
@@ -533,7 +532,29 @@ export const FoundationActor = memo(function FoundationActor({
           animate={showHighlight ? { scale: [1, 1.02, 1] } : { scale: 1 }}
           transition={showHighlight ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' } : {}}
           className={`relative ${showClickHighlight ? 'cursor-pointer' : 'cursor-default'}`}
+          style={{ touchAction: 'none' }}
         >
+          {isActorInspecting && (
+            <svg
+              className="absolute -inset-1 pointer-events-none z-[100]"
+              viewBox="0 0 100 140"
+              preserveAspectRatio="none"
+            >
+              <rect
+                x="1"
+                y="1"
+                width="98"
+                height="138"
+                rx="9"
+                ry="9"
+                fill="none"
+                stroke="rgba(127, 219, 202, 0.95)"
+                strokeWidth="4"
+                strokeDasharray="472"
+                strokeDashoffset={472 * (1 - actorInspectProgress)}
+              />
+            </svg>
+          )}
           {showHighlight && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -647,7 +668,7 @@ export const FoundationActor = memo(function FoundationActor({
                 />
               </div>
             )}
-            {isCardHovering && !tooltipDisabled && !watercolorEnabled && (
+            {isCardHovering && !tooltipDisabled && !watercolorEnabled && !isActorInspecting && (
               <svg
                 key={`card-hover-${cardHoverToken}`}
                 className="absolute -inset-1 pointer-events-none"
