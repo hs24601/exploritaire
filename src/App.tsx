@@ -78,6 +78,7 @@ export default function App() {
   const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
   const [showText, setShowText] = useState(true);
   const [commandVisible, setCommandVisible] = useState(true);
+  const [narrativeOpen, setNarrativeOpen] = useState(true);
   const [lightingEnabled, setLightingEnabled] = useState(true);
   const [watercolorEnabled, setWatercolorEnabled] = useState(true);
   const [paintLuminosityEnabled, setPaintLuminosityEnabled] = useState(true);
@@ -1457,6 +1458,8 @@ export default function App() {
                   applyKeruArchetype: actions.applyKeruArchetype,
                 }}
                 explorationStepRef={explorationStepRef}
+                narrativeOpen={narrativeOpen}
+                onCloseNarrative={() => setNarrativeOpen(false)}
                 />
             )}
             </div>
@@ -1725,5 +1728,12 @@ export default function App() {
     </GraphicsContext.Provider>
   );
 }
+
+
+
+
+
+
+
 
 

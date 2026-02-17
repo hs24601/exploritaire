@@ -53,7 +53,7 @@ export function createPoiTableauPreset(presetId: PoiTableauPresetId): Card[][] {
     case 'initial_actions_00':
       return createSingleRowTableaus('initial_actions_00', [1, 2, 3, 4, 5, 6, 7]);
     case 'initial_actions_01':
-      return createSingleRowTableaus('initial_actions_01', [8, 7, 6, 5, 4, 3, 2]);
+      return createSingleRowTableaus('initial_actions_01', [9, 8, 7, 6, 5, 4, 3]);
     case 'initial_actions_02':
       return createSingleRowTableaus('initial_actions_02', [1, 2, 1, 2, 1, 13, 12]);
     case 'oasis_a_tutorial':

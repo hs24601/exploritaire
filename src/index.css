@@ -531,3 +531,24 @@ html[data-light-editor="on"] [data-tile-text],
   transform-origin: center center;
   will-change: transform, opacity;
 }
+
+.target-swirl-ring {
+  animation: target-swirl-ring-pulse 1.2s ease-in-out infinite;
+}
+
+.target-swirl-sparkles {
+  inset: -16px;
+  animation: target-swirl-sparkle-swirl 1.7s linear infinite;
+}
+
+@keyframes target-swirl-ring-pulse {
+  0% { opacity: 0.7; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 0.7; transform: scale(0.96); }
+}
+
+@keyframes target-swirl-sparkle-swirl {
+  0% { transform: rotate(0deg); opacity: 0.75; }
+  50% { opacity: 1; }
+  100% { transform: rotate(360deg); opacity: 0.75; }
+}

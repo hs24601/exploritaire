@@ -31,15 +31,18 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
   const [rotation, setRotation] = useState(0);
   const lastRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const isKeruRewardCard = card.id.startsWith('keru-archetype-');
+  const frameClassName = isKeruRewardCard
+    ? 'flex flex-col items-start justify-start p-2 gap-1 text-2xl font-bold'
+    : 'flex flex-col items-center justify-center gap-1 text-2xl font-bold';
   const keruMeta = (() => {
     if (card.id === 'keru-archetype-wolf') {
-      return { title: 'WOLF', subtitle: 'Keru Archetype', accent: '#f7d24b' };
+      return { title: 'LUPUS', subtitle: 'Ranger Archetype', accent: '#f7d24b' };
     }
     if (card.id === 'keru-archetype-bear') {
-      return { title: 'BEAR', subtitle: 'Keru Archetype', accent: '#ffb075' };
+      return { title: 'URSUS', subtitle: 'Tank Archetype', accent: '#ffb075' };
     }
     if (card.id === 'keru-archetype-cat') {
-      return { title: 'CAT', subtitle: 'Keru Archetype', accent: '#9de3ff' };
+      return { title: 'FELIS', subtitle: 'Rogue Archetype', accent: '#9de3ff' };
     }
     return null;
   })();
@@ -82,19 +85,20 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
         size={{ width: cardWidth, height: cardHeight }}
         borderColor={suitColor}
         boxShadow={`0 10px 40px rgba(0,0,0,0.5), 0 0 20px ${suitColor}66`}
-        className="flex flex-col items-center justify-center gap-1 text-2xl font-bold"
+        className={frameClassName}
         style={{
           color: suitColor,
         }}
       >
         {isKeruRewardCard && keruMeta ? (
-          <div className="w-full h-full flex flex-col items-start justify-start px-2 py-2">
+          <div className="absolute top-2 left-2 right-2 flex flex-col items-start justify-start gap-1">
             <div
               style={{
                 fontSize: Math.max(8, Math.round(cardWidth * 0.09)),
                 letterSpacing: '0.12em',
                 color: '#7fdbca',
                 fontWeight: 700,
+                lineHeight: 1,
               }}
             >
               {keruMeta.subtitle}
@@ -105,22 +109,13 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
                 letterSpacing: '0.1em',
                 color: '#f8f8f8',
                 fontWeight: 700,
-                lineHeight: 1.1,
-                marginTop: 2,
+                lineHeight: 1.05,
               }}
             >
               {keruMeta.title}
             </div>
-            <div
-              style={{
-                marginTop: 6,
-                fontSize: Math.max(8, Math.round(cardWidth * 0.08)),
-                fontWeight: 700,
-                color: keruMeta.accent,
-              }}
-            >
-              Aspect
-            </div>
+
+
           </div>
         ) : (
           <div style={{ textShadow: `0 0 10px ${suitColor}` }}>
@@ -164,3 +159,10 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
     document.body
   );
 });
+
+
+
+
+
+
+

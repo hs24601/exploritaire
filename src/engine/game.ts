@@ -269,7 +269,7 @@ function getKeruArchetypePatch(archetype: Exclude<ActorKeruArchetype, 'blank'>):
       sight: 1,
       mobility: 2,
       leadership: 3,
-      tags: ['ranger', 'stamina', 'leadership'],
+      tags: ['stamina', 'leadership'],
     };
   }
   if (archetype === 'bear') {
@@ -287,7 +287,7 @@ function getKeruArchetypePatch(archetype: Exclude<ActorKeruArchetype, 'blank'>):
       sight: 0,
       mobility: 0,
       leadership: 1,
-      tags: ['tank', 'hp', 'armor'],
+      tags: ['hp', 'armor'],
     };
   }
   return {
@@ -304,7 +304,7 @@ function getKeruArchetypePatch(archetype: Exclude<ActorKeruArchetype, 'blank'>):
     sight: 3,
     mobility: 3,
     leadership: 0,
-    tags: ['rogue', 'stealth', 'evasion', 'sight', 'mobility'],
+    tags: ['stealth', 'evasion', 'sight', 'mobility'],
   };
 }
 
@@ -4266,5 +4266,6 @@ export function traverse(state: GameState): GameState | null {
   const partyActors = getPartyForTile(nextState, newBiomeId); // Get party for the new tile
   return startBiome(nextState, newBiomeId, newBiomeId);
 }
+
 
 

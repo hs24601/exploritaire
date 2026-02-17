@@ -22,7 +22,7 @@ export const mainWorldMap: WorldMapDefinition = {
   pointsOfInterest: [
     {
       id: 'poi_start',
-      name: 'Quiet Clearing',
+      name: 'Tutorial A',
       description: 'Initial actions row 0,0.',
       type: 'biome',
       biomeId: 'random_wilds',
@@ -30,7 +30,7 @@ export const mainWorldMap: WorldMapDefinition = {
     },
     {
       id: 'poi_initial_01',
-      name: 'Initial Actions 0,1',
+      name: 'Tutorial B',
       description: 'Initial actions row 0,1.',
       type: 'biome',
       biomeId: 'random_wilds',
@@ -38,7 +38,7 @@ export const mainWorldMap: WorldMapDefinition = {
     },
     {
       id: 'poi_initial_02',
-      name: 'Initial Actions 0,2',
+      name: 'Tutorial C',
       description: 'Initial actions row 0,2.',
       type: 'biome',
       biomeId: 'random_wilds',

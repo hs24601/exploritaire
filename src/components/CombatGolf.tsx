@@ -1,7 +1,7 @@
 import { memo, useEffect, useState, useMemo, useCallback, useRef, type RefObject, type KeyboardEventHandler, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion } from 'framer-motion';
 import { useGraphics } from '../contexts/GraphicsContext';
-import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition, Die as DieType, RelicCombatEvent } from '../engine/types';
+import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition, Die as DieType, RelicCombatEvent, ActorKeru } from '../engine/types';
 import type { DragState } from '../hooks/useDragDrop';
 import type { BlockingRect } from '../engine/lighting';
 import { ShadowCanvas } from './LightRenderer';
@@ -55,6 +55,8 @@ import { StartMatchOverlay, type StartOverlayPhase } from './combat/StartMatchOv
 import { CombatOverlayFrame } from './combat/CombatOverlayFrame';
 import { RpgCardInspectOverlay, getRpgCardMeta } from './combat/RpgCardInspectOverlay';
 import { ActorInspectOverlay } from './combat/ActorInspectOverlay';
+import { TargetSwirlIndicator } from './TargetSwirlIndicator';
+import { Callout } from './Callout';
 import { isGameAudioMuted, playCardPlaceSound, setGameAudioMuted } from '../audio/gameAudio';
 
 const CONTROLLED_DRAGONFIRE_BEHAVIOR_ID = 'controlled_dragonfire_v1';
@@ -63,6 +65,37 @@ const SUMMON_DARKSPAWN_BEHAVIOR_ID = 'summon_darkspawn_v1';
 const DEV_TRAVERSE_HOLD_DELAY_MS = 260;
 const DEV_TRAVERSE_HOLD_INTERVAL_MS = 190;
 const JUMBO_LAYOUT_SCALE = 6;
+const KERU_CALLOUT_DURATION_MS = 2600;
+const ASPECT_DISPLAY_TEXT: Record<string, string> = {
+  wolf: 'Lupus',
+  bear: 'Ursus',
+  cat: 'Felis',
+};
+const getAspectLabel = (archetype?: string) => {
+  if (!archetype || archetype === 'blank') return undefined;
+  return ASPECT_DISPLAY_TEXT[archetype] ??
+    `${archetype.charAt(0).toUpperCase()}${archetype.slice(1)}`;
+};
+const KERU_STAT_DIFFS: Array<{ key: keyof ActorKeru; label: string }> = [
+  { key: 'hpMax', label: 'HP' },
+  { key: 'staminaMax', label: 'Stamina' },
+  { key: 'energyMax', label: 'Energy' },
+  { key: 'armor', label: 'Armor' },
+  { key: 'evasion', label: 'Evasion' },
+  { key: 'sight', label: 'Sight' },
+  { key: 'mobility', label: 'Mobility' },
+  { key: 'leadership', label: 'Leadership' },
+];
+const buildKeruStatLines = (previous: ActorKeru, next: ActorKeru): string[] =>
+  KERU_STAT_DIFFS.reduce((lines, { key, label }) => {
+    const prevValue = previous[key] ?? 0;
+    const nextValue = next[key] ?? 0;
+    const diff = nextValue - prevValue;
+    if (diff > 0) {
+      lines.push(`${label}+${diff}`);
+    }
+    return lines;
+  }, [] as string[]);
 const KERU_ARCHETYPE_REWARD_CARDS: CardType[] = [
   { id: 'keru-archetype-wolf', rank: 3, element: 'N', suit: ELEMENT_TO_SUIT.N, actorGlyph: '🐺' },
   { id: 'keru-archetype-bear', rank: 5, element: 'N', suit: ELEMENT_TO_SUIT.N, actorGlyph: '🐻' },
@@ -149,6 +182,8 @@ interface CombatGolfProps {
     swapPartyLead: (actorId: string) => void;
     playWildAnalysisSequence: () => void;
   };
+  narrativeOpen: boolean;
+  onCloseNarrative: () => void;
   benchSwapCount?: number;
   infiniteBenchSwapsEnabled?: boolean;
   onToggleInfiniteBenchSwaps?: () => void;
@@ -416,6 +451,8 @@ export const CombatGolf = memo(function CombatGolf({
   onTogglePause,
   wildAnalysis = null,
   actions,
+  narrativeOpen,
+  onCloseNarrative,
   benchSwapCount = 0,
   infiniteBenchSwapsEnabled = false,
   onToggleInfiniteBenchSwaps,
@@ -454,7 +491,11 @@ export const CombatGolf = memo(function CombatGolf({
   const [owlExplorationRevealByNode, setOwlExplorationRevealByNode] = useState<Record<string, Record<number, string | null>>>({});
   const [overwatchClockMs, setOverwatchClockMs] = useState(() => Date.now());
   const [comboPaused, setComboPaused] = useState(false);
-  const [mapVisible, setMapVisible] = useState(true);
+  const keruHasAspect = useMemo(
+    () => ((gameState.actorKeru?.selectedAspectIds ?? []).length > 0),
+    [gameState.actorKeru?.selectedAspectIds]
+  );
+  const [mapVisible, setMapVisible] = useState(keruHasAspect);
   const [soundMuted, setSoundMuted] = useState<boolean>(() => isGameAudioMuted());
   const [bankedTurnMs, setBankedTurnMs] = useState(0);
   const [bankedTimerBonusMs, setBankedTimerBonusMs] = useState(0);
@@ -481,11 +522,14 @@ export const CombatGolf = memo(function CombatGolf({
   const [showKeruArchetypeReward, setShowKeruArchetypeReward] = useState(false);
   const [keruFxToken, setKeruFxToken] = useState(0);
   const [keruFxActive, setKeruFxActive] = useState(false);
+  const [keruStatLines, setKeruStatLines] = useState<string[]>([]);
   const [hoveredKeruRewardId, setHoveredKeruRewardId] = useState<string | null>(null);
   const [upgradedHandCardIds, setUpgradedHandCardIds] = useState<string[]>([]);
   const upgradedFlashTimeoutsRef = useRef<Record<string, number>>({});
   const prevRpgHandIdsRef = useRef<Set<string>>(new Set());
   const rewardCardIdRef = useRef(0);
+  const prevKeruRef = useRef<ActorKeru | undefined>();
+  const prevKeruMutationAtRef = useRef<number | undefined>();
   const [comboExpiryTokens, setComboExpiryTokens] = useState<Array<{ id: number; value: number }>>([]);
   const comboTokenIdRef = useRef(0);
   const [ambientDarkness, setAmbientDarkness] = useState(0.85);
@@ -904,9 +948,9 @@ export const CombatGolf = memo(function CombatGolf({
   const rewardPanelHorizontalPadding = 28;
   const rewardPanelVerticalPadding = 24;
   const rewardCardEdgeBufferPx = Math.max(10, Math.min(28, Math.round(layoutViewportHeight * 0.02)));
-  const rewardPanelTopOffsetPx = 64;
   const rewardPanelHeightPx = Math.min(640, Math.max(360, Math.round(layoutViewportHeight * 0.56)));
-  const rewardPanelWidthPx = Math.max(320, layoutViewportWidth - 16);
+  const rewardPanelViewportWidth = typeof window !== 'undefined' ? window.innerWidth : layoutViewportWidth;
+  const rewardPanelWidthPx = Math.max(320, Math.min(layoutViewportWidth, rewardPanelViewportWidth) - 16);
   const rewardCardGapPx = Math.max(10, Math.min(28, Math.round(layoutViewportWidth * 0.014)));
   const rewardCardRatio = CARD_SIZE.width / CARD_SIZE.height;
   const rewardAvailableWidth = Math.max(
@@ -945,6 +989,39 @@ export const CombatGolf = memo(function CombatGolf({
       };
     });
   }, [jumboCardWidth, rewardCardGapPx]);
+  const isDraggingKeruRewardCard = dragState.isDragging
+    && !!dragState.card
+    && dragState.card.id.startsWith('keru-archetype-');
+  const keruRewardPointer = isDraggingKeruRewardCard
+    ? {
+      x: dragState.position.x + dragState.offset.x,
+      y: dragState.position.y + dragState.offset.y,
+    }
+    : null;
+  const keruFoundationRect = isDraggingKeruRewardCard
+    ? foundationRefs.current[0]?.getBoundingClientRect()
+    : null;
+  const isKeruRewardOverTarget = Boolean(
+    keruRewardPointer
+    && keruFoundationRect
+    && keruRewardPointer.x >= keruFoundationRect.left
+    && keruRewardPointer.x <= keruFoundationRect.right
+    && keruRewardPointer.y >= keruFoundationRect.top
+    && keruRewardPointer.y <= keruFoundationRect.bottom
+  );
+  const keruAspectLabel = useMemo(
+    () => getAspectLabel(gameState.actorKeru?.archetype),
+    [gameState.actorKeru?.archetype]
+  );
+
+  const keruCalloutText = keruAspectLabel ? `${keruAspectLabel} Aspect` : 'Aspect Applied';
+  const getActorDisplayLabel = (actor?: Actor | null): string | undefined => {
+    if (!actor) return undefined;
+    if (actor.definitionId === 'keru') {
+      return keruAspectLabel ?? getActorDefinition('keru')?.name ?? 'Keru';
+    }
+    return getActorDefinition(actor.definitionId)?.name ?? actor.definitionId;
+  };
   const foundationCardScale = effectiveGlobalCardScale;
   const tableauRequiredWidth = (tableauCount * CARD_SIZE.width * foundationCardScale) + (Math.max(0, tableauCount - 1) * tableauGapPx);
   const tableauFitScale = tableauRequiredWidth > tableauAvailableWidth
@@ -1448,7 +1525,7 @@ export const CombatGolf = memo(function CombatGolf({
   const displayedPlayerHandCards = explorationModeActive
     ? activeExplorationActorHandCards
     : playerHandCardsWithStatuses;
-  const shouldRenderPlayerHand = isPartyBattleVariant && (!explorationModeActive || activePlayerHandActorIndex !== null);
+  const shouldRenderPlayerHand = isPartyBattleVariant && (!explorationModeActive || activePlayerHandActorIndex !== null) && displayedPlayerHandCards.length > 0;
   useEffect(() => {
     if (!explorationModeActive) {
       setActivePlayerHandActorIndex(null);
@@ -1476,16 +1553,33 @@ export const CombatGolf = memo(function CombatGolf({
     }
   }, [enemyFoundations, explorationNodes, gameState.actorKeru?.archetype, isRpgVariant]);
   useEffect(() => {
-    const lastMutationAt = gameState.actorKeru?.lastMutationAt;
-    if (!lastMutationAt) return;
-    setShowKeruArchetypeReward(false);
-    setKeruFxToken(lastMutationAt);
-    setKeruFxActive(true);
-    const timeout = window.setTimeout(() => {
+    const currentKeru = gameState.actorKeru;
+    const lastMutationAt = currentKeru?.lastMutationAt;
+    const prevMutationAt = prevKeruMutationAtRef.current;
+    let timeout: number | undefined;
+
+    if (!lastMutationAt) {
       setKeruFxActive(false);
-    }, 1000);
-    return () => window.clearTimeout(timeout);
-  }, [gameState.actorKeru?.lastMutationAt]);
+      setKeruStatLines([]);
+    } else if (lastMutationAt !== prevMutationAt && currentKeru) {
+      setShowKeruArchetypeReward(false);
+      setKeruFxToken(lastMutationAt);
+      setKeruFxActive(true);
+      setKeruStatLines(buildKeruStatLines(prevKeruRef.current ?? currentKeru, currentKeru));
+      timeout = window.setTimeout(() => {
+        setKeruFxActive(false);
+      }, KERU_CALLOUT_DURATION_MS);
+    }
+
+    prevKeruRef.current = currentKeru;
+    prevKeruMutationAtRef.current = lastMutationAt;
+
+    return () => {
+      if (timeout) {
+        window.clearTimeout(timeout);
+      }
+    };
+  }, [gameState.actorKeru]);
   useEffect(() => {
     if (!isRpgVariant) return;
     const current = gameState.rpgHandCards ?? [];
@@ -2002,8 +2096,8 @@ export const CombatGolf = memo(function CombatGolf({
   const isActorCombatReady = (actor: Actor | null | undefined) =>
     (actor?.stamina ?? 0) > 0 && (actor?.hp ?? 0) > 0;
   const renderActorNameLabel = (actor: Actor | null | undefined) => {
-    if (!actor) return null;
-    const actorName = getActorDefinition(actor.definitionId)?.name ?? actor.definitionId;
+    const displayName = getActorDisplayLabel(actor);
+    if (!displayName) return null;
     return (
       <div
         className="mt-1 text-[10px] font-bold tracking-[2px] uppercase"
@@ -2012,7 +2106,7 @@ export const CombatGolf = memo(function CombatGolf({
           textShadow: '0 0 8px rgba(255,255,255,0.35)',
         }}
       >
-        {actorName}
+        {displayName.toUpperCase()}
       </div>
     );
   };
@@ -2178,6 +2272,15 @@ export const CombatGolf = memo(function CombatGolf({
   }, []);
   const handleKeruJumboCardPointerDown = useCallback((card: CardType, event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (event.pointerType !== 'mouse') {
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // Ignore capture errors from browsers/devices that don't support it for this node.
+      }
+    }
     const rect = new DOMRect(
       event.clientX - (cardWidth / 2),
       event.clientY - (cardHeight / 2),
@@ -2262,34 +2365,26 @@ export const CombatGolf = memo(function CombatGolf({
   const timerBankVisuals = (
     <>
       {bankCallouts.map((entry) => (
-        <div
+        <Callout
           key={entry.id}
-          className="fixed left-14 bottom-24 z-[10026] pointer-events-none rounded border px-2 py-1 text-[11px] font-bold tracking-[1px]"
-          style={{
-            color: '#f7d24b',
-            borderColor: 'rgba(255, 229, 120, 0.85)',
-            backgroundColor: 'rgba(10, 8, 6, 0.92)',
-            boxShadow: '0 0 14px rgba(230, 179, 30, 0.55)',
-            animation: 'bank-callout-fade 1.7s ease-out forwards',
-          }}
-        >
-          +{formatBankSeconds(entry.ms)} banked
-        </div>
+          visible
+          instanceKey={entry.id}
+          text={`+${formatBankSeconds(entry.ms)} banked`}
+          tone="gold"
+          autoFadeMs={1700}
+          className="fixed left-14 bottom-24 z-[10026]"
+        />
       ))}
       {enemyTurnEndCallouts.map((entry) => (
-        <div
+        <Callout
           key={entry.id}
-          className="fixed left-14 bottom-20 z-[10026] pointer-events-none rounded border px-2 py-1 text-[11px] font-bold tracking-[1px]"
-          style={{
-            color: '#f7d24b',
-            borderColor: 'rgba(255, 229, 120, 0.85)',
-            backgroundColor: 'rgba(10, 8, 6, 0.92)',
-            boxShadow: '0 0 14px rgba(230, 179, 30, 0.55)',
-            animation: 'bank-callout-fade 1.7s ease-out forwards',
-          }}
-        >
-          ENEMY TURN ENDED
-        </div>
+          visible
+          instanceKey={entry.id}
+          text="Enemy Turn Ended"
+          tone="gold"
+          autoFadeMs={1700}
+          className="fixed left-14 bottom-20 z-[10026]"
+        />
       ))}
       {bankSmashFx && (
         <div
@@ -2307,10 +2402,6 @@ export const CombatGolf = memo(function CombatGolf({
         </div>
       )}
       <style>{`
-        @keyframes bank-callout-fade {
-          0% { opacity: 1; transform: translateY(0); }
-          100% { opacity: 0; transform: translateY(-24px); }
-        }
         @keyframes bank-smash-into-rail {
           0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
           25% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
@@ -2635,10 +2726,13 @@ export const CombatGolf = memo(function CombatGolf({
   const isExplorationMode = isRpgVariant && !hasSpawnedEnemies;
   const showActorComboCounts = !isRpgVariant || hasSpawnedEnemies;
   useEffect(() => {
-    if ((hasSpawnedEnemies || !isRpgVariant) && mapVisible) {
+    const shouldShowMap = isRpgVariant && !hasSpawnedEnemies && keruHasAspect;
+    if (shouldShowMap && !mapVisible) {
+      setMapVisible(true);
+    } else if (!shouldShowMap && mapVisible) {
       setMapVisible(false);
     }
-  }, [hasSpawnedEnemies, isRpgVariant, mapVisible]);
+  }, [isRpgVariant, hasSpawnedEnemies, keruHasAspect, mapVisible]);
   const showPauseButton = !zenModeEnabled && isPartyBattleVariant && hasSpawnedEnemies;
   const pauseButton = (
     <button
@@ -2780,6 +2874,56 @@ export const CombatGolf = memo(function CombatGolf({
     isCurrentExplorationTableauCleared,
     isRpgVariant,
   ]);
+  const canAdvanceExplorationMap = useCallback((direction: Direction): boolean => {
+    const compassDelta: Record<Direction, { dx: number; dy: number }> = {
+      N: { dx: 0, dy: -1 }, NE: { dx: 1, dy: -1 }, E: { dx: 1, dy: 0 }, SE: { dx: 1, dy: 1 },
+      S: { dx: 0, dy: 1 }, SW: { dx: -1, dy: 1 }, W: { dx: -1, dy: 0 }, NW: { dx: -1, dy: -1 },
+    };
+    const prevNodes = explorationNodesRef.current;
+    const currentNode = prevNodes.find((node) => node.id === explorationCurrentNodeIdRef.current) ?? prevNodes[0];
+    if (!currentNode) return false;
+    const { dx, dy } = compassDelta[direction] ?? { dx: 0, dy: -1 };
+    const targetX = currentNode.x + dx;
+    const targetY = currentNode.y + dy;
+    const currentKey = `${currentNode.x},${currentNode.y}`;
+    const targetKey = `${targetX},${targetY}`;
+    if (worldBlockedCellKeys.has(targetKey)) return false;
+    if (worldBlockedEdges.has(`${currentKey}->${targetKey}`)) return false;
+    const blockedByConditionalEdge = (mainWorldMap.conditionalEdges ?? []).some((edge) => {
+      if (edge.requirement !== 'source_tableau_cleared') return false;
+      const forward = currentNode.x === edge.from.col
+        && currentNode.y === edge.from.row
+        && targetX === edge.to.col
+        && targetY === edge.to.row;
+      const reverse = edge.bidirectional !== false
+        && currentNode.x === edge.to.col
+        && currentNode.y === edge.to.row
+        && targetX === edge.from.col
+        && targetY === edge.from.row;
+      if (!forward && !reverse) return false;
+      return !isCurrentExplorationTableauCleared;
+    });
+    if (blockedByConditionalEdge) return false;
+    if (mainWorldMap.tutorialRail?.lockUntilPathComplete !== false && worldForcedPath.length >= 2) {
+      const forcedIndex = worldForcedPath.findIndex((step) => step.x === currentNode.x && step.y === currentNode.y);
+      if (forcedIndex >= 0 && forcedIndex < worldForcedPath.length - 1) {
+        const required = worldForcedPath[forcedIndex + 1];
+        if (targetX !== required.x || targetY !== required.y) return false;
+      }
+    }
+    return true;
+  }, [
+    explorationNodesRef,
+    explorationCurrentNodeIdRef,
+    isCurrentExplorationTableauCleared,
+    worldBlockedCellKeys,
+    worldBlockedEdges,
+    worldForcedPath,
+  ]);
+  const canAdvanceExplorationHeading = useMemo(
+    () => canAdvanceExplorationMap(explorationHeading),
+    [canAdvanceExplorationMap, explorationHeading]
+  );
   const advanceExplorationMap = useCallback((direction: Direction): boolean => {
     const compassDelta: Record<Direction, { dx: number; dy: number }> = {
       N: { dx: 0, dy: -1 }, NE: { dx: 1, dy: -1 }, E: { dx: 1, dy: 0 }, SE: { dx: 1, dy: 1 },
@@ -4441,6 +4585,32 @@ export const CombatGolf = memo(function CombatGolf({
             castShadows: false,
             flicker: { enabled: false, speed: 0, amount: 0 },
           }];
+          if (isDraggingKeruRewardCard) {
+            const targetEl = foundationRefs.current[0];
+            if (targetEl) {
+              const targetRect = targetEl.getBoundingClientRect();
+              const targetX = targetRect.left - biomeContainerOriginRef.current.left + (targetRect.width / 2);
+              const targetY = targetRect.top - biomeContainerOriginRef.current.top + (targetRect.height / 2);
+              allLights.push({
+                x: targetX,
+                y: targetY,
+                radius: 220,
+                intensity: 1.05,
+                color: '#7fdbca',
+                castShadows: false,
+                flicker: { enabled: true, speed: 0.007, amount: 0.16 },
+              });
+              allLights.push({
+                x: targetX,
+                y: targetY,
+                radius: 140,
+                intensity: 1.25,
+                color: '#f7d24b',
+                castShadows: false,
+                flicker: { enabled: true, speed: 0.011, amount: 0.24 },
+              });
+            }
+          }
         } else {
             // Normal state: flash lights + ambient paint lights
             const now = performance.now();
@@ -4668,6 +4838,47 @@ export const CombatGolf = memo(function CombatGolf({
               cursor={!isEnemyTurn && canTriggerEndTurnFromCombo ? 'pointer' : 'default'}
             />
           )}
+          {narrativeOpen && isRpgVariant && !hasSpawnedEnemies && (
+            <div className="w-full px-2 sm:px-3 mb-2 flex justify-center pointer-events-none">
+              <div
+                className="relative w-full rounded-[15px] border border-game-teal/50 bg-gradient-to-br from-[#5f7c3b]/80 via-[#35502a]/80 to-[#172711]/80 shadow-[0_12px_40px_rgba(0,0,0,0.65)] pointer-events-auto overflow-hidden"
+                style={{ padding: '1px', width: `${explorationMapWidth + 14}px`, maxWidth: '100%' }}
+              >
+                <div className="relative rounded-[14px] bg-gradient-to-br from-[#4b6998]/90 via-[#356088]/80 to-[#1f355a]/70 px-5 py-5 text-game-white">
+                  <button
+                    type="button"
+                    onClick={onCloseNarrative}
+                    className="absolute top-3 right-3 h-8 w-8 rounded-full border border-white/60 bg-black/40 text-lg leading-none flex items-center justify-center hover:bg-black/70 transition"
+                    aria-label="Dismiss message"
+                  >
+                    ×
+                  </button>
+                  <div className="space-y-2 text-center">
+                    <p className="text-xs font-semibold uppercase tracking-[0.6em] text-game-teal/80">
+                      Awaken your{' '}
+                      <motion.span
+                        className="inline-flex text-base md:text-lg font-black tracking-[0.6em]"
+                        animate={{
+                          scale: [1, 1.08, 1],
+                          textShadow: [
+                            '0 0 0 rgba(255,255,255,0)',
+                            '0 0 18px rgba(126, 255, 199, 0.8)',
+                            '0 0 0 rgba(255,255,255,0)',
+                          ],
+                        }}
+                        transition={{ duration: 1.4, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
+                      >
+                        aspect
+                      </motion.span>
+                    </p>
+                    <p className="text-sm text-game-white/80 max-w-xl mx-auto">
+                      You cannot progress through this physical world as just a spirit. Order the elements before you to unlock a physical aspect.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {isRpgVariant && !hasSpawnedEnemies && mapVisible && (
             <div className="w-full px-2 sm:px-3 mb-2">
               <div
@@ -4697,6 +4908,8 @@ export const CombatGolf = memo(function CombatGolf({
                   stepCost={travelRowsPerStep}
                   onStepCostDecrease={() => setExplorationRowsPerStep((current) => Math.max(1, current - 1))}
                   onStepCostIncrease={() => setExplorationRowsPerStep((current) => Math.min(12, current + 1))}
+                  onStepForward={stepExplorationOnPlay}
+                  canStepForward={canAdvanceExplorationHeading || devTraverseHoldEnabled}
                   onHeadingChange={handleExplorationHeadingChange}
                   onTeleport={teleportToExplorationNode}
                 />
@@ -4904,6 +5117,18 @@ export const CombatGolf = memo(function CombatGolf({
                             />
                           </div>
                         )}
+                        {idx === 0 && (
+                          <Callout
+                            visible={keruFxActive}
+                            instanceKey={`keru-aspect-${keruFxToken}`}
+                            text={keruCalloutText}
+                            tone="gold"
+                            autoFadeMs={KERU_CALLOUT_DURATION_MS}
+                            lines={keruStatLines}
+                            className="absolute left-1/2 -top-14 -translate-x-1/2 z-[145]"
+                          />
+                        )}
+                        {idx === 0 && isKeruRewardOverTarget && <TargetSwirlIndicator />}
                         {renderExplorationActorHandPreview(actor, idx)}
                         {renderActorNameLabel(actor)}
                         {isWild && (
@@ -5322,7 +5547,7 @@ export const CombatGolf = memo(function CombatGolf({
             />
           </div>
         )}
-        {showKeruArchetypeReward && (
+        {showKeruArchetypeReward && !isDraggingKeruRewardCard && (
           <CombatOverlayFrame
             visible
             interactive={!inspectedRpgCard}
@@ -5332,11 +5557,10 @@ export const CombatGolf = memo(function CombatGolf({
           >
             <div className="absolute inset-0" />
             <div
-              className="relative self-start mt-[64px] rounded-xl border px-3 py-3 md:px-4 md:py-4 overflow-hidden"
+              className="relative rounded-xl border px-3 py-3 md:px-4 md:py-4 overflow-hidden"
               style={{
                 width: `${rewardPanelWidthPx}px`,
                 height: `${rewardPanelHeightPx}px`,
-                marginTop: `${rewardPanelTopOffsetPx}px`,
                 marginLeft: 'auto',
                 marginRight: 'auto',
                 borderColor: 'rgba(127, 219, 202, 0.72)',
@@ -5358,12 +5582,14 @@ export const CombatGolf = memo(function CombatGolf({
                       className="absolute left-1/2 rounded-xl border p-4 cursor-grab active:cursor-grabbing select-none"
                       style={{
                         top: `${rewardPanelVerticalPadding + rewardCardEdgeBufferPx}px`,
+                        marginLeft: `${Math.round(jumboCardWidth / -2)}px`,
                         width: `${jumboCardWidth}px`,
                         height: `${jumboCardHeight}px`,
                         borderColor: 'rgba(127, 219, 202, 0.72)',
                         background: 'linear-gradient(180deg, rgba(8,14,24,0.96) 0%, rgba(8,12,18,0.96) 100%)',
                         boxShadow: '0 0 28px rgba(127, 219, 202, 0.24)',
                         transformOrigin: 'bottom center',
+                        touchAction: 'none',
                         visibility: isDraggingReward ? 'hidden' : 'visible',
                         opacity: isDraggingReward ? 0 : 1,
                         pointerEvents: isDraggingReward ? 'none' : 'auto',
@@ -5406,21 +5632,41 @@ export const CombatGolf = memo(function CombatGolf({
                         {meta.body}
                       </div>
                       <div className="mt-6 flex flex-wrap gap-2">
-                        {meta.details.map((detail) => (
-                          <div
-                            key={`${rewardCard.id}-${detail}`}
-                            className="rounded border px-2 py-1 font-bold"
-                            style={{
-                              borderColor: 'rgba(247, 210, 75, 0.62)',
-                              color: '#f7d24b',
-                              backgroundColor: 'rgba(22, 18, 10, 0.82)',
-                              fontSize: `${Math.max(10, Math.round(jumboCardWidth * 0.042))}px`,
-                              letterSpacing: '0.04em',
-                            }}
-                          >
-                            {detail}
-                          </div>
-                        ))}
+                        {meta.details.map((detail) => {
+                          const tooltipDescriptionByDetail: Record<string, string> = {
+                            'HP +8': 'Increases Keru max HP by 8.',
+                            'Stamina +5': 'Increases Keru stamina by 5.',
+                            'HP +14': 'Increases Keru max HP by 14.',
+                            'Armor +1': 'Increases Keru armor by 1.',
+                            'HP +5': 'Increases Keru max HP by 5.',
+                            'Evasion +15%': 'Increases Keru evasion by 15%.',
+                            'Stealth +5': 'Increases Keru stealth by 5.',
+                          };
+                          const tooltipDescription = tooltipDescriptionByDetail[detail] ?? 'Archetype trait applied to Keru.';
+                          const tooltipContent = (
+                            <div className="text-xs leading-snug">
+                              <div className="font-bold tracking-[1.2px] text-game-gold">{detail}</div>
+                              <div className="mt-1 text-game-white/85">{tooltipDescription}</div>
+                            </div>
+                          );
+                          return (
+                            <Tooltip key={`${rewardCard.id}-${detail}`} content={tooltipContent} pinnable disabled={tooltipSuppressed}>
+                              <div
+                                className="rounded border px-2 py-1 font-bold"
+                                style={{
+                                  borderColor: 'rgba(247, 210, 75, 0.62)',
+                                  color: '#f7d24b',
+                                  backgroundColor: 'rgba(22, 18, 10, 0.82)',
+                                  fontSize: `${Math.max(10, Math.round(jumboCardWidth * 0.042))}px`,
+                                  letterSpacing: '0.04em',
+                                  cursor: tooltipSuppressed ? 'default' : 'help',
+                                }}
+                              >
+                                {detail}
+                              </div>
+                            </Tooltip>
+                          );
+                        })}
                       </div>
                     </motion.div>
                   );
@@ -5709,6 +5955,32 @@ export const CombatGolf = memo(function CombatGolf({
             castShadows: false,
             flicker: { enabled: false, speed: 0, amount: 0 },
           }];
+          if (isDraggingKeruRewardCard) {
+            const targetEl = foundationRefs.current[0];
+            if (targetEl) {
+              const targetRect = targetEl.getBoundingClientRect();
+              const targetX = targetRect.left - biomeContainerOriginRef.current.left + (targetRect.width / 2);
+              const targetY = targetRect.top - biomeContainerOriginRef.current.top + (targetRect.height / 2);
+              allLights.push({
+                x: targetX,
+                y: targetY,
+                radius: 220,
+                intensity: 1.05,
+                color: '#7fdbca',
+                castShadows: false,
+                flicker: { enabled: true, speed: 0.007, amount: 0.16 },
+              });
+              allLights.push({
+                x: targetX,
+                y: targetY,
+                radius: 140,
+                intensity: 1.25,
+                color: '#f7d24b',
+                castShadows: false,
+                flicker: { enabled: true, speed: 0.011, amount: 0.24 },
+              });
+            }
+          }
         } else {
           // Normal state: flash lights + ambient paint lights
           const now = performance.now();
@@ -5889,7 +6161,8 @@ export const CombatGolf = memo(function CombatGolf({
               ) &&
               hasStamina;
 
-            const actorName = actor ? getActorDefinition(actor.definitionId)?.name : undefined;
+            const actorDisplayName = getActorDisplayLabel(actor);
+            const actorName = actorDisplayName ? actorDisplayName.toUpperCase() : undefined;
 
             return (
               <div
@@ -5951,6 +6224,7 @@ export const CombatGolf = memo(function CombatGolf({
                   hpOverlayOffsetPx={6}
                   onActorLongPress={({ actor: pressedActor }) => handleActorFoundationLongPress(pressedActor)}
                 />
+                {idx === 0 && isKeruRewardOverTarget && <TargetSwirlIndicator />}
                 {renderExplorationActorHandPreview(actor, idx)}
                 {renderActorNameLabel(actor)}
                 {(() => {
@@ -6128,3 +6402,11 @@ export const CombatGolf = memo(function CombatGolf({
 });
 
 export default CombatGolf;
+
+
+
+
+
+
+
+

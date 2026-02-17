@@ -24,28 +24,28 @@ export function getRpgCardMeta(card: CardType) {
   const level = getCardLevel(card);
   if (card.id === 'keru-archetype-wolf') {
     return {
-      title: 'Wolf Aspect',
-      subtitle: 'Keru Archetype',
+      title: 'Lupus',
+      subtitle: 'Ranger Archetype',
       body: 'Bind feral ranger instincts into your Keru core.',
-      details: ['Stamina +', 'Leadership +', 'Role: Ranger'],
+      details: ['HP +8', 'Stamina +5'],
       accent: '#f7d24b',
     };
   }
   if (card.id === 'keru-archetype-bear') {
     return {
-      title: 'Bear Aspect',
-      subtitle: 'Keru Archetype',
+      title: 'Ursus',
+      subtitle: 'Tank Archetype',
       body: 'Fuse a heavy guardian shell into your Keru form.',
-      details: ['HP ++', 'Armor ++', 'Role: Tank'],
+      details: ['HP +14', 'Armor +1'],
       accent: '#ffb075',
     };
   }
   if (card.id === 'keru-archetype-cat') {
     return {
-      title: 'Cat Aspect',
-      subtitle: 'Keru Archetype',
+      title: 'Felis',
+      subtitle: 'Rogue Archetype',
       body: 'Attune to stealth, sight, and evasive mobility.',
-      details: ['Stealth +', 'Sight +', 'Mobility/Evasion +', 'Role: Rogue'],
+      details: ['HP +5', 'Evasion +15%', 'Stealth +5'],
       accent: '#9de3ff',
     };
   }
@@ -391,3 +391,10 @@ export const RpgCardInspectOverlay = memo(function RpgCardInspectOverlay({
     </CombatOverlayFrame>
   );
 });
+
+
+
+
+
+
+

@@ -37,6 +37,8 @@ interface ExplorationMapProps {
   stepCost?: number;
   onStepCostDecrease?: () => void;
   onStepCostIncrease?: () => void;
+  onStepForward?: () => void;
+  canStepForward?: boolean;
   onHeadingChange?: (direction: Direction) => void;
   onTeleport?: (x: number, y: number) => void;
   poiMarkers?: Array<{ id: string; x: number; y: number; label?: string }>;
@@ -202,6 +204,8 @@ export const ExplorationMap = memo(function ExplorationMap({
   stepCost,
   onStepCostDecrease,
   onStepCostIncrease,
+  onStepForward,
+  canStepForward = true,
   onHeadingChange,
   onTeleport,
   poiMarkers = [],
@@ -220,6 +224,7 @@ export const ExplorationMap = memo(function ExplorationMap({
   const isDraggingRef = useRef(false);
   const lastPointerRef = useRef({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement>(null);
+  const zoomSliderRef = useRef<HTMLInputElement>(null);
 
   void stepCost;
   void onStepCostDecrease;
@@ -387,6 +392,10 @@ export const ExplorationMap = memo(function ExplorationMap({
   const projectedById = useMemo(
     () => new Map(projected.map((n) => [n.id, n] as const)),
     [projected],
+  );
+  const currentProjected = useMemo(
+    () => (currentNodeId ? projectedById.get(currentNodeId) ?? null : null),
+    [currentNodeId, projectedById],
   );
 
   // Grid line ranges — account for zoom and pan
@@ -599,6 +608,11 @@ export const ExplorationMap = memo(function ExplorationMap({
         backgroundColor: 'rgba(10, 10, 10, 0.76)',
         boxShadow: '0 0 12px rgba(127, 219, 202, 0.28)',
       }}
+      data-dev-component="ExplorationMap"
+      data-dev-name="Exploration Map"
+      data-dev-kind="panel"
+      data-dev-description="Node grid and travel controls for exploration mode."
+      data-dev-path="components/ExplorationMap"
     >
       <div
         className="absolute left-2 top-2 px-1.5 py-0.5 rounded border text-[11px] font-bold tracking-[1px]"
@@ -610,12 +624,6 @@ export const ExplorationMap = memo(function ExplorationMap({
         title="Successful travel steps"
       >
         👣 {traversalCount}
-      </div>
-      <div
-        className="text-[12px] font-bold tracking-[1.6px] text-game-teal/85 text-center mb-0.5"
-        style={{ paddingRight: 96 }}
-      >
-        {travelLabel ?? 'UNKNOWN'}
       </div>
       <div className="text-center mb-1">
         {currentNode && (
@@ -956,18 +964,6 @@ export const ExplorationMap = memo(function ExplorationMap({
                         strokeWidth={0.45}
                       />
                     )}
-                    {currentNode && (
-                      <text
-                        x={11}
-                        y={4}
-                        textAnchor="start"
-                        fontSize={7}
-                        fill="rgba(247, 210, 75, 0.9)"
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        ({currentNode.x},{currentNode.y})
-                      </text>
-                    )}
                   </>
                 ) : (
                   /* Unresolved location — small diamond marker */
@@ -1034,16 +1030,34 @@ export const ExplorationMap = memo(function ExplorationMap({
           )}
           {/* Mouse coordinate display — anchored beside cursor */}
           {mouseCoord && (
-            <text
-              x={Math.min(width - 4, mouseCoord.px + 9)}
-              y={Math.max(8, mouseCoord.py - 3)}
-              textAnchor="start"
-              fontSize={7}
-              fill="rgba(127, 219, 202, 0.8)"
-              style={{ fontFamily: 'monospace' }}
+            <g
+              transform={`translate(${Math.min(width - 4, mouseCoord.px + 9)}, ${Math.max(
+                8,
+                mouseCoord.py - 3
+              )})`}
             >
-              {mouseCoord.x}, {mouseCoord.y}
-            </text>
+              <rect
+                x={0}
+                y={-11}
+                width={54}
+                height={16}
+                rx={4}
+                ry={4}
+                fill="rgba(10, 10, 10, 0.8)"
+                stroke="rgba(127, 219, 202, 0.4)"
+                strokeWidth={1}
+              />
+              <text
+                x={4}
+                y={0}
+                textAnchor="start"
+                fontSize={11}
+                fill="rgba(127, 219, 202, 0.95)"
+                style={{ fontFamily: 'monospace', fontWeight: 600 }}
+              >
+                {mouseCoord.x}, {mouseCoord.y}
+              </text>
+            </g>
           )}
           {/* Zoom level indicator — lower-left corner, only when not at 1x */}
           {Math.abs(zoom - 1) > 0.05 && (
@@ -1059,6 +1073,76 @@ export const ExplorationMap = memo(function ExplorationMap({
             </text>
           )}
         </svg>
+        {currentProjected && (onHeadingChange || onStepForward) && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            aria-hidden={!onHeadingChange && !onStepForward}
+          >
+            <div
+              className="absolute"
+              style={{
+                left: currentProjected.px,
+                top: currentProjected.py,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              {onStepForward && canStepForward && (
+                <button
+                  type="button"
+                  onClick={onStepForward}
+                  className="absolute px-2 py-0.5 rounded border font-bold leading-none select-none pointer-events-auto"
+                  style={{
+                    left: 0,
+                    top: -68,
+                    transform: 'translate(-50%, -50%)',
+                    borderColor: 'rgba(247, 210, 75, 0.8)',
+                    color: '#f7d24b',
+                    backgroundColor: 'rgba(10, 8, 6, 0.9)',
+                  }}
+                  title="Step forward"
+                >
+                  ↑
+                </button>
+              )}
+              {onHeadingChange && (
+              <button
+                  type="button"
+                  onClick={handleLeftChevron}
+                  className="absolute px-2 py-0.5 rounded border font-bold leading-none select-none pointer-events-auto"
+                  style={{
+                    left: -68,
+                    top: 0,
+                    transform: 'translate(-50%, -50%)',
+                    borderColor: 'rgba(127, 219, 202, 0.65)',
+                    color: '#7fdbca',
+                    backgroundColor: 'rgba(10, 10, 10, 0.8)',
+                  }}
+                  title="Counterclockwise to previous direction"
+                >
+                  ‹
+                </button>
+              )}
+              {onHeadingChange && (
+          <button
+                  type="button"
+                  onClick={handleRightChevron}
+                  className="absolute px-2 py-0.5 rounded border font-bold leading-none select-none pointer-events-auto"
+                  style={{
+                    left: 68,
+                    top: 0,
+                    transform: 'translate(-50%, -50%)',
+                    borderColor: 'rgba(127, 219, 202, 0.65)',
+                    color: '#7fdbca',
+                    backgroundColor: 'rgba(10, 10, 10, 0.8)',
+                  }}
+                  title="Clockwise to next direction"
+                >
+                  ›
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Watercolor splotches overlay */}
         <div className="absolute inset-0 pointer-events-none">
@@ -1096,20 +1180,9 @@ export const ExplorationMap = memo(function ExplorationMap({
         )}
       </div>
 
-      {/* Bottom row: heading chevrons + coordinate + zoom + counters + center */}
+      {/* Bottom row: coordinate + zoom + counters + center */}
       {(onHeadingChange || currentNode) && (
         <div className="mt-1 flex items-center justify-center gap-2">
-          {onHeadingChange && (
-            <button
-              type="button"
-              onClick={handleLeftChevron}
-              className="px-2 py-0.5 rounded border font-bold leading-none select-none"
-              style={{ borderColor: 'rgba(127, 219, 202, 0.65)', color: '#7fdbca', backgroundColor: 'rgba(10, 10, 10, 0.8)' }}
-              title="Counterclockwise to previous direction"
-            >
-              ‹
-            </button>
-          )}
           {currentNode && (
             <div
               className="px-2 py-0.5 rounded border text-[10px] font-bold tracking-[1px] tabular-nums select-none"
@@ -1123,7 +1196,7 @@ export const ExplorationMap = memo(function ExplorationMap({
               {currentNode.x},{currentNode.y}
             </div>
           )}
-          <button
+            <button
             type="button"
             onClick={onUseSupply}
             disabled={!onUseSupply || typeof supplyCount !== 'number' || supplyCount <= 0}
@@ -1137,26 +1210,45 @@ export const ExplorationMap = memo(function ExplorationMap({
               textAlign: 'center',
             }}
             title={typeof supplyCount === 'number' ? `Use supply (+20 AP). ${supplyCount} remaining` : 'Supplies'}
+            data-dev-component="ExplorationMapSupplyButton"
+            data-dev-name="Use Supply"
+            data-dev-kind="control"
+            data-dev-description="Spend one supply to gain action points."
+            data-dev-role="map-control"
           >
             {typeof supplyCount === 'number' ? supplyCount : '--'}
           </button>
-          <div className="flex items-center gap-1 rounded border px-1.5 py-0.5" style={{ borderColor: 'rgba(127, 219, 202, 0.5)', backgroundColor: 'rgba(10, 10, 10, 0.7)' }}>
-            <span className="text-[8px] font-bold tracking-[1px]" style={{ color: 'rgba(127, 219, 202, 0.75)' }}>
-              Z
-            </span>
-            <input
-              type="range"
-              min={MIN_ZOOM}
-              max={MAX_ZOOM}
-              step={0.05}
-              value={zoom}
-              onChange={handleZoomSliderChange}
-              className="w-20 accent-[rgba(127,219,202,0.95)]"
-              title="Zoom (locks to player)"
-            />
-            <span className="text-[8px] font-mono font-bold min-w-[28px] text-right" style={{ color: 'rgba(127, 219, 202, 0.9)' }}>
-              {zoom.toFixed(2)}x
-            </span>
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className="text-[10px] font-bold tracking-[1px] uppercase text-game-teal/70"
+              style={{ letterSpacing: '0.2em' }}
+            >
+              {travelLabel ?? 'UNKNOWN'}
+            </div>
+            <div className="flex items-center gap-1 rounded border px-1.5 py-0.5" style={{ borderColor: 'rgba(127, 219, 202, 0.5)', backgroundColor: 'rgba(10, 10, 10, 0.7)' }}>
+              <span className="text-[8px] font-bold tracking-[1px]" style={{ color: 'rgba(127, 219, 202, 0.75)' }}>
+                Z
+              </span>
+              <input
+                ref={zoomSliderRef}
+                type="range"
+                min={MIN_ZOOM}
+                max={MAX_ZOOM}
+                step={0.05}
+                value={zoom}
+                onChange={handleZoomSliderChange}
+                className="w-20 accent-[rgba(127,219,202,0.95)]"
+                title="Zoom (locks to player)"
+                data-dev-component="ExplorationMapZoomSlider"
+                data-dev-name="Map Zoom"
+                data-dev-kind="control"
+                data-dev-description="Adjust map zoom level."
+                data-dev-role="map-control"
+              />
+              <span className="text-[8px] font-mono font-bold min-w-[28px] text-right" style={{ color: 'rgba(127, 219, 202, 0.9)' }}>
+                {zoom.toFixed(2)}x
+              </span>
+            </div>
           </div>
           <div
             className="px-1.5 py-0.5 rounded border text-[12px] font-bold tracking-[1px] select-none"
@@ -1183,22 +1275,19 @@ export const ExplorationMap = memo(function ExplorationMap({
               boxShadow: '0 0 8px rgba(255, 86, 86, 0.35)',
             }}
             title="Center map on player"
+            data-dev-component="ExplorationMapCenterButton"
+            data-dev-name="Center Map on Player"
+            data-dev-kind="control"
+            data-dev-description="Re-center the map view on the current player node."
+            data-dev-role="map-control"
           >
             🂠
           </button>
-          {onHeadingChange && (
-            <button
-              type="button"
-              onClick={handleRightChevron}
-              className="px-2 py-0.5 rounded border font-bold leading-none select-none"
-              style={{ borderColor: 'rgba(127, 219, 202, 0.65)', color: '#7fdbca', backgroundColor: 'rgba(10, 10, 10, 0.8)' }}
-              title="Clockwise to next direction"
-            >
-              ›
-            </button>
-          )}
         </div>
       )}
     </div>
   );
 });
+
+
+
