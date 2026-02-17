@@ -5,15 +5,16 @@ import { randomIdSuffix } from './constants';
 // ACTOR_DEFINITIONS_START
 export const ACTOR_DEFINITIONS: ActorDefinition[] = [
   {
-    id: 'fox',
-    name: 'Fox',
-    titles: ['Fennec', 'Fox'],
-    description: 'A curious fennec fox with keen senses',
+    id: 'keru',
+    name: 'Keru',
+    titles: ['Blank', 'Keru'],
+    description: 'A non-corporeal spirit that can absorb aspects and mutate',
     type: 'adventurer',
     value: 2,
     suit: undefined,
     element: 'N',
     sprite: '🦊',
+    aliases: ['fox', 'fennec'],
     orimSlots: [
       { orimId: 'claw', locked: true },
       { orimId: 'bide' },
@@ -138,10 +139,10 @@ export function createActor(definitionId: string): Actor | null {
 export function createInitialActors(): Actor[] {
   const actors: Actor[] = [];
 
-  const fox = createActor('fox');
-  if (fox) {
-    fox.gridPosition = { col: 3, row: 2 };
-    actors.push(fox);
+  const keru = createActor('keru');
+  if (keru) {
+    keru.gridPosition = { col: 3, row: 2 };
+    actors.push(keru);
   }
 
   const wolf = createActor('wolf');

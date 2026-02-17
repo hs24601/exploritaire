@@ -1,4 +1,5 @@
-import { memo, useEffect, useState, useMemo, useCallback, useRef, type RefObject, type KeyboardEventHandler } from 'react';
+import { memo, useEffect, useState, useMemo, useCallback, useRef, type RefObject, type KeyboardEventHandler, type PointerEvent as ReactPointerEvent } from 'react';
+import { motion } from 'framer-motion';
 import { useGraphics } from '../contexts/GraphicsContext';
 import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition, Die as DieType, RelicCombatEvent } from '../engine/types';
 import type { DragState } from '../hooks/useDragDrop';
@@ -52,7 +53,7 @@ import { Tooltip } from './Tooltip';
 import { createRandomBattleHandRewardCard, getBattleHandRewardThreshold } from './combat/battleHandUnlocks';
 import { StartMatchOverlay, type StartOverlayPhase } from './combat/StartMatchOverlay';
 import { CombatOverlayFrame } from './combat/CombatOverlayFrame';
-import { RpgCardInspectOverlay } from './combat/RpgCardInspectOverlay';
+import { RpgCardInspectOverlay, getRpgCardMeta } from './combat/RpgCardInspectOverlay';
 import { ActorInspectOverlay } from './combat/ActorInspectOverlay';
 import { isGameAudioMuted, playCardPlaceSound, setGameAudioMuted } from '../audio/gameAudio';
 
@@ -61,6 +62,12 @@ const CONTROLLED_DRAGONFIRE_CARD_ID_PREFIX = 'relic-controlled-dragonfire-';
 const SUMMON_DARKSPAWN_BEHAVIOR_ID = 'summon_darkspawn_v1';
 const DEV_TRAVERSE_HOLD_DELAY_MS = 260;
 const DEV_TRAVERSE_HOLD_INTERVAL_MS = 190;
+const JUMBO_LAYOUT_SCALE = 6;
+const KERU_ARCHETYPE_REWARD_CARDS: CardType[] = [
+  { id: 'keru-archetype-wolf', rank: 3, element: 'N', suit: ELEMENT_TO_SUIT.N, actorGlyph: '🐺' },
+  { id: 'keru-archetype-bear', rank: 5, element: 'N', suit: ELEMENT_TO_SUIT.N, actorGlyph: '🐻' },
+  { id: 'keru-archetype-cat', rank: 2, element: 'N', suit: ELEMENT_TO_SUIT.N, actorGlyph: '🐈' },
+];
 
 interface CombatGolfProps {
   gameState: GameState;
@@ -136,6 +143,7 @@ interface CombatGolfProps {
     adjustRpgHandCardRarity?: (cardId: string, delta: -1 | 1) => boolean;
     addRpgHandCard?: (card: CardType) => boolean;
     removeRpgHandCardById?: (cardId: string) => boolean;
+    applyKeruArchetype?: (archetype: 'wolf' | 'bear' | 'cat') => boolean;
     setEnemyDifficulty?: (difficulty: GameState['enemyDifficulty']) => void;
     rewindLastCard: () => boolean;
     swapPartyLead: (actorId: string) => void;
@@ -462,12 +470,18 @@ export const CombatGolf = memo(function CombatGolf({
   const [tableauSlideOffsetPx, setTableauSlideOffsetPx] = useState(0);
   const [tableauSlideAnimating, setTableauSlideAnimating] = useState(false);
   const [inspectedRpgCard, setInspectedRpgCard] = useState<CardType | null>(null);
-  const [inspectedRpgCardSource, setInspectedRpgCardSource] = useState<{ side: 'player' } | { side: 'enemy'; actorIndex: number } | null>(null);
+  const [inspectedRpgCardSource, setInspectedRpgCardSource] = useState<
+    { side: 'player' } | { side: 'enemy'; actorIndex: number } | { side: 'reward' } | null
+  >(null);
   const [inspectedActorId, setInspectedActorId] = useState<string | null>(null);
   const [actorNodeAssignments, setActorNodeAssignments] = useState<Record<string, Record<string, string>>>({});
   const [activeEnemyHandActorIndex, setActiveEnemyHandActorIndex] = useState<number | null>(null);
   const [activePlayerHandActorIndex, setActivePlayerHandActorIndex] = useState<number | null>(null);
   const [rewardedBattleHandCards, setRewardedBattleHandCards] = useState<CardType[]>([]);
+  const [showKeruArchetypeReward, setShowKeruArchetypeReward] = useState(false);
+  const [keruFxToken, setKeruFxToken] = useState(0);
+  const [keruFxActive, setKeruFxActive] = useState(false);
+  const [hoveredKeruRewardId, setHoveredKeruRewardId] = useState<string | null>(null);
   const [upgradedHandCardIds, setUpgradedHandCardIds] = useState<string[]>([]);
   const upgradedFlashTimeoutsRef = useRef<Record<string, number>>({});
   const prevRpgHandIdsRef = useRef<Set<string>>(new Set());
@@ -887,6 +901,50 @@ export const CombatGolf = memo(function CombatGolf({
   const tableauAvailableWidth = autoScaleAvailableWidth;
   const cardWidth = CARD_SIZE.width * effectiveGlobalCardScale;
   const cardHeight = CARD_SIZE.height * effectiveGlobalCardScale;
+  const rewardPanelHorizontalPadding = 28;
+  const rewardPanelVerticalPadding = 24;
+  const rewardCardEdgeBufferPx = Math.max(10, Math.min(28, Math.round(layoutViewportHeight * 0.02)));
+  const rewardPanelTopOffsetPx = 64;
+  const rewardPanelHeightPx = Math.min(640, Math.max(360, Math.round(layoutViewportHeight * 0.56)));
+  const rewardPanelWidthPx = Math.max(320, layoutViewportWidth - 16);
+  const rewardCardGapPx = Math.max(10, Math.min(28, Math.round(layoutViewportWidth * 0.014)));
+  const rewardCardRatio = CARD_SIZE.width / CARD_SIZE.height;
+  const rewardAvailableWidth = Math.max(
+    220,
+    rewardPanelWidthPx - (rewardPanelHorizontalPadding * 2) - (rewardCardGapPx * (KERU_ARCHETYPE_REWARD_CARDS.length - 1))
+  );
+  const rewardAvailableHeight = Math.max(
+    220,
+    rewardPanelHeightPx - (rewardPanelVerticalPadding * 2) - (rewardCardEdgeBufferPx * 2)
+  );
+  const rewardCardWidthByPanel = rewardAvailableWidth / Math.max(1, KERU_ARCHETYPE_REWARD_CARDS.length);
+  const rewardCardHeightByPanel = rewardAvailableHeight;
+  const rewardJumboScale = Math.max(
+    1,
+    Math.min(
+      JUMBO_LAYOUT_SCALE,
+      rewardCardWidthByPanel / Math.max(1, cardWidth),
+      rewardCardHeightByPanel / Math.max(1, cardHeight)
+    )
+  );
+  const jumboCardWidth = Math.max(180, Math.round(cardWidth * rewardJumboScale));
+  const jumboCardHeight = Math.max(240, Math.round(jumboCardWidth / rewardCardRatio));
+  const keruRewardFanPositions = useMemo(() => {
+    const n = KERU_ARCHETYPE_REWARD_CARDS.length;
+    if (n <= 0) return [];
+    const centerIndex = (n - 1) / 2;
+    const spacing = jumboCardWidth + rewardCardGapPx;
+    const maxTilt = Math.min(12, Math.max(6, jumboCardWidth / 70));
+    return Array.from({ length: n }, (_, index) => {
+      const relative = index - centerIndex;
+      const normalized = centerIndex > 0 ? (relative / centerIndex) : 0;
+      return {
+        x: relative * spacing,
+        y: 0,
+        rotation: normalized * maxTilt,
+      };
+    });
+  }, [jumboCardWidth, rewardCardGapPx]);
   const foundationCardScale = effectiveGlobalCardScale;
   const tableauRequiredWidth = (tableauCount * CARD_SIZE.width * foundationCardScale) + (Math.max(0, tableauCount - 1) * tableauGapPx);
   const tableauFitScale = tableauRequiredWidth > tableauAvailableWidth
@@ -945,6 +1003,7 @@ export const CombatGolf = memo(function CombatGolf({
   }, [activeEnemyHandActorIndex, inspectedRpgCard, inspectedRpgCardSource, isRpgVariant]);
   useEffect(() => {
     if (!isRpgVariant || !inspectedRpgCard) return;
+    if (inspectedRpgCardSource?.side === 'reward') return;
     const sourceCards = inspectedRpgCardSource?.side === 'enemy'
       ? ((gameState.rpgEnemyHandCards ?? [])[inspectedRpgCardSource.actorIndex] ?? [])
       : (gameState.rpgHandCards ?? []);
@@ -1069,6 +1128,7 @@ export const CombatGolf = memo(function CombatGolf({
   const TOKEN_ORDER: Element[] = ['W', 'E', 'A', 'F', 'D', 'L', 'N'];
   const SHOW_FOUNDATION_TOKEN_BADGES = false;
   const ACTOR_LINE_COLORS: Record<string, string> = {
+    keru: '#e6b31e',
     fox: '#e6b31e',
     wolf: '#f0f0f0',
     owl: '#fff5cc',
@@ -1399,6 +1459,33 @@ export const CombatGolf = memo(function CombatGolf({
       setActivePlayerHandActorIndex(null);
     }
   }, [activeParty.length, activePlayerHandActorIndex, explorationModeActive]);
+  useEffect(() => {
+    const spawnedEnemies = enemyFoundations.some((foundation) => foundation.length > 0);
+    if (!isRpgVariant || spawnedEnemies) {
+      setShowKeruArchetypeReward(false);
+      return;
+    }
+    const keruArchetype = gameState.actorKeru?.archetype ?? 'blank';
+    if (keruArchetype !== 'blank') {
+      setShowKeruArchetypeReward(false);
+      return;
+    }
+    const tutorialPoiCleared = explorationNodes.some((node) => node.x === 0 && node.y === 2 && node.cleared);
+    if (tutorialPoiCleared) {
+      setShowKeruArchetypeReward(true);
+    }
+  }, [enemyFoundations, explorationNodes, gameState.actorKeru?.archetype, isRpgVariant]);
+  useEffect(() => {
+    const lastMutationAt = gameState.actorKeru?.lastMutationAt;
+    if (!lastMutationAt) return;
+    setShowKeruArchetypeReward(false);
+    setKeruFxToken(lastMutationAt);
+    setKeruFxActive(true);
+    const timeout = window.setTimeout(() => {
+      setKeruFxActive(false);
+    }, 1000);
+    return () => window.clearTimeout(timeout);
+  }, [gameState.actorKeru?.lastMutationAt]);
   useEffect(() => {
     if (!isRpgVariant) return;
     const current = gameState.rpgHandCards ?? [];
@@ -2050,6 +2137,7 @@ export const CombatGolf = memo(function CombatGolf({
         if (!inspectedRpgCard || inspectedRpgCardSource?.side !== 'player') return;
         actions.adjustRpgHandCardRarity?.(inspectedRpgCard.id, delta);
       }}
+      zIndex={10036}
     />
   );
   const actorInspectOverlay = (
@@ -2084,6 +2172,20 @@ export const CombatGolf = memo(function CombatGolf({
     setInspectedRpgCardSource({ side: 'player' });
     setInspectedRpgCard(card);
   }, [isRpgVariant]);
+  const handleKeruRewardCardInspect = useCallback((card: CardType) => {
+    setInspectedRpgCardSource({ side: 'reward' });
+    setInspectedRpgCard(card);
+  }, []);
+  const handleKeruJumboCardPointerDown = useCallback((card: CardType, event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const rect = new DOMRect(
+      event.clientX - (cardWidth / 2),
+      event.clientY - (cardHeight / 2),
+      cardWidth,
+      cardHeight
+    );
+    handleDragStartGuarded(card, HAND_SOURCE_INDEX, event.clientX, event.clientY, rect);
+  }, [cardHeight, cardWidth, handleDragStartGuarded]);
   const noopEnemyHandDragStart = useCallback((
     _card: CardType,
     _tableauIndex: number,
@@ -3730,6 +3832,10 @@ export const CombatGolf = memo(function CombatGolf({
       laneCount: gameState.foundations.length,
     });
   };
+  useEffect(() => {
+    if (!keruFxToken) return;
+    triggerCardPlayFlash(0, Math.max(6, partyComboTotal + 4));
+  }, [keruFxToken, partyComboTotal]);
 
   const triggerIntroGoFlash = useCallback(() => {
     const containerRect = biomeContainerRef.current?.getBoundingClientRect();
@@ -4767,6 +4873,37 @@ export const CombatGolf = memo(function CombatGolf({
                           hpOverlayOffsetPx={6}
                           onActorLongPress={({ actor: pressedActor }) => handleActorFoundationLongPress(pressedActor)}
                         />
+                        {idx === 0 && keruFxActive && (
+                          <div
+                            key={`keru-fx-${keruFxToken}`}
+                            className="absolute inset-0 pointer-events-none rounded-xl"
+                            style={{
+                              animation: 'keru-foundation-flash 780ms ease-out forwards',
+                            }}
+                          >
+                            <div
+                              className="absolute inset-[-26px] rounded-2xl"
+                              style={{
+                                background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(127,219,202,0.78) 24%, rgba(127,219,202,0.3) 56%, rgba(127,219,202,0) 78%)',
+                                mixBlendMode: 'screen',
+                                animation: 'keru-foundation-shimmer 1s ease-out forwards',
+                              }}
+                            />
+                            <div
+                              className="absolute inset-[-30px] rounded-2xl"
+                              style={{
+                                backgroundImage: `
+                                  radial-gradient(circle at 14% 30%, rgba(127,219,202,0.9) 0 1px, transparent 1.6px),
+                                  radial-gradient(circle at 38% 18%, rgba(247,210,75,0.8) 0 1px, transparent 1.7px),
+                                  radial-gradient(circle at 68% 72%, rgba(127,219,202,0.9) 0 1px, transparent 1.5px),
+                                  radial-gradient(circle at 86% 44%, rgba(247,210,75,0.75) 0 1px, transparent 1.8px)
+                                `,
+                                opacity: 0.95,
+                                animation: 'keru-foundation-sparkles 1s ease-out forwards',
+                              }}
+                            />
+                          </div>
+                        )}
                         {renderExplorationActorHandPreview(actor, idx)}
                         {renderActorNameLabel(actor)}
                         {isWild && (
@@ -5185,6 +5322,130 @@ export const CombatGolf = memo(function CombatGolf({
             />
           </div>
         )}
+        {showKeruArchetypeReward && (
+          <CombatOverlayFrame
+            visible
+            interactive={!inspectedRpgCard}
+            dimOpacity={0.4}
+            blurPx={1.5}
+            zIndex={10024}
+          >
+            <div className="absolute inset-0" />
+            <div
+              className="relative self-start mt-[64px] rounded-xl border px-3 py-3 md:px-4 md:py-4 overflow-hidden"
+              style={{
+                width: `${rewardPanelWidthPx}px`,
+                height: `${rewardPanelHeightPx}px`,
+                marginTop: `${rewardPanelTopOffsetPx}px`,
+                marginLeft: 'auto',
+                marginRight: 'auto',
+                borderColor: 'rgba(127, 219, 202, 0.72)',
+                backgroundColor: 'rgba(10, 10, 10, 0.9)',
+                boxShadow: '0 0 22px rgba(127, 219, 202, 0.35)',
+              }}
+            >
+              <div className="relative z-40 w-full h-full">
+                {KERU_ARCHETYPE_REWARD_CARDS.map((rewardCard, index) => {
+                  const meta = getRpgCardMeta(rewardCard);
+                  const pos = keruRewardFanPositions[index] ?? { x: 0, y: 0, rotation: 0 };
+                  const isHovered = hoveredKeruRewardId === rewardCard.id;
+                  const isDraggingReward = dragState.isDragging && dragState.card?.id === rewardCard.id;
+                  return (
+                    <motion.div
+                      key={rewardCard.id}
+                      role="button"
+                      tabIndex={0}
+                      className="absolute left-1/2 rounded-xl border p-4 cursor-grab active:cursor-grabbing select-none"
+                      style={{
+                        top: `${rewardPanelVerticalPadding + rewardCardEdgeBufferPx}px`,
+                        width: `${jumboCardWidth}px`,
+                        height: `${jumboCardHeight}px`,
+                        borderColor: 'rgba(127, 219, 202, 0.72)',
+                        background: 'linear-gradient(180deg, rgba(8,14,24,0.96) 0%, rgba(8,12,18,0.96) 100%)',
+                        boxShadow: '0 0 28px rgba(127, 219, 202, 0.24)',
+                        transformOrigin: 'bottom center',
+                        visibility: isDraggingReward ? 'hidden' : 'visible',
+                        opacity: isDraggingReward ? 0 : 1,
+                        pointerEvents: isDraggingReward ? 'none' : 'auto',
+                      }}
+                      initial={false}
+                      animate={{
+                        x: pos.x,
+                        y: isHovered ? (pos.y - 20) : pos.y,
+                        rotate: isHovered ? 0 : pos.rotation,
+                        scale: isHovered ? 1.02 : 1,
+                      }}
+                      transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+                      onHoverStart={() => setHoveredKeruRewardId(rewardCard.id)}
+                      onHoverEnd={() => setHoveredKeruRewardId((current) => (current === rewardCard.id ? null : current))}
+                      onClick={() => handleKeruRewardCardInspect(rewardCard)}
+                      onPointerDown={(event) => handleKeruJumboCardPointerDown(rewardCard, event)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleKeruRewardCardInspect(rewardCard);
+                        }
+                      }}
+                    >
+                      <div
+                        className="font-bold text-game-teal/80"
+                        style={{ fontSize: `${Math.max(10, Math.round(jumboCardWidth * 0.042))}px`, letterSpacing: '0.16em' }}
+                      >
+                        {meta.subtitle}
+                      </div>
+                      <div
+                        className="font-bold text-game-white uppercase leading-tight"
+                        style={{ fontSize: `${Math.max(20, Math.round(jumboCardWidth * 0.105))}px`, letterSpacing: '0.12em' }}
+                      >
+                        {meta.title}
+                      </div>
+                      <div
+                        className="mt-4 leading-relaxed text-game-white/92"
+                        style={{ fontSize: `${Math.max(14, Math.round(jumboCardWidth * 0.052))}px` }}
+                      >
+                        {meta.body}
+                      </div>
+                      <div className="mt-6 flex flex-wrap gap-2">
+                        {meta.details.map((detail) => (
+                          <div
+                            key={`${rewardCard.id}-${detail}`}
+                            className="rounded border px-2 py-1 font-bold"
+                            style={{
+                              borderColor: 'rgba(247, 210, 75, 0.62)',
+                              color: '#f7d24b',
+                              backgroundColor: 'rgba(22, 18, 10, 0.82)',
+                              fontSize: `${Math.max(10, Math.round(jumboCardWidth * 0.042))}px`,
+                              letterSpacing: '0.04em',
+                            }}
+                          >
+                            {detail}
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          </CombatOverlayFrame>
+        )}
+        <style>{`
+          @keyframes keru-foundation-flash {
+            0% { opacity: 0; transform: scale(0.92); }
+            22% { opacity: 1; transform: scale(1.04); }
+            100% { opacity: 0; transform: scale(1.12); }
+          }
+          @keyframes keru-foundation-shimmer {
+            0% { opacity: 0.95; transform: translateX(-8%) scale(0.92); }
+            45% { opacity: 0.85; transform: translateX(6%) scale(1.04); }
+            100% { opacity: 0; transform: translateX(14%) scale(1.08); }
+          }
+          @keyframes keru-foundation-sparkles {
+            0% { opacity: 0.95; transform: scale(0.86); }
+            35% { opacity: 1; transform: scale(1.02); }
+            100% { opacity: 0; transform: scale(1.14); }
+          }
+        `}</style>
         <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />
         {enemyHandOverlay}
         {rpgCardInspectOverlay}

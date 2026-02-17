@@ -33,6 +33,7 @@ const ELEMENT_ACCENT: Record<string, string> = {
 };
 
 const ACTOR_NODE_SCENE_BG: Record<string, string> = {
+  keru: '/assets/actors/constellations/const_fox.png',
   fox: '/assets/actors/constellations/const_fox.png',
 };
 

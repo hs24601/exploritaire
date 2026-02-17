@@ -362,6 +362,24 @@ export default function App() {
           });
         }
         if (card) {
+          if (gameState.playtestVariant === 'rpg' && card.id.startsWith('keru-archetype-')) {
+            const archetype = card.id.replace('keru-archetype-', '');
+            if (archetype === 'wolf' || archetype === 'bear' || archetype === 'cat') {
+              const applied = actions.applyKeruArchetype(archetype);
+              if (applied) {
+                const directionDeg = momentum
+                  ? (Math.atan2(momentum.y, momentum.x) * 180) / Math.PI
+                  : -90;
+                setFoundationSplashHint({
+                  foundationIndex,
+                  directionDeg,
+                  token: Date.now(),
+                });
+              }
+            }
+            draggedHandCardRef.current = null;
+            return;
+          }
           if (gameState.playtestVariant === 'rpg' && card.id.startsWith('rpg-')) {
             const point = dropPoint;
             if (point) {
@@ -1436,6 +1454,7 @@ export default function App() {
                   spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
                   setBiomeTableaus: actions.setBiomeTableaus,
                   addRpgHandCard: actions.addRpgHandCard,
+                  applyKeruArchetype: actions.applyKeruArchetype,
                 }}
                 explorationStepRef={explorationStepRef}
                 />

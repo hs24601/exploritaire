@@ -30,6 +30,19 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
   const orimSlotSize = Math.max(6, Math.round(cardWidth * 0.16));
   const [rotation, setRotation] = useState(0);
   const lastRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const isKeruRewardCard = card.id.startsWith('keru-archetype-');
+  const keruMeta = (() => {
+    if (card.id === 'keru-archetype-wolf') {
+      return { title: 'WOLF', subtitle: 'Keru Archetype', accent: '#f7d24b' };
+    }
+    if (card.id === 'keru-archetype-bear') {
+      return { title: 'BEAR', subtitle: 'Keru Archetype', accent: '#ffb075' };
+    }
+    if (card.id === 'keru-archetype-cat') {
+      return { title: 'CAT', subtitle: 'Keru Archetype', accent: '#9de3ff' };
+    }
+    return null;
+  })();
 
   useEffect(() => {
     const now = performance.now();
@@ -74,10 +87,47 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
           color: suitColor,
         }}
       >
-        <div style={{ textShadow: `0 0 10px ${suitColor}` }}>
-          {getRankDisplay(card.rank)}
-        </div>
-        {hasOrimSlots ? (
+        {isKeruRewardCard && keruMeta ? (
+          <div className="w-full h-full flex flex-col items-start justify-start px-2 py-2">
+            <div
+              style={{
+                fontSize: Math.max(8, Math.round(cardWidth * 0.09)),
+                letterSpacing: '0.12em',
+                color: '#7fdbca',
+                fontWeight: 700,
+              }}
+            >
+              {keruMeta.subtitle}
+            </div>
+            <div
+              style={{
+                fontSize: Math.max(12, Math.round(cardWidth * 0.18)),
+                letterSpacing: '0.1em',
+                color: '#f8f8f8',
+                fontWeight: 700,
+                lineHeight: 1.1,
+                marginTop: 2,
+              }}
+            >
+              {keruMeta.title}
+            </div>
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: Math.max(8, Math.round(cardWidth * 0.08)),
+                fontWeight: 700,
+                color: keruMeta.accent,
+              }}
+            >
+              Aspect
+            </div>
+          </div>
+        ) : (
+          <div style={{ textShadow: `0 0 10px ${suitColor}` }}>
+            {getRankDisplay(card.rank)}
+          </div>
+        )}
+        {!isKeruRewardCard && hasOrimSlots ? (
           <div className="flex items-center justify-center gap-1">
             {orimSlots.map((slot, index) => {
               const element = index === 0
@@ -106,9 +156,9 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
               );
             })}
           </div>
-        ) : (
+        ) : !isKeruRewardCard ? (
           <div style={{ fontSize: '1.2rem' }}>{suitDisplay}</div>
-        )}
+        ) : null}
       </CardFrame>
     </div>,
     document.body

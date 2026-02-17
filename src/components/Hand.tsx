@@ -1,4 +1,4 @@
-import { memo, useState, useMemo, useCallback } from 'react';
+import { memo, useState, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Card as CardType, Element, InteractionMode, OrimDefinition } from '../engine/types';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
@@ -36,6 +36,7 @@ const FAN = {
   hoverScale: 1.1,
 } as const;
 const INSPECT_HOLD_MS = 1000;
+const DRAG_START_THRESHOLD_PX = 10;
 
 function computeFanPositions(n: number, minCenterDistance: number, maxCenterDistance: number) {
   if (n === 0) return [];
@@ -76,6 +77,13 @@ export const Hand = memo(function Hand({
   upgradedCardIds = [],
 }: HandProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const pendingDragRef = useRef<{
+    id: string;
+    card: CardType;
+    startX: number;
+    startY: number;
+    rect: DOMRect;
+  } | null>(null);
   const globalScale = useCardScale();
   const effectiveScale = cardScale * globalScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
@@ -209,6 +217,15 @@ export const Hand = memo(function Hand({
             const handlePressStart = (event: React.PointerEvent) => {
               if (!onCardLongPress) return;
               if (isOnCooldown) return;
+              if (canDrag) {
+                pendingDragRef.current = {
+                  id: card.id,
+                  card,
+                  startX: event.clientX,
+                  startY: event.clientY,
+                  rect: event.currentTarget.getBoundingClientRect(),
+                };
+              }
               longPressInspect.startLongPress({
                 id: card.id,
                 payload: card,
@@ -216,9 +233,23 @@ export const Hand = memo(function Hand({
               });
             };
             const handlePressMove = (event: React.PointerEvent) => {
+              const pendingDrag = pendingDragRef.current;
+              if (canDrag && pendingDrag && pendingDrag.id === card.id) {
+                const dx = event.clientX - pendingDrag.startX;
+                const dy = event.clientY - pendingDrag.startY;
+                if ((dx * dx) + (dy * dy) >= (DRAG_START_THRESHOLD_PX * DRAG_START_THRESHOLD_PX)) {
+                  longPressInspect.handlePointerEnd();
+                  pendingDragRef.current = null;
+                  handleDragStart(card, event.clientX, event.clientY, pendingDrag.rect);
+                  return;
+                }
+              }
               longPressInspect.handlePointerMove(event);
             };
             const handlePressEnd = () => {
+              if (pendingDragRef.current?.id === card.id) {
+                pendingDragRef.current = null;
+              }
               longPressInspect.handlePointerEnd();
             };
             const handleCardClick = () => {
@@ -282,7 +313,7 @@ export const Hand = memo(function Hand({
                         ? handleCardClick
                         : undefined
                     }
-                    onDragStart={canDrag ? handleDragStart : undefined}
+                    onDragStart={canDrag && !onCardLongPress ? handleDragStart : undefined}
                     showGraphics={showGraphics}
                     isDimmed={isOnCooldown}
                     orimDefinitions={orimDefinitions}

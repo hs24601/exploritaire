@@ -158,6 +158,29 @@ export interface RpgDotEffect {
   effectKind?: 'vice_grip' | 'bleed';
 }
 
+export type ActorKeruArchetype = 'blank' | 'wolf' | 'bear' | 'cat';
+
+export interface ActorKeru {
+  id: string;
+  archetype: ActorKeruArchetype;
+  label: string;
+  hp: number;
+  hpMax: number;
+  armor: number;
+  stamina: number;
+  staminaMax: number;
+  energy: number;
+  energyMax: number;
+  evasion: number;
+  sight: number;
+  mobility: number;
+  leadership: number;
+  tags: string[];
+  selectedAspectIds: string[];
+  mutationCount: number;
+  lastMutationAt?: number;
+}
+
 export interface GameState {
   tableaus: Card[][];
   foundations: Card[][];
@@ -216,6 +239,7 @@ export interface GameState {
   rpgBlindedEnemyLevel?: number;
   rpgBlindedEnemyUntil?: number;
   playtestVariant?: 'single-foundation' | 'party-foundations' | 'party-battle' | 'rpg';
+  actorKeru?: ActorKeru;
 }
 
 export interface Move {

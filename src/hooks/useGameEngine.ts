@@ -67,6 +67,7 @@ import {
   updateRelicDefinitions as updateRelicDefinitionsFn,
   updateEquippedRelics as updateEquippedRelicsFn,
   processRelicCombatEvent as processRelicCombatEventFn,
+  applyKeruArchetype as applyKeruArchetypeFn,
 } from '../engine/game';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { findBestMoveSequence, solveOptimally } from '../engine/guidance';
@@ -338,6 +339,7 @@ export function useGameEngine(
           orimStash: gameState.orimStash,
           orimInstances: gameState.orimInstances,
           actorDecks: gameState.actorDecks,
+          actorKeru: gameState.actorKeru,
           noRegretCooldown: gameState.noRegretCooldown,
         }
       : undefined;
@@ -1024,6 +1026,14 @@ export function useGameEngine(
     setGameState((prev) => (prev ? processRelicCombatEventFn(prev, event) : prev));
   }, []);
 
+  const applyKeruArchetype = useCallback((archetype: 'wolf' | 'bear' | 'cat') => {
+    if (!gameState) return false;
+    const newState = applyKeruArchetypeFn(gameState, archetype);
+    if (newState === gameState) return false;
+    setGameState(newState);
+    return true;
+  }, [gameState]);
+
   const setEnemyDifficulty = useCallback((difficulty: GameState['enemyDifficulty']) => {
     setGameState((prev) => (prev ? { ...prev, enemyDifficulty: difficulty } : prev));
   }, []);
@@ -1120,6 +1130,7 @@ export function useGameEngine(
       updateRelicDefinitions,
       updateEquippedRelics,
       processRelicCombatEvent,
+      applyKeruArchetype,
       setEnemyDifficulty,
       toggleGraphics,
     },

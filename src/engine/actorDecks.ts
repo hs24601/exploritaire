@@ -37,6 +37,11 @@ const createDeckCard = (
 
 // ACTOR_DECK_TEMPLATES_START
 export const ACTOR_DECK_TEMPLATES: Record<string, { values: number[]; slotsPerCard?: number[]; starterOrim?: { cardIndex: number; slotIndex?: number; orimId: string }[]; slotLocks?: { cardIndex: number; slotIndex?: number; locked: boolean }[] }> = {
+  keru: {
+    values: [1, 3],
+    slotsPerCard: [1, 1],
+    starterOrim: [],
+  },
   fox: {
     values: [1, 3],
     slotsPerCard: [1, 1],

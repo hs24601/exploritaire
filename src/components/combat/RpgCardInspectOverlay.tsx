@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import type { Card as CardType } from '../../engine/types';
 import { CombatOverlayFrame } from './CombatOverlayFrame';
 
@@ -20,8 +20,35 @@ function getCardLevel(card: CardType): number {
   return Number.isFinite(parsed) ? parsed : 1;
 }
 
-function getRpgCardMeta(card: CardType) {
+export function getRpgCardMeta(card: CardType) {
   const level = getCardLevel(card);
+  if (card.id === 'keru-archetype-wolf') {
+    return {
+      title: 'Wolf Aspect',
+      subtitle: 'Keru Archetype',
+      body: 'Bind feral ranger instincts into your Keru core.',
+      details: ['Stamina +', 'Leadership +', 'Role: Ranger'],
+      accent: '#f7d24b',
+    };
+  }
+  if (card.id === 'keru-archetype-bear') {
+    return {
+      title: 'Bear Aspect',
+      subtitle: 'Keru Archetype',
+      body: 'Fuse a heavy guardian shell into your Keru form.',
+      details: ['HP ++', 'Armor ++', 'Role: Tank'],
+      accent: '#ffb075',
+    };
+  }
+  if (card.id === 'keru-archetype-cat') {
+    return {
+      title: 'Cat Aspect',
+      subtitle: 'Keru Archetype',
+      body: 'Attune to stealth, sight, and evasive mobility.',
+      details: ['Stealth +', 'Sight +', 'Mobility/Evasion +', 'Role: Rogue'],
+      accent: '#9de3ff',
+    };
+  }
   if (card.id.startsWith('rpg-scratch-')) {
     return {
       title: 'Scratch',
@@ -113,6 +140,12 @@ export const RpgCardInspectOverlay = memo(function RpgCardInspectOverlay({
   zIndex = 10022,
 }: RpgCardInspectOverlayProps) {
   const meta = useMemo(() => (card ? getRpgCardMeta(card) : null), [card]);
+  const openedAtRef = useRef(0);
+
+  useEffect(() => {
+    if (!open) return;
+    openedAtRef.current = performance.now();
+  }, [open, card?.id]);
 
   useEffect(() => {
     if (!open) return;
@@ -153,12 +186,16 @@ export const RpgCardInspectOverlay = memo(function RpgCardInspectOverlay({
     mythic: '222, 91, 117',
   };
   const rarityRgb = rarityColorByKey[rarityKey] ?? rarityColorByKey.common;
+  const handleBackdropClose = () => {
+    if (performance.now() - openedAtRef.current < 220) return;
+    onClose();
+  };
 
   return (
     <CombatOverlayFrame visible={open} interactive dimOpacity={0.6} blurPx={2} zIndex={zIndex}>
       <div
         className="absolute inset-0"
-        onClick={onClose}
+        onClick={handleBackdropClose}
         onContextMenu={(event) => {
           event.preventDefault();
           event.stopPropagation();

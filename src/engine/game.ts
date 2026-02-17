@@ -1,4 +1,4 @@
-import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent } from './types';
+import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype } from './types';
 import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, GARDEN_GRID, ALL_ELEMENTS, MAX_KARMA_DEALING_ATTEMPTS, TOKEN_PROXIMITY_THRESHOLD, randomIdSuffix, createFullWildSentinel } from './constants';
 import { createDeck, shuffleDeck } from './deck';
 import { canPlayCardWithWild, checkKarmaDealing } from './rules';
@@ -60,6 +60,8 @@ const DEFAULT_ENEMY_ACTOR_IDS = ['shadowcub', 'shadowkit'] as const;
 const DEFAULT_EQUIPPED_RELIC_IDS = new Set<string>(['turtles_bide', 'koi_coin', 'heart_of_the_wild', 'hindsight', 'controlled_dragonfire', 'summon_darkspawn']);
 const HINDSIGHT_BEHAVIOR_ID = 'hindsight_v1';
 const HINDSIGHT_LAST_USED_REST_COUNTER = 'hindsightLastUsedRestCount';
+const DEFAULT_KERU_ID = 'keru-primary';
+const KERU_BASE_HP = 1;
 
 function clampPartyForFoundations(partyActors: Actor[]): Actor[] {
   return partyActors.slice(0, PARTY_FOUNDATION_LIMIT);
@@ -211,6 +213,98 @@ function createEmptyTokenCounts(): Record<Element, number> {
     D: 0,
     L: 0,
     N: 0,
+  };
+}
+
+function createDefaultKeru(): ActorKeru {
+  return {
+    id: DEFAULT_KERU_ID,
+    archetype: 'blank',
+    label: 'Blank Keru',
+    hp: KERU_BASE_HP,
+    hpMax: KERU_BASE_HP,
+    armor: 0,
+    stamina: 1,
+    staminaMax: 1,
+    energy: 1,
+    energyMax: 1,
+    evasion: 0,
+    sight: 0,
+    mobility: 0,
+    leadership: 0,
+    tags: ['fragile', 'blank'],
+    selectedAspectIds: [],
+    mutationCount: 0,
+  };
+}
+
+function normalizeKeru(keru?: ActorKeru): ActorKeru {
+  if (!keru) return createDefaultKeru();
+  return {
+    ...createDefaultKeru(),
+    ...keru,
+    hp: keru.hp ?? keru.hpMax ?? KERU_BASE_HP,
+    hpMax: keru.hpMax ?? KERU_BASE_HP,
+    archetype: keru.archetype ?? 'blank',
+    label: keru.label ?? 'Blank Keru',
+    selectedAspectIds: keru.selectedAspectIds ?? [],
+    tags: keru.tags ?? ['fragile', 'blank'],
+    mutationCount: keru.mutationCount ?? 0,
+  };
+}
+
+function getKeruArchetypePatch(archetype: Exclude<ActorKeruArchetype, 'blank'>): Pick<ActorKeru, 'archetype' | 'label' | 'hp' | 'hpMax' | 'armor' | 'stamina' | 'staminaMax' | 'energy' | 'energyMax' | 'evasion' | 'sight' | 'mobility' | 'leadership' | 'tags'> {
+  if (archetype === 'wolf') {
+    return {
+      archetype: 'wolf',
+      label: 'Wolf Keru',
+      hp: 2,
+      hpMax: 2,
+      armor: 0,
+      stamina: 4,
+      staminaMax: 4,
+      energy: 3,
+      energyMax: 3,
+      evasion: 8,
+      sight: 1,
+      mobility: 2,
+      leadership: 3,
+      tags: ['ranger', 'stamina', 'leadership'],
+    };
+  }
+  if (archetype === 'bear') {
+    return {
+      archetype: 'bear',
+      label: 'Bear Keru',
+      hp: 4,
+      hpMax: 4,
+      armor: 2,
+      stamina: 2,
+      staminaMax: 2,
+      energy: 2,
+      energyMax: 2,
+      evasion: 0,
+      sight: 0,
+      mobility: 0,
+      leadership: 1,
+      tags: ['tank', 'hp', 'armor'],
+    };
+  }
+  return {
+    archetype: 'cat',
+    label: 'Cat Keru',
+    hp: 2,
+    hpMax: 2,
+    armor: 0,
+    stamina: 3,
+    staminaMax: 3,
+    energy: 4,
+    energyMax: 4,
+    evasion: 24,
+    sight: 3,
+    mobility: 3,
+    leadership: 0,
+    tags: ['rogue', 'stealth', 'evasion', 'sight', 'mobility'],
   };
 }
 
@@ -393,6 +487,7 @@ export interface PersistedState {
   noRegretCooldowns?: Record<string, number>;
   noRegretCooldown?: number;
   tiles: Tile[];
+  actorKeru?: ActorKeru;
 }
 
 /**
@@ -523,8 +618,10 @@ export function initializeGame(
     };
   };
   const migrateActorDefinitionId = (actor: Actor): Actor => {
-    if (actor.definitionId !== 'fennec') return actor;
-    return { ...actor, definitionId: 'fox' };
+    if (actor.definitionId === 'fennec' || actor.definitionId === 'fox') {
+      return { ...actor, definitionId: 'keru' };
+    }
+    return actor;
   };
   const mergeOrimDefinitions = (
     baseDefinitions: OrimDefinition[],
@@ -667,6 +764,7 @@ export function initializeGame(
     playtestVariant: options?.playtestVariant ?? 'party-foundations',
     currentLocationId: persisted?.currentLocationId ?? 'starting_area', // Initialize player's starting location
     facingDirection: persisted?.facingDirection ?? 'N', // Initialize player's facing direction
+    actorKeru: normalizeKeru(persisted?.actorKeru),
   };
 
   if (!isFreshStart) return baseState;
@@ -674,7 +772,7 @@ export function initializeGame(
   const randomWildsTile = baseState.tiles.find((tile) => tile.definitionId === 'random_wilds') || null;
   if (!randomWildsTile) return baseState;
 
-  const partyDefinitionIds = ['fox', 'wolf', 'owl'];
+  const partyDefinitionIds = ['keru', 'wolf', 'owl'];
   const queuedActors = baseState.availableActors.filter((actor) =>
     partyDefinitionIds.includes(actor.definitionId)
   );
@@ -1179,7 +1277,7 @@ function awardActorComboCards(
   if (combo <= 0) return state.rpgHandCards;
 
   const rewards: Card[] = [];
-  if (foundationActor.definitionId === 'fox') {
+  if (foundationActor.definitionId === 'keru') {
     rewards.push(createRpgScratchCard(foundationActor.id));
   }
   if (foundationActor.definitionId === 'wolf') {
@@ -2532,6 +2630,70 @@ export function swapPartyLead(
     foundations: nextFoundations,
     foundationCombos: nextCombos,
     foundationTokens: nextTokens,
+  };
+}
+
+export function applyKeruArchetype(
+  state: GameState,
+  archetype: Exclude<ActorKeruArchetype, 'blank'>
+): GameState {
+  const currentKeru = normalizeKeru(state.actorKeru);
+  const patch = getKeruArchetypePatch(archetype);
+  const nextKeru: ActorKeru = {
+    ...currentKeru,
+    ...patch,
+    mutationCount: (currentKeru.mutationCount ?? 0) + 1,
+    selectedAspectIds: Array.from(new Set([...(currentKeru.selectedAspectIds ?? []), archetype])),
+    lastMutationAt: Date.now(),
+  };
+
+  const activeTileId = state.activeSessionTileId;
+  if (!activeTileId) {
+    return {
+      ...state,
+      actorKeru: nextKeru,
+    };
+  }
+  const party = getPartyForTile(state, activeTileId);
+  if (party.length === 0) {
+    return {
+      ...state,
+      actorKeru: nextKeru,
+    };
+  }
+
+  const lead = party[0];
+  const nextLead: Actor = {
+    ...lead,
+    hpMax: nextKeru.hpMax,
+    hp: Math.min(nextKeru.hp, nextKeru.hpMax),
+    staminaMax: nextKeru.staminaMax,
+    stamina: Math.min(nextKeru.stamina, nextKeru.staminaMax),
+    energyMax: nextKeru.energyMax,
+    energy: Math.min(nextKeru.energy, nextKeru.energyMax),
+    armor: nextKeru.armor,
+    evasion: nextKeru.evasion,
+    accuracy: Math.max(70, Math.min(130, 100 + nextKeru.sight * 3)),
+  };
+  const nextParty = [nextLead, ...party.slice(1)];
+
+  const nextFoundations = [...state.foundations];
+  if (nextFoundations.length > 0) {
+    const existing = nextFoundations[0] ?? [];
+    const baseCard = createActorFoundationCard(nextLead);
+    nextFoundations[0] = existing.length > 0
+      ? [{ ...existing[0], ...baseCard }]
+      : [baseCard];
+  }
+
+  return {
+    ...state,
+    actorKeru: nextKeru,
+    tileParties: {
+      ...state.tileParties,
+      [activeTileId]: nextParty,
+    },
+    foundations: nextFoundations,
   };
 }
 
