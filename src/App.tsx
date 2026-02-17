@@ -297,25 +297,6 @@ export default function App() {
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
-      if (event.repeat) return;
-      if (event.code !== 'AltLeft') return;
-      event.preventDefault();
-      setIsGamePaused((prev) => {
-        const next = !prev;
-        setHidePauseOverlay(next);
-        return next;
-      });
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
       const key = event.key.toLowerCase();
       if (key === 'a') {
         setToolingOpen((prev) => !prev);

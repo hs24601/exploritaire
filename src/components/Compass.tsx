@@ -70,7 +70,7 @@ const compassWatercolorConfig: WatercolorConfig = {
 interface CompassProps {
   value?: Direction;
   onChange?: (direction: Direction) => void;
-  mapAlignmentMode?: 'compass' | 'north';
+  mapAlignmentMode?: 'player' | 'map';
   onMapAlignmentToggle?: () => void;
 }
 
@@ -219,12 +219,12 @@ export const Compass = memo(function Compass({
               textShadow: '0 0 6px rgba(243, 215, 162, 0.45)',
               boxShadow: '0 0 10px rgba(154, 114, 60, 0.35)',
             }}
-            aria-label={`Map alignment ${mapAlignmentMode === 'north' ? 'true north' : 'aligned with compass'}. Click to toggle.`}
-            title={mapAlignmentMode === 'north'
-              ? 'Map alignment: TRUE NORTH. Click to switch to ALIGNED WITH COMPASS.'
-              : 'Map alignment: ALIGNED WITH COMPASS. Click to switch to TRUE NORTH.'}
+            aria-label={`Map alignment ${mapAlignmentMode === 'map' ? 'map north' : 'player direction'}. Click to toggle.`}
+            title={mapAlignmentMode === 'map'
+              ? 'Map alignment: MAP NORTH. Click to switch to PLAYER DIRECTION.'
+              : 'Map alignment: PLAYER DIRECTION. Click to switch to MAP NORTH.'}
           >
-            <span>{mapAlignmentMode === 'north' ? 'TN' : 'AC'}</span>
+            <span>{mapAlignmentMode === 'map' ? 'MN' : 'PD'}</span>
           </button>
         )}
       </div>

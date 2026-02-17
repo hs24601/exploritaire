@@ -1,4 +1,4 @@
-import { memo, useState, useMemo, useCallback } from 'react';
+import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Card as CardType, Element, InteractionMode, OrimDefinition } from '../engine/types';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
@@ -11,6 +11,7 @@ interface HandProps {
   cardScale: number;
   onDragStart: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
   onCardClick?: (card: CardType) => void;
+  onCardLongPress?: (card: CardType) => void;
   stockCount?: number;
   onStockClick?: () => void;
   infiniteStockEnabled?: boolean;
@@ -59,6 +60,7 @@ export const Hand = memo(function Hand({
   cardScale,
   onDragStart,
   onCardClick,
+  onCardLongPress,
   stockCount = 0,
   onStockClick,
   infiniteStockEnabled = false,
@@ -72,6 +74,9 @@ export const Hand = memo(function Hand({
   upgradedCardIds = [],
 }: HandProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressCardIdRef = useRef<string | null>(null);
+  const consumedClickCardIdsRef = useRef(new Set<string>());
   const globalScale = useCardScale();
   const effectiveScale = cardScale * globalScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
@@ -168,6 +173,18 @@ export const Hand = memo(function Hand({
     );
   }, []);
 
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressCardIdRef.current = null;
+  }, []);
+
+  useEffect(() => () => {
+    clearLongPress();
+  }, [clearLongPress]);
+
   if (cards.length === 0 && stockCount === 0) return null;
 
   return (
@@ -192,6 +209,29 @@ export const Hand = memo(function Hand({
             const baseScale = isHovered ? FAN.hoverScale : 1;
             const finalScale = isHovered ? baseScale : baseScale * cooldownScale;
             const canDrag = interactionMode === 'dnd' && !isOnCooldown;
+            const handlePressStart = (event: React.PointerEvent) => {
+              if (!onCardLongPress) return;
+              if (interactionMode !== 'click') return;
+              if (isOnCooldown) return;
+              if (event.pointerType === 'mouse' && event.button !== 0) return;
+              clearLongPress();
+              longPressCardIdRef.current = card.id;
+              const holdMs = event.pointerType === 'mouse' ? 520 : 420;
+              longPressTimerRef.current = window.setTimeout(() => {
+                consumedClickCardIdsRef.current.add(card.id);
+                onCardLongPress(card);
+              }, holdMs);
+            };
+            const handlePressEnd = () => {
+              clearLongPress();
+            };
+            const handleCardClick = () => {
+              if (consumedClickCardIdsRef.current.has(card.id)) {
+                consumedClickCardIdsRef.current.delete(card.id);
+                return;
+              }
+              onCardClick?.(card);
+            };
 
             return (
               <motion.div
@@ -214,6 +254,10 @@ export const Hand = memo(function Hand({
                 }}
                 onHoverStart={() => setHoveredId(card.id)}
                 onHoverEnd={() => setHoveredId(null)}
+                onPointerDown={handlePressStart}
+                onPointerUp={handlePressEnd}
+                onPointerLeave={handlePressEnd}
+                onPointerCancel={handlePressEnd}
               >
                 {isUpgraded && (
                   <div
@@ -239,7 +283,7 @@ export const Hand = memo(function Hand({
                     isAnyCardDragging={isAnyCardDragging}
                     onClick={
                       interactionMode === 'click' && !isOnCooldown && onCardClick
-                        ? () => onCardClick(card)
+                        ? handleCardClick
                         : undefined
                     }
                     onDragStart={canDrag ? handleDragStart : undefined}

@@ -510,6 +510,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
           touchPanRef.current.active = false;
           return;
         }
+        e.preventDefault();
         touchPanRef.current = {
           active: true,
           startX: t.clientX,
@@ -623,7 +624,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       touchPanRef.current.active = false;
     };
 
-    target.addEventListener('touchstart', handleTouchStart, { passive: true });
+    target.addEventListener('touchstart', handleTouchStart, { passive: false });
     target.addEventListener('touchmove', handleTouchMove, { passive: false });
     target.addEventListener('touchend', handleTouchEnd);
     target.addEventListener('touchcancel', handleTouchEnd);

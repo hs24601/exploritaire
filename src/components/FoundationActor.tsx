@@ -132,6 +132,7 @@ interface FoundationActorProps {
   maskValue?: boolean;
   splashDirectionDeg?: number;
   splashDirectionToken?: number;
+  onActorLongPress?: (payload: { actor: Actor }) => void;
 }
 
 export const FoundationActor = memo(function FoundationActor({
@@ -160,6 +161,7 @@ export const FoundationActor = memo(function FoundationActor({
   maskValue = false,
   splashDirectionDeg,
   splashDirectionToken,
+  onActorLongPress,
 }: FoundationActorProps) {
   const effectiveScale = cardScale;
   const showClickHighlight = interactionMode === 'click' && (canReceive || isGuidanceTarget);
@@ -173,6 +175,8 @@ export const FoundationActor = memo(function FoundationActor({
   const [orimHoverToken, setOrimHoverToken] = useState(0);
   const [isCardHovering, setIsCardHovering] = useState(false);
   const [cardHoverToken, setCardHoverToken] = useState(0);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressFiredRef = useRef(false);
   const prevCardCountRef = useRef(cards.length);
   const foundationTiltRef = useRef(new Map<string, number>());
   const foundationOffsetRef = useRef(new Map<string, { x: number; y: number }>());
@@ -203,6 +207,40 @@ export const FoundationActor = memo(function FoundationActor({
   } | null>(null);
 
   const showEmptyFoundation = cards.length === 0;
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => {
+    clearLongPress();
+  }, [clearLongPress]);
+
+  const handleFoundationPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!actor || !onActorLongPress) return;
+    clearLongPress();
+    longPressFiredRef.current = false;
+    const holdMs = event.pointerType === 'mouse' ? 520 : 420;
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressFiredRef.current = true;
+      onActorLongPress({ actor });
+    }, holdMs);
+  }, [actor, clearLongPress, onActorLongPress]);
+
+  const handleFoundationPointerEnd = useCallback(() => {
+    clearLongPress();
+  }, [clearLongPress]);
+
+  const handleFoundationClick = useCallback(() => {
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+    onFoundationClick(index);
+  }, [index, onFoundationClick]);
 
   useEffect(() => {
     if (!watercolorEngine || !pendingSplashRef.current || disableFoundationSplashes) return;
@@ -479,7 +517,11 @@ export const FoundationActor = memo(function FoundationActor({
       <Tooltip content={tooltipContent} disabled={!tooltipContent || tooltipDisabled} delayMs={1500} pinnable>
         <motion.div
           ref={refCallback}
-          onClick={interactionMode === 'click' ? () => onFoundationClick(index) : undefined}
+          onClick={interactionMode === 'click' ? handleFoundationClick : undefined}
+          onPointerDown={onActorLongPress ? handleFoundationPointerDown : undefined}
+          onPointerUp={onActorLongPress ? handleFoundationPointerEnd : undefined}
+          onPointerLeave={onActorLongPress ? handleFoundationPointerEnd : undefined}
+          onPointerCancel={onActorLongPress ? handleFoundationPointerEnd : undefined}
           onMouseEnter={() => {
             if (tooltipDisabled) return;
             setIsCardHovering(true);

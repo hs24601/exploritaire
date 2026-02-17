@@ -65,5 +65,15 @@ export const RELIC_DEFINITIONS: RelicDefinition[] = [
     behaviorId: 'controlled_dragonfire_v1',
     params: {},
   },
+  {
+    id: 'summon_darkspawn',
+    name: 'Summon Darkspawn',
+    description: 'Click to summon a random enemy to the battlefield.',
+    rarity: 'rare',
+    passive: true,
+    scope: 'party',
+    behaviorId: 'summon_darkspawn_v1',
+    params: {},
+  },
 ];
 // RELIC_DEFINITIONS_END

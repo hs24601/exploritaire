@@ -9,7 +9,16 @@ export const mainWorldMap: WorldMapDefinition = {
   id: 'main_world',
   name: 'Exploritaire World',
   size: { cols: 11, rows: 11 },
-  defaultSpawnPosition: { col: 0, row: 0 },
+  defaultSpawnPosition: { col: 0, row: 2 },
+  tutorialRail: {
+    path: [
+      { col: 0, row: 2 },
+      { col: 0, row: 1 },
+      { col: 0, row: 0 },
+    ],
+    lockUntilPathComplete: true,
+    label: 'Tutorial Path',
+  },
   pointsOfInterest: [
     {
       id: 'poi_start',
@@ -72,12 +81,36 @@ export const mainWorldMap: WorldMapDefinition = {
     },
   ],
   cells: [
-    { gridPosition: { col: 0, row: 0 }, poiId: 'poi_start', traversalDifficulty: 1 },
+    { gridPosition: { col: 0, row: 0 }, poiId: 'poi_initial_02', traversalDifficulty: 1 },
     { gridPosition: { col: 0, row: 1 }, poiId: 'poi_initial_01', traversalDifficulty: 1 },
-    { gridPosition: { col: 0, row: 2 }, poiId: 'poi_initial_02', traversalDifficulty: 1 },
+    { gridPosition: { col: 0, row: 2 }, poiId: 'poi_start', traversalDifficulty: 1 },
     { gridPosition: { col: 0, row: -2 }, poiId: 'poi_oasis_a', traversalDifficulty: 1 },
     { gridPosition: { col: 1, row: 0 }, poiId: 'poi_random_wilds', traversalDifficulty: 2 },
-    { gridPosition: { col: 1, row: 1 }, poiId: 'poi_battle_arena', traversalDifficulty: 5 },
-    { gridPosition: { col: -1, row: 1 }, poiId: 'poi_supply_cache', traversalDifficulty: 1 },
+  ],
+  blockedCells: [
+    { gridPosition: { col: -2, row: 0 }, reason: 'Canyon wall' },
+    { gridPosition: { col: -1, row: 0 }, reason: 'Canyon wall' },
+    { gridPosition: { col: 1, row: 0 }, reason: 'Canyon wall' },
+    { gridPosition: { col: 2, row: 0 }, reason: 'Canyon wall' },
+    { gridPosition: { col: -2, row: 1 }, reason: 'Mountain pass' },
+    { gridPosition: { col: -1, row: 1 }, reason: 'Mountain pass' },
+    { gridPosition: { col: 1, row: 1 }, reason: 'Mountain pass' },
+    { gridPosition: { col: 2, row: 1 }, reason: 'Mountain pass' },
+    { gridPosition: { col: -2, row: 2 }, reason: 'Canyon wall' },
+    { gridPosition: { col: -1, row: 2 }, reason: 'Canyon wall' },
+    { gridPosition: { col: 1, row: 2 }, reason: 'Canyon wall' },
+    { gridPosition: { col: 2, row: 2 }, reason: 'Canyon wall' },
+    { gridPosition: { col: -2, row: 3 }, reason: 'Mountain ridge' },
+    { gridPosition: { col: -1, row: 3 }, reason: 'Mountain ridge' },
+    { gridPosition: { col: 0, row: 3 }, reason: 'Mountain ridge' },
+    { gridPosition: { col: 1, row: 3 }, reason: 'Mountain ridge' },
+    { gridPosition: { col: 2, row: 3 }, reason: 'Mountain ridge' },
+  ],
+  blockedEdges: [
+    { from: { col: 0, row: 0 }, to: { col: 0, row: -1 }, reason: 'Collapsed bridge' },
+  ],
+  conditionalEdges: [
+    { from: { col: 0, row: 2 }, to: { col: 0, row: 1 }, requirement: 'source_tableau_cleared', reason: 'Clear tableau at 0,2 first' },
+    { from: { col: 0, row: 1 }, to: { col: 0, row: 0 }, requirement: 'source_tableau_cleared', reason: 'Clear tableau at 0,1 first' },
   ],
 };

@@ -57,7 +57,7 @@ const DEFAULT_ENEMY_FOUNDATION_SEEDS: Array<{ id: string; rank: number; suit: Su
   { id: 'enemy-sun', rank: 8, suit: '☀️', element: 'L' },
 ];
 const DEFAULT_ENEMY_ACTOR_IDS = ['shadowcub', 'shadowkit'] as const;
-const DEFAULT_EQUIPPED_RELIC_IDS = new Set<string>(['turtles_bide', 'koi_coin', 'heart_of_the_wild', 'hindsight', 'controlled_dragonfire']);
+const DEFAULT_EQUIPPED_RELIC_IDS = new Set<string>(['turtles_bide', 'koi_coin', 'heart_of_the_wild', 'hindsight', 'controlled_dragonfire', 'summon_darkspawn']);
 const HINDSIGHT_BEHAVIOR_ID = 'hindsight_v1';
 const HINDSIGHT_LAST_USED_REST_COUNTER = 'hindsightLastUsedRestCount';
 
