@@ -13,6 +13,7 @@ import { WatercolorContext } from '../watercolor/useWatercolorEnabled';
 import { getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
 import { getElementCardWatercolor } from '../watercolor/elementCardWatercolor';
 import type { WatercolorConfig } from '../watercolor/types';
+import aspectProfilesJson from '../data/aspectProfiles.json';
 
 const CARD_WATERCOLOR_CANVAS_SCALE = 1.35;
 const CARD_WATERCOLOR_OVERALL_SCALE_MULTIPLIER = 1 / CARD_WATERCOLOR_CANVAS_SCALE;
@@ -158,6 +159,54 @@ export const Card = memo(function Card({
     }
     return null;
   }, [card, rpgLevel]);
+  const keruArchetypeMeta = useMemo(() => {
+    if (!card) return null;
+    if (card.id === 'keru-archetype-wolf') {
+      return { title: 'LUPUS', subtitle: 'ASPECT', titleColor: '#f7d24b', subtitleColor: '#7fdbca' };
+    }
+    if (card.id === 'keru-archetype-bear') {
+      return { title: 'URSUS', subtitle: 'ASPECT', titleColor: '#ffb075', subtitleColor: '#7fdbca' };
+    }
+    if (card.id === 'keru-archetype-cat') {
+      return { title: 'FELIS', subtitle: 'ASPECT', titleColor: '#9de3ff', subtitleColor: '#7fdbca' };
+    }
+    return null;
+  }, [card]);
+  const cardTitleMeta = keruArchetypeMeta ?? rpgCardMeta;
+  const keruAspectProfile = useMemo(() => {
+    if (!card || !card.id.startsWith('keru-archetype-')) return null;
+    const key = card.id.replace('keru-archetype-', '').toLowerCase();
+    const profiles = (aspectProfilesJson as { aspects?: Array<{
+      id?: string;
+      name?: string;
+      description?: string;
+      archetype?: string | null;
+      rarity?: string;
+      attributes?: Array<string | { stat?: string; op?: string; value?: number | string }>;
+    }> }).aspects ?? [];
+    const match = profiles.find((entry) => {
+      const id = String(entry.id ?? '').toLowerCase();
+      const archetype = String(entry.archetype ?? '').toLowerCase();
+      return id === key || archetype === key;
+    }) ?? null;
+    if (!match) return null;
+    const attributes = (match.attributes ?? []).map((attr) => {
+      if (typeof attr === 'string') return attr;
+      const stat = String(attr.stat ?? '').trim();
+      const op = String(attr.op ?? '').trim();
+      const value = String(attr.value ?? '').trim();
+      if (!stat && !value) return '';
+      const safeOp = op || '+';
+      return `${stat}${safeOp}${value}`.trim();
+    }).filter(Boolean);
+    return {
+      archetype: match.archetype ?? '',
+      rarity: match.rarity ?? 'common',
+      name: match.name ?? '',
+      description: match.description ?? '',
+      attributes,
+    };
+  }, [card]);
   const isUpgradedRpgCard = !!card && (
     card.id.startsWith('rpg-vice-bite-')
     || card.id.startsWith('rpg-blinding-peck-')
@@ -284,6 +333,7 @@ export const Card = memo(function Card({
     }));
   }, [showDarkArtOverlay, card]);
 
+  const isKeruAspectCard = !!keruAspectProfile;
   return (
     <CardFrame
       ref={cardRef}
@@ -298,8 +348,8 @@ export const Card = memo(function Card({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
-        flex flex-col items-center justify-center gap-0
-        text-2xl font-bold px-2 py-1
+        flex flex-col items-center ${isKeruAspectCard ? 'justify-start' : 'justify-center'} gap-0
+        text-2xl font-bold ${isKeruAspectCard ? 'px-0 py-0' : 'px-2 py-1'}
         ${onClick && !faceDown ? 'cursor-pointer' : ''}
         ${onDragStart && !faceDown ? 'cursor-grab' : ''}
         ${!onClick && !onDragStart ? 'cursor-default' : ''}
@@ -925,29 +975,118 @@ export const Card = memo(function Card({
                   <WatercolorOverlay config={valueWatercolorConfig} />
                 </div>
               )}
-              {rpgCardMeta ? (
+              {keruAspectProfile ? (
+                <div className="relative z-[2] flex h-full w-full flex-col items-center text-center px-3 pt-0 pb-2 overflow-hidden">
+                  <div
+                    style={{
+                      color: '#7fdbca',
+                      fontWeight: 700,
+                      fontSize: Math.max(7, Math.round(frameSize.width * 0.075)),
+                      letterSpacing: '0.22em',
+                      textTransform: 'uppercase',
+                      position: 'absolute',
+                      left: 10,
+                      top: 2,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {(keruAspectProfile.rarity || 'Common').toUpperCase()}
+                  </div>
+                  {(() => {
+                    const archetypeLabel = keruAspectProfile.archetype
+                      ? `${keruAspectProfile.archetype} Archetype`
+                      : 'Archetype';
+                    const labelLength = Math.max(archetypeLabel.length, 1);
+                    const maxWidth = frameSize.width - 24;
+                    const baseSize = frameSize.width * 0.085;
+                    const letterSpacing = Math.max(0.06, Math.min(0.16, 10 / labelLength));
+                    const fitSize = Math.floor(maxWidth / (labelLength * (0.62 + letterSpacing)));
+                    const fontSize = Math.max(7, Math.min(Math.round(baseSize), fitSize));
+                    return (
+                      <div
+                        style={{
+                          color: '#e6b31e',
+                          fontWeight: 700,
+                          fontSize,
+                          letterSpacing: `${letterSpacing}em`,
+                          textTransform: 'none',
+                          marginTop: Math.max(8, Math.round(frameSize.height * 0.06)),
+                          whiteSpace: 'nowrap',
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                          textOverflow: 'clip',
+                        }}
+                      >
+                        {archetypeLabel}
+                      </div>
+                    );
+                  })()}
+                  <div
+                    style={{
+                      color: '#f8f8f8',
+                      fontWeight: 900,
+                      fontSize: Math.max(14, Math.round(frameSize.width * 0.13)),
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      lineHeight: 1.1,
+                      marginTop: Math.max(6, Math.round(frameSize.height * 0.02)),
+                    }}
+                  >
+                    <div>ASPECT OF</div>
+                    <div>{(keruAspectProfile.name || 'Aspect').toUpperCase()}</div>
+                  </div>
+                  <div
+                    style={{
+                      color: '#d9f9f3',
+                      fontSize: Math.max(8, Math.round(frameSize.width * 0.065)),
+                      lineHeight: 1.35,
+                      maxHeight: Math.round(frameSize.height * 0.24),
+                      overflow: 'hidden',
+                      marginTop: Math.max(8, Math.round(frameSize.height * 0.03)),
+                      marginBottom: Math.max(8, Math.round(frameSize.height * 0.03)),
+                      paddingLeft: Math.max(4, Math.round(frameSize.width * 0.03)),
+                      paddingRight: Math.max(4, Math.round(frameSize.width * 0.03)),
+                    }}
+                  >
+                    {keruAspectProfile.description}
+                  </div>
+                  {keruAspectProfile.attributes.length > 0 && (
+                    <div className="mt-auto flex flex-wrap items-center justify-center gap-1 pb-4">
+                      {keruAspectProfile.attributes.map((attr) => (
+                        <span
+                          key={`${card.id}-${attr}`}
+                          className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-1 py-[1px] text-[7px] uppercase tracking-[0.12em]"
+                          style={{ color: '#e6b31e' }}
+                        >
+                          {attr}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : cardTitleMeta ? (
                 <div className="relative z-[2] flex flex-col items-center gap-0.5">
                   <span
                     style={{
-                      color: rpgCardMeta.titleColor,
+                      color: cardTitleMeta.titleColor,
                       fontWeight: 800,
                       fontSize: Math.max(9, Math.round(frameSize.width * 0.11)),
                       letterSpacing: '0.16em',
-                      textShadow: `0 0 8px ${rpgCardMeta.titleColor}88`,
+                      textShadow: `0 0 8px ${cardTitleMeta.titleColor}88`,
                     }}
                   >
-                    {rpgCardMeta.title}
+                    {cardTitleMeta.title}
                   </span>
                   <span
                     style={{
-                      color: rpgCardMeta.subtitleColor,
+                      color: cardTitleMeta.subtitleColor,
                       fontWeight: 800,
                       fontSize: Math.max(9, Math.round(frameSize.width * 0.1)),
                       letterSpacing: '0.12em',
-                      textShadow: `0 0 8px ${rpgCardMeta.subtitleColor}88`,
+                      textShadow: `0 0 8px ${cardTitleMeta.subtitleColor}88`,
                     }}
                   >
-                    {rpgCardMeta.subtitle}
+                    {cardTitleMeta.subtitle}
                   </span>
                 </div>
               ) : (
@@ -1070,7 +1209,7 @@ export const Card = memo(function Card({
                   );
                 })}
             </div>
-          ) : (!maskValue && !rpgCardMeta) ? (
+          ) : (!maskValue && !cardTitleMeta && !keruAspectProfile) ? (
             <div
               className="text-xs force-sharp"
               style={{

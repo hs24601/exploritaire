@@ -1,0 +1,71 @@
+{
+  "aspects": [
+    {
+      "id": "ursus",
+      "name": "Ursus",
+      "description": "Take on the aspect of an ancient protector.",
+      "archetype": "Tank",
+      "rarity": "common",
+      "attributes": [
+        {
+          "stat": "Max HP",
+          "op": "+",
+          "value": 16
+        },
+        {
+          "stat": "Defense",
+          "op": "+",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "new-aspect",
+      "name": "LUPUS",
+      "description": "A reluctant leader who keeps safe the wilds until her pack is found.",
+      "archetype": "Ranger",
+      "rarity": "common",
+      "attributes": [
+        {
+          "stat": "Max HP",
+          "op": "+",
+          "value": 5
+        },
+        {
+          "stat": "Stamina",
+          "op": "+",
+          "value": 3
+        },
+        {
+          "stat": "Leadership",
+          "op": "+",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "new-aspect-2",
+      "name": "Felis",
+      "description": "Silent and cunning, take on the aspect of the Felis to navigate the dangers of this world with finesse.",
+      "archetype": "Rogue",
+      "rarity": "common",
+      "attributes": [
+        {
+          "stat": "Max HP",
+          "op": "+",
+          "value": 4
+        },
+        {
+          "stat": "Evasion",
+          "op": "+",
+          "value": 5
+        },
+        {
+          "stat": "Stealth",
+          "op": "+",
+          "value": 2
+        }
+      ]
+    }
+  ]
+}

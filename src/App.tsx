@@ -5,19 +5,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameEngine } from './hooks/useGameEngine';
 import { useDragDrop } from './hooks/useDragDrop';
 import { GameButton } from './components/GameButton';
+import { Card } from './components/Card';
 import { Table } from './components/Table';
 import { WinScreen } from './components/WinScreen';
 import { DragPreview } from './components/DragPreview';
 import { DebugConsole } from './components/DebugConsole';
 import { CombatGolf } from './components/CombatGolf';
 import { PlayingScreen } from './components/PlayingScreen';
-import { OrimEditor } from './components/OrimEditor';
-import { ActorEditor } from './components/ActorEditor';
 import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element } from './engine/types';
-import { ACTOR_DEFINITIONS, getActorDisplayGlyph, getActorDefinition } from './engine/actors';
+import { getActorDisplayGlyph, getActorDefinition } from './engine/actors';
 import { getOrimAccentColor } from './watercolor/orimWatercolor';
 import { setWatercolorInteractionDegraded } from './watercolor/WatercolorOverlay';
-import { ACTOR_DECK_TEMPLATES } from './engine/actorDecks';
 import { canPlayCard, canPlayCardWithWild } from './engine/rules';
 import { ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from './engine/constants';
 import { getBiomeDefinition } from './engine/biomes';
@@ -29,6 +27,11 @@ import { WatercolorContext } from './watercolor/useWatercolorEnabled';
 import { WatercolorCanvas, WatercolorProvider } from './watercolor-engine';
 import { initializeGame } from './engine/game';
 import { CardScaleProvider } from './contexts/CardScaleContext';
+import { mainWorldMap } from './data/worldMap';
+import { KERU_ARCHETYPE_OPTIONS, KeruAspect } from './data/keruAspects';
+import poiRewardOverridesJson from './data/poiRewardOverrides.json';
+import keruAspectsJson from './data/keruAspects.json';
+import type { PoiReward, PoiRewardType } from './engine/worldMapTypes';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -67,6 +70,34 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     return this.props.children;
   }
 }
+
+type PoiRewardDraft = {
+  id: number;
+  type: PoiRewardType;
+  description: string;
+  amount: number;
+  selectedAspects: KeruAspect[];
+  searchFilter: string;
+};
+
+type AspectDraft = {
+  id: string;
+  label: string;
+  abilityLabel: string;
+  abilityDamage: string;
+  abilityCardId: string;
+  abilityCardRank: number;
+  abilityCardElement: Element;
+  abilityCardGlyph: string;
+  tagsText: string;
+  archetypeCardId: string;
+  archetypeCardRank: number;
+  archetypeCardElement: Element;
+};
+
+const REWARD_TYPE_OPTIONS: Array<{ value: PoiRewardType; label: string }> = [
+  { value: 'aspect-jumbo', label: 'Aspects (jumbo)' },
+];
 const TIME_SCALE_OPTIONS = [0.5, 1, 1.5, 2];
 const DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED = false;
 
@@ -100,14 +131,70 @@ export default function App() {
   const [isGamePaused, setIsGamePaused] = useState(false);
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
-  const [toolingTab, setToolingTab] = useState<'orim' | 'actor'>('actor');
+  const [toolingTab, setToolingTab] = useState<'poi' | 'aspects' | 'ability'>('poi');
+  const [poiRewardOverrides, setPoiRewardOverrides] = useState<Record<string, PoiReward[]>>(
+    poiRewardOverridesJson as Record<string, PoiReward[]>
+  );
+  const [poiEditorCoords, setPoiEditorCoords] = useState('0,2');
+  const [poiEditorName, setPoiEditorName] = useState('');
+  const [poiEditorDiscoveryRange, setPoiEditorDiscoveryRange] = useState(1);
+  const [poiEditorType, setPoiEditorType] = useState<'puzzle' | 'combat'>('puzzle');
+  const [poiEditorIcon, setPoiEditorIcon] = useState('');
+  const [poiEditorMessage, setPoiEditorMessage] = useState<string | null>(null);
+  const [isSavingPoi, setIsSavingPoi] = useState(false);
+  const [poiEditorRewards, setPoiEditorRewards] = useState<PoiRewardDraft[]>([{
+    id: 1,
+    type: 'aspect-jumbo',
+    description: '',
+    amount: 1,
+    selectedAspects: [],
+    searchFilter: '',
+  }]);
+  const poiRewardIdRef = useRef(1);
+  const [abilityDrafts, setAbilityDrafts] = useState<AspectDraft[]>(() => {
+    const source = (keruAspectsJson as { aspects?: Array<{
+      id: string;
+      label?: string;
+      ability?: { label?: string; damage?: string; cardId?: string; cardRank?: number; cardElement?: Element; cardGlyph?: string };
+      tags?: string[];
+      archetypeCard?: { cardId?: string; cardRank?: number; cardElement?: Element };
+    }> }).aspects ?? [];
+    return source.map((entry) => ({
+      id: entry.id ?? '',
+      label: entry.label ?? '',
+      abilityLabel: entry.ability?.label ?? '',
+      abilityDamage: entry.ability?.damage ?? '',
+      abilityCardId: entry.ability?.cardId ?? '',
+      abilityCardRank: entry.ability?.cardRank ?? 1,
+      abilityCardElement: entry.ability?.cardElement ?? 'N',
+      abilityCardGlyph: entry.ability?.cardGlyph ?? '',
+      tagsText: (entry.tags ?? []).join(', '),
+      archetypeCardId: entry.archetypeCard?.cardId ?? '',
+      archetypeCardRank: entry.archetypeCard?.cardRank ?? 1,
+      archetypeCardElement: entry.archetypeCard?.cardElement ?? 'N',
+    }));
+  });
+  const [abilitySearch, setAbilitySearch] = useState('');
+  const [selectedAbilityId, setSelectedAbilityId] = useState<string | null>(null);
+  const [abilityEditorMessage, setAbilityEditorMessage] = useState<string | null>(null);
+  const [isSavingAbility, setIsSavingAbility] = useState(false);
+  const [aspectProfiles, setAspectProfiles] = useState<Array<{
+    id: string;
+    name: string;
+    description: string;
+    archetype: KeruAspect | '';
+    rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+    attributes: Array<{ stat: string; op: '+' | '-'; value: number | '' }>;
+  }>>([]);
+  const [aspectProfileSearch, setAspectProfileSearch] = useState('');
+  const [selectedAspectProfileId, setSelectedAspectProfileId] = useState<string | null>(null);
+  const [aspectProfileMessage, setAspectProfileMessage] = useState<string | null>(null);
+  const [isSavingAspectProfiles, setIsSavingAspectProfiles] = useState(false);
   const [useGhostBackground, setUseGhostBackground] = useState(false);
   const [pixelArtEnabled, setPixelArtEnabled] = useState(false);
   const [cardScale, setCardScale] = useState(1);
   const [timeScale, setTimeScale] = useState(TIME_SCALE_OPTIONS[1]);
   const showPuzzleOverlay = true;
-  const [actorDefinitions, setActorDefinitions] = useState(ACTOR_DEFINITIONS);
-  const [actorDeckTemplates, setActorDeckTemplates] = useState(ACTOR_DECK_TEMPLATES);
   const [cameraDebug, setCameraDebug] = useState<{
     wheelCount: number;
     lastDelta: number;
@@ -190,6 +277,506 @@ export default function App() {
     actions,
   } = useGameEngine(initialGameState, { devNoRegretEnabled });
   const ghostBackgroundEnabled = false;
+
+  const parsePoiCoords = useCallback((value: string) => {
+    const parts = value
+      .split(/[,\s]+/)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    if (parts.length < 2) return null;
+    const col = Number(parts[0]);
+    const row = Number(parts[1]);
+    if (Number.isNaN(col) || Number.isNaN(row)) return null;
+    return { col, row };
+  }, []);
+
+  const VALID_KERU_ASPECTS = useMemo(() => new Set<KeruAspect>(KERU_ARCHETYPE_OPTIONS.map((option) => option.archetype)), []);
+
+  const createDraftFromReward = useCallback((reward: PoiReward): PoiRewardDraft => {
+    const nextId = poiRewardIdRef.current + 1;
+    poiRewardIdRef.current = nextId;
+    const options = (reward.options ?? []).filter((option): option is KeruAspect => VALID_KERU_ASPECTS.has(option as KeruAspect));
+    return {
+      id: nextId,
+      type: reward.type,
+      description: reward.description ?? '',
+      amount: Math.max(0, reward.amount),
+      selectedAspects: options,
+      searchFilter: '',
+    };
+  }, [VALID_KERU_ASPECTS]);
+
+  const createEmptyDraft = useCallback((): PoiRewardDraft => {
+    const nextId = poiRewardIdRef.current + 1;
+    poiRewardIdRef.current = nextId;
+    return {
+      id: nextId,
+      type: 'aspect-jumbo',
+      description: '',
+      amount: 1,
+      selectedAspects: [],
+      searchFilter: '',
+    };
+  }, []);
+
+  const handleLoadPoi = useCallback(() => {
+    const coords = parsePoiCoords(poiEditorCoords);
+    if (!coords) {
+      setPoiEditorMessage('Enter coordinates as "col,row".');
+      return;
+    }
+    const key = `${coords.col},${coords.row}`;
+    const cell = mainWorldMap.cells.find(
+      (entry) => entry.gridPosition.col === coords.col && entry.gridPosition.row === coords.row
+    );
+    if (!cell) {
+      setPoiEditorMessage(`No world-cell defined at ${coords.col},${coords.row}.`);
+      return;
+    }
+    const poi = mainWorldMap.pointsOfInterest.find((entry) => entry.id === cell.poiId);
+    if (!poi) {
+      setPoiEditorMessage(`No POI registered at ${coords.col},${coords.row}.`);
+      return;
+    }
+    setPoiEditorName(poi.name);
+    setPoiEditorDiscoveryRange(cell.traversalDifficulty ?? 1);
+    setPoiEditorType(poi.type === 'biome' ? 'combat' : 'puzzle');
+    setPoiEditorIcon((poi as { icon?: string }).icon ?? '');
+    const existingRewards = poiRewardOverrides[key] ?? poi.rewards ?? [];
+    const rewardDrafts = existingRewards.length > 0
+      ? existingRewards.map(createDraftFromReward)
+      : [createEmptyDraft()];
+    setPoiEditorRewards(rewardDrafts);
+    setPoiEditorMessage(`Loaded POI "${poi.name}" at ${coords.col},${coords.row}.`);
+  }, [createDraftFromReward, createEmptyDraft, parsePoiCoords, poiEditorCoords, poiRewardOverrides]);
+
+  const handleResetPoiForm = useCallback(() => {
+    setPoiEditorName('');
+    setPoiEditorDiscoveryRange(1);
+    setPoiEditorType('puzzle');
+    setPoiEditorIcon('');
+    setPoiEditorRewards([createEmptyDraft()]);
+    setPoiEditorMessage(null);
+  }, [createEmptyDraft]);
+
+  const handleSavePoi = useCallback(async () => {
+    const coords = parsePoiCoords(poiEditorCoords);
+    if (!coords || !poiEditorName.trim()) {
+      setPoiEditorMessage('Provide a name and valid coordinates before saving.');
+      return;
+    }
+    const key = `${coords.col},${coords.row}`;
+    const hasAspectRowWithoutSelection = poiEditorRewards.some((draft) =>
+      draft.type === 'aspect-jumbo' && draft.selectedAspects.length === 0
+    );
+    if (hasAspectRowWithoutSelection) {
+      setPoiEditorMessage('Select at least one aspect for each aspect reward row.');
+      return;
+    }
+    const registry = poiEditorRewards.map((draft) => ({
+      type: draft.type,
+      amount: Math.max(0, draft.amount),
+      description: draft.description.trim() || undefined,
+      options: draft.type === 'aspect-jumbo' ? [...new Set(draft.selectedAspects)] : undefined,
+    }));
+    setIsSavingPoi(true);
+    setPoiEditorMessage('Saving POI...');
+    try {
+      const response = await fetch('/__poi-editor/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, rewards: registry }),
+      });
+      if (!response.ok) {
+        throw new Error('Save failed');
+      }
+      const savedOverrides = (await response.json()) as Record<string, PoiReward[]>;
+      setPoiRewardOverrides(savedOverrides);
+      setPoiEditorMessage(`POI "${poiEditorName}" saved for ${coords.col},${coords.row}.`);
+    } catch (error) {
+      console.error('[App] failed to save POI', error);
+      setPoiEditorMessage('Failed to save POI.');
+    } finally {
+      setIsSavingPoi(false);
+    }
+  }, [parsePoiCoords, poiEditorCoords, poiEditorName, poiEditorRewards]);
+
+  const handleAddRewardRow = useCallback(() => {
+    setPoiEditorRewards((prev) => [...prev, createEmptyDraft()]);
+  }, [createEmptyDraft]);
+
+  const handleRemoveRewardRow = useCallback((id: number) => {
+    setPoiEditorRewards((prev) => (
+      prev.length <= 1 ? prev : prev.filter((entry) => entry.id !== id)
+    ));
+  }, []);
+
+  const handleRewardChange = useCallback((id: number, key: 'description' | 'amount' | 'type' | 'searchFilter', value: string | number) => {
+    setPoiEditorRewards((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      if (key === 'amount') {
+        return { ...entry, amount: Math.max(0, Number(value) || 0) };
+      }
+      if (key === 'type') {
+        return {
+          ...entry,
+          type: value as PoiRewardType,
+          selectedAspects: [],
+          searchFilter: '',
+        };
+      }
+      if (key === 'searchFilter') {
+        return { ...entry, searchFilter: String(value) };
+      }
+      return { ...entry, [key]: String(value) };
+    }));
+  }, []);
+
+  const handleRewardAspectToggle = useCallback((id: number, aspect: KeruAspect) => {
+    setPoiEditorRewards((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      const has = entry.selectedAspects.includes(aspect);
+      const nextSet = has
+        ? entry.selectedAspects.filter((value) => value !== aspect)
+        : [...entry.selectedAspects, aspect];
+      return { ...entry, selectedAspects: nextSet };
+    }));
+  }, []);
+
+  const handleRewardSelectAll = useCallback((id: number, targets: KeruAspect[]) => {
+    setPoiEditorRewards((prev) => prev.map((entry) => (
+      entry.id === id
+        ? { ...entry, selectedAspects: Array.from(new Set([...entry.selectedAspects, ...targets])) }
+        : entry
+    )));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadOverrides = async () => {
+      try {
+        const response = await fetch('/__poi-editor/overrides');
+        if (!response.ok) throw new Error('Unable to load overrides');
+        const data = (await response.json()) as Record<string, PoiReward[]>;
+        if (active) {
+          setPoiRewardOverrides(data);
+        }
+      } catch (err) {
+        console.error('[App] failed to load POI overrides', err);
+      }
+    };
+    loadOverrides();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleAddAbility = useCallback(() => {
+    const nextIdBase = 'new-ability';
+    let nextId = nextIdBase;
+    let suffix = 1;
+    const existing = new Set(abilityDrafts.map((entry) => entry.id));
+    while (existing.has(nextId)) {
+      suffix += 1;
+      nextId = `${nextIdBase}-${suffix}`;
+    }
+    const nextDraft: AspectDraft = {
+      id: nextId,
+      label: '',
+      abilityLabel: '',
+      abilityDamage: '',
+      abilityCardId: '',
+      abilityCardRank: 1,
+      abilityCardElement: 'N',
+      abilityCardGlyph: '',
+      tagsText: '',
+      archetypeCardId: '',
+      archetypeCardRank: 1,
+      archetypeCardElement: 'N',
+    };
+    setAbilityDrafts((prev) => [...prev, nextDraft]);
+    setSelectedAbilityId(nextId);
+  }, [abilityDrafts]);
+
+  const handleRemoveAbility = useCallback((id: string) => {
+    setAbilityDrafts((prev) => prev.filter((entry) => entry.id !== id));
+    setSelectedAbilityId((current) => (current === id ? null : current));
+  }, []);
+
+  const handleAbilityChange = useCallback((id: string, key: keyof AspectDraft, value: string | number) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      if (key === 'abilityCardRank' || key === 'archetypeCardRank') {
+        return { ...entry, [key]: Math.max(0, Number(value) || 0) };
+      }
+      return { ...entry, [key]: value };
+    }));
+    if (key === 'id') {
+      const nextId = String(value);
+      setSelectedAbilityId((current) => (current === id ? nextId : current));
+    }
+  }, []);
+
+  const handleSaveAbility = useCallback(async () => {
+    setIsSavingAbility(true);
+    setAbilityEditorMessage('Saving abilities...');
+    try {
+      const payload = {
+        aspects: abilityDrafts.map((entry) => ({
+          id: entry.id.trim(),
+          label: entry.label.trim(),
+          ability: {
+            label: entry.abilityLabel.trim(),
+            damage: entry.abilityDamage.trim(),
+            cardId: entry.abilityCardId.trim(),
+            cardRank: entry.abilityCardRank,
+            cardElement: entry.abilityCardElement,
+            cardGlyph: entry.abilityCardGlyph.trim() || undefined,
+          },
+          tags: entry.tagsText
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+          archetypeCard: {
+            cardId: entry.archetypeCardId.trim(),
+            cardRank: entry.archetypeCardRank,
+            cardElement: entry.archetypeCardElement,
+          },
+        })),
+      };
+      const response = await fetch('/__aspects/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error('Save failed');
+      setAbilityEditorMessage('Abilities saved. Reload to refresh data if needed.');
+    } catch (error) {
+      console.error('[App] failed to save abilities', error);
+      setAbilityEditorMessage('Failed to save abilities.');
+    } finally {
+      setIsSavingAbility(false);
+    }
+  }, [abilityDrafts]);
+
+  useEffect(() => {
+    let active = true;
+    const loadAspects = async () => {
+      try {
+        const response = await fetch('/__aspects/overrides');
+        if (!response.ok) throw new Error('Unable to load aspects');
+        const data = (await response.json()) as {
+          aspects?: Array<{
+            id: string;
+            label?: string;
+            ability?: { label?: string; damage?: string; cardId?: string; cardRank?: number; cardElement?: Element; cardGlyph?: string };
+            tags?: string[];
+            archetypeCard?: { cardId?: string; cardRank?: number; cardElement?: Element };
+          }>;
+        };
+        if (!active) return;
+        const nextDrafts = (data.aspects ?? []).map((entry) => ({
+          id: entry.id ?? '',
+          label: entry.label ?? '',
+          abilityLabel: entry.ability?.label ?? '',
+          abilityDamage: entry.ability?.damage ?? '',
+          abilityCardId: entry.ability?.cardId ?? '',
+          abilityCardRank: entry.ability?.cardRank ?? 1,
+          abilityCardElement: entry.ability?.cardElement ?? 'N',
+          abilityCardGlyph: entry.ability?.cardGlyph ?? '',
+          tagsText: (entry.tags ?? []).join(', '),
+          archetypeCardId: entry.archetypeCard?.cardId ?? '',
+          archetypeCardRank: entry.archetypeCard?.cardRank ?? 1,
+          archetypeCardElement: entry.archetypeCard?.cardElement ?? 'N',
+        }));
+        setAbilityDrafts(nextDrafts);
+      } catch (err) {
+        console.error('[App] failed to load aspects', err);
+      }
+    };
+    loadAspects();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const slugify = useCallback((value: string) => (
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  ), []);
+
+  const handleAddAspectProfile = useCallback(() => {
+    const nextIdBase = 'new-aspect';
+    let nextId = nextIdBase;
+    let suffix = 1;
+    const existing = new Set(aspectProfiles.map((entry) => entry.id));
+    while (existing.has(nextId)) {
+      suffix += 1;
+      nextId = `${nextIdBase}-${suffix}`;
+    }
+    const nextProfile = {
+      id: nextId,
+      name: 'New Aspect',
+      description: '',
+      archetype: '',
+      rarity: 'common',
+      attributes: [],
+    };
+    setAspectProfiles((prev) => [...prev, nextProfile]);
+    setSelectedAspectProfileId(nextId);
+  }, [aspectProfiles]);
+
+  const handleRemoveAspectProfile = useCallback((id: string) => {
+    setAspectProfiles((prev) => prev.filter((entry) => entry.id !== id));
+    setSelectedAspectProfileId((current) => (current === id ? null : current));
+  }, []);
+
+  const handleAspectProfileChange = useCallback((
+    id: string,
+    key: 'name' | 'description' | 'archetype' | 'rarity',
+    value: string
+  ) => {
+    setAspectProfiles((prev) => prev.map((entry) => (
+      entry.id === id ? { ...entry, [key]: value } : entry
+    )));
+  }, []);
+
+  const handleAspectAttributeChange = useCallback((id: string, index: number, value: string) => {
+    setAspectProfiles((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      const next = [...entry.attributes];
+      const numeric = value === '' ? '' : Number(value);
+      next[index] = { ...next[index], value: Number.isFinite(numeric) ? numeric : '' };
+      return { ...entry, attributes: next };
+    }));
+  }, []);
+
+  const handleAspectAttributeStatChange = useCallback((id: string, index: number, value: string) => {
+    setAspectProfiles((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      const next = [...entry.attributes];
+      next[index] = { ...next[index], stat: value };
+      return { ...entry, attributes: next };
+    }));
+  }, []);
+
+  const handleAspectAttributeOpChange = useCallback((id: string, index: number, value: '+' | '-') => {
+    setAspectProfiles((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      const next = [...entry.attributes];
+      next[index] = { ...next[index], op: value };
+      return { ...entry, attributes: next };
+    }));
+  }, []);
+
+  const handleAddAspectAttribute = useCallback((id: string) => {
+    setAspectProfiles((prev) => prev.map((entry) => (
+      entry.id === id
+        ? { ...entry, attributes: [...entry.attributes, { stat: 'Max HP', op: '+', value: '' }] }
+        : entry
+    )));
+  }, []);
+
+  const handleRemoveAspectAttribute = useCallback((id: string, index: number) => {
+    setAspectProfiles((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      return { ...entry, attributes: entry.attributes.filter((_, idx) => idx !== index) };
+    }));
+  }, []);
+
+  const handleSaveAspectProfiles = useCallback(async () => {
+    setIsSavingAspectProfiles(true);
+    setAspectProfileMessage('Saving aspects...');
+    try {
+      const payload = {
+        aspects: aspectProfiles.map((entry) => {
+          const derivedId = entry.id.trim() || slugify(entry.name) || 'aspect';
+          return {
+            id: derivedId,
+            name: entry.name.trim(),
+            description: entry.description.trim(),
+            archetype: entry.archetype || null,
+            rarity: entry.rarity ?? 'common',
+            attributes: entry.attributes
+              .map((attr) => ({
+                stat: attr.stat.trim(),
+                op: attr.op,
+                value: typeof attr.value === 'number' ? attr.value : null,
+              }))
+              .filter((attr) => attr.stat || attr.value !== null),
+          };
+        }),
+      };
+      const response = await fetch('/__aspect-profiles/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error('Save failed');
+      setAspectProfileMessage('Aspects saved.');
+    } catch (error) {
+      console.error('[App] failed to save aspect profiles', error);
+      setAspectProfileMessage('Failed to save aspects.');
+    } finally {
+      setIsSavingAspectProfiles(false);
+    }
+  }, [aspectProfiles, slugify]);
+
+  useEffect(() => {
+    let active = true;
+    const loadAspectProfiles = async () => {
+      try {
+        const response = await fetch('/__aspect-profiles/overrides');
+        if (!response.ok) throw new Error('Unable to load aspects');
+        const data = (await response.json()) as {
+          aspects?: Array<{
+            id: string;
+            name?: string;
+            description?: string;
+            archetype?: KeruAspect | null;
+            attributes?: string[];
+          }>;
+        };
+        if (!active) return;
+        const nextProfiles = (data.aspects ?? []).map((entry) => ({
+          id: entry.id ?? '',
+          name: entry.name ?? '',
+          description: entry.description ?? '',
+          archetype: entry.archetype ?? '',
+          rarity: (entry.rarity as 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary') ?? 'common',
+          attributes: Array.isArray(entry.attributes)
+            ? entry.attributes.map((attr) => {
+                if (typeof attr === 'string') {
+                  return { stat: attr, op: '+', value: '' };
+                }
+                if (attr && typeof attr === 'object') {
+                  const rawOp = String((attr as { op?: string }).op ?? '+');
+                  const op = rawOp === '-' ? '-' : '+';
+                  const rawValue = (attr as { value?: number | string }).value;
+                  const numeric = typeof rawValue === 'number' ? rawValue : Number(rawValue);
+                  return {
+                    stat: String((attr as { stat?: string }).stat ?? ''),
+                    op,
+                    value: Number.isFinite(numeric) ? numeric : '',
+                  };
+                }
+                return { stat: '', op: '+', value: '' };
+              })
+            : [],
+        }));
+        setAspectProfiles(nextProfiles);
+      } catch (err) {
+        console.error('[App] failed to load aspect profiles', err);
+      }
+    };
+    loadAspectProfiles();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     console.log('[App] phase', gameState?.phase, 'watercolorEnabled', watercolorEnabled);
@@ -1271,24 +1858,64 @@ export default function App() {
           <div className="fixed inset-0 z-[10030]">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
             <div className="relative w-full h-full flex items-start justify-center p-4">
-              <div className="relative w-[1200px] max-w-[88vw] max-h-[90vh] overflow-y-auto overflow-x-hidden menu-text">
+              <div className="relative w-[1200px] max-w-[88vw] h-[90vh] flex flex-col overflow-hidden menu-text">
                 <div className="absolute top-0 left-0 flex items-center gap-2 z-10">
                   <button
                     type="button"
-                    onClick={() => setToolingTab('actor')}
-                    className={`text-[10px] font-mono px-3 py-1 rounded border ${toolingTab === 'actor' ? 'border-game-gold text-game-gold' : 'border-game-teal/40 text-game-white/70'}`}
+                    onClick={() => setToolingTab('poi')}
+                    className={`text-[10px] font-mono px-3 py-1 rounded border ${toolingTab === 'poi' ? 'border-game-gold text-game-gold' : 'border-game-teal/40 text-game-white/70'}`}
                   >
-                    Actor
+                    POI
                   </button>
                   <button
                     type="button"
-                    onClick={() => setToolingTab('orim')}
-                    className={`text-[10px] font-mono px-3 py-1 rounded border ${toolingTab === 'orim' ? 'border-game-gold text-game-gold' : 'border-game-teal/40 text-game-white/70'}`}
+                    onClick={() => setToolingTab('aspects')}
+                    className={`text-[10px] font-mono px-3 py-1 rounded border ${toolingTab === 'aspects' ? 'border-game-gold text-game-gold' : 'border-game-teal/40 text-game-white/70'}`}
                   >
-                    Orim
+                    Aspects
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setToolingTab('ability')}
+                    className={`text-[10px] font-mono px-3 py-1 rounded border ${toolingTab === 'ability' ? 'border-game-gold text-game-gold' : 'border-game-teal/40 text-game-white/70'}`}
+                  >
+                    Ability
                   </button>
                 </div>
                 <div className="absolute top-0 right-0 flex items-center gap-2 z-10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (toolingTab === 'poi') {
+                        void handleSavePoi();
+                        return;
+                      }
+                      if (toolingTab === 'aspects') {
+                        void handleSaveAspectProfiles();
+                        return;
+                      }
+                      void handleSaveAbility();
+                    }}
+                    disabled={
+                      toolingTab === 'poi'
+                        ? isSavingPoi
+                        : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility)
+                    }
+                    className={`text-[10px] uppercase tracking-[0.4em] px-3 py-1 rounded border ${
+                      (toolingTab === 'poi'
+                        ? isSavingPoi
+                        : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility))
+                        ? 'border-game-teal/30 text-game-teal/30'
+                        : 'border-game-gold text-game-gold'
+                    } bg-game-bg-dark/70 transition-opacity`}
+                    title={toolingTab === 'poi' ? 'Save POI' : (toolingTab === 'aspects' ? 'Save Aspects' : 'Save Ability')}
+                  >
+                    {(toolingTab === 'poi'
+                      ? isSavingPoi
+                      : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility))
+                      ? 'Saving…'
+                      : 'Save'}
+                  </button>
                   <button
                     onClick={() => setToolingOpen(false)}
                     className="text-xs text-game-pink border border-game-pink rounded w-6 h-6 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
@@ -1297,7 +1924,556 @@ export default function App() {
                     x
                   </button>
                 </div>
-                <div className="pt-8">
+                <div className="pt-8 space-y-4 flex-1 overflow-y-auto">
+                  {toolingTab === 'poi' && (
+                    <>
+                  <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">POI Editor</div>
+                    <div className="text-[10px] text-game-white/70">
+                      Author or inspect a POI by typing coordinates and tapping load. Saving is mocked for now.
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        value={poiEditorCoords}
+                        onChange={(event) => setPoiEditorCoords(event.target.value)}
+                        placeholder="Col,Row"
+                        className="flex-1 min-w-[160px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleLoadPoi}
+                        className="text-[10px] uppercase tracking-[0.4em] bg-game-teal/70 text-black px-3 py-1 rounded"
+                      >
+                        Load POI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetPoiForm}
+                        className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-[10px]">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-game-teal/70">POI Name</span>
+                        <input
+                          value={poiEditorName}
+                          onChange={(event) => setPoiEditorName(event.target.value)}
+                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-game-teal/70">POI Discovery Range</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={poiEditorDiscoveryRange}
+                          onChange={(event) => setPoiEditorDiscoveryRange(Math.max(0, Number(event.target.value) || 0))}
+                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-game-teal/70">POI Type</span>
+                        <select
+                          value={poiEditorType}
+                          onChange={(event) => setPoiEditorType(event.target.value as 'puzzle' | 'combat')}
+                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                        >
+                          <option value="puzzle">Puzzle</option>
+                          <option value="combat">Combat</option>
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-game-teal/70">POI Icon</span>
+                        <input
+                          value={poiEditorIcon}
+                          onChange={(event) => setPoiEditorIcon(event.target.value)}
+                          placeholder="e.g., 🐺"
+                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                        />
+                      </label>
+                    </div>
+                    <div className="text-[10px] text-game-white/60">
+                      {poiEditorMessage ?? 'No status yet.'}
+                    </div>
+                  </div>
+                  <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">POI Rewards</div>
+                      <button
+                        type="button"
+                        onClick={handleAddRewardRow}
+                        className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
+                      >
+                        Add Row
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {poiEditorRewards.map((reward, index) => {
+                        const searchTerm = reward.searchFilter.trim().toLowerCase();
+                        const filteredAspects = KERU_ARCHETYPE_OPTIONS.filter((option) => {
+                          const haystack = `${option.label} ${option.archetype}`.toLowerCase();
+                          return searchTerm === '' || haystack.includes(searchTerm);
+                        });
+                        return (
+                          <div key={reward.id} className="rounded-xl bg-black/70 border border-game-teal/30 p-3 space-y-2">
+                            <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                              <span className="text-game-white/60">Reward {index + 1}</span>
+                              <select
+                                value={reward.type}
+                                onChange={(event) => handleRewardChange(reward.id, 'type', event.target.value)}
+                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              >
+                                {REWARD_TYPE_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRewardRow(reward.id)}
+                                disabled={poiEditorRewards.length <= 1}
+                                className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40 disabled:opacity-50"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <input
+                                value={reward.description}
+                                onChange={(event) => handleRewardChange(reward.id, 'description', event.target.value)}
+                                placeholder="Description"
+                                className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              />
+                              <label className="flex items-center gap-1">
+                                <span className="text-game-teal/70">Count</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={reward.amount}
+                                  onChange={(event) => handleRewardChange(reward.id, 'amount', Number(event.target.value) || 0)}
+                                  className="w-16 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                />
+                              </label>
+                            </div>
+                            {reward.type === 'aspect-jumbo' && (
+                              <div className="space-y-2 pt-2 text-[10px]">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    value={reward.searchFilter}
+                                    onChange={(event) => handleRewardChange(reward.id, 'searchFilter', event.target.value)}
+                                    placeholder="Filter aspects"
+                                    className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRewardSelectAll(reward.id, filteredAspects.map((option) => option.archetype))}
+                                    className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
+                                  >
+                                    Select matching
+                                  </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {filteredAspects.map((option) => (
+                                    <label
+                                      key={`${reward.id}-${option.archetype}`}
+                                      className="flex items-center gap-1 rounded border border-game-teal/30 bg-black/50 px-2 py-1 text-[9px] cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={reward.selectedAspects.includes(option.archetype)}
+                                        onChange={() => handleRewardAspectToggle(reward.id, option.archetype)}
+                                        className="accent-game-teal"
+                                      />
+                                      {option.label}
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="text-[9px] text-game-white/50">
+                      Example: 0,2 → Choose 1: Lupus, Ursus, or Felis jumbo card aspect.
+                    </div>
+                  </div>
+                    </>
+                  )}
+                  {toolingTab === 'ability' && (
+                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Ability Editor</div>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                        <input
+                          value={abilitySearch}
+                          onChange={(event) => setAbilitySearch(event.target.value)}
+                          placeholder="Search abilities"
+                          className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddAbility}
+                          className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
+                        >
+                          Add Ability
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-4">
+                        <div className="space-y-2">
+                          {abilityDrafts
+                            .filter((entry) => {
+                              const haystack = `${entry.id} ${entry.label}`.toLowerCase();
+                              const term = abilitySearch.trim().toLowerCase();
+                              return term === '' || haystack.includes(term);
+                            })
+                            .map((entry) => (
+                              <button
+                                key={entry.id}
+                                type="button"
+                                onClick={() => setSelectedAbilityId(entry.id)}
+                                className={`w-full text-left px-3 py-2 rounded border text-[10px] ${
+                                  selectedAbilityId === entry.id
+                                    ? 'border-game-gold text-game-gold'
+                                    : 'border-game-teal/40 text-game-white/70'
+                                }`}
+                              >
+                                <div className="text-[9px] uppercase tracking-[0.3em]">{entry.label || entry.id}</div>
+                                <div className="text-[8px] text-game-white/50">{entry.id}</div>
+                              </button>
+                            ))}
+                        </div>
+                        <div className="space-y-3">
+                          {(() => {
+                            const active = abilityDrafts.find((entry) => entry.id === selectedAbilityId) ?? abilityDrafts[0];
+                            if (!active) {
+                              return <div className="text-[10px] text-game-white/60">No abilities available.</div>;
+                            }
+                            return (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="text-[10px] text-game-white/70">Editing: {active.id}</div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveAbility(active.id)}
+                                    className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 text-[10px]">
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Ability Id</span>
+                                    <input
+                                      value={active.id}
+                                      onChange={(event) => handleAbilityChange(active.id, 'id', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Label</span>
+                                    <input
+                                      value={active.label}
+                                      onChange={(event) => handleAbilityChange(active.id, 'label', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3 text-[10px]">
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Ability Label</span>
+                                    <input
+                                      value={active.abilityLabel}
+                                      onChange={(event) => handleAbilityChange(active.id, 'abilityLabel', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Ability Damage</span>
+                                    <input
+                                      value={active.abilityDamage}
+                                      onChange={(event) => handleAbilityChange(active.id, 'abilityDamage', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Ability Glyph</span>
+                                    <input
+                                      value={active.abilityCardGlyph}
+                                      onChange={(event) => handleAbilityChange(active.id, 'abilityCardGlyph', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3 text-[10px]">
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Ability Card Id</span>
+                                    <input
+                                      value={active.abilityCardId}
+                                      onChange={(event) => handleAbilityChange(active.id, 'abilityCardId', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Ability Rank</span>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={active.abilityCardRank}
+                                      onChange={(event) => handleAbilityChange(active.id, 'abilityCardRank', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Ability Element</span>
+                                    <select
+                                      value={active.abilityCardElement}
+                                      onChange={(event) => handleAbilityChange(active.id, 'abilityCardElement', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    >
+                                      {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
+                                        <option key={element} value={element}>{element}</option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3 text-[10px]">
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Aspect Card Id</span>
+                                    <input
+                                      value={active.archetypeCardId}
+                                      onChange={(event) => handleAbilityChange(active.id, 'archetypeCardId', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Aspect Rank</span>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={active.archetypeCardRank}
+                                      onChange={(event) => handleAbilityChange(active.id, 'archetypeCardRank', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Aspect Element</span>
+                                    <select
+                                      value={active.archetypeCardElement}
+                                      onChange={(event) => handleAbilityChange(active.id, 'archetypeCardElement', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    >
+                                      {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
+                                        <option key={element} value={element}>{element}</option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                </div>
+                                <label className="flex flex-col gap-1 text-[10px]">
+                                  <span className="text-game-teal/70">Tags (comma separated)</span>
+                                  <input
+                                    value={active.tagsText}
+                                    onChange={(event) => handleAbilityChange(active.id, 'tagsText', event.target.value)}
+                                    className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                  />
+                                </label>
+                              </div>
+                            );
+                          })()}
+                          <div className="text-[9px] text-game-white/60">
+                            {abilityEditorMessage ?? 'Edit ability metadata and save to update keruAspects.json.'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {toolingTab === 'aspects' && (
+                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4 min-h-full">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Aspect Editor</div>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                        <input
+                          value={aspectProfileSearch}
+                          onChange={(event) => setAspectProfileSearch(event.target.value)}
+                          placeholder="Search aspects"
+                          className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddAspectProfile}
+                          className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
+                        >
+                          Add Aspect
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-[275px_minmax(0,1fr)] gap-4 h-full">
+                        <div className="space-y-3 h-full overflow-visible">
+                          {aspectProfiles
+                            .filter((entry) => {
+                              const haystack = `${entry.name} ${entry.archetype}`.toLowerCase();
+                              const term = aspectProfileSearch.trim().toLowerCase();
+                              return term === '' || haystack.includes(term);
+                            })
+                            .map((entry) => (
+                              <button
+                                key={entry.id}
+                                type="button"
+                                onClick={() => setSelectedAspectProfileId(entry.id)}
+                                className={`w-full text-left px-3 py-2 rounded border text-[10px] ${
+                                  selectedAspectProfileId === entry.id
+                                    ? 'border-game-gold text-game-gold'
+                                    : 'border-game-teal/40 text-game-white/70'
+                                }`}
+                              >
+                                <div className="text-[9px] uppercase tracking-[0.3em]">{entry.name || entry.archetype || entry.id}</div>
+                                <div className="text-[8px] text-game-white/50">{entry.archetype || 'Unassigned'}</div>
+                              </button>
+                            ))}
+                          {(() => {
+                            const active = aspectProfiles.find((entry) => entry.id === selectedAspectProfileId) ?? aspectProfiles[0];
+                            const archetypeKey = active?.archetype?.trim().toLowerCase();
+                            const previewCard = archetypeKey
+                              ? {
+                                  id: `keru-archetype-${archetypeKey}`,
+                                  rank: 1,
+                                  element: 'N' as Element,
+                                  suit: ELEMENT_TO_SUIT.N,
+                                }
+                              : null;
+                            return (
+                              <div className="flex justify-center overflow-visible">
+                                {previewCard ? (
+                                  <Card
+                                    card={previewCard}
+                                    showGraphics={showGraphics}
+                                    size={{ width: 230, height: 322 }}
+                                  />
+                                ) : (
+                                  <div className="text-[9px] text-game-white/50">Set an archetype to preview the jumbo card.</div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        <div className="space-y-3">
+                          {(() => {
+                            const active = aspectProfiles.find((entry) => entry.id === selectedAspectProfileId) ?? aspectProfiles[0];
+                            if (!active) {
+                              return <div className="text-[10px] text-game-white/60">No aspects available.</div>;
+                            }
+                            return (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="text-[10px] text-game-white/70">Editing: {active.name || active.id}</div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveAspectProfile(active.id)}
+                                    className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3 text-[10px]">
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Aspect Name</span>
+                                    <input
+                                      value={active.name}
+                                      onChange={(event) => handleAspectProfileChange(active.id, 'name', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Aspect Archetype</span>
+                                    <input
+                                      value={active.archetype}
+                                      onChange={(event) => handleAspectProfileChange(active.id, 'archetype', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70">Rarity</span>
+                                    <select
+                                      value={active.rarity}
+                                      onChange={(event) => handleAspectProfileChange(active.id, 'rarity', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    >
+                                      {(['common', 'uncommon', 'rare', 'epic', 'legendary'] as const).map((option) => (
+                                        <option key={option} value={option}>{option}</option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                </div>
+                                <label className="flex flex-col gap-1 text-[10px]">
+                                  <span className="text-game-teal/70">Aspect Description</span>
+                                  <textarea
+                                    value={active.description}
+                                    onChange={(event) => handleAspectProfileChange(active.id, 'description', event.target.value)}
+                                    rows={3}
+                                    className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                  />
+                                </label>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between text-[10px]">
+                                    <span className="text-game-teal/70">Aspect Attributes</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddAspectAttribute(active.id)}
+                                      className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
+                                    >
+                                      Add Row
+                                    </button>
+                                  </div>
+                                  <div className="space-y-2">
+                                    {active.attributes.length === 0 && (
+                                      <div className="text-[9px] text-game-white/50">No attributes yet.</div>
+                                    )}
+                                    {active.attributes.map((attr, idx) => (
+                                      <div key={`${active.id}-attr-${idx}`} className="grid grid-cols-[160px_70px_minmax(0,1fr)_auto] gap-2 items-center">
+                                        <select
+                                          value={attr.stat}
+                                          onChange={(event) => handleAspectAttributeStatChange(active.id, idx, event.target.value)}
+                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                        >
+                                          {['Max HP', 'Defense', 'Armor', 'Speed', 'Power', 'Focus', 'Leadership', 'Stealth', 'Evasion', 'Stamina'].map((option) => (
+                                            <option key={option} value={option}>{option}</option>
+                                          ))}
+                                        </select>
+                                        <select
+                                          value={attr.op}
+                                          onChange={(event) => handleAspectAttributeOpChange(active.id, idx, event.target.value as '+' | '-')}
+                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                        >
+                                          <option value="+">+</option>
+                                          <option value="-">-</option>
+                                        </select>
+                                        <input
+                                          value={attr.value}
+                                          onChange={(event) => handleAspectAttributeChange(active.id, idx, event.target.value)}
+                                          placeholder="16"
+                                          type="number"
+                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveAspectAttribute(active.id, idx)}
+                                          className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40"
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          <div className="text-[9px] text-game-white/60">
+                            {aspectProfileMessage ?? 'Edit aspect metadata and save to update aspectProfiles.json.'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/*
                   {toolingTab === 'orim' && gameState && (
                     <OrimEditor
                       embedded
@@ -1317,6 +2493,7 @@ export default function App() {
                       onDeckChange={setActorDeckTemplates}
                     />
                   )}
+                  */}
                 </div>
               </div>
             </div>
@@ -1378,7 +2555,7 @@ export default function App() {
 
             {/* Biome screen */}
             {gameState.phase === 'biome' && (
-                <CombatGolf
+              <CombatGolf
                 gameState={gameState}
                 selectedCard={selectedCard}
                 validFoundationsForSelected={validFoundationsForSelected}
@@ -1431,6 +2608,7 @@ export default function App() {
                   setHidePauseOverlay(false);
                   setIsGamePaused((prev) => !prev);
                 }}
+                poiRewardOverrides={poiRewardOverrides}
                 wildAnalysis={analysis.wild}
                 actions={{
                   selectCard: actions.selectCard,

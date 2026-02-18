@@ -14,6 +14,17 @@ export interface PointOfInterest {
   biomeId?: string;
   /** Optional deterministic tableau preset used when this POI is active. */
   tableauPresetId?: string;
+  rewards?: PoiReward[];
+}
+
+export type PoiRewardType = 'aspect-jumbo';
+
+export interface PoiReward {
+  id?: string;
+  type: PoiRewardType;
+  description?: string;
+  amount: number;
+  options?: string[];
 }
 
 /**
@@ -30,6 +41,11 @@ export interface WorldMapCell {
 export interface WorldMapBlockedCell {
   gridPosition: { col: number; row: number };
   reason?: string;
+  terrain?: 'mountain' | 'canyon' | 'ridge' | 'cliff';
+  lightBlocker?: {
+    castHeight?: number;
+    softness?: number;
+  };
 }
 
 export interface WorldMapBlockedEdge {

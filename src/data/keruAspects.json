@@ -1,0 +1,58 @@
+{
+  "aspects": [
+    {
+      "id": "wolf",
+      "label": "Lupus",
+      "ability": {
+        "label": "Bite",
+        "damage": "1 DMG",
+        "cardId": "keru-ability-bite",
+        "cardRank": 1,
+        "cardElement": "N",
+        "cardGlyph": "🐺"
+      },
+      "tags": ["HP +8", "Stamina +5"],
+      "archetypeCard": {
+        "cardId": "keru-archetype-wolf",
+        "cardRank": 1,
+        "cardElement": "N"
+      }
+    },
+    {
+      "id": "bear",
+      "label": "Ursus",
+      "ability": {
+        "label": "Swipe",
+        "damage": "1 DMG",
+        "cardId": "keru-ability-swipe",
+        "cardRank": 1,
+        "cardElement": "N",
+        "cardGlyph": "🐻"
+      },
+      "tags": ["HP +14", "Armor +1"],
+      "archetypeCard": {
+        "cardId": "keru-archetype-bear",
+        "cardRank": 1,
+        "cardElement": "N"
+      }
+    },
+    {
+      "id": "cat",
+      "label": "Felis",
+      "ability": {
+        "label": "Claw",
+        "damage": "1 DMG",
+        "cardId": "keru-ability-claw",
+        "cardRank": 1,
+        "cardElement": "N",
+        "cardGlyph": "🐈"
+      },
+      "tags": ["HP +5", "Evasion +15%", "Stealth +5"],
+      "archetypeCard": {
+        "cardId": "keru-archetype-cat",
+        "cardRank": 1,
+        "cardElement": "N"
+      }
+    }
+  ]
+}

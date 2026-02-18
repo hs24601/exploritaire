@@ -3,6 +3,8 @@ import type { Direction } from './Compass';
 import { DIRECTIONS } from './Compass';
 import { WatercolorSplotch } from '../watercolor/WatercolorSplotch';
 import { generateSplotchConfig } from '../watercolor/splotchUtils';
+import { ShadowCanvas } from './LightRenderer';
+import type { BlockingRect } from '../engine/lighting';
 
 export type ExplorationMapNode = {
   id: string;
@@ -21,10 +23,21 @@ export type ExplorationMapEdge = {
   traversals: number;
 };
 
+export type ExplorationBlockedCell = {
+  x: number;
+  y: number;
+  terrain?: 'mountain' | 'canyon' | 'ridge' | 'cliff' | 'other';
+  lightBlocker?: {
+    castHeight?: number;
+    softness?: number;
+  };
+};
+
 interface ExplorationMapProps {
   nodes: ExplorationMapNode[];
   edges: ExplorationMapEdge[];
   width?: number;
+  height?: number;
   heading?: Direction;
   alignmentMode?: 'player' | 'map';
   currentNodeId: string | null;
@@ -42,12 +55,13 @@ interface ExplorationMapProps {
   onHeadingChange?: (direction: Direction) => void;
   onTeleport?: (x: number, y: number) => void;
   poiMarkers?: Array<{ id: string; x: number; y: number; label?: string }>;
-  blockedCells?: Array<{ x: number; y: number }>;
+  blockedCells?: ExplorationBlockedCell[];
   blockedEdges?: Array<{ fromX: number; fromY: number; toX: number; toY: number }>;
   conditionalEdges?: Array<{ fromX: number; fromY: number; toX: number; toY: number; locked: boolean }>;
   activeBlockedEdge?: { fromX: number; fromY: number; toX: number; toY: number; reason?: string } | null;
   forcedPath?: Array<{ x: number; y: number }>;
   nextForcedPathIndex?: number | null;
+  showLighting?: boolean;
 }
 
 const WIDTH = 190;
@@ -86,8 +100,9 @@ function pointKey(point: GridPoint): string {
   return `${point.x},${point.y}`;
 }
 
-function extractBlockedRegions(blockedCells: GridCell[]): Array<{ id: string; cells: GridCell[] }> {
-  const remaining = new Set(blockedCells.map((cell) => `${cell.x},${cell.y}`));
+function extractBlockedRegions(blockedCells: ExplorationBlockedCell[]): Array<{ id: string; cells: GridCell[] }> {
+  const gridCells = blockedCells.map((cell) => ({ x: cell.x, y: cell.y }));
+  const remaining = new Set(gridCells.map((cell) => `${cell.x},${cell.y}`));
   const regions: Array<{ id: string; cells: GridCell[] }> = [];
 
   while (remaining.size > 0) {
@@ -192,6 +207,7 @@ export const ExplorationMap = memo(function ExplorationMap({
   nodes,
   edges,
   width = WIDTH,
+  height = HEIGHT,
   heading = 'N',
   alignmentMode = 'player',
   currentNodeId,
@@ -215,6 +231,7 @@ export const ExplorationMap = memo(function ExplorationMap({
   activeBlockedEdge = null,
   forcedPath = [],
   nextForcedPathIndex = null,
+  showLighting = true,
 }: ExplorationMapProps) {
   const [mouseCoord, setMouseCoord] = useState<{ x: number; y: number; px: number; py: number } | null>(null);
   const [isTeleportActive, setIsTeleportActive] = useState(false);
@@ -224,6 +241,7 @@ export const ExplorationMap = memo(function ExplorationMap({
   const isDraggingRef = useRef(false);
   const lastPointerRef = useRef({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement>(null);
+  const shadowContainerRef = useRef<HTMLDivElement>(null);
   const zoomSliderRef = useRef<HTMLInputElement>(null);
 
   void stepCost;
@@ -231,7 +249,7 @@ export const ExplorationMap = memo(function ExplorationMap({
   void onStepCostIncrease;
 
   const cx = width / 2;
-  const cy = HEIGHT / 2;
+  const cy = height / 2;
 
   const { zoom, panX, panY } = view;
   const cellSizeZ = CELL_SIZE * zoom * ZOOM_RECALIBRATION;
@@ -389,6 +407,83 @@ export const ExplorationMap = memo(function ExplorationMap({
     });
   }, [blockedCells, cellSizeZ, projectWorldToScreen]);
 
+  const blockedRegionRects = useMemo(() => {
+    const rects: BlockingRect[] = [];
+    projectedBlockedRegions.forEach((region) => {
+      region.loops.forEach((loop) => {
+        if (loop.length === 0) return;
+        const xs = loop.map((point) => point.x);
+        const ys = loop.map((point) => point.y);
+        const left = Math.min(...xs);
+        const right = Math.max(...xs);
+        const top = Math.min(...ys);
+        const bottom = Math.max(...ys);
+        const widthRect = right - left || 1;
+        const heightRect = bottom - top || 1;
+        rects.push({
+          x: left,
+          y: top,
+          width: widthRect,
+          height: heightRect,
+        });
+      });
+    });
+    return rects;
+  }, [projectedBlockedRegions]);
+
+  const projectedCellBlockers = useMemo(() => {
+    const buildRect = (cell: ExplorationBlockedCell): BlockingRect => {
+      const corners = [
+        projectWorldToScreen(cell.x - 0.5, cell.y - 0.5),
+        projectWorldToScreen(cell.x + 0.5, cell.y - 0.5),
+        projectWorldToScreen(cell.x + 0.5, cell.y + 0.5),
+        projectWorldToScreen(cell.x - 0.5, cell.y + 0.5),
+      ];
+      const xs = corners.map((point) => point.px);
+      const ys = corners.map((point) => point.py);
+      const left = Math.min(...xs);
+      const right = Math.max(...xs);
+      const top = Math.min(...ys);
+      const bottom = Math.max(...ys);
+      return {
+        x: left,
+        y: top,
+        width: Math.max(1, right - left),
+        height: Math.max(1, bottom - top),
+        castHeight: cell.lightBlocker?.castHeight ?? 6,
+        softness: cell.lightBlocker?.softness ?? 5,
+      };
+    };
+    return blockedCells.map(buildRect);
+  }, [blockedCells, projectWorldToScreen]);
+
+  const edgeBlockers = useMemo(() => {
+    const rects: BlockingRect[] = [];
+    const accumulateEdge = (edge: { fromX: number; fromY: number; toX: number; toY: number }) => {
+      const from = projectWorldToScreen(edge.fromX, edge.fromY);
+      const to = projectWorldToScreen(edge.toX, edge.toY);
+      const left = Math.min(from.px, to.px);
+      const right = Math.max(from.px, to.px);
+      const top = Math.min(from.py, to.py);
+      const bottom = Math.max(from.py, to.py);
+      const thickness = Math.max(4, cellSizeZ * 0.1);
+      rects.push({
+        x: left - thickness * 0.5,
+        y: top - thickness * 0.5,
+        width: (right - left) || thickness,
+        height: (bottom - top) || thickness,
+      });
+    };
+    blockedEdges.forEach(accumulateEdge);
+    conditionalEdges.forEach(accumulateEdge);
+    return rects;
+  }, [blockedEdges, conditionalEdges, projectWorldToScreen, cellSizeZ]);
+
+  const shadowBlockers = useMemo(
+    () => [...blockedRegionRects, ...edgeBlockers, ...projectedCellBlockers],
+    [blockedRegionRects, edgeBlockers, projectedCellBlockers],
+  );
+
   const projectedById = useMemo(
     () => new Map(projected.map((n) => [n.id, n] as const)),
     [projected],
@@ -397,6 +492,22 @@ export const ExplorationMap = memo(function ExplorationMap({
     () => (currentNodeId ? projectedById.get(currentNodeId) ?? null : null),
     [currentNodeId, projectedById],
   );
+
+  const playerScreenPos = useMemo(() => {
+    if (currentProjected) return currentProjected;
+    return projectWorldToScreen(camX, camY);
+  }, [currentProjected, projectWorldToScreen, camX, camY]);
+
+  const playerActorLights = useMemo(() => ([
+    {
+      x: playerScreenPos.px,
+      y: playerScreenPos.py,
+      radius: Math.max(cellSizeZ * 0.75, 12),
+      intensity: 0.75,
+      color: '#f7d24b',
+      flicker: { enabled: true, speed: 0.28, amount: 0.15 },
+    },
+  ]), [playerScreenPos, cellSizeZ]);
 
   // Grid line ranges — account for zoom and pan
   const gridXRange = useMemo(() => {
@@ -407,7 +518,7 @@ export const ExplorationMap = memo(function ExplorationMap({
 
   const gridYRange = useMemo(() => {
     const min = Math.floor(camY + (-cy - panY) / cellSizeZ) - 1;
-    const max = Math.ceil(camY + (HEIGHT - cy - panY) / cellSizeZ) + 1;
+    const max = Math.ceil(camY + (height - cy - panY) / cellSizeZ) + 1;
     return Array.from({ length: max - min + 1 }, (_, i) => min + i);
   }, [camY, cy, cellSizeZ, panY]);
 
@@ -521,7 +632,7 @@ export const ExplorationMap = memo(function ExplorationMap({
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const scaleX = width / rect.width;
-    const scaleY = HEIGHT / rect.height;
+    const scaleY = height / rect.height;
     if (isDraggingRef.current) {
       const dx = (e.clientX - lastPointerRef.current.x) * scaleX;
       const dy = (e.clientY - lastPointerRef.current.y) * scaleY;
@@ -669,11 +780,11 @@ export const ExplorationMap = memo(function ExplorationMap({
         )}
       </div>
 
-      <div style={{ position: 'relative', width, height: HEIGHT }} className="block">
+      <div style={{ position: 'relative', width, height }} className="block">
         <svg
           ref={svgRef}
           width={width}
-          height={HEIGHT}
+          height={height}
           className="absolute inset-0"
           style={{ cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none', touchAction: 'none' }}
           onPointerDown={handlePointerDown}
@@ -713,7 +824,7 @@ export const ExplorationMap = memo(function ExplorationMap({
           })}
           {/* X-axis coordinate labels along bottom */}
           {gridXRange.map((x) => {
-            const label = projectWorldToScreen(x, camY + ((HEIGHT / 2 - 4 - panY) / Math.max(cellSizeZ, 1)));
+            const label = projectWorldToScreen(x, camY + ((height / 2 - 4 - panY) / Math.max(cellSizeZ, 1)));
             return (
               <text
                 key={`xl-${x}`}
@@ -1028,42 +1139,11 @@ export const ExplorationMap = memo(function ExplorationMap({
               strokeDasharray="2 2"
             />
           )}
-          {/* Mouse coordinate display — anchored beside cursor */}
-          {mouseCoord && (
-            <g
-              transform={`translate(${Math.min(width - 4, mouseCoord.px + 9)}, ${Math.max(
-                8,
-                mouseCoord.py - 3
-              )})`}
-            >
-              <rect
-                x={0}
-                y={-11}
-                width={54}
-                height={16}
-                rx={4}
-                ry={4}
-                fill="rgba(10, 10, 10, 0.8)"
-                stroke="rgba(127, 219, 202, 0.4)"
-                strokeWidth={1}
-              />
-              <text
-                x={4}
-                y={0}
-                textAnchor="start"
-                fontSize={11}
-                fill="rgba(127, 219, 202, 0.95)"
-                style={{ fontFamily: 'monospace', fontWeight: 600 }}
-              >
-                {mouseCoord.x}, {mouseCoord.y}
-              </text>
-            </g>
-          )}
           {/* Zoom level indicator — lower-left corner, only when not at 1x */}
           {Math.abs(zoom - 1) > 0.05 && (
             <text
               x={4}
-              y={HEIGHT - 3}
+              y={height - 3}
               textAnchor="start"
               fontSize={7}
               fill="rgba(127, 219, 202, 0.55)"
@@ -1073,9 +1153,58 @@ export const ExplorationMap = memo(function ExplorationMap({
             </text>
           )}
         </svg>
+        {showLighting && (
+          <div
+            ref={shadowContainerRef}
+            className="absolute inset-0 pointer-events-none"
+            style={{ zIndex: 8 }}
+          >
+            <ShadowCanvas
+              containerRef={shadowContainerRef}
+              anchorRef={shadowContainerRef}
+              lightX={playerScreenPos.px}
+              lightY={playerScreenPos.py}
+              lightRadius={cellSizeZ * 3}
+              lightIntensity={0.9}
+              lightColor="#7fdbca"
+              ambientDarkness={0.75}
+              flickerSpeed={0}
+              flickerAmount={0}
+              actorLights={playerActorLights}
+              blockers={shadowBlockers}
+              actorGlows={[]}
+              worldWidth={width}
+              tileSize={cellSizeZ}
+              width={width}
+              worldHeight={height}
+              height={height}
+            />
+          </div>
+        )}
+        {mouseCoord && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ zIndex: 30 }}
+          >
+            <div
+              className="absolute text-[11px] font-mono font-bold tabular-nums rounded px-1.5 py-0.5"
+              style={{
+                left: Math.min(width - 4, mouseCoord.px + 9),
+                top: Math.max(8, mouseCoord.py - 14),
+                backgroundColor: 'rgba(10, 10, 10, 0.85)',
+                color: 'rgba(127, 219, 202, 0.95)',
+                border: '1px solid rgba(127, 219, 202, 0.4)',
+                boxShadow: '0 0 6px rgba(0,0,0,0.6)',
+              }}
+            >
+              {mouseCoord.x},{mouseCoord.y}
+            </div>
+          </div>
+        )}
         {currentProjected && (onHeadingChange || onStepForward) && (
           <div
             className="absolute inset-0 pointer-events-none"
+            style={{ zIndex: 20 }}
             aria-hidden={!onHeadingChange && !onStepForward}
           >
             <div
@@ -1183,19 +1312,6 @@ export const ExplorationMap = memo(function ExplorationMap({
       {/* Bottom row: coordinate + zoom + counters + center */}
       {(onHeadingChange || currentNode) && (
         <div className="mt-1 flex items-center justify-center gap-2">
-          {currentNode && (
-            <div
-              className="px-2 py-0.5 rounded border text-[10px] font-bold tracking-[1px] tabular-nums select-none"
-              style={{
-                borderColor: 'rgba(127, 219, 202, 0.45)',
-                color: '#d7fff8',
-                backgroundColor: 'rgba(10, 10, 10, 0.8)',
-              }}
-              title="Current exploration coordinates (col,row)"
-            >
-              {currentNode.x},{currentNode.y}
-            </div>
-          )}
             <button
             type="button"
             onClick={onUseSupply}
@@ -1218,9 +1334,9 @@ export const ExplorationMap = memo(function ExplorationMap({
           >
             {typeof supplyCount === 'number' ? supplyCount : '--'}
           </button>
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex flex-col items-center gap-0.5">
             <div
-              className="text-[10px] font-bold tracking-[1px] uppercase text-game-teal/70"
+              className="text-[10px] font-bold tracking-[1px] uppercase text-game-teal/70 mb-0.5"
               style={{ letterSpacing: '0.2em' }}
             >
               {travelLabel ?? 'UNKNOWN'}

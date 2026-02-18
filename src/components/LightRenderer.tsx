@@ -1,7 +1,5 @@
 import { memo, useEffect, useRef } from 'react';
 import type { BlockingRect } from '../engine/lighting';
-import { computeVisibilityPolygon } from '../engine/lighting';
-
 // === Shadow Canvas (2D raycasting light engine) ===
 
 interface ShadowCanvasProps {
@@ -96,10 +94,6 @@ export const ShadowCanvas = memo(function ShadowCanvas({
   };
 
   // Cached visibility polygon (recomputed only when blockers change)
-  const polyCache = useRef<{ key: string; polygon: Array<{ x: number; y: number }> }>({
-    key: '', polygon: [],
-  });
-
   // Single animation loop – only restarts if canvas dimensions change
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -185,8 +179,6 @@ export const ShadowCanvas = memo(function ShadowCanvas({
           softness: b.softness,
         }))
         : emptyScreenBlockersRef.current;
-      const visibilityBlockers = screenBlockers;
-
       let lightScreenX = offsetX + lightX * scale;
       let lightScreenY = offsetY + lightY * scale;
       if (lightAnchor && anchorScreenX != null && anchorScreenY != null) {
@@ -195,21 +187,6 @@ export const ShadowCanvas = memo(function ShadowCanvas({
       }
       if (flipHorizontal) {
         lightScreenX = width - lightScreenX;
-      }
-
-      const bKey = visibilityBlockers.length > 0
-        ? visibilityBlockers.map(b => `${b.x},${b.y},${b.width},${b.height}`).join('|')
-        : '';
-      let polygon = polyCache.current.polygon;
-      if (visibilityBlockers.length > 0) {
-        const cacheKey = `${lightScreenX},${lightScreenY},${width},${height},${bKey}`;
-        if (cacheKey !== polyCache.current.key) {
-          polyCache.current = {
-            key: cacheKey,
-            polygon: computeVisibilityPolygon(lightScreenX, lightScreenY, visibilityBlockers, width, height),
-          };
-        }
-        polygon = polyCache.current.polygon;
       }
 
       // --- Draw ---
@@ -250,33 +227,10 @@ export const ShadowCanvas = memo(function ShadowCanvas({
         grad.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = grad;
 
-        // Fast path: no blockers → skip polygon raycasting and canvas clip.
-        // The gradient already fades to alpha=0 at the radius, so no clip needed.
-        if (visibilityBlockers.length === 0) {
-          ctx.fillRect(
-            screenX - screenRadius, screenY - screenRadius,
-            screenRadius * 2, screenRadius * 2,
-          );
-          return;
-        }
-
-        // Slow path: clip to visibility polygon so light doesn't bleed through walls.
-        const lightKey = `${screenX},${screenY},${width},${height},${bKey}`;
-        const lightPolygon = lightKey === polyCache.current.key
-          ? polygon
-          : computeVisibilityPolygon(screenX, screenY, visibilityBlockers, width, height);
-        if (lightPolygon.length <= 2) return;
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(lightPolygon[0].x, lightPolygon[0].y);
-        for (let i = 1; i < lightPolygon.length; i++) {
-          ctx.lineTo(lightPolygon[i].x, lightPolygon[i].y);
-        }
-        ctx.closePath();
-        ctx.clip();
-        ctx.fillRect(0, 0, width, height);
-        ctx.restore();
+        ctx.fillRect(
+          screenX - screenRadius, screenY - screenRadius,
+          screenRadius * 2, screenRadius * 2,
+        );
       };
 
       drawLight(lightScreenX, lightScreenY, d.lightRadius * scale, intensity, {

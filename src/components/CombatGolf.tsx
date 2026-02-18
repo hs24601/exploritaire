@@ -1,7 +1,8 @@
-import { memo, useEffect, useState, useMemo, useCallback, useRef, type RefObject, type KeyboardEventHandler, type PointerEvent as ReactPointerEvent } from 'react';
+import { memo, useEffect, useState, useMemo, useCallback, useRef, type RefObject, type KeyboardEventHandler } from 'react';
 import { motion } from 'framer-motion';
 import { useGraphics } from '../contexts/GraphicsContext';
-import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition, Die as DieType, RelicCombatEvent, ActorKeru } from '../engine/types';
+import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition, Die as DieType, RelicCombatEvent, ActorKeru, ActorKeruArchetype } from '../engine/types';
+import type { PoiReward } from '../engine/worldMapTypes';
 import type { DragState } from '../hooks/useDragDrop';
 import type { BlockingRect } from '../engine/lighting';
 import { ShadowCanvas } from './LightRenderer';
@@ -14,7 +15,7 @@ import { NodeEdgeBiomeScreen } from './NodeEdgeBiomeScreen';
 import { FoundationTokenGrid } from './FoundationTokenGrid';
 import { Foundation } from './Foundation';
 import { Compass, DIRECTIONS, type Direction } from './Compass';
-import { ExplorationMap, type ExplorationMapEdge, type ExplorationMapNode } from './ExplorationMap';
+import { ExplorationMap, type ExplorationMapEdge, type ExplorationMapNode, type ExplorationBlockedCell } from './ExplorationMap';
 import { ComboTimerController } from './ComboTimerController';
 import { ResourceStash } from './ResourceStash';
 import {
@@ -58,6 +59,13 @@ import { ActorInspectOverlay } from './combat/ActorInspectOverlay';
 import { TargetSwirlIndicator } from './TargetSwirlIndicator';
 import { Callout } from './Callout';
 import { isGameAudioMuted, playCardPlaceSound, setGameAudioMuted } from '../audio/gameAudio';
+import {
+  ASPECT_ABILITY_DEFINITIONS,
+  ASPECT_DISPLAY_TEXT,
+  KERU_ARCHETYPE_OPTIONS,
+  KERU_ARCHETYPE_CARDS,
+  KeruAspect,
+} from '../data/keruAspects';
 
 const CONTROLLED_DRAGONFIRE_BEHAVIOR_ID = 'controlled_dragonfire_v1';
 const CONTROLLED_DRAGONFIRE_CARD_ID_PREFIX = 'relic-controlled-dragonfire-';
@@ -65,17 +73,14 @@ const SUMMON_DARKSPAWN_BEHAVIOR_ID = 'summon_darkspawn_v1';
 const DEV_TRAVERSE_HOLD_DELAY_MS = 260;
 const DEV_TRAVERSE_HOLD_INTERVAL_MS = 190;
 const JUMBO_LAYOUT_SCALE = 6;
-const KERU_CALLOUT_DURATION_MS = 2600;
-const ASPECT_DISPLAY_TEXT: Record<string, string> = {
-  wolf: 'Lupus',
-  bear: 'Ursus',
-  cat: 'Felis',
-};
+const KERU_CALLOUT_DURATION_MS = 6600;
 const getAspectLabel = (archetype?: string) => {
   if (!archetype || archetype === 'blank') return undefined;
-  return ASPECT_DISPLAY_TEXT[archetype] ??
+  return ASPECT_DISPLAY_TEXT[archetype as KeruAspect] ??
     `${archetype.charAt(0).toUpperCase()}${archetype.slice(1)}`;
 };
+const VALID_KERU_ASPECT_SET = new Set<KeruAspect>(KERU_ARCHETYPE_OPTIONS.map((option) => option.archetype));
+const BASE_KERU_ASPECT_ORDER = KERU_ARCHETYPE_OPTIONS.map((option) => option.archetype);
 const KERU_STAT_DIFFS: Array<{ key: keyof ActorKeru; label: string }> = [
   { key: 'hpMax', label: 'HP' },
   { key: 'staminaMax', label: 'Stamina' },
@@ -96,11 +101,6 @@ const buildKeruStatLines = (previous: ActorKeru, next: ActorKeru): string[] =>
     }
     return lines;
   }, [] as string[]);
-const KERU_ARCHETYPE_REWARD_CARDS: CardType[] = [
-  { id: 'keru-archetype-wolf', rank: 3, element: 'N', suit: ELEMENT_TO_SUIT.N, actorGlyph: '🐺' },
-  { id: 'keru-archetype-bear', rank: 5, element: 'N', suit: ELEMENT_TO_SUIT.N, actorGlyph: '🐻' },
-  { id: 'keru-archetype-cat', rank: 2, element: 'N', suit: ELEMENT_TO_SUIT.N, actorGlyph: '🐈' },
-];
 
 interface CombatGolfProps {
   gameState: GameState;
@@ -152,6 +152,7 @@ interface CombatGolfProps {
   isGamePaused?: boolean;
   timeScale?: number;
   onTogglePause?: () => void;
+  poiRewardOverrides: Record<string, PoiReward[]>;
   wildAnalysis?: { key: string; sequence: Move[]; maxCount: number } | null;
   actions: {
     selectCard: (card: CardType, tableauIndex: number) => void;
@@ -450,6 +451,7 @@ export const CombatGolf = memo(function CombatGolf({
   timeScale = 1,
   onTogglePause,
   wildAnalysis = null,
+  poiRewardOverrides = {},
   actions,
   narrativeOpen,
   onCloseNarrative,
@@ -520,10 +522,13 @@ export const CombatGolf = memo(function CombatGolf({
   const [activePlayerHandActorIndex, setActivePlayerHandActorIndex] = useState<number | null>(null);
   const [rewardedBattleHandCards, setRewardedBattleHandCards] = useState<CardType[]>([]);
   const [showKeruArchetypeReward, setShowKeruArchetypeReward] = useState(false);
+  const [showKeruAbilityReward, setShowKeruAbilityReward] = useState(false);
+  const [pendingPoiRewardKey, setPendingPoiRewardKey] = useState<string | null>(null);
+  const [lastAspectRewardKey, setLastAspectRewardKey] = useState<string | null>(null);
+  const keruAbilityRewardShownRef = useRef(false);
   const [keruFxToken, setKeruFxToken] = useState(0);
   const [keruFxActive, setKeruFxActive] = useState(false);
   const [keruStatLines, setKeruStatLines] = useState<string[]>([]);
-  const [hoveredKeruRewardId, setHoveredKeruRewardId] = useState<string | null>(null);
   const [upgradedHandCardIds, setUpgradedHandCardIds] = useState<string[]>([]);
   const upgradedFlashTimeoutsRef = useRef<Record<string, number>>({});
   const prevRpgHandIdsRef = useRef<Set<string>>(new Set());
@@ -685,6 +690,20 @@ export const CombatGolf = memo(function CombatGolf({
       };
     });
   }, [poiPresenceByCoordinateKey]);
+  const poiRewardDefinitionsByCoordinate = useMemo(() => {
+    const map = new Map<string, PoiReward[]>();
+    mainWorldMap.cells.forEach((cell) => {
+      const key = `${cell.gridPosition.col},${cell.gridPosition.row}`;
+      const poi = mainWorldMap.pointsOfInterest.find((entry) => entry.id === cell.poiId);
+      if (poi?.rewards?.length) {
+        map.set(key, poi.rewards);
+      }
+    });
+    return map;
+  }, []);
+  const getPoiRewardsForKey = useCallback((key: string) => (
+    poiRewardOverrides[key] ?? poiRewardDefinitionsByCoordinate.get(key) ?? []
+  ), [poiRewardDefinitionsByCoordinate, poiRewardOverrides]);
   const worldBlockedCellKeys = useMemo(() => new Set(
     (mainWorldMap.blockedCells ?? []).map((cell) => `${cell.gridPosition.col},${cell.gridPosition.row}`)
   ), []);
@@ -704,10 +723,14 @@ export const CombatGolf = memo(function CombatGolf({
     () => (mainWorldMap.tutorialRail?.path ?? []).map((step) => ({ x: step.col, y: step.row })),
     []
   );
-  const explorationBlockedCells = useMemo(
-    () => (mainWorldMap.blockedCells ?? []).map((cell) => ({ x: cell.gridPosition.col, y: cell.gridPosition.row })),
-    []
-  );
+  const explorationBlockedCells = useMemo<ExplorationBlockedCell[]>(() => (
+    (mainWorldMap.blockedCells ?? []).map((cell) => ({
+      x: cell.gridPosition.col,
+      y: cell.gridPosition.row,
+      terrain: cell.terrain,
+      lightBlocker: cell.lightBlocker,
+    }))
+  ), []);
   const explorationBlockedEdges = useMemo(
     () => (mainWorldMap.blockedEdges ?? []).map((edge) => ({
       fromX: edge.from.col,
@@ -717,15 +740,52 @@ export const CombatGolf = memo(function CombatGolf({
     })),
     []
   );
+  const isCurrentExplorationTableauCleared = useMemo(() => (
+    gameState.tableaus.length > 0 && gameState.tableaus.every((tableau) => tableau.length === 0)
+  ), [gameState.tableaus]);
   const getExplorationNodeCoordinates = useCallback((nodeId: string): { x: number; y: number } | null => {
     if (nodeId === 'origin') return { x: explorationSpawnX, y: explorationSpawnY };
     const parsed = /^node-(-?\d+)-(-?\d+)$/.exec(nodeId);
     if (!parsed) return null;
     return { x: Number(parsed[1]), y: Number(parsed[2]) };
   }, [explorationSpawnX, explorationSpawnY]);
-  const isCurrentExplorationTableauCleared = useMemo(() => (
-    gameState.tableaus.length > 0 && gameState.tableaus.every((tableau) => tableau.length === 0)
-  ), [gameState.tableaus]);
+  const clearedPoiKeyRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const nextCleared = new Set(clearedPoiKeyRef.current);
+    let newlyClearedAspectKey: string | null = null;
+    const currentCoords = getExplorationNodeCoordinates(explorationCurrentNodeId);
+    if (currentCoords && isCurrentExplorationTableauCleared) {
+      const key = `${currentCoords.x},${currentCoords.y}`;
+      if (!nextCleared.has(key)) {
+        nextCleared.add(key);
+        const rewards = getPoiRewardsForKey(key);
+        if (rewards.some((reward) => reward.type === 'aspect-jumbo')) {
+          newlyClearedAspectKey = key;
+        }
+      }
+    }
+    explorationNodes.forEach((node) => {
+      if (!node.cleared) return;
+      const key = `${node.x},${node.y}`;
+      if (nextCleared.has(key)) return;
+      nextCleared.add(key);
+      const rewards = getPoiRewardsForKey(key);
+      if (!newlyClearedAspectKey && rewards.some((reward) => reward.type === 'aspect-jumbo')) {
+        newlyClearedAspectKey = key;
+      }
+    });
+    if (newlyClearedAspectKey && newlyClearedAspectKey !== lastAspectRewardKey) {
+      setLastAspectRewardKey(newlyClearedAspectKey);
+    }
+    clearedPoiKeyRef.current = nextCleared;
+  }, [
+    explorationCurrentNodeId,
+    explorationNodes,
+    getExplorationNodeCoordinates,
+    getPoiRewardsForKey,
+    isCurrentExplorationTableauCleared,
+    lastAspectRewardKey,
+  ]);
   const explorationConditionalEdges = useMemo(() => {
     const coords = getExplorationNodeCoordinates(explorationCurrentNodeId);
     const clearedCoordKeys = new Set(
@@ -947,74 +1007,73 @@ export const CombatGolf = memo(function CombatGolf({
   const cardHeight = CARD_SIZE.height * effectiveGlobalCardScale;
   const rewardPanelHorizontalPadding = 28;
   const rewardPanelVerticalPadding = 24;
-  const rewardCardEdgeBufferPx = Math.max(10, Math.min(28, Math.round(layoutViewportHeight * 0.02)));
   const rewardPanelHeightPx = Math.min(640, Math.max(360, Math.round(layoutViewportHeight * 0.56)));
   const rewardPanelViewportWidth = typeof window !== 'undefined' ? window.innerWidth : layoutViewportWidth;
   const rewardPanelWidthPx = Math.max(320, Math.min(layoutViewportWidth, rewardPanelViewportWidth) - 16);
-  const rewardCardGapPx = Math.max(10, Math.min(28, Math.round(layoutViewportWidth * 0.014)));
-  const rewardCardRatio = CARD_SIZE.width / CARD_SIZE.height;
-  const rewardAvailableWidth = Math.max(
-    220,
-    rewardPanelWidthPx - (rewardPanelHorizontalPadding * 2) - (rewardCardGapPx * (KERU_ARCHETYPE_REWARD_CARDS.length - 1))
-  );
-  const rewardAvailableHeight = Math.max(
-    220,
-    rewardPanelHeightPx - (rewardPanelVerticalPadding * 2) - (rewardCardEdgeBufferPx * 2)
-  );
-  const rewardCardWidthByPanel = rewardAvailableWidth / Math.max(1, KERU_ARCHETYPE_REWARD_CARDS.length);
-  const rewardCardHeightByPanel = rewardAvailableHeight;
-  const rewardJumboScale = Math.max(
-    1,
-    Math.min(
-      JUMBO_LAYOUT_SCALE,
-      rewardCardWidthByPanel / Math.max(1, cardWidth),
-      rewardCardHeightByPanel / Math.max(1, cardHeight)
-    )
-  );
-  const jumboCardWidth = Math.max(180, Math.round(cardWidth * rewardJumboScale));
-  const jumboCardHeight = Math.max(240, Math.round(jumboCardWidth / rewardCardRatio));
-  const keruRewardFanPositions = useMemo(() => {
-    const n = KERU_ARCHETYPE_REWARD_CARDS.length;
-    if (n <= 0) return [];
-    const centerIndex = (n - 1) / 2;
-    const spacing = jumboCardWidth + rewardCardGapPx;
-    const maxTilt = Math.min(12, Math.max(6, jumboCardWidth / 70));
-    return Array.from({ length: n }, (_, index) => {
-      const relative = index - centerIndex;
-      const normalized = centerIndex > 0 ? (relative / centerIndex) : 0;
-      return {
-        x: relative * spacing,
-        y: 0,
-        rotation: normalized * maxTilt,
-      };
-    });
-  }, [jumboCardWidth, rewardCardGapPx]);
-  const isDraggingKeruRewardCard = dragState.isDragging
-    && !!dragState.card
-    && dragState.card.id.startsWith('keru-archetype-');
-  const keruRewardPointer = isDraggingKeruRewardCard
-    ? {
-      x: dragState.position.x + dragState.offset.x,
-      y: dragState.position.y + dragState.offset.y,
-    }
-    : null;
-  const keruFoundationRect = isDraggingKeruRewardCard
+  const abilityCardSize = { width: Math.max(140, Math.round(cardWidth * 0.88)), height: Math.max(190, Math.round(cardHeight * 0.88)) };
+  const normalizeAspectOptions = useCallback((options?: string[]): KeruAspect[] => (
+    (options ?? []).filter((value): value is KeruAspect => VALID_KERU_ASPECT_SET.has(value as KeruAspect))
+  ), []);
+  const selectedAspect = (gameState.actorKeru?.archetype ?? 'blank') as ActorKeruArchetype;
+  const abilityDefinition = selectedAspect !== 'blank' ? ASPECT_ABILITY_DEFINITIONS[selectedAspect as KeruAspect] : null;
+  const abilityCard = abilityDefinition?.card ?? null;
+  const isDraggingAbilityCard = abilityCard ? (dragState.isDragging && dragState.card?.id === abilityCard.id) : false;
+  const abilityCardPointer = isDraggingAbilityCard ? {
+    x: dragState.position.x + dragState.offset.x,
+    y: dragState.position.y + dragState.offset.y,
+  } : null;
+  const abilityFoundationRect = isDraggingAbilityCard
     ? foundationRefs.current[0]?.getBoundingClientRect()
     : null;
-  const isKeruRewardOverTarget = Boolean(
-    keruRewardPointer
-    && keruFoundationRect
-    && keruRewardPointer.x >= keruFoundationRect.left
-    && keruRewardPointer.x <= keruFoundationRect.right
-    && keruRewardPointer.y >= keruFoundationRect.top
-    && keruRewardPointer.y <= keruFoundationRect.bottom
+  const isAbilityOverTarget = Boolean(
+    abilityCardPointer
+    && abilityFoundationRect
+    && abilityCardPointer.x >= abilityFoundationRect.left
+    && abilityCardPointer.x <= abilityFoundationRect.right
+    && abilityCardPointer.y >= abilityFoundationRect.top
+    && abilityCardPointer.y <= abilityFoundationRect.bottom
+  );
+  const pendingAspectReward = useMemo(() => (
+    pendingPoiRewardKey
+      ? getPoiRewardsForKey(pendingPoiRewardKey).find((entry) => entry.type === 'aspect-jumbo')
+      : undefined
+  ), [getPoiRewardsForKey, pendingPoiRewardKey]);
+  const allowedAspectList = useMemo(() => {
+    if (!pendingAspectReward) return BASE_KERU_ASPECT_ORDER;
+    const normalized = normalizeAspectOptions(pendingAspectReward.options);
+    return normalized.length > 0 ? normalized : BASE_KERU_ASPECT_ORDER;
+  }, [normalizeAspectOptions, pendingAspectReward]);
+  const allowedAspectSet = useMemo(() => new Set(allowedAspectList), [allowedAspectList]);
+  const permittedKeruOptions = useMemo(() => (
+    KERU_ARCHETYPE_OPTIONS.filter((option) => allowedAspectSet.has(option.archetype))
+  ), [allowedAspectSet]);
+  const aspectRewardCards = useMemo(
+    () => permittedKeruOptions.map((option) => KERU_ARCHETYPE_CARDS[option.archetype]),
+    [permittedKeruOptions]
   );
   const keruAspectLabel = useMemo(
     () => getAspectLabel(gameState.actorKeru?.archetype),
     [gameState.actorKeru?.archetype]
   );
-
-  const keruCalloutText = keruAspectLabel ? `${keruAspectLabel} Aspect` : 'Aspect Applied';
+  const keruCalloutText = keruAspectLabel ?? 'Keru';
+  const keruRewardCard = abilityCard;
+  const isDraggingKeruRewardCard = keruRewardCard ? (dragState.isDragging && dragState.card?.id === keruRewardCard.id) : false;
+  const isDraggingAspectRewardCard = dragState.isDragging && !!dragState.card?.id?.startsWith('keru-archetype-');
+  const keruRewardCardPointer = isDraggingKeruRewardCard ? {
+    x: dragState.position.x + dragState.offset.x,
+    y: dragState.position.y + dragState.offset.y,
+  } : null;
+  const keruRewardFoundationRect = isDraggingKeruRewardCard
+    ? foundationRefs.current[0]?.getBoundingClientRect()
+    : null;
+  const isKeruRewardOverTarget = Boolean(
+    keruRewardCardPointer
+    && keruRewardFoundationRect
+    && keruRewardCardPointer.x >= keruRewardFoundationRect.left
+    && keruRewardCardPointer.x <= keruRewardFoundationRect.right
+    && keruRewardCardPointer.y >= keruRewardFoundationRect.top
+    && keruRewardCardPointer.y <= keruRewardFoundationRect.bottom
+  );
   const getActorDisplayLabel = (actor?: Actor | null): string | undefined => {
     if (!actor) return undefined;
     if (actor.definitionId === 'keru') {
@@ -1047,6 +1106,16 @@ export const CombatGolf = memo(function CombatGolf({
       Math.max(320, layoutViewportWidth - 20)
     )
   );
+  const explorationMapVerticalBufferPx = 140;
+  const rawAvailableMapHeight = layoutViewportHeight - explorationTableauRowHeightPx - explorationMapVerticalBufferPx;
+  const availableMapHeight = Math.max(rawAvailableMapHeight, 0);
+  const fallbackMapHeight = Math.max(180, Math.round(layoutViewportHeight * 0.35));
+  const maxMapHeight = Math.max(220, Math.round(layoutViewportHeight * 0.45));
+  const explorationMapHeight = Math.min(
+    availableMapHeight > 0 ? availableMapHeight : fallbackMapHeight,
+    maxMapHeight
+  );
+  const explorationMapFrameWidth = explorationMapWidth + 14;
   const foundationOffset = cardHeight * 1.25;
   const handOffset = Math.max(12, Math.round(cardHeight * 0.35));
   const handCardScale = viewportAutoCardScaleFactor;
@@ -1540,18 +1609,36 @@ export const CombatGolf = memo(function CombatGolf({
     const spawnedEnemies = enemyFoundations.some((foundation) => foundation.length > 0);
     if (!isRpgVariant || spawnedEnemies) {
       setShowKeruArchetypeReward(false);
+      setPendingPoiRewardKey(null);
       return;
     }
     const keruArchetype = gameState.actorKeru?.archetype ?? 'blank';
     if (keruArchetype !== 'blank') {
       setShowKeruArchetypeReward(false);
+      setPendingPoiRewardKey(null);
       return;
     }
-    const tutorialPoiCleared = explorationNodes.some((node) => node.x === 0 && node.y === 2 && node.cleared);
-    if (tutorialPoiCleared) {
-      setShowKeruArchetypeReward(true);
+    const clearedAspectKey = lastAspectRewardKey;
+    if (!clearedAspectKey) return;
+    setPendingPoiRewardKey(clearedAspectKey);
+    setShowKeruArchetypeReward(true);
+  }, [
+    enemyFoundations,
+    explorationCurrentNodeId,
+    explorationNodes,
+    isRpgVariant,
+    lastAspectRewardKey,
+    gameState.actorKeru?.archetype,
+  ]);
+  useEffect(() => {
+    if (!isRpgVariant) return;
+    const keruArchetype = gameState.actorKeru?.archetype ?? 'blank';
+    const tutorialBCleared = explorationNodes.some((node) => node.x === 0 && node.y === 1 && node.cleared);
+    if (tutorialBCleared && keruArchetype !== 'blank' && !keruAbilityRewardShownRef.current) {
+      setShowKeruAbilityReward(true);
+      keruAbilityRewardShownRef.current = true;
     }
-  }, [enemyFoundations, explorationNodes, gameState.actorKeru?.archetype, isRpgVariant]);
+  }, [explorationNodes, gameState.actorKeru?.archetype, isRpgVariant]);
   useEffect(() => {
     const currentKeru = gameState.actorKeru;
     const lastMutationAt = currentKeru?.lastMutationAt;
@@ -1580,6 +1667,11 @@ export const CombatGolf = memo(function CombatGolf({
       }
     };
   }, [gameState.actorKeru]);
+  useEffect(() => {
+    if (showKeruAbilityReward && !isDraggingKeruRewardCard && isKeruRewardOverTarget) {
+      setShowKeruAbilityReward(false);
+    }
+  }, [showKeruAbilityReward, isDraggingKeruRewardCard, isKeruRewardOverTarget]);
   useEffect(() => {
     if (!isRpgVariant) return;
     const current = gameState.rpgHandCards ?? [];
@@ -2266,29 +2358,12 @@ export const CombatGolf = memo(function CombatGolf({
     setInspectedRpgCardSource({ side: 'player' });
     setInspectedRpgCard(card);
   }, [isRpgVariant]);
-  const handleKeruRewardCardInspect = useCallback((card: CardType) => {
-    setInspectedRpgCardSource({ side: 'reward' });
-    setInspectedRpgCard(card);
-  }, []);
-  const handleKeruJumboCardPointerDown = useCallback((card: CardType, event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    if (event.pointerType !== 'mouse') {
-      event.preventDefault();
-      event.stopPropagation();
-      try {
-        event.currentTarget.setPointerCapture(event.pointerId);
-      } catch {
-        // Ignore capture errors from browsers/devices that don't support it for this node.
-      }
-    }
-    const rect = new DOMRect(
-      event.clientX - (cardWidth / 2),
-      event.clientY - (cardHeight / 2),
-      cardWidth,
-      cardHeight
-    );
-    handleDragStartGuarded(card, HAND_SOURCE_INDEX, event.clientX, event.clientY, rect);
-  }, [cardHeight, cardWidth, handleDragStartGuarded]);
+  const handleKeruAspectSelect = useCallback((archetype: KeruAspect) => {
+    if (!allowedAspectSet.has(archetype)) return;
+    actions.applyKeruArchetype?.(archetype);
+    setShowKeruArchetypeReward(false);
+    setPendingPoiRewardKey(null);
+  }, [actions.applyKeruArchetype, allowedAspectSet]);
   const noopEnemyHandDragStart = useCallback((
     _card: CardType,
     _tableauIndex: number,
@@ -3075,9 +3150,23 @@ export const CombatGolf = memo(function CombatGolf({
     const updatedNodes = explorationNodesRef.current.map((node) => (
       node.id === currentId ? { ...node, cleared: true } : node
     ));
+    const coords = getExplorationNodeCoordinates(currentId);
+    if (coords) {
+      const key = `${coords.x},${coords.y}`;
+      const rewards = getPoiRewardsForKey(key);
+      if (rewards.some((reward) => reward.type === 'aspect-jumbo')) {
+        setLastAspectRewardKey(key);
+      }
+    }
     explorationNodesRef.current = updatedNodes;
     setExplorationNodes(updatedNodes);
-  }, [hasSpawnedEnemies, isCurrentExplorationTableauCleared, isRpgVariant]);
+  }, [
+    getExplorationNodeCoordinates,
+    getPoiRewardsForKey,
+    hasSpawnedEnemies,
+    isCurrentExplorationTableauCleared,
+    isRpgVariant,
+  ]);
   useEffect(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
     const sources = getColumnSourcesForDirection(explorationHeading);
@@ -4840,11 +4929,11 @@ export const CombatGolf = memo(function CombatGolf({
           )}
           {narrativeOpen && isRpgVariant && !hasSpawnedEnemies && (
             <div className="w-full px-2 sm:px-3 mb-2 flex justify-center pointer-events-none">
-              <div
-                className="relative w-full rounded-[15px] border border-game-teal/50 bg-gradient-to-br from-[#5f7c3b]/80 via-[#35502a]/80 to-[#172711]/80 shadow-[0_12px_40px_rgba(0,0,0,0.65)] pointer-events-auto overflow-hidden"
-                style={{ padding: '1px', width: `${explorationMapWidth + 14}px`, maxWidth: '100%' }}
-              >
-                <div className="relative rounded-[14px] bg-gradient-to-br from-[#4b6998]/90 via-[#356088]/80 to-[#1f355a]/70 px-5 py-5 text-game-white">
+          <div
+            className="relative w-full rounded-[15px] border border-game-teal/50 bg-gradient-to-br from-[#5f7c3b]/80 via-[#35502a]/80 to-[#172711]/80 shadow-[0_12px_40px_rgba(0,0,0,0.65)] pointer-events-auto overflow-hidden"
+            style={{ padding: '1px', width: `${explorationMapFrameWidth}px`, maxWidth: '100%' }}
+          >
+            <div className="relative rounded-[15px] bg-gradient-to-br from-[#4b6998]/90 via-[#356088]/80 to-[#1f355a]/70 px-5 py-5 text-game-white">
                   <button
                     type="button"
                     onClick={onCloseNarrative}
@@ -4883,12 +4972,13 @@ export const CombatGolf = memo(function CombatGolf({
             <div className="w-full px-2 sm:px-3 mb-2">
               <div
                 className="relative mx-auto"
-                style={{ width: `${explorationMapWidth + 14}px`, maxWidth: '100%' }}
+                style={{ width: `${explorationMapFrameWidth}px`, maxWidth: '100%' }}
               >
                 <ExplorationMap
                   nodes={explorationNodes}
                   edges={explorationEdges}
                   width={explorationMapWidth}
+                  height={explorationMapHeight}
                   heading={explorationHeading}
                   alignmentMode={explorationMapAlignment}
                   currentNodeId={explorationCurrentNodeId}
@@ -4912,6 +5002,7 @@ export const CombatGolf = memo(function CombatGolf({
                   canStepForward={canAdvanceExplorationHeading || devTraverseHoldEnabled}
                   onHeadingChange={handleExplorationHeadingChange}
                   onTeleport={teleportToExplorationNode}
+                  showLighting={lightingEnabled}
                 />
                 <div
                   className="absolute top-0 right-0 z-20 pointer-events-auto"
@@ -5086,7 +5177,7 @@ export const CombatGolf = memo(function CombatGolf({
                           hpOverlayOffsetPx={6}
                           onActorLongPress={({ actor: pressedActor }) => handleActorFoundationLongPress(pressedActor)}
                         />
-                        {idx === 0 && keruFxActive && (
+                        {idx === 0 && keruFxActive && isKeruRewardOverTarget && (
                           <div
                             key={`keru-fx-${keruFxToken}`}
                             className="absolute inset-0 pointer-events-none rounded-xl"
@@ -5119,7 +5210,7 @@ export const CombatGolf = memo(function CombatGolf({
                         )}
                         {idx === 0 && (
                           <Callout
-                            visible={keruFxActive}
+                            visible={keruFxActive && isKeruRewardOverTarget}
                             instanceKey={`keru-aspect-${keruFxToken}`}
                             text={keruCalloutText}
                             tone="gold"
@@ -5547,7 +5638,44 @@ export const CombatGolf = memo(function CombatGolf({
             />
           </div>
         )}
-        {showKeruArchetypeReward && !isDraggingKeruRewardCard && (
+        {showKeruArchetypeReward && !isDraggingAspectRewardCard && (
+          <CombatOverlayFrame
+            visible
+            interactive={!inspectedRpgCard}
+            dimOpacity={0.55}
+            blurPx={2}
+            zIndex={10024}
+          >
+            <div className="absolute inset-0" />
+            <div
+              className="relative mx-4 rounded-[26px] border border-game-teal/50 px-6 py-6"
+              style={{
+                maxWidth: 'min(900px, 92vw)',
+                background: 'linear-gradient(180deg, rgba(10,18,24,0.95) 0%, rgba(10,16,22,0.92) 100%)',
+                boxShadow: '0 0 40px rgba(0,0,0,0.6), 0 0 22px rgba(127,219,202,0.18)',
+              }}
+            >
+              <div className="mb-4 text-xs font-semibold uppercase tracking-[0.6em] text-game-teal/80">
+                Awaken Your Aspect
+              </div>
+              <div className="mb-4 text-sm text-game-white/80">
+                Drag an aspect card to the foundation to bind Keru&apos;s form.
+              </div>
+              <div className="relative flex items-center justify-center">
+                <Hand
+                  cards={aspectRewardCards}
+                  cardScale={1.6}
+                  onDragStart={handleDragStartGuarded}
+                  showGraphics={showGraphics}
+                  interactionMode={gameState.interactionMode}
+                  draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+                  isAnyCardDragging={dragState.isDragging}
+                />
+              </div>
+            </div>
+          </CombatOverlayFrame>
+        )}
+        {showKeruAbilityReward && keruRewardCard && abilityDefinition && (
           <CombatOverlayFrame
             visible
             interactive={!inspectedRpgCard}
@@ -5568,109 +5696,24 @@ export const CombatGolf = memo(function CombatGolf({
                 boxShadow: '0 0 22px rgba(127, 219, 202, 0.35)',
               }}
             >
-              <div className="relative z-40 w-full h-full">
-                {KERU_ARCHETYPE_REWARD_CARDS.map((rewardCard, index) => {
-                  const meta = getRpgCardMeta(rewardCard);
-                  const pos = keruRewardFanPositions[index] ?? { x: 0, y: 0, rotation: 0 };
-                  const isHovered = hoveredKeruRewardId === rewardCard.id;
-                  const isDraggingReward = dragState.isDragging && dragState.card?.id === rewardCard.id;
-                  return (
-                    <motion.div
-                      key={rewardCard.id}
-                      role="button"
-                      tabIndex={0}
-                      className="absolute left-1/2 rounded-xl border p-4 cursor-grab active:cursor-grabbing select-none"
-                      style={{
-                        top: `${rewardPanelVerticalPadding + rewardCardEdgeBufferPx}px`,
-                        marginLeft: `${Math.round(jumboCardWidth / -2)}px`,
-                        width: `${jumboCardWidth}px`,
-                        height: `${jumboCardHeight}px`,
-                        borderColor: 'rgba(127, 219, 202, 0.72)',
-                        background: 'linear-gradient(180deg, rgba(8,14,24,0.96) 0%, rgba(8,12,18,0.96) 100%)',
-                        boxShadow: '0 0 28px rgba(127, 219, 202, 0.24)',
-                        transformOrigin: 'bottom center',
-                        touchAction: 'none',
-                        visibility: isDraggingReward ? 'hidden' : 'visible',
-                        opacity: isDraggingReward ? 0 : 1,
-                        pointerEvents: isDraggingReward ? 'none' : 'auto',
-                      }}
-                      initial={false}
-                      animate={{
-                        x: pos.x,
-                        y: isHovered ? (pos.y - 20) : pos.y,
-                        rotate: isHovered ? 0 : pos.rotation,
-                        scale: isHovered ? 1.02 : 1,
-                      }}
-                      transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-                      onHoverStart={() => setHoveredKeruRewardId(rewardCard.id)}
-                      onHoverEnd={() => setHoveredKeruRewardId((current) => (current === rewardCard.id ? null : current))}
-                      onClick={() => handleKeruRewardCardInspect(rewardCard)}
-                      onPointerDown={(event) => handleKeruJumboCardPointerDown(rewardCard, event)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          handleKeruRewardCardInspect(rewardCard);
-                        }
-                      }}
-                    >
-                      <div
-                        className="font-bold text-game-teal/80"
-                        style={{ fontSize: `${Math.max(10, Math.round(jumboCardWidth * 0.042))}px`, letterSpacing: '0.16em' }}
-                      >
-                        {meta.subtitle}
-                      </div>
-                      <div
-                        className="font-bold text-game-white uppercase leading-tight"
-                        style={{ fontSize: `${Math.max(20, Math.round(jumboCardWidth * 0.105))}px`, letterSpacing: '0.12em' }}
-                      >
-                        {meta.title}
-                      </div>
-                      <div
-                        className="mt-4 leading-relaxed text-game-white/92"
-                        style={{ fontSize: `${Math.max(14, Math.round(jumboCardWidth * 0.052))}px` }}
-                      >
-                        {meta.body}
-                      </div>
-                      <div className="mt-6 flex flex-wrap gap-2">
-                        {meta.details.map((detail) => {
-                          const tooltipDescriptionByDetail: Record<string, string> = {
-                            'HP +8': 'Increases Keru max HP by 8.',
-                            'Stamina +5': 'Increases Keru stamina by 5.',
-                            'HP +14': 'Increases Keru max HP by 14.',
-                            'Armor +1': 'Increases Keru armor by 1.',
-                            'HP +5': 'Increases Keru max HP by 5.',
-                            'Evasion +15%': 'Increases Keru evasion by 15%.',
-                            'Stealth +5': 'Increases Keru stealth by 5.',
-                          };
-                          const tooltipDescription = tooltipDescriptionByDetail[detail] ?? 'Archetype trait applied to Keru.';
-                          const tooltipContent = (
-                            <div className="text-xs leading-snug">
-                              <div className="font-bold tracking-[1.2px] text-game-gold">{detail}</div>
-                              <div className="mt-1 text-game-white/85">{tooltipDescription}</div>
-                            </div>
-                          );
-                          return (
-                            <Tooltip key={`${rewardCard.id}-${detail}`} content={tooltipContent} pinnable disabled={tooltipSuppressed}>
-                              <div
-                                className="rounded border px-2 py-1 font-bold"
-                                style={{
-                                  borderColor: 'rgba(247, 210, 75, 0.62)',
-                                  color: '#f7d24b',
-                                  backgroundColor: 'rgba(22, 18, 10, 0.82)',
-                                  fontSize: `${Math.max(10, Math.round(jumboCardWidth * 0.042))}px`,
-                                  letterSpacing: '0.04em',
-                                  cursor: tooltipSuppressed ? 'default' : 'help',
-                                }}
-                              >
-                                {detail}
-                              </div>
-                            </Tooltip>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  );
-                })}
+              <div className="relative z-40 w-full h-full flex flex-col items-center justify-center gap-3 text-center">
+                <div className="text-[10px] font-bold tracking-[2px] uppercase text-game-teal/80">
+                  KERU {keruAspectLabel?.toUpperCase() ?? 'AWAKEN'}
+                </div>
+                <div className="shadow-neon-teal flex items-center justify-center">
+                  <Card
+                    card={keruRewardCard}
+                    showGraphics={showGraphics}
+                    size={abilityCardSize}
+                    onDragStart={(card, clientX, clientY, rect) => handleDragStartGuarded(card, HAND_SOURCE_INDEX, clientX, clientY, rect)}
+                  />
+                </div>
+                <div className="text-[11px] font-bold uppercase tracking-[1px] text-game-gold">
+                  {abilityDefinition.label} · {abilityDefinition.damage}
+                </div>
+                <div className="text-[10px] tracking-[0.6px] uppercase text-game-white/70 max-w-[320px]">
+                  Drag this ability to your foundation to anchor the physical aspect.
+                </div>
               </div>
             </div>
           </CombatOverlayFrame>
@@ -6402,6 +6445,7 @@ export const CombatGolf = memo(function CombatGolf({
 });
 
 export default CombatGolf;
+
 
 
 

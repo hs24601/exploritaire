@@ -95,6 +95,7 @@ export const MapEditor = memo(function MapEditor({
               currentNodeId={selectedCellId}
               alignmentMode="north" // Keep the map aligned north for editor
               onNodeClick={setSelectedCellId}
+              showLighting={false}
               isEditorMode={true}
             />
           </div>
