@@ -83,6 +83,17 @@ type PoiRewardDraft = {
   abilitySearchFilter: string;
 };
 
+type PoiNarrationDraft = {
+  title: string;
+  body: string;
+  tone: 'teal' | 'gold' | 'violet' | 'green';
+};
+
+type PoiOverride = {
+  rewards?: PoiReward[];
+  narration?: PoiNarrationDraft;
+};
+
 type AspectDraft = {
   id: string;
   label: string;
@@ -137,15 +148,34 @@ export default function App() {
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
   const [toolingTab, setToolingTab] = useState<'poi' | 'aspects' | 'ability'>('poi');
-  const [poiRewardOverrides, setPoiRewardOverrides] = useState<Record<string, PoiReward[]>>(
-    poiRewardOverridesJson as Record<string, PoiReward[]>
+  const normalizePoiOverrides = useCallback((input: Record<string, PoiReward[] | PoiOverride>) => {
+    const next: Record<string, PoiOverride> = {};
+    Object.entries(input || {}).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        next[key] = { rewards: value };
+      } else if (value && typeof value === 'object') {
+        next[key] = {
+          rewards: Array.isArray(value.rewards) ? value.rewards : [],
+          narration: value.narration ?? undefined,
+        };
+      }
+    });
+    return next;
+  }, []);
+  const [poiRewardOverrides, setPoiRewardOverrides] = useState<Record<string, PoiOverride>>(
+    normalizePoiOverrides(poiRewardOverridesJson as Record<string, PoiReward[] | PoiOverride>)
   );
-  const [poiEditorCoords, setPoiEditorCoords] = useState('0,2');
+  const [poiEditorCoords, setPoiEditorCoords] = useState('');
+  const [poiSearchQuery, setPoiSearchQuery] = useState('');
   const [poiEditorName, setPoiEditorName] = useState('');
   const [poiEditorDiscoveryRange, setPoiEditorDiscoveryRange] = useState(1);
   const [poiEditorType, setPoiEditorType] = useState<'puzzle' | 'combat'>('puzzle');
   const [poiEditorIcon, setPoiEditorIcon] = useState('');
+  const [poiEditorNarrationTitle, setPoiEditorNarrationTitle] = useState('');
+  const [poiEditorNarrationBody, setPoiEditorNarrationBody] = useState('');
+  const [poiEditorNarrationTone, setPoiEditorNarrationTone] = useState<PoiNarrationDraft['tone']>('teal');
   const [poiEditorMessage, setPoiEditorMessage] = useState<string | null>(null);
+  const [poiEditorSection, setPoiEditorSection] = useState<'details' | 'rewards' | 'narration'>('details');
   const [isSavingPoi, setIsSavingPoi] = useState(false);
   const [poiEditorRewards, setPoiEditorRewards] = useState<PoiRewardDraft[]>([{
     id: 1,
@@ -285,6 +315,10 @@ export default function App() {
     actions,
   } = useGameEngine(initialGameState, { devNoRegretEnabled });
   const ghostBackgroundEnabled = false;
+  const playtestVariant = gameState?.playtestVariant ?? 'single-foundation';
+  const isRpgVariant = playtestVariant === 'rpg';
+  const hasSpawnedEnemies = !isRpgVariant || (gameState?.enemyFoundations ?? []).some((foundation) => foundation.length > 0);
+  const isTimeScaleVisible = !zenModeEnabled && hasSpawnedEnemies;
 
   const parsePoiCoords = useCallback((value: string) => {
     const parts = value
@@ -292,10 +326,10 @@ export default function App() {
       .map((segment) => segment.trim())
       .filter(Boolean);
     if (parts.length < 2) return null;
-    const col = Number(parts[0]);
-    const row = Number(parts[1]);
-    if (Number.isNaN(col) || Number.isNaN(row)) return null;
-    return { col, row };
+    const x = Number(parts[0]);
+    const y = Number(parts[1]);
+    if (Number.isNaN(x) || Number.isNaN(y)) return null;
+    return { x, y };
   }, []);
 
   const VALID_KERU_ASPECTS = useMemo(() => new Set<KeruAspect>(KERU_ARCHETYPE_OPTIONS.map((option) => option.archetype)), []);
@@ -338,42 +372,101 @@ export default function App() {
     };
   }, []);
 
-  const handleLoadPoi = useCallback(() => {
-    const coords = parsePoiCoords(poiEditorCoords);
+  const loadPoi = useCallback((coordsStr: string) => {
+    const coords = parsePoiCoords(coordsStr);
     if (!coords) {
-      setPoiEditorMessage('Enter coordinates as "col,row".');
+      setPoiEditorMessage('Enter coordinates as "x,y".');
       return;
     }
-    const key = `${coords.col},${coords.row}`;
+    const key = `${coords.x},${coords.y}`;
     const cell = mainWorldMap.cells.find(
-      (entry) => entry.gridPosition.col === coords.col && entry.gridPosition.row === coords.row
+      (entry) => entry.gridPosition.col === coords.x && entry.gridPosition.row === coords.y
     );
-    if (!cell) {
-      setPoiEditorMessage(`No world-cell defined at ${coords.col},${coords.row}.`);
+    
+    // Look for POI in world map or check if there's an override that might exist without a world map entry
+    const poi = cell ? mainWorldMap.pointsOfInterest.find((entry) => entry.id === cell.poiId) : null;
+    const override = poiRewardOverrides[key];
+
+    if (!poi && !override) {
+      setPoiEditorMessage(`No POI or override found at ${coords.x},${coords.y}.`);
       return;
     }
-    const poi = mainWorldMap.pointsOfInterest.find((entry) => entry.id === cell.poiId);
-    if (!poi) {
-      setPoiEditorMessage(`No POI registered at ${coords.col},${coords.row}.`);
-      return;
-    }
-    setPoiEditorName(poi.name);
-    setPoiEditorDiscoveryRange(cell.traversalDifficulty ?? 1);
-    setPoiEditorType(poi.type === 'biome' ? 'combat' : 'puzzle');
-    setPoiEditorIcon((poi as { icon?: string }).icon ?? '');
-    const existingRewards = poiRewardOverrides[key] ?? poi.rewards ?? [];
+
+    setPoiEditorCoords(key);
+    setPoiEditorName(poi?.name ?? (override?.narration?.title || 'Unnamed Override'));
+    setPoiEditorDiscoveryRange(cell?.traversalDifficulty ?? 1);
+    setPoiEditorType(poi?.type === 'biome' ? 'combat' : 'puzzle');
+    setPoiEditorIcon((poi as { icon?: string })?.icon ?? '');
+    
+    const existingRewards = override?.rewards ?? poi?.rewards ?? [];
     const rewardDrafts = existingRewards.length > 0
       ? existingRewards.map(createDraftFromReward)
       : [createEmptyDraft()];
     setPoiEditorRewards(rewardDrafts);
-    setPoiEditorMessage(`Loaded POI "${poi.name}" at ${coords.col},${coords.row}.`);
-  }, [createDraftFromReward, createEmptyDraft, parsePoiCoords, poiEditorCoords, poiRewardOverrides]);
+    
+    const narration = override?.narration;
+    setPoiEditorNarrationTitle(narration?.title ?? '');
+    setPoiEditorNarrationBody(narration?.body ?? '');
+    setPoiEditorNarrationTone(narration?.tone ?? 'teal');
+    setPoiEditorMessage(`Loaded POI at ${coords.x},${coords.y}.`);
+  }, [createDraftFromReward, createEmptyDraft, parsePoiCoords, poiRewardOverrides]);
+
+  const handleLoadPoi = useCallback(() => {
+    loadPoi(poiEditorCoords);
+  }, [loadPoi, poiEditorCoords]);
+
+  const poiSearchResults = useMemo(() => {
+    const query = poiSearchQuery.trim().toLowerCase();
+    const results: Array<{ id: string; name: string; coords: string; preview?: string }> = [];
+    if (!query) return results;
+
+    const seenCoords = new Set<string>();
+
+    // 1. Search world map cells/pois
+    mainWorldMap.cells.forEach(cell => {
+      const poi = mainWorldMap.pointsOfInterest.find(p => p.id === cell.poiId);
+      if (!poi) return;
+      const coords = `${cell.gridPosition.col},${cell.gridPosition.row}`;
+      const haystack = `${poi.name} ${poi.description || ''} ${coords}`.toLowerCase();
+      if (haystack.includes(query)) {
+        seenCoords.add(coords);
+        results.push({
+          id: poi.id,
+          name: poi.name,
+          coords,
+          preview: poi.description
+        });
+      }
+    });
+
+    // 2. Search overrides
+    Object.entries(poiRewardOverrides).forEach(([coords, override]) => {
+      if (seenCoords.has(coords)) return;
+      const { title, body } = override.narration ?? {};
+      const haystack = `${title || ''} ${body || ''} ${coords}`.toLowerCase();
+      if (haystack.includes(query)) {
+        results.push({
+          id: `override-${coords}`,
+          name: title || 'Unnamed Override',
+          coords,
+          preview: body
+        });
+      }
+    });
+
+    return results;
+  }, [poiSearchQuery, poiRewardOverrides]);
 
   const handleResetPoiForm = useCallback(() => {
+    setPoiEditorCoords('');
+    setPoiSearchQuery('');
     setPoiEditorName('');
     setPoiEditorDiscoveryRange(1);
     setPoiEditorType('puzzle');
     setPoiEditorIcon('');
+    setPoiEditorNarrationTitle('');
+    setPoiEditorNarrationBody('');
+    setPoiEditorNarrationTone('teal');
     setPoiEditorRewards([createEmptyDraft()]);
     setPoiEditorMessage(null);
   }, [createEmptyDraft]);
@@ -384,7 +477,7 @@ export default function App() {
       setPoiEditorMessage('Provide a name and valid coordinates before saving.');
       return;
     }
-    const key = `${coords.col},${coords.row}`;
+    const key = `${coords.x},${coords.y}`;
     const invalidAspectRows = poiEditorRewards.filter((draft) =>
       (draft.type === 'aspect-choice' || draft.type === 'aspect-jumbo') && draft.selectedAspects.length === 0
     );
@@ -414,27 +507,43 @@ export default function App() {
         ? [...new Set(draft.selectedAspects)]
         : (draft.type === 'ability-choice' ? [...new Set(draft.selectedAbilities)] : undefined),
     }));
+    const narration = (poiEditorNarrationTitle.trim() || poiEditorNarrationBody.trim())
+      ? {
+          title: poiEditorNarrationTitle.trim(),
+          body: poiEditorNarrationBody.trim(),
+          tone: poiEditorNarrationTone,
+        }
+      : undefined;
     setIsSavingPoi(true);
     setPoiEditorMessage('Saving POI...');
     try {
       const response = await fetch('/__poi-editor/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, rewards: registry }),
+        body: JSON.stringify({ key, rewards: registry, narration }),
       });
       if (!response.ok) {
         throw new Error('Save failed');
       }
-      const savedOverrides = (await response.json()) as Record<string, PoiReward[]>;
-      setPoiRewardOverrides(savedOverrides);
-      setPoiEditorMessage(`POI "${poiEditorName}" saved for ${coords.col},${coords.row}.`);
+      const savedOverrides = (await response.json()) as Record<string, PoiReward[] | PoiOverride>;
+      setPoiRewardOverrides(normalizePoiOverrides(savedOverrides));
+      setPoiEditorMessage(`POI "${poiEditorName}" saved for ${coords.x},${coords.y}.`);
     } catch (error) {
       console.error('[App] failed to save POI', error);
       setPoiEditorMessage('Failed to save POI.');
     } finally {
       setIsSavingPoi(false);
     }
-  }, [parsePoiCoords, poiEditorCoords, poiEditorName, poiEditorRewards]);
+  }, [
+    normalizePoiOverrides,
+    parsePoiCoords,
+    poiEditorCoords,
+    poiEditorName,
+    poiEditorNarrationBody,
+    poiEditorNarrationTitle,
+    poiEditorNarrationTone,
+    poiEditorRewards,
+  ]);
 
   const handleAddRewardRow = useCallback(() => {
     setPoiEditorRewards((prev) => [...prev, createEmptyDraft()]);
@@ -526,9 +635,9 @@ export default function App() {
       try {
         const response = await fetch('/__poi-editor/overrides');
         if (!response.ok) throw new Error('Unable to load overrides');
-        const data = (await response.json()) as Record<string, PoiReward[]>;
+        const data = (await response.json()) as Record<string, PoiReward[] | PoiOverride>;
         if (active) {
-          setPoiRewardOverrides(data);
+          setPoiRewardOverrides(normalizePoiOverrides(data));
         }
       } catch (err) {
         console.error('[App] failed to load POI overrides', err);
@@ -955,9 +1064,15 @@ export default function App() {
         return;
       }
       const key = event.key.toLowerCase();
-      if (key === 'a') {
-        setToolingOpen((prev) => !prev);
-        setToolingTab('actor');
+      if (key === 'e') {
+        setToolingOpen((prev) => {
+          const next = !prev;
+          if (next) {
+            setToolingTab('poi');
+            setPoiEditorSection('details');
+          }
+          return next;
+        });
       }
       if (key === 'w') {
         setWatercolorEnabled((prev) => !prev);
@@ -1633,6 +1748,7 @@ export default function App() {
           backgroundColor: ghostBackgroundEnabled ? 'ghostwhite' : 'black',
         } as React.CSSProperties}
       >
+        {isTimeScaleVisible && (
         <div className="fixed bottom-4 left-4 z-[9999] flex flex-col gap-2 menu-text">
           <button
             type="button"
@@ -1648,6 +1764,7 @@ export default function App() {
             ⏱ x{timeScale.toFixed(1)}
           </button>
         </div>
+        )}
         {settingsOpen && (
           <div className="fixed inset-0 z-[10020]">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
@@ -1802,7 +1919,8 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
-                      setToolingTab('actor');
+                      setToolingTab('poi');
+                      setPoiEditorSection('details');
                       setToolingOpen(true);
                     }}
                     className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
@@ -1812,6 +1930,7 @@ export default function App() {
                   </button>
                   <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
                     <div className="text-[10px] text-game-white/70 tracking-[2px]">HOTKEYS</div>
+                    <div className="text-[10px] text-game-teal/80 font-mono">E — Editor</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">P — Background toggle</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">G — Graphics toggle</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">D — Touch vs Drag</div>
@@ -1996,230 +2115,342 @@ export default function App() {
                 <div className="pt-8 space-y-4 flex-1 overflow-y-auto">
                   {toolingTab === 'poi' && (
                     <>
-                  <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3">
-                    <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">POI Editor</div>
-                    <div className="text-[10px] text-game-white/70">
-                      Author or inspect a POI by typing coordinates and tapping load. Saving is mocked for now.
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <input
-                        value={poiEditorCoords}
-                        onChange={(event) => setPoiEditorCoords(event.target.value)}
-                        placeholder="Col,Row"
-                        className="flex-1 min-w-[160px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleLoadPoi}
-                        className="text-[10px] uppercase tracking-[0.4em] bg-game-teal/70 text-black px-3 py-1 rounded"
-                      >
-                        Load POI
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleResetPoiForm}
-                        className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
-                      >
-                        Reset
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 text-[10px]">
-                      <label className="flex flex-col gap-1">
-                        <span className="text-game-teal/70">POI Name</span>
-                        <input
-                          value={poiEditorName}
-                          onChange={(event) => setPoiEditorName(event.target.value)}
-                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-game-teal/70">POI Discovery Range</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={poiEditorDiscoveryRange}
-                          onChange={(event) => setPoiEditorDiscoveryRange(Math.max(0, Number(event.target.value) || 0))}
-                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-game-teal/70">POI Type</span>
-                        <select
-                          value={poiEditorType}
-                          onChange={(event) => setPoiEditorType(event.target.value as 'puzzle' | 'combat')}
-                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                        >
-                          <option value="puzzle">Puzzle</option>
-                          <option value="combat">Combat</option>
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-game-teal/70">POI Icon</span>
-                        <input
-                          value={poiEditorIcon}
-                          onChange={(event) => setPoiEditorIcon(event.target.value)}
-                          placeholder="e.g., 🐺"
-                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                        />
-                      </label>
-                    </div>
-                    <div className="text-[10px] text-game-white/60">
-                      {poiEditorMessage ?? 'No status yet.'}
-                    </div>
-                  </div>
-                  <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">POI Rewards</div>
-                      <button
-                        type="button"
-                        onClick={handleAddRewardRow}
-                        className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
-                      >
-                        Add Row
-                      </button>
-                    </div>
-                    <div className="space-y-3">
-                      {poiEditorRewards.map((reward, index) => {
-                        const searchTerm = reward.searchFilter.trim().toLowerCase();
-                        const filteredAspects = KERU_ARCHETYPE_OPTIONS.filter((option) => {
-                          const haystack = `${option.label} ${option.archetype}`.toLowerCase();
-                          return searchTerm === '' || haystack.includes(searchTerm);
-                        });
-                        const abilitySearchTerm = reward.abilitySearchFilter.trim().toLowerCase();
-                        const filteredAbilities = abilityDrafts.filter((option) => {
-                          const haystack = `${option.id} ${option.label}`.toLowerCase();
-                          return abilitySearchTerm === '' || haystack.includes(abilitySearchTerm);
-                        });
-                        const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
-                        const isAbilityReward = reward.type === 'ability-choice';
-                        return (
-                          <div key={reward.id} className="rounded-xl bg-black/70 border border-game-teal/30 p-3 space-y-2">
-                            <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                              <span className="text-game-white/60">Reward {index + 1}</span>
-                              <select
-                                value={reward.type}
-                                onChange={(event) => handleRewardChange(reward.id, 'type', event.target.value)}
-                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                              >
-                                {REWARD_TYPE_OPTIONS.map((option) => (
-                                  <option key={option.value} value={option.value}>{option.label}</option>
+                      <div className="flex flex-col gap-2 md:hidden">
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <button
+                            type="button"
+                            onClick={() => setPoiEditorSection('details')}
+                            className={`px-2 py-1 rounded border uppercase tracking-[0.3em] ${
+                              poiEditorSection === 'details'
+                                ? 'border-game-gold text-game-gold'
+                                : 'border-game-teal/40 text-game-white/70'
+                            }`}
+                          >
+                            Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPoiEditorSection('rewards')}
+                            className={`px-2 py-1 rounded border uppercase tracking-[0.3em] ${
+                              poiEditorSection === 'rewards'
+                                ? 'border-game-gold text-game-gold'
+                                : 'border-game-teal/40 text-game-white/70'
+                            }`}
+                          >
+                            Rewards
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPoiEditorSection('narration')}
+                            className={`px-2 py-1 rounded border uppercase tracking-[0.3em] ${
+                              poiEditorSection === 'narration'
+                                ? 'border-game-gold text-game-gold'
+                                : 'border-game-teal/40 text-game-white/70'
+                            }`}
+                          >
+                            Narration
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-4">
+                        <div className={`bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3 ${poiEditorSection !== 'details' ? 'hidden md:block' : ''}`}>
+                          <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">POI Editor</div>
+                          <div className="space-y-2">
+                            <span className="text-game-teal/70 text-[9px] uppercase tracking-wider">Find POI by Title or Body</span>
+                            <input
+                              value={poiSearchQuery}
+                              onChange={(event) => setPoiSearchQuery(event.target.value)}
+                              placeholder="Search titles, bodies, or coordinates..."
+                              className="w-full bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                            />
+                            {poiSearchResults.length > 0 && (
+                              <div className="max-h-[140px] overflow-y-auto border border-game-teal/30 rounded bg-black/40 p-1 space-y-1">
+                                {poiSearchResults.map(result => (
+                                  <button
+                                    key={result.id}
+                                    type="button"
+                                    onClick={() => loadPoi(result.coords)}
+                                    className="w-full text-left p-1.5 hover:bg-game-teal/20 rounded flex justify-between items-start gap-3 group transition-colors"
+                                  >
+                                    <div className="flex flex-col flex-1 min-w-0">
+                                      <span className="text-game-white text-[10px] font-bold truncate">{result.name}</span>
+                                      {result.preview && <span className="text-game-white/50 text-[8px] line-clamp-1 italic">{result.preview}</span>}
+                                    </div>
+                                    <span className="text-game-teal/60 text-[9px] font-mono group-hover:text-game-teal shrink-0">{result.coords}</span>
+                                  </button>
                                 ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveRewardRow(reward.id)}
-                                disabled={poiEditorRewards.length <= 1}
-                                className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40 disabled:opacity-50"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              <input
-                                value={reward.description}
-                                onChange={(event) => handleRewardChange(reward.id, 'description', event.target.value)}
-                                placeholder="Description"
-                                className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                              />
-                              <label className="flex items-center gap-1">
-                                <span className="text-game-teal/70">Draw</span>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={reward.drawCount}
-                                  onChange={(event) => handleRewardChange(reward.id, 'drawCount', Number(event.target.value) || 0)}
-                                  className="w-16 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                />
-                              </label>
-                              <label className="flex items-center gap-1">
-                                <span className="text-game-teal/70">Choose</span>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={reward.chooseCount}
-                                  onChange={(event) => handleRewardChange(reward.id, 'chooseCount', Number(event.target.value) || 0)}
-                                  className="w-16 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                />
-                              </label>
-                            </div>
-                            {isAspectReward && (
-                              <div className="space-y-2 pt-2 text-[10px]">
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    value={reward.searchFilter}
-                                    onChange={(event) => handleRewardChange(reward.id, 'searchFilter', event.target.value)}
-                                    placeholder="Filter aspects"
-                                    className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRewardSelectAll(reward.id, filteredAspects.map((option) => option.archetype))}
-                                    className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
-                                  >
-                                    Select matching
-                                  </button>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {filteredAspects.map((option) => (
-                                    <label
-                                      key={`${reward.id}-${option.archetype}`}
-                                      className="flex items-center gap-1 rounded border border-game-teal/30 bg-black/50 px-2 py-1 text-[9px] cursor-pointer"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={reward.selectedAspects.includes(option.archetype)}
-                                        onChange={() => handleRewardAspectToggle(reward.id, option.archetype)}
-                                        className="accent-game-teal"
-                                      />
-                                      {option.label}
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            {isAbilityReward && (
-                              <div className="space-y-2 pt-2 text-[10px]">
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    value={reward.abilitySearchFilter}
-                                    onChange={(event) => handleRewardChange(reward.id, 'abilitySearchFilter', event.target.value)}
-                                    placeholder="Filter abilities"
-                                    className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRewardAbilitySelectAll(reward.id, filteredAbilities.map((option) => option.id))}
-                                    className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
-                                  >
-                                    Select matching
-                                  </button>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {filteredAbilities.map((option) => (
-                                    <label
-                                      key={`${reward.id}-${option.id}`}
-                                      className="flex items-center gap-1 rounded border border-game-teal/30 bg-black/50 px-2 py-1 text-[9px] cursor-pointer"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={reward.selectedAbilities.includes(option.id)}
-                                        onChange={() => handleRewardAbilityToggle(reward.id, option.id)}
-                                        className="accent-game-teal"
-                                      />
-                                      {option.label || option.id}
-                                    </label>
-                                  ))}
-                                </div>
                               </div>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
-                    <div className="text-[9px] text-game-white/50">
-                      Example: 0,2 → Aspect choice (draw 3, choose 1). TutB → Ability choice (draw 4, choose 3).
-                    </div>
-                  </div>
+                          
+                          <div className="h-[1px] bg-game-teal/20 my-2" />
+                          
+                          <div className="space-y-2">
+                            <span className="text-game-teal/70 text-[9px] uppercase tracking-wider">Load by Coordinates</span>
+                            <div className="flex flex-wrap gap-2">
+                              <input
+                                value={poiEditorCoords}
+                                onChange={(event) => setPoiEditorCoords(event.target.value)}
+                                placeholder="x,y"
+                                className="flex-1 min-w-[120px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleLoadPoi}
+                                className="text-[10px] uppercase tracking-[0.4em] bg-game-teal/70 text-black px-3 py-1 rounded"
+                              >
+                                Load POI
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleResetPoiForm}
+                                className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 text-[10px]">
+                            <label className="flex flex-col gap-1">
+                              <span className="text-game-teal/70">POI Name</span>
+                              <input
+                                value={poiEditorName}
+                                onChange={(event) => setPoiEditorName(event.target.value)}
+                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1">
+                              <span className="text-game-teal/70">POI Discovery Range</span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={poiEditorDiscoveryRange}
+                                onChange={(event) => setPoiEditorDiscoveryRange(Math.max(0, Number(event.target.value) || 0))}
+                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1">
+                              <span className="text-game-teal/70">POI Type</span>
+                              <select
+                                value={poiEditorType}
+                                onChange={(event) => setPoiEditorType(event.target.value as 'puzzle' | 'combat')}
+                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              >
+                                <option value="puzzle">Puzzle</option>
+                                <option value="combat">Combat</option>
+                              </select>
+                            </label>
+                            <label className="flex flex-col gap-1">
+                              <span className="text-game-teal/70">POI Icon</span>
+                              <input
+                                value={poiEditorIcon}
+                                onChange={(event) => setPoiEditorIcon(event.target.value)}
+                                placeholder="e.g., 🐺"
+                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              />
+                            </label>
+                          </div>
+                          <div className="text-[10px] text-game-white/60">
+                            {poiEditorMessage ?? 'No status yet.'}
+                          </div>
+                        </div>
+                        <div className={`bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3 ${poiEditorSection !== 'rewards' ? 'hidden md:block' : ''}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">POI Rewards</div>
+                            <button
+                              type="button"
+                              onClick={handleAddRewardRow}
+                              className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
+                            >
+                              Add Row
+                            </button>
+                          </div>
+                          <div className="space-y-3">
+                            {poiEditorRewards.map((reward, index) => {
+                              const searchTerm = reward.searchFilter.trim().toLowerCase();
+                              const filteredAspects = KERU_ARCHETYPE_OPTIONS.filter((option) => {
+                                const haystack = `${option.label} ${option.archetype}`.toLowerCase();
+                                return searchTerm === '' || haystack.includes(searchTerm);
+                              });
+                              const abilitySearchTerm = reward.abilitySearchFilter.trim().toLowerCase();
+                              const filteredAbilities = abilityDrafts.filter((option) => {
+                                const haystack = `${option.id} ${option.label}`.toLowerCase();
+                                return abilitySearchTerm === '' || haystack.includes(abilitySearchTerm);
+                              });
+                              const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
+                              const isAbilityReward = reward.type === 'ability-choice';
+                              return (
+                                <div key={reward.id} className="rounded-xl bg-black/70 border border-game-teal/30 p-3 space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                                    <span className="text-game-white/60">Reward {index + 1}</span>
+                                    <select
+                                      value={reward.type}
+                                      onChange={(event) => handleRewardChange(reward.id, 'type', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    >
+                                      {REWARD_TYPE_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveRewardRow(reward.id)}
+                                      disabled={poiEditorRewards.length <= 1}
+                                      className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40 disabled:opacity-50"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <input
+                                      value={reward.description}
+                                      onChange={(event) => handleRewardChange(reward.id, 'description', event.target.value)}
+                                      placeholder="Description"
+                                      className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                    <label className="flex items-center gap-1">
+                                      <span className="text-game-teal/70">Draw</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={reward.drawCount}
+                                        onChange={(event) => handleRewardChange(reward.id, 'drawCount', Number(event.target.value) || 0)}
+                                        className="w-16 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                      />
+                                    </label>
+                                    <label className="flex items-center gap-1">
+                                      <span className="text-game-teal/70">Choose</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={reward.chooseCount}
+                                        onChange={(event) => handleRewardChange(reward.id, 'chooseCount', Number(event.target.value) || 0)}
+                                        className="w-16 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                      />
+                                    </label>
+                                  </div>
+                                  {isAspectReward && (
+                                    <div className="space-y-2 pt-2 text-[10px]">
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          value={reward.searchFilter}
+                                          onChange={(event) => handleRewardChange(reward.id, 'searchFilter', event.target.value)}
+                                          placeholder="Filter aspects"
+                                          className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRewardSelectAll(reward.id, filteredAspects.map((option) => option.archetype))}
+                                          className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
+                                        >
+                                          Select matching
+                                        </button>
+                                      </div>
+                                      <div className="flex flex-wrap gap-2">
+                                        {filteredAspects.map((option) => (
+                                          <label
+                                            key={`${reward.id}-${option.archetype}`}
+                                            className="flex items-center gap-1 rounded border border-game-teal/30 bg-black/50 px-2 py-1 text-[9px] cursor-pointer"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={reward.selectedAspects.includes(option.archetype)}
+                                              onChange={() => handleRewardAspectToggle(reward.id, option.archetype)}
+                                              className="accent-game-teal"
+                                            />
+                                            {option.label}
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {isAbilityReward && (
+                                    <div className="space-y-2 pt-2 text-[10px]">
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          value={reward.abilitySearchFilter}
+                                          onChange={(event) => handleRewardChange(reward.id, 'abilitySearchFilter', event.target.value)}
+                                          placeholder="Filter abilities"
+                                          className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRewardAbilitySelectAll(reward.id, filteredAbilities.map((option) => option.id))}
+                                          className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
+                                        >
+                                          Select matching
+                                        </button>
+                                      </div>
+                                      <div className="flex flex-wrap gap-2">
+                                        {filteredAbilities.map((option) => (
+                                          <label
+                                            key={`${reward.id}-${option.id}`}
+                                            className="flex items-center gap-1 rounded border border-game-teal/30 bg-black/50 px-2 py-1 text-[9px] cursor-pointer"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={reward.selectedAbilities.includes(option.id)}
+                                              onChange={() => handleRewardAbilityToggle(reward.id, option.id)}
+                                              className="accent-game-teal"
+                                            />
+                                            {option.label || option.id}
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="text-[9px] text-game-white/50">
+                            Example: 0,2 → Aspect choice (draw 3, choose 1). TutB → Ability choice (draw 4, choose 3).
+                          </div>
+                        </div>
+                        <div className={`bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3 ${poiEditorSection !== 'narration' ? 'hidden md:block' : ''}`}>
+                          <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Narration</div>
+                          <div className="grid grid-cols-3 gap-3 text-[10px]">
+                            <label className="flex flex-col gap-1 col-span-2">
+                              <span className="text-game-teal/70">Title</span>
+                              <input
+                                value={poiEditorNarrationTitle}
+                                onChange={(event) => setPoiEditorNarrationTitle(event.target.value)}
+                                placeholder="Awaken Your Aspect"
+                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1">
+                              <span className="text-game-teal/70">Tone</span>
+                              <select
+                                value={poiEditorNarrationTone}
+                                onChange={(event) => setPoiEditorNarrationTone(event.target.value as PoiNarrationDraft['tone'])}
+                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              >
+                                <option value="teal">Teal</option>
+                                <option value="gold">Gold</option>
+                                <option value="violet">Violet</option>
+                                <option value="green">Green</option>
+                              </select>
+                            </label>
+                          </div>
+                          <label className="flex flex-col gap-1 text-[10px]">
+                            <span className="text-game-teal/70">Body</span>
+                            <textarea
+                              value={poiEditorNarrationBody}
+                              onChange={(event) => setPoiEditorNarrationBody(event.target.value)}
+                              placeholder="Short narrative for when the player arrives."
+                              rows={3}
+                              className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold resize-none"
+                            />
+                          </label>
+                          <div className="text-[9px] text-game-white/50 space-y-1">
+                            <div>
+                              This text appears when arriving at the POI. Use <span className="text-game-teal">{'{word}'}</span> for pulse or <span className="text-game-gold">{'{word|color}'}</span> for highlight.
+                            </div>
+                            <div>Leave blank to disable.</div>
+                          </div>
+                        </div>
+                      </div>
                     </>
                   )}
                   {toolingTab === 'ability' && (
@@ -2451,27 +2682,55 @@ export default function App() {
                             ))}
                           {(() => {
                             const active = aspectProfiles.find((entry) => entry.id === selectedAspectProfileId) ?? aspectProfiles[0];
-                            const archetypeKey = active?.archetype?.trim().toLowerCase();
-                            const previewCard = archetypeKey
-                              ? {
-                                  id: `keru-archetype-${archetypeKey}`,
-                                  rank: 1,
-                                  element: 'N' as Element,
-                                  suit: ELEMENT_TO_SUIT.N,
-                                }
-                              : null;
+                            const formattedAttributes = (active?.attributes ?? []).map((attr) => {
+                              if (typeof attr === 'string') return attr;
+                              const stat = attr.stat?.trim() ?? '';
+                              const op = attr.op ?? '+';
+                              const value = String(attr.value ?? '').trim();
+                              if (!stat && !value) return '';
+                              return `${stat}${op}${value}`.trim();
+                            }).filter(Boolean);
+                            if (!active || !active.archetype) {
+                              return (
+                                <div className="text-[9px] text-game-white/50">Set an archetype to preview the jumbo card.</div>
+                              );
+                            }
                             return (
-                              <div className="flex justify-center overflow-visible">
-                                {previewCard ? (
-                                  <Card
-                                    card={previewCard}
-                                    showGraphics={showGraphics}
-                                    size={{ width: 230, height: 322 }}
-                                  />
-                                ) : (
-                                  <div className="text-[9px] text-game-white/50">Set an archetype to preview the jumbo card.</div>
+                              <div className="flex justify-center">
+                                <div
+                                  className="w-[280px] rounded-[18px] border border-game-teal/50 shadow-[0_0_30px_rgba(0,0,0,0.45)] px-6 py-5 text-center"
+                                  style={{
+                                    background: 'linear-gradient(180deg, rgba(6,8,14,0.9) 0%, rgba(5,6,12,0.95) 65%, rgba(0,0,0,0.95) 100%)',
+                                  }}
+                                >
+                                <div className="text-[8px] font-bold tracking-[0.4em] text-game-teal/60 uppercase">
+                                  {(active.rarity ?? 'Common').toUpperCase()}
+                                </div>
+                                <div className="text-[11px] font-bold tracking-[0.3em] text-game-gold uppercase mt-2">
+                                  {active.archetype} Archetype
+                                </div>
+                                <div className="text-[22px] font-black tracking-[0.15em] text-white uppercase mt-4">
+                                  <div>Aspect Of</div>
+                                  <div>{(active.name ?? '??').toUpperCase()}</div>
+                                </div>
+                                <div className="text-[10px] text-game-white/70 mt-4 leading-5">
+                                  {active.description || 'No description provided.'}
+                                </div>
+                                {formattedAttributes.length > 0 && (
+                                  <div className="flex flex-wrap items-center justify-center gap-1 mt-4">
+                                    {formattedAttributes.map((attr) => (
+                                      <span
+                                        key={attr}
+                                        className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-2 py-1 text-[8px] uppercase tracking-[0.2em]"
+                                        style={{ color: '#f7d24b' }}
+                                      >
+                                        {attr}
+                                      </span>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
+                            </div>
                             );
                           })()}
                         </div>

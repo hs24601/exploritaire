@@ -2929,8 +2929,8 @@ export const Table = memo(function Table({
 
   // === Shadow / Lighting data ===
   const SHADOW_Z = 35;
-  const SAPLING_LIGHT_BASE_RADIUS = 350;
-  const SAPLING_LIGHT_RADIUS_STEP = 20;
+  const SAPLING_LIGHT_BASE_RADIUS = 120;
+  const SAPLING_LIGHT_RADIUS_STEP = 6;
   const SAPLING_LIGHT_BASE_INTENSITY = 0.85;
   const SAPLING_LIGHT_INTENSITY_STEP = 0.02;
   const DISCOVERY_INTENSITY_THRESHOLD = 0.12;
@@ -4678,6 +4678,7 @@ export const Table = memo(function Table({
               lightRadius={shadowLight.radius}
               lightIntensity={shadowLight.intensity}
               lightColor={shadowLight.color}
+              ambientDarkness={0.93}
               flickerSpeed={0.5}
               flickerAmount={0.08}
               actorLights={[...actorLights, ...(intentDragLight ? [intentDragLight] : [])]}

@@ -195,7 +195,7 @@ export const ShadowCanvas = memo(function ShadowCanvas({
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, width, height);
       ctx.globalCompositeOperation = 'source-over';
-      const darkness = Math.min(1, Math.max(0.2, d.ambientDarkness ?? 0.93));
+      const darkness = Math.min(1, Math.max(0, d.ambientDarkness ?? 0.93));
       ctx.fillStyle = `rgba(8, 8, 24, ${darkness})`;
       ctx.fillRect(0, 0, width, height);
 

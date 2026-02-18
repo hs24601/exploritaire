@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ReactNode } from 'react';
+import { RichNarration } from './RichNarration';
 
 export interface NarrativeOverlayProps {
   open: boolean;
@@ -11,21 +12,11 @@ export function NarrativeOverlay({ open, onClose, children }: NarrativeOverlayPr
   const defaultContent = (
     <div className="space-y-4 text-center">
       <p className="text-3xl md:text-4xl font-bold uppercase tracking-[0.35em]">Awaken your</p>
-      <div className="relative inline-flex">
-        <motion.span
-          className="text-5xl md:text-6xl font-black uppercase tracking-[0.5em]"
-          animate={{
-            scale: [1, 1.09, 1],
-            textShadow: [
-              '0 0 0 rgba(255,255,255,0)',
-              '0 0 30px rgba(126, 255, 199, 0.8)',
-              '0 0 0 rgba(255,255,255,0)',
-            ],
-          }}
-          transition={{ duration: 1.8, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
-        >
-          aspect
-        </motion.span>
+      <div className="relative inline-flex items-center justify-center">
+        <RichNarration
+          text="{aspect}"
+          className="text-5xl md:text-6xl"
+        />
         <motion.div
           aria-hidden
           className="absolute inset-0 pointer-events-none rounded-full border border-game-teal/30"

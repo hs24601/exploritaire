@@ -52,6 +52,8 @@ interface ExplorationMapProps {
   onStepCostIncrease?: () => void;
   onStepForward?: () => void;
   canStepForward?: boolean;
+  onStepBackward?: () => void;
+  canStepBackward?: boolean;
   onHeadingChange?: (direction: Direction) => void;
   onTeleport?: (x: number, y: number) => void;
   poiMarkers?: Array<{ id: string; x: number; y: number; label?: string }>;
@@ -59,6 +61,7 @@ interface ExplorationMapProps {
   blockedEdges?: Array<{ fromX: number; fromY: number; toX: number; toY: number }>;
   conditionalEdges?: Array<{ fromX: number; fromY: number; toX: number; toY: number; locked: boolean }>;
   activeBlockedEdge?: { fromX: number; fromY: number; toX: number; toY: number; reason?: string } | null;
+  tableauWall?: { fromX: number; fromY: number; toX: number; toY: number; tableaus: number; pathBlock?: boolean } | null;
   forcedPath?: Array<{ x: number; y: number }>;
   nextForcedPathIndex?: number | null;
   showLighting?: boolean;
@@ -73,6 +76,7 @@ const MAX_ZOOM = 1;
 const ZOOM_FACTOR = 1.15;
 const FULL_TURN_DEG = 360;
 const STEP_DEG = FULL_TURN_DEG / DIRECTIONS.length;
+const SHORT_HEIGHT_THRESHOLD = 230;
 
 type GridCell = { x: number; y: number };
 type GridPoint = { x: number; y: number };
@@ -222,6 +226,8 @@ export const ExplorationMap = memo(function ExplorationMap({
   onStepCostIncrease,
   onStepForward,
   canStepForward = true,
+  onStepBackward,
+  canStepBackward = false,
   onHeadingChange,
   onTeleport,
   poiMarkers = [],
@@ -229,6 +235,7 @@ export const ExplorationMap = memo(function ExplorationMap({
   blockedEdges = [],
   conditionalEdges = [],
   activeBlockedEdge = null,
+  tableauWall = null,
   forcedPath = [],
   nextForcedPathIndex = null,
   showLighting = true,
@@ -318,11 +325,12 @@ export const ExplorationMap = memo(function ExplorationMap({
     y2: projectWorldToScreen(edge.toX, edge.toY).py,
   })), [conditionalEdges, projectWorldToScreen]);
   const projectedActiveBlockedEdge = useMemo(() => {
-    if (!activeBlockedEdge) return null;
-    const moveDx = activeBlockedEdge.toX - activeBlockedEdge.fromX;
-    const moveDy = activeBlockedEdge.toY - activeBlockedEdge.fromY;
-    const anchorX = activeBlockedEdge.fromX + (moveDx * 0.35);
-    const anchorY = activeBlockedEdge.fromY + (moveDy * 0.35);
+    const edge = tableauWall ?? activeBlockedEdge;
+    if (!edge) return null;
+    const moveDx = edge.toX - edge.fromX;
+    const moveDy = edge.toY - edge.fromY;
+    const anchorX = edge.fromX + (moveDx * 0.35);
+    const anchorY = edge.fromY + (moveDy * 0.35);
     // Build a "wall" perpendicular to travel so it spans between neighboring obstacle lanes.
     const wallFromWorld = Math.abs(moveDy) >= Math.abs(moveDx)
       ? { x: anchorX - 1, y: anchorY }
@@ -334,7 +342,7 @@ export const ExplorationMap = memo(function ExplorationMap({
     const from = projectWorldToScreen(wallFromWorld.x, wallFromWorld.y);
     const to = projectWorldToScreen(wallToWorld.x, wallToWorld.y);
     return {
-      ...activeBlockedEdge,
+      ...edge,
       x1: from.px,
       y1: from.py,
       x2: to.px,
@@ -342,7 +350,51 @@ export const ExplorationMap = memo(function ExplorationMap({
       mx: (from.px + to.px) / 2,
       my: (from.py + to.py) / 2,
     };
-  }, [activeBlockedEdge, projectWorldToScreen]);
+  }, [activeBlockedEdge, tableauWall, projectWorldToScreen]);
+
+  const tableauWallCards = useMemo<TableauWallCard[]>(() => {
+    if (!projectedActiveBlockedEdge) return [];
+    const count = Math.max(1, Math.round(tableauWall?.tableaus ?? 0) || 1);
+    const dx = projectedActiveBlockedEdge.x2 - projectedActiveBlockedEdge.x1;
+    const dy = projectedActiveBlockedEdge.y2 - projectedActiveBlockedEdge.y1;
+    const segmentLength = Math.max(1, Math.hypot(dx, dy));
+    const ux = dx / segmentLength;
+    const uy = dy / segmentLength;
+    const edgeInset = Math.min(cellSizeZ * 0.35, segmentLength * 0.18);
+    const usableLength = Math.max(1, segmentLength - (edgeInset * 2));
+    const step = usableLength / count;
+    const cardHeight = step * 1.02;
+    const cardWidth = Math.min(cellSizeZ * 0.34, Math.max(2.2, cardHeight * 0.62));
+    return Array.from({ length: count }).map((_, index) => {
+      const distance = edgeInset + (step * (index + 0.5));
+      const x = projectedActiveBlockedEdge.x1 + (ux * distance);
+      const y = projectedActiveBlockedEdge.y1 + (uy * distance);
+      return { x, y, width: cardWidth, height: cardHeight };
+    });
+  }, [projectedActiveBlockedEdge, tableauWall?.tableaus, cellSizeZ]);
+
+  const tableauWallLine = useMemo(() => {
+    if (!projectedActiveBlockedEdge || tableauWallCards.length === 0) return projectedActiveBlockedEdge;
+    const dx = projectedActiveBlockedEdge.x2 - projectedActiveBlockedEdge.x1;
+    const dy = projectedActiveBlockedEdge.y2 - projectedActiveBlockedEdge.y1;
+    const len = Math.max(1, Math.hypot(dx, dy));
+    const ux = dx / len;
+    const uy = dy / len;
+    const centers = tableauWallCards.map((card) => ({
+      t: (card.x - projectedActiveBlockedEdge.x1) * ux + (card.y - projectedActiveBlockedEdge.y1) * uy,
+      x: card.x,
+      y: card.y,
+    }));
+    const min = centers.reduce((acc, cur) => (cur.t < acc.t ? cur : acc), centers[0]);
+    const max = centers.reduce((acc, cur) => (cur.t > acc.t ? cur : acc), centers[0]);
+    return {
+      ...projectedActiveBlockedEdge,
+      x1: min.x,
+      y1: min.y,
+      x2: max.x,
+      y2: max.y,
+    };
+  }, [projectedActiveBlockedEdge, tableauWallCards]);
 
   const projectedForcedPath = useMemo(() => forcedPath.map((step) => ({
     ...step,
@@ -479,9 +531,27 @@ export const ExplorationMap = memo(function ExplorationMap({
     return rects;
   }, [blockedEdges, conditionalEdges, projectWorldToScreen, cellSizeZ]);
 
+  const tableauWallBlockers = useMemo<BlockingRect[]>(() => {
+    if (tableauWallCards.length === 0) return [];
+    const minX = Math.min(...tableauWallCards.map((card) => card.x - card.width / 2));
+    const maxX = Math.max(...tableauWallCards.map((card) => card.x + card.width / 2));
+    const minY = Math.min(...tableauWallCards.map((card) => card.y - card.height / 2));
+    const maxY = Math.max(...tableauWallCards.map((card) => card.y + card.height / 2));
+    const padX = Math.max(2, cellSizeZ * 0.08);
+    const padY = Math.max(2, cellSizeZ * 0.12);
+    return [{
+      x: minX - padX,
+      y: minY - padY,
+      width: (maxX - minX) + (padX * 2),
+      height: (maxY - minY) + (padY * 2),
+      castHeight: Math.max(8, Math.round(cellSizeZ * 0.45)),
+      softness: Math.max(4, Math.round(cellSizeZ * 0.2)),
+    }];
+  }, [tableauWallCards, cellSizeZ]);
+
   const shadowBlockers = useMemo(
-    () => [...blockedRegionRects, ...edgeBlockers, ...projectedCellBlockers],
-    [blockedRegionRects, edgeBlockers, projectedCellBlockers],
+    () => [...blockedRegionRects, ...edgeBlockers, ...projectedCellBlockers, ...tableauWallBlockers],
+    [blockedRegionRects, edgeBlockers, projectedCellBlockers, tableauWallBlockers],
   );
 
   const projectedById = useMemo(
@@ -505,6 +575,7 @@ export const ExplorationMap = memo(function ExplorationMap({
       radius: Math.max(cellSizeZ * 0.75, 12),
       intensity: 0.75,
       color: '#f7d24b',
+      castShadows: false,
       flicker: { enabled: true, speed: 0.28, amount: 0.15 },
     },
   ]), [playerScreenPos, cellSizeZ]);
@@ -710,14 +781,17 @@ export const ExplorationMap = memo(function ExplorationMap({
     onHeadingChange(getNextHeadingFromDirection(heading, true));
   }, [heading, onHeadingChange]);
 
+  const isCompact = height < SHORT_HEIGHT_THRESHOLD;
+
   return (
     <div
-      className="relative rounded border px-2 py-2"
+      className="relative rounded border overflow-hidden"
       style={{
         width: width + 14,
         borderColor: 'rgba(127, 219, 202, 0.65)',
         backgroundColor: 'rgba(10, 10, 10, 0.76)',
         boxShadow: '0 0 12px rgba(127, 219, 202, 0.28)',
+        padding: 0,
       }}
       data-dev-component="ExplorationMap"
       data-dev-name="Exploration Map"
@@ -736,51 +810,21 @@ export const ExplorationMap = memo(function ExplorationMap({
       >
         👣 {traversalCount}
       </div>
-      <div className="text-center mb-1">
-        {currentNode && (
-          isTeleportActive ? (
-            <input
-              // eslint-disable-next-line jsx-a11y/no-autofocus
-              autoFocus
-              type="text"
-              value={teleportValue}
-              onChange={(e) => setTeleportValue(e.target.value)}
-              onKeyDown={handleTeleportKeyDown}
-              onBlur={handleTeleportCommit}
-              className="rounded border text-center text-[11px] font-mono font-bold"
-              style={{
-                width: 72,
-                borderColor: 'rgba(247, 210, 75, 0.85)',
-                color: '#f7d24b',
-                backgroundColor: 'rgba(10, 8, 6, 0.95)',
-                outline: 'none',
-                padding: '1px 4px',
-              }}
-              placeholder="x,y"
-            />
-          ) : (
-            <span
-              onDoubleClick={handleCoordDoubleClick}
-              className="text-[11px] font-mono font-bold select-none"
-              style={{
-                color: onTeleport ? 'rgba(247, 210, 75, 0.9)' : 'rgba(127, 219, 202, 0.75)',
-                cursor: onTeleport ? 'pointer' : 'default',
-                minWidth: 72,
-                textAlign: 'center',
-                display: 'inline-block',
-                padding: '1px 4px',
-                borderRadius: 3,
-                border: onTeleport ? '1px solid rgba(247, 210, 75, 0.35)' : '1px solid transparent',
-              }}
-              title={onTeleport ? 'Double-click to teleport' : undefined}
-            >
-              {currentNode.x},{currentNode.y}
-            </span>
-          )
-        )}
+      <div
+        className="absolute left-1/2 top-2 z-30 px-3 py-0.5 rounded-full border pointer-events-none"
+        style={{
+          transform: 'translateX(-50%)',
+          borderColor: 'rgba(127, 219, 202, 0.45)',
+          backgroundColor: 'rgba(10, 10, 10, 0.85)',
+          color: 'rgba(127, 219, 202, 0.9)',
+          boxShadow: '0 0 12px rgba(0, 0, 0, 0.6)',
+        }}
+      >
+        <div className="text-[10px] font-bold uppercase tracking-[0.3em] whitespace-nowrap">
+          {travelLabel ?? 'Exploring...'}
+        </div>
       </div>
-
-      <div style={{ position: 'relative', width, height }} className="block">
+      <div style={{ position: 'relative', width, height, overflow: 'hidden' }} className="block">
         <svg
           ref={svgRef}
           width={width}
@@ -963,62 +1007,50 @@ export const ExplorationMap = memo(function ExplorationMap({
               strokeLinecap="round"
             />
           ))}
-          {projectedActiveBlockedEdge && (
+          {tableauWallLine && (
             <g>
               <line
-                x1={projectedActiveBlockedEdge.x1}
-                y1={projectedActiveBlockedEdge.y1}
-                x2={projectedActiveBlockedEdge.x2}
-                y2={projectedActiveBlockedEdge.y2}
-                stroke="rgba(255, 86, 86, 0.96)"
-                strokeWidth={4.8}
+                x1={tableauWallLine.x1}
+                y1={tableauWallLine.y1}
+                x2={tableauWallLine.x2}
+                y2={tableauWallLine.y2}
+                stroke={tableauWall?.pathBlock === false ? 'rgba(120, 230, 210, 0.85)' : 'rgba(255, 86, 86, 0.96)'}
+                strokeWidth={4.2}
                 strokeLinecap="round"
               />
-              {Array.from({ length: 7 }).map((_, index) => {
-                const dx = projectedActiveBlockedEdge.x2 - projectedActiveBlockedEdge.x1;
-                const dy = projectedActiveBlockedEdge.y2 - projectedActiveBlockedEdge.y1;
-                const segmentLength = Math.max(1, Math.hypot(dx, dy));
-                const step = segmentLength / 7;
-                const ux = dx / segmentLength;
-                const uy = dy / segmentLength;
-                const edgeInset = step * 0.75;
-                const usableLength = Math.max(1, segmentLength - (edgeInset * 2));
-                const cardHeight = Math.max(2.2, step * 0.62);
-                const cardWidth = Math.max(1.8, cardHeight * 0.62);
-                const t = (index + 0.5) / 7;
-                const distance = edgeInset + (usableLength * t);
-                const x = projectedActiveBlockedEdge.x1 + (ux * distance);
-                const y = projectedActiveBlockedEdge.y1 + (uy * distance);
+              {tableauWallCards.map((card, index) => {
+                const fill = tableauWall?.pathBlock === false ? 'rgba(10, 26, 26, 0.98)' : 'rgba(33, 10, 10, 0.98)';
+                const stroke = tableauWall?.pathBlock === false ? 'rgba(120, 230, 210, 0.95)' : 'rgba(255, 120, 120, 0.98)';
                 return (
                   <g
                     key={`blocked-card-${index}`}
-                    transform={`translate(${x}, ${y})`}
+                    transform={`translate(${card.x}, ${card.y})`}
                   >
                     <rect
-                      x={-cardWidth / 2}
-                      y={-cardHeight / 2}
-                      width={cardWidth}
-                      height={cardHeight}
-                      rx={Math.max(0.9, cardWidth * 0.16)}
-                      fill="rgba(33, 10, 10, 0.98)"
-                      stroke="rgba(255, 120, 120, 0.98)"
-                      strokeWidth={Math.max(0.9, cardWidth * 0.12)}
+                      x={-card.width / 2}
+                      y={-card.height / 2}
+                      width={card.width}
+                      height={card.height}
+                      rx={Math.max(0.8, card.width * 0.18)}
+                      fill={fill}
+                      stroke={stroke}
+                      strokeWidth={Math.max(0.6, card.width * 0.12)}
                     />
                     <line
-                      x1={-cardWidth * 0.3}
-                      y1={-cardHeight * 0.3}
-                      x2={cardWidth * 0.3}
-                      y2={cardHeight * 0.3}
-                      stroke="rgba(255, 120, 120, 0.9)"
-                      strokeWidth={Math.max(0.45, cardWidth * 0.08)}
+                      x1={-card.width * 0.3}
+                      y1={-card.height * 0.3}
+                      x2={card.width * 0.3}
+                      y2={card.height * 0.3}
+                      stroke={stroke}
+                      strokeWidth={Math.max(0.35, card.width * 0.08)}
                     />
                     <line
-                      x1={cardWidth * 0.3}
-                      y1={-cardHeight * 0.3}
-                      x2={-cardWidth * 0.3}
-                      y2={cardHeight * 0.3}
-                      stroke="rgba(255, 120, 120, 0.9)"
-                      strokeWidth={Math.max(0.45, cardWidth * 0.08)}
+                      x1={card.width * 0.3}
+                      y1={-card.height * 0.3}
+                      x2={-card.width * 0.3}
+                      y2={card.height * 0.3}
+                      stroke={stroke}
+                      strokeWidth={Math.max(0.35, card.width * 0.08)}
                     />
                   </g>
                 );
@@ -1164,10 +1196,10 @@ export const ExplorationMap = memo(function ExplorationMap({
               anchorRef={shadowContainerRef}
               lightX={playerScreenPos.px}
               lightY={playerScreenPos.py}
-              lightRadius={cellSizeZ * 3}
-              lightIntensity={0.9}
+              lightRadius={cellSizeZ * 1.5}
+              lightIntensity={0.45}
               lightColor="#7fdbca"
-              ambientDarkness={0.75}
+              ambientDarkness={0.98}
               flickerSpeed={0}
               flickerAmount={0}
               actorLights={playerActorLights}
@@ -1222,7 +1254,7 @@ export const ExplorationMap = memo(function ExplorationMap({
                   className="absolute px-2 py-0.5 rounded border font-bold leading-none select-none pointer-events-auto"
                   style={{
                     left: 0,
-                    top: -68,
+                    top: isCompact ? -52 : -68,
                     transform: 'translate(-50%, -50%)',
                     borderColor: 'rgba(247, 210, 75, 0.8)',
                     color: '#f7d24b',
@@ -1231,6 +1263,24 @@ export const ExplorationMap = memo(function ExplorationMap({
                   title="Step forward"
                 >
                   ↑
+                </button>
+              )}
+              {onStepBackward && canStepBackward && (
+                <button
+                  type="button"
+                  onClick={onStepBackward}
+                  className="absolute px-2 py-0.5 rounded border font-bold leading-none select-none pointer-events-auto"
+                  style={{
+                    left: 0,
+                    top: isCompact ? 52 : 68,
+                    transform: 'translate(-50%, -50%)',
+                    borderColor: 'rgba(247, 210, 75, 0.8)',
+                    color: '#f7d24b',
+                    backgroundColor: 'rgba(10, 8, 6, 0.9)',
+                  }}
+                  title="Step backward"
+                >
+                  ↓
                 </button>
               )}
               {onHeadingChange && (
@@ -1242,13 +1292,13 @@ export const ExplorationMap = memo(function ExplorationMap({
                     left: -68,
                     top: 0,
                     transform: 'translate(-50%, -50%)',
-                    borderColor: 'rgba(127, 219, 202, 0.65)',
-                    color: '#7fdbca',
-                    backgroundColor: 'rgba(10, 10, 10, 0.8)',
+                    borderColor: 'rgba(247, 210, 75, 0.8)',
+                    color: '#f7d24b',
+                    backgroundColor: 'rgba(10, 8, 6, 0.9)',
                   }}
                   title="Counterclockwise to previous direction"
                 >
-                  ‹
+                  <span style={{ display: 'inline-block', transform: 'rotate(-90deg)' }}>↺</span>
                 </button>
               )}
               {onHeadingChange && (
@@ -1260,13 +1310,13 @@ export const ExplorationMap = memo(function ExplorationMap({
                     left: 68,
                     top: 0,
                     transform: 'translate(-50%, -50%)',
-                    borderColor: 'rgba(127, 219, 202, 0.65)',
-                    color: '#7fdbca',
-                    backgroundColor: 'rgba(10, 10, 10, 0.8)',
+                    borderColor: 'rgba(247, 210, 75, 0.8)',
+                    color: '#f7d24b',
+                    backgroundColor: 'rgba(10, 8, 6, 0.9)',
                   }}
                   title="Clockwise to next direction"
                 >
-                  ›
+                  <span style={{ display: 'inline-block', transform: 'rotate(90deg)' }}>↻</span>
                 </button>
               )}
             </div>
@@ -1309,101 +1359,190 @@ export const ExplorationMap = memo(function ExplorationMap({
         )}
       </div>
 
-      {/* Bottom row: coordinate + zoom + counters + center */}
-      {(onHeadingChange || currentNode) && (
-        <div className="mt-1 flex items-center justify-center gap-2">
-            <button
-            type="button"
-            onClick={onUseSupply}
-            disabled={!onUseSupply || typeof supplyCount !== 'number' || supplyCount <= 0}
-            className="px-1.5 py-0.5 rounded border text-[12px] font-bold tracking-[1px] select-none disabled:opacity-50"
-            style={{
-              borderColor: 'rgba(255, 229, 120, 0.8)',
-              color: '#f7d24b',
-              backgroundColor: 'rgba(10, 8, 6, 0.92)',
-              textShadow: '0 0 4px rgba(230, 179, 30, 0.45)',
-              minWidth: 38,
-              textAlign: 'center',
-            }}
-            title={typeof supplyCount === 'number' ? `Use supply (+20 AP). ${supplyCount} remaining` : 'Supplies'}
-            data-dev-component="ExplorationMapSupplyButton"
-            data-dev-name="Use Supply"
-            data-dev-kind="control"
-            data-dev-description="Spend one supply to gain action points."
-            data-dev-role="map-control"
-          >
-            {typeof supplyCount === 'number' ? supplyCount : '--'}
-          </button>
-          <div className="flex flex-col items-center gap-0.5">
-            <div
-              className="text-[10px] font-bold tracking-[1px] uppercase text-game-teal/70 mb-0.5"
-              style={{ letterSpacing: '0.2em' }}
-            >
-              {travelLabel ?? 'UNKNOWN'}
-            </div>
-            <div className="flex items-center gap-1 rounded border px-1.5 py-0.5" style={{ borderColor: 'rgba(127, 219, 202, 0.5)', backgroundColor: 'rgba(10, 10, 10, 0.7)' }}>
-              <span className="text-[8px] font-bold tracking-[1px]" style={{ color: 'rgba(127, 219, 202, 0.75)' }}>
-                Z
-              </span>
-              <input
-                ref={zoomSliderRef}
-                type="range"
-                min={MIN_ZOOM}
-                max={MAX_ZOOM}
-                step={0.05}
-                value={zoom}
-                onChange={handleZoomSliderChange}
-                className="w-20 accent-[rgba(127,219,202,0.95)]"
-                title="Zoom (locks to player)"
-                data-dev-component="ExplorationMapZoomSlider"
-                data-dev-name="Map Zoom"
+
+      {(currentNode || typeof supplyCount === 'number' || onHeadingChange) && (
+        <div
+          className="absolute left-0 right-0 z-20 pointer-events-auto px-3"
+          style={{ bottom: 5 }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col items-center gap-0.5">
+              {!isCompact && <div className="text-[9px] uppercase tracking-[0.3em]" style={{ color: 'rgba(255, 229, 120, 0.8)' }}>
+                Supplies
+              </div>}
+              <button
+                type="button"
+                onClick={onUseSupply}
+                disabled={!onUseSupply || typeof supplyCount !== 'number' || supplyCount <= 0}
+                className="px-1.5 py-0.5 rounded border text-[12px] font-bold tracking-[1px] select-none disabled:opacity-50"
+                style={{
+                  borderColor: 'rgba(255, 229, 120, 0.8)',
+                  color: '#f7d24b',
+                  backgroundColor: 'rgba(10, 8, 6, 0.92)',
+                  textShadow: '0 0 4px rgba(230, 179, 30, 0.45)',
+                  minWidth: 44,
+                  textAlign: 'center',
+                }}
+                title={typeof supplyCount === 'number' ? `Use supply (+20 AP). ${supplyCount} remaining` : 'Supplies'}
+                data-dev-component="ExplorationMapSupplyButton"
+                data-dev-name="Use Supply"
                 data-dev-kind="control"
-                data-dev-description="Adjust map zoom level."
+                data-dev-description="Spend one supply to gain action points."
                 data-dev-role="map-control"
-              />
-              <span className="text-[8px] font-mono font-bold min-w-[28px] text-right" style={{ color: 'rgba(127, 219, 202, 0.9)' }}>
-                {zoom.toFixed(2)}x
-              </span>
+              >
+                {typeof supplyCount === 'number' ? supplyCount : '--'}
+              </button>
+            </div>
+            <div className="flex-1 flex justify-center">
+              {currentNode && (
+                <div
+                  className="flex items-center justify-center rounded-full text-[11px] font-mono font-bold text-game-white"
+                  style={{
+                    padding: '2px 8px',
+                    backgroundColor: 'rgba(10, 10, 10, 0.85)',
+                    borderRadius: '999px',
+                    border: '1px solid rgba(127, 219, 202, 0.4)',
+                    minWidth: 68,
+                  }}
+                >
+                  {isTeleportActive ? (
+                    <input
+                      // eslint-disable-next-line jsx-a11y/no-autofocus
+                      autoFocus
+                      type="text"
+                      value={teleportValue}
+                      onChange={(e) => setTeleportValue(e.target.value)}
+                      onKeyDown={handleTeleportKeyDown}
+                      onBlur={handleTeleportCommit}
+                      className="rounded border text-center text-[11px] font-mono font-bold"
+                      style={{
+                        width: 72,
+                        borderColor: 'rgba(247, 210, 75, 0.85)',
+                        color: '#f7d24b',
+                        backgroundColor: 'rgba(10, 8, 6, 0.95)',
+                        outline: 'none',
+                        padding: '1px 4px',
+                      }}
+                      placeholder="x,y"
+                    />
+                  ) : (
+                    <span
+                      onDoubleClick={handleCoordDoubleClick}
+                      className="select-none"
+                      style={{
+                        color: onTeleport ? 'rgba(247, 210, 75, 0.9)' : 'rgba(127, 219, 202, 0.75)',
+                        cursor: onTeleport ? 'pointer' : 'default',
+                      }}
+                      title={onTeleport ? 'Double-click to teleport' : undefined}
+                    >
+                      {currentNode.x},{currentNode.y}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              {onHeadingChange && (
+                <div className="flex flex-col items-center gap-0.5">
+                  {!isCompact && <div className="h-[13px]" aria-hidden="true" />}
+                  <button
+                    type="button"
+                    onClick={handleCenterOnPlayer}
+                    className="h-6 min-w-[28px] px-1.5 rounded border text-[17px] leading-none font-bold tracking-[0.8px] pointer-events-auto flex items-center justify-center"
+                    style={{
+                      borderColor: 'rgba(255, 118, 118, 0.78)',
+                      color: '#ff6f6f',
+                      backgroundColor: 'rgba(24, 8, 10, 0.9)',
+                      boxShadow: '0 0 8px rgba(255, 86, 86, 0.35)',
+                    }}
+                    title="Center map on player"
+                    data-dev-component="ExplorationMapCenterButton"
+                    data-dev-name="Center Map on Player"
+                    data-dev-kind="control"
+                    data-dev-description="Re-center the map view on the current player node."
+                    data-dev-role="map-control"
+                  >
+                    ⌖
+                  </button>
+                </div>
+              )}
+          <div className="flex flex-col items-center gap-0.5">
+            {!isCompact && <div className="text-[9px] uppercase tracking-[0.3em]" style={{ color: 'rgba(255, 229, 120, 0.8)' }}>
+              AP
+            </div>}
+            <button
+              type="button"
+              className="px-1.5 py-0.5 rounded border text-[12px] font-bold tracking-[1px] select-none"
+              style={{
+                borderColor: 'rgba(255, 229, 120, 0.8)',
+                color: '#f7d24b',
+                backgroundColor: 'rgba(10, 8, 6, 0.92)',
+                textShadow: '0 0 4px rgba(230, 179, 30, 0.45)',
+                minWidth: 38,
+                textAlign: 'center',
+              }}
+              title="Available action points"
+            >
+              {typeof actionPoints === 'number' ? Math.max(0, Math.floor(actionPoints)) : '--'}
+            </button>
+          </div>
             </div>
           </div>
-          <div
-            className="px-1.5 py-0.5 rounded border text-[12px] font-bold tracking-[1px] select-none"
-            style={{
-              borderColor: 'rgba(247, 210, 75, 0.8)',
-              color: '#f7d24b',
-              backgroundColor: 'rgba(10, 8, 6, 0.92)',
-              textShadow: '0 0 4px rgba(230, 179, 30, 0.45)',
-              minWidth: 42,
-              textAlign: 'center',
-            }}
-            title="Available action points"
-          >
-            {typeof actionPoints === 'number' ? Math.max(0, Math.floor(actionPoints)) : '--'}
-          </div>
-          <button
-            type="button"
-            onClick={handleCenterOnPlayer}
-            className="h-6 min-w-[28px] px-1.5 rounded border text-[12px] leading-none font-bold tracking-[0.8px] pointer-events-auto flex items-center justify-center"
-            style={{
-              borderColor: 'rgba(255, 118, 118, 0.78)',
-              color: '#ff6f6f',
-              backgroundColor: 'rgba(24, 8, 10, 0.9)',
-              boxShadow: '0 0 8px rgba(255, 86, 86, 0.35)',
-            }}
-            title="Center map on player"
-            data-dev-component="ExplorationMapCenterButton"
-            data-dev-name="Center Map on Player"
-            data-dev-kind="control"
-            data-dev-description="Re-center the map view on the current player node."
-            data-dev-role="map-control"
-          >
-            🂠
-          </button>
         </div>
       )}
+      <div
+        className="absolute left-2 z-30 pointer-events-auto"
+        style={{
+          top: 0,
+          bottom: isCompact ? 38 : 0,
+          padding: '0 6px',
+        }}
+      >
+        <div
+          className="flex flex-col items-center gap-2"
+          style={{ height: '100%', justifyContent: 'center' }}
+        >
+          <div className="text-[8px] font-bold uppercase tracking-[0.4em]" style={{ color: 'rgba(127, 219, 202, 0.75)' }}>
+            Z
+          </div>
+          <input
+            ref={zoomSliderRef}
+            type="range"
+            min={MIN_ZOOM}
+            max={MAX_ZOOM}
+            step={0.05}
+            value={zoom}
+            onChange={handleZoomSliderChange}
+            orient="vertical"
+            className="accent-[rgba(127,219,202,0.95)]"
+            title="Zoom (locks to player)"
+            data-dev-component="ExplorationMapZoomSlider"
+            data-dev-name="Map Zoom"
+            data-dev-kind="control"
+            data-dev-description="Adjust map zoom level."
+            data-dev-role="map-control"
+            style={{
+              height: Math.min(
+                isCompact ? height - 70 : height,
+                Math.max(isCompact ? 60 : 90, cellSizeZ * 1.5)
+              ),
+              width: 18,
+              margin: 0,
+              WebkitAppearance: 'slider-vertical',
+              writingMode: 'bt-lr',
+              backgroundColor: 'transparent',
+            }}
+          />
+          <div className="text-[10px] font-mono font-bold" style={{ color: 'rgba(127, 219, 202, 0.9)' }}>
+            {zoom.toFixed(2)}x
+          </div>
+        </div>
+      </div>
     </div>
   );
 });
+
+
 
 
 

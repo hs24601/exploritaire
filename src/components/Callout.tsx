@@ -3,6 +3,14 @@ import type { CSSProperties } from 'react';
 
 type CalloutTone = 'gold' | 'teal';
 
+type SecondaryCallout = {
+  text: string;
+  subtitle?: string;
+  tone?: CalloutTone;
+  compact?: boolean;
+  lines?: string[];
+};
+
 interface CalloutProps {
   visible: boolean;
   text: string;
@@ -12,6 +20,8 @@ interface CalloutProps {
   tone?: CalloutTone;
   autoFadeMs?: number;
   lines?: string[];
+  compact?: boolean;
+  secondaryCallouts?: SecondaryCallout[];
 }
 
 const TONE_STYLES: Record<CalloutTone, {
@@ -40,6 +50,68 @@ const TONE_STYLES: Record<CalloutTone, {
   },
 };
 
+function renderPanel({
+  text,
+  subtitle,
+  lines,
+  palette,
+  compact,
+  style,
+}: {
+  text: string;
+  subtitle?: string;
+  lines?: string[];
+  palette: (typeof TONE_STYLES)[CalloutTone];
+  compact?: boolean;
+  style?: CSSProperties;
+}) {
+  const hasLines = (lines?.length ?? 0) > 0;
+  const panelStyle: CSSProperties = {
+    color: palette.text,
+    borderColor: palette.border,
+    background: `linear-gradient(180deg, ${palette.bgFrom} 0%, ${palette.bgTo} 100%)`,
+    boxShadow: palette.glow,
+    ...(hasLines ? { minHeight: '120px' } : {}),
+    ...style,
+  };
+
+  return (
+    <div
+      className={`relative overflow-hidden border ${compact ? 'rounded-[12px] px-3 py-1.5' : 'rounded-[12px] px-4 py-3'}`}
+      style={panelStyle}
+    >
+      <motion.div
+        className="absolute inset-0"
+        aria-hidden
+        initial={{ opacity: 0.25, x: '-48%' }}
+        animate={{ opacity: [0.2, 0.34, 0.2], x: ['-48%', '52%', '104%'] }}
+        transition={{ duration: 1.15, ease: 'linear' }}
+        style={{
+          background: `linear-gradient(100deg, rgba(255,255,255,0) 0%, ${palette.accent} 48%, rgba(255,255,255,0) 100%)`,
+          mixBlendMode: 'screen',
+        }}
+      />
+      <div className={`relative font-bold uppercase text-center whitespace-nowrap ${compact ? 'text-[9px] tracking-[1px]' : 'text-[11px] tracking-[1.4px]'}`}>
+        {text}
+      </div>
+      {subtitle && (
+        <div className={`relative uppercase text-center opacity-85 whitespace-nowrap ${compact ? 'text-[8px] tracking-[0.8px] mt-0.5' : 'text-[9px] tracking-[1px] mt-0.5'}`}>
+          {subtitle}
+        </div>
+      )}
+      {hasLines && (
+        <div className="relative mt-3 flex flex-col gap-1 text-[10px] tracking-[0.6px] uppercase text-center">
+          {lines?.map((line, index) => (
+            <span key={index} className="font-semibold">
+              {line}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Callout({
   visible,
   text,
@@ -49,19 +121,30 @@ export function Callout({
   tone = 'gold',
   autoFadeMs,
   lines,
+  compact = false,
+  secondaryCallouts,
 }: CalloutProps) {
-  const palette = TONE_STYLES[tone];
   const EXTRA_DURATION_MS = 4000;
   const useAutoFade = !!autoFadeMs && autoFadeMs > 0;
   const effectiveAutoFadeMs = useAutoFade ? (autoFadeMs ?? 0) + EXTRA_DURATION_MS : 0;
   const autoFadeSeconds = Math.max(0.6, effectiveAutoFadeMs / 1000);
-  const hasLines = (lines?.length ?? 0) > 0;
-  const containerStyle: CSSProperties = {
-    color: palette.text,
-    borderColor: palette.border,
-    background: `linear-gradient(180deg, ${palette.bgFrom} 0%, ${palette.bgTo} 100%)`,
-    boxShadow: palette.glow,
-    ...(hasLines ? { minHeight: '120px' } : {}),
+  const primaryPalette = TONE_STYLES[tone];
+  const hasSecondaries = (secondaryCallouts?.length ?? 0) > 0;
+
+  const renderSecondary = (entry: SecondaryCallout, index: number) => {
+    const palette = TONE_STYLES[entry.tone ?? tone];
+    return (
+      <div key={`secondary-${instanceKey ?? text}-${index}`}>
+        {renderPanel({
+          text: entry.text,
+          subtitle: entry.subtitle,
+          lines: entry.lines,
+          palette,
+          compact: entry.compact ?? true,
+          style: { minWidth: 110, alignSelf: 'flex-end' },
+        })}
+      </div>
+    );
   };
 
   return (
@@ -81,38 +164,23 @@ export function Callout({
             ease: useAutoFade ? 'easeOut' : [0.22, 0.68, 0.2, 1],
             ...(useAutoFade ? { times: [0, 0.05, 0.85, 1] as const } : {}),
           }}
+          style={{ zIndex: 120 }}
           className={`pointer-events-none select-none ${className}`.trim()}
         >
-          <div
-            className="relative overflow-hidden rounded-lg border px-4 py-3"
-            style={containerStyle}
-          >
-            <motion.div
-              className="absolute inset-0"
-              aria-hidden
-              initial={{ opacity: 0.25, x: '-48%' }}
-              animate={{ opacity: [0.2, 0.34, 0.2], x: ['-48%', '52%', '104%'] }}
-              transition={{ duration: 1.15, ease: 'linear' }}
-              style={{
-                background: `linear-gradient(100deg, rgba(255,255,255,0) 0%, ${palette.accent} 48%, rgba(255,255,255,0) 100%)`,
-                mixBlendMode: 'screen',
-              }}
-            />
-            <div className="relative text-[11px] font-bold tracking-[1.4px] uppercase text-center whitespace-nowrap">
-              {text}
+          <div className={`flex gap-2 ${hasSecondaries ? 'items-end' : ''}`}>
+            <div className="flex-1">
+              {renderPanel({
+                text,
+                subtitle,
+                lines,
+                palette: primaryPalette,
+                compact,
+                style: hasSecondaries ? { minWidth: 220 } : undefined,
+              })}
             </div>
-            {subtitle && (
-              <div className="relative text-[9px] tracking-[1px] uppercase text-center opacity-85 mt-0.5 whitespace-nowrap">
-                {subtitle}
-              </div>
-            )}
-            {hasLines && (
-              <div className="relative mt-3 flex flex-col gap-1 text-[10px] tracking-[0.6px] uppercase text-center">
-                {lines?.map((line, index) => (
-                  <span key={index} className="font-semibold">
-                    {line}
-                  </span>
-                ))}
+            {hasSecondaries && (
+              <div className="flex flex-col gap-1 items-end">
+                {secondaryCallouts!.map(renderSecondary)}
               </div>
             )}
           </div>

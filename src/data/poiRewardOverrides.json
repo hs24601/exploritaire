@@ -1,15 +1,22 @@
 {
-  "0,2": [
-    {
-      "type": "aspect-choice",
-      "amount": 3,
-      "drawCount": 3,
-      "chooseCount": 1,
-      "options": [
-        "wolf",
-        "bear",
-        "cat"
-      ]
+  "0,2": {
+    "rewards": [
+      {
+        "type": "aspect-choice",
+        "amount": 3,
+        "drawCount": 3,
+        "chooseCount": 1,
+        "options": [
+          "wolf",
+          "bear",
+          "cat"
+        ]
+      }
+    ],
+    "narration": {
+      "title": "Awaken an {Aspect|orange}",
+      "body": "You cannot progress through this physical world as just a {spirit}. Order the chaos ahead of you to unlock a physical aspect.",
+      "tone": "teal"
     }
-  ]
+  }
 }
