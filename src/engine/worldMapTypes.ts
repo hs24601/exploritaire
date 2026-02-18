@@ -17,7 +17,7 @@ export interface PointOfInterest {
   rewards?: PoiReward[];
 }
 
-export type PoiRewardType = 'aspect-jumbo';
+export type PoiRewardType = 'aspect-choice' | 'ability-choice' | 'aspect-jumbo';
 
 export interface PoiReward {
   id?: string;
@@ -25,6 +25,8 @@ export interface PoiReward {
   description?: string;
   amount: number;
   options?: string[];
+  chooseCount?: number;
+  drawCount?: number;
 }
 
 /**

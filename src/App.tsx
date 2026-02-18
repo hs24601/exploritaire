@@ -75,9 +75,12 @@ type PoiRewardDraft = {
   id: number;
   type: PoiRewardType;
   description: string;
-  amount: number;
+  drawCount: number;
+  chooseCount: number;
   selectedAspects: KeruAspect[];
+  selectedAbilities: string[];
   searchFilter: string;
+  abilitySearchFilter: string;
 };
 
 type AspectDraft = {
@@ -96,7 +99,9 @@ type AspectDraft = {
 };
 
 const REWARD_TYPE_OPTIONS: Array<{ value: PoiRewardType; label: string }> = [
-  { value: 'aspect-jumbo', label: 'Aspects (jumbo)' },
+  { value: 'aspect-choice', label: 'Aspects (choice)' },
+  { value: 'ability-choice', label: 'Ability cards (choice)' },
+  { value: 'aspect-jumbo', label: 'Aspects (jumbo, legacy)' },
 ];
 const TIME_SCALE_OPTIONS = [0.5, 1, 1.5, 2];
 const DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED = false;
@@ -144,11 +149,14 @@ export default function App() {
   const [isSavingPoi, setIsSavingPoi] = useState(false);
   const [poiEditorRewards, setPoiEditorRewards] = useState<PoiRewardDraft[]>([{
     id: 1,
-    type: 'aspect-jumbo',
+    type: 'aspect-choice',
     description: '',
-    amount: 1,
+    drawCount: 3,
+    chooseCount: 1,
     selectedAspects: [],
+    selectedAbilities: [],
     searchFilter: '',
+    abilitySearchFilter: '',
   }]);
   const poiRewardIdRef = useRef(1);
   const [abilityDrafts, setAbilityDrafts] = useState<AspectDraft[]>(() => {
@@ -295,14 +303,22 @@ export default function App() {
   const createDraftFromReward = useCallback((reward: PoiReward): PoiRewardDraft => {
     const nextId = poiRewardIdRef.current + 1;
     poiRewardIdRef.current = nextId;
-    const options = (reward.options ?? []).filter((option): option is KeruAspect => VALID_KERU_ASPECTS.has(option as KeruAspect));
+    const options = reward.options ?? [];
+    const aspectOptions = options.filter((option): option is KeruAspect => VALID_KERU_ASPECTS.has(option as KeruAspect));
+    const abilityOptions = options.filter((option) => !VALID_KERU_ASPECTS.has(option as KeruAspect));
+    const normalizedType = reward.type === 'aspect-jumbo' ? 'aspect-choice' : reward.type;
+    const drawCount = Math.max(0, reward.drawCount ?? reward.amount ?? options.length);
+    const chooseCount = Math.max(0, reward.chooseCount ?? (normalizedType === 'ability-choice' ? 3 : 1));
     return {
       id: nextId,
-      type: reward.type,
+      type: normalizedType,
       description: reward.description ?? '',
-      amount: Math.max(0, reward.amount),
-      selectedAspects: options,
+      drawCount,
+      chooseCount,
+      selectedAspects: aspectOptions,
+      selectedAbilities: abilityOptions,
       searchFilter: '',
+      abilitySearchFilter: '',
     };
   }, [VALID_KERU_ASPECTS]);
 
@@ -311,11 +327,14 @@ export default function App() {
     poiRewardIdRef.current = nextId;
     return {
       id: nextId,
-      type: 'aspect-jumbo',
+      type: 'aspect-choice',
       description: '',
-      amount: 1,
+      drawCount: 3,
+      chooseCount: 1,
       selectedAspects: [],
+      selectedAbilities: [],
       searchFilter: '',
+      abilitySearchFilter: '',
     };
   }, []);
 
@@ -366,18 +385,34 @@ export default function App() {
       return;
     }
     const key = `${coords.col},${coords.row}`;
-    const hasAspectRowWithoutSelection = poiEditorRewards.some((draft) =>
-      draft.type === 'aspect-jumbo' && draft.selectedAspects.length === 0
+    const invalidAspectRows = poiEditorRewards.filter((draft) =>
+      (draft.type === 'aspect-choice' || draft.type === 'aspect-jumbo') && draft.selectedAspects.length === 0
     );
-    if (hasAspectRowWithoutSelection) {
+    if (invalidAspectRows.length > 0) {
       setPoiEditorMessage('Select at least one aspect for each aspect reward row.');
+      return;
+    }
+    const invalidAbilityRows = poiEditorRewards.filter((draft) =>
+      draft.type === 'ability-choice' && draft.selectedAbilities.length === 0
+    );
+    if (invalidAbilityRows.length > 0) {
+      setPoiEditorMessage('Select at least one ability for each ability reward row.');
+      return;
+    }
+    const invalidChoiceCounts = poiEditorRewards.filter((draft) => draft.chooseCount > draft.drawCount);
+    if (invalidChoiceCounts.length > 0) {
+      setPoiEditorMessage('Choose count cannot exceed draw count.');
       return;
     }
     const registry = poiEditorRewards.map((draft) => ({
       type: draft.type,
-      amount: Math.max(0, draft.amount),
+      amount: Math.max(0, draft.drawCount),
+      drawCount: Math.max(0, draft.drawCount),
+      chooseCount: Math.max(0, draft.chooseCount),
       description: draft.description.trim() || undefined,
-      options: draft.type === 'aspect-jumbo' ? [...new Set(draft.selectedAspects)] : undefined,
+      options: (draft.type === 'aspect-choice' || draft.type === 'aspect-jumbo')
+        ? [...new Set(draft.selectedAspects)]
+        : (draft.type === 'ability-choice' ? [...new Set(draft.selectedAbilities)] : undefined),
     }));
     setIsSavingPoi(true);
     setPoiEditorMessage('Saving POI...');
@@ -411,22 +446,37 @@ export default function App() {
     ));
   }, []);
 
-  const handleRewardChange = useCallback((id: number, key: 'description' | 'amount' | 'type' | 'searchFilter', value: string | number) => {
+  const handleRewardChange = useCallback((
+    id: number,
+    key: 'description' | 'drawCount' | 'chooseCount' | 'type' | 'searchFilter' | 'abilitySearchFilter',
+    value: string | number
+  ) => {
     setPoiEditorRewards((prev) => prev.map((entry) => {
       if (entry.id !== id) return entry;
-      if (key === 'amount') {
-        return { ...entry, amount: Math.max(0, Number(value) || 0) };
+      if (key === 'drawCount') {
+        return { ...entry, drawCount: Math.max(0, Number(value) || 0) };
+      }
+      if (key === 'chooseCount') {
+        return { ...entry, chooseCount: Math.max(0, Number(value) || 0) };
       }
       if (key === 'type') {
+        const nextType = value as PoiRewardType;
         return {
           ...entry,
-          type: value as PoiRewardType,
+          type: nextType,
+          drawCount: nextType === 'ability-choice' ? 4 : 3,
+          chooseCount: nextType === 'ability-choice' ? 3 : 1,
           selectedAspects: [],
+          selectedAbilities: [],
           searchFilter: '',
+          abilitySearchFilter: '',
         };
       }
       if (key === 'searchFilter') {
         return { ...entry, searchFilter: String(value) };
+      }
+      if (key === 'abilitySearchFilter') {
+        return { ...entry, abilitySearchFilter: String(value) };
       }
       return { ...entry, [key]: String(value) };
     }));
@@ -447,6 +497,25 @@ export default function App() {
     setPoiEditorRewards((prev) => prev.map((entry) => (
       entry.id === id
         ? { ...entry, selectedAspects: Array.from(new Set([...entry.selectedAspects, ...targets])) }
+        : entry
+    )));
+  }, []);
+
+  const handleRewardAbilityToggle = useCallback((id: number, abilityId: string) => {
+    setPoiEditorRewards((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      const has = entry.selectedAbilities.includes(abilityId);
+      const nextSet = has
+        ? entry.selectedAbilities.filter((value) => value !== abilityId)
+        : [...entry.selectedAbilities, abilityId];
+      return { ...entry, selectedAbilities: nextSet };
+    }));
+  }, []);
+
+  const handleRewardAbilitySelectAll = useCallback((id: number, targets: string[]) => {
+    setPoiEditorRewards((prev) => prev.map((entry) => (
+      entry.id === id
+        ? { ...entry, selectedAbilities: Array.from(new Set([...entry.selectedAbilities, ...targets])) }
         : entry
     )));
   }, []);
@@ -2016,6 +2085,13 @@ export default function App() {
                           const haystack = `${option.label} ${option.archetype}`.toLowerCase();
                           return searchTerm === '' || haystack.includes(searchTerm);
                         });
+                        const abilitySearchTerm = reward.abilitySearchFilter.trim().toLowerCase();
+                        const filteredAbilities = abilityDrafts.filter((option) => {
+                          const haystack = `${option.id} ${option.label}`.toLowerCase();
+                          return abilitySearchTerm === '' || haystack.includes(abilitySearchTerm);
+                        });
+                        const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
+                        const isAbilityReward = reward.type === 'ability-choice';
                         return (
                           <div key={reward.id} className="rounded-xl bg-black/70 border border-game-teal/30 p-3 space-y-2">
                             <div className="flex flex-wrap items-center gap-2 text-[10px]">
@@ -2046,17 +2122,27 @@ export default function App() {
                                 className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                               />
                               <label className="flex items-center gap-1">
-                                <span className="text-game-teal/70">Count</span>
+                                <span className="text-game-teal/70">Draw</span>
                                 <input
                                   type="number"
                                   min={0}
-                                  value={reward.amount}
-                                  onChange={(event) => handleRewardChange(reward.id, 'amount', Number(event.target.value) || 0)}
+                                  value={reward.drawCount}
+                                  onChange={(event) => handleRewardChange(reward.id, 'drawCount', Number(event.target.value) || 0)}
+                                  className="w-16 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                />
+                              </label>
+                              <label className="flex items-center gap-1">
+                                <span className="text-game-teal/70">Choose</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={reward.chooseCount}
+                                  onChange={(event) => handleRewardChange(reward.id, 'chooseCount', Number(event.target.value) || 0)}
                                   className="w-16 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                                 />
                               </label>
                             </div>
-                            {reward.type === 'aspect-jumbo' && (
+                            {isAspectReward && (
                               <div className="space-y-2 pt-2 text-[10px]">
                                 <div className="flex items-center gap-2">
                                   <input
@@ -2091,12 +2177,47 @@ export default function App() {
                                 </div>
                               </div>
                             )}
+                            {isAbilityReward && (
+                              <div className="space-y-2 pt-2 text-[10px]">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    value={reward.abilitySearchFilter}
+                                    onChange={(event) => handleRewardChange(reward.id, 'abilitySearchFilter', event.target.value)}
+                                    placeholder="Filter abilities"
+                                    className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRewardAbilitySelectAll(reward.id, filteredAbilities.map((option) => option.id))}
+                                    className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
+                                  >
+                                    Select matching
+                                  </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {filteredAbilities.map((option) => (
+                                    <label
+                                      key={`${reward.id}-${option.id}`}
+                                      className="flex items-center gap-1 rounded border border-game-teal/30 bg-black/50 px-2 py-1 text-[9px] cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={reward.selectedAbilities.includes(option.id)}
+                                        onChange={() => handleRewardAbilityToggle(reward.id, option.id)}
+                                        className="accent-game-teal"
+                                      />
+                                      {option.label || option.id}
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
                     <div className="text-[9px] text-game-white/50">
-                      Example: 0,2 → Choose 1: Lupus, Ursus, or Felis jumbo card aspect.
+                      Example: 0,2 → Aspect choice (draw 3, choose 1). TutB → Ability choice (draw 4, choose 3).
                     </div>
                   </div>
                     </>
@@ -2776,6 +2897,7 @@ export default function App() {
           card={dragState.card}
           position={dragState.position}
           offset={dragState.offset}
+          size={dragState.size}
           showText={showText}
         />
       )}

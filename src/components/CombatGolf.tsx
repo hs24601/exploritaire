@@ -740,6 +740,9 @@ export const CombatGolf = memo(function CombatGolf({
     })),
     []
   );
+  const isAspectRewardType = useCallback((reward: PoiReward) => (
+    reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo'
+  ), []);
   const isCurrentExplorationTableauCleared = useMemo(() => (
     gameState.tableaus.length > 0 && gameState.tableaus.every((tableau) => tableau.length === 0)
   ), [gameState.tableaus]);
@@ -759,7 +762,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (!nextCleared.has(key)) {
         nextCleared.add(key);
         const rewards = getPoiRewardsForKey(key);
-        if (rewards.some((reward) => reward.type === 'aspect-jumbo')) {
+        if (rewards.some(isAspectRewardType)) {
           newlyClearedAspectKey = key;
         }
       }
@@ -770,7 +773,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (nextCleared.has(key)) return;
       nextCleared.add(key);
       const rewards = getPoiRewardsForKey(key);
-      if (!newlyClearedAspectKey && rewards.some((reward) => reward.type === 'aspect-jumbo')) {
+      if (!newlyClearedAspectKey && rewards.some(isAspectRewardType)) {
         newlyClearedAspectKey = key;
       }
     });
@@ -785,6 +788,7 @@ export const CombatGolf = memo(function CombatGolf({
     getPoiRewardsForKey,
     isCurrentExplorationTableauCleared,
     lastAspectRewardKey,
+    isAspectRewardType,
   ]);
   const explorationConditionalEdges = useMemo(() => {
     const coords = getExplorationNodeCoordinates(explorationCurrentNodeId);
@@ -1035,13 +1039,15 @@ export const CombatGolf = memo(function CombatGolf({
   );
   const pendingAspectReward = useMemo(() => (
     pendingPoiRewardKey
-      ? getPoiRewardsForKey(pendingPoiRewardKey).find((entry) => entry.type === 'aspect-jumbo')
+      ? getPoiRewardsForKey(pendingPoiRewardKey).find(isAspectRewardType)
       : undefined
-  ), [getPoiRewardsForKey, pendingPoiRewardKey]);
+  ), [getPoiRewardsForKey, pendingPoiRewardKey, isAspectRewardType]);
   const allowedAspectList = useMemo(() => {
     if (!pendingAspectReward) return BASE_KERU_ASPECT_ORDER;
     const normalized = normalizeAspectOptions(pendingAspectReward.options);
-    return normalized.length > 0 ? normalized : BASE_KERU_ASPECT_ORDER;
+    const baseList = normalized.length > 0 ? normalized : BASE_KERU_ASPECT_ORDER;
+    const drawCount = Math.max(0, pendingAspectReward.drawCount ?? pendingAspectReward.amount ?? baseList.length);
+    return drawCount > 0 ? baseList.slice(0, drawCount) : baseList;
   }, [normalizeAspectOptions, pendingAspectReward]);
   const allowedAspectSet = useMemo(() => new Set(allowedAspectList), [allowedAspectList]);
   const permittedKeruOptions = useMemo(() => (
@@ -1051,6 +1057,24 @@ export const CombatGolf = memo(function CombatGolf({
     () => permittedKeruOptions.map((option) => KERU_ARCHETYPE_CARDS[option.archetype]),
     [permittedKeruOptions]
   );
+  const aspectModalWidth = Math.min(1200, Math.round(layoutViewportWidth * 0.96));
+  const aspectModalHeight = Math.min(820, Math.round(layoutViewportHeight * 0.82));
+  const aspectCardCount = Math.max(1, aspectRewardCards.length);
+  const aspectCardGap = Math.max(18, Math.round(aspectModalWidth * 0.02));
+  const aspectHeaderBuffer = 190;
+  const aspectAvailableWidth = Math.max(320, aspectModalWidth - 80);
+  const aspectAvailableHeight = Math.max(260, aspectModalHeight - aspectHeaderBuffer);
+  const aspectBaseWidth = Math.floor((aspectAvailableWidth - aspectCardGap * (aspectCardCount - 1)) / aspectCardCount);
+  const aspectMaxWidth = Math.min(360, aspectBaseWidth);
+  const aspectRatio = CARD_SIZE.height / CARD_SIZE.width;
+  let aspectCardWidth = Math.max(240, aspectMaxWidth);
+  let aspectCardHeight = Math.round(aspectCardWidth * aspectRatio);
+  if (aspectCardHeight > aspectAvailableHeight) {
+    aspectCardHeight = Math.max(240, aspectAvailableHeight);
+    aspectCardWidth = Math.round(aspectCardHeight / aspectRatio);
+  }
+  const aspectCardSize = { width: aspectCardWidth, height: aspectCardHeight };
+  const aspectChoiceCount = Math.max(1, pendingAspectReward?.chooseCount ?? 1);
   const keruAspectLabel = useMemo(
     () => getAspectLabel(gameState.actorKeru?.archetype),
     [gameState.actorKeru?.archetype]
@@ -3154,7 +3178,7 @@ export const CombatGolf = memo(function CombatGolf({
     if (coords) {
       const key = `${coords.x},${coords.y}`;
       const rewards = getPoiRewardsForKey(key);
-      if (rewards.some((reward) => reward.type === 'aspect-jumbo')) {
+      if (rewards.some(isAspectRewardType)) {
         setLastAspectRewardKey(key);
       }
     }
@@ -3166,6 +3190,7 @@ export const CombatGolf = memo(function CombatGolf({
     hasSpawnedEnemies,
     isCurrentExplorationTableauCleared,
     isRpgVariant,
+    isAspectRewardType,
   ]);
   useEffect(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
@@ -5648,9 +5673,11 @@ export const CombatGolf = memo(function CombatGolf({
           >
             <div className="absolute inset-0" />
             <div
-              className="relative mx-4 rounded-[26px] border border-game-teal/50 px-6 py-6"
+              className="relative mx-4 rounded-[32px] border border-game-teal/50 px-10 py-8 flex flex-col"
               style={{
-                maxWidth: 'min(900px, 92vw)',
+                width: `${aspectModalWidth}px`,
+                height: `${aspectModalHeight}px`,
+                maxHeight: '82vh',
                 background: 'linear-gradient(180deg, rgba(10,18,24,0.95) 0%, rgba(10,16,22,0.92) 100%)',
                 boxShadow: '0 0 40px rgba(0,0,0,0.6), 0 0 22px rgba(127,219,202,0.18)',
               }}
@@ -5661,16 +5688,30 @@ export const CombatGolf = memo(function CombatGolf({
               <div className="mb-4 text-sm text-game-white/80">
                 Drag an aspect card to the foundation to bind Keru&apos;s form.
               </div>
-              <div className="relative flex items-center justify-center">
-                <Hand
-                  cards={aspectRewardCards}
-                  cardScale={1.6}
-                  onDragStart={handleDragStartGuarded}
-                  showGraphics={showGraphics}
-                  interactionMode={gameState.interactionMode}
-                  draggingCardId={dragState.isDragging ? dragState.card?.id : null}
-                  isAnyCardDragging={dragState.isDragging}
-                />
+              <div className="mb-4 text-[11px] uppercase tracking-[0.3em] text-game-gold/80">
+                Choose {aspectChoiceCount}
+              </div>
+              <div className="relative flex flex-1 items-center justify-center pt-2">
+                <div className="relative flex items-end justify-center" style={{ gap: aspectCardGap }}>
+                  {aspectRewardCards.map((card, index) => {
+                    const rotation = aspectRewardCards.length === 1
+                      ? 0
+                      : (index - (aspectRewardCards.length - 1) / 2) * 6;
+                    return (
+                      <div key={card.id} style={{ transform: `rotate(${rotation}deg)` }}>
+                        <Card
+                          card={card}
+                          size={aspectCardSize}
+                          showGraphics={showGraphics}
+                          isAnyCardDragging={dragState.isDragging}
+                          onDragStart={(cardPayload, clientX, clientY, rect) => (
+                            handleDragStartGuarded(cardPayload, HAND_SOURCE_INDEX, clientX, clientY, rect)
+                          )}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </CombatOverlayFrame>

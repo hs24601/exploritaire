@@ -11,6 +11,7 @@ interface DragPreviewProps {
   card: CardType;
   position: { x: number; y: number };
   offset: { x: number; y: number };
+  size?: { width: number; height: number };
   showText: boolean;
 }
 
@@ -18,11 +19,27 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-export const DragPreview = memo(function DragPreview({ card, position, offset, showText }: DragPreviewProps) {
+export const DragPreview = memo(function DragPreview({ card, position, offset, size, showText }: DragPreviewProps) {
   const showGraphics = useGraphics();
   const globalScale = useCardScale();
-  const cardWidth = CARD_SIZE.width * globalScale;
-  const cardHeight = CARD_SIZE.height * globalScale;
+  const defaultWidth = CARD_SIZE.width * globalScale;
+  const defaultHeight = CARD_SIZE.height * globalScale;
+  const isKeruRewardCard = card.id.startsWith('keru-archetype-');
+  const rawWidth = size?.width ?? defaultWidth;
+  const rawHeight = size?.height ?? defaultHeight;
+  const cardWidth = isKeruRewardCard ? defaultWidth : Math.min(rawWidth, defaultWidth);
+  const cardHeight = isKeruRewardCard ? defaultHeight : Math.min(rawHeight, defaultHeight);
+  const scaleX = rawWidth > 0 ? cardWidth / rawWidth : 1;
+  const scaleY = rawHeight > 0 ? cardHeight / rawHeight : 1;
+  const adjustedOffset = isKeruRewardCard
+    ? { x: offset.x * scaleX, y: offset.y * scaleY }
+    : offset;
+  const adjustedPosition = isKeruRewardCard
+    ? {
+        x: position.x + offset.x - adjustedOffset.x,
+        y: position.y + offset.y - adjustedOffset.y,
+      }
+    : position;
   const suitColor = SUIT_COLORS[card.suit];
   const suitDisplay = getSuitDisplay(card.suit, showGraphics);
   const hasOrimSlots = !!card.orimSlots?.length;
@@ -30,7 +47,6 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
   const orimSlotSize = Math.max(6, Math.round(cardWidth * 0.16));
   const [rotation, setRotation] = useState(0);
   const lastRef = useRef<{ x: number; y: number; t: number } | null>(null);
-  const isKeruRewardCard = card.id.startsWith('keru-archetype-');
   const frameClassName = isKeruRewardCard
     ? 'flex flex-col items-start justify-start p-2 gap-1 text-2xl font-bold'
     : 'flex flex-col items-center justify-center gap-1 text-2xl font-bold';
@@ -49,9 +65,9 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
 
   useEffect(() => {
     const now = performance.now();
-    const pointerX = position.x + offset.x;
-    const pointerY = position.y + offset.y;
-    const grabTilt = ((offset.x - cardWidth / 2) / cardWidth) * -10;
+    const pointerX = adjustedPosition.x + adjustedOffset.x;
+    const pointerY = adjustedPosition.y + adjustedOffset.y;
+    const grabTilt = ((adjustedOffset.x - cardWidth / 2) / cardWidth) * -10;
     const last = lastRef.current;
     if (last) {
       const dt = Math.max(16, now - last.t);
@@ -64,20 +80,20 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
       setRotation(grabTilt);
     }
     lastRef.current = { x: pointerX, y: pointerY, t: now };
-  }, [position.x, position.y, offset.x, offset.y]);
+  }, [adjustedPosition.x, adjustedPosition.y, adjustedOffset.x, adjustedOffset.y, cardWidth]);
 
   return createPortal(
     <div
       style={{
         position: 'fixed',
-        left: position.x,
-        top: position.y,
+        left: adjustedPosition.x,
+        top: adjustedPosition.y,
         width: cardWidth,
         height: cardHeight,
         zIndex: 9999,
         pointerEvents: 'none',
         transform: `rotate(${rotation}deg)`,
-        transformOrigin: `${offset.x}px ${offset.y}px`,
+        transformOrigin: `${adjustedOffset.x}px ${adjustedOffset.y}px`,
       }}
       className={showText ? '' : 'textless-mode'}
     >

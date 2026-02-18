@@ -6,6 +6,7 @@ export interface DragState {
   tableauIndex: number | null;
   position: { x: number; y: number };
   offset: { x: number; y: number };
+  size?: { width: number; height: number };
   isDragging: boolean;
 }
 
@@ -19,6 +20,7 @@ const initialDragState: DragState = {
   tableauIndex: null,
   position: { x: 0, y: 0 },
   offset: { x: 0, y: 0 },
+  size: undefined,
   isDragging: false,
 };
 
@@ -82,6 +84,7 @@ export function useDragDrop(
       tableauIndex,
       position: { x: clientX - offset.x, y: clientY - offset.y },
       offset,
+      size: { width: cardRect.width, height: cardRect.height },
       isDragging: true,
     };
     // Sync the ref immediately — before React re-renders and before useEffect runs —

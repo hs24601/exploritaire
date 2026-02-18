@@ -176,6 +176,12 @@ export const Card = memo(function Card({
   const keruAspectProfile = useMemo(() => {
     if (!card || !card.id.startsWith('keru-archetype-')) return null;
     const key = card.id.replace('keru-archetype-', '').toLowerCase();
+    const latinKeyMap: Record<string, string> = {
+      wolf: 'lupus',
+      bear: 'ursus',
+      cat: 'felis',
+    };
+    const latinKey = latinKeyMap[key] ?? key;
     const profiles = (aspectProfilesJson as { aspects?: Array<{
       id?: string;
       name?: string;
@@ -187,7 +193,8 @@ export const Card = memo(function Card({
     const match = profiles.find((entry) => {
       const id = String(entry.id ?? '').toLowerCase();
       const archetype = String(entry.archetype ?? '').toLowerCase();
-      return id === key || archetype === key;
+      const name = String(entry.name ?? '').toLowerCase();
+      return id === key || archetype === key || name === key || id === latinKey || name === latinKey;
     }) ?? null;
     if (!match) return null;
     const attributes = (match.attributes ?? []).map((attr) => {
@@ -1021,48 +1028,86 @@ export const Card = memo(function Card({
                       </div>
                     );
                   })()}
-                  <div
-                    style={{
-                      color: '#f8f8f8',
-                      fontWeight: 900,
-                      fontSize: Math.max(14, Math.round(frameSize.width * 0.13)),
-                      letterSpacing: '0.12em',
-                      textTransform: 'uppercase',
-                      lineHeight: 1.1,
-                      marginTop: Math.max(6, Math.round(frameSize.height * 0.02)),
-                    }}
-                  >
-                    <div>ASPECT OF</div>
-                    <div>{(keruAspectProfile.name || 'Aspect').toUpperCase()}</div>
-                  </div>
-                  <div
-                    style={{
-                      color: '#d9f9f3',
-                      fontSize: Math.max(8, Math.round(frameSize.width * 0.065)),
-                      lineHeight: 1.35,
-                      maxHeight: Math.round(frameSize.height * 0.24),
-                      overflow: 'hidden',
-                      marginTop: Math.max(8, Math.round(frameSize.height * 0.03)),
-                      marginBottom: Math.max(8, Math.round(frameSize.height * 0.03)),
-                      paddingLeft: Math.max(4, Math.round(frameSize.width * 0.03)),
-                      paddingRight: Math.max(4, Math.round(frameSize.width * 0.03)),
-                    }}
-                  >
-                    {keruAspectProfile.description}
-                  </div>
-                  {keruAspectProfile.attributes.length > 0 && (
-                    <div className="mt-auto flex flex-wrap items-center justify-center gap-1 pb-4">
-                      {keruAspectProfile.attributes.map((attr) => (
-                        <span
-                          key={`${card.id}-${attr}`}
-                          className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-1 py-[1px] text-[7px] uppercase tracking-[0.12em]"
-                          style={{ color: '#e6b31e' }}
+                  {(() => {
+                    const nameLabel = (keruAspectProfile.name || 'Aspect').toUpperCase();
+                    const nameLength = Math.max(nameLabel.length, 1);
+                    const nameMaxWidth = frameSize.width * 0.9;
+                    const baseNameSize = Math.round(frameSize.width * 0.13);
+                    const fitNameSize = Math.floor(nameMaxWidth / (nameLength * 0.65));
+                    const nameFontSize = Math.max(12, Math.min(baseNameSize, fitNameSize));
+                    return (
+                      <div
+                        style={{
+                          color: '#f8f8f8',
+                          fontWeight: 900,
+                          fontSize: nameFontSize,
+                          letterSpacing: '0.12em',
+                          textTransform: 'uppercase',
+                          lineHeight: 1.1,
+                          marginTop: Math.max(6, Math.round(frameSize.height * 0.02)),
+                          maxWidth: '92%',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <div>ASPECT OF</div>
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip' }}>
+                          {nameLabel}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const chipsHeight = Math.round(frameSize.height * 0.2);
+                    const titleBlockHeight = Math.round(frameSize.height * 0.44);
+                    const descContainerHeight = Math.max(60, frameSize.height - chipsHeight - titleBlockHeight);
+                    const desc = keruAspectProfile.description ?? '';
+                    const baseDescSize = Math.max(8, Math.round(frameSize.width * 0.065));
+                    const targetLines = keruAspectProfile.attributes.length > 0 ? 3 : 4;
+                    const lineHeight = 1.35;
+                    const maxFontSize = Math.floor(descContainerHeight / (targetLines * lineHeight));
+                    const descFontSize = Math.max(7, Math.min(baseDescSize, maxFontSize));
+                    return (
+                      <>
+                        <div
+                          style={{
+                            color: '#d9f9f3',
+                            fontSize: descFontSize,
+                            lineHeight,
+                            height: descContainerHeight,
+                            overflow: 'hidden',
+                            marginTop: Math.max(8, Math.round(frameSize.height * 0.03)),
+                            paddingLeft: Math.max(4, Math.round(frameSize.width * 0.03)),
+                            paddingRight: Math.max(4, Math.round(frameSize.width * 0.03)),
+                          }}
                         >
-                          {attr}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                          {desc}
+                        </div>
+                        <div
+                          style={{
+                            height: chipsHeight,
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            justifyContent: 'center',
+                            paddingBottom: Math.max(8, Math.round(frameSize.height * 0.025)),
+                          }}
+                        >
+                          {keruAspectProfile.attributes.length > 0 && (
+                            <div className="flex flex-wrap items-center justify-center gap-1">
+                              {keruAspectProfile.attributes.map((attr) => (
+                                <span
+                                  key={`${card.id}-${attr}`}
+                                  className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-1.5 py-[2px] text-[8px] uppercase tracking-[0.12em]"
+                                  style={{ color: '#e6b31e' }}
+                                >
+                                  {attr}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               ) : cardTitleMeta ? (
                 <div className="relative z-[2] flex flex-col items-center gap-0.5">
