@@ -1,7 +1,7 @@
 import { memo, useRef, useCallback, useMemo, useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
-import type { Card as CardType, OrimDefinition } from '../engine/types';
+import type { Card as CardType, OrimDefinition, OrimRarity } from '../engine/types';
 import { getRankDisplay } from '../engine/rules';
 import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT } from '../engine/constants';
 import { useCardScale } from '../contexts/CardScaleContext';
@@ -14,6 +14,8 @@ import { getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../waterc
 import { getElementCardWatercolor } from '../watercolor/elementCardWatercolor';
 import type { WatercolorConfig } from '../watercolor/types';
 import aspectProfilesJson from '../data/aspectProfiles.json';
+import { useHoloInteraction } from '../hooks/useHoloInteraction';
+import { RarityAura } from './RarityAura';
 
 const CARD_WATERCOLOR_CANVAS_SCALE = 1.35;
 const CARD_WATERCOLOR_OVERALL_SCALE_MULTIPLIER = 1 / CARD_WATERCOLOR_CANVAS_SCALE;
@@ -341,39 +343,97 @@ export const Card = memo(function Card({
   }, [showDarkArtOverlay, card]);
 
   const isKeruAspectCard = !!keruAspectProfile;
+  const { styles: holoStyles, handlePointerMove, handlePointerLeave } = useHoloInteraction();
+  const rarity = (keruAspectProfile?.rarity || card?.rarity || 'common').toLowerCase() as OrimRarity;
+  const isShiny = rarity !== 'common' || isUpgradedRpgCard;
+  const effectiveRarity = rarity === 'common' && isUpgradedRpgCard ? 'rare' : rarity;
+
   return (
-    <CardFrame
-      ref={cardRef}
-      size={frameSize}
-      borderColor={getBorderColor()}
-      boxShadow={getBoxShadow()}
-      onClick={onClick}
-      onPointerDown={onDragStart ? handlePointerDown : undefined}
-      whileHover={!faceDown && !isAnyCardDragging && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
-      whileTap={!faceDown && !isAnyCardDragging && !onDragStart && onClick ? { scale: 0.98 } : {}}
-      initial={false}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`
-        flex flex-col items-center ${isKeruAspectCard ? 'justify-start' : 'justify-center'} gap-0
-        text-2xl font-bold ${isKeruAspectCard ? 'px-0 py-0' : 'px-2 py-1'}
-        ${onClick && !faceDown ? 'cursor-pointer' : ''}
-        ${onDragStart && !faceDown ? 'cursor-grab' : ''}
-        ${!onClick && !onDragStart ? 'cursor-default' : ''}
-        ${isDimmed ? 'opacity-50' : 'opacity-100'}
-        ${frameClassName ?? ''}
-      `}
+    <div
+      className="relative"
       style={{
-        color: faceDown ? 'transparent' : (isDimmed ? `${suitColor}44` : suitColor),
-        visibility: isDragging ? 'hidden' : 'visible',
-        // Prevent the browser from claiming touch gestures as scroll when the card
-        // is draggable. Without this, a downward drag on mobile lets the browser
-        // decide at touchstart time that it owns the gesture (before JS runs),
-        // resulting in pointercancel and the card snapping back to its origin.
-        touchAction: onDragStart && !faceDown ? 'none' : undefined,
-        imageRendering: 'crisp-edges',
+        ...holoStyles,
+        width: frameSize.width,
+        height: frameSize.height,
+        zIndex: isHovered ? 50 : 1,
+      }}
+      onPointerMove={handlePointerMove}
+      onMouseLeave={(e) => {
+        setIsHovered(false);
+        handlePointerLeave();
       }}
     >
+      {isShiny && !faceDown && (
+        <RarityAura
+          rarity={effectiveRarity}
+          cardWidth={frameSize.width}
+          cardHeight={frameSize.height}
+          layer="behind"
+          hyp={holoStyles['--hyp']}
+        />
+      )}
+      <CardFrame
+        ref={cardRef}
+        size={frameSize}
+        borderColor={getBorderColor()}
+        boxShadow={getBoxShadow()}
+        onClick={onClick}
+        onPointerDown={onDragStart ? handlePointerDown : undefined}
+        whileHover={!faceDown && !isAnyCardDragging && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
+        whileTap={!faceDown && !isAnyCardDragging && !onDragStart && onClick ? { scale: 0.98 } : {}}
+        initial={false}
+        onMouseEnter={() => setIsHovered(true)}
+        className={`
+          flex flex-col items-center ${isKeruAspectCard ? 'justify-start' : 'justify-center'} gap-0
+          text-2xl font-bold ${isKeruAspectCard ? 'px-0 py-0' : 'px-2 py-1'}
+          ${onClick && !faceDown ? 'cursor-pointer' : ''}
+          ${onDragStart && !faceDown ? 'cursor-grab' : ''}
+          ${!onClick && !onDragStart ? 'cursor-default' : ''}
+          ${isDimmed ? 'opacity-50' : 'opacity-100'}
+          ${frameClassName ?? ''}
+        `}
+        style={{
+          color: faceDown ? 'transparent' : (isDimmed ? `${suitColor}44` : suitColor),
+          visibility: isDragging ? 'hidden' : 'visible',
+          // Prevent the browser from claiming touch gestures as scroll when the card
+          // is draggable. Without this, a downward drag on mobile lets the browser
+          // decide at touchstart time that it owns the gesture (before JS runs),
+          // resulting in pointercancel and the card snapping back to its origin.
+          touchAction: onDragStart && !faceDown ? 'none' : undefined,
+          imageRendering: 'crisp-edges',
+          overflow: 'hidden', // Ensure glare/foil are clipped
+        }}
+      >
+        {isShiny && !faceDown && (
+          <>
+            {/* Glare Layer */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                zIndex: 10,
+                background: `radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,${isHovered ? 0.35 : 0}) 0%, transparent 80%)`,
+                mixBlendMode: 'soft-light',
+              }}
+            />
+            {/* Foil/Holo Layer */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                zIndex: 9,
+                backgroundImage: rarity === 'mythic' 
+                  ? `linear-gradient(110deg, transparent 20%, rgba(255,50,50,0.15) 30%, rgba(50,255,50,0.15) 40%, rgba(50,50,255,0.15) 50%, rgba(255,255,255,0.25) 52%, transparent 80%)`
+                  : rarity === 'legendary'
+                  ? `linear-gradient(110deg, transparent 25%, rgba(255,200,50,0.2) 48%, rgba(255,255,255,0.3) 52%, transparent 75%)`
+                  : `linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.15) 48%, rgba(255,255,255,0.25) 52%, transparent 75%)`,
+                backgroundPosition: 'var(--posx) var(--posy)',
+                backgroundSize: '200% 200%',
+                mixBlendMode: 'color-dodge',
+                opacity: isHovered ? 0.8 : 0.1, // Always show a bit of foil for shiny cards
+                transition: 'opacity 0.3s ease',
+              }}
+            />
+          </>
+        )}
       {cardWatercolorConfig && (
         <WatercolorContext.Provider value={forceWatercolor}>
           <div
@@ -1319,6 +1379,16 @@ export const Card = memo(function Card({
           {isExpansionOpen ? 'X' : expansionGlyph}
         </button>
       )}
-    </CardFrame>
+      </CardFrame>
+      {isShiny && !faceDown && (
+        <RarityAura
+          rarity={effectiveRarity}
+          cardWidth={frameSize.width}
+          cardHeight={frameSize.height}
+          layer="front"
+          hyp={holoStyles['--hyp']}
+        />
+      )}
+    </div>
   );
 });

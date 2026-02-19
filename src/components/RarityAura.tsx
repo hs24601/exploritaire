@@ -167,6 +167,8 @@ interface RarityAuraProps {
   /** 'behind' (default) = all layers except onTop stars.
    *  'front' = only onTop stars, intended to be rendered after the Card in the DOM. */
   layer?: 'behind' | 'front';
+  /** Tilt intensity (0..1) from mouse interaction. */
+  hyp?: number;
 }
 
 export const RarityAura = memo(function RarityAura({
@@ -175,15 +177,18 @@ export const RarityAura = memo(function RarityAura({
   cardHeight,
   layer = 'behind',
 }: RarityAuraProps) {
-  const rgb         = RARITY_RGB[rarity];
-  const glowPx      = RARITY_GLOW_PX[rarity];
-  const glowAlpha   = RARITY_GLOW_ALPHA[rarity];
+  hyp = hyp ?? 0;
+  const intensity    = Math.min(1, Math.max(0, hyp));
+  const rgb          = RARITY_RGB[rarity];
+  const glowPx       = RARITY_GLOW_PX[rarity] + intensity * 8;
+  const glowAlpha    = Math.min(1, RARITY_GLOW_ALPHA[rarity] * (0.8 + intensity * 0.4));
   const shimmerDur  = SHIMMER_DURATION[rarity];
   const shimmerOpac = SHIMMER_OPACITY[rarity];
   const sparkleN    = SPARKLE_COUNT[rarity] ?? 0;
   const auroraInset = AURORA_INSET[rarity];
-  const auroraOpac  = AURORA_OPACITY[rarity];
-  const auroraDur   = AURORA_DURATION[rarity];
+  const baseAuroraOp = AURORA_OPACITY[rarity] ?? 0;
+  const auroraOpac   = baseAuroraOp * (0.55 + intensity * 0.45);
+  const auroraDur    = Math.max(2, (AURORA_DURATION[rarity] ?? 4) - intensity * 0.75);
   const isMythic    = rarity === 'mythic';
   const isLegendary = rarity === 'legendary' || isMythic;
   const br          = 10; // card border-radius (px)
@@ -226,6 +231,7 @@ export const RarityAura = memo(function RarityAura({
                 ].join(' '),
                 animation: `rarity-star-float ${dur}s ease-in-out infinite`,
                 animationDelay: `${delay}s`,
+                opacity: 0.75 + intensity * 0.2,
               }}
             >
               <path d={STAR_PATH} fill={starColor} />
@@ -271,6 +277,7 @@ export const RarityAura = memo(function RarityAura({
               #4d96ff, #c77dff, #ff6b6b)`,
             opacity: auroraOpac,
             animation: `${isMythic ? 'rarity-aurora-mythic' : 'rarity-aurora'} ${auroraDur}s linear infinite`,
+            filter: `brightness(${1 + intensity * 0.15})`,
           }}
         />
       )}
@@ -284,8 +291,10 @@ export const RarityAura = memo(function RarityAura({
           zIndex: 0,
           boxShadow: [
             `0 0 ${glowPx}px rgba(${rgb}, ${glowAlpha})`,
-            `0 0 ${glowPx * 2}px rgba(${rgb}, ${glowAlpha * 0.4})`,
+            `0 0 ${glowPx * 1.8}px rgba(${rgb}, ${glowAlpha * 0.45})`,
+            `0 0 ${glowPx * 2.8}px rgba(${rgb}, ${glowAlpha * 0.25})`,
           ].join(', '),
+          filter: `brightness(${1 + intensity * 0.12})`,
         }}
       />
 
@@ -374,6 +383,7 @@ export const RarityAura = memo(function RarityAura({
                 ].join(' '),
                 animation: `rarity-star-float ${dur}s ease-in-out infinite`,
                 animationDelay: `${delay}s`,
+                opacity: 0.45 + intensity * 0.35,
               }}
             >
               <path d={STAR_PATH} fill={starColor} />

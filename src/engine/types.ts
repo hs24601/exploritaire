@@ -6,7 +6,13 @@ export type Element = 'W' | 'E' | 'A' | 'F' | 'L' | 'D' | 'N';
 
 export type OrimCategory = 'ability' | 'utility' | 'trait';
 
-export type OrimRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
+export type OrimRarity =
+  | 'common'
+  | 'uncommon' // holo layer expects this tier explicitly
+  | 'rare'
+  | 'epic'
+  | 'legendary'
+  | 'mythic';
 
 export type OrimDomain = 'puzzle' | 'combat';
 
