@@ -22,6 +22,7 @@ interface TableauProps {
   dimTopCard?: boolean;
   hiddenTopCard?: boolean;
   maskTopValue?: boolean;
+  layout?: 'vertical' | 'horizontal';
 }
 
 export const Tableau = memo(function Tableau({
@@ -43,6 +44,7 @@ export const Tableau = memo(function Tableau({
   dimTopCard = false,
   hiddenTopCard = false,
   maskTopValue = false,
+  layout = 'vertical',
 }: TableauProps) {
   const isSelected = selectedCard?.tableauIndex === tableauIndex;
   const guidanceActive = guidanceMoves.length > 0;
@@ -53,6 +55,7 @@ export const Tableau = memo(function Tableau({
   const revealOffset = revealNextRow ? Math.round(cardHeight * 0.18) + 5 : 0;
   const stackStep = (revealNextRow ? 8 : 3) * effectiveScale;
   const stackCap = (revealNextRow ? 80 : 20) * effectiveScale;
+  const horizontalStep = cardWidth + (8 * effectiveScale); // Small fixed gap scaled with the cards
   const maxStackOffset = Math.min(Math.max(0, cards.length - 1) * stackStep, stackCap);
   const topVisibleIndex = (() => {
     if (!draggingCardId) return cards.length - 1;
@@ -81,7 +84,10 @@ export const Tableau = memo(function Tableau({
 
   return (
     <div
-      style={{ width: cardWidth, minHeight: cardHeight + maxStackOffset + revealOffset + 60 * effectiveScale }}
+      style={{ 
+        width: layout === 'horizontal' ? Math.max(cardWidth, cards.length * horizontalStep) : cardWidth, 
+        minHeight: layout === 'horizontal' ? cardHeight : cardHeight + maxStackOffset + revealOffset + 60 * effectiveScale 
+      }}
       className="relative"
     >
       {cards.map((card, index) => {
@@ -93,9 +99,10 @@ export const Tableau = memo(function Tableau({
         return (
           <div
             key={card.id}
-            className="absolute left-0"
+            className="absolute"
             style={{
-              top: stackOffset + (isTopCard ? revealOffset : 0),
+              left: layout === 'horizontal' ? index * horizontalStep : 0,
+              top: layout === 'vertical' ? stackOffset + (isTopCard ? revealOffset : 0) : 0,
               filter: dimTopCard && isTopCard ? 'brightness(0.38) saturate(0.55)' : undefined,
             }}
           >

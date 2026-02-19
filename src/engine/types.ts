@@ -77,6 +77,7 @@ export interface Card {
   actorGlyph?: string;
   sourceActorId?: string;
   sourceDeckCardId?: string;
+  sourceTableauIndex?: number;
   cooldown?: number;
   maxCooldown?: number;
 }
@@ -164,7 +165,7 @@ export interface RpgDotEffect {
   effectKind?: 'vice_grip' | 'bleed';
 }
 
-export type ActorKeruArchetype = 'blank' | 'wolf' | 'bear' | 'cat';
+export type ActorKeruArchetype = 'blank' | 'lupus' | 'ursus' | 'felis';
 
 export interface ActorKeru {
   id: string;

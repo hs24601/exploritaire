@@ -176,6 +176,7 @@ export default function App() {
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [isGamePaused, setIsGamePaused] = useState(false);
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
+  const [forcedPerspectiveEnabled, setForcedPerspectiveEnabled] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
   const [toolingTab, setToolingTab] = useState<'poi' | 'aspects' | 'ability'>('poi');
   const normalizePoiOverrides = useCallback((input: Record<string, PoiReward[] | PoiOverride>) => {
@@ -204,6 +205,7 @@ export default function App() {
     normalizePoiOverrides(poiRewardOverridesJson as Record<string, PoiReward[] | PoiOverride>)
   );
   const [poiEditorCoords, setPoiEditorCoords] = useState('');
+  const lastAutoPoiCoordsRef = useRef<string | null>(null);
   const [poiSearchQuery, setPoiSearchQuery] = useState('');
   const [currentPlayerCoords, setCurrentPlayerCoords] = useState<{ x: number; y: number } | null>(null);
   const [poiEditorName, setPoiEditorName] = useState('');
@@ -380,14 +382,50 @@ export default function App() {
     return { x, y };
   }, []);
 
-  const VALID_KERU_ASPECTS = useMemo(() => new Set<KeruAspect>(KERU_ARCHETYPE_OPTIONS.map((option) => option.archetype)), []);
+  const VALID_KERU_ASPECTS = useMemo(() => {
+    const base = KERU_ARCHETYPE_OPTIONS.map((option) => option.archetype);
+    const fallback: KeruAspect[] = ['lupus', 'ursus', 'felis'];
+    return new Set<KeruAspect>(base.length > 0 ? base : fallback);
+  }, []);
+  const resolveKeruAspectKey = useCallback((value?: string | null): KeruAspect | null => {
+    const raw = String(value ?? '').trim().toLowerCase();
+    if (!raw) return null;
+    if (raw === 'lupus' || raw === 'ursus' || raw === 'felis') return raw as KeruAspect;
+    if (raw.includes('lupus')) return 'lupus';
+    if (raw.includes('ursus')) return 'ursus';
+    if (raw.includes('felis')) return 'felis';
+    return null;
+  }, []);
+  const aspectRewardOptions = useMemo(() => {
+    const fromProfiles = aspectProfiles
+      .map((entry) => {
+        const key = resolveKeruAspectKey(entry.id)
+          ?? resolveKeruAspectKey(entry.name)
+          ?? resolveKeruAspectKey(entry.archetype);
+        if (!key) return null;
+        const label = entry.name?.trim()
+          || entry.archetype?.trim()
+          || `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+        return { archetype: key, label };
+      })
+      .filter((entry): entry is { archetype: KeruAspect; label: string } => !!entry);
+    const deduped = fromProfiles.reduce<Array<{ archetype: KeruAspect; label: string }>>((acc, entry) => {
+      if (acc.some((existing) => existing.archetype === entry.archetype)) return acc;
+      acc.push(entry);
+      return acc;
+    }, []);
+    return deduped.length > 0 ? deduped : KERU_ARCHETYPE_OPTIONS;
+  }, [aspectProfiles, resolveKeruAspectKey]);
 
   const createDraftFromReward = useCallback((reward: PoiReward): PoiRewardDraft => {
     const nextId = poiRewardIdRef.current + 1;
     poiRewardIdRef.current = nextId;
     const options = reward.options ?? [];
-    const aspectOptions = options.filter((option): option is KeruAspect => VALID_KERU_ASPECTS.has(option as KeruAspect));
-    const abilityOptions = options.filter((option) => !VALID_KERU_ASPECTS.has(option as KeruAspect));
+    const normalizedAspects = options
+      .map((option) => resolveKeruAspectKey(option))
+      .filter((option): option is KeruAspect => !!option && VALID_KERU_ASPECTS.has(option));
+    const aspectOptions = normalizedAspects;
+    const abilityOptions = options.filter((option) => !resolveKeruAspectKey(option));
     const normalizedType = reward.type === 'aspect-jumbo' ? 'aspect-choice' : reward.type;
     const drawCount = Math.max(0, reward.drawCount ?? reward.amount ?? options.length);
     const chooseCount = Math.max(0, reward.chooseCount ?? (normalizedType === 'ability-choice' ? 3 : 1));
@@ -402,7 +440,7 @@ export default function App() {
       searchFilter: '',
       abilitySearchFilter: '',
     };
-  }, [VALID_KERU_ASPECTS]);
+  }, [VALID_KERU_ASPECTS, resolveKeruAspectKey]);
 
   const createEmptyDraft = useCallback((): PoiRewardDraft => {
     const nextId = poiRewardIdRef.current + 1;
@@ -562,7 +600,13 @@ export default function App() {
       chooseCount: Math.max(0, draft.chooseCount),
       description: draft.description.trim() || undefined,
       options: (draft.type === 'aspect-choice' || draft.type === 'aspect-jumbo')
-        ? [...new Set(draft.selectedAspects)]
+        ? Array.from(
+          new Set(
+            draft.selectedAspects
+              .map((value) => resolveKeruAspectKey(value))
+              .filter((value): value is KeruAspect => !!value && VALID_KERU_ASPECTS.has(value))
+          )
+        )
         : (draft.type === 'ability-choice' ? [...new Set(draft.selectedAbilities)] : undefined),
     }));
     const narration = (poiEditorNarrationTitle.trim() || poiEditorNarrationBody.trim() || poiEditorCompletionTitle.trim() || poiEditorCompletionBody.trim())
@@ -729,9 +773,14 @@ export default function App() {
 
   useEffect(() => {
     if (toolingOpen && toolingTab === 'poi' && currentPlayerCoords) {
-      loadPoi(`${currentPlayerCoords.x},${currentPlayerCoords.y}`);
+      const nextCoords = `${currentPlayerCoords.x},${currentPlayerCoords.y}`;
+      if (!poiEditorCoords || poiEditorCoords === lastAutoPoiCoordsRef.current) {
+        setPoiEditorCoords(nextCoords);
+        lastAutoPoiCoordsRef.current = nextCoords;
+      }
+      loadPoi(nextCoords);
     }
-  }, [toolingOpen, toolingTab, currentPlayerCoords, loadPoi]);
+  }, [toolingOpen, toolingTab, currentPlayerCoords, loadPoi, poiEditorCoords]);
 
   const handleAddAbility = useCallback(() => {
     const nextIdBase = 'new-ability';
@@ -1168,6 +1217,9 @@ export default function App() {
       if (key === 'w') {
         setWatercolorEnabled((prev) => !prev);
       }
+      if (key === '/') {
+        setForcedPerspectiveEnabled((prev) => !prev);
+      }
       if (event.code === 'Enter') {
         event.preventDefault();
         actions.autoPlayNextMove();
@@ -1227,7 +1279,7 @@ export default function App() {
         if (card) {
           if (gameState.playtestVariant === 'rpg' && card.id.startsWith('keru-archetype-')) {
             const archetype = card.id.replace('keru-archetype-', '');
-            if (archetype === 'wolf' || archetype === 'bear' || archetype === 'cat') {
+            if (archetype === 'lupus' || archetype === 'ursus' || archetype === 'felis') {
               const applied = actions.applyKeruArchetype(archetype);
               if (applied) {
                 const directionDeg = momentum
@@ -2457,7 +2509,7 @@ export default function App() {
                             <div className="flex-1 overflow-y-auto pr-3 custom-scrollbar space-y-4">
                               {poiEditorRewards.map((reward, index) => {
                                 const searchTerm = reward.searchFilter.trim().toLowerCase();
-                                const filteredAspects = KERU_ARCHETYPE_OPTIONS.filter((option) => {
+                                const filteredAspects = aspectRewardOptions.filter((option) => {
                                   const haystack = `${option.label} ${option.archetype}`.toLowerCase();
                                   return searchTerm === '' || haystack.includes(searchTerm);
                                 });
@@ -2912,37 +2964,86 @@ export default function App() {
                             return (
                               <div className="flex justify-center">
                                 <div
-                                  className="w-[280px] rounded-[18px] border border-game-teal/50 shadow-[0_0_30px_rgba(0,0,0,0.45)] px-6 py-5 text-center"
+                                  className="w-[280px] aspect-[5/7] rounded-[18px] border border-game-teal/50 shadow-[0_0_30px_rgba(0,0,0,0.45)] overflow-hidden flex flex-col"
                                   style={{
                                     background: 'linear-gradient(180deg, rgba(6,8,14,0.9) 0%, rgba(5,6,12,0.95) 65%, rgba(0,0,0,0.95) 100%)',
                                   }}
                                 >
-                                  <div className="text-[8px] font-bold tracking-[0.4em] text-game-teal/60 uppercase">
-                                    {(active.rarity ?? 'Common').toUpperCase()}
-                                  </div>
-                                  <div className="text-[11px] font-bold tracking-[0.3em] text-game-gold uppercase mt-2">
-                                    {active.archetype} Archetype
-                                  </div>
-                                  <div className="text-[22px] font-black tracking-[0.15em] text-white uppercase mt-4">
-                                    <div>Aspect Of</div>
-                                    <div>{(active.name ?? '??').toUpperCase()}</div>
-                                  </div>
-                                  <div className="text-[10px] text-game-white/70 mt-4 leading-5">
-                                    {active.description || 'No description provided.'}
-                                  </div>
-                                  {formattedAttributes.length > 0 && (
-                                    <div className="flex flex-wrap items-center justify-center gap-1 mt-4">
-                                      {formattedAttributes.map((attr) => (
-                                        <span
-                                          key={attr}
-                                          className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-2 py-1 text-[8px] uppercase tracking-[0.2em]"
-                                          style={{ color: '#f7d24b' }}
-                                        >
-                                          {attr}
-                                        </span>
-                                      ))}
+                                  {/* TOP SECTION: 40% - Rarity, Archetype, Aspect Name */}
+                                  <div className="h-[40%] flex flex-col px-5 pt-4 pb-3 justify-start">
+                                    {/* Rarity - Upper Left */}
+                                    <div className="text-left">
+                                      <div
+                                        className="font-bold tracking-[0.4em] text-game-teal/60 uppercase"
+                                        style={{
+                                          fontSize: 'clamp(6px, 2vw, 8px)',
+                                          lineHeight: '1.2',
+                                        }}
+                                      >
+                                        {(active.rarity ?? 'Common').toUpperCase()}
+                                      </div>
                                     </div>
-                                  )}
+
+                                    {/* Archetype - Left aligned, one line, dynamic sizing */}
+                                    <div className="mt-2 text-left min-h-[1.2em] overflow-hidden flex items-center">
+                                      <div
+                                        className="font-bold tracking-[0.3em] text-game-gold uppercase whitespace-nowrap"
+                                        style={{
+                                          fontSize: 'clamp(9px, 1.8vw, 11px)',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                        }}
+                                      >
+                                        {active.archetype} Archetype
+                                      </div>
+                                    </div>
+
+                                    {/* Aspect Name - Center aligned, max 2 lines, dynamic sizing */}
+                                    <div className="mt-auto text-center flex flex-col justify-center flex-1 min-h-0">
+                                      <div
+                                        className="font-black tracking-[0.15em] text-white uppercase leading-tight"
+                                        style={{
+                                          fontSize: 'clamp(16px, 2.8vw, 24px)',
+                                          lineHeight: '1.1',
+                                        }}
+                                      >
+                                        <div>Aspect Of</div>
+                                        <div className="line-clamp-2">{(active.name ?? '??').toUpperCase()}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* MIDDLE SECTION: 35% (41-75%) - Description */}
+                                  <div className="h-[35%] px-5 py-2 flex items-center justify-center overflow-y-auto">
+                                    <div
+                                      className="text-game-white/70 leading-snug"
+                                      style={{
+                                        fontSize: 'clamp(8px, 1.4vw, 10px)',
+                                      }}
+                                    >
+                                      {active.description || 'No description provided.'}
+                                    </div>
+                                  </div>
+
+                                  {/* BOTTOM SECTION: 25% - Attributes */}
+                                  <div className="h-[25%] px-4 pb-4 flex items-center justify-center overflow-hidden">
+                                    {formattedAttributes.length > 0 && (
+                                      <div className="flex flex-wrap items-center justify-center gap-1 w-full">
+                                        {formattedAttributes.map((attr) => (
+                                          <span
+                                            key={attr}
+                                            className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-2 py-1 uppercase tracking-[0.2em] whitespace-nowrap"
+                                            style={{
+                                              color: '#f7d24b',
+                                              fontSize: 'clamp(6px, 1.2vw, 8px)',
+                                            }}
+                                          >
+                                            {attr}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -3144,6 +3245,7 @@ export default function App() {
                 handleDragStart={handleDragStart}
                 setFoundationRef={setFoundationRef}
                 actions={playingScreenActions}
+                forcedPerspectiveEnabled={forcedPerspectiveEnabled}
               />
             )}
 
@@ -3234,6 +3336,7 @@ export default function App() {
                 onOpenNarrative={() => setNarrativeOpen(true)}
                 onCloseNarrative={() => setNarrativeOpen(false)}
                 onPositionChange={(x, y) => setCurrentPlayerCoords({ x, y })}
+                forcedPerspectiveEnabled={forcedPerspectiveEnabled}
                 />
             )}
             </div>

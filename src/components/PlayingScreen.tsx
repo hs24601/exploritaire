@@ -8,9 +8,7 @@ import { StatsPanel } from './StatsPanel';
 import { canPlayCard } from '../engine/rules';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { CARD_SIZE } from '../engine/constants';
-import { getActorDefinition } from '../engine/actors';
-import { NO_MOVES_BADGE_STYLE, NEON_COLORS } from '../utils/styles';
-import { useCardScale } from '../contexts/CardScaleContext';
+import { PerspectiveTableauGroup } from './PerspectiveTableauGroup';
 
 interface PlayingScreenProps {
   gameState: GameState;
@@ -35,6 +33,7 @@ interface PlayingScreenProps {
     autoPlay: () => void;
     rewindLastCard: () => boolean;
   };
+  forcedPerspectiveEnabled?: boolean;
 }
 
 export const PlayingScreen = memo(function PlayingScreen({
@@ -54,6 +53,7 @@ export const PlayingScreen = memo(function PlayingScreen({
   handleDragStart,
   setFoundationRef,
   actions,
+  forcedPerspectiveEnabled = true,
 }: PlayingScreenProps) {
   const showGraphics = useGraphics();
   const globalCardScale = useCardScale();
@@ -100,27 +100,45 @@ export const PlayingScreen = memo(function PlayingScreen({
           {activeTileName.toUpperCase()}
         </div>
         {/* Tableaus */}
-        <div className="relative flex gap-3">
-          {gameState.tableaus.map((tableau, idx) => (
-            <Tableau
-              key={idx}
-              cards={tableau}
-              tableauIndex={idx}
-              canPlay={tableauCanPlay[idx]}
-              noValidMoves={noValidMoves}
-              selectedCard={selectedCard}
-              onCardSelect={actions.selectCard}
-              guidanceMoves={guidanceMoves}
-              interactionMode={gameState.interactionMode}
-              onDragStart={handleDragStart}
-              draggingCardId={isDragging ? draggingCard?.id : null}
-              isAnyCardDragging={isDragging}
-              showGraphics={showGraphics}
-              cardScale={foundationCardScale}
-              revealNextRow={cloudSightActive}
-            />
-          ))}
-        </div>
+        {forcedPerspectiveEnabled ? (
+          <PerspectiveTableauGroup
+            gameState={gameState}
+            selectedCard={selectedCard}
+            onCardSelect={actions.selectCard}
+            guidanceMoves={guidanceMoves}
+            showGraphics={showGraphics}
+            cardScale={foundationCardScale}
+            interactionMode={gameState.interactionMode}
+            handleDragStart={handleDragStart}
+            isDragging={isDragging}
+            draggingCardId={isDragging ? draggingCard?.id : null}
+            revealNextRow={cloudSightActive}
+            tableauCanPlay={tableauCanPlay}
+            noValidMoves={noValidMoves}
+          />
+        ) : (
+          <div className="relative flex gap-3">
+            {gameState.tableaus.map((tableau, idx) => (
+              <Tableau
+                key={idx}
+                cards={tableau}
+                tableauIndex={idx}
+                canPlay={tableauCanPlay[idx]}
+                noValidMoves={noValidMoves}
+                selectedCard={selectedCard}
+                onCardSelect={actions.selectCard}
+                guidanceMoves={guidanceMoves}
+                interactionMode={gameState.interactionMode}
+                onDragStart={handleDragStart}
+                draggingCardId={isDragging ? draggingCard?.id : null}
+                isAnyCardDragging={isDragging}
+                showGraphics={showGraphics}
+                cardScale={foundationCardScale}
+                revealNextRow={cloudSightActive}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Foundations */}
         <div className="flex flex-col items-center gap-4" style={{ marginTop: -foundationOffsetAdjusted }}>

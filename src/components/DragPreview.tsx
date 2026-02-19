@@ -47,13 +47,13 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
     ? 'flex flex-col items-start justify-start p-2 gap-1 text-2xl font-bold'
     : 'flex flex-col items-center justify-center gap-1 text-2xl font-bold';
   const keruMeta = (() => {
-    if (card.id === 'keru-archetype-wolf') {
+    if (card.id === 'keru-archetype-lupus') {
       return { title: 'LUPUS', subtitle: 'Ranger Archetype', accent: '#f7d24b' };
     }
-    if (card.id === 'keru-archetype-bear') {
+    if (card.id === 'keru-archetype-ursus') {
       return { title: 'URSUS', subtitle: 'Tank Archetype', accent: '#ffb075' };
     }
-    if (card.id === 'keru-archetype-cat') {
+    if (card.id === 'keru-archetype-felis') {
       return { title: 'FELIS', subtitle: 'Rogue Archetype', accent: '#9de3ff' };
     }
     return null;

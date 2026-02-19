@@ -55,6 +55,7 @@ export const CardFrame = forwardRef<HTMLDivElement, CardFrameProps>(function Car
     textRendering: 'geometricPrecision',
     borderWidth: style?.borderWidth ?? GAME_BORDER_WIDTH,
     boxSizing: 'border-box',
+    transformStyle: 'preserve-3d',
     ...style,
   };
 
@@ -66,7 +67,7 @@ export const CardFrame = forwardRef<HTMLDivElement, CardFrameProps>(function Car
       onTouchStart={onTouchStart}
       onPointerDown={onPointerDown}
       onClick={onClick}
-      className={`rounded-lg border-solid bg-game-bg-dark transition-[border-color,box-shadow,opacity] select-none relative overflow-hidden${className ? ` ${className}` : ''}`}
+      className={`rounded-lg border-solid bg-game-bg-dark transition-[border-color,box-shadow,opacity] select-none relative${className ? ` ${className}` : ''}`}
       style={baseStyle}
       {...dataAttributes}
       {...motionProps}

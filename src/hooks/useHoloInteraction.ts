@@ -9,6 +9,10 @@ export interface HoloInteractionStyles extends CSSProperties {
   '--posx': string;
   '--posy': string;
   '--hyp': number;
+  '--bg-x'?: number;
+  '--bg-y'?: number;
+  '--bg-x-flipped'?: number;
+  '--bg-y-flipped'?: number;
 }
 
 export function useHoloInteraction() {
@@ -20,6 +24,10 @@ export function useHoloInteraction() {
     '--posx': '50%',
     '--posy': '50%',
     '--hyp': 0,
+    '--bg-x': 0,
+    '--bg-y': 0,
+    '--bg-x-flipped': 0,
+    '--bg-y-flipped': 0,
     transform: 'perspective(600px) rotateX(0deg) rotateY(0deg)',
   });
 
@@ -37,6 +45,10 @@ export function useHoloInteraction() {
     const ry = (50 - px) / 2;
     
     const hyp = Math.sqrt(Math.pow(py - 50, 2) + Math.pow(px - 50, 2)) / 50;
+
+    // 3D tilt values from the new animation style
+    const tiltX = -(x - rect.width / 2) / 20;
+    const tiltY = -(y - rect.height / 2) / 20;
     
     if (timerRef.current) cancelAnimationFrame(timerRef.current);
     
@@ -49,6 +61,10 @@ export function useHoloInteraction() {
         '--posx': `${px}%`,
         '--posy': `${py}%`,
         '--hyp': hyp,
+        '--bg-y': tiltX / 2,
+        '--bg-x': tiltY / 2,
+        '--bg-y-flipped': tiltX, // Simplified from x3
+        '--bg-x-flipped': tiltY, // Simplified from y3
         transform: `perspective(600px) rotateX(${rx}deg) rotateY(${ry}deg)`,
         transition: 'none',
       });
@@ -66,8 +82,12 @@ export function useHoloInteraction() {
       '--posx': '50%',
       '--posy': '50%',
       '--hyp': 0,
+      '--bg-x': 0,
+      '--bg-y': 0,
+      '--bg-x-flipped': 0,
+      '--bg-y-flipped': 0,
       transform: 'perspective(600px) rotateX(0deg) rotateY(0deg)',
-      transition: 'transform 0.5s ease, --mx 0.5s ease, --my 0.5s ease',
+      transition: 'transform 0.5s ease, --mx 0.5s ease, --my 0.5s ease, --bg-x 0.5s ease, --bg-y 0.5s ease',
     });
   }, []);
 

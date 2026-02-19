@@ -33,7 +33,7 @@ export const mainWorldMap: WorldMapDefinition = {
           type: 'aspect-jumbo',
           amount: 1,
           description: 'Choose 1: Lupus, Ursus, or Felis jumbo card aspect',
-          options: ['wolf', 'bear', 'cat'],
+          options: ['lupus', 'ursus', 'felis'],
         },
       ],
     },

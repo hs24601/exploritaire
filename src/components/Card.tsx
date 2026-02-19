@@ -163,13 +163,13 @@ export const Card = memo(function Card({
   }, [card, rpgLevel]);
   const keruArchetypeMeta = useMemo(() => {
     if (!card) return null;
-    if (card.id === 'keru-archetype-wolf') {
+    if (card.id === 'keru-archetype-lupus') {
       return { title: 'LUPUS', subtitle: 'ASPECT', titleColor: '#f7d24b', subtitleColor: '#7fdbca' };
     }
-    if (card.id === 'keru-archetype-bear') {
+    if (card.id === 'keru-archetype-ursus') {
       return { title: 'URSUS', subtitle: 'ASPECT', titleColor: '#ffb075', subtitleColor: '#7fdbca' };
     }
-    if (card.id === 'keru-archetype-cat') {
+    if (card.id === 'keru-archetype-felis') {
       return { title: 'FELIS', subtitle: 'ASPECT', titleColor: '#9de3ff', subtitleColor: '#7fdbca' };
     }
     return null;
@@ -179,9 +179,9 @@ export const Card = memo(function Card({
     if (!card || !card.id.startsWith('keru-archetype-')) return null;
     const key = card.id.replace('keru-archetype-', '').toLowerCase();
     const latinKeyMap: Record<string, string> = {
-      wolf: 'lupus',
-      bear: 'ursus',
-      cat: 'felis',
+      lupus: 'lupus',
+      ursus: 'ursus',
+      felis: 'felis',
     };
     const latinKey = latinKeyMap[key] ?? key;
     const profiles = (aspectProfilesJson as { aspects?: Array<{
@@ -363,6 +363,7 @@ export const Card = memo(function Card({
         handlePointerLeave();
       }}
     >
+      <div className={`card-3d-container h-full w-full ${faceDown ? 'flipped' : ''}`}>
       {isShiny && !faceDown && (
         <RarityAura
           rarity={effectiveRarity}
@@ -384,6 +385,7 @@ export const Card = memo(function Card({
         initial={false}
         onMouseEnter={() => setIsHovered(true)}
         className={`
+          card-3d
           flex flex-col items-center ${isKeruAspectCard ? 'justify-start' : 'justify-center'} gap-0
           text-2xl font-bold ${isKeruAspectCard ? 'px-0 py-0' : 'px-2 py-1'}
           ${onClick && !faceDown ? 'cursor-pointer' : ''}
@@ -401,9 +403,28 @@ export const Card = memo(function Card({
           // resulting in pointercancel and the card snapping back to its origin.
           touchAction: onDragStart && !faceDown ? 'none' : undefined,
           imageRendering: 'crisp-edges',
-          overflow: 'hidden', // Ensure glare/foil are clipped
         }}
       >
+        {/* Back face */}
+        <div
+          className="absolute inset-0 bg-game-bg-dark flex items-center justify-center rounded-lg border-2 border-game-purple/50"
+          style={{
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg) translateZ(1px)',
+            zIndex: faceDown ? 20 : 0,
+            backgroundImage: 'var(--card-back)',
+            backgroundSize: 'contain',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            ...neonGlow('rgba(139, 92, 246, 0.4)'),
+          }}
+        >
+          <div
+            className="w-10 h-10 border-2 border-game-purple rounded-full"
+            style={neonGlow('rgba(139, 92, 246, 0.4)')}
+          />
+        </div>
+
         {isShiny && !faceDown && (
           <>
             {/* Glare Layer */}
@@ -1336,50 +1357,8 @@ export const Card = memo(function Card({
           )}
         </div>
       )}
-
-      {faceDown && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div
-            className="w-10 h-10 border-2 border-game-purple rounded-full"
-            style={neonGlow('rgba(139, 92, 246, 0.4)')}
-          />
-        </div>
-      )}
-
-      {/* Playable indicator */}
-      {canPlay && !faceDown && !isGuidanceTarget && !isDimmed && !isAnyCardDragging && (
-        <motion.div
-          animate={{ opacity: [0.3, 0.7, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -inset-1 border-2 border-game-gold rounded-[10px] pointer-events-none"
-          style={neonGlow('#e6b31e', 15)}
-        />
-      )}
-
-      {/* Guidance target indicator */}
-      {isGuidanceTarget && !isAnyCardDragging && (
-        <motion.div
-          animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.02, 1] }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -inset-1 border-[3px] border-game-teal rounded-[10px] pointer-events-none"
-          style={neonGlow('#7fdbca', 15)}
-        />
-      )}
-
-      {/* Expansion toggle stub */}
-      {hasExpansion && onToggleExpansion && !faceDown && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpansion();
-          }}
-          className="absolute bottom-1 right-1 text-[8px] text-game-teal border border-game-teal rounded px-1 py-[1px] opacity-70 hover:opacity-100 transition-opacity"
-          title="Toggle card expansion"
-        >
-          {isExpansionOpen ? 'X' : expansionGlyph}
-        </button>
-      )}
       </CardFrame>
+      </div>
       {isShiny && !faceDown && (
         <RarityAura
           rarity={effectiveRarity}

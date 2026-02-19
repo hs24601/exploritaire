@@ -1,67 +1,57 @@
 {
   "aspects": [
     {
-      "id": "wolf",
-      "label": "Lupus",
-      "ability": {
-        "label": "Bite",
-        "damage": "1 DMG",
-        "cardId": "keru-ability-bite",
-        "cardRank": 1,
-        "cardElement": "N",
-        "cardGlyph": "🐺"
-      },
-      "tags": [
-        "HP +8",
-        "Stamina +5"
-      ],
-      "archetypeCard": {
-        "cardId": "keru-archetype-wolf",
-        "cardRank": 1,
-        "cardElement": "N"
-      }
-    },
-    {
-      "id": "bear",
+      "id": "ursus",
       "label": "Ursus",
       "ability": {
-        "label": "Swipe",
-        "damage": "1 DMG",
-        "cardId": "keru-ability-swipe",
+        "label": "Bear's Blessing",
+        "description": "Fortify yourself and your allies",
+        "damage": "0",
+        "cardId": "ability-ursus-blessing",
         "cardRank": 1,
-        "cardElement": "N",
-        "cardGlyph": "🐻"
+        "cardElement": "earth"
       },
-      "tags": [
-        "HP +14",
-        "Armor +1"
-      ],
+      "tags": ["tank", "protection"],
       "archetypeCard": {
-        "cardId": "keru-archetype-bear",
-        "cardRank": 1,
-        "cardElement": "N"
+        "cardId": "keru-archetype-ursus",
+        "cardRank": 0,
+        "cardElement": "earth"
       }
     },
     {
-      "id": "cat",
+      "id": "lupus",
+      "label": "Lupus",
+      "ability": {
+        "label": "Pack Leader's Call",
+        "description": "Rally your allies with leadership",
+        "damage": "2",
+        "cardId": "ability-lupus-call",
+        "cardRank": 1,
+        "cardElement": "wind"
+      },
+      "tags": ["ranger", "leader"],
+      "archetypeCard": {
+        "cardId": "keru-archetype-lupus",
+        "cardRank": 0,
+        "cardElement": "wind"
+      }
+    },
+    {
+      "id": "felis",
       "label": "Felis",
       "ability": {
-        "label": "Claw",
-        "damage": "1 DMG",
-        "cardId": "keru-ability-claw",
+        "label": "Shadow Strike",
+        "description": "Move with lethal grace",
+        "damage": "3",
+        "cardId": "ability-felis-strike",
         "cardRank": 1,
-        "cardElement": "N",
-        "cardGlyph": "🐈"
+        "cardElement": "fire"
       },
-      "tags": [
-        "HP +5",
-        "Evasion +15%",
-        "Stealth +5"
-      ],
+      "tags": ["rogue", "stealth"],
       "archetypeCard": {
-        "cardId": "keru-archetype-cat",
-        "cardRank": 1,
-        "cardElement": "N"
+        "cardId": "keru-archetype-felis",
+        "cardRank": 0,
+        "cardElement": "fire"
       }
     }
   ]

@@ -21,10 +21,10 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     ],
   },
   {
-    id: 'wolf',
-    name: 'Wolf',
-    titles: ["Ze'ev", 'Wolf'],
-    description: 'A fierce wolf with unwavering loyalty',
+    id: 'lupus',
+    name: 'Lupus',
+    titles: ['Lupus'],
+    description: 'A fierce lupus with unwavering loyalty',
     type: 'adventurer',
     value: 3,
     suit: undefined,
@@ -33,20 +33,6 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     orimSlots: [
       { orimId: 'bite', locked: true },
       { orimId: 'teamwork' },
-    ],
-  },
-  {
-    id: 'owl',
-    name: 'Owl',
-    titles: ['Strix', 'Owl'],
-    description: 'A calm owl with patient insight',
-    type: 'adventurer',
-    value: 10,
-    suit: undefined,
-    element: 'N',
-    sprite: '🦉',
-    orimSlots: [
-      { orimId: 'cloud_sight', locked: true },
     ],
   },
   {
@@ -145,16 +131,10 @@ export function createInitialActors(): Actor[] {
     actors.push(keru);
   }
 
-  const wolf = createActor('wolf');
-  if (wolf) {
-    wolf.gridPosition = { col: 4, row: 2 };
-    actors.push(wolf);
-  }
-
-  const owl = createActor('owl');
-  if (owl) {
-    owl.gridPosition = { col: 4, row: 3 };
-    actors.push(owl);
+  const lupus = createActor('lupus');
+  if (lupus) {
+    lupus.gridPosition = { col: 4, row: 2 };
+    actors.push(lupus);
   }
 
   return actors;

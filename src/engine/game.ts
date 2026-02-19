@@ -254,10 +254,10 @@ function normalizeKeru(keru?: ActorKeru): ActorKeru {
 }
 
 function getKeruArchetypePatch(archetype: Exclude<ActorKeruArchetype, 'blank'>): Pick<ActorKeru, 'archetype' | 'label' | 'hp' | 'hpMax' | 'armor' | 'stamina' | 'staminaMax' | 'energy' | 'energyMax' | 'evasion' | 'sight' | 'mobility' | 'leadership' | 'tags'> {
-  if (archetype === 'wolf') {
+  if (archetype === 'lupus') {
     return {
-      archetype: 'wolf',
-      label: 'Wolf Keru',
+      archetype: 'lupus',
+      label: 'Lupus Keru',
       hp: 2,
       hpMax: 2,
       armor: 0,
@@ -272,10 +272,10 @@ function getKeruArchetypePatch(archetype: Exclude<ActorKeruArchetype, 'blank'>):
       tags: ['stamina', 'leadership'],
     };
   }
-  if (archetype === 'bear') {
+  if (archetype === 'ursus') {
     return {
-      archetype: 'bear',
-      label: 'Bear Keru',
+      archetype: 'ursus',
+      label: 'Ursus Keru',
       hp: 4,
       hpMax: 4,
       armor: 2,
@@ -291,8 +291,8 @@ function getKeruArchetypePatch(archetype: Exclude<ActorKeruArchetype, 'blank'>):
     };
   }
   return {
-    archetype: 'cat',
-    label: 'Cat Keru',
+    archetype: 'felis',
+    label: 'Felis Keru',
     hp: 2,
     hpMax: 2,
     armor: 0,
@@ -772,7 +772,7 @@ export function initializeGame(
   const randomWildsTile = baseState.tiles.find((tile) => tile.definitionId === 'random_wilds') || null;
   if (!randomWildsTile) return baseState;
 
-  const partyDefinitionIds = ['keru', 'wolf', 'owl'];
+  const partyDefinitionIds = ['keru', 'lupus'];
   const queuedActors = baseState.availableActors.filter((actor) =>
     partyDefinitionIds.includes(actor.definitionId)
   );
@@ -1280,12 +1280,8 @@ function awardActorComboCards(
   if (foundationActor.definitionId === 'keru') {
     rewards.push(createRpgScratchCard(foundationActor.id));
   }
-  if (foundationActor.definitionId === 'wolf') {
+  if (foundationActor.definitionId === 'lupus') {
     if (combo % 3 === 0) rewards.push(createRpgBiteCard(foundationActor.id));
-  }
-  if (foundationActor.definitionId === 'owl') {
-    if (combo % 2 === 0) rewards.push(createRpgPeckCard(foundationActor.id));
-    if (combo % 3 === 0) rewards.push(createRpgCloudSightCard(foundationActor.id));
   }
   const base = rewards.length > 0 ? [...(state.rpgHandCards ?? []), ...rewards] : (state.rpgHandCards ?? []);
   return upgradeRpgHandCards(base);
@@ -3598,7 +3594,6 @@ export function playRpgHandCardOnActor(
 
   if (isCloudSight) {
     const target = party[actorIndex];
-    if (target.definitionId !== 'owl') return state;
     if (sourceActor?.id && sourceActor.id !== target.id) return state;
     const cloudSightLevel = getCloudSightCount(card);
     const grantsTimerBonus = cloudSightLevel >= 2;

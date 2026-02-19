@@ -9,6 +9,7 @@ import type { BlockingRect } from '../engine/lighting';
 import { ShadowCanvas } from './LightRenderer';
 import { GameButton } from './GameButton';
 import { Tableau } from './Tableau';
+import { PerspectiveTableauGroup } from './PerspectiveTableauGroup';
 import { FoundationActor } from './FoundationActor';
 import { Card } from './Card';
 import { Die } from './Die';
@@ -107,7 +108,11 @@ const buildKeruStatLines = (previous: ActorKeru, next: ActorKeru): string[] =>
 const getKeruAspectAttributeLines = (archetype?: ActorKeruArchetype | null): string[] => {
   if (!archetype || archetype === 'blank') return [];
   const key = archetype.toLowerCase();
-  const latinMap: Record<string, string> = { wolf: 'lupus', bear: 'ursus', cat: 'felis' };
+  const latinMap: Record<string, string> = {
+    lupus: 'lupus',
+    ursus: 'ursus',
+    felis: 'felis',
+  };
   const lookup = latinMap[key] ?? key;
   const profiles = (aspectProfilesJson as { aspects?: Array<{
     id?: string;
@@ -206,7 +211,7 @@ interface CombatGolfProps {
     adjustRpgHandCardRarity?: (cardId: string, delta: -1 | 1) => boolean;
     addRpgHandCard?: (card: CardType) => boolean;
     removeRpgHandCardById?: (cardId: string) => boolean;
-    applyKeruArchetype?: (archetype: 'wolf' | 'bear' | 'cat') => boolean;
+    applyKeruArchetype?: (archetype: 'lupus' | 'ursus' | 'felis') => boolean;
     setEnemyDifficulty?: (difficulty: GameState['enemyDifficulty']) => void;
     rewindLastCard: () => boolean;
     swapPartyLead: (actorId: string) => void;
@@ -219,6 +224,7 @@ interface CombatGolfProps {
   onToggleInfiniteBenchSwaps?: () => void;
   onConsumeBenchSwap?: () => void;
   explorationStepRef?: { current: (() => void) | null };
+  forcedPerspectiveEnabled?: boolean;
 }
 
 interface TurnTimerRailProps {
@@ -490,6 +496,7 @@ export const CombatGolf = memo(function CombatGolf({
   onConsumeBenchSwap,
   onOpenSettings,
   explorationStepRef,
+  forcedPerspectiveEnabled = true,
 }: CombatGolfProps) {
   const showGraphics = useGraphics();
   const [splatterModalOpen, setSplatterModalOpen] = useState(false);
@@ -518,9 +525,6 @@ export const CombatGolf = memo(function CombatGolf({
   });
   const [explorationTotalTraversalCount, setExplorationTotalTraversalCount] = useState(0);
   const [ctrlHeld, setCtrlHeld] = useState(false);
-  const [owlOverwatchUntilMs, setOwlOverwatchUntilMs] = useState(0);
-  const [owlExplorationRevealByNode, setOwlExplorationRevealByNode] = useState<Record<string, Record<number, string | null>>>({});
-  const [overwatchClockMs, setOverwatchClockMs] = useState(() => Date.now());
   const [comboPaused, setComboPaused] = useState(false);
   const keruHasAspect = useMemo(
     () => ((gameState.actorKeru?.selectedAspectIds ?? []).length > 0),
@@ -1381,8 +1385,7 @@ export const CombatGolf = memo(function CombatGolf({
   const ACTOR_LINE_COLORS: Record<string, string> = {
     keru: '#e6b31e',
     fox: '#e6b31e',
-    wolf: '#f0f0f0',
-    owl: '#fff5cc',
+    lupus: '#f0f0f0',
   };
   const COMBO_FLASH_SCALING_ENABLED = true;
   const foundationActor = foundationHasActor ? activeParty[0] ?? null : null;
@@ -1505,21 +1508,14 @@ export const CombatGolf = memo(function CombatGolf({
     if (!activeParty.length) return 0;
     return activeParty.reduce((sum, actor) => sum + (actorComboCounts[actor.id] ?? 0), 0);
   }, [activeParty, actorComboCounts]);
-  const owlOverwatchActorId = useMemo(() => {
-    const owlActor = activeParty.find((actor) => actor.definitionId === 'owl');
-    if (!owlActor) return null;
-    const apexEnhancement = actorNodeAssignments[owlActor.id]?.apex;
-    if (!apexEnhancement || apexEnhancement.trim().toLowerCase() !== 'zephyr') return null;
-    return owlActor.id;
-  }, [activeParty, actorNodeAssignments]);
-  const wolfPackMomentumActorId = useMemo(() => {
-    const wolfActor = activeParty.find((actor) => actor.definitionId === 'wolf');
-    if (!wolfActor) return null;
-    const apexEnhancement = actorNodeAssignments[wolfActor.id]?.apex;
+  const lupusPackMomentumActorId = useMemo(() => {
+    const lupusActor = activeParty.find((actor) => actor.definitionId === 'lupus');
+    if (!lupusActor) return null;
+    const apexEnhancement = actorNodeAssignments[lupusActor.id]?.apex;
     if (!apexEnhancement || apexEnhancement.trim().toLowerCase() !== 'ferocity') return null;
-    return wolfActor.id;
+    return lupusActor.id;
   }, [activeParty, actorNodeAssignments]);
-  const packMomentumActive = !!wolfPackMomentumActorId;
+  const packMomentumActive = !!lupusPackMomentumActorId;
   const partyComboTotalForTimer = packMomentumActive ? partyComboTotal : 0;
   const ownedOrimNames = useMemo(() => {
     const names = (gameState.orimStash ?? []).map((instance) => {
@@ -1548,86 +1544,6 @@ export const CombatGolf = memo(function CombatGolf({
       };
     });
   }, []);
-  const owlOverwatchMilestoneRef = useRef(0);
-  useEffect(() => {
-    if (!owlOverwatchActorId) {
-      owlOverwatchMilestoneRef.current = 0;
-      setOwlOverwatchUntilMs(0);
-      setOwlExplorationRevealByNode({});
-      return;
-    }
-    const milestone = Math.floor(Math.max(0, partyComboTotal) / 5);
-    if (milestone <= 0) {
-      owlOverwatchMilestoneRef.current = 0;
-      return;
-    }
-    if (milestone > owlOverwatchMilestoneRef.current) {
-      owlOverwatchMilestoneRef.current = milestone;
-      setOwlOverwatchUntilMs(Date.now() + 5000);
-      const isExploringWithoutEnemies = isRpgVariant && !enemyFoundations.some((foundation) => foundation.length > 0);
-      if (isExploringWithoutEnemies) {
-        const nodeId = explorationCurrentNodeIdRef.current;
-        setOwlExplorationRevealByNode((prev) => {
-          const existingForNode = prev[nodeId] ?? {};
-          const nextForNode = { ...existingForNode };
-          gameState.tableaus.forEach((tableau, tableauIndex) => {
-            const secondCard = tableau.length >= 2 ? tableau[tableau.length - 2] : null;
-            if (secondCard) {
-              nextForNode[tableauIndex] = secondCard.id;
-            }
-          });
-          return {
-            ...prev,
-            [nodeId]: nextForNode,
-          };
-        });
-      }
-    }
-  }, [enemyFoundations, gameState.tableaus, isRpgVariant, owlOverwatchActorId, partyComboTotal]);
-  useEffect(() => {
-    const nodeId = explorationCurrentNodeId;
-    setOwlExplorationRevealByNode((prev) => {
-      const nodeMap = prev[nodeId] ?? {};
-      const nextNodeMap: Record<number, string | null> = {};
-      let changed = false;
-      for (const [indexKey, cardId] of Object.entries(nodeMap)) {
-        if (!cardId) continue;
-        const tableauIndex = Number(indexKey);
-        const tableau = gameState.tableaus[tableauIndex] ?? [];
-        const stillExists = tableau.some((card) => card.id === cardId);
-        if (stillExists) {
-          nextNodeMap[tableauIndex] = cardId;
-        } else {
-          changed = true;
-        }
-      }
-      if (!changed && Object.keys(nextNodeMap).length === Object.keys(nodeMap).length) return prev;
-      return {
-        ...prev,
-        [nodeId]: nextNodeMap,
-      };
-    });
-  }, [explorationCurrentNodeId, gameState.tableaus]);
-  useEffect(() => {
-    if (owlOverwatchUntilMs <= 0) return;
-    const remainingMs = owlOverwatchUntilMs - Date.now();
-    if (remainingMs <= 0) {
-      setOwlOverwatchUntilMs(0);
-      return;
-    }
-    const timeoutId = window.setTimeout(() => setOwlOverwatchUntilMs(0), remainingMs + 20);
-    return () => window.clearTimeout(timeoutId);
-  }, [owlOverwatchUntilMs]);
-  const owlOverwatchActive = !!owlOverwatchActorId && Date.now() < owlOverwatchUntilMs;
-  const owlExplorationRevealMap = owlExplorationRevealByNode[explorationCurrentNodeId] ?? {};
-  useEffect(() => {
-    if (!owlOverwatchActive) return;
-    setOverwatchClockMs(Date.now());
-    const intervalId = window.setInterval(() => {
-      setOverwatchClockMs(Date.now());
-    }, 50);
-    return () => window.clearInterval(intervalId);
-  }, [owlOverwatchActive]);
   useEffect(() => {
     if (!isPartyBattleVariant || isRpgVariant) {
       setRewardedBattleHandCards([]);
@@ -1647,19 +1563,6 @@ export const CombatGolf = memo(function CombatGolf({
     if (isRpgVariant) return gameState.rpgHandCards ?? [];
     return rewardedBattleHandCards;
   }, [gameState.rpgHandCards, isPartyBattleVariant, isRpgVariant, rewardedBattleHandCards]);
-  const owlOverwatchRemainingMs = Math.max(0, owlOverwatchUntilMs - overwatchClockMs);
-  const owlOverwatchStatusCard = useMemo<CardType | null>(() => {
-    if (!owlOverwatchActorId || owlOverwatchRemainingMs <= 0) return null;
-    return {
-      id: 'status-overwatch',
-      rank: 0,
-      element: 'N',
-      suit: ELEMENT_TO_SUIT.N,
-      rarity: 'uncommon',
-      cooldown: owlOverwatchRemainingMs,
-      maxCooldown: 5000,
-    };
-  }, [owlOverwatchActorId, owlOverwatchRemainingMs]);
   const rewindHandCard = useMemo<CardType | null>(() => {
     if (!noRegretStatus.actorId) return null;
     const cooldown = Math.max(0, noRegretStatus.cooldown);
@@ -1673,13 +1576,9 @@ export const CombatGolf = memo(function CombatGolf({
       maxCooldown: Math.max(1, cooldown),
     };
   }, [noRegretStatus.actorId, noRegretStatus.cooldown]);
-  const playerHandCardsWithOverwatch = useMemo<CardType[]>(
-    () => (owlOverwatchStatusCard ? [owlOverwatchStatusCard, ...unlockedBattleHandCards] : unlockedBattleHandCards),
-    [owlOverwatchStatusCard, unlockedBattleHandCards]
-  );
   const playerHandCardsWithStatuses = useMemo<CardType[]>(
-    () => (rewindHandCard ? [rewindHandCard, ...playerHandCardsWithOverwatch] : playerHandCardsWithOverwatch),
-    [playerHandCardsWithOverwatch, rewindHandCard]
+    () => (rewindHandCard ? [rewindHandCard, ...unlockedBattleHandCards] : unlockedBattleHandCards),
+    [rewindHandCard, unlockedBattleHandCards]
   );
   const explorationActorHandCardsByIndex = useMemo<CardType[][]>(
     () => activeParty.map((actor) => {
@@ -2121,14 +2020,7 @@ export const CombatGolf = memo(function CombatGolf({
     remainingMs?: number;
     totalMs?: number;
   };
-  const [statusClockMs, setStatusClockMs] = useState(() => Date.now());
-  useEffect(() => {
-    if (!isRpgVariant) return;
-    const intervalId = window.setInterval(() => {
-      setStatusClockMs(Date.now());
-    }, 100);
-    return () => window.clearInterval(intervalId);
-  }, [isRpgVariant]);
+  const statusClockMs = isRpgVariant ? Date.now() : 0;
   const formatStatusSeconds = (remainingMs: number): string => {
     const seconds = Math.max(0, remainingMs) / 1000;
     return `${seconds.toFixed(seconds >= 10 ? 0 : 1)}s`;
@@ -2454,9 +2346,7 @@ export const CombatGolf = memo(function CombatGolf({
       nodeAssignments={inspectedActor ? (actorNodeAssignments[inspectedActor.id] ?? {}) : {}}
       onAssignNodeOrim={handleAssignNodeOrim}
       onClearNodeOrim={handleClearNodeOrim}
-      owlOverwatchActive={owlOverwatchActive}
-      owlOverwatchRemainingMs={owlOverwatchRemainingMs}
-      wolfPackMomentumActive={packMomentumActive}
+      lupusPackMomentumActive={packMomentumActive}
     />
   );
   const closeEnemyHandOverlay = useCallback(() => {
@@ -3014,7 +2904,6 @@ export const CombatGolf = memo(function CombatGolf({
     explorationMajorTableauCacheRef.current = {};
     explorationMinorCenterCacheRef.current = {};
     explorationPoiTableauCacheRef.current = {};
-    setOwlExplorationRevealByNode({});
   }, [explorationSpawnX, explorationSpawnY, gameState.currentBiome, hasSpawnedEnemies, isRpgVariant]);
   const handleExplorationHeadingChange = useCallback((direction: Direction) => {
     if (isRpgVariant && !hasSpawnedEnemies) {
@@ -4010,7 +3899,7 @@ export const CombatGolf = memo(function CombatGolf({
   }, []);
 
   const renderMatchLines = useCallback((mode: 'random' | 'traditional') => {
-    const autoPathMode = !isEnemyTurn && owlOverwatchActive && !!owlOverwatchActorId;
+  const autoPathMode = false;
     if (!ctrlHeld && !autoPathMode) return null;
     if (!matchLineContainerRef.current) return null;
     const containerRect = matchLineContainerRef.current.getBoundingClientRect();
@@ -4032,7 +3921,7 @@ export const CombatGolf = memo(function CombatGolf({
         const actor = activeParty[fIdx];
         const hasStamina = isActorCombatReady(actor);
         if (!hasStamina) continue;
-        if (autoPathMode && actor?.id !== owlOverwatchActorId) continue;
+        if (autoPathMode) continue;
         const top = foundation[foundation.length - 1];
         const canPlay = canPlayCardWithWild(card, top, gameState.activeEffects, foundation);
         if (!canPlay) continue;
@@ -4070,7 +3959,7 @@ export const CombatGolf = memo(function CombatGolf({
         ))}
       </svg>
     );
-  }, [ctrlHeld, gameState.tableaus, gameState.foundations, gameState.activeEffects, activeParty, owlOverwatchActive, owlOverwatchActorId, isEnemyTurn]);
+  }, [ctrlHeld, gameState.tableaus, gameState.foundations, gameState.activeEffects, activeParty, isEnemyTurn]);
 
   const splatterModal = (
     <SplatterPatternModal
@@ -5182,49 +5071,66 @@ export const CombatGolf = memo(function CombatGolf({
             </div>
           )}
           {hasUnclearedVisibleTableaus && (
-            <div
-              className="flex w-full justify-center gap-3 px-2 sm:px-3"
-              style={{
-                alignItems: 'flex-start',
-                height: `${explorationTableauRowHeightPx}px`,
-                overflow: 'hidden',
-                transform: `translateX(${tableauSlideOffsetPx}px)`,
-                transition: tableauSlideAnimating ? `transform ${EXPLORATION_SLIDE_ANIMATION_MS}ms cubic-bezier(0.2, 0.9, 0.25, 1)` : 'none',
-                willChange: 'transform',
-              }}
-            >
-              {gameState.tableaus.map((tableau, idx) => (
-                <div
-                  key={idx}
-                  ref={(el) => { tableauRefs.current[idx] = el; }}
-                  style={tableau.length > 0 && sunkCostTableauPulseStyle ? sunkCostTableauPulseStyle : undefined}
-                >
-                  <Tableau
-                    cards={tableau}
-                    tableauIndex={idx}
-                    canPlay={tableauCanPlay[idx]}
-                    noValidMoves={noValidMoves}
-                    selectedCard={selectedCard}
-                    onCardSelect={handleTableauClick}
-                    guidanceMoves={[]}
-                    interactionMode={gameState.interactionMode}
-                    onDragStart={handleDragStartGuarded}
-                    draggingCardId={dragState.isDragging ? dragState.card?.id : null}
-                    showGraphics={showGraphics}
-                    cardScale={tableauCardScale}
-                    revealNextRow={cloudSightActive}
-                    persistentRevealCardId={isRpgVariant && !hasSpawnedEnemies ? (owlExplorationRevealMap[idx] ?? null) : null}
-                    revealAllCards={revealAllCardsForIntro}
-                    dimTopCard={enemyDraggingTableauIndexes.has(idx)}
-                    hiddenTopCard={isRpgVariant && hiddenPlayerTableaus.has(idx)}
-                    maskTopValue={isRpgVariant && maskAllPlayerTableauValues}
-                    hideElements={isRpgVariant}
-                    topCardStepIndexOverride={isRpgVariant && !hasSpawnedEnemies ? getDisplayedStepIndexForColumn(idx) : null}
-                    debugStepLabel={getDebugStepLabelForColumn(idx)}
-                  />
-                </div>
-              ))}
-            </div>
+            forcedPerspectiveEnabled ? (
+              <PerspectiveTableauGroup
+                gameState={gameState}
+                selectedCard={selectedCard}
+                onCardSelect={handleTableauClick}
+                guidanceMoves={[]}
+                showGraphics={showGraphics}
+                cardScale={tableauCardScale}
+                interactionMode={gameState.interactionMode}
+                handleDragStart={handleDragStartGuarded}
+                isDragging={dragState.isDragging}
+                draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+                revealNextRow={cloudSightActive}
+                tableauCanPlay={tableauCanPlay}
+                noValidMoves={noValidMoves}
+              />
+            ) : (
+              <div
+                className="flex w-full justify-center gap-3 px-2 sm:px-3"
+                style={{
+                  alignItems: 'flex-start',
+                  height: `${explorationTableauRowHeightPx}px`,
+                  overflow: 'hidden',
+                  transform: `translateX(${tableauSlideOffsetPx}px)`,
+                  transition: tableauSlideAnimating ? `transform ${EXPLORATION_SLIDE_ANIMATION_MS}ms cubic-bezier(0.2, 0.9, 0.25, 1)` : 'none',
+                  willChange: 'transform',
+                }}
+              >
+                {gameState.tableaus.map((tableau, idx) => (
+                  <div
+                    key={idx}
+                    ref={(el) => { tableauRefs.current[idx] = el; }}
+                    style={tableau.length > 0 && sunkCostTableauPulseStyle ? sunkCostTableauPulseStyle : undefined}
+                  >
+                    <Tableau
+                      cards={tableau}
+                      tableauIndex={idx}
+                      canPlay={tableauCanPlay[idx]}
+                      noValidMoves={noValidMoves}
+                      selectedCard={selectedCard}
+                      onCardSelect={handleTableauClick}
+                      guidanceMoves={[]}
+                      interactionMode={gameState.interactionMode}
+                      onDragStart={handleDragStartGuarded}
+                      draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+                      showGraphics={showGraphics}
+                      cardScale={tableauCardScale}
+                      revealNextRow={cloudSightActive}
+                      revealAllCards={revealAllCardsForIntro}
+                      dimTopCard={enemyDraggingTableauIndexes.has(idx)}
+                      hiddenTopCard={isRpgVariant && hiddenPlayerTableaus.has(idx)}
+                      maskTopValue={isRpgVariant && maskAllPlayerTableauValues}
+                      hideElements={isRpgVariant}
+                      topCardStepIndexOverride={isRpgVariant && !hasSpawnedEnemies ? getDisplayedStepIndexForColumn(idx) : null}
+                      debugStepLabel={getDebugStepLabelForColumn(idx)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
             {!isRpgVariant && comboExpiryTokens.length > 0 && (
@@ -6308,7 +6214,6 @@ export const CombatGolf = memo(function CombatGolf({
                 showGraphics={showGraphics}
                 cardScale={tableauCardScale}
                 revealNextRow={cloudSightActive}
-                persistentRevealCardId={isRpgVariant && !hasSpawnedEnemies ? (owlExplorationRevealMap[idx] ?? null) : null}
                 revealAllCards={revealAllCardsForIntro}
                 dimTopCard={enemyDraggingTableauIndexes.has(idx)}
                 hiddenTopCard={isRpgVariant && hiddenPlayerTableaus.has(idx)}
@@ -6342,7 +6247,6 @@ export const CombatGolf = memo(function CombatGolf({
                 showGraphics={showGraphics}
                 cardScale={tableauCardScale}
                 revealNextRow={cloudSightActive}
-                persistentRevealCardId={isRpgVariant && !hasSpawnedEnemies ? (owlExplorationRevealMap[idx] ?? null) : null}
                 revealAllCards={revealAllCardsForIntro}
                 dimTopCard={enemyDraggingTableauIndexes.has(idx)}
                 hiddenTopCard={isRpgVariant && hiddenPlayerTableaus.has(idx)}

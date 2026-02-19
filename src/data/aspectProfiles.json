@@ -20,7 +20,7 @@
       ]
     },
     {
-      "id": "new-aspect",
+      "id": "lupus",
       "name": "LUPUS",
       "description": "A reluctant leader who keeps safe the wilds until her pack is found.",
       "archetype": "Ranger",
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "id": "new-aspect-2",
+      "id": "felis",
       "name": "Felis",
       "description": "Silent and cunning, take on the aspect of the Felis to navigate the dangers of this world with finesse.",
       "archetype": "Rogue",

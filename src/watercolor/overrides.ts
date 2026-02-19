@@ -190,7 +190,7 @@ export const ACTOR_WATERCOLOR_OVERRIDES: ActorWatercolorOverride[] = [
     }
   },
   {
-    "actorId": "wolf",
+    "actorId": "lupus",
     "baseColor": "#e5e2d7",
     "template": {
       "splotches": [

@@ -1026,7 +1026,7 @@ export function useGameEngine(
     setGameState((prev) => (prev ? processRelicCombatEventFn(prev, event) : prev));
   }, []);
 
-  const applyKeruArchetype = useCallback((archetype: 'wolf' | 'bear' | 'cat') => {
+  const applyKeruArchetype = useCallback((archetype: 'lupus' | 'ursus' | 'felis') => {
     if (!gameState) return false;
     const newState = applyKeruArchetypeFn(gameState, archetype);
     if (newState === gameState) return false;

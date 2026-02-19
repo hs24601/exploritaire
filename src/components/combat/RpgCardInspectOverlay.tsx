@@ -22,7 +22,7 @@ function getCardLevel(card: CardType): number {
 
 export function getRpgCardMeta(card: CardType) {
   const level = getCardLevel(card);
-  if (card.id === 'keru-archetype-wolf') {
+  if (card.id === 'keru-archetype-lupus') {
     return {
       title: 'Lupus',
       subtitle: 'Ranger Archetype',
@@ -31,7 +31,7 @@ export function getRpgCardMeta(card: CardType) {
       accent: '#f7d24b',
     };
   }
-  if (card.id === 'keru-archetype-bear') {
+  if (card.id === 'keru-archetype-ursus') {
     return {
       title: 'Ursus',
       subtitle: 'Tank Archetype',
@@ -40,7 +40,7 @@ export function getRpgCardMeta(card: CardType) {
       accent: '#ffb075',
     };
   }
-  if (card.id === 'keru-archetype-cat') {
+  if (card.id === 'keru-archetype-felis') {
     return {
       title: 'Felis',
       subtitle: 'Rogue Archetype',
