@@ -53,6 +53,9 @@ const attachPoiEditorRoutes = (middlewares: any) => {
         if (parsed.narration) {
           nextEntry.narration = parsed.narration;
         }
+        if (parsed.sparkle) {
+          nextEntry.sparkle = parsed.sparkle;
+        }
         existing[parsed.key] = nextEntry;
         fs.writeFileSync(filePath, JSON.stringify(existing, null, 2), 'utf8');
         res.setHeader('Content-Type', 'application/json');

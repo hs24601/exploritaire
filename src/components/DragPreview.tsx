@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useGraphics } from '../contexts/GraphicsContext';
 import type { Card as CardType } from '../engine/types';
@@ -13,10 +13,6 @@ interface DragPreviewProps {
   offset: { x: number; y: number };
   size?: { width: number; height: number };
   showText: boolean;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
 }
 
 export const DragPreview = memo(function DragPreview({ card, position, offset, size, showText }: DragPreviewProps) {
@@ -45,8 +41,8 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
   const hasOrimSlots = !!card.orimSlots?.length;
   const orimSlots = card.orimSlots ?? [];
   const orimSlotSize = Math.max(6, Math.round(cardWidth * 0.16));
-  const [rotation, setRotation] = useState(0);
-  const lastRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const grabTilt = ((adjustedOffset.x - cardWidth / 2) / cardWidth) * -10;
+  const rotation = Math.max(-10, Math.min(10, grabTilt));
   const frameClassName = isKeruRewardCard
     ? 'flex flex-col items-start justify-start p-2 gap-1 text-2xl font-bold'
     : 'flex flex-col items-center justify-center gap-1 text-2xl font-bold';
@@ -62,25 +58,6 @@ export const DragPreview = memo(function DragPreview({ card, position, offset, s
     }
     return null;
   })();
-
-  useEffect(() => {
-    const now = performance.now();
-    const pointerX = adjustedPosition.x + adjustedOffset.x;
-    const pointerY = adjustedPosition.y + adjustedOffset.y;
-    const grabTilt = ((adjustedOffset.x - cardWidth / 2) / cardWidth) * -10;
-    const last = lastRef.current;
-    if (last) {
-      const dt = Math.max(16, now - last.t);
-      const vx = (pointerX - last.x) / dt;
-      const vy = (pointerY - last.y) / dt;
-      const momentumTilt = clamp(vx * 120, -6, 6) + clamp(vy * -40, -3, 3);
-      const target = clamp(grabTilt + momentumTilt, -10, 10);
-      setRotation((prev) => prev + (target - prev) * 0.35);
-    } else {
-      setRotation(grabTilt);
-    }
-    lastRef.current = { x: pointerX, y: pointerY, t: now };
-  }, [adjustedPosition.x, adjustedPosition.y, adjustedOffset.x, adjustedOffset.y, cardWidth]);
 
   return createPortal(
     <div

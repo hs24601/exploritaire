@@ -26,3 +26,6 @@
 - Use `#devmode` in the URL hash to enable backlog/experimental gameplay features.
 - Default behavior remains production-safe when `#devmode` is absent.
 - Details and policy: `docs/devmode.md`.
+
+## Naming Conventions
+- System IDs (ability IDs, aspect identifiers, and similar tooling-driven values) use `thisTypeOfCase` (lower camel case) so they're consistent across the editors. Stick to that format when entering or reviewing system IDs.

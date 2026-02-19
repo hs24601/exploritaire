@@ -5,6 +5,7 @@ import { WatercolorSplotch } from '../watercolor/WatercolorSplotch';
 import { generateSplotchConfig } from '../watercolor/splotchUtils';
 import { ShadowCanvas } from './LightRenderer';
 import type { BlockingRect } from '../engine/lighting';
+import { POISparkleMarker, computePOISparkleEffect, type PoiStarDef } from './POISparkleMarker';
 
 export type ExplorationMapNode = {
   id: string;
@@ -77,6 +78,21 @@ const ZOOM_FACTOR = 1.15;
 const FULL_TURN_DEG = 360;
 const STEP_DEG = FULL_TURN_DEG / DIRECTIONS.length;
 const SHORT_HEIGHT_THRESHOLD = 230;
+
+// POI sparkle star definitions (screen-space offsets from POI center)
+const POI_STAR_DEFS: PoiStarDef[] = [
+  { dx: 0,    dy: -16, size: 6,  delay: 0.0, dur: 3.1 },      // top (neutral)
+  { dx: -14,  dy: -8,  size: 5,  delay: 0.8, dur: 2.8 },      // top-left
+  { dx: 14,   dy: -8,  size: 6,  delay: 1.4, dur: 3.2 },      // top-right
+  { dx: 0,    dy:  16, size: 5,  delay: 0.6, dur: 2.9 },      // bottom (neutral)
+  { dx: -14,  dy:  8,  size: 6,  delay: 1.8, dur: 3.4 },      // bottom-left
+  { dx: 14,   dy:  8,  size: 5,  delay: 1.0, dur: 2.6 },      // bottom-right
+];
+
+// POI targets with sparkle effect (grid coordinates)
+const SPARKLE_POI_TARGETS = [
+  { x: 0, y: 1, name: 'poi_initial_01' }, // Tutorial B
+];
 
 type GridCell = { x: number; y: number };
 type GridPoint = { x: number; y: number };
@@ -549,11 +565,6 @@ export const ExplorationMap = memo(function ExplorationMap({
     }];
   }, [tableauWallCards, cellSizeZ]);
 
-  const shadowBlockers = useMemo(
-    () => [...blockedRegionRects, ...edgeBlockers, ...projectedCellBlockers, ...tableauWallBlockers],
-    [blockedRegionRects, edgeBlockers, projectedCellBlockers, tableauWallBlockers],
-  );
-
   const projectedById = useMemo(
     () => new Map(projected.map((n) => [n.id, n] as const)),
     [projected],
@@ -572,13 +583,24 @@ export const ExplorationMap = memo(function ExplorationMap({
     {
       x: playerScreenPos.px,
       y: playerScreenPos.py,
-      radius: Math.max(cellSizeZ * 0.75, 12),
-      intensity: 0.75,
+      radius: Math.max(cellSizeZ * 0.375, 6),
+      intensity: 0.375,
       color: '#f7d24b',
       castShadows: false,
       flicker: { enabled: true, speed: 0.28, amount: 0.15 },
     },
   ]), [playerScreenPos, cellSizeZ]);
+
+  // POI sparkle effects disabled to prevent render cascade
+  // TODO: Re-enable with a separate isolated component that doesn't depend on ExplorationMap internals
+  const sparkleEffects: Record<string, any> = {};
+  const poiActorLights: any[] = [];
+  const poiShadowBlockers: BlockingRect[] = [];
+
+  const shadowBlockers = useMemo(
+    () => [...blockedRegionRects, ...edgeBlockers, ...projectedCellBlockers, ...tableauWallBlockers, ...poiShadowBlockers],
+    [blockedRegionRects, edgeBlockers, projectedCellBlockers, tableauWallBlockers, poiShadowBlockers],
+  );
 
   // Grid line ranges — account for zoom and pan
   const gridXRange = useMemo(() => {
@@ -1146,6 +1168,7 @@ export const ExplorationMap = memo(function ExplorationMap({
               </text>
             </g>
           ))}
+          {/* POI sparkle markers disabled - TODO: implement as separate component */}
           {/* Path step numbers */}
           {projectedForcedPath.map((step, idx) => (
             <text
@@ -1202,7 +1225,7 @@ export const ExplorationMap = memo(function ExplorationMap({
               ambientDarkness={0.98}
               flickerSpeed={0}
               flickerAmount={0}
-              actorLights={playerActorLights}
+              actorLights={[...playerActorLights, ...poiActorLights]}
               blockers={shadowBlockers}
               actorGlows={[]}
               worldWidth={width}

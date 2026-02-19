@@ -44,6 +44,12 @@ export const mainWorldMap: WorldMapDefinition = {
       type: 'biome',
       biomeId: 'random_wilds',
       tableauPresetId: 'initial_actions_01',
+      sparkle: {
+        proximityRange: 3,
+        starCount: 6,
+        glowColor: '#f7d24b',
+        intensity: 1,
+      },
     },
     {
       id: 'poi_initial_02',

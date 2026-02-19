@@ -17,7 +17,7 @@ import { getActorDisplayGlyph, getActorDefinition } from './engine/actors';
 import { getOrimAccentColor } from './watercolor/orimWatercolor';
 import { setWatercolorInteractionDegraded } from './watercolor/WatercolorOverlay';
 import { canPlayCard, canPlayCardWithWild } from './engine/rules';
-import { ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from './engine/constants';
+import { ELEMENT_TO_SUIT, HAND_SOURCE_INDEX, WILD_SENTINEL_RANK } from './engine/constants';
 import { getBiomeDefinition } from './engine/biomes';
 import { getTileDefinition } from './engine/tiles';
 import { getBlueprintDefinition } from './engine/blueprints';
@@ -31,7 +31,7 @@ import { mainWorldMap } from './data/worldMap';
 import { KERU_ARCHETYPE_OPTIONS, KeruAspect } from './data/keruAspects';
 import poiRewardOverridesJson from './data/poiRewardOverrides.json';
 import keruAspectsJson from './data/keruAspects.json';
-import type { PoiReward, PoiRewardType } from './engine/worldMapTypes';
+import type { PoiReward, PoiRewardType, PoiSparkleConfig } from './engine/worldMapTypes';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -87,17 +87,25 @@ type PoiNarrationDraft = {
   title: string;
   body: string;
   tone: 'teal' | 'gold' | 'violet' | 'green';
+  autoCloseOnDeparture?: boolean;
+  completion?: {
+    title: string;
+    body: string;
+    tone: 'teal' | 'gold' | 'violet' | 'green';
+  };
 };
 
 type PoiOverride = {
   rewards?: PoiReward[];
   narration?: PoiNarrationDraft;
+  sparkle?: PoiSparkleConfig;
 };
 
 type AspectDraft = {
   id: string;
-  label: string;
-  abilityLabel: string;
+  name: string;
+  abilityType: 'exploration' | 'combat';
+  abilityDescription: string;
   abilityDamage: string;
   abilityCardId: string;
   abilityCardRank: number;
@@ -109,6 +117,22 @@ type AspectDraft = {
   archetypeCardElement: Element;
 };
 
+const toThisTypeOfCase = (value: string) => {
+  const cleaned = value
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .toLowerCase();
+  if (!cleaned) return '';
+  const parts = cleaned.split(/\s+/);
+  return parts
+    .map((part, index) => (
+      index === 0
+        ? part
+        : `${part.charAt(0).toUpperCase()}${part.slice(1)}`
+    ))
+    .join('');
+};
+
 const REWARD_TYPE_OPTIONS: Array<{ value: PoiRewardType; label: string }> = [
   { value: 'aspect-choice', label: 'Aspects (choice)' },
   { value: 'ability-choice', label: 'Ability cards (choice)' },
@@ -116,6 +140,12 @@ const REWARD_TYPE_OPTIONS: Array<{ value: PoiRewardType; label: string }> = [
 ];
 const TIME_SCALE_OPTIONS = [0.5, 1, 1.5, 2];
 const DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED = false;
+const DEFAULT_SPARKLE_CONFIG: Required<PoiSparkleConfig> = {
+  proximityRange: 3,
+  starCount: 6,
+  glowColor: '#f7d24b',
+  intensity: 1,
+};
 
 export default function App() {
   const buildStamp = useMemo(() => new Date().toLocaleString(), []);
@@ -157,23 +187,40 @@ export default function App() {
         next[key] = {
           rewards: Array.isArray(value.rewards) ? value.rewards : [],
           narration: value.narration ?? undefined,
+          sparkle: value.sparkle ?? undefined,
         };
       }
     });
     return next;
+  }, []);
+  const applySparkleConfig = useCallback((config?: PoiSparkleConfig) => {
+    const resolved = { ...DEFAULT_SPARKLE_CONFIG, ...config };
+    setPoiEditorProximityRange(resolved.proximityRange);
+    setPoiEditorStarCount(resolved.starCount);
+    setPoiEditorGlowColor(resolved.glowColor);
+    setPoiEditorIntensity(resolved.intensity);
   }, []);
   const [poiRewardOverrides, setPoiRewardOverrides] = useState<Record<string, PoiOverride>>(
     normalizePoiOverrides(poiRewardOverridesJson as Record<string, PoiReward[] | PoiOverride>)
   );
   const [poiEditorCoords, setPoiEditorCoords] = useState('');
   const [poiSearchQuery, setPoiSearchQuery] = useState('');
+  const [currentPlayerCoords, setCurrentPlayerCoords] = useState<{ x: number; y: number } | null>(null);
   const [poiEditorName, setPoiEditorName] = useState('');
   const [poiEditorDiscoveryRange, setPoiEditorDiscoveryRange] = useState(1);
   const [poiEditorType, setPoiEditorType] = useState<'puzzle' | 'combat'>('puzzle');
   const [poiEditorIcon, setPoiEditorIcon] = useState('');
+  const [poiEditorProximityRange, setPoiEditorProximityRange] = useState(DEFAULT_SPARKLE_CONFIG.proximityRange);
+  const [poiEditorStarCount, setPoiEditorStarCount] = useState(DEFAULT_SPARKLE_CONFIG.starCount);
+  const [poiEditorGlowColor, setPoiEditorGlowColor] = useState(DEFAULT_SPARKLE_CONFIG.glowColor);
+  const [poiEditorIntensity, setPoiEditorIntensity] = useState(DEFAULT_SPARKLE_CONFIG.intensity);
   const [poiEditorNarrationTitle, setPoiEditorNarrationTitle] = useState('');
   const [poiEditorNarrationBody, setPoiEditorNarrationBody] = useState('');
   const [poiEditorNarrationTone, setPoiEditorNarrationTone] = useState<PoiNarrationDraft['tone']>('teal');
+  const [poiEditorNarrationAutoClose, setPoiEditorNarrationAutoClose] = useState(true);
+  const [poiEditorCompletionTitle, setPoiEditorCompletionTitle] = useState('');
+  const [poiEditorCompletionBody, setPoiEditorCompletionBody] = useState('');
+  const [poiEditorCompletionTone, setPoiEditorCompletionTone] = useState<PoiNarrationDraft['tone']>('teal');
   const [poiEditorMessage, setPoiEditorMessage] = useState<string | null>(null);
   const [poiEditorSection, setPoiEditorSection] = useState<'details' | 'rewards' | 'narration'>('details');
   const [isSavingPoi, setIsSavingPoi] = useState(false);
@@ -193,14 +240,15 @@ export default function App() {
     const source = (keruAspectsJson as { aspects?: Array<{
       id: string;
       label?: string;
-      ability?: { label?: string; damage?: string; cardId?: string; cardRank?: number; cardElement?: Element; cardGlyph?: string };
+      ability?: { label?: string; description?: string; damage?: string; cardId?: string; cardRank?: number; cardElement?: Element; cardGlyph?: string };
       tags?: string[];
       archetypeCard?: { cardId?: string; cardRank?: number; cardElement?: Element };
     }> }).aspects ?? [];
-    return source.map((entry) => ({
+  return source.map((entry) => ({
       id: entry.id ?? '',
-      label: entry.label ?? '',
-      abilityLabel: entry.ability?.label ?? '',
+      name: entry.label ?? '',
+      abilityType: (entry as any).abilityType ?? 'exploration',
+      abilityDescription: entry.ability?.description ?? '',
       abilityDamage: entry.ability?.damage ?? '',
       abilityCardId: entry.ability?.cardId ?? '',
       abilityCardRank: entry.ability?.cardRank ?? 1,
@@ -397,6 +445,7 @@ export default function App() {
     setPoiEditorDiscoveryRange(cell?.traversalDifficulty ?? 1);
     setPoiEditorType(poi?.type === 'biome' ? 'combat' : 'puzzle');
     setPoiEditorIcon((poi as { icon?: string })?.icon ?? '');
+    applySparkleConfig(override?.sparkle ?? (poi as { sparkle?: PoiSparkleConfig })?.sparkle);
     
     const existingRewards = override?.rewards ?? poi?.rewards ?? [];
     const rewardDrafts = existingRewards.length > 0
@@ -408,8 +457,12 @@ export default function App() {
     setPoiEditorNarrationTitle(narration?.title ?? '');
     setPoiEditorNarrationBody(narration?.body ?? '');
     setPoiEditorNarrationTone(narration?.tone ?? 'teal');
+    setPoiEditorNarrationAutoClose(narration?.autoCloseOnDeparture ?? true);
+    setPoiEditorCompletionTitle(narration?.completion?.title ?? '');
+    setPoiEditorCompletionBody(narration?.completion?.body ?? '');
+    setPoiEditorCompletionTone(narration?.completion?.tone ?? 'teal');
     setPoiEditorMessage(`Loaded POI at ${coords.x},${coords.y}.`);
-  }, [createDraftFromReward, createEmptyDraft, parsePoiCoords, poiRewardOverrides]);
+  }, [applySparkleConfig, createDraftFromReward, createEmptyDraft, parsePoiCoords, poiRewardOverrides]);
 
   const handleLoadPoi = useCallback(() => {
     loadPoi(poiEditorCoords);
@@ -467,8 +520,13 @@ export default function App() {
     setPoiEditorNarrationTitle('');
     setPoiEditorNarrationBody('');
     setPoiEditorNarrationTone('teal');
+    setPoiEditorNarrationAutoClose(true);
+    setPoiEditorCompletionTitle('');
+    setPoiEditorCompletionBody('');
+    setPoiEditorCompletionTone('teal');
     setPoiEditorRewards([createEmptyDraft()]);
     setPoiEditorMessage(null);
+    applySparkleConfig();
   }, [createEmptyDraft]);
 
   const handleSavePoi = useCallback(async () => {
@@ -507,11 +565,17 @@ export default function App() {
         ? [...new Set(draft.selectedAspects)]
         : (draft.type === 'ability-choice' ? [...new Set(draft.selectedAbilities)] : undefined),
     }));
-    const narration = (poiEditorNarrationTitle.trim() || poiEditorNarrationBody.trim())
+    const narration = (poiEditorNarrationTitle.trim() || poiEditorNarrationBody.trim() || poiEditorCompletionTitle.trim() || poiEditorCompletionBody.trim())
       ? {
           title: poiEditorNarrationTitle.trim(),
           body: poiEditorNarrationBody.trim(),
           tone: poiEditorNarrationTone,
+          autoCloseOnDeparture: poiEditorNarrationAutoClose,
+          completion: (poiEditorCompletionTitle.trim() || poiEditorCompletionBody.trim()) ? {
+            title: poiEditorCompletionTitle.trim(),
+            body: poiEditorCompletionBody.trim(),
+            tone: poiEditorCompletionTone,
+          } : undefined,
         }
       : undefined;
     setIsSavingPoi(true);
@@ -520,7 +584,17 @@ export default function App() {
       const response = await fetch('/__poi-editor/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, rewards: registry, narration }),
+        body: JSON.stringify({
+          key,
+          rewards: registry,
+          narration,
+          sparkle: {
+            proximityRange: poiEditorProximityRange,
+            starCount: poiEditorStarCount,
+            glowColor: poiEditorGlowColor,
+            intensity: poiEditorIntensity,
+          },
+        }),
       });
       if (!response.ok) {
         throw new Error('Save failed');
@@ -543,6 +617,10 @@ export default function App() {
     poiEditorNarrationTitle,
     poiEditorNarrationTone,
     poiEditorRewards,
+    poiEditorProximityRange,
+    poiEditorStarCount,
+    poiEditorGlowColor,
+    poiEditorIntensity,
   ]);
 
   const handleAddRewardRow = useCallback(() => {
@@ -649,6 +727,12 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (toolingOpen && toolingTab === 'poi' && currentPlayerCoords) {
+      loadPoi(`${currentPlayerCoords.x},${currentPlayerCoords.y}`);
+    }
+  }, [toolingOpen, toolingTab, currentPlayerCoords, loadPoi]);
+
   const handleAddAbility = useCallback(() => {
     const nextIdBase = 'new-ability';
     let nextId = nextIdBase;
@@ -660,8 +744,9 @@ export default function App() {
     }
     const nextDraft: AspectDraft = {
       id: nextId,
-      label: '',
-      abilityLabel: '',
+      name: '',
+      abilityType: 'exploration',
+      abilityDescription: '',
       abilityDamage: '',
       abilityCardId: '',
       abilityCardRank: 1,
@@ -684,13 +769,17 @@ export default function App() {
   const handleAbilityChange = useCallback((id: string, key: keyof AspectDraft, value: string | number) => {
     setAbilityDrafts((prev) => prev.map((entry) => {
       if (entry.id !== id) return entry;
-      if (key === 'abilityCardRank' || key === 'archetypeCardRank') {
-        return { ...entry, [key]: Math.max(0, Number(value) || 0) };
+      const nextEntry = { ...entry, [key]: value };
+      if (key === 'name') {
+        nextEntry.id = toThisTypeOfCase(String(value));
       }
-      return { ...entry, [key]: value };
+      if (key === 'abilityCardRank' || key === 'archetypeCardRank') {
+        nextEntry[key] = Math.max(0, Number(value) || 0);
+      }
+      return nextEntry;
     }));
-    if (key === 'id') {
-      const nextId = String(value);
+    if (key === 'name') {
+      const nextId = toThisTypeOfCase(String(value));
       setSelectedAbilityId((current) => (current === id ? nextId : current));
     }
   }, []);
@@ -702,9 +791,11 @@ export default function App() {
       const payload = {
         aspects: abilityDrafts.map((entry) => ({
           id: entry.id.trim(),
-          label: entry.label.trim(),
+          label: entry.name.trim(),
+          abilityType: entry.abilityType,
           ability: {
-            label: entry.abilityLabel.trim(),
+            label: entry.name.trim(),
+            description: entry.abilityDescription.trim() || undefined,
             damage: entry.abilityDamage.trim(),
             cardId: entry.abilityCardId.trim(),
             cardRank: entry.abilityCardRank,
@@ -2046,412 +2137,587 @@ export default function App() {
           <div className="fixed inset-0 z-[10030]">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
             <div className="relative w-full h-full flex items-start justify-center p-4">
-              <div className="relative w-[1200px] max-w-[88vw] h-[90vh] flex flex-col overflow-hidden menu-text">
-                <div className="absolute top-0 left-0 flex items-center gap-2 z-10">
-                  <button
-                    type="button"
-                    onClick={() => setToolingTab('poi')}
-                    className={`text-[10px] font-mono px-3 py-1 rounded border ${toolingTab === 'poi' ? 'border-game-gold text-game-gold' : 'border-game-teal/40 text-game-white/70'}`}
-                  >
-                    POI
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setToolingTab('aspects')}
-                    className={`text-[10px] font-mono px-3 py-1 rounded border ${toolingTab === 'aspects' ? 'border-game-gold text-game-gold' : 'border-game-teal/40 text-game-white/70'}`}
-                  >
-                    Aspects
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setToolingTab('ability')}
-                    className={`text-[10px] font-mono px-3 py-1 rounded border ${toolingTab === 'ability' ? 'border-game-gold text-game-gold' : 'border-game-teal/40 text-game-white/70'}`}
-                  >
-                    Ability
-                  </button>
-                </div>
-                <div className="absolute top-0 right-0 flex items-center gap-2 z-10">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (toolingTab === 'poi') {
-                        void handleSavePoi();
-                        return;
+              <div className="relative w-[1200px] max-w-[88vw] h-[90vh] flex flex-col bg-game-bg-dark/95 border border-game-teal/40 rounded-2xl overflow-hidden menu-text shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+                {/* Unified Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-game-teal/20 bg-black/40 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setToolingTab('poi')}
+                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'poi' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
+                    >
+                      POI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setToolingTab('aspects')}
+                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'aspects' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
+                    >
+                      Aspects
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setToolingTab('ability')}
+                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'ability' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
+                    >
+                      Ability
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (toolingTab === 'poi') {
+                          void handleSavePoi();
+                          return;
+                        }
+                        if (toolingTab === 'aspects') {
+                          void handleSaveAspectProfiles();
+                          return;
+                        }
+                        void handleSaveAbility();
+                      }}
+                      disabled={
+                        toolingTab === 'poi'
+                          ? isSavingPoi
+                          : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility)
                       }
-                      if (toolingTab === 'aspects') {
-                        void handleSaveAspectProfiles();
-                        return;
-                      }
-                      void handleSaveAbility();
-                    }}
-                    disabled={
-                      toolingTab === 'poi'
-                        ? isSavingPoi
-                        : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility)
-                    }
-                    className={`text-[10px] uppercase tracking-[0.4em] px-3 py-1 rounded border ${
-                      (toolingTab === 'poi'
-                        ? isSavingPoi
-                        : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility))
-                        ? 'border-game-teal/30 text-game-teal/30'
-                        : 'border-game-gold text-game-gold'
-                    } bg-game-bg-dark/70 transition-opacity`}
-                    title={toolingTab === 'poi' ? 'Save POI' : (toolingTab === 'aspects' ? 'Save Aspects' : 'Save Ability')}
-                  >
-                    {(toolingTab === 'poi'
-                      ? isSavingPoi
-                      : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility))
-                      ? 'Saving…'
-                      : 'Save'}
-                  </button>
-                  <button
-                    onClick={() => setToolingOpen(false)}
-                    className="text-xs text-game-pink border border-game-pink rounded w-6 h-6 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
-                    title="Close"
-                  >
-                    x
-                  </button>
+                      className={`text-[10px] uppercase tracking-[0.4em] px-4 py-1.5 rounded border font-black transition-all ${
+                        (toolingTab === 'poi'
+                          ? isSavingPoi
+                          : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility))
+                          ? 'border-game-teal/30 text-game-teal/30 scale-95'
+                          : 'border-game-gold text-game-gold bg-game-gold/5 hover:bg-game-gold/15 active:scale-95 shadow-[0_0_15px_rgba(230,179,30,0.2)]'
+                      }`}
+                    >
+                      {(() => {
+                        const isSaving = toolingTab === 'poi' ? isSavingPoi : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility);
+                        if (isSaving) return 'Saving…';
+                        return `Save ${toolingTab === 'poi' ? 'POI' : (toolingTab === 'aspects' ? 'Aspects' : 'Ability')}`;
+                      })()}
+                    </button>
+                    <button
+                      onClick={() => setToolingOpen(false)}
+                      className="text-xs text-game-pink border border-game-pink/40 rounded w-7 h-7 flex items-center justify-center opacity-70 hover:opacity-100 hover:border-game-pink transition-all bg-game-pink/5"
+                      title="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-                <div className="pt-8 space-y-4 flex-1 overflow-y-auto">
+
+                <div className="p-6 flex-1 flex flex-col min-h-0 overflow-hidden">
                   {toolingTab === 'poi' && (
-                    <>
-                      <div className="flex flex-col gap-2 md:hidden">
-                        <div className="flex items-center gap-2 text-[10px]">
-                          <button
-                            type="button"
-                            onClick={() => setPoiEditorSection('details')}
-                            className={`px-2 py-1 rounded border uppercase tracking-[0.3em] ${
-                              poiEditorSection === 'details'
-                                ? 'border-game-gold text-game-gold'
-                                : 'border-game-teal/40 text-game-white/70'
-                            }`}
-                          >
-                            Details
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPoiEditorSection('rewards')}
-                            className={`px-2 py-1 rounded border uppercase tracking-[0.3em] ${
-                              poiEditorSection === 'rewards'
-                                ? 'border-game-gold text-game-gold'
-                                : 'border-game-teal/40 text-game-white/70'
-                            }`}
-                          >
-                            Rewards
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPoiEditorSection('narration')}
-                            className={`px-2 py-1 rounded border uppercase tracking-[0.3em] ${
-                              poiEditorSection === 'narration'
-                                ? 'border-game-gold text-game-gold'
-                                : 'border-game-teal/40 text-game-white/70'
-                            }`}
-                          >
-                            Narration
-                          </button>
-                        </div>
-                      </div>
-                      <div className="grid md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-4">
-                        <div className={`bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3 ${poiEditorSection !== 'details' ? 'hidden md:block' : ''}`}>
-                          <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">POI Editor</div>
-                          <div className="space-y-2">
-                            <span className="text-game-teal/70 text-[9px] uppercase tracking-wider">Find POI by Title or Body</span>
-                            <input
-                              value={poiSearchQuery}
-                              onChange={(event) => setPoiSearchQuery(event.target.value)}
-                              placeholder="Search titles, bodies, or coordinates..."
-                              className="w-full bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                            />
-                            {poiSearchResults.length > 0 && (
-                              <div className="max-h-[140px] overflow-y-auto border border-game-teal/30 rounded bg-black/40 p-1 space-y-1">
-                                {poiSearchResults.map(result => (
-                                  <button
-                                    key={result.id}
-                                    type="button"
-                                    onClick={() => loadPoi(result.coords)}
-                                    className="w-full text-left p-1.5 hover:bg-game-teal/20 rounded flex justify-between items-start gap-3 group transition-colors"
-                                  >
-                                    <div className="flex flex-col flex-1 min-w-0">
-                                      <span className="text-game-white text-[10px] font-bold truncate">{result.name}</span>
-                                      {result.preview && <span className="text-game-white/50 text-[8px] line-clamp-1 italic">{result.preview}</span>}
-                                    </div>
-                                    <span className="text-game-teal/60 text-[9px] font-mono group-hover:text-game-teal shrink-0">{result.coords}</span>
-                                  </button>
-                                ))}
-                              </div>
+                    <div className="flex flex-col h-full gap-4">
+                      {/* Sub-navigation for POI Editor */}
+                      <div className="flex items-center gap-2 text-[10px] shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setPoiEditorSection('details')}
+                          className={`px-3 py-1.5 rounded border uppercase tracking-[0.3em] font-bold transition-all ${
+                            poiEditorSection === 'details'
+                              ? 'border-game-gold text-game-gold bg-game-gold/10'
+                              : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'
+                          }`}
+                        >
+                          Details
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPoiEditorSection('rewards')}
+                          className={`px-3 py-1.5 rounded border uppercase tracking-[0.3em] font-bold transition-all ${
+                            poiEditorSection === 'rewards'
+                              ? 'border-game-gold text-game-gold bg-game-gold/10'
+                              : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'
+                          }`}
+                        >
+                          Rewards
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPoiEditorSection('narration')}
+                          className={`px-3 py-1.5 rounded border uppercase tracking-[0.3em] font-bold transition-all ${
+                            poiEditorSection === 'narration'
+                              ? 'border-game-gold text-game-gold bg-game-gold/10'
+                              : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'
+                          }`}
+                        >
+                          Narration
+                        </button>
+
+                        <div className="ml-auto flex items-center gap-2">
+                          <div className="text-[9px] font-black uppercase tracking-[0.3em] text-game-teal/80">
+                            {poiEditorCoords ? (
+                              <>
+                                Editing: <span className="text-game-gold">{poiEditorName || 'Unnamed'}</span>
+                                <span className="text-game-white/40 ml-2 font-mono">[{poiEditorCoords}]</span>
+                              </>
+                            ) : (
+                              <span className="text-game-white/30 italic">No POI Loaded</span>
                             )}
                           </div>
-                          
-                          <div className="h-[1px] bg-game-teal/20 my-2" />
-                          
-                          <div className="space-y-2">
-                            <span className="text-game-teal/70 text-[9px] uppercase tracking-wider">Load by Coordinates</span>
-                            <div className="flex flex-wrap gap-2">
-                              <input
-                                value={poiEditorCoords}
-                                onChange={(event) => setPoiEditorCoords(event.target.value)}
-                                placeholder="x,y"
-                                className="flex-1 min-w-[120px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                              />
-                              <button
-                                type="button"
-                                onClick={handleLoadPoi}
-                                className="text-[10px] uppercase tracking-[0.4em] bg-game-teal/70 text-black px-3 py-1 rounded"
-                              >
-                                Load POI
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleResetPoiForm}
-                                className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
-                              >
-                                Reset
-                              </button>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-h-0 overflow-hidden">
+                        {/* 1. Details Tab */}
+                        {poiEditorSection === 'details' && (
+                          <div className="h-full bg-black/80 border border-game-teal/50 rounded-2xl p-5 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col gap-4 animate-in fade-in duration-200 overflow-hidden">
+                            <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80 shrink-0">POI Core Data</div>
+                            
+                            <div className="grid md:grid-cols-2 gap-6 shrink-0">
+                              <div className="space-y-3">
+                                <span className="text-game-teal/70 text-[9px] uppercase tracking-wider font-bold">Load by Coordinates</span>
+                                <div className="flex gap-2">
+                                  <input
+                                    value={poiEditorCoords}
+                                    onChange={(event) => setPoiEditorCoords(event.target.value)}
+                                    placeholder="x,y"
+                                    className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handleLoadPoi}
+                                    className="text-[9px] uppercase tracking-[0.2em] bg-game-teal/70 text-black px-4 py-1 rounded font-black shadow-lg"
+                                  >
+                                    Load
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleResetPoiForm}
+                                    className="text-[9px] uppercase tracking-[0.2em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded text-game-white/70"
+                                  >
+                                    Reset
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="space-y-3">
+                                <span className="text-game-teal/70 text-[9px] uppercase tracking-wider font-bold">Search & Discovery</span>
+                                <input
+                                  value={poiSearchQuery}
+                                  onChange={(event) => setPoiSearchQuery(event.target.value)}
+                                  placeholder="Search existing POIs..."
+                                  className="w-full bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                />
+                                {poiSearchResults.length > 0 && (
+                                  <div className="max-h-[140px] overflow-y-auto border border-game-teal/30 rounded bg-black/40 p-1 space-y-1 custom-scrollbar">
+                                    {poiSearchResults.map(result => (
+                                      <button
+                                        key={result.id}
+                                        type="button"
+                                        onClick={() => loadPoi(result.coords)}
+                                        className="w-full text-left p-2 hover:bg-game-teal/20 rounded flex justify-between items-start gap-3 group transition-colors"
+                                      >
+                                        <div className="flex flex-col flex-1 min-w-0">
+                                          <span className="text-game-white text-[10px] font-bold truncate">{result.name}</span>
+                                          {result.preview && <span className="text-game-white/50 text-[8px] line-clamp-1 italic">{result.preview}</span>}
+                                        </div>
+                                        <span className="text-game-teal/60 text-[9px] font-mono group-hover:text-game-teal shrink-0">{result.coords}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="h-[1px] bg-game-teal/20 my-1 shrink-0" />
+
+                            <div className="grid grid-cols-2 gap-4 text-[10px] shrink-0">
+                              <label className="flex flex-col gap-1.5">
+                                <span className="text-game-teal/70 uppercase tracking-tighter font-bold">Display Name</span>
+                                <input
+                                  value={poiEditorName}
+                                  onChange={(event) => setPoiEditorName(event.target.value)}
+                                  className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                />
+                              </label>
+                              <label className="flex flex-col gap-1.5">
+                                <span className="text-game-teal/70 uppercase tracking-tighter font-bold">Discovery Range</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={poiEditorDiscoveryRange}
+                                  onChange={(event) => setPoiEditorDiscoveryRange(Math.max(0, Number(event.target.value) || 0))}
+                                  className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                />
+                              </label>
+                              <label className="flex flex-col gap-1.5">
+                                <span className="text-game-teal/70 uppercase tracking-tighter font-bold">POI Type</span>
+                                <select
+                                  value={poiEditorType}
+                                  onChange={(event) => setPoiEditorType(event.target.value as 'puzzle' | 'combat')}
+                                  className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                >
+                                  <option value="puzzle">Puzzle</option>
+                                  <option value="combat">Combat</option>
+                                </select>
+                              </label>
+                              <label className="flex flex-col gap-1.5">
+                                <span className="text-game-teal/70 uppercase tracking-tighter font-bold">Visual Icon</span>
+                                <input
+                                  value={poiEditorIcon}
+                                  onChange={(event) => setPoiEditorIcon(event.target.value)}
+                                  placeholder="e.g., 🐺"
+                                  className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                />
+                              </label>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="text-game-teal/70 text-[9px] uppercase tracking-wider font-bold">Sparkle Effect</div>
+                              <div className="grid md:grid-cols-2 gap-4">
+                                <label className="flex flex-col gap-1.5">
+                                  <span className="text-game-white/70 uppercase tracking-tighter font-bold">Proximity Range</span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    step={0.5}
+                                    value={poiEditorProximityRange}
+                                    onChange={(event) => setPoiEditorProximityRange(
+                                      Math.max(1, Number(event.target.value) || DEFAULT_SPARKLE_CONFIG.proximityRange)
+                                    )}
+                                    className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                  />
+                                </label>
+                                <label className="flex flex-col gap-1.5">
+                                  <span className="text-game-white/70 uppercase tracking-tighter font-bold">Max Stars</span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    step={1}
+                                    value={poiEditorStarCount}
+                                    onChange={(event) => {
+                                      const parsed = Number(event.target.value);
+                                      const next = Number.isNaN(parsed) ? DEFAULT_SPARKLE_CONFIG.starCount : parsed;
+                                      setPoiEditorStarCount(Math.max(0, next));
+                                    }}
+                                    className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                  />
+                                </label>
+                                <label className="flex flex-col gap-1.5">
+                                  <span className="text-game-white/70 uppercase tracking-tighter font-bold">Glow Color</span>
+                                  <div className="flex gap-2 items-center">
+                                    <input
+                                      type="color"
+                                      value={poiEditorGlowColor}
+                                      onChange={(event) => setPoiEditorGlowColor(event.target.value)}
+                                      className="w-12 h-10 rounded border border-game-teal/40 p-0"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={poiEditorGlowColor}
+                                      onChange={(event) => setPoiEditorGlowColor(event.target.value)}
+                                      placeholder="#f7d24b"
+                                      className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </div>
+                                </label>
+                                <label className="flex flex-col gap-1.5">
+                                  <span className="text-game-white/70 uppercase tracking-tighter font-bold">Intensity</span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    step={0.05}
+                                    value={poiEditorIntensity}
+                                    onChange={(event) => {
+                                      const parsed = Number(event.target.value);
+                                      const next = Number.isNaN(parsed) ? DEFAULT_SPARKLE_CONFIG.intensity : parsed;
+                                      setPoiEditorIntensity(Math.max(0, next));
+                                    }}
+                                    className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                  />
+                                </label>
+                              </div>
+                              <p className="text-[9px] text-game-white/50 italic">
+                                These values drive the sparkle effect computed by <code>usePOISparkleEffect</code>, controlling how the light grows near the POI.
+                              </p>
+                            </div>
+                            <div className="flex-1 flex items-end">
+                              <div className="w-full text-[10px] text-game-white/60 bg-black/40 p-3 rounded-xl border border-game-teal/10 italic">
+                                {poiEditorMessage ?? 'Select or enter coordinates to begin editing POI data.'}
+                              </div>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-3 text-[10px]">
-                            <label className="flex flex-col gap-1">
-                              <span className="text-game-teal/70">POI Name</span>
-                              <input
-                                value={poiEditorName}
-                                onChange={(event) => setPoiEditorName(event.target.value)}
-                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1">
-                              <span className="text-game-teal/70">POI Discovery Range</span>
-                              <input
-                                type="number"
-                                min={0}
-                                value={poiEditorDiscoveryRange}
-                                onChange={(event) => setPoiEditorDiscoveryRange(Math.max(0, Number(event.target.value) || 0))}
-                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1">
-                              <span className="text-game-teal/70">POI Type</span>
-                              <select
-                                value={poiEditorType}
-                                onChange={(event) => setPoiEditorType(event.target.value as 'puzzle' | 'combat')}
-                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                        )}
+
+                        {/* 2. Rewards Tab */}
+                        {poiEditorSection === 'rewards' && (
+                          <div className="h-full bg-black/80 border border-game-teal/50 rounded-2xl p-5 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col gap-4 animate-in fade-in duration-200 overflow-hidden">
+                            <div className="flex items-center justify-between shrink-0">
+                              <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Loot & Registry</div>
+                              <button
+                                type="button"
+                                onClick={handleAddRewardRow}
+                                className="text-[10px] uppercase tracking-[0.4em] bg-game-teal/70 text-black px-5 py-2 rounded font-black shadow-lg"
                               >
-                                <option value="puzzle">Puzzle</option>
-                                <option value="combat">Combat</option>
-                              </select>
-                            </label>
-                            <label className="flex flex-col gap-1">
-                              <span className="text-game-teal/70">POI Icon</span>
-                              <input
-                                value={poiEditorIcon}
-                                onChange={(event) => setPoiEditorIcon(event.target.value)}
-                                placeholder="e.g., 🐺"
-                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                              />
-                            </label>
-                          </div>
-                          <div className="text-[10px] text-game-white/60">
-                            {poiEditorMessage ?? 'No status yet.'}
-                          </div>
-                        </div>
-                        <div className={`bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3 ${poiEditorSection !== 'rewards' ? 'hidden md:block' : ''}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">POI Rewards</div>
-                            <button
-                              type="button"
-                              onClick={handleAddRewardRow}
-                              className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
-                            >
-                              Add Row
-                            </button>
-                          </div>
-                          <div className="space-y-3">
-                            {poiEditorRewards.map((reward, index) => {
-                              const searchTerm = reward.searchFilter.trim().toLowerCase();
-                              const filteredAspects = KERU_ARCHETYPE_OPTIONS.filter((option) => {
-                                const haystack = `${option.label} ${option.archetype}`.toLowerCase();
-                                return searchTerm === '' || haystack.includes(searchTerm);
-                              });
-                              const abilitySearchTerm = reward.abilitySearchFilter.trim().toLowerCase();
-                              const filteredAbilities = abilityDrafts.filter((option) => {
-                                const haystack = `${option.id} ${option.label}`.toLowerCase();
-                                return abilitySearchTerm === '' || haystack.includes(abilitySearchTerm);
-                              });
-                              const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
-                              const isAbilityReward = reward.type === 'ability-choice';
-                              return (
-                                <div key={reward.id} className="rounded-xl bg-black/70 border border-game-teal/30 p-3 space-y-2">
-                                  <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                                    <span className="text-game-white/60">Reward {index + 1}</span>
-                                    <select
-                                      value={reward.type}
-                                      onChange={(event) => handleRewardChange(reward.id, 'type', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    >
-                                      {REWARD_TYPE_OPTIONS.map((option) => (
-                                        <option key={option.value} value={option.value}>{option.label}</option>
-                                      ))}
-                                    </select>
+                                Add Reward Row
+                              </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto pr-3 custom-scrollbar space-y-4">
+                              {poiEditorRewards.map((reward, index) => {
+                                const searchTerm = reward.searchFilter.trim().toLowerCase();
+                                const filteredAspects = KERU_ARCHETYPE_OPTIONS.filter((option) => {
+                                  const haystack = `${option.label} ${option.archetype}`.toLowerCase();
+                                  return searchTerm === '' || haystack.includes(searchTerm);
+                                });
+                                const abilitySearchTerm = reward.abilitySearchFilter.trim().toLowerCase();
+                                const filteredAbilities = abilityDrafts.filter((option) => {
+                                  const haystack = `${option.id} ${option.label}`.toLowerCase();
+                                  return abilitySearchTerm === '' || haystack.includes(abilitySearchTerm);
+                                });
+                                const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
+                                const isAbilityReward = reward.type === 'ability-choice';
+                                return (
+                                  <div key={reward.id} className="p-5 rounded-2xl border border-game-teal/30 bg-game-bg-dark/40 space-y-4 relative group hover:border-game-teal/60 transition-colors">
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveRewardRow(reward.id)}
-                                      disabled={poiEditorRewards.length <= 1}
-                                      className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40 disabled:opacity-50"
+                                      className="absolute top-3 right-3 text-[10px] text-game-pink opacity-40 hover:opacity-100 uppercase tracking-widest font-black transition-opacity"
                                     >
                                       Remove
                                     </button>
-                                  </div>
-                                  <div className="flex flex-wrap gap-2">
-                                    <input
-                                      value={reward.description}
-                                      onChange={(event) => handleRewardChange(reward.id, 'description', event.target.value)}
-                                      placeholder="Description"
-                                      className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                    <label className="flex items-center gap-1">
-                                      <span className="text-game-teal/70">Draw</span>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={reward.drawCount}
-                                        onChange={(event) => handleRewardChange(reward.id, 'drawCount', Number(event.target.value) || 0)}
-                                        className="w-16 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                      />
-                                    </label>
-                                    <label className="flex items-center gap-1">
-                                      <span className="text-game-teal/70">Choose</span>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={reward.chooseCount}
-                                        onChange={(event) => handleRewardChange(reward.id, 'chooseCount', Number(event.target.value) || 0)}
-                                        className="w-16 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                      />
-                                    </label>
-                                  </div>
-                                  {isAspectReward && (
-                                    <div className="space-y-2 pt-2 text-[10px]">
-                                      <div className="flex items-center gap-2">
-                                        <input
-                                          value={reward.searchFilter}
-                                          onChange={(event) => handleRewardChange(reward.id, 'searchFilter', event.target.value)}
-                                          placeholder="Filter aspects"
-                                          className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRewardSelectAll(reward.id, filteredAspects.map((option) => option.archetype))}
-                                          className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
+                                    <div className="grid grid-cols-[1fr_1.5fr] gap-4">
+                                      <label className="flex flex-col gap-1.5 text-[10px]">
+                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Category</span>
+                                        <select
+                                          value={reward.type}
+                                          onChange={(event) => handleRewardChange(reward.id, 'type', event.target.value)}
+                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
                                         >
-                                          Select matching
-                                        </button>
-                                      </div>
-                                      <div className="flex flex-wrap gap-2">
-                                        {filteredAspects.map((option) => (
-                                          <label
-                                            key={`${reward.id}-${option.archetype}`}
-                                            className="flex items-center gap-1 rounded border border-game-teal/30 bg-black/50 px-2 py-1 text-[9px] cursor-pointer"
-                                          >
-                                            <input
-                                              type="checkbox"
-                                              checked={reward.selectedAspects.includes(option.archetype)}
-                                              onChange={() => handleRewardAspectToggle(reward.id, option.archetype)}
-                                              className="accent-game-teal"
-                                            />
-                                            {option.label}
-                                          </label>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {isAbilityReward && (
-                                    <div className="space-y-2 pt-2 text-[10px]">
-                                      <div className="flex items-center gap-2">
+                                          {REWARD_TYPE_OPTIONS.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                          ))}
+                                        </select>
+                                      </label>
+                                      <label className="flex flex-col gap-1.5 text-[10px]">
+                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Flavor Description</span>
                                         <input
-                                          value={reward.abilitySearchFilter}
-                                          onChange={(event) => handleRewardChange(reward.id, 'abilitySearchFilter', event.target.value)}
-                                          placeholder="Filter abilities"
-                                          className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                          value={reward.description}
+                                          onChange={(event) => handleRewardChange(reward.id, 'description', event.target.value)}
+                                          placeholder="e.g., A gift from the stars..."
+                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
                                         />
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRewardAbilitySelectAll(reward.id, filteredAbilities.map((option) => option.id))}
-                                          className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
-                                        >
-                                          Select matching
-                                        </button>
-                                      </div>
-                                      <div className="flex flex-wrap gap-2">
-                                        {filteredAbilities.map((option) => (
-                                          <label
-                                            key={`${reward.id}-${option.id}`}
-                                            className="flex items-center gap-1 rounded border border-game-teal/30 bg-black/50 px-2 py-1 text-[9px] cursor-pointer"
-                                          >
-                                            <input
-                                              type="checkbox"
-                                              checked={reward.selectedAbilities.includes(option.id)}
-                                              onChange={() => handleRewardAbilityToggle(reward.id, option.id)}
-                                              className="accent-game-teal"
-                                            />
-                                            {option.label || option.id}
-                                          </label>
-                                        ))}
-                                      </div>
+                                      </label>
                                     </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div className="text-[9px] text-game-white/50">
-                            Example: 0,2 → Aspect choice (draw 3, choose 1). TutB → Ability choice (draw 4, choose 3).
-                          </div>
-                        </div>
-                        <div className={`bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-3 ${poiEditorSection !== 'narration' ? 'hidden md:block' : ''}`}>
-                          <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Narration</div>
-                          <div className="grid grid-cols-3 gap-3 text-[10px]">
-                            <label className="flex flex-col gap-1 col-span-2">
-                              <span className="text-game-teal/70">Title</span>
-                              <input
-                                value={poiEditorNarrationTitle}
-                                onChange={(event) => setPoiEditorNarrationTitle(event.target.value)}
-                                placeholder="Awaken Your Aspect"
-                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1">
-                              <span className="text-game-teal/70">Tone</span>
-                              <select
-                                value={poiEditorNarrationTone}
-                                onChange={(event) => setPoiEditorNarrationTone(event.target.value as PoiNarrationDraft['tone'])}
-                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                              >
-                                <option value="teal">Teal</option>
-                                <option value="gold">Gold</option>
-                                <option value="violet">Violet</option>
-                                <option value="green">Green</option>
-                              </select>
-                            </label>
-                          </div>
-                          <label className="flex flex-col gap-1 text-[10px]">
-                            <span className="text-game-teal/70">Body</span>
-                            <textarea
-                              value={poiEditorNarrationBody}
-                              onChange={(event) => setPoiEditorNarrationBody(event.target.value)}
-                              placeholder="Short narrative for when the player arrives."
-                              rows={3}
-                              className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold resize-none"
-                            />
-                          </label>
-                          <div className="text-[9px] text-game-white/50 space-y-1">
-                            <div>
-                              This text appears when arriving at the POI. Use <span className="text-game-teal">{'{word}'}</span> for pulse or <span className="text-game-gold">{'{word|color}'}</span> for highlight.
+                                    <div className="flex gap-6 border-t border-game-teal/10 pt-3">
+                                      <label className="flex flex-col gap-1.5 text-[10px]">
+                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Draw</span>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={reward.drawCount}
+                                          onChange={(event) => handleRewardChange(reward.id, 'drawCount', Number(event.target.value) || 0)}
+                                          className="w-20 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                        />
+                                      </label>
+                                      <label className="flex flex-col gap-1.5 text-[10px]">
+                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Choose</span>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={reward.chooseCount}
+                                          onChange={(event) => handleRewardChange(reward.id, 'chooseCount', Number(event.target.value) || 0)}
+                                          className="w-20 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                        />
+                                      </label>
+                                    </div>
+                                    {isAspectReward && (
+                                      <div className="space-y-3 pt-2 bg-black/30 p-4 rounded-xl border border-game-teal/10">
+                                        <div className="flex items-center gap-3">
+                                          <input
+                                            value={reward.searchFilter}
+                                            onChange={(event) => handleRewardChange(reward.id, 'searchFilter', event.target.value)}
+                                            placeholder="Filter aspects..."
+                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRewardSelectAll(reward.id, filteredAspects.map((option) => option.archetype))}
+                                            className="text-[9px] uppercase tracking-[0.2em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded font-black hover:border-game-gold transition-colors"
+                                          >
+                                            Select Matching
+                                          </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-1">
+                                          {filteredAspects.map((option) => (
+                                            <label
+                                              key={`${reward.id}-${option.archetype}`}
+                                              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[10px] cursor-pointer transition-all ${
+                                                reward.selectedAspects.includes(option.archetype)
+                                                  ? 'border-game-teal bg-game-teal/20 text-game-white'
+                                                  : 'border-game-teal/20 bg-black/40 text-game-white/60 hover:border-game-teal/40'
+                                              }`}
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                checked={reward.selectedAspects.includes(option.archetype)}
+                                                onChange={() => handleRewardAspectToggle(reward.id, option.archetype)}
+                                                className="hidden"
+                                              />
+                                              {option.label}
+                                            </label>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {isAbilityReward && (
+                                      <div className="space-y-3 pt-2 bg-black/30 p-4 rounded-xl border border-game-teal/10">
+                                        <div className="flex items-center gap-3">
+                                          <input
+                                            value={reward.abilitySearchFilter}
+                                            onChange={(event) => handleRewardChange(reward.id, 'abilitySearchFilter', event.target.value)}
+                                            placeholder="Filter abilities..."
+                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRewardAbilitySelectAll(reward.id, filteredAbilities.map((option) => option.id))}
+                                            className="text-[9px] uppercase tracking-[0.2em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded font-black hover:border-game-gold transition-colors"
+                                          >
+                                            Select Matching
+                                          </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-1">
+                                          {filteredAbilities.map((option) => (
+                                            <label
+                                              key={`${reward.id}-${option.id}`}
+                                              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[10px] cursor-pointer transition-all ${
+                                                reward.selectedAbilities.includes(option.id)
+                                                  ? 'border-game-teal bg-game-teal/20 text-game-white'
+                                                  : 'border-game-teal/20 bg-black/40 text-game-white/60 hover:border-game-teal/40'
+                                              }`}
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                checked={reward.selectedAbilities.includes(option.id)}
+                                                onChange={() => handleRewardAbilityToggle(reward.id, option.id)}
+                                                className="hidden"
+                                              />
+                                              {option.label || option.id}
+                                            </label>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                            <div>Leave blank to disable.</div>
                           </div>
-                        </div>
+                        )}
+
+                        {/* 3. Narration Tab */}
+                        {poiEditorSection === 'narration' && (
+                          <div className="h-full bg-black/80 border border-game-teal/50 rounded-2xl p-5 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col gap-4 animate-in fade-in duration-200 overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-game-teal/20 pb-4 shrink-0">
+                              <div className="space-y-1">
+                                <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Narrator Scripting</div>
+                                <div className="text-[9px] text-game-white/40 uppercase tracking-widest italic">Automated story beats</div>
+                              </div>
+                              <label className="flex items-center gap-3 cursor-pointer bg-game-teal/5 px-4 py-2 rounded-full border border-game-teal/30 hover:bg-game-teal/10 hover:border-game-teal/50 transition-all">
+                                <input
+                                  type="checkbox"
+                                  checked={poiEditorNarrationAutoClose}
+                                  onChange={(event) => setPoiEditorNarrationAutoClose(event.target.checked)}
+                                  className="accent-game-teal"
+                                />
+                                <span className="text-[10px] text-game-teal font-black uppercase tracking-widest">Auto-close on departure</span>
+                              </label>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto pr-3 custom-scrollbar space-y-6">
+                              <div className="space-y-4 border border-game-teal/30 p-5 rounded-2xl bg-game-bg-dark/20 shadow-inner">
+                                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-game-teal/90 pb-2 border-b border-game-teal/10">Arrival Sequence</div>
+                                <div className="grid md:grid-cols-2 gap-4 text-[10px]">
+                                  <label className="flex flex-col gap-1.5">
+                                    <span className="text-game-white/60 font-bold uppercase tracking-tight">Main Header</span>
+                                    <input
+                                      value={poiEditorNarrationTitle}
+                                      onChange={(event) => setPoiEditorNarrationTitle(event.target.value)}
+                                      placeholder="Awaken Your Aspect"
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold font-bold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1.5">
+                                    <span className="text-game-white/60 font-bold uppercase tracking-tight">Visual Tone</span>
+                                    <select
+                                      value={poiEditorNarrationTone}
+                                      onChange={(event) => setPoiEditorNarrationTone(event.target.value as PoiNarrationDraft['tone'])}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                    >
+                                      <option value="teal">Teal (Ocean/Spirit)</option>
+                                      <option value="gold">Gold (Sacred/Legend)</option>
+                                      <option value="violet">Violet (Mystic/Dark)</option>
+                                      <option value="green">Green (Nature/Growth)</option>
+                                    </select>
+                                  </label>
+                                </div>
+                                <label className="flex flex-col gap-1.5 text-[10px]">
+                                  <span className="text-game-white/60 font-bold uppercase tracking-tight">Body Content</span>
+                                  <textarea
+                                    value={poiEditorNarrationBody}
+                                    onChange={(event) => setPoiEditorNarrationBody(event.target.value)}
+                                    placeholder="Short narrative for when the player arrives."
+                                    rows={4}
+                                    className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-3 rounded text-[11px] text-game-white outline-none focus:border-game-gold resize-none leading-relaxed custom-scrollbar"
+                                  />
+                                </label>
+                              </div>
+
+                              <div className="space-y-4 border border-game-gold/30 p-5 rounded-2xl bg-game-bg-dark/20 shadow-inner">
+                                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-game-gold/90 pb-2 border-b border-game-gold/10">Completion Sequence</div>
+                                <div className="grid md:grid-cols-2 gap-4 text-[10px]">
+                                  <label className="flex flex-col gap-1.5">
+                                    <span className="text-game-white/60 font-bold uppercase tracking-tight">Main Header</span>
+                                    <input
+                                      value={poiEditorCompletionTitle}
+                                      onChange={(event) => setPoiEditorCompletionTitle(event.target.value)}
+                                      placeholder="Challenge Overcome"
+                                      className="bg-game-bg-dark/80 border border-game-gold/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-teal font-bold"
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-1.5">
+                                    <span className="text-game-white/60 font-bold uppercase tracking-tight">Visual Tone</span>
+                                    <select
+                                      value={poiEditorCompletionTone}
+                                      onChange={(event) => setPoiEditorCompletionTone(event.target.value as PoiNarrationDraft['tone'])}
+                                      className="bg-game-bg-dark/80 border border-game-gold/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-teal"
+                                    >
+                                      <option value="teal">Teal</option>
+                                      <option value="gold">Gold</option>
+                                      <option value="violet">Violet</option>
+                                      <option value="green">Green</option>
+                                    </select>
+                                  </label>
+                                </div>
+                                <label className="flex flex-col gap-1.5 text-[10px]">
+                                  <span className="text-game-white/60 font-bold uppercase tracking-tight">Body Content</span>
+                                  <textarea
+                                    value={poiEditorCompletionBody}
+                                    onChange={(event) => setPoiEditorCompletionBody(event.target.value)}
+                                    placeholder="Narrative for when the POI is completed."
+                                    rows={4}
+                                    className="bg-game-bg-dark/80 border border-game-gold/40 px-3 py-3 rounded text-[11px] text-game-white outline-none focus:border-game-teal resize-none leading-relaxed custom-scrollbar"
+                                  />
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 text-[10px] text-game-white/50 flex flex-wrap gap-x-8 bg-black/40 p-4 rounded-2xl border border-game-white/5">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-game-teal shadow-[0_0_10px_rgba(127,219,202,0.8)]" />
+                                <span>Use <span className="text-game-teal font-black tracking-widest">{'{word}'}</span> for pulse effect.</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-game-gold shadow-[0_0_10px_rgba(230,179,30,0.8)]" />
+                                <span>Use <span className="text-game-gold font-black tracking-widest">{'{word|color}'}</span> for highlights.</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </>
+                    </div>
                   )}
                   {toolingTab === 'ability' && (
                     <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4">
@@ -2460,6 +2726,7 @@ export default function App() {
                         <input
                           value={abilitySearch}
                           onChange={(event) => setAbilitySearch(event.target.value)}
+                          onFocus={() => setAbilitySearch('')}
                           placeholder="Search abilities"
                           className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                         />
@@ -2471,164 +2738,112 @@ export default function App() {
                           Add Ability
                         </button>
                       </div>
-                      <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-4">
-                        <div className="space-y-2">
-                          {abilityDrafts
-                            .filter((entry) => {
-                              const haystack = `${entry.id} ${entry.label}`.toLowerCase();
-                              const term = abilitySearch.trim().toLowerCase();
-                              return term === '' || haystack.includes(term);
-                            })
-                            .map((entry) => (
-                              <button
-                                key={entry.id}
-                                type="button"
-                                onClick={() => setSelectedAbilityId(entry.id)}
-                                className={`w-full text-left px-3 py-2 rounded border text-[10px] ${
-                                  selectedAbilityId === entry.id
-                                    ? 'border-game-gold text-game-gold'
-                                    : 'border-game-teal/40 text-game-white/70'
-                                }`}
-                              >
-                                <div className="text-[9px] uppercase tracking-[0.3em]">{entry.label || entry.id}</div>
-                                <div className="text-[8px] text-game-white/50">{entry.id}</div>
-                              </button>
-                            ))}
-                        </div>
-                        <div className="space-y-3">
+                      <div className="space-y-3 h-full">
                           {(() => {
+                            const term = abilitySearch.trim().toLowerCase();
+                            const filteredAbilities = abilityDrafts.filter((entry) => {
+                              const haystack = `${entry.id} ${entry.name} ${entry.abilityDescription || ''}`.toLowerCase();
+                              return term === '' || haystack.includes(term);
+                            });
                             const active = abilityDrafts.find((entry) => entry.id === selectedAbilityId) ?? abilityDrafts[0];
                             if (!active) {
                               return <div className="text-[10px] text-game-white/60">No abilities available.</div>;
                             }
                             return (
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <div className="text-[10px] text-game-white/70">Editing: {active.id}</div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveAbility(active.id)}
-                                    className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3 text-[10px]">
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Ability Id</span>
-                                    <input
-                                      value={active.id}
-                                      onChange={(event) => handleAbilityChange(active.id, 'id', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Label</span>
-                                    <input
-                                      value={active.label}
-                                      onChange={(event) => handleAbilityChange(active.id, 'label', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                </div>
-                                <div className="grid grid-cols-3 gap-3 text-[10px]">
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Ability Label</span>
-                                    <input
-                                      value={active.abilityLabel}
-                                      onChange={(event) => handleAbilityChange(active.id, 'abilityLabel', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Ability Damage</span>
-                                    <input
-                                      value={active.abilityDamage}
-                                      onChange={(event) => handleAbilityChange(active.id, 'abilityDamage', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Ability Glyph</span>
-                                    <input
-                                      value={active.abilityCardGlyph}
-                                      onChange={(event) => handleAbilityChange(active.id, 'abilityCardGlyph', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                </div>
-                                <div className="grid grid-cols-3 gap-3 text-[10px]">
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Ability Card Id</span>
-                                    <input
-                                      value={active.abilityCardId}
-                                      onChange={(event) => handleAbilityChange(active.id, 'abilityCardId', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Ability Rank</span>
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={active.abilityCardRank}
-                                      onChange={(event) => handleAbilityChange(active.id, 'abilityCardRank', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Ability Element</span>
-                                    <select
-                                      value={active.abilityCardElement}
-                                      onChange={(event) => handleAbilityChange(active.id, 'abilityCardElement', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                              <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 min-h-[400px]">
+                                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border-r border-game-teal/20">
+                                  {filteredAbilities.map((entry) => (
+                                    <button
+                                      key={entry.id}
+                                      type="button"
+                                      onClick={() => setSelectedAbilityId(entry.id)}
+                                      className={`w-full text-left px-3 py-2 rounded border text-[10px] transition-all ${
+                                        active.id === entry.id
+                                          ? 'border-game-gold text-game-gold bg-game-gold/10 shadow-[inset_0_0_12px_rgba(230,179,30,0.1)]'
+                                          : 'border-game-teal/20 text-game-white/60 hover:border-game-teal/50 hover:text-game-white hover:bg-white/5'
+                                      }`}
                                     >
-                                      {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
-                                        <option key={element} value={element}>{element}</option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                      <div className="font-bold uppercase tracking-wider truncate">{entry.name || entry.id || 'Unnamed Ability'}</div>
+                                      <div className="text-[8px] opacity-40 truncate font-mono mt-0.5">{entry.id}</div>
+                                    </button>
+                                  ))}
+                                  {filteredAbilities.length === 0 && (
+                                    <div className="text-[10px] text-game-white/40 italic p-2">No matches found.</div>
+                                  )}
                                 </div>
-                                <div className="grid grid-cols-3 gap-3 text-[10px]">
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Aspect Card Id</span>
-                                    <input
-                                      value={active.archetypeCardId}
-                                      onChange={(event) => handleAbilityChange(active.id, 'archetypeCardId', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Aspect Rank</span>
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={active.archetypeCardRank}
-                                      onChange={(event) => handleAbilityChange(active.id, 'archetypeCardRank', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Aspect Element</span>
-                                    <select
-                                      value={active.archetypeCardElement}
-                                      onChange={(event) => handleAbilityChange(active.id, 'archetypeCardElement', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between text-[10px] text-game-white/70 bg-game-teal/5 p-2 rounded border border-game-teal/20">
+                                    <span className="font-bold tracking-widest uppercase">Editing: <span className="text-game-teal">{active.id}</span></span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveAbility(active.id)}
+                                      className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40 hover:bg-game-pink/10 transition-colors"
                                     >
-                                      {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
-                                        <option key={element} value={element}>{element}</option>
+                                      Remove
+                                    </button>
+                                  </div>
+                                  <div className="grid grid-cols-1 gap-3 text-[10px]">
+                                    <label className="flex flex-col gap-1">
+                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Name</span>
+                                      <input
+                                        value={active.name}
+                                        onChange={(event) => handleAbilityChange(active.id, 'name', event.target.value)}
+                                        className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                      />
+                                    </label>
+                                  </div>
+                                  <div className="flex flex-col gap-1.5 text-[10px]">
+                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Type</span>
+                                    <div className="flex gap-2">
+                                      {(['exploration', 'combat'] as const).map((type) => (
+                                        <button
+                                          key={type}
+                                          type="button"
+                                          onClick={() => handleAbilityChange(active.id, 'abilityType', type)}
+                                          className={`flex-1 py-1.5 rounded border text-[9px] font-black uppercase tracking-widest transition-all ${
+                                            active.abilityType === type
+                                              ? 'bg-game-teal/20 border-game-teal text-game-teal shadow-[0_0_12px_rgba(127,219,202,0.2)]'
+                                              : 'bg-game-bg-dark/40 border-game-teal/20 text-game-white/40 hover:border-game-teal/40'
+                                          }`}
+                                        >
+                                          {type}
+                                        </button>
                                       ))}
-                                    </select>
+                                    </div>
+                                  </div>
+                                  <label className="flex flex-col gap-1 text-[10px]">
+                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Description</span>
+                                    <textarea
+                                      value={active.abilityDescription}
+                                      onChange={(event) => handleAbilityChange(active.id, 'abilityDescription', event.target.value)}
+                                      rows={4}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded resize-none text-[10px] text-game-white outline-none focus:border-game-gold custom-scrollbar"
+                                    />
                                   </label>
+                                  <div className="grid grid-cols-2 gap-3 text-[10px]">
+                                    <label className="flex flex-col gap-1">
+                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Element</span>
+                                      <select
+                                        value={active.abilityCardElement}
+                                        onChange={(event) => handleAbilityChange(active.id, 'abilityCardElement', event.target.value)}
+                                        className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                      >
+                                        {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
+                                          <option key={element} value={element}>{element}</option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                    <label className="flex flex-col gap-1">
+                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Glyph</span>
+                                      <input
+                                        value={active.abilityCardGlyph}
+                                        onChange={(event) => handleAbilityChange(active.id, 'abilityCardGlyph', event.target.value)}
+                                        className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                      />
+                                    </label>
+                                  </div>
                                 </div>
-                                <label className="flex flex-col gap-1 text-[10px]">
-                                  <span className="text-game-teal/70">Tags (comma separated)</span>
-                                  <input
-                                    value={active.tagsText}
-                                    onChange={(event) => handleAbilityChange(active.id, 'tagsText', event.target.value)}
-                                    className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                  />
-                                </label>
                               </div>
                             );
                           })()}
@@ -2636,7 +2851,6 @@ export default function App() {
                             {abilityEditorMessage ?? 'Edit ability metadata and save to update keruAspects.json.'}
                           </div>
                         </div>
-                      </div>
                     </div>
                   )}
                   {toolingTab === 'aspects' && (
@@ -2703,34 +2917,34 @@ export default function App() {
                                     background: 'linear-gradient(180deg, rgba(6,8,14,0.9) 0%, rgba(5,6,12,0.95) 65%, rgba(0,0,0,0.95) 100%)',
                                   }}
                                 >
-                                <div className="text-[8px] font-bold tracking-[0.4em] text-game-teal/60 uppercase">
-                                  {(active.rarity ?? 'Common').toUpperCase()}
-                                </div>
-                                <div className="text-[11px] font-bold tracking-[0.3em] text-game-gold uppercase mt-2">
-                                  {active.archetype} Archetype
-                                </div>
-                                <div className="text-[22px] font-black tracking-[0.15em] text-white uppercase mt-4">
-                                  <div>Aspect Of</div>
-                                  <div>{(active.name ?? '??').toUpperCase()}</div>
-                                </div>
-                                <div className="text-[10px] text-game-white/70 mt-4 leading-5">
-                                  {active.description || 'No description provided.'}
-                                </div>
-                                {formattedAttributes.length > 0 && (
-                                  <div className="flex flex-wrap items-center justify-center gap-1 mt-4">
-                                    {formattedAttributes.map((attr) => (
-                                      <span
-                                        key={attr}
-                                        className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-2 py-1 text-[8px] uppercase tracking-[0.2em]"
-                                        style={{ color: '#f7d24b' }}
-                                      >
-                                        {attr}
-                                      </span>
-                                    ))}
+                                  <div className="text-[8px] font-bold tracking-[0.4em] text-game-teal/60 uppercase">
+                                    {(active.rarity ?? 'Common').toUpperCase()}
                                   </div>
-                                )}
+                                  <div className="text-[11px] font-bold tracking-[0.3em] text-game-gold uppercase mt-2">
+                                    {active.archetype} Archetype
+                                  </div>
+                                  <div className="text-[22px] font-black tracking-[0.15em] text-white uppercase mt-4">
+                                    <div>Aspect Of</div>
+                                    <div>{(active.name ?? '??').toUpperCase()}</div>
+                                  </div>
+                                  <div className="text-[10px] text-game-white/70 mt-4 leading-5">
+                                    {active.description || 'No description provided.'}
+                                  </div>
+                                  {formattedAttributes.length > 0 && (
+                                    <div className="flex flex-wrap items-center justify-center gap-1 mt-4">
+                                      {formattedAttributes.map((attr) => (
+                                        <span
+                                          key={attr}
+                                          className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-2 py-1 text-[8px] uppercase tracking-[0.2em]"
+                                          style={{ color: '#f7d24b' }}
+                                        >
+                                          {attr}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
                             );
                           })()}
                         </div>
@@ -2803,10 +3017,10 @@ export default function App() {
                                     </button>
                                   </div>
                                   <div className="space-y-2">
-                                    {active.attributes.length === 0 && (
+                                    {(active.attributes ?? []).length === 0 && (
                                       <div className="text-[9px] text-game-white/50">No attributes yet.</div>
                                     )}
-                                    {active.attributes.map((attr, idx) => (
+                                    {(active.attributes ?? []).map((attr, idx) => (
                                       <div key={`${active.id}-attr-${idx}`} className="grid grid-cols-[160px_70px_minmax(0,1fr)_auto] gap-2 items-center">
                                         <select
                                           value={attr.stat}
@@ -3017,7 +3231,9 @@ export default function App() {
                 }}
                 explorationStepRef={explorationStepRef}
                 narrativeOpen={narrativeOpen}
+                onOpenNarrative={() => setNarrativeOpen(true)}
                 onCloseNarrative={() => setNarrativeOpen(false)}
+                onPositionChange={(x, y) => setCurrentPlayerCoords({ x, y })}
                 />
             )}
             </div>
@@ -3287,12 +3503,3 @@ export default function App() {
     </GraphicsContext.Provider>
   );
 }
-
-
-
-
-
-
-
-
-

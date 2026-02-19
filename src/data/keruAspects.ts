@@ -9,6 +9,7 @@ type KeruAspectJson = {
   label: string;
   ability: {
     label: string;
+    description?: string;
     damage: string;
     cardId: string;
     cardRank: number;

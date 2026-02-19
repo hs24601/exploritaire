@@ -51,7 +51,7 @@ export function NarrativeOverlay({ open, onClose, children }: NarrativeOverlayPr
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full border border-game-purple text-game-white text-xl"
+              className="absolute top-4 right-4 text-xs text-game-pink border border-game-pink rounded w-6 h-6 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
               aria-label="Close narrative"
             >
               ×

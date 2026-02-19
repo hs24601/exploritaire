@@ -5,6 +5,13 @@ import type { Direction } from '../components/Compass';
  * Defines a Point of Interest (POI) on the world map.
  * This is the content that exists at a specific grid cell.
  */
+export interface PoiSparkleConfig {
+  proximityRange?: number;
+  starCount?: number;
+  glowColor?: string;
+  intensity?: number;
+}
+
 export interface PointOfInterest {
   id: string; // Unique ID, e.g., 'poi_start', 'poi_battle_1', 'poi_village_A'
   name: string;
@@ -15,6 +22,8 @@ export interface PointOfInterest {
   /** Optional deterministic tableau preset used when this POI is active. */
   tableauPresetId?: string;
   rewards?: PoiReward[];
+  /** Optional sparkle configuration used by the exploration map lighting. */
+  sparkle?: PoiSparkleConfig;
 }
 
 export type PoiRewardType = 'aspect-choice' | 'ability-choice' | 'aspect-jumbo';

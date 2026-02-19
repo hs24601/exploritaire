@@ -5847,8 +5847,9 @@ export const CombatGolf = memo(function CombatGolf({
                     const rotation = aspectRewardCards.length === 1
                       ? 0
                       : (index - (aspectRewardCards.length - 1) / 2) * 6;
+                    const cardKey = card.id || `aspect-reward-${index}`;
                     return (
-                      <div key={card.id} style={{ transform: `rotate(${rotation}deg)` }}>
+                      <div key={cardKey} style={{ transform: `rotate(${rotation}deg)` }}>
                         <Card
                           card={card}
                           size={aspectCardSize}
