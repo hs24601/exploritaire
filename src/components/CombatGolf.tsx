@@ -136,6 +136,18 @@ const getKeruAspectAttributeLines = (archetype?: ActorKeruArchetype | null): str
   }).filter(Boolean);
 };
 
+interface PoiNarration {
+  title?: string;
+  body?: string;
+  tone?: 'teal' | 'orange' | 'pink' | 'white';
+  autoCloseOnDeparture?: boolean;
+  completion?: {
+    title?: string;
+    body?: string;
+    tone?: 'teal' | 'orange' | 'pink' | 'white';
+  };
+}
+
 interface CombatGolfProps {
   gameState: GameState;
   selectedCard: SelectedCard | null;
@@ -186,7 +198,7 @@ interface CombatGolfProps {
   isGamePaused?: boolean;
   timeScale?: number;
   onTogglePause?: () => void;
-  poiRewardOverrides: Record<string, PoiReward[] | { rewards?: PoiReward[]; narration?: { title?: string; body?: string; tone?: string } }>;
+  onPositionChange?: (x: number, y: number) => void;
   wildAnalysis?: { key: string; sequence: Move[]; maxCount: number } | null;
   actions: {
     selectCard: (card: CardType, tableauIndex: number) => void;
@@ -216,6 +228,7 @@ interface CombatGolfProps {
     rewindLastCard: () => boolean;
     swapPartyLead: (actorId: string) => void;
     playWildAnalysisSequence: () => void;
+    puzzleCompleted?: (payload?: { coord?: { x: number; y: number } | null; poiId?: string | null; tableauId?: string | null } | null) => void;
   };
   narrativeOpen: boolean;
   onCloseNarrative: () => void;
@@ -486,7 +499,6 @@ export const CombatGolf = memo(function CombatGolf({
   timeScale = 1,
   onTogglePause,
   wildAnalysis = null,
-  poiRewardOverrides = {},
   actions,
   narrativeOpen,
   onCloseNarrative,
@@ -694,22 +706,20 @@ export const CombatGolf = memo(function CombatGolf({
     tableaus.map((stack) => stack.map((card) => cloneCard(card)))
   ), [cloneCard]);
   const poiByCoordinateKey = useMemo(() => {
-    const poiById = new Map(mainWorldMap.pointsOfInterest.map((poi) => [poi.id, poi]));
     const map = new Map<string, PoiTableauPresetId>();
     mainWorldMap.cells.forEach((cell) => {
-      const poi = poiById.get(cell.poiId);
+      const poi = cell.poi;
       if (!poi?.tableauPresetId) return;
       map.set(`${cell.gridPosition.col},${cell.gridPosition.row}`, poi.tableauPresetId as PoiTableauPresetId);
     });
     return map;
   }, []);
   const poiPresenceByCoordinateKey = useMemo(() => {
-    const poiById = new Map(mainWorldMap.pointsOfInterest.map((poi) => [poi.id, poi]));
     const map = new Map<string, { id: string; name: string }>();
     mainWorldMap.cells.forEach((cell) => {
-      const poi = poiById.get(cell.poiId);
+      const poi = cell.poi;
       if (!poi || poi.type === 'empty') return;
-      map.set(`${cell.gridPosition.col},${cell.gridPosition.row}`, { id: poi.id, name: poi.name });
+      map.set(`${cell.gridPosition.col},${cell.gridPosition.row}`, { id: poi.id ?? '', name: poi.name });
     });
     return map;
   }, []);
@@ -729,29 +739,33 @@ export const CombatGolf = memo(function CombatGolf({
     const map = new Map<string, PoiReward[]>();
     mainWorldMap.cells.forEach((cell) => {
       const key = `${cell.gridPosition.col},${cell.gridPosition.row}`;
-      const poi = mainWorldMap.pointsOfInterest.find((entry) => entry.id === cell.poiId);
+      const poi = cell.poi;
       if (poi?.rewards?.length) {
         map.set(key, poi.rewards);
       }
     });
     return map;
   }, []);
-  const normalizePoiOverride = useCallback((entry?: PoiReward[] | { rewards?: PoiReward[]; narration?: { title?: string; body?: string; tone?: string } }) => {
-    if (!entry) return { rewards: [] as PoiReward[], narration: undefined };
-    if (Array.isArray(entry)) return { rewards: entry, narration: undefined };
-    return {
-      rewards: Array.isArray(entry.rewards) ? entry.rewards : [],
-      narration: entry.narration ?? undefined,
-    };
+  const getPoiIdForKey = useCallback((key: string) => (
+    poiPresenceByCoordinateKey.get(key)?.id ?? null
+  ), [poiPresenceByCoordinateKey]);
+  const poiNarrationByCoordinate = useMemo(() => {
+    const map = new Map<string, PoiNarration>();
+    mainWorldMap.cells.forEach((cell) => {
+      const key = `${cell.gridPosition.col},${cell.gridPosition.row}`;
+      const poi = cell.poi;
+      if (poi?.narration) {
+        map.set(key, poi.narration);
+      }
+    });
+    return map;
   }, []);
   const getPoiRewardsForKey = useCallback((key: string) => (
-    normalizePoiOverride(poiRewardOverrides[key]).rewards
-    ?? poiRewardDefinitionsByCoordinate.get(key)
-    ?? []
-  ), [normalizePoiOverride, poiRewardDefinitionsByCoordinate, poiRewardOverrides]);
+    poiRewardDefinitionsByCoordinate.get(key) ?? []
+  ), [poiRewardDefinitionsByCoordinate]);
   const getPoiNarrationForKey = useCallback((key: string) => (
-    normalizePoiOverride(poiRewardOverrides[key]).narration ?? null
-  ), [normalizePoiOverride, poiRewardOverrides]);
+    poiNarrationByCoordinate.get(key) ?? null
+  ), [poiNarrationByCoordinate]);
   const worldBlockedCellKeys = useMemo(() => new Set(
     (mainWorldMap.blockedCells ?? []).map((cell) => `${cell.gridPosition.col},${cell.gridPosition.row}`)
   ), []);
@@ -809,6 +823,11 @@ export const CombatGolf = memo(function CombatGolf({
       const key = `${currentCoords.x},${currentCoords.y}`;
       if (!nextCleared.has(key)) {
         nextCleared.add(key);
+        actions.puzzleCompleted?.({
+          coord: { x: currentCoords.x, y: currentCoords.y },
+          poiId: getPoiIdForKey(key),
+          tableauId: explorationCurrentNodeId,
+        });
         const rewards = getPoiRewardsForKey(key);
         if (rewards.some(isAspectRewardType)) {
           newlyClearedAspectKey = key;
@@ -820,6 +839,11 @@ export const CombatGolf = memo(function CombatGolf({
       const key = `${node.x},${node.y}`;
       if (nextCleared.has(key)) return;
       nextCleared.add(key);
+      actions.puzzleCompleted?.({
+        coord: { x: node.x, y: node.y },
+        poiId: getPoiIdForKey(key),
+        tableauId: node.id,
+      });
       const rewards = getPoiRewardsForKey(key);
       if (!newlyClearedAspectKey && rewards.some(isAspectRewardType)) {
         newlyClearedAspectKey = key;
@@ -834,9 +858,11 @@ export const CombatGolf = memo(function CombatGolf({
     explorationNodes,
     getExplorationNodeCoordinates,
     getPoiRewardsForKey,
+    getPoiIdForKey,
     isCurrentExplorationTableauCleared,
     lastAspectRewardKey,
     isAspectRewardType,
+    actions,
   ]);
   const explorationConditionalEdges = useMemo(() => {
     const coords = getExplorationNodeCoordinates(explorationCurrentNodeId);
@@ -1855,8 +1881,13 @@ export const CombatGolf = memo(function CombatGolf({
       && (gameState.rpgSoarEvasionSide ?? 'player') === side;
     const targetEvasion = (targetActor.evasion ?? 0) + (soarActive ? 75 : 0);
     const hitChance = clampPercent(attackerAccuracy - targetEvasion);
-    const damage = Math.max(0, baseDamage - (targetActor.armor ?? 0));
-    if (damage <= 0) return null;
+    // Mirror the engine damage formula: defense → super armor → armor → HP
+    const afterDefense = Math.max(0, baseDamage - (targetActor.defense ?? 0));
+    const afterSuperArmor = (targetActor.superArmor ?? 0) > 0 ? 0 : afterDefense;
+    const damage = afterSuperArmor > 0
+      ? Math.max(0, afterSuperArmor - (targetActor.armor ?? 0))
+      : afterSuperArmor;
+    if (damage <= 0 && afterDefense <= 0) return null;
 
     return { side, actorIndex, damage, hitChance };
   }, [
@@ -1888,6 +1919,9 @@ export const CombatGolf = memo(function CombatGolf({
     const damagePct = Math.max(0, lagPct - currentPct);
     const armorValue = Math.max(0, Math.round(actor.armor ?? 0));
     const armorPct = Math.max(0, Math.min(100, (armorValue / hpMax) * 100));
+    const superArmorValue = Math.max(0, Math.round(actor.superArmor ?? 0));
+    const superArmorPct = Math.max(0, Math.min(100, (superArmorValue / hpMax) * 100));
+    const defenseValue = Math.max(0, Math.round(actor.defense ?? 0));
     const previewMatchesTarget = !!rpgDragDamagePreview
       && rpgDragDamagePreview.side === side
       && rpgDragDamagePreview.actorIndex === actorIndex;
@@ -1955,6 +1989,19 @@ export const CombatGolf = memo(function CombatGolf({
                   title={`Armor ${armorValue}`}
                 />
               )}
+              {superArmorPct > 0 && (
+                <div
+                  className="absolute inset-y-0 left-0"
+                  style={{
+                    width: `${superArmorPct}%`,
+                    backgroundColor: 'rgba(255, 210, 60, 0.48)',
+                    boxShadow: '0 0 14px rgba(255, 210, 60, 0.7), inset 0 0 10px rgba(255, 210, 60, 0.4)',
+                    transition: 'width 220ms linear',
+                    zIndex: 4,
+                  }}
+                  title={`Super Armor ${superArmorValue}`}
+                />
+              )}
               <div
                 className="absolute inset-0 flex items-center justify-center text-[9px] font-bold tracking-[1.5px]"
                 style={{
@@ -1966,6 +2013,46 @@ export const CombatGolf = memo(function CombatGolf({
                 {`${currentHp}/${hpMax}`}
               </div>
             </div>
+            {defenseValue > 0 && (
+              <div
+                className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 flex items-center justify-center rounded-full"
+                style={{
+                  zIndex: 5,
+                  width: 14,
+                  height: 14,
+                  color: '#a0e4a0',
+                  backgroundColor: 'rgba(0, 28, 12, 0.75)',
+                  border: '1px solid rgba(100, 220, 100, 0.55)',
+                  textShadow: '0 0 8px rgba(100, 220, 100, 0.85)',
+                  fontSize: 7,
+                  fontWeight: 700,
+                  letterSpacing: 0,
+                }}
+                title={`Defense ${defenseValue}`}
+              >
+                {defenseValue}
+              </div>
+            )}
+            {superArmorValue > 0 && (
+              <div
+                className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-[calc(100%+2px)] flex items-center justify-center rounded-full"
+                style={{
+                  zIndex: 5,
+                  width: 14,
+                  height: 14,
+                  color: '#ffd23c',
+                  backgroundColor: 'rgba(32, 20, 0, 0.75)',
+                  border: '1px solid rgba(255, 210, 60, 0.55)',
+                  textShadow: '0 0 8px rgba(255, 210, 60, 0.85)',
+                  fontSize: 7,
+                  fontWeight: 700,
+                  letterSpacing: 0,
+                }}
+                title={`Super Armor ${superArmorValue}`}
+              >
+                ✦
+              </div>
+            )}
             {armorPct > 0 && (
               <div
                 className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2 flex items-center justify-center rounded-full"
@@ -5750,12 +5837,19 @@ export const CombatGolf = memo(function CombatGolf({
               <div className="relative flex flex-1 items-center justify-center pt-2">
                 <div className="relative flex items-end justify-center" style={{ gap: aspectCardGap }}>
                   {aspectRewardCards.map((card, index) => {
+                    const isCardBeingDragged = isDraggingAspectRewardCard && dragState.card?.id === card.id;
                     const rotation = aspectRewardCards.length === 1
                       ? 0
                       : (index - (aspectRewardCards.length - 1) / 2) * 6;
                     const cardKey = card.id || `aspect-reward-${index}`;
                     return (
-                      <div key={cardKey} style={{ transform: `rotate(${rotation}deg)` }}>
+                      <div
+                        key={cardKey}
+                        style={{
+                          transform: isCardBeingDragged ? 'none' : `rotate(${rotation}deg)`,
+                          transition: 'transform 0.15s ease-out'
+                        }}
+                      >
                         <Card
                           card={card}
                           size={aspectCardSize}

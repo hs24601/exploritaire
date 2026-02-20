@@ -185,6 +185,88 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
     rewards: { cards: [] },
     requiredMoves: 0,
   },
+
+  // === EVENT ENCOUNTERS ===
+
+  {
+    id: 'event_peaceful_glade',
+    name: 'Peaceful Glade',
+    description: 'A sun-dappled clearing where the forest offers its gifts freely. The air hums with quiet possibility.',
+    seed: 'EVENT_PEACEFUL_GLADE_001',
+    biomeType: 'event',
+    layout: {
+      tableaus: [
+        [3, 6, 9],
+        [2, 5, 8],
+        [1, 4, 7],
+      ],
+      elements: [
+        ['E', 'W', 'A'],
+        ['W', 'E', 'N'],
+        ['A', 'N', 'E'],
+      ],
+    },
+    rewards: { cards: [] },
+    requiredMoves: 0,
+    eventChoices: [
+      {
+        id: 'aspect',
+        label: 'Attune',
+        description: 'The glade resonates with your spirit. Choose an aspect to absorb.',
+        rewards: [{ type: 'aspect-choice', amount: 1, chooseCount: 1, options: ['lupus', 'ursus', 'felis'] }],
+      },
+      {
+        id: 'rest',
+        label: 'Rest',
+        description: 'You settle into stillness. A calm washes over you — no reward, but no cost.',
+        rewards: [],
+      },
+    ],
+  },
+
+  {
+    id: 'event_hidden_cache',
+    name: 'Hidden Cache',
+    description: 'Tucked beneath gnarled roots, a weathered bundle. Someone left this here — or something did.',
+    seed: 'EVENT_HIDDEN_CACHE_001',
+    biomeType: 'event',
+    layout: {
+      tableaus: [
+        [5, 10],
+        [3, 8],
+        [1, 6],
+        [4, 9],
+      ],
+      elements: [
+        ['N', 'F'],
+        ['E', 'N'],
+        ['W', 'A'],
+        ['N', 'L'],
+      ],
+    },
+    rewards: { cards: [] },
+    requiredMoves: 0,
+    eventChoices: [
+      {
+        id: 'take_orim',
+        label: 'Take the Bundle',
+        description: 'You claim the cache and gain a card modification.',
+        rewards: [{ type: 'orim-choice', amount: 1 }],
+      },
+      {
+        id: 'take_aspect',
+        label: 'Read the Markings',
+        description: 'Strange glyphs on the wrapping contain knowledge. Gain an aspect choice.',
+        rewards: [{ type: 'aspect-choice', amount: 1, chooseCount: 1, options: ['lupus', 'ursus', 'felis'] }],
+      },
+      {
+        id: 'leave',
+        label: 'Leave It',
+        description: 'You decide not to disturb what was hidden.',
+        rewards: [],
+      },
+    ],
+  },
 ];
 
 /**

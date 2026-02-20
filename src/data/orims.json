@@ -1,0 +1,18 @@
+{
+  "orims": [
+    {
+      "id": "fireShard",
+      "name": "Fire Shard",
+      "description": "A splinter that is warm to the touch",
+      "element": "F",
+      "effects": [
+        {
+          "type": "damage",
+          "target": "enemy",
+          "element": "F",
+          "elementalValue": 1
+        }
+      ]
+    }
+  ]
+}

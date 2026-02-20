@@ -7,10 +7,12 @@ import { useDragDrop } from './hooks/useDragDrop';
 import { GameButton } from './components/GameButton';
 import { Card } from './components/Card';
 import { Table } from './components/Table';
+import { RowManager } from './components/RowManager';
 import { WinScreen } from './components/WinScreen';
 import { DragPreview } from './components/DragPreview';
 import { DebugConsole } from './components/DebugConsole';
 import { CombatGolf } from './components/CombatGolf';
+import { EventEncounter } from './components/EventEncounter';
 import { PlayingScreen } from './components/PlayingScreen';
 import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element } from './engine/types';
 import { getActorDisplayGlyph, getActorDefinition } from './engine/actors';
@@ -29,8 +31,8 @@ import { initializeGame } from './engine/game';
 import { CardScaleProvider } from './contexts/CardScaleContext';
 import { mainWorldMap } from './data/worldMap';
 import { KERU_ARCHETYPE_OPTIONS, KeruAspect } from './data/keruAspects';
-import poiRewardOverridesJson from './data/poiRewardOverrides.json';
-import keruAspectsJson from './data/keruAspects.json';
+import abilitiesJson from './data/abilities.json';
+import { ORIM_DEFINITIONS } from './engine/orims';
 import type { PoiReward, PoiRewardType, PoiSparkleConfig } from './engine/worldMapTypes';
 
 interface ErrorBoundaryProps {
@@ -79,8 +81,10 @@ type PoiRewardDraft = {
   chooseCount: number;
   selectedAspects: KeruAspect[];
   selectedAbilities: string[];
+  selectedOrims: string[];
   searchFilter: string;
   abilitySearchFilter: string;
+  orimSearchFilter: string;
 };
 
 type PoiNarrationDraft = {
@@ -95,11 +99,28 @@ type PoiNarrationDraft = {
   };
 };
 
-type PoiOverride = {
-  rewards?: PoiReward[];
-  narration?: PoiNarrationDraft;
-  sparkle?: PoiSparkleConfig;
-};
+type AbilityEffectType =
+  | 'damage' | 'healing' | 'speed' | 'evasion'
+  | 'armor' | 'super_armor' | 'defense' | 'draw'
+  | 'burn' | 'bleed' | 'stun' | 'freeze';
+
+type AbilityEffectTarget = 'self' | 'enemy' | 'all_enemies' | 'ally';
+
+interface AbilityEffect {
+  type: AbilityEffectType;
+  value: number;
+  target: AbilityEffectTarget;
+  charges?: number;
+  duration?: number;
+  element?: Element;
+  elementalValue?: number;
+}
+
+const ABILITY_EFFECT_TYPES: AbilityEffectType[] = [
+  'damage', 'healing', 'speed', 'evasion',
+  'armor', 'super_armor', 'defense', 'draw',
+  'burn', 'bleed', 'stun', 'freeze',
+];
 
 type AspectDraft = {
   id: string;
@@ -115,6 +136,26 @@ type AspectDraft = {
   archetypeCardId: string;
   archetypeCardRank: number;
   archetypeCardElement: Element;
+  effects: AbilityEffect[];
+  equipCost: number;
+};
+
+type OrimDraft = {
+  id: string;
+  name: string;
+  description: string;
+  element: Element;
+  effects: AbilityEffect[];
+};
+
+type OrimSynergy = {
+  id: string; // auto-generated: `${abilityId}_${orimId}`
+  abilityId: string;
+  orimId: string;
+  synergizedName: string;
+  additionalEffects: AbilityEffect[];
+  isBuilt: boolean;
+  description: string;
 };
 
 const toThisTypeOfCase = (value: string) => {
@@ -136,6 +177,7 @@ const toThisTypeOfCase = (value: string) => {
 const REWARD_TYPE_OPTIONS: Array<{ value: PoiRewardType; label: string }> = [
   { value: 'aspect-choice', label: 'Aspects (choice)' },
   { value: 'ability-choice', label: 'Ability cards (choice)' },
+  { value: 'orim-choice', label: 'Orims (choice)' },
   { value: 'aspect-jumbo', label: 'Aspects (jumbo, legacy)' },
 ];
 const TIME_SCALE_OPTIONS = [0.5, 1, 1.5, 2];
@@ -178,22 +220,7 @@ export default function App() {
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
   const [forcedPerspectiveEnabled, setForcedPerspectiveEnabled] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
-  const [toolingTab, setToolingTab] = useState<'poi' | 'aspects' | 'ability'>('poi');
-  const normalizePoiOverrides = useCallback((input: Record<string, PoiReward[] | PoiOverride>) => {
-    const next: Record<string, PoiOverride> = {};
-    Object.entries(input || {}).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        next[key] = { rewards: value };
-      } else if (value && typeof value === 'object') {
-        next[key] = {
-          rewards: Array.isArray(value.rewards) ? value.rewards : [],
-          narration: value.narration ?? undefined,
-          sparkle: value.sparkle ?? undefined,
-        };
-      }
-    });
-    return next;
-  }, []);
+  const [toolingTab, setToolingTab] = useState<'poi' | 'aspects' | 'ability' | 'orim' | 'synergies'>('poi');
   const applySparkleConfig = useCallback((config?: PoiSparkleConfig) => {
     const resolved = { ...DEFAULT_SPARKLE_CONFIG, ...config };
     setPoiEditorProximityRange(resolved.proximityRange);
@@ -201,9 +228,6 @@ export default function App() {
     setPoiEditorGlowColor(resolved.glowColor);
     setPoiEditorIntensity(resolved.intensity);
   }, []);
-  const [poiRewardOverrides, setPoiRewardOverrides] = useState<Record<string, PoiOverride>>(
-    normalizePoiOverrides(poiRewardOverridesJson as Record<string, PoiReward[] | PoiOverride>)
-  );
   const [poiEditorCoords, setPoiEditorCoords] = useState('');
   const lastAutoPoiCoordsRef = useRef<string | null>(null);
   const [poiSearchQuery, setPoiSearchQuery] = useState('');
@@ -234,32 +258,44 @@ export default function App() {
     chooseCount: 1,
     selectedAspects: [],
     selectedAbilities: [],
+    selectedOrims: [],
     searchFilter: '',
     abilitySearchFilter: '',
+    orimSearchFilter: '',
   }]);
   const poiRewardIdRef = useRef(1);
   const [abilityDrafts, setAbilityDrafts] = useState<AspectDraft[]>(() => {
-    const source = (keruAspectsJson as { aspects?: Array<{
+    const source = (abilitiesJson as { abilities?: Array<{
       id: string;
+      aspectId?: string;
       label?: string;
-      ability?: { label?: string; description?: string; damage?: string; cardId?: string; cardRank?: number; cardElement?: Element; cardGlyph?: string };
+      description?: string;
+      damage?: string;
+      cardId?: string;
+      cardRank?: number;
+      cardElement?: Element;
+      cardGlyph?: string;
+      abilityType?: string;
       tags?: string[];
-      archetypeCard?: { cardId?: string; cardRank?: number; cardElement?: Element };
-    }> }).aspects ?? [];
-  return source.map((entry) => ({
+      effects?: AbilityEffect[];
+      equipCost?: number;
+    }> }).abilities ?? [];
+    return source.map((entry) => ({
       id: entry.id ?? '',
       name: entry.label ?? '',
-      abilityType: (entry as any).abilityType ?? 'exploration',
-      abilityDescription: entry.ability?.description ?? '',
-      abilityDamage: entry.ability?.damage ?? '',
-      abilityCardId: entry.ability?.cardId ?? '',
-      abilityCardRank: entry.ability?.cardRank ?? 1,
-      abilityCardElement: entry.ability?.cardElement ?? 'N',
-      abilityCardGlyph: entry.ability?.cardGlyph ?? '',
+      abilityType: entry.abilityType ?? 'exploration',
+      abilityDescription: entry.description ?? '',
+      abilityDamage: entry.damage ?? '',
+      abilityCardId: entry.cardId ?? '',
+      abilityCardRank: entry.cardRank ?? 1,
+      abilityCardElement: entry.cardElement ?? 'N',
+      abilityCardGlyph: entry.cardGlyph ?? '',
       tagsText: (entry.tags ?? []).join(', '),
-      archetypeCardId: entry.archetypeCard?.cardId ?? '',
-      archetypeCardRank: entry.archetypeCard?.cardRank ?? 1,
-      archetypeCardElement: entry.archetypeCard?.cardElement ?? 'N',
+      archetypeCardId: '',
+      archetypeCardRank: 1,
+      archetypeCardElement: 'N' as Element,
+      effects: (entry.effects as AbilityEffect[] | undefined) ?? [],
+      equipCost: entry.equipCost ?? 0,
     }));
   });
   const [abilitySearch, setAbilitySearch] = useState('');
@@ -278,6 +314,24 @@ export default function App() {
   const [selectedAspectProfileId, setSelectedAspectProfileId] = useState<string | null>(null);
   const [aspectProfileMessage, setAspectProfileMessage] = useState<string | null>(null);
   const [isSavingAspectProfiles, setIsSavingAspectProfiles] = useState(false);
+  const [orimSearch, setOrimSearch] = useState('');
+  const [selectedOrimId, setSelectedOrimId] = useState<string | null>(null);
+  const [orimDrafts, setOrimDrafts] = useState<OrimDraft[]>(() =>
+    ORIM_DEFINITIONS.map((orim) => ({
+      id: orim.id,
+      name: orim.name,
+      description: orim.description,
+      element: orim.element,
+      effects: [],
+    }))
+  );
+  const [orimEditorMessage, setOrimEditorMessage] = useState<string | null>(null);
+  const [isSavingOrim, setIsSavingOrim] = useState(false);
+  const [synergies, setSynergies] = useState<OrimSynergy[]>([]);
+  const [selectedSynergyAbilityId, setSelectedSynergyAbilityId] = useState<string | null>(null);
+  const [selectedSynergyOrimId, setSelectedSynergyOrimId] = useState<string | null>(null);
+  const [synergyEditorMessage, setSynergyEditorMessage] = useState<string | null>(null);
+  const [isSavingSynergy, setIsSavingSynergy] = useState(false);
   const [useGhostBackground, setUseGhostBackground] = useState(false);
   const [pixelArtEnabled, setPixelArtEnabled] = useState(false);
   const [cardScale, setCardScale] = useState(1);
@@ -367,6 +421,9 @@ export default function App() {
   const ghostBackgroundEnabled = false;
   const playtestVariant = gameState?.playtestVariant ?? 'single-foundation';
   const isRpgVariant = playtestVariant === 'rpg';
+  const isEventBiome = gameState?.currentBiome
+    ? getBiomeDefinition(gameState.currentBiome)?.biomeType === 'event'
+    : false;
   const hasSpawnedEnemies = !isRpgVariant || (gameState?.enemyFoundations ?? []).some((foundation) => foundation.length > 0);
   const isTimeScaleVisible = !zenModeEnabled && hasSpawnedEnemies;
 
@@ -437,8 +494,10 @@ export default function App() {
       chooseCount,
       selectedAspects: aspectOptions,
       selectedAbilities: abilityOptions,
+      selectedOrims: [],
       searchFilter: '',
       abilitySearchFilter: '',
+      orimSearchFilter: '',
     };
   }, [VALID_KERU_ASPECTS, resolveKeruAspectKey]);
 
@@ -453,8 +512,10 @@ export default function App() {
       chooseCount: 1,
       selectedAspects: [],
       selectedAbilities: [],
+      selectedOrims: [],
       searchFilter: '',
       abilitySearchFilter: '',
+      orimSearchFilter: '',
     };
   }, []);
 
@@ -469,29 +530,27 @@ export default function App() {
       (entry) => entry.gridPosition.col === coords.x && entry.gridPosition.row === coords.y
     );
     
-    // Look for POI in world map or check if there's an override that might exist without a world map entry
-    const poi = cell ? mainWorldMap.pointsOfInterest.find((entry) => entry.id === cell.poiId) : null;
-    const override = poiRewardOverrides[key];
+    const poi = cell?.poi ?? null;
 
-    if (!poi && !override) {
-      setPoiEditorMessage(`No POI or override found at ${coords.x},${coords.y}.`);
+    if (!poi) {
+      setPoiEditorMessage(`No POI found at ${coords.x},${coords.y}.`);
       return;
     }
 
     setPoiEditorCoords(key);
-    setPoiEditorName(poi?.name ?? (override?.narration?.title || 'Unnamed Override'));
+    setPoiEditorName(poi.name);
     setPoiEditorDiscoveryRange(cell?.traversalDifficulty ?? 1);
-    setPoiEditorType(poi?.type === 'biome' ? 'combat' : 'puzzle');
+    setPoiEditorType(poi.type === 'biome' ? 'combat' : 'puzzle');
     setPoiEditorIcon((poi as { icon?: string })?.icon ?? '');
-    applySparkleConfig(override?.sparkle ?? (poi as { sparkle?: PoiSparkleConfig })?.sparkle);
-    
-    const existingRewards = override?.rewards ?? poi?.rewards ?? [];
+    applySparkleConfig((poi as { sparkle?: PoiSparkleConfig })?.sparkle);
+
+    const existingRewards = poi.rewards ?? [];
     const rewardDrafts = existingRewards.length > 0
       ? existingRewards.map(createDraftFromReward)
       : [createEmptyDraft()];
     setPoiEditorRewards(rewardDrafts);
     
-    const narration = override?.narration;
+    const narration = poi.narration;
     setPoiEditorNarrationTitle(narration?.title ?? '');
     setPoiEditorNarrationBody(narration?.body ?? '');
     setPoiEditorNarrationTone(narration?.tone ?? 'teal');
@@ -500,7 +559,7 @@ export default function App() {
     setPoiEditorCompletionBody(narration?.completion?.body ?? '');
     setPoiEditorCompletionTone(narration?.completion?.tone ?? 'teal');
     setPoiEditorMessage(`Loaded POI at ${coords.x},${coords.y}.`);
-  }, [applySparkleConfig, createDraftFromReward, createEmptyDraft, parsePoiCoords, poiRewardOverrides]);
+  }, [applySparkleConfig, createDraftFromReward, createEmptyDraft, parsePoiCoords]);
 
   const handleLoadPoi = useCallback(() => {
     loadPoi(poiEditorCoords);
@@ -515,7 +574,7 @@ export default function App() {
 
     // 1. Search world map cells/pois
     mainWorldMap.cells.forEach(cell => {
-      const poi = mainWorldMap.pointsOfInterest.find(p => p.id === cell.poiId);
+      const poi = cell.poi;
       if (!poi) return;
       const coords = `${cell.gridPosition.col},${cell.gridPosition.row}`;
       const haystack = `${poi.name} ${poi.description || ''} ${coords}`.toLowerCase();
@@ -530,23 +589,8 @@ export default function App() {
       }
     });
 
-    // 2. Search overrides
-    Object.entries(poiRewardOverrides).forEach(([coords, override]) => {
-      if (seenCoords.has(coords)) return;
-      const { title, body } = override.narration ?? {};
-      const haystack = `${title || ''} ${body || ''} ${coords}`.toLowerCase();
-      if (haystack.includes(query)) {
-        results.push({
-          id: `override-${coords}`,
-          name: title || 'Unnamed Override',
-          coords,
-          preview: body
-        });
-      }
-    });
-
     return results;
-  }, [poiSearchQuery, poiRewardOverrides]);
+  }, [poiSearchQuery]);
 
   const handleResetPoiForm = useCallback(() => {
     setPoiEditorCoords('');
@@ -622,38 +666,9 @@ export default function App() {
           } : undefined,
         }
       : undefined;
-    setIsSavingPoi(true);
-    setPoiEditorMessage('Saving POI...');
-    try {
-      const response = await fetch('/__poi-editor/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key,
-          rewards: registry,
-          narration,
-          sparkle: {
-            proximityRange: poiEditorProximityRange,
-            starCount: poiEditorStarCount,
-            glowColor: poiEditorGlowColor,
-            intensity: poiEditorIntensity,
-          },
-        }),
-      });
-      if (!response.ok) {
-        throw new Error('Save failed');
-      }
-      const savedOverrides = (await response.json()) as Record<string, PoiReward[] | PoiOverride>;
-      setPoiRewardOverrides(normalizePoiOverrides(savedOverrides));
-      setPoiEditorMessage(`POI "${poiEditorName}" saved for ${coords.x},${coords.y}.`);
-    } catch (error) {
-      console.error('[App] failed to save POI', error);
-      setPoiEditorMessage('Failed to save POI.');
-    } finally {
-      setIsSavingPoi(false);
-    }
+    setPoiEditorMessage('POI save is disabled. Edit src/data/worldMap.ts directly for permanent changes.');
+    setIsSavingPoi(false);
   }, [
-    normalizePoiOverrides,
     parsePoiCoords,
     poiEditorCoords,
     poiEditorName,
@@ -679,7 +694,7 @@ export default function App() {
 
   const handleRewardChange = useCallback((
     id: number,
-    key: 'description' | 'drawCount' | 'chooseCount' | 'type' | 'searchFilter' | 'abilitySearchFilter',
+    key: 'description' | 'drawCount' | 'chooseCount' | 'type' | 'searchFilter' | 'abilitySearchFilter' | 'orimSearchFilter',
     value: string | number
   ) => {
     setPoiEditorRewards((prev) => prev.map((entry) => {
@@ -699,8 +714,10 @@ export default function App() {
           chooseCount: nextType === 'ability-choice' ? 3 : 1,
           selectedAspects: [],
           selectedAbilities: [],
+          selectedOrims: [],
           searchFilter: '',
           abilitySearchFilter: '',
+          orimSearchFilter: '',
         };
       }
       if (key === 'searchFilter') {
@@ -708,6 +725,9 @@ export default function App() {
       }
       if (key === 'abilitySearchFilter') {
         return { ...entry, abilitySearchFilter: String(value) };
+      }
+      if (key === 'orimSearchFilter') {
+        return { ...entry, orimSearchFilter: String(value) };
       }
       return { ...entry, [key]: String(value) };
     }));
@@ -751,25 +771,42 @@ export default function App() {
     )));
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    const loadOverrides = async () => {
-      try {
-        const response = await fetch('/__poi-editor/overrides');
-        if (!response.ok) throw new Error('Unable to load overrides');
-        const data = (await response.json()) as Record<string, PoiReward[] | PoiOverride>;
-        if (active) {
-          setPoiRewardOverrides(normalizePoiOverrides(data));
-        }
-      } catch (err) {
-        console.error('[App] failed to load POI overrides', err);
-      }
-    };
-    loadOverrides();
-    return () => {
-      active = false;
-    };
+  const handleRewardOrimToggle = useCallback((id: number, orimId: string) => {
+    setPoiEditorRewards((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      const has = entry.selectedOrims.includes(orimId);
+      const nextSet = has
+        ? entry.selectedOrims.filter((value) => value !== orimId)
+        : [...entry.selectedOrims, orimId];
+      return { ...entry, selectedOrims: nextSet };
+    }));
   }, []);
+
+  const handleRewardOrimSelectAll = useCallback((id: number, targets: string[]) => {
+    setPoiEditorRewards((prev) => prev.map((entry) => (
+      entry.id === id
+        ? { ...entry, selectedOrims: Array.from(new Set([...entry.selectedOrims, ...targets])) }
+        : entry
+    )));
+  }, []);
+
+  const handleTestPoiReward = useCallback(() => {
+    const coords = parsePoiCoords(poiEditorCoords);
+    if (!coords) {
+      setPoiEditorMessage('Enter coordinates as "x,y" before testing rewards.');
+      return;
+    }
+    const cell = mainWorldMap.cells.find(
+      (entry) => entry.gridPosition.col === coords.x && entry.gridPosition.row === coords.y
+    );
+    const poiId = cell?.poi?.id ?? null;
+    actions.puzzleCompleted?.({
+      coord: { x: coords.x, y: coords.y },
+      poiId,
+      tableauId: `node-${coords.x}-${coords.y}`,
+    });
+    setPoiEditorMessage(`Triggered reward test for ${coords.x},${coords.y}.`);
+  }, [actions, parsePoiCoords, poiEditorCoords]);
 
   useEffect(() => {
     if (toolingOpen && toolingTab === 'poi' && currentPlayerCoords) {
@@ -805,6 +842,8 @@ export default function App() {
       archetypeCardId: '',
       archetypeCardRank: 1,
       archetypeCardElement: 'N',
+      effects: [],
+      equipCost: 0,
     };
     setAbilityDrafts((prev) => [...prev, nextDraft]);
     setSelectedAbilityId(nextId);
@@ -813,6 +852,48 @@ export default function App() {
   const handleRemoveAbility = useCallback((id: string) => {
     setAbilityDrafts((prev) => prev.filter((entry) => entry.id !== id));
     setSelectedAbilityId((current) => (current === id ? null : current));
+  }, []);
+
+  const handleAbilityEffectAdd = useCallback((abilityId: string) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      const newEffect: AbilityEffect = { type: 'damage', value: 0, target: 'enemy' };
+      return { ...entry, effects: [...entry.effects, newEffect] };
+    }));
+  }, []);
+
+  const handleAbilityEffectRemove = useCallback((abilityId: string, index: number) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      return { ...entry, effects: entry.effects.filter((_, i) => i !== index) };
+    }));
+  }, []);
+
+  const handleAbilityEffectChange = useCallback((
+    abilityId: string,
+    index: number,
+    field: keyof AbilityEffect,
+    value: unknown,
+  ) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      const next = entry.effects.map((fx, i) => {
+        if (i !== index) return fx;
+        if (field === 'value') {
+          return { ...fx, value: Math.max(0, Number(value) || 0) };
+        }
+        if (field === 'charges' || field === 'duration') {
+          const n = value === '' || value === undefined ? undefined : Math.max(1, Number(value) || 1);
+          return { ...fx, [field]: n };
+        }
+        if (field === 'elementalValue') {
+          const n = value === '' ? undefined : Number(value) || undefined;
+          return { ...fx, elementalValue: n };
+        }
+        return { ...fx, [field]: value };
+      });
+      return { ...entry, effects: next };
+    }));
   }, []);
 
   const handleAbilityChange = useCallback((id: string, key: keyof AspectDraft, value: string | number) => {
@@ -838,31 +919,33 @@ export default function App() {
     setAbilityEditorMessage('Saving abilities...');
     try {
       const payload = {
-        aspects: abilityDrafts.map((entry) => ({
+        abilities: abilityDrafts.map((entry) => ({
           id: entry.id.trim(),
           label: entry.name.trim(),
+          description: entry.abilityDescription.trim() || undefined,
+          damage: entry.abilityDamage.trim(),
+          cardId: entry.abilityCardId.trim(),
+          cardRank: entry.abilityCardRank,
+          cardElement: entry.abilityCardElement,
+          cardGlyph: entry.abilityCardGlyph.trim() || undefined,
           abilityType: entry.abilityType,
-          ability: {
-            label: entry.name.trim(),
-            description: entry.abilityDescription.trim() || undefined,
-            damage: entry.abilityDamage.trim(),
-            cardId: entry.abilityCardId.trim(),
-            cardRank: entry.abilityCardRank,
-            cardElement: entry.abilityCardElement,
-            cardGlyph: entry.abilityCardGlyph.trim() || undefined,
-          },
           tags: entry.tagsText
             .split(',')
             .map((tag) => tag.trim())
             .filter(Boolean),
-          archetypeCard: {
-            cardId: entry.archetypeCardId.trim(),
-            cardRank: entry.archetypeCardRank,
-            cardElement: entry.archetypeCardElement,
-          },
+          effects: entry.effects.map((fx) => ({
+            type: fx.type,
+            value: fx.value,
+            target: fx.target,
+            ...(fx.charges !== undefined ? { charges: fx.charges } : {}),
+            ...(fx.duration !== undefined ? { duration: fx.duration } : {}),
+            ...(fx.element !== undefined && fx.element !== 'N' ? { element: fx.element } : {}),
+            ...(fx.elementalValue !== undefined ? { elementalValue: fx.elementalValue } : {}),
+          })),
+          equipCost: entry.equipCost,
         })),
       };
-      const response = await fetch('/__aspects/save', {
+      const response = await fetch('/__abilities/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -879,44 +962,332 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    const loadAspects = async () => {
+    const loadAbilities = async () => {
       try {
-        const response = await fetch('/__aspects/overrides');
-        if (!response.ok) throw new Error('Unable to load aspects');
+        const response = await fetch('/__abilities/overrides');
+        if (!response.ok) throw new Error('Unable to load abilities');
         const data = (await response.json()) as {
-          aspects?: Array<{
+          abilities?: Array<{
             id: string;
+            aspectId?: string;
             label?: string;
-            ability?: { label?: string; damage?: string; cardId?: string; cardRank?: number; cardElement?: Element; cardGlyph?: string };
+            description?: string;
+            damage?: string;
+            cardId?: string;
+            cardRank?: number;
+            cardElement?: Element;
+            cardGlyph?: string;
+            abilityType?: string;
             tags?: string[];
-            archetypeCard?: { cardId?: string; cardRank?: number; cardElement?: Element };
+            effects?: AbilityEffect[];
+            equipCost?: number;
           }>;
         };
         if (!active) return;
-        const nextDrafts = (data.aspects ?? []).map((entry) => ({
+        const nextDrafts = (data.abilities ?? []).map((entry) => ({
           id: entry.id ?? '',
-          label: entry.label ?? '',
-          abilityLabel: entry.ability?.label ?? '',
-          abilityDamage: entry.ability?.damage ?? '',
-          abilityCardId: entry.ability?.cardId ?? '',
-          abilityCardRank: entry.ability?.cardRank ?? 1,
-          abilityCardElement: entry.ability?.cardElement ?? 'N',
-          abilityCardGlyph: entry.ability?.cardGlyph ?? '',
+          name: entry.label ?? '',
+          abilityType: entry.abilityType ?? 'exploration',
+          abilityDescription: entry.description ?? '',
+          abilityDamage: entry.damage ?? '',
+          abilityCardId: entry.cardId ?? '',
+          abilityCardRank: entry.cardRank ?? 1,
+          abilityCardElement: entry.cardElement ?? 'N',
+          abilityCardGlyph: entry.cardGlyph ?? '',
           tagsText: (entry.tags ?? []).join(', '),
-          archetypeCardId: entry.archetypeCard?.cardId ?? '',
-          archetypeCardRank: entry.archetypeCard?.cardRank ?? 1,
-          archetypeCardElement: entry.archetypeCard?.cardElement ?? 'N',
+          archetypeCardId: '',
+          archetypeCardRank: 1,
+          archetypeCardElement: 'N' as Element,
+          effects: Array.isArray(entry.effects) ? entry.effects : [],
+          equipCost: entry.equipCost ?? 0,
         }));
         setAbilityDrafts(nextDrafts);
       } catch (err) {
-        console.error('[App] failed to load aspects', err);
+        console.error('[App] failed to load abilities', err);
       }
     };
-    loadAspects();
+    loadAbilities();
     return () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadOrims = async () => {
+      try {
+        const response = await fetch('/__orims/overrides');
+        if (!response.ok) throw new Error('Unable to load orims');
+        const data = (await response.json()) as {
+          orims?: Array<{
+            id: string;
+            name: string;
+            description: string;
+            element: Element;
+            effects?: AbilityEffect[];
+          }>;
+        };
+        if (!active) return;
+        const nextDrafts = (data.orims ?? []).map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+          description: entry.description,
+          element: entry.element,
+          effects: Array.isArray(entry.effects) ? entry.effects : [],
+        }));
+        setOrimDrafts(nextDrafts);
+      } catch (err) {
+        console.error('[App] failed to load orims', err);
+      }
+    };
+    loadOrims();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadSynergies = async () => {
+      try {
+        const response = await fetch('/__synergies/overrides');
+        if (!response.ok) throw new Error('Unable to load synergies');
+        const data = (await response.json()) as {
+          synergies?: OrimSynergy[];
+        };
+        if (!active) return;
+        setSynergies(data.synergies ?? []);
+      } catch (err) {
+        console.error('[App] failed to load synergies', err);
+      }
+    };
+    loadSynergies();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleAddOrim = useCallback(() => {
+    const nextIdBase = 'new-orim';
+    let nextId = nextIdBase;
+    let suffix = 1;
+    const existing = new Set(orimDrafts.map((entry) => entry.id));
+    while (existing.has(nextId)) {
+      suffix += 1;
+      nextId = `${nextIdBase}-${suffix}`;
+    }
+    const nextDraft: OrimDraft = {
+      id: nextId,
+      name: '',
+      description: '',
+      element: 'N',
+      effects: [],
+    };
+    setOrimDrafts((prev) => [...prev, nextDraft]);
+    setSelectedOrimId(nextId);
+  }, [orimDrafts]);
+
+  const handleRemoveOrim = useCallback((id: string) => {
+    setOrimDrafts((prev) => prev.filter((entry) => entry.id !== id));
+    setSelectedOrimId((current) => (current === id ? null : current));
+  }, []);
+
+  const handleOrimChange = useCallback((id: string, key: keyof OrimDraft, value: string | number) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      const nextEntry = { ...entry, [key]: value };
+      if (key === 'name') {
+        nextEntry.id = toThisTypeOfCase(String(value));
+      }
+      return nextEntry;
+    }));
+    if (key === 'name') {
+      const nextId = toThisTypeOfCase(String(value));
+      setSelectedOrimId((current) => (current === id ? nextId : current));
+    }
+  }, []);
+
+  const handleSaveOrim = useCallback(async () => {
+    setIsSavingOrim(true);
+    setOrimEditorMessage('Saving orims...');
+    try {
+      const payload = {
+        orims: orimDrafts.map((entry) => ({
+          id: entry.id.trim(),
+          name: entry.name.trim(),
+          description: entry.description.trim(),
+          element: entry.element,
+          effects: entry.effects.map((fx) => ({
+            type: fx.type,
+            value: fx.value,
+            target: fx.target,
+            ...(fx.charges !== undefined ? { charges: fx.charges } : {}),
+            ...(fx.duration !== undefined ? { duration: fx.duration } : {}),
+            ...(fx.element !== undefined && fx.element !== 'N' ? { element: fx.element } : {}),
+            ...(fx.elementalValue !== undefined ? { elementalValue: fx.elementalValue } : {}),
+          })),
+        })),
+      };
+      const response = await fetch('/__orims/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error('Save failed');
+      setOrimEditorMessage('Orims saved. Reload to refresh data if needed.');
+    } catch (error) {
+      console.error('[App] failed to save orims', error);
+      setOrimEditorMessage('Failed to save orims.');
+    } finally {
+      setIsSavingOrim(false);
+    }
+  }, [orimDrafts]);
+
+  const handleOrimEffectAdd = useCallback((orimId: string) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      return { ...entry, effects: [...entry.effects, { type: 'damage', value: 1, target: 'enemy', charges: undefined, duration: undefined }] };
+    }));
+  }, []);
+
+  const handleOrimEffectRemove = useCallback((orimId: string, index: number) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      return { ...entry, effects: entry.effects.filter((_, i) => i !== index) };
+    }));
+  }, []);
+
+  const handleOrimEffectChange = useCallback(
+    (orimId: string, index: number, key: keyof AbilityEffect, value: string | number) => {
+      setOrimDrafts((prev) => prev.map((entry) => {
+        if (entry.id !== orimId) return entry;
+        const nextEffects = [...entry.effects];
+        const fx = nextEffects[index]!;
+        let nextEffect: AbilityEffect;
+
+        if (key === 'value') {
+          nextEffect = { ...fx, value: Math.max(0, Number(value) || 0) };
+        } else if (key === 'charges' || key === 'duration') {
+          const n = value === '' ? undefined : Math.max(1, Number(value) || 1);
+          nextEffect = { ...fx, [key]: n };
+        } else if (key === 'elementalValue') {
+          const n = value === '' ? undefined : Number(value) || undefined;
+          nextEffect = { ...fx, elementalValue: n };
+        } else {
+          nextEffect = { ...fx, [key]: value };
+        }
+
+        nextEffects[index] = nextEffect;
+        return { ...entry, effects: nextEffects };
+      }));
+    },
+    []
+  );
+
+  const handleCreateSynergy = useCallback(
+    (abilityId: string, orimId: string) => {
+      const synergyId = `${abilityId}_${orimId}`;
+      const existing = synergies.find((s) => s.id === synergyId);
+      if (existing) return;
+
+      const ability = abilityDrafts.find((a) => a.id === abilityId);
+      const orim = orimDrafts.find((o) => o.id === orimId);
+      if (!ability || !orim) return;
+
+      const newSynergy: OrimSynergy = {
+        id: synergyId,
+        abilityId,
+        orimId,
+        synergizedName: `${ability.name}+${orim.name}`,
+        additionalEffects: [],
+        isBuilt: false,
+        description: '',
+      };
+      setSynergies((prev) => [...prev, newSynergy]);
+      setSelectedSynergyAbilityId(abilityId);
+      setSelectedSynergyOrimId(orimId);
+    },
+    [abilityDrafts, orimDrafts, synergies]
+  );
+
+  const handleDeleteSynergy = useCallback((synergyId: string) => {
+    setSynergies((prev) => prev.filter((s) => s.id !== synergyId));
+    setSelectedSynergyAbilityId(null);
+    setSelectedSynergyOrimId(null);
+  }, []);
+
+  const handleSynergyChange = useCallback((synergyId: string, key: keyof OrimSynergy, value: string | boolean | AbilityEffect[]) => {
+    setSynergies((prev) =>
+      prev.map((s) => (s.id === synergyId ? { ...s, [key]: value } : s))
+    );
+  }, []);
+
+  const handleSynergyEffectAdd = useCallback((synergyId: string) => {
+    setSynergies((prev) =>
+      prev.map((s) => {
+        if (s.id !== synergyId) return s;
+        return { ...s, additionalEffects: [...s.additionalEffects, { type: 'damage', value: 1, target: 'enemy', charges: undefined, duration: undefined }] };
+      })
+    );
+  }, []);
+
+  const handleSynergyEffectRemove = useCallback((synergyId: string, index: number) => {
+    setSynergies((prev) =>
+      prev.map((s) => {
+        if (s.id !== synergyId) return s;
+        return { ...s, additionalEffects: s.additionalEffects.filter((_, i) => i !== index) };
+      })
+    );
+  }, []);
+
+  const handleSynergyEffectChange = useCallback(
+    (synergyId: string, index: number, key: keyof AbilityEffect, value: string | number) => {
+      setSynergies((prev) =>
+        prev.map((s) => {
+          if (s.id !== synergyId) return s;
+          const nextEffects = [...s.additionalEffects];
+          const fx = nextEffects[index]!;
+          let nextEffect: AbilityEffect;
+
+          if (key === 'value') {
+            nextEffect = { ...fx, value: Math.max(0, Number(value) || 0) };
+          } else if (key === 'charges' || key === 'duration') {
+            const n = value === '' ? undefined : Math.max(1, Number(value) || 1);
+            nextEffect = { ...fx, [key]: n };
+          } else if (key === 'elementalValue') {
+            const n = value === '' ? undefined : Number(value) || undefined;
+            nextEffect = { ...fx, elementalValue: n };
+          } else {
+            nextEffect = { ...fx, [key]: value };
+          }
+
+          nextEffects[index] = nextEffect;
+          return { ...s, additionalEffects: nextEffects };
+        })
+      );
+    },
+    []
+  );
+
+  const handleSaveSynergy = useCallback(async () => {
+    setIsSavingSynergy(true);
+    setSynergyEditorMessage('Saving synergies...');
+    try {
+      const payload = { synergies };
+      const response = await fetch('/__synergies/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error('Save failed');
+      setSynergyEditorMessage('Synergies saved.');
+    } catch (error) {
+      console.error('[App] failed to save synergies', error);
+      setSynergyEditorMessage('Failed to save synergies.');
+    } finally {
+      setIsSavingSynergy(false);
+    }
+  }, [synergies]);
 
   const slugify = useCallback((value: string) => (
     value
@@ -2214,6 +2585,20 @@ export default function App() {
                     >
                       Ability
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setToolingTab('orim')}
+                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'orim' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
+                    >
+                      Orims
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setToolingTab('synergies')}
+                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'synergies' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
+                    >
+                      Synergies
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-3">
@@ -2228,25 +2613,33 @@ export default function App() {
                           void handleSaveAspectProfiles();
                           return;
                         }
+                        if (toolingTab === 'orim') {
+                          void handleSaveOrim();
+                          return;
+                        }
+                        if (toolingTab === 'synergies') {
+                          void handleSaveSynergy();
+                          return;
+                        }
                         void handleSaveAbility();
                       }}
                       disabled={
                         toolingTab === 'poi'
                           ? isSavingPoi
-                          : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility)
+                          : (toolingTab === 'aspects' ? isSavingAspectProfiles : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility)))
                       }
                       className={`text-[10px] uppercase tracking-[0.4em] px-4 py-1.5 rounded border font-black transition-all ${
                         (toolingTab === 'poi'
                           ? isSavingPoi
-                          : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility))
+                          : (toolingTab === 'aspects' ? isSavingAspectProfiles : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility))))
                           ? 'border-game-teal/30 text-game-teal/30 scale-95'
                           : 'border-game-gold text-game-gold bg-game-gold/5 hover:bg-game-gold/15 active:scale-95 shadow-[0_0_15px_rgba(230,179,30,0.2)]'
                       }`}
                     >
                       {(() => {
-                        const isSaving = toolingTab === 'poi' ? isSavingPoi : (toolingTab === 'aspects' ? isSavingAspectProfiles : isSavingAbility);
+                        const isSaving = toolingTab === 'poi' ? isSavingPoi : (toolingTab === 'aspects' ? isSavingAspectProfiles : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility)));
                         if (isSaving) return 'Saving…';
-                        return `Save ${toolingTab === 'poi' ? 'POI' : (toolingTab === 'aspects' ? 'Aspects' : 'Ability')}`;
+                        return `Save ${toolingTab === 'poi' ? 'POI' : (toolingTab === 'aspects' ? 'Aspects' : (toolingTab === 'orim' ? 'Orims' : (toolingTab === 'synergies' ? 'Synergies' : 'Ability')))}`;
                       })()}
                     </button>
                     <button
@@ -2498,13 +2891,22 @@ export default function App() {
                           <div className="h-full bg-black/80 border border-game-teal/50 rounded-2xl p-5 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col gap-4 animate-in fade-in duration-200 overflow-hidden">
                             <div className="flex items-center justify-between shrink-0">
                               <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Loot & Registry</div>
-                              <button
-                                type="button"
-                                onClick={handleAddRewardRow}
-                                className="text-[10px] uppercase tracking-[0.4em] bg-game-teal/70 text-black px-5 py-2 rounded font-black shadow-lg"
-                              >
-                                Add Reward Row
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={handleTestPoiReward}
+                                  className="text-[10px] uppercase tracking-[0.35em] bg-black/60 border border-game-gold/60 text-game-gold px-4 py-2 rounded font-black shadow-lg hover:border-game-gold hover:text-game-gold/90"
+                                >
+                                  Test Reward
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleAddRewardRow}
+                                  className="text-[10px] uppercase tracking-[0.4em] bg-game-teal/70 text-black px-5 py-2 rounded font-black shadow-lg"
+                                >
+                                  Add Reward Row
+                                </button>
+                              </div>
                             </div>
                             <div className="flex-1 overflow-y-auto pr-3 custom-scrollbar space-y-4">
                               {poiEditorRewards.map((reward, index) => {
@@ -2517,6 +2919,11 @@ export default function App() {
                                 const filteredAbilities = abilityDrafts.filter((option) => {
                                   const haystack = `${option.id} ${option.label}`.toLowerCase();
                                   return abilitySearchTerm === '' || haystack.includes(abilitySearchTerm);
+                                });
+                                const orimSearchTerm = reward.orimSearchFilter.trim().toLowerCase();
+                                const filteredOrims = ORIM_DEFINITIONS.filter((option) => {
+                                  const haystack = `${option.name} ${option.description}`.toLowerCase();
+                                  return orimSearchTerm === '' || haystack.includes(orimSearchTerm);
                                 });
                                 const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
                                 const isAbilityReward = reward.type === 'ability-choice';
@@ -2647,6 +3054,45 @@ export default function App() {
                                                 className="hidden"
                                               />
                                               {option.label || option.id}
+                                            </label>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {reward.type === 'orim-choice' && (
+                                      <div className="space-y-3 pt-2 bg-black/30 p-4 rounded-xl border border-game-teal/10">
+                                        <div className="flex items-center gap-3">
+                                          <input
+                                            value={reward.orimSearchFilter || ''}
+                                            onChange={(event) => handleRewardChange(reward.id, 'orimSearchFilter', event.target.value)}
+                                            placeholder="Filter orims..."
+                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRewardOrimSelectAll(reward.id, filteredOrims.map((option) => option.id))}
+                                            className="text-[9px] uppercase tracking-[0.2em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded font-black hover:border-game-gold transition-colors"
+                                          >
+                                            Select Matching
+                                          </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-1">
+                                          {filteredOrims.map((option) => (
+                                            <label
+                                              key={`${reward.id}-${option.id}`}
+                                              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[10px] cursor-pointer transition-all ${
+                                                reward.selectedOrims.includes(option.id)
+                                                  ? 'border-game-teal bg-game-teal/20 text-game-white'
+                                                  : 'border-game-teal/20 bg-black/40 text-game-white/60 hover:border-game-teal/40'
+                                              }`}
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                checked={reward.selectedOrims.includes(option.id)}
+                                                onChange={() => handleRewardOrimToggle(reward.id, option.id)}
+                                                className="hidden"
+                                              />
+                                              {option.name}
                                             </label>
                                           ))}
                                         </div>
@@ -2816,7 +3262,7 @@ export default function App() {
                                       }`}
                                     >
                                       <div className="font-bold uppercase tracking-wider truncate">{entry.name || entry.id || 'Unnamed Ability'}</div>
-                                      <div className="text-[8px] opacity-40 truncate font-mono mt-0.5">{entry.id}</div>
+                                      <div className="text-[10px] opacity-40 truncate font-mono mt-0.5">{entry.id}</div>
                                     </button>
                                   ))}
                                   {filteredAbilities.length === 0 && (
@@ -2824,7 +3270,7 @@ export default function App() {
                                   )}
                                 </div>
 
-                                <div className="space-y-4">
+                                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
                                   <div className="flex items-center justify-between text-[10px] text-game-white/70 bg-game-teal/5 p-2 rounded border border-game-teal/20">
                                     <span className="font-bold tracking-widest uppercase">Editing: <span className="text-game-teal">{active.id}</span></span>
                                     <button
@@ -2835,33 +3281,33 @@ export default function App() {
                                       Remove
                                     </button>
                                   </div>
-                                  <div className="grid grid-cols-1 gap-3 text-[10px]">
-                                    <label className="flex flex-col gap-1">
+                                  <div className="flex items-end gap-2 text-[10px]">
+                                    <label className="flex flex-col gap-1 flex-1 min-w-0">
                                       <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Name</span>
                                       <input
                                         value={active.name}
                                         onChange={(event) => handleAbilityChange(active.id, 'name', event.target.value)}
-                                        className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                        className="w-full bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                                       />
                                     </label>
-                                  </div>
-                                  <div className="flex flex-col gap-1.5 text-[10px]">
-                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Type</span>
-                                    <div className="flex gap-2">
-                                      {(['exploration', 'combat'] as const).map((type) => (
-                                        <button
-                                          key={type}
-                                          type="button"
-                                          onClick={() => handleAbilityChange(active.id, 'abilityType', type)}
-                                          className={`flex-1 py-1.5 rounded border text-[9px] font-black uppercase tracking-widest transition-all ${
-                                            active.abilityType === type
-                                              ? 'bg-game-teal/20 border-game-teal text-game-teal shadow-[0_0_12px_rgba(127,219,202,0.2)]'
-                                              : 'bg-game-bg-dark/40 border-game-teal/20 text-game-white/40 hover:border-game-teal/40'
-                                          }`}
-                                        >
-                                          {type}
-                                        </button>
-                                      ))}
+                                    <div className="flex flex-col gap-1 shrink-0">
+                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight">Type</span>
+                                      <div className="flex gap-1">
+                                        {(['exploration', 'combat'] as const).map((type) => (
+                                          <button
+                                            key={type}
+                                            type="button"
+                                            onClick={() => handleAbilityChange(active.id, 'abilityType', type)}
+                                            className={`px-2 py-2 rounded border text-[9px] font-black uppercase tracking-widest transition-all ${
+                                              active.abilityType === type
+                                                ? 'bg-game-teal/20 border-game-teal text-game-teal shadow-[0_0_12px_rgba(127,219,202,0.2)]'
+                                                : 'bg-game-bg-dark/40 border-game-teal/20 text-game-white/40 hover:border-game-teal/40'
+                                            }`}
+                                          >
+                                            {type}
+                                          </button>
+                                        ))}
+                                      </div>
                                     </div>
                                   </div>
                                   <label className="flex flex-col gap-1 text-[10px]">
@@ -2873,7 +3319,111 @@ export default function App() {
                                       className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded resize-none text-[10px] text-game-white outline-none focus:border-game-gold custom-scrollbar"
                                     />
                                   </label>
-                                  <div className="grid grid-cols-2 gap-3 text-[10px]">
+                                  {/* ── Effects ─────────────────────────────── */}
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight text-[10px]">Effects</span>
+                                    </div>
+                                    <RowManager
+                                      rows={active.effects.map((fx, i) => ({ ...fx, id: i }))}
+                                      renderHeader={() => (
+                                        <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10">
+                                          <span>Type</span>
+                                          <span>Value</span>
+                                          <span>Target</span>
+                                          <span>Charges</span>
+                                          <span>Duration</span>
+                                          <span>Element</span>
+                                          <span>Elem Value</span>
+                                          <span />
+                                        </div>
+                                      )}
+                                      renderEmpty={() => (
+                                        <div className="text-[9px] text-game-white/30 italic">No effects. Click + Add Effect to begin.</div>
+                                      )}
+                                      renderRow={(fx) => (
+                                        <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5">
+                                          <select
+                                            value={fx.type}
+                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'type', e.target.value)}
+                                            className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                          >
+                                            {ABILITY_EFFECT_TYPES.map((t) => (
+                                              <option key={t} value={t}>{t}</option>
+                                            ))}
+                                          </select>
+                                          <input
+                                            type="number"
+                                            value={fx.value}
+                                            min={0}
+                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'value', e.target.value)}
+                                            className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                          />
+                                          <select
+                                            value={fx.target}
+                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'target', e.target.value)}
+                                            className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                          >
+                                            {(['self', 'enemy', 'all_enemies', 'ally'] as AbilityEffectTarget[]).map((t) => (
+                                              <option key={t} value={t}>{t}</option>
+                                            ))}
+                                          </select>
+                                          <input
+                                            type="number"
+                                            value={fx.charges ?? ''}
+                                            min={1}
+                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'charges', e.target.value)}
+                                            className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                            placeholder="∞"
+                                          />
+                                          <input
+                                            type="number"
+                                            value={fx.duration ?? ''}
+                                            min={1}
+                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'duration', e.target.value)}
+                                            className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                            placeholder="inst"
+                                          />
+                                          <select
+                                            value={fx.element ?? 'N'}
+                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'element', e.target.value)}
+                                            className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                          >
+                                            {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
+                                              <option key={element} value={element}>{element}</option>
+                                            ))}
+                                          </select>
+                                          <input
+                                            type="number"
+                                            value={fx.elementalValue ?? ''}
+                                            min={0}
+                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'elementalValue', e.target.value)}
+                                            className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAbilityEffectRemove(active.id, fx.id as number)}
+                                            className="text-[9px] text-game-pink/50 hover:text-game-pink px-1.5 py-0.5 rounded border border-transparent hover:border-game-pink/30 transition-colors justify-self-end"
+                                          >
+                                            ✕
+                                          </button>
+                                        </div>
+                                      )}
+                                      onAdd={() => handleAbilityEffectAdd(active.id)}
+                                      onRemove={(id) => handleAbilityEffectRemove(active.id, id as number)}
+                                      containerClassName="space-y-3"
+                                      addButtonLabel="+ Add Effect"
+                                      addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-teal/40 text-game-teal/70 hover:border-game-teal hover:text-game-teal transition-colors"
+                                    />
+                                    {active.effects.length > 0 && (
+                                      <div className="text-[8px] text-game-white/25 flex gap-4">
+                                        <span>∞ = unlimited charges</span>
+                                        <span>inst = instant (no duration)</span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="grid grid-cols-3 gap-3 text-[10px]">
                                     <label className="flex flex-col gap-1">
                                       <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Element</span>
                                       <select
@@ -2894,17 +3444,465 @@ export default function App() {
                                         className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                                       />
                                     </label>
+                                    <label className="flex flex-col gap-1">
+                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight">Equip Cost</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={active.equipCost}
+                                        onChange={(event) => handleAbilityChange(active.id, 'equipCost', Math.max(0, Number(event.target.value) || 0))}
+                                        className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                      />
+                                    </label>
                                   </div>
                                 </div>
                               </div>
                             );
                           })()}
                           <div className="text-[9px] text-game-white/60">
-                            {abilityEditorMessage ?? 'Edit ability metadata and save to update keruAspects.json.'}
+                            {abilityEditorMessage ?? 'Edit ability metadata and save to update abilities.json.'}
                           </div>
                         </div>
                     </div>
                   )}
+
+                  {/* ─────────────────────────────────────────────────────────────────── */}
+                  {/* Orims Editor */}
+                  {/* ─────────────────────────────────────────────────────────────────── */}
+                  {toolingTab === 'orim' && (
+                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4 min-h-full">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Orim Editor</div>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                        <input
+                          value={orimSearch}
+                          onChange={(event) => setOrimSearch(event.target.value)}
+                          onFocus={() => setOrimSearch('')}
+                          placeholder="Search orims"
+                          className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddOrim}
+                          className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
+                        >
+                          Add Orim
+                        </button>
+                      </div>
+                      <div className="space-y-3 h-full">
+                        {(() => {
+                          const term = orimSearch.trim().toLowerCase();
+                          const filteredOrims = orimDrafts.filter((entry) => {
+                            const haystack = `${entry.id} ${entry.name} ${entry.description}`.toLowerCase();
+                            return term === '' || haystack.includes(term);
+                          });
+                          const active = orimDrafts.find((entry) => entry.id === selectedOrimId) ?? orimDrafts[0];
+                          if (!active) {
+                            return <div className="text-[10px] text-game-white/60">No orims available.</div>;
+                          }
+                          return (
+                            <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 min-h-[400px]">
+                              <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border-r border-game-teal/20">
+                                {filteredOrims.map((entry) => (
+                                  <button
+                                    key={entry.id}
+                                    type="button"
+                                    onClick={() => setSelectedOrimId(entry.id)}
+                                    className={`w-full text-left px-3 py-2 rounded border text-[10px] transition-all ${
+                                      active.id === entry.id
+                                        ? 'border-game-gold text-game-gold bg-game-gold/10 shadow-[inset_0_0_12px_rgba(230,179,30,0.1)]'
+                                        : 'border-game-teal/20 text-game-white/60 hover:border-game-teal/50 hover:text-game-white hover:bg-white/5'
+                                    }`}
+                                  >
+                                    <div className="font-bold uppercase tracking-wider truncate">{active.id === entry.id ? '⊙ ' : ''}{entry.name || entry.id || 'Unnamed Orim'}</div>
+                                    <div className="text-[10px] opacity-40 truncate font-mono mt-0.5">{entry.id}</div>
+                                  </button>
+                                ))}
+                                {filteredOrims.length === 0 && (
+                                  <div className="text-[10px] text-game-white/40 italic p-2">No matches found.</div>
+                                )}
+                              </div>
+
+                              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                                <div className="flex items-center justify-between text-[10px] text-game-white/70 bg-game-teal/5 p-2 rounded border border-game-teal/20">
+                                  <span className="font-bold tracking-widest uppercase">Editing: <span className="text-game-teal">{active.id}</span></span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveOrim(active.id)}
+                                    className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40 hover:bg-game-pink/10 transition-colors"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+
+                                <div className="space-y-4 text-[10px]">
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Orim Name</span>
+                                    <input
+                                      value={active.name}
+                                      onChange={(event) => handleOrimChange(active.id, 'name', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    />
+                                  </label>
+
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Description</span>
+                                    <textarea
+                                      value={active.description}
+                                      onChange={(event) => handleOrimChange(active.id, 'description', event.target.value)}
+                                      rows={4}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded resize-none text-[10px] text-game-white outline-none focus:border-game-gold custom-scrollbar"
+                                    />
+                                  </label>
+
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Element</span>
+                                    <select
+                                      value={active.element}
+                                      onChange={(event) => handleOrimChange(active.id, 'element', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    >
+                                      {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
+                                        <option key={element} value={element}>{element}</option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  {/* ── Effects ─────────────────────────────── */}
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight text-[10px]">Effects</span>
+                                    </div>
+                                    <RowManager
+                                      rows={active.effects.map((fx, i) => ({ ...fx, id: i }))}
+                                      renderHeader={() => (
+                                        <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10">
+                                          <span>Type</span>
+                                          <span>Value</span>
+                                          <span>Target</span>
+                                          <span>Charges</span>
+                                          <span>Duration</span>
+                                          <span>Element</span>
+                                          <span>Elem Value</span>
+                                          <span />
+                                        </div>
+                                      )}
+                                      renderEmpty={() => (
+                                        <div className="text-[9px] text-game-white/30 italic">No effects. Click + Add Effect to begin.</div>
+                                      )}
+                                      renderRow={(fx) => (
+                                        <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5">
+                                          <select
+                                            value={fx.type}
+                                            onChange={(e) => handleOrimEffectChange(active.id, fx.id as number, 'type', e.target.value)}
+                                            className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                          >
+                                            {ABILITY_EFFECT_TYPES.map((t) => (
+                                              <option key={t} value={t}>{t}</option>
+                                            ))}
+                                          </select>
+                                          <input
+                                            type="number"
+                                            value={fx.value}
+                                            min={0}
+                                            onChange={(e) => handleOrimEffectChange(active.id, fx.id as number, 'value', e.target.value)}
+                                            className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                          />
+                                          <select
+                                            value={fx.target}
+                                            onChange={(e) => handleOrimEffectChange(active.id, fx.id as number, 'target', e.target.value)}
+                                            className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                          >
+                                            {(['self', 'enemy', 'all_enemies', 'ally'] as AbilityEffectTarget[]).map((t) => (
+                                              <option key={t} value={t}>{t}</option>
+                                            ))}
+                                          </select>
+                                          <input
+                                            type="number"
+                                            value={fx.charges ?? ''}
+                                            min={1}
+                                            onChange={(e) => handleOrimEffectChange(active.id, fx.id as number, 'charges', e.target.value)}
+                                            className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                            placeholder="∞"
+                                          />
+                                          <input
+                                            type="number"
+                                            value={fx.duration ?? ''}
+                                            min={1}
+                                            onChange={(e) => handleOrimEffectChange(active.id, fx.id as number, 'duration', e.target.value)}
+                                            className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                            placeholder="inst"
+                                          />
+                                          <select
+                                            value={fx.element ?? 'N'}
+                                            onChange={(e) => handleOrimEffectChange(active.id, fx.id as number, 'element', e.target.value)}
+                                            className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                          >
+                                            {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
+                                              <option key={element} value={element}>{element}</option>
+                                            ))}
+                                          </select>
+                                          <input
+                                            type="number"
+                                            value={fx.elementalValue ?? ''}
+                                            min={0}
+                                            onChange={(e) => handleOrimEffectChange(active.id, fx.id as number, 'elementalValue', e.target.value)}
+                                            className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOrimEffectRemove(active.id, fx.id as number)}
+                                            className="text-[9px] text-game-pink/50 hover:text-game-pink px-1.5 py-0.5 rounded border border-transparent hover:border-game-pink/30 transition-colors justify-self-end"
+                                          >
+                                            ✕
+                                          </button>
+                                        </div>
+                                      )}
+                                      onAdd={() => handleOrimEffectAdd(active.id)}
+                                      onRemove={(id) => handleOrimEffectRemove(active.id, id as number)}
+                                      containerClassName="space-y-3"
+                                      addButtonLabel="+ Add Effect"
+                                      addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-teal/40 text-game-teal/70 hover:border-game-teal hover:text-game-teal transition-colors"
+                                    />
+                                    {active.effects.length > 0 && (
+                                      <div className="text-[8px] text-game-white/25 flex gap-4">
+                                        <span>∞ = unlimited charges</span>
+                                        <span>inst = instant (no duration)</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="text-[9px] text-game-white/60">
+                                  {orimEditorMessage ?? 'Edit orim metadata and save to update orims.json.'}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─────────────────────────────────────────────────────────────────── */}
+                  {/* Synergies Playground */}
+                  {/* ─────────────────────────────────────────────────────────────────── */}
+                  {toolingTab === 'synergies' && (
+                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4 min-h-full">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Synergy Playground</div>
+
+                      {/* Selectors */}
+                      <div className="grid grid-cols-2 gap-4 text-[10px]">
+                        <label className="flex flex-col gap-1.5">
+                          <span className="text-game-teal/70 font-bold uppercase tracking-tight">Select Ability</span>
+                          <select
+                            value={selectedSynergyAbilityId ?? ''}
+                            onChange={(e) => setSelectedSynergyAbilityId(e.target.value || null)}
+                            className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                          >
+                            <option value="">-- Choose Ability --</option>
+                            {abilityDrafts.map((ability) => (
+                              <option key={ability.id} value={ability.id}>
+                                {ability.name || ability.id}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="flex flex-col gap-1.5">
+                          <span className="text-game-teal/70 font-bold uppercase tracking-tight">Select Orim</span>
+                          <select
+                            value={selectedSynergyOrimId ?? ''}
+                            onChange={(e) => setSelectedSynergyOrimId(e.target.value || null)}
+                            className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                          >
+                            <option value="">-- Choose Orim --</option>
+                            {orimDrafts.map((orim) => (
+                              <option key={orim.id} value={orim.id}>
+                                {orim.name || orim.id}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      {/* Action Button */}
+                      {selectedSynergyAbilityId && selectedSynergyOrimId && (
+                        <button
+                          type="button"
+                          onClick={() => handleCreateSynergy(selectedSynergyAbilityId!, selectedSynergyOrimId!)}
+                          disabled={synergies.some((s) => s.abilityId === selectedSynergyAbilityId && s.orimId === selectedSynergyOrimId)}
+                          className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:border-game-teal enabled:hover:text-game-teal transition-colors"
+                        >
+                          {synergies.some((s) => s.abilityId === selectedSynergyAbilityId && s.orimId === selectedSynergyOrimId)
+                            ? 'Synergy Exists'
+                            : 'Create Synergy'}
+                        </button>
+                      )}
+
+                      {/* Synergy List and Editor */}
+                      <div className="space-y-4">
+                        {synergies.length === 0 ? (
+                          <div className="text-[10px] text-game-white/40 italic p-4 border border-game-teal/20 rounded">
+                            No synergies created yet. Select an ability and orim above to create one.
+                          </div>
+                        ) : (
+                          synergies.map((synergy) => {
+                            const ability = abilityDrafts.find((a) => a.id === synergy.abilityId);
+                            const orim = orimDrafts.find((o) => o.id === synergy.orimId);
+                            if (!ability || !orim) return null;
+
+                            return (
+                              <div key={synergy.id} className="p-5 rounded-2xl border border-game-teal/30 bg-game-bg-dark/40 space-y-4">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="text-[10px] text-game-teal/60 font-mono mb-1">
+                                      {ability.name} + {orim.name}
+                                    </div>
+                                    <label className="flex flex-col gap-1">
+                                      <span className="text-[10px] text-game-teal/70 font-bold uppercase tracking-tight">Synergized Name</span>
+                                      <input
+                                        value={synergy.synergizedName}
+                                        onChange={(e) => handleSynergyChange(synergy.id, 'synergizedName', e.target.value)}
+                                        className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                      />
+                                    </label>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSynergy(synergy.id)}
+                                    className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40 hover:bg-game-pink/10 transition-colors whitespace-nowrap ml-3"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+
+                                <label className="flex flex-col gap-1">
+                                  <span className="text-[10px] text-game-teal/70 font-bold uppercase tracking-tight">Description</span>
+                                  <textarea
+                                    value={synergy.description}
+                                    onChange={(e) => handleSynergyChange(synergy.id, 'description', e.target.value)}
+                                    rows={2}
+                                    className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded resize-none text-[10px] text-game-white outline-none focus:border-game-gold custom-scrollbar"
+                                  />
+                                </label>
+
+                                {/* Additional Effects */}
+                                <div className="flex flex-col gap-2">
+                                  <span className="text-[10px] text-game-teal/70 font-bold uppercase tracking-tight">Additional Effects</span>
+                                  <RowManager
+                                    rows={synergy.additionalEffects.map((fx, i) => ({ ...fx, id: i }))}
+                                    renderHeader={() => (
+                                      <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10">
+                                        <span>Type</span>
+                                        <span>Value</span>
+                                        <span>Target</span>
+                                        <span>Charges</span>
+                                        <span>Duration</span>
+                                        <span>Element</span>
+                                        <span>Elem Value</span>
+                                        <span />
+                                      </div>
+                                    )}
+                                    renderEmpty={() => (
+                                      <div className="text-[9px] text-game-white/30 italic">Base ability + orim effects stack additively. Add extra effects here.</div>
+                                    )}
+                                    renderRow={(fx) => (
+                                      <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5">
+                                        <select
+                                          value={fx.type}
+                                          onChange={(e) => handleSynergyEffectChange(synergy.id, fx.id as number, 'type', e.target.value)}
+                                          className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                        >
+                                          {ABILITY_EFFECT_TYPES.map((t) => (
+                                            <option key={t} value={t}>{t}</option>
+                                          ))}
+                                        </select>
+                                        <input
+                                          type="number"
+                                          value={fx.value}
+                                          min={0}
+                                          onChange={(e) => handleSynergyEffectChange(synergy.id, fx.id as number, 'value', e.target.value)}
+                                          className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                        />
+                                        <select
+                                          value={fx.target}
+                                          onChange={(e) => handleSynergyEffectChange(synergy.id, fx.id as number, 'target', e.target.value)}
+                                          className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                        >
+                                          {(['self', 'enemy', 'all_enemies', 'ally'] as AbilityEffectTarget[]).map((t) => (
+                                            <option key={t} value={t}>{t}</option>
+                                          ))}
+                                        </select>
+                                        <input
+                                          type="number"
+                                          value={fx.charges ?? ''}
+                                          min={1}
+                                          onChange={(e) => handleSynergyEffectChange(synergy.id, fx.id as number, 'charges', e.target.value)}
+                                          className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                          placeholder="∞"
+                                        />
+                                        <input
+                                          type="number"
+                                          value={fx.duration ?? ''}
+                                          min={1}
+                                          onChange={(e) => handleSynergyEffectChange(synergy.id, fx.id as number, 'duration', e.target.value)}
+                                          className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                          placeholder="inst"
+                                        />
+                                        <select
+                                          value={fx.element ?? 'N'}
+                                          onChange={(e) => handleSynergyEffectChange(synergy.id, fx.id as number, 'element', e.target.value)}
+                                          className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                        >
+                                          {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
+                                            <option key={element} value={element}>{element}</option>
+                                          ))}
+                                        </select>
+                                        <input
+                                          type="number"
+                                          value={fx.elementalValue ?? ''}
+                                          min={0}
+                                          onChange={(e) => handleSynergyEffectChange(synergy.id, fx.id as number, 'elementalValue', e.target.value)}
+                                          className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSynergyEffectRemove(synergy.id, fx.id as number)}
+                                          className="text-[9px] text-game-pink/50 hover:text-game-pink px-1.5 py-0.5 rounded border border-transparent hover:border-game-pink/30 transition-colors justify-self-end"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    )}
+                                    onAdd={() => handleSynergyEffectAdd(synergy.id)}
+                                    onRemove={(id) => handleSynergyEffectRemove(synergy.id, id as number)}
+                                    containerClassName="space-y-3"
+                                    addButtonLabel="+ Add Effect"
+                                    addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-teal/40 text-game-teal/70 hover:border-game-teal hover:text-game-teal transition-colors"
+                                  />
+                                </div>
+
+                                {/* Built Status */}
+                                <label className="flex items-center gap-2 text-[10px] cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={synergy.isBuilt}
+                                    onChange={(e) => handleSynergyChange(synergy.id, 'isBuilt', e.target.checked)}
+                                    className="accent-game-teal"
+                                  />
+                                  <span className="text-game-teal/70 font-bold uppercase tracking-tight">Mark as Built (Dev Burndown)</span>
+                                </label>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      <div className="text-[9px] text-game-white/60">
+                        {synergyEditorMessage ?? 'Author ability + orim synergies here. Base effects stack additively.'}
+                      </div>
+                    </div>
+                  )}
+
                   {toolingTab === 'aspects' && (
                     <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4 min-h-full">
                       <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Aspect Editor</div>
@@ -2924,7 +3922,7 @@ export default function App() {
                         </button>
                       </div>
                       <div className="grid grid-cols-[275px_minmax(0,1fr)] gap-4 h-full">
-                        <div className="space-y-3 h-full overflow-visible">
+                        <div className="space-y-3 h-full overflow-visible flex flex-col">
                           {aspectProfiles
                             .filter((entry) => {
                               const haystack = `${entry.name} ${entry.archetype}`.toLowerCase();
@@ -2964,7 +3962,7 @@ export default function App() {
                             return (
                               <div className="flex justify-center">
                                 <div
-                                  className="w-[280px] aspect-[5/7] rounded-[18px] border border-game-teal/50 shadow-[0_0_30px_rgba(0,0,0,0.45)] overflow-hidden flex flex-col"
+                                  className="w-full max-w-[320px] aspect-[5/7] rounded-[18px] border border-game-teal/50 shadow-[0_0_30px_rgba(0,0,0,0.45)] overflow-hidden flex flex-col"
                                   style={{
                                     background: 'linear-gradient(180deg, rgba(6,8,14,0.9) 0%, rgba(5,6,12,0.95) 65%, rgba(0,0,0,0.95) 100%)',
                                   }}
@@ -3249,8 +4247,19 @@ export default function App() {
               />
             )}
 
-            {/* Biome screen */}
-            {gameState.phase === 'biome' && (
+            {/* Biome screen — event encounters */}
+            {gameState.phase === 'biome' && isEventBiome && (
+              <EventEncounter
+                gameState={gameState}
+                actions={{
+                  puzzleCompleted: actions.puzzleCompleted,
+                  completeBiome: actions.completeBiome,
+                }}
+              />
+            )}
+
+            {/* Biome screen — combat (CombatGolf) */}
+            {gameState.phase === 'biome' && !isEventBiome && (
               <CombatGolf
                 gameState={gameState}
                 selectedCard={selectedCard}
@@ -3304,7 +4313,6 @@ export default function App() {
                   setHidePauseOverlay(false);
                   setIsGamePaused((prev) => !prev);
                 }}
-                poiRewardOverrides={poiRewardOverrides}
                 wildAnalysis={analysis.wild}
                 actions={{
                   selectCard: actions.selectCard,
@@ -3330,6 +4338,7 @@ export default function App() {
                   setBiomeTableaus: actions.setBiomeTableaus,
                   addRpgHandCard: actions.addRpgHandCard,
                   applyKeruArchetype: actions.applyKeruArchetype,
+                  puzzleCompleted: actions.puzzleCompleted,
                 }}
                 explorationStepRef={explorationStepRef}
                 narrativeOpen={narrativeOpen}

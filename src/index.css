@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Dark scrollbar for editor panels ── */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(127, 219, 202, 0.18) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(127, 219, 202, 0.18);
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(127, 219, 202, 0.35);
+}
+
 @property --rotateY {
   syntax: "<number>";
   inherits: true;

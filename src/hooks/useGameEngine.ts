@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import type { GameState, SelectedCard, Move, EffectType, Element, Token, Card, Actor, RelicCombatEvent } from '../engine/types';
+import type { GameState, SelectedCard, Move, EffectType, Element, Token, Card, Actor, RelicCombatEvent, PuzzleCompletedPayload } from '../engine/types';
 import {
   initializeGame,
   playCard,
@@ -68,6 +68,7 @@ import {
   updateEquippedRelics as updateEquippedRelicsFn,
   processRelicCombatEvent as processRelicCombatEventFn,
   applyKeruArchetype as applyKeruArchetypeFn,
+  puzzleCompleted as puzzleCompletedFn,
 } from '../engine/game';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { findBestMoveSequence, solveOptimally } from '../engine/guidance';
@@ -1034,6 +1035,11 @@ export function useGameEngine(
     return true;
   }, [gameState]);
 
+  const puzzleCompleted = useCallback((payload?: PuzzleCompletedPayload | null) => {
+    if (!gameState) return;
+    setGameState(puzzleCompletedFn(gameState, payload));
+  }, [gameState]);
+
   const setEnemyDifficulty = useCallback((difficulty: GameState['enemyDifficulty']) => {
     setGameState((prev) => (prev ? { ...prev, enemyDifficulty: difficulty } : prev));
   }, []);
@@ -1131,6 +1137,7 @@ export function useGameEngine(
       updateEquippedRelics,
       processRelicCombatEvent,
       applyKeruArchetype,
+      puzzleCompleted,
       setEnemyDifficulty,
       toggleGraphics,
     },

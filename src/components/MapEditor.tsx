@@ -1,7 +1,7 @@
 // src/components/MapEditor.tsx
 import { memo, useState, useMemo } from 'react';
 import { mainWorldMap } from '../data/worldMap';
-import type { WorldMapCell, PointOfInterest } from '../engine/worldMapTypes';
+import type { WorldMapCell } from '../engine/worldMapTypes';
 import { ExplorationMap, type ExplorationMapNode } from './ExplorationMap';
 import type { Direction } from './Compass';
 
@@ -21,11 +21,6 @@ export const MapEditor = memo(function MapEditor({
   const [activeTool, setActiveTool] = useState<'select' | 'poi' | 'paintbrush'>('select');
   const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
 
-  const pointsOfInterestMap = useMemo(() => 
-    new Map(worldMap.pointsOfInterest.map(poi => [poi.id, poi])), 
-    [worldMap.pointsOfInterest]
-  );
-  
   const mapNodes = useMemo<ExplorationMapNode[]>(() => {
     return worldMap.cells.map(cell => {
       return {
@@ -45,7 +40,7 @@ export const MapEditor = memo(function MapEditor({
     return worldMap.cells.find(c => c.gridPosition.col === col && c.gridPosition.row === row) ?? null;
   }, [selectedCellId, worldMap.cells]);
 
-  const selectedPoi = selectedCell ? pointsOfInterestMap.get(selectedCell.poiId) : null;
+  const selectedPoi = selectedCell?.poi ?? null;
 
   return (
     <div className="w-full h-full flex flex-col bg-game-bg-dark/80 text-game-white">

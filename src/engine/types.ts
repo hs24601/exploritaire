@@ -1,4 +1,5 @@
 import type { WatercolorConfig } from '../watercolor/types';
+import type { PoiReward } from './worldMapTypes';
 
 export type Suit = '💨' | '⛰️' | '🔥' | '💧' | '⭐' | '🌙' | '☀️';
 
@@ -16,17 +17,34 @@ export type OrimRarity =
 
 export type OrimDomain = 'puzzle' | 'combat';
 
+/**
+ * Orim effect definition — used by orims to add damage components and other effects.
+ * This is the engine-level representation of authored effects.
+ */
+export interface OrimEffectDef {
+  type: 'damage' | 'healing' | 'armor' | 'evasion' | 'defense' | 'burn' | 'bleed' | 'stun';
+  value?: number;
+  target: 'self' | 'enemy' | 'all_enemies' | 'ally';
+  element?: Element;
+  elementalValue?: number;
+  charges?: number;
+  duration?: number;
+}
+
 export interface OrimDefinition {
   id: string;
   name: string;
-  description?: string;
+  description: string;
+  element: Element;
+  effects?: OrimEffectDef[];
+  // Legacy fields below — kept for backwards compatibility, will be deprecated
   artSrc?: string;
-  category: OrimCategory;
-  domain: OrimDomain;
-  rarity: OrimRarity;
-  powerCost: number;
-  grantsWild?: boolean; // Wild placement effect
-  damage?: number; // Basic effect placeholder
+  category?: OrimCategory;
+  domain?: OrimDomain;
+  rarity?: OrimRarity;
+  powerCost?: number;
+  grantsWild?: boolean;
+  damage?: number;
   affinity?: Partial<Record<Element, number>>;
   activationCondition?: TriggerGroup;
   activationTiming?: TriggerTiming[];
@@ -129,13 +147,16 @@ export interface Actor {
   energyMax: number; // Max energy pips
   hp: number; // Current health
   hpMax: number; // Max health
-  armor?: number; // Flat incoming damage reduction
+  armor?: number;      // Temporary absorber: depletes when hit; overflow damages HP
+  superArmor?: number; // Temporary block: absorbs entire hit and nullifies overflow when broken
+  defense?: number;    // Permanent flat damage reduction (applied before armor)
   evasion?: number; // Chance to avoid incoming hits
   accuracy?: number; // Chance to land outgoing hits
   damageTaken?: number; // Damage taken this bout
   power: number; // Current power usage
   powerMax: number; // Max power capacity
   orimSlots: OrimSlot[]; // Actor-level ORIM slots
+  element?: Element; // Elemental vulnerability for damage calculations
   gridPosition?: GridPosition; // Position in garden grid (available actors only)
   homeTileId?: string; // ID of tile where this actor is homed
   stackId?: string; // Stack identifier for grouped actors
@@ -165,6 +186,17 @@ export interface RpgDotEffect {
   effectKind?: 'vice_grip' | 'bleed';
 }
 
+/**
+ * Result of an attack resolution (hit, graze, or miss).
+ * Used for combat callouts and UI feedback.
+ */
+export interface HitResult {
+  actor: Actor; // Resulting actor state after damage
+  hitType: 'hit' | 'graze' | 'miss';
+  damageDealt: number;
+  damageTaken?: number; // Original damage before multiplier (for graze calculation display)
+}
+
 export type ActorKeruArchetype = 'blank' | 'lupus' | 'ursus' | 'felis';
 
 export interface ActorKeru {
@@ -186,6 +218,28 @@ export interface ActorKeru {
   selectedAspectIds: string[];
   mutationCount: number;
   lastMutationAt?: number;
+}
+
+export type RewardSource = 'poi' | 'random' | 'script' | 'unknown' | 'event';
+
+export interface PuzzleCompletedPayload {
+  coord?: { x: number; y: number } | null;
+  poiId?: string | null;
+  tableauId?: string | null;
+  source?: RewardSource;
+  seed?: number | null;
+  /** Direct rewards for event encounters — bypasses world map POI lookup. */
+  rewards?: PoiReward[];
+}
+
+export interface RewardBundle {
+  id: string;
+  source: RewardSource;
+  coord?: { x: number; y: number } | null;
+  poiId?: string | null;
+  tableauId?: string | null;
+  createdAt: number;
+  rewards: PoiReward[];
 }
 
 export interface GameState {
@@ -247,6 +301,8 @@ export interface GameState {
   rpgBlindedEnemyUntil?: number;
   playtestVariant?: 'single-foundation' | 'party-foundations' | 'party-battle' | 'rpg';
   actorKeru?: ActorKeru;
+  rewardQueue?: RewardBundle[];
+  rewardHistory?: RewardBundle[];
 }
 
 export interface Move {
@@ -453,12 +509,22 @@ export interface BiomeBlueprintSpawn {
   afterMoves: number; // Spawn after N moves
 }
 
+// A single choice presented to the player at the end of an event encounter
+export interface EventChoice {
+  id: string;
+  label: string;
+  description: string;
+  rewards: PoiReward[];
+}
+
 // Biome definition
 export interface BiomeDefinition {
   id: string;
   name: string;
   description: string;
   seed: string; // Deterministic seed for RNG
+  /** 'combat' = CombatGolf (default). 'event' = EventEncounter (peaceful, choice-based). */
+  biomeType?: 'combat' | 'event';
   mode?: 'traditional' | 'node-edge'; // Defaults to 'traditional'
   randomlyGenerated?: boolean; // Random tableau generation each turn
   infinite?: boolean; // Tableaus backfill with new random cards when cards are removed
@@ -468,6 +534,8 @@ export interface BiomeDefinition {
   rewards: BiomeReward;
   blueprintSpawn?: BiomeBlueprintSpawn;
   requiredMoves: number; // Total moves to complete
+  /** Player choices shown after the event tableau. Only used when biomeType === 'event'. */
+  eventChoices?: EventChoice[];
 }
 
 // === NODE-EDGE TABLEAU SYSTEM ===

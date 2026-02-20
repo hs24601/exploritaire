@@ -61,7 +61,7 @@ export const PerspectiveTableauGroup = memo(function PerspectiveTableauGroup({
 
       <style>{`
         .perspective-group-container {
-          padding: 2em;
+          padding: 0;
           perspective: 2000px;
           display: flex;
           justify-content: center;
@@ -78,7 +78,7 @@ export const PerspectiveTableauGroup = memo(function PerspectiveTableauGroup({
           border: 1px solid rgba(213, 220, 226, 0.4);
           border-bottom-color: rgba(184, 194, 204, 0.5);
           transition: box-shadow 1.2s ease;
-          padding: 2rem;
+          padding: 10px;
           background: rgba(10, 15, 20, 0.4);
           backdrop-filter: blur(4px);
           display: flex;

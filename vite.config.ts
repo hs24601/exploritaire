@@ -2,72 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
-
-const resolvePoiOverridePath = () => path.resolve(process.cwd(), 'src/data/poiRewardOverrides.json');
-
-const attachPoiEditorRoutes = (middlewares: any) => {
-  middlewares.use('/__poi-editor/overrides', (req, res) => {
-    if (req.method !== 'GET') {
-      res.statusCode = 405;
-      res.end('Method Not Allowed');
-      return;
-    }
-    try {
-      const filePath = resolvePoiOverridePath();
-      if (!fs.existsSync(filePath)) {
-        res.setHeader('Content-Type', 'application/json');
-        res.end('{}');
-        return;
-      }
-      const contents = fs.readFileSync(filePath, 'utf8');
-      res.setHeader('Content-Type', 'application/json');
-      res.end(contents);
-    } catch (err) {
-      res.statusCode = 500;
-      res.end('Unable to load overrides');
-    }
-  });
-  middlewares.use('/__poi-editor/save', (req, res) => {
-    if (req.method !== 'POST') {
-      res.statusCode = 405;
-      res.end('Method Not Allowed');
-      return;
-    }
-    let body = '';
-    req.on('data', (chunk) => {
-      body += chunk;
-    });
-    req.on('end', () => {
-      try {
-        const parsed = JSON.parse(body);
-        if (typeof parsed.key !== 'string' || !Array.isArray(parsed.rewards)) {
-          res.statusCode = 400;
-          res.end('Invalid payload');
-          return;
-        }
-        const filePath = resolvePoiOverridePath();
-        const existing = fs.existsSync(filePath)
-          ? JSON.parse(fs.readFileSync(filePath, 'utf8'))
-          : {};
-        const nextEntry: Record<string, unknown> = { rewards: parsed.rewards };
-        if (parsed.narration) {
-          nextEntry.narration = parsed.narration;
-        }
-        if (parsed.sparkle) {
-          nextEntry.sparkle = parsed.sparkle;
-        }
-        existing[parsed.key] = nextEntry;
-        fs.writeFileSync(filePath, JSON.stringify(existing, null, 2), 'utf8');
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify(existing));
-      } catch (err) {
-        res.statusCode = 400;
-        res.end('Write failed');
-      }
-    });
-  });
-};
-
 export default defineConfig({
   server: {
     host: '0.0.0.0',
@@ -77,7 +11,6 @@ export default defineConfig({
     {
       name: 'light-blocker-save',
       configureServer(server) {
-        attachPoiEditorRoutes(server.middlewares);
         server.middlewares.use('/__light-patterns/save', (req, res, next) => {
           if (req.method !== 'POST') {
             res.statusCode = 405;
@@ -153,7 +86,7 @@ export default defineConfig({
             return;
           }
           try {
-            const filePath = path.resolve(__dirname, 'src/data/keruAspects.json');
+            const filePath = path.resolve(__dirname, 'src/data/aspects.json');
             if (!fs.existsSync(filePath)) {
               res.setHeader('Content-Type', 'application/json');
               res.end('{"aspects": []}');
@@ -185,7 +118,158 @@ export default defineConfig({
                 res.end('Invalid payload');
                 return;
               }
-              const filePath = path.resolve(__dirname, 'src/data/keruAspects.json');
+              const filePath = path.resolve(__dirname, 'src/data/aspects.json');
+              fs.writeFileSync(filePath, JSON.stringify(parsed, null, 2), 'utf8');
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(parsed));
+            } catch (err) {
+              res.statusCode = 400;
+              res.end('Write failed');
+            }
+          });
+        });
+        server.middlewares.use('/__abilities/overrides', (req, res) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          try {
+            const filePath = path.resolve(__dirname, 'src/data/abilities.json');
+            if (!fs.existsSync(filePath)) {
+              res.setHeader('Content-Type', 'application/json');
+              res.end('{"abilities": []}');
+              return;
+            }
+            const contents = fs.readFileSync(filePath, 'utf8');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(contents);
+          } catch (err) {
+            res.statusCode = 500;
+            res.end('Unable to load abilities');
+          }
+        });
+        server.middlewares.use('/__abilities/save', (req, res) => {
+          if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const parsed = JSON.parse(body);
+              if (!parsed || !Array.isArray(parsed.abilities)) {
+                res.statusCode = 400;
+                res.end('Invalid payload');
+                return;
+              }
+              const filePath = path.resolve(__dirname, 'src/data/abilities.json');
+              fs.writeFileSync(filePath, JSON.stringify(parsed, null, 2), 'utf8');
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(parsed));
+            } catch (err) {
+              res.statusCode = 400;
+              res.end('Write failed');
+            }
+          });
+        });
+        server.middlewares.use('/__orims/overrides', (req, res) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          try {
+            const filePath = path.resolve(__dirname, 'src/data/orims.json');
+            if (!fs.existsSync(filePath)) {
+              res.setHeader('Content-Type', 'application/json');
+              res.end('{"orims": []}');
+              return;
+            }
+            const contents = fs.readFileSync(filePath, 'utf8');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(contents);
+          } catch (err) {
+            res.statusCode = 500;
+            res.end('Unable to load orims');
+          }
+        });
+        server.middlewares.use('/__orims/save', (req, res) => {
+          if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const parsed = JSON.parse(body);
+              if (!parsed || !Array.isArray(parsed.orims)) {
+                res.statusCode = 400;
+                res.end('Invalid payload');
+                return;
+              }
+              const dataFilePath = path.resolve(__dirname, 'src/data/orims.json');
+              fs.writeFileSync(dataFilePath, JSON.stringify({ orims: parsed.orims }, null, 2), 'utf8');
+
+              const tsFilePath = path.resolve(__dirname, 'src/engine/orims.ts');
+              const tsContent = `import type { OrimDefinition } from './types';\n\n/**\n * Orim Definitions - Clean, minimal card modifications\n * Each orim has: id, name, description, element\n */\nexport const ORIM_DEFINITIONS: OrimDefinition[] = ${JSON.stringify(parsed.orims, null, 2)};\n\n/**\n * Get an orim definition by ID\n */\nexport function getOrimDefinition(orimId: string): OrimDefinition | null {\n  return ORIM_DEFINITIONS.find((o) => o.id === orimId) || null;\n}\n`;
+              fs.writeFileSync(tsFilePath, tsContent, 'utf8');
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(parsed));
+            } catch (err) {
+              res.statusCode = 400;
+              res.end('Write failed');
+            }
+          });
+        });
+        server.middlewares.use('/__synergies/overrides', (req, res) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          try {
+            const filePath = path.resolve(__dirname, 'src/data/synergies.json');
+            if (!fs.existsSync(filePath)) {
+              res.setHeader('Content-Type', 'application/json');
+              res.end('{"synergies": []}');
+              return;
+            }
+            const contents = fs.readFileSync(filePath, 'utf8');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(contents);
+          } catch (err) {
+            res.statusCode = 500;
+            res.end('Unable to load synergies');
+          }
+        });
+        server.middlewares.use('/__synergies/save', (req, res) => {
+          if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const parsed = JSON.parse(body);
+              if (!parsed || !Array.isArray(parsed.synergies)) {
+                res.statusCode = 400;
+                res.end('Invalid payload');
+                return;
+              }
+              const filePath = path.resolve(__dirname, 'src/data/synergies.json');
               fs.writeFileSync(filePath, JSON.stringify(parsed, null, 2), 'utf8');
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify(parsed));
@@ -278,10 +362,7 @@ export default defineConfig({
             }
           });
         });
-      },
-      configurePreviewServer(server) {
-        attachPoiEditorRoutes(server.middlewares);
-      },
+        },
     },
   ],
   resolve: {

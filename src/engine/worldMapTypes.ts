@@ -13,7 +13,7 @@ export interface PoiSparkleConfig {
 }
 
 export interface PointOfInterest {
-  id: string; // Unique ID, e.g., 'poi_start', 'poi_battle_1', 'poi_village_A'
+  id?: string;
   name: string;
   description: string;
   type: 'biome' | 'village' | 'shop' | 'empty';
@@ -24,9 +24,20 @@ export interface PointOfInterest {
   rewards?: PoiReward[];
   /** Optional sparkle configuration used by the exploration map lighting. */
   sparkle?: PoiSparkleConfig;
+  narration?: {
+    title?: string;
+    body?: string;
+    tone?: 'teal' | 'orange' | 'pink' | 'white';
+    autoCloseOnDeparture?: boolean;
+    completion?: {
+      title?: string;
+      body?: string;
+      tone?: 'teal' | 'orange' | 'pink' | 'white';
+    };
+  };
 }
 
-export type PoiRewardType = 'aspect-choice' | 'ability-choice' | 'aspect-jumbo';
+export type PoiRewardType = 'aspect-choice' | 'ability-choice' | 'aspect-jumbo' | 'card-choice' | 'orim-choice';
 
 export interface PoiReward {
   id?: string;
@@ -43,9 +54,9 @@ export interface PoiReward {
  */
 export interface WorldMapCell {
   gridPosition: { col: number; row: number };
-  /** The ID of the PointOfInterest at this location. */
-  poiId: string;
-  /** The difficulty of traversing this cell, influencing the challenge. */
+  /** Optional POI metadata for this cell. */
+  poi?: PointOfInterest;
+  /** Difficulty of traversing this cell. */
   traversalDifficulty: number;
 }
 
@@ -105,6 +116,6 @@ export interface WorldMapDefinition {
   conditionalEdges?: WorldMapConditionalEdge[];
   /** Optional on-rails path segment for tutorial movement. */
   tutorialRail?: WorldMapTutorialRail;
-  /** All the points of interest that can be referenced by cells. */
-  pointsOfInterest: PointOfInterest[];
+  /** (Legacy) points of interest registry. */
+  pointsOfInterest?: PointOfInterest[];
 }

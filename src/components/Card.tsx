@@ -14,6 +14,7 @@ import { getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../waterc
 import { getElementCardWatercolor } from '../watercolor/elementCardWatercolor';
 import type { WatercolorConfig } from '../watercolor/types';
 import aspectProfilesJson from '../data/aspectProfiles.json';
+import abilitiesJson from '../data/abilities.json';
 import { useHoloInteraction } from '../hooks/useHoloInteraction';
 import { RarityAura } from './RarityAura';
 
@@ -214,6 +215,40 @@ export const Card = memo(function Card({
       name: match.name ?? '',
       description: match.description ?? '',
       attributes,
+    };
+  }, [card]);
+  const keruAbilityProfile = useMemo(() => {
+    if (!card || !card.id.startsWith('ability-')) return null;
+    const key = card.id.replace('ability-', '').toLowerCase();
+    const abilities = (abilitiesJson as { abilities?: Array<{
+      id?: string;
+      aspectId?: string;
+      label?: string;
+      description?: string;
+      damage?: string;
+      cardId?: string;
+      abilityType?: string;
+      tags?: string[];
+      effects?: Array<{
+        type: string;
+        value: number;
+        target: string;
+        charges?: number;
+        duration?: number;
+      }>;
+    }> }).abilities ?? [];
+    const match = abilities.find((entry) => {
+      const cardIdKey = String(entry.cardId ?? '').replace('ability-', '').toLowerCase();
+      const id = String(entry.id ?? '').toLowerCase();
+      return id === key || cardIdKey === key;
+    }) ?? null;
+    if (!match) return null;
+    return {
+      label: match.label ?? '',
+      description: match.description ?? '',
+      damage: match.damage ?? '0',
+      tags: match.tags ?? [],
+      effects: match.effects ?? [],
     };
   }, [card]);
   const isUpgradedRpgCard = !!card && (
@@ -1063,7 +1098,164 @@ export const Card = memo(function Card({
                   <WatercolorOverlay config={valueWatercolorConfig} />
                 </div>
               )}
-              {keruAspectProfile ? (
+              {keruAbilityProfile ? (
+                <div className="relative z-[2] flex h-full w-full flex-col items-center text-center px-3 pt-0 pb-0 overflow-hidden">
+                  {/* 40% Header Section: Badge + Damage + Name */}
+                  <div style={{ height: `${frameSize.height * 0.4}px`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', width: '100%', paddingTop: Math.max(6, Math.round(frameSize.height * 0.02)), gap: Math.max(3, Math.round(frameSize.height * 0.015)) }}>
+                    <div
+                      style={{
+                        color: '#f7d24b',
+                        fontWeight: 700,
+                        fontSize: Math.max(6, Math.round(frameSize.width * 0.065)),
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        lineHeight: 1,
+                      }}
+                    >
+                      ABILITY
+                    </div>
+                    {(() => {
+                      const damageLabel = `PWR ${keruAbilityProfile.damage}`;
+                      const fontSize = Math.max(8, Math.round(frameSize.width * 0.095));
+                      return (
+                        <div
+                          style={{
+                            color: '#9de3ff',
+                            fontWeight: 700,
+                            fontSize,
+                            letterSpacing: '0.12em',
+                            textTransform: 'uppercase',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {damageLabel}
+                        </div>
+                      );
+                    })()}
+                    {(() => {
+                      const nameLabel = (keruAbilityProfile.label || 'Ability').toUpperCase();
+                      const baseNameSize = Math.round(frameSize.width * 0.105);
+                      const nameFontSize = Math.max(10, baseNameSize);
+                      return (
+                        <div
+                          style={{
+                            color: '#f8f8f8',
+                            fontWeight: 900,
+                            fontSize: nameFontSize,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            lineHeight: 1.2,
+                            maxWidth: '94%',
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {nameLabel}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* 35% Description Section */}
+                  <div style={{ height: `${frameSize.height * 0.35}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', overflow: 'hidden', paddingLeft: Math.max(5, Math.round(frameSize.width * 0.035)), paddingRight: Math.max(5, Math.round(frameSize.width * 0.035)), paddingTop: Math.max(3, Math.round(frameSize.height * 0.01)), paddingBottom: Math.max(3, Math.round(frameSize.height * 0.01)) }}>
+                    {(() => {
+                      const desc = keruAbilityProfile.description ?? '';
+                      const baseDescSize = Math.max(7, Math.round(frameSize.width * 0.06));
+                      const descFontSize = baseDescSize;
+                      return (
+                        <div
+                          style={{
+                            color: '#d9f9f3',
+                            fontSize: descFontSize,
+                            lineHeight: 1.38,
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {desc}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* 25% Chips / Effects Section — anchored to bottom */}
+                  <div style={{ height: `${frameSize.height * 0.25}px`, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', paddingBottom: Math.max(4, Math.round(frameSize.height * 0.02)), paddingTop: Math.max(2, Math.round(frameSize.height * 0.005)), overflow: 'hidden' }}>
+                    {keruAbilityProfile.effects.length > 0 ? (
+                      <div className="flex flex-col items-center justify-center gap-1 w-full overflow-hidden">
+                        {keruAbilityProfile.effects.map((fx, i) => {
+                          const chipFontSize = Math.max(6, Math.round(frameSize.width * 0.052));
+                          const chipPaddingX = Math.max(4, Math.round(frameSize.width * 0.03));
+                          const chipPaddingY = Math.max(2, Math.round(frameSize.height * 0.012));
+                          const effectColor: Record<string, string> = {
+                            damage: '#ff8a8a', burn: '#ff8a8a', bleed: '#ff8a8a',
+                            healing: '#7dffb3', defense: '#7dffb3',
+                            armor: '#00c8ff', super_armor: '#ffd23c',
+                            speed: '#9de3ff', evasion: '#9de3ff',
+                            stun: '#b8d8ff', freeze: '#b8d8ff',
+                            draw: '#f7d24b',
+                          };
+                          const color = effectColor[fx.type] ?? '#9de3ff';
+                          const targetLabel = fx.target.replace('_', ' ');
+                          const suffix = [
+                            fx.duration !== undefined ? `·${fx.duration}t` : '',
+                            fx.charges !== undefined ? `·${fx.charges}c` : '',
+                          ].filter(Boolean).join(' ');
+                          const label = `${fx.type.toUpperCase()} ${fx.value} → ${targetLabel.toUpperCase()}${suffix ? ` ${suffix}` : ''}`;
+                          return (
+                            <span
+                              key={`${card.id}-fx-${i}`}
+                              className="rounded border bg-game-bg-dark/80 uppercase tracking-[0.06em] whitespace-nowrap"
+                              style={{
+                                color,
+                                borderColor: `${color}60`,
+                                fontSize: chipFontSize,
+                                fontWeight: 600,
+                                paddingLeft: chipPaddingX,
+                                paddingRight: chipPaddingX,
+                                paddingTop: chipPaddingY,
+                                paddingBottom: chipPaddingY,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : keruAbilityProfile.tags.length > 0 ? (
+                      <div className="flex flex-wrap items-center justify-center gap-1.5">
+                        {keruAbilityProfile.tags.map((tag) => {
+                          const chipFontSize = Math.max(6, Math.round(frameSize.width * 0.055));
+                          const chipPaddingX = Math.max(5, Math.round(frameSize.width * 0.035));
+                          const chipPaddingY = Math.max(2, Math.round(frameSize.height * 0.015));
+                          return (
+                            <span
+                              key={`${card.id}-${tag}`}
+                              className="rounded border border-cyan-400/60 bg-game-bg-dark/80 uppercase tracking-[0.08em] whitespace-nowrap"
+                              style={{
+                                color: '#9de3ff',
+                                fontSize: chipFontSize,
+                                fontWeight: 600,
+                                paddingLeft: chipPaddingX,
+                                paddingRight: chipPaddingX,
+                                paddingTop: chipPaddingY,
+                                paddingBottom: chipPaddingY,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {tag}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : keruAspectProfile ? (
                 <div className="relative z-[2] flex h-full w-full flex-col items-center text-center px-3 pt-0 pb-2 overflow-hidden">
                   <div
                     style={{

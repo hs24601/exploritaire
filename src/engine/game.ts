@@ -1,4 +1,4 @@
-import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype } from './types';
+import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype, PuzzleCompletedPayload, RewardBundle, RewardSource, HitResult } from './types';
 import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, GARDEN_GRID, ALL_ELEMENTS, MAX_KARMA_DEALING_ATTEMPTS, TOKEN_PROXIMITY_THRESHOLD, randomIdSuffix, createFullWildSentinel } from './constants';
 import { createDeck, shuffleDeck } from './deck';
 import { canPlayCardWithWild, checkKarmaDealing } from './rules';
@@ -20,6 +20,7 @@ import { ORIM_DEFINITIONS } from './orims';
 import { RELIC_DEFINITIONS } from './relics';
 import { canActivateOrim } from './orimTriggers';
 import { applyOrimTiming, actorHasOrimDefinition } from './orimEffects';
+import { buildDamagePacket, resolvePacketTotal, collectCardOrimEffects } from './damagePacket';
 import {
   createInitialTiles,
   createTile,
@@ -33,6 +34,8 @@ import {
 } from './tiles';
 import { createInitialTokens, createToken } from './tokens';
 import { getBiomeDefinition } from './biomes';
+import type { PoiReward } from './worldMapTypes';
+import { mainWorldMap } from '../data/worldMap';
 // import { getNodePattern } from './nodePatterns'; // Deprecated
 // import { generateNodeTableau, playCardFromNode } from './nodeTableau'; // Deprecated
 
@@ -51,6 +54,7 @@ const RPG_CLOUD_SIGHT_MS = 10000;
 const RPG_SOAR_EVASION_BONUS = 75;
 const RPG_SOAR_EVASION_BASE_MS = 6000;
 const RPG_SOAR_EVASION_LEVEL_STEP_MS = 2000;
+const RPG_GRAZE_THRESHOLD = 20; // Percentage points above dodge boundary for glancing blows
 const ORIM_RARITY_ORDER: OrimRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
 const DEFAULT_ENEMY_FOUNDATION_SEEDS: Array<{ id: string; rank: number; suit: Suit; element: Element }> = [
   { id: 'enemy-shadow', rank: 12, suit: '🌙', element: 'D' },
@@ -765,6 +769,8 @@ export function initializeGame(
     currentLocationId: persisted?.currentLocationId ?? 'starting_area', // Initialize player's starting location
     facingDirection: persisted?.facingDirection ?? 'N', // Initialize player's facing direction
     actorKeru: normalizeKeru(persisted?.actorKeru),
+    rewardQueue: [],
+    rewardHistory: [],
   };
 
   if (!isFreshStart) return baseState;
@@ -790,6 +796,52 @@ export function initializeGame(
   };
 
   return startBiome(prequeuedState, randomWildsTile.id, 'random_wilds');
+}
+
+function resolvePuzzleRewards(payload?: PuzzleCompletedPayload | null): { rewards: PoiReward[]; source: RewardSource } {
+  if (!payload) {
+    return { rewards: [], source: 'unknown' };
+  }
+  // Event encounters pass rewards directly — skip world map lookup.
+  if (payload.rewards && payload.rewards.length > 0) {
+    return { rewards: payload.rewards, source: payload.source ?? 'event' };
+  }
+  const coord = payload.coord ?? null;
+  const poiId = payload.poiId ?? null;
+  let poi = null as { rewards?: PoiReward[] } | null;
+  if (poiId) {
+    poi = mainWorldMap.cells.map((cell) => cell.poi).find((entry) => entry?.id === poiId) ?? null;
+  }
+  if (!poi && coord) {
+    const cell = mainWorldMap.cells.find(
+      (entry) => entry.gridPosition.col === coord.x && entry.gridPosition.row === coord.y
+    );
+    poi = cell?.poi ?? null;
+  }
+  const rewards = poi?.rewards ?? [];
+  const source: RewardSource = payload.source ?? (rewards.length > 0 ? 'poi' : 'unknown');
+  return { rewards, source };
+}
+
+export function puzzleCompleted(state: GameState, payload?: PuzzleCompletedPayload | null): GameState {
+  const resolved = resolvePuzzleRewards(payload);
+  const createdAt = Date.now();
+  const bundle: RewardBundle = {
+    id: `reward-${createdAt}-${randomIdSuffix()}`,
+    source: resolved.source,
+    coord: payload?.coord ?? null,
+    poiId: payload?.poiId ?? null,
+    tableauId: payload?.tableauId ?? null,
+    createdAt,
+    rewards: resolved.rewards,
+  };
+  const rewardQueue = [...(state.rewardQueue ?? []), bundle];
+  const rewardHistory = [...(state.rewardHistory ?? []), bundle];
+  return {
+    ...state,
+    rewardQueue,
+    rewardHistory,
+  };
 }
 
 /**
@@ -1051,6 +1103,45 @@ function getRpcFamily(card: Card): RpcFamily | null {
   if (card.id.startsWith('rpg-bite-') || card.id.startsWith('rpg-vice-bite-')) return 'bite';
   if (card.id.startsWith('rpg-peck-') || card.id.startsWith('rpg-blinding-peck-')) return 'peck';
   return null;
+}
+
+/**
+ * Core damage resolution: applies defense → super armor → armor → HP in order.
+ * Does NOT handle hit/miss — call only after confirming the attack lands.
+ */
+function applyDamageToActor(actor: Actor, baseDamage: number): Actor {
+  if ((actor.hp ?? 0) <= 0) return actor;
+
+  // 1. Defense — permanent flat reduction
+  const def = actor.defense ?? 0;
+  let remaining = Math.max(0, baseDamage - def);
+  if (remaining <= 0) return actor;
+
+  let nextSuperArmor = actor.superArmor ?? 0;
+  let nextArmor = actor.armor ?? 0;
+
+  // 2. Super armor — absorbs entire hit; overflow is nullified (not passed to HP)
+  if (nextSuperArmor > 0) {
+    nextSuperArmor = Math.max(0, nextSuperArmor - remaining);
+    remaining = 0;
+  }
+
+  // 3. Regular armor — absorbs up to its value; overflow hits HP
+  if (remaining > 0 && nextArmor > 0) {
+    const absorbed = Math.min(nextArmor, remaining);
+    nextArmor -= absorbed;
+    remaining -= absorbed;
+  }
+
+  // 4. HP damage
+  const hpDamage = remaining;
+  return {
+    ...actor,
+    superArmor: nextSuperArmor,
+    armor: nextArmor,
+    hp: Math.max(0, (actor.hp ?? 0) - hpDamage),
+    damageTaken: hpDamage > 0 ? (actor.damageTaken ?? 0) + hpDamage : (actor.damageTaken ?? 0),
+  };
 }
 
 function withAddedArmorToActiveParty(state: GameState, armorDelta: number): GameState {
@@ -3508,21 +3599,41 @@ export function playRpgHandCardOnActor(
   const sourceActor = card.sourceActorId ? findActorById(state, card.sourceActorId) : null;
   const attackerAccuracy = sourceActor?.accuracy ?? 100;
 
-  const resolveDirectDamage = (target: Actor, baseDamage: number): Actor => {
-    if ((target.hp ?? 0) <= 0) return target;
+  const resolveDirectDamage = (target: Actor, baseDamage: number): HitResult => {
+    if ((target.hp ?? 0) <= 0) {
+      return { actor: target, hitType: 'miss', damageDealt: 0 };
+    }
     const targetEvasion = getEffectiveEvasion(state, target, side, now);
-    const targetArmor = target.armor ?? 0;
     const hitChance = clampPercent(attackerAccuracy - targetEvasion, 5, 95);
-    const didHit = Math.random() * 100 < hitChance;
-    if (!didHit) return target;
-    const damage = Math.max(0, baseDamage - targetArmor);
-    if (damage <= 0) return target;
-    const hpBefore = target.hp ?? target.hpMax ?? 0;
-    return {
-      ...target,
-      hp: Math.max(0, hpBefore - damage),
-      damageTaken: (target.damageTaken ?? 0) + damage,
-    };
+    const roll = Math.random() * 100;
+
+    if (roll < hitChance) {
+      // Full hit
+      const resultActor = applyDamageToActor(target, baseDamage);
+      const hpLost = (target.hp ?? 0) - (resultActor.hp ?? 0);
+      return {
+        actor: resultActor,
+        hitType: 'hit',
+        damageDealt: baseDamage,
+        damageTaken: hpLost,
+      };
+    } else if (roll < hitChance + RPG_GRAZE_THRESHOLD) {
+      // Graze / glancing blow
+      const graceMargin = roll - hitChance;
+      const damageMultiplier = 1 - graceMargin / RPG_GRAZE_THRESHOLD;
+      const grazeDamage = Math.max(1, Math.floor(baseDamage * damageMultiplier));
+      const resultActor = applyDamageToActor(target, grazeDamage);
+      const hpLost = (target.hp ?? 0) - (resultActor.hp ?? 0);
+      return {
+        actor: resultActor,
+        hitType: 'graze',
+        damageDealt: grazeDamage,
+        damageTaken: hpLost,
+      };
+    } else {
+      // Full miss / dodge
+      return { actor: target, hitType: 'miss', damageDealt: 0 };
+    }
   };
 
   const now = Date.now();
@@ -3556,8 +3667,13 @@ export function playRpgHandCardOnActor(
     if (!isActorCombatEnabled(enemyActors[actorIndex])) return state;
     if (isCloudSight) return state;
     const baseDamage = rpcProfile?.damage ?? 0;
+    const orimEffects = collectCardOrimEffects(state, card);
+    const damagePacket = buildDamagePacket(baseDamage, orimEffects);
+    const targetActor = enemyActors[actorIndex]!;
+    const totalDamage = resolvePacketTotal(damagePacket, targetActor.element);
+    const hitResult = resolveDirectDamage(targetActor, totalDamage);
     const updatedEnemyActors = enemyActors.map((actor, index) =>
-      index === actorIndex ? resolveDirectDamage(actor, baseDamage) : actor
+      index === actorIndex ? hitResult.actor : actor
     );
     let damagedState: GameState = {
       ...state,
@@ -3613,8 +3729,13 @@ export function playRpgHandCardOnActor(
   }
 
   const baseDamage = rpcProfile?.damage ?? 0;
+  const orimEffects = collectCardOrimEffects(state, card);
+  const damagePacket = buildDamagePacket(baseDamage, orimEffects);
+  const targetActor = party[actorIndex]!;
+  const totalDamage = resolvePacketTotal(damagePacket, targetActor.element);
+  const hitResult = resolveDirectDamage(targetActor, totalDamage);
   const updatedParty = party.map((actor, index) =>
-    index === actorIndex ? resolveDirectDamage(actor, baseDamage) : actor
+    index === actorIndex ? hitResult.actor : actor
   );
 
   let damagedState: GameState = {
@@ -3680,28 +3801,53 @@ export function playEnemyRpgHandCardOnActor(
   const attackerAccuracy = sourceActor?.accuracy ?? 100;
   const now = Date.now();
 
-  const resolveDirectDamage = (target: Actor, baseDamage: number): Actor => {
-    if ((target.hp ?? 0) <= 0) return target;
+  const resolveDirectDamage = (target: Actor, baseDamage: number): HitResult => {
+    if ((target.hp ?? 0) <= 0) {
+      return { actor: target, hitType: 'miss', damageDealt: 0 };
+    }
     const targetEvasion = getEffectiveEvasion(state, target, 'player', now);
-    const targetArmor = target.armor ?? 0;
     const hitChance = clampPercent(attackerAccuracy - targetEvasion, 5, 95);
-    const didHit = Math.random() * 100 < hitChance;
-    if (!didHit) return target;
-    const damage = Math.max(0, baseDamage - targetArmor);
-    if (damage <= 0) return target;
-    const hpBefore = target.hp ?? target.hpMax ?? 0;
-    return {
-      ...target,
-      hp: Math.max(0, hpBefore - damage),
-      damageTaken: (target.damageTaken ?? 0) + damage,
-    };
+    const roll = Math.random() * 100;
+
+    if (roll < hitChance) {
+      // Full hit
+      const resultActor = applyDamageToActor(target, baseDamage);
+      const hpLost = (target.hp ?? 0) - (resultActor.hp ?? 0);
+      return {
+        actor: resultActor,
+        hitType: 'hit',
+        damageDealt: baseDamage,
+        damageTaken: hpLost,
+      };
+    } else if (roll < hitChance + RPG_GRAZE_THRESHOLD) {
+      // Graze / glancing blow
+      const graceMargin = roll - hitChance;
+      const damageMultiplier = 1 - graceMargin / RPG_GRAZE_THRESHOLD;
+      const grazeDamage = Math.max(1, Math.floor(baseDamage * damageMultiplier));
+      const resultActor = applyDamageToActor(target, grazeDamage);
+      const hpLost = (target.hp ?? 0) - (resultActor.hp ?? 0);
+      return {
+        actor: resultActor,
+        hitType: 'graze',
+        damageDealt: grazeDamage,
+        damageTaken: hpLost,
+      };
+    } else {
+      // Full miss / dodge
+      return { actor: target, hitType: 'miss', damageDealt: 0 };
+    }
   };
 
   const baseDamage = isDarkClaw ? Math.max(1, card.rank ?? 1) : (rpcProfile?.damage ?? 0);
   if (baseDamage <= 0) return state;
 
+  const orimEffects = collectCardOrimEffects(state, card);
+  const damagePacket = buildDamagePacket(baseDamage, orimEffects);
+  const totalDamage = resolvePacketTotal(damagePacket, targetActor.element);
+
+  const hitResult = resolveDirectDamage(targetActor, totalDamage);
   const updatedParty = party.map((actor, index) =>
-    index === targetActorIndex ? resolveDirectDamage(actor, baseDamage) : actor
+    index === targetActorIndex ? hitResult.actor : actor
   );
   let nextState: GameState = {
     ...state,
@@ -3824,19 +3970,12 @@ export function tickRpgCombat(state: GameState, now: number = Date.now()): GameS
     baseDamage: number
   ): Actor => {
     if ((actor.hp ?? 0) <= 0) return actor;
-    const targetArmor = actor.armor ?? 0;
     const sourceAccuracy = sourceActor?.accuracy ?? 100;
     const targetEvasion = getEffectiveEvasion(nextState, actor, dot.targetSide, now);
     const hitChance = clampPercent(sourceAccuracy - targetEvasion, 5, 95);
     const didHit = Math.random() * 100 < hitChance;
     if (!didHit) return actor;
-    const damage = Math.max(0, baseDamage - targetArmor);
-    if (damage <= 0) return actor;
-    return {
-      ...actor,
-      hp: Math.max(0, (actor.hp ?? actor.hpMax ?? 0) - damage),
-      damageTaken: (actor.damageTaken ?? 0) + damage,
-    };
+    return applyDamageToActor(actor, baseDamage);
   };
 
   nextDots.forEach((dot) => {
@@ -4018,7 +4157,8 @@ export function startBiome(
   const biomeDef = getBiomeDefinition(biomeId);
   if (!biomeDef) return state;
   const partyActors = getPartyForTile(state, tileId);
-  if (partyActors.length === 0) return state;
+  // Event encounters don't require a party — all other biome types do.
+  if (partyActors.length === 0 && biomeDef.biomeType !== 'event') return state;
 
   // Route to random biome handler
   if (biomeDef.randomlyGenerated) {
