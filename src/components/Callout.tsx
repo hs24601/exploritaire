@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { CSSProperties } from 'react';
 
-type CalloutTone = 'gold' | 'teal';
+type CalloutTone = 'gold' | 'teal' | 'orange';
 
 type SecondaryCallout = {
   text: string;
@@ -22,6 +22,8 @@ interface CalloutProps {
   lines?: string[];
   compact?: boolean;
   secondaryCallouts?: SecondaryCallout[];
+  style?: CSSProperties;
+  anchor?: { x: number; y: number };
 }
 
 const TONE_STYLES: Record<CalloutTone, {
@@ -48,17 +50,25 @@ const TONE_STYLES: Record<CalloutTone, {
     glow: '0 0 18px rgba(127, 219, 202, 0.5), inset 0 0 12px rgba(127, 219, 202, 0.2)',
     accent: 'rgba(127, 219, 202, 0.9)',
   },
+  orange: {
+    text: '#ffe7d3',
+    border: 'rgba(255, 140, 26, 0.92)',
+    bgFrom: 'rgba(28, 14, 6, 0.95)',
+    bgTo: 'rgba(12, 9, 6, 0.94)',
+    glow: '0 0 18px rgba(255, 140, 26, 0.5), inset 0 0 12px rgba(255, 140, 26, 0.2)',
+    accent: 'rgba(255, 140, 26, 0.9)',
+  },
 };
 
 function renderPanel({
-  text,
+  text = 'CALL OUT',
   subtitle,
   lines,
   palette,
   compact,
   style,
 }: {
-  text: string;
+  text?: string;
   subtitle?: string;
   lines?: string[];
   palette: (typeof TONE_STYLES)[CalloutTone];
@@ -123,6 +133,8 @@ export function Callout({
   lines,
   compact = false,
   secondaryCallouts,
+  style: styleProp,
+  anchor,
 }: CalloutProps) {
   const EXTRA_DURATION_MS = 4000;
   const useAutoFade = !!autoFadeMs && autoFadeMs > 0;
@@ -147,6 +159,14 @@ export function Callout({
     );
   };
 
+  const anchorStyle: CSSProperties = anchor ? {
+    position: 'fixed',
+    left: anchor.x,
+    top: anchor.y,
+    transform: 'translate(-50%, -100%)',
+    pointerEvents: 'none',
+  } : {};
+
   return (
     <AnimatePresence>
       {visible && (
@@ -164,7 +184,7 @@ export function Callout({
             ease: useAutoFade ? 'easeOut' : [0.22, 0.68, 0.2, 1],
             ...(useAutoFade ? { times: [0, 0.05, 0.85, 1] as const } : {}),
           }}
-          style={{ zIndex: 120 }}
+          style={{ zIndex: 120, ...anchorStyle, ...styleProp }}
           className={`pointer-events-none select-none ${className}`.trim()}
         >
           <div className={`flex gap-2 ${hasSecondaries ? 'items-end' : ''}`}>

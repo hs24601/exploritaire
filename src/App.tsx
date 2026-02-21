@@ -14,7 +14,8 @@ import { DebugConsole } from './components/DebugConsole';
 import { CombatGolf } from './components/CombatGolf';
 import { EventEncounter } from './components/EventEncounter';
 import { PlayingScreen } from './components/PlayingScreen';
-import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element } from './engine/types';
+import { JewelModal } from './components/JewelModal';
+import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element, OrimRarity } from './engine/types';
 import { getActorDisplayGlyph, getActorDefinition } from './engine/actors';
 import { getOrimAccentColor } from './watercolor/orimWatercolor';
 import { setWatercolorInteractionDegraded } from './watercolor/WatercolorOverlay';
@@ -94,7 +95,7 @@ type PoiRewardDraft = {
 type PoiNarrationDraft = {
   title: string;
   body: string;
-  tone: 'teal' | 'gold' | 'violet' | 'green';
+  tone: 'teal' | 'gold' | 'violet' | 'green' | 'red' | 'blue' | 'orange' | 'pink' | 'silver' | 'brown' | 'black' | 'white';
   autoCloseOnDeparture?: boolean;
   completion?: {
     title: string;
@@ -105,7 +106,7 @@ type PoiNarrationDraft = {
 
 type AbilityEffectType =
   | 'damage' | 'healing' | 'speed' | 'evasion'
-  | 'armor' | 'super_armor' | 'defense' | 'draw'
+  | 'armor' | 'super_armor' | 'defense' | 'draw' | 'maxhp'
   | 'burn' | 'bleed' | 'stun' | 'freeze';
 
 type AbilityEffectTarget = 'self' | 'enemy' | 'all_enemies' | 'ally';
@@ -122,9 +123,16 @@ interface AbilityEffect {
 
 const ABILITY_EFFECT_TYPES: AbilityEffectType[] = [
   'damage', 'healing', 'speed', 'evasion',
-  'armor', 'super_armor', 'defense', 'draw',
+  'armor', 'super_armor', 'defense', 'draw', 'maxhp',
   'burn', 'bleed', 'stun', 'freeze',
 ];
+
+const ELEMENT_OPTIONS: Element[] = ['N', 'W', 'E', 'A', 'F', 'L', 'D'];
+
+const ensureElementList = (value?: Element[] | null): Element[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter(Boolean) as Element[];
+};
 
 type AspectDraft = {
   id: string;
@@ -134,7 +142,7 @@ type AspectDraft = {
   abilityDamage: string;
   abilityCardId: string;
   abilityCardRank: number;
-  abilityCardElement: Element;
+  abilityCardElements: Element[];
   abilityCardGlyph: string;
   tagsText: string;
   archetypeCardId: string;
@@ -148,9 +156,15 @@ type OrimDraft = {
   id: string;
   name: string;
   description: string;
-  element: Element;
+  elements: Element[];
   effects: AbilityEffect[];
   isAspect?: boolean;
+  aspectProfile?: {
+    key: string;
+    archetype: string;
+    rarity: OrimRarity;
+    attributes: Array<{ stat: string; op: string; value: number | string }>;
+  };
 };
 
 type OrimSynergy = {
@@ -197,6 +211,7 @@ const DEFAULT_SPARKLE_CONFIG: Required<PoiSparkleConfig> = {
 export default function App() {
   const buildStamp = useMemo(() => new Date().toLocaleString(), []);
   const [serverAlive, setServerAlive] = useState(true);
+  const [isJewelModalOpen, setIsJewelModalOpen] = useState(false);
   const [restartCopied, setRestartCopied] = useState(false);
   const [fps, setFps] = useState(0);
   const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
@@ -281,7 +296,7 @@ export default function App() {
       damage?: string;
       cardId?: string;
       cardRank?: number;
-      cardElement?: Element;
+      cardElements?: Element[];
       cardGlyph?: string;
       abilityType?: string;
       tags?: string[];
@@ -296,7 +311,7 @@ export default function App() {
       abilityDamage: entry.damage ?? '',
       abilityCardId: entry.cardId ?? '',
       abilityCardRank: entry.cardRank ?? 1,
-      abilityCardElement: entry.cardElement ?? 'N',
+      abilityCardElements: ensureElementList(entry.cardElements),
       abilityCardGlyph: entry.cardGlyph ?? '',
       tagsText: (entry.tags ?? []).join(', '),
       archetypeCardId: '',
@@ -319,9 +334,26 @@ export default function App() {
       id: orim.id,
       name: orim.name,
       description: orim.description,
-      element: orim.element,
+      elements: ensureElementList(orim.elements),
       effects: [],
       isAspect: orim.isAspect,
+      aspectProfile: orim.aspectProfile
+        ? {
+          key: orim.aspectProfile.key ?? '',
+          archetype: orim.aspectProfile.archetype ?? '',
+          rarity: orim.aspectProfile.rarity ?? 'common',
+          attributes: (orim.aspectProfile.attributes ?? []).map((attr) => {
+            if (typeof attr === 'string') {
+              return { stat: attr, op: '+', value: '' };
+            }
+            return {
+              stat: String(attr.stat ?? ''),
+              op: String(attr.op ?? '+'),
+              value: attr.value ?? '',
+            };
+          }),
+        }
+        : undefined,
     }))
   );
   const [orimEditorMessage, setOrimEditorMessage] = useState<string | null>(null);
@@ -938,7 +970,6 @@ export default function App() {
     }
   }, [toolingOpen, toolingTab, currentPlayerCoords, loadPoi, poiEditorCoords]);
 
-
   const handleAddAbility = useCallback(() => {
     const nextIdBase = 'new-ability';
     let nextId = nextIdBase;
@@ -956,7 +987,7 @@ export default function App() {
       abilityDamage: '',
       abilityCardId: '',
       abilityCardRank: 1,
-      abilityCardElement: 'N',
+      abilityCardElements: ['N'],
       abilityCardGlyph: '',
       tagsText: '',
       archetypeCardId: '',
@@ -1034,6 +1065,30 @@ export default function App() {
     }
   }, []);
 
+  const handleAbilityElementAdd = useCallback((abilityId: string) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      return { ...entry, abilityCardElements: [...entry.abilityCardElements, 'N'] };
+    }));
+  }, []);
+
+  const handleAbilityElementRemove = useCallback((abilityId: string, index: number) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      if (entry.abilityCardElements.length <= 1) return entry;
+      return { ...entry, abilityCardElements: entry.abilityCardElements.filter((_, i) => i !== index) };
+    }));
+  }, []);
+
+  const handleAbilityElementChange = useCallback((abilityId: string, index: number, value: Element) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      const next = [...entry.abilityCardElements];
+      next[index] = value;
+      return { ...entry, abilityCardElements: next };
+    }));
+  }, []);
+
   const handleSaveAbility = useCallback(async () => {
     setIsSavingAbility(true);
     setAbilityEditorMessage('Saving abilities...');
@@ -1046,7 +1101,7 @@ export default function App() {
           damage: entry.abilityDamage.trim(),
           cardId: entry.abilityCardId.trim(),
           cardRank: entry.abilityCardRank,
-          cardElement: entry.abilityCardElement,
+          cardElements: entry.abilityCardElements,
           cardGlyph: entry.abilityCardGlyph.trim() || undefined,
           abilityType: entry.abilityType,
           tags: entry.tagsText
@@ -1095,7 +1150,7 @@ export default function App() {
             damage?: string;
             cardId?: string;
             cardRank?: number;
-            cardElement?: Element;
+            cardElements?: Element[];
             cardGlyph?: string;
             abilityType?: string;
             tags?: string[];
@@ -1112,7 +1167,7 @@ export default function App() {
           abilityDamage: entry.damage ?? '',
           abilityCardId: entry.cardId ?? '',
           abilityCardRank: entry.cardRank ?? 1,
-          abilityCardElement: entry.cardElement ?? 'N',
+          abilityCardElements: ensureElementList(entry.cardElements),
           abilityCardGlyph: entry.cardGlyph ?? '',
           tagsText: (entry.tags ?? []).join(', '),
           archetypeCardId: '',
@@ -1143,8 +1198,15 @@ export default function App() {
             id: string;
             name: string;
             description: string;
-            element: Element;
+            elements?: Element[];
             effects?: AbilityEffect[];
+            isAspect?: boolean;
+            aspectProfile?: {
+              key?: string;
+              archetype?: string;
+              rarity?: OrimRarity;
+              attributes?: Array<string | { stat?: string; op?: string; value?: number | string }>;
+            };
           }>;
         };
         if (!active) return;
@@ -1152,8 +1214,26 @@ export default function App() {
           id: entry.id,
           name: entry.name,
           description: entry.description,
-          element: entry.element,
+          elements: ensureElementList(entry.elements),
           effects: Array.isArray(entry.effects) ? entry.effects : [],
+          isAspect: entry.isAspect,
+          aspectProfile: entry.aspectProfile
+            ? {
+              key: entry.aspectProfile.key ?? '',
+              archetype: entry.aspectProfile.archetype ?? '',
+              rarity: entry.aspectProfile.rarity ?? 'common',
+              attributes: (entry.aspectProfile.attributes ?? []).map((attr) => {
+                if (typeof attr === 'string') {
+                  return { stat: attr, op: '+', value: '' };
+                }
+                return {
+                  stat: String(attr.stat ?? ''),
+                  op: String(attr.op ?? '+'),
+                  value: attr.value ?? '',
+                };
+              }),
+            }
+            : undefined,
         }));
         setOrimDrafts(nextDrafts);
       } catch (err) {
@@ -1221,8 +1301,9 @@ export default function App() {
       id: nextId,
       name: '',
       description: '',
-      element: 'N',
+      elements: ['N'],
       effects: [],
+      aspectProfile: undefined,
     };
     setOrimDrafts((prev) => [...prev, nextDraft]);
     setSelectedOrimId(nextId);
@@ -1241,6 +1322,14 @@ export default function App() {
         nextValue = value === 'true';
       }
       const nextEntry = { ...entry, [key]: nextValue };
+      if (key === 'isAspect' && nextValue === true && !entry.aspectProfile) {
+        nextEntry.aspectProfile = {
+          key: '',
+          archetype: '',
+          rarity: 'common',
+          attributes: [],
+        };
+      }
       if (key === 'name') {
         nextEntry.id = toThisTypeOfCase(String(value));
       }
@@ -1252,6 +1341,92 @@ export default function App() {
     }
   }, []);
 
+  const handleOrimElementAdd = useCallback((orimId: string) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      return { ...entry, elements: [...entry.elements, 'N'] };
+    }));
+  }, []);
+
+  const handleOrimElementRemove = useCallback((orimId: string, index: number) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      if (entry.elements.length <= 1) return entry;
+      return { ...entry, elements: entry.elements.filter((_, i) => i !== index) };
+    }));
+  }, []);
+
+  const handleOrimElementChange = useCallback((orimId: string, index: number, value: Element) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      const next = [...entry.elements];
+      next[index] = value;
+      return { ...entry, elements: next };
+    }));
+  }, []);
+
+  const handleOrimAspectProfileChange = useCallback(
+    (orimId: string, key: 'key' | 'archetype' | 'rarity', value: string) => {
+      setOrimDrafts((prev) => prev.map((entry) => {
+        if (entry.id !== orimId) return entry;
+        const profile = entry.aspectProfile ?? { key: '', archetype: '', rarity: 'common', attributes: [] };
+        return {
+          ...entry,
+          aspectProfile: {
+            ...profile,
+            [key]: key === 'rarity' ? (value as OrimRarity) : value,
+          },
+        };
+      }));
+    },
+    []
+  );
+
+  const handleOrimAspectAttributeAdd = useCallback((orimId: string) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      const profile = entry.aspectProfile ?? { key: '', archetype: '', rarity: 'common', attributes: [] };
+      return {
+        ...entry,
+        aspectProfile: {
+          ...profile,
+          attributes: [...profile.attributes, { stat: '', op: '+', value: '' }],
+        },
+      };
+    }));
+  }, []);
+
+  const handleOrimAspectAttributeRemove = useCallback((orimId: string, index: number) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      if (!entry.aspectProfile) return entry;
+      return {
+        ...entry,
+        aspectProfile: {
+          ...entry.aspectProfile,
+          attributes: entry.aspectProfile.attributes.filter((_, i) => i !== index),
+        },
+      };
+    }));
+  }, []);
+
+  const handleOrimAspectAttributeChange = useCallback(
+    (orimId: string, index: number, field: 'stat' | 'op' | 'value', value: string) => {
+      setOrimDrafts((prev) => prev.map((entry) => {
+        if (entry.id !== orimId) return entry;
+        const profile = entry.aspectProfile ?? { key: '', archetype: '', rarity: 'common', attributes: [] };
+        const next = [...profile.attributes];
+        const current = next[index] ?? { stat: '', op: '+', value: '' };
+        next[index] = { ...current, [field]: value };
+        return {
+          ...entry,
+          aspectProfile: { ...profile, attributes: next },
+        };
+      }));
+    },
+    []
+  );
+
   const handleSaveOrim = useCallback(async () => {
     setIsSavingOrim(true);
     setOrimEditorMessage('Saving orims...');
@@ -1261,8 +1436,22 @@ export default function App() {
           id: entry.id.trim(),
           name: entry.name.trim(),
           description: entry.description.trim(),
-          element: entry.element,
+          elements: entry.elements,
           ...(entry.isAspect ? { isAspect: entry.isAspect } : {}),
+          ...(entry.isAspect && entry.aspectProfile
+            ? {
+              aspectProfile: {
+                key: entry.aspectProfile.key.trim() || undefined,
+                archetype: entry.aspectProfile.archetype.trim() || undefined,
+                rarity: entry.aspectProfile.rarity,
+                attributes: entry.aspectProfile.attributes.map((attr) => ({
+                  stat: attr.stat.trim(),
+                  op: attr.op.trim() || '+',
+                  value: attr.value,
+                })).filter((attr) => attr.stat || attr.value),
+              },
+            }
+            : {}),
           effects: entry.effects.map((fx) => ({
             type: fx.type,
             value: fx.value,
@@ -1536,23 +1725,22 @@ export default function App() {
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
-      if (event.repeat) return;
-      if (event.code !== 'Space') return;
-      event.preventDefault();
-      setHidePauseOverlay(false);
-      setIsGamePaused((prev) => !prev);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      const key = event.key.toLowerCase();
+      const code = event.code;
+
+      if (toolingOpen && key !== 'e') {
         return;
       }
-      const key = event.key.toLowerCase();
+
+      if (code === 'Space') {
+        if (event.repeat) return;
+        event.preventDefault();
+        setHidePauseOverlay(false);
+        setIsGamePaused((prev) => !prev);
+        return;
+      }
+
       if (key === 'e') {
         setToolingOpen((prev) => {
           const next = !prev;
@@ -1562,31 +1750,84 @@ export default function App() {
           }
           return next;
         });
-      }
-      if (key === 'w') {
-        setWatercolorEnabled((prev) => !prev);
-      }
-      if (key === '/') {
-        setForcedPerspectiveEnabled((prev) => !prev);
-      }
-      if (event.code === 'Enter') {
-        event.preventDefault();
-        actions.autoPlayNextMove();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [actions]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'g') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
-      e.preventDefault();
-      actions.toggleGraphics();
+
+      if (key === 'w') {
+        setWatercolorEnabled((prev) => !prev);
+        return;
+      }
+
+      if (key === 'j') {
+        event.preventDefault();
+        setIsJewelModalOpen((prev) => !prev);
+        return;
+      }
+
+      if (key === '/') {
+        setForcedPerspectiveEnabled((prev) => !prev);
+        return;
+      }
+
+      if (code === 'Enter') {
+        event.preventDefault();
+        actions.autoPlayNextMove();
+        return;
+      }
+
+      if (key === 'g') {
+        event.preventDefault();
+        actions.toggleGraphics();
+        return;
+      }
+
+      if (key === 'p') {
+        event.preventDefault();
+        setUseGhostBackground((prev) => !prev);
+        return;
+      }
+
+      if (key === 'd') {
+        event.preventDefault();
+        actions.toggleInteractionMode();
+        return;
+      }
+
+      if (key === 'o') {
+        event.preventDefault();
+        setOrimInjectorOpen((prev) => !prev);
+        return;
+      }
+
+      if (event.key === '`') {
+        event.preventDefault();
+        setOrimTrayDevMode((prev) => !prev);
+        return;
+      }
+
+      if (key === 't') {
+        event.preventDefault();
+        setShowText((prev) => !prev);
+        return;
+      }
+
+      if (key === 'l') {
+        event.preventDefault();
+        setLightingEnabled((prev) => !prev);
+        return;
+      }
+
+      if (key === 'z') {
+        event.preventDefault();
+        setZenModeEnabled((prev) => !prev);
+        return;
+      }
+
+      if (event.key === '[') {
+        event.preventDefault();
+        setPixelArtEnabled((prev) => !prev);
+        return;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -1651,7 +1892,7 @@ export default function App() {
               : [];
             const targetActor = party[foundationIndex];
             if (targetActor && actions.devInjectOrimToActor) {
-              actions.devInjectOrimToActor(targetActor.id, orimId);
+              actions.devInjectOrimToActor(targetActor.id, orimId, foundationIndex, dropPoint);
               applySplashHint();
               setPoiRewardResolvedAt(Date.now());
             }
@@ -1852,36 +2093,6 @@ export default function App() {
   }, [dieDragging, dieDragOffset]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'p') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      e.preventDefault();
-      setUseGhostBackground((prev) => !prev);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'd') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      e.preventDefault();
-      actions.toggleInteractionMode();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [actions]);
-
-  useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
@@ -1897,96 +2108,6 @@ export default function App() {
       const nextIndex = (currentIndex + 1) % TIME_SCALE_OPTIONS.length;
       return TIME_SCALE_OPTIONS[nextIndex];
     });
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'o') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      e.preventDefault();
-      setOrimInjectorOpen((prev) => !prev);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== '`') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      e.preventDefault();
-      setOrimTrayDevMode((prev) => !prev);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 't') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      e.preventDefault();
-      setShowText((prev) => !prev);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'l') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      e.preventDefault();
-      setLightingEnabled((prev) => !prev);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'z') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      e.preventDefault();
-      setZenModeEnabled((prev) => !prev);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== '[') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      e.preventDefault();
-      setPixelArtEnabled((prev) => !prev);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -2049,6 +2170,21 @@ export default function App() {
     actions.startBiome(tileId, biomeId);
     setIsPuzzleOpen(true);
   }, [actions, gameState]);
+
+  useEffect(() => {
+    if (!gameState || !currentPlayerCoords) return;
+    if (gameState.playtestVariant !== 'rpg') return;
+    const cell = mainWorldMap.cells.find(
+      (entry) =>
+        entry.gridPosition.col === currentPlayerCoords.x
+        && entry.gridPosition.row === currentPlayerCoords.y
+    );
+    const biomeId = cell?.poi?.biomeId;
+    if (biomeId !== 'wave_battle') return;
+    if (gameState.phase === 'biome' && gameState.currentBiome === biomeId) return;
+    const tileId = gameState.activeSessionTileId ?? cell?.poi?.id ?? biomeId;
+    handleStartBiome(tileId, biomeId);
+  }, [currentPlayerCoords, gameState, handleStartBiome]);
 
   const handleCloseReturnModal = useCallback(() => {
     setReturnModal((prev) => ({ ...prev, open: false }));
@@ -2239,7 +2375,6 @@ export default function App() {
   const activeTileName = activeTile
     ? getTileDefinition(activeTile.definitionId)?.name ?? 'ADVENTURE'
     : 'ADVENTURE';
-
   return (
     <GraphicsContext.Provider value={showGraphics}>
     <InteractionModeContext.Provider value={gameState.interactionMode}>
@@ -2635,7 +2770,7 @@ export default function App() {
 
                 <div className="p-6 flex-1 flex flex-col min-h-0 overflow-hidden">
                   {toolingTab === 'poi' && (
-                    <div className="flex flex-col h-full gap-4">
+                    <div className="flex flex-col flex-1 min-h-0 gap-4">
                       {/* Sub-navigation for POI Editor */}
                       <div className="flex items-center gap-2 text-[10px] shrink-0">
                         <button
@@ -2691,7 +2826,7 @@ export default function App() {
                         {poiEditorSection === 'details' && (
                           <div className="h-full bg-black/80 border border-game-teal/50 rounded-2xl p-5 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col gap-4 animate-in fade-in duration-200 overflow-hidden">
                             <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80 shrink-0">POI Core Data</div>
-                            
+                            <div className="flex-1 min-h-0 overflow-y-auto pr-1 custom-scrollbar space-y-4">
                             <div className="grid md:grid-cols-2 gap-6 shrink-0">
                               <div className="space-y-3">
                                 <span className="text-game-teal/70 text-[9px] uppercase tracking-wider font-bold">Load by Coordinates</span>
@@ -2865,6 +3000,7 @@ export default function App() {
                               </div>
                             </div>
                           </div>
+                          </div>
                         )}
 
                         {/* 2. Rewards Tab */}
@@ -2889,7 +3025,7 @@ export default function App() {
                                 </button>
                               </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto pr-3 custom-scrollbar space-y-4">
+                            <div className="flex-1 min-h-0 overflow-y-auto pr-3 custom-scrollbar space-y-4">
                               {poiEditorRewards.map((reward, index) => {
                                 const searchTerm = reward.searchFilter.trim().toLowerCase();
                                 const filteredAspects = aspectRewardOptions.filter((option) => {
@@ -3148,7 +3284,7 @@ export default function App() {
                               </label>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto pr-3 custom-scrollbar space-y-6">
+                            <div className="flex-1 min-h-0 overflow-y-auto pr-3 custom-scrollbar space-y-6">
                               <div className="space-y-4 border border-game-teal/30 p-5 rounded-2xl bg-game-bg-dark/20 shadow-inner">
                                 <div className="text-[10px] font-black uppercase tracking-[0.3em] text-game-teal/90 pb-2 border-b border-game-teal/10">Arrival Sequence</div>
                                 <div className="grid md:grid-cols-2 gap-4 text-[10px]">
@@ -3166,12 +3302,32 @@ export default function App() {
                                     <select
                                       value={poiEditorNarrationTone}
                                       onChange={(event) => setPoiEditorNarrationTone(event.target.value as PoiNarrationDraft['tone'])}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                      className="bg-game-bg-dark/80 border px-3 py-2 rounded text-[11px] outline-none transition-colors font-bold"
+                                      style={{ 
+                                        color: {
+                                          teal: '#7fdbca', gold: '#f7d24b', violet: '#c87de8', green: '#6bcb77',
+                                          red: '#ff4d4d', blue: '#6cb6ff', orange: '#ff8e66', pink: '#f5d0fe',
+                                          silver: '#e2e8f0', brown: '#a16207', black: '#ffffff', white: '#ffffff'
+                                        }[poiEditorNarrationTone],
+                                        borderColor: {
+                                          teal: '#7fdbca66', gold: '#f7d24b66', violet: '#c87de866', green: '#6bcb7766',
+                                          red: '#ff4d4d66', blue: '#6cb6ff66', orange: '#ff8e6666', pink: '#f5d0fe66',
+                                          silver: '#e2e8f066', brown: '#a1620766', black: '#ffffff44', white: '#ffffff66'
+                                        }[poiEditorNarrationTone]
+                                      }}
                                     >
-                                      <option value="teal">Teal (Ocean/Spirit)</option>
-                                      <option value="gold">Gold (Sacred/Legend)</option>
-                                      <option value="violet">Violet (Mystic/Dark)</option>
-                                      <option value="green">Green (Nature/Growth)</option>
+                                      <option value="teal" style={{ color: '#7fdbca', backgroundColor: '#0a0a0a' }}>Teal (Ocean/Spirit)</option>
+                                      <option value="gold" style={{ color: '#f7d24b', backgroundColor: '#0a0a0a' }}>Gold (Sacred/Legend)</option>
+                                      <option value="violet" style={{ color: '#c87de8', backgroundColor: '#0a0a0a' }}>Violet (Mystic/Dark)</option>
+                                      <option value="green" style={{ color: '#6bcb77', backgroundColor: '#0a0a0a' }}>Green (Nature/Growth)</option>
+                                      <option value="red" style={{ color: '#ff4d4d', backgroundColor: '#0a0a0a' }}>Red (Fire/Combat)</option>
+                                      <option value="blue" style={{ color: '#6cb6ff', backgroundColor: '#0a0a0a' }}>Blue (Ice/Calm)</option>
+                                      <option value="orange" style={{ color: '#ff8e66', backgroundColor: '#0a0a0a' }}>Orange (Warmth/Sun)</option>
+                                      <option value="pink" style={{ color: '#f5d0fe', backgroundColor: '#0a0a0a' }}>Pink (Fairy/Dream)</option>
+                                      <option value="silver" style={{ color: '#e2e8f0', backgroundColor: '#0a0a0a' }}>Silver (Metal/Machine)</option>
+                                      <option value="brown" style={{ color: '#a16207', backgroundColor: '#0a0a0a' }}>Brown (Earth/Root)</option>
+                                      <option value="black" style={{ color: '#ffffff', backgroundColor: '#0a0a0a' }}>Black (Void/Shadow)</option>
+                                      <option value="white" style={{ color: '#ffffff', backgroundColor: '#0a0a0a' }}>White (Pure/Light)</option>
                                     </select>
                                   </label>
                                 </div>
@@ -3204,12 +3360,32 @@ export default function App() {
                                     <select
                                       value={poiEditorCompletionTone}
                                       onChange={(event) => setPoiEditorCompletionTone(event.target.value as PoiNarrationDraft['tone'])}
-                                      className="bg-game-bg-dark/80 border border-game-gold/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-teal"
+                                      className="bg-game-bg-dark/80 border px-3 py-2 rounded text-[11px] outline-none transition-colors font-bold"
+                                      style={{ 
+                                        color: {
+                                          teal: '#7fdbca', gold: '#f7d24b', violet: '#c87de8', green: '#6bcb77',
+                                          red: '#ff4d4d', blue: '#6cb6ff', orange: '#ff8e66', pink: '#f5d0fe',
+                                          silver: '#e2e8f0', brown: '#a16207', black: '#ffffff', white: '#ffffff'
+                                        }[poiEditorCompletionTone],
+                                        borderColor: {
+                                          teal: '#7fdbca66', gold: '#f7d24b66', violet: '#c87de866', green: '#6bcb7766',
+                                          red: '#ff4d4d66', blue: '#6cb6ff66', orange: '#ff8e6666', pink: '#f5d0fe66',
+                                          silver: '#e2e8f066', brown: '#a1620766', black: '#ffffff44', white: '#ffffff66'
+                                        }[poiEditorCompletionTone]
+                                      }}
                                     >
-                                      <option value="teal">Teal</option>
-                                      <option value="gold">Gold</option>
-                                      <option value="violet">Violet</option>
-                                      <option value="green">Green</option>
+                                      <option value="teal" style={{ color: '#7fdbca', backgroundColor: '#0a0a0a' }}>Teal (Ocean/Spirit)</option>
+                                      <option value="gold" style={{ color: '#f7d24b', backgroundColor: '#0a0a0a' }}>Gold (Sacred/Legend)</option>
+                                      <option value="violet" style={{ color: '#c87de8', backgroundColor: '#0a0a0a' }}>Violet (Mystic/Dark)</option>
+                                      <option value="green" style={{ color: '#6bcb77', backgroundColor: '#0a0a0a' }}>Green (Nature/Growth)</option>
+                                      <option value="red" style={{ color: '#ff4d4d', backgroundColor: '#0a0a0a' }}>Red (Fire/Combat)</option>
+                                      <option value="blue" style={{ color: '#6cb6ff', backgroundColor: '#0a0a0a' }}>Blue (Ice/Calm)</option>
+                                      <option value="orange" style={{ color: '#ff8e66', backgroundColor: '#0a0a0a' }}>Orange (Warmth/Sun)</option>
+                                      <option value="pink" style={{ color: '#f5d0fe', backgroundColor: '#0a0a0a' }}>Pink (Fairy/Dream)</option>
+                                      <option value="silver" style={{ color: '#e2e8f0', backgroundColor: '#0a0a0a' }}>Silver (Metal/Machine)</option>
+                                      <option value="brown" style={{ color: '#a16207', backgroundColor: '#0a0a0a' }}>Brown (Earth/Root)</option>
+                                      <option value="black" style={{ color: '#ffffff', backgroundColor: '#0a0a0a' }}>Black (Void/Shadow)</option>
+                                      <option value="white" style={{ color: '#ffffff', backgroundColor: '#0a0a0a' }}>White (Pure/Light)</option>
                                     </select>
                                   </label>
                                 </div>
@@ -3242,9 +3418,9 @@ export default function App() {
                     </div>
                   )}
                   {toolingTab === 'ability' && (
-                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Ability Editor</div>
-                      <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col flex-1 min-h-0 overflow-hidden">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80 shrink-0">Ability Editor</div>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] shrink-0">
                         <input
                           value={abilitySearch}
                           onChange={(event) => setAbilitySearch(event.target.value)}
@@ -3260,7 +3436,7 @@ export default function App() {
                           Add Ability
                         </button>
                       </div>
-                      <div className="space-y-3 h-full">
+                      <div className="flex-1 min-h-0">
                           {(() => {
                             const term = abilitySearch.trim().toLowerCase();
                             const filteredAbilities = abilityDrafts.filter((entry) => {
@@ -3274,8 +3450,8 @@ export default function App() {
                               return <div className="text-[10px] text-game-white/60">No abilities available.</div>;
                             }
                             return (
-                              <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 min-h-[400px]">
-                              <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border-r border-game-teal/20">
+                              <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 h-full min-h-0">
+                              <div className="space-y-2 h-full min-h-0 overflow-y-auto pr-2 custom-scrollbar border-r border-game-teal/20 self-stretch">
                                 <div className="flex items-center gap-2 px-2 pb-2">
                                   <button
                                     type="button"
@@ -3312,7 +3488,6 @@ export default function App() {
                                       }`}
                                     >
                                       <div className="font-bold uppercase tracking-wider truncate">{entry.name || entry.id || 'Unnamed Ability'}</div>
-                                      <div className="text-[10px] opacity-40 truncate font-mono mt-0.5">{entry.id}</div>
                                     </button>
                                   ))}
                                   {filteredAbilities.length === 0 && (
@@ -3320,7 +3495,7 @@ export default function App() {
                                   )}
                                 </div>
 
-                                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                                <div className="space-y-4 min-h-0 overflow-y-auto pr-1 custom-scrollbar">
                                   <div className="flex items-center justify-between text-[10px] text-game-white/70 bg-game-teal/5 p-2 rounded border border-game-teal/20">
                                     <span className="font-bold tracking-widest uppercase">Editing: <span className="text-game-teal">{active.id}</span></span>
                                     <button
@@ -3474,18 +3649,43 @@ export default function App() {
                                   </div>
 
                                   <div className="grid grid-cols-3 gap-3 text-[10px]">
-                                    <label className="flex flex-col gap-1">
-                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Element</span>
-                                      <select
-                                        value={active.abilityCardElement}
-                                        onChange={(event) => handleAbilityChange(active.id, 'abilityCardElement', event.target.value)}
-                                        className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                      >
-                                        {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
-                                          <option key={element} value={element}>{element}</option>
-                                        ))}
-                                      </select>
-                                    </label>
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Elements</span>
+                                      <RowManager
+                                        rows={active.abilityCardElements.map((element, index) => ({ id: index, element }))}
+                                        renderRow={(row, index) => {
+                                          const canRemoveElement = active.abilityCardElements.length > 1;
+                                          return (
+                                            <div className="flex items-center gap-1">
+                                              <select
+                                                value={row.element ?? 'N'}
+                                                onChange={(event) => handleAbilityElementChange(active.id, index, event.target.value as Element)}
+                                                className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                              >
+                                                {ELEMENT_OPTIONS.map((element) => (
+                                                  <option key={element} value={element}>{element}</option>
+                                                ))}
+                                              </select>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleAbilityElementRemove(active.id, index)}
+                                                disabled={!canRemoveElement}
+                                                className="text-[10px] text-game-pink/60 px-1.5 py-1 rounded border border-transparent hover:border-game-pink/30 hover:text-game-pink transition-colors disabled:opacity-40"
+                                                aria-label="Remove element"
+                                              >
+                                                ✕
+                                              </button>
+                                            </div>
+                                          );
+                                        }}
+                                        onAdd={() => handleAbilityElementAdd(active.id)}
+                                        onRemove={() => undefined}
+                                        containerClassName="space-y-2"
+                                        addButtonLabel="+ Add Element"
+                                        addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-teal/30 text-game-teal/70 hover:border-game-teal hover:text-game-teal transition-colors w-fit"
+                                        minRows={1}
+                                      />
+                                    </div>
                                     <label className="flex flex-col gap-1">
                                       <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Glyph</span>
                                       <input
@@ -3520,9 +3720,9 @@ export default function App() {
                   {/* Orims Editor */}
                   {/* ─────────────────────────────────────────────────────────────────── */}
                   {toolingTab === 'orim' && (
-                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4 min-h-full">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Orim Editor</div>
-                      <div className="space-y-2">
+                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col flex-1 min-h-0 overflow-hidden">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80 shrink-0">Orim Editor</div>
+                      <div className="space-y-2 shrink-0">
                         <div className="flex flex-wrap items-center gap-2 text-[10px]">
                           <input
                             value={orimSearch}
@@ -3557,7 +3757,7 @@ export default function App() {
                           ))}
                         </div>
                       </div>
-                      <div className="space-y-3 h-full">
+                      <div className="flex-1 min-h-0">
                         {(() => {
                           const term = orimSearch.trim().toLowerCase();
                           const filteredOrims = orimDrafts.filter((entry) => {
@@ -3576,8 +3776,8 @@ export default function App() {
                             return <div className="text-[10px] text-game-white/60">No orims available.</div>;
                           }
                           return (
-                            <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 min-h-[400px]">
-                              <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border-r border-game-teal/20">
+                            <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 h-full min-h-0">
+                              <div className="space-y-2 min-h-0 overflow-y-auto pr-2 custom-scrollbar border-r border-game-teal/20">
                                 {filteredOrims.map((entry) => (
                                   <button
                                     key={entry.id}
@@ -3598,7 +3798,7 @@ export default function App() {
                                 )}
                               </div>
 
-                              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                              <div className="space-y-4 min-h-0 overflow-y-auto pr-1 custom-scrollbar">
                                 <div className="flex items-center justify-between text-[10px] text-game-white/70 bg-game-teal/5 p-2 rounded border border-game-teal/20">
                                   <span className="font-bold tracking-widest uppercase">Editing: <span className="text-game-teal">{active.id}</span></span>
                                   <button
@@ -3630,18 +3830,43 @@ export default function App() {
                                     />
                                   </label>
 
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Element</span>
-                                    <select
-                                      value={active.element}
-                                      onChange={(event) => handleOrimChange(active.id, 'element', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    >
-                                      {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
-                                        <option key={element} value={element}>{element}</option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Elements</span>
+                                    <RowManager
+                                      rows={active.elements.map((element, index) => ({ id: index, element }))}
+                                      renderRow={(row, index) => {
+                                        const canRemoveElement = active.elements.length > 1;
+                                        return (
+                                          <div className="flex items-center gap-1">
+                                            <select
+                                              value={row.element ?? 'N'}
+                                              onChange={(event) => handleOrimElementChange(active.id, index, event.target.value as Element)}
+                                              className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                            >
+                                              {ELEMENT_OPTIONS.map((element) => (
+                                                <option key={element} value={element}>{element}</option>
+                                              ))}
+                                            </select>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleOrimElementRemove(active.id, index)}
+                                              disabled={!canRemoveElement}
+                                              className="text-[10px] text-game-pink/60 px-1.5 py-1 rounded border border-transparent hover:border-game-pink/30 hover:text-game-pink transition-colors disabled:opacity-40"
+                                              aria-label="Remove element"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        );
+                                      }}
+                                      onAdd={() => handleOrimElementAdd(active.id)}
+                                      onRemove={() => undefined}
+                                      containerClassName="space-y-2"
+                                      addButtonLabel="+ Add Element"
+                                      addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-teal/30 text-game-teal/70 hover:border-game-teal hover:text-game-teal transition-colors w-fit"
+                                      minRows={1}
+                                    />
+                                  </div>
 
                                   <label className="flex items-center gap-2 text-[10px]">
                                     <input
@@ -3652,6 +3877,95 @@ export default function App() {
                                     />
                                     <span className="text-game-teal/70 font-bold uppercase tracking-tight">Character Aspect</span>
                                   </label>
+
+                                  {active.isAspect && (
+                                    <div className="border border-game-teal/20 rounded-xl p-3 space-y-3 bg-black/40">
+                                      <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-game-teal/70">Aspect Profile</div>
+                                      <div className="grid grid-cols-3 gap-3 text-[10px]">
+                                        <label className="flex flex-col gap-1">
+                                          <span className="text-game-teal/70 font-bold uppercase tracking-tight">Aspect Key</span>
+                                          <input
+                                            value={active.aspectProfile?.key ?? ''}
+                                            onChange={(event) => handleOrimAspectProfileChange(active.id, 'key', event.target.value)}
+                                            className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                            placeholder="felis"
+                                          />
+                                        </label>
+                                        <label className="flex flex-col gap-1">
+                                          <span className="text-game-teal/70 font-bold uppercase tracking-tight">Archetype</span>
+                                          <input
+                                            value={active.aspectProfile?.archetype ?? ''}
+                                            onChange={(event) => handleOrimAspectProfileChange(active.id, 'archetype', event.target.value)}
+                                            className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                            placeholder="Rogue"
+                                          />
+                                        </label>
+                                        <label className="flex flex-col gap-1">
+                                          <span className="text-game-teal/70 font-bold uppercase tracking-tight">Rarity</span>
+                                          <select
+                                            value={active.aspectProfile?.rarity ?? 'common'}
+                                            onChange={(event) => handleOrimAspectProfileChange(active.id, 'rarity', event.target.value)}
+                                            className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                          >
+                                            {(['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as OrimRarity[]).map((rarity) => (
+                                              <option key={rarity} value={rarity}>{rarity}</option>
+                                            ))}
+                                          </select>
+                                        </label>
+                                      </div>
+                                      <div className="flex flex-col gap-2">
+                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight text-[10px]">Attributes</span>
+                                        <RowManager
+                                          rows={(active.aspectProfile?.attributes ?? []).map((attr, index) => ({ id: index, ...attr }))}
+                                          renderHeader={() => (
+                                            <div className="grid grid-cols-[minmax(0,1fr)_64px_80px_auto] items-center gap-x-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10">
+                                              <span>Stat</span>
+                                              <span>Op</span>
+                                              <span>Value</span>
+                                              <span />
+                                            </div>
+                                          )}
+                                          renderEmpty={() => (
+                                            <div className="text-[9px] text-game-white/30 italic">No attributes yet.</div>
+                                          )}
+                                          renderRow={(row, index) => (
+                                            <div className="grid grid-cols-[minmax(0,1fr)_64px_80px_auto] items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5">
+                                              <input
+                                                value={row.stat ?? ''}
+                                                onChange={(e) => handleOrimAspectAttributeChange(active.id, index, 'stat', e.target.value)}
+                                                className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                                placeholder="Max HP"
+                                              />
+                                              <input
+                                                value={row.op ?? '+'}
+                                                onChange={(e) => handleOrimAspectAttributeChange(active.id, index, 'op', e.target.value)}
+                                                className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                                placeholder="+"
+                                              />
+                                              <input
+                                                value={row.value ?? ''}
+                                                onChange={(e) => handleOrimAspectAttributeChange(active.id, index, 'value', e.target.value)}
+                                                className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                                placeholder="4"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() => handleOrimAspectAttributeRemove(active.id, index)}
+                                                className="text-[9px] text-game-pink/50 hover:text-game-pink px-1.5 py-0.5 rounded border border-transparent hover:border-game-pink/30 transition-colors justify-self-end"
+                                              >
+                                                ✕
+                                              </button>
+                                            </div>
+                                          )}
+                                          onAdd={() => handleOrimAspectAttributeAdd(active.id)}
+                                          onRemove={(id) => handleOrimAspectAttributeRemove(active.id, id as number)}
+                                          containerClassName="space-y-2"
+                                          addButtonLabel="+ Add Attribute"
+                                          addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-teal/40 text-game-teal/70 hover:border-game-teal hover:text-game-teal transition-colors w-fit"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
 
                                   {/* ── Effects ─────────────────────────────── */}
                                   <div className="flex flex-col gap-2">
@@ -3773,11 +4087,11 @@ export default function App() {
                   {/* Synergies Playground */}
                   {/* ─────────────────────────────────────────────────────────────────── */}
                   {toolingTab === 'synergies' && (
-                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4 min-h-full">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Synergy Playground</div>
+                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col flex-1 min-h-0 overflow-hidden">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80 shrink-0">Synergy Playground</div>
 
                       {/* Selectors */}
-                      <div className="grid grid-cols-2 gap-4 text-[10px]">
+                      <div className="grid grid-cols-2 gap-4 text-[10px] shrink-0">
                         <label className="flex flex-col gap-1.5">
                           <span className="text-game-teal/70 font-bold uppercase tracking-tight">Select Ability</span>
                           <select
@@ -3825,7 +4139,7 @@ export default function App() {
                       )}
 
                       {/* Synergy List and Editor */}
-                      <div className="space-y-4">
+                      <div className="space-y-4 flex-1 min-h-0 overflow-y-auto pr-1 custom-scrollbar">
                         {synergies.length === 0 ? (
                           <div className="text-[10px] text-game-white/40 italic p-4 border border-game-teal/20 rounded">
                             No synergies created yet. Select an ability and orim above to create one.
@@ -4138,11 +4452,11 @@ export default function App() {
                   setIsGamePaused((prev) => !prev);
                 }}
                 wildAnalysis={analysis.wild}
-                actions={{
-                  selectCard: actions.selectCard,
-                  playToFoundation: actions.playToFoundation,
-                  playCardDirect: actions.playCardDirect,
-                  playCardInRandomBiome: actions.playCardInRandomBiome,
+                  actions={{
+                    selectCard: actions.selectCard,
+                    playToFoundation: actions.playToFoundation,
+                    playCardDirect: actions.playCardDirect,
+                    playCardInRandomBiome: actions.playCardInRandomBiome,
                   playEnemyCardInRandomBiome: actions.playEnemyCardInRandomBiome,
                   playFromHand: actions.playFromHand,
                   playFromStock: (foundationIndex: number, useWild = false, force = false) =>
@@ -4157,13 +4471,14 @@ export default function App() {
                   setEnemyDifficulty: actions.setEnemyDifficulty,
                   rewindLastCard: actions.rewindLastCard,
                   swapPartyLead: actions.swapPartyLead,
-                  playWildAnalysisSequence: actions.playWildAnalysisSequence,
-                  spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
-                  setBiomeTableaus: actions.setBiomeTableaus,
-                  addRpgHandCard: actions.addRpgHandCard,
-                  applyKeruArchetype: actions.applyKeruArchetype,
-                  puzzleCompleted: actions.puzzleCompleted,
-                }}
+                    playWildAnalysisSequence: actions.playWildAnalysisSequence,
+                    spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
+                    setBiomeTableaus: actions.setBiomeTableaus,
+                    addRpgHandCard: actions.addRpgHandCard,
+                    applyKeruArchetype: actions.applyKeruArchetype,
+                    puzzleCompleted: actions.puzzleCompleted,
+                    startBiome: actions.startBiome,
+                  }}
                 explorationStepRef={explorationStepRef}
                 narrativeOpen={narrativeOpen}
                 onOpenNarrative={() => setNarrativeOpen(true)}
@@ -4299,6 +4614,11 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <JewelModal 
+        isOpen={isJewelModalOpen} 
+        onClose={() => setIsJewelModalOpen(false)} 
+      />
 
       {/* Win screen now displayed near the final tableau */}
 

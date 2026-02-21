@@ -3082,6 +3082,9 @@ function startRandomBiome(
   if (!biomeDef || !biomeDef.randomlyGenerated) return state;
   if (partyActors.length === 0) return state;
 
+  const isWaveBattle = !!biomeDef.waveBattle;
+  const tileParties = state.tileParties ?? {};
+
   const equipAllOrims = false; // TEMP: disable sandbox auto-equip; use actor defaults
   let sandboxActors = partyActors;
   let sandboxInstances: Record<string, OrimInstance> | null = null;
@@ -3110,7 +3113,8 @@ function startRandomBiome(
   const playtestVariant = state.playtestVariant ?? 'single-foundation';
   const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const useEnemyFoundations = playtestVariant === 'party-battle' || playtestVariant === 'rpg';
-  const foundationActors = clampPartyForFoundations(sandboxActors);
+  const partyLimit = isWaveBattle ? 1 : PARTY_FOUNDATION_LIMIT;
+  const foundationActors = clampPartyForFoundations(sandboxActors, partyLimit);
   const useSingleWildFoundation = playtestVariant === 'rpg' && biomeId === 'random_wilds';
   const foundations: Card[][] = useSingleWildFoundation
     ? [[createFullWildSentinel(0)]]
@@ -3136,6 +3140,9 @@ function startRandomBiome(
     ...(state.actorCombos ?? {}),
     ...Object.fromEntries(partyActors.map((actor) => [actor.id, state.actorCombos?.[actor.id] ?? 0])),
   };
+  const nextTileParties = equipAllOrims
+    ? { ...tileParties, [tileId]: sandboxActors }
+    : (isWaveBattle ? { ...tileParties, [tileId]: foundationActors } : tileParties);
 
   return {
     ...state,
@@ -3178,9 +3185,7 @@ function startRandomBiome(
     rpgBlindedPlayerUntil: 0,
     rpgBlindedEnemyLevel: 0,
     rpgBlindedEnemyUntil: 0,
-    tileParties: equipAllOrims
-      ? { ...state.tileParties, [tileId]: sandboxActors }
-      : state.tileParties,
+    tileParties: nextTileParties,
     orimInstances: sandboxInstances
       ? { ...state.orimInstances, ...sandboxInstances }
       : state.orimInstances,
@@ -3571,6 +3576,51 @@ export function spawnRandomEnemyInRandomBiome(state: GameState): GameState {
     next[spawnIndex] = [];
     return next;
   })();
+  return {
+    ...state,
+    enemyFoundations: nextEnemyFoundations,
+    enemyActors: nextEnemyActors,
+    enemyFoundationCombos: nextEnemyCombos,
+    enemyFoundationTokens: nextEnemyTokens,
+    rpgEnemyHandCards: nextEnemyHands,
+  };
+}
+
+export function cleanupDefeatedEnemies(state: GameState): GameState {
+  if (!state.enemyFoundations || !state.enemyActors) return state;
+  let changed = false;
+  const nextEnemyFoundations = state.enemyFoundations.map((foundation, index) => {
+    const actor = state.enemyActors?.[index];
+    const actorDefeated = actor ? ((actor.hp ?? 0) <= 0 || (actor.stamina ?? 0) <= 0) : false;
+    if (!actorDefeated || foundation.length === 0) return foundation;
+    changed = true;
+    return [];
+  });
+  if (!changed) return state;
+  const nextEnemyActors = state.enemyActors.map((actor, index) => (
+    nextEnemyFoundations[index].length === 0
+      ? {
+        ...actor,
+        hp: 0,
+        stamina: 0,
+      }
+      : actor
+  ));
+  const nextEnemyCombos = state.enemyFoundationCombos
+    ? state.enemyFoundationCombos.map((value, index) => (
+      nextEnemyFoundations[index].length === 0 ? 0 : value
+    ))
+    : state.enemyFoundationCombos;
+  const nextEnemyTokens = state.enemyFoundationTokens
+    ? state.enemyFoundationTokens.map((value, index) => (
+      nextEnemyFoundations[index].length === 0 ? createEmptyTokenCounts() : value
+    ))
+    : state.enemyFoundationTokens;
+  const nextEnemyHands = state.rpgEnemyHandCards
+    ? state.rpgEnemyHandCards.map((cards, index) => (
+      nextEnemyFoundations[index].length === 0 ? [] : cards
+    ))
+    : state.rpgEnemyHandCards;
   return {
     ...state,
     enemyFoundations: nextEnemyFoundations,

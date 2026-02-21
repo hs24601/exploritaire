@@ -175,6 +175,7 @@ export const RarityAura = memo(function RarityAura({
   rarity,
   cardWidth,
   cardHeight,
+  hyp,
   layer = 'behind',
 }: RarityAuraProps) {
   hyp = hyp ?? 0;

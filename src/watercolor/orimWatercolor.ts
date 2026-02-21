@@ -11,18 +11,21 @@ export const ORIM_WATERCOLOR_OVERALL_SCALE_MULTIPLIER = 1 / ORIM_WATERCOLOR_CANV
 export const ORIM_NEUTRAL_BASE_COLOR = '#3a3f41';
 
 function getOrimPrimaryElement(definition: OrimDefinition | null): Element | null {
-  if (!definition?.affinity) return null;
-  let best: Element | null = null;
-  let bestValue = -Infinity;
-  for (const element of ORIM_ELEMENT_PRIORITY) {
-    const value = definition.affinity[element];
-    if (value === undefined) continue;
-    if (value > bestValue) {
-      bestValue = value;
-      best = element;
+  if (!definition) return null;
+  if (definition.affinity) {
+    let best: Element | null = null;
+    let bestValue = -Infinity;
+    for (const element of ORIM_ELEMENT_PRIORITY) {
+      const value = definition.affinity[element];
+      if (value === undefined) continue;
+      if (value > bestValue) {
+        bestValue = value;
+        best = element;
+      }
     }
+    if (best) return best;
   }
-  return best;
+  return definition.elements[0] ?? null;
 }
 
 export function getOrimBaseColor(definition: OrimDefinition | null): string {

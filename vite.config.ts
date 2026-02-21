@@ -220,7 +220,7 @@ export default defineConfig({
               fs.writeFileSync(dataFilePath, JSON.stringify({ orims: parsed.orims }, null, 2), 'utf8');
 
               const tsFilePath = path.resolve(__dirname, 'src/engine/orims.ts');
-              const tsContent = `import type { OrimDefinition } from './types';\n\n/**\n * Orim Definitions - Clean, minimal card modifications\n * Each orim has: id, name, description, element\n */\nexport const ORIM_DEFINITIONS: OrimDefinition[] = ${JSON.stringify(parsed.orims, null, 2)};\n\n/**\n * Get an orim definition by ID\n */\nexport function getOrimDefinition(orimId: string): OrimDefinition | null {\n  return ORIM_DEFINITIONS.find((o) => o.id === orimId) || null;\n}\n`;
+              const tsContent = `import type { OrimDefinition } from './types';\n\n/**\n * Orim Definitions - Clean, minimal card modifications\n * Each orim has: id, name, description, elements\n */\nexport const ORIM_DEFINITIONS: OrimDefinition[] = ${JSON.stringify(parsed.orims, null, 2)};\n\n/**\n * Get an orim definition by ID\n */\nexport function getOrimDefinition(orimId: string): OrimDefinition | null {\n  return ORIM_DEFINITIONS.find((o) => o.id === orimId) || null;\n}\n`;
               fs.writeFileSync(tsFilePath, tsContent, 'utf8');
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify(parsed));

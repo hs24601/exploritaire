@@ -75,5 +75,17 @@ export const RELIC_DEFINITIONS: RelicDefinition[] = [
     behaviorId: 'summon_darkspawn_v1',
     params: {},
   },
+  {
+    id: 'momentum',
+    name: 'Momentum',
+    description: 'Valid moves push the countdown timer ahead, keeping the combat flow alive.',
+    rarity: 'rare',
+    passive: true,
+    scope: 'party',
+    behaviorId: 'momentum_v1',
+    params: {
+      bonusMs: 1000,
+    },
+  },
 ];
 // RELIC_DEFINITIONS_END

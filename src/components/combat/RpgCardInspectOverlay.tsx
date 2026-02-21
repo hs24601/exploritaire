@@ -79,7 +79,7 @@ export function getRpgCardMeta(card: CardType) {
     const isBlinding = card.id.startsWith('rpg-blinding-peck-');
     return {
       title: isBlinding ? 'Blinding Peck' : 'Peck',
-      subtitle: 'Owl Signature',
+      subtitle: 'Signature',
       body: isBlinding
         ? 'Deal heavy damage and apply blinded debuff.'
         : 'Deal direct damage and scale with hand growth.',
@@ -108,7 +108,7 @@ export function getRpgCardMeta(card: CardType) {
     }
     return {
       title: 'Soar',
-      subtitle: 'Owl Signature',
+      subtitle: 'Signature',
       body: 'Reveal second-layer tableau values and improve tempo.',
       details,
       accent: '#7fdbca',

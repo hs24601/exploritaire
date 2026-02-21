@@ -7,7 +7,9 @@
       "damage": "",
       "cardId": "",
       "cardRank": 1,
-      "cardElement": "N",
+      "cardElements": [
+        "N"
+      ],
       "abilityType": "combat",
       "tags": [],
       "effects": [
@@ -26,7 +28,9 @@
       "damage": "",
       "cardId": "",
       "cardRank": 1,
-      "cardElement": "W",
+      "cardElements": [
+        "W"
+      ],
       "abilityType": "exploration",
       "tags": [],
       "effects": [],
@@ -39,7 +43,9 @@
       "damage": "",
       "cardId": "",
       "cardRank": 1,
-      "cardElement": "N",
+      "cardElements": [
+        "N"
+      ],
       "abilityType": "combat",
       "tags": [],
       "effects": [],
@@ -52,7 +58,9 @@
       "damage": "",
       "cardId": "",
       "cardRank": 1,
-      "cardElement": "N",
+      "cardElements": [
+        "N"
+      ],
       "abilityType": "combat",
       "tags": [],
       "effects": [
@@ -60,6 +68,88 @@
           "type": "damage",
           "value": 1,
           "target": "enemy"
+        }
+      ],
+      "equipCost": 0
+    },
+    {
+      "id": "claw",
+      "label": "Claw",
+      "damage": "",
+      "cardId": "",
+      "cardRank": 1,
+      "cardElements": [
+        "N"
+      ],
+      "abilityType": "exploration",
+      "tags": [],
+      "effects": [
+        {
+          "type": "damage",
+          "value": 1,
+          "target": "enemy"
+        }
+      ],
+      "equipCost": 0
+    },
+    {
+      "id": "prowl",
+      "label": "Prowl",
+      "damage": "",
+      "cardId": "",
+      "cardRank": 1,
+      "cardElements": [
+        "N"
+      ],
+      "abilityType": "exploration",
+      "tags": [],
+      "effects": [
+        {
+          "type": "evasion",
+          "value": 2,
+          "target": "self"
+        }
+      ],
+      "equipCost": 0
+    },
+    {
+      "id": "wigglebuttAmbush",
+      "label": "Wigglebutt Ambush",
+      "description": "While in stealth, your next attack deals additional damage",
+      "damage": "",
+      "cardId": "",
+      "cardRank": 1,
+      "cardElements": [
+        "N"
+      ],
+      "abilityType": "exploration",
+      "tags": [],
+      "effects": [
+        {
+          "type": "damage",
+          "value": 3,
+          "target": "enemy"
+        }
+      ],
+      "equipCost": 0
+    },
+    {
+      "id": "whiskersense",
+      "label": "Whiskersense",
+      "damage": "",
+      "cardId": "",
+      "cardRank": 1,
+      "cardElements": [
+        "N"
+      ],
+      "abilityType": "exploration",
+      "tags": [],
+      "effects": [
+        {
+          "type": "evasion",
+          "value": 3,
+          "target": "self",
+          "charges": 10
         }
       ],
       "equipCost": 0

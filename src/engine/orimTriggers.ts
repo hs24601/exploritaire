@@ -39,9 +39,9 @@ const getActorAffinity = (state: GameState, actorId: string): Record<Element, nu
         if (!instance) return;
         const definition = state.orimDefinitions.find((def) => def.id === instance.definitionId);
         if (!definition) return;
-        if (definition.element) {
-          totals[definition.element] += 1;
-        }
+        definition.elements.forEach((element) => {
+          totals[element] += 1;
+        });
         if (definition.affinity) {
           Object.entries(definition.affinity).forEach(([element, value]) => {
             totals[element as Element] += value ?? 0;

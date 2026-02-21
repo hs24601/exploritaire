@@ -20,6 +20,7 @@ export const mainWorldMap: WorldMapDefinition = {
     { gridPosition: { col: 0, row: 0 }, traversalDifficulty: 1, poi: undefined },
     { gridPosition: { col: 0, row: 1 }, traversalDifficulty: 1, poi: undefined },
     { gridPosition: { col: 0, row: 2 }, traversalDifficulty: 1, poi: undefined },
+    { gridPosition: { col: 0, row: 3 }, traversalDifficulty: 1, poi: undefined },
     { gridPosition: { col: 0, row: -2 }, traversalDifficulty: 1, poi: undefined },
     { gridPosition: { col: 1, row: 0 }, traversalDifficulty: 2, poi: undefined },
     { gridPosition: { col: 1, row: 2 }, traversalDifficulty: 1, poi: undefined },
@@ -110,12 +111,6 @@ export const mainWorldMap: WorldMapDefinition = {
       lightBlocker: { castHeight: 9, softness: 7 },
     },
     {
-      gridPosition: { col: 0, row: 3 },
-      reason: 'Mountain ridge',
-      terrain: 'mountain',
-      lightBlocker: { castHeight: 9, softness: 7 },
-    },
-    {
       gridPosition: { col: 1, row: 3 },
       reason: 'Mountain ridge',
       terrain: 'mountain',
@@ -145,6 +140,7 @@ const CELL_POI_MAPPING: Array<{ col: number; row: number; poiId: string }> = [
   { col: 0, row: 0, poiId: 'poi_initial_02' },
   { col: 0, row: 1, poiId: 'poi_initial_01' },
   { col: 0, row: 2, poiId: 'poi_start' },
+  { col: 0, row: 3, poiId: 'poi_wave_battle' },
   { col: 0, row: -2, poiId: 'poi_oasis_a' },
   { col: 1, row: 0, poiId: 'poi_random_wilds' },
   { col: 1, row: 2, poiId: 'poi_event_glade_test' },

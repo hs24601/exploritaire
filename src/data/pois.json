@@ -15,15 +15,14 @@
           "drawCount": 3,
           "chooseCount": 1,
           "options": [
-            "ursus",
-            "lupus"
+            "felis"
           ]
         }
       ],
       "narration": {
         "title": "Awaken an {Aspect|orange}",
         "body": "You cannot progress through this physical world as just a {spirit}. Order the chaos ahead of you to unlock a physical aspect.",
-        "tone": "teal",
+        "tone": "silver",
         "autoCloseOnDeparture": true
       },
       "sparkle": {
@@ -139,6 +138,26 @@
         "starCount": 5,
         "glowColor": "#a8e6a3",
         "intensity": 0.8
+      }
+    },
+    {
+      "id": "poi_wave_battle",
+      "name": "Wave Battle",
+      "description": "A relentless gauntlet. Defeat each foe as new waves arrive.",
+      "type": "biome",
+      "biomeId": "wave_battle",
+      "rewards": [],
+      "narration": {
+        "title": "{BATTLE|red}",
+        "body": "A wave battle...can you survive???",
+        "tone": "gold",
+        "autoCloseOnDeparture": true
+      },
+      "sparkle": {
+        "proximityRange": 3,
+        "starCount": 6,
+        "glowColor": "#f26b6b",
+        "intensity": 1
       }
     },
     {

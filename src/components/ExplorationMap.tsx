@@ -55,6 +55,8 @@ interface ExplorationMapProps {
   canStepForward?: boolean;
   onStepBackward?: () => void;
   canStepBackward?: boolean;
+  pathingLocked?: boolean;
+  onTogglePathingLocked?: () => void;
   onHeadingChange?: (direction: Direction) => void;
   onTeleport?: (x: number, y: number) => void;
   poiMarkers?: Array<{ id: string; x: number; y: number; label?: string }>;
@@ -244,6 +246,8 @@ export const ExplorationMap = memo(function ExplorationMap({
   canStepForward = true,
   onStepBackward,
   canStepBackward = false,
+  pathingLocked = false,
+  onTogglePathingLocked,
   onHeadingChange,
   onTeleport,
   poiMarkers = [],
@@ -1389,32 +1393,97 @@ export const ExplorationMap = memo(function ExplorationMap({
           style={{ bottom: 5 }}
         >
           <div className="flex items-center justify-between gap-3">
-            <div className="flex flex-col items-center gap-0.5">
-              {!isCompact && <div className="text-[9px] uppercase tracking-[0.3em]" style={{ color: 'rgba(255, 229, 120, 0.8)' }}>
-                Supplies
-              </div>}
-              <button
-                type="button"
-                onClick={onUseSupply}
-                disabled={!onUseSupply || typeof supplyCount !== 'number' || supplyCount <= 0}
-                className="px-1.5 py-0.5 rounded border text-[12px] font-bold tracking-[1px] select-none disabled:opacity-50"
-                style={{
-                  borderColor: 'rgba(255, 229, 120, 0.8)',
-                  color: '#f7d24b',
-                  backgroundColor: 'rgba(10, 8, 6, 0.92)',
-                  textShadow: '0 0 4px rgba(230, 179, 30, 0.45)',
-                  minWidth: 44,
-                  textAlign: 'center',
-                }}
-                title={typeof supplyCount === 'number' ? `Use supply (+20 AP). ${supplyCount} remaining` : 'Supplies'}
-                data-dev-component="ExplorationMapSupplyButton"
-                data-dev-name="Use Supply"
-                data-dev-kind="control"
-                data-dev-description="Spend one supply to gain action points."
-                data-dev-role="map-control"
-              >
-                {typeof supplyCount === 'number' ? supplyCount : '--'}
-              </button>
+            <div className="flex items-end gap-2">
+              {onTogglePathingLocked && (
+                <div className="flex flex-col items-center gap-0.5">
+                  {!isCompact && <div className="h-[13px]" aria-hidden="true" />}
+                  <button
+                    type="button"
+                    onClick={onTogglePathingLocked}
+                    className="h-8 w-10 rounded border text-sm font-bold flex items-center justify-center transition hover:bg-black/40"
+                    style={{
+                      borderColor: pathingLocked ? 'rgba(247, 210, 75, 0.85)' : 'rgba(127, 219, 202, 0.75)',
+                      color: pathingLocked ? '#f7d24b' : '#7fdbca',
+                      backgroundColor: 'rgba(10, 8, 6, 0.9)',
+                      boxShadow: pathingLocked
+                        ? '0 0 10px rgba(247, 210, 75, 0.45)'
+                        : '0 0 10px rgba(127, 219, 202, 0.35)',
+                    }}
+                    aria-label={pathingLocked ? 'Lock pathing' : 'Unlock pathing'}
+                    title={pathingLocked ? 'Pathing locked (blocked)' : 'Pathing unlocked (clipping enabled)'}
+                    data-dev-component="ExplorationMapPathingToggle"
+                    data-dev-name="Pathing Toggle"
+                    data-dev-kind="control"
+                    data-dev-description="Lock/unlock map pathing checks."
+                    data-dev-role="map-control"
+                  >
+                    {pathingLocked ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path
+                          d="M7 10V8a5 5 0 0 1 10 0v2"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
+                        <rect
+                          x="5"
+                          y="10"
+                          width="14"
+                          height="10"
+                          rx="2"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                        />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path
+                          d="M9 10V8a5 5 0 0 1 9.5-2"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
+                        <rect
+                          x="5"
+                          y="10"
+                          width="14"
+                          height="10"
+                          rx="2"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              )}
+              <div className="flex flex-col items-center gap-0.5">
+                {!isCompact && <div className="text-[9px] uppercase tracking-[0.3em]" style={{ color: 'rgba(255, 229, 120, 0.8)' }}>
+                  Supplies
+                </div>}
+                <button
+                  type="button"
+                  onClick={onUseSupply}
+                  disabled={!onUseSupply || typeof supplyCount !== 'number' || supplyCount <= 0}
+                  className="px-1.5 py-0.5 rounded border text-[12px] font-bold tracking-[1px] select-none disabled:opacity-50"
+                  style={{
+                    borderColor: 'rgba(255, 229, 120, 0.8)',
+                    color: '#f7d24b',
+                    backgroundColor: 'rgba(10, 8, 6, 0.92)',
+                    textShadow: '0 0 4px rgba(230, 179, 30, 0.45)',
+                    minWidth: 44,
+                    textAlign: 'center',
+                  }}
+                  title={typeof supplyCount === 'number' ? `Use supply (+20 AP). ${supplyCount} remaining` : 'Supplies'}
+                  data-dev-component="ExplorationMapSupplyButton"
+                  data-dev-name="Use Supply"
+                  data-dev-kind="control"
+                  data-dev-description="Spend one supply to gain action points."
+                  data-dev-role="map-control"
+                >
+                  {typeof supplyCount === 'number' ? supplyCount : '--'}
+                </button>
+              </div>
             </div>
             <div className="flex-1 flex justify-center">
               {currentNode && (
@@ -1544,17 +1613,17 @@ export const ExplorationMap = memo(function ExplorationMap({
             data-dev-kind="control"
             data-dev-description="Adjust map zoom level."
             data-dev-role="map-control"
-            style={{
-              height: Math.min(
-                isCompact ? height - 70 : height,
-                Math.max(isCompact ? 60 : 90, cellSizeZ * 1.5)
-              ),
-              width: 18,
-              margin: 0,
-              WebkitAppearance: 'slider-vertical',
-              writingMode: 'bt-lr',
-              backgroundColor: 'transparent',
-            }}
+              style={{
+                height: Math.min(
+                  isCompact ? height - 70 : height,
+                  Math.max(isCompact ? 60 : 90, cellSizeZ * 1.5)
+                ),
+                width: 18,
+                margin: 0,
+                writingMode: 'vertical-lr',
+                direction: 'rtl',
+                backgroundColor: 'transparent',
+              }}
           />
           <div className="text-[10px] font-mono font-bold" style={{ color: 'rgba(127, 219, 202, 0.9)' }}>
             {zoom.toFixed(2)}x

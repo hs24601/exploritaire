@@ -2,45 +2,63 @@ import type { OrimDefinition } from './types';
 
 /**
  * Orim Definitions - Clean, minimal card modifications
- * Each orim has: id, name, description, element
- *
- * Aspects (isAspect: true) are character archetypes — orim groupings for jumbo card selection.
+ * Each orim has: id, name, description, elements
  */
 export const ORIM_DEFINITIONS: OrimDefinition[] = [
-  // Character Aspects
-  {
-    "id": "lupus",
-    "name": "Lupus",
-    "description": "A ranger and leader. Swift and strategic.",
-    "element": "A",
-    "isAspect": true
-  },
-  {
-    "id": "ursus",
-    "name": "Ursus",
-    "description": "A tank and protector. Enduring and sturdy.",
-    "element": "E",
-    "isAspect": true
-  },
-  {
-    "id": "felis",
-    "name": "Felis",
-    "description": "A rogue and infiltrator. Quick and cunning.",
-    "element": "F",
-    "isAspect": true
-  },
-  // Regular Orims
   {
     "id": "fireShard",
     "name": "Fire Shard",
     "description": "A splinter that is warm to the touch",
-    "element": "F",
+    "elements": [
+      "F"
+    ],
     "effects": [
       {
         "type": "damage",
         "target": "enemy",
         "element": "F",
         "elementalValue": 1
+      }
+    ]
+  },
+  {
+    "id": "iceShard",
+    "name": "Ice Shard",
+    "description": "A splinter of sheer cold",
+    "elements": [
+      "W",
+      "A"
+    ],
+    "effects": []
+  },
+  {
+    "id": "felis",
+    "name": "Felis",
+    "description": "Rogue Archetype",
+    "elements": [
+      "N"
+    ],
+    "isAspect": true,
+    "aspectProfile": {
+      "key": "Felis",
+      "rarity": "common",
+      "attributes": []
+    },
+    "effects": [
+      {
+        "type": "evasion",
+        "value": 2,
+        "target": "self"
+      },
+      {
+        "type": "damage",
+        "value": 1,
+        "target": "enemy"
+      },
+      {
+        "type": "maxhp",
+        "value": 5,
+        "target": "enemy"
       }
     ]
   }

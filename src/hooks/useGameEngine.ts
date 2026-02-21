@@ -44,6 +44,7 @@ import {
   advanceRandomBiomeTurn as advanceRandomBiomeTurnFn,
   rerollRandomBiomeDeal as rerollRandomBiomeDealFn,
   spawnRandomEnemyInRandomBiome as spawnRandomEnemyInRandomBiomeFn,
+  cleanupDefeatedEnemies as cleanupDefeatedEnemiesFn,
   playRpgHandCardOnActor as playRpgHandCardOnActorFn,
   playEnemyRpgHandCardOnActor as playEnemyRpgHandCardOnActorFn,
   adjustRpgHandCardRarity as adjustRpgHandCardRarityFn,
@@ -841,6 +842,9 @@ export function useGameEngine(
     setGameState((prev) => (prev ? spawnRandomEnemyInRandomBiomeFn(prev) : prev));
     setSelectedCard(null);
   }, []);
+  const cleanupDefeatedEnemies = useCallback(() => {
+    setGameState((prev) => (prev ? cleanupDefeatedEnemiesFn(prev) : prev));
+  }, []);
 
   const setBiomeTableaus = useCallback((tableaus: Card[][]) => {
     setGameState((prev) => {
@@ -1005,9 +1009,14 @@ export function useGameEngine(
     setGameState(returnOrimToStashFn(gameState, actorId, cardId, slotId));
   }, [gameState]);
 
-  const devInjectOrimToActor = useCallback((actorId: string, orimDefinitionId: string) => {
+  const devInjectOrimToActor = useCallback((
+    actorId: string,
+    orimDefinitionId: string,
+    foundationIndex?: number,
+    dropPoint?: { x: number; y: number }
+  ) => {
     if (!gameState) return;
-    setGameState(devInjectOrimToActorFn(gameState, actorId, orimDefinitionId));
+    setGameState(devInjectOrimToActorFn(gameState, actorId, orimDefinitionId, foundationIndex, dropPoint));
   }, [gameState]);
 
   const updateOrimDefinitions = useCallback((definitions: GameState['orimDefinitions']) => {
@@ -1110,6 +1119,7 @@ export function useGameEngine(
       advanceRandomBiomeTurn,
       rerollRandomBiomeDeal,
       spawnRandomEnemyInRandomBiome,
+      cleanupDefeatedEnemies,
       setBiomeTableaus,
       playRpgHandCardOnActor,
       playEnemyRpgHandCardOnActor,

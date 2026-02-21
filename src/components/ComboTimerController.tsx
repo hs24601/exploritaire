@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 interface ComboTimerControllerProps {
   partyComboTotal: number;
   paused: boolean;
   disabled?: boolean;
+  timeScale?: number;
+  bonusExtendMs?: number;
+  bonusExtendToken?: number;
+  secondaryBonusExtendMs?: number;
+  secondaryBonusExtendToken?: number;
   onExpire: (value: number) => void;
   children: (state: {
     displayedCombo: number;
@@ -17,6 +22,11 @@ export function ComboTimerController({
   partyComboTotal,
   paused,
   disabled = false,
+  timeScale = 1,
+  bonusExtendMs = 0,
+  bonusExtendToken,
+  secondaryBonusExtendMs = 0,
+  secondaryBonusExtendToken,
   onExpire,
   children,
 }: ComboTimerControllerProps) {
@@ -26,6 +36,40 @@ export function ComboTimerController({
   const pausedRemainingRef = useRef<number>(COMBO_TIMER_MS);
   const prevPartyComboRef = useRef(0);
   const displayedComboRef = useRef(0);
+  const lastBonusTokenRef = useRef<number | undefined>(undefined);
+  const lastSecondaryBonusTokenRef = useRef<number | undefined>(undefined);
+
+  const resolvedTimeScale = Math.max(0.1, timeScale);
+  const timerDurationMs = COMBO_TIMER_MS / resolvedTimeScale;
+
+  const updateTimerFill = useCallback(() => {
+    if (!timerRef.current) return;
+    const now = performance.now();
+    const remaining = paused
+      ? pausedRemainingRef.current
+      : Math.max(0, (comboEndRef.current ?? now) - now);
+    const fill = Math.max(0, Math.min(1, remaining / timerDurationMs));
+    timerRef.current.style.setProperty('--combo-fill', `${fill * 100}%`);
+  }, [paused, timerDurationMs]);
+
+  const extendTimer = useCallback(
+    (ms: number) => {
+      if (disabled || ms <= 0) return;
+      if (paused) {
+        pausedRemainingRef.current = Math.max(0, pausedRemainingRef.current + ms);
+        updateTimerFill();
+        return;
+      }
+      const now = performance.now();
+      if (!comboEndRef.current) {
+        comboEndRef.current = now + timerDurationMs;
+      } else {
+        comboEndRef.current += ms;
+      }
+      updateTimerFill();
+    },
+    [disabled, paused, timerDurationMs, updateTimerFill]
+  );
 
   useEffect(() => {
     displayedComboRef.current = displayedCombo;
@@ -44,13 +88,13 @@ export function ComboTimerController({
     if (partyComboTotal > prevPartyComboRef.current) {
       const delta = partyComboTotal - prevPartyComboRef.current;
       setDisplayedCombo((prev) => prev + delta);
-      comboEndRef.current = performance.now() + COMBO_TIMER_MS;
+      comboEndRef.current = performance.now() + timerDurationMs;
     } else if (partyComboTotal < prevPartyComboRef.current) {
       setDisplayedCombo(0);
       comboEndRef.current = null;
     }
     prevPartyComboRef.current = partyComboTotal;
-  }, [disabled, partyComboTotal]);
+  }, [disabled, partyComboTotal, timerDurationMs]);
 
   useEffect(() => {
     if (disabled) return;
@@ -58,7 +102,23 @@ export function ComboTimerController({
     if (displayedCombo === 0) {
       timerRef.current.style.setProperty('--combo-fill', '100%');
     }
-  }, [displayedCombo]);
+  }, [disabled, displayedCombo]);
+
+  useEffect(() => {
+    if (disabled) return;
+    if (comboEndRef.current) return;
+    pausedRemainingRef.current = timerDurationMs;
+  }, [disabled, timerDurationMs]);
+
+  useEffect(() => {
+    if (disabled) return;
+    if (paused) {
+      const now = performance.now();
+      pausedRemainingRef.current = Math.max(0, (comboEndRef.current ?? now) - now);
+    } else {
+      comboEndRef.current = performance.now() + pausedRemainingRef.current;
+    }
+  }, [disabled, paused]);
 
   useEffect(() => {
     if (disabled) return;
@@ -66,7 +126,7 @@ export function ComboTimerController({
       if (!timerRef.current) return;
       const now = performance.now();
       if (comboEndRef.current === null) {
-        comboEndRef.current = now + COMBO_TIMER_MS;
+        comboEndRef.current = now + timerDurationMs;
       }
       const remaining = paused
         ? pausedRemainingRef.current
@@ -83,21 +143,27 @@ export function ComboTimerController({
         return;
       }
 
-      const fill = Math.max(0, Math.min(1, remaining / COMBO_TIMER_MS));
+      const fill = Math.max(0, Math.min(1, remaining / timerDurationMs));
       timerRef.current.style.setProperty('--combo-fill', `${fill * 100}%`);
     }, 100);
     return () => window.clearInterval(interval);
-  }, [disabled, onExpire, paused]);
+  }, [disabled, onExpire, paused, timerDurationMs]);
 
   useEffect(() => {
     if (disabled) return;
-    if (paused) {
-      const now = performance.now();
-      pausedRemainingRef.current = Math.max(0, (comboEndRef.current ?? now) - now);
-    } else {
-      comboEndRef.current = performance.now() + pausedRemainingRef.current;
-    }
-  }, [disabled, paused]);
+    if (bonusExtendToken === undefined) return;
+    if (bonusExtendToken === lastBonusTokenRef.current) return;
+    lastBonusTokenRef.current = bonusExtendToken;
+    extendTimer(bonusExtendMs ?? 0);
+  }, [bonusExtendMs, bonusExtendToken, disabled, extendTimer]);
+
+  useEffect(() => {
+    if (disabled) return;
+    if (secondaryBonusExtendToken === undefined) return;
+    if (secondaryBonusExtendToken === lastSecondaryBonusTokenRef.current) return;
+    lastSecondaryBonusTokenRef.current = secondaryBonusExtendToken;
+    extendTimer(secondaryBonusExtendMs ?? 0);
+  }, [disabled, secondaryBonusExtendMs, secondaryBonusExtendToken, extendTimer]);
 
   return <>{children({ displayedCombo, timerRef })}</>;
 }

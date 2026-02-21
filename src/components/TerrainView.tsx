@@ -290,7 +290,7 @@ function TerrainObject({ obj, type, viewWidth }: {
 
 function PartySilhouettes({ viewWidth }: { viewWidth: number }) {
   const cx = viewWidth / 2;
-  // Three figures: left (Fox), center (Wolf), right (Owl)
+  // Three figures: left (Fox), center (Wolf), right (Bird)
   const positions = [cx - 52, cx, cx + 52];
   const scales = [0.82, 1.0, 0.82];
   const opacities = [0.72, 0.88, 0.72];

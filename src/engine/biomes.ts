@@ -185,6 +185,19 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
     rewards: { cards: [] },
     requiredMoves: 0,
   },
+  {
+    id: 'wave_battle',
+    name: 'Wave Battle',
+    description: 'A relentless gauntlet. Defeat each foe as new waves arrive.',
+    seed: 'WAVE_BATTLE_001',
+    randomlyGenerated: true,
+    infinite: true,
+    waveBattle: true,
+    enemyDifficulty: 'normal',
+    layout: { tableaus: [], elements: [] },
+    rewards: { cards: [] },
+    requiredMoves: 0,
+  },
 
   // === EVENT ENCOUNTERS ===
 

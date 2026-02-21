@@ -351,7 +351,7 @@ export const Hand = memo(function Hand({
           100% { opacity: 0.15; transform: scale(0.96); }
         }
       `}</style>
-      {stockCount > 0 && (
+      {cards.length > 0 && stockCount > 0 && (
         <div
           className="absolute"
           style={{

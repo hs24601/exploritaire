@@ -13,8 +13,8 @@ import { WatercolorContext } from '../watercolor/useWatercolorEnabled';
 import { getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
 import { getElementCardWatercolor } from '../watercolor/elementCardWatercolor';
 import type { WatercolorConfig } from '../watercolor/types';
-import aspectProfilesJson from '../data/aspectProfiles.json';
 import abilitiesJson from '../data/abilities.json';
+import { ORIM_DEFINITIONS } from '../engine/orims';
 import { useHoloInteraction } from '../hooks/useHoloInteraction';
 import { RarityAura } from './RarityAura';
 
@@ -48,6 +48,7 @@ interface CardProps {
   watercolorShadowGlyph?: string;
   valueWatercolor?: WatercolorConfig | null;
   maskValue?: boolean;
+  disableTilt?: boolean;
 }
 
 export const Card = memo(function Card({
@@ -77,6 +78,7 @@ export const Card = memo(function Card({
   watercolorShadowGlyph,
   valueWatercolor,
   maskValue = false,
+  disableTilt = false,
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [shimmer, setShimmer] = useState(0);
@@ -179,28 +181,18 @@ export const Card = memo(function Card({
   const keruAspectProfile = useMemo(() => {
     if (!card || !card.id.startsWith('keru-archetype-')) return null;
     const key = card.id.replace('keru-archetype-', '').toLowerCase();
-    const latinKeyMap: Record<string, string> = {
-      lupus: 'lupus',
-      ursus: 'ursus',
-      felis: 'felis',
-    };
-    const latinKey = latinKeyMap[key] ?? key;
-    const profiles = (aspectProfilesJson as { aspects?: Array<{
-      id?: string;
-      name?: string;
-      description?: string;
-      archetype?: string | null;
-      rarity?: string;
-      attributes?: Array<string | { stat?: string; op?: string; value?: number | string }>;
-    }> }).aspects ?? [];
-    const match = profiles.find((entry) => {
+    const aspectOrims = (orimDefinitions && orimDefinitions.length > 0)
+      ? orimDefinitions
+      : ORIM_DEFINITIONS;
+    const match = aspectOrims.find((entry) => {
+      if (!entry.isAspect) return false;
+      const entryKey = String(entry.aspectProfile?.key ?? '').toLowerCase();
       const id = String(entry.id ?? '').toLowerCase();
-      const archetype = String(entry.archetype ?? '').toLowerCase();
       const name = String(entry.name ?? '').toLowerCase();
-      return id === key || archetype === key || name === key || id === latinKey || name === latinKey;
+      return id === key || entryKey === key || name === key;
     }) ?? null;
-    if (!match) return null;
-    const attributes = (match.attributes ?? []).map((attr) => {
+    if (!match || !match.aspectProfile) return null;
+    const attributes = (match.aspectProfile.attributes ?? []).map((attr) => {
       if (typeof attr === 'string') return attr;
       const stat = String(attr.stat ?? '').trim();
       const op = String(attr.op ?? '').trim();
@@ -210,13 +202,13 @@ export const Card = memo(function Card({
       return `${stat}${safeOp}${value}`.trim();
     }).filter(Boolean);
     return {
-      archetype: match.archetype ?? '',
-      rarity: match.rarity ?? 'common',
+      archetype: match.aspectProfile.archetype ?? '',
+      rarity: match.aspectProfile.rarity ?? 'common',
       name: match.name ?? '',
       description: match.description ?? '',
       attributes,
     };
-  }, [card]);
+  }, [card, orimDefinitions]);
   const keruAbilityProfile = useMemo(() => {
     if (!card || !card.id.startsWith('ability-')) return null;
     const key = card.id.replace('ability-', '').toLowerCase();
@@ -387,15 +379,15 @@ export const Card = memo(function Card({
     <div
       className="relative"
       style={{
-        ...holoStyles,
+        ...(disableTilt ? {} : holoStyles),
         width: frameSize.width,
         height: frameSize.height,
         zIndex: isHovered ? 50 : 1,
       }}
-      onPointerMove={handlePointerMove}
+      onPointerMove={disableTilt ? undefined : handlePointerMove}
       onMouseLeave={(e) => {
         setIsHovered(false);
-        handlePointerLeave();
+        if (!disableTilt) handlePointerLeave();
       }}
     >
       <div className={`card-3d-container h-full w-full ${faceDown ? 'flipped' : ''}`}>
@@ -1528,18 +1520,20 @@ export const Card = memo(function Card({
                 })}
             </div>
           ) : (!maskValue && !cardTitleMeta && !keruAspectProfile) ? (
-            <div
-              className="text-xs force-sharp"
-              style={{
-                transform: 'translateZ(0)',
-                WebkitFontSmoothing: 'subpixel-antialiased',
-                fontSize: suitFontSizeOverride ? `${suitFontSizeOverride}px` : undefined,
-                color: isWaterElement ? (showGraphics ? '#050505' : '#f8f8ff') : undefined,
-                textShadow: isWaterElement ? 'none' : undefined,
-                mixBlendMode: isWaterElement ? 'normal' : undefined,
-              }}
-            >
-              {suitDisplay}
+            <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+              <div
+                className="text-xs force-sharp"
+                style={{
+                  transform: 'translateZ(0)',
+                  WebkitFontSmoothing: 'subpixel-antialiased',
+                  fontSize: suitFontSizeOverride ? `${suitFontSizeOverride}px` : undefined,
+                  color: isWaterElement ? (showGraphics ? '#050505' : '#f8f8ff') : undefined,
+                  textShadow: isWaterElement ? 'none' : undefined,
+                  mixBlendMode: isWaterElement ? 'normal' : undefined,
+                }}
+              >
+                {suitDisplay}
+              </div>
             </div>
           ) : null}
           {cooldownValue > 0 && cooldownMax > 0 && (

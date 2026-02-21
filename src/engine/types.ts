@@ -31,13 +31,27 @@ export interface OrimEffectDef {
   duration?: number;
 }
 
+export interface OrimAspectAttribute {
+  stat?: string;
+  op?: string;
+  value?: number | string;
+}
+
+export interface OrimAspectProfile {
+  key?: string;
+  archetype?: string;
+  rarity?: OrimRarity;
+  attributes?: Array<string | OrimAspectAttribute>;
+}
+
 export interface OrimDefinition {
   id: string;
   name: string;
   description: string;
-  element: Element;
+  elements: Element[];
   effects?: OrimEffectDef[];
   isAspect?: boolean; // Marks this orim as a character aspect (jumbo card option)
+  aspectProfile?: OrimAspectProfile;
   // Legacy fields below — kept for backwards compatibility, will be deprecated
   artSrc?: string;
   category?: OrimCategory;
@@ -62,6 +76,12 @@ export interface OrimSlot {
   orimId?: string | null;
   locked?: boolean;
 }
+
+export type RelicCombatEvent =
+  | { type: 'ORIM_CALLOUT_SHOWN' }
+  | { type: 'NO_PLAYABLE_MOVES'; side: 'player' | 'enemy' }
+  | { type: 'TURN_ENDED_EARLY'; side: 'player' | 'enemy'; bankedMs: number }
+  | { type: 'VALID_MOVE_PLAYED'; side: 'player' };
 
 export interface DeckCardInstance {
   id: string;
@@ -302,6 +322,9 @@ export interface GameState {
   rpgBlindedEnemyUntil?: number;
   playtestVariant?: 'single-foundation' | 'party-foundations' | 'party-battle' | 'rpg';
   actorKeru?: ActorKeru;
+  lastResolvedOrimId?: string | null;
+  lastResolvedOrimFoundationIndex?: number | null;
+  lastResolvedOrimDropPoint?: { x: number; y: number } | null;
   rewardQueue?: RewardBundle[];
   rewardHistory?: RewardBundle[];
 }
@@ -529,6 +552,8 @@ export interface BiomeDefinition {
   mode?: 'traditional' | 'node-edge'; // Defaults to 'traditional'
   randomlyGenerated?: boolean; // Random tableau generation each turn
   infinite?: boolean; // Tableaus backfill with new random cards when cards are removed
+  /** Wave battle mode: auto-spawn sequential enemies with callouts. */
+  waveBattle?: boolean;
   nodePattern?: string; // NodeEdgePattern ID (for node-edge biomes)
   enemyDifficulty?: EnemyDifficulty;
   layout: BiomeLayout;

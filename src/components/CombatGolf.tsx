@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useGraphics } from '../contexts/GraphicsContext';
 import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition, Die as DieType, RelicCombatEvent, ActorKeru, ActorKeruArchetype } from '../engine/types';
 import type { PoiReward } from '../engine/worldMapTypes';
-import aspectProfilesJson from '../data/aspectProfiles.json';
 import type { DragState } from '../hooks/useDragDrop';
 import type { BlockingRect } from '../engine/lighting';
 import { ShadowCanvas } from './LightRenderer';
@@ -12,6 +11,7 @@ import { Tableau } from './Tableau';
 import { PerspectiveTableauGroup } from './PerspectiveTableauGroup';
 import { FoundationActor } from './FoundationActor';
 import { Card } from './Card';
+import { JewelOrim } from './JewelModal';
 import { Die } from './Die';
 import { NodeEdgeBiomeScreen } from './NodeEdgeBiomeScreen';
 import { FoundationTokenGrid } from './FoundationTokenGrid';
@@ -108,27 +108,17 @@ const buildKeruStatLines = (previous: ActorKeru, next: ActorKeru): string[] =>
 
 const getKeruAspectAttributeLines = (archetype?: ActorKeruArchetype | null): string[] => {
   if (!archetype || archetype === 'blank') return [];
-  const key = archetype.toLowerCase();
-  const latinMap: Record<string, string> = {
-    lupus: 'lupus',
-    ursus: 'ursus',
-    felis: 'felis',
-  };
-  const lookup = latinMap[key] ?? key;
-  const profiles = (aspectProfilesJson as { aspects?: Array<{
-    id?: string;
-    name?: string;
-    archetype?: string | null;
-    attributes?: Array<string | { stat?: string; op?: string; value?: number | string }>;
-  }> }).aspects ?? [];
-  const match = profiles.find((entry) => {
+  const lookup = archetype.toLowerCase();
+  const match = ORIM_DEFINITIONS.find((entry) => {
+    if (!entry.isAspect || !entry.aspectProfile) return false;
     const id = String(entry.id ?? '').toLowerCase();
     const name = String(entry.name ?? '').toLowerCase();
-    const archetypeName = String(entry.archetype ?? '').toLowerCase();
-    return id === lookup || name === lookup || archetypeName === lookup;
+    const key = String(entry.aspectProfile.key ?? '').toLowerCase();
+    const archetypeName = String(entry.aspectProfile.archetype ?? '').toLowerCase();
+    return id === lookup || name === lookup || key === lookup || archetypeName === lookup;
   });
-  if (!match) return [];
-  return (match.attributes ?? []).map((attr) => {
+  if (!match?.aspectProfile) return [];
+  return (match.aspectProfile.attributes ?? []).map((attr) => {
     if (typeof attr === 'string') return attr;
     const stat = String(attr.stat ?? '').trim();
     const op = String(attr.op ?? '').trim() || '+';
@@ -220,6 +210,7 @@ interface CombatGolfProps {
     advanceRandomBiomeTurn?: () => void;
     rerollRandomBiomeDeal?: () => void;
     spawnRandomEnemyInRandomBiome?: () => void;
+    cleanupDefeatedEnemies?: () => void;
     setBiomeTableaus?: (tableaus: CardType[][]) => void;
     tickRpgCombat?: (nowMs: number) => boolean;
     processRelicCombatEvent?: (event: RelicCombatEvent) => void;
@@ -232,6 +223,7 @@ interface CombatGolfProps {
     swapPartyLead: (actorId: string) => void;
     playWildAnalysisSequence: () => void;
     puzzleCompleted?: (payload?: { coord?: { x: number; y: number } | null; poiId?: string | null; tableauId?: string | null } | null) => void;
+    startBiome?: (tileId: string, biomeId: string) => void;
   };
   narrativeOpen: boolean;
   onCloseNarrative: () => void;
@@ -251,6 +243,9 @@ interface TurnTimerRailProps {
   remainingMsOverride?: number;
   showSkipButton?: boolean;
   onSkip?: (remainingMs: number) => void;
+  showPauseButton?: boolean;
+  onTogglePause?: () => void;
+  isGamePaused?: boolean;
   paused?: boolean;
   onClick?: () => void;
   role?: string;
@@ -267,6 +262,9 @@ function TurnTimerRail({
   remainingMsOverride,
   showSkipButton = false,
   onSkip,
+  showPauseButton = false,
+  onTogglePause,
+  isGamePaused = false,
   paused = false,
   onClick,
   role,
@@ -282,6 +280,8 @@ function TurnTimerRail({
   }, []);
   const remainingMs = remainingMsOverride ?? Math.max(0, Math.round((parsePercent(fillPercent) / 100) * totalMs));
   const resolvedFillPct = Math.max(0, Math.min(100, (remainingMs / Math.max(1, totalMs)) * 100));
+  const durationSeconds = Math.max(0, totalMs / 1000);
+  const durationLabel = `${durationSeconds.toFixed(1)}s`;
 
   const healthColor = useMemo(() => {
     const t = Math.max(0, Math.min(1, resolvedFillPct / 100));
@@ -317,7 +317,7 @@ function TurnTimerRail({
         </div>
       <div
         ref={timerRef}
-          className="relative flex-1 w-9 font-bold rounded border overflow-hidden select-none"
+        className="relative flex-1 w-9 font-bold rounded border overflow-hidden select-none"
         onClick={onClick}
         role={role}
         tabIndex={tabIndex}
@@ -327,41 +327,42 @@ function TurnTimerRail({
           boxShadow: '0 0 12px rgba(230, 179, 30, 0.65)',
           backgroundColor: 'rgba(10, 8, 6, 0.92)',
           cursor,
-            ['--combo-fill' as string]: `${resolvedFillPct}%`,
+          ['--combo-fill' as string]: `${resolvedFillPct}%`,
         }}
       >
         <div
-            className="absolute inset-x-0 bottom-0"
+          className="absolute inset-x-0 bottom-0"
           style={{
-              height: 'var(--combo-fill)',
+            height: 'var(--combo-fill)',
             backgroundColor: 'rgba(230, 179, 30, 0.95)',
             transition: 'height 90ms linear',
           }}
         />
+        <div
+          className="absolute left-1/2 pointer-events-none px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-[1px]"
+          style={{
+            top: `calc(${100 - resolvedFillPct}% - 2px)`,
+            transform: 'translate(-50%, -100%)',
+            color: '#f8f8f8',
+            borderColor: `${healthColor}`,
+            backgroundColor: 'rgba(10, 8, 6, 0.9)',
+            boxShadow: `0 0 8px ${healthColor}`,
+            lineHeight: 1,
+            transition: 'top 90ms linear, border-color 120ms linear, box-shadow 120ms linear',
+          }}
+        >
+          {timerValueLabel}
+        </div>
+        {paused && (
           <div
-            className="absolute left-1/2 pointer-events-none px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-[1px]"
-            style={{
-              top: `calc(${100 - resolvedFillPct}% - 2px)`,
-              transform: 'translate(-50%, -100%)',
-              color: '#f8f8f8',
-              borderColor: `${healthColor}`,
-              backgroundColor: 'rgba(10, 8, 6, 0.9)',
-              boxShadow: `0 0 8px ${healthColor}`,
-              lineHeight: 1,
-              transition: 'top 90ms linear, border-color 120ms linear, box-shadow 120ms linear',
-            }}
+            className="absolute inset-0 flex items-center justify-center text-xl font-bold pointer-events-none"
+            style={{ color: '#f7d24b', textShadow: '0 0 8px rgba(247, 210, 75, 0.75)' }}
           >
-            {timerValueLabel}
+            ||
           </div>
-          {paused && (
-            <div
-              className="absolute inset-0 flex items-center justify-center text-xl font-bold pointer-events-none"
-              style={{ color: '#f7d24b', textShadow: '0 0 8px rgba(247, 210, 75, 0.75)' }}
-            >
-              ||
-            </div>
-          )}
+        )}
       </div>
+      <div className="text-[10px] uppercase tracking-[2px] text-game-white/60">{`duration ${durationLabel}`}</div>
         {showSkipButton ? (
           <button
             type="button"
@@ -381,6 +382,18 @@ function TurnTimerRail({
             ⏭
           </button>
         ) : <div style={{ minHeight: 28 }} />}
+        {showPauseButton ? (
+          <button
+            type="button"
+            onClick={onTogglePause}
+            disabled={!onTogglePause}
+            className="rounded border border-game-gold/70 bg-game-bg-dark/90 px-4 py-2 text-[12px] font-bold tracking-[2px] text-game-gold shadow-neon-gold disabled:opacity-50"
+            title={isGamePaused ? 'Resume' : 'Pause'}
+            aria-label={isGamePaused ? 'Resume' : 'Pause'}
+          >
+            {isGamePaused ? '▶' : '⏸'}
+          </button>
+        ) : <div style={{ minHeight: 36 }} />}
       </div>
     </div>
   );
@@ -519,6 +532,7 @@ export const CombatGolf = memo(function CombatGolf({
   const [splatterModalOpen, setSplatterModalOpen] = useState(false);
   const [explorationHeading, setExplorationHeading] = useState<Direction>('N');
   const [explorationMapAlignment, setExplorationMapAlignment] = useState<'player' | 'map'>('player');
+  const [pathingLocked, setPathingLocked] = useState(false);
   const explorationSpawnX = mainWorldMap.defaultSpawnPosition.col;
   const explorationSpawnY = mainWorldMap.defaultSpawnPosition.row;
   const [explorationNodes, setExplorationNodes] = useState<ExplorationMapNode[]>([
@@ -554,6 +568,10 @@ export const CombatGolf = memo(function CombatGolf({
   const [bankedTimerBonusToken, setBankedTimerBonusToken] = useState<number | undefined>(undefined);
   const [bankCallouts, setBankCallouts] = useState<Array<{ id: number; ms: number }>>([]);
   const [enemyTurnEndCallouts, setEnemyTurnEndCallouts] = useState<Array<{ id: number }>>([]);
+  const [waveBattleCount, setWaveBattleCount] = useState(0);
+  const [waveBattleCallouts, setWaveBattleCallouts] = useState<Array<{ id: number; wave: number }>>([]);
+  const waveBattleSpawnPendingRef = useRef(false);
+  const waveBattleStartRef = useRef<string | null>(null);
   const [bankSmashFx, setBankSmashFx] = useState<{ id: number; ms: number } | null>(null);
   const [explorationSupplies, setExplorationSupplies] = useState(10);
   const [explorationRowsPerStep, setExplorationRowsPerStep] = useState(1);
@@ -580,6 +598,12 @@ export const CombatGolf = memo(function CombatGolf({
   const [keruFxActive, setKeruFxActive] = useState(false);
   const [keruStatLines, setKeruStatLines] = useState<string[]>([]);
   const [keruAttributeCallouts, setKeruAttributeCallouts] = useState<Array<{ id: number; text: string }>>([]);
+  const [orimRewardCallouts, setOrimRewardCallouts] = useState<Array<{
+    id: number;
+    orimId: string;
+    foundationIndex: number | null;
+    dropPoint?: { x: number; y: number } | null;
+  }>>([]);
   const keruAttributeTimeoutsRef = useRef<number[]>([]);
   const [upgradedHandCardIds, setUpgradedHandCardIds] = useState<string[]>([]);
   const upgradedFlashTimeoutsRef = useRef<Record<string, number>>({});
@@ -723,7 +747,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (!poi?.tableauPresetId) return;
       map.set(`${cell.gridPosition.col},${cell.gridPosition.row}`, poi.tableauPresetId as PoiTableauPresetId);
     });
-    console.log('[POI Tableau Map] poiByCoordinateKey rebuilt. Keys:', Array.from(map.keys()));
+    // console.log('[POI Tableau Map] poiByCoordinateKey rebuilt. Keys:', Array.from(map.keys()));
     return map;
   }, [poiDataVersion]);
 
@@ -881,6 +905,7 @@ export const CombatGolf = memo(function CombatGolf({
   }, [explorationSpawnX, explorationSpawnY]);
   const clearedPoiKeyRef = useRef<Set<string>>(new Set());
   const seenNonEmptyTableauKeysRef = useRef<Set<string>>(new Set());
+  const consumedPoiRewardKeysRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const nextCleared = new Set(clearedPoiKeyRef.current);
     let newlyClearedAspectKey: string | null = null;
@@ -907,7 +932,7 @@ export const CombatGolf = memo(function CombatGolf({
         });
         const rewards = getPoiRewardsForKey(key);
         const clearRewards = rewards.filter((r) => (r.trigger ?? 'on_tableau_clear') === 'on_tableau_clear');
-        if (clearRewards.length > 0) {
+        if (clearRewards.length > 0 && !consumedPoiRewardKeysRef.current.has(key)) {
           newlyClearedAspectKey = key;
           setLastPoiRewardKey(key);
           const reward = clearRewards[0];
@@ -1257,11 +1282,13 @@ export const CombatGolf = memo(function CombatGolf({
     return allowedOrimIds.map((orimId) => {
       const orimDef = ORIM_DEFINITIONS.find((o) => o.id === orimId);
       if (!orimDef) return null;
+      const primaryElement = orimDef.elements[0];
+      if (!primaryElement) return null;
       return {
         id: `reward-orim-${orimDef.id}`,
         rank: 0,
-        element: orimDef.element || 'N',
-        suit: ELEMENT_TO_SUIT[orimDef.element as Element] || 'wild',
+        element: primaryElement,
+        suit: ELEMENT_TO_SUIT[primaryElement] || 'wild',
       } as CardType;
     }).filter((c) => c !== null) as CardType[];
   }, [allowedOrimIds, ORIM_DEFINITIONS]);
@@ -1365,7 +1392,8 @@ export const CombatGolf = memo(function CombatGolf({
   const playtestVariant = gameState.playtestVariant ?? 'single-foundation';
   const isSingleFoundationVariant = playtestVariant === 'single-foundation';
   const isRpgVariant = playtestVariant === 'rpg';
-  const isPartyBattleVariant = playtestVariant === 'party-battle' || isRpgVariant;
+  const isWaveBattle = !!biomeDef?.waveBattle;
+  const isPartyBattleVariant = playtestVariant === 'party-battle' || isRpgVariant || isWaveBattle;
   const isPartyFoundationsVariant = playtestVariant === 'party-foundations' || isPartyBattleVariant;
   const isEnemyTurn = isPartyBattleVariant && gameState.randomBiomeActiveSide === 'enemy';
   const sunkCostRelicEquipped = useMemo(() => {
@@ -1382,7 +1410,7 @@ export const CombatGolf = memo(function CombatGolf({
     if (!coords) return null;
     return getPoiNarrationForKey(`${coords.x},${coords.y}`);
   }, [explorationCurrentNodeId, getExplorationNodeCoordinates, getPoiNarrationForKey]);
-  const narrationTone = (activePoiNarration?.tone ?? 'teal') as 'teal' | 'gold' | 'violet' | 'green';
+  const narrationTone = (activePoiNarration?.tone ?? 'teal') as 'teal' | 'gold' | 'violet' | 'green' | 'red' | 'blue' | 'orange' | 'pink' | 'silver' | 'brown' | 'black' | 'white';
   const narrationTheme = useMemo(() => {
     switch (narrationTone) {
       case 'gold':
@@ -1403,10 +1431,59 @@ export const CombatGolf = memo(function CombatGolf({
           inner: 'from-[#3f7a5f]/90 via-[#265842]/80 to-[#173225]/70',
           accent: 'text-emerald-200/80',
         };
+      case 'red':
+        return {
+          outer: 'from-[#7c2d12]/80 via-[#450a0a]/80 to-[#180505]/80',
+          inner: 'from-[#991b1b]/90 via-[#7f1d1d]/80 to-[#450a0a]/70',
+          accent: 'text-red-200/80',
+        };
+      case 'blue':
+        return {
+          outer: 'from-[#1e3a8a]/80 via-[#1e1b4b]/80 to-[#020617]/80',
+          inner: 'from-[#1d4ed8]/90 via-[#1e40af]/80 to-[#1e3a8a]/70',
+          accent: 'text-blue-200/80',
+        };
+      case 'orange':
+        return {
+          outer: 'from-[#7c2d12]/80 via-[#431407]/80 to-[#1c0a00]/80',
+          inner: 'from-[#ea580c]/90 via-[#9a3412]/80 to-[#7c2d12]/70',
+          accent: 'text-orange-200/80',
+        };
+      case 'pink':
+        return {
+          outer: 'from-[#701a75]/80 via-[#4a044e]/80 to-[#200122]/80',
+          inner: 'from-[#9d174d]/90 via-[#831843]/80 to-[#500724]/70',
+          accent: 'text-pink-200/80',
+        };
+      case 'silver':
+        return {
+          outer: 'from-[#374151]/80 via-[#1f2937]/80 to-[#0f172a]/80',
+          inner: 'from-[#4b5563]/90 via-[#374151]/80 to-[#1f2937]/70',
+          accent: 'text-slate-200/80',
+        };
+      case 'brown':
+        return {
+          outer: 'from-[#451a03]/80 via-[#2d1a0a]/80 to-[#170d05]/80',
+          inner: 'from-[#78350f]/90 via-[#5d2b06]/80 to-[#451a03]/70',
+          accent: 'text-amber-200/80',
+        };
+      case 'black':
+        return {
+          outer: 'from-[#020617]/80 via-[#000000]/80 to-[#000000]/80',
+          inner: 'from-[#0f172a]/90 via-[#020617]/80 to-[#000000]/70',
+          accent: 'text-slate-400/80',
+        };
+      case 'white':
+        return {
+          outer: 'from-[#94a3b8]/80 via-[#475569]/80 to-[#1e293b]/80',
+          inner: 'from-[#cbd5e1]/90 via-[#94a3b8]/80 to-[#64748b]/70',
+          accent: 'text-white font-bold',
+        };
+      case 'teal':
       default:
         return {
-          outer: 'from-[#5f7c3b]/80 via-[#35502a]/80 to-[#172711]/80',
-          inner: 'from-[#4b6998]/90 via-[#356088]/80 to-[#1f355a]/70',
+          outer: 'from-[#134e4a]/80 via-[#064e3b]/80 to-[#022c22]/80',
+          inner: 'from-[#0d9488]/90 via-[#0f766e]/80 to-[#134e4a]/70',
           accent: 'text-game-teal/80',
         };
     }
@@ -1826,10 +1903,37 @@ export const CombatGolf = memo(function CombatGolf({
     const reward = getPoiRewardsForKey(pendingPoiRewardKey)[0];
     if (!reward) return;
     if (reward.type === 'orim-choice') {
+      consumedPoiRewardKeysRef.current.add(pendingPoiRewardKey);
+      setLastPoiRewardKey(null);
       setShowKeruArchetypeReward(false);
       setPendingPoiRewardKey(null);
+      keruAbilityRewardShownRef.current = true;
     }
   }, [poiRewardResolvedAt, pendingPoiRewardKey, getPoiRewardsForKey]);
+  useEffect(() => {
+    const orimId = gameState.lastResolvedOrimId;
+    if (!orimId) return;
+
+    const def = ORIM_DEFINITIONS.find((o) => o.id === orimId);
+    if (def) {
+      const calloutId = Date.now() + Math.random();
+      const foundationIndex = gameState.lastResolvedOrimFoundationIndex ?? null;
+      const dropPoint = gameState.lastResolvedOrimDropPoint ?? null;
+      setOrimRewardCallouts((prev) => [...prev, { id: calloutId, orimId, foundationIndex, dropPoint }]);
+      setTimeout(() => {
+        setOrimRewardCallouts((prev) => prev.filter((entry) => entry.id !== calloutId));
+      }, 3500);
+    }
+
+    // Clear the last resolved Orim ID in game state so we don't trigger again
+    actions.processRelicCombatEvent?.({ type: 'ORIM_CALLOUT_SHOWN' } as any);
+  }, [
+    gameState.lastResolvedOrimId,
+    gameState.lastResolvedOrimFoundationIndex,
+    gameState.lastResolvedOrimDropPoint,
+    actions.processRelicCombatEvent,
+  ]);
+
   useEffect(() => {
     const currentKeru = gameState.actorKeru;
     const lastMutationAt = currentKeru?.lastMutationAt;
@@ -2069,7 +2173,8 @@ export const CombatGolf = memo(function CombatGolf({
     isRpgVariant,
   ]);
   const renderHpLabel = (actor: Actor | null | undefined, side: HpBarSide = 'player', actorIndex = -1) => {
-    if (!isRpgVariant || !actor) return null;
+    const showHpBars = isRpgVariant || isWaveBattle;
+    if (!showHpBars || !actor) return null;
     const theme = HP_BAR_THEME[side];
     const currentHp = Math.max(0, actor.hp ?? 0);
     const hpMax = Math.max(1, actor.hpMax ?? 1);
@@ -2619,8 +2724,12 @@ export const CombatGolf = memo(function CombatGolf({
     if (!allowedAspectSet.has(archetype)) return;
     actions.applyKeruArchetype?.(archetype);
     setShowKeruArchetypeReward(false);
+    if (pendingPoiRewardKey) {
+      consumedPoiRewardKeysRef.current.add(pendingPoiRewardKey);
+      setLastPoiRewardKey(null);
+    }
     setPendingPoiRewardKey(null);
-  }, [actions.applyKeruArchetype, allowedAspectSet]);
+  }, [actions.applyKeruArchetype, allowedAspectSet, pendingPoiRewardKey]);
   const noopEnemyHandDragStart = useCallback((
     _card: CardType,
     _tableauIndex: number,
@@ -2694,6 +2803,16 @@ export const CombatGolf = memo(function CombatGolf({
   );
   const isInspectOverlayActive = (isRpgVariant && !!inspectedRpgCard) || !!inspectedActor;
   const formatBankSeconds = useCallback((ms: number) => `${(Math.max(0, ms) / 1000).toFixed(1)}s`, []);
+  const [momentumCallouts, setMomentumCallouts] = useState<Array<{ id: number; text: string }>>([]);
+  const momentumRelicDefinition = useMemo(() => (
+    gameState.relicDefinitions.find((definition) => definition.behaviorId === 'momentum_v1')
+  ), [gameState.relicDefinitions]);
+  const momentumBonusMs = Number(momentumRelicDefinition?.params?.bonusMs ?? 0);
+  const momentumEquipped = useMemo(() => (
+    momentumRelicDefinition
+      ? (gameState.equippedRelics ?? []).some((instance) => instance.enabled && instance.relicId === momentumRelicDefinition.id)
+      : false
+  ), [momentumRelicDefinition, gameState.equippedRelics]);
   const timerBankVisuals = (
     <>
       {bankCallouts.map((entry) => (
@@ -2718,6 +2837,60 @@ export const CombatGolf = memo(function CombatGolf({
           className="fixed left-14 bottom-20 z-[9985]"
         />
       ))}
+      {momentumCallouts.map((entry) => (
+        <Callout
+          key={entry.id}
+          visible
+          instanceKey={entry.id}
+          text={entry.text}
+          tone="teal"
+          autoFadeMs={1500}
+          className="fixed left-14 bottom-28 z-[9985]"
+        />
+      ))}
+      {waveBattleCallouts.map((entry) => (
+        <Callout
+          key={entry.id}
+          visible
+          instanceKey={entry.id}
+          text={`Wave ${entry.wave}`}
+          tone="orange"
+          autoFadeMs={1600}
+          className="fixed left-1/2 top-24 -translate-x-1/2 z-[10045]"
+        />
+      ))}
+      {orimRewardCallouts.map((entry) => {
+        const def = ORIM_DEFINITIONS.find((o) => o.id === entry.orimId);
+        if (!def) return null;
+        
+        let anchor = { x: window.innerWidth / 2, y: window.innerHeight * 0.33 };
+
+        if (entry.dropPoint) {
+          anchor = entry.dropPoint;
+        } else if (entry.foundationIndex !== null) {
+          const ref = foundationRefs.current[entry.foundationIndex];
+          if (ref) {
+            const rect = ref.getBoundingClientRect();
+            anchor = {
+              x: rect.left + rect.width / 2,
+              y: rect.top,
+            };
+          }
+        }
+
+        return (
+          <Callout
+            key={entry.id}
+            visible
+            instanceKey={entry.id}
+            text={`Equipped: ${def.name}`}
+            tone="teal"
+            autoFadeMs={3500}
+            anchor={anchor}
+            secondaryCallouts={def.description ? [{ id: 1, text: def.description }] : []}
+          />
+        );
+      })}
       {bankSmashFx && (
         <div
           key={bankSmashFx.id}
@@ -2753,15 +2926,16 @@ export const CombatGolf = memo(function CombatGolf({
       .map((instance) => {
         const definition = definitionsById.get(instance.relicId);
         if (!definition) return null;
-        const knownGlyphByBehaviorId: Record<string, string> = {
-          turtle_bide_v1: '🛡',
-          heart_of_wild_v1: '🐾',
-          sunk_cost_v1: '🐚',
-          [CONTROLLED_DRAGONFIRE_BEHAVIOR_ID]: '🐉',
-          koi_coin_v1: '🪙',
-          hindsight_v1: '⌛',
-          [SUMMON_DARKSPAWN_BEHAVIOR_ID]: '⚔',
-        };
+    const knownGlyphByBehaviorId: Record<string, string> = {
+      turtle_bide_v1: '🛡',
+      heart_of_wild_v1: '🐾',
+      sunk_cost_v1: '🐚',
+      [CONTROLLED_DRAGONFIRE_BEHAVIOR_ID]: '🐉',
+      koi_coin_v1: '🪙',
+      hindsight_v1: '⌛',
+      momentum_v1: '⏱️',
+      [SUMMON_DARKSPAWN_BEHAVIOR_ID]: '⚔',
+    };
         const fallbackGlyph = definition.name
           .split(/\s+/)
           .filter(Boolean)
@@ -2810,26 +2984,42 @@ export const CombatGolf = memo(function CombatGolf({
     >
       <div className="h-full w-full px-2 flex items-center gap-2 overflow-x-auto pointer-events-auto">
         {equippedRelics.map(({ instance, definition, glyph }) => {
-          const justActivated = relicLastActivation?.instanceId === instance.instanceId;
-          const isTurtleBide = definition.behaviorId === 'turtle_bide_v1';
-          const isControlledDragonfire = definition.behaviorId === CONTROLLED_DRAGONFIRE_BEHAVIOR_ID;
-          const isSummonDarkspawn = definition.behaviorId === SUMMON_DARKSPAWN_BEHAVIOR_ID;
-          const relicAccent = isTurtleBide
-            ? 'rgba(90, 170, 255, 0.75)'
-            : (isControlledDragonfire ? 'rgba(255, 118, 82, 0.78)'
-            : (isSummonDarkspawn ? 'rgba(168, 100, 220, 0.78)' : 'rgba(255, 215, 64, 0.6)'));
-          const relicText = isTurtleBide ? '#6cb6ff' : (isControlledDragonfire ? '#ff8e66' : (isSummonDarkspawn ? '#c87de8' : '#ffd740'));
-          const relicBg = isTurtleBide ? 'rgba(6, 14, 30, 0.78)' : (isControlledDragonfire ? 'rgba(26, 8, 5, 0.8)' : (isSummonDarkspawn ? 'rgba(16, 5, 26, 0.85)' : 'rgba(18, 12, 2, 0.72)'));
-          const relicGlowIdle = isTurtleBide
-            ? '0 0 8px rgba(90, 170, 255, 0.3)'
-            : (isControlledDragonfire ? '0 0 8px rgba(255, 118, 82, 0.3)' : (isSummonDarkspawn ? '0 0 8px rgba(168, 100, 220, 0.3)' : '0 0 8px rgba(255, 215, 64, 0.25)'));
-          const relicGlowActive = isTurtleBide
-            ? '0 0 22px rgba(90, 170, 255, 0.95), 0 0 42px rgba(70, 140, 255, 0.75)'
-            : (isControlledDragonfire
-              ? '0 0 22px rgba(255, 118, 82, 0.95), 0 0 42px rgba(255, 80, 56, 0.75)'
-              : (isSummonDarkspawn
-                ? '0 0 22px rgba(168, 100, 220, 0.95), 0 0 42px rgba(140, 60, 200, 0.75)'
-                : '0 0 22px rgba(255, 215, 64, 0.95), 0 0 42px rgba(255, 185, 40, 0.75)'));
+        const justActivated = relicLastActivation?.instanceId === instance.instanceId;
+        const isTurtleBide = definition.behaviorId === 'turtle_bide_v1';
+        const isControlledDragonfire = definition.behaviorId === CONTROLLED_DRAGONFIRE_BEHAVIOR_ID;
+        const isSummonDarkspawn = definition.behaviorId === SUMMON_DARKSPAWN_BEHAVIOR_ID;
+        const isMomentum = definition.behaviorId === 'momentum_v1';
+        let relicAccent = 'rgba(255, 215, 64, 0.6)';
+        let relicText = '#ffd740';
+        let relicBg = 'rgba(18, 12, 2, 0.72)';
+        let relicGlowIdle = '0 0 8px rgba(255, 215, 64, 0.25)';
+        let relicGlowActive = '0 0 22px rgba(255, 215, 64, 0.95), 0 0 42px rgba(255, 185, 40, 0.75)';
+        if (isMomentum) {
+          relicAccent = 'rgba(103, 225, 255, 0.78)';
+          relicText = '#8ff3ff';
+          relicBg = 'rgba(6, 10, 18, 0.85)';
+          relicGlowIdle = '0 0 8px rgba(103, 225, 255, 0.3)';
+          relicGlowActive = '0 0 22px rgba(103, 225, 255, 0.95), 0 0 42px rgba(70, 195, 255, 0.75)';
+        }
+        if (isTurtleBide) {
+          relicAccent = 'rgba(90, 170, 255, 0.75)';
+          relicText = '#6cb6ff';
+          relicBg = 'rgba(6, 14, 30, 0.78)';
+          relicGlowIdle = '0 0 8px rgba(90, 170, 255, 0.3)';
+          relicGlowActive = '0 0 22px rgba(90, 170, 255, 0.95), 0 0 42px rgba(70, 140, 255, 0.75)';
+        } else if (isControlledDragonfire) {
+          relicAccent = 'rgba(255, 118, 82, 0.78)';
+          relicText = '#ff8e66';
+          relicBg = 'rgba(26, 8, 5, 0.8)';
+          relicGlowIdle = '0 0 8px rgba(255, 118, 82, 0.3)';
+          relicGlowActive = '0 0 22px rgba(255, 118, 82, 0.95), 0 0 42px rgba(255, 80, 56, 0.75)';
+        } else if (isSummonDarkspawn) {
+          relicAccent = 'rgba(168, 100, 220, 0.78)';
+          relicText = '#c87de8';
+          relicBg = 'rgba(16, 5, 26, 0.85)';
+          relicGlowIdle = '0 0 8px rgba(168, 100, 220, 0.3)';
+          relicGlowActive = '0 0 22px rgba(168, 100, 220, 0.95), 0 0 42px rgba(140, 60, 200, 0.75)';
+        }
           const canDevActivate = relicDevModeEnabled
             && definition.behaviorId === 'turtle_bide_v1'
             && !!actions.processRelicCombatEvent;
@@ -3020,12 +3210,24 @@ export const CombatGolf = memo(function CombatGolf({
     isPartyBattleVariant,
     zenModeEnabled,
   ]);
+  const signalValidMove = useCallback(() => {
+    actions.processRelicCombatEvent?.({ type: 'VALID_MOVE_PLAYED', side: 'player' });
+    if (momentumEquipped && momentumBonusMs > 0) {
+      const text = `+${(momentumBonusMs / 1000).toFixed(1)}s`;
+      const calloutId = Date.now() + Math.random();
+      setMomentumCallouts((prev) => [...prev, { id: calloutId, text }]);
+      window.setTimeout(() => {
+        setMomentumCallouts((current) => current.filter((entry) => entry.id !== calloutId));
+      }, 1500);
+    }
+  }, [actions.processRelicCombatEvent, momentumEquipped, momentumBonusMs]);
   const maybeGainSupplyFromValidMove = useCallback(() => {
+    signalValidMove();
     if (!isRpgVariant) return;
     if (Math.random() <= 0.05) {
       setExplorationSupplies((current) => current + 1);
     }
-  }, [isRpgVariant]);
+  }, [isRpgVariant, signalValidMove]);
   const triggerExplorationTableauSlide = useCallback((from: Direction, to: Direction) => {
     if (from === to) return;
     const total = DIRECTIONS.length;
@@ -3054,18 +3256,74 @@ export const CombatGolf = memo(function CombatGolf({
       });
     });
   }, []);
+  const hasLivingEnemy = useMemo(() => (
+    enemyFoundations.some((foundation, index) => {
+      if (foundation.length === 0) return false;
+      const actor = enemyActors[index];
+      if (!actor) return false;
+      return (actor.hp ?? 0) > 0 && (actor.stamina ?? 0) > 0;
+    })
+  ), [enemyActors, enemyFoundations]);
   const hasSpawnedEnemies = !isRpgVariant || enemyFoundations.some((foundation) => foundation.length > 0);
-  const isExplorationMode = isRpgVariant && !hasSpawnedEnemies;
+  const isExplorationMode = isRpgVariant && !isWaveBattle && !hasSpawnedEnemies;
   const showActorComboCounts = !isRpgVariant || hasSpawnedEnemies;
   useEffect(() => {
-    const shouldShowMap = isRpgVariant && !hasSpawnedEnemies && keruHasAspect;
+    if (!isWaveBattle) {
+      waveBattleSpawnPendingRef.current = false;
+      setWaveBattleCount(0);
+      setWaveBattleCallouts([]);
+      waveBattleStartRef.current = null;
+    }
+  }, [isWaveBattle, gameState.currentBiome]);
+  useEffect(() => {
+    if (!isRpgVariant) return;
+    const coords = getExplorationNodeCoordinates(explorationCurrentNodeId);
+    if (!coords) return;
+    const cell = mainWorldMap.cells.find(
+      (entry) => entry.gridPosition.col === coords.x && entry.gridPosition.row === coords.y
+    );
+    const biomeId = cell?.poi?.biomeId;
+    if (biomeId !== 'wave_battle') return;
+    if (gameState.currentBiome === biomeId) return;
+    const lockKey = `${coords.x},${coords.y}:${biomeId}`;
+    if (waveBattleStartRef.current === lockKey) return;
+    waveBattleStartRef.current = lockKey;
+    actions.startBiome?.(gameState.activeSessionTileId ?? cell?.poi?.id ?? biomeId, biomeId);
+  }, [actions.startBiome, explorationCurrentNodeId, gameState.activeSessionTileId, gameState.currentBiome, getExplorationNodeCoordinates, isRpgVariant]);
+  useEffect(() => {
+    if (!isWaveBattle || !isPartyBattleVariant) return;
+    actions.cleanupDefeatedEnemies?.();
+    if (hasLivingEnemy) {
+      waveBattleSpawnPendingRef.current = false;
+      return;
+    }
+    if (waveBattleSpawnPendingRef.current) return;
+    waveBattleSpawnPendingRef.current = true;
+    actions.spawnRandomEnemyInRandomBiome?.();
+    setWaveBattleCount((prev) => {
+      const next = prev + 1;
+      const calloutId = Date.now() + Math.random();
+      setWaveBattleCallouts((current) => [...current, { id: calloutId, wave: next }]);
+      window.setTimeout(() => {
+        setWaveBattleCallouts((current) => current.filter((entry) => entry.id !== calloutId));
+      }, 1800);
+      return next;
+    });
+  }, [actions.cleanupDefeatedEnemies, actions.spawnRandomEnemyInRandomBiome, hasLivingEnemy, isPartyBattleVariant, isWaveBattle]);
+  useEffect(() => {
+    const shouldShowMap = isRpgVariant && !isWaveBattle && !hasSpawnedEnemies && keruHasAspect;
     if (shouldShowMap && !mapVisible) {
       setMapVisible(true);
     } else if (!shouldShowMap && mapVisible) {
       setMapVisible(false);
     }
-  }, [isRpgVariant, hasSpawnedEnemies, keruHasAspect, mapVisible]);
+  }, [isRpgVariant, isWaveBattle, hasSpawnedEnemies, keruHasAspect, mapVisible]);
+  useEffect(() => {
+    if (!isWaveBattle) return;
+    if (mapVisible) setMapVisible(false);
+  }, [isWaveBattle, mapVisible]);
   const showPauseButton = !zenModeEnabled && isPartyBattleVariant && hasSpawnedEnemies;
+  /*
   const pauseButton = (
     <button
       type="button"
@@ -3089,6 +3347,7 @@ export const CombatGolf = memo(function CombatGolf({
       {showPauseButton ? pauseButton : null}
     </div>
   ) : null;
+  */
   const activeTravelDirection = (explorationHeading.length === 1 ? explorationHeading : explorationHeading[0]) as MajorDirection;
   const travelRowsPerStep = Math.max(1, explorationRowsPerStep);
   const currentDirectionMoves = explorationMovesByDirection[activeTravelDirection] ?? 0;
@@ -3180,6 +3439,7 @@ export const CombatGolf = memo(function CombatGolf({
   }, [explorationCurrentNodeId, getExplorationNodeCoordinates, worldForcedPath]);
   const explorationActiveBlockedEdge = useMemo(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return null;
+    if (!pathingLocked) return null;
     const coords = getExplorationNodeCoordinates(explorationCurrentNodeId);
     if (!coords) return null;
     const pinnedConditionalEdge = (mainWorldMap.conditionalEdges ?? []).find((edge) => {
@@ -3230,28 +3490,30 @@ export const CombatGolf = memo(function CombatGolf({
     const targetY = currentNode.y + dy;
     const currentKey = `${currentNode.x},${currentNode.y}`;
     const targetKey = `${targetX},${targetY}`;
-    if (worldBlockedCellKeys.has(targetKey)) return false;
-    if (worldBlockedEdges.has(`${currentKey}->${targetKey}`)) return false;
-    const blockedByConditionalEdge = (mainWorldMap.conditionalEdges ?? []).some((edge) => {
-      if (edge.requirement !== 'source_tableau_cleared') return false;
-      const forward = currentNode.x === edge.from.col
-        && currentNode.y === edge.from.row
-        && targetX === edge.to.col
-        && targetY === edge.to.row;
-      const reverse = edge.bidirectional !== false
-        && currentNode.x === edge.to.col
-        && currentNode.y === edge.to.row
-        && targetX === edge.from.col
-        && targetY === edge.from.row;
-      if (!forward && !reverse) return false;
-      return !isCurrentExplorationTableauCleared;
-    });
-    if (blockedByConditionalEdge) return false;
-    if (mainWorldMap.tutorialRail?.lockUntilPathComplete !== false && worldForcedPath.length >= 2) {
-      const forcedIndex = worldForcedPath.findIndex((step) => step.x === currentNode.x && step.y === currentNode.y);
-      if (forcedIndex >= 0 && forcedIndex < worldForcedPath.length - 1) {
-        const required = worldForcedPath[forcedIndex + 1];
-        if (targetX !== required.x || targetY !== required.y) return false;
+    if (pathingLocked) {
+      if (worldBlockedCellKeys.has(targetKey)) return false;
+      if (worldBlockedEdges.has(`${currentKey}->${targetKey}`)) return false;
+      const blockedByConditionalEdge = (mainWorldMap.conditionalEdges ?? []).some((edge) => {
+        if (edge.requirement !== 'source_tableau_cleared') return false;
+        const forward = currentNode.x === edge.from.col
+          && currentNode.y === edge.from.row
+          && targetX === edge.to.col
+          && targetY === edge.to.row;
+        const reverse = edge.bidirectional !== false
+          && currentNode.x === edge.to.col
+          && currentNode.y === edge.to.row
+          && targetX === edge.from.col
+          && targetY === edge.from.row;
+        if (!forward && !reverse) return false;
+        return !isCurrentExplorationTableauCleared;
+      });
+      if (blockedByConditionalEdge) return false;
+      if (mainWorldMap.tutorialRail?.lockUntilPathComplete !== false && worldForcedPath.length >= 2) {
+        const forcedIndex = worldForcedPath.findIndex((step) => step.x === currentNode.x && step.y === currentNode.y);
+        if (forcedIndex >= 0 && forcedIndex < worldForcedPath.length - 1) {
+          const required = worldForcedPath[forcedIndex + 1];
+          if (targetX !== required.x || targetY !== required.y) return false;
+        }
       }
     }
     return true;
@@ -3262,6 +3524,7 @@ export const CombatGolf = memo(function CombatGolf({
     worldBlockedCellKeys,
     worldBlockedEdges,
     worldForcedPath,
+    pathingLocked,
   ]);
   const canAdvanceExplorationHeading = useMemo(
     () => canAdvanceExplorationMap(explorationHeading),
@@ -3280,28 +3543,30 @@ export const CombatGolf = memo(function CombatGolf({
     const targetY = currentNode.y + dy;
     const currentKey = `${currentNode.x},${currentNode.y}`;
     const targetKey = `${targetX},${targetY}`;
-    if (worldBlockedCellKeys.has(targetKey)) return false;
-    if (worldBlockedEdges.has(`${currentKey}->${targetKey}`)) return false;
-    const blockedByConditionalEdge = (mainWorldMap.conditionalEdges ?? []).some((edge) => {
-      if (edge.requirement !== 'source_tableau_cleared') return false;
-      const forward = currentNode.x === edge.from.col
-        && currentNode.y === edge.from.row
-        && targetX === edge.to.col
-        && targetY === edge.to.row;
-      const reverse = edge.bidirectional !== false
-        && currentNode.x === edge.to.col
-        && currentNode.y === edge.to.row
-        && targetX === edge.from.col
-        && targetY === edge.from.row;
-      if (!forward && !reverse) return false;
-      return !isCurrentExplorationTableauCleared;
-    });
-    if (blockedByConditionalEdge) return false;
-    if (mainWorldMap.tutorialRail?.lockUntilPathComplete !== false && worldForcedPath.length >= 2) {
-      const forcedIndex = worldForcedPath.findIndex((step) => step.x === currentNode.x && step.y === currentNode.y);
-      if (forcedIndex >= 0 && forcedIndex < worldForcedPath.length - 1) {
-        const required = worldForcedPath[forcedIndex + 1];
-        if (targetX !== required.x || targetY !== required.y) return false;
+    if (pathingLocked) {
+      if (worldBlockedCellKeys.has(targetKey)) return false;
+      if (worldBlockedEdges.has(`${currentKey}->${targetKey}`)) return false;
+      const blockedByConditionalEdge = (mainWorldMap.conditionalEdges ?? []).some((edge) => {
+        if (edge.requirement !== 'source_tableau_cleared') return false;
+        const forward = currentNode.x === edge.from.col
+          && currentNode.y === edge.from.row
+          && targetX === edge.to.col
+          && targetY === edge.to.row;
+        const reverse = edge.bidirectional !== false
+          && currentNode.x === edge.to.col
+          && currentNode.y === edge.to.row
+          && targetX === edge.from.col
+          && targetY === edge.from.row;
+        if (!forward && !reverse) return false;
+        return !isCurrentExplorationTableauCleared;
+      });
+      if (blockedByConditionalEdge) return false;
+      if (mainWorldMap.tutorialRail?.lockUntilPathComplete !== false && worldForcedPath.length >= 2) {
+        const forcedIndex = worldForcedPath.findIndex((step) => step.x === currentNode.x && step.y === currentNode.y);
+        if (forcedIndex >= 0 && forcedIndex < worldForcedPath.length - 1) {
+          const required = worldForcedPath[forcedIndex + 1];
+          if (targetX !== required.x || targetY !== required.y) return false;
+        }
       }
     }
     const existingIndex = prevNodes.findIndex((node) => node.x === targetX && node.y === targetY);
@@ -3342,7 +3607,7 @@ export const CombatGolf = memo(function CombatGolf({
     setExplorationTrailNodeIds(nextTrail);
     setExplorationEdges(nextEdges);
     return true;
-  }, [isCurrentExplorationTableauCleared, worldBlockedCellKeys, worldBlockedEdges, worldForcedPath]);
+  }, [isCurrentExplorationTableauCleared, worldBlockedCellKeys, worldBlockedEdges, worldForcedPath, pathingLocked]);
   const teleportToExplorationNode = useCallback((targetX: number, targetY: number) => {
     const prevNodes = explorationNodesRef.current;
     const existingIndex = prevNodes.findIndex((n) => n.x === targetX && n.y === targetY);
@@ -3600,9 +3865,17 @@ export const CombatGolf = memo(function CombatGolf({
   useEffect(() => {
     if (!isExplorationMode) return;
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'm') {
+        event.preventDefault();
+        setMapVisible((prev) => !prev);
+        return;
+      }
       if (event.key === 'ArrowUp') {
         event.preventDefault();
         stepExplorationOnPlay();
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        handleExplorationStepBackward();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -3934,7 +4207,6 @@ export const CombatGolf = memo(function CombatGolf({
     setStartOverlayPhase('ready');
     setStartCountdown(3);
     setExplorationSupplies(10);
-    setOwlExplorationRevealByNode({});
   }, [gameState.currentBiome]);
 
   const equippedOrimRow = (
@@ -4426,7 +4698,9 @@ export const CombatGolf = memo(function CombatGolf({
 
       // Detect which foundation gained a card
       for (let i = 0; i < current.length; i++) {
-        if (current[i].length > prev[i].length) {
+        const previousFoundation = prev[i];
+        if (!previousFoundation) continue;
+        if (current[i].length > previousFoundation.length) {
           const topCard = current[i][current[i].length - 1];
           if (topCard?.id?.startsWith('battle-hand-reward-')) {
             setRewardedBattleHandCards((cards) => cards.filter((card) => card.id !== topCard.id));
@@ -5206,6 +5480,9 @@ export const CombatGolf = memo(function CombatGolf({
               remainingMsOverride={!isEnemyTurn && !introBlocking ? playerRemainingMs : undefined}
               showSkipButton={!isEnemyTurn && canTriggerEndTurnFromCombo}
               onSkip={!isEnemyTurn && canTriggerEndTurnFromCombo ? handleSkipWithBank : undefined}
+              showPauseButton={showPauseButton}
+              onTogglePause={onTogglePause}
+              isGamePaused={isGamePaused}
               paused={comboPaused}
               onClick={!isEnemyTurn ? handlePartyComboCounterEndTurn : undefined}
               role={!isEnemyTurn && canTriggerEndTurnFromCombo ? 'button' : undefined}
@@ -5271,7 +5548,7 @@ export const CombatGolf = memo(function CombatGolf({
               </div>
             </div>
           )}
-          {isRpgVariant && !hasSpawnedEnemies && mapVisible && (
+          {isRpgVariant && !isWaveBattle && !hasSpawnedEnemies && mapVisible && (
             <div className="w-full px-2 sm:px-3 mb-2">
               <div
                 className="relative mx-auto"
@@ -5311,6 +5588,8 @@ export const CombatGolf = memo(function CombatGolf({
                   canStepForward={canAdvanceExplorationHeading || devTraverseHoldEnabled}
                   onStepBackward={handleExplorationStepBackward}
                   canStepBackward={explorationTrailNodeIds.length > 1}
+                  pathingLocked={pathingLocked}
+                  onTogglePathingLocked={() => setPathingLocked((prev) => !prev)}
                   onHeadingChange={handleExplorationHeadingChange}
                   onTeleport={teleportToExplorationNode}
                   showLighting={lightingEnabled}
@@ -5465,11 +5744,17 @@ export const CombatGolf = memo(function CombatGolf({
                               return;
                             }
                         if (selectedCard) {
-                              actions.playCardInRandomBiome(
-                                selectedCard.tableauIndex,
-                                foundationIndex
-                              );
-                            }
+                          const played = actions.playCardInRandomBiome(
+                            selectedCard.tableauIndex,
+                            foundationIndex
+                          );
+                          if (played) {
+                            signalValidMove();
+                            maybeGainSupplyFromValidMove();
+                            awardExplorationActionPoint();
+                            setSelectedCard(null);
+                          }
+                        }
                           }}
                           canReceive={showGoldHighlight && hasStamina}
                           isGuidanceTarget={isPartyFoundationsVariant && armedFoundationIndex === idx}
@@ -5715,10 +6000,16 @@ export const CombatGolf = memo(function CombatGolf({
                           return;
                         }
                         if (selectedCard) {
-                          actions.playCardInRandomBiome(
+                          const played = actions.playCardInRandomBiome(
                             selectedCard.tableauIndex,
                             foundationIndex
                           );
+                          if (played) {
+                            signalValidMove();
+                            maybeGainSupplyFromValidMove();
+                            awardExplorationActionPoint();
+                            setSelectedCard(null);
+                          }
                         }
                       }}
                       canReceive={showGoldHighlight && hasStamina}
@@ -6018,6 +6309,11 @@ export const CombatGolf = memo(function CombatGolf({
                       ? 0
                       : (index - (displayedRewardCards.length - 1) / 2) * 6;
                     const cardKey = card.id || `aspect-reward-${index}`;
+                    const isOrimReward = pendingPoiReward?.type === 'orim-choice';
+                    const orimId = isOrimReward ? card.id.replace('reward-orim-', '') : null;
+                    const orimDef = orimId ? ORIM_DEFINITIONS.find((o) => o.id === orimId) : null;
+                    const jewelColor = orimDef ? getOrimAccentColor(orimDef) : '#63687F';
+
                     return (
                       <div
                         key={cardKey}
@@ -6026,15 +6322,42 @@ export const CombatGolf = memo(function CombatGolf({
                           transition: 'transform 0.15s ease-out'
                         }}
                       >
-                        <Card
-                          card={card}
-                          size={aspectCardSize}
-                          showGraphics={showGraphics}
-                          isAnyCardDragging={dragState.isDragging}
-                          onDragStart={(cardPayload, clientX, clientY, rect) => (
-                            handleDragStartGuarded(cardPayload, HAND_SOURCE_INDEX, clientX, clientY, rect)
-                          )}
-                        />
+                        {isOrimReward ? (
+                          <div className="flex flex-col items-center gap-4">
+                            <JewelOrim
+                              color={jewelColor}
+                              size={Math.min(aspectCardSize.width, aspectCardSize.height) * 0.8}
+                              onPointerDown={(e) => {
+                                if (e.button !== 0) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (e.currentTarget && 'setPointerCapture' in e.currentTarget) {
+                                  (e.currentTarget as Element).setPointerCapture(e.pointerId);
+                                }
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                handleDragStartGuarded(card, HAND_SOURCE_INDEX, e.clientX, e.clientY, rect);
+                              }}
+                            />
+                            <div className="text-center">
+                              <div className="text-game-white font-bold tracking-wider uppercase text-sm">
+                                {orimDef?.name}
+                              </div>
+                              <div className="text-game-white/60 text-[10px] mt-1 max-w-[180px] leading-tight">
+                                {orimDef?.description}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <Card
+                            card={card}
+                            size={aspectCardSize}
+                            showGraphics={showGraphics}
+                            isAnyCardDragging={dragState.isDragging}
+                            onDragStart={(cardPayload, clientX, clientY, rect) => (
+                              handleDragStartGuarded(cardPayload, HAND_SOURCE_INDEX, clientX, clientY, rect)
+                            )}
+                          />
+                        )}
                       </div>
                     );
                   })}
@@ -6109,7 +6432,6 @@ export const CombatGolf = memo(function CombatGolf({
         {actorInspectOverlay}
         {timerBankVisuals}
         {topHudBar}
-        {leftControlColumn}
         </div>
         </div>
         {splatterModal}
@@ -6150,7 +6472,6 @@ export const CombatGolf = memo(function CombatGolf({
         {actorInspectOverlay}
         {timerBankVisuals}
         {topHudBar}
-        {leftControlColumn}
         {splatterModal}
       </div>
     );
@@ -6186,14 +6507,18 @@ export const CombatGolf = memo(function CombatGolf({
     if (isPartyFoundationsVariant) {
       if (armedFoundationIndex !== null) {
         if (!validFoundations.includes(armedFoundationIndex)) return;
-        actions.playCardDirect(tableauIndex, armedFoundationIndex);
+        const played = actions.playCardDirect(tableauIndex, armedFoundationIndex);
+        if (!played) return;
+        signalValidMove();
         triggerCardPlayFlash(armedFoundationIndex, partyComboTotal + 1);
         awardExplorationActionPoint();
         setArmedFoundationIndex(null);
         return;
       }
       if (validFoundations.length === 1) {
-        actions.playCardDirect(tableauIndex, validFoundations[0]);
+        const played = actions.playCardDirect(tableauIndex, validFoundations[0]);
+        if (!played) return;
+        signalValidMove();
         triggerCardPlayFlash(validFoundations[0], partyComboTotal + 1);
         awardExplorationActionPoint();
       }
@@ -6202,7 +6527,9 @@ export const CombatGolf = memo(function CombatGolf({
 
     const foundationIndex = validFoundations[0] ?? -1;
     if (foundationIndex === -1) return;
-    actions.playCardDirect(tableauIndex, foundationIndex);
+    const played = actions.playCardDirect(tableauIndex, foundationIndex);
+    if (!played) return;
+    signalValidMove();
     triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
     awardExplorationActionPoint();
   };
@@ -6240,6 +6567,7 @@ export const CombatGolf = memo(function CombatGolf({
     if (foundationIndex === -1) return;
     const played = actions.playFromHand(card, foundationIndex, false);
     if (!played) return;
+    signalValidMove();
     if (card.id.startsWith('battle-hand-reward-')) {
       setRewardedBattleHandCards((cards) => cards.filter((entry) => entry.id !== card.id));
     }
@@ -6269,6 +6597,7 @@ export const CombatGolf = memo(function CombatGolf({
       : Math.max(0, activeParty.findIndex((actor) => (actor?.stamina ?? 0) > 0));
     const played = actions.playFromStock(fallbackIndex, false, true);
     if (played) {
+      signalValidMove();
       awardExplorationActionPoint();
     }
   };
@@ -6313,6 +6642,9 @@ export const CombatGolf = memo(function CombatGolf({
           remainingMsOverride={!isEnemyTurn && !introBlocking ? playerRemainingMs : undefined}
           showSkipButton={!isEnemyTurn && canTriggerEndTurnFromCombo}
           onSkip={!isEnemyTurn && canTriggerEndTurnFromCombo ? handleSkipWithBank : undefined}
+          showPauseButton={showPauseButton}
+          onTogglePause={onTogglePause}
+          isGamePaused={isGamePaused}
           paused={comboPaused}
           onClick={!isEnemyTurn ? handlePartyComboCounterEndTurn : undefined}
           role={!isEnemyTurn && canTriggerEndTurnFromCombo ? 'button' : undefined}
@@ -6595,7 +6927,9 @@ export const CombatGolf = memo(function CombatGolf({
                       setArmedFoundationIndex((prev) => (prev === foundationIndex ? null : foundationIndex));
                       return;
                     }
-                    actions.playToFoundation(foundationIndex);
+                    const played = actions.playToFoundation(foundationIndex);
+                    if (!played) return;
+                    signalValidMove();
                   }}
                   canReceive={showGoldHighlight && hasStamina}
                   isGuidanceTarget={isPartyFoundationsVariant && armedFoundationIndex === idx}
@@ -6799,7 +7133,6 @@ export const CombatGolf = memo(function CombatGolf({
       {actorInspectOverlay}
       {timerBankVisuals}
       {topHudBar}
-      {leftControlColumn}
       </div>
       </div>
       {splatterModal}

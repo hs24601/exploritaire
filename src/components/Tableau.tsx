@@ -128,6 +128,7 @@ export const Tableau = memo(function Tableau({
               isDimmed={(guidanceActive && isTopCard && !isNextGuidanceMove) || (dimTopCard && isTopCard)}
               showGraphics={showGraphics}
               maskValue={maskTopValue && (isTopCard || isSecondCard)}
+              disableTilt={true}
             />
             {dimTopCard && isTopCard && (
               <div
