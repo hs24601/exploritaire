@@ -328,6 +328,55 @@ export default defineConfig({
             }
           });
         });
+        server.middlewares.use('/__pois/overrides', (req, res) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          try {
+            const filePath = path.resolve(__dirname, 'src/data/pois.json');
+            if (!fs.existsSync(filePath)) {
+              res.setHeader('Content-Type', 'application/json');
+              res.end('{"pois": []}');
+              return;
+            }
+            const contents = fs.readFileSync(filePath, 'utf8');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(contents);
+          } catch (err) {
+            res.statusCode = 500;
+            res.end('Unable to load POIs');
+          }
+        });
+        server.middlewares.use('/__pois/save', (req, res) => {
+          if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const parsed = JSON.parse(body);
+              if (!parsed || !Array.isArray(parsed.pois)) {
+                res.statusCode = 400;
+                res.end('Invalid payload');
+                return;
+              }
+              const dataFilePath = path.resolve(__dirname, 'src/data/pois.json');
+              fs.writeFileSync(dataFilePath, JSON.stringify({ pois: parsed.pois }, null, 2), 'utf8');
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(parsed));
+            } catch (err) {
+              res.statusCode = 400;
+              res.end('Write failed');
+            }
+          });
+        });
         server.middlewares.use('/__write-file', (req, res) => {
           if (req.method !== 'POST') {
             res.statusCode = 405;

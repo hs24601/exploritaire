@@ -1,7 +1,7 @@
 import type { Card as CardType, ActorKeruArchetype, Element } from '../engine/types';
 import { ELEMENT_TO_SUIT } from '../engine/constants';
+import { ORIM_DEFINITIONS } from '../engine/orims';
 import aspectsJson from './aspects.json';
-import abilitiesJson from './abilities.json';
 
 export type KeruAspect = Exclude<ActorKeruArchetype, 'blank'>;
 
@@ -16,55 +16,44 @@ type AspectJson = {
   };
 };
 
-type AbilityJson = {
-  id: string;
-  aspectId: string;
-  label: string;
-  description?: string;
-  damage: string;
-  cardId: string;
-  cardRank: number;
-  cardElement: Element;
-  cardGlyph?: string;
-  abilityType?: string;
-};
-
 const aspectEntries = (aspectsJson as { aspects: AspectJson[] }).aspects ?? [];
-const abilityEntries = (abilitiesJson as { abilities: AbilityJson[] }).abilities ?? [];
 
-// Index abilities by aspectId for fast lookup
-const abilitiesByAspect = abilityEntries.reduce((acc, entry) => {
-  acc[entry.aspectId] = entry;
-  return acc;
-}, {} as Record<string, AbilityJson>);
+// Index aspect orims by ID for checking if an aspect exists
+const aspectOrimsByEntryId = ORIM_DEFINITIONS.filter((o) => o.isAspect).reduce(
+  (acc, orim) => {
+    acc[orim.id] = orim;
+    return acc;
+  },
+  {} as Record<string, typeof ORIM_DEFINITIONS[0]>
+);
 
-export const ASPECT_DISPLAY_TEXT: Record<KeruAspect, string> = aspectEntries.reduce((acc, entry) => {
-  acc[entry.id] = entry.label;
-  return acc;
-}, {} as Record<KeruAspect, string>);
-
+// Build aspect ability definitions from aspect orims
 export const ASPECT_ABILITY_DEFINITIONS: Record<KeruAspect, { label: string; damage: string; card: CardType }> = (
   aspectEntries.reduce((acc, entry) => {
-    const ability = abilitiesByAspect[entry.id];
-    if (!ability) return acc;
+    const orim = aspectOrimsByEntryId[entry.id];
+    if (!orim) return acc;
     acc[entry.id] = {
-      label: ability.label,
-      damage: ability.damage,
+      label: orim.name,
+      damage: orim.description,
       card: {
-        id: ability.cardId,
-        rank: ability.cardRank,
-        element: ability.cardElement,
-        suit: ELEMENT_TO_SUIT[ability.cardElement],
-        actorGlyph: ability.cardGlyph,
+        id: entry.archetypeCard.cardId,
+        rank: entry.archetypeCard.cardRank,
+        element: entry.archetypeCard.cardElement,
+        suit: ELEMENT_TO_SUIT[entry.archetypeCard.cardElement],
       },
     };
     return acc;
   }, {} as Record<KeruAspect, { label: string; damage: string; card: CardType }>)
 );
 
+export const ASPECT_DISPLAY_TEXT: Record<KeruAspect, string> = aspectEntries.reduce((acc, entry) => {
+  acc[entry.id] = entry.label;
+  return acc;
+}, {} as Record<KeruAspect, string>);
+
 export const KERU_ARCHETYPE_OPTIONS: Array<{ archetype: KeruAspect; label: string; ability: { label: string; damage: string; card: CardType } }> = (
   aspectEntries
-    .filter((entry) => !!abilitiesByAspect[entry.id])
+    .filter((entry) => !!aspectOrimsByEntryId[entry.id])
     .map((entry) => ({
       archetype: entry.id,
       label: entry.label ?? `${entry.id.charAt(0).toUpperCase()}${entry.id.slice(1)}`,

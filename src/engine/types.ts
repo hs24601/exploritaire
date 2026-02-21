@@ -37,6 +37,7 @@ export interface OrimDefinition {
   description: string;
   element: Element;
   effects?: OrimEffectDef[];
+  isAspect?: boolean; // Marks this orim as a character aspect (jumbo card option)
   // Legacy fields below — kept for backwards compatibility, will be deprecated
   artSrc?: string;
   category?: OrimCategory;

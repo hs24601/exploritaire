@@ -2,7 +2,6 @@
   "abilities": [
     {
       "id": "bite",
-      "aspectId": "lupus",
       "label": "Bite",
       "description": "deals damage",
       "damage": "",
@@ -10,7 +9,6 @@
       "cardRank": 1,
       "cardElement": "N",
       "abilityType": "combat",
-      "equipCost": 0,
       "tags": [],
       "effects": [
         {
@@ -18,11 +16,11 @@
           "value": 1,
           "target": "enemy"
         }
-      ]
+      ],
+      "equipCost": 0
     },
     {
       "id": "goFish",
-      "aspectId": "felis",
       "label": "Go Fish",
       "description": "Chance to catch a fish (+1 Supply) any time a water element is collected.",
       "damage": "",
@@ -30,13 +28,12 @@
       "cardRank": 1,
       "cardElement": "W",
       "abilityType": "exploration",
-      "equipCost": 0,
       "tags": [],
-      "effects": []
+      "effects": [],
+      "equipCost": 0
     },
     {
       "id": "ironfur",
-      "aspectId": "ursus",
       "label": "Ironfur",
       "description": "Defense +1 for",
       "damage": "",
@@ -44,9 +41,28 @@
       "cardRank": 1,
       "cardElement": "N",
       "abilityType": "combat",
-      "equipCost": 0,
       "tags": [],
-      "effects": []
+      "effects": [],
+      "equipCost": 0
+    },
+    {
+      "id": "swipe",
+      "label": "Swipe",
+      "description": "Swipe at an enemy, dealing damage",
+      "damage": "",
+      "cardId": "",
+      "cardRank": 1,
+      "cardElement": "N",
+      "abilityType": "combat",
+      "tags": [],
+      "effects": [
+        {
+          "type": "damage",
+          "value": 1,
+          "target": "enemy"
+        }
+      ],
+      "equipCost": 0
     }
   ]
 }

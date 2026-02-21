@@ -42,6 +42,7 @@ import { PartyBench } from './PartyBench';
 import { canPlayCardWithWild, isSequential } from '../engine/rules';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { getActorDefinition } from '../engine/actors';
+import { ORIM_DEFINITIONS } from '../engine/orims';
 import { getActiveBlindLevel, getBlindedDetail, getBlindedHiddenTableauIndexes, getBlindedLabel } from '../engine/rpgBlind';
 import { getOrimAccentColor, getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
 import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
@@ -191,6 +192,8 @@ interface CombatGolfProps {
   fps?: number;
   serverAlive?: boolean;
   onOpenSettings?: () => void;
+  onOpenPoiEditorAt?: (x: number, y: number) => void;
+  poiRewardResolvedAt?: number;
   infiniteStockEnabled: boolean;
   onToggleInfiniteStock: () => void;
   noRegretStatus: { canRewind: boolean; cooldown: number; actorId: string | null };
@@ -507,6 +510,8 @@ export const CombatGolf = memo(function CombatGolf({
   onToggleInfiniteBenchSwaps,
   onConsumeBenchSwap,
   onOpenSettings,
+  onOpenPoiEditorAt,
+  poiRewardResolvedAt,
   explorationStepRef,
   forcedPerspectiveEnabled = true,
 }: CombatGolfProps) {
@@ -569,7 +574,7 @@ export const CombatGolf = memo(function CombatGolf({
   const [showKeruArchetypeReward, setShowKeruArchetypeReward] = useState(false);
   const [showKeruAbilityReward, setShowKeruAbilityReward] = useState(false);
   const [pendingPoiRewardKey, setPendingPoiRewardKey] = useState<string | null>(null);
-  const [lastAspectRewardKey, setLastAspectRewardKey] = useState<string | null>(null);
+  const [lastPoiRewardKey, setLastPoiRewardKey] = useState<string | null>(null);
   const keruAbilityRewardShownRef = useRef(false);
   const [keruFxToken, setKeruFxToken] = useState(0);
   const [keruFxActive, setKeruFxActive] = useState(false);
@@ -705,6 +710,12 @@ export const CombatGolf = memo(function CombatGolf({
   const cloneTableaus = useCallback((tableaus: CardType[][]): CardType[][] => (
     tableaus.map((stack) => stack.map((card) => cloneCard(card)))
   ), [cloneCard]);
+  // Build POI presence map directly (don't cache so it updates when POI data changes)
+  // Track when POI data changes to force re-render
+  const [poiDataVersion, setPoiDataVersion] = useState(0);
+  const lastPoiDataRef = useRef<string>('');
+  const lastPoiCellSignatureRef = useRef<string>('');
+  const skipPoiCommitRef = useRef(false);
   const poiByCoordinateKey = useMemo(() => {
     const map = new Map<string, PoiTableauPresetId>();
     mainWorldMap.cells.forEach((cell) => {
@@ -712,8 +723,46 @@ export const CombatGolf = memo(function CombatGolf({
       if (!poi?.tableauPresetId) return;
       map.set(`${cell.gridPosition.col},${cell.gridPosition.row}`, poi.tableauPresetId as PoiTableauPresetId);
     });
+    console.log('[POI Tableau Map] poiByCoordinateKey rebuilt. Keys:', Array.from(map.keys()));
     return map;
+  }, [poiDataVersion]);
+
+  // Watch mainWorldMap for changes (mutations from App.tsx)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const rewardData = JSON.stringify(
+        mainWorldMap.cells
+          .filter((c) => c.poi?.rewards)
+          .map((c) => ({ pos: c.gridPosition, rewards: c.poi?.rewards }))
+      );
+      const cellData = JSON.stringify(
+        mainWorldMap.cells.map((cell) => ({
+          pos: cell.gridPosition,
+          poiId: cell.poi?.id ?? null,
+          tableauPresetId: cell.poi?.tableauPresetId ?? null,
+        }))
+      );
+      const rewardsChanged = rewardData !== lastPoiDataRef.current;
+      const cellsChanged = cellData !== lastPoiCellSignatureRef.current;
+      if (rewardsChanged || cellsChanged) {
+        lastPoiDataRef.current = rewardData;
+        lastPoiCellSignatureRef.current = cellData;
+        setPoiDataVersion((v) => v + 1);
+        if (cellsChanged) {
+          console.log('[POI Cache] Clearing tableau cache due to POI data change');
+          explorationPoiTableauCacheRef.current = {};
+        }
+      }
+    }, 200);
+    return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+    skipPoiCommitRef.current = true;
+  }, [poiDataVersion]);
+
+  // Compute POI maps fresh every render since mainWorldMap is mutated by App.tsx.
+  // These are fast computations that must reflect real-time changes to mainWorldMap.
+  // Reference poiDataVersion to ensure recomputation when POI data changes
   const poiPresenceByCoordinateKey = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
     mainWorldMap.cells.forEach((cell) => {
@@ -721,21 +770,23 @@ export const CombatGolf = memo(function CombatGolf({
       if (!poi || poi.type === 'empty') return;
       map.set(`${cell.gridPosition.col},${cell.gridPosition.row}`, { id: poi.id ?? '', name: poi.name });
     });
+    console.log('[POI Map] poiPresenceByCoordinateKey rebuilt. Keys:', Array.from(map.keys()), 'version:', poiDataVersion);
     return map;
-  }, []);
-  const explorationPoiMarkers = useMemo(() => {
-    const entries = Array.from(poiPresenceByCoordinateKey.entries());
-    return entries.map(([coordKey, poi]) => {
-      const [xRaw, yRaw] = coordKey.split(',');
-      return {
-        id: poi.id,
-        x: Number(xRaw),
-        y: Number(yRaw),
-        label: '?',
-      };
-    });
-  }, [poiPresenceByCoordinateKey]);
-  const poiRewardDefinitionsByCoordinate = useMemo(() => {
+  }, [poiDataVersion]);
+  const poiMapsReady = poiByCoordinateKey.size > 0 || poiPresenceByCoordinateKey.size > 0;
+
+  const explorationPoiMarkers = Array.from(poiPresenceByCoordinateKey.entries()).map(([coordKey, poi]) => {
+    const [xRaw, yRaw] = coordKey.split(',');
+    return {
+      id: poi.id,
+      x: Number(xRaw),
+      y: Number(yRaw),
+      label: '?',
+    };
+  });
+
+  // Build POI rewards map - computed fresh every render to reflect saved changes
+  const poiRewardDefinitionsByCoordinate = (() => {
     const map = new Map<string, PoiReward[]>();
     mainWorldMap.cells.forEach((cell) => {
       const key = `${cell.gridPosition.col},${cell.gridPosition.row}`;
@@ -745,11 +796,14 @@ export const CombatGolf = memo(function CombatGolf({
       }
     });
     return map;
-  }, []);
+  })();
+
   const getPoiIdForKey = useCallback((key: string) => (
     poiPresenceByCoordinateKey.get(key)?.id ?? null
   ), [poiPresenceByCoordinateKey]);
-  const poiNarrationByCoordinate = useMemo(() => {
+
+  // Build POI narration map - computed fresh every render
+  const poiNarrationByCoordinate = (() => {
     const map = new Map<string, PoiNarration>();
     mainWorldMap.cells.forEach((cell) => {
       const key = `${cell.gridPosition.col},${cell.gridPosition.row}`;
@@ -759,10 +813,21 @@ export const CombatGolf = memo(function CombatGolf({
       }
     });
     return map;
+  })();
+
+  const getPoiRewardsForKey = useCallback((key: string) => {
+    // Recompute fresh to always get current data
+    const map = new Map<string, PoiReward[]>();
+    mainWorldMap.cells.forEach((cell) => {
+      const cellKey = `${cell.gridPosition.col},${cell.gridPosition.row}`;
+      const poi = cell.poi;
+      if (poi?.rewards?.length) {
+        map.set(cellKey, poi.rewards);
+      }
+    });
+    return map.get(key) ?? [];
   }, []);
-  const getPoiRewardsForKey = useCallback((key: string) => (
-    poiRewardDefinitionsByCoordinate.get(key) ?? []
-  ), [poiRewardDefinitionsByCoordinate]);
+
   const getPoiNarrationForKey = useCallback((key: string) => (
     poiNarrationByCoordinate.get(key) ?? null
   ), [poiNarrationByCoordinate]);
@@ -815,13 +880,25 @@ export const CombatGolf = memo(function CombatGolf({
     return { x: Number(parsed[1]), y: Number(parsed[2]) };
   }, [explorationSpawnX, explorationSpawnY]);
   const clearedPoiKeyRef = useRef<Set<string>>(new Set());
+  const seenNonEmptyTableauKeysRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const nextCleared = new Set(clearedPoiKeyRef.current);
     let newlyClearedAspectKey: string | null = null;
     const currentCoords = getExplorationNodeCoordinates(explorationCurrentNodeId);
-    if (currentCoords && isCurrentExplorationTableauCleared) {
+    const currentTableauHasCards = gameState.tableaus.some((tableau) => tableau.length > 0);
+
+    // Only mark current coord as cleared if:
+    // 1. We have coordinates for the current node
+    // 2. The tableau is actually cleared (gameState.tableaus exists and is empty)
+    // 3. The node hasn't already been marked as cleared
+    // 4. We haven't already processed this coordinate in this effect
+    if (currentCoords) {
       const key = `${currentCoords.x},${currentCoords.y}`;
-      if (!nextCleared.has(key)) {
+      if (currentTableauHasCards) {
+        seenNonEmptyTableauKeysRef.current.add(key);
+      }
+      const hasSeenCards = seenNonEmptyTableauKeysRef.current.has(key);
+      if (hasSeenCards && isCurrentExplorationTableauCleared && gameState.tableaus.length > 0 && !nextCleared.has(key)) {
         nextCleared.add(key);
         actions.puzzleCompleted?.({
           coord: { x: currentCoords.x, y: currentCoords.y },
@@ -829,8 +906,16 @@ export const CombatGolf = memo(function CombatGolf({
           tableauId: explorationCurrentNodeId,
         });
         const rewards = getPoiRewardsForKey(key);
-        if (rewards.some(isAspectRewardType)) {
+        const clearRewards = rewards.filter((r) => (r.trigger ?? 'on_tableau_clear') === 'on_tableau_clear');
+        if (clearRewards.length > 0) {
           newlyClearedAspectKey = key;
+          setLastPoiRewardKey(key);
+          const reward = clearRewards[0];
+          const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
+          if (!isAspectReward || (gameState.actorKeru?.archetype ?? 'blank') === 'blank') {
+            setPendingPoiRewardKey(key);
+            setShowKeruArchetypeReward(true);
+          }
         }
       }
     }
@@ -844,13 +929,11 @@ export const CombatGolf = memo(function CombatGolf({
         poiId: getPoiIdForKey(key),
         tableauId: node.id,
       });
-      const rewards = getPoiRewardsForKey(key);
-      if (!newlyClearedAspectKey && rewards.some(isAspectRewardType)) {
-        newlyClearedAspectKey = key;
-      }
+      // Note: reward modal only tracks the current cleared node to avoid
+      // pulling stale rewards from previously-cleared nodes.
     });
-    if (newlyClearedAspectKey && newlyClearedAspectKey !== lastAspectRewardKey) {
-      setLastAspectRewardKey(newlyClearedAspectKey);
+    if (newlyClearedAspectKey && newlyClearedAspectKey !== lastPoiRewardKey) {
+      setLastPoiRewardKey(newlyClearedAspectKey);
     }
     clearedPoiKeyRef.current = nextCleared;
   }, [
@@ -860,10 +943,34 @@ export const CombatGolf = memo(function CombatGolf({
     getPoiRewardsForKey,
     getPoiIdForKey,
     isCurrentExplorationTableauCleared,
-    lastAspectRewardKey,
+    lastPoiRewardKey,
     isAspectRewardType,
     actions,
+    gameState.tableaus,
+    gameState.actorKeru?.archetype,
   ]);
+
+  // Handle "on_arrival" rewards when player arrives at a new POI
+  const visitedPoiKeysRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const currentCoords = getExplorationNodeCoordinates(explorationCurrentNodeId);
+    if (!currentCoords) return;
+
+    const key = `${currentCoords.x},${currentCoords.y}`;
+
+    // Check if we've already visited this POI
+    if (visitedPoiKeysRef.current.has(key)) return;
+    visitedPoiKeysRef.current.add(key);
+
+    // Check for on_arrival rewards
+    const rewards = getPoiRewardsForKey(key);
+    const arrivalRewards = rewards.filter(r => r.trigger === 'on_arrival');
+
+    if (arrivalRewards.length > 0 && key !== lastPoiRewardKey) {
+      setLastPoiRewardKey(key);
+    }
+  }, [explorationCurrentNodeId, getExplorationNodeCoordinates, getPoiRewardsForKey, lastPoiRewardKey]);
+
   const explorationConditionalEdges = useMemo(() => {
     const coords = getExplorationNodeCoordinates(explorationCurrentNodeId);
     const clearedCoordKeys = new Set(
@@ -891,7 +998,11 @@ export const CombatGolf = memo(function CombatGolf({
   const getPoiTableauPresetForNode = useCallback((nodeId: string): PoiTableauPresetId | null => {
     const coords = getExplorationNodeCoordinates(nodeId);
     if (!coords) return null;
-    return poiByCoordinateKey.get(`${coords.x},${coords.y}`) ?? null;
+    const key = `${coords.x},${coords.y}`;
+    const result = poiByCoordinateKey.get(key) ?? null;
+    if (coords.x === 0 && coords.y === 2) {
+    }
+    return result;
   }, [getExplorationNodeCoordinates, poiByCoordinateKey]);
   const hasPoiForNode = useCallback((nodeId: string): boolean => {
     const coords = getExplorationNodeCoordinates(nodeId);
@@ -903,11 +1014,7 @@ export const CombatGolf = memo(function CombatGolf({
     if (!presetId) return null;
     const cacheKey = `${nodeId}|poi|${presetId}`;
     const cached = explorationPoiTableauCacheRef.current[cacheKey];
-    let generated = cached ?? createPoiTableauPreset(presetId);
-    const coords = getExplorationNodeCoordinates(nodeId);
-    if (coords && coords.x === 0 && (coords.y === 0 || coords.y === 1 || coords.y === 2)) {
-      generated = generated.slice(0, 7).map((stack) => (stack.length > 0 ? [stack[stack.length - 1]] : []));
-    }
+    const generated = cached ?? createPoiTableauPreset(presetId);
     explorationPoiTableauCacheRef.current[cacheKey] = generated;
     return generated;
   }, [getExplorationNodeCoordinates, getPoiTableauPresetForNode]);
@@ -975,10 +1082,18 @@ export const CombatGolf = memo(function CombatGolf({
     return generated;
   }, [createDeterministicTableaus, getMinorCenterCacheKey]);
   const getDisplayTableausForHeading = useCallback((nodeId: string, direction: Direction): CardType[][] => {
+    const coords = getExplorationNodeCoordinates(nodeId);
+    if (coords && coords.x === 0 && coords.y === 2) {
+    }
+
     if (!hasPoiForNode(nodeId)) {
       return [];
     }
     const poiPresetTableaus = ensurePoiPresetTableaus(nodeId);
+
+    if (coords && coords.x === 0 && coords.y === 2) {
+    }
+
     if (poiPresetTableaus) {
       return cloneTableaus(poiPresetTableaus);
     }
@@ -1111,29 +1226,55 @@ export const CombatGolf = memo(function CombatGolf({
     && abilityCardPointer.y >= abilityFoundationRect.top
     && abilityCardPointer.y <= abilityFoundationRect.bottom
   );
-  const pendingAspectReward = useMemo(() => (
-    pendingPoiRewardKey
-      ? getPoiRewardsForKey(pendingPoiRewardKey).find(isAspectRewardType)
-      : undefined
-  ), [getPoiRewardsForKey, pendingPoiRewardKey, isAspectRewardType]);
+  // Compute fresh to always get current mainWorldMap data
+  // Reference poiDataVersion to ensure recomputation when POI data changes
+  const pendingPoiReward = useMemo(() => {
+    if (!pendingPoiRewardKey) return undefined;
+    const rewards = getPoiRewardsForKey(pendingPoiRewardKey);
+    return rewards[0];
+  }, [pendingPoiRewardKey, getPoiRewardsForKey, poiDataVersion]);
+
   const allowedAspectList = useMemo(() => {
-    if (!pendingAspectReward) return BASE_KERU_ASPECT_ORDER;
-    const normalized = normalizeAspectOptions(pendingAspectReward.options);
+    if (!pendingPoiReward) return BASE_KERU_ASPECT_ORDER;
+    if (pendingPoiReward.type !== 'aspect-choice') return BASE_KERU_ASPECT_ORDER;
+    const normalized = normalizeAspectOptions(pendingPoiReward.options);
     const baseList = normalized.length > 0 ? normalized : BASE_KERU_ASPECT_ORDER;
-    const drawCount = Math.max(0, pendingAspectReward.drawCount ?? pendingAspectReward.amount ?? baseList.length);
+    const drawCount = Math.max(0, pendingPoiReward.drawCount ?? pendingPoiReward.amount ?? baseList.length);
     return drawCount > 0 ? baseList.slice(0, drawCount) : baseList;
-  }, [normalizeAspectOptions, pendingAspectReward]);
+  }, [normalizeAspectOptions, pendingPoiReward]);
+
+  const allowedOrimIds = useMemo(() => {
+    if (!pendingPoiReward || pendingPoiReward.type !== 'orim-choice') return [];
+    return (pendingPoiReward.options ?? []).filter((opt) => ORIM_DEFINITIONS.some((o) => o.id === opt));
+  }, [pendingPoiReward, ORIM_DEFINITIONS]);
+
   const allowedAspectSet = useMemo(() => new Set(allowedAspectList), [allowedAspectList]);
   const permittedKeruOptions = useMemo(() => (
     KERU_ARCHETYPE_OPTIONS.filter((option) => allowedAspectSet.has(option.archetype))
   ), [allowedAspectSet]);
+
+  const orimRewardCards = useMemo(() => {
+    return allowedOrimIds.map((orimId) => {
+      const orimDef = ORIM_DEFINITIONS.find((o) => o.id === orimId);
+      if (!orimDef) return null;
+      return {
+        id: `reward-orim-${orimDef.id}`,
+        rank: 0,
+        element: orimDef.element || 'N',
+        suit: ELEMENT_TO_SUIT[orimDef.element as Element] || 'wild',
+      } as CardType;
+    }).filter((c) => c !== null) as CardType[];
+  }, [allowedOrimIds, ORIM_DEFINITIONS]);
+
   const aspectRewardCards = useMemo(
     () => permittedKeruOptions.map((option) => KERU_ARCHETYPE_CARDS[option.archetype]),
     [permittedKeruOptions]
   );
+
+  const displayedRewardCards = pendingPoiReward?.type === 'orim-choice' ? orimRewardCards : aspectRewardCards;
   const aspectModalWidth = Math.min(1200, Math.round(layoutViewportWidth * 0.96));
   const aspectModalHeight = Math.min(820, Math.round(layoutViewportHeight * 0.82));
-  const aspectCardCount = Math.max(1, aspectRewardCards.length);
+  const aspectCardCount = Math.max(1, displayedRewardCards.length);
   const aspectCardGap = Math.max(18, Math.round(aspectModalWidth * 0.02));
   const aspectHeaderBuffer = 190;
   const aspectAvailableWidth = Math.max(320, aspectModalWidth - 80);
@@ -1148,7 +1289,7 @@ export const CombatGolf = memo(function CombatGolf({
     aspectCardWidth = Math.round(aspectCardHeight / aspectRatio);
   }
   const aspectCardSize = { width: aspectCardWidth, height: aspectCardHeight };
-  const aspectChoiceCount = Math.max(1, pendingAspectReward?.chooseCount ?? 1);
+  const aspectChoiceCount = Math.max(1, pendingPoiReward?.chooseCount ?? 1);
   const keruAspectLabel = useMemo(
     () => getAspectLabel(gameState.actorKeru?.archetype),
     [gameState.actorKeru?.archetype]
@@ -1158,7 +1299,7 @@ export const CombatGolf = memo(function CombatGolf({
     : 'Aspect Gained';
   const keruRewardCard = abilityCard;
   const isDraggingKeruRewardCard = keruRewardCard ? (dragState.isDragging && dragState.card?.id === keruRewardCard.id) : false;
-  const isDraggingAspectRewardCard = dragState.isDragging && !!dragState.card?.id?.startsWith('keru-archetype-');
+  const isDraggingAspectRewardCard = dragState.isDragging && !!(dragState.card?.id?.startsWith('keru-archetype-') || dragState.card?.id?.startsWith('reward-orim-'));
   const keruRewardCardPointer = isDraggingKeruRewardCard ? {
     x: dragState.position.x + dragState.offset.x,
     y: dragState.position.y + dragState.offset.y,
@@ -1642,33 +1783,53 @@ export const CombatGolf = memo(function CombatGolf({
       setPendingPoiRewardKey(null);
       return;
     }
+    if (pendingPoiRewardKey) return;
     const keruArchetype = gameState.actorKeru?.archetype ?? 'blank';
-    if (keruArchetype !== 'blank') {
+    const clearedPoiRewardKey = lastPoiRewardKey;
+    if (!clearedPoiRewardKey) return;
+    const rewards = getPoiRewardsForKey(clearedPoiRewardKey);
+    const reward = rewards[0];
+    if (!reward) return;
+    const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
+    if (isAspectReward && keruArchetype !== 'blank') {
       setShowKeruArchetypeReward(false);
       setPendingPoiRewardKey(null);
       return;
     }
-    const clearedAspectKey = lastAspectRewardKey;
-    if (!clearedAspectKey) return;
-    setPendingPoiRewardKey(clearedAspectKey);
+    setPendingPoiRewardKey(clearedPoiRewardKey);
     setShowKeruArchetypeReward(true);
   }, [
     enemyFoundations,
     explorationCurrentNodeId,
     explorationNodes,
     isRpgVariant,
-    lastAspectRewardKey,
+    lastPoiRewardKey,
     gameState.actorKeru?.archetype,
+    getPoiRewardsForKey,
+    pendingPoiRewardKey,
   ]);
   useEffect(() => {
     if (!isRpgVariant) return;
     const keruArchetype = gameState.actorKeru?.archetype ?? 'blank';
     const tutorialBCleared = explorationNodes.some((node) => node.x === 0 && node.y === 1 && node.cleared);
+    if (pendingPoiRewardKey) {
+      const reward = getPoiRewardsForKey(pendingPoiRewardKey)[0];
+      if (reward?.type === 'orim-choice') return;
+    }
     if (tutorialBCleared && keruArchetype !== 'blank' && !keruAbilityRewardShownRef.current) {
       setShowKeruAbilityReward(true);
       keruAbilityRewardShownRef.current = true;
     }
-  }, [explorationNodes, gameState.actorKeru?.archetype, isRpgVariant]);
+  }, [explorationNodes, gameState.actorKeru?.archetype, isRpgVariant, pendingPoiRewardKey, getPoiRewardsForKey]);
+  useEffect(() => {
+    if (!poiRewardResolvedAt || !pendingPoiRewardKey) return;
+    const reward = getPoiRewardsForKey(pendingPoiRewardKey)[0];
+    if (!reward) return;
+    if (reward.type === 'orim-choice') {
+      setShowKeruArchetypeReward(false);
+      setPendingPoiRewardKey(null);
+    }
+  }, [poiRewardResolvedAt, pendingPoiRewardKey, getPoiRewardsForKey]);
   useEffect(() => {
     const currentKeru = gameState.actorKeru;
     const lastMutationAt = currentKeru?.lastMutationAt;
@@ -1721,7 +1882,7 @@ export const CombatGolf = memo(function CombatGolf({
     const current = gameState.rpgHandCards ?? [];
     const currentIds = new Set(current.map((card) => card.id));
     const isUpgradedRpcCard = (card: CardType) => {
-      const levelMatch = card.id.match(/-lvl-(\d+)-/);
+      const levelMatch = card.id.match(/-lvl-(\d+)/);
       const level = levelMatch ? Number(levelMatch[1]) : 0;
       return level >= 3 && (
         card.id.startsWith('rpg-scratch-')
@@ -1838,11 +1999,11 @@ export const CombatGolf = memo(function CombatGolf({
       return null;
     };
     const getRpcCount = (id: string): number => {
-      if (id.startsWith('rpg-scratch-lvl-') || id.startsWith('rpg-bite-lvl-') || id.startsWith('rpg-peck-lvl-')) {
-        const match = id.match(/-lvl-(\d+)-/);
-        const parsed = match ? Number(match[1]) : NaN;
-        if (Number.isFinite(parsed) && parsed > 0) return parsed;
-      }
+    if (id.startsWith('rpg-scratch-lvl-') || id.startsWith('rpg-bite-lvl-') || id.startsWith('rpg-peck-lvl-')) {
+      const match = id.match(/-lvl-(\d+)/);
+      const parsed = match ? Number(match[1]) : NaN;
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
       if (id.startsWith('rpg-vice-bite-')) return 3;
       if (id.startsWith('rpg-blinding-peck-')) return 3;
       if (id.startsWith('rpg-scratch-') || id.startsWith('rpg-bite-') || id.startsWith('rpg-peck-')) return 1;
@@ -3223,12 +3384,16 @@ export const CombatGolf = memo(function CombatGolf({
   useEffect(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
     if (!actions.setBiomeTableaus) return;
+    if (!poiMapsReady) return;
     const nodeId = explorationCurrentNodeId;
     const heading = explorationHeading;
     const currentDisplay = gameState.tableaus;
     const displayedContext = explorationDisplayedContextRef.current;
-    if (displayedContext) {
+    if (displayedContext && !skipPoiCommitRef.current) {
       commitDisplayedTableausToCaches(displayedContext.nodeId, displayedContext.heading, currentDisplay);
+    }
+    if (skipPoiCommitRef.current) {
+      skipPoiCommitRef.current = false;
     }
     const desiredDisplay = getDisplayTableausForHeading(nodeId, heading);
     if (!areTableausEquivalent(currentDisplay, desiredDisplay)) {
@@ -3247,6 +3412,7 @@ export const CombatGolf = memo(function CombatGolf({
     getDisplayTableausForHeading,
     hasSpawnedEnemies,
     isRpgVariant,
+    poiMapsReady,
   ]);
   useEffect(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
@@ -3257,23 +3423,14 @@ export const CombatGolf = memo(function CombatGolf({
     const updatedNodes = explorationNodesRef.current.map((node) => (
       node.id === currentId ? { ...node, cleared: true } : node
     ));
-    const coords = getExplorationNodeCoordinates(currentId);
-    if (coords) {
-      const key = `${coords.x},${coords.y}`;
-      const rewards = getPoiRewardsForKey(key);
-      if (rewards.some(isAspectRewardType)) {
-        setLastAspectRewardKey(key);
-      }
-    }
+    // Note: lastPoiRewardKey is set in the main effect when nodes clear,
+    // not here, to ensure it happens after tableaus are actually resolved
     explorationNodesRef.current = updatedNodes;
     setExplorationNodes(updatedNodes);
   }, [
-    getExplorationNodeCoordinates,
-    getPoiRewardsForKey,
     hasSpawnedEnemies,
     isCurrentExplorationTableauCleared,
     isRpgVariant,
-    isAspectRewardType,
   ]);
   useEffect(() => {
     if (!(isRpgVariant && !hasSpawnedEnemies)) return;
@@ -3668,6 +3825,22 @@ export const CombatGolf = memo(function CombatGolf({
     setSoundMuted(next);
     setGameAudioMuted(next);
   }, [soundMuted]);
+  const currentCoords = getExplorationNodeCoordinates(explorationCurrentNodeId);
+  const coordsLabel = currentCoords ? `${currentCoords.x},${currentCoords.y}` : '--,--';
+  const topRightCoords = (
+    <button
+      type="button"
+      onClick={() => {
+        if (!currentCoords) return;
+        onOpenPoiEditorAt?.(currentCoords.x, currentCoords.y);
+      }}
+      className="h-[30px] rounded border border-game-gold/70 bg-game-bg-dark/90 px-2 text-[12px] font-mono tracking-[0.5px] text-game-gold shadow-neon-gold flex items-center justify-center"
+      title="Open POI editor at current coordinates"
+      aria-label="Open POI editor at current coordinates"
+    >
+      {coordsLabel}
+    </button>
+  );
   const topLeftFpsCounter = (
     <button
       type="button"
@@ -3704,7 +3877,8 @@ export const CombatGolf = memo(function CombatGolf({
         <div className="justify-self-center w-full max-w-[min(90vw,960px)]">
           {relicTray}
         </div>
-        <div className="justify-self-end pointer-events-auto">
+        <div className="justify-self-end pointer-events-auto flex items-center gap-2">
+          {topRightCoords}
           {topRightSoundToggle}
         </div>
       </div>
@@ -3955,7 +4129,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
-      if (e.key !== '\\') return;
+      if (e.key !== '`') return;
       e.preventDefault();
       setSplatterModalOpen((prev) => !prev);
     };
@@ -3986,7 +4160,7 @@ export const CombatGolf = memo(function CombatGolf({
   }, []);
 
   const renderMatchLines = useCallback((mode: 'random' | 'traditional') => {
-  const autoPathMode = false;
+    const autoPathMode = false;
     if (!ctrlHeld && !autoPathMode) return null;
     if (!matchLineContainerRef.current) return null;
     const containerRect = matchLineContainerRef.current.getBoundingClientRect();
@@ -5826,21 +6000,23 @@ export const CombatGolf = memo(function CombatGolf({
               }}
             >
               <div className="mb-4 text-xs font-semibold uppercase tracking-[0.6em] text-game-teal/80">
-                Awaken Your Aspect
+                {pendingPoiReward?.type === 'orim-choice' ? 'Choose an Orim' : 'Awaken Your Aspect'}
               </div>
               <div className="mb-4 text-sm text-game-white/80">
-                Drag an aspect card to the foundation to bind Keru&apos;s form.
+                {pendingPoiReward?.type === 'orim-choice'
+                  ? 'Drag an orim card to the foundation to equip it.'
+                  : 'Drag an aspect card to the foundation to bind Keru\'s form.'}
               </div>
               <div className="mb-4 text-[11px] uppercase tracking-[0.3em] text-game-gold/80">
                 Choose {aspectChoiceCount}
               </div>
               <div className="relative flex flex-1 items-center justify-center pt-2">
                 <div className="relative flex items-end justify-center" style={{ gap: aspectCardGap }}>
-                  {aspectRewardCards.map((card, index) => {
+                  {displayedRewardCards.map((card, index) => {
                     const isCardBeingDragged = isDraggingAspectRewardCard && dragState.card?.id === card.id;
-                    const rotation = aspectRewardCards.length === 1
+                    const rotation = displayedRewardCards.length === 1
                       ? 0
-                      : (index - (aspectRewardCards.length - 1) / 2) * 6;
+                      : (index - (displayedRewardCards.length - 1) / 2) * 6;
                     const cardKey = card.id || `aspect-reward-${index}`;
                     return (
                       <div

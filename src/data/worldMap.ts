@@ -1,146 +1,6 @@
 // src/data/worldMap.ts
 import type { WorldMapDefinition, PointOfInterest } from '../engine/worldMapTypes';
 
-const pointsOfInterest: PointOfInterest[] = [
-  {
-    id: 'poi_start',
-    name: 'Tutorial A',
-    description: 'Initial actions row 0,0.',
-    type: 'biome',
-    biomeId: 'random_wilds',
-    tableauPresetId: 'initial_actions_00',
-    rewards: [
-      {
-        id: 'tutorial-a-aspects',
-        type: 'aspect-choice',
-        amount: 3,
-        drawCount: 3,
-        chooseCount: 1,
-        description: 'Choose 1: Lupus, Ursus, or Felis jumbo card aspect',
-        options: ['lupus', 'ursus', 'felis'],
-      },
-    ],
-    narration: {
-      title: 'Awaken an {Aspect|orange}',
-      body: 'You cannot progress through this physical world as just a {spirit}. Order the chaos ahead of you to unlock a physical aspect.',
-      tone: 'teal',
-      autoCloseOnDeparture: true,
-    },
-    sparkle: {
-      proximityRange: 3,
-      starCount: 6,
-      glowColor: '#f7d24b',
-      intensity: 1,
-    },
-  },
-  {
-    id: 'poi_initial_01',
-    name: 'Tutorial B',
-    description: 'Initial actions row 0,1.',
-    type: 'biome',
-    biomeId: 'random_wilds',
-    tableauPresetId: 'initial_actions_01',
-    rewards: [
-      {
-        id: 'tutorial-b-orim',
-        type: 'orim-choice',
-        amount: 1,
-        drawCount: 3,
-        chooseCount: 1,
-        description: 'Choose 1 orim to enhance your cards.',
-        options: ['orim_vigor', 'orim_swiftness', 'orim_brilliance'],
-      },
-    ],
-    sparkle: {
-      proximityRange: 3,
-      starCount: 6,
-      glowColor: '#f7d24b',
-      intensity: 1,
-    },
-  },
-  {
-    id: 'poi_initial_02',
-    name: 'Tutorial C',
-    description: 'Initial actions row 0,2.',
-    type: 'biome',
-    biomeId: 'random_wilds',
-    tableauPresetId: 'initial_actions_02',
-    rewards: [
-      {
-        id: 'tutorial-c-aspects',
-        type: 'aspect-choice',
-        amount: 3,
-        drawCount: 3,
-        chooseCount: 1,
-        description: 'Choose 1: Lupus, Ursus, or Felis jumbo card aspect',
-        options: ['lupus', 'ursus', 'felis'],
-      },
-    ],
-    narration: {
-      title: 'Awaken an {Aspect|orange}',
-      body: 'You cannot progress through this physical world as just a {spirit}. Order the chaos ahead of you to unlock a physical aspect.',
-      tone: 'teal',
-      autoCloseOnDeparture: true,
-    },
-    sparkle: {
-      proximityRange: 3,
-      starCount: 6,
-      glowColor: '#f7d24b',
-      intensity: 1,
-    },
-  },
-  {
-    id: 'poi_oasis_a',
-    name: 'Oasis A',
-    description: 'Tutorial oasis that introduces sequencing and golf transitions.',
-    type: 'biome',
-    biomeId: 'random_wilds',
-    tableauPresetId: 'oasis_a_tutorial',
-  },
-  {
-    id: 'poi_battle_arena',
-    name: 'Goblin Outpost',
-    description: 'A goblin stands guard. A battle is imminent.',
-    type: 'biome',
-    biomeId: 'battle_biome',
-  },
-  {
-    id: 'poi_supply_cache',
-    name: 'Hidden Satchel',
-    description: 'You found a satchel of supplies!',
-    type: 'biome',
-    biomeId: 'supply_cache_biome',
-  },
-  {
-    id: 'poi_random_wilds',
-    name: 'Whispering Wilds',
-    description: 'An untamed wilderness stretches before you.',
-    type: 'biome',
-    biomeId: 'random_wilds',
-  },
-  {
-    id: 'poi_event_glade_test',
-    name: 'Peaceful Glade',
-    description: 'A sun-dappled clearing. Something stirs here.',
-    type: 'biome',
-    biomeId: 'event_peaceful_glade',
-    sparkle: {
-      proximityRange: 3,
-      starCount: 5,
-      glowColor: '#a8e6a3',
-      intensity: 0.8,
-    },
-  },
-  {
-    id: 'poi_empty',
-    name: 'Empty Field',
-    description: 'There is nothing of interest here.',
-    type: 'empty',
-  },
-];
-
-const poiLookup = new Map(pointsOfInterest.map((poi) => [poi.id ?? '', poi]));
-
 export const mainWorldMap: WorldMapDefinition = {
   id: 'main_world',
   name: 'Exploritaire World',
@@ -155,14 +15,14 @@ export const mainWorldMap: WorldMapDefinition = {
     lockUntilPathComplete: true,
     label: 'Tutorial Path',
   },
-  pointsOfInterest,
+  pointsOfInterest: [], // Populated dynamically at runtime
   cells: [
-    { gridPosition: { col: 0, row: 0 }, traversalDifficulty: 1, poi: poiLookup.get('poi_initial_02') },
-    { gridPosition: { col: 0, row: 1 }, traversalDifficulty: 1, poi: poiLookup.get('poi_initial_01') },
-    { gridPosition: { col: 0, row: 2 }, traversalDifficulty: 1, poi: poiLookup.get('poi_start') },
-    { gridPosition: { col: 0, row: -2 }, traversalDifficulty: 1, poi: poiLookup.get('poi_oasis_a') },
-    { gridPosition: { col: 1, row: 0 }, traversalDifficulty: 2, poi: poiLookup.get('poi_random_wilds') },
-    { gridPosition: { col: 1, row: 2 }, traversalDifficulty: 1, poi: poiLookup.get('poi_event_glade_test') },
+    { gridPosition: { col: 0, row: 0 }, traversalDifficulty: 1, poi: undefined },
+    { gridPosition: { col: 0, row: 1 }, traversalDifficulty: 1, poi: undefined },
+    { gridPosition: { col: 0, row: 2 }, traversalDifficulty: 1, poi: undefined },
+    { gridPosition: { col: 0, row: -2 }, traversalDifficulty: 1, poi: undefined },
+    { gridPosition: { col: 1, row: 0 }, traversalDifficulty: 2, poi: undefined },
+    { gridPosition: { col: 1, row: 2 }, traversalDifficulty: 1, poi: undefined },
   ],
   blockedCells: [
     {
@@ -276,3 +136,38 @@ export const mainWorldMap: WorldMapDefinition = {
     { from: { col: 0, row: 1 }, to: { col: 0, row: 0 }, requirement: 'source_tableau_cleared', reason: 'Clear tableau at 0,1 first' },
   ],
 };
+
+/**
+ * Map of cell coordinates to POI IDs
+ * Defines which POI should appear at each grid position
+ */
+const CELL_POI_MAPPING: Array<{ col: number; row: number; poiId: string }> = [
+  { col: 0, row: 0, poiId: 'poi_initial_02' },
+  { col: 0, row: 1, poiId: 'poi_initial_01' },
+  { col: 0, row: 2, poiId: 'poi_start' },
+  { col: 0, row: -2, poiId: 'poi_oasis_a' },
+  { col: 1, row: 0, poiId: 'poi_random_wilds' },
+  { col: 1, row: 2, poiId: 'poi_event_glade_test' },
+];
+
+/**
+ * Initializes the world map with POI data loaded at runtime
+ * Call this after fetching pois.json from the server
+ */
+export function initializeWorldMapPois(pois: PointOfInterest[]): void {
+  // Build POI lookup by ID
+  const poiLookup = new Map(pois.map((poi) => [poi.id ?? '', poi]));
+
+  // Assign POIs to cells based on mapping
+  CELL_POI_MAPPING.forEach(({ col, row, poiId }) => {
+    const cell = mainWorldMap.cells.find(
+      (c) => c.gridPosition.col === col && c.gridPosition.row === row
+    );
+    if (cell) {
+      cell.poi = poiLookup.get(poiId);
+    }
+  });
+
+  // Update pointsOfInterest array
+  mainWorldMap.pointsOfInterest = pois;
+}

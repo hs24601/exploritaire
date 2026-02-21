@@ -1,0 +1,151 @@
+{
+  "pois": [
+    {
+      "id": "poi_start",
+      "name": "Tutorial A",
+      "description": "Initial actions row 0,2.",
+      "type": "biome",
+      "biomeId": "random_wilds",
+      "tableauPresetId": "initial_actions_00",
+      "rewards": [
+        {
+          "type": "aspect-choice",
+          "trigger": "on_tableau_clear",
+          "amount": 3,
+          "drawCount": 3,
+          "chooseCount": 1,
+          "options": [
+            "ursus",
+            "lupus"
+          ]
+        }
+      ],
+      "narration": {
+        "title": "Awaken an {Aspect|orange}",
+        "body": "You cannot progress through this physical world as just a {spirit}. Order the chaos ahead of you to unlock a physical aspect.",
+        "tone": "teal",
+        "autoCloseOnDeparture": true
+      },
+      "sparkle": {
+        "proximityRange": 3,
+        "starCount": 6,
+        "glowColor": "#f7d24b",
+        "intensity": 1
+      }
+    },
+    {
+      "id": "poi_initial_01",
+      "name": "Tutorial B",
+      "description": "Initial actions row 0,1.",
+      "type": "biome",
+      "biomeId": "random_wilds",
+      "tableauPresetId": "initial_actions_01",
+      "rewards": [
+        {
+          "type": "orim-choice",
+          "trigger": "on_tableau_clear",
+          "amount": 3,
+          "drawCount": 3,
+          "chooseCount": 1,
+          "description": "Flavor Description",
+          "overtitle": "OVERTITLE",
+          "summary": "SUMMARY",
+          "instructions": "INSTRUCTIONS",
+          "options": [
+            "fireShard"
+          ]
+        }
+      ],
+      "sparkle": {
+        "proximityRange": 3,
+        "starCount": 6,
+        "glowColor": "#f7d24b",
+        "intensity": 1
+      }
+    },
+    {
+      "id": "poi_initial_02",
+      "name": "Tutorial C",
+      "description": "Initial actions row 0,2.",
+      "type": "biome",
+      "biomeId": "random_wilds",
+      "tableauPresetId": "initial_actions_02",
+      "rewards": [
+        {
+          "id": "tutorial-c-aspects",
+          "type": "aspect-choice",
+          "trigger": "on_tableau_clear",
+          "amount": 3,
+          "drawCount": 3,
+          "chooseCount": 1,
+          "description": "Choose 1: Lupus, Ursus, or Felis jumbo card aspect",
+          "options": [
+            "lupus",
+            "ursus",
+            "felis"
+          ]
+        }
+      ],
+      "narration": {
+        "title": "Awaken an {Aspect|orange}",
+        "body": "You cannot progress through this physical world as just a {spirit}. Order the chaos ahead of you to unlock a physical aspect.",
+        "tone": "teal",
+        "autoCloseOnDeparture": true
+      },
+      "sparkle": {
+        "proximityRange": 3,
+        "starCount": 6,
+        "glowColor": "#f7d24b",
+        "intensity": 1
+      }
+    },
+    {
+      "id": "poi_oasis_a",
+      "name": "Oasis A",
+      "description": "Tutorial oasis that introduces sequencing and golf transitions.",
+      "type": "biome",
+      "biomeId": "random_wilds",
+      "tableauPresetId": "oasis_a_tutorial"
+    },
+    {
+      "id": "poi_battle_arena",
+      "name": "Goblin Outpost",
+      "description": "A goblin stands guard. A battle is imminent.",
+      "type": "biome",
+      "biomeId": "battle_biome"
+    },
+    {
+      "id": "poi_supply_cache",
+      "name": "Hidden Satchel",
+      "description": "You found a satchel of supplies!",
+      "type": "biome",
+      "biomeId": "supply_cache_biome"
+    },
+    {
+      "id": "poi_random_wilds",
+      "name": "Whispering Wilds",
+      "description": "An untamed wilderness stretches before you.",
+      "type": "biome",
+      "biomeId": "random_wilds"
+    },
+    {
+      "id": "poi_event_glade_test",
+      "name": "Peaceful Glade",
+      "description": "A sun-dappled clearing. Something stirs here.",
+      "type": "biome",
+      "biomeId": "event_peaceful_glade",
+      "sparkle": {
+        "proximityRange": 3,
+        "starCount": 5,
+        "glowColor": "#a8e6a3",
+        "intensity": 0.8
+      }
+    },
+    {
+      "id": "poi_empty",
+      "name": "Empty Field",
+      "description": "There is nothing of interest here.",
+      "type": "empty"
+    }
+  ]
+}

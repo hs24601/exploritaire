@@ -29,7 +29,7 @@ import { WatercolorContext } from './watercolor/useWatercolorEnabled';
 import { WatercolorCanvas, WatercolorProvider } from './watercolor-engine';
 import { initializeGame } from './engine/game';
 import { CardScaleProvider } from './contexts/CardScaleContext';
-import { mainWorldMap } from './data/worldMap';
+import { mainWorldMap, initializeWorldMapPois } from './data/worldMap';
 import { KERU_ARCHETYPE_OPTIONS, KeruAspect } from './data/keruAspects';
 import abilitiesJson from './data/abilities.json';
 import { ORIM_DEFINITIONS } from './engine/orims';
@@ -76,6 +76,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 type PoiRewardDraft = {
   id: number;
   type: PoiRewardType;
+  trigger: 'on_arrival' | 'on_tableau_clear' | 'on_condition';
   description: string;
   drawCount: number;
   chooseCount: number;
@@ -85,6 +86,9 @@ type PoiRewardDraft = {
   searchFilter: string;
   abilitySearchFilter: string;
   orimSearchFilter: string;
+  overtitle: string;
+  summary: string;
+  instructions: string;
 };
 
 type PoiNarrationDraft = {
@@ -146,6 +150,7 @@ type OrimDraft = {
   description: string;
   element: Element;
   effects: AbilityEffect[];
+  isAspect?: boolean;
 };
 
 type OrimSynergy = {
@@ -220,7 +225,7 @@ export default function App() {
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
   const [forcedPerspectiveEnabled, setForcedPerspectiveEnabled] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
-  const [toolingTab, setToolingTab] = useState<'poi' | 'aspects' | 'ability' | 'orim' | 'synergies'>('poi');
+  const [toolingTab, setToolingTab] = useState<'poi' | 'ability' | 'orim' | 'synergies'>('poi');
   const applySparkleConfig = useCallback((config?: PoiSparkleConfig) => {
     const resolved = { ...DEFAULT_SPARKLE_CONFIG, ...config };
     setPoiEditorProximityRange(resolved.proximityRange);
@@ -262,6 +267,9 @@ export default function App() {
     searchFilter: '',
     abilitySearchFilter: '',
     orimSearchFilter: '',
+    overtitle: '',
+    summary: '',
+    instructions: '',
   }]);
   const poiRewardIdRef = useRef(1);
   const [abilityDrafts, setAbilityDrafts] = useState<AspectDraft[]>(() => {
@@ -299,22 +307,12 @@ export default function App() {
     }));
   });
   const [abilitySearch, setAbilitySearch] = useState('');
+  const [abilityTypeFilter, setAbilityTypeFilter] = useState<'all' | 'exploration' | 'combat'>('all');
   const [selectedAbilityId, setSelectedAbilityId] = useState<string | null>(null);
   const [abilityEditorMessage, setAbilityEditorMessage] = useState<string | null>(null);
   const [isSavingAbility, setIsSavingAbility] = useState(false);
-  const [aspectProfiles, setAspectProfiles] = useState<Array<{
-    id: string;
-    name: string;
-    description: string;
-    archetype: KeruAspect | '';
-    rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-    attributes: Array<{ stat: string; op: '+' | '-'; value: number | '' }>;
-  }>>([]);
-  const [aspectProfileSearch, setAspectProfileSearch] = useState('');
-  const [selectedAspectProfileId, setSelectedAspectProfileId] = useState<string | null>(null);
-  const [aspectProfileMessage, setAspectProfileMessage] = useState<string | null>(null);
-  const [isSavingAspectProfiles, setIsSavingAspectProfiles] = useState(false);
   const [orimSearch, setOrimSearch] = useState('');
+  const [orimAspectFilter, setOrimAspectFilter] = useState<'all' | 'aspects' | 'non-aspects'>('all');
   const [selectedOrimId, setSelectedOrimId] = useState<string | null>(null);
   const [orimDrafts, setOrimDrafts] = useState<OrimDraft[]>(() =>
     ORIM_DEFINITIONS.map((orim) => ({
@@ -323,6 +321,7 @@ export default function App() {
       description: orim.description,
       element: orim.element,
       effects: [],
+      isAspect: orim.isAspect,
     }))
   );
   const [orimEditorMessage, setOrimEditorMessage] = useState<string | null>(null);
@@ -453,51 +452,49 @@ export default function App() {
     if (raw.includes('felis')) return 'felis';
     return null;
   }, []);
-  const aspectRewardOptions = useMemo(() => {
-    const fromProfiles = aspectProfiles
-      .map((entry) => {
-        const key = resolveKeruAspectKey(entry.id)
-          ?? resolveKeruAspectKey(entry.name)
-          ?? resolveKeruAspectKey(entry.archetype);
-        if (!key) return null;
-        const label = entry.name?.trim()
-          || entry.archetype?.trim()
-          || `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-        return { archetype: key, label };
-      })
-      .filter((entry): entry is { archetype: KeruAspect; label: string } => !!entry);
-    const deduped = fromProfiles.reduce<Array<{ archetype: KeruAspect; label: string }>>((acc, entry) => {
-      if (acc.some((existing) => existing.archetype === entry.archetype)) return acc;
-      acc.push(entry);
-      return acc;
-    }, []);
-    return deduped.length > 0 ? deduped : KERU_ARCHETYPE_OPTIONS;
-  }, [aspectProfiles, resolveKeruAspectKey]);
+  const aspectRewardOptions = KERU_ARCHETYPE_OPTIONS;
 
   const createDraftFromReward = useCallback((reward: PoiReward): PoiRewardDraft => {
     const nextId = poiRewardIdRef.current + 1;
     poiRewardIdRef.current = nextId;
     const options = reward.options ?? [];
-    const normalizedAspects = options
-      .map((option) => resolveKeruAspectKey(option))
-      .filter((option): option is KeruAspect => !!option && VALID_KERU_ASPECTS.has(option));
-    const aspectOptions = normalizedAspects;
-    const abilityOptions = options.filter((option) => !resolveKeruAspectKey(option));
     const normalizedType = reward.type === 'aspect-jumbo' ? 'aspect-choice' : reward.type;
     const drawCount = Math.max(0, reward.drawCount ?? reward.amount ?? options.length);
     const chooseCount = Math.max(0, reward.chooseCount ?? (normalizedType === 'ability-choice' ? 3 : 1));
+
+    let aspectOptions: KeruAspect[] = [];
+    let abilityOptions: string[] = [];
+    let orimOptions: string[] = [];
+
+    if (normalizedType === 'orim-choice') {
+      // For orim rewards, filter options to only valid orim IDs
+      const validOrimIds = new Set(ORIM_DEFINITIONS.map((o) => o.id));
+      orimOptions = options.filter((opt) => validOrimIds.has(opt));
+    } else {
+      // For aspect/ability rewards, resolve options
+      const normalizedAspects = options
+        .map((option) => resolveKeruAspectKey(option))
+        .filter((option): option is KeruAspect => !!option && VALID_KERU_ASPECTS.has(option));
+      aspectOptions = normalizedAspects;
+      abilityOptions = options.filter((option) => !resolveKeruAspectKey(option));
+    }
+
     return {
       id: nextId,
       type: normalizedType,
+      trigger: reward.trigger ?? 'on_tableau_clear',
       description: reward.description ?? '',
       drawCount,
       chooseCount,
       selectedAspects: aspectOptions,
       selectedAbilities: abilityOptions,
-      selectedOrims: [],
+      selectedOrims: orimOptions,
       searchFilter: '',
       abilitySearchFilter: '',
       orimSearchFilter: '',
+      overtitle: reward.overtitle ?? '',
+      summary: reward.summary ?? '',
+      instructions: reward.instructions ?? '',
     };
   }, [VALID_KERU_ASPECTS, resolveKeruAspectKey]);
 
@@ -507,6 +504,7 @@ export default function App() {
     return {
       id: nextId,
       type: 'aspect-choice',
+      trigger: 'on_tableau_clear',
       description: '',
       drawCount: 3,
       chooseCount: 1,
@@ -516,6 +514,9 @@ export default function App() {
       searchFilter: '',
       abilitySearchFilter: '',
       orimSearchFilter: '',
+      overtitle: '',
+      summary: '',
+      instructions: '',
     };
   }, []);
 
@@ -545,9 +546,8 @@ export default function App() {
     applySparkleConfig((poi as { sparkle?: PoiSparkleConfig })?.sparkle);
 
     const existingRewards = poi.rewards ?? [];
-    const rewardDrafts = existingRewards.length > 0
-      ? existingRewards.map(createDraftFromReward)
-      : [createEmptyDraft()];
+    console.log(`[loadPoi] Loading ${key}, rewards:`, existingRewards);
+    const rewardDrafts = existingRewards.map(createDraftFromReward);
     setPoiEditorRewards(rewardDrafts);
     
     const narration = poi.narration;
@@ -637,22 +637,37 @@ export default function App() {
       setPoiEditorMessage('Choose count cannot exceed draw count.');
       return;
     }
-    const registry = poiEditorRewards.map((draft) => ({
-      type: draft.type,
-      amount: Math.max(0, draft.drawCount),
-      drawCount: Math.max(0, draft.drawCount),
-      chooseCount: Math.max(0, draft.chooseCount),
-      description: draft.description.trim() || undefined,
-      options: (draft.type === 'aspect-choice' || draft.type === 'aspect-jumbo')
-        ? Array.from(
+    const registry = poiEditorRewards.map((draft) => {
+      let options: string[] | undefined;
+      if (draft.type === 'aspect-choice' || draft.type === 'aspect-jumbo') {
+        options = Array.from(
           new Set(
             draft.selectedAspects
               .map((value) => resolveKeruAspectKey(value))
               .filter((value): value is KeruAspect => !!value && VALID_KERU_ASPECTS.has(value))
           )
-        )
-        : (draft.type === 'ability-choice' ? [...new Set(draft.selectedAbilities)] : undefined),
-    }));
+        );
+      } else if (draft.type === 'ability-choice') {
+        options = [...new Set(draft.selectedAbilities)];
+      } else if (draft.type === 'orim-choice') {
+        // Filter to only valid orim IDs
+        const validOrimIds = new Set(ORIM_DEFINITIONS.map((o) => o.id));
+        options = draft.selectedOrims.filter((id) => validOrimIds.has(id));
+      }
+
+      return {
+        type: draft.type,
+        trigger: draft.trigger,
+        amount: Math.max(0, draft.drawCount),
+        drawCount: Math.max(0, draft.drawCount),
+        chooseCount: Math.max(0, draft.chooseCount),
+        description: draft.description.trim() || undefined,
+        ...(draft.overtitle.trim() ? { overtitle: draft.overtitle.trim() } : {}),
+        ...(draft.summary.trim() ? { summary: draft.summary.trim() } : {}),
+        ...(draft.instructions.trim() ? { instructions: draft.instructions.trim() } : {}),
+        ...(options ? { options } : {}),
+      };
+    });
     const narration = (poiEditorNarrationTitle.trim() || poiEditorNarrationBody.trim() || poiEditorCompletionTitle.trim() || poiEditorCompletionBody.trim())
       ? {
           title: poiEditorNarrationTitle.trim(),
@@ -666,20 +681,112 @@ export default function App() {
           } : undefined,
         }
       : undefined;
-    setPoiEditorMessage('POI save is disabled. Edit src/data/worldMap.ts directly for permanent changes.');
-    setIsSavingPoi(false);
+
+    setIsSavingPoi(true);
+    setPoiEditorMessage('Saving POI...');
+    try {
+      // Find the POI ID from coordinates
+      const coords = parsePoiCoords(poiEditorCoords);
+      if (!coords) {
+        setPoiEditorMessage('Invalid coordinates.');
+        return;
+      }
+
+      const cell = mainWorldMap.cells.find(
+        (entry) => entry.gridPosition.col === coords.x && entry.gridPosition.row === coords.y
+      );
+
+      if (!cell || !cell.poi) {
+        setPoiEditorMessage('No POI found at these coordinates.');
+        return;
+      }
+
+      const poiId = cell.poi.id;
+      if (!poiId) {
+        setPoiEditorMessage('POI has no ID.');
+        return;
+      }
+
+      // Load all existing POIs
+      const response = await fetch('/__pois/overrides');
+      if (!response.ok) throw new Error('Failed to load POIs');
+
+      const data = await response.json();
+      const allPois = data.pois || [];
+
+      // Find and update this POI
+      const poiIndex = allPois.findIndex((p: any) => p.id === poiId);
+      if (poiIndex === -1) {
+        setPoiEditorMessage(`POI with id '${poiId}' not found.`);
+        return;
+      }
+
+      // Update the POI with new data
+      // Map editor type back to POI type: 'combat' → 'biome', 'puzzle' → 'empty'
+      const actualType = poiEditorType === 'combat' ? 'biome' : 'empty';
+
+      allPois[poiIndex] = {
+        id: poiId,
+        name: poiEditorName.trim(),
+        description: allPois[poiIndex].description, // Keep existing description
+        type: actualType,
+        biomeId: allPois[poiIndex].biomeId, // Keep existing biomeId
+        tableauPresetId: allPois[poiIndex].tableauPresetId, // Keep existing tableauPresetId
+        rewards: registry,
+        narration: narration as any, // Type mismatch between editor and POI narration types
+        sparkle: {
+          proximityRange: poiEditorProximityRange,
+          starCount: poiEditorStarCount,
+          glowColor: poiEditorGlowColor,
+          intensity: allPois[poiIndex].sparkle?.intensity ?? 1, // Keep existing intensity
+        },
+      };
+
+      // Save back to disk
+      const saveResponse = await fetch('/__pois/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pois: allPois }),
+      });
+
+      if (!saveResponse.ok) throw new Error('Save failed');
+
+      // Update in-memory mainWorldMap
+      cell.poi.name = poiEditorName.trim();
+      cell.poi.type = actualType;
+      cell.poi.rewards = registry;
+      cell.poi.narration = narration as any;
+      (cell.poi as any).sparkle = {
+        proximityRange: poiEditorProximityRange,
+        starCount: poiEditorStarCount,
+        glowColor: poiEditorGlowColor,
+      };
+
+      setPoiEditorMessage('POI saved successfully.');
+    } catch (error) {
+      console.error('[App] failed to save POI', error);
+      setPoiEditorMessage('Failed to save POI.');
+    } finally {
+      setIsSavingPoi(false);
+    }
   }, [
     parsePoiCoords,
     poiEditorCoords,
     poiEditorName,
+    poiEditorType,
     poiEditorNarrationBody,
     poiEditorNarrationTitle,
     poiEditorNarrationTone,
+    poiEditorNarrationAutoClose,
+    poiEditorCompletionTitle,
+    poiEditorCompletionBody,
+    poiEditorCompletionTone,
     poiEditorRewards,
     poiEditorProximityRange,
     poiEditorStarCount,
     poiEditorGlowColor,
-    poiEditorIntensity,
+    VALID_KERU_ASPECTS,
+    resolveKeruAspectKey,
   ]);
 
   const handleAddRewardRow = useCallback(() => {
@@ -687,14 +794,12 @@ export default function App() {
   }, [createEmptyDraft]);
 
   const handleRemoveRewardRow = useCallback((id: number) => {
-    setPoiEditorRewards((prev) => (
-      prev.length <= 1 ? prev : prev.filter((entry) => entry.id !== id)
-    ));
+    setPoiEditorRewards((prev) => prev.filter((entry) => entry.id !== id));
   }, []);
 
   const handleRewardChange = useCallback((
     id: number,
-    key: 'description' | 'drawCount' | 'chooseCount' | 'type' | 'searchFilter' | 'abilitySearchFilter' | 'orimSearchFilter',
+    key: 'description' | 'drawCount' | 'chooseCount' | 'type' | 'trigger' | 'searchFilter' | 'abilitySearchFilter' | 'orimSearchFilter' | 'overtitle' | 'summary' | 'instructions',
     value: string | number
   ) => {
     setPoiEditorRewards((prev) => prev.map((entry) => {
@@ -704,6 +809,9 @@ export default function App() {
       }
       if (key === 'chooseCount') {
         return { ...entry, chooseCount: Math.max(0, Number(value) || 0) };
+      }
+      if (key === 'trigger') {
+        return { ...entry, trigger: value as 'on_arrival' | 'on_tableau_clear' | 'on_condition' };
       }
       if (key === 'type') {
         const nextType = value as PoiRewardType;
@@ -728,6 +836,9 @@ export default function App() {
       }
       if (key === 'orimSearchFilter') {
         return { ...entry, orimSearchFilter: String(value) };
+      }
+      if (key === 'overtitle' || key === 'summary' || key === 'instructions') {
+        return { ...entry, [key]: String(value) };
       }
       return { ...entry, [key]: String(value) };
     }));
@@ -808,6 +919,14 @@ export default function App() {
     setPoiEditorMessage(`Triggered reward test for ${coords.x},${coords.y}.`);
   }, [actions, parsePoiCoords, poiEditorCoords]);
 
+  const handleOpenPoiEditorAt = useCallback((x: number, y: number) => {
+    const coordString = `${x},${y}`;
+    setToolingTab('poi');
+    setToolingOpen(true);
+    setPoiEditorCoords(coordString);
+    loadPoi(coordString);
+  }, [loadPoi]);
+
   useEffect(() => {
     if (toolingOpen && toolingTab === 'poi' && currentPlayerCoords) {
       const nextCoords = `${currentPlayerCoords.x},${currentPlayerCoords.y}`;
@@ -818,6 +937,7 @@ export default function App() {
       loadPoi(nextCoords);
     }
   }, [toolingOpen, toolingTab, currentPlayerCoords, loadPoi, poiEditorCoords]);
+
 
   const handleAddAbility = useCallback(() => {
     const nextIdBase = 'new-ability';
@@ -1046,6 +1166,27 @@ export default function App() {
     };
   }, []);
 
+  // Load POIs from disk and initialize world map
+  useEffect(() => {
+    let active = true;
+    const loadPois = async () => {
+      try {
+        const response = await fetch('/__pois/overrides');
+        if (!response.ok) throw new Error('Unable to load POIs');
+        const data = (await response.json()) as { pois?: any[] };
+        if (!active) return;
+        const pois = data.pois ?? [];
+        initializeWorldMapPois(pois);
+      } catch (err) {
+        console.error('[App] failed to load POIs', err);
+      }
+    };
+    loadPois();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   useEffect(() => {
     let active = true;
     const loadSynergies = async () => {
@@ -1092,10 +1233,14 @@ export default function App() {
     setSelectedOrimId((current) => (current === id ? null : current));
   }, []);
 
-  const handleOrimChange = useCallback((id: string, key: keyof OrimDraft, value: string | number) => {
+  const handleOrimChange = useCallback((id: string, key: keyof OrimDraft, value: string | number | boolean) => {
     setOrimDrafts((prev) => prev.map((entry) => {
       if (entry.id !== id) return entry;
-      const nextEntry = { ...entry, [key]: value };
+      let nextValue: any = value;
+      if (key === 'isAspect' && typeof value === 'string') {
+        nextValue = value === 'true';
+      }
+      const nextEntry = { ...entry, [key]: nextValue };
       if (key === 'name') {
         nextEntry.id = toThisTypeOfCase(String(value));
       }
@@ -1117,6 +1262,7 @@ export default function App() {
           name: entry.name.trim(),
           description: entry.description.trim(),
           element: entry.element,
+          ...(entry.isAspect ? { isAspect: entry.isAspect } : {}),
           effects: entry.effects.map((fx) => ({
             type: fx.type,
             value: fx.value,
@@ -1297,175 +1443,6 @@ export default function App() {
       .replace(/^-+|-+$/g, '')
   ), []);
 
-  const handleAddAspectProfile = useCallback(() => {
-    const nextIdBase = 'new-aspect';
-    let nextId = nextIdBase;
-    let suffix = 1;
-    const existing = new Set(aspectProfiles.map((entry) => entry.id));
-    while (existing.has(nextId)) {
-      suffix += 1;
-      nextId = `${nextIdBase}-${suffix}`;
-    }
-    const nextProfile = {
-      id: nextId,
-      name: 'New Aspect',
-      description: '',
-      archetype: '',
-      rarity: 'common',
-      attributes: [],
-    };
-    setAspectProfiles((prev) => [...prev, nextProfile]);
-    setSelectedAspectProfileId(nextId);
-  }, [aspectProfiles]);
-
-  const handleRemoveAspectProfile = useCallback((id: string) => {
-    setAspectProfiles((prev) => prev.filter((entry) => entry.id !== id));
-    setSelectedAspectProfileId((current) => (current === id ? null : current));
-  }, []);
-
-  const handleAspectProfileChange = useCallback((
-    id: string,
-    key: 'name' | 'description' | 'archetype' | 'rarity',
-    value: string
-  ) => {
-    setAspectProfiles((prev) => prev.map((entry) => (
-      entry.id === id ? { ...entry, [key]: value } : entry
-    )));
-  }, []);
-
-  const handleAspectAttributeChange = useCallback((id: string, index: number, value: string) => {
-    setAspectProfiles((prev) => prev.map((entry) => {
-      if (entry.id !== id) return entry;
-      const next = [...entry.attributes];
-      const numeric = value === '' ? '' : Number(value);
-      next[index] = { ...next[index], value: Number.isFinite(numeric) ? numeric : '' };
-      return { ...entry, attributes: next };
-    }));
-  }, []);
-
-  const handleAspectAttributeStatChange = useCallback((id: string, index: number, value: string) => {
-    setAspectProfiles((prev) => prev.map((entry) => {
-      if (entry.id !== id) return entry;
-      const next = [...entry.attributes];
-      next[index] = { ...next[index], stat: value };
-      return { ...entry, attributes: next };
-    }));
-  }, []);
-
-  const handleAspectAttributeOpChange = useCallback((id: string, index: number, value: '+' | '-') => {
-    setAspectProfiles((prev) => prev.map((entry) => {
-      if (entry.id !== id) return entry;
-      const next = [...entry.attributes];
-      next[index] = { ...next[index], op: value };
-      return { ...entry, attributes: next };
-    }));
-  }, []);
-
-  const handleAddAspectAttribute = useCallback((id: string) => {
-    setAspectProfiles((prev) => prev.map((entry) => (
-      entry.id === id
-        ? { ...entry, attributes: [...entry.attributes, { stat: 'Max HP', op: '+', value: '' }] }
-        : entry
-    )));
-  }, []);
-
-  const handleRemoveAspectAttribute = useCallback((id: string, index: number) => {
-    setAspectProfiles((prev) => prev.map((entry) => {
-      if (entry.id !== id) return entry;
-      return { ...entry, attributes: entry.attributes.filter((_, idx) => idx !== index) };
-    }));
-  }, []);
-
-  const handleSaveAspectProfiles = useCallback(async () => {
-    setIsSavingAspectProfiles(true);
-    setAspectProfileMessage('Saving aspects...');
-    try {
-      const payload = {
-        aspects: aspectProfiles.map((entry) => {
-          const derivedId = entry.id.trim() || slugify(entry.name) || 'aspect';
-          return {
-            id: derivedId,
-            name: entry.name.trim(),
-            description: entry.description.trim(),
-            archetype: entry.archetype || null,
-            rarity: entry.rarity ?? 'common',
-            attributes: entry.attributes
-              .map((attr) => ({
-                stat: attr.stat.trim(),
-                op: attr.op,
-                value: typeof attr.value === 'number' ? attr.value : null,
-              }))
-              .filter((attr) => attr.stat || attr.value !== null),
-          };
-        }),
-      };
-      const response = await fetch('/__aspect-profiles/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) throw new Error('Save failed');
-      setAspectProfileMessage('Aspects saved.');
-    } catch (error) {
-      console.error('[App] failed to save aspect profiles', error);
-      setAspectProfileMessage('Failed to save aspects.');
-    } finally {
-      setIsSavingAspectProfiles(false);
-    }
-  }, [aspectProfiles, slugify]);
-
-  useEffect(() => {
-    let active = true;
-    const loadAspectProfiles = async () => {
-      try {
-        const response = await fetch('/__aspect-profiles/overrides');
-        if (!response.ok) throw new Error('Unable to load aspects');
-        const data = (await response.json()) as {
-          aspects?: Array<{
-            id: string;
-            name?: string;
-            description?: string;
-            archetype?: KeruAspect | null;
-            attributes?: string[];
-          }>;
-        };
-        if (!active) return;
-        const nextProfiles = (data.aspects ?? []).map((entry) => ({
-          id: entry.id ?? '',
-          name: entry.name ?? '',
-          description: entry.description ?? '',
-          archetype: entry.archetype ?? '',
-          rarity: (entry.rarity as 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary') ?? 'common',
-          attributes: Array.isArray(entry.attributes)
-            ? entry.attributes.map((attr) => {
-                if (typeof attr === 'string') {
-                  return { stat: attr, op: '+', value: '' };
-                }
-                if (attr && typeof attr === 'object') {
-                  const rawOp = String((attr as { op?: string }).op ?? '+');
-                  const op = rawOp === '-' ? '-' : '+';
-                  const rawValue = (attr as { value?: number | string }).value;
-                  const numeric = typeof rawValue === 'number' ? rawValue : Number(rawValue);
-                  return {
-                    stat: String((attr as { stat?: string }).stat ?? ''),
-                    op,
-                    value: Number.isFinite(numeric) ? numeric : '',
-                  };
-                }
-                return { stat: '', op: '+', value: '' };
-              })
-            : [],
-        }));
-        setAspectProfiles(nextProfiles);
-      } catch (err) {
-        console.error('[App] failed to load aspect profiles', err);
-      }
-    };
-    loadAspectProfiles();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(() => {
     console.log('[App] phase', gameState?.phase, 'watercolorEnabled', watercolorEnabled);
@@ -1488,6 +1465,7 @@ export default function App() {
     directionDeg: number;
     token: number;
   } | null>(null);
+  const [poiRewardResolvedAt, setPoiRewardResolvedAt] = useState<number>(0);
   const [rpgImpactSplashHint, setRpgImpactSplashHint] = useState<{
     side: 'player' | 'enemy';
     foundationIndex: number;
@@ -1662,6 +1640,20 @@ export default function App() {
                   token: Date.now(),
                 });
               }
+            }
+            draggedHandCardRef.current = null;
+            return;
+          }
+          if (gameState.playtestVariant === 'rpg' && card.id.startsWith('reward-orim-')) {
+            const orimId = card.id.replace('reward-orim-', '');
+            const party = gameState.activeSessionTileId
+              ? gameState.tileParties[gameState.activeSessionTileId] ?? []
+              : [];
+            const targetActor = party[foundationIndex];
+            if (targetActor && actions.devInjectOrimToActor) {
+              actions.devInjectOrimToActor(targetActor.id, orimId);
+              applySplashHint();
+              setPoiRewardResolvedAt(Date.now());
             }
             draggedHandCardRef.current = null;
             return;
@@ -2573,13 +2565,6 @@ export default function App() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setToolingTab('aspects')}
-                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'aspects' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
-                    >
-                      Aspects
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setToolingTab('ability')}
                       className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'ability' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
                     >
@@ -2609,10 +2594,6 @@ export default function App() {
                           void handleSavePoi();
                           return;
                         }
-                        if (toolingTab === 'aspects') {
-                          void handleSaveAspectProfiles();
-                          return;
-                        }
                         if (toolingTab === 'orim') {
                           void handleSaveOrim();
                           return;
@@ -2626,20 +2607,20 @@ export default function App() {
                       disabled={
                         toolingTab === 'poi'
                           ? isSavingPoi
-                          : (toolingTab === 'aspects' ? isSavingAspectProfiles : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility)))
+                          : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility))
                       }
                       className={`text-[10px] uppercase tracking-[0.4em] px-4 py-1.5 rounded border font-black transition-all ${
                         (toolingTab === 'poi'
                           ? isSavingPoi
-                          : (toolingTab === 'aspects' ? isSavingAspectProfiles : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility))))
+                          : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility)))
                           ? 'border-game-teal/30 text-game-teal/30 scale-95'
                           : 'border-game-gold text-game-gold bg-game-gold/5 hover:bg-game-gold/15 active:scale-95 shadow-[0_0_15px_rgba(230,179,30,0.2)]'
                       }`}
                     >
                       {(() => {
-                        const isSaving = toolingTab === 'poi' ? isSavingPoi : (toolingTab === 'aspects' ? isSavingAspectProfiles : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility)));
+                        const isSaving = toolingTab === 'poi' ? isSavingPoi : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility));
                         if (isSaving) return 'Saving…';
-                        return `Save ${toolingTab === 'poi' ? 'POI' : (toolingTab === 'aspects' ? 'Aspects' : (toolingTab === 'orim' ? 'Orims' : (toolingTab === 'synergies' ? 'Synergies' : 'Ability')))}`;
+                        return `Save ${toolingTab === 'poi' ? 'POI' : (toolingTab === 'orim' ? 'Orims' : (toolingTab === 'synergies' ? 'Synergies' : 'Ability'))}`;
                       })()}
                     </button>
                     <button
@@ -2936,7 +2917,7 @@ export default function App() {
                                     >
                                       Remove
                                     </button>
-                                    <div className="grid grid-cols-[1fr_1.5fr] gap-4">
+                                    <div className="grid grid-cols-[1fr_1fr_1.5fr] gap-4">
                                       <label className="flex flex-col gap-1.5 text-[10px]">
                                         <span className="text-game-teal/70 font-bold uppercase tracking-tight">Category</span>
                                         <select
@@ -2947,6 +2928,18 @@ export default function App() {
                                           {REWARD_TYPE_OPTIONS.map((opt) => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                           ))}
+                                        </select>
+                                      </label>
+                                      <label className="flex flex-col gap-1.5 text-[10px]">
+                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Trigger</span>
+                                        <select
+                                          value={reward.trigger}
+                                          onChange={(event) => handleRewardChange(reward.id, 'trigger', event.target.value)}
+                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                        >
+                                          <option value="on_arrival">On Arrival</option>
+                                          <option value="on_tableau_clear">On Clear</option>
+                                          <option value="on_condition">On Condition</option>
                                         </select>
                                       </label>
                                       <label className="flex flex-col gap-1.5 text-[10px]">
@@ -3098,6 +3091,37 @@ export default function App() {
                                         </div>
                                       </div>
                                     )}
+                                    <div className="space-y-3 pt-3 border-t border-game-teal/10">
+                                      <div className="text-[9px] font-bold uppercase tracking-[0.3em] text-game-teal/70">Modal Display (Optional)</div>
+                                      <label className="flex flex-col gap-1.5 text-[10px]">
+                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Overtitle</span>
+                                        <input
+                                          value={reward.overtitle}
+                                          onChange={(event) => handleRewardChange(reward.id, 'overtitle', event.target.value)}
+                                          placeholder="e.g., KERU LUPUS"
+                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                        />
+                                      </label>
+                                      <label className="flex flex-col gap-1.5 text-[10px]">
+                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Summary</span>
+                                        <input
+                                          value={reward.summary}
+                                          onChange={(event) => handleRewardChange(reward.id, 'summary', event.target.value)}
+                                          placeholder="e.g., LUPUS - A RANGER AND LEADER - SWIFT AND STRATEGIC"
+                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                        />
+                                      </label>
+                                      <label className="flex flex-col gap-1.5 text-[10px]">
+                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Instructions</span>
+                                        <textarea
+                                          value={reward.instructions}
+                                          onChange={(event) => handleRewardChange(reward.id, 'instructions', event.target.value)}
+                                          placeholder="e.g., Drag this ability to your foundation to anchor the physical aspect."
+                                          rows={2}
+                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded resize-none text-[11px] text-game-white outline-none focus:border-game-gold"
+                                        />
+                                      </label>
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -3241,7 +3265,9 @@ export default function App() {
                             const term = abilitySearch.trim().toLowerCase();
                             const filteredAbilities = abilityDrafts.filter((entry) => {
                               const haystack = `${entry.id} ${entry.name} ${entry.abilityDescription || ''}`.toLowerCase();
-                              return term === '' || haystack.includes(term);
+                              const matchesSearch = term === '' || haystack.includes(term);
+                              const matchesType = abilityTypeFilter === 'all' || entry.abilityType === abilityTypeFilter;
+                              return matchesSearch && matchesType;
                             });
                             const active = abilityDrafts.find((entry) => entry.id === selectedAbilityId) ?? abilityDrafts[0];
                             if (!active) {
@@ -3249,8 +3275,32 @@ export default function App() {
                             }
                             return (
                               <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 min-h-[400px]">
-                                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border-r border-game-teal/20">
-                                  {filteredAbilities.map((entry) => (
+                              <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border-r border-game-teal/20">
+                                <div className="flex items-center gap-2 px-2 pb-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setAbilityTypeFilter((prev) => (prev === 'exploration' ? 'all' : 'exploration'))}
+                                    className={`px-3 py-1 rounded border text-[10px] font-black uppercase tracking-[0.3em] transition-all ${
+                                      abilityTypeFilter === 'exploration'
+                                        ? 'bg-game-teal/20 border-game-teal text-game-teal shadow-[0_0_12px_rgba(127,219,202,0.2)]'
+                                        : 'bg-game-bg-dark/40 border-game-teal/20 text-game-white/40 hover:border-game-teal/40'
+                                    }`}
+                                  >
+                                    Exploration
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAbilityTypeFilter((prev) => (prev === 'combat' ? 'all' : 'combat'))}
+                                    className={`px-3 py-1 rounded border text-[10px] font-black uppercase tracking-[0.3em] transition-all ${
+                                      abilityTypeFilter === 'combat'
+                                        ? 'bg-game-teal/20 border-game-teal text-game-teal shadow-[0_0_12px_rgba(127,219,202,0.2)]'
+                                        : 'bg-game-bg-dark/40 border-game-teal/20 text-game-white/40 hover:border-game-teal/40'
+                                    }`}
+                                  >
+                                    Combat
+                                  </button>
+                                </div>
+                                {filteredAbilities.map((entry) => (
                                     <button
                                       key={entry.id}
                                       type="button"
@@ -3472,28 +3522,54 @@ export default function App() {
                   {toolingTab === 'orim' && (
                     <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4 min-h-full">
                       <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Orim Editor</div>
-                      <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                        <input
-                          value={orimSearch}
-                          onChange={(event) => setOrimSearch(event.target.value)}
-                          onFocus={() => setOrimSearch('')}
-                          placeholder="Search orims"
-                          className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddOrim}
-                          className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
-                        >
-                          Add Orim
-                        </button>
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                          <input
+                            value={orimSearch}
+                            onChange={(event) => setOrimSearch(event.target.value)}
+                            onFocus={() => setOrimSearch('')}
+                            placeholder="Search orims"
+                            className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddOrim}
+                            className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
+                          >
+                            Add Orim
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[9px]">
+                          <span className="text-game-teal/60 font-bold">Filter:</span>
+                          {(['all', 'aspects', 'non-aspects'] as const).map((filter) => (
+                            <button
+                              key={filter}
+                              type="button"
+                              onClick={() => setOrimAspectFilter(filter)}
+                              className={`px-2 py-1 rounded border uppercase tracking-tight transition-colors ${
+                                orimAspectFilter === filter
+                                  ? 'border-game-gold text-game-gold bg-game-gold/10'
+                                  : 'border-game-teal/30 text-game-white/60 hover:border-game-teal/60'
+                              }`}
+                            >
+                              {filter === 'all' ? 'All' : filter === 'aspects' ? 'Aspects' : 'Regular'}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       <div className="space-y-3 h-full">
                         {(() => {
                           const term = orimSearch.trim().toLowerCase();
                           const filteredOrims = orimDrafts.filter((entry) => {
+                            // Text search filter
                             const haystack = `${entry.id} ${entry.name} ${entry.description}`.toLowerCase();
-                            return term === '' || haystack.includes(term);
+                            if (term !== '' && !haystack.includes(term)) return false;
+
+                            // Aspect type filter
+                            if (orimAspectFilter === 'aspects') return entry.isAspect ?? false;
+                            if (orimAspectFilter === 'non-aspects') return !(entry.isAspect ?? false);
+
+                            return true;
                           });
                           const active = orimDrafts.find((entry) => entry.id === selectedOrimId) ?? orimDrafts[0];
                           if (!active) {
@@ -3565,6 +3641,16 @@ export default function App() {
                                         <option key={element} value={element}>{element}</option>
                                       ))}
                                     </select>
+                                  </label>
+
+                                  <label className="flex items-center gap-2 text-[10px]">
+                                    <input
+                                      type="checkbox"
+                                      checked={active.isAspect ?? false}
+                                      onChange={(event) => handleOrimChange(active.id, 'isAspect', event.target.checked ? 'true' : 'false')}
+                                      className="w-4 h-4 cursor-pointer"
+                                    />
+                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Character Aspect</span>
                                   </label>
 
                                   {/* ── Effects ─────────────────────────────── */}
@@ -3902,270 +3988,6 @@ export default function App() {
                       </div>
                     </div>
                   )}
-
-                  {toolingTab === 'aspects' && (
-                    <div className="bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] space-y-4 min-h-full">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Aspect Editor</div>
-                      <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                        <input
-                          value={aspectProfileSearch}
-                          onChange={(event) => setAspectProfileSearch(event.target.value)}
-                          placeholder="Search aspects"
-                          className="flex-1 min-w-[180px] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddAspectProfile}
-                          className="text-[10px] uppercase tracking-[0.4em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded"
-                        >
-                          Add Aspect
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-[275px_minmax(0,1fr)] gap-4 h-full">
-                        <div className="space-y-3 h-full overflow-visible flex flex-col">
-                          {aspectProfiles
-                            .filter((entry) => {
-                              const haystack = `${entry.name} ${entry.archetype}`.toLowerCase();
-                              const term = aspectProfileSearch.trim().toLowerCase();
-                              return term === '' || haystack.includes(term);
-                            })
-                            .map((entry) => (
-                              <button
-                                key={entry.id}
-                                type="button"
-                                onClick={() => setSelectedAspectProfileId(entry.id)}
-                                className={`w-full text-left px-3 py-2 rounded border text-[10px] ${
-                                  selectedAspectProfileId === entry.id
-                                    ? 'border-game-gold text-game-gold'
-                                    : 'border-game-teal/40 text-game-white/70'
-                                }`}
-                              >
-                                <div className="text-[9px] uppercase tracking-[0.3em]">{entry.name || entry.archetype || entry.id}</div>
-                                <div className="text-[8px] text-game-white/50">{entry.archetype || 'Unassigned'}</div>
-                              </button>
-                            ))}
-                          {(() => {
-                            const active = aspectProfiles.find((entry) => entry.id === selectedAspectProfileId) ?? aspectProfiles[0];
-                            const formattedAttributes = (active?.attributes ?? []).map((attr) => {
-                              if (typeof attr === 'string') return attr;
-                              const stat = attr.stat?.trim() ?? '';
-                              const op = attr.op ?? '+';
-                              const value = String(attr.value ?? '').trim();
-                              if (!stat && !value) return '';
-                              return `${stat}${op}${value}`.trim();
-                            }).filter(Boolean);
-                            if (!active || !active.archetype) {
-                              return (
-                                <div className="text-[9px] text-game-white/50">Set an archetype to preview the jumbo card.</div>
-                              );
-                            }
-                            return (
-                              <div className="flex justify-center">
-                                <div
-                                  className="w-full max-w-[320px] aspect-[5/7] rounded-[18px] border border-game-teal/50 shadow-[0_0_30px_rgba(0,0,0,0.45)] overflow-hidden flex flex-col"
-                                  style={{
-                                    background: 'linear-gradient(180deg, rgba(6,8,14,0.9) 0%, rgba(5,6,12,0.95) 65%, rgba(0,0,0,0.95) 100%)',
-                                  }}
-                                >
-                                  {/* TOP SECTION: 40% - Rarity, Archetype, Aspect Name */}
-                                  <div className="h-[40%] flex flex-col px-5 pt-4 pb-3 justify-start">
-                                    {/* Rarity - Upper Left */}
-                                    <div className="text-left">
-                                      <div
-                                        className="font-bold tracking-[0.4em] text-game-teal/60 uppercase"
-                                        style={{
-                                          fontSize: 'clamp(6px, 2vw, 8px)',
-                                          lineHeight: '1.2',
-                                        }}
-                                      >
-                                        {(active.rarity ?? 'Common').toUpperCase()}
-                                      </div>
-                                    </div>
-
-                                    {/* Archetype - Left aligned, one line, dynamic sizing */}
-                                    <div className="mt-2 text-left min-h-[1.2em] overflow-hidden flex items-center">
-                                      <div
-                                        className="font-bold tracking-[0.3em] text-game-gold uppercase whitespace-nowrap"
-                                        style={{
-                                          fontSize: 'clamp(9px, 1.8vw, 11px)',
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis',
-                                        }}
-                                      >
-                                        {active.archetype} Archetype
-                                      </div>
-                                    </div>
-
-                                    {/* Aspect Name - Center aligned, max 2 lines, dynamic sizing */}
-                                    <div className="mt-auto text-center flex flex-col justify-center flex-1 min-h-0">
-                                      <div
-                                        className="font-black tracking-[0.15em] text-white uppercase leading-tight"
-                                        style={{
-                                          fontSize: 'clamp(16px, 2.8vw, 24px)',
-                                          lineHeight: '1.1',
-                                        }}
-                                      >
-                                        <div>Aspect Of</div>
-                                        <div className="line-clamp-2">{(active.name ?? '??').toUpperCase()}</div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* MIDDLE SECTION: 35% (41-75%) - Description */}
-                                  <div className="h-[35%] px-5 py-2 flex items-center justify-center overflow-y-auto">
-                                    <div
-                                      className="text-game-white/70 leading-snug"
-                                      style={{
-                                        fontSize: 'clamp(8px, 1.4vw, 10px)',
-                                      }}
-                                    >
-                                      {active.description || 'No description provided.'}
-                                    </div>
-                                  </div>
-
-                                  {/* BOTTOM SECTION: 25% - Attributes */}
-                                  <div className="h-[25%] px-4 pb-4 flex items-center justify-center overflow-hidden">
-                                    {formattedAttributes.length > 0 && (
-                                      <div className="flex flex-wrap items-center justify-center gap-1 w-full">
-                                        {formattedAttributes.map((attr) => (
-                                          <span
-                                            key={attr}
-                                            className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-2 py-1 uppercase tracking-[0.2em] whitespace-nowrap"
-                                            style={{
-                                              color: '#f7d24b',
-                                              fontSize: 'clamp(6px, 1.2vw, 8px)',
-                                            }}
-                                          >
-                                            {attr}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                        <div className="space-y-3">
-                          {(() => {
-                            const active = aspectProfiles.find((entry) => entry.id === selectedAspectProfileId) ?? aspectProfiles[0];
-                            if (!active) {
-                              return <div className="text-[10px] text-game-white/60">No aspects available.</div>;
-                            }
-                            return (
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <div className="text-[10px] text-game-white/70">Editing: {active.name || active.id}</div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveAspectProfile(active.id)}
-                                    className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                                <div className="grid grid-cols-3 gap-3 text-[10px]">
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Aspect Name</span>
-                                    <input
-                                      value={active.name}
-                                      onChange={(event) => handleAspectProfileChange(active.id, 'name', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Aspect Archetype</span>
-                                    <input
-                                      value={active.archetype}
-                                      onChange={(event) => handleAspectProfileChange(active.id, 'archetype', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col gap-1">
-                                    <span className="text-game-teal/70">Rarity</span>
-                                    <select
-                                      value={active.rarity}
-                                      onChange={(event) => handleAspectProfileChange(active.id, 'rarity', event.target.value)}
-                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                    >
-                                      {(['common', 'uncommon', 'rare', 'epic', 'legendary'] as const).map((option) => (
-                                        <option key={option} value={option}>{option}</option>
-                                      ))}
-                                    </select>
-                                  </label>
-                                </div>
-                                <label className="flex flex-col gap-1 text-[10px]">
-                                  <span className="text-game-teal/70">Aspect Description</span>
-                                  <textarea
-                                    value={active.description}
-                                    onChange={(event) => handleAspectProfileChange(active.id, 'description', event.target.value)}
-                                    rows={3}
-                                    className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                  />
-                                </label>
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between text-[10px]">
-                                    <span className="text-game-teal/70">Aspect Attributes</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleAddAspectAttribute(active.id)}
-                                      className="text-[9px] uppercase tracking-[0.3em] bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded"
-                                    >
-                                      Add Row
-                                    </button>
-                                  </div>
-                                  <div className="space-y-2">
-                                    {(active.attributes ?? []).length === 0 && (
-                                      <div className="text-[9px] text-game-white/50">No attributes yet.</div>
-                                    )}
-                                    {(active.attributes ?? []).map((attr, idx) => (
-                                      <div key={`${active.id}-attr-${idx}`} className="grid grid-cols-[160px_70px_minmax(0,1fr)_auto] gap-2 items-center">
-                                        <select
-                                          value={attr.stat}
-                                          onChange={(event) => handleAspectAttributeStatChange(active.id, idx, event.target.value)}
-                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                        >
-                                          {['Max HP', 'Defense', 'Armor', 'Speed', 'Power', 'Focus', 'Leadership', 'Stealth', 'Evasion', 'Stamina'].map((option) => (
-                                            <option key={option} value={option}>{option}</option>
-                                          ))}
-                                        </select>
-                                        <select
-                                          value={attr.op}
-                                          onChange={(event) => handleAspectAttributeOpChange(active.id, idx, event.target.value as '+' | '-')}
-                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                        >
-                                          <option value="+">+</option>
-                                          <option value="-">-</option>
-                                        </select>
-                                        <input
-                                          value={attr.value}
-                                          onChange={(event) => handleAspectAttributeChange(active.id, idx, event.target.value)}
-                                          placeholder="16"
-                                          type="number"
-                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRemoveAspectAttribute(active.id, idx)}
-                                          className="text-[9px] text-game-pink/70 px-2 py-1 rounded border border-game-pink/40"
-                                        >
-                                          Remove
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                          <div className="text-[9px] text-game-white/60">
-                            {aspectProfileMessage ?? 'Edit aspect metadata and save to update aspectProfiles.json.'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                   {/*
                   {toolingTab === 'orim' && gameState && (
                     <OrimEditor
@@ -4297,6 +4119,8 @@ export default function App() {
                 serverAlive={serverAlive}
                 infiniteStockEnabled={infiniteStockEnabled}
                 onToggleInfiniteStock={() => setInfiniteStockEnabled((prev) => !prev)}
+                onOpenPoiEditorAt={handleOpenPoiEditorAt}
+                poiRewardResolvedAt={poiRewardResolvedAt}
                 benchSwapCount={benchSwapCount}
                 infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
                 onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
