@@ -141,7 +141,10 @@ export function Callout({
   const effectiveAutoFadeMs = useAutoFade ? (autoFadeMs ?? 0) + EXTRA_DURATION_MS : 0;
   const autoFadeSeconds = Math.max(0.6, effectiveAutoFadeMs / 1000);
   const primaryPalette = TONE_STYLES[tone];
-  const hasSecondaries = (secondaryCallouts?.length ?? 0) > 0;
+  const safeSecondaries = (secondaryCallouts ?? []).filter(
+    (entry): entry is SecondaryCallout => !!entry && typeof entry.text === 'string'
+  );
+  const hasSecondaries = safeSecondaries.length > 0;
 
   const renderSecondary = (entry: SecondaryCallout, index: number) => {
     const palette = TONE_STYLES[entry.tone ?? tone];
@@ -200,7 +203,7 @@ export function Callout({
             </div>
             {hasSecondaries && (
               <div className="flex flex-col gap-1 items-end">
-                {secondaryCallouts!.map(renderSecondary)}
+                {safeSecondaries.map(renderSecondary)}
               </div>
             )}
           </div>

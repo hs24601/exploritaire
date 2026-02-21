@@ -9,6 +9,7 @@ export const ORIM_DEFINITIONS: OrimDefinition[] = [
     "id": "fireShard",
     "name": "Fire Shard",
     "description": "A splinter that is warm to the touch",
+    "rarity": "common",
     "elements": [
       "F"
     ],
@@ -25,6 +26,7 @@ export const ORIM_DEFINITIONS: OrimDefinition[] = [
     "id": "iceShard",
     "name": "Ice Shard",
     "description": "A splinter of sheer cold",
+    "rarity": "common",
     "elements": [
       "W",
       "A"
@@ -35,6 +37,7 @@ export const ORIM_DEFINITIONS: OrimDefinition[] = [
     "id": "felis",
     "name": "Felis",
     "description": "Rogue Archetype",
+    "rarity": "common",
     "elements": [
       "N"
     ],

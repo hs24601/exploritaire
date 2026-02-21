@@ -13,6 +13,8 @@ interface ComboTimerControllerProps {
   children: (state: {
     displayedCombo: number;
     timerRef: RefObject<HTMLDivElement>;
+    remainingMs: number;
+    visualMaxMs: number;
   }) => ReactNode;
 }
 
@@ -41,6 +43,16 @@ export function ComboTimerController({
 
   const resolvedTimeScale = Math.max(0.1, timeScale);
   const timerDurationMs = COMBO_TIMER_MS / resolvedTimeScale;
+  const [timerSnapshot, setTimerSnapshot] = useState(() => ({
+    remainingMs: timerDurationMs,
+    visualMaxMs: timerDurationMs,
+  }));
+  useEffect(() => {
+    setTimerSnapshot((current) => ({
+      remainingMs: Math.min(current.remainingMs, timerDurationMs),
+      visualMaxMs: timerDurationMs,
+    }));
+  }, [timerDurationMs]);
 
   const updateTimerFill = useCallback(() => {
     if (!timerRef.current) return;
@@ -52,24 +64,33 @@ export function ComboTimerController({
     timerRef.current.style.setProperty('--combo-fill', `${fill * 100}%`);
   }, [paused, timerDurationMs]);
 
-  const extendTimer = useCallback(
-    (ms: number) => {
-      if (disabled || ms <= 0) return;
-      if (paused) {
-        pausedRemainingRef.current = Math.max(0, pausedRemainingRef.current + ms);
+    const extendTimer = useCallback(
+      (ms: number) => {
+        if (disabled || ms <= 0) return;
+        if (paused) {
+          pausedRemainingRef.current = Math.max(0, pausedRemainingRef.current + ms);
+          updateTimerFill();
+          setTimerSnapshot({
+            remainingMs: pausedRemainingRef.current,
+            visualMaxMs: timerDurationMs,
+          });
+          return;
+        }
+        const now = performance.now();
+        if (!comboEndRef.current) {
+          comboEndRef.current = now + timerDurationMs;
+        } else {
+          comboEndRef.current += ms;
+        }
         updateTimerFill();
-        return;
-      }
-      const now = performance.now();
-      if (!comboEndRef.current) {
-        comboEndRef.current = now + timerDurationMs;
-      } else {
-        comboEndRef.current += ms;
-      }
-      updateTimerFill();
-    },
-    [disabled, paused, timerDurationMs, updateTimerFill]
-  );
+        const remainingAfterExtend = Math.max(0, (comboEndRef.current ?? now) - now);
+        setTimerSnapshot({
+          remainingMs: remainingAfterExtend,
+          visualMaxMs: timerDurationMs,
+        });
+      },
+      [disabled, paused, timerDurationMs, updateTimerFill]
+    );
 
   useEffect(() => {
     displayedComboRef.current = displayedCombo;
@@ -115,10 +136,18 @@ export function ComboTimerController({
     if (paused) {
       const now = performance.now();
       pausedRemainingRef.current = Math.max(0, (comboEndRef.current ?? now) - now);
+      setTimerSnapshot({
+        remainingMs: pausedRemainingRef.current,
+        visualMaxMs: timerDurationMs,
+      });
     } else {
       comboEndRef.current = performance.now() + pausedRemainingRef.current;
+      setTimerSnapshot({
+        remainingMs: pausedRemainingRef.current,
+        visualMaxMs: timerDurationMs,
+      });
     }
-  }, [disabled, paused]);
+  }, [disabled, paused, timerDurationMs]);
 
   useEffect(() => {
     if (disabled) return;
@@ -145,6 +174,10 @@ export function ComboTimerController({
 
       const fill = Math.max(0, Math.min(1, remaining / timerDurationMs));
       timerRef.current.style.setProperty('--combo-fill', `${fill * 100}%`);
+      setTimerSnapshot({
+        remainingMs: paused ? pausedRemainingRef.current : remaining,
+        visualMaxMs: timerDurationMs,
+      });
     }, 100);
     return () => window.clearInterval(interval);
   }, [disabled, onExpire, paused, timerDurationMs]);
@@ -165,5 +198,14 @@ export function ComboTimerController({
     extendTimer(secondaryBonusExtendMs ?? 0);
   }, [disabled, secondaryBonusExtendMs, secondaryBonusExtendToken, extendTimer]);
 
-  return <>{children({ displayedCombo, timerRef })}</>;
+  return (
+    <>
+      {children({
+        displayedCombo,
+        timerRef,
+        remainingMs: timerSnapshot.remainingMs,
+        visualMaxMs: timerSnapshot.visualMaxMs,
+      })}
+    </>
+  );
 }

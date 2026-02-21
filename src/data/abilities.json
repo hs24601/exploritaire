@@ -10,15 +10,23 @@
       "cardElements": [
         "N"
       ],
+      "rarity": "common",
       "abilityType": "combat",
       "tags": [],
       "effects": [
         {
-          "type": "damage",
-          "value": 1,
-          "target": "enemy"
-        }
-      ],
+        "type": "damage",
+        "value": 1,
+        "valueByRarity": {
+          "common": 1,
+          "rare": 2,
+          "epic": 3,
+          "legendary": 4,
+          "mythic": 5
+        },
+        "target": "enemy"
+      }
+    ],
       "equipCost": 0
     },
     {
@@ -31,6 +39,7 @@
       "cardElements": [
         "W"
       ],
+      "rarity": "common",
       "abilityType": "exploration",
       "tags": [],
       "effects": [],
@@ -46,6 +55,7 @@
       "cardElements": [
         "N"
       ],
+      "rarity": "common",
       "abilityType": "combat",
       "tags": [],
       "effects": [],
@@ -61,6 +71,7 @@
       "cardElements": [
         "N"
       ],
+      "rarity": "common",
       "abilityType": "combat",
       "tags": [],
       "effects": [
@@ -81,6 +92,7 @@
       "cardElements": [
         "N"
       ],
+      "rarity": "common",
       "abilityType": "exploration",
       "tags": [],
       "effects": [
@@ -101,6 +113,7 @@
       "cardElements": [
         "N"
       ],
+      "rarity": "common",
       "abilityType": "exploration",
       "tags": [],
       "effects": [
@@ -122,6 +135,7 @@
       "cardElements": [
         "N"
       ],
+      "rarity": "common",
       "abilityType": "exploration",
       "tags": [],
       "effects": [

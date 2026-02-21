@@ -463,21 +463,18 @@ export const Card = memo(function Card({
                 mixBlendMode: 'soft-light',
               }}
             />
-            {/* Foil/Holo Layer */}
-            <div
-              className="absolute inset-0 pointer-events-none"
+            {/* Multi-layer Holo/Sparkle System */}
+            <div 
+              className="absolute inset-0 pointer-events-none card-holo-gradient"
               style={{
-                zIndex: 9,
-                backgroundImage: rarity === 'mythic' 
-                  ? `linear-gradient(110deg, transparent 20%, rgba(255,50,50,0.15) 30%, rgba(50,255,50,0.15) 40%, rgba(50,50,255,0.15) 50%, rgba(255,255,255,0.25) 52%, transparent 80%)`
-                  : rarity === 'legendary'
-                  ? `linear-gradient(110deg, transparent 25%, rgba(255,200,50,0.2) 48%, rgba(255,255,255,0.3) 52%, transparent 75%)`
-                  : `linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.15) 48%, rgba(255,255,255,0.25) 52%, transparent 75%)`,
-                backgroundPosition: 'var(--posx) var(--posy)',
-                backgroundSize: '200% 200%',
-                mixBlendMode: 'color-dodge',
-                opacity: isHovered ? 0.8 : 0.1, // Always show a bit of foil for shiny cards
-                transition: 'opacity 0.3s ease',
+                opacity: isHovered ? 0.88 : 0.5,
+                filter: `brightness(${isHovered ? 0.66 : 0.5}) contrast(${isHovered ? 1.33 : 1})`,
+              }}
+            />
+            <div 
+              className="absolute inset-0 pointer-events-none card-holo-sparkle"
+              style={{
+                opacity: isHovered ? 1 : 0.75,
               }}
             />
           </>

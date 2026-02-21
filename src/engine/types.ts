@@ -340,6 +340,20 @@ export interface SelectedCard {
   tableauIndex: number;
 }
 
+export type EncounterDefinition =
+  | {
+      type: 'combat';
+      enemyActors?: Actor[];
+      loot?: RewardBundle[];
+    }
+  | {
+      type: 'puzzle';
+      turnLimit?: number;
+      specificCardGoals?: string[];
+      enemyActors?: Actor[];
+      enemyActorsHook?: (context: { gameState: GameState }) => Actor[];
+    };
+
 export interface GameConfig {
   tableauCount: number;
   cardsPerTableau: number;

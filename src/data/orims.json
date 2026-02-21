@@ -4,6 +4,7 @@
       "id": "fireShard",
       "name": "Fire Shard",
       "description": "A splinter that is warm to the touch",
+      "rarity": "common",
       "elements": [
         "F"
       ],
@@ -20,6 +21,7 @@
       "id": "iceShard",
       "name": "Ice Shard",
       "description": "A splinter of sheer cold",
+      "rarity": "common",
       "elements": [
         "W",
         "A"
@@ -30,6 +32,7 @@
       "id": "felis",
       "name": "Felis",
       "description": "Rogue Archetype",
+      "rarity": "common",
       "elements": [
         "N"
       ],

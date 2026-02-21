@@ -1,33 +1,14 @@
 import { useCallback, useMemo, useEffect, Component, useState, useRef } from 'react';
 import { GraphicsContext } from './contexts/GraphicsContext';
 import { InteractionModeContext } from './contexts/InteractionModeContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useGameEngine } from './hooks/useGameEngine';
-import { useDragDrop } from './hooks/useDragDrop';
-import { GameButton } from './components/GameButton';
-import { Card } from './components/Card';
-import { Table } from './components/Table';
 import { RowManager } from './components/RowManager';
-import { WinScreen } from './components/WinScreen';
-import { DragPreview } from './components/DragPreview';
 import { DebugConsole } from './components/DebugConsole';
-import { CombatGolf } from './components/CombatGolf';
-import { EventEncounter } from './components/EventEncounter';
-import { PlayingScreen } from './components/PlayingScreen';
-import { JewelModal } from './components/JewelModal';
-import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element, OrimRarity } from './engine/types';
-import { getActorDisplayGlyph, getActorDefinition } from './engine/actors';
-import { getOrimAccentColor } from './watercolor/orimWatercolor';
-import { setWatercolorInteractionDegraded } from './watercolor/WatercolorOverlay';
-import { canPlayCard, canPlayCardWithWild } from './engine/rules';
-import { ELEMENT_TO_SUIT, HAND_SOURCE_INDEX, WILD_SENTINEL_RANK } from './engine/constants';
-import { getBiomeDefinition } from './engine/biomes';
-import { getTileDefinition } from './engine/tiles';
-import { getBlueprintDefinition } from './engine/blueprints';
-import { Die } from './components/Die';
-import { createDie, setRolling } from './engine/dice';
+import { VisualsEditor } from './components/VisualsEditor';
+import type { Element, OrimRarity } from './engine/types';
+import { getActorDefinition } from './engine/actors';
 import { WatercolorContext } from './watercolor/useWatercolorEnabled';
-import { WatercolorCanvas, WatercolorProvider } from './watercolor-engine';
+import { WatercolorProvider } from './watercolor-engine';
 import { initializeGame } from './engine/game';
 import { CardScaleProvider } from './contexts/CardScaleContext';
 import { mainWorldMap, initializeWorldMapPois } from './data/worldMap';
@@ -35,6 +16,7 @@ import { KERU_ARCHETYPE_OPTIONS, KeruAspect } from './data/keruAspects';
 import abilitiesJson from './data/abilities.json';
 import { ORIM_DEFINITIONS } from './engine/orims';
 import type { PoiReward, PoiRewardType, PoiSparkleConfig } from './engine/worldMapTypes';
+import { GameShell } from './components/GameShell';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -119,6 +101,7 @@ interface AbilityEffect {
   duration?: number;
   element?: Element;
   elementalValue?: number;
+  valueByRarity?: Partial<Record<OrimRarity, number>>;
 }
 
 const ABILITY_EFFECT_TYPES: AbilityEffectType[] = [
@@ -127,7 +110,37 @@ const ABILITY_EFFECT_TYPES: AbilityEffectType[] = [
   'burn', 'bleed', 'stun', 'freeze',
 ];
 
+const resolveEffectValueForRarity = (effect: AbilityEffect, rarity: OrimRarity): number => {
+  const map = effect.valueByRarity ?? {};
+  if (typeof map[rarity] === 'number') return map[rarity]!;
+  if (typeof map.common === 'number') return map.common;
+  return effect.value ?? 0;
+};
+
+const ensureEffectValueByRarity = (effect: AbilityEffect): AbilityEffect => {
+  const map: Partial<Record<OrimRarity, number>> = { ...(effect.valueByRarity ?? {}) };
+  const baseValue = typeof effect.value === 'number' ? effect.value : map.common ?? 0;
+  if (map.common === undefined) {
+    map.common = baseValue;
+  }
+  return { ...effect, valueByRarity: map };
+};
+
+const hydrateAbilityEffects = (effects: AbilityEffect[] | undefined, rarity: OrimRarity): AbilityEffect[] => {
+  return (effects ?? []).map((fx) => {
+    const normalized = ensureEffectValueByRarity(fx);
+    return { ...normalized, value: resolveEffectValueForRarity(normalized, rarity) };
+  });
+};
+
+const formatEffectValue = (value?: number): string => {
+  if (!Number.isFinite(value ?? NaN)) return '--';
+  const normalized = Math.round((value ?? 0) * 10) / 10;
+  return normalized % 1 === 0 ? `${normalized}` : `${normalized.toFixed(1)}`;
+};
+
 const ELEMENT_OPTIONS: Element[] = ['N', 'W', 'E', 'A', 'F', 'L', 'D'];
+const ORIM_RARITY_OPTIONS: OrimRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
 
 const ensureElementList = (value?: Element[] | null): Element[] => {
   if (!Array.isArray(value)) return [];
@@ -138,6 +151,7 @@ type AspectDraft = {
   id: string;
   name: string;
   abilityType: 'exploration' | 'combat';
+  abilityRarity: OrimRarity;
   abilityDescription: string;
   abilityDamage: string;
   abilityCardId: string;
@@ -156,6 +170,7 @@ type OrimDraft = {
   id: string;
   name: string;
   description: string;
+  rarity: OrimRarity;
   elements: Element[];
   effects: AbilityEffect[];
   isAspect?: boolean;
@@ -200,7 +215,6 @@ const REWARD_TYPE_OPTIONS: Array<{ value: PoiRewardType; label: string }> = [
   { value: 'aspect-jumbo', label: 'Aspects (jumbo, legacy)' },
 ];
 const TIME_SCALE_OPTIONS = [0.5, 1, 1.5, 2];
-const DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED = false;
 const DEFAULT_SPARKLE_CONFIG: Required<PoiSparkleConfig> = {
   proximityRange: 3,
   starCount: 6,
@@ -211,13 +225,9 @@ const DEFAULT_SPARKLE_CONFIG: Required<PoiSparkleConfig> = {
 export default function App() {
   const buildStamp = useMemo(() => new Date().toLocaleString(), []);
   const [serverAlive, setServerAlive] = useState(true);
-  const [isJewelModalOpen, setIsJewelModalOpen] = useState(false);
-  const [restartCopied, setRestartCopied] = useState(false);
   const [fps, setFps] = useState(0);
-  const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
   const [showText, setShowText] = useState(true);
   const [commandVisible, setCommandVisible] = useState(true);
-  const [narrativeOpen, setNarrativeOpen] = useState(true);
   const [lightingEnabled, setLightingEnabled] = useState(true);
   const [watercolorEnabled, setWatercolorEnabled] = useState(true);
   const [paintLuminosityEnabled, setPaintLuminosityEnabled] = useState(true);
@@ -298,6 +308,7 @@ export default function App() {
       cardRank?: number;
       cardElements?: Element[];
       cardGlyph?: string;
+      rarity?: OrimRarity;
       abilityType?: string;
       tags?: string[];
       effects?: AbilityEffect[];
@@ -307,17 +318,22 @@ export default function App() {
       id: entry.id ?? '',
       name: entry.label ?? '',
       abilityType: entry.abilityType ?? 'exploration',
+      abilityRarity: entry.rarity ?? 'common',
       abilityDescription: entry.description ?? '',
       abilityDamage: entry.damage ?? '',
       abilityCardId: entry.cardId ?? '',
       abilityCardRank: entry.cardRank ?? 1,
       abilityCardElements: ensureElementList(entry.cardElements),
       abilityCardGlyph: entry.cardGlyph ?? '',
+      abilityRarity: entry.rarity ?? 'common',
       tagsText: (entry.tags ?? []).join(', '),
       archetypeCardId: '',
       archetypeCardRank: 1,
       archetypeCardElement: 'N' as Element,
-      effects: (entry.effects as AbilityEffect[] | undefined) ?? [],
+        effects: hydrateAbilityEffects(
+          entry.effects as AbilityEffect[] | undefined,
+          entry.rarity ?? 'common'
+        ),
       equipCost: entry.equipCost ?? 0,
     }));
   });
@@ -334,6 +350,7 @@ export default function App() {
       id: orim.id,
       name: orim.name,
       description: orim.description,
+      rarity: orim.rarity ?? 'common',
       elements: ensureElementList(orim.elements),
       effects: [],
       isAspect: orim.isAspect,
@@ -367,7 +384,6 @@ export default function App() {
   const [pixelArtEnabled, setPixelArtEnabled] = useState(false);
   const [cardScale, setCardScale] = useState(1);
   const [timeScale, setTimeScale] = useState(TIME_SCALE_OPTIONS[1]);
-  const showPuzzleOverlay = true;
   const [cameraDebug, setCameraDebug] = useState<{
     wheelCount: number;
     lastDelta: number;
@@ -379,28 +395,8 @@ export default function App() {
     baseScale?: number;
     effectiveScale?: number;
   } | null>(null);
-  const [returnModal, setReturnModal] = useState<{
-    open: boolean;
-    blueprintCards: BlueprintCard[];
-    blueprints: Blueprint[];
-  }>({
-    open: false,
-    blueprintCards: [],
-    blueprints: [],
-  });
-  const [tokenReturnNotice, setTokenReturnNotice] = useState<{ id: number; count: number } | null>(null);
-  const lastPhaseRef = useRef<string | null>(null);
   const [commandBarHeight, setCommandBarHeight] = useState(0);
-  const [spawnedDie, setSpawnedDie] = useState<DieType | null>(null);
-  const [diceComboPulse, setDiceComboPulse] = useState(0);
-  const [diePosition, setDiePosition] = useState({ x: 0, y: 0 });
-  const [dieAnimating, setDieAnimating] = useState(false);
-  const [dieDragging, setDieDragging] = useState(false);
-  const [dieDragOffset, setDieDragOffset] = useState({ x: 0, y: 0 });
-  const [watercolorCanvasSize, setWatercolorCanvasSize] = useState({
-    width: typeof window !== 'undefined' ? window.innerWidth : 0,
-    height: typeof window !== 'undefined' ? window.innerHeight : 0,
-  });
+  const spawnDieRef = useRef<((clientX: number, clientY: number) => void) | null>(null);
   const initialGameState = useMemo(() => {
     if (typeof window === 'undefined') {
       return initializeGame();
@@ -452,9 +448,6 @@ export default function App() {
   const ghostBackgroundEnabled = false;
   const playtestVariant = gameState?.playtestVariant ?? 'single-foundation';
   const isRpgVariant = playtestVariant === 'rpg';
-  const isEventBiome = gameState?.currentBiome
-    ? getBiomeDefinition(gameState.currentBiome)?.biomeType === 'event'
-    : false;
   const hasSpawnedEnemies = !isRpgVariant || (gameState?.enemyFoundations ?? []).some((foundation) => foundation.length > 0);
   const isTimeScaleVisible = !zenModeEnabled && hasSpawnedEnemies;
 
@@ -983,6 +976,7 @@ export default function App() {
       id: nextId,
       name: '',
       abilityType: 'exploration',
+      abilityRarity: 'common',
       abilityDescription: '',
       abilityDamage: '',
       abilityCardId: '',
@@ -1008,7 +1002,14 @@ export default function App() {
   const handleAbilityEffectAdd = useCallback((abilityId: string) => {
     setAbilityDrafts((prev) => prev.map((entry) => {
       if (entry.id !== abilityId) return entry;
-      const newEffect: AbilityEffect = { type: 'damage', value: 0, target: 'enemy' };
+        const newEffect: AbilityEffect = {
+          type: 'damage',
+          value: 0,
+          target: 'enemy',
+          valueByRarity: {
+            [entry.abilityRarity]: 0,
+          },
+        };
       return { ...entry, effects: [...entry.effects, newEffect] };
     }));
   }, []);
@@ -1030,9 +1031,18 @@ export default function App() {
       if (entry.id !== abilityId) return entry;
       const next = entry.effects.map((fx, i) => {
         if (i !== index) return fx;
-        if (field === 'value') {
-          return { ...fx, value: Math.max(0, Number(value) || 0) };
-        }
+          if (field === 'value') {
+            const safeValue = Math.max(0, Number(value) || 0);
+            const currentRarity = entry.abilityRarity;
+            return {
+              ...fx,
+              value: safeValue,
+              valueByRarity: {
+                ...(fx.valueByRarity ?? {}),
+                [currentRarity]: safeValue,
+              },
+            };
+          }
         if (field === 'charges' || field === 'duration') {
           const n = value === '' || value === undefined ? undefined : Math.max(1, Number(value) || 1);
           return { ...fx, [field]: n };
@@ -1050,10 +1060,17 @@ export default function App() {
   const handleAbilityChange = useCallback((id: string, key: keyof AspectDraft, value: string | number) => {
     setAbilityDrafts((prev) => prev.map((entry) => {
       if (entry.id !== id) return entry;
-      const nextEntry = { ...entry, [key]: value };
-      if (key === 'name') {
-        nextEntry.id = toThisTypeOfCase(String(value));
-      }
+        const nextEntry = { ...entry, [key]: value };
+        if (key === 'abilityRarity') {
+          const nextRarity = value as OrimRarity;
+          nextEntry.effects = nextEntry.effects.map((fx) => ({
+            ...fx,
+            value: resolveEffectValueForRarity(fx, nextRarity),
+          }));
+        }
+        if (key === 'name') {
+          nextEntry.id = toThisTypeOfCase(String(value));
+        }
       if (key === 'abilityCardRank' || key === 'archetypeCardRank') {
         nextEntry[key] = Math.max(0, Number(value) || 0);
       }
@@ -1103,15 +1120,17 @@ export default function App() {
           cardRank: entry.abilityCardRank,
           cardElements: entry.abilityCardElements,
           cardGlyph: entry.abilityCardGlyph.trim() || undefined,
+          rarity: entry.abilityRarity,
           abilityType: entry.abilityType,
           tags: entry.tagsText
             .split(',')
             .map((tag) => tag.trim())
             .filter(Boolean),
-          effects: entry.effects.map((fx) => ({
-            type: fx.type,
-            value: fx.value,
-            target: fx.target,
+            effects: entry.effects.map((fx) => ({
+              type: fx.type,
+              value: fx.value,
+              target: fx.target,
+              ...(fx.valueByRarity ? { valueByRarity: fx.valueByRarity } : {}),
             ...(fx.charges !== undefined ? { charges: fx.charges } : {}),
             ...(fx.duration !== undefined ? { duration: fx.duration } : {}),
             ...(fx.element !== undefined && fx.element !== 'N' ? { element: fx.element } : {}),
@@ -1152,6 +1171,7 @@ export default function App() {
             cardRank?: number;
             cardElements?: Element[];
             cardGlyph?: string;
+            rarity?: OrimRarity;
             abilityType?: string;
             tags?: string[];
             effects?: AbilityEffect[];
@@ -1169,11 +1189,15 @@ export default function App() {
           abilityCardRank: entry.cardRank ?? 1,
           abilityCardElements: ensureElementList(entry.cardElements),
           abilityCardGlyph: entry.cardGlyph ?? '',
+          abilityRarity: entry.rarity ?? 'common',
           tagsText: (entry.tags ?? []).join(', '),
           archetypeCardId: '',
           archetypeCardRank: 1,
           archetypeCardElement: 'N' as Element,
-          effects: Array.isArray(entry.effects) ? entry.effects : [],
+            effects: hydrateAbilityEffects(
+              Array.isArray(entry.effects) ? entry.effects : undefined,
+              entry.rarity ?? 'common'
+            ),
           equipCost: entry.equipCost ?? 0,
         }));
         setAbilityDrafts(nextDrafts);
@@ -1201,6 +1225,7 @@ export default function App() {
             elements?: Element[];
             effects?: AbilityEffect[];
             isAspect?: boolean;
+            rarity?: OrimRarity;
             aspectProfile?: {
               key?: string;
               archetype?: string;
@@ -1214,6 +1239,7 @@ export default function App() {
           id: entry.id,
           name: entry.name,
           description: entry.description,
+          rarity: entry.rarity ?? 'common',
           elements: ensureElementList(entry.elements),
           effects: Array.isArray(entry.effects) ? entry.effects : [],
           isAspect: entry.isAspect,
@@ -1301,6 +1327,7 @@ export default function App() {
       id: nextId,
       name: '',
       description: '',
+      rarity: 'common',
       elements: ['N'],
       effects: [],
       aspectProfile: undefined,
@@ -1436,6 +1463,7 @@ export default function App() {
           id: entry.id.trim(),
           name: entry.name.trim(),
           description: entry.description.trim(),
+          rarity: entry.rarity,
           elements: entry.elements,
           ...(entry.isAspect ? { isAspect: entry.isAspect } : {}),
           ...(entry.isAspect && entry.aspectProfile
@@ -1647,23 +1675,6 @@ export default function App() {
     }
   }, [gameState?.phase, useGhostBackground]);
 
-  const draggedHandCardRef = useRef<CardType | null>(null);
-  const [handCards, setHandCards] = useState<CardType[]>([]);
-  const [foundationSplashHint, setFoundationSplashHint] = useState<{
-    foundationIndex: number;
-    directionDeg: number;
-    token: number;
-  } | null>(null);
-  const [poiRewardResolvedAt, setPoiRewardResolvedAt] = useState<number>(0);
-  const [rpgImpactSplashHint, setRpgImpactSplashHint] = useState<{
-    side: 'player' | 'enemy';
-    foundationIndex: number;
-    directionDeg: number;
-    token: number;
-  } | null>(null);
-  const lastPartyKeyRef = useRef<string>('');
-  const explorationStepRef = useRef<(() => void) | null>(null);
-
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     let rafId = 0;
@@ -1687,26 +1698,6 @@ export default function App() {
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, []);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handleResize = () => {
-      setWatercolorCanvasSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (diceComboPulse <= 0) return;
-    const timer = window.setTimeout(() => {
-      setDiceComboPulse(0);
-    }, 1000);
-    return () => window.clearTimeout(timer);
-  }, [diceComboPulse]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -1755,12 +1746,6 @@ export default function App() {
 
       if (key === 'w') {
         setWatercolorEnabled((prev) => !prev);
-        return;
-      }
-
-      if (key === 'j') {
-        event.preventDefault();
-        setIsJewelModalOpen((prev) => !prev);
         return;
       }
 
@@ -1834,263 +1819,9 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [actions]);
 
-  // Handle drop from DND
-  const handleDrop = useCallback(
-    (
-      tableauIndex: number,
-      foundationIndex: number,
-      dropPoint?: { x: number; y: number },
-      momentum?: { x: number; y: number }
-    ) => {
-      if (!gameState) return;
-      const applySplashHint = () => {
-        if (!DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED) return;
-        if (!momentum || (Math.abs(momentum.x) + Math.abs(momentum.y)) <= 0.1) return;
-        const directionDeg = (Math.atan2(momentum.y, momentum.x) * 180) / Math.PI;
-        setFoundationSplashHint({
-          foundationIndex,
-          directionDeg,
-          token: Date.now(),
-        });
-      };
-      const currentBiomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
-      const useWild = !!currentBiomeDef?.randomlyGenerated;
-
-      // Hand source: validate and remove from hand
-      if (tableauIndex === HAND_SOURCE_INDEX) {
-        const card = draggedHandCardRef.current;
-        if (import.meta.env.DEV) {
-          console.debug('[hand drop]', {
-            cardId: card?.id,
-            sourceActorId: card?.sourceActorId,
-            foundationIndex,
-          });
-        }
-        if (card) {
-          if (gameState.playtestVariant === 'rpg' && card.id.startsWith('keru-archetype-')) {
-            const archetype = card.id.replace('keru-archetype-', '');
-            if (archetype === 'lupus' || archetype === 'ursus' || archetype === 'felis') {
-              const applied = actions.applyKeruArchetype(archetype);
-              if (applied) {
-                const directionDeg = momentum
-                  ? (Math.atan2(momentum.y, momentum.x) * 180) / Math.PI
-                  : -90;
-                setFoundationSplashHint({
-                  foundationIndex,
-                  directionDeg,
-                  token: Date.now(),
-                });
-              }
-            }
-            draggedHandCardRef.current = null;
-            return;
-          }
-          if (gameState.playtestVariant === 'rpg' && card.id.startsWith('reward-orim-')) {
-            const orimId = card.id.replace('reward-orim-', '');
-            const party = gameState.activeSessionTileId
-              ? gameState.tileParties[gameState.activeSessionTileId] ?? []
-              : [];
-            const targetActor = party[foundationIndex];
-            if (targetActor && actions.devInjectOrimToActor) {
-              actions.devInjectOrimToActor(targetActor.id, orimId, foundationIndex, dropPoint);
-              applySplashHint();
-              setPoiRewardResolvedAt(Date.now());
-            }
-            draggedHandCardRef.current = null;
-            return;
-          }
-          if (gameState.playtestVariant === 'rpg' && card.id.startsWith('rpg-')) {
-            const point = dropPoint;
-            if (point) {
-              const actorTarget = document
-                .elementsFromPoint(point.x, point.y)
-                .find((entry) => entry instanceof HTMLElement && entry.dataset.rpgActorTarget === 'true') as HTMLElement | undefined;
-              const side = actorTarget?.dataset.rpgActorSide;
-              const actorIndexRaw = actorTarget?.dataset.rpgActorIndex;
-              const actorIndex = actorIndexRaw !== undefined ? Number(actorIndexRaw) : NaN;
-              if ((side === 'player' || side === 'enemy') && Number.isInteger(actorIndex)) {
-                const played = actions.playRpgHandCardOnActor(card.id, side, actorIndex);
-                if (
-                  DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED
-                  && played
-                  && momentum
-                  && (Math.abs(momentum.x) + Math.abs(momentum.y)) > 0.1
-                ) {
-                  const directionDeg = (Math.atan2(momentum.y, momentum.x) * 180) / Math.PI;
-                  setRpgImpactSplashHint({
-                    side,
-                    foundationIndex: actorIndex,
-                    directionDeg,
-                    token: Date.now(),
-                  });
-                }
-              }
-            }
-            draggedHandCardRef.current = null;
-            return;
-          }
-          const played = actions.playFromHand(card, foundationIndex, useWild);
-          if (played) applySplashHint();
-          void played;
-        }
-        draggedHandCardRef.current = null;
-        return;
-      }
-
-      const foundation = gameState.foundations[foundationIndex];
-      if (!foundation) return;
-      const foundationTop = foundation[foundation.length - 1];
-
-      const tableau = gameState.tableaus[tableauIndex];
-      if (tableau.length === 0) return;
-
-      const card = tableau[tableau.length - 1];
-
-      if (useWild) {
-        if (canPlayCardWithWild(card, foundationTop, gameState.activeEffects)) {
-          const played = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
-          if (played) {
-            applySplashHint();
-            explorationStepRef.current?.();
-          }
-        }
-        return;
-      }
-
-      if (canPlayCard(card, foundationTop, gameState.activeEffects)) {
-        const played = actions.playFromTableau(tableauIndex, foundationIndex);
-        if (played) applySplashHint();
-      }
-    },
-    [gameState, actions]
-  );
-
-  const { dragState, startDrag, setFoundationRef, lastDragEndAt } = useDragDrop(handleDrop, isGamePaused);
-  const [tooltipSuppressed, setTooltipSuppressed] = useState(false);
-
-  const handleDragStart = useCallback(
-    (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => {
-      if (tableauIndex === HAND_SOURCE_INDEX) {
-        draggedHandCardRef.current = card;
-      }
-      startDrag(card, tableauIndex, clientX, clientY, rect);
-    },
-    [startDrag]
-  );
-
   const handleSpawnDie = useCallback((e: React.MouseEvent) => {
-    const newDie = createDie();
-    setSpawnedDie(newDie);
-    setDieAnimating(true);
-
-    // Use mouse click coordinates as landing position
-    const dieSize = 64;
-    const margin = 120; // Margin for combo effects
-
-    // Clamp to safe viewport bounds
-    const targetX = Math.max(margin, Math.min(
-      e.clientX - dieSize / 2,
-      window.innerWidth - margin - dieSize
-    ));
-    const targetY = Math.max(margin, Math.min(
-      e.clientY - dieSize / 2,
-      window.innerHeight - margin - dieSize
-    ));
-
-    setDiePosition({ x: targetX, y: targetY });
-
-    // Trigger combo effect after animation completes
-    setTimeout(() => {
-      setDiceComboPulse((prev) => prev + 1);
-      setDieAnimating(false);
-      // Clear rolling state after bounce
-      setSpawnedDie((prev) => prev ? { ...prev, rolling: false } : null);
-    }, 1200); // Match bounce animation duration
+    spawnDieRef.current?.(e.clientX, e.clientY);
   }, []);
-
-  useEffect(() => {
-    if (dragState.isDragging) {
-      setTooltipSuppressed(true);
-      return;
-    }
-    if (!lastDragEndAt) {
-      setTooltipSuppressed(false);
-      return;
-    }
-    setTooltipSuppressed(true);
-    const timeout = window.setTimeout(() => setTooltipSuppressed(false), 450);
-    return () => window.clearTimeout(timeout);
-  }, [dragState.isDragging, lastDragEndAt]);
-
-  // Degrade watercolor effects during drag for better FPS
-  useEffect(() => {
-    setWatercolorInteractionDegraded(dragState.isDragging);
-  }, [dragState.isDragging]);
-
-  // Stable actions object for PlayingScreen — prevents memo() busting on every App render
-  const playingScreenActions = useMemo(() => ({
-    selectCard: actions.selectCard,
-    playToFoundation: actions.playToFoundation,
-    returnToGarden: actions.returnToGarden,
-    autoPlay: actions.autoPlay,
-    rewindLastCard: actions.rewindLastCard,
-  }), [actions.selectCard, actions.playToFoundation, actions.returnToGarden, actions.autoPlay, actions.rewindLastCard]);
-
-  const handleDieMouseDown = useCallback((e: React.MouseEvent) => {
-    if (dieAnimating) return; // Don't drag during animation
-    e.preventDefault();
-    setDieDragging(true);
-    setDieDragOffset({
-      x: e.clientX - diePosition.x,
-      y: e.clientY - diePosition.y,
-    });
-  }, [dieAnimating, diePosition]);
-
-  const handleDieTouchStart = useCallback((e: React.TouchEvent) => {
-    if (dieAnimating) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    setDieDragging(true);
-    setDieDragOffset({
-      x: touch.clientX - diePosition.x,
-      y: touch.clientY - diePosition.y,
-    });
-  }, [dieAnimating, diePosition]);
-
-  useEffect(() => {
-    if (!dieDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      setDiePosition({
-        x: e.clientX - dieDragOffset.x,
-        y: e.clientY - dieDragOffset.y,
-      });
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      setDiePosition({
-        x: touch.clientX - dieDragOffset.x,
-        y: touch.clientY - dieDragOffset.y,
-      });
-    };
-
-    const handleEnd = () => {
-      setDieDragging(false);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleEnd);
-    window.addEventListener('touchmove', handleTouchMove);
-    window.addEventListener('touchend', handleEnd);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleEnd);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleEnd);
-    };
-  }, [dieDragging, dieDragOffset]);
 
   useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
@@ -2129,95 +1860,6 @@ export default function App() {
     };
   }, []);
 
-  const handleCopyRestart = useCallback(async () => {
-    const command = '$conn = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -First 1; if ($conn -and $conn.OwningProcess -ne 0) { Stop-Process -Id $conn.OwningProcess -Force }; Start-Sleep -Milliseconds 300; cd C:\\dev\\Exploritaire; npm run dev -- --port 5173 --strictPort';
-    try {
-      await navigator.clipboard.writeText(command);
-      setRestartCopied(true);
-      setTimeout(() => setRestartCopied(false), 1500);
-    } catch {
-      setRestartCopied(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!gameState) return;
-    const phase = gameState.phase;
-    if (phase !== lastPhaseRef.current && (phase === 'playing' || phase === 'biome')) {
-      setIsPuzzleOpen(true);
-    }
-    lastPhaseRef.current = phase;
-  }, [gameState]);
-
-  const handleStartAdventure = useCallback((tileId: string) => {
-    if (!gameState) return;
-    if (gameState.activeSessionTileId && gameState.activeSessionTileId !== tileId) return;
-    if (gameState.phase !== 'garden') {
-      setIsPuzzleOpen(true);
-      return;
-    }
-    actions.startAdventure(tileId);
-    setIsPuzzleOpen(true);
-  }, [actions, gameState]);
-
-  const handleStartBiome = useCallback((tileId: string, biomeId: string) => {
-    if (!gameState) return;
-    if (gameState.activeSessionTileId && gameState.activeSessionTileId !== tileId) return;
-    if (gameState.phase === 'biome' && gameState.currentBiome === biomeId) {
-      setIsPuzzleOpen(true);
-      return;
-    }
-    actions.startBiome(tileId, biomeId);
-    setIsPuzzleOpen(true);
-  }, [actions, gameState]);
-
-  useEffect(() => {
-    if (!gameState || !currentPlayerCoords) return;
-    if (gameState.playtestVariant !== 'rpg') return;
-    const cell = mainWorldMap.cells.find(
-      (entry) =>
-        entry.gridPosition.col === currentPlayerCoords.x
-        && entry.gridPosition.row === currentPlayerCoords.y
-    );
-    const biomeId = cell?.poi?.biomeId;
-    if (biomeId !== 'wave_battle') return;
-    if (gameState.phase === 'biome' && gameState.currentBiome === biomeId) return;
-    const tileId = gameState.activeSessionTileId ?? cell?.poi?.id ?? biomeId;
-    handleStartBiome(tileId, biomeId);
-  }, [currentPlayerCoords, gameState, handleStartBiome]);
-
-  const handleCloseReturnModal = useCallback(() => {
-    setReturnModal((prev) => ({ ...prev, open: false }));
-  }, []);
-
-  const handleExitBiome = useCallback((mode: 'return' | 'abandon') => {
-    if (!gameState) return;
-    const blueprintCards = gameState.pendingBlueprintCards ?? [];
-    const blueprints = gameState.blueprints.filter((blueprint) => blueprint.isNew);
-    const totalTokens = Object.values(gameState.collectedTokens || {}).reduce((sum, value) => sum + (value || 0), 0);
-    const hasLoot = totalTokens > 0 || blueprintCards.length > 0 || blueprints.length > 0;
-    if (mode === 'return' && hasLoot) {
-      setReturnModal({
-        open: true,
-        blueprintCards,
-        blueprints,
-      });
-    } else {
-      setReturnModal((prev) => ({ ...prev, open: false }));
-    }
-    if (mode === 'return') {
-      if (totalTokens > 0) {
-        setTokenReturnNotice({ id: Date.now(), count: totalTokens });
-      } else {
-        setTokenReturnNotice(null);
-      }
-      actions.returnToGarden();
-    } else {
-      actions.abandonSession();
-    }
-    setIsPuzzleOpen(false);
-  }, [actions, gameState]);
-
   const handleCommandBarHeightChange = useCallback((height: number) => {
     setCommandBarHeight(height);
   }, []);
@@ -2230,91 +1872,6 @@ export default function App() {
       document.documentElement.style.removeProperty('--cli-offset');
     };
   }, [cliOffset]);
-
-  useEffect(() => {
-    if (!gameState) return;
-    const categoryGlyphs: Record<string, string> = {
-      ability: '⚡️',
-      utility: '💫',
-      trait: '🧬',
-    };
-    const activeParty = gameState.activeSessionTileId
-      ? gameState.tileParties[gameState.activeSessionTileId] ?? []
-      : [];
-    const foundationHasActor = (gameState.foundations[0]?.length ?? 0) > 0;
-    const handParty = gameState.currentBiome === 'random_wilds'
-      ? (foundationHasActor ? activeParty.slice(0, 1) : [])
-      : activeParty;
-    const partyKey = activeParty.map((actor) => actor.id).join('|');
-    if (gameState.phase !== 'biome') {
-      setHandCards([]);
-      lastPartyKeyRef.current = '';
-      return;
-    }
-    lastPartyKeyRef.current = partyKey;
-    const nextHand = handParty.flatMap((actor) => {
-      const deck = gameState.actorDecks[actor.id];
-      if (!deck) return [];
-      const buildDisplay = (slotId: string, definitionId?: string, fallbackId?: string) => {
-        const definition = definitionId
-          ? gameState.orimDefinitions.find((item) => item.id === definitionId)
-          : undefined;
-        if (!definition) return null;
-        const glyph = categoryGlyphs[definition.category] ?? '◌';
-        const meta: string[] = [];
-        if (definition?.rarity) meta.push(definition.rarity);
-        meta.push(`Power ${definition?.powerCost ?? 0}`);
-        if (definition?.damage !== undefined) meta.push(`DMG ${definition.damage}`);
-        if (definition?.affinity) {
-          meta.push(`Affinity ${Object.entries(definition.affinity)
-            .map(([key, value]) => `${key}:${value}`)
-            .join(' ')}`);
-        }
-        return {
-          id: slotId || fallbackId || `orim-slot-${Math.random()}`,
-          glyph,
-          color: getOrimAccentColor(definition, definition?.id),
-          definitionId: definition.id,
-          title: definition?.name,
-          meta,
-          description: definition?.description,
-        };
-      };
-      const actorGlyph = getActorDisplayGlyph(actor.definitionId, showGraphics);
-      const actorOrimDisplay = (actor.orimSlots ?? [])
-        .map((slot, index) => {
-          const instance = slot.orimId ? gameState.orimInstances[slot.orimId] : undefined;
-          return buildDisplay(slot.id, instance?.definitionId, `${actor.id}-orim-${index}`);
-        })
-        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-      return deck.cards.map((card) => ({
-        id: `hand-${card.id}`,
-        rank: card.value,
-        element: 'N' as Element,
-        suit: ELEMENT_TO_SUIT.N as Suit,
-        actorGlyph,
-        sourceActorId: actor.id,
-        sourceDeckCardId: card.id,
-        cooldown: card.cooldown ?? 0,
-        maxCooldown: card.maxCooldown ?? 5,
-        orimDisplay: [
-          ...actorOrimDisplay,
-          ...card.slots
-            .map((slot, index) => {
-              const instance = slot.orimId ? gameState.orimInstances[slot.orimId] : undefined;
-              return buildDisplay(slot.id, instance?.definitionId, `${card.id}-orim-${index}`);
-            })
-            .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
-        ],
-        orimSlots: card.slots.map((slot) => ({
-          id: slot.id,
-          orimId: slot.orimId ?? null,
-          locked: slot.locked ?? false,
-        })),
-      }));
-    });
-    setHandCards(nextHand);
-  }, [gameState, showGraphics]);
 
   const injectorOrims = useMemo(() => {
     if (!gameState?.orimDefinitions) return [];
@@ -2360,21 +1917,6 @@ export default function App() {
 
   if (!gameState) return null;
 
-  const guidanceActive = guidanceMoves.length > 0;
-  const totalReturnTokens = Object.values(gameState.collectedTokens || {}).reduce((sum, value) => sum + (value || 0), 0);
-  const hasCollectedLoot =
-    totalReturnTokens > 0
-    || (gameState.pendingBlueprintCards ?? []).length > 0
-    || gameState.blueprints.some((blueprint) => blueprint.isNew);
-  const activeParty = gameState.activeSessionTileId
-    ? gameState.tileParties[gameState.activeSessionTileId] ?? []
-    : [];
-  const activeTile = gameState.activeSessionTileId
-    ? gameState.tiles.find((tile) => tile.id === gameState.activeSessionTileId)
-    : undefined;
-  const activeTileName = activeTile
-    ? getTileDefinition(activeTile.definitionId)?.name ?? 'ADVENTURE'
-    : 'ADVENTURE';
   return (
     <GraphicsContext.Provider value={showGraphics}>
     <InteractionModeContext.Provider value={gameState.interactionMode}>
@@ -2686,8 +2228,8 @@ export default function App() {
         {toolingOpen && (
           <div className="fixed inset-0 z-[10030]">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-            <div className="relative w-full h-full flex items-start justify-center p-4">
-              <div className="relative w-[1200px] max-w-[88vw] h-[90vh] flex flex-col bg-game-bg-dark/95 border border-game-teal/40 rounded-2xl overflow-hidden menu-text shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+            <div className="relative w-full h-full flex items-center justify-center p-4">
+              <div className="relative w-full h-full flex flex-col bg-game-bg-dark/95 border border-game-teal/40 rounded-2xl overflow-hidden menu-text shadow-[0_0_50px_rgba(0,0,0,0.8)]">
                 {/* Unified Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-game-teal/20 bg-black/40 shrink-0">
                   <div className="flex items-center gap-2">
@@ -2718,6 +2260,13 @@ export default function App() {
                       className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'synergies' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
                     >
                       Synergies
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setToolingTab('visuals')}
+                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'visuals' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
+                    >
+                      Visuals
                     </button>
                   </div>
 
@@ -3005,27 +2554,27 @@ export default function App() {
 
                         {/* 2. Rewards Tab */}
                         {poiEditorSection === 'rewards' && (
-                          <div className="h-full bg-black/80 border border-game-teal/50 rounded-2xl p-5 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col gap-4 animate-in fade-in duration-200 overflow-hidden">
-                            <div className="flex items-center justify-between shrink-0">
-                              <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-game-teal/80">Loot & Registry</div>
+                          <div className="h-full bg-black/80 border border-game-teal/50 rounded-2xl p-4 shadow-[0_0_32px_rgba(0,0,0,0.45)] flex flex-col gap-3 animate-in fade-in duration-200 overflow-hidden">
+                            <div className="flex items-center justify-between shrink-0 border-b border-game-teal/10 pb-3">
+                              <div className="text-[10px] font-black uppercase tracking-[0.4em] text-game-teal/80">Loot & Registry</div>
                               <div className="flex items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={handleTestPoiReward}
-                                  className="text-[10px] uppercase tracking-[0.35em] bg-black/60 border border-game-gold/60 text-game-gold px-4 py-2 rounded font-black shadow-lg hover:border-game-gold hover:text-game-gold/90"
+                                  className="text-[9px] uppercase tracking-[0.25em] bg-black/60 border border-game-gold/40 text-game-gold px-3 py-1.5 rounded font-black shadow-lg hover:border-game-gold transition-all active:scale-95"
                                 >
                                   Test Reward
                                 </button>
                                 <button
                                   type="button"
                                   onClick={handleAddRewardRow}
-                                  className="text-[10px] uppercase tracking-[0.4em] bg-game-teal/70 text-black px-5 py-2 rounded font-black shadow-lg"
+                                  className="text-[9px] uppercase tracking-[0.3em] bg-game-teal/70 text-black px-4 py-1.5 rounded font-black shadow-lg hover:bg-game-teal transition-all active:scale-95"
                                 >
                                   Add Reward Row
                                 </button>
                               </div>
                             </div>
-                            <div className="flex-1 min-h-0 overflow-y-auto pr-3 custom-scrollbar space-y-4">
+                            <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar space-y-3">
                               {poiEditorRewards.map((reward, index) => {
                                 const searchTerm = reward.searchFilter.trim().toLowerCase();
                                 const filteredAspects = aspectRewardOptions.filter((option) => {
@@ -3045,46 +2594,69 @@ export default function App() {
                                 const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
                                 const isAbilityReward = reward.type === 'ability-choice';
                                 return (
-                                  <div key={reward.id} className="p-5 rounded-2xl border border-game-teal/30 bg-game-bg-dark/40 space-y-4 relative group hover:border-game-teal/60 transition-colors">
+                                  <div key={reward.id} className="p-3 rounded-xl border border-game-teal/20 bg-game-bg-dark/40 space-y-3 relative group hover:border-game-teal/40 transition-colors shadow-inner">
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveRewardRow(reward.id)}
-                                      className="absolute top-3 right-3 text-[10px] text-game-pink opacity-40 hover:opacity-100 uppercase tracking-widest font-black transition-opacity"
+                                      className="absolute top-2 right-2 text-[8px] text-game-pink opacity-30 hover:opacity-100 uppercase tracking-widest font-black transition-opacity p-1"
                                     >
                                       Remove
                                     </button>
-                                    <div className="grid grid-cols-[1fr_1fr_1.5fr] gap-4">
-                                      <label className="flex flex-col gap-1.5 text-[10px]">
-                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Category</span>
+                                    
+                                    <div className="flex flex-wrap items-end gap-3">
+                                      <label className="flex flex-col gap-1 text-[9px]">
+                                        <span className="text-game-teal/60 font-black uppercase tracking-tight">Category</span>
                                         <select
                                           value={reward.type}
                                           onChange={(event) => handleRewardChange(reward.id, 'type', event.target.value)}
-                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                          className="bg-game-bg-dark/80 border border-game-teal/30 px-2 py-1.5 rounded text-[10px] text-game-white outline-none focus:border-game-gold min-w-[140px]"
                                         >
                                           {REWARD_TYPE_OPTIONS.map((opt) => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                           ))}
                                         </select>
                                       </label>
-                                      <label className="flex flex-col gap-1.5 text-[10px]">
-                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Trigger</span>
+                                      <label className="flex flex-col gap-1 text-[9px]">
+                                        <span className="text-game-teal/60 font-black uppercase tracking-tight">Trigger</span>
                                         <select
                                           value={reward.trigger}
                                           onChange={(event) => handleRewardChange(reward.id, 'trigger', event.target.value)}
-                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                          className="bg-game-bg-dark/80 border border-game-teal/30 px-2 py-1.5 rounded text-[10px] text-game-white outline-none focus:border-game-gold min-w-[120px]"
                                         >
                                           <option value="on_arrival">On Arrival</option>
                                           <option value="on_tableau_clear">On Clear</option>
                                           <option value="on_condition">On Condition</option>
                                         </select>
                                       </label>
-                                      <label className="flex flex-col gap-1.5 text-[10px]">
-                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Flavor Description</span>
+                                      <div className="flex gap-2 bg-black/20 p-1.5 rounded-lg border border-game-teal/10">
+                                        <label className="flex items-center gap-2 text-[9px]">
+                                          <span className="text-game-teal/50 font-bold uppercase tracking-tight">Draw</span>
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            value={reward.drawCount}
+                                            onChange={(event) => handleRewardChange(reward.id, 'drawCount', Number(event.target.value) || 0)}
+                                            className="w-10 bg-game-bg-dark border border-game-teal/20 rounded px-1.5 py-1 text-[10px] text-game-white outline-none focus:border-game-gold text-center"
+                                          />
+                                        </label>
+                                        <label className="flex items-center gap-2 text-[9px]">
+                                          <span className="text-game-teal/50 font-bold uppercase tracking-tight">Choose</span>
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            value={reward.chooseCount}
+                                            onChange={(event) => handleRewardChange(reward.id, 'chooseCount', Number(event.target.value) || 0)}
+                                            className="w-10 bg-game-bg-dark border border-game-teal/20 rounded px-1.5 py-1 text-[10px] text-game-white outline-none focus:border-game-gold text-center"
+                                          />
+                                        </label>
+                                      </div>
+                                      <label className="flex-1 flex flex-col gap-1 text-[9px]">
+                                        <span className="text-game-teal/60 font-black uppercase tracking-tight">Flavor Description</span>
                                         <input
                                           value={reward.description}
                                           onChange={(event) => handleRewardChange(reward.id, 'description', event.target.value)}
                                           placeholder="e.g., A gift from the stars..."
-                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                          className="w-full bg-game-bg-dark/80 border border-game-teal/30 px-2 py-1.5 rounded text-[10px] text-game-white outline-none focus:border-game-gold placeholder:text-game-white/20"
                                         />
                                       </label>
                                     </div>
@@ -3111,30 +2683,30 @@ export default function App() {
                                       </label>
                                     </div>
                                     {isAspectReward && (
-                                      <div className="space-y-3 pt-2 bg-black/30 p-4 rounded-xl border border-game-teal/10">
-                                        <div className="flex items-center gap-3">
+                                      <div className="space-y-2 pt-1 bg-black/30 p-2.5 rounded-xl border border-game-teal/10">
+                                        <div className="flex items-center gap-2">
                                           <input
                                             value={reward.searchFilter}
                                             onChange={(event) => handleRewardChange(reward.id, 'searchFilter', event.target.value)}
                                             placeholder="Filter aspects..."
-                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/20 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                                           />
                                           <button
                                             type="button"
                                             onClick={() => handleRewardSelectAll(reward.id, filteredAspects.map((option) => option.archetype))}
-                                            className="text-[9px] uppercase tracking-[0.2em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded font-black hover:border-game-gold transition-colors"
+                                            className="text-[8px] uppercase tracking-[0.1em] bg-game-bg-dark/80 border border-game-teal/30 px-2 py-1 rounded font-black hover:border-game-gold transition-colors"
                                           >
                                             Select Matching
                                           </button>
                                         </div>
-                                        <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-1">
+                                        <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1 custom-scrollbar">
                                           {filteredAspects.map((option) => (
                                             <label
                                               key={`${reward.id}-${option.archetype}`}
-                                              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[10px] cursor-pointer transition-all ${
+                                              className={`flex items-center gap-1.5 rounded border px-2 py-1 text-[9px] cursor-pointer transition-all ${
                                                 reward.selectedAspects.includes(option.archetype)
-                                                  ? 'border-game-teal bg-game-teal/20 text-game-white'
-                                                  : 'border-game-teal/20 bg-black/40 text-game-white/60 hover:border-game-teal/40'
+                                                  ? 'border-game-teal bg-game-teal/30 text-game-white'
+                                                  : 'border-game-teal/10 bg-black/20 text-game-white/40 hover:border-game-teal/30'
                                               }`}
                                             >
                                               <input
@@ -3150,30 +2722,30 @@ export default function App() {
                                       </div>
                                     )}
                                     {isAbilityReward && (
-                                      <div className="space-y-3 pt-2 bg-black/30 p-4 rounded-xl border border-game-teal/10">
-                                        <div className="flex items-center gap-3">
+                                      <div className="space-y-2 pt-1 bg-black/30 p-2.5 rounded-xl border border-game-teal/10">
+                                        <div className="flex items-center gap-2">
                                           <input
                                             value={reward.abilitySearchFilter}
                                             onChange={(event) => handleRewardChange(reward.id, 'abilitySearchFilter', event.target.value)}
                                             placeholder="Filter abilities..."
-                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/20 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                                           />
                                           <button
                                             type="button"
                                             onClick={() => handleRewardAbilitySelectAll(reward.id, filteredAbilities.map((option) => option.id))}
-                                            className="text-[9px] uppercase tracking-[0.2em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded font-black hover:border-game-gold transition-colors"
+                                            className="text-[8px] uppercase tracking-[0.1em] bg-game-bg-dark/80 border border-game-teal/30 px-2 py-1 rounded font-black hover:border-game-gold transition-colors"
                                           >
                                             Select Matching
                                           </button>
                                         </div>
-                                        <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-1">
+                                        <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1 custom-scrollbar">
                                           {filteredAbilities.map((option) => (
                                             <label
                                               key={`${reward.id}-${option.id}`}
-                                              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[10px] cursor-pointer transition-all ${
+                                              className={`flex items-center gap-1.5 rounded border px-2 py-1 text-[9px] cursor-pointer transition-all ${
                                                 reward.selectedAbilities.includes(option.id)
-                                                  ? 'border-game-teal bg-game-teal/20 text-game-white'
-                                                  : 'border-game-teal/20 bg-black/40 text-game-white/60 hover:border-game-teal/40'
+                                                  ? 'border-game-teal bg-game-teal/30 text-game-white'
+                                                  : 'border-game-teal/10 bg-black/20 text-game-white/40 hover:border-game-teal/30'
                                               }`}
                                             >
                                               <input
@@ -3189,30 +2761,30 @@ export default function App() {
                                       </div>
                                     )}
                                     {reward.type === 'orim-choice' && (
-                                      <div className="space-y-3 pt-2 bg-black/30 p-4 rounded-xl border border-game-teal/10">
-                                        <div className="flex items-center gap-3">
+                                      <div className="space-y-2 pt-1 bg-black/30 p-2.5 rounded-xl border border-game-teal/10">
+                                        <div className="flex items-center gap-2">
                                           <input
                                             value={reward.orimSearchFilter || ''}
                                             onChange={(event) => handleRewardChange(reward.id, 'orimSearchFilter', event.target.value)}
                                             placeholder="Filter orims..."
-                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
+                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/20 px-2 py-1 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                                           />
                                           <button
                                             type="button"
                                             onClick={() => handleRewardOrimSelectAll(reward.id, filteredOrims.map((option) => option.id))}
-                                            className="text-[9px] uppercase tracking-[0.2em] bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded font-black hover:border-game-gold transition-colors"
+                                            className="text-[8px] uppercase tracking-[0.1em] bg-game-bg-dark/80 border border-game-teal/30 px-2 py-1 rounded font-black hover:border-game-gold transition-colors"
                                           >
                                             Select Matching
                                           </button>
                                         </div>
-                                        <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-1">
+                                        <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1 custom-scrollbar">
                                           {filteredOrims.map((option) => (
                                             <label
                                               key={`${reward.id}-${option.id}`}
-                                              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[10px] cursor-pointer transition-all ${
+                                              className={`flex items-center gap-1.5 rounded border px-2 py-1 text-[9px] cursor-pointer transition-all ${
                                                 reward.selectedOrims.includes(option.id)
-                                                  ? 'border-game-teal bg-game-teal/20 text-game-white'
-                                                  : 'border-game-teal/20 bg-black/40 text-game-white/60 hover:border-game-teal/40'
+                                                  ? 'border-game-teal bg-game-teal/30 text-game-white'
+                                                  : 'border-game-teal/10 bg-black/20 text-game-white/40 hover:border-game-teal/30'
                                               }`}
                                             >
                                               <input
@@ -3227,36 +2799,40 @@ export default function App() {
                                         </div>
                                       </div>
                                     )}
-                                    <div className="space-y-3 pt-3 border-t border-game-teal/10">
-                                      <div className="text-[9px] font-bold uppercase tracking-[0.3em] text-game-teal/70">Modal Display (Optional)</div>
-                                      <label className="flex flex-col gap-1.5 text-[10px]">
-                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Overtitle</span>
-                                        <input
-                                          value={reward.overtitle}
-                                          onChange={(event) => handleRewardChange(reward.id, 'overtitle', event.target.value)}
-                                          placeholder="e.g., KERU LUPUS"
-                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
-                                        />
-                                      </label>
-                                      <label className="flex flex-col gap-1.5 text-[10px]">
-                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Summary</span>
-                                        <input
-                                          value={reward.summary}
-                                          onChange={(event) => handleRewardChange(reward.id, 'summary', event.target.value)}
-                                          placeholder="e.g., LUPUS - A RANGER AND LEADER - SWIFT AND STRATEGIC"
-                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[11px] text-game-white outline-none focus:border-game-gold"
-                                        />
-                                      </label>
-                                      <label className="flex flex-col gap-1.5 text-[10px]">
-                                        <span className="text-game-teal/70 font-bold uppercase tracking-tight">Instructions</span>
-                                        <textarea
-                                          value={reward.instructions}
-                                          onChange={(event) => handleRewardChange(reward.id, 'instructions', event.target.value)}
-                                          placeholder="e.g., Drag this ability to your foundation to anchor the physical aspect."
-                                          rows={2}
-                                          className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded resize-none text-[11px] text-game-white outline-none focus:border-game-gold"
-                                        />
-                                      </label>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-game-teal/10">
+                                      <div className="space-y-2">
+                                        <div className="text-[8px] font-black uppercase tracking-[0.3em] text-game-teal/40">Modal Display (Optional)</div>
+                                        <label className="flex flex-col gap-1 text-[9px]">
+                                          <span className="text-game-teal/50 font-bold uppercase tracking-tight">Overtitle</span>
+                                          <input
+                                            value={reward.overtitle}
+                                            onChange={(event) => handleRewardChange(reward.id, 'overtitle', event.target.value)}
+                                            placeholder="e.g., KERU LUPUS"
+                                            className="bg-game-bg-dark/80 border border-game-teal/20 px-2 py-1.5 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                          />
+                                        </label>
+                                        <label className="flex flex-col gap-1 text-[9px]">
+                                          <span className="text-game-teal/50 font-bold uppercase tracking-tight">Summary</span>
+                                          <input
+                                            value={reward.summary}
+                                            onChange={(event) => handleRewardChange(reward.id, 'summary', event.target.value)}
+                                            placeholder="e.g., LUPUS - SWIFT RANGER"
+                                            className="bg-game-bg-dark/80 border border-game-teal/20 px-2 py-1.5 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                          />
+                                        </label>
+                                      </div>
+                                      <div className="flex flex-col justify-end pt-4">
+                                        <label className="flex flex-col gap-1 text-[9px] h-full">
+                                          <span className="text-game-teal/50 font-bold uppercase tracking-tight">Instructions</span>
+                                          <textarea
+                                            value={reward.instructions}
+                                            onChange={(event) => handleRewardChange(reward.id, 'instructions', event.target.value)}
+                                            placeholder="e.g., Drag to foundation..."
+                                            className="flex-1 bg-game-bg-dark/80 border border-game-teal/20 px-2 py-1.5 rounded resize-none text-[10px] text-game-white outline-none focus:border-game-gold leading-tight custom-scrollbar"
+                                          />
+                                        </label>
+                                      </div>
                                     </div>
                                   </div>
                                 );
@@ -3534,6 +3110,18 @@ export default function App() {
                                         ))}
                                       </div>
                                     </div>
+                                    <label className="flex flex-col gap-1 shrink-0">
+                                      <span className="text-game-teal/70 font-bold uppercase tracking-tight">Rarity</span>
+                                      <select
+                                        value={active.abilityRarity ?? 'common'}
+                                        onChange={(event) => handleAbilityChange(active.id, 'abilityRarity', event.target.value)}
+                                        className="bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                      >
+                                        {ORIM_RARITY_OPTIONS.map((rarity) => (
+                                          <option key={rarity} value={rarity}>{rarity}</option>
+                                        ))}
+                                      </select>
+                                    </label>
                                   </div>
                                   <label className="flex flex-col gap-1 text-[10px]">
                                     <span className="text-game-teal/70 font-bold uppercase tracking-tight">Ability Description</span>
@@ -3567,71 +3155,89 @@ export default function App() {
                                         <div className="text-[9px] text-game-white/30 italic">No effects. Click + Add Effect to begin.</div>
                                       )}
                                       renderRow={(fx) => (
-                                        <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5">
-                                          <select
-                                            value={fx.type}
-                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'type', e.target.value)}
-                                            className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
-                                          >
-                                            {ABILITY_EFFECT_TYPES.map((t) => (
-                                              <option key={t} value={t}>{t}</option>
-                                            ))}
-                                          </select>
-                                          <input
-                                            type="number"
-                                            value={fx.value}
-                                            min={0}
-                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'value', e.target.value)}
-                                            className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
-                                          />
-                                          <select
-                                            value={fx.target}
-                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'target', e.target.value)}
-                                            className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
-                                          >
-                                            {(['self', 'enemy', 'all_enemies', 'ally'] as AbilityEffectTarget[]).map((t) => (
-                                              <option key={t} value={t}>{t}</option>
-                                            ))}
-                                          </select>
-                                          <input
-                                            type="number"
-                                            value={fx.charges ?? ''}
-                                            min={1}
-                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'charges', e.target.value)}
-                                            className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
-                                            placeholder="∞"
-                                          />
-                                          <input
-                                            type="number"
-                                            value={fx.duration ?? ''}
-                                            min={1}
-                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'duration', e.target.value)}
-                                            className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
-                                            placeholder="inst"
-                                          />
-                                          <select
-                                            value={fx.element ?? 'N'}
-                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'element', e.target.value)}
-                                            className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
-                                          >
-                                            {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
-                                              <option key={element} value={element}>{element}</option>
-                                            ))}
-                                          </select>
-                                          <input
-                                            type="number"
-                                            value={fx.elementalValue ?? ''}
-                                            min={0}
-                                            onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'elementalValue', e.target.value)}
-                                            className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
-                                          />
-                                          <button
-                                            type="button"
-                                            onClick={() => handleAbilityEffectRemove(active.id, fx.id as number)}
-                                            className="text-[9px] text-game-pink/50 hover:text-game-pink px-1.5 py-0.5 rounded border border-transparent hover:border-game-pink/30 transition-colors justify-self-end"
-                                          >
-                                            ✕
-                                          </button>
+                                        <div className="space-y-1">
+                                          <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5">
+                                            <select
+                                              value={fx.type}
+                                              onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'type', e.target.value)}
+                                              className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                            >
+                                              {ABILITY_EFFECT_TYPES.map((t) => (
+                                                <option key={t} value={t}>{t}</option>
+                                              ))}
+                                            </select>
+                                            <input
+                                              type="number"
+                                              value={fx.value}
+                                              min={0}
+                                              onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'value', e.target.value)}
+                                              className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                            />
+                                            <select
+                                              value={fx.target}
+                                              onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'target', e.target.value)}
+                                              className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                            >
+                                              {(['self', 'enemy', 'all_enemies', 'ally'] as AbilityEffectTarget[]).map((t) => (
+                                                <option key={t} value={t}>{t}</option>
+                                              ))}
+                                            </select>
+                                            <input
+                                              type="number"
+                                              value={fx.charges ?? ''}
+                                              min={1}
+                                              onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'charges', e.target.value)}
+                                              className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                              placeholder="∞"
+                                            />
+                                            <input
+                                              type="number"
+                                              value={fx.duration ?? ''}
+                                              min={1}
+                                              onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'duration', e.target.value)}
+                                              className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                              placeholder="inst"
+                                            />
+                                            <select
+                                              value={fx.element ?? 'N'}
+                                              onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'element', e.target.value)}
+                                              className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                            >
+                                              {(['N', 'W', 'E', 'A', 'F', 'L', 'D'] as Element[]).map((element) => (
+                                                <option key={element} value={element}>{element}</option>
+                                              ))}
+                                            </select>
+                                            <input
+                                              type="number"
+                                              value={fx.elementalValue ?? ''}
+                                              min={0}
+                                              onChange={(e) => handleAbilityEffectChange(active.id, fx.id as number, 'elementalValue', e.target.value)}
+                                              className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={() => handleAbilityEffectRemove(active.id, fx.id as number)}
+                                              className="text-[9px] text-game-pink/50 hover:text-game-pink px-1.5 py-0.5 rounded border border-transparent hover:border-game-pink/30 transition-colors justify-self-end"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                          <div className="flex flex-wrap gap-1 text-[9px]">
+                                            {ORIM_RARITY_OPTIONS.map((rarity) => {
+                                              const scaledValue = resolveEffectValueForRarity(fx, rarity);
+                                              const labelValue = formatEffectValue(scaledValue);
+                                              const isActive = active.abilityRarity === rarity;
+                                              return (
+                                                <div
+                                                  key={`effect-${fx.id}-rarity-${rarity}`}
+                                                  className={`flex flex-col items-center gap-0.5 px-2 py-0.5 rounded border tracking-[1px] uppercase ${isActive ? 'border-game-gold text-game-gold' : 'border-game-teal/20 text-game-white/60'}`}
+                                                >
+                                                  <span className="text-[7px]">{rarity}</span>
+                                                  <span className="text-[10px] font-bold">{labelValue}</span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
                                         </div>
                                       )}
                                       onAdd={() => handleAbilityEffectAdd(active.id)}
@@ -3828,6 +3434,19 @@ export default function App() {
                                       rows={4}
                                       className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded resize-none text-[10px] text-game-white outline-none focus:border-game-gold custom-scrollbar"
                                     />
+                                  </label>
+
+                                  <label className="flex flex-col gap-1">
+                                    <span className="text-game-teal/70 font-bold uppercase tracking-tight">Rarity</span>
+                                    <select
+                                      value={active.rarity ?? 'common'}
+                                      onChange={(event) => handleOrimChange(active.id, 'rarity', event.target.value)}
+                                      className="bg-game-bg-dark/80 border border-game-teal/40 px-3 py-2 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
+                                    >
+                                      {ORIM_RARITY_OPTIONS.map((rarity) => (
+                                        <option key={rarity} value={rarity}>{rarity}</option>
+                                      ))}
+                                    </select>
                                   </label>
 
                                   <div className="flex flex-col gap-1">
@@ -4302,6 +3921,11 @@ export default function App() {
                       </div>
                     </div>
                   )}
+
+                  {toolingTab === 'visuals' && (
+                    <VisualsEditor />
+                  )}
+
                   {/*
                   {toolingTab === 'orim' && gameState && (
                     <OrimEditor
@@ -4329,427 +3953,61 @@ export default function App() {
           </div>
         )}
 
-      {showPuzzleOverlay && isPuzzleOpen && (gameState.phase === 'playing' || gameState.phase === 'biome') && (
-        <div className="fixed inset-0 z-[9000]">
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              opacity: lightingEnabled ? 0.8 : 1,
-              backgroundColor: ghostBackgroundEnabled
-                ? 'rgba(248, 248, 255, 0.85)'
-                : 'rgba(0, 0, 0, 0.85)',
-            }}
-          />
-          <div className={`relative w-full h-full flex items-center justify-center${showText ? '' : ' textless-mode'}`}>
-            {watercolorEnabled && (gameState.phase === 'biome' || gameState.phase === 'playing') && (
-              <div
-                data-watercolor-canvas-root
-                className="absolute inset-0 pointer-events-none"
-                style={{ zIndex: 1 }}
-              >
-                <WatercolorCanvas
-                  key={`biome-watercolor-${ghostBackgroundEnabled ? 'ghost' : 'dark'}`}
-                  width={watercolorCanvasSize.width}
-                  height={watercolorCanvasSize.height}
-                  paperConfig={{
-                    baseColor: ghostBackgroundEnabled ? '#f8f8ff' : '#0a0a0a',
-                    grainIntensity: 0.08,
-                  }}
-                  style={{ opacity: lightingEnabled ? 0.68 : 0.85 }}
-                />
-              </div>
-            )}
-            <div className="relative w-full h-full flex items-center justify-center" style={{ zIndex: 2 }}>
-            {/* Playing screen */}
-            {gameState.phase === 'playing' && (
-              <PlayingScreen
-                gameState={gameState}
-                selectedCard={selectedCard}
-                validFoundationsForSelected={validFoundationsForSelected}
-                tableauCanPlay={tableauCanPlay}
-                noValidMoves={noValidMoves}
-                isWon={isWon}
-                guidanceMoves={guidanceMoves}
-                guidanceActive={guidanceActive}
-                activeParty={activeParty}
-                activeTileName={activeTileName}
-                isDragging={dragState.isDragging}
-                draggingCard={dragState.card}
-                noRegretStatus={noRegretStatus}
-                handleDragStart={handleDragStart}
-                setFoundationRef={setFoundationRef}
-                actions={playingScreenActions}
-                forcedPerspectiveEnabled={forcedPerspectiveEnabled}
-              />
-            )}
-
-            {/* Biome screen — event encounters */}
-            {gameState.phase === 'biome' && isEventBiome && (
-              <EventEncounter
-                gameState={gameState}
-                actions={{
-                  puzzleCompleted: actions.puzzleCompleted,
-                  completeBiome: actions.completeBiome,
-                }}
-              />
-            )}
-
-            {/* Biome screen — combat (CombatGolf) */}
-            {gameState.phase === 'biome' && !isEventBiome && (
-              <CombatGolf
-                gameState={gameState}
-                selectedCard={selectedCard}
-                validFoundationsForSelected={validFoundationsForSelected}
-                tableauCanPlay={tableauCanPlay}
-                noValidMoves={noValidMoves}
-                isWon={isWon}
-                guidanceMoves={guidanceMoves}
-                activeParty={activeParty}
-                sandboxOrimIds={sandboxOrimIds}
-                orimTrayDevMode={orimTrayDevMode}
-                orimTrayTab={orimTrayTab}
-                onOrimTrayTabChange={setOrimTrayTab}
-                sandboxOrimSearch={sandboxOrimSearch}
-                onSandboxOrimSearchChange={setSandboxOrimSearch}
-                sandboxOrimResults={sandboxOrimResults}
-                onAddSandboxOrim={(id) => {
-                  setSandboxOrimIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-                }}
-                onRemoveSandboxOrim={(id) => {
-                  setSandboxOrimIds((prev) => prev.filter((entry) => entry !== id));
-                }}
-                hasCollectedLoot={hasCollectedLoot}
-                dragState={dragState}
-                handleDragStart={handleDragStart}
-                setFoundationRef={setFoundationRef}
-                foundationSplashHint={foundationSplashHint}
-                rpgImpactSplashHint={rpgImpactSplashHint}
-                handCards={handCards}
-                tooltipSuppressed={tooltipSuppressed}
-                handleExitBiome={handleExitBiome}
-                useGhostBackground={ghostBackgroundEnabled}
-                lightingEnabled={lightingEnabled}
-                fps={fps}
-                serverAlive={serverAlive}
-                infiniteStockEnabled={infiniteStockEnabled}
-                onToggleInfiniteStock={() => setInfiniteStockEnabled((prev) => !prev)}
-                onOpenPoiEditorAt={handleOpenPoiEditorAt}
-                poiRewardResolvedAt={poiRewardResolvedAt}
-                benchSwapCount={benchSwapCount}
-                infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
-                onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
-                onConsumeBenchSwap={() => setBenchSwapCount((prev) => Math.max(0, prev - 1))}
-                noRegretStatus={noRegretStatus}
-                paintLuminosityEnabled={paintLuminosityEnabled}
-                onTogglePaintLuminosity={() => setPaintLuminosityEnabled((prev) => !prev)}
-                zenModeEnabled={zenModeEnabled}
-                isGamePaused={isGamePaused}
-                timeScale={timeScale}
-                hidePauseOverlay={hidePauseOverlay}
-                onOpenSettings={() => setSettingsOpen(true)}
-                onTogglePause={() => {
-                  setHidePauseOverlay(false);
-                  setIsGamePaused((prev) => !prev);
-                }}
-                wildAnalysis={analysis.wild}
-                  actions={{
-                    selectCard: actions.selectCard,
-                    playToFoundation: actions.playToFoundation,
-                    playCardDirect: actions.playCardDirect,
-                    playCardInRandomBiome: actions.playCardInRandomBiome,
-                  playEnemyCardInRandomBiome: actions.playEnemyCardInRandomBiome,
-                  playFromHand: actions.playFromHand,
-                  playFromStock: (foundationIndex: number, useWild = false, force = false) =>
-                    actions.playFromStock(foundationIndex, useWild, force, !infiniteStockEnabled),
-                  completeBiome: actions.completeBiome,
-                  autoSolveBiome: actions.autoSolveBiome,
-                  playCardInNodeBiome: actions.playCardInNodeBiome,
-                  endRandomBiomeTurn: actions.endRandomBiomeTurn,
-                  endExplorationTurnInRandomBiome: actions.endExplorationTurnInRandomBiome,
-                  advanceRandomBiomeTurn: actions.advanceRandomBiomeTurn,
-                  tickRpgCombat: actions.tickRpgCombat,
-                  setEnemyDifficulty: actions.setEnemyDifficulty,
-                  rewindLastCard: actions.rewindLastCard,
-                  swapPartyLead: actions.swapPartyLead,
-                    playWildAnalysisSequence: actions.playWildAnalysisSequence,
-                    spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
-                    setBiomeTableaus: actions.setBiomeTableaus,
-                    addRpgHandCard: actions.addRpgHandCard,
-                    applyKeruArchetype: actions.applyKeruArchetype,
-                    puzzleCompleted: actions.puzzleCompleted,
-                    startBiome: actions.startBiome,
-                  }}
-                explorationStepRef={explorationStepRef}
-                narrativeOpen={narrativeOpen}
-                onOpenNarrative={() => setNarrativeOpen(true)}
-                onCloseNarrative={() => setNarrativeOpen(false)}
-                onPositionChange={(x, y) => setCurrentPlayerCoords({ x, y })}
-                forcedPerspectiveEnabled={forcedPerspectiveEnabled}
-                />
-            )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Garden screen */}
-      {gameState.playtestVariant !== 'party-foundations' && gameState.playtestVariant !== 'party-battle' && gameState.playtestVariant !== 'rpg' && (
-        <Table
-          pendingCards={gameState.pendingCards}
-          buildPileProgress={gameState.buildPileProgress}
-          tiles={gameState.tiles}
-          availableActors={gameState.availableActors}
-          tileParties={gameState.tileParties}
-          activeSessionTileId={gameState.activeSessionTileId}
-          tokens={gameState.tokens}
-          resourceStash={gameState.resourceStash}
-          collectedTokens={gameState.collectedTokens}
-          orimDefinitions={gameState.orimDefinitions}
-          orimStash={gameState.orimStash}
-          orimInstances={gameState.orimInstances}
-          actorDecks={gameState.actorDecks}
-          tokenReturnNotice={tokenReturnNotice}
-          showTokenTray={gameState.phase === 'garden'}
-          showLighting={lightingEnabled}
-          discoveryEnabled={discoveryEnabled}
-          disableZoom={gameState.phase !== 'garden' && gameState.phase !== 'biome'}
-          allowWindowPan={gameState.phase === 'biome'}
-          showWatercolorCanvas={gameState.phase === 'garden'}
-          pixelArtEnabled={pixelArtEnabled}
-          onStartAdventure={handleStartAdventure}
-          onStartBiome={handleStartBiome}
-          onAssignCardToBuildPile={actions.assignCardToBuildPile}
-          onAssignCardToTileSlot={actions.assignCardToTileSlot}
-          onAssignTokenToTileSlot={actions.assignTokenToTileSlot}
-          onAssignActorToParty={actions.assignActorToParty}
-          onAssignActorToTileHome={actions.assignActorToTileHome}
-          onClearBuildPileProgress={actions.clearBuildPileProgress}
-          onClearTileProgress={actions.clearTileProgress}
-          onClearAllProgress={actions.clearAllProgress}
-          onResetGame={() => actions.newGame(false)}
-          onUpdateTilePosition={actions.updateTileGridPosition}
-          onUpdateTileWatercolorConfig={actions.updateTileWatercolorConfig}
-          onAddTileToGardenAt={actions.addTileToGardenAt}
-          onRemoveTile={actions.removeTileFromGarden}
-          onToggleTileLock={actions.toggleTileLock}
-          onUpdateActorPosition={actions.updateActorGridPosition}
-          onUpdateTokenPosition={actions.updateTokenGridPosition}
-          onStackActors={actions.stackActorOnActor}
-          onStackTokens={actions.stackTokenOnToken}
-          onEquipOrimFromStash={actions.equipOrimFromStash}
-          onMoveOrimBetweenSlots={actions.moveOrimBetweenSlots}
-          onReturnOrimToStash={actions.returnOrimToStash}
-          onAddTokenInstance={actions.addTokenInstanceToGarden}
-          onDepositTokenToStash={actions.depositTokenToStash}
-          onWithdrawTokenFromStash={actions.withdrawTokenFromStash}
-          onReorderActorStack={actions.reorderActorStack}
-          onDetachActorFromStack={actions.detachActorFromStack}
-          onDetachActorFromParty={actions.detachActorFromParty}
-          onRemoveActorFromTileHome={actions.removeActorFromTileHome}
-          showText={showText}
-          showGraphics={showGraphics}
-          serverAlive={serverAlive}
-          fps={fps}
-        />
-      )}
-
-      {returnModal.open && (
-        <div className="fixed inset-0 z-[9500]">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div className="relative w-full h-full flex items-center justify-center p-6">
-            <div className="relative bg-game-bg-dark border border-game-teal/40 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <button
-                onClick={handleCloseReturnModal}
-                className="absolute top-3 right-3 text-xs text-game-pink border border-game-pink rounded w-6 h-6 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
-                title="Close"
-              >
-                x
-              </button>
-              <div className="text-sm text-game-teal tracking-[4px] mb-4">
-                ADVENTURE RETURNS
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div>
-                  <div className="text-xs text-game-purple tracking-wider mb-2">BLUEPRINTS</div>
-                  {(returnModal.blueprintCards.length > 0 || returnModal.blueprints.length > 0) ? (
-                    <div className="flex flex-wrap gap-3">
-                      {returnModal.blueprintCards.map((bp) => {
-                        const def = getBlueprintDefinition(bp.blueprintId);
-                        return (
-                          <div
-                            key={bp.id}
-                            className="border border-game-purple/40 rounded-md px-3 py-2 text-xs"
-                            data-card-face
-                          >
-                            {def?.name?.toUpperCase() ?? 'BLUEPRINT'}
-                          </div>
-                        );
-                      })}
-                      {returnModal.blueprints.map((bp) => {
-                        const def = getBlueprintDefinition(bp.definitionId);
-                        return (
-                          <div
-                            key={bp.id}
-                            className="border border-game-purple/40 rounded-md px-3 py-2 text-xs"
-                            data-card-face
-                          >
-                            {def?.name?.toUpperCase() ?? 'BLUEPRINT'}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-game-white opacity-60">No blueprints returned</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end mt-6">
-                <GameButton onClick={handleCloseReturnModal} color="teal" size="sm">
-                  CONTINUE
-                </GameButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <JewelModal 
-        isOpen={isJewelModalOpen} 
-        onClose={() => setIsJewelModalOpen(false)} 
+      <GameShell
+        gameState={gameState}
+        actions={actions}
+        selectedCard={selectedCard}
+        guidanceMoves={guidanceMoves}
+        validFoundationsForSelected={validFoundationsForSelected}
+        tableauCanPlay={tableauCanPlay}
+        noValidMoves={noValidMoves}
+        isWon={isWon}
+        noRegretStatus={noRegretStatus}
+        wildAnalysis={analysis.wild}
+        showGraphics={showGraphics}
+        lightingEnabled={lightingEnabled}
+        watercolorEnabled={watercolorEnabled}
+        paintLuminosityEnabled={paintLuminosityEnabled}
+        forcedPerspectiveEnabled={forcedPerspectiveEnabled}
+        pixelArtEnabled={pixelArtEnabled}
+        showText={showText}
+        zenModeEnabled={zenModeEnabled}
+        isGamePaused={isGamePaused}
+        timeScale={timeScale}
+        discoveryEnabled={discoveryEnabled}
+        hidePauseOverlay={hidePauseOverlay}
+        onTogglePause={() => {
+          setHidePauseOverlay(false);
+          setIsGamePaused((prev) => !prev);
+        }}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onTogglePaintLuminosity={() => setPaintLuminosityEnabled((prev) => !prev)}
+        onPositionChange={(x, y) => setCurrentPlayerCoords({ x, y })}
+        fps={fps}
+        serverAlive={serverAlive}
+        onOpenPoiEditorAt={handleOpenPoiEditorAt}
+        sandboxOrimIds={sandboxOrimIds}
+        onAddSandboxOrim={(id) => {
+          setSandboxOrimIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+        }}
+        onRemoveSandboxOrim={(id) => {
+          setSandboxOrimIds((prev) => prev.filter((entry) => entry !== id));
+        }}
+        sandboxOrimSearch={sandboxOrimSearch}
+        onSandboxOrimSearchChange={setSandboxOrimSearch}
+        sandboxOrimResults={sandboxOrimResults}
+        orimTrayDevMode={orimTrayDevMode}
+        orimTrayTab={orimTrayTab}
+        onOrimTrayTabChange={setOrimTrayTab}
+        infiniteStockEnabled={infiniteStockEnabled}
+        onToggleInfiniteStock={() => setInfiniteStockEnabled((prev) => !prev)}
+        benchSwapCount={benchSwapCount}
+        onConsumeBenchSwap={() => setBenchSwapCount((prev) => Math.max(0, prev - 1))}
+        infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
+        onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
+        spawnDieRef={spawnDieRef}
       />
 
-      {/* Win screen now displayed near the final tableau */}
-
-      {/* Drag preview */}
-      {dragState.isDragging && dragState.card && (
-        <DragPreview
-          card={dragState.card}
-          position={dragState.position}
-          offset={dragState.offset}
-          size={dragState.size}
-          showText={showText}
-        />
-      )}
-
-      {/* Spawned die with bounce animation */}
-      <AnimatePresence>
-        {spawnedDie && (
-          <motion.div
-            initial={dieAnimating ? { x: 16, y: -100, rotate: -45, scale: 0 } : false}
-            animate={dieAnimating ? {
-              x: [16, diePosition.x, diePosition.x],
-              y: [-100, diePosition.y, diePosition.y],
-              rotate: [0, 720, 720],
-              scale: [0, 1.2, 1]
-            } : {
-              x: diePosition.x,
-              y: diePosition.y,
-              rotate: 0,
-              scale: 1
-            }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={dieAnimating ? {
-              duration: 1.2,
-              times: [0, 0.7, 1],
-              ease: [0.34, 1.56, 0.64, 1]
-            } : {
-              duration: 0
-            }}
-            style={{
-              cursor: dieAnimating ? 'default' : (dieDragging ? 'grabbing' : 'grab')
-            }}
-            className="fixed z-[9999]"
-            onMouseDown={handleDieMouseDown}
-            onTouchStart={handleDieTouchStart}
-          >
-            <div className="relative">
-              {/* Combo effect */}
-              <AnimatePresence>
-                {diceComboPulse > 0 && (
-                  <motion.div
-                    key={diceComboPulse}
-                    initial={{ opacity: 0, scale: 0.3, rotate: -12, y: -6 }}
-                    animate={{ opacity: 1, scale: 1.25, rotate: 10, y: -80 }}
-                    exit={{ opacity: 0, scale: 1.6, rotate: 0, y: -100 }}
-                    transition={{ duration: 0.5, ease: 'backOut' }}
-                    className="absolute -top-10 left-1/2 -translate-x-1/2 pointer-events-none"
-                  >
-                    <div className="relative">
-                      {/* Glow effect */}
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.6, rotate: -18 }}
-                        animate={{ opacity: 0.8, scale: 1.5, rotate: -8 }}
-                        exit={{ opacity: 0, scale: 1.8 }}
-                        transition={{ duration: 0.35, ease: 'backOut' }}
-                        className="absolute -inset-8 rounded-full"
-                        style={{
-                          background: 'radial-gradient(circle, rgba(230,179,30,0.8) 0%, rgba(230,179,30,0) 70%)',
-                          boxShadow: '0 0 40px rgba(230, 179, 30, 0.9)',
-                        }}
-                      />
-
-                      {/* Rotating ring */}
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.5, rotate: 12 }}
-                        animate={{ opacity: 0.9, scale: 1.3, rotate: 6 }}
-                        exit={{ opacity: 0, scale: 1.6 }}
-                        transition={{ duration: 0.4, ease: 'backOut' }}
-                        className="absolute -inset-6 rotate-6"
-                        style={{
-                          background:
-                            'repeating-conic-gradient(from 0deg, rgba(230,179,30,0.3) 0deg 10deg, rgba(10,10,10,0) 10deg 20deg)',
-                          maskImage: 'radial-gradient(circle, black 55%, transparent 72%)',
-                        }}
-                      />
-
-                      {/* Burst text */}
-                      <motion.div
-                        initial={{ opacity: 0, y: -6, rotate: -8 }}
-                        animate={{ opacity: 1, y: -24, rotate: 4 }}
-                        exit={{ opacity: 0, y: -32 }}
-                        transition={{ duration: 0.35, ease: 'backOut' }}
-                        className="absolute -left-16 -top-8 text-xs font-bold tracking-[3px]"
-                        style={{ color: '#f97316', textShadow: '0 0 10px rgba(249, 115, 22, 0.9)' }}
-                      >
-                        POW!
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ opacity: 0, y: 6, rotate: 8 }}
-                        animate={{ opacity: 0.9, y: 24, rotate: -4 }}
-                        exit={{ opacity: 0, y: 32 }}
-                        transition={{ duration: 0.4, ease: 'backOut' }}
-                        className="absolute -right-16 -bottom-8 text-xs font-bold tracking-[3px]"
-                        style={{ color: '#38bdf8', textShadow: '0 0 10px rgba(56, 189, 248, 0.9)' }}
-                      >
-                        BAM!
-                      </motion.div>
-
-                      {/* Result badge */}
-                      <div
-                        className="relative z-10 px-4 py-2 text-sm font-bold tracking-[3px] rounded border-2"
-                        style={{
-                          color: '#e6b31e',
-                          borderColor: '#e6b31e',
-                          background: 'rgba(10, 10, 10, 0.9)',
-                          boxShadow: '0 0 24px rgba(230, 179, 30, 0.8)',
-                          textShadow: '0 0 12px rgba(230, 179, 30, 0.9)',
-                        }}
-                      >
-                        {spawnedDie.value}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <Die die={spawnedDie} size={64} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       </div>
     </ErrorBoundary>
     </WatercolorProvider>

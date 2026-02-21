@@ -739,9 +739,7 @@ export function initializeGame(
     phase: options?.startPhase ?? 'garden', // Start in garden unless overridden
     challengeProgress: persisted?.challengeProgress || createInitialProgress(),
     buildPileProgress: persisted?.buildPileProgress || createInitialBuildPileProgress(),
-    interactionMode: (options?.playtestVariant === 'party-foundations' || options?.playtestVariant === 'party-battle' || options?.playtestVariant === 'rpg'
-      ? 'dnd'
-      : (persisted?.interactionMode || 'click')),
+    interactionMode: 'dnd',
     availableActors: finalizedActors,
     tileParties: baseParties,
     activeSessionTileId: persisted?.activeSessionTileId,
@@ -765,7 +763,7 @@ export function initializeGame(
     tiles: persisted?.tiles || createInitialTiles(),
     blueprints: [], // Player's blueprint library
     pendingBlueprintCards: [], // Blueprints in chaos state
-    playtestVariant: options?.playtestVariant ?? 'party-foundations',
+    playtestVariant: options?.playtestVariant ?? 'rpg',
     currentLocationId: persisted?.currentLocationId ?? 'starting_area', // Initialize player's starting location
     facingDirection: persisted?.facingDirection ?? 'N', // Initialize player's facing direction
     actorKeru: normalizeKeru(persisted?.actorKeru),
@@ -1348,7 +1346,6 @@ function canAwardPlayerActorCards(
   state: GameState,
   options?: { allowEnemyDefault?: boolean; sourceSide?: 'player' | 'enemy' }
 ): boolean {
-  if (state.playtestVariant !== 'rpg') return false;
   const sourceSide = options?.sourceSide ?? (state.randomBiomeActiveSide ?? 'player');
   if (sourceSide === 'enemy') return !!options?.allowEnemyDefault;
   return true;
@@ -4149,6 +4146,21 @@ export function processRelicCombatEvent(state: GameState, event: RelicCombatEven
         procs: 1,
         armorGained: 0,
       },
+    };
+  }
+  if (event.type === 'VALID_MOVE_PLAYED') {
+    const momentumRelic = state.relicDefinitions.find((definition) => definition.behaviorId === 'momentum_v1');
+    if (!momentumRelic) return state;
+    const momentumInstance = state.equippedRelics.find(
+      (instance) => instance.relicId === momentumRelic.id && instance.enabled
+    );
+    if (!momentumInstance) return state;
+    const bonusMs = Math.max(0, Number(momentumRelic.params?.bonusMs ?? 0));
+    if (!bonusMs) return state;
+    return {
+      ...state,
+      rpgComboTimerBonusMs: bonusMs,
+      rpgComboTimerBonusToken: Date.now() + Math.random(),
     };
   }
   if (event.type !== 'TURN_ENDED_EARLY') return state;

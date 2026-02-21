@@ -8,6 +8,37 @@
   </head>
   <body>
     <div id="root"></div>
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+      <defs>
+          <filter id="watercolor">
+              <feTurbulence result="noise-lg" type="fractalNoise" baseFrequency=".0125" NumOctaves="2" seed="1222" />
+              <feTurbulence result="noise-md" type="fractalNoise" baseFrequency=".12" NumOctaves="3" seed="11413" />
+              
+              <!-- Mask noise with SourceGraphic to prevent bleed outside the shape -->
+              <feComposite result="noise-masked" in="noise-lg" in2="SourceGraphic" operator="in" />
+              
+              <!-- BaseGraphic w/ chroma variation -->
+              <feComposite result="BaseGraphic" in="SourceGraphic" in2="noise-masked" operator="arithmetic" k1="0.5" k2="0.6" k3="0.2" k4="0" />
+              
+              <feMorphology id="water" result="layer-1" in="BaseGraphic" operator="dilate" radius="0.5" />
+              <feDisplacementMap result="layer-1" in="layer-1" in2="noise-lg" xChannelSelector="R" yChannelSelector="B" scale="2" />
+              <feDisplacementMap result="layer-1" in="layer-1" in2="noise-md" xChannelSelector="R" yChannelSelector="B" scale="3" />
+              <feDisplacementMap result="mask" in="layer-1" in2="noise-lg" xChannelSelector="A" yChannelSelector="A" scale="4" />
+              <feGaussianBlur result="mask" in="mask" stdDeviation="6" />
+              <feComposite result="layer-1" in="layer-1" in2="mask" operator="arithmetic" k1="1" k2=".4" k3="-.2" k4="0" />
+              
+              <feDisplacementMap result="layer-2" in="BaseGraphic" in2="noise-lg" xChannelSelector="G" yChannelSelector="R" scale="2" />
+              <feDisplacementMap result="layer-2" in="layer-2" in2="noise-md" xChannelSelector="A" yChannelSelector="G" scale="3" />
+              <feDisplacementMap result="glow" in="BaseGraphic" in2="noise-lg" xChannelSelector="R" yChannelSelector="A" scale="5" />
+              <feMorphology result="glow-diff" in="glow" operator="erode" radius="2" />
+              <feComposite result="glow" in="glow" in2="glow-diff" operator="out" />
+              <feGaussianBlur result="glow" in="glow" stdDeviation=".5" />
+              <feComposite id="color" result="layer-2" in="layer-2" in2="glow" operator="arithmetic" k1="1.4" k2="0.7" k3=".4" k4="-0.1" />
+              
+              <feComposite result="watercolor" in="layer-1" in2="layer-2" operator="over" />
+          </filter>
+      </defs>
+    </svg>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

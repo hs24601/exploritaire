@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type AssetEditorTabId = 'actor' | 'orim' | 'card' | 'relic' | 'map' | 'godRays';
+export type AssetEditorTabId = 'actor' | 'orim' | 'card' | 'relic' | 'map' | 'godRays' | 'visuals';
 
 export type AssetEditorTab = {
   id: AssetEditorTabId;
