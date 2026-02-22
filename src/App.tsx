@@ -11,8 +11,6 @@ import { AssetEditorEngine } from './components/editor/AssetEditorEngine';
 import type { AssetEditorPaneDefinition, AssetEditorTabId } from './components/editor/types';
 import type { Element, OrimRarity } from './engine/types';
 import { getActorDefinition } from './engine/actors';
-import { WatercolorContext } from './watercolor/useWatercolorEnabled';
-import { WatercolorProvider } from './watercolor-engine';
 import { initializeGame } from './engine/game';
 import { CardScaleProvider } from './contexts/CardScaleContext';
 import { mainWorldMap, initializeWorldMapPois } from './data/worldMap';
@@ -234,7 +232,6 @@ export default function App() {
   const [showText, setShowText] = useState(true);
   const [commandVisible, setCommandVisible] = useState(true);
   const [lightingEnabled, setLightingEnabled] = useState(true);
-  const [watercolorEnabled, setWatercolorEnabled] = useState(true);
   const [paintLuminosityEnabled, setPaintLuminosityEnabled] = useState(true);
   const [discoveryEnabled, setDiscoveryEnabled] = useState(false);
   const [devNoRegretEnabled, setDevNoRegretEnabled] = useState(false);
@@ -395,7 +392,6 @@ export default function App() {
   const [synergyEditorMessage, setSynergyEditorMessage] = useState<string | null>(null);
   const [isSavingSynergy, setIsSavingSynergy] = useState(false);
   const [useGhostBackground, setUseGhostBackground] = useState(false);
-  const [pixelArtEnabled, setPixelArtEnabled] = useState(false);
   const [cardScale, setCardScale] = useState(1);
   const [timeScale, setTimeScale] = useState(TIME_SCALE_OPTIONS[1]);
   const [cameraDebug, setCameraDebug] = useState<{
@@ -1706,11 +1702,11 @@ export default function App() {
 
 
   useEffect(() => {
-    console.log('[App] phase', gameState?.phase, 'watercolorEnabled', watercolorEnabled);
+    console.log('[App] phase', gameState?.phase);
     if (typeof window !== 'undefined') {
       (window as typeof window & { __EXPLORA_PHASE__?: string }).__EXPLORA_PHASE__ = gameState?.phase ?? 'unknown';
     }
-  }, [gameState?.phase, watercolorEnabled]);
+  }, [gameState?.phase]);
 
   useEffect(() => {
     if (!gameState?.phase) return;
@@ -1788,11 +1784,6 @@ export default function App() {
         return;
       }
 
-      if (key === 'w') {
-        setWatercolorEnabled((prev) => !prev);
-        return;
-      }
-
       if (key === '/') {
         setForcedPerspectiveEnabled((prev) => !prev);
         return;
@@ -1852,11 +1843,6 @@ export default function App() {
         return;
       }
 
-      if (event.key === '[') {
-        event.preventDefault();
-        setPixelArtEnabled((prev) => !prev);
-        return;
-      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -1968,9 +1954,7 @@ export default function App() {
   return (
     <GraphicsContext.Provider value={showGraphics}>
     <InteractionModeContext.Provider value={gameState.interactionMode}>
-    <WatercolorContext.Provider value={watercolorEnabled}>
     <CardScaleProvider value={cardScale}>
-    <WatercolorProvider>
     <ErrorBoundary>
       <div
         className={`w-screen h-screen bg-game-bg-dark flex flex-col items-center justify-center font-mono text-game-gold p-5 box-border overflow-hidden relative${showText ? '' : ' textless-mode'}`}
@@ -2041,18 +2025,6 @@ export default function App() {
                     />
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setWatercolorEnabled((prev) => !prev)}
-                    className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
-                    style={{
-                      color: watercolorEnabled ? '#7fdbca' : '#ff6b6b',
-                      borderColor: watercolorEnabled ? 'rgba(127, 219, 202, 0.6)' : 'rgba(255, 107, 107, 0.6)',
-                    }}
-                    title="Toggle watercolors"
-                  >
-                    🎨 Watercolor
-                  </button>
                   <button
                     type="button"
                     onClick={() => setLightingEnabled((prev) => !prev)}
@@ -4024,10 +3996,8 @@ export default function App() {
         wildAnalysis={analysis.wild}
         showGraphics={showGraphics}
         lightingEnabled={lightingEnabled}
-        watercolorEnabled={watercolorEnabled}
         paintLuminosityEnabled={paintLuminosityEnabled}
         forcedPerspectiveEnabled={forcedPerspectiveEnabled}
-        pixelArtEnabled={pixelArtEnabled}
         showText={showText}
         zenModeEnabled={zenModeEnabled}
         isGamePaused={isGamePaused}
@@ -4075,9 +4045,7 @@ export default function App() {
 
       </div>
     </ErrorBoundary>
-    </WatercolorProvider>
     </CardScaleProvider>
-    </WatercolorContext.Provider>
     </InteractionModeContext.Provider>
     </GraphicsContext.Provider>
   );

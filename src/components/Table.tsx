@@ -39,10 +39,7 @@ import { GAME_BORDER_WIDTH } from '../utils/styles';
 import type { WatercolorConfig } from '../watercolor/types';
 import { cloneWatercolorConfig } from '../watercolor/editorDefaults';
 import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
-import { useWatercolorEnabled } from '../watercolor/useWatercolorEnabled';
 import { getActorCardWatercolor } from '../watercolor/actorCardWatercolor';
-import { WatercolorCanvas } from '../watercolor-engine';
-import type { WatercolorEngineAPI } from '../watercolor-engine';
 
 const TILE_SIZE = { width: GARDEN_GRID.cellSize, height: GARDEN_GRID.cellSize };
 function getOrimDefinition(definitions: OrimDefinition[], definitionId?: string | null): OrimDefinition | null {
@@ -122,8 +119,6 @@ interface TableProps {
   discoveryEnabled?: boolean;
   disableZoom?: boolean;
   allowWindowPan?: boolean;
-  showWatercolorCanvas?: boolean;
-  pixelArtEnabled?: boolean;
   serverAlive?: boolean;
   fps?: number;
   onStartAdventure: (tileId: string) => void;
@@ -1055,11 +1050,7 @@ export const Table = memo(function Table({
   onDetachActorFromStack,
   onDetachActorFromParty,
   onRemoveActorFromTileHome,
-  showWatercolorCanvas,
-  pixelArtEnabled,
 }: TableProps) {
-  const watercolorEnabled = useWatercolorEnabled();
-  const allowWatercolorCanvas = (showWatercolorCanvas ?? true) && watercolorEnabled;
   const saplingTile = useMemo(
     () => tiles.find((tile) => getTileDefinition(tile.definitionId)?.buildPileId === 'sapling'),
     [tiles]
@@ -1136,7 +1127,6 @@ export const Table = memo(function Table({
   // Ref to the garden center for centering
   const gardenCenterRef = useRef<HTMLDivElement>(null);
   const saplingRef = useRef<HTMLDivElement>(null);
-  const watercolorEngineRef = useRef<WatercolorEngineAPI | null>(null);
   const hasCenteredRef = useRef(false);
   const effectiveScaleRef = useRef(effectiveScale);
   effectiveScaleRef.current = effectiveScale;
@@ -4077,26 +4067,6 @@ export const Table = memo(function Table({
           >
             {/* Visual grid */}
             <GardenGrid opacity={1} />
-
-            {/* Watercolor engine canvas - persistent paint layer */}
-            {allowWatercolorCanvas && (
-              <div
-                data-watercolor-canvas-root
-                className="absolute inset-0 pointer-events-none"
-                style={{ zIndex: TABLE_Z + 1 }}
-              >
-                <WatercolorCanvas
-                  width={gridDimensions.width}
-                  height={gridDimensions.height}
-                  paperConfig={{ baseColor: '#0a0a0a', grainIntensity: 0.08 }}
-                  pixelArtEnabled={pixelArtEnabled ?? false}
-                  pixelSize={4}
-                  onReady={(api) => {
-                    watercolorEngineRef.current = api;
-                  }}
-                />
-              </div>
-            )}
 
             {/* Title - centered at top */}
             <div

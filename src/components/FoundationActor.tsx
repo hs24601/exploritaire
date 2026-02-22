@@ -11,7 +11,6 @@ import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
 import { CardFrame } from './card/CardFrame';
 import { getOrimAccentColor, getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
 import { useWatercolorEnabled } from '../watercolor/useWatercolorEnabled';
-import { useWatercolorEngine } from '../watercolor-engine';
 import { getActorCardWatercolor } from '../watercolor/actorCardWatercolor';
 import { ACTOR_WATERCOLOR_TEMPLATE, buildActorWatercolorConfig } from '../watercolor/presets';
 import { useLongPressStateMachine } from '../hooks/useLongPressStateMachine';
@@ -182,29 +181,6 @@ export const FoundationActor = memo(function FoundationActor({
   const foundationOffsetRef = useRef(new Map<string, { x: number; y: number }>());
   const foundationRef = useRef<HTMLDivElement>(null);
   const watercolorEnabled = useWatercolorEnabled();
-  const watercolorEngine = useWatercolorEngine();
-  const splatterPatternIds = useMemo(
-    () => [
-      'splatter_fan_left',
-      'splatter_streak_right',
-      'splatter_drip_down',
-      'splatter_round_burst',
-      'splatter_blob_drip',
-      'splatter_crown',
-    ],
-    []
-  );
-  const pendingSplashRef = useRef<{
-    origin: { x: number; y: number };
-    direction: number;
-    patternId: string;
-    color: string;
-    intensity: number;
-    splotchCount: number;
-    drizzleCount: number;
-    duration: number;
-    sizeScale: number;
-  } | null>(null);
 
   const showEmptyFoundation = cards.length === 0;
   const handleActorLongPressPayload = useCallback((payload: { actor: Actor }) => {
@@ -238,79 +214,19 @@ export const FoundationActor = memo(function FoundationActor({
     onFoundationClick(index);
   }, [actor, index, longPressInspect, onActorLongPress, onFoundationClick]);
 
-  useEffect(() => {
-    if (!watercolorEngine || !pendingSplashRef.current || disableFoundationSplashes) return;
-    watercolorEngine.splash({
-      ...pendingSplashRef.current,
-    });
-    pendingSplashRef.current = null;
-  }, [watercolorEngine]);
-
-  // Detect when a new card is placed and trigger splash
+  // Detect when a new card is placed and trigger visual timing updates.
   useEffect(() => {
     const prevCount = prevCardCountRef.current;
     const currentCount = cards.length;
     prevCardCountRef.current = currentCount;
 
-    // Only trigger splash when cards are added (not removed)
+    // Only react when cards are added (not removed)
     if (currentCount > prevCount && watercolorEnabled && !disableFoundationSplashes) {
-      const newCard = cards[cards.length - 1];
-      const cardColor = newCard?.element ? SUIT_COLORS[ELEMENT_TO_SUIT[newCard.element]] : '#7fdbca';
-      // Follow drag momentum when available; fallback to randomized direction.
-      const primaryDir = Number.isFinite(splashDirectionDeg)
-        ? ((splashDirectionDeg as number) + 360) % 360
-        : Math.random() * 360;
-      const comboBoost = Math.min(Math.max(comboCount, 0), 10);
-      const intensity = 0.8 + comboBoost * 0.08;
-      const sizeScale = 1 + comboBoost * 0.06;
-      const splotchCount = 8 + comboBoost;
-      const drizzleCount = 12 + comboBoost * 2;
-      const duration = Math.max(350, 650 - comboBoost * 25);
-      const patternId = splatterPatternIds[Math.floor(Math.random() * splatterPatternIds.length)] ?? 'splatter_round_burst';
-
-      // Use new PixiJS engine if available (queue if not ready yet)
-      console.log('[FoundationActor] Card placed, watercolorEngine:', !!watercolorEngine, 'foundationRef:', !!foundationRef.current);
-      if (foundationRef.current) {
-        // Get foundation position relative to the watercolor canvas
-        const foundationRect = foundationRef.current.getBoundingClientRect();
-        const canvasRoots = Array.from(document.querySelectorAll('[data-watercolor-canvas-root]')) as HTMLElement[];
-        const bestCanvas = canvasRoots
-          .map((el) => ({ el, rect: el.getBoundingClientRect() }))
-          .filter(({ rect }) => rect.width > 0 && rect.height > 0)
-          .sort((a, b) => (b.rect.width * b.rect.height) - (a.rect.width * a.rect.height))[0];
-        const canvasRect = bestCanvas?.rect ?? {
-          left: 0,
-          top: 0,
-          width: window.innerWidth,
-          height: window.innerHeight,
-        };
-
-        const rawX = foundationRect.left - canvasRect.left + foundationRect.width / 2;
-        const rawY = foundationRect.top - canvasRect.top + foundationRect.height / 2;
-        const centerX = Math.min(Math.max(0, rawX), canvasRect.width);
-        const centerY = Math.min(Math.max(0, rawY), canvasRect.height);
-        const splashPayload = {
-          origin: { x: centerX, y: centerY },
-          direction: primaryDir,
-          patternId,
-          color: cardColor,
-          intensity,
-          splotchCount,
-          drizzleCount,
-          duration,
-          sizeScale,
-        };
-
-        if (watercolorEngine) {
-          watercolorEngine.splash({
-            ...splashPayload,
-          });
-        } else {
-          pendingSplashRef.current = splashPayload;
-        }
-      }
+      void splashDirectionDeg;
+      void splashDirectionToken;
+      void comboCount;
     }
-  }, [cards.length, cards, watercolorEnabled, watercolorEngine, splashDirectionDeg, splashDirectionToken]);
+  }, [cards.length, cards, watercolorEnabled, disableFoundationSplashes, splashDirectionDeg, splashDirectionToken, comboCount]);
   useEffect(() => {
     cards.forEach((card) => {
       if (!foundationTiltRef.current.has(card.id)) {

@@ -8,8 +8,6 @@ import { EncounterScene } from './encounters/EncounterScene';
 import { JewelModal } from './JewelModal';
 import { Die } from './Die';
 import { GameButton } from './GameButton';
-import { WatercolorCanvas } from '../watercolor-engine';
-import { setWatercolorInteractionDegraded } from '../watercolor/WatercolorOverlay';
 import { canPlayCard, canPlayCardWithWild } from '../engine/rules';
 import { ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
 import { getBiomeDefinition } from '../engine/biomes';
@@ -40,10 +38,8 @@ export interface GameShellProps {
 
   // Global settings
   lightingEnabled: boolean;
-  watercolorEnabled: boolean;
   paintLuminosityEnabled: boolean;
   forcedPerspectiveEnabled: boolean;
-  pixelArtEnabled: boolean;
   showText: boolean;
   zenModeEnabled: boolean;
   isGamePaused: boolean;
@@ -99,10 +95,8 @@ export function GameShell({
   wildAnalysis,
   showGraphics,
   lightingEnabled,
-  watercolorEnabled,
   paintLuminosityEnabled,
   forcedPerspectiveEnabled,
-  pixelArtEnabled,
   showText,
   zenModeEnabled,
   isGamePaused,
@@ -152,10 +146,6 @@ export function GameShell({
   const [dieAnimating, setDieAnimating] = useState(false);
   const [dieDragging, setDieDragging] = useState(false);
   const [dieDragOffset, setDieDragOffset] = useState({ x: 0, y: 0 });
-  const [watercolorCanvasSize, setWatercolorCanvasSize] = useState({
-    width: typeof window !== 'undefined' ? window.innerWidth : 0,
-    height: typeof window !== 'undefined' ? window.innerHeight : 0,
-  });
   const [handCards, setHandCards] = useState<CardType[]>([]);
   const [foundationSplashHint, setFoundationSplashHint] = useState<{
     foundationIndex: number;
@@ -200,20 +190,6 @@ export function GameShell({
     : 'ADVENTURE';
 
   // ── Effects ───────────────────────────────────────────────────────────────
-
-  // Window resize → watercolorCanvasSize
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handleResize = () => {
-      setWatercolorCanvasSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // diceComboPulse timeout
   useEffect(() => {
@@ -484,11 +460,6 @@ export function GameShell({
     return () => window.clearTimeout(timeout);
   }, [dragState.isDragging, lastDragEndAt]);
 
-  // Degrade watercolor effects during drag for better FPS
-  useEffect(() => {
-    setWatercolorInteractionDegraded(dragState.isDragging);
-  }, [dragState.isDragging]);
-
   const handleDragStart = useCallback(
     (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => {
       if (tableauIndex === HAND_SOURCE_INDEX) {
@@ -732,24 +703,6 @@ export function GameShell({
             }}
           />
           <div className={`relative w-full h-full flex items-center justify-center${showText ? '' : ' textless-mode'}`}>
-            {watercolorEnabled && (gameState.phase === 'biome' || gameState.phase === 'playing') && (
-              <div
-                data-watercolor-canvas-root
-                className="absolute inset-0 pointer-events-none"
-                style={{ zIndex: 1 }}
-              >
-                <WatercolorCanvas
-                  key={`biome-watercolor-${ghostBackgroundEnabled ? 'ghost' : 'dark'}`}
-                  width={watercolorCanvasSize.width}
-                  height={watercolorCanvasSize.height}
-                  paperConfig={{
-                    baseColor: ghostBackgroundEnabled ? '#f8f8ff' : '#0a0a0a',
-                    grainIntensity: 0.08,
-                  }}
-                  style={{ opacity: lightingEnabled ? 0.68 : 0.85 }}
-                />
-              </div>
-            )}
             <div className="relative w-full h-full flex items-center justify-center" style={{ zIndex: 2 }}>
             {/* Playing screen */}
             {gameState.phase === 'playing' && (
@@ -859,8 +812,6 @@ export function GameShell({
           discoveryEnabled={discoveryEnabled}
           disableZoom={gameState.phase !== 'garden' && gameState.phase !== 'biome'}
           allowWindowPan={gameState.phase === 'biome'}
-          showWatercolorCanvas={gameState.phase === 'garden'}
-          pixelArtEnabled={pixelArtEnabled}
           onStartAdventure={handleStartAdventure}
           onStartBiome={handleStartBiome}
           onAssignCardToBuildPile={actions.assignCardToBuildPile}

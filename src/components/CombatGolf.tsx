@@ -62,13 +62,11 @@ import { ORIM_DEFINITIONS } from '../engine/orims';
 import { getActiveBlindLevel, getBlindedDetail, getBlindedHiddenTableauIndexes, getBlindedLabel } from '../engine/rpgBlind';
 import { getOrimAccentColor, getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
 import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
-import { useWatercolorEngine, usePaintMarkCount } from '../watercolor-engine/WatercolorContext';
 import { getBiomeDefinition } from '../engine/biomes';
 import { createDie } from '../engine/dice';
 import { useDevModeFlag } from '../utils/devMode';
 import { mainWorldMap } from '../data/worldMap';
 import type { PoiTableauPresetId } from '../data/poiTableaus';
-import { SplatterPatternModal } from './SplatterPatternModal';
 import { Tooltip } from './Tooltip';
 import { createRandomBattleHandRewardCard, getBattleHandRewardThreshold } from './combat/battleHandUnlocks';
 import { StartMatchOverlay, type StartOverlayPhase } from './combat/StartMatchOverlay';
@@ -662,7 +660,6 @@ export const CombatGolf = memo(function CombatGolf({
   forcedPerspectiveEnabled = true,
 }: CombatGolfProps) {
   const showGraphics = useGraphics();
-  const [splatterModalOpen, setSplatterModalOpen] = useState(false);
   const [explorationHeading, setExplorationHeading] = useState<Direction>('N');
   const explorationSpawnX = mainWorldMap.defaultSpawnPosition.col;
   const explorationSpawnY = mainWorldMap.defaultSpawnPosition.row;
@@ -834,20 +831,10 @@ export const CombatGolf = memo(function CombatGolf({
   const foundationRowRef = useRef<HTMLDivElement | null>(null);
   const biomeContainerRef = useRef<HTMLElement>(null!);
   const biomeContainerOriginRef = useRef({ left: 0, top: 0 });
-  const watercolorEngine = useWatercolorEngine();
-  const paintMarkCount = usePaintMarkCount();
   const globalCardScale = useCardScale();
   const layoutVariant = gameState.playtestVariant ?? 'single-foundation';
   const isPartyBattleLayout = layoutVariant === 'party-battle' || layoutVariant === 'rpg';
   const isPartyFoundationsLayout = layoutVariant === 'party-foundations' || isPartyBattleLayout;
-  const [paintLights, setPaintLights] = useState<Array<{
-    x: number;
-    y: number;
-    radius: number;
-    intensity: number;
-    color: string;
-    flicker: { enabled: boolean; speed: number; amount: number };
-  }>>([]);
   const [rerollDie, setRerollDie] = useState<DieType>(() => createDie());
   const [rerollRolling, setRerollRolling] = useState(false);
   useEffect(() => {
@@ -2497,63 +2484,6 @@ export const CombatGolf = memo(function CombatGolf({
     });
   }, [activeParty, enemyActors, isRpgMode]);
 
-  useEffect(() => {
-    if (!isRpgMode || !rpgImpactSplashHint || !watercolorEngine) return;
-    const targetEl = rpgImpactSplashHint.side === 'enemy'
-      ? enemyFoundationRefs.current[rpgImpactSplashHint.foundationIndex]
-      : foundationRefs.current[rpgImpactSplashHint.foundationIndex];
-    if (!targetEl) return;
-    const canvasRoots = Array.from(document.querySelectorAll('[data-watercolor-canvas-root]')) as HTMLElement[];
-    const bestCanvas = canvasRoots
-      .map((el) => ({ el, rect: el.getBoundingClientRect() }))
-      .filter(({ rect }) => rect.width > 0 && rect.height > 0)
-      .sort((a, b) => (b.rect.width * b.rect.height) - (a.rect.width * a.rect.height))[0];
-    const canvasRect = bestCanvas?.rect ?? {
-      left: 0,
-      top: 0,
-      width: window.innerWidth,
-      height: window.innerHeight,
-    };
-    const rect = targetEl.getBoundingClientRect();
-    const centerX = Math.min(Math.max(0, rect.left - canvasRect.left + rect.width / 2), canvasRect.width);
-    const centerY = Math.min(Math.max(0, rect.top - canvasRect.top + rect.height / 2), canvasRect.height);
-    const direction = ((rpgImpactSplashHint.directionDeg % 360) + 360) % 360;
-    const originJitterRadius = Math.max(4, Math.round(Math.min(rect.width, rect.height) * 0.08));
-    const jitter = () => ({
-      x: (Math.random() * 2 - 1) * originJitterRadius,
-      y: (Math.random() * 2 - 1) * originJitterRadius,
-    });
-    const first = jitter();
-    watercolorEngine.splash({
-      origin: {
-        x: Math.min(Math.max(0, centerX + first.x), canvasRect.width),
-        y: Math.min(Math.max(0, centerY + first.y), canvasRect.height),
-      },
-      direction,
-      patternId: 'splatter_round_burst',
-      color: '#ff5c5c',
-      intensity: 0.95,
-      splotchCount: 9,
-      drizzleCount: 6,
-      duration: 520,
-      sizeScale: 0.9,
-    });
-    const second = jitter();
-    watercolorEngine.splash({
-      origin: {
-        x: Math.min(Math.max(0, centerX + second.x), canvasRect.width),
-        y: Math.min(Math.max(0, centerY + second.y), canvasRect.height),
-      },
-      direction: (direction + (Math.random() * 16 - 8) + 360) % 360,
-      patternId: 'splatter_blob_drip',
-      color: '#ff5c5c',
-      intensity: 0.75,
-      splotchCount: 6,
-      drizzleCount: 4,
-      duration: 460,
-      sizeScale: 0.78,
-    });
-  }, [isRpgMode, rpgImpactSplashHint, watercolorEngine]);
   const handleActorFoundationLongPress = useCallback((actor: Actor) => {
     setInspectedActorId(actor.id);
     setInspectedRpgCard(null);
@@ -3994,20 +3924,6 @@ export const CombatGolf = memo(function CombatGolf({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-        return;
-      }
-      if (e.key !== '`') return;
-      e.preventDefault();
-      setSplatterModalOpen((prev) => !prev);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Control') {
         setCtrlHeld(true);
       }
@@ -4090,14 +4006,6 @@ export const CombatGolf = memo(function CombatGolf({
       </svg>
     );
   }, [ctrlHeld, gameState.tableaus, gameState.foundations, gameState.activeEffects, activeParty, isEnemyTurn]);
-
-  const splatterModal = (
-    <SplatterPatternModal
-      isOpen={splatterModalOpen}
-      onClose={() => setSplatterModalOpen(false)}
-    />
-  );
-
 
   // Compute foundation blockers for light shadows (only in party-foundations with lighting enabled)
   useEffect(() => {
@@ -4309,75 +4217,6 @@ export const CombatGolf = memo(function CombatGolf({
     prevFoundationsRef.current = gameState.foundations;
   }, [gameState.foundations, lightingEnabled, true, partyComboTotal]);
 
-  // Extract baked paint marks from the WatercolorCanvas engine and convert to lights.
-  // paintMarkCount comes from usePaintMarkCount() which subscribes to the global
-  // notifyPaintMarkAdded() emitter — reactive even across component boundaries.
-  useEffect(() => {
-    if (!lightingEnabled || !paintLuminosityEnabled || !watercolorEngine || !biomeContainerRef.current) {
-      setPaintLights([]);
-      return;
-    }
-
-    const marks = watercolorEngine.getPaintMarks();
-    const canvas = biomeContainerRef.current;
-
-    // WatercolorCanvas uses its own pixel space (canvas width/height).
-    // biomeContainerRef is the DOM overlay – get its size so we can map marks.
-    const canvasState = watercolorEngine.getState();
-    const wcWidth = canvasState.size.width;
-    const wcHeight = canvasState.size.height;
-    if (wcWidth <= 0 || wcHeight <= 0) return;
-
-    const containerRect = canvas.getBoundingClientRect();
-    const scaleX = containerRect.width / wcWidth;
-    const scaleY = containerRect.height / wcHeight;
-
-    // Spatially thin paint marks to a small representative set.
-    // Sort by alpha (brightest first), then skip any mark that lands too close
-    // to one already kept. Cap at MAX_PAINT_LIGHTS to bound per-frame canvas work.
-    const MAX_PAINT_LIGHTS = 8;
-    const MIN_SEP_PX = 70; // minimum separation in container pixels
-
-    const sorted = marks.slice().sort((a, b) => b.alpha - a.alpha);
-    const kept: typeof sorted = [];
-    for (const mark of sorted) {
-      if (kept.length >= MAX_PAINT_LIGHTS) break;
-      const cx = mark.x * scaleX;
-      const cy = mark.y * scaleY;
-      const tooClose = kept.some((k) => {
-        const dx = k.x * scaleX - cx;
-        const dy = k.y * scaleY - cy;
-        return dx * dx + dy * dy < MIN_SEP_PX * MIN_SEP_PX;
-      });
-      if (!tooClose) kept.push(mark);
-    }
-
-    const newPaintLights = kept.map((mark) => {
-      // Map from WatercolorCanvas pixel space to ShadowCanvas pixel space
-      const x = mark.x * scaleX;
-      const y = mark.y * scaleY;
-
-      // Glow radius extends comfortably beyond the splotch edge
-      const radius = mark.radius * Math.max(scaleX, scaleY) * 2.5;
-
-      // Paint lights are purely ambient — no shadow casting (castShadows: false below).
-      // Intensity can be moderate since it only affects the glow punch-through, not shadows.
-      const intensity = Math.min(0.9, mark.alpha * 1.2);
-
-      return {
-        x,
-        y,
-        radius,
-        intensity,
-        color: mark.color,
-        castShadows: false,
-        flicker: { enabled: false, speed: 0, amount: 0 },
-      };
-    });
-
-    setPaintLights(newPaintLights);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lightingEnabled, paintLuminosityEnabled, paintMarkCount, watercolorEngine]);
 
   const handleTableauTopCardRightClick = useCallback((card: CardType, tableauIndex: number) => {
     const tableau = gameState.tableaus[tableauIndex];
@@ -4884,7 +4723,7 @@ export const CombatGolf = memo(function CombatGolf({
                 flicker: { enabled: false, speed: 0, amount: 0 },
               };
             });
-            const allLights = [...flashLights, ...paintLights];
+            const allLights = flashLights;
 
             return (
               <ShadowCanvas
@@ -5761,7 +5600,6 @@ export const CombatGolf = memo(function CombatGolf({
         {actorInspectOverlay}
         {timerBankVisuals}
         {topHudBar}
-        {splatterModal}
       </div>
       </div>
       </div>
@@ -5802,7 +5640,6 @@ export const CombatGolf = memo(function CombatGolf({
         {actorInspectOverlay}
         {timerBankVisuals}
         {topHudBar}
-        {splatterModal}
       </div>
     );
   }
@@ -6052,7 +5889,7 @@ export const CombatGolf = memo(function CombatGolf({
               },
             };
           });
-          const allLights = [...flashLights, ...paintLights];
+          const allLights = flashLights;
 
           return (
             <ShadowCanvas
@@ -6439,7 +6276,6 @@ export const CombatGolf = memo(function CombatGolf({
       {topHudBar}
       </InteractionScreen>
       </div>
-      {splatterModal}
     </div>
         );
       }}
