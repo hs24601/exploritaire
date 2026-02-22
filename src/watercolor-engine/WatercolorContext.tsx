@@ -31,6 +31,26 @@ export function usePaintMarkCount(): number {
   return count;
 }
 
+interface GodRayState {
+  lightPos: [number, number];
+  exposure: number;
+  decay: number;
+  weight: number;
+  density: number;
+  rayColor: [number, number, number];
+  noiseAmount: number;
+}
+
+const DEFAULT_GOD_RAY_STATE: GodRayState = {
+  lightPos: [0.5, 0.15],
+  exposure: 0.10,
+  decay: 0.97,
+  weight: 0.04,
+  density: 0.95,
+  rayColor: [0.78, 0.95, 0.55],
+  noiseAmount: 0.03,
+};
+
 interface WatercolorEngineContextValue {
   /** Engine API (null if not ready) */
   api: WatercolorEngineAPI | null;
@@ -38,6 +58,10 @@ interface WatercolorEngineContextValue {
   ready: boolean;
   /** Register the engine API (called by WatercolorCanvas) */
   setApi: (api: WatercolorEngineAPI) => void;
+  /** God ray state controlled by the editor */
+  godRayState: GodRayState;
+  /** Setter for god ray state */
+  setGodRayState: (next: GodRayState) => void;
 }
 
 const WatercolorEngineContext = createContext<WatercolorEngineContextValue | null>(null);
@@ -46,6 +70,7 @@ let globalWatercolorApi: WatercolorEngineAPI | null = null;
 export function WatercolorProvider({ children }: { children: ReactNode }) {
   const [api, setApiState] = useState<WatercolorEngineAPI | null>(null);
   const [ready, setReady] = useState(false);
+  const [godRayState, setGodRayState] = useState<GodRayState>(DEFAULT_GOD_RAY_STATE);
 
   const setApi = useCallback((newApi: WatercolorEngineAPI) => {
     setApiState(newApi);
@@ -53,10 +78,14 @@ export function WatercolorProvider({ children }: { children: ReactNode }) {
     globalWatercolorApi = newApi;
   }, []);
 
+  const updateGodRayState = useCallback((next: GodRayState) => setGodRayState(next), []);
+
   const value: WatercolorEngineContextValue = {
     api,
     ready,
     setApi,
+    godRayState,
+    setGodRayState: updateGodRayState,
   };
 
   return (
@@ -64,6 +93,22 @@ export function WatercolorProvider({ children }: { children: ReactNode }) {
       {children}
     </WatercolorEngineContext.Provider>
   );
+}
+
+/**
+ * Hook to read the active god ray state.
+ */
+export function useGodRayState(): GodRayState {
+  const context = useContext(WatercolorEngineContext);
+  return context?.godRayState ?? DEFAULT_GOD_RAY_STATE;
+}
+
+/**
+ * Hook to update the active god ray state.
+ */
+export function useSetGodRayState() {
+  const context = useContext(WatercolorEngineContext);
+  return context?.setGodRayState ?? (() => {});
 }
 
 /**

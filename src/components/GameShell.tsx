@@ -3,9 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDragDrop } from '../hooks/useDragDrop';
 import { Table } from './Table';
 import { DragPreview } from './DragPreview';
-import { CombatGolf } from './CombatGolf';
-import { EventEncounter } from './EventEncounter';
 import { PlayingScreen } from './PlayingScreen';
+import { EncounterScene } from './encounters/EncounterScene';
 import { JewelModal } from './JewelModal';
 import { Die } from './Die';
 import { GameButton } from './GameButton';
@@ -57,6 +56,7 @@ export interface GameShellProps {
   onOpenSettings: () => void;
   onTogglePaintLuminosity: () => void;
   onPositionChange: (x: number, y: number) => void;
+  onToggleCombatSandbox: () => void;
 
   // Dev/monitoring
   fps: number;
@@ -112,6 +112,7 @@ export function GameShell({
   onOpenSettings,
   onTogglePaintLuminosity,
   onPositionChange,
+  onToggleCombatSandbox,
   fps,
   serverAlive,
   onOpenPoiEditorAt,
@@ -182,10 +183,6 @@ export function GameShell({
   const showPuzzleOverlay = true;
 
   // ── Derived values ────────────────────────────────────────────────────────
-  const isEventBiome = gameState.currentBiome
-    ? getBiomeDefinition(gameState.currentBiome)?.biomeType === 'event'
-    : false;
-
   const guidanceActive = guidanceMoves.length > 0;
   const totalReturnTokens = Object.values(gameState.collectedTokens || {}).reduce((sum, value) => sum + (value || 0), 0);
   const hasCollectedLoot =
@@ -201,18 +198,6 @@ export function GameShell({
   const activeTileName = activeTile
     ? getTileDefinition(activeTile.definitionId)?.name ?? 'ADVENTURE'
     : 'ADVENTURE';
-
-  const encounterDefinition = useMemo(() => {
-    const enemyActors = gameState.enemyActors ?? [];
-    if (enemyActors.length > 0) {
-      return {
-        type: 'combat' as const,
-        enemyActors,
-        loot: gameState.rewardQueue ?? [],
-      };
-    }
-    return { type: 'puzzle' as const };
-  }, [gameState.enemyActors, gameState.rewardQueue]);
 
   // ── Effects ───────────────────────────────────────────────────────────────
 
@@ -482,7 +467,7 @@ export function GameShell({
     [gameState, actions]
   );
 
-  const { dragState, startDrag, setFoundationRef, lastDragEndAt } = useDragDrop(handleDrop, isGamePaused);
+  const { dragState, startDrag, setFoundationRef, lastDragEndAt, dragPositionRef } = useDragDrop(handleDrop, isGamePaused);
 
   // Tooltip suppression
   useEffect(() => {
@@ -668,6 +653,70 @@ export function GameShell({
     rewindLastCard: actions.rewindLastCard,
   }), [actions.selectCard, actions.playToFoundation, actions.returnToGarden, actions.autoPlay, actions.rewindLastCard]);
 
+  const combatActions = useMemo(() => ({
+    selectCard: actions.selectCard,
+    playToFoundation: actions.playToFoundation,
+    playCardDirect: actions.playCardDirect,
+    playCardInRandomBiome: actions.playCardInRandomBiome,
+    playEnemyCardInRandomBiome: actions.playEnemyCardInRandomBiome,
+    playFromHand: actions.playFromHand,
+    playFromStock: (foundationIndex: number, useWild = false, force = false) =>
+      actions.playFromStock(foundationIndex, useWild, force, !infiniteStockEnabled),
+    completeBiome: actions.completeBiome,
+    autoSolveBiome: actions.autoSolveBiome,
+    playCardInNodeBiome: actions.playCardInNodeBiome,
+    endRandomBiomeTurn: actions.endRandomBiomeTurn,
+    endExplorationTurnInRandomBiome: actions.endExplorationTurnInRandomBiome,
+    advanceRandomBiomeTurn: actions.advanceRandomBiomeTurn,
+    tickRpgCombat: actions.tickRpgCombat,
+    setEnemyDifficulty: actions.setEnemyDifficulty,
+    rewindLastCard: actions.rewindLastCard,
+    swapPartyLead: actions.swapPartyLead,
+    playWildAnalysisSequence: actions.playWildAnalysisSequence,
+    spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
+    setBiomeTableaus: actions.setBiomeTableaus,
+    addRpgHandCard: actions.addRpgHandCard,
+    applyKeruArchetype: actions.applyKeruArchetype,
+    puzzleCompleted: actions.puzzleCompleted,
+    startBiome: actions.startBiome,
+  }), [
+    actions.selectCard,
+    actions.playToFoundation,
+    actions.playCardDirect,
+    actions.playCardInRandomBiome,
+    actions.playEnemyCardInRandomBiome,
+    actions.playFromHand,
+    actions.playFromStock,
+    actions.completeBiome,
+    actions.autoSolveBiome,
+    actions.playCardInNodeBiome,
+    actions.endRandomBiomeTurn,
+    actions.endExplorationTurnInRandomBiome,
+    actions.advanceRandomBiomeTurn,
+    actions.tickRpgCombat,
+    actions.setEnemyDifficulty,
+    actions.rewindLastCard,
+    actions.swapPartyLead,
+    actions.playWildAnalysisSequence,
+    actions.spawnRandomEnemyInRandomBiome,
+    actions.setBiomeTableaus,
+    actions.addRpgHandCard,
+    actions.applyKeruArchetype,
+    actions.puzzleCompleted,
+    actions.startBiome,
+    infiniteStockEnabled,
+  ]);
+
+  const eventActions = useMemo(() => ({
+    puzzleCompleted: actions.puzzleCompleted,
+    completeBiome: actions.completeBiome,
+  }), [actions.puzzleCompleted, actions.completeBiome]);
+
+  const handleCombatPositionChange = useCallback((x: number, y: number) => {
+    setCurrentPlayerCoords({ x, y });
+    onPositionChange(x, y);
+  }, [onPositionChange]);
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
@@ -725,22 +774,9 @@ export function GameShell({
               />
             )}
 
-            {/* Biome screen — event encounters */}
-            {gameState.phase === 'biome' && isEventBiome && (
-              <EventEncounter
+            {gameState.phase === 'biome' && (
+              <EncounterScene
                 gameState={gameState}
-                actions={{
-                  puzzleCompleted: actions.puzzleCompleted,
-                  completeBiome: actions.completeBiome,
-                }}
-              />
-            )}
-
-            {/* Biome screen — combat (CombatGolf) */}
-            {gameState.phase === 'biome' && !isEventBiome && (
-              <CombatGolf
-                gameState={gameState}
-                encounterDefinition={encounterDefinition}
                 selectedCard={selectedCard}
                 validFoundationsForSelected={validFoundationsForSelected}
                 tableauCanPlay={tableauCanPlay}
@@ -759,6 +795,7 @@ export function GameShell({
                 onRemoveSandboxOrim={onRemoveSandboxOrim}
                 hasCollectedLoot={hasCollectedLoot}
                 dragState={dragState}
+                dragPositionRef={dragPositionRef}
                 handleDragStart={handleDragStart}
                 setFoundationRef={setFoundationRef}
                 foundationSplashHint={foundationSplashHint}
@@ -786,42 +823,14 @@ export function GameShell({
                 timeScale={timeScale}
                 onOpenSettings={onOpenSettings}
                 onTogglePause={onTogglePause}
+                onToggleCombatSandbox={onToggleCombatSandbox}
                 wildAnalysis={wildAnalysis}
-                  actions={{
-                    selectCard: actions.selectCard,
-                    playToFoundation: actions.playToFoundation,
-                    playCardDirect: actions.playCardDirect,
-                    playCardInRandomBiome: actions.playCardInRandomBiome,
-                  playEnemyCardInRandomBiome: actions.playEnemyCardInRandomBiome,
-                  playFromHand: actions.playFromHand,
-                  playFromStock: (foundationIndex: number, useWild = false, force = false) =>
-                    actions.playFromStock(foundationIndex, useWild, force, !infiniteStockEnabled),
-                  completeBiome: actions.completeBiome,
-                  autoSolveBiome: actions.autoSolveBiome,
-                  playCardInNodeBiome: actions.playCardInNodeBiome,
-                  endRandomBiomeTurn: actions.endRandomBiomeTurn,
-                  endExplorationTurnInRandomBiome: actions.endExplorationTurnInRandomBiome,
-                  advanceRandomBiomeTurn: actions.advanceRandomBiomeTurn,
-                  tickRpgCombat: actions.tickRpgCombat,
-                  setEnemyDifficulty: actions.setEnemyDifficulty,
-                  rewindLastCard: actions.rewindLastCard,
-                  swapPartyLead: actions.swapPartyLead,
-                    playWildAnalysisSequence: actions.playWildAnalysisSequence,
-                    spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
-                    setBiomeTableaus: actions.setBiomeTableaus,
-                    addRpgHandCard: actions.addRpgHandCard,
-                    applyKeruArchetype: actions.applyKeruArchetype,
-                    puzzleCompleted: actions.puzzleCompleted,
-                    startBiome: actions.startBiome,
-                  }}
+                combatActions={combatActions}
                 explorationStepRef={explorationStepRef}
-
-                onPositionChange={(x, y) => {
-                  setCurrentPlayerCoords({ x, y });
-                  onPositionChange(x, y);
-                }}
+                onPositionChange={handleCombatPositionChange}
                 forcedPerspectiveEnabled={forcedPerspectiveEnabled}
-                />
+                eventActions={eventActions}
+              />
             )}
             </div>
           </div>
@@ -962,7 +971,7 @@ export function GameShell({
       {dragState.isDragging && dragState.card && (
         <DragPreview
           card={dragState.card}
-          position={dragState.position}
+          positionRef={dragPositionRef}
           offset={dragState.offset}
           size={dragState.size}
           showText={showText}

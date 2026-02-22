@@ -213,7 +213,7 @@ export const DynamicPaintCanvas = memo(function DynamicPaintCanvas() {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full h-[400px] rounded-2xl overflow-hidden border border-game-teal/20 bg-white">
+    <div ref={containerRef} className="relative w-full h-[260px] rounded-2xl overflow-hidden border border-game-teal/20 bg-white">
       <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style={{ display: 'none' }}>
         <defs>
           <filter id="squiggly">

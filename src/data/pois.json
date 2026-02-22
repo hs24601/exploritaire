@@ -22,7 +22,7 @@
       "narration": {
         "title": "Awaken an {Aspect|orange}",
         "body": "You cannot progress through this physical world as just a {spirit}. Order the chaos ahead of you to unlock a physical aspect.",
-        "tone": "silver",
+        "tone": "orange",
         "autoCloseOnDeparture": true
       },
       "sparkle": {
@@ -55,6 +55,12 @@
           ]
         }
       ],
+      "narration": {
+        "title": "Unlock Your Inherent Abilities",
+        "body": "Bring order to the chaos to unlock this aspect's knowledge of how to interact with the physical plane.",
+        "tone": "pink",
+        "autoCloseOnDeparture": true
+      },
       "sparkle": {
         "proximityRange": 3,
         "starCount": 6,

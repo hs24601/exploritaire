@@ -22,11 +22,12 @@ export const JewelOrim = memo(function JewelOrim({
   size = 100,
   onPointerDown,
 }: JewelOrimProps) {
-  const { styles: holoStyles, handlePointerMove, handlePointerLeave } = useHoloInteraction();
+  const { styles: holoStyles, handlePointerMove, handlePointerLeave, registerElement } = useHoloInteraction();
 
   return (
-    <div 
-      className="flex flex-col items-center relative group"
+      <div
+        ref={registerElement}
+        className="flex flex-col items-center relative group"
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onPointerDown={onPointerDown}

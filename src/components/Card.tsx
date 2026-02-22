@@ -17,9 +17,11 @@ import abilitiesJson from '../data/abilities.json';
 import { ORIM_DEFINITIONS } from '../engine/orims';
 import { useHoloInteraction } from '../hooks/useHoloInteraction';
 import { RarityAura } from './RarityAura';
+import { HorizontalRipThreeEffect } from './card/HorizontalRipThreeEffect';
 
 const CARD_WATERCOLOR_CANVAS_SCALE = 1.35;
 const CARD_WATERCOLOR_OVERALL_SCALE_MULTIPLIER = 1 / CARD_WATERCOLOR_CANVAS_SCALE;
+const BLUEVEE_ASSET = '/assets/Bluevee.png';
 
 interface CardProps {
   card: CardType | null;
@@ -49,6 +51,10 @@ interface CardProps {
   valueWatercolor?: WatercolorConfig | null;
   maskValue?: boolean;
   disableTilt?: boolean;
+  disableHoverLift?: boolean;
+  hideElements?: boolean;
+  rpgSubtitleRarityOnly?: boolean;
+  ripTrigger?: number;
 }
 
 export const Card = memo(function Card({
@@ -79,10 +85,15 @@ export const Card = memo(function Card({
   valueWatercolor,
   maskValue = false,
   disableTilt = false,
+  disableHoverLift = false,
+  ripTrigger = 0,
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [shimmer, setShimmer] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [showRipOverlay, setShowRipOverlay] = useState(false);
+  const [hideDomCard, setHideDomCard] = useState(false);
+  const handledRipTriggerRef = useRef(0);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!onDragStart || !card || faceDown) return;
@@ -370,19 +381,28 @@ export const Card = memo(function Card({
   }, [showDarkArtOverlay, card]);
 
   const isKeruAspectCard = !!keruAspectProfile;
-  const { styles: holoStyles, handlePointerMove, handlePointerLeave } = useHoloInteraction();
+  const { styles: holoStyles, handlePointerMove, handlePointerLeave, registerElement } = useHoloInteraction();
   const rarity = (keruAspectProfile?.rarity || card?.rarity || 'common').toLowerCase() as OrimRarity;
   const isShiny = rarity !== 'common' || isUpgradedRpgCard;
   const effectiveRarity = rarity === 'common' && isUpgradedRpgCard ? 'rare' : rarity;
 
+  useEffect(() => {
+    if (ripTrigger <= 0) return;
+    if (ripTrigger === handledRipTriggerRef.current) return;
+    handledRipTriggerRef.current = ripTrigger;
+    setHideDomCard(false);
+    setShowRipOverlay(true);
+  }, [ripTrigger]);
+
   return (
     <div
+      ref={registerElement}
       className="relative"
       style={{
         ...(disableTilt ? {} : holoStyles),
         width: frameSize.width,
         height: frameSize.height,
-        zIndex: isHovered ? 50 : 1,
+        zIndex: (!disableHoverLift && isHovered) ? 50 : 1,
       }}
       onPointerMove={disableTilt ? undefined : handlePointerMove}
       onMouseLeave={(e) => {
@@ -407,7 +427,7 @@ export const Card = memo(function Card({
         boxShadow={getBoxShadow()}
         onClick={onClick}
         onPointerDown={onDragStart ? handlePointerDown : undefined}
-        whileHover={!faceDown && !isAnyCardDragging && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
+        whileHover={!disableHoverLift && !faceDown && !isAnyCardDragging && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
         whileTap={!faceDown && !isAnyCardDragging && !onDragStart && onClick ? { scale: 0.98 } : {}}
         initial={false}
         onMouseEnter={() => setIsHovered(true)}
@@ -424,6 +444,7 @@ export const Card = memo(function Card({
         style={{
           color: faceDown ? 'transparent' : (isDimmed ? `${suitColor}44` : suitColor),
           visibility: isDragging ? 'hidden' : 'visible',
+          opacity: hideDomCard ? 0 : 1,
           // Prevent the browser from claiming touch gestures as scroll when the card
           // is draggable. Without this, a downward drag on mobile lets the browser
           // decide at touchstart time that it owns the gesture (before JS runs),
@@ -454,6 +475,17 @@ export const Card = memo(function Card({
 
         {isShiny && !faceDown && (
           <>
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                zIndex: 9,
+                backgroundImage: `url('${BLUEVEE_ASSET}')`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                opacity: isHovered ? 0.45 : 0.35,
+              }}
+            />
             {/* Glare Layer */}
             <div
               className="absolute inset-0 pointer-events-none"
@@ -478,9 +510,9 @@ export const Card = memo(function Card({
               }}
             />
           </>
-        )}
+      )}
       {cardWatercolorConfig && (
-        <WatercolorContext.Provider value={forceWatercolor}>
+        <WatercolorContext.Provider value={forceWatercolor || !!cardWatercolor}>
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
@@ -1542,6 +1574,15 @@ export const Card = memo(function Card({
       )}
       </CardFrame>
       </div>
+      {showRipOverlay && !faceDown && (
+        <HorizontalRipThreeEffect
+          sourceRef={cardRef}
+          trigger={ripTrigger}
+          width={frameSize.width}
+          height={frameSize.height}
+          onSnapshotReady={() => setHideDomCard(true)}
+        />
+      )}
       {isShiny && !faceDown && (
         <RarityAura
           rarity={effectiveRarity}

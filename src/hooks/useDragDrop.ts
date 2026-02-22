@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { scheduleDragRafOnce } from './dragRafCoordinator';
 import type { Card } from '../engine/types';
 
 export interface DragState {
@@ -39,8 +40,8 @@ export function useDragDrop(
   const onDropRef = useRef(onDrop);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const pendingPosRef = useRef<{ x: number; y: number } | null>(null);
+  const dragPositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const samplePointsRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
-  const rafRef = useRef<number | null>(null);
   const pausedRef = useRef(paused);
 
   useEffect(() => {
@@ -87,6 +88,7 @@ export function useDragDrop(
       size: { width: cardRect.width, height: cardRect.height },
       isDragging: true,
     };
+    dragPositionRef.current = { x: clientX - offset.x, y: clientY - offset.y };
     // Sync the ref immediately — before React re-renders and before useEffect runs —
     // so that pointermove / pointercancel / touchmove handlers see isDragging = true
     // from the very first event after the drag begins.
@@ -102,22 +104,13 @@ export function useDragDrop(
     if (samplePointsRef.current.length > 8) {
       samplePointsRef.current.shift();
     }
-    if (rafRef.current !== null) return;
-    rafRef.current = window.requestAnimationFrame(() => {
-      rafRef.current = null;
+    scheduleDragRafOnce(() => {
       const pending = pendingPosRef.current;
       const current = dragStateRef.current;
       if (!pending || !current.isDragging) return;
       const nextX = pending.x - current.offset.x;
       const nextY = pending.y - current.offset.y;
-      setDragState((prev) => {
-        if (!prev.isDragging) return prev;
-        if (prev.position.x === nextX && prev.position.y === nextY) return prev;
-        return {
-          ...prev,
-          position: { x: nextX, y: nextY },
-        };
-      });
+      dragPositionRef.current = { x: nextX, y: nextY };
     });
   }, []);
 
@@ -127,10 +120,6 @@ export function useDragDrop(
       setLastDragEndAt(Date.now());
       setDragState(initialDragState);
       return;
-    }
-    if (rafRef.current !== null) {
-      window.cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
     }
     pendingPosRef.current = null;
     let momentum: DragMomentum | undefined;
@@ -183,10 +172,6 @@ export function useDragDrop(
   }, []);
 
   const cancelDrag = useCallback(() => {
-    if (rafRef.current !== null) {
-      window.cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
     pendingPosRef.current = null;
     samplePointsRef.current = [];
     dragStateRef.current = initialDragState;
@@ -299,5 +284,6 @@ export function useDragDrop(
     startDrag,
     setFoundationRef,
     lastDragEndAt,
+    dragPositionRef,
   };
 }

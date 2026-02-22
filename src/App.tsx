@@ -5,6 +5,10 @@ import { useGameEngine } from './hooks/useGameEngine';
 import { RowManager } from './components/RowManager';
 import { DebugConsole } from './components/DebugConsole';
 import { VisualsEditor } from './components/VisualsEditor';
+import { MapEditor } from './components/MapEditor';
+import { GodRaysEditor } from './components/GodRaysEditor';
+import { AssetEditorEngine } from './components/editor/AssetEditorEngine';
+import type { AssetEditorPaneDefinition, AssetEditorTabId } from './components/editor/types';
 import type { Element, OrimRarity } from './engine/types';
 import { getActorDefinition } from './engine/actors';
 import { WatercolorContext } from './watercolor/useWatercolorEnabled';
@@ -17,6 +21,7 @@ import abilitiesJson from './data/abilities.json';
 import { ORIM_DEFINITIONS } from './engine/orims';
 import type { PoiReward, PoiRewardType, PoiSparkleConfig } from './engine/worldMapTypes';
 import { GameShell } from './components/GameShell';
+import { CombatSandbox } from './components/combat/CombatSandbox';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -82,7 +87,7 @@ type PoiNarrationDraft = {
   completion?: {
     title: string;
     body: string;
-    tone: 'teal' | 'gold' | 'violet' | 'green';
+    tone: 'teal' | 'gold' | 'violet' | 'green' | 'red' | 'blue' | 'orange' | 'pink' | 'silver' | 'brown' | 'black' | 'white';
   };
 };
 
@@ -245,6 +250,16 @@ export default function App() {
   const [infiniteBenchSwapsEnabled, setInfiniteBenchSwapsEnabled] = useState(false);
   const [cameraDebugOpen, setCameraDebugOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [combatSandboxOpen, setCombatSandboxOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    const value = params.get('sandbox');
+    return value === '1' || value === 'combat' || value === 'true';
+  });
+  const [assetEditorOpen, setAssetEditorOpen] = useState(false);
+  const [assetEditorTab, setAssetEditorTab] = useState<AssetEditorTabId>('visuals');
+  const [isGodRaysSliderDragging, setIsGodRaysSliderDragging] = useState(false);
+  const [activeGodRaysSliderId, setActiveGodRaysSliderId] = useState<string | null>(null);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [isGamePaused, setIsGamePaused] = useState(false);
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
@@ -325,7 +340,6 @@ export default function App() {
       abilityCardRank: entry.cardRank ?? 1,
       abilityCardElements: ensureElementList(entry.cardElements),
       abilityCardGlyph: entry.cardGlyph ?? '',
-      abilityRarity: entry.rarity ?? 'common',
       tagsText: (entry.tags ?? []).join(', '),
       archetypeCardId: '',
       archetypeCardRank: 1,
@@ -397,6 +411,36 @@ export default function App() {
   } | null>(null);
   const [commandBarHeight, setCommandBarHeight] = useState(0);
   const spawnDieRef = useRef<((clientX: number, clientY: number) => void) | null>(null);
+  const assetEditorPanes = useMemo<AssetEditorPaneDefinition[]>(() => [
+    {
+      id: 'visuals',
+      label: 'Visuals',
+      render: () => <VisualsEditor />,
+    },
+    {
+      id: 'map',
+      label: 'Map',
+      render: () => (
+        <MapEditor
+          embedded={false}
+          onClose={() => setAssetEditorOpen(false)}
+        />
+      ),
+    },
+    {
+      id: 'godRays',
+      label: 'God Rays',
+      render: () => (
+        <GodRaysEditor
+          embedded={false}
+          onClose={() => setAssetEditorOpen(false)}
+          onSliderDragChange={(isDragging) => setIsGodRaysSliderDragging(isDragging)}
+          activeSliderId={activeGodRaysSliderId}
+          onActiveSliderChange={setActiveGodRaysSliderId}
+        />
+      ),
+    },
+  ], [activeGodRaysSliderId]);
   const initialGameState = useMemo(() => {
     if (typeof window === 'undefined') {
       return initializeGame();
@@ -1817,7 +1861,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [actions]);
+  }, [actions, toolingOpen]);
 
   const handleSpawnDie = useCallback((e: React.MouseEvent) => {
     spawnDieRef.current?.(e.clientX, e.clientY);
@@ -1839,6 +1883,10 @@ export default function App() {
       const nextIndex = (currentIndex + 1) % TIME_SCALE_OPTIONS.length;
       return TIME_SCALE_OPTIONS[nextIndex];
     });
+  }, []);
+  const handleTogglePause = useCallback(() => {
+    setHidePauseOverlay(false);
+    setIsGamePaused((prev) => !prev);
   }, []);
 
   useEffect(() => {
@@ -1964,44 +2012,26 @@ export default function App() {
                   DEV / FEATURES
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
-                    <div className="text-[10px] text-game-white/70 tracking-[2px]">PROGRESS</div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={actions.clearAllProgress}
-                        className="text-[10px] font-mono bg-game-bg-dark/80 border px-2 py-1 rounded cursor-pointer"
-                        style={{
-                          color: '#d946ef',
-                          borderColor: 'rgba(217, 70, 239, 0.6)',
-                          textShadow: '0 0 8px rgba(217, 70, 239, 0.8)',
-                        }}
-                        title="Clear all progress"
-                      >
-                        CLEAR PROGRESS
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => actions.newGame(false)}
-                        className="text-[10px] font-mono bg-game-bg-dark/80 border px-2 py-1 rounded cursor-pointer"
-                        style={{
-                          color: '#ff6b6b',
-                          borderColor: 'rgba(255, 107, 107, 0.6)',
-                          textShadow: '0 0 8px rgba(255, 107, 107, 0.8)',
-                        }}
-                        title="Reset game"
-                      >
-                        RESET GAME
-                      </button>
-                    </div>
-                    <div className="text-[10px] text-game-teal font-mono pointer-events-none bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded">
-                      Last change: {buildStamp}
-                    </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
+                  <div className="text-[10px] text-game-white/70 tracking-[2px]">PROGRESS</div>
+                  <div className="text-[10px] text-game-teal font-mono pointer-events-none bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded">
+                    Last change: {buildStamp}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-game-white/70">Console</span>
-                    <DebugConsole
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    setAssetEditorOpen(true);
+                  }}
+                  className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/30 px-3 py-2 rounded uppercase tracking-[0.3em] text-game-white hover:border-game-gold hover:text-game-gold transition-colors"
+                >
+                  EDITOR
+                </button>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-game-white/70">Console</span>
+                  <DebugConsole
                       visible={commandVisible}
                       onBarHeightChange={handleCommandBarHeightChange}
                       onAddTileToGarden={actions.addTileToGarden}
@@ -2111,8 +2141,21 @@ export default function App() {
                   >
                     🧰 Tooling
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setCombatSandboxOpen((prev) => !prev)}
+                    className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
+                    style={{
+                      color: combatSandboxOpen ? '#e6b31e' : '#7fdbca',
+                      borderColor: combatSandboxOpen ? 'rgba(230, 179, 30, 0.6)' : 'rgba(127, 219, 202, 0.6)',
+                    }}
+                    title="Toggle combat sandbox panel"
+                  >
+                    {combatSandboxOpen ? '🥊 Sandbox: ON' : '🥊 Sandbox: OFF'}
+                  </button>
                   <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
                     <div className="text-[10px] text-game-white/70 tracking-[2px]">HOTKEYS</div>
+                    <div className="text-[10px] text-game-teal/80 font-mono">C — Combat sandbox</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">E — Editor</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">P — Background toggle</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">G — Graphics toggle</div>
@@ -3953,6 +3996,21 @@ export default function App() {
           </div>
         )}
 
+      <CombatSandbox
+        open={combatSandboxOpen}
+        onClose={() => setCombatSandboxOpen(false)}
+        gameState={gameState}
+        actions={actions}
+        timeScale={timeScale}
+        onCycleTimeScale={handleCycleTimeScale}
+        isGamePaused={isGamePaused}
+        onTogglePause={handleTogglePause}
+        selectedCard={selectedCard}
+        validFoundationsForSelected={validFoundationsForSelected}
+        noValidMoves={noValidMoves}
+        tableauCanPlay={tableauCanPlay}
+      />
+
       <GameShell
         gameState={gameState}
         actions={actions}
@@ -3976,10 +4034,7 @@ export default function App() {
         timeScale={timeScale}
         discoveryEnabled={discoveryEnabled}
         hidePauseOverlay={hidePauseOverlay}
-        onTogglePause={() => {
-          setHidePauseOverlay(false);
-          setIsGamePaused((prev) => !prev);
-        }}
+        onTogglePause={handleTogglePause}
         onOpenSettings={() => setSettingsOpen(true)}
         onTogglePaintLuminosity={() => setPaintLuminosityEnabled((prev) => !prev)}
         onPositionChange={(x, y) => setCurrentPlayerCoords({ x, y })}
@@ -4006,6 +4061,16 @@ export default function App() {
         infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
         onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
         spawnDieRef={spawnDieRef}
+        onToggleCombatSandbox={() => setCombatSandboxOpen((prev) => !prev)}
+      />
+
+      <AssetEditorEngine
+        open={assetEditorOpen}
+        onClose={() => setAssetEditorOpen(false)}
+        activeTab={assetEditorTab}
+        onTabChange={setAssetEditorTab}
+        panes={assetEditorPanes}
+        isGodRaysSliderDragging={isGodRaysSliderDragging}
       />
 
       </div>

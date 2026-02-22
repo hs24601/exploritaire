@@ -16,6 +16,8 @@ interface PerspectiveTableauGroupProps {
   revealNextRow?: boolean;
   tableauCanPlay?: boolean[];
   noValidMoves?: boolean;
+  onTopCardRightClick?: (card: CardType, tableauIndex: number) => void;
+  ripTriggerByCardId?: Record<string, number>;
 }
 
 export const PerspectiveTableauGroup = memo(function PerspectiveTableauGroup({
@@ -32,6 +34,8 @@ export const PerspectiveTableauGroup = memo(function PerspectiveTableauGroup({
   revealNextRow,
   tableauCanPlay = [],
   noValidMoves = false,
+  onTopCardRightClick,
+  ripTriggerByCardId,
 }: PerspectiveTableauGroupProps) {
   return (
     <div className="perspective-group-container">
@@ -55,6 +59,8 @@ export const PerspectiveTableauGroup = memo(function PerspectiveTableauGroup({
             revealAllCards={true}
             layout="horizontal"
             revealNextRow={revealNextRow}
+            onTopCardRightClick={onTopCardRightClick}
+            ripTriggerByCardId={ripTriggerByCardId}
           />
         ))}
       </div>

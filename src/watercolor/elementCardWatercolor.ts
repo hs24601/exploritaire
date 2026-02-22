@@ -3,7 +3,37 @@ import type { WatercolorConfig } from './types';
 import { ACTOR_WATERCOLOR_TEMPLATE, buildActorWatercolorConfig } from './presets';
 
 export function getElementCardWatercolor(element: Element | undefined): WatercolorConfig | null {
-  if (!element || element === 'N') return null;
+  if (!element) return null;
+
+  if (element === 'N') {
+    const baseColor = '#667085';
+    const config = buildActorWatercolorConfig(baseColor, ACTOR_WATERCOLOR_TEMPLATE);
+    return {
+      ...config,
+      splotches: config.splotches.map((splotch, index) => ({
+        ...splotch,
+        blendMode: 'normal',
+        opacity: Math.max(0.45, 0.78 - index * 0.08),
+        gradient: {
+          ...splotch.gradient,
+          light: '#e8edf7',
+          mid: '#9aa8c2',
+          dark: '#3f4a60',
+          lightOpacity: 0.78,
+          midOpacity: 0.72,
+          darkOpacity: 0.82,
+        },
+      })),
+      grain: {
+        ...config.grain,
+        enabled: true,
+        intensity: 0.22,
+        frequency: 0.03,
+        blendMode: 'overlay',
+      },
+      overallScale: 1.05,
+    };
+  }
 
   if (element === 'A') {
     const baseColor = '#9cc6ef';
@@ -631,6 +661,36 @@ export function getElementCardWatercolor(element: Element | undefined): Watercol
         blendMode: 'overlay',
       },
       overallScale: 1.1,
+    };
+  }
+
+  if (element === 'D') {
+    const baseColor = '#5f4a78';
+    const config = buildActorWatercolorConfig(baseColor, ACTOR_WATERCOLOR_TEMPLATE);
+    return {
+      ...config,
+      splotches: config.splotches.map((splotch, index) => ({
+        ...splotch,
+        blendMode: 'normal',
+        opacity: Math.max(0.5, 0.82 - index * 0.08),
+        gradient: {
+          ...splotch.gradient,
+          light: '#d8cdef',
+          mid: '#8f79b1',
+          dark: '#2a1d3f',
+          lightOpacity: 0.82,
+          midOpacity: 0.78,
+          darkOpacity: 0.9,
+        },
+      })),
+      grain: {
+        ...config.grain,
+        enabled: true,
+        intensity: 0.2,
+        frequency: 0.03,
+        blendMode: 'overlay',
+      },
+      overallScale: 1.08,
     };
   }
 

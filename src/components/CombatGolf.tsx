@@ -1,8 +1,23 @@
-import { memo, useEffect, useState, useMemo, useCallback, useRef, type RefObject, type KeyboardEventHandler } from 'react';
+import { memo, useEffect, useState, useMemo, useCallback, useRef, type RefObject, type KeyboardEventHandler, type MutableRefObject } from 'react';
 import { useGraphics } from '../contexts/GraphicsContext';
 import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition, Die as DieType, RelicCombatEvent, ActorKeru, ActorKeruArchetype, EncounterDefinition } from '../engine/types';
 import type { PoiReward } from '../engine/worldMapTypes';
 import type { DragState } from '../hooks/useDragDrop';
+import { subscribeDragRaf } from '../hooks/dragRafCoordinator';
+import { useExplorationEncounterState } from '../hooks/useExplorationEncounterState';
+import { useExplorationBootstrapState } from '../hooks/useExplorationBootstrapState';
+import { useExplorationMapVisibility } from '../hooks/useExplorationMapVisibility';
+import { useExplorationNavigationControls } from '../hooks/useExplorationNavigationControls';
+import { useExplorationPoiArrivalRewards } from '../hooks/useExplorationPoiArrivalRewards';
+import { useExplorationPoiClearRewards } from '../hooks/useExplorationPoiClearRewards';
+import { useExplorationOrimRewardCallouts } from '../hooks/useExplorationOrimRewardCallouts';
+import { useExplorationPoiRewardFlow } from '../hooks/useExplorationPoiRewardFlow';
+import { useExplorationTableauDisplaySync } from '../hooks/useExplorationTableauDisplaySync';
+import { useExplorationTableauProgress } from '../hooks/useExplorationTableauProgress';
+import { useExplorationTravelProgression } from '../hooks/useExplorationTravelProgression';
+import { useExplorationTraverseHoldControls } from '../hooks/useExplorationTraverseHoldControls';
+import { useExplorationTraversalController } from '../hooks/useExplorationTraversalController';
+import { useKeruMutationCallouts } from '../hooks/useKeruMutationCallouts';
 import type { BlockingRect } from '../engine/lighting';
 import { ShadowCanvas } from './LightRenderer';
 import { GameButton } from './GameButton';
@@ -17,7 +32,7 @@ import { FoundationTokenGrid } from './FoundationTokenGrid';
 import { Foundation } from './Foundation';
 import { DIRECTIONS, type Direction } from './Compass';
 import type { ExplorationMapEdge, ExplorationMapNode, ExplorationBlockedCell } from './ExplorationMap';
-import { Exploritaire, type PoiNarration } from './Exploritaire';
+import type { PoiNarration } from './Exploritaire';
 import { InteractionScreen } from './InteractionScreen';
 import { ComboTimerController } from './ComboTimerController';
 import { ResourceStash } from './ResourceStash';
@@ -52,7 +67,7 @@ import { getBiomeDefinition } from '../engine/biomes';
 import { createDie } from '../engine/dice';
 import { useDevModeFlag } from '../utils/devMode';
 import { mainWorldMap } from '../data/worldMap';
-import { createPoiTableauPreset, type PoiTableauPresetId } from '../data/poiTableaus';
+import type { PoiTableauPresetId } from '../data/poiTableaus';
 import { SplatterPatternModal } from './SplatterPatternModal';
 import { Tooltip } from './Tooltip';
 import { createRandomBattleHandRewardCard, getBattleHandRewardThreshold } from './combat/battleHandUnlocks';
@@ -62,6 +77,7 @@ import { RpgCardInspectOverlay, getRpgCardMeta } from './combat/RpgCardInspectOv
 import { ActorInspectOverlay } from './combat/ActorInspectOverlay';
 import { TargetSwirlIndicator } from './TargetSwirlIndicator';
 import { Callout } from './Callout';
+import { ExplorationEncounterPanel } from './encounters/ExplorationEncounterPanel';
 import { isGameAudioMuted, playCardPlaceSound, setGameAudioMuted } from '../audio/gameAudio';
 import {
   ASPECT_ABILITY_DEFINITIONS,
@@ -127,6 +143,135 @@ const getKeruAspectAttributeLines = (archetype?: ActorKeruArchetype | null): str
   }).filter(Boolean);
 };
 
+type DragLight = {
+  x: number;
+  y: number;
+  radius: number;
+  intensity: number;
+  color: string;
+  castShadows: boolean;
+  flicker: { enabled: boolean; speed: number; amount: number };
+};
+
+const DragLightOverlay = memo(function DragLightOverlay({
+  active,
+  dragPositionRef,
+  fallbackPositionRef,
+  effectiveGlobalCardScale,
+  containerSize,
+  containerRef,
+  anchorRef,
+  biomeOriginRef,
+  foundationRefs,
+  isDraggingKeruRewardCard,
+  ambientDarkness,
+}: {
+  active: boolean;
+  dragPositionRef?: MutableRefObject<{ x: number; y: number }>;
+  fallbackPositionRef: MutableRefObject<{ x: number; y: number }>;
+  effectiveGlobalCardScale: number;
+  containerSize: { width: number; height: number };
+  containerRef: RefObject<HTMLDivElement>;
+  anchorRef: RefObject<HTMLDivElement>;
+  biomeOriginRef: MutableRefObject<{ left: number; top: number }>;
+  foundationRefs: MutableRefObject<Array<HTMLDivElement | null>>;
+  isDraggingKeruRewardCard: boolean;
+  ambientDarkness: number;
+}) {
+  const [lights, setLights] = useState<DragLight[]>([]);
+
+  useEffect(() => {
+    if (!active) {
+      setLights([]);
+      return;
+    }
+    const update = () => {
+      const base = dragPositionRef?.current ?? fallbackPositionRef.current;
+      const cardScale = 1.25;
+      const effectiveScale = cardScale * effectiveGlobalCardScale;
+      const dragCenterX = base.x + (CARD_SIZE.width * effectiveScale) / 2 - biomeOriginRef.current.left;
+      const dragCenterY = base.y + (CARD_SIZE.height * effectiveScale) / 2 - biomeOriginRef.current.top;
+      const nextLights: DragLight[] = [{
+        x: dragCenterX,
+        y: dragCenterY,
+        radius: 260,
+        intensity: 1.2,
+        color: '#ffffff',
+        castShadows: false,
+        flicker: { enabled: false, speed: 0, amount: 0 },
+      }];
+      if (isDraggingKeruRewardCard) {
+        const targetEl = foundationRefs.current[0];
+        if (targetEl) {
+          const targetRect = targetEl.getBoundingClientRect();
+          const targetX = targetRect.left - biomeOriginRef.current.left + (targetRect.width / 2);
+          const targetY = targetRect.top - biomeOriginRef.current.top + (targetRect.height / 2);
+          nextLights.push({
+            x: targetX,
+            y: targetY,
+            radius: 220,
+            intensity: 1.05,
+            color: '#7fdbca',
+            castShadows: false,
+            flicker: { enabled: true, speed: 0.007, amount: 0.16 },
+          });
+          nextLights.push({
+            x: targetX,
+            y: targetY,
+            radius: 140,
+            intensity: 1.25,
+            color: '#f7d24b',
+            castShadows: false,
+            flicker: { enabled: true, speed: 0.011, amount: 0.24 },
+          });
+        }
+      }
+      setLights(nextLights);
+    };
+    update();
+    const unsubscribe = subscribeDragRaf(() => update());
+    return unsubscribe;
+  }, [
+    active,
+    dragPositionRef,
+    fallbackPositionRef,
+    effectiveGlobalCardScale,
+    biomeOriginRef,
+    foundationRefs,
+    isDraggingKeruRewardCard,
+  ]);
+
+  if (!active || containerSize.width <= 0) return null;
+
+  const lightX = containerSize.width / 2;
+  const lightY = containerSize.height * 0.05;
+  const lightRadius = Math.max(containerSize.width, containerSize.height) * 1.2;
+
+  return (
+    <ShadowCanvas
+      containerRef={containerRef}
+      anchorRef={anchorRef}
+      useCameraTransform={false}
+      lightX={lightX}
+      lightY={lightY}
+      lightRadius={lightRadius}
+      lightIntensity={0}
+      lightColor="#ffffff"
+      ambientDarkness={ambientDarkness}
+      flickerSpeed={0}
+      flickerAmount={0}
+      blockers={[]}
+      actorGlows={[]}
+      actorLights={lights}
+      worldWidth={containerSize.width}
+      worldHeight={containerSize.height}
+      tileSize={100}
+      width={containerSize.width}
+      height={containerSize.height}
+    />
+  );
+});
+
 interface CombatGolfProps {
   gameState: GameState;
   encounterDefinition?: EncounterDefinition;
@@ -148,6 +293,7 @@ interface CombatGolfProps {
   onRemoveSandboxOrim?: (id: string) => void;
   hasCollectedLoot: boolean;
   dragState: DragState;
+  dragPositionRef?: MutableRefObject<{ x: number; y: number }>;
   handleDragStart: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
   setFoundationRef: (index: number, el: HTMLDivElement | null) => void;
   handCards: CardType[];
@@ -180,6 +326,7 @@ interface CombatGolfProps {
   isGamePaused?: boolean;
   timeScale?: number;
   onTogglePause?: () => void;
+  onToggleCombatSandbox?: () => void;
   onPositionChange?: (x: number, y: number) => void;
   wildAnalysis?: { key: string; sequence: Move[]; maxCount: number } | null;
   actions: {
@@ -393,8 +540,6 @@ type TableauColumnSource =
   | { kind: 'minor-center'; direction: MinorDirection };
 
 const DEFAULT_TABLEAU_COLUMNS = 7;
-const DEFAULT_TABLEAU_DEPTH = 4;
-const ELEMENT_POOL: Element[] = ['N', 'A', 'E', 'W', 'F', 'D', 'L'];
 const EXPLORATION_SLIDE_ANIMATION_MS = 1200;
 
 const getMinorBlendSources = (direction: MinorDirection): TableauColumnSource[] => {
@@ -482,6 +627,7 @@ export const CombatGolf = memo(function CombatGolf({
   onRemoveSandboxOrim,
   hasCollectedLoot,
   dragState,
+  dragPositionRef,
   handleDragStart,
   setFoundationRef,
   handCards,
@@ -502,6 +648,7 @@ export const CombatGolf = memo(function CombatGolf({
   isGamePaused = false,
   timeScale = 1,
   onTogglePause,
+  onToggleCombatSandbox,
   wildAnalysis = null,
   actions,
   benchSwapCount = 0,
@@ -515,11 +662,8 @@ export const CombatGolf = memo(function CombatGolf({
   forcedPerspectiveEnabled = true,
 }: CombatGolfProps) {
   const showGraphics = useGraphics();
-  const [narrativeOpen, setNarrativeOpen] = useState(true);
   const [splatterModalOpen, setSplatterModalOpen] = useState(false);
   const [explorationHeading, setExplorationHeading] = useState<Direction>('N');
-  const [explorationMapAlignment, setExplorationMapAlignment] = useState<'player' | 'map'>('player');
-  const [pathingLocked, setPathingLocked] = useState(false);
   const explorationSpawnX = mainWorldMap.defaultSpawnPosition.col;
   const explorationSpawnY = mainWorldMap.defaultSpawnPosition.row;
   const [explorationNodes, setExplorationNodes] = useState<ExplorationMapNode[]>([
@@ -541,32 +685,49 @@ export const CombatGolf = memo(function CombatGolf({
     S: 0,
     W: 0,
   });
-  const [explorationTotalTraversalCount, setExplorationTotalTraversalCount] = useState(0);
-  const [ctrlHeld, setCtrlHeld] = useState(false);
-  const [comboPaused, setComboPaused] = useState(false);
+  const {
+    narrativeOpen,
+    setNarrativeOpen,
+    explorationMapAlignment,
+    setExplorationMapAlignment,
+    pathingLocked,
+    setPathingLocked,
+    explorationTotalTraversalCount,
+    setExplorationTotalTraversalCount,
+    ctrlHeld,
+    setCtrlHeld,
+    comboPaused,
+    setComboPaused,
+    waveBattleCount,
+    setWaveBattleCount,
+    explorationSupplies,
+    setExplorationSupplies,
+    explorationRowsPerStep,
+    setExplorationRowsPerStep,
+    tableauSlideOffsetPx,
+    setTableauSlideOffsetPx,
+    tableauSlideAnimating,
+    setTableauSlideAnimating,
+    devTraverseHoldProgress,
+    setDevTraverseHoldProgress,
+  } = useExplorationEncounterState();
   const keruHasAspect = useMemo(
     () => ((gameState.actorKeru?.selectedAspectIds ?? []).length > 0),
     [gameState.actorKeru?.selectedAspectIds]
   );
-  const [mapVisible, setMapVisible] = useState(keruHasAspect);
   const [soundMuted, setSoundMuted] = useState<boolean>(() => isGameAudioMuted());
   const [bankedTurnMs, setBankedTurnMs] = useState(0);
   const [bankedTimerBonusMs, setBankedTimerBonusMs] = useState(0);
   const [bankedTimerBonusToken, setBankedTimerBonusToken] = useState<number | undefined>(undefined);
   const [bankCallouts, setBankCallouts] = useState<Array<{ id: number; ms: number }>>([]);
   const [enemyTurnEndCallouts, setEnemyTurnEndCallouts] = useState<Array<{ id: number }>>([]);
-  const [waveBattleCount, setWaveBattleCount] = useState(0);
   const [waveBattleCallouts, setWaveBattleCallouts] = useState<Array<{ id: number; wave: number }>>([]);
   const waveBattleSpawnPendingRef = useRef(false);
   const waveBattleStartRef = useRef<string | null>(null);
   const [bankSmashFx, setBankSmashFx] = useState<{ id: number; ms: number } | null>(null);
-  const [explorationSupplies, setExplorationSupplies] = useState(10);
-  const [explorationRowsPerStep, setExplorationRowsPerStep] = useState(1);
   const [sunkCostPulseStartedAt, setSunkCostPulseStartedAt] = useState<number | null>(null);
   const [sunkCostPulseNowMs, setSunkCostPulseNowMs] = useState<number>(0);
   const sunkCostPulseArmedRef = useRef(false);
-  const [tableauSlideOffsetPx, setTableauSlideOffsetPx] = useState(0);
-  const [tableauSlideAnimating, setTableauSlideAnimating] = useState(false);
   const [inspectedRpgCard, setInspectedRpgCard] = useState<CardType | null>(null);
   const [inspectedRpgCardSource, setInspectedRpgCardSource] = useState<
     { side: 'player' } | { side: 'enemy'; actorIndex: number } | { side: 'reward' } | null
@@ -596,13 +757,22 @@ export const CombatGolf = memo(function CombatGolf({
   const upgradedFlashTimeoutsRef = useRef<Record<string, number>>({});
   const prevRpgHandIdsRef = useRef<Set<string>>(new Set());
   const rewardCardIdRef = useRef(0);
-  const prevKeruRef = useRef<ActorKeru | undefined>();
   const prevKeruMutationAtRef = useRef<number | undefined>();
   const [comboExpiryTokens, setComboExpiryTokens] = useState<Array<{ id: number; value: number }>>([]);
   const comboTokenIdRef = useRef(0);
   const [ambientDarkness, setAmbientDarkness] = useState(0.85);
   const [armedFoundationIndex, setArmedFoundationIndex] = useState<number | null>(null);
+  const [tableauRipTriggerByCardId, setTableauRipTriggerByCardId] = useState<Record<string, number>>({});
   const [foundationBlockers, setFoundationBlockers] = useState<BlockingRect[]>([]);
+  const dragBasePositionRef = useRef(dragState.position);
+  const dragMetaRef = useRef({
+    isDragging: false,
+    card: null as CardType | null,
+    tableauIndex: null as number | null,
+    offset: { x: 0, y: 0 },
+  });
+  const abilityFoundationRectRef = useRef<DOMRect | null>(null);
+  const keruFoundationRectRef = useRef<DOMRect | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [foundationRowWidth, setFoundationRowWidth] = useState(0);
   const [cardPlayFlashes, setCardPlayFlashes] = useState<Array<{
@@ -640,12 +810,6 @@ export const CombatGolf = memo(function CombatGolf({
   const explorationEdgesRef = useRef<ExplorationMapEdge[]>([]);
   const explorationTrailNodeIdsRef = useRef<string[]>(['origin']);
   const tableauSlideRafRef = useRef<number | null>(null);
-  const devTraverseHoldTimeoutRef = useRef<number | null>(null);
-  const devTraverseHoldIntervalRef = useRef<number | null>(null);
-  const devTraverseHoldRafRef = useRef<number | null>(null);
-  const devTraverseHoldStartAtRef = useRef<number>(0);
-  const devTraverseTriggeredHoldRef = useRef(false);
-  const [devTraverseHoldProgress, setDevTraverseHoldProgress] = useState(0);
   const explorationLastTopCardIdBySourceRef = useRef<Record<string, string>>({});
   const explorationDisplayedContextRef = useRef<{ nodeId: string; heading: Direction } | null>(null);
   const explorationMajorTableauCacheRef = useRef<Record<string, CardType[][]>>({});
@@ -878,9 +1042,6 @@ export const CombatGolf = memo(function CombatGolf({
     })),
     []
   );
-  const isAspectRewardType = useCallback((reward: PoiReward) => (
-    reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo'
-  ), []);
   const isCurrentExplorationTableauCleared = useMemo(() => (
     gameState.tableaus.length > 0 && gameState.tableaus.every((tableau) => tableau.length === 0)
   ), [gameState.tableaus]);
@@ -890,98 +1051,31 @@ export const CombatGolf = memo(function CombatGolf({
     if (!parsed) return null;
     return { x: Number(parsed[1]), y: Number(parsed[2]) };
   }, [explorationSpawnX, explorationSpawnY]);
-  const clearedPoiKeyRef = useRef<Set<string>>(new Set());
-  const seenNonEmptyTableauKeysRef = useRef<Set<string>>(new Set());
   const consumedPoiRewardKeysRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const nextCleared = new Set(clearedPoiKeyRef.current);
-    let newlyClearedAspectKey: string | null = null;
-    const currentCoords = getExplorationNodeCoordinates(explorationCurrentNodeId);
-    const currentTableauHasCards = gameState.tableaus.some((tableau) => tableau.length > 0);
-
-    // Only mark current coord as cleared if:
-    // 1. We have coordinates for the current node
-    // 2. The tableau is actually cleared (gameState.tableaus exists and is empty)
-    // 3. The node hasn't already been marked as cleared
-    // 4. We haven't already processed this coordinate in this effect
-    if (currentCoords) {
-      const key = `${currentCoords.x},${currentCoords.y}`;
-      if (currentTableauHasCards) {
-        seenNonEmptyTableauKeysRef.current.add(key);
-      }
-      const hasSeenCards = seenNonEmptyTableauKeysRef.current.has(key);
-      if (hasSeenCards && isCurrentExplorationTableauCleared && gameState.tableaus.length > 0 && !nextCleared.has(key)) {
-        nextCleared.add(key);
-        actions.puzzleCompleted?.({
-          coord: { x: currentCoords.x, y: currentCoords.y },
-          poiId: getPoiIdForKey(key),
-          tableauId: explorationCurrentNodeId,
-        });
-        const rewards = getPoiRewardsForKey(key);
-        const clearRewards = rewards.filter((r) => (r.trigger ?? 'on_tableau_clear') === 'on_tableau_clear');
-        if (clearRewards.length > 0 && !consumedPoiRewardKeysRef.current.has(key)) {
-          newlyClearedAspectKey = key;
-          setLastPoiRewardKey(key);
-          const reward = clearRewards[0];
-          const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
-          if (!isAspectReward || (gameState.actorKeru?.archetype ?? 'blank') === 'blank') {
-            setPendingPoiRewardKey(key);
-            setShowKeruArchetypeReward(true);
-          }
-        }
-      }
-    }
-    explorationNodes.forEach((node) => {
-      if (!node.cleared) return;
-      const key = `${node.x},${node.y}`;
-      if (nextCleared.has(key)) return;
-      nextCleared.add(key);
-      actions.puzzleCompleted?.({
-        coord: { x: node.x, y: node.y },
-        poiId: getPoiIdForKey(key),
-        tableauId: node.id,
-      });
-      // Note: reward modal only tracks the current cleared node to avoid
-      // pulling stale rewards from previously-cleared nodes.
-    });
-    if (newlyClearedAspectKey && newlyClearedAspectKey !== lastPoiRewardKey) {
-      setLastPoiRewardKey(newlyClearedAspectKey);
-    }
-    clearedPoiKeyRef.current = nextCleared;
-  }, [
+  useExplorationPoiClearRewards({
     explorationCurrentNodeId,
     explorationNodes,
+    tableaus: gameState.tableaus,
+    actorKeruArchetype: gameState.actorKeru?.archetype,
+    isCurrentExplorationTableauCleared,
     getExplorationNodeCoordinates,
     getPoiRewardsForKey,
     getPoiIdForKey,
-    isCurrentExplorationTableauCleared,
     lastPoiRewardKey,
-    isAspectRewardType,
-    actions,
-    gameState.tableaus,
-    gameState.actorKeru?.archetype,
-  ]);
+    consumedPoiRewardKeysRef,
+    setLastPoiRewardKey,
+    setPendingPoiRewardKey,
+    setShowKeruArchetypeReward,
+    puzzleCompleted: actions.puzzleCompleted,
+  });
 
-  // Handle "on_arrival" rewards when player arrives at a new POI
-  const visitedPoiKeysRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const currentCoords = getExplorationNodeCoordinates(explorationCurrentNodeId);
-    if (!currentCoords) return;
-
-    const key = `${currentCoords.x},${currentCoords.y}`;
-
-    // Check if we've already visited this POI
-    if (visitedPoiKeysRef.current.has(key)) return;
-    visitedPoiKeysRef.current.add(key);
-
-    // Check for on_arrival rewards
-    const rewards = getPoiRewardsForKey(key);
-    const arrivalRewards = rewards.filter(r => r.trigger === 'on_arrival');
-
-    if (arrivalRewards.length > 0 && key !== lastPoiRewardKey) {
-      setLastPoiRewardKey(key);
-    }
-  }, [explorationCurrentNodeId, getExplorationNodeCoordinates, getPoiRewardsForKey, lastPoiRewardKey]);
+  useExplorationPoiArrivalRewards({
+    explorationCurrentNodeId,
+    getExplorationNodeCoordinates,
+    getPoiRewardsForKey,
+    lastPoiRewardKey,
+    setLastPoiRewardKey,
+  });
 
   const explorationConditionalEdges = useMemo(() => {
     const coords = getExplorationNodeCoordinates(explorationCurrentNodeId);
@@ -1007,170 +1101,6 @@ export const CombatGolf = memo(function CombatGolf({
       };
     });
   }, [explorationCurrentNodeId, explorationNodes, getExplorationNodeCoordinates, isCurrentExplorationTableauCleared]);
-  const getPoiTableauPresetForNode = useCallback((nodeId: string): PoiTableauPresetId | null => {
-    const coords = getExplorationNodeCoordinates(nodeId);
-    if (!coords) return null;
-    const key = `${coords.x},${coords.y}`;
-    const result = poiByCoordinateKey.get(key) ?? null;
-    if (coords.x === 0 && coords.y === 2) {
-    }
-    return result;
-  }, [getExplorationNodeCoordinates, poiByCoordinateKey]);
-  const hasPoiForNode = useCallback((nodeId: string): boolean => {
-    const coords = getExplorationNodeCoordinates(nodeId);
-    if (!coords) return false;
-    return poiPresenceByCoordinateKey.has(`${coords.x},${coords.y}`);
-  }, [getExplorationNodeCoordinates, poiPresenceByCoordinateKey]);
-  const ensurePoiPresetTableaus = useCallback((nodeId: string): CardType[][] | null => {
-    const presetId = getPoiTableauPresetForNode(nodeId);
-    if (!presetId) return null;
-    const cacheKey = `${nodeId}|poi|${presetId}`;
-    const cached = explorationPoiTableauCacheRef.current[cacheKey];
-    const generated = cached ?? createPoiTableauPreset(presetId);
-    explorationPoiTableauCacheRef.current[cacheKey] = generated;
-    return generated;
-  }, [getExplorationNodeCoordinates, getPoiTableauPresetForNode]);
-  const hashString = useCallback((value: string) => {
-    let hash = 2166136261 >>> 0;
-    for (let index = 0; index < value.length; index += 1) {
-      hash ^= value.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
-    return hash >>> 0;
-  }, []);
-  const createPrng = useCallback((seed: number) => {
-    let state = seed >>> 0;
-    return () => {
-      state ^= state << 13;
-      state ^= state >>> 17;
-      state ^= state << 5;
-      return (state >>> 0) / 4294967296;
-    };
-  }, []);
-  const createDeterministicCard = useCallback((
-    nodeId: string,
-    directionLabel: string,
-    columnIndex: number,
-    depthIndex: number
-  ): CardType => {
-    const seed = hashString(`${nodeId}:${directionLabel}:${columnIndex}:${depthIndex}`);
-    const rand = createPrng(seed);
-    const rank = Math.floor(rand() * 13) + 1;
-    const element = ELEMENT_POOL[Math.floor(rand() * ELEMENT_POOL.length)] ?? 'N';
-    const suit = ELEMENT_TO_SUIT[element];
-    return {
-      id: `exp-${nodeId}-${directionLabel}-${columnIndex}-${depthIndex}-${seed.toString(36)}`,
-      rank,
-      element,
-      suit,
-      tableauStepIndex: Math.max(1, DEFAULT_TABLEAU_DEPTH - depthIndex),
-      tokenReward: element !== 'N' ? element : undefined,
-      orimSlots: [],
-    };
-  }, [createPrng, hashString]);
-  const createDeterministicTableaus = useCallback((nodeId: string, directionLabel: string) => {
-    return Array.from({ length: DEFAULT_TABLEAU_COLUMNS }, (_, columnIndex) => (
-      Array.from({ length: DEFAULT_TABLEAU_DEPTH }, (_, depthIndex) => (
-        createDeterministicCard(nodeId, directionLabel, columnIndex, depthIndex)
-      ))
-    ));
-  }, [createDeterministicCard]);
-  const getMajorCacheKey = useCallback((nodeId: string, direction: MajorDirection) => `${nodeId}|major|${direction}`, []);
-  const getMinorCenterCacheKey = useCallback((nodeId: string, direction: MinorDirection) => `${nodeId}|minor-center|${direction}`, []);
-  const ensureMajorDirectionTableaus = useCallback((nodeId: string, direction: MajorDirection) => {
-    const key = getMajorCacheKey(nodeId, direction);
-    const cached = explorationMajorTableauCacheRef.current[key];
-    if (cached) return cached;
-    const generated = createDeterministicTableaus(nodeId, direction);
-    explorationMajorTableauCacheRef.current[key] = generated;
-    return generated;
-  }, [createDeterministicTableaus, getMajorCacheKey]);
-  const ensureMinorCenterTableau = useCallback((nodeId: string, direction: MinorDirection) => {
-    const key = getMinorCenterCacheKey(nodeId, direction);
-    const cached = explorationMinorCenterCacheRef.current[key];
-    if (cached) return cached;
-    const generated = createDeterministicTableaus(nodeId, direction)[3] ?? [];
-    explorationMinorCenterCacheRef.current[key] = generated;
-    return generated;
-  }, [createDeterministicTableaus, getMinorCenterCacheKey]);
-  const getDisplayTableausForHeading = useCallback((nodeId: string, direction: Direction): CardType[][] => {
-    const coords = getExplorationNodeCoordinates(nodeId);
-    if (coords && coords.x === 0 && coords.y === 2) {
-    }
-
-    if (!hasPoiForNode(nodeId)) {
-      return [];
-    }
-    const poiPresetTableaus = ensurePoiPresetTableaus(nodeId);
-
-    if (coords && coords.x === 0 && coords.y === 2) {
-    }
-
-    if (poiPresetTableaus) {
-      return cloneTableaus(poiPresetTableaus);
-    }
-    if (direction.length === 1) {
-      return cloneTableaus(ensureMajorDirectionTableaus(nodeId, direction as MajorDirection));
-    }
-    const sources = getColumnSourcesForDirection(direction);
-    const columns = sources.map((source) => {
-      if (source.kind === 'major') {
-        const major = ensureMajorDirectionTableaus(nodeId, source.direction);
-        return major[source.columnIndex] ?? [];
-      }
-      return ensureMinorCenterTableau(nodeId, source.direction);
-    });
-    return cloneTableaus(columns);
-  }, [cloneTableaus, ensureMajorDirectionTableaus, ensureMinorCenterTableau, ensurePoiPresetTableaus, hasPoiForNode]);
-  const commitDisplayedTableausToCaches = useCallback((nodeId: string, direction: Direction, displayed: CardType[][]) => {
-    const presetId = getPoiTableauPresetForNode(nodeId);
-    if (presetId) {
-      const cacheKey = `${nodeId}|poi|${presetId}`;
-      if (presetId === 'initial_actions_00' || presetId === 'initial_actions_01' || presetId === 'initial_actions_02') {
-        const previous = explorationPoiTableauCacheRef.current[cacheKey] ?? createPoiTableauPreset(presetId);
-        const next = Array.from({ length: 7 }, (_, index) => {
-          const prevTop = previous[index]?.[0];
-          const currentTop = displayed[index]?.[displayed[index].length - 1];
-          // Initial-actions POIs are single-row only: a column may keep its same card
-          // or become empty, but never reveal a different card behind it.
-          if (!prevTop) return [];
-          if (!currentTop) return [];
-          if (currentTop.id !== prevTop.id) return [];
-          return [cloneCard(currentTop)];
-        });
-        explorationPoiTableauCacheRef.current[cacheKey] = next;
-        return;
-      }
-      explorationPoiTableauCacheRef.current[cacheKey] = displayed.map((stack) => stack.map((card) => cloneCard(card)));
-      return;
-    }
-    const sources = getColumnSourcesForDirection(direction);
-    sources.forEach((source, index) => {
-      const stack = displayed[index] ?? [];
-      if (source.kind === 'major') {
-        const majorKey = getMajorCacheKey(nodeId, source.direction);
-        const major = explorationMajorTableauCacheRef.current[majorKey]
-          ?? ensureMajorDirectionTableaus(nodeId, source.direction);
-        major[source.columnIndex] = stack.map((card) => cloneCard(card));
-        explorationMajorTableauCacheRef.current[majorKey] = major;
-        return;
-      }
-      const minorKey = getMinorCenterCacheKey(nodeId, source.direction);
-      explorationMinorCenterCacheRef.current[minorKey] = stack.map((card) => cloneCard(card));
-    });
-  }, [cloneCard, ensureMajorDirectionTableaus, getMajorCacheKey, getMinorCenterCacheKey, getPoiTableauPresetForNode]);
-  const areTableausEquivalent = useCallback((left: CardType[][], right: CardType[][]) => {
-    if (left.length !== right.length) return false;
-    for (let col = 0; col < left.length; col += 1) {
-      const l = left[col] ?? [];
-      const r = right[col] ?? [];
-      if (l.length !== r.length) return false;
-      for (let row = 0; row < l.length; row += 1) {
-        if (l[row]?.id !== r[row]?.id) return false;
-      }
-    }
-    return true;
-  }, []);
   const biomeDef = gameState.currentBiome
     ? getBiomeDefinition(gameState.currentBiome)
     : null;
@@ -1223,21 +1153,7 @@ export const CombatGolf = memo(function CombatGolf({
   const abilityDefinition = selectedAspect !== 'blank' ? ASPECT_ABILITY_DEFINITIONS[selectedAspect as KeruAspect] : null;
   const abilityCard = abilityDefinition?.card ?? null;
   const isDraggingAbilityCard = abilityCard ? (dragState.isDragging && dragState.card?.id === abilityCard.id) : false;
-  const abilityCardPointer = isDraggingAbilityCard ? {
-    x: dragState.position.x + dragState.offset.x,
-    y: dragState.position.y + dragState.offset.y,
-  } : null;
-  const abilityFoundationRect = isDraggingAbilityCard
-    ? foundationRefs.current[0]?.getBoundingClientRect()
-    : null;
-  const isAbilityOverTarget = Boolean(
-    abilityCardPointer
-    && abilityFoundationRect
-    && abilityCardPointer.x >= abilityFoundationRect.left
-    && abilityCardPointer.x <= abilityFoundationRect.right
-    && abilityCardPointer.y >= abilityFoundationRect.top
-    && abilityCardPointer.y <= abilityFoundationRect.bottom
-  );
+  const [isAbilityOverTarget, setIsAbilityOverTarget] = useState(false);
   // Compute fresh to always get current mainWorldMap data
   // Reference poiDataVersion to ensure recomputation when POI data changes
   const pendingPoiReward = useMemo(() => {
@@ -1314,21 +1230,82 @@ export const CombatGolf = memo(function CombatGolf({
   const keruRewardCard = abilityCard;
   const isDraggingKeruRewardCard = keruRewardCard ? (dragState.isDragging && dragState.card?.id === keruRewardCard.id) : false;
   const isDraggingAspectRewardCard = dragState.isDragging && !!(dragState.card?.id?.startsWith('keru-archetype-') || dragState.card?.id?.startsWith('reward-orim-'));
-  const keruRewardCardPointer = isDraggingKeruRewardCard ? {
-    x: dragState.position.x + dragState.offset.x,
-    y: dragState.position.y + dragState.offset.y,
-  } : null;
-  const keruRewardFoundationRect = isDraggingKeruRewardCard
-    ? foundationRefs.current[0]?.getBoundingClientRect()
-    : null;
-  const isKeruRewardOverTarget = Boolean(
-    keruRewardCardPointer
-    && keruRewardFoundationRect
-    && keruRewardCardPointer.x >= keruRewardFoundationRect.left
-    && keruRewardCardPointer.x <= keruRewardFoundationRect.right
-    && keruRewardCardPointer.y >= keruRewardFoundationRect.top
-    && keruRewardCardPointer.y <= keruRewardFoundationRect.bottom
-  );
+  const [isKeruRewardOverTarget, setIsKeruRewardOverTarget] = useState(false);
+  const dragHoverStateRef = useRef({ ability: false, keru: false });
+
+  useEffect(() => {
+    dragMetaRef.current = {
+      isDragging: dragState.isDragging,
+      card: dragState.card,
+      tableauIndex: dragState.tableauIndex,
+      offset: dragState.offset,
+    };
+    if (dragState.isDragging) {
+      dragBasePositionRef.current = dragState.position;
+    }
+  }, [
+    dragState.isDragging,
+    dragState.card,
+    dragState.tableauIndex,
+    dragState.offset.x,
+    dragState.offset.y,
+    dragState.position.x,
+    dragState.position.y,
+  ]);
+
+  useEffect(() => {
+    if (!dragState.isDragging) {
+      abilityFoundationRectRef.current = null;
+      keruFoundationRectRef.current = null;
+      return;
+    }
+    if (isDraggingAbilityCard) {
+      abilityFoundationRectRef.current = foundationRefs.current[0]?.getBoundingClientRect() ?? null;
+    }
+    if (isDraggingKeruRewardCard) {
+      keruFoundationRectRef.current = foundationRefs.current[0]?.getBoundingClientRect() ?? null;
+    }
+  }, [dragState.isDragging, isDraggingAbilityCard, isDraggingKeruRewardCard]);
+
+  useEffect(() => {
+    if (!dragState.isDragging) {
+      if (dragHoverStateRef.current.ability || dragHoverStateRef.current.keru) {
+        dragHoverStateRef.current = { ability: false, keru: false };
+        setIsAbilityOverTarget(false);
+        setIsKeruRewardOverTarget(false);
+      }
+      return;
+    }
+    const unsubscribe = subscribeDragRaf(() => {
+      const current = dragMetaRef.current;
+      if (!current.isDragging) return;
+      const base = dragPositionRef?.current ?? dragBasePositionRef.current;
+      const pointerX = base.x + current.offset.x;
+      const pointerY = base.y + current.offset.y;
+
+      let abilityHit = false;
+      if (isDraggingAbilityCard && abilityFoundationRectRef.current) {
+        const rect = abilityFoundationRectRef.current;
+        abilityHit = pointerX >= rect.left && pointerX <= rect.right && pointerY >= rect.top && pointerY <= rect.bottom;
+      }
+
+      let keruHit = false;
+      if (isDraggingKeruRewardCard && keruFoundationRectRef.current) {
+        const rect = keruFoundationRectRef.current;
+        keruHit = pointerX >= rect.left && pointerX <= rect.right && pointerY >= rect.top && pointerY <= rect.bottom;
+      }
+
+      if (abilityHit !== dragHoverStateRef.current.ability) {
+        dragHoverStateRef.current.ability = abilityHit;
+        setIsAbilityOverTarget(abilityHit);
+      }
+      if (keruHit !== dragHoverStateRef.current.keru) {
+        dragHoverStateRef.current.keru = keruHit;
+        setIsKeruRewardOverTarget(keruHit);
+      }
+    });
+    return unsubscribe;
+  }, [dragState.isDragging, dragPositionRef, isDraggingAbilityCard, isDraggingKeruRewardCard]);
   const getActorDisplayLabel = (actor?: Actor | null): string | undefined => {
     if (!actor) return undefined;
     if (actor.definitionId === 'keru') {
@@ -1393,83 +1370,6 @@ export const CombatGolf = memo(function CombatGolf({
     return getPoiNarrationForKey(`${coords.x},${coords.y}`);
   }, [explorationCurrentNodeId, getExplorationNodeCoordinates, getPoiNarrationForKey]);
   const narrationTone = (activePoiNarration?.tone ?? 'teal') as 'teal' | 'gold' | 'violet' | 'green' | 'red' | 'blue' | 'orange' | 'pink' | 'silver' | 'brown' | 'black' | 'white';
-  const narrationTheme = useMemo(() => {
-    switch (narrationTone) {
-      case 'gold':
-        return {
-          outer: 'from-[#6d5a2d]/80 via-[#44341a]/80 to-[#23190d]/80',
-          inner: 'from-[#8b6f3b]/90 via-[#5c4220]/80 to-[#2d1f10]/70',
-          accent: 'text-game-gold/80',
-        };
-      case 'violet':
-        return {
-          outer: 'from-[#56346a]/80 via-[#3a2347]/80 to-[#201324]/80',
-          inner: 'from-[#6b4a88]/90 via-[#3d2855]/80 to-[#251636]/70',
-          accent: 'text-purple-200/80',
-        };
-      case 'green':
-        return {
-          outer: 'from-[#3b6a52]/80 via-[#234735]/80 to-[#14241b]/80',
-          inner: 'from-[#3f7a5f]/90 via-[#265842]/80 to-[#173225]/70',
-          accent: 'text-emerald-200/80',
-        };
-      case 'red':
-        return {
-          outer: 'from-[#7c2d12]/80 via-[#450a0a]/80 to-[#180505]/80',
-          inner: 'from-[#991b1b]/90 via-[#7f1d1d]/80 to-[#450a0a]/70',
-          accent: 'text-red-200/80',
-        };
-      case 'blue':
-        return {
-          outer: 'from-[#1e3a8a]/80 via-[#1e1b4b]/80 to-[#020617]/80',
-          inner: 'from-[#1d4ed8]/90 via-[#1e40af]/80 to-[#1e3a8a]/70',
-          accent: 'text-blue-200/80',
-        };
-      case 'orange':
-        return {
-          outer: 'from-[#7c2d12]/80 via-[#431407]/80 to-[#1c0a00]/80',
-          inner: 'from-[#ea580c]/90 via-[#9a3412]/80 to-[#7c2d12]/70',
-          accent: 'text-orange-200/80',
-        };
-      case 'pink':
-        return {
-          outer: 'from-[#701a75]/80 via-[#4a044e]/80 to-[#200122]/80',
-          inner: 'from-[#9d174d]/90 via-[#831843]/80 to-[#500724]/70',
-          accent: 'text-pink-200/80',
-        };
-      case 'silver':
-        return {
-          outer: 'from-[#374151]/80 via-[#1f2937]/80 to-[#0f172a]/80',
-          inner: 'from-[#4b5563]/90 via-[#374151]/80 to-[#1f2937]/70',
-          accent: 'text-slate-200/80',
-        };
-      case 'brown':
-        return {
-          outer: 'from-[#451a03]/80 via-[#2d1a0a]/80 to-[#170d05]/80',
-          inner: 'from-[#78350f]/90 via-[#5d2b06]/80 to-[#451a03]/70',
-          accent: 'text-amber-200/80',
-        };
-      case 'black':
-        return {
-          outer: 'from-[#020617]/80 via-[#000000]/80 to-[#000000]/80',
-          inner: 'from-[#0f172a]/90 via-[#020617]/80 to-[#000000]/70',
-          accent: 'text-slate-400/80',
-        };
-      case 'white':
-        return {
-          outer: 'from-[#94a3b8]/80 via-[#475569]/80 to-[#1e293b]/80',
-          inner: 'from-[#cbd5e1]/90 via-[#94a3b8]/80 to-[#64748b]/70',
-          accent: 'text-white font-bold',
-        };
-      case 'teal':
-      default:
-        return {
-          outer: 'from-[#134e4a]/80 via-[#064e3b]/80 to-[#022c22]/80',
-          inner: 'from-[#0d9488]/90 via-[#0f766e]/80 to-[#134e4a]/70',
-          accent: 'text-game-teal/80',
-        };
-    }
-  }, [narrationTone]);
   const [startOverlayPhase, setStartOverlayPhase] = useState<StartOverlayPhase>('ready');
   const [startCountdown, setStartCountdown] = useState(3);
   const [startTriggeredByPlay, setStartTriggeredByPlay] = useState(false);
@@ -1517,6 +1417,14 @@ export const CombatGolf = memo(function CombatGolf({
     return (gameState.enemyActors ?? []);
   }, [encounterDefinition, gameState]);
   const enemyActors = encounterEnemyActors;
+  const activeEnemyActorsCount = enemyActors.filter((actor) => (actor?.hp ?? 0) > 0).length;
+  const showMultipleEnemyFoundations = activeEnemyActorsCount > 1;
+  const enemyFoundationsForDisplay = showMultipleEnemyFoundations
+    ? enemyFoundations
+    : enemyFoundations.slice(0, 1);
+  const enemyActorsForDisplay = showMultipleEnemyFoundations
+    ? enemyActors
+    : enemyActors.slice(0, 1);
   const inspectedActor = useMemo(() => {
     if (!inspectedActorId) return null;
     const playerMatch = activeParty.find((entry) => entry.id === inspectedActorId);
@@ -1845,129 +1753,43 @@ export const CombatGolf = memo(function CombatGolf({
       setActivePlayerHandActorIndex(null);
     }
   }, [activeParty.length, activePlayerHandActorIndex, explorationModeActive]);
-  useEffect(() => {
-    const spawnedEnemies = enemyFoundations.some((foundation) => foundation.length > 0);
-    if (!isRpgMode || spawnedEnemies) {
-      setShowKeruArchetypeReward(false);
-      setPendingPoiRewardKey(null);
-      return;
-    }
-    if (pendingPoiRewardKey) return;
-    const keruArchetype = gameState.actorKeru?.archetype ?? 'blank';
-    const clearedPoiRewardKey = lastPoiRewardKey;
-    if (!clearedPoiRewardKey) return;
-    const rewards = getPoiRewardsForKey(clearedPoiRewardKey);
-    const reward = rewards[0];
-    if (!reward) return;
-    const isAspectReward = reward.type === 'aspect-choice' || reward.type === 'aspect-jumbo';
-    if (isAspectReward && keruArchetype !== 'blank') {
-      setShowKeruArchetypeReward(false);
-      setPendingPoiRewardKey(null);
-      return;
-    }
-    setPendingPoiRewardKey(clearedPoiRewardKey);
-    setShowKeruArchetypeReward(true);
-  }, [
-    enemyFoundations,
-    explorationCurrentNodeId,
-    explorationNodes,
+  useExplorationPoiRewardFlow({
     isRpgMode,
-    lastPoiRewardKey,
-    gameState.actorKeru?.archetype,
-    getPoiRewardsForKey,
+    enemyFoundations,
+    explorationNodes,
+    actorKeruArchetype: gameState.actorKeru?.archetype,
     pendingPoiRewardKey,
-  ]);
-  useEffect(() => {
-    if (!isRpgMode) return;
-    const keruArchetype = gameState.actorKeru?.archetype ?? 'blank';
-    const tutorialBCleared = explorationNodes.some((node) => node.x === 0 && node.y === 1 && node.cleared);
-    if (pendingPoiRewardKey) {
-      const reward = getPoiRewardsForKey(pendingPoiRewardKey)[0];
-      if (reward?.type === 'orim-choice') return;
-    }
-    if (tutorialBCleared && keruArchetype !== 'blank' && !keruAbilityRewardShownRef.current) {
-      setShowKeruAbilityReward(true);
-      keruAbilityRewardShownRef.current = true;
-    }
-  }, [explorationNodes, gameState.actorKeru?.archetype, isRpgMode, pendingPoiRewardKey, getPoiRewardsForKey]);
-  useEffect(() => {
-    if (!poiRewardResolvedAt || !pendingPoiRewardKey) return;
-    const reward = getPoiRewardsForKey(pendingPoiRewardKey)[0];
-    if (!reward) return;
-    if (reward.type === 'orim-choice') {
-      consumedPoiRewardKeysRef.current.add(pendingPoiRewardKey);
-      setLastPoiRewardKey(null);
-      setShowKeruArchetypeReward(false);
-      setPendingPoiRewardKey(null);
-      keruAbilityRewardShownRef.current = true;
-    }
-  }, [poiRewardResolvedAt, pendingPoiRewardKey, getPoiRewardsForKey]);
-  useEffect(() => {
-    const orimId = gameState.lastResolvedOrimId;
-    if (!orimId) return;
+    lastPoiRewardKey,
+    poiRewardResolvedAt,
+    getPoiRewardsForKey,
+    consumedPoiRewardKeysRef,
+    keruAbilityRewardShownRef,
+    setShowKeruArchetypeReward,
+    setShowKeruAbilityReward,
+    setPendingPoiRewardKey,
+    setLastPoiRewardKey,
+  });
+  useExplorationOrimRewardCallouts({
+    lastResolvedOrimId: gameState.lastResolvedOrimId,
+    lastResolvedOrimFoundationIndex: gameState.lastResolvedOrimFoundationIndex,
+    lastResolvedOrimDropPoint: gameState.lastResolvedOrimDropPoint,
+    hasOrimDefinition: (orimId) => ORIM_DEFINITIONS.some((orim) => orim.id === orimId),
+    setOrimRewardCallouts,
+    processRelicCombatEvent: actions.processRelicCombatEvent as ((event: { type: 'ORIM_CALLOUT_SHOWN' }) => void) | undefined,
+  });
 
-    const def = ORIM_DEFINITIONS.find((o) => o.id === orimId);
-    if (def) {
-      const calloutId = Date.now() + Math.random();
-      const foundationIndex = gameState.lastResolvedOrimFoundationIndex ?? null;
-      const dropPoint = gameState.lastResolvedOrimDropPoint ?? null;
-      setOrimRewardCallouts((prev) => [...prev, { id: calloutId, orimId, foundationIndex, dropPoint }]);
-      setTimeout(() => {
-        setOrimRewardCallouts((prev) => prev.filter((entry) => entry.id !== calloutId));
-      }, 3500);
-    }
-
-    // Clear the last resolved Orim ID in game state so we don't trigger again
-    actions.processRelicCombatEvent?.({ type: 'ORIM_CALLOUT_SHOWN' } as any);
-  }, [
-    gameState.lastResolvedOrimId,
-    gameState.lastResolvedOrimFoundationIndex,
-    gameState.lastResolvedOrimDropPoint,
-    actions.processRelicCombatEvent,
-  ]);
-
-  useEffect(() => {
-    const currentKeru = gameState.actorKeru;
-    const lastMutationAt = currentKeru?.lastMutationAt;
-    const prevMutationAt = prevKeruMutationAtRef.current;
-    let timeout: number | undefined;
-    keruAttributeTimeoutsRef.current.forEach((id) => window.clearTimeout(id));
-    keruAttributeTimeoutsRef.current = [];
-    setKeruAttributeCallouts([]);
-
-    if (!lastMutationAt) {
-      setKeruFxActive(false);
-      setKeruStatLines([]);
-    } else if (lastMutationAt !== prevMutationAt && currentKeru) {
-      setShowKeruArchetypeReward(false);
-      setKeruFxToken(lastMutationAt);
-      setKeruFxActive(true);
-      const attributeLines = getKeruAspectAttributeLines(currentKeru.archetype);
-      setKeruStatLines(attributeLines);
-      attributeLines.forEach((line, index) => {
-        const delay = index * 500;
-        const showId = window.setTimeout(() => {
-          setKeruAttributeCallouts((prev) => [...prev, { id: lastMutationAt + index, text: line }]);
-        }, delay);
-        const hideId = window.setTimeout(() => {
-          setKeruAttributeCallouts((prev) => prev.filter((entry) => entry.id !== lastMutationAt + index));
-        }, delay + 3200);
-        keruAttributeTimeoutsRef.current.push(showId, hideId);
-      });
-      timeout = window.setTimeout(() => {
-        setKeruFxActive(false);
-      }, KERU_CALLOUT_DURATION_MS);
-    }
-
-    prevKeruRef.current = currentKeru;
-    prevKeruMutationAtRef.current = lastMutationAt;
-
-    return () => {
-      if (timeout) {
-        window.clearTimeout(timeout);
-      }
-    };
-  }, [gameState.actorKeru]);
+  useKeruMutationCallouts({
+    actorKeru: gameState.actorKeru,
+    keruCalloutDurationMs: KERU_CALLOUT_DURATION_MS,
+    getKeruAspectAttributeLines,
+    keruAbilityTimeoutsRef: keruAttributeTimeoutsRef,
+    prevKeruMutationAtRef,
+    setShowKeruArchetypeReward,
+    setKeruFxToken,
+    setKeruFxActive,
+    setKeruStatLines,
+    setKeruAttributeCallouts,
+  });
   useEffect(() => {
     if (showKeruAbilityReward && !isDraggingKeruRewardCard && isKeruRewardOverTarget) {
       setShowKeruAbilityReward(false);
@@ -2066,104 +1888,174 @@ export const CombatGolf = memo(function CombatGolf({
     damage: number;
     hitChance: number;
   };
-  const rpgDragDamagePreview = useMemo<RpgDragDamagePreview | null>(() => {
-    if (!isRpgMode) return null;
-    if (!dragState.isDragging || dragState.tableauIndex !== HAND_SOURCE_INDEX) return null;
-    const draggedCard = dragState.card;
-    if (!draggedCard || !draggedCard.id.startsWith('rpg-')) return null;
-    if (draggedCard.id.startsWith('rpg-cloud-sight-')) return null;
-
-    const pointerX = dragState.position.x + dragState.offset.x;
-    const pointerY = dragState.position.y + dragState.offset.y;
-    const targetEl = document
-      .elementsFromPoint(pointerX, pointerY)
-      .map((node) => (node as HTMLElement).closest?.('[data-rpg-actor-target="true"]') as HTMLElement | null)
-      .find((entry): entry is HTMLElement => !!entry) ?? null;
-    if (!targetEl) return null;
-
-    const sideAttr = targetEl.getAttribute('data-rpg-actor-side');
-    const indexAttr = targetEl.getAttribute('data-rpg-actor-index');
-    if (sideAttr !== 'player' && sideAttr !== 'enemy') return null;
-    const actorIndex = Number(indexAttr);
-    if (!Number.isFinite(actorIndex) || actorIndex < 0) return null;
-
-    type RpcFamily = 'scratch' | 'bite' | 'peck';
-    const getRpcFamily = (id: string): RpcFamily | null => {
-      if (id.startsWith('rpg-scratch-')) return 'scratch';
-      if (id.startsWith('rpg-bite-') || id.startsWith('rpg-vice-bite-')) return 'bite';
-      if (id.startsWith('rpg-peck-') || id.startsWith('rpg-blinding-peck-')) return 'peck';
-      return null;
-    };
-    const getRpcCount = (id: string): number => {
-    if (id.startsWith('rpg-scratch-lvl-') || id.startsWith('rpg-bite-lvl-') || id.startsWith('rpg-peck-lvl-')) {
-      const match = id.match(/-lvl-(\d+)/);
-      const parsed = match ? Number(match[1]) : NaN;
-      if (Number.isFinite(parsed) && parsed > 0) return parsed;
-    }
-      if (id.startsWith('rpg-vice-bite-')) return 3;
-      if (id.startsWith('rpg-blinding-peck-')) return 3;
-      if (id.startsWith('rpg-scratch-') || id.startsWith('rpg-bite-') || id.startsWith('rpg-peck-')) return 1;
-      return 0;
-    };
-    const getRpcDamage = (family: RpcFamily, count: number): number => {
-      const safeCount = Math.max(1, count);
-      if (family !== 'bite') return safeCount;
-      if (safeCount <= 1) return 1;
-      if (safeCount === 2) return 2;
-      if (safeCount === 3) return 3;
-      if (safeCount === 4) return 5;
-      return 6;
-    };
-    const clampPercent = (value: number): number => Math.max(5, Math.min(95, value));
-
-    const family = getRpcFamily(draggedCard.id);
-    if (!family) return null;
-    const count = getRpcCount(draggedCard.id);
-    const baseDamage = getRpcDamage(family, count);
-    if (baseDamage <= 0) return null;
-
-    const side = sideAttr as HpBarSide;
-    const targetActor = side === 'enemy'
-      ? (gameState.enemyActors ?? [])[actorIndex]
-      : ((gameState.activeSessionTileId ? (gameState.tileParties[gameState.activeSessionTileId] ?? []) : [])[actorIndex]);
-    if (!targetActor || (targetActor.hp ?? 0) <= 0) return null;
-
-    const sourceActor = draggedCard.sourceActorId
-      ? [...activeParty, ...(gameState.enemyActors ?? [])].find((actor) => actor.id === draggedCard.sourceActorId)
-      : null;
-    const attackerAccuracy = sourceActor?.accuracy ?? 100;
-    const now = Date.now();
-    const soarActive = (gameState.rpgSoarEvasionUntil ?? 0) > now
-      && gameState.rpgSoarEvasionActorId === targetActor.id
-      && (gameState.rpgSoarEvasionSide ?? 'player') === side;
-    const targetEvasion = (targetActor.evasion ?? 0) + (soarActive ? 75 : 0);
-    const hitChance = clampPercent(attackerAccuracy - targetEvasion);
-    // Mirror the engine damage formula: defense → super armor → armor → HP
-    const afterDefense = Math.max(0, baseDamage - (targetActor.defense ?? 0));
-    const afterSuperArmor = (targetActor.superArmor ?? 0) > 0 ? 0 : afterDefense;
-    const damage = afterSuperArmor > 0
-      ? Math.max(0, afterSuperArmor - (targetActor.armor ?? 0))
-      : afterSuperArmor;
-    if (damage <= 0 && afterDefense <= 0) return null;
-
-    return { side, actorIndex, damage, hitChance };
-  }, [
+  const [rpgDragDamagePreview, setRpgDragDamagePreview] = useState<RpgDragDamagePreview | null>(null);
+  const rpgPreviewRef = useRef<RpgDragDamagePreview | null>(null);
+  const rpgPreviewContextRef = useRef({
     activeParty,
-    dragState.card,
-    dragState.isDragging,
-    dragState.offset.x,
-    dragState.offset.y,
-    dragState.position.x,
-    dragState.position.y,
-    dragState.tableauIndex,
-    gameState.activeSessionTileId,
-    gameState.enemyActors,
-    gameState.rpgSoarEvasionActorId,
-    gameState.rpgSoarEvasionSide,
-    gameState.rpgSoarEvasionUntil,
-    gameState.tileParties,
-    isRpgMode,
-  ]);
+    gameState,
+  });
+
+  useEffect(() => {
+    rpgPreviewContextRef.current = { activeParty, gameState };
+  }, [activeParty, gameState]);
+
+  useEffect(() => {
+    if (!isRpgMode) {
+      if (rpgPreviewRef.current !== null) {
+        rpgPreviewRef.current = null;
+        setRpgDragDamagePreview(null);
+      }
+      return;
+    }
+    const unsubscribe = subscribeDragRaf(() => {
+      const current = dragMetaRef.current;
+      if (!current.isDragging || current.tableauIndex !== HAND_SOURCE_INDEX) {
+        if (rpgPreviewRef.current !== null) {
+          rpgPreviewRef.current = null;
+          setRpgDragDamagePreview(null);
+        }
+        return;
+      }
+      const draggedCard = current.card;
+      if (!draggedCard || !draggedCard.id.startsWith('rpg-') || draggedCard.id.startsWith('rpg-cloud-sight-')) {
+        if (rpgPreviewRef.current !== null) {
+          rpgPreviewRef.current = null;
+          setRpgDragDamagePreview(null);
+        }
+        return;
+      }
+
+      const base = dragPositionRef?.current ?? dragBasePositionRef.current;
+      const pointerX = base.x + current.offset.x;
+      const pointerY = base.y + current.offset.y;
+      const targetEl = document
+        .elementsFromPoint(pointerX, pointerY)
+        .map((node) => (node as HTMLElement).closest?.('[data-rpg-actor-target="true"]') as HTMLElement | null)
+        .find((entry): entry is HTMLElement => !!entry) ?? null;
+      if (!targetEl) {
+        if (rpgPreviewRef.current !== null) {
+          rpgPreviewRef.current = null;
+          setRpgDragDamagePreview(null);
+        }
+        return;
+      }
+
+      const sideAttr = targetEl.getAttribute('data-rpg-actor-side');
+      const indexAttr = targetEl.getAttribute('data-rpg-actor-index');
+      if (sideAttr !== 'player' && sideAttr !== 'enemy') {
+        if (rpgPreviewRef.current !== null) {
+          rpgPreviewRef.current = null;
+          setRpgDragDamagePreview(null);
+        }
+        return;
+      }
+      const actorIndex = Number(indexAttr);
+      if (!Number.isFinite(actorIndex) || actorIndex < 0) {
+        if (rpgPreviewRef.current !== null) {
+          rpgPreviewRef.current = null;
+          setRpgDragDamagePreview(null);
+        }
+        return;
+      }
+
+      type RpcFamily = 'scratch' | 'bite' | 'peck';
+      const getRpcFamily = (id: string): RpcFamily | null => {
+        if (id.startsWith('rpg-scratch-')) return 'scratch';
+        if (id.startsWith('rpg-bite-') || id.startsWith('rpg-vice-bite-')) return 'bite';
+        if (id.startsWith('rpg-peck-') || id.startsWith('rpg-blinding-peck-')) return 'peck';
+        return null;
+      };
+      const getRpcCount = (id: string): number => {
+        if (id.startsWith('rpg-scratch-lvl-') || id.startsWith('rpg-bite-lvl-') || id.startsWith('rpg-peck-lvl-')) {
+          const match = id.match(/-lvl-(\d+)/);
+          const parsed = match ? Number(match[1]) : NaN;
+          if (Number.isFinite(parsed) && parsed > 0) return parsed;
+        }
+        if (id.startsWith('rpg-vice-bite-')) return 3;
+        if (id.startsWith('rpg-blinding-peck-')) return 3;
+        if (id.startsWith('rpg-scratch-') || id.startsWith('rpg-bite-') || id.startsWith('rpg-peck-')) return 1;
+        return 0;
+      };
+      const getRpcDamage = (family: RpcFamily, count: number): number => {
+        const safeCount = Math.max(1, count);
+        if (family !== 'bite') return safeCount;
+        if (safeCount <= 1) return 1;
+        if (safeCount === 2) return 2;
+        if (safeCount === 3) return 3;
+        if (safeCount === 4) return 5;
+        return 6;
+      };
+      const clampPercent = (value: number): number => Math.max(5, Math.min(95, value));
+
+      const family = getRpcFamily(draggedCard.id);
+      if (!family) {
+        if (rpgPreviewRef.current !== null) {
+          rpgPreviewRef.current = null;
+          setRpgDragDamagePreview(null);
+        }
+        return;
+      }
+      const count = getRpcCount(draggedCard.id);
+      const baseDamage = getRpcDamage(family, count);
+      if (baseDamage <= 0) {
+        if (rpgPreviewRef.current !== null) {
+          rpgPreviewRef.current = null;
+          setRpgDragDamagePreview(null);
+        }
+        return;
+      }
+
+      const { activeParty: party, gameState: gs } = rpgPreviewContextRef.current;
+      const side = sideAttr as HpBarSide;
+      const targetActor = side === 'enemy'
+        ? (gs.enemyActors ?? [])[actorIndex]
+        : ((gs.activeSessionTileId ? (gs.tileParties[gs.activeSessionTileId] ?? []) : [])[actorIndex]);
+      if (!targetActor || (targetActor.hp ?? 0) <= 0) {
+        if (rpgPreviewRef.current !== null) {
+          rpgPreviewRef.current = null;
+          setRpgDragDamagePreview(null);
+        }
+        return;
+      }
+
+      const sourceActor = draggedCard.sourceActorId
+        ? [...party, ...(gs.enemyActors ?? [])].find((actor) => actor.id === draggedCard.sourceActorId)
+        : null;
+      const attackerAccuracy = sourceActor?.accuracy ?? 100;
+      const now = Date.now();
+      const soarActive = (gs.rpgSoarEvasionUntil ?? 0) > now
+        && gs.rpgSoarEvasionActorId === targetActor.id
+        && (gs.rpgSoarEvasionSide ?? 'player') === side;
+      const targetEvasion = (targetActor.evasion ?? 0) + (soarActive ? 75 : 0);
+      const hitChance = clampPercent(attackerAccuracy - targetEvasion);
+      // Mirror the engine damage formula: defense → super armor → armor → HP
+      const afterDefense = Math.max(0, baseDamage - (targetActor.defense ?? 0));
+      const afterSuperArmor = (targetActor.superArmor ?? 0) > 0 ? 0 : afterDefense;
+      const damage = afterSuperArmor > 0
+        ? Math.max(0, afterSuperArmor - (targetActor.armor ?? 0))
+        : afterSuperArmor;
+      if (damage <= 0 && afterDefense <= 0) {
+        if (rpgPreviewRef.current !== null) {
+          rpgPreviewRef.current = null;
+          setRpgDragDamagePreview(null);
+        }
+        return;
+      }
+
+      const nextPreview: RpgDragDamagePreview = { side, actorIndex, damage, hitChance };
+      const prev = rpgPreviewRef.current;
+      const isSame = prev
+        && prev.side === nextPreview.side
+        && prev.actorIndex === nextPreview.actorIndex
+        && prev.damage === nextPreview.damage
+        && Math.abs(prev.hitChance - nextPreview.hitChance) < 0.01;
+      if (!isSame) {
+        rpgPreviewRef.current = nextPreview;
+        setRpgDragDamagePreview(nextPreview);
+      }
+    });
+    return unsubscribe;
+  }, [dragPositionRef, isRpgMode]);
   const renderHpLabel = (actor: Actor | null | undefined, side: HpBarSide = 'player', actorIndex = -1) => {
     const showHpBars = isRpgMode || false;
     if (!showHpBars || !actor) return null;
@@ -3259,6 +3151,11 @@ export const CombatGolf = memo(function CombatGolf({
   const hasSpawnedEnemies = !isRpgMode
     || enemyFoundations.some((foundation) => foundation.length > 0)
     || encounterEnemyActors.length > 0;
+  const { mapVisible, handleToggleMap } = useExplorationMapVisibility({
+    keruHasAspect,
+    isRpgMode,
+    hasSpawnedEnemies,
+  });
   const isExplorationMode = isRpgMode && !false && !hasSpawnedEnemies;
   const showActorComboCounts = !isRpgMode || hasSpawnedEnemies;
   useEffect(() => {
@@ -3304,18 +3201,6 @@ export const CombatGolf = memo(function CombatGolf({
       return next;
     });
   }, [actions.cleanupDefeatedEnemies, actions.spawnRandomEnemyInRandomBiome, hasLivingEnemy, true, false]);
-  useEffect(() => {
-    const shouldShowMap = isRpgMode && !false && !hasSpawnedEnemies && keruHasAspect;
-    if (shouldShowMap && !mapVisible) {
-      setMapVisible(true);
-    } else if (!shouldShowMap && mapVisible) {
-      setMapVisible(false);
-    }
-  }, [isRpgMode, false, hasSpawnedEnemies, keruHasAspect, mapVisible]);
-  useEffect(() => {
-    if (!false) return;
-    if (mapVisible) setMapVisible(false);
-  }, [false, mapVisible]);
   const showPauseButton = !zenModeEnabled && true && hasSpawnedEnemies;
   /*
   const pauseButton = (
@@ -3342,82 +3227,98 @@ export const CombatGolf = memo(function CombatGolf({
     </div>
   ) : null;
   */
-  const activeTravelDirection = (explorationHeading.length === 1 ? explorationHeading : explorationHeading[0]) as MajorDirection;
-  const travelRowsPerStep = Math.max(1, explorationRowsPerStep);
-  const currentDirectionMoves = explorationMovesByDirection[activeTravelDirection] ?? 0;
-  const consumedDirectionRows = (explorationAppliedTraversalByDirection[activeTravelDirection] ?? 0) * travelRowsPerStep;
-  const pendingDirectionRows = Math.max(0, currentDirectionMoves - consumedDirectionRows);
   const devTraverseHoldEnabled = useDevModeFlag();
-  const availableExplorationActionPoints = pendingDirectionRows;
-  const explorationTravelProgress = Math.min(travelRowsPerStep, availableExplorationActionPoints);
-  const canStepForwardInExploration = availableExplorationActionPoints >= travelRowsPerStep;
+  const {
+    travelRowsPerStep,
+    availableExplorationActionPoints,
+    explorationTravelProgress,
+    canStepForwardInExploration,
+    awardExplorationActionPoint,
+    registerExplorationTraversal,
+  } = useExplorationTravelProgression({
+    explorationHeading,
+    explorationRowsPerStep,
+    explorationMovesByDirection,
+    explorationAppliedTraversalByDirection,
+    isExplorationMode,
+    setExplorationMovesByDirection,
+    setExplorationAppliedTraversalByDirection,
+    setExplorationTotalTraversalCount,
+  });
   const explorationAppliedTraversalCount = explorationTotalTraversalCount;
-  const getDisplayedStepIndexForColumn = useCallback((columnIndex: number) => {
-    const sources = getColumnSourcesForDirection(explorationHeading);
-    const source = sources[columnIndex];
-    if (!source) return 1;
-    const sourceKey = getExplorationSourceKey(explorationCurrentNodeId, source);
-    return (explorationStepOffsetBySource[sourceKey] ?? 0) + 1;
-  }, [explorationCurrentNodeId, explorationHeading, explorationStepOffsetBySource]);
-  const getDebugStepLabelForColumn = useCallback((columnIndex: number) => {
-    if (!(isRpgMode && !hasSpawnedEnemies)) return null;
-    const sources = getColumnSourcesForDirection(explorationHeading);
-    const source = sources[columnIndex];
-    if (!source) return null;
-    const sourceKey = getExplorationSourceKey(explorationCurrentNodeId, source);
-    const step = (explorationStepOffsetBySource[sourceKey] ?? 0) + 1;
-    return `${sourceKey} | s:${step}`;
-  }, [
+  const {
+    getDisplayedStepIndexForColumn,
+    getDebugStepLabelForColumn,
+  } = useExplorationTableauProgress({
+    isRpgMode,
+    hasSpawnedEnemies,
+    explorationHeading,
+    explorationCurrentNodeId,
+    explorationStepOffsetBySource,
+    setExplorationStepOffsetBySource,
+    explorationLastTopCardIdBySourceRef,
+    tableaus: gameState.tableaus,
+    getColumnSourcesForDirection,
+    getExplorationSourceKey,
+  });
+  useExplorationTableauDisplaySync({
+    isRpgMode,
+    hasSpawnedEnemies,
+    poiMapsReady,
     explorationCurrentNodeId,
     explorationHeading,
-    explorationStepOffsetBySource,
-    hasSpawnedEnemies,
+    currentTableaus: gameState.tableaus,
+    setBiomeTableaus: actions.setBiomeTableaus,
+    getExplorationNodeCoordinates,
+    getColumnSourcesForDirection,
+    poiByCoordinateKey,
+    poiPresenceByCoordinateKey,
+    cloneCard,
+    cloneTableaus,
+    skipPoiCommitRef,
+    explorationDisplayedContextRef,
+    explorationMajorTableauCacheRef,
+    explorationMinorCenterCacheRef,
+    explorationPoiTableauCacheRef,
+  });
+  useExplorationBootstrapState({
     isRpgMode,
-  ]);
-  useEffect(() => {
-    if (!(isRpgMode && !hasSpawnedEnemies)) return;
-    setExplorationNodes([{ id: 'origin', heading: 'N', x: explorationSpawnX, y: explorationSpawnY, z: 0, visits: 1 }]);
-    explorationNodesRef.current = [{ id: 'origin', heading: 'N', x: explorationSpawnX, y: explorationSpawnY, z: 0, visits: 1 }];
-    setExplorationEdges([]);
-    explorationEdgesRef.current = [];
-    setExplorationCurrentNodeId('origin');
-    explorationCurrentNodeIdRef.current = 'origin';
-    setExplorationTrailNodeIds(['origin']);
-    explorationTrailNodeIdsRef.current = ['origin'];
-    setExplorationHeading('N');
-    explorationHeadingRef.current = 'N';
-    setExplorationStepOffsetBySource({});
-    setExplorationMovesByDirection({
-      N: 0,
-      E: 0,
-      S: 0,
-      W: 0,
-    });
-    setExplorationAppliedTraversalByDirection({
-      N: 0,
-      E: 0,
-      S: 0,
-      W: 0,
-    });
-    setExplorationTotalTraversalCount(0);
-    explorationLastTopCardIdBySourceRef.current = {};
-    explorationDisplayedContextRef.current = null;
-    explorationMajorTableauCacheRef.current = {};
-    explorationMinorCenterCacheRef.current = {};
-    explorationPoiTableauCacheRef.current = {};
-  }, [explorationSpawnX, explorationSpawnY, gameState.currentBiome, hasSpawnedEnemies, isRpgMode]);
-  const handleExplorationHeadingChange = useCallback((direction: Direction) => {
-    if (isRpgMode && !hasSpawnedEnemies) {
-      triggerExplorationTableauSlide(explorationHeadingRef.current, direction);
-    }
-    setExplorationHeading(direction);
-  }, [hasSpawnedEnemies, isRpgMode, triggerExplorationTableauSlide]);
-  const handleExplorationHeadingStep = useCallback((clockwise: boolean) => {
-    const idx = DIRECTIONS.indexOf(explorationHeadingRef.current);
-    if (idx < 0) return;
-    const next = DIRECTIONS[(idx + (clockwise ? 1 : -1) + DIRECTIONS.length) % DIRECTIONS.length];
-    handleExplorationHeadingChange(next);
-  }, [handleExplorationHeadingChange]);
+    hasSpawnedEnemies,
+    biomeKey: gameState.currentBiome,
+    explorationSpawnX,
+    explorationSpawnY,
+    setExplorationNodes,
+    setExplorationEdges,
+    setExplorationCurrentNodeId,
+    setExplorationTrailNodeIds,
+    setExplorationHeading,
+    setExplorationStepOffsetBySource,
+    setExplorationMovesByDirection,
+    setExplorationAppliedTraversalByDirection,
+    setExplorationTotalTraversalCount,
+    explorationNodesRef,
+    explorationEdgesRef,
+    explorationCurrentNodeIdRef,
+    explorationTrailNodeIdsRef,
+    explorationHeadingRef,
+    explorationLastTopCardIdBySourceRef,
+    explorationDisplayedContextRef,
+    explorationMajorTableauCacheRef,
+    explorationMinorCenterCacheRef,
+    explorationPoiTableauCacheRef,
+  });
+  const {
+    handleExplorationHeadingChange,
+    handleExplorationHeadingStep,
+    toggleExplorationMapAlignment,
+  } = useExplorationNavigationControls({
+    isRpgMode,
+    hasSpawnedEnemies,
+    explorationHeadingRef,
+    setExplorationHeading,
+    setExplorationMapAlignment,
+    triggerExplorationTableauSlide,
+  });
   const explorationCurrentLocationTitle = useMemo(() => {
     const coords = getExplorationNodeCoordinates(explorationCurrentNodeId);
     if (!coords) return 'UNKNOWN';
@@ -3471,208 +3372,28 @@ export const CombatGolf = memo(function CombatGolf({
       }
       : null
   ), [explorationActiveBlockedEdge, gameState.tableaus.length]);
-  const canAdvanceExplorationMap = useCallback((direction: Direction): boolean => {
-    const compassDelta: Record<Direction, { dx: number; dy: number }> = {
-      N: { dx: 0, dy: -1 }, NE: { dx: 1, dy: -1 }, E: { dx: 1, dy: 0 }, SE: { dx: 1, dy: 1 },
-      S: { dx: 0, dy: 1 }, SW: { dx: -1, dy: 1 }, W: { dx: -1, dy: 0 }, NW: { dx: -1, dy: -1 },
-    };
-    const prevNodes = explorationNodesRef.current;
-    const currentNode = prevNodes.find((node) => node.id === explorationCurrentNodeIdRef.current) ?? prevNodes[0];
-    if (!currentNode) return false;
-    const { dx, dy } = compassDelta[direction] ?? { dx: 0, dy: -1 };
-    const targetX = currentNode.x + dx;
-    const targetY = currentNode.y + dy;
-    const currentKey = `${currentNode.x},${currentNode.y}`;
-    const targetKey = `${targetX},${targetY}`;
-    if (pathingLocked) {
-      if (worldBlockedCellKeys.has(targetKey)) return false;
-      if (worldBlockedEdges.has(`${currentKey}->${targetKey}`)) return false;
-      const blockedByConditionalEdge = (mainWorldMap.conditionalEdges ?? []).some((edge) => {
-        if (edge.requirement !== 'source_tableau_cleared') return false;
-        const forward = currentNode.x === edge.from.col
-          && currentNode.y === edge.from.row
-          && targetX === edge.to.col
-          && targetY === edge.to.row;
-        const reverse = edge.bidirectional !== false
-          && currentNode.x === edge.to.col
-          && currentNode.y === edge.to.row
-          && targetX === edge.from.col
-          && targetY === edge.from.row;
-        if (!forward && !reverse) return false;
-        return !isCurrentExplorationTableauCleared;
-      });
-      if (blockedByConditionalEdge) return false;
-      if (mainWorldMap.tutorialRail?.lockUntilPathComplete !== false && worldForcedPath.length >= 2) {
-        const forcedIndex = worldForcedPath.findIndex((step) => step.x === currentNode.x && step.y === currentNode.y);
-        if (forcedIndex >= 0 && forcedIndex < worldForcedPath.length - 1) {
-          const required = worldForcedPath[forcedIndex + 1];
-          if (targetX !== required.x || targetY !== required.y) return false;
-        }
-      }
-    }
-    return true;
-  }, [
-    explorationNodesRef,
-    explorationCurrentNodeIdRef,
+  const {
+    canAdvanceExplorationHeading,
+    advanceExplorationMap,
+    teleportToExplorationNode,
+    stepExplorationBackward,
+  } = useExplorationTraversalController({
+    explorationHeading,
+    pathingLocked,
     isCurrentExplorationTableauCleared,
     worldBlockedCellKeys,
     worldBlockedEdges,
     worldForcedPath,
-    pathingLocked,
-  ]);
-  const canAdvanceExplorationHeading = useMemo(
-    () => canAdvanceExplorationMap(explorationHeading),
-    [canAdvanceExplorationMap, explorationHeading]
-  );
-  const advanceExplorationMap = useCallback((direction: Direction): boolean => {
-    const compassDelta: Record<Direction, { dx: number; dy: number }> = {
-      N: { dx: 0, dy: -1 }, NE: { dx: 1, dy: -1 }, E: { dx: 1, dy: 0 }, SE: { dx: 1, dy: 1 },
-      S: { dx: 0, dy: 1 }, SW: { dx: -1, dy: 1 }, W: { dx: -1, dy: 0 }, NW: { dx: -1, dy: -1 },
-    };
-    const prevNodes = explorationNodesRef.current;
-    const currentNode = prevNodes.find((node) => node.id === explorationCurrentNodeIdRef.current) ?? prevNodes[0];
-    if (!currentNode) return false;
-    const { dx, dy } = compassDelta[direction] ?? { dx: 0, dy: -1 };
-    const targetX = currentNode.x + dx;
-    const targetY = currentNode.y + dy;
-    const currentKey = `${currentNode.x},${currentNode.y}`;
-    const targetKey = `${targetX},${targetY}`;
-    if (pathingLocked) {
-      if (worldBlockedCellKeys.has(targetKey)) return false;
-      if (worldBlockedEdges.has(`${currentKey}->${targetKey}`)) return false;
-      const blockedByConditionalEdge = (mainWorldMap.conditionalEdges ?? []).some((edge) => {
-        if (edge.requirement !== 'source_tableau_cleared') return false;
-        const forward = currentNode.x === edge.from.col
-          && currentNode.y === edge.from.row
-          && targetX === edge.to.col
-          && targetY === edge.to.row;
-        const reverse = edge.bidirectional !== false
-          && currentNode.x === edge.to.col
-          && currentNode.y === edge.to.row
-          && targetX === edge.from.col
-          && targetY === edge.from.row;
-        if (!forward && !reverse) return false;
-        return !isCurrentExplorationTableauCleared;
-      });
-      if (blockedByConditionalEdge) return false;
-      if (mainWorldMap.tutorialRail?.lockUntilPathComplete !== false && worldForcedPath.length >= 2) {
-        const forcedIndex = worldForcedPath.findIndex((step) => step.x === currentNode.x && step.y === currentNode.y);
-        if (forcedIndex >= 0 && forcedIndex < worldForcedPath.length - 1) {
-          const required = worldForcedPath[forcedIndex + 1];
-          if (targetX !== required.x || targetY !== required.y) return false;
-        }
-      }
-    }
-    const existingIndex = prevNodes.findIndex((node) => node.x === targetX && node.y === targetY);
-    let nextNodes: ExplorationMapNode[];
-    let targetNodeId: string;
-    if (existingIndex >= 0) {
-      targetNodeId = prevNodes[existingIndex].id;
-      nextNodes = prevNodes.map((node, index) => (
-        index === existingIndex ? { ...node, visits: node.visits + 1, heading: direction } : node
-      ));
-    } else {
-      const newId = `node-${targetX}-${targetY}`;
-      targetNodeId = newId;
-      const depth = Math.min(6, Math.floor(prevNodes.length / 3));
-      nextNodes = [...prevNodes, { id: newId, heading: direction, x: targetX, y: targetY, z: depth, visits: 1 }];
-    }
-    // Mark the node we're leaving as cleared (player engaged with its tableau and earned enough AP to leave)
-    nextNodes = nextNodes.map((n) => (
-      n.id === currentNode.id
-        ? { ...n, cleared: isCurrentExplorationTableauCleared || n.cleared === true }
-        : n
-    ));
-    const edgeKey = `${currentNode.id}->${targetNodeId}`;
-    const prevEdges = explorationEdgesRef.current;
-    const foundEdge = prevEdges.find((edge) => edge.id === edgeKey);
-    const nextEdges = foundEdge
-      ? prevEdges.map((edge) => (edge.id === edgeKey ? { ...edge, traversals: edge.traversals + 1 } : edge))
-      : [...prevEdges, { id: edgeKey, fromId: currentNode.id, toId: targetNodeId, traversals: 1 }];
-    const nextTrail = [...explorationTrailNodeIdsRef.current, targetNodeId];
-    // Update refs synchronously before calling setters
-    explorationCurrentNodeIdRef.current = targetNodeId;
-    explorationNodesRef.current = nextNodes;
-    explorationEdgesRef.current = nextEdges;
-    explorationTrailNodeIdsRef.current = nextTrail;
-    // Call all setters at top level — no nesting, no functional updaters
-    setExplorationNodes(nextNodes);
-    setExplorationCurrentNodeId(targetNodeId);
-    setExplorationTrailNodeIds(nextTrail);
-    setExplorationEdges(nextEdges);
-    return true;
-  }, [isCurrentExplorationTableauCleared, worldBlockedCellKeys, worldBlockedEdges, worldForcedPath, pathingLocked]);
-  const teleportToExplorationNode = useCallback((targetX: number, targetY: number) => {
-    const prevNodes = explorationNodesRef.current;
-    const existingIndex = prevNodes.findIndex((n) => n.x === targetX && n.y === targetY);
-    let nextNodes: ExplorationMapNode[];
-    let targetNodeId: string;
-    if (existingIndex >= 0) {
-      targetNodeId = prevNodes[existingIndex].id;
-      nextNodes = prevNodes.map((n, i) =>
-        i === existingIndex ? { ...n, visits: n.visits + 1 } : n,
-      );
-    } else {
-      targetNodeId = `node-${targetX}-${targetY}`;
-      const depth = Math.min(6, Math.floor(prevNodes.length / 3));
-      nextNodes = [...prevNodes, {
-        id: targetNodeId,
-        heading: explorationHeadingRef.current,
-        x: targetX,
-        y: targetY,
-        z: depth,
-        visits: 1,
-      }];
-    }
-    const nextTrail = [...explorationTrailNodeIdsRef.current, targetNodeId];
-    explorationCurrentNodeIdRef.current = targetNodeId;
-    explorationNodesRef.current = nextNodes;
-    explorationTrailNodeIdsRef.current = nextTrail;
-    setExplorationNodes(nextNodes);
-    setExplorationCurrentNodeId(targetNodeId);
-    setExplorationTrailNodeIds(nextTrail);
-  }, []);
-  const awardExplorationActionPoint = useCallback((points = 1) => {
-    if (!isExplorationMode) return;
-    if (points <= 0) return;
-    setExplorationMovesByDirection((prev) => ({
-      ...prev,
-      [activeTravelDirection]: (prev[activeTravelDirection] ?? 0) + points,
-    }));
-  }, [activeTravelDirection, isExplorationMode]);
-  useEffect(() => {
-    if (!(isRpgMode && !hasSpawnedEnemies)) return;
-    if (!actions.setBiomeTableaus) return;
-    if (!poiMapsReady) return;
-    const nodeId = explorationCurrentNodeId;
-    const heading = explorationHeading;
-    const currentDisplay = gameState.tableaus;
-    const displayedContext = explorationDisplayedContextRef.current;
-    if (displayedContext && !skipPoiCommitRef.current) {
-      commitDisplayedTableausToCaches(displayedContext.nodeId, displayedContext.heading, currentDisplay);
-    }
-    if (skipPoiCommitRef.current) {
-      skipPoiCommitRef.current = false;
-    }
-    const desiredDisplay = getDisplayTableausForHeading(nodeId, heading);
-    if (!areTableausEquivalent(currentDisplay, desiredDisplay)) {
-      actions.setBiomeTableaus(desiredDisplay);
-      explorationDisplayedContextRef.current = { nodeId, heading };
-      return;
-    }
-    explorationDisplayedContextRef.current = { nodeId, heading };
-  }, [
-    actions.setBiomeTableaus,
-    areTableausEquivalent,
-    commitDisplayedTableausToCaches,
-    explorationCurrentNodeId,
-    explorationHeading,
-    gameState.tableaus,
-    getDisplayTableausForHeading,
-    hasSpawnedEnemies,
-    isRpgMode,
-    poiMapsReady,
-  ]);
+    explorationNodesRef,
+    explorationEdgesRef,
+    explorationCurrentNodeIdRef,
+    explorationTrailNodeIdsRef,
+    explorationHeadingRef,
+    setExplorationNodes,
+    setExplorationEdges,
+    setExplorationCurrentNodeId,
+    setExplorationTrailNodeIds,
+  });
   useEffect(() => {
     if (!(isRpgMode && !hasSpawnedEnemies)) return;
     if (!isCurrentExplorationTableauCleared) return;
@@ -3689,36 +3410,6 @@ export const CombatGolf = memo(function CombatGolf({
   }, [
     hasSpawnedEnemies,
     isCurrentExplorationTableauCleared,
-    isRpgMode,
-  ]);
-  useEffect(() => {
-    if (!(isRpgMode && !hasSpawnedEnemies)) return;
-    const sources = getColumnSourcesForDirection(explorationHeading);
-    if (sources.length === 0) return;
-    const increments: Record<string, number> = {};
-    sources.forEach((source, columnIndex) => {
-      const sourceKey = getExplorationSourceKey(explorationCurrentNodeId, source);
-      const nextTopId = gameState.tableaus[columnIndex]?.[gameState.tableaus[columnIndex].length - 1]?.id ?? '';
-      const prevTopId = explorationLastTopCardIdBySourceRef.current[sourceKey];
-      if (prevTopId !== undefined && prevTopId !== nextTopId) {
-        increments[sourceKey] = (increments[sourceKey] ?? 0) + 1;
-      }
-      explorationLastTopCardIdBySourceRef.current[sourceKey] = nextTopId;
-    });
-    if (Object.keys(increments).length > 0) {
-      setExplorationStepOffsetBySource((prev) => {
-        const next = { ...prev };
-        Object.entries(increments).forEach(([key, value]) => {
-          next[key] = (next[key] ?? 0) + value;
-        });
-        return next;
-      });
-    }
-  }, [
-    explorationCurrentNodeId,
-    explorationHeading,
-    gameState.tableaus,
-    hasSpawnedEnemies,
     isRpgMode,
   ]);
   useEffect(() => {
@@ -3817,40 +3508,25 @@ export const CombatGolf = memo(function CombatGolf({
     if (!canStepForwardInExploration) return;
     const moved = advanceExplorationMap(explorationHeading);
     if (!moved) return;
-    setExplorationAppliedTraversalByDirection((prev) => ({
-      ...prev,
-      [activeTravelDirection]: (prev[activeTravelDirection] ?? 0) + 1,
-    }));
-    setExplorationTotalTraversalCount((prev) => prev + 1);
+    registerExplorationTraversal();
   }, [
-    activeTravelDirection,
     advanceExplorationMap,
     canStepForwardInExploration,
     explorationHeading,
     hasSpawnedEnemies,
     isRpgMode,
+    registerExplorationTraversal,
   ]);
   const handleExplorationStepBackward = useCallback(() => {
-    const trail = explorationTrailNodeIdsRef.current;
-    if (trail.length <= 1) return;
-    const nextTrail = trail.slice(0, -1);
-    const nextNodeId = nextTrail[nextTrail.length - 1];
-    explorationTrailNodeIdsRef.current = nextTrail;
-    explorationCurrentNodeIdRef.current = nextNodeId;
-    setExplorationTrailNodeIds(nextTrail);
-    setExplorationCurrentNodeId(nextNodeId);
-  }, []);
+    stepExplorationBackward();
+  }, [stepExplorationBackward]);
 
   const stepExplorationOnPlay = useCallback(() => {
     if (!isExplorationMode) return;
     const moved = advanceExplorationMap(explorationHeading);
     if (!moved) return;
-    setExplorationAppliedTraversalByDirection((prev) => ({
-      ...prev,
-      [activeTravelDirection]: (prev[activeTravelDirection] ?? 0) + 1,
-    }));
-    setExplorationTotalTraversalCount((prev) => prev + 1);
-  }, [activeTravelDirection, advanceExplorationMap, explorationHeading, isExplorationMode]);
+    registerExplorationTraversal();
+  }, [advanceExplorationMap, explorationHeading, isExplorationMode, registerExplorationTraversal]);
   useEffect(() => {
     if (explorationStepRef) explorationStepRef.current = () => {
       awardExplorationActionPoint();
@@ -3865,80 +3541,29 @@ export const CombatGolf = memo(function CombatGolf({
     actions.setBiomeTableaus(nextTableaus);
     const moved = advanceExplorationMap(explorationHeading);
     if (!moved) return;
-    setExplorationAppliedTraversalByDirection((prev) => ({
-      ...prev,
-      [activeTravelDirection]: (prev[activeTravelDirection] ?? 0) + 1,
-    }));
-    setExplorationMovesByDirection((prev) => ({
-      ...prev,
-      [activeTravelDirection]: (prev[activeTravelDirection] ?? 0) + travelRowsPerStep,
-    }));
-    setExplorationTotalTraversalCount((prev) => prev + 1);
+    registerExplorationTraversal(travelRowsPerStep);
   }, [
     actions.setBiomeTableaus,
-    activeTravelDirection,
     advanceExplorationMap,
     explorationHeading,
     gameState.tableaus,
     hasSpawnedEnemies,
     isRpgMode,
+    registerExplorationTraversal,
     travelRowsPerStep,
   ]);
-  const clearDevTraverseHold = useCallback(() => {
-    if (devTraverseHoldTimeoutRef.current !== null) {
-      window.clearTimeout(devTraverseHoldTimeoutRef.current);
-      devTraverseHoldTimeoutRef.current = null;
-    }
-    if (devTraverseHoldIntervalRef.current !== null) {
-      window.clearInterval(devTraverseHoldIntervalRef.current);
-      devTraverseHoldIntervalRef.current = null;
-    }
-    if (devTraverseHoldRafRef.current !== null) {
-      window.cancelAnimationFrame(devTraverseHoldRafRef.current);
-      devTraverseHoldRafRef.current = null;
-    }
-    devTraverseHoldStartAtRef.current = 0;
-    setDevTraverseHoldProgress(0);
-  }, []);
-  const handleTraversalButtonPointerDown = useCallback(() => {
-    if (!devTraverseHoldEnabled) return;
-    clearDevTraverseHold();
-    devTraverseTriggeredHoldRef.current = false;
-    devTraverseHoldStartAtRef.current = performance.now();
-    const tickProgress = () => {
-      if (devTraverseHoldStartAtRef.current <= 0) return;
-      const elapsed = performance.now() - devTraverseHoldStartAtRef.current;
-      const progress = Math.max(0, Math.min(1, elapsed / DEV_TRAVERSE_HOLD_DELAY_MS));
-      setDevTraverseHoldProgress(progress);
-      if (progress < 1) {
-        devTraverseHoldRafRef.current = window.requestAnimationFrame(tickProgress);
-      } else {
-        devTraverseHoldRafRef.current = null;
-      }
-    };
-    devTraverseHoldRafRef.current = window.requestAnimationFrame(tickProgress);
-    devTraverseHoldTimeoutRef.current = window.setTimeout(() => {
-      devTraverseTriggeredHoldRef.current = true;
-      setDevTraverseHoldProgress(1);
-      runDevTraversePulse();
-      devTraverseHoldIntervalRef.current = window.setInterval(() => {
-        runDevTraversePulse();
-      }, DEV_TRAVERSE_HOLD_INTERVAL_MS);
-    }, DEV_TRAVERSE_HOLD_DELAY_MS);
-  }, [clearDevTraverseHold, devTraverseHoldEnabled, runDevTraversePulse]);
-  const handleTraversalButtonPointerUp = useCallback(() => {
-    clearDevTraverseHold();
-  }, [clearDevTraverseHold]);
-  const handleTraversalButtonClick = useCallback(() => {
-    if (devTraverseTriggeredHoldRef.current) {
-      devTraverseTriggeredHoldRef.current = false;
-      return;
-    }
-    handleExplorationStepForward();
-  }, [handleExplorationStepForward]);
-  useEffect(() => () => {
-    clearDevTraverseHold();
-  }, [clearDevTraverseHold]);
+  const {
+    handlePointerDown: handleTraversalButtonPointerDown,
+    handlePointerUp: handleTraversalButtonPointerUp,
+    handleClick: handleTraversalButtonClick,
+  } = useExplorationTraverseHoldControls({
+    enabled: devTraverseHoldEnabled,
+    holdDelayMs: DEV_TRAVERSE_HOLD_DELAY_MS,
+    holdIntervalMs: DEV_TRAVERSE_HOLD_INTERVAL_MS,
+    setHoldProgress: setDevTraverseHoldProgress,
+    onTapStepForward: handleExplorationStepForward,
+    onHoldPulse: runDevTraversePulse,
+  });
   const handleExplorationUseSupply = useCallback(() => {
     if (!(isRpgMode && !hasSpawnedEnemies)) return;
     if (explorationSupplies <= 0) return;
@@ -4056,7 +3681,21 @@ export const CombatGolf = memo(function CombatGolf({
     setGameAudioMuted(next);
   }, [soundMuted]);
   const currentCoords = getExplorationNodeCoordinates(explorationCurrentNodeId);
+  const handleBattleButtonClick = useCallback(() => {
+    onToggleCombatSandbox?.();
+  }, [onToggleCombatSandbox]);
   const coordsLabel = currentCoords ? `${currentCoords.x},${currentCoords.y}` : '--,--';
+  const topRightBattleButton = (
+    <button
+      type="button"
+      onClick={handleBattleButtonClick}
+      className="h-[30px] min-w-[58px] rounded border border-game-gold/70 bg-game-bg-dark/90 px-2 text-[12px] font-mono tracking-[0.5px] text-game-gold shadow-neon-gold flex items-center justify-center"
+      title="Toggle combat sandbox"
+      aria-label="Toggle combat sandbox"
+    >
+      BATTLE
+    </button>
+  );
   const topRightCoords = (
     <button
       type="button"
@@ -4108,6 +3747,7 @@ export const CombatGolf = memo(function CombatGolf({
           {relicTray}
         </div>
         <div className="justify-self-end pointer-events-auto flex items-center gap-2">
+          {topRightBattleButton}
           {topRightCoords}
           {topRightSoundToggle}
         </div>
@@ -4739,6 +4379,33 @@ export const CombatGolf = memo(function CombatGolf({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightingEnabled, paintLuminosityEnabled, paintMarkCount, watercolorEngine]);
 
+  const handleTableauTopCardRightClick = useCallback((card: CardType, tableauIndex: number) => {
+    const tableau = gameState.tableaus[tableauIndex];
+    if (!tableau || tableau.length === 0) return;
+    const topCard = tableau[tableau.length - 1];
+    if (!topCard || topCard.id !== card.id) return;
+    setTableauRipTriggerByCardId((current) => ({
+      ...current,
+      [card.id]: (current[card.id] ?? 0) + 1,
+    }));
+  }, [gameState.tableaus]);
+
+  useEffect(() => {
+    const liveCardIds = new Set(gameState.tableaus.flat().map((card) => card.id));
+    setTableauRipTriggerByCardId((current) => {
+      const next: Record<string, number> = {};
+      let changed = false;
+      Object.entries(current).forEach(([id, token]) => {
+        if (liveCardIds.has(id)) {
+          next[id] = token;
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+  }, [gameState.tableaus]);
+
   // Random biome rendering
   if (biomeDef?.randomlyGenerated) {
     const handleTableauClick = (card: CardType, tableauIndex: number) => {
@@ -5173,58 +4840,25 @@ export const CombatGolf = memo(function CombatGolf({
           />
         )}
         {/* Light shadow overlay – shows drag light while dragging, normal lights otherwise */}
-        {lightingEnabled && containerSize.width > 0 && (() => {
-          const lightX = containerSize.width / 2;
-          const lightY = containerSize.height * 0.05;
-          const lightRadius = Math.max(containerSize.width, containerSize.height) * 1.2;
-
-        let allLights;
-        if (dragState.isDragging) {
-          // During drag: single light follows the dragged card
-          const cardScale = 1.25;
-          const effectiveScale = cardScale * effectiveGlobalCardScale;
-          const dragCenterX = dragState.position.x
-            + (CARD_SIZE.width * effectiveScale) / 2
-            - biomeContainerOriginRef.current.left;
-          const dragCenterY = dragState.position.y
-            + (CARD_SIZE.height * effectiveScale) / 2
-            - biomeContainerOriginRef.current.top;
-          allLights = [{
-            x: dragCenterX,
-            y: dragCenterY,
-            radius: 260,
-            intensity: 1.2,
-            color: '#ffffff',
-            castShadows: false,
-            flicker: { enabled: false, speed: 0, amount: 0 },
-          }];
-          if (isDraggingKeruRewardCard) {
-            const targetEl = foundationRefs.current[0];
-            if (targetEl) {
-              const targetRect = targetEl.getBoundingClientRect();
-              const targetX = targetRect.left - biomeContainerOriginRef.current.left + (targetRect.width / 2);
-              const targetY = targetRect.top - biomeContainerOriginRef.current.top + (targetRect.height / 2);
-              allLights.push({
-                x: targetX,
-                y: targetY,
-                radius: 220,
-                intensity: 1.05,
-                color: '#7fdbca',
-                castShadows: false,
-                flicker: { enabled: true, speed: 0.007, amount: 0.16 },
-              });
-              allLights.push({
-                x: targetX,
-                y: targetY,
-                radius: 140,
-                intensity: 1.25,
-                color: '#f7d24b',
-                castShadows: false,
-                flicker: { enabled: true, speed: 0.011, amount: 0.24 },
-              });
-            }
-          }
-        } else {
+        {lightingEnabled && containerSize.width > 0 && (
+          dragState.isDragging ? (
+            <DragLightOverlay
+              active={dragState.isDragging}
+              dragPositionRef={dragPositionRef}
+              fallbackPositionRef={dragBasePositionRef}
+              effectiveGlobalCardScale={effectiveGlobalCardScale}
+              containerSize={containerSize}
+              containerRef={biomeContainerRef}
+              anchorRef={biomeContainerRef}
+              biomeOriginRef={biomeContainerOriginRef}
+              foundationRefs={foundationRefs}
+              isDraggingKeruRewardCard={isDraggingKeruRewardCard}
+              ambientDarkness={dynamicAmbientDarkness}
+            />
+          ) : (() => {
+            const lightX = containerSize.width / 2;
+            const lightY = containerSize.height * 0.05;
+            const lightRadius = Math.max(containerSize.width, containerSize.height) * 1.2;
             // Normal state: flash lights + ambient paint lights
             const now = performance.now();
             const flashLights = cardPlayFlashes.map((flash) => {
@@ -5250,33 +4884,33 @@ export const CombatGolf = memo(function CombatGolf({
                 flicker: { enabled: false, speed: 0, amount: 0 },
               };
             });
-            allLights = [...flashLights, ...paintLights];
-          }
+            const allLights = [...flashLights, ...paintLights];
 
-          return (
-            <ShadowCanvas
-              containerRef={biomeContainerRef}
-              anchorRef={biomeContainerRef}
-              useCameraTransform={false}
-              lightX={lightX}
-              lightY={lightY}
-              lightRadius={lightRadius}
-              lightIntensity={0}
-              lightColor="#ffffff"
-              ambientDarkness={dynamicAmbientDarkness}
-              flickerSpeed={0}
-              flickerAmount={0}
-              blockers={dragState.isDragging ? [] : foundationBlockers}
-              actorGlows={[]}
-              actorLights={allLights}
-              worldWidth={containerSize.width}
-              worldHeight={containerSize.height}
-              tileSize={100}
-              width={containerSize.width}
-              height={containerSize.height}
-            />
-          );
-        })()}
+            return (
+              <ShadowCanvas
+                containerRef={biomeContainerRef}
+                anchorRef={biomeContainerRef}
+                useCameraTransform={false}
+                lightX={lightX}
+                lightY={lightY}
+                lightRadius={lightRadius}
+                lightIntensity={0}
+                lightColor="#ffffff"
+                ambientDarkness={dynamicAmbientDarkness}
+                flickerSpeed={0}
+                flickerAmount={0}
+                blockers={foundationBlockers}
+                actorGlows={[]}
+                actorLights={allLights}
+                worldWidth={containerSize.width}
+                worldHeight={containerSize.height}
+                tileSize={100}
+                width={containerSize.width}
+                height={containerSize.height}
+              />
+            );
+          })()
+        )}
         <div
           className="relative w-full h-full flex flex-col items-center justify-center pointer-events-auto"
           style={{ gap: battleSectionGap }}
@@ -5290,12 +4924,12 @@ export const CombatGolf = memo(function CombatGolf({
         {renderMatchLines('random')}
 
         {/* Enemy Foundations + Tableaus */}
-        <div className="relative z-30 flex flex-col items-center">
+          <div className="relative z-30 flex flex-col items-center">
           {true && (
             <div className="relative w-full flex justify-center" style={{ marginBottom: 12, marginTop: -20 }}>
               <div className="flex items-center justify-center" style={{ gap: `${enemyFoundationGapPx}px` }}>
-                {enemyFoundations.map((cards, idx) => {
-                  const enemyActor = enemyActors[idx];
+                {enemyFoundationsForDisplay.map((cards, idx) => {
+                  const enemyActor = enemyActorsForDisplay[idx];
                   const enemyTopRpgCard = enemyRpgHandCards[idx]?.[Math.max(0, (enemyRpgHandCards[idx]?.length ?? 1) - 1)] ?? null;
                   const enemyHandCount = enemyRpgHandCards[idx]?.length ?? 0;
                   const enemyCombatReady = !enemyActor || (enemyActor.hp ?? 0) > 0;
@@ -5454,121 +5088,80 @@ export const CombatGolf = memo(function CombatGolf({
               cursor={!isEnemyTurn && canTriggerEndTurnFromCombo ? 'pointer' : 'default'}
             />
           )}
-          <Exploritaire
-            showNarration={narrativeOpen && isRpgMode && !hasSpawnedEnemies}
-            narrationTheme={narrationTheme}
+          <ExplorationEncounterPanel
+            narrativeOpen={narrativeOpen}
+            isRpgMode={isRpgMode}
+            hasSpawnedEnemies={hasSpawnedEnemies}
             narrationTone={narrationTone}
             activePoiNarration={activePoiNarration}
             onCloseNarrative={() => setNarrativeOpen(false)}
             explorationMapFrameWidth={explorationMapFrameWidth}
-            showMap={isRpgMode && !false && !hasSpawnedEnemies && mapVisible}
+            mapVisible={mapVisible}
             hasUnclearedVisibleTableaus={hasUnclearedVisibleTableaus}
-            mapWidth={explorationMapWidth}
-            mapHeight={explorationMapHeight}
-            heading={explorationHeading}
-            alignmentMode={explorationMapAlignment}
-            currentNodeId={explorationCurrentNodeId}
-            trailNodeIds={explorationTrailNodeIds}
-            nodes={explorationNodes}
-            edges={explorationEdges}
-            poiMarkers={explorationPoiMarkers}
-            blockedCells={explorationBlockedCells}
-            blockedEdges={explorationBlockedEdges}
-            conditionalEdges={explorationConditionalEdges}
-            activeBlockedEdge={explorationActiveBlockedEdge}
-            tableauWall={explorationTableauWall}
-            forcedPath={worldForcedPath}
-            nextForcedPathIndex={explorationForcedPathNextIndex}
-            travelLabel={explorationCurrentLocationTitle}
-            actionPoints={availableExplorationActionPoints}
-            supplyCount={explorationSupplies}
-            onUseSupply={handleExplorationUseSupply}
-            traversalCount={explorationAppliedTraversalCount}
-            stepCost={travelRowsPerStep}
+            explorationMapWidth={explorationMapWidth}
+            explorationMapHeight={explorationMapHeight}
+            explorationHeading={explorationHeading}
+            explorationMapAlignment={explorationMapAlignment}
+            explorationCurrentNodeId={explorationCurrentNodeId}
+            explorationTrailNodeIds={explorationTrailNodeIds}
+            explorationNodes={explorationNodes}
+            explorationEdges={explorationEdges}
+            explorationPoiMarkers={explorationPoiMarkers}
+            explorationBlockedCells={explorationBlockedCells}
+            explorationBlockedEdges={explorationBlockedEdges}
+            explorationConditionalEdges={explorationConditionalEdges}
+            explorationActiveBlockedEdge={explorationActiveBlockedEdge}
+            explorationTableauWall={explorationTableauWall}
+            worldForcedPath={worldForcedPath}
+            explorationForcedPathNextIndex={explorationForcedPathNextIndex}
+            explorationCurrentLocationTitle={explorationCurrentLocationTitle}
+            availableExplorationActionPoints={availableExplorationActionPoints}
+            explorationSupplies={explorationSupplies}
+            onExplorationUseSupply={handleExplorationUseSupply}
+            explorationAppliedTraversalCount={explorationAppliedTraversalCount}
+            travelRowsPerStep={travelRowsPerStep}
             onStepCostDecrease={() => setExplorationRowsPerStep((current) => Math.max(1, current - 1))}
             onStepCostIncrease={() => setExplorationRowsPerStep((current) => Math.min(12, current + 1))}
-            onStepForward={stepExplorationOnPlay}
-            canStepForward={canAdvanceExplorationHeading || devTraverseHoldEnabled}
-            onStepBackward={handleExplorationStepBackward}
-            canStepBackward={explorationTrailNodeIds.length > 1}
+            stepExplorationOnPlay={stepExplorationOnPlay}
+            canAdvanceExplorationHeading={canAdvanceExplorationHeading}
+            devTraverseHoldEnabled={devTraverseHoldEnabled}
+            handleExplorationStepBackward={handleExplorationStepBackward}
             pathingLocked={pathingLocked}
             onTogglePathingLocked={() => setPathingLocked((prev) => !prev)}
-            onHeadingChange={handleExplorationHeadingChange}
-            onTeleport={teleportToExplorationNode}
-            showLighting={lightingEnabled}
-            onMapAlignmentToggle={() => {
-              setExplorationMapAlignment((current) => (current === 'map' ? 'player' : 'map'));
-            }}
-            enableKeyboard={isExplorationMode}
-            onToggleMap={() => setMapVisible((prev) => !prev)}
-            onStepForward={stepExplorationOnPlay}
-            onStepBackward={handleExplorationStepBackward}
+            handleExplorationHeadingChange={handleExplorationHeadingChange}
+            teleportToExplorationNode={teleportToExplorationNode}
+            lightingEnabled={lightingEnabled}
+            onMapAlignmentToggle={toggleExplorationMapAlignment}
+            isExplorationMode={isExplorationMode}
+            handleToggleMap={handleToggleMap}
             onRotateLeft={() => handleExplorationHeadingStep(false)}
             onRotateRight={() => handleExplorationHeadingStep(true)}
+            forcedPerspectiveEnabled={forcedPerspectiveEnabled}
+            gameState={gameState}
+            selectedCard={selectedCard}
+            handleTableauClick={handleTableauClick}
+            handleTableauTopCardRightClick={handleTableauTopCardRightClick}
+            showGraphics={showGraphics}
+            tableauCardScale={tableauCardScale}
+            handleDragStartGuarded={handleDragStartGuarded}
+            dragState={dragState}
+            cloudSightActive={cloudSightActive}
+            tableauCanPlay={tableauCanPlay}
+            noValidMoves={noValidMoves}
+            explorationTableauRowHeightPx={explorationTableauRowHeightPx}
+            tableauSlideOffsetPx={tableauSlideOffsetPx}
+            tableauSlideAnimating={tableauSlideAnimating}
+            explorationSlideAnimationMs={EXPLORATION_SLIDE_ANIMATION_MS}
+            tableauRefs={tableauRefs}
+            sunkCostTableauPulseStyle={sunkCostTableauPulseStyle}
+            revealAllCardsForIntro={revealAllCardsForIntro}
+            enemyDraggingTableauIndexes={enemyDraggingTableauIndexes}
+            hiddenPlayerTableaus={hiddenPlayerTableaus}
+            maskAllPlayerTableauValues={maskAllPlayerTableauValues}
+            getDisplayedStepIndexForColumn={getDisplayedStepIndexForColumn}
+            getDebugStepLabelForColumn={getDebugStepLabelForColumn}
+            ripTriggerByCardId={tableauRipTriggerByCardId}
           />
-          {hasUnclearedVisibleTableaus && (
-            forcedPerspectiveEnabled ? (
-              <PerspectiveTableauGroup
-                gameState={gameState}
-                selectedCard={selectedCard}
-                onCardSelect={handleTableauClick}
-                guidanceMoves={[]}
-                showGraphics={showGraphics}
-                cardScale={tableauCardScale}
-                interactionMode={gameState.interactionMode}
-                handleDragStart={handleDragStartGuarded}
-                isDragging={dragState.isDragging}
-                draggingCardId={dragState.isDragging ? dragState.card?.id : null}
-                revealNextRow={cloudSightActive}
-                tableauCanPlay={tableauCanPlay}
-                noValidMoves={noValidMoves}
-              />
-            ) : (
-              <div
-                className="flex w-full justify-center gap-3 px-2 sm:px-3"
-                style={{
-                  alignItems: 'flex-start',
-                  height: `${explorationTableauRowHeightPx}px`,
-                  overflow: 'hidden',
-                  transform: `translateX(${tableauSlideOffsetPx}px)`,
-                  transition: tableauSlideAnimating ? `transform ${EXPLORATION_SLIDE_ANIMATION_MS}ms cubic-bezier(0.2, 0.9, 0.25, 1)` : 'none',
-                  willChange: 'transform',
-                }}
-              >
-                {gameState.tableaus.map((tableau, idx) => (
-                  <div
-                    key={idx}
-                    ref={(el) => { tableauRefs.current[idx] = el; }}
-                    style={tableau.length > 0 && sunkCostTableauPulseStyle ? sunkCostTableauPulseStyle : undefined}
-                  >
-                    <Tableau
-                      cards={tableau}
-                      tableauIndex={idx}
-                      canPlay={tableauCanPlay[idx]}
-                      noValidMoves={noValidMoves}
-                      selectedCard={selectedCard}
-                      onCardSelect={handleTableauClick}
-                      guidanceMoves={[]}
-                      interactionMode={gameState.interactionMode}
-                      onDragStart={handleDragStartGuarded}
-                      draggingCardId={dragState.isDragging ? dragState.card?.id : null}
-                      showGraphics={showGraphics}
-                      cardScale={tableauCardScale}
-                      revealNextRow={cloudSightActive}
-                      revealAllCards={revealAllCardsForIntro}
-                      dimTopCard={enemyDraggingTableauIndexes.has(idx)}
-                      hiddenTopCard={isRpgMode && hiddenPlayerTableaus.has(idx)}
-                      maskTopValue={isRpgMode && maskAllPlayerTableauValues}
-                      hideElements={isRpgMode}
-                      topCardStepIndexOverride={isRpgMode && !hasSpawnedEnemies ? getDisplayedStepIndexForColumn(idx) : null}
-                      debugStepLabel={getDebugStepLabelForColumn(idx)}
-                    />
-                  </div>
-                ))}
-              </div>
-            )
-          )}
-        </div>
             {!isRpgMode && comboExpiryTokens.length > 0 && (
               <div className="relative flex items-center justify-center gap-2" style={{ marginTop: 2, marginBottom: 2 }}>
                 {comboExpiryTokens.map((token) => (
@@ -5595,10 +5188,11 @@ export const CombatGolf = memo(function CombatGolf({
               <div className="relative w-full flex items-center justify-center min-h-[148px]">
                 <div
                   ref={foundationRowRef}
-                  className="flex items-center justify-center"
+                  className={`flex items-center justify-center ${forcedPerspectiveEnabled ? 'perspective-foundation-container' : ''}`}
                   style={{ gap: `${foundationGapPx}px` }}
                 >
-                  {gameState.foundations.map((foundation, idx) => {
+                  <div className={`flex items-center justify-center ${forcedPerspectiveEnabled ? 'perspective-foundation-content' : ''}`} style={{ gap: `${foundationGapPx}px` }}>
+                    {gameState.foundations.map((foundation, idx) => {
                     const isWild = foundation.length === 1 && foundation[0].rank === WILD_SENTINEL_RANK;
                     const showGoldHighlight = !!(selectedCard && validFoundationsForSelected[idx]);
                     const actor = false
@@ -5846,171 +5440,10 @@ export const CombatGolf = memo(function CombatGolf({
                   </div>
                 </div>
               </div>
+              </div>
             )}
             {!true && <div className="w-20" aria-hidden="true" />}
-            {!true && (
-              <div
-                ref={foundationRowRef}
-                className="flex items-start"
-                style={{ gap: `${foundationGapPx}px` }}
-              >
-              {gameState.foundations.map((foundation, idx) => {
-                const isWild = foundation.length === 1 && foundation[0].rank === WILD_SENTINEL_RANK;
-                const showGoldHighlight = !!(selectedCard && validFoundationsForSelected[idx]);
-                const actor = false
-                  ? ((idx === 0 && !foundationHasActor) ? null : activeParty[idx])
-                  : activeParty[idx];
-                const hasStamina = isActorCombatReady(actor);
-                const canReceiveDrag =
-                  dragState.isDragging &&
-                  dragState.card &&
-                  canPlayCardWithWild(
-                    dragState.card,
-                    foundation[foundation.length - 1],
-                    gameState.activeEffects,
-                    foundation
-                  ) &&
-                  hasStamina;
-
-                return (
-                  <div
-                    key={idx}
-                    className="relative flex flex-col items-center"
-                    data-rpg-actor-target="true"
-                    data-rpg-actor-side="player"
-                    data-rpg-actor-index={idx}
-                    ref={(el) => {
-                      foundationRefs.current[idx] = el;
-                      setFoundationRef(idx, el);
-                    }}
-                  >
-                    {renderStatusBadges(actor, 'player')}
-                    <FoundationActor
-                      cards={foundation}
-                      index={idx}
-                      onFoundationClick={(foundationIndex) => {
-                        if (isGamePaused) return;
-                        if (handlePlayerFoundationClickInBiome(foundationIndex)) return;
-                        if (true) {
-                          setArmedFoundationIndex((prev) => (prev === foundationIndex ? null : foundationIndex));
-                          return;
-                        }
-                        if (selectedCard) {
-                          const played = actions.playCardInRandomBiome(
-                            selectedCard.tableauIndex,
-                            foundationIndex
-                          );
-                          if (played) {
-                            signalValidMove();
-                            maybeGainSupplyFromValidMove();
-                            awardExplorationActionPoint();
-                            setSelectedCard(null);
-                          }
-                        }
-                      }}
-                      canReceive={showGoldHighlight && hasStamina}
-                      isGuidanceTarget={true && armedFoundationIndex === idx}
-                      isDimmed={!hasStamina}
-                      interactionMode={gameState.interactionMode}
-                      isDragTarget={!!canReceiveDrag}
-                      actor={actor}
-                      showGraphics={showGraphics}
-                      actorDeck={actor ? gameState.actorDecks[actor.id] : undefined}
-                      orimInstances={foundationOrimInstances}
-                      orimDefinitions={foundationOrimDefinitions}
-                      isPartied
-                      showCompleteSticker={false}
-                      cardScale={foundationCardScale}
-                      tooltipDisabled={tooltipSuppressed}
-                      showTokenEdgeOverlay={false}
-                      maskValue={maskPlayerFoundationValues}
-                      splashDirectionDeg={
-                        foundationSplashHint && foundationSplashHint.foundationIndex === idx
-                          ? foundationSplashHint.directionDeg
-                          : undefined
-                      }
-                      splashDirectionToken={
-                        foundationSplashHint && foundationSplashHint.foundationIndex === idx
-                          ? foundationSplashHint.token
-                          : undefined
-                      }
-                      disableFoundationSplashes
-                      comboCount={showActorComboCounts && actor ? (true
-                        ? (actorComboCounts[actor.id] ?? 0)
-                        : ((gameState.foundationCombos || [])[idx] || 0)) : 0}
-                      hideElements={isRpgMode}
-                      hpOverlay={renderHpLabel(actor, 'player', idx)}
-                      hpOverlayPlacement="top"
-                      hpOverlayOffsetPx={6}
-                      onActorLongPress={({ actor: pressedActor }) => handleActorFoundationLongPress(pressedActor)}
-                    />
-                    {renderExplorationActorHandPreview(actor, idx)}
-                    {renderActorNameLabel(actor)}
-                    {isWild && (
-                      <div
-                        className="text-[10px] tracking-wider font-bold mt-1"
-                        style={{ color: '#e6b31e' }}
-                      >
-                        WILD
-                      </div>
-                    )}
-                    {(() => {
-                      if (!SHOW_FOUNDATION_TOKEN_BADGES) return null;
-                      const tokenCounts = (gameState.foundationTokens || [])[idx] || emptyTokens;
-                      const tokenList = TOKEN_ORDER.flatMap((element) =>
-                        Array.from({ length: tokenCounts[element] || 0 }, () => element)
-                      );
-                      if (tokenList.length === 0) return null;
-                      const tokenSize = Math.max(20, Math.round(cardWidth * 0.32));
-                      return (
-                        <div className="mt-2 grid grid-cols-3 gap-1 justify-items-center">
-                          {tokenList.map((element, tokenIndex) => {
-                            const suit = ELEMENT_TO_SUIT[element];
-                            const color = SUIT_COLORS[suit];
-                            const display = getSuitDisplay(suit, showGraphics);
-                            return (
-                              <div
-                                key={`${element}-${tokenIndex}`}
-                                className="rounded-full flex items-center justify-center text-[10px] font-bold"
-                                style={{
-                                  width: tokenSize,
-                                  height: tokenSize,
-                                  borderWidth: 1,
-                                  borderStyle: 'solid',
-                                  borderColor: color,
-                                  backgroundColor: color,
-                                  color: '#0a0a0a',
-                                  boxShadow: `0 0 0 1px #ffffff, inset 0 0 0 1px #ffffff`,
-                                }}
-                                data-token-face
-                              >
-                                <span
-                                  style={{
-                                    WebkitTextStroke: '0.3px #ffffff',
-                                    textShadow: '0 0 1px rgba(255, 255, 255, 0.5)',
-                                  }}
-                                >
-                                  {display}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                    {!true && (
-                      <FoundationTokenGrid
-                        tokens={(gameState.foundationTokens || [])[idx] || emptyTokens}
-                        comboCount={showActorComboCounts && actor ? (true
-                          ? (actorComboCounts[actor.id] ?? 0)
-                          : ((gameState.foundationCombos || [])[idx] || 0)) : 0}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            )}
+            {!true && null}
             {false && true && isRpgMode && !hasSpawnedEnemies && (
               <div
                 className="absolute pointer-events-auto z-[100]"
@@ -6322,15 +5755,16 @@ export const CombatGolf = memo(function CombatGolf({
             100% { opacity: 0; transform: scale(1.14); }
           }
         `}</style>
-        <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />
+        {false && <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />}
         {enemyHandOverlay}
         {rpgCardInspectOverlay}
         {actorInspectOverlay}
         {timerBankVisuals}
         {topHudBar}
-        </div>
-        </div>
         {splatterModal}
+      </div>
+      </div>
+      </div>
       </div>
           );
         }}
@@ -6362,7 +5796,7 @@ export const CombatGolf = memo(function CombatGolf({
           showGraphics={showGraphics}
         />
         </div>
-        <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />
+        {false && <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />}
         {enemyHandOverlay}
         {rpgCardInspectOverlay}
         {actorInspectOverlay}
@@ -6570,58 +6004,25 @@ export const CombatGolf = memo(function CombatGolf({
       style={{ zIndex: 2, gap: 'clamp(6px, 1.8vh, 22px)', pointerEvents: blockIntroPointerEvents ? 'none' : 'auto' }}
       >
       {/* Light shadow overlay – shows drag light while dragging, normal lights otherwise */}
-      {lightingEnabled && containerSize.width > 0 && (() => {
-        const lightX = containerSize.width / 2;
-        const lightY = containerSize.height * 0.05;
-        const lightRadius = Math.max(containerSize.width, containerSize.height) * 1.2;
-
-        let allLights;
-        if (dragState.isDragging) {
-          // During drag: single light follows the dragged card
-          const cardScale = 1.25;
-          const effectiveScale = cardScale * effectiveGlobalCardScale;
-          const dragCenterX = dragState.position.x
-            + (CARD_SIZE.width * effectiveScale) / 2
-            - biomeContainerOriginRef.current.left;
-          const dragCenterY = dragState.position.y
-            + (CARD_SIZE.height * effectiveScale) / 2
-            - biomeContainerOriginRef.current.top;
-          allLights = [{
-            x: dragCenterX,
-            y: dragCenterY,
-            radius: 260,
-            intensity: 1.2,
-            color: '#ffffff',
-            castShadows: false,
-            flicker: { enabled: false, speed: 0, amount: 0 },
-          }];
-          if (isDraggingKeruRewardCard) {
-            const targetEl = foundationRefs.current[0];
-            if (targetEl) {
-              const targetRect = targetEl.getBoundingClientRect();
-              const targetX = targetRect.left - biomeContainerOriginRef.current.left + (targetRect.width / 2);
-              const targetY = targetRect.top - biomeContainerOriginRef.current.top + (targetRect.height / 2);
-              allLights.push({
-                x: targetX,
-                y: targetY,
-                radius: 220,
-                intensity: 1.05,
-                color: '#7fdbca',
-                castShadows: false,
-                flicker: { enabled: true, speed: 0.007, amount: 0.16 },
-              });
-              allLights.push({
-                x: targetX,
-                y: targetY,
-                radius: 140,
-                intensity: 1.25,
-                color: '#f7d24b',
-                castShadows: false,
-                flicker: { enabled: true, speed: 0.011, amount: 0.24 },
-              });
-            }
-          }
-        } else {
+      {lightingEnabled && containerSize.width > 0 && (
+        dragState.isDragging ? (
+          <DragLightOverlay
+            active={dragState.isDragging}
+            dragPositionRef={dragPositionRef}
+            fallbackPositionRef={dragBasePositionRef}
+            effectiveGlobalCardScale={effectiveGlobalCardScale}
+            containerSize={containerSize}
+            containerRef={biomeContainerRef}
+            anchorRef={biomeContainerRef}
+            biomeOriginRef={biomeContainerOriginRef}
+            foundationRefs={foundationRefs}
+            isDraggingKeruRewardCard={isDraggingKeruRewardCard}
+            ambientDarkness={dynamicAmbientDarkness}
+          />
+        ) : (() => {
+          const lightX = containerSize.width / 2;
+          const lightY = containerSize.height * 0.05;
+          const lightRadius = Math.max(containerSize.width, containerSize.height) * 1.2;
           // Normal state: flash lights + ambient paint lights
           const now = performance.now();
           const flashLights = cardPlayFlashes.map((flash) => {
@@ -6651,33 +6052,33 @@ export const CombatGolf = memo(function CombatGolf({
               },
             };
           });
-          allLights = [...flashLights, ...paintLights];
-        }
+          const allLights = [...flashLights, ...paintLights];
 
-        return (
-          <ShadowCanvas
-            containerRef={biomeContainerRef}
-            anchorRef={biomeContainerRef}
-            useCameraTransform={false}
-            lightX={lightX}
-            lightY={lightY}
-            lightRadius={lightRadius}
-            lightIntensity={0}
-            lightColor="#ffffff"
-            ambientDarkness={dynamicAmbientDarkness}
-            flickerSpeed={0}
-            flickerAmount={0}
-            blockers={dragState.isDragging ? [] : foundationBlockers}
-            actorGlows={[]}
-            actorLights={allLights}
-            worldWidth={containerSize.width}
-            worldHeight={containerSize.height}
-            tileSize={80}
-            width={containerSize.width}
-            height={containerSize.height}
-          />
-        );
-      })()}
+          return (
+            <ShadowCanvas
+              containerRef={biomeContainerRef}
+              anchorRef={biomeContainerRef}
+              useCameraTransform={false}
+              lightX={lightX}
+              lightY={lightY}
+              lightRadius={lightRadius}
+              lightIntensity={0}
+              lightColor="#ffffff"
+              ambientDarkness={dynamicAmbientDarkness}
+              flickerSpeed={0}
+              flickerAmount={0}
+              blockers={foundationBlockers}
+              actorGlows={[]}
+              actorLights={allLights}
+              worldWidth={containerSize.width}
+              worldHeight={containerSize.height}
+              tileSize={80}
+              width={containerSize.width}
+              height={containerSize.height}
+            />
+          );
+        })()
+      )}
       <InteractionScreen
         className="relative w-full flex flex-col items-center pointer-events-auto"
         style={{ gap: 'clamp(6px, 1.8vh, 22px)' }}
@@ -6720,6 +6121,8 @@ export const CombatGolf = memo(function CombatGolf({
                 hideElements={isRpgMode}
                 topCardStepIndexOverride={isRpgMode && !hasSpawnedEnemies ? getDisplayedStepIndexForColumn(idx) : null}
                 debugStepLabel={getDebugStepLabelForColumn(idx)}
+                onTopCardRightClick={handleTableauTopCardRightClick}
+                ripTriggerByCardId={tableauRipTriggerByCardId}
               />
             </div>
           ))}
@@ -6753,6 +6156,8 @@ export const CombatGolf = memo(function CombatGolf({
                 hideElements={isRpgMode}
                 topCardStepIndexOverride={isRpgMode && !hasSpawnedEnemies ? getDisplayedStepIndexForColumn(idx) : null}
                 debugStepLabel={getDebugStepLabelForColumn(idx)}
+                onTopCardRightClick={handleTableauTopCardRightClick}
+                ripTriggerByCardId={tableauRipTriggerByCardId}
               />
             </div>
           ))}
@@ -6779,7 +6184,8 @@ export const CombatGolf = memo(function CombatGolf({
             ))}
           </div>
         )}
-        <div className={`flex w-full justify-center ${true ? 'items-center' : ''}`} style={{ gap: true ? `${foundationGapPx}px` : '10px' }}>
+        <div className={`flex w-full justify-center ${true ? 'items-center' : ''} ${forcedPerspectiveEnabled ? 'perspective-foundation-container' : ''}`} style={{ gap: true ? `${foundationGapPx}px` : '10px' }}>
+          <div className={`flex items-center justify-center ${forcedPerspectiveEnabled ? 'perspective-foundation-content' : ''}`} style={{ gap: true ? `${foundationGapPx}px` : '10px' }}>
             {gameState.foundations.map((foundation, idx) => {
               const showGoldHighlight =
                 !!(selectedCard && validFoundationsForSelected[idx]);
@@ -6915,6 +6321,7 @@ export const CombatGolf = memo(function CombatGolf({
             );
           })}
         </div>
+        </div>
 
         <div className="mt-2 pointer-events-auto relative z-[100]">
           <div className="flex items-center gap-2 pointer-events-auto z-[100] relative">
@@ -7024,7 +6431,7 @@ export const CombatGolf = memo(function CombatGolf({
           />
         </div>
       )}
-      <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />
+      {false && <StartMatchOverlay phase={startOverlayPhase} countdown={startCountdown} onPlay={handleStartMatch} onSkip={handleSkipIntro} />}
       {enemyHandOverlay}
       {rpgCardInspectOverlay}
       {actorInspectOverlay}

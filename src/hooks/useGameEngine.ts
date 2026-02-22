@@ -848,7 +848,7 @@ export function useGameEngine(
 
   const setBiomeTableaus = useCallback((tableaus: Card[][]) => {
     setGameState((prev) => {
-      if (!prev || prev.phase !== 'biome') return prev;
+      if (!prev) return prev;
       return {
         ...prev,
         tableaus,

@@ -54,4 +54,6 @@ export {
   useWatercolorSplash,
   useWatercolorReady,
   useRegisterWatercolorEngine,
+  useGodRayState,
+  useSetGodRayState,
 } from './WatercolorContext';

@@ -4,7 +4,7 @@ import { NEON_COLORS } from '../utils/styles';
 
 interface RichNarrationProps {
   text: string;
-  tone?: 'teal' | 'gold' | 'violet' | 'green';
+  tone?: 'teal' | 'gold' | 'violet' | 'green' | 'red' | 'blue' | 'orange' | 'pink' | 'silver' | 'brown' | 'black' | 'white';
   className?: string;
 }
 
@@ -27,9 +27,17 @@ export function RichNarration({ text, tone = 'teal', className = '' }: RichNarra
 
     // Fallback to tone
     switch (tone) {
-      case 'gold': return { glow: 'rgba(230, 179, 30, 0.8)', text: 'text-game-gold' };
-      case 'violet': return { glow: 'rgba(139, 92, 246, 0.8)', text: 'text-game-purple' };
-      case 'green': return { glow: 'rgba(34, 197, 94, 0.8)', text: 'text-green-400' };
+      case 'gold': return { glow: 'rgba(247, 210, 75, 0.8)', text: 'text-game-gold' };
+      case 'violet': return { glow: 'rgba(200, 125, 232, 0.8)', text: 'text-game-purple' };
+      case 'green': return { glow: 'rgba(107, 203, 119, 0.8)', text: 'text-emerald-300' };
+      case 'red': return { glow: 'rgba(255, 77, 77, 0.85)', text: 'text-red-300' };
+      case 'blue': return { glow: 'rgba(108, 182, 255, 0.85)', text: 'text-blue-300' };
+      case 'orange': return { glow: 'rgba(255, 142, 102, 0.85)', text: 'text-orange-300' };
+      case 'pink': return { glow: 'rgba(245, 208, 254, 0.85)', text: 'text-pink-200' };
+      case 'silver': return { glow: 'rgba(226, 232, 240, 0.85)', text: 'text-slate-200' };
+      case 'brown': return { glow: 'rgba(161, 98, 7, 0.8)', text: 'text-amber-300' };
+      case 'black': return { glow: 'rgba(255, 255, 255, 0.5)', text: 'text-slate-200' };
+      case 'white': return { glow: 'rgba(255, 255, 255, 0.95)', text: 'text-white' };
       default: return { glow: 'rgba(126, 255, 199, 0.8)', text: 'text-game-teal' };
     }
   };

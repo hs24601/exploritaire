@@ -15,9 +15,9 @@ function createPresetCard(
   presetId: PoiTableauPresetId,
   rank: number,
   rowIndex: number,
-  columnIndex: number
+  columnIndex: number,
+  element: Card['element'] = 'N'
 ): Card {
-  const element = 'N';
   return {
     id: `${presetId}-r${rowIndex}-c${columnIndex}-rk${rank}`,
     rank,
@@ -41,17 +41,22 @@ function createOasisATutorialTableaus(): Card[][] {
 
 function createSingleRowTableaus(
   presetId: PoiTableauPresetId,
-  ranks: number[]
+  ranks: number[],
+  elements?: Card['element'][]
 ): Card[][] {
   return ranks.map((rank, columnIndex) => [
-    createPresetCard(presetId, rank, 0, columnIndex),
+    createPresetCard(presetId, rank, 0, columnIndex, elements?.[columnIndex] ?? 'N'),
   ]);
 }
 
 export function createPoiTableauPreset(presetId: PoiTableauPresetId): Card[][] {
   switch (presetId) {
     case 'initial_actions_00':
-      return createSingleRowTableaus('initial_actions_00', [1, 2, 3, 4, 5, 6, 7]);
+      return createSingleRowTableaus(
+        'initial_actions_00',
+        [1, 2, 3, 4, 5, 6, 7],
+        ['A', 'W', 'E', 'F', 'L', 'D', 'N']
+      );
     case 'initial_actions_01':
       return createSingleRowTableaus('initial_actions_01', [9, 8, 7, 6, 5, 4, 3]);
     case 'initial_actions_02':
