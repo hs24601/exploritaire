@@ -4,6 +4,7 @@ import { useHoloInteraction } from '../hooks/useHoloInteraction';
 import { NEON_COLORS } from '../utils/styles';
 import { DepthCardScene } from './DepthCardScene';
 import { DynamicPaintCanvas } from './DynamicPaintCanvas';
+import { ELEMENT_WATERCOLOR_SWATCH_ORDER, ELEMENT_WATERCOLOR_SWATCHES } from '../watercolor/elementalSwatches';
 
 const BLUEYCHU_ASSET = '/assets/Bluevee.png';
 
@@ -124,6 +125,14 @@ const LEGACY_EFFECT_PRESETS: HoloEffectPreset[] = [
 ];
 
 const NEXT_EFFECT_PRESETS: HoloEffectPreset[] = [
+  {
+    id: 'legacy-rainbow-foundation',
+    name: 'Rainbow Foundation',
+    description: 'Foundation actor variant of rainbow secret holo for in-combat stacking tests.',
+    rarity: 'mythic',
+    descriptorTitle: 'Rainbow Foundation',
+    effectClass: 'card-holo-legacy-rainbow-foundation',
+  },
   {
     id: 'legacy-common-uncommon',
     name: 'Common + Uncommon',
@@ -814,16 +823,10 @@ export const VisualsEditor = memo(function VisualsEditor() {
                           </div>
 
                           <div className="mt-4 flex flex-wrap gap-3 justify-center lg:justify-start items-center">
-                            {[
-                              { label: 'Water', hue: '210deg', sat: '420%', con: 1.85, bri: 1.2 },
-                              { label: 'Earth', hue: '18deg', sat: '320%', con: 1.45, bri: 0.92 },
-                              { label: 'Air', hue: '198deg', sat: '180%', con: 1.15, bri: 1.6 },
-                              { label: 'Fire', hue: '15deg', sat: '340%', con: 1.7, bri: 1.2 },
-                              { label: 'Light', hue: '52deg', sat: '70%', con: 1.1, bri: 1.9, glow: 'rgba(255, 248, 208, 0.85)' },
-                              { label: 'Dark', hue: '230deg', sat: '22%', con: 1.3, bri: 0.6 },
-                              { label: 'Neutral', hue: '35deg', sat: '40%', con: 1.05, bri: 1.2 },
-                            ].map((item, i) => (
-                              <div key={`element-${i}`} className="flex flex-col items-center gap-2">
+                            {ELEMENT_WATERCOLOR_SWATCH_ORDER.map((element) => {
+                              const item = ELEMENT_WATERCOLOR_SWATCHES[element];
+                              return (
+                              <div key={`element-${element}`} className="flex flex-col items-center gap-2">
                                 <div
                                   className="relative w-28 h-12 rounded-2xl flex items-center justify-center"
                                   style={{ isolation: 'isolate', mixBlendMode: 'multiply' }}
@@ -831,14 +834,14 @@ export const VisualsEditor = memo(function VisualsEditor() {
                                   <div
                                     className="absolute inset-0 rounded-2xl"
                                     style={{
-                                      background: 'rgb(0 0 0 / 100%)',
-                                      filter: `url(#watercolor) drop-shadow(0 0em 0em rgba(255,255,255,1)) sepia(1) brightness(${item.bri}) contrast(${item.con}) saturate(${item.sat}) hue-rotate(${item.hue})`,
+                                      background: item.baseColor,
+                                      filter: `url(#watercolor) drop-shadow(0 0em 0em rgba(255,255,255,1)) ${item.filterTail}`,
                                       opacity: 0.9,
                                       transform: 'translate(-1px, -1px)',
                                       zIndex: -1,
                                     }}
                                   />
-                                  {item.label === 'Water' && (
+                                  {element === 'W' && (
                                     <div
                                       className="absolute inset-0 rounded-2xl"
                                       aria-hidden="true"
@@ -849,12 +852,12 @@ export const VisualsEditor = memo(function VisualsEditor() {
                                       }}
                                     />
                                   )}
-                                  {item.label === 'Earth' && (
+                                  {element === 'E' && (
                                     <div
                                       className="absolute inset-0 rounded-2xl"
                                       aria-hidden="true"
                                       style={{
-                                        background: 'radial-gradient(circle at 65% 30%, rgba(139, 69, 19, 0.4), rgba(139, 69, 19, 0) 60%)',
+                                        background: `radial-gradient(circle at 65% 30%, ${item.baseColor}66, ${item.baseColor}00 60%)`,
                                         mixBlendMode: 'multiply',
                                         opacity: 0.65,
                                       }}
@@ -875,7 +878,8 @@ export const VisualsEditor = memo(function VisualsEditor() {
                                   </div>
                                 </div>
                               </div>
-                            ))}
+                            );
+                            })}
                           </div>
                         </div>
                       </section>

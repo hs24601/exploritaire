@@ -1,8 +1,6 @@
 import { memo, useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import type { Direction } from './Compass';
 import { DIRECTIONS } from './Compass';
-import { WatercolorSplotch } from '../watercolor/WatercolorSplotch';
-import { generateSplotchConfig } from '../watercolor/splotchUtils';
 import { ShadowCanvas } from './LightRenderer';
 import type { BlockingRect } from '../engine/lighting';
 import { POISparkleMarker, computePOISparkleEffect, type PoiStarDef } from './POISparkleMarker';
@@ -651,36 +649,6 @@ export const ExplorationMap = memo(function ExplorationMap({
     }).filter(Boolean) as Array<{ id: string; x: number; y: number; alpha: number }>;
   }, [projectedById, trailNodeIds]);
 
-  const trailSplotches = useMemo(() => {
-    const splotches: Array<{
-      id: string; x: number; y: number; size: number;
-      config: ReturnType<typeof generateSplotchConfig>; index: number;
-    }> = [];
-    const splotchSize = 30;
-    trailSegments.forEach((segment, si) => {
-      const dx = segment.x2 - segment.x1;
-      const dy = segment.y2 - segment.y1;
-      if (Math.sqrt(dx * dx + dy * dy) === 0) return;
-      for (let i = 0; i < 2; i += 1) {
-        const t = (i + 0.5) / 2;
-        splotches.push({
-          id: `${segment.id}-splotch-${i}`,
-          x: segment.x1 + dx * t - splotchSize / 2,
-          y: segment.y1 + dy * t - splotchSize / 2,
-          size: splotchSize,
-          config: generateSplotchConfig({
-            scale: 0.8 + Math.random() * 0.4,
-            offset: [(Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2],
-            opacity: 0.5 + Math.random() * 0.2,
-            blendMode: 'multiply',
-            seed: (si * 1000 + i) * 100,
-          }),
-          index: si * 2 + i,
-        });
-      }
-    });
-    return splotches;
-  }, [trailSegments]);
 
   // Facing arrow follows heading when map is north-up; points up when map is player-aligned.
   const facingIndicator = useMemo(() => {
@@ -1352,20 +1320,6 @@ export const ExplorationMap = memo(function ExplorationMap({
 
         {/* Watercolor splotches overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          {trailSplotches.map((splotch) => (
-            <div
-              key={splotch.id}
-              className="absolute"
-              style={{ left: splotch.x, top: splotch.y, width: splotch.size, height: splotch.size, overflow: 'hidden' }}
-            >
-              <WatercolorSplotch
-                config={splotch.config}
-                index={splotch.index}
-                containerWidth={splotch.size}
-                containerHeight={splotch.size}
-              />
-            </div>
-          ))}
         </div>
         {(blockedCells.length > 0 || blockedEdges.length > 0 || conditionalEdges.length > 0 || forcedPath.length > 0) && (
           <div
@@ -1474,11 +1428,11 @@ export const ExplorationMap = memo(function ExplorationMap({
                     minWidth: 44,
                     textAlign: 'center',
                   }}
-                  title={typeof supplyCount === 'number' ? `Use supply (+20 AP). ${supplyCount} remaining` : 'Supplies'}
+                  title={typeof supplyCount === 'number' ? `Use supply (+2 short-rest charges). ${supplyCount} remaining` : 'Supplies'}
                   data-dev-component="ExplorationMapSupplyButton"
                   data-dev-name="Use Supply"
                   data-dev-kind="control"
-                  data-dev-description="Spend one supply to gain action points."
+                  data-dev-description="Spend one supply to recover two short-rest charges."
                   data-dev-role="map-control"
                 >
                   {typeof supplyCount === 'number' ? supplyCount : '--'}

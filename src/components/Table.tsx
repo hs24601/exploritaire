@@ -31,15 +31,10 @@ import { GARDEN_GRID, CARD_SIZE, ACTOR_CARD_SIZE } from '../engine/constants';
 import { CardFrame } from './card/CardFrame';
 import { Tooltip } from './Tooltip';
 import { ActorCardTooltipContent } from './ActorCardTooltipContent';
-import { MapEditorWatercolorPanel } from './MapEditorWatercolorPanel';
 import { getCardDetailLevel } from '../ui/cardLike';
 import lightBlockPatternDefaults from '../data/lightBlockPatterns.json';
 import mapEditorLayoutDefaults from '../data/mapEditorLayout.json';
 import { GAME_BORDER_WIDTH } from '../utils/styles';
-import type { WatercolorConfig } from '../watercolor/types';
-import { cloneWatercolorConfig } from '../watercolor/editorDefaults';
-import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
-import { getActorCardWatercolor } from '../watercolor/actorCardWatercolor';
 
 const TILE_SIZE = { width: GARDEN_GRID.cellSize, height: GARDEN_GRID.cellSize };
 function getOrimDefinition(definitions: OrimDefinition[], definitionId?: string | null): OrimDefinition | null {
@@ -133,7 +128,6 @@ interface TableProps {
   onClearAllProgress: () => void;
   onResetGame: () => void;
   onUpdateTilePosition: (tileId: string, col: number, row: number) => void;
-  onUpdateTileWatercolorConfig: (tileId: string, watercolorConfig: TileType['watercolorConfig']) => void;
   onAddTileToGardenAt: (definitionId: string, col: number, row: number) => void;
   onRemoveTile: (tileId: string) => void;
   onToggleTileLock: (tileId: string) => void;
@@ -176,7 +170,7 @@ type LightPatternStore = {
 };
 
 type MapEditorLayout = {
-  tiles: Array<{ definitionId: string; col: number; row: number; createdAt?: number; watercolor?: WatercolorConfig | null }>;
+  tiles: Array<{ definitionId: string; col: number; row: number; createdAt?: number }>;
   cards: Array<{ definitionId: string; col: number; row: number }>;
 };
 
@@ -299,11 +293,6 @@ const ActorCard = memo(function ActorCard({
   const badgeFontSize = Math.max(8, Math.round(renderSize.height * 0.18));
   const expandBtnSize = Math.max(10, Math.round(renderSize.width * 0.32));
   const expandBtnFontSize = Math.max(6, Math.round(renderSize.height * 0.2));
-  const watercolorConfig = useMemo(
-    () => getActorCardWatercolor(actor, actorDeck, orimInstances, orimDefinitions),
-    [actor, actorDeck, orimInstances, orimDefinitions]
-  );
-
   const tooltipContent = (
     <ActorCardTooltipContent
       actor={actor}
@@ -336,10 +325,6 @@ const ActorCard = memo(function ActorCard({
             className="overflow-visible"
             style={{ willChange: 'transform', borderWidth }}
           >
-            <WatercolorOverlay
-              config={watercolorConfig}
-              style={{ borderRadius: 10, zIndex: 1 }}
-            />
             <div
               className="relative w-full h-full flex flex-col items-center justify-center overflow-visible"
               style={{ padding: Math.max(2, Math.round(renderSize.height * 0.04)) }}
@@ -1032,7 +1017,6 @@ export const Table = memo(function Table({
   onClearAllProgress,
   onResetGame,
   onUpdateTilePosition,
-  onUpdateTileWatercolorConfig,
   onAddTileToGardenAt,
   onRemoveTile,
   onToggleTileLock,
@@ -1221,7 +1205,6 @@ export const Table = memo(function Table({
     col: number;
     row: number;
   } | null>(null);
-  const [mapEditorWatercolorDraft, setMapEditorWatercolorDraft] = useState<WatercolorConfig | null>(null);
   const [mapEditorReplaceTarget, setMapEditorReplaceTarget] = useState<{
     tileId: string;
     col: number;
@@ -1573,89 +1556,6 @@ export const Table = memo(function Table({
     });
     mapEditorAppliedRef.current = true;
   }, [mapEditorEnabled, mapEditorLayout, onAddTileToGardenAt]);
-
-  useEffect(() => {
-    if (!mapEditorEnabled) return;
-    mapEditorLayout.tiles.forEach((entry) => {
-      if (!entry.watercolor) return;
-      const tile = tilesRef.current.find((candidate) => (
-        candidate.definitionId === entry.definitionId
-        && candidate.gridPosition?.col === entry.col
-        && candidate.gridPosition?.row === entry.row
-      ));
-      if (!tile) return;
-      onUpdateTileWatercolorConfig(tile.id, entry.watercolor);
-    });
-  }, [mapEditorEnabled, mapEditorLayout, onUpdateTileWatercolorConfig]);
-
-  useEffect(() => {
-    if (!mapEditorActiveTile) {
-      setMapEditorWatercolorDraft(null);
-      return;
-    }
-    const entry = mapEditorLayout.tiles.find((tileEntry) => (
-      tileEntry.col === mapEditorActiveTile.col
-      && tileEntry.row === mapEditorActiveTile.row
-    ));
-    const fallback = tilesRef.current.find((tile) => tile.id === mapEditorActiveTile.tileId)?.watercolorConfig ?? null;
-    const nextConfig = entry?.watercolor ?? fallback;
-    setMapEditorWatercolorDraft(nextConfig ? cloneWatercolorConfig(nextConfig) : null);
-  }, [mapEditorActiveTile, mapEditorLayout.tiles]);
-
-  useEffect(() => {
-    if (!mapEditorActiveTile) return;
-    const timer = window.setTimeout(() => {
-      if (!mapEditorActiveTile) return;
-      if (!mapEditorWatercolorDraft) {
-        onUpdateTileWatercolorConfig(mapEditorActiveTile.tileId, null);
-        return;
-      }
-      onUpdateTileWatercolorConfig(mapEditorActiveTile.tileId, mapEditorWatercolorDraft);
-    }, 200);
-    return () => window.clearTimeout(timer);
-  }, [mapEditorActiveTile, mapEditorWatercolorDraft, onUpdateTileWatercolorConfig]);
-
-  const saveWatercolorForActiveTile = useCallback(() => {
-    if (!mapEditorActiveTile || !mapEditorWatercolorDraft) return;
-    const draft = cloneWatercolorConfig(mapEditorWatercolorDraft);
-    setMapEditorLayout((prev) => {
-      let found = false;
-      const nextTiles = prev.tiles.map((entry) => {
-        if (entry.col === mapEditorActiveTile.col && entry.row === mapEditorActiveTile.row) {
-          found = true;
-          return { ...entry, watercolor: draft };
-        }
-        return entry;
-      });
-      if (!found) {
-        nextTiles.push({
-          definitionId: mapEditorActiveTile.definitionId,
-          col: mapEditorActiveTile.col,
-          row: mapEditorActiveTile.row,
-          createdAt: Date.now(),
-          watercolor: draft,
-        });
-      }
-      return { ...prev, tiles: nextTiles };
-    });
-    onUpdateTileWatercolorConfig(mapEditorActiveTile.tileId, draft);
-  }, [mapEditorActiveTile, mapEditorWatercolorDraft, onUpdateTileWatercolorConfig]);
-
-  const clearWatercolorForActiveTile = useCallback(() => {
-    if (!mapEditorActiveTile) return;
-    setMapEditorLayout((prev) => ({
-      ...prev,
-      tiles: prev.tiles.map((entry) => {
-        if (entry.col === mapEditorActiveTile.col && entry.row === mapEditorActiveTile.row) {
-          const { watercolor, ...rest } = entry;
-          return rest;
-        }
-        return entry;
-      }),
-    }));
-    setMapEditorWatercolorDraft(null);
-    onUpdateTileWatercolorConfig(mapEditorActiveTile.tileId, null);
-  }, [mapEditorActiveTile, onUpdateTileWatercolorConfig]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -4045,12 +3945,6 @@ export const Table = memo(function Table({
                       📋
                     </button>
                   </div>
-                  <MapEditorWatercolorPanel
-                    draft={mapEditorWatercolorDraft}
-                    onDraftChange={setMapEditorWatercolorDraft}
-                    onSave={saveWatercolorForActiveTile}
-                    onClear={clearWatercolorForActiveTile}
-                  />
                 </div>
               </div>
             );

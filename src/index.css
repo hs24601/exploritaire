@@ -227,6 +227,7 @@
 .card-holo-legacy-vstar,
 .card-holo-legacy-full-alt,
 .card-holo-legacy-trainer-full-art,
+.card-holo-legacy-rainbow-foundation,
 .card-holo-legacy-rainbow-secret,
 .card-holo-legacy-rainbow-secret-alt,
 .card-holo-legacy-gold-secret,
@@ -290,6 +291,7 @@
 .card-holo-legacy-vstar { filter: brightness(0.85) contrast(2.1) saturate(0.8); }
 .card-holo-legacy-full-alt { filter: brightness(calc((var(--hyp) * 0.3) + 0.5)) contrast(2) saturate(1.35); }
 .card-holo-legacy-trainer-full-art { filter: brightness(0.78) contrast(2.4) saturate(0.85); }
+.card-holo-legacy-rainbow-foundation { filter: brightness(calc((var(--hyp) * 0.2) + 0.62)) contrast(1.8) saturate(0.9); }
 .card-holo-legacy-rainbow-secret { filter: brightness(calc((var(--hyp) * 0.25) + 0.66)) contrast(2.05) saturate(0.95); }
 .card-holo-legacy-rainbow-secret-alt { filter: brightness(calc((var(--hyp) * 0.25) + 0.66)) contrast(3) saturate(0.7); }
 .card-holo-legacy-gold-secret {
@@ -519,49 +521,6 @@ div, span, p, h1, h2, h3, h4, h5, h6 {
   100% { transform: translateY(120vh) rotate(360deg); opacity: 0; }
 }
 
-/* ── Watercolor engine animations ── */
-
-.wc-main-mass {
-  animation: wc-breathe var(--wc-breathe-dur, 10s) ease-in-out infinite;
-}
-
-.wc-highlight {
-  animation: wc-highlight-shift var(--wc-hl-dur, 8s) ease-in-out infinite alternate;
-}
-
-.wc-tendril {
-  animation: wc-sway 8s ease-in-out infinite alternate;
-}
-
-.wc-satellite {
-  animation: wc-drift 15s ease-in-out infinite;
-}
-
-.wc-splotch-group {
-  isolation: isolate;
-}
-
-@keyframes wc-breathe {
-  0%, 100% { transform: scale(1) translate(0, 0); }
-  50% { transform: scale(var(--wc-breathe-scale, 1.04)) translate(3px, -2px); }
-}
-
-@keyframes wc-sway {
-  0% { transform: rotate(calc(-1 * var(--wc-sway-angle, 3deg))) scaleY(1); }
-  100% { transform: rotate(var(--wc-sway-angle, 3deg)) scaleY(1.08); }
-}
-
-@keyframes wc-drift {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(var(--wc-drift-x1, 6px), var(--wc-drift-y1, -4px)); }
-  50% { transform: translate(var(--wc-drift-x2, -4px), var(--wc-drift-y2, 8px)); }
-  75% { transform: translate(var(--wc-drift-x3, 5px), var(--wc-drift-y3, 2px)); }
-}
-
-@keyframes wc-highlight-shift {
-  0% { transform: translate(-4px, -3px) scale(0.96); opacity: 0.35; }
-  100% { transform: translate(4px, 3px) scale(1.02); opacity: 0.55; }
-}
 
 body[data-light-editor="on"] [data-tile-title],
 html[data-light-editor="on"] [data-tile-title],

@@ -1,18 +1,21 @@
 import { useCallback, useMemo, useEffect, Component, useState, useRef } from 'react';
+import { WatercolorSvgFilterDefs } from './watercolor/WatercolorSvgFilterDefs';
 import { GraphicsContext } from './contexts/GraphicsContext';
+import { SHOW_WATERCOLOR_FILTERS } from './config/ui';
 import { InteractionModeContext } from './contexts/InteractionModeContext';
 import { useGameEngine } from './hooks/useGameEngine';
 import { RowManager } from './components/RowManager';
 import { DebugConsole } from './components/DebugConsole';
 import { VisualsEditor } from './components/VisualsEditor';
 import { MapEditor } from './components/MapEditor';
-import { GodRaysEditor } from './components/GodRaysEditor';
+import { ActorEditor } from './components/ActorEditor';
 import { AssetEditorEngine } from './components/editor/AssetEditorEngine';
 import type { AssetEditorPaneDefinition, AssetEditorTabId } from './components/editor/types';
-import type { Element, OrimRarity } from './engine/types';
-import { getActorDefinition } from './engine/actors';
+import type { ActorDefinition, Element, OrimRarity } from './engine/types';
+import { ACTOR_DEFINITIONS, getActorDefinition } from './engine/actors';
+import { ACTOR_DECK_TEMPLATES } from './engine/actorDecks';
 import { initializeGame } from './engine/game';
-import { CardScaleProvider } from './contexts/CardScaleContext';
+import { CardScaleProvider, type CardScaleProfile } from './contexts/CardScaleContext';
 import { mainWorldMap, initializeWorldMapPois } from './data/worldMap';
 import { KERU_ARCHETYPE_OPTIONS, KeruAspect } from './data/keruAspects';
 import abilitiesJson from './data/abilities.json';
@@ -87,6 +90,13 @@ type PoiNarrationDraft = {
     body: string;
     tone: 'teal' | 'gold' | 'violet' | 'green' | 'red' | 'blue' | 'orange' | 'pink' | 'silver' | 'brown' | 'black' | 'white';
   };
+};
+
+type ActorDeckTemplate = {
+  values: number[];
+  slotsPerCard?: number[];
+  starterOrim?: { cardIndex: number; slotIndex?: number; orimId: string }[];
+  slotLocks?: { cardIndex: number; slotIndex?: number; locked: boolean }[];
 };
 
 type AbilityEffectType =
@@ -251,18 +261,27 @@ export default function App() {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
     const value = params.get('sandbox');
+    if (value === null) return false;
     return value === '1' || value === 'combat' || value === 'true';
+  });
+  const [combatLabMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    const mode = (params.get('mode') ?? '').toLowerCase();
+    const explicit = (params.get('combatlab') ?? params.get('combat_lab') ?? '').toLowerCase();
+    return mode === 'combat-lab' || mode === 'combatlab' || explicit === '1' || explicit === 'true';
   });
   const [assetEditorOpen, setAssetEditorOpen] = useState(false);
   const [assetEditorTab, setAssetEditorTab] = useState<AssetEditorTabId>('visuals');
-  const [isGodRaysSliderDragging, setIsGodRaysSliderDragging] = useState(false);
-  const [activeGodRaysSliderId, setActiveGodRaysSliderId] = useState<string | null>(null);
+  const [actorEditorGroup, setActorEditorGroup] = useState<'party' | 'enemy'>('party');
+  const [actorDefinitions, setActorDefinitions] = useState<ActorDefinition[]>(ACTOR_DEFINITIONS);
+  const [actorDeckTemplates, setActorDeckTemplates] = useState<Record<string, ActorDeckTemplate>>(ACTOR_DECK_TEMPLATES);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [isGamePaused, setIsGamePaused] = useState(false);
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
   const [forcedPerspectiveEnabled, setForcedPerspectiveEnabled] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
-  const [toolingTab, setToolingTab] = useState<'poi' | 'ability' | 'orim' | 'synergies'>('poi');
+  const [toolingTab, setToolingTab] = useState<'poi' | 'ability' | 'orim' | 'synergies' | 'visuals' | 'actor'>('poi');
   const applySparkleConfig = useCallback((config?: PoiSparkleConfig) => {
     const resolved = { ...DEFAULT_SPARKLE_CONFIG, ...config };
     setPoiEditorProximityRange(resolved.proximityRange);
@@ -392,7 +411,13 @@ export default function App() {
   const [synergyEditorMessage, setSynergyEditorMessage] = useState<string | null>(null);
   const [isSavingSynergy, setIsSavingSynergy] = useState(false);
   const [useGhostBackground, setUseGhostBackground] = useState(false);
-  const [cardScale, setCardScale] = useState(1);
+  const [cardScaleProfile, setCardScaleProfile] = useState<CardScaleProfile>({
+    zoom: 2,
+    table: 1,
+    hand: 1,
+    drag: 1,
+    jumbo: 1.25,
+  });
   const [timeScale, setTimeScale] = useState(TIME_SCALE_OPTIONS[1]);
   const [cameraDebug, setCameraDebug] = useState<{
     wheelCount: number;
@@ -406,8 +431,101 @@ export default function App() {
     effectiveScale?: number;
   } | null>(null);
   const [commandBarHeight, setCommandBarHeight] = useState(0);
+  useEffect(() => {
+    const handleZoomKeys = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      const key = event.key;
+      if (key !== '+' && key !== '=' && key !== '-' && key !== '_') return;
+      event.preventDefault();
+      setCardScaleProfile((previous) => {
+        const delta = (key === '-' || key === '_') ? -0.05 : 0.05;
+        const zoom = Math.max(0.5, Math.min(2, Number((previous.zoom + delta).toFixed(3))));
+        return { ...previous, zoom };
+      });
+    };
+    window.addEventListener('keydown', handleZoomKeys);
+    return () => window.removeEventListener('keydown', handleZoomKeys);
+  }, []);
   const spawnDieRef = useRef<((clientX: number, clientY: number) => void) | null>(null);
+  const actorTypeFilter = actorEditorGroup === 'party' ? 'adventurer' : 'npc';
+  const actorDefinitionsForEditor = useMemo(
+    () => actorDefinitions.filter((definition) => definition.type === actorTypeFilter),
+    [actorDefinitions, actorTypeFilter]
+  );
+  const handleActorDefinitionChange = useCallback((nextScopedDefinitions: ActorDefinition[]) => {
+    const normalizedScopedDefinitions = nextScopedDefinitions.map((definition) => ({
+      ...definition,
+      type: actorTypeFilter,
+    }));
+    setActorDefinitions((previous) => {
+      const scopedIds = new Set(
+        previous
+          .filter((definition) => definition.type === actorTypeFilter)
+          .map((definition) => definition.id)
+      );
+      const nextById = new Map(normalizedScopedDefinitions.map((definition) => [definition.id, definition]));
+      const merged: ActorDefinition[] = [];
+
+      previous.forEach((definition) => {
+        if (!scopedIds.has(definition.id)) {
+          merged.push(definition);
+          return;
+        }
+        const replacement = nextById.get(definition.id);
+        if (replacement) {
+          merged.push(replacement);
+          nextById.delete(definition.id);
+        }
+      });
+
+      nextById.forEach((definition) => {
+        merged.push(definition);
+      });
+
+      return merged;
+    });
+  }, [actorTypeFilter]);
   const assetEditorPanes = useMemo<AssetEditorPaneDefinition[]>(() => [
+    {
+      id: 'actor',
+      label: 'Actors',
+      render: () => (
+        <div className="flex h-full min-h-0 flex-col gap-2">
+          <div className="flex items-center justify-end">
+            <div className="inline-flex items-center rounded border border-game-teal/40 bg-game-bg-dark/70 p-0.5 text-[10px] font-mono">
+              <button
+                type="button"
+                onClick={() => setActorEditorGroup('party')}
+                className={`rounded px-3 py-1 transition-colors ${actorEditorGroup === 'party' ? 'bg-game-teal/25 text-game-gold' : 'text-game-white/70 hover:text-game-white'}`}
+              >
+                Party
+              </button>
+              <button
+                type="button"
+                onClick={() => setActorEditorGroup('enemy')}
+                className={`rounded px-3 py-1 transition-colors ${actorEditorGroup === 'enemy' ? 'bg-game-teal/25 text-game-gold' : 'text-game-white/70 hover:text-game-white'}`}
+              >
+                Enemy
+              </button>
+            </div>
+          </div>
+          <div className="px-1 text-[10px] text-game-white/45">
+            Editing {actorEditorGroup === 'party' ? 'party' : 'enemy'} actors only.
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <ActorEditor
+              embedded
+              onClose={() => setAssetEditorOpen(false)}
+              definitions={actorDefinitionsForEditor}
+              deckTemplates={actorDeckTemplates}
+              orimDefinitions={ORIM_DEFINITIONS}
+              onChange={handleActorDefinitionChange}
+              onDeckChange={setActorDeckTemplates}
+            />
+          </div>
+        </div>
+      ),
+    },
     {
       id: 'visuals',
       label: 'Visuals',
@@ -423,20 +541,12 @@ export default function App() {
         />
       ),
     },
-    {
-      id: 'godRays',
-      label: 'God Rays',
-      render: () => (
-        <GodRaysEditor
-          embedded={false}
-          onClose={() => setAssetEditorOpen(false)}
-          onSliderDragChange={(isDragging) => setIsGodRaysSliderDragging(isDragging)}
-          activeSliderId={activeGodRaysSliderId}
-          onActiveSliderChange={setActiveGodRaysSliderId}
-        />
-      ),
-    },
-  ], [activeGodRaysSliderId]);
+  ], [
+    actorDeckTemplates,
+    actorDefinitionsForEditor,
+    actorEditorGroup,
+    handleActorDefinitionChange,
+  ]);
   const initialGameState = useMemo(() => {
     if (typeof window === 'undefined') {
       return initializeGame();
@@ -458,7 +568,18 @@ export default function App() {
     const orimDefinitions = stored ? (() => {
       try {
         const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) ? parsed : undefined;
+        if (!Array.isArray(parsed)) return undefined;
+        const allowedAspectIds = new Set(
+          ORIM_DEFINITIONS
+            .filter((definition) => definition.isAspect)
+            .map((definition) => definition.id)
+        );
+        return parsed.filter((definition) => {
+          if (!definition || typeof definition !== 'object') return false;
+          if (!(definition as { isAspect?: boolean }).isAspect) return true;
+          const id = String((definition as { id?: string }).id ?? '').trim().toLowerCase();
+          return allowedAspectIds.has(id);
+        });
       } catch {
         return undefined;
       }
@@ -505,18 +626,17 @@ export default function App() {
 
   const VALID_KERU_ASPECTS = useMemo(() => {
     const base = KERU_ARCHETYPE_OPTIONS.map((option) => option.archetype);
-    const fallback: KeruAspect[] = ['lupus', 'ursus', 'felis'];
-    return new Set<KeruAspect>(base.length > 0 ? base : fallback);
+    return new Set<KeruAspect>(base);
   }, []);
   const resolveKeruAspectKey = useCallback((value?: string | null): KeruAspect | null => {
     const raw = String(value ?? '').trim().toLowerCase();
     if (!raw) return null;
-    if (raw === 'lupus' || raw === 'ursus' || raw === 'felis') return raw as KeruAspect;
-    if (raw.includes('lupus')) return 'lupus';
-    if (raw.includes('ursus')) return 'ursus';
-    if (raw.includes('felis')) return 'felis';
-    return null;
-  }, []);
+    for (const option of KERU_ARCHETYPE_OPTIONS) {
+      if (option.archetype.toLowerCase() === raw) return option.archetype;
+      if (option.label.trim().toLowerCase() === raw) return option.archetype;
+    }
+    return VALID_KERU_ASPECTS.has(raw as KeruAspect) ? (raw as KeruAspect) : null;
+  }, [VALID_KERU_ASPECTS]);
   const aspectRewardOptions = KERU_ARCHETYPE_OPTIONS;
 
   const createDraftFromReward = useCallback((reward: PoiReward): PoiRewardDraft => {
@@ -1720,13 +1840,14 @@ export default function App() {
     let rafId = 0;
     let frameCount = 0;
     let lastSample = performance.now();
-    const sampleMs = 500;
+    const sampleMs = 2000;
 
     const tick = (now: number) => {
       frameCount += 1;
       const elapsed = now - lastSample;
       if (elapsed >= sampleMs) {
-        setFps(Math.round((frameCount * 1000) / elapsed));
+        const next = Math.round((frameCount * 1000) / elapsed);
+        setFps((prev) => (Math.abs(next - prev) >= 2 ? next : prev));
         frameCount = 0;
         lastSample = now;
       }
@@ -1954,8 +2075,9 @@ export default function App() {
   return (
     <GraphicsContext.Provider value={showGraphics}>
     <InteractionModeContext.Provider value={gameState.interactionMode}>
-    <CardScaleProvider value={cardScale}>
+    <CardScaleProvider value={cardScaleProfile}>
     <ErrorBoundary>
+      {SHOW_WATERCOLOR_FILTERS && <WatercolorSvgFilterDefs />}
       <div
         className={`w-screen h-screen bg-game-bg-dark flex flex-col items-center justify-center font-mono text-game-gold p-5 box-border overflow-hidden relative${showText ? '' : ' textless-mode'}`}
         style={{
@@ -2113,21 +2235,21 @@ export default function App() {
                   >
                     🧰 Tooling
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setCombatSandboxOpen((prev) => !prev)}
-                    className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
-                    style={{
-                      color: combatSandboxOpen ? '#e6b31e' : '#7fdbca',
-                      borderColor: combatSandboxOpen ? 'rgba(230, 179, 30, 0.6)' : 'rgba(127, 219, 202, 0.6)',
-                    }}
-                    title="Toggle combat sandbox panel"
-                  >
-                    {combatSandboxOpen ? '🥊 Sandbox: ON' : '🥊 Sandbox: OFF'}
+                    <button
+                      type="button"
+                      onClick={() => setCombatSandboxOpen((prev) => !prev)}
+                      className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
+                      style={{
+                        color: combatSandboxOpen ? '#e6b31e' : '#7fdbca',
+                        borderColor: combatSandboxOpen ? 'rgba(230, 179, 30, 0.6)' : 'rgba(127, 219, 202, 0.6)',
+                      }}
+                      title="Toggle combat lab panel"
+                    >
+                    {combatSandboxOpen ? '🥊 Lab: ON' : '🥊 Lab: OFF'}
                   </button>
                   <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
                     <div className="text-[10px] text-game-white/70 tracking-[2px]">HOTKEYS</div>
-                    <div className="text-[10px] text-game-teal/80 font-mono">C — Combat sandbox</div>
+                    <div className="text-[10px] text-game-teal/80 font-mono">C — Combat lab</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">E — Editor</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">P — Background toggle</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">G — Graphics toggle</div>
@@ -2283,45 +2405,54 @@ export default function App() {
                     >
                       Visuals
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setToolingTab('actor')}
+                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'actor' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
+                    >
+                      Actors
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (toolingTab === 'poi') {
-                          void handleSavePoi();
-                          return;
+                    {toolingTab !== 'actor' && toolingTab !== 'visuals' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (toolingTab === 'poi') {
+                            void handleSavePoi();
+                            return;
+                          }
+                          if (toolingTab === 'orim') {
+                            void handleSaveOrim();
+                            return;
+                          }
+                          if (toolingTab === 'synergies') {
+                            void handleSaveSynergy();
+                            return;
+                          }
+                          void handleSaveAbility();
+                        }}
+                        disabled={
+                          toolingTab === 'poi'
+                            ? isSavingPoi
+                            : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility))
                         }
-                        if (toolingTab === 'orim') {
-                          void handleSaveOrim();
-                          return;
-                        }
-                        if (toolingTab === 'synergies') {
-                          void handleSaveSynergy();
-                          return;
-                        }
-                        void handleSaveAbility();
-                      }}
-                      disabled={
-                        toolingTab === 'poi'
-                          ? isSavingPoi
-                          : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility))
-                      }
-                      className={`text-[10px] uppercase tracking-[0.4em] px-4 py-1.5 rounded border font-black transition-all ${
-                        (toolingTab === 'poi'
-                          ? isSavingPoi
-                          : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility)))
-                          ? 'border-game-teal/30 text-game-teal/30 scale-95'
-                          : 'border-game-gold text-game-gold bg-game-gold/5 hover:bg-game-gold/15 active:scale-95 shadow-[0_0_15px_rgba(230,179,30,0.2)]'
-                      }`}
-                    >
-                      {(() => {
-                        const isSaving = toolingTab === 'poi' ? isSavingPoi : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility));
-                        if (isSaving) return 'Saving…';
-                        return `Save ${toolingTab === 'poi' ? 'POI' : (toolingTab === 'orim' ? 'Orims' : (toolingTab === 'synergies' ? 'Synergies' : 'Ability'))}`;
-                      })()}
-                    </button>
+                        className={`text-[10px] uppercase tracking-[0.4em] px-4 py-1.5 rounded border font-black transition-all ${
+                          (toolingTab === 'poi'
+                            ? isSavingPoi
+                            : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility)))
+                            ? 'border-game-teal/30 text-game-teal/30 scale-95'
+                            : 'border-game-gold text-game-gold bg-game-gold/5 hover:bg-game-gold/15 active:scale-95 shadow-[0_0_15px_rgba(230,179,30,0.2)]'
+                        }`}
+                      >
+                        {(() => {
+                          const isSaving = toolingTab === 'poi' ? isSavingPoi : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility));
+                          if (isSaving) return 'Saving…';
+                          return `Save ${toolingTab === 'poi' ? 'POI' : (toolingTab === 'orim' ? 'Orims' : (toolingTab === 'synergies' ? 'Synergies' : 'Ability'))}`;
+                        })()}
+                      </button>
+                    )}
                     <button
                       onClick={() => setToolingOpen(false)}
                       className="text-xs text-game-pink border border-game-pink/40 rounded w-7 h-7 flex items-center justify-center opacity-70 hover:opacity-100 hover:border-game-pink transition-all bg-game-pink/5"
@@ -2823,7 +2954,7 @@ export default function App() {
                                           <input
                                             value={reward.overtitle}
                                             onChange={(event) => handleRewardChange(reward.id, 'overtitle', event.target.value)}
-                                            placeholder="e.g., KERU LUPUS"
+                                            placeholder="e.g., KERU FELIS"
                                             className="bg-game-bg-dark/80 border border-game-teal/20 px-2 py-1.5 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                                           />
                                         </label>
@@ -2832,7 +2963,7 @@ export default function App() {
                                           <input
                                             value={reward.summary}
                                             onChange={(event) => handleRewardChange(reward.id, 'summary', event.target.value)}
-                                            placeholder="e.g., LUPUS - SWIFT RANGER"
+                                            placeholder="e.g., FELIS - CUNNING ROGUE"
                                             className="bg-game-bg-dark/80 border border-game-teal/20 px-2 py-1.5 rounded text-[10px] text-game-white outline-none focus:border-game-gold"
                                           />
                                         </label>
@@ -3940,28 +4071,39 @@ export default function App() {
                   {toolingTab === 'visuals' && (
                     <VisualsEditor />
                   )}
-
-                  {/*
-                  {toolingTab === 'orim' && gameState && (
-                    <OrimEditor
-                      embedded
-                      onClose={() => setToolingOpen(false)}
-                      definitions={gameState.orimDefinitions}
-                      onChange={actions.updateOrimDefinitions}
-                    />
-                  )}
                   {toolingTab === 'actor' && (
-                    <ActorEditor
-                      embedded
-                      onClose={() => setToolingOpen(false)}
-                      definitions={actorDefinitions}
-                      deckTemplates={actorDeckTemplates}
-                      orimDefinitions={gameState?.orimDefinitions ?? []}
-                      onChange={setActorDefinitions}
-                      onDeckChange={setActorDeckTemplates}
-                    />
+                    <div className="flex h-full min-h-0 flex-col gap-2">
+                      <div className="flex items-center justify-end">
+                        <div className="inline-flex items-center rounded border border-game-teal/40 bg-game-bg-dark/70 p-0.5 text-[10px] font-mono">
+                          <button
+                            type="button"
+                            onClick={() => setActorEditorGroup('party')}
+                            className={`rounded px-3 py-1 transition-colors ${actorEditorGroup === 'party' ? 'bg-game-teal/25 text-game-gold' : 'text-game-white/70 hover:text-game-white'}`}
+                          >
+                            Party
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActorEditorGroup('enemy')}
+                            className={`rounded px-3 py-1 transition-colors ${actorEditorGroup === 'enemy' ? 'bg-game-teal/25 text-game-gold' : 'text-game-white/70 hover:text-game-white'}`}
+                          >
+                            Enemy
+                          </button>
+                        </div>
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-hidden">
+                        <ActorEditor
+                          embedded
+                          onClose={() => setToolingOpen(false)}
+                          definitions={actorDefinitionsForEditor}
+                          deckTemplates={actorDeckTemplates}
+                          orimDefinitions={gameState?.orimDefinitions ?? ORIM_DEFINITIONS}
+                          onChange={handleActorDefinitionChange}
+                          onDeckChange={setActorDeckTemplates}
+                        />
+                      </div>
+                    </div>
                   )}
-                  */}
                 </div>
               </div>
             </div>
@@ -3969,8 +4111,16 @@ export default function App() {
         )}
 
       <CombatSandbox
-        open={combatSandboxOpen}
-        onClose={() => setCombatSandboxOpen(false)}
+        open={combatLabMode || combatSandboxOpen}
+        isLabMode={combatLabMode}
+        onClose={() => {
+          if (combatLabMode) return;
+          setCombatSandboxOpen(false);
+        }}
+        onOpenEditor={() => {
+          setAssetEditorTab('actor');
+          setAssetEditorOpen(true);
+        }}
         gameState={gameState}
         actions={actions}
         timeScale={timeScale}
@@ -3983,56 +4133,59 @@ export default function App() {
         tableauCanPlay={tableauCanPlay}
       />
 
-      <GameShell
-        gameState={gameState}
-        actions={actions}
-        selectedCard={selectedCard}
-        guidanceMoves={guidanceMoves}
-        validFoundationsForSelected={validFoundationsForSelected}
-        tableauCanPlay={tableauCanPlay}
-        noValidMoves={noValidMoves}
-        isWon={isWon}
-        noRegretStatus={noRegretStatus}
-        wildAnalysis={analysis.wild}
-        showGraphics={showGraphics}
-        lightingEnabled={lightingEnabled}
-        paintLuminosityEnabled={paintLuminosityEnabled}
-        forcedPerspectiveEnabled={forcedPerspectiveEnabled}
-        showText={showText}
-        zenModeEnabled={zenModeEnabled}
-        isGamePaused={isGamePaused}
-        timeScale={timeScale}
-        discoveryEnabled={discoveryEnabled}
-        hidePauseOverlay={hidePauseOverlay}
-        onTogglePause={handleTogglePause}
-        onOpenSettings={() => setSettingsOpen(true)}
-        onTogglePaintLuminosity={() => setPaintLuminosityEnabled((prev) => !prev)}
-        onPositionChange={(x, y) => setCurrentPlayerCoords({ x, y })}
-        fps={fps}
-        serverAlive={serverAlive}
-        onOpenPoiEditorAt={handleOpenPoiEditorAt}
-        sandboxOrimIds={sandboxOrimIds}
-        onAddSandboxOrim={(id) => {
-          setSandboxOrimIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-        }}
-        onRemoveSandboxOrim={(id) => {
-          setSandboxOrimIds((prev) => prev.filter((entry) => entry !== id));
-        }}
-        sandboxOrimSearch={sandboxOrimSearch}
-        onSandboxOrimSearchChange={setSandboxOrimSearch}
-        sandboxOrimResults={sandboxOrimResults}
-        orimTrayDevMode={orimTrayDevMode}
-        orimTrayTab={orimTrayTab}
-        onOrimTrayTabChange={setOrimTrayTab}
-        infiniteStockEnabled={infiniteStockEnabled}
-        onToggleInfiniteStock={() => setInfiniteStockEnabled((prev) => !prev)}
-        benchSwapCount={benchSwapCount}
-        onConsumeBenchSwap={() => setBenchSwapCount((prev) => Math.max(0, prev - 1))}
-        infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
-        onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
-        spawnDieRef={spawnDieRef}
-        onToggleCombatSandbox={() => setCombatSandboxOpen((prev) => !prev)}
-      />
+      {!combatLabMode && (
+        <GameShell
+          gameState={gameState}
+          actions={actions}
+          selectedCard={selectedCard}
+          guidanceMoves={guidanceMoves}
+          validFoundationsForSelected={validFoundationsForSelected}
+          tableauCanPlay={tableauCanPlay}
+          noValidMoves={noValidMoves}
+          isWon={isWon}
+          noRegretStatus={noRegretStatus}
+          wildAnalysis={analysis.wild}
+          showGraphics={showGraphics}
+          lightingEnabled={lightingEnabled}
+          paintLuminosityEnabled={paintLuminosityEnabled}
+          forcedPerspectiveEnabled={forcedPerspectiveEnabled}
+          showText={showText}
+          zenModeEnabled={zenModeEnabled}
+          isGamePaused={isGamePaused}
+          timeScale={timeScale}
+          discoveryEnabled={discoveryEnabled}
+          hidePauseOverlay={hidePauseOverlay}
+          onTogglePause={handleTogglePause}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onTogglePaintLuminosity={() => setPaintLuminosityEnabled((prev) => !prev)}
+          onPositionChange={(x, y) => setCurrentPlayerCoords({ x, y })}
+          fps={fps}
+          serverAlive={serverAlive}
+          combatSandboxOpen={combatSandboxOpen}
+          onOpenPoiEditorAt={handleOpenPoiEditorAt}
+          sandboxOrimIds={sandboxOrimIds}
+          onAddSandboxOrim={(id) => {
+            setSandboxOrimIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+          }}
+          onRemoveSandboxOrim={(id) => {
+            setSandboxOrimIds((prev) => prev.filter((entry) => entry !== id));
+          }}
+          sandboxOrimSearch={sandboxOrimSearch}
+          onSandboxOrimSearchChange={setSandboxOrimSearch}
+          sandboxOrimResults={sandboxOrimResults}
+          orimTrayDevMode={orimTrayDevMode}
+          orimTrayTab={orimTrayTab}
+          onOrimTrayTabChange={setOrimTrayTab}
+          infiniteStockEnabled={infiniteStockEnabled}
+          onToggleInfiniteStock={() => setInfiniteStockEnabled((prev) => !prev)}
+          benchSwapCount={benchSwapCount}
+          onConsumeBenchSwap={() => setBenchSwapCount((prev) => Math.max(0, prev - 1))}
+          infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
+          onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
+          spawnDieRef={spawnDieRef}
+          onToggleCombatSandbox={() => setCombatSandboxOpen((prev) => !prev)}
+        />
+      )}
 
       <AssetEditorEngine
         open={assetEditorOpen}
@@ -4040,7 +4193,7 @@ export default function App() {
         activeTab={assetEditorTab}
         onTabChange={setAssetEditorTab}
         panes={assetEditorPanes}
-        isGodRaysSliderDragging={isGodRaysSliderDragging}
+        isGodRaysSliderDragging={false}
       />
 
       </div>

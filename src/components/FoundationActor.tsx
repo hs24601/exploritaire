@@ -7,17 +7,13 @@ import { Card } from './Card';
 import { getActorDisplayGlyph, getActorDefinition } from '../engine/actors';
 import { Tooltip } from './Tooltip';
 import { ActorCardTooltipContent } from './ActorCardTooltipContent';
-import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
 import { CardFrame } from './card/CardFrame';
-import { getOrimAccentColor, getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
-import { useWatercolorEnabled } from '../watercolor/useWatercolorEnabled';
-import { getActorCardWatercolor } from '../watercolor/actorCardWatercolor';
-import { ACTOR_WATERCOLOR_TEMPLATE, buildActorWatercolorConfig } from '../watercolor/presets';
+import { getOrimAccentColor } from '../utils/orimColors';
 import { useLongPressStateMachine } from '../hooks/useLongPressStateMachine';
+import { WildcardPaintOverlay } from './WildcardPaintOverlay';
+import { FORCE_NEON_CARD_STYLE, SHOW_WATERCOLOR_FILTERS } from '../config/ui';
 
 const ELEMENT_ORDER: Element[] = ['A', 'W', 'E', 'F', 'L', 'D'];
-const CARD_WATERCOLOR_CANVAS_SCALE = 1.35;
-const CARD_WATERCOLOR_OVERALL_SCALE_MULTIPLIER = 1 / CARD_WATERCOLOR_CANVAS_SCALE;
 const FOUNDATION_TILT_MAX_DEG = 2.4;
 const CATEGORY_GLYPHS: Record<string, string> = {
   ability: '⚡️',
@@ -65,6 +61,13 @@ const getFoundationOffset = (cardId: string) => {
     x: (normalizedX * 2 - 1) * maxOffset,
     y: (normalizedY * 2 - 1) * maxOffset,
   };
+};
+
+const isFoundationActorCard = (card: CardType) => {
+  return card.id.startsWith('actor-')
+    || card.id.startsWith('combatlab-foundation-')
+    || card.id.startsWith('lab-foundation-')
+    || (card.rpgCardKind === 'focus' && !!card.sourceActorId);
 };
 
 // Vary a hex color slightly for organic paint variation
@@ -165,9 +168,11 @@ export const FoundationActor = memo(function FoundationActor({
   onActorLongPress,
 }: FoundationActorProps) {
   const effectiveScale = cardScale;
-  const showClickHighlight = interactionMode === 'click' && (canReceive || isGuidanceTarget);
-  const showDragHighlight = interactionMode === 'dnd' && isDragTarget;
-  const showHighlight = showClickHighlight || showDragHighlight;
+  const neonMode = FORCE_NEON_CARD_STYLE;
+  const foundationLocked = cards.length > 1;
+  const showClickHighlight = !foundationLocked && interactionMode === 'click' && (canReceive || isGuidanceTarget);
+  const showDragHighlight = !foundationLocked && interactionMode === 'dnd' && isDragTarget;
+  const showHighlight = !foundationLocked && (showClickHighlight || showDragHighlight);
   const highlightColor = isGuidanceTarget ? '#7fdbca' : '#e6b31e';
   const cardWidth = CARD_SIZE.width * effectiveScale;
   const cardHeight = CARD_SIZE.height * effectiveScale;
@@ -180,8 +185,6 @@ export const FoundationActor = memo(function FoundationActor({
   const foundationTiltRef = useRef(new Map<string, number>());
   const foundationOffsetRef = useRef(new Map<string, { x: number; y: number }>());
   const foundationRef = useRef<HTMLDivElement>(null);
-  const watercolorEnabled = useWatercolorEnabled();
-
   const showEmptyFoundation = cards.length === 0;
   const handleActorLongPressPayload = useCallback((payload: { actor: Actor }) => {
     onActorLongPress?.(payload);
@@ -221,12 +224,12 @@ export const FoundationActor = memo(function FoundationActor({
     prevCardCountRef.current = currentCount;
 
     // Only react when cards are added (not removed)
-    if (currentCount > prevCount && watercolorEnabled && !disableFoundationSplashes) {
+    if (currentCount > prevCount && !disableFoundationSplashes) {
       void splashDirectionDeg;
       void splashDirectionToken;
       void comboCount;
     }
-  }, [cards.length, cards, watercolorEnabled, disableFoundationSplashes, splashDirectionDeg, splashDirectionToken, comboCount]);
+  }, [cards.length, cards, disableFoundationSplashes, splashDirectionDeg, splashDirectionToken, comboCount]);
   useEffect(() => {
     cards.forEach((card) => {
       if (!foundationTiltRef.current.has(card.id)) {
@@ -252,15 +255,6 @@ export const FoundationActor = memo(function FoundationActor({
   const actorOrimFont = Math.max(8, Math.round(actorOrimSize * 0.6));
   const actorOrimGap = Math.max(4, Math.round(actorOrimSize * 0.2));
 
-  const refCallback = useCallback(
-    (ref: HTMLDivElement | null) => {
-      if (setDropRef) {
-        setDropRef(index, ref);
-      }
-    },
-    [setDropRef, index]
-  );
-
   const elementCounts = ELEMENT_ORDER.reduce<Record<Element, number>>((acc, element) => {
     acc[element] = 0;
     return acc;
@@ -269,12 +263,6 @@ export const FoundationActor = memo(function FoundationActor({
   const topCard = cards.length > 0 ? cards[cards.length - 1] : null;
   const isWildFoundation = !!topCard && topCard.rank === WILD_SENTINEL_RANK;
   const actorDefinition = actor ? getActorDefinition(actor.definitionId) : null;
-  const actorWatercolor = useMemo(
-    () => (actor && orimInstances && orimDefinitions
-      ? getActorCardWatercolor(actor, actorDeck, orimInstances, orimDefinitions)
-      : null),
-    [actor, actorDeck, orimInstances, orimDefinitions]
-  );
   const actorPortraitSrc = showGraphics
     ? (actorDefinition?.artSrc
       ? (actorDefinition.artSrc.startsWith('/') ? actorDefinition.artSrc : `/${actorDefinition.artSrc}`)
@@ -283,56 +271,6 @@ export const FoundationActor = memo(function FoundationActor({
   const usePortrait = !!actorPortraitSrc && topCard && topCard.element === 'N';
   const neutralDisplay = topCard && topCard.element === 'N' && actor
     ? (usePortrait ? '' : getActorDisplayGlyph(actor.definitionId, showGraphics))
-    : undefined;
-  const valueWatercolor = useMemo(() => {
-    if (!topCard) return null;
-    const baseColor = '#1e90ff';
-    const config = buildActorWatercolorConfig(baseColor, ACTOR_WATERCOLOR_TEMPLATE);
-    const baseSplotches = config.splotches.map((splotch) => ({
-      ...splotch,
-      blendMode: 'normal',
-      opacity: 1,
-      gradient: {
-        ...splotch.gradient,
-        light: '#6ec6ff',
-        mid: '#1e90ff',
-        dark: '#0b4f9a',
-        lightOpacity: 1,
-        midOpacity: 1,
-        darkOpacity: 1,
-      },
-    }));
-    const extraSplotches = [
-      [0.36, -0.18],
-      [0.18, -0.36],
-      [-0.32, -0.22],
-      [-0.28, 0.28],
-      [0.24, 0.34],
-    ].map(([x, y], index) => ({
-      ...config.splotches[0],
-      scale: 0.22 + index * 0.01,
-      offset: [x, y] as [number, number],
-      blendMode: 'normal',
-      opacity: 0.95,
-      gradient: {
-        ...config.splotches[0].gradient,
-        light: '#1a5bb0',
-        mid: '#0c3f86',
-        dark: '#062a5e',
-        lightOpacity: 0.9,
-        midOpacity: 0.95,
-        darkOpacity: 1,
-      },
-    }));
-    return {
-      ...config,
-      splotches: [...baseSplotches, ...extraSplotches],
-      grain: { ...config.grain, enabled: false, intensity: 0 },
-      overallScale: 0.64,
-    };
-  }, [topCard]);
-  const watercolorShadowGlyph = !usePortrait && actorDefinition
-    ? (actorDefinition.sprite ?? getActorDisplayGlyph(actorDefinition.id, showGraphics))
     : undefined;
   const tooltipContent = actor && actorDefinition && orimInstances && orimDefinitions ? (
     <ActorCardTooltipContent
@@ -345,7 +283,6 @@ export const FoundationActor = memo(function FoundationActor({
       isPartied={isPartied}
     />
   ) : null;
-  const wildGradientId = `wildRainbow-${index}`;
   const playedCards = cards.slice(1);
   for (const card of playedCards) {
     if (card.element in elementCounts) {
@@ -371,27 +308,10 @@ export const FoundationActor = memo(function FoundationActor({
         description: definition.description,
         meta,
         color,
-        watercolor: getOrimWatercolorConfig(definition, instance?.definitionId),
       };
     })
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
     .slice(0, 4);
-  const auraSplotch = actorWatercolor?.splotches?.[4]
-    ?? actorWatercolor?.splotches?.[actorWatercolor.splotches.length - 1]
-    ?? null;
-  const baseActorWatercolor = actorWatercolor
-    ? {
-      ...actorWatercolor,
-      splotches: actorWatercolor.splotches.filter((_, index) => index !== 4),
-    }
-    : null;
-  const auraConfig = actorWatercolor && auraSplotch
-    ? {
-      ...actorWatercolor,
-      splotches: [auraSplotch],
-      overallScale: (actorWatercolor.overallScale ?? 1) * CARD_WATERCOLOR_OVERALL_SCALE_MULTIPLIER,
-    }
-    : null;
   const stackCards = useMemo(() => cards.slice(-7), [cards]);
   const actorInspectId = actor?.id ?? null;
   const isActorInspecting = actorInspectId ? longPressInspect.isPressingId(actorInspectId) : false;
@@ -425,20 +345,22 @@ export const FoundationActor = memo(function FoundationActor({
 
   return (
     <div
-      ref={foundationRef}
+      ref={(el) => {
+        foundationRef.current = el;
+        setDropRef?.(index, el);
+      }}
       className={`relative flex flex-col items-center gap-3 transition-opacity duration-300${isDimmed ? ' opacity-40' : ''}`}
       style={{ marginInline: Math.max(6, Math.round(cardWidth * 0.12)) }}
     >
       <Tooltip content={tooltipContent} disabled={!tooltipContent || tooltipDisabled} delayMs={1500} pinnable>
         <motion.div
-          ref={refCallback}
-          onClick={interactionMode === 'click' ? handleFoundationClick : undefined}
-          onPointerDown={onActorLongPress ? handleFoundationPointerDown : undefined}
-          onPointerMove={onActorLongPress ? handleFoundationPointerMove : undefined}
-          onPointerUp={onActorLongPress ? handleFoundationPointerEnd : undefined}
-          onPointerCancel={onActorLongPress ? handleFoundationPointerEnd : undefined}
+          onClick={!foundationLocked && interactionMode === 'click' ? handleFoundationClick : undefined}
+          onPointerDown={!foundationLocked && onActorLongPress ? handleFoundationPointerDown : undefined}
+          onPointerMove={!foundationLocked && onActorLongPress ? handleFoundationPointerMove : undefined}
+          onPointerUp={!foundationLocked && onActorLongPress ? handleFoundationPointerEnd : undefined}
+          onPointerCancel={!foundationLocked && onActorLongPress ? handleFoundationPointerEnd : undefined}
           onMouseEnter={() => {
-            if (tooltipDisabled) return;
+            if (foundationLocked || tooltipDisabled) return;
             setIsCardHovering(true);
             setCardHoverToken((prev) => prev + 1);
           }}
@@ -448,7 +370,7 @@ export const FoundationActor = memo(function FoundationActor({
           animate={showHighlight ? { scale: [1, 1.02, 1] } : { scale: 1 }}
           transition={showHighlight ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' } : {}}
           className={`relative ${showClickHighlight ? 'cursor-pointer' : 'cursor-default'}`}
-          style={{ touchAction: 'none' }}
+          style={{ touchAction: foundationLocked ? 'auto' : 'none', pointerEvents: foundationLocked ? 'none' : 'auto' }}
         >
           {isActorInspecting && (
             <svg
@@ -488,6 +410,7 @@ export const FoundationActor = memo(function FoundationActor({
               const isTop = stackIndex === stackCards.length - 1;
               const tilt = stackCards.length <= 1 && isTop ? 0 : getTiltForCard(card.id);
               const offset = isTop ? { x: 0, y: 0 } : getOffsetForCard(card.id);
+              const showSecretActorHolo = isTop && isFoundationActorCard(card);
               return (
                 <div
                   key={card.id}
@@ -498,70 +421,26 @@ export const FoundationActor = memo(function FoundationActor({
                     zIndex: 2 + stackIndex,
                   }}
                 >
-                  {isTop && isWildFoundation && (
-                    <svg
-                      className="wild-foundation-train"
-                      viewBox="0 0 100 140"
-                      preserveAspectRatio="none"
-                      aria-hidden="true"
-                    >
-                    <defs>
-                      <linearGradient
-                        id={wildGradientId}
-                        x1="0"
-                        y1="0"
-                        x2="100"
-                        y2="0"
-                        gradientUnits="userSpaceOnUse"
-                        spreadMethod="repeat"
-                      >
-                        <stop offset="0%" stopColor="#fd004c" />
-                        <stop offset="16%" stopColor="#fe9000" />
-                        <stop offset="32%" stopColor="#fff020" />
-                        <stop offset="48%" stopColor="#3edf4b" />
-                        <stop offset="64%" stopColor="#3363ff" />
-                        <stop offset="80%" stopColor="#b102b7" />
-                        <stop offset="100%" stopColor="#fd004c" />
-                        <animateTransform
-                          attributeName="gradientTransform"
-                          type="translate"
-                          from="0 0"
-                          to="100 0"
-                          dur="1.2s"
-                          repeatCount="indefinite"
-                        />
-                      </linearGradient>
-                    </defs>
-                    <rect
-                      x="2"
-                      y="2"
-                      width="96"
-                      height="136"
-                      rx="9"
-                      ry="9"
-                      fill="none"
-                      stroke={`url(#${wildGradientId})`}
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                )}
                 <Card
                   card={card}
                   size={cardSize}
                   isFoundation
-                  borderColorOverride={isTop && isWildFoundation ? 'transparent' : undefined}
-                  boxShadowOverride={isTop && isWildFoundation ? 'none' : undefined}
                   isDimmed={isDimmed}
                   showGraphics={showGraphics}
                   suitDisplayOverride={isTop ? neutralDisplay : undefined}
                   suitFontSizeOverride={isTop && neutralDisplay ? suitFontSize : undefined}
                   frameClassName={`relative ${isTop ? 'z-[2]' : 'z-[1]'}`}
-                  cardWatercolor={isTop && watercolorEnabled ? baseActorWatercolor : null}
-                  watercolorShadowGlyph={isTop && watercolorEnabled ? watercolorShadowGlyph : undefined}
-                  valueWatercolor={isTop ? valueWatercolor : null}
                   maskValue={maskValue}
+                  showFoundationActorSecretHolo={showSecretActorHolo}
                 />
+                {isTop && isWildFoundation && SHOW_WATERCOLOR_FILTERS && !neonMode && (
+                  <div
+                    className="absolute inset-0 rounded-[10px] overflow-hidden pointer-events-none"
+                    style={{ zIndex: 20, opacity: 0.92, width: '100%', height: '100%' }}
+                  >
+                    <WildcardPaintOverlay />
+                  </div>
+                )}
               </div>
             );
             })}
@@ -584,7 +463,7 @@ export const FoundationActor = memo(function FoundationActor({
                 />
               </div>
             )}
-            {isCardHovering && !tooltipDisabled && !watercolorEnabled && !isActorInspecting && (
+            {isCardHovering && !tooltipDisabled && !isActorInspecting && (
               <svg
                 key={`card-hover-${cardHoverToken}`}
                 className="absolute -inset-1 pointer-events-none"
@@ -608,66 +487,6 @@ export const FoundationActor = memo(function FoundationActor({
                   }}
                 />
               </svg>
-            )}
-            {watercolorEnabled && isCardHovering && !tooltipDisabled && auraConfig && (
-              <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
-                {/* SVG with mask and foreignObject containing watercolor */}
-                <svg
-                  key={`card-aura-mask-${index}-${cardHoverToken}`}
-                  className="absolute"
-                  style={{
-                    width: cardWidth * CARD_WATERCOLOR_CANVAS_SCALE,
-                    height: cardHeight * CARD_WATERCOLOR_CANVAS_SCALE,
-                    left: (cardWidth - cardWidth * CARD_WATERCOLOR_CANVAS_SCALE) / 2,
-                    top: (cardHeight - cardHeight * CARD_WATERCOLOR_CANVAS_SCALE) / 2,
-                    overflow: 'visible',
-                  }}
-                  viewBox="0 0 100 140"
-                  preserveAspectRatio="none"
-                >
-                  <defs>
-                    <mask id={`card-aura-mask-${index}`} maskUnits="userSpaceOnUse" x="-30" y="-30" width="160" height="200">
-                      {/* Background black (hidden) */}
-                      <rect x="-30" y="-30" width="160" height="200" fill="black" />
-                      {/* Animated stroke reveals the border region - thick stroke to cover watercolor bleed */}
-                      <rect
-                        x="0"
-                        y="0"
-                        width="100"
-                        height="140"
-                        rx="10"
-                        ry="10"
-                        fill="none"
-                        stroke="white"
-                        strokeWidth="40"
-                        strokeLinecap="round"
-                        strokeDasharray="480"
-                        strokeDashoffset="480"
-                        style={{
-                          animation: 'card-aura-stroke-reveal 1.25s linear forwards',
-                        }}
-                      />
-                    </mask>
-                  </defs>
-                  {/* Watercolor inside foreignObject with mask applied */}
-                  <foreignObject
-                    x="0"
-                    y="0"
-                    width="100"
-                    height="140"
-                    mask={`url(#card-aura-mask-${index})`}
-                  >
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                      }}
-                    >
-                      <WatercolorOverlay config={auraConfig} />
-                    </div>
-                  </foreignObject>
-                </svg>
-              </div>
             )}
             {showCompleteSticker && (
               <div className="absolute -top-2 -right-2 text-[9px] font-bold px-2 py-1 rounded-full border border-game-gold/70 text-game-gold bg-game-bg-dark/90">
@@ -864,50 +683,8 @@ export const FoundationActor = memo(function FoundationActor({
                     }}
                     onMouseLeave={() => setActiveOrimId((prev) => (prev === slot.id ? null : prev))}
                   >
-                    {slot.watercolor && (
-                      <div
-                        className="absolute"
-                        style={{
-                          zIndex: 2,
-                          pointerEvents: 'none',
-                          width: actorOrimSize * ORIM_WATERCOLOR_CANVAS_SCALE,
-                          height: actorOrimSize * ORIM_WATERCOLOR_CANVAS_SCALE,
-                          left: (actorOrimSize - actorOrimSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
-                          top: (actorOrimSize - actorOrimSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
-                        }}
-                      >
-                        <WatercolorOverlay
-                          config={{
-                            ...slot.watercolor,
-                            splotches: slot.watercolor.splotches.length > 0 ? [slot.watercolor.splotches[0]] : [],
-                          }}
-                        />
-                      </div>
-                    )}
-                    {slot.watercolor && activeOrimId === slot.id && slot.watercolor.splotches[1] && (
-                      <div
-                        key={`orim-splotch-${slot.id}-${orimHoverToken}`}
-                        className="absolute orim-splotch-reveal"
-                        style={{
-                          zIndex: 1,
-                          pointerEvents: 'none',
-                          width: actorOrimSize * ORIM_WATERCOLOR_CANVAS_SCALE,
-                          height: actorOrimSize * ORIM_WATERCOLOR_CANVAS_SCALE,
-                          left: (actorOrimSize - actorOrimSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
-                          top: (actorOrimSize - actorOrimSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
-                          animation: 'orim-splotch-reveal 1.25s linear forwards',
-                        }}
-                      >
-                        <WatercolorOverlay
-                          config={{
-                            ...slot.watercolor,
-                            splotches: [slot.watercolor.splotches[1]],
-                          }}
-                        />
-                      </div>
-                    )}
                     <span style={{ position: 'relative', zIndex: 3 }}>{slot.glyph}</span>
-                    {activeOrimId === slot.id && !tooltipDisabled && !watercolorEnabled && (
+                    {activeOrimId === slot.id && !tooltipDisabled && (
                       <svg
                         key={`${slot.id}-${orimHoverToken}`}
                         className="absolute inset-0"

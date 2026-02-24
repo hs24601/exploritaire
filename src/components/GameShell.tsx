@@ -15,7 +15,7 @@ import { getTileDefinition } from '../engine/tiles';
 import { getBlueprintDefinition } from '../engine/blueprints';
 import { createDie } from '../engine/dice';
 import { getActorDisplayGlyph } from '../engine/actors';
-import { getOrimAccentColor } from '../watercolor/orimWatercolor';
+import { getOrimAccentColor } from '../utils/orimColors';
 import { mainWorldMap } from '../data/worldMap';
 import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element, OrimDefinition } from '../engine/types';
 import type { useGameEngine } from '../hooks/useGameEngine';
@@ -53,6 +53,7 @@ export interface GameShellProps {
   onTogglePaintLuminosity: () => void;
   onPositionChange: (x: number, y: number) => void;
   onToggleCombatSandbox: () => void;
+  combatSandboxOpen: boolean;
 
   // Dev/monitoring
   fps: number;
@@ -107,6 +108,7 @@ export function GameShell({
   onTogglePaintLuminosity,
   onPositionChange,
   onToggleCombatSandbox,
+  combatSandboxOpen,
   fps,
   serverAlive,
   onOpenPoiEditorAt,
@@ -347,8 +349,13 @@ export function GameShell({
         if (card) {
           if (gameState.playtestVariant === 'rpg' && card.id.startsWith('keru-archetype-')) {
             const archetype = card.id.replace('keru-archetype-', '');
-            if (archetype === 'lupus' || archetype === 'ursus' || archetype === 'felis') {
-              const applied = actions.applyKeruArchetype(archetype);
+            const availableAspectIds = new Set(
+              (gameState.orimDefinitions ?? [])
+                .filter((definition) => definition.isAspect)
+                .map((definition) => String(definition.id ?? '').toLowerCase())
+            );
+            if (availableAspectIds.has(archetype.toLowerCase())) {
+              const applied = actions.applyKeruArchetype(archetype as 'felis');
               if (applied) {
                 const directionDeg = momentum
                   ? (Math.atan2(momentum.y, momentum.x) * 180) / Math.PI
@@ -423,9 +430,10 @@ export function GameShell({
       if (tableau.length === 0) return;
 
       const card = tableau[tableau.length - 1];
+      const canPlace = canPlayCardWithWild(card, foundationTop, gameState.activeEffects);
 
       if (useWild) {
-        if (canPlayCardWithWild(card, foundationTop, gameState.activeEffects)) {
+        if (canPlace) {
           const played = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
           if (played) {
             applySplashHint();
@@ -435,7 +443,7 @@ export function GameShell({
         return;
       }
 
-      if (canPlayCard(card, foundationTop, gameState.activeEffects)) {
+      if (canPlace) {
         const played = actions.playFromTableau(tableauIndex, foundationIndex);
         if (played) applySplashHint();
       }
@@ -691,7 +699,7 @@ export function GameShell({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      {showPuzzleOverlay && isPuzzleOpen && (gameState.phase === 'playing' || gameState.phase === 'biome') && (
+      {showPuzzleOverlay && isPuzzleOpen && !combatSandboxOpen && (gameState.phase === 'playing' || gameState.phase === 'biome') && (
         <div className="fixed inset-0 z-[9000]">
           <div
             className="absolute inset-0 pointer-events-none"
@@ -777,6 +785,7 @@ export function GameShell({
                 onOpenSettings={onOpenSettings}
                 onTogglePause={onTogglePause}
                 onToggleCombatSandbox={onToggleCombatSandbox}
+                combatSandboxOpen={combatSandboxOpen}
                 wildAnalysis={wildAnalysis}
                 combatActions={combatActions}
                 explorationStepRef={explorationStepRef}
@@ -791,7 +800,10 @@ export function GameShell({
       )}
 
       {/* Garden screen */}
-      {gameState.playtestVariant !== 'party-foundations' && gameState.playtestVariant !== 'party-battle' && gameState.playtestVariant !== 'rpg' && (
+      {gameState.playtestVariant !== 'party-foundations'
+        && gameState.playtestVariant !== 'party-battle'
+        && gameState.playtestVariant !== 'rpg'
+        && !(gameState.phase === 'biome' && combatSandboxOpen) && (
         <Table
           pendingCards={gameState.pendingCards}
           buildPileProgress={gameState.buildPileProgress}
@@ -824,7 +836,6 @@ export function GameShell({
           onClearAllProgress={actions.clearAllProgress}
           onResetGame={() => actions.newGame(false)}
           onUpdateTilePosition={actions.updateTileGridPosition}
-          onUpdateTileWatercolorConfig={actions.updateTileWatercolorConfig}
           onAddTileToGardenAt={actions.addTileToGardenAt}
           onRemoveTile={actions.removeTileFromGarden}
           onToggleTileLock={actions.toggleTileLock}

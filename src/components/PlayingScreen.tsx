@@ -2,13 +2,12 @@ import { memo, useMemo, useCallback } from 'react';
 import { useGraphics } from '../contexts/GraphicsContext';
 import type { GameState, Card as CardType, Move, SelectedCard, Actor } from '../engine/types';
 import { GameButton } from './GameButton';
-import { Tableau } from './Tableau';
+import { Tableau, TableauGroup } from './Tableau';
 import { FoundationActor } from './FoundationActor';
 import { StatsPanel } from './StatsPanel';
 import { canPlayCard } from '../engine/rules';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { CARD_SIZE } from '../engine/constants';
-import { PerspectiveTableauGroup } from './PerspectiveTableauGroup';
 
 interface PlayingScreenProps {
   gameState: GameState;
@@ -101,17 +100,18 @@ export const PlayingScreen = memo(function PlayingScreen({
         </div>
         {/* Tableaus */}
         {forcedPerspectiveEnabled ? (
-          <PerspectiveTableauGroup
-            gameState={gameState}
+          <TableauGroup
+            mode="perspective"
+            tableaus={gameState.tableaus}
             selectedCard={selectedCard}
             onCardSelect={actions.selectCard}
             guidanceMoves={guidanceMoves}
+            interactionMode={gameState.interactionMode}
             showGraphics={showGraphics}
             cardScale={foundationCardScale}
-            interactionMode={gameState.interactionMode}
-            handleDragStart={handleDragStart}
-            isDragging={isDragging}
+            onDragStart={handleDragStart}
             draggingCardId={isDragging ? draggingCard?.id : null}
+            isAnyCardDragging={isDragging}
             revealNextRow={cloudSightActive}
             tableauCanPlay={tableauCanPlay}
             noValidMoves={noValidMoves}

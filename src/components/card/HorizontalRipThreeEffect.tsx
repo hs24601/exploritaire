@@ -10,63 +10,112 @@ interface HorizontalRipThreeEffectProps {
   onSnapshotReady?: () => void;
 }
 
-const VERTEX_SHADER = `
-uniform float uProgress;
-uniform float uIsTop;
-uniform float uSeed;
+const RIP_TEX_URL = 'https://assets.codepen.io/557388/rip.jpg';
+
+const RIP_VERTEX_SHADER = `
+uniform float uTearAmount;
+uniform float uTearWidth;
+uniform float uTearXAngle;
+uniform float uTearYAngle;
+uniform float uTearZAngle;
+uniform float uTearXOffset;
+uniform float uHalfHeight;
+
 varying vec2 vUv;
+varying float vAmount;
+
+mat4 rotationX(in float angle) {
+  return mat4(
+    1.0, 0.0, 0.0, 0.0,
+    0.0, cos(angle), -sin(angle), 0.0,
+    0.0, sin(angle), cos(angle), 0.0,
+    0.0, 0.0, 0.0, 1.0
+  );
+}
+
+mat4 rotationY(in float angle) {
+  return mat4(
+    cos(angle), 0.0, sin(angle), 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    -sin(angle), 0.0, cos(angle), 0.0,
+    0.0, 0.0, 0.0, 1.0
+  );
+}
+
+mat4 rotationZ(in float angle) {
+  return mat4(
+    cos(angle), -sin(angle), 0.0, 0.0,
+    sin(angle), cos(angle), 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0
+  );
+}
 
 void main() {
+  // Match prototype falloff so the split opens widest near the origin.
+  float yAmount = max(0.0, (uTearAmount - (1.0 - uv.y)));
+  float zRotate = uTearZAngle * yAmount;
+  float xRotate = uTearXAngle * yAmount;
+  float yRotate = uTearYAngle * yAmount;
+
+  vec4 vertex = vec4(position.x, position.y + uHalfHeight, position.z, 1.0);
+  vertex = vertex * rotationY(yRotate) * rotationX(xRotate) * rotationZ(zRotate);
+  vertex.x += uTearXOffset * yAmount;
+  vertex.y -= uHalfHeight;
+
   vUv = uv;
-  vec3 pos = position;
-  float seamFalloff = uIsTop > 0.5 ? (1.0 - uv.y) : uv.y;
-  seamFalloff = pow(clamp(seamFalloff, 0.0, 1.0), 1.45);
-  float noise = sin((uv.x * 26.0) + uSeed) * 0.013 + sin((uv.x * 63.0) - (uSeed * 1.7)) * 0.008;
-  pos.z += seamFalloff * uProgress * 0.05;
-  pos.x += noise * seamFalloff * uProgress * 0.12;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  vAmount = yAmount;
+  gl_Position = projectionMatrix * modelViewMatrix * vertex;
 }
 `;
 
-const FRAGMENT_SHADER = `
+const RIP_FRAGMENT_SHADER = `
 uniform sampler2D uMap;
-uniform float uIsTop;
-uniform float uProgress;
-uniform float uSeed;
-varying vec2 vUv;
+uniform sampler2D uRip;
+uniform float uUvOffset;
+uniform float uRipSide;
+uniform float uTearWidth;
+uniform float uFullWidth;
+uniform float uWhiteThreshold;
+uniform float uTearOffset;
 
-float jag(float x) {
-  return sin((x * 33.0) + uSeed) * 0.55 + sin((x * 91.0) - (uSeed * 0.7)) * 0.35;
-}
+varying vec2 vUv;
+varying float vAmount;
 
 void main() {
-  vec2 uv = vec2(vUv.x, uIsTop > 0.5 ? (0.5 + (vUv.y * 0.5)) : (vUv.y * 0.5));
-  vec4 base = texture2D(uMap, uv);
-  float tearEdge = 0.015 + (jag(vUv.x) * 0.012);
+  bool rightSide = uRipSide == 1.0;
+  float halfWidth = uFullWidth * 0.5;
+  float widthOverlap = halfWidth + (uTearWidth * 0.5);
+  float xScale = widthOverlap / uFullWidth;
+  vec2 uvOffset = vec2(vUv.x * xScale + uUvOffset, vUv.y);
+  vec4 textureColor = texture2D(uMap, uvOffset);
 
-  float seamY;
-  if (uIsTop > 0.5) {
-    seamY = max(0.0, tearEdge);
-  } else {
-    seamY = min(1.0, 1.0 - tearEdge);
+  float ripRange = uTearWidth / widthOverlap;
+  float ripStart = rightSide ? 0.0 : (1.0 - ripRange);
+  float ripX = (vUv.x - ripStart) / ripRange;
+  float ripY = (vUv.y * 0.5) + (0.5 * uTearOffset);
+  float alpha = 1.0;
+  bool inRipBand = (ripX >= 0.0 && ripX <= 1.0);
+  if (inRipBand) {
+    vec4 ripCut = texture2D(uRip, vec2(ripX, ripY));
+    float whiteness = dot(vec4(1.0), ripCut) * 0.25;
+    float edgeBand = 1.0 - smoothstep(0.0, 0.06, abs(whiteness - uWhiteThreshold));
+    if (!rightSide && whiteness <= uWhiteThreshold) {
+      alpha = 0.0;
+    }
+    if (rightSide && whiteness >= uWhiteThreshold) {
+      alpha = 0.0;
+    }
+    if (alpha > 0.0 && edgeBand > 0.0) {
+      textureColor.rgb = mix(textureColor.rgb, vec3(0.94), edgeBand * 0.35);
+    }
   }
 
-  float distToSeam = abs(vUv.y - seamY);
-  float cutHalfWidth = 0.011 + (uProgress * 0.004);
-  if (distToSeam < cutHalfWidth) {
-    discard;
-  }
-
-  float paperEdgeBand = smoothstep(0.032, 0.012, distToSeam);
-  float grain = 0.5 + (0.5 * sin((vUv.x * 210.0) + (uSeed * 1.3)));
-  vec3 paperEdge = mix(vec3(0.86), vec3(0.97), grain);
-  base.rgb = mix(base.rgb, paperEdge, paperEdgeBand * 0.7);
-
-  float shadowBand = smoothstep(0.065, 0.025, distToSeam);
-  base.rgb *= (1.0 - (shadowBand * 0.06));
-  gl_FragColor = base;
+  gl_FragColor = vec4(textureColor.rgb, textureColor.a * alpha);
 }
 `;
+
+type RipSide = 'left' | 'right';
 
 export function HorizontalRipThreeEffect({
   sourceRef,
@@ -79,9 +128,10 @@ export function HorizontalRipThreeEffect({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
-  const topMeshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> | null>(null);
-  const bottomMeshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> | null>(null);
-  const textureRef = useRef<THREE.Texture | null>(null);
+  const mapTextureRef = useRef<THREE.Texture | null>(null);
+  const ripTextureRef = useRef<THREE.Texture | null>(null);
+  const leftMeshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> | null>(null);
+  const rightMeshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastTriggerRef = useRef(0);
 
@@ -93,9 +143,9 @@ export function HorizontalRipThreeEffect({
         alpha: true,
         antialias: true,
       });
+      renderer.setClearColor(0x000000, 0);
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.NoToneMapping;
-      renderer.setClearColor(0x000000, 0);
       rendererRef.current = renderer;
       sceneRef.current = new THREE.Scene();
       cameraRef.current = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 10);
@@ -107,11 +157,25 @@ export function HorizontalRipThreeEffect({
   }, [width, height]);
 
   useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin('anonymous');
+    loader.load(RIP_TEX_URL, (tex) => {
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.colorSpace = THREE.NoColorSpace;
+      ripTextureRef.current = tex;
+    });
+  }, []);
+
+  useEffect(() => {
     const sourceEl = sourceRef.current;
     const renderer = rendererRef.current;
     const scene = sceneRef.current;
     const camera = cameraRef.current;
-    if (!sourceEl || !renderer || !scene || !camera) return;
+    const ripTex = ripTextureRef.current;
+    if (!sourceEl || !renderer || !scene || !camera || !ripTex) return;
     if (trigger <= 0 || trigger === lastTriggerRef.current) return;
     lastTriggerRef.current = trigger;
 
@@ -124,73 +188,85 @@ export function HorizontalRipThreeEffect({
       });
       onSnapshotReady?.();
 
-      if (textureRef.current) {
-        textureRef.current.dispose();
-      }
-      textureRef.current = new THREE.CanvasTexture(snapshotCanvas);
-      textureRef.current.colorSpace = THREE.SRGBColorSpace;
-      textureRef.current.minFilter = THREE.LinearFilter;
-      textureRef.current.magFilter = THREE.LinearFilter;
+      if (mapTextureRef.current) mapTextureRef.current.dispose();
+      mapTextureRef.current = new THREE.CanvasTexture(snapshotCanvas);
+      mapTextureRef.current.colorSpace = THREE.SRGBColorSpace;
+      mapTextureRef.current.minFilter = THREE.LinearFilter;
+      mapTextureRef.current.magFilter = THREE.LinearFilter;
 
-      if (topMeshRef.current) {
-        scene.remove(topMeshRef.current);
-        topMeshRef.current.geometry.dispose();
-        topMeshRef.current.material.dispose();
+      if (leftMeshRef.current) {
+        scene.remove(leftMeshRef.current);
+        leftMeshRef.current.geometry.dispose();
+        leftMeshRef.current.material.dispose();
       }
-      if (bottomMeshRef.current) {
-        scene.remove(bottomMeshRef.current);
-        bottomMeshRef.current.geometry.dispose();
-        bottomMeshRef.current.material.dispose();
+      if (rightMeshRef.current) {
+        scene.remove(rightMeshRef.current);
+        rightMeshRef.current.geometry.dispose();
+        rightMeshRef.current.material.dispose();
       }
 
-      const seed = Math.random() * 1000;
-      const makeMaterial = (isTop: 0 | 1) => new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        uniforms: {
-          uMap: { value: textureRef.current },
-          uProgress: { value: 0 },
-          uIsTop: { value: isTop },
-          uSeed: { value: seed },
-        },
-        vertexShader: VERTEX_SHADER,
-        fragmentShader: FRAGMENT_SHADER,
-      });
+      const fullWidth = 2.0;
+      const tearWidth = 0.07;
+      const halfHeight = 1.0;
+      const leftUvOffset = 0.0;
+      const rightUvOffset = ((fullWidth - tearWidth) / fullWidth) * 0.5;
+      const tearOffset = Math.random();
 
-      const planeGeometry = new THREE.PlaneGeometry(2, 1, 48, 32);
-      const topMesh = new THREE.Mesh(planeGeometry, makeMaterial(1));
-      const bottomMesh = new THREE.Mesh(planeGeometry.clone(), makeMaterial(0));
-      topMesh.position.y = 0.5;
-      bottomMesh.position.y = -0.5;
+      const makeMaterial = (side: RipSide) => {
+        const right = side === 'right';
+        return new THREE.ShaderMaterial({
+          transparent: true,
+          depthWrite: false,
+          uniforms: {
+            uMap: { value: mapTextureRef.current },
+            uRip: { value: ripTex },
+            uUvOffset: { value: right ? rightUvOffset : leftUvOffset },
+            uRipSide: { value: right ? 1 : 0 },
+            uTearWidth: { value: tearWidth },
+            uFullWidth: { value: fullWidth },
+            uWhiteThreshold: { value: 0.76 },
+            uTearOffset: { value: tearOffset },
+            uTearAmount: { value: 0 },
+            uTearXAngle: { value: right ? 0.07 : -0.07 },
+            uTearYAngle: { value: right ? 0.02 : -0.02 },
+            uTearZAngle: { value: right ? -0.03 : 0.03 },
+            uTearXOffset: { value: 0 },
+            uHalfHeight: { value: halfHeight },
+          },
+          vertexShader: RIP_VERTEX_SHADER,
+          fragmentShader: RIP_FRAGMENT_SHADER,
+        });
+      };
 
-      topMeshRef.current = topMesh;
-      bottomMeshRef.current = bottomMesh;
-      scene.add(topMesh);
-      scene.add(bottomMesh);
+      const sideWidth = (fullWidth * 0.5) + (tearWidth * 0.5);
+      const geometry = new THREE.PlaneGeometry(sideWidth, 2.0, 50, 50);
+      const leftMesh = new THREE.Mesh(geometry, makeMaterial('left'));
+      const rightMesh = new THREE.Mesh(geometry.clone(), makeMaterial('right'));
+      const baseX = (fullWidth - tearWidth) * 0.25;
+      leftMesh.position.x = -baseX;
+      rightMesh.position.x = baseX;
+      leftMesh.position.z = 0.002;
+      rightMesh.position.z = 0.003;
+      leftMeshRef.current = leftMesh;
+      rightMeshRef.current = rightMesh;
+      scene.add(leftMesh);
+      scene.add(rightMesh);
 
       const durationMs = 760;
       const start = performance.now();
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-      }
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
 
       const animate = (now: number) => {
         const t = Math.min(1, (now - start) / durationMs);
-        const eased = t * t * (3 - (2 * t));
-        const bell = Math.exp(-Math.pow((t - 0.52) / 0.23, 2));
-        const gap = eased * 0.2;
-        const extraLift = bell * 0.06;
+        const eased = t * t * (3.0 - (2.0 * t));
+        const bell = Math.exp(-Math.pow((t - 0.52) / 0.21, 2.0));
+        const split = (eased * 0.005) + (bell * 0.003);
+        const tearAmount = eased * 0.92;
 
-        topMesh.material.uniforms.uProgress.value = eased;
-        bottomMesh.material.uniforms.uProgress.value = eased;
-        topMesh.position.y = 0.5 + gap + extraLift;
-        bottomMesh.position.y = -0.5 - gap - (extraLift * 0.9);
-        topMesh.rotation.x = -0.06 * eased - (0.18 * bell);
-        bottomMesh.rotation.x = 0.06 * eased + (0.18 * bell);
-        topMesh.rotation.z = -0.012 * eased;
-        bottomMesh.rotation.z = 0.012 * eased;
-        topMesh.position.z = 0.03;
-        bottomMesh.position.z = 0.02;
+        leftMesh.material.uniforms.uTearAmount.value = tearAmount;
+        rightMesh.material.uniforms.uTearAmount.value = tearAmount;
+        leftMesh.material.uniforms.uTearXOffset.value = -split;
+        rightMesh.material.uniforms.uTearXOffset.value = split;
 
         renderer.render(scene, camera);
         if (t < 1) {
@@ -202,24 +278,23 @@ export function HorizontalRipThreeEffect({
     };
 
     run().catch(() => {
-      // Ignore snapshot/render failures and leave the original DOM card visible.
+      // Keep DOM card visible if rip setup fails.
     });
   }, [onSnapshotReady, sourceRef, trigger]);
 
   useEffect(() => {
     return () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (leftMeshRef.current) {
+        leftMeshRef.current.geometry.dispose();
+        leftMeshRef.current.material.dispose();
       }
-      if (topMeshRef.current) {
-        topMeshRef.current.geometry.dispose();
-        topMeshRef.current.material.dispose();
+      if (rightMeshRef.current) {
+        rightMeshRef.current.geometry.dispose();
+        rightMeshRef.current.material.dispose();
       }
-      if (bottomMeshRef.current) {
-        bottomMeshRef.current.geometry.dispose();
-        bottomMeshRef.current.material.dispose();
-      }
-      textureRef.current?.dispose();
+      mapTextureRef.current?.dispose();
+      ripTextureRef.current?.dispose();
       rendererRef.current?.dispose();
     };
   }, []);

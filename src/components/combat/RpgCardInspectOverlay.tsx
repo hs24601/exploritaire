@@ -22,31 +22,20 @@ function getCardLevel(card: CardType): number {
 
 export function getRpgCardMeta(card: CardType) {
   const level = getCardLevel(card);
-  if (card.id === 'keru-archetype-lupus') {
+  if (card.id.startsWith('keru-archetype-')) {
+    const aspectName = card.id
+      .replace('keru-archetype-', '')
+      .replace(/[-_]+/g, ' ')
+      .trim();
+    const title = aspectName
+      ? aspectName.charAt(0).toUpperCase() + aspectName.slice(1)
+      : 'Aspect';
     return {
-      title: 'Lupus',
-      subtitle: 'Ranger Archetype',
-      body: 'Bind feral ranger instincts into your Keru core.',
-      details: ['HP +8', 'Stamina +5'],
-      accent: '#f7d24b',
-    };
-  }
-  if (card.id === 'keru-archetype-ursus') {
-    return {
-      title: 'Ursus',
-      subtitle: 'Tank Archetype',
-      body: 'Fuse a heavy guardian shell into your Keru form.',
-      details: ['HP +14', 'Armor +1'],
-      accent: '#ffb075',
-    };
-  }
-  if (card.id === 'keru-archetype-felis') {
-    return {
-      title: 'Felis',
-      subtitle: 'Rogue Archetype',
-      body: 'Attune to stealth, sight, and evasive mobility.',
-      details: ['HP +5', 'Evasion +15%', 'Stealth +5'],
-      accent: '#9de3ff',
+      title,
+      subtitle: 'Aspect',
+      body: 'Apply this aspect to your Keru core.',
+      details: [],
+      accent: '#7fdbca',
     };
   }
   if (card.id.startsWith('rpg-scratch-')) {

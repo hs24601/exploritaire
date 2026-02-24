@@ -14,7 +14,6 @@ import type {
 } from '../engine/types';
 import { ELEMENT_TO_SUIT, SUIT_COLORS, getSuitDisplay } from '../engine/constants';
 import { useGraphics } from '../contexts/GraphicsContext';
-import { WatercolorOverrideEditor } from './WatercolorOverrideEditor';
 
 const ELEMENTS: Element[] = ['W', 'E', 'A', 'F', 'L', 'D', 'N'];
 const CATEGORIES: OrimCategory[] = ['ability', 'utility', 'trait'];
@@ -663,13 +662,7 @@ export function OrimEditor({
           {saveStatus && (
             <div className="text-[10px] text-game-white/50">{saveStatus}</div>
           )}
-          {selected ? (
-            <WatercolorOverrideEditor
-              mode="orim"
-              orimDefinition={selected}
-              showGraphics={showGraphics}
-            />
-          ) : (
+          {!selected && (
             <div className="text-xs text-game-white/50">No orim selected.</div>
           )}
         </div>

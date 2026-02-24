@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import type { Element } from '../engine/types';
 
 /**
  * Shared neon-style glow utilities for consistent visual effects.
@@ -57,7 +58,25 @@ export const NEON_COLORS = {
   blueRgba: (a: number) => `rgba(56, 189, 248, ${a})`,
   pink: '#d946ef',
   pinkRgba: (a: number) => `rgba(217, 70, 239, ${a})`,
+  deepBlue: '#1d4ed8',
+  deepBlueRgba: (a: number) => `rgba(29, 78, 216, ${a})`,
+  white: '#ffffff',
+  whiteRgba: (a: number) => `rgba(255, 255, 255, ${a})`,
+  brown: '#a16207',
+  brownRgba: (a: number) => `rgba(161, 98, 7, ${a})`,
 } as const;
+
+export const NEON_ELEMENT_COLORS: Record<Element, string> = {
+  W: NEON_COLORS.deepBlue,
+  E: NEON_COLORS.brown,
+  A: NEON_COLORS.white,
+  F: NEON_COLORS.orange,
+  L: NEON_COLORS.gold,
+  D: NEON_COLORS.purple,
+  N: NEON_COLORS.teal,
+};
+
+export const getNeonElementColor = (element?: Element) => NEON_ELEMENT_COLORS[element ?? 'N'] ?? NEON_COLORS.teal;
 
 /**
  * Universal border width for game objects (cards, tiles, tokens, slots, previews).

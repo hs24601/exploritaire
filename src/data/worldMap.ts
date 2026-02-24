@@ -5,18 +5,21 @@ export const mainWorldMap: WorldMapDefinition = {
   id: 'main_world',
   name: 'Exploritaire World',
   size: { cols: 11, rows: 11 },
-  defaultSpawnPosition: { col: 0, row: 2 },
+  defaultSpawnPosition: { col: 22, row: 22 },
   tutorialRail: {
     path: [
-      { col: 0, row: 2 },
-      { col: 0, row: 1 },
-      { col: 0, row: 0 },
+      { col: 22, row: 22 },
+      { col: 22, row: 21 },
+      { col: 22, row: 20 },
     ],
     lockUntilPathComplete: true,
     label: 'Tutorial Path',
   },
   pointsOfInterest: [], // Populated dynamically at runtime
   cells: [
+    { gridPosition: { col: 22, row: 20 }, traversalDifficulty: 1, poi: undefined },
+    { gridPosition: { col: 22, row: 21 }, traversalDifficulty: 1, poi: undefined },
+    { gridPosition: { col: 22, row: 22 }, traversalDifficulty: 1, poi: undefined },
     { gridPosition: { col: 0, row: 0 }, traversalDifficulty: 1, poi: undefined },
     { gridPosition: { col: 0, row: 1 }, traversalDifficulty: 1, poi: undefined },
     { gridPosition: { col: 0, row: 2 }, traversalDifficulty: 1, poi: undefined },
@@ -127,8 +130,8 @@ export const mainWorldMap: WorldMapDefinition = {
     { from: { col: 0, row: 0 }, to: { col: 0, row: -1 }, reason: 'Collapsed bridge' },
   ],
   conditionalEdges: [
-    { from: { col: 0, row: 2 }, to: { col: 0, row: 1 }, requirement: 'source_tableau_cleared', reason: 'Clear tableau at 0,2 first' },
-    { from: { col: 0, row: 1 }, to: { col: 0, row: 0 }, requirement: 'source_tableau_cleared', reason: 'Clear tableau at 0,1 first' },
+    { from: { col: 22, row: 22 }, to: { col: 22, row: 21 }, requirement: 'source_tableau_cleared', reason: 'Clear tableau at 22,22 first' },
+    { from: { col: 22, row: 21 }, to: { col: 22, row: 20 }, requirement: 'source_tableau_cleared', reason: 'Clear tableau at 22,21 first' },
   ],
 };
 
@@ -137,9 +140,9 @@ export const mainWorldMap: WorldMapDefinition = {
  * Defines which POI should appear at each grid position
  */
 const CELL_POI_MAPPING: Array<{ col: number; row: number; poiId: string }> = [
-  { col: 0, row: 0, poiId: 'poi_initial_02' },
-  { col: 0, row: 1, poiId: 'poi_initial_01' },
-  { col: 0, row: 2, poiId: 'poi_start' },
+  { col: 22, row: 20, poiId: 'poi_initial_02' },
+  { col: 22, row: 21, poiId: 'poi_initial_01' },
+  { col: 22, row: 22, poiId: 'poi_start' },
   { col: 0, row: 3, poiId: 'poi_wave_battle' },
   { col: 0, row: -2, poiId: 'poi_oasis_a' },
   { col: 1, row: 0, poiId: 'poi_random_wilds' },

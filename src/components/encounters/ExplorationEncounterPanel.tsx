@@ -1,6 +1,5 @@
 import type { CSSProperties, MutableRefObject } from 'react';
-import { PerspectiveTableauGroup } from '../PerspectiveTableauGroup';
-import { Tableau } from '../Tableau';
+import { Tableau, TableauGroup } from '../Tableau';
 import { Exploritaire, type PoiNarration } from '../Exploritaire';
 import type { Direction } from '../Compass';
 import type { ExplorationBlockedCell, ExplorationMapEdge, ExplorationMapNode } from '../ExplorationMap';
@@ -209,17 +208,18 @@ export function ExplorationEncounterPanel({
       />
       {hasUnclearedVisibleTableaus && (
         forcedPerspectiveEnabled ? (
-          <PerspectiveTableauGroup
-            gameState={gameState}
+          <TableauGroup
+            mode="perspective"
+            tableaus={gameState.tableaus}
             selectedCard={selectedCard}
             onCardSelect={handleTableauClick}
             guidanceMoves={[]}
+            interactionMode={gameState.interactionMode}
             showGraphics={showGraphics}
             cardScale={tableauCardScale}
-            interactionMode={gameState.interactionMode}
-            handleDragStart={handleDragStartGuarded}
-            isDragging={dragState.isDragging}
+            onDragStart={handleDragStartGuarded}
             draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+            isAnyCardDragging={dragState.isDragging}
             revealNextRow={cloudSightActive}
             tableauCanPlay={tableauCanPlay}
             noValidMoves={noValidMoves}

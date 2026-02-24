@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Card as CardType, Element, InteractionMode, OrimDefinition } from '../engine/types';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
 import { Card } from './Card';
-import { useCardScale } from '../contexts/CardScaleContext';
+import { useCardScalePreset } from '../contexts/CardScaleContext';
 import { Tooltip } from './Tooltip';
 import { useLongPressStateMachine } from '../hooks/useLongPressStateMachine';
+import { FORCE_NEON_CARD_STYLE } from '../config/ui';
 
 interface HandProps {
   cards: CardType[];
@@ -24,6 +25,8 @@ interface HandProps {
   orimDefinitions?: OrimDefinition[];
   tooltipEnabled?: boolean;
   upgradedCardIds?: string[];
+  disableSpringMotion?: boolean;
+  watercolorOnlyCards?: boolean;
 }
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -75,8 +78,12 @@ export const Hand = memo(function Hand({
   orimDefinitions,
   tooltipEnabled = false,
   upgradedCardIds = [],
+  disableSpringMotion = false,
+  watercolorOnlyCards = false,
 }: HandProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const neonMode = FORCE_NEON_CARD_STYLE;
+  const effectiveWatercolorOnly = watercolorOnlyCards && !neonMode;
   const pendingDragRef = useRef<{
     id: string;
     card: CardType;
@@ -84,8 +91,8 @@ export const Hand = memo(function Hand({
     startY: number;
     rect: DOMRect;
   } | null>(null);
-  const globalScale = useCardScale();
-  const effectiveScale = cardScale * globalScale;
+  const handGlobalScale = useCardScalePreset('hand');
+  const effectiveScale = cardScale * handGlobalScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
   const cardHeight = CARD_SIZE.height * effectiveScale;
   const cardSize = useMemo(() => ({ width: cardWidth, height: cardHeight }), [cardWidth, cardHeight]);
@@ -262,8 +269,8 @@ export const Hand = memo(function Hand({
             return (
               <motion.div
                 key={card.id}
-                layout
-                initial={{ opacity: 0, y: 50, scale: 0.8 }}
+                layout={!disableSpringMotion}
+                initial={disableSpringMotion ? false : { opacity: 0, y: 50, scale: 0.8 }}
                 animate={{
                   opacity: isDragging ? 0 : 1,
                   x: pos.x,
@@ -272,7 +279,7 @@ export const Hand = memo(function Hand({
                   scale: finalScale,
                 }}
                 exit={{ opacity: 0, y: -60, scale: 0.5, transition: { duration: 0.3 } }}
-                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                transition={disableSpringMotion ? { duration: 0.12 } : { type: 'spring', stiffness: 300, damping: 25 }}
                 style={{
                   position: 'absolute',
                   transformOrigin: 'bottom center',
@@ -314,9 +321,14 @@ export const Hand = memo(function Hand({
                         : undefined
                     }
                     onDragStart={canDrag && !onCardLongPress ? handleDragStart : undefined}
-                    showGraphics={showGraphics}
+                    showGraphics={effectiveWatercolorOnly ? false : showGraphics}
                     isDimmed={isOnCooldown}
                     orimDefinitions={orimDefinitions}
+                    borderColorOverride={effectiveWatercolorOnly ? 'rgba(6, 10, 14, 0.9)' : undefined}
+                    boxShadowOverride={effectiveWatercolorOnly ? 'none' : undefined}
+                    disableTilt={effectiveWatercolorOnly}
+                    disableLegacyShine={effectiveWatercolorOnly}
+                    watercolorOnly={effectiveWatercolorOnly}
                   />
                 </Tooltip>
                 {isInspecting && (

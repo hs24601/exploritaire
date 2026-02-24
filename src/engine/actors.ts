@@ -5,6 +5,32 @@ import { randomIdSuffix } from './constants';
 // ACTOR_DEFINITIONS_START
 export const ACTOR_DEFINITIONS: ActorDefinition[] = [
   {
+    id: 'felis',
+    name: 'Felis',
+    titles: ['Night', 'Prowler'],
+    description: 'A fast striker specializing in tempo and precision damage.',
+    type: 'adventurer',
+    value: 2,
+    suit: undefined,
+    element: 'N',
+    sprite: '🐈',
+    aliases: ['cat', 'roguecat'],
+    orimSlots: [],
+  },
+  {
+    id: 'ursus',
+    name: 'Ursus',
+    titles: ['Iron', 'Guardian'],
+    description: 'A resilient frontliner that disrupts enemies and shields allies.',
+    type: 'adventurer',
+    value: 3,
+    suit: undefined,
+    element: 'N',
+    sprite: '🐻',
+    aliases: ['bear', 'guardianbear'],
+    orimSlots: [],
+  },
+  {
     id: 'keru',
     name: 'Keru',
     titles: ['Blank', 'Keru'],
@@ -18,21 +44,6 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     orimSlots: [
       { orimId: 'claw', locked: true },
       { orimId: 'bide' },
-    ],
-  },
-  {
-    id: 'lupus',
-    name: 'Lupus',
-    titles: ['Lupus'],
-    description: 'A fierce lupus with unwavering loyalty',
-    type: 'adventurer',
-    value: 3,
-    suit: undefined,
-    element: 'N',
-    sprite: '🐺',
-    orimSlots: [
-      { orimId: 'bite', locked: true },
-      { orimId: 'teamwork' },
     ],
   },
   {
@@ -57,6 +68,32 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     suit: undefined,
     element: 'D',
     sprite: '🌘',
+    orimSlots: [],
+  },
+  {
+    id: 'shade',
+    name: 'Shade',
+    titles: ['Night', 'Shade'],
+    description: 'A lurking shade that fights with standard instincts.',
+    type: 'npc',
+    value: 7,
+    suit: undefined,
+    element: 'D',
+    sprite: '👤',
+    aliases: ['nightshade'],
+    orimSlots: [],
+  },
+  {
+    id: 'target_dummy',
+    name: 'Target Dummy',
+    titles: ['Target', 'Dummy'],
+    description: 'A durable training target that never takes actions.',
+    type: 'npc',
+    value: 1,
+    suit: undefined,
+    element: 'N',
+    sprite: '🎯',
+    aliases: ['dummy', 'target-dummy'],
     orimSlots: [],
   },
 ];
@@ -125,16 +162,16 @@ export function createActor(definitionId: string): Actor | null {
 export function createInitialActors(): Actor[] {
   const actors: Actor[] = [];
 
-  const keru = createActor('keru');
-  if (keru) {
-    keru.gridPosition = { col: 3, row: 2 };
-    actors.push(keru);
+  const felis = createActor('felis');
+  if (felis) {
+    felis.gridPosition = { col: 2, row: 2 };
+    actors.push(felis);
   }
 
-  const lupus = createActor('lupus');
-  if (lupus) {
-    lupus.gridPosition = { col: 4, row: 2 };
-    actors.push(lupus);
+  const ursus = createActor('ursus');
+  if (ursus) {
+    ursus.gridPosition = { col: 4, row: 2 };
+    actors.push(ursus);
   }
 
   return actors;

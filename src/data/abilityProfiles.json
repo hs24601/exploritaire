@@ -1,22 +1,6 @@
 {
   "abilities": [
     {
-      "id": "ursus-blessing",
-      "label": "Bear's Blessing",
-      "description": "Fortify yourself and your allies",
-      "damage": "0",
-      "element": "earth",
-      "tags": ["tank", "protection", "support"]
-    },
-    {
-      "id": "lupus-call",
-      "label": "Pack Leader's Call",
-      "description": "Rally your allies with leadership",
-      "damage": "2",
-      "element": "wind",
-      "tags": ["ranger", "leader", "buff"]
-    },
-    {
       "id": "felis-strike",
       "label": "Shadow Strike",
       "description": "Move with lethal grace",

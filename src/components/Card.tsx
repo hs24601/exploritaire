@@ -1,26 +1,21 @@
 import { memo, useRef, useCallback, useMemo, useState, useEffect } from 'react';
-import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
-import type { Card as CardType, OrimDefinition, OrimRarity } from '../engine/types';
+import type { Card as CardType, OrimDefinition, OrimRarity, Element } from '../engine/types';
 import { getRankDisplay } from '../engine/rules';
-import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT } from '../engine/constants';
+import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, WILD_SENTINEL_RANK } from '../engine/constants';
 import { useCardScale } from '../contexts/CardScaleContext';
 import { CardFrame } from './card/CardFrame';
 import { Tooltip } from './Tooltip';
-import { neonGlow } from '../utils/styles';
-import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
-import { WatercolorContext } from '../watercolor/useWatercolorEnabled';
-import { getOrimWatercolorConfig, ORIM_WATERCOLOR_CANVAS_SCALE } from '../watercolor/orimWatercolor';
-import { getElementCardWatercolor } from '../watercolor/elementCardWatercolor';
-import type { WatercolorConfig } from '../watercolor/types';
+import { CARD_WATERCOLOR_FILTER_ID } from '../watercolor/WatercolorSvgFilterDefs';
+import { ELEMENT_WATERCOLOR_SWATCHES } from '../watercolor/elementalSwatches';
 import abilitiesJson from '../data/abilities.json';
 import { ORIM_DEFINITIONS } from '../engine/orims';
 import { useHoloInteraction } from '../hooks/useHoloInteraction';
 import { RarityAura } from './RarityAura';
 import { HorizontalRipThreeEffect } from './card/HorizontalRipThreeEffect';
+import { NEON_COLORS, getNeonElementColor } from '../utils/styles';
+import { FORCE_NEON_CARD_STYLE, SHOW_WATERCOLOR_FILTERS } from '../config/ui';
 
-const CARD_WATERCOLOR_CANVAS_SCALE = 1.35;
-const CARD_WATERCOLOR_OVERALL_SCALE_MULTIPLIER = 1 / CARD_WATERCOLOR_CANVAS_SCALE;
 const BLUEVEE_ASSET = '/assets/Bluevee.png';
 
 interface CardProps {
@@ -46,15 +41,15 @@ interface CardProps {
   suitDisplayOverride?: string;
   suitFontSizeOverride?: number;
   orimDefinitions?: OrimDefinition[];
-  cardWatercolor?: WatercolorConfig | null;
-  watercolorShadowGlyph?: string;
-  valueWatercolor?: WatercolorConfig | null;
   maskValue?: boolean;
   disableTilt?: boolean;
   disableHoverLift?: boolean;
   hideElements?: boolean;
   rpgSubtitleRarityOnly?: boolean;
   ripTrigger?: number;
+  disableLegacyShine?: boolean;
+  watercolorOnly?: boolean;
+  showFoundationActorSecretHolo?: boolean;
 }
 
 export const Card = memo(function Card({
@@ -80,20 +75,24 @@ export const Card = memo(function Card({
   suitDisplayOverride,
   suitFontSizeOverride,
   orimDefinitions,
-  cardWatercolor,
-  watercolorShadowGlyph,
-  valueWatercolor,
   maskValue = false,
   disableTilt = false,
   disableHoverLift = false,
   ripTrigger = 0,
+  disableLegacyShine = false,
+  watercolorOnly = false,
+  showFoundationActorSecretHolo = false,
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [shimmer, setShimmer] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [showRipOverlay, setShowRipOverlay] = useState(false);
   const [hideDomCard, setHideDomCard] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const handledRipTriggerRef = useRef(0);
+  const foundationAutoRafRef = useRef<number | null>(null);
+  const foundationAutoWasActiveRef = useRef(false);
+  const foundationAutoLastUpdateRef = useRef(0);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!onDragStart || !card || faceDown) return;
@@ -112,6 +111,64 @@ export const Card = memo(function Card({
     ? (card.element ?? (card.suit ? SUIT_TO_ELEMENT[card.suit] : undefined))
     : undefined;
   const isWaterElement = elementKey === 'W' || card?.suit === '💧';
+  const elementChipStyles: Record<Element, {
+    border: string;
+    background: string;
+    color: string;
+    textShadow: string;
+    boxShadow: string;
+  }> = {
+    W: {
+      border: '1px solid rgba(171, 215, 255, 0.7)',
+      background: 'linear-gradient(180deg, rgba(222, 241, 255, 0.9) 0%, rgba(147, 191, 255, 0.78) 100%)',
+      color: '#1a4ca8',
+      textShadow: '0 1px 0 rgba(255,255,255,0.78), 0 0 7px rgba(175, 217, 255, 0.95)',
+      boxShadow: '0 0 9px rgba(122, 185, 255, 0.4), inset 0 0 4px rgba(255,255,255,0.42)',
+    },
+    E: {
+      border: '1px solid rgba(224, 188, 126, 0.68)',
+      background: 'linear-gradient(180deg, rgba(247, 226, 191, 0.9) 0%, rgba(201, 151, 89, 0.8) 100%)',
+      color: '#6d3d15',
+      textShadow: '0 1px 0 rgba(255,249,238,0.72), 0 0 7px rgba(228, 186, 130, 0.78)',
+      boxShadow: '0 0 8px rgba(190, 132, 69, 0.36), inset 0 0 4px rgba(255,243,225,0.4)',
+    },
+    A: {
+      border: '1px solid rgba(206, 242, 255, 0.7)',
+      background: 'linear-gradient(180deg, rgba(239, 252, 255, 0.92) 0%, rgba(176, 226, 244, 0.8) 100%)',
+      color: '#2e6f88',
+      textShadow: '0 1px 0 rgba(255,255,255,0.82), 0 0 7px rgba(194, 241, 255, 0.95)',
+      boxShadow: '0 0 8px rgba(158, 225, 247, 0.38), inset 0 0 4px rgba(255,255,255,0.45)',
+    },
+    F: {
+      border: '1px solid rgba(255, 178, 135, 0.72)',
+      background: 'linear-gradient(180deg, rgba(255, 223, 197, 0.92) 0%, rgba(255, 133, 75, 0.82) 100%)',
+      color: '#8d2408',
+      textShadow: '0 1px 0 rgba(255,244,236,0.78), 0 0 8px rgba(255, 151, 97, 0.95)',
+      boxShadow: '0 0 9px rgba(255, 108, 57, 0.4), inset 0 0 4px rgba(255,225,208,0.42)',
+    },
+    L: {
+      border: '1px solid rgba(255, 245, 190, 0.72)',
+      background: 'linear-gradient(180deg, rgba(255, 252, 236, 0.92) 0%, rgba(247, 231, 170, 0.8) 100%)',
+      color: '#c9a63a',
+      textShadow: '0 1px 0 rgba(255,255,255,0.75), 0 0 8px rgba(255, 245, 196, 0.95)',
+      boxShadow: '0 0 9px rgba(255, 243, 181, 0.44), inset 0 0 4px rgba(255,255,255,0.45)',
+    },
+    D: {
+      border: '1px solid rgba(172, 161, 217, 0.68)',
+      background: 'linear-gradient(180deg, rgba(87, 73, 129, 0.9) 0%, rgba(34, 26, 56, 0.82) 100%)',
+      color: '#e7dfff',
+      textShadow: '0 1px 0 rgba(33, 24, 56, 0.88), 0 0 8px rgba(177, 162, 232, 0.9)',
+      boxShadow: '0 0 9px rgba(94, 72, 163, 0.38), inset 0 0 4px rgba(181,169,233,0.24)',
+    },
+    N: {
+      border: '1px solid rgba(210, 210, 210, 0.66)',
+      background: 'linear-gradient(180deg, rgba(246, 246, 246, 0.9) 0%, rgba(186, 186, 186, 0.8) 100%)',
+      color: '#4f4f4f',
+      textShadow: '0 1px 0 rgba(255,255,255,0.72), 0 0 6px rgba(214,214,214,0.78)',
+      boxShadow: '0 0 8px rgba(146,146,146,0.34), inset 0 0 4px rgba(255,255,255,0.36)',
+    },
+  };
+  const elementChipStyle = elementChipStyles[(elementKey ?? 'N') as Element] ?? elementChipStyles.N;
   const suitDisplay = card
     ? (suitDisplayOverride
       ?? (isWaterElement ? 'W' : getSuitDisplay(card.suit, showGraphics)))
@@ -125,6 +182,7 @@ export const Card = memo(function Card({
   const hasOrimSlots = orimDisplay.length > 0 || !!card?.orimSlots?.length;
   const orimSlots = card?.orimSlots ?? [];
   const orimSlotSize = Math.max(6, Math.round(frameSize.width * 0.32));
+  const isWildFoundation = isFoundation && card && card.rank === WILD_SENTINEL_RANK;
   const cooldownValue = card?.cooldown ?? 0;
   const cooldownMax = card?.maxCooldown ?? 0;
   const cooldownProgress = cooldownMax > 0 ? Math.max(0, Math.min(1, (cooldownMax - cooldownValue) / cooldownMax)) : 0;
@@ -176,17 +234,18 @@ export const Card = memo(function Card({
     return null;
   }, [card, rpgLevel]);
   const keruArchetypeMeta = useMemo(() => {
-    if (!card) return null;
-    if (card.id === 'keru-archetype-lupus') {
-      return { title: 'LUPUS', subtitle: 'ASPECT', titleColor: '#f7d24b', subtitleColor: '#7fdbca' };
-    }
-    if (card.id === 'keru-archetype-ursus') {
-      return { title: 'URSUS', subtitle: 'ASPECT', titleColor: '#ffb075', subtitleColor: '#7fdbca' };
-    }
-    if (card.id === 'keru-archetype-felis') {
-      return { title: 'FELIS', subtitle: 'ASPECT', titleColor: '#9de3ff', subtitleColor: '#7fdbca' };
-    }
-    return null;
+    if (!card || !card.id.startsWith('keru-archetype-')) return null;
+    const title = card.id
+      .replace('keru-archetype-', '')
+      .replace(/[-_]+/g, ' ')
+      .trim()
+      .toUpperCase();
+    return {
+      title: title || 'ASPECT',
+      subtitle: 'ASPECT',
+      titleColor: '#d7f9ff',
+      subtitleColor: '#7fdbca',
+    };
   }, [card]);
   const cardTitleMeta = keruArchetypeMeta ?? rpgCardMeta;
   const keruAspectProfile = useMemo(() => {
@@ -220,6 +279,33 @@ export const Card = memo(function Card({
       attributes,
     };
   }, [card, orimDefinitions]);
+  const foundationActorProfile = useMemo(() => {
+    if (!card || !isFoundation) return null;
+    const isActorFoundationCard = card.id.startsWith('actor-')
+      || card.id.startsWith('combatlab-foundation-')
+      || card.id.startsWith('lab-foundation-');
+    if (!isActorFoundationCard) return null;
+    const normalizedName = (card.name ?? '').trim();
+    const fallbackNameSeed = card.id
+      .replace(/^actor-/, '')
+      .replace(/^combatlab-foundation-/, '')
+      .replace(/^lab-foundation-/, '')
+      .split('-')[0];
+    const fallbackName = fallbackNameSeed
+      ? `${fallbackNameSeed[0]?.toUpperCase() ?? ''}${fallbackNameSeed.slice(1)}`
+      : 'Actor';
+    const tags = (card.tags ?? []).filter(Boolean);
+    const rawRole = (tags[0] ?? '').trim();
+    const normalizedRole = rawRole.replace(/\s+/g, ' ').trim().toLowerCase();
+    const isLabFoundationCard = card.id.startsWith('combatlab-foundation-') || card.id.startsWith('lab-foundation-');
+    const role = isLabFoundationCard || normalizedRole === 'party member' ? '' : rawRole;
+    return {
+      name: normalizedName || fallbackName,
+      role,
+      description: card.description ?? '',
+      attributes: (role ? tags.slice(1, 4) : tags.slice(0, 3)),
+    };
+  }, [card, isFoundation]);
   const keruAbilityProfile = useMemo(() => {
     if (!card || !card.id.startsWith('ability-')) return null;
     const key = card.id.replace('ability-', '').toLowerCase();
@@ -275,54 +361,58 @@ export const Card = memo(function Card({
   const getBorderColor = () => {
     if (borderColorOverride !== undefined) return borderColorOverride;
     if (isSelected) return '#e6b31e'; // gold
-    if (faceDown) return 'rgba(139, 92, 246, 0.3)'; // purple faded
-    return isDimmed ? `${suitColor}44` : suitColor;
+    if (faceDown) return 'rgba(156, 181, 198, 0.34)';
+    const baseColor = neonMode ? neonColor : suitColor;
+    return isDimmed ? `${baseColor}44` : baseColor;
   };
 
   const getBoxShadow = () => {
     if (boxShadowOverride !== undefined) return boxShadowOverride;
     if (isDimmed) return 'none';
     if (isSelected) return `0 0 20px #e6b31e, inset 0 0 20px rgba(230, 179, 30, 0.13)`;
-    if (isFoundation) return `0 0 15px ${suitColor}66, inset 0 0 15px ${suitColor}11`;
+    if (isFoundation) {
+      const foundationGlow = neonMode ? neonColor : suitColor;
+      return `0 0 18px ${foundationGlow}66, inset 0 0 18px ${foundationGlow}11`;
+    }
+    if (faceDown) return '0 8px 20px rgba(0, 0, 0, 0.34), inset 0 0 0 1px rgba(193, 208, 218, 0.18)';
+    if (neonMode) {
+      const outerSize = elementKey === 'A' ? 28 : 18;
+      const insetSize = elementKey === 'A' ? 20 : 14;
+      const glowOpacity = elementKey === 'A' ? 'ee' : 'cc';
+      return `0 0 ${outerSize}px ${neonColor}${glowOpacity}, inset 0 0 ${insetSize}px ${neonColor}55`;
+    }
     return `0 0 10px ${suitColor}33`;
+  };
+const getWatercolorColorFilter = () => {
+  if (!SHOW_WATERCOLOR_FILTERS) return 'none';
+  const ds = 'drop-shadow(0 0 0 rgba(255,255,255,1))';
+  const swatch = ELEMENT_WATERCOLOR_SWATCHES[(elementKey ?? 'N') as Element] ?? ELEMENT_WATERCOLOR_SWATCHES.N;
+  return `url(#${CARD_WATERCOLOR_FILTER_ID}) ${ds} ${swatch.filterTail}`;
+};
+  const getWatercolorBaseColor = () => {
+    const swatch = ELEMENT_WATERCOLOR_SWATCHES[(elementKey ?? 'N') as Element] ?? ELEMENT_WATERCOLOR_SWATCHES.N;
+    return swatch.baseColor;
   };
   const expansionGlyph = showGraphics ? '+' : 'EXP';
 
-  const elementWatercolor = showGraphics && !cardWatercolor && card && !faceDown
-    ? (elementKey === 'W' || elementKey === 'L' || elementKey === 'F' || elementKey === 'A' || elementKey === 'D'
-      ? null
-      : getElementCardWatercolor(elementKey))
-    : null;
-  const cardWatercolorConfig = (cardWatercolor ?? elementWatercolor)
-    ? {
-      ...(cardWatercolor ?? elementWatercolor),
-      overallScale: ((cardWatercolor ?? elementWatercolor)?.overallScale ?? 1) * CARD_WATERCOLOR_OVERALL_SCALE_MULTIPLIER,
-    }
-    : null;
-  const forceWatercolor = !!elementWatercolor && !cardWatercolor;
-  const overlayBlendMode = forceWatercolor
-    ? 'normal'
-    : (cardWatercolorConfig?.splotches?.[0]?.blendMode as CSSProperties['mixBlendMode']) || 'normal';
-  const showWaterDepthOverlay = !!elementWatercolor && isWaterElement && !faceDown && !isAnyCardDragging;
-  const showWaterArtOverlay = showGraphics && isWaterElement && !faceDown && !isAnyCardDragging;
-  const showLightArtOverlay = showGraphics && elementKey === 'L' && !faceDown && !isAnyCardDragging;
-  const showFireArtOverlay = showGraphics && elementKey === 'F' && !faceDown && !isAnyCardDragging;
-  const showAirArtOverlay = showGraphics && elementKey === 'A' && !faceDown && !isAnyCardDragging;
-  const showDarkArtOverlay = showGraphics && elementKey === 'D' && !faceDown && !isAnyCardDragging;
-  const valueWatercolorConfig = valueWatercolor
-    ? {
-      ...valueWatercolor,
-      overallScale: Math.max(0.2, (valueWatercolor.overallScale ?? 1) * 0.6),
-    }
-    : null;
-
+  const neonMode = FORCE_NEON_CARD_STYLE;
+  const neonColor = getNeonElementColor(elementKey as Element);
+  const showElementArtOverlays = !watercolorOnly && !neonMode;
+  const showWaterDepthOverlay = showElementArtOverlays && isWaterElement && !faceDown && !isAnyCardDragging;
+  const showWaterArtOverlay = showElementArtOverlays && showGraphics && isWaterElement && !faceDown && !isAnyCardDragging;
+  const showLightArtOverlay = showElementArtOverlays && showGraphics && elementKey === 'L' && !faceDown && !isAnyCardDragging;
+  const showFireArtOverlay = showElementArtOverlays && showGraphics && elementKey === 'F' && !faceDown && !isAnyCardDragging;
+  const showAirArtOverlay = showElementArtOverlays && showGraphics && elementKey === 'A' && !faceDown && !isAnyCardDragging;
+  const showDarkArtOverlay = showElementArtOverlays && showGraphics && elementKey === 'D' && !faceDown && !isAnyCardDragging;
+  const textColorBase = neonMode ? neonColor : (watercolorOnly ? 'rgba(226, 233, 238, 0.95)' : suitColor);
+  const dimmedTextColor = (neonMode || !watercolorOnly) ? `${textColorBase}44` : textColorBase;
   useEffect(() => {
-    if (!showLightArtOverlay) return;
+    if (!showLightArtOverlay || !isHovered) return;
     const interval = setInterval(() => {
       setShimmer((prev) => (prev + 0.05) % 100);
     }, 50);
     return () => clearInterval(interval);
-  }, [showLightArtOverlay]);
+  }, [showLightArtOverlay, isHovered]);
 
   const waterFish = useMemo(() => {
     if (!showWaterArtOverlay || !card) return [];
@@ -359,6 +449,17 @@ export const Card = memo(function Card({
     for (let i = 1; i < steps; i++) points.push(`${rand() * variance}% ${100 - (i / steps) * 100}%`);
     return `polygon(${points.join(', ')})`;
   }, [showDarkArtOverlay, card]);
+  const shaderOverlayStyle = useMemo(() => ({
+    clipPath: darkJaggedPath || 'inset(0)',
+    background: `
+      radial-gradient(circle at 25% 20%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 45%),
+      radial-gradient(circle at 78% 46%, rgba(173, 154, 255, 0.42) 0%, rgba(173, 154, 255, 0) 55%),
+      linear-gradient(180deg, rgba(4,6,12,0.95), rgba(4,6,12,0.65))
+    `,
+    mixBlendMode: 'screen',
+    opacity: 0.85,
+    filter: 'saturate(1.2)',
+  }), [darkJaggedPath]);
 
   const darkStars = useMemo(() => {
     if (!showDarkArtOverlay || !card) return [];
@@ -385,6 +486,122 @@ export const Card = memo(function Card({
   const rarity = (keruAspectProfile?.rarity || card?.rarity || 'common').toLowerCase() as OrimRarity;
   const isShiny = rarity !== 'common' || isUpgradedRpgCard;
   const effectiveRarity = rarity === 'common' && isUpgradedRpgCard ? 'rare' : rarity;
+  const showSecretActorHolo = showFoundationActorSecretHolo && !!foundationActorProfile && !faceDown && !hideDomCard;
+  const showLegacyShine = isShiny && !faceDown && !hideDomCard && !disableLegacyShine && !showSecretActorHolo;
+  const shouldAutoFoundationOrbit = showSecretActorHolo && !isHovered && !disableTilt && !isDragging && !isAnyCardDragging;
+  const registerRootElement = useCallback((element: HTMLDivElement | null) => {
+    rootRef.current = element;
+    registerElement(element);
+  }, [registerElement]);
+  const foundationAutoProfile = useMemo(() => {
+    const source = card?.id ?? 'foundation-auto';
+    let hash = 0;
+    for (let i = 0; i < source.length; i += 1) {
+      hash = ((hash << 5) - hash + source.charCodeAt(i)) | 0;
+    }
+    const next = () => {
+      hash = (hash * 1664525 + 1013904223) | 0;
+      return ((hash >>> 0) % 10000) / 10000;
+    };
+    return {
+      phase: next() * Math.PI * 2,
+      orbitX: 17 + next() * 12,
+      orbitY: 16 + next() * 11,
+      wobble: 2 + next() * 5,
+      noise: 1.3 + next() * 2.4,
+      speed: 0.00042 + next() * 0.00034,
+      breathe: 0.00055 + next() * 0.0005,
+    };
+  }, [card?.id]);
+
+  useEffect(() => {
+    if (!shouldAutoFoundationOrbit) {
+      if (foundationAutoRafRef.current !== null) {
+        cancelAnimationFrame(foundationAutoRafRef.current);
+        foundationAutoRafRef.current = null;
+      }
+      if (foundationAutoWasActiveRef.current) {
+        foundationAutoWasActiveRef.current = false;
+        handlePointerLeave();
+      }
+      return;
+    }
+
+    foundationAutoWasActiveRef.current = true;
+    foundationAutoLastUpdateRef.current = 0;
+    const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+    const start = performance.now();
+    let mounted = true;
+    const animate = (now: number) => {
+      if (!mounted) return;
+      const node = rootRef.current;
+      if (!node) {
+        foundationAutoRafRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      if (now - foundationAutoLastUpdateRef.current < 42) {
+        foundationAutoRafRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      foundationAutoLastUpdateRef.current = now;
+      const elapsed = now - start;
+      const theta = (elapsed * foundationAutoProfile.speed) + foundationAutoProfile.phase;
+      const orbitX = foundationAutoProfile.orbitX
+        + Math.sin((elapsed * foundationAutoProfile.breathe) + foundationAutoProfile.phase) * foundationAutoProfile.wobble;
+      const orbitY = foundationAutoProfile.orbitY
+        + Math.cos((elapsed * foundationAutoProfile.breathe * 0.92) + foundationAutoProfile.phase * 0.8) * foundationAutoProfile.wobble;
+      const px = clamp(
+        50
+          + Math.cos(theta) * orbitX
+          + Math.sin(theta * 1.7 + foundationAutoProfile.phase * 0.6) * foundationAutoProfile.noise,
+        8,
+        92,
+      );
+      const py = clamp(
+        50
+          + Math.sin(theta) * orbitY
+          + Math.cos(theta * 1.45 + foundationAutoProfile.phase * 0.33) * foundationAutoProfile.noise,
+        8,
+        92,
+      );
+      const rx = (py - 50) / 2;
+      const ry = (50 - px) / 2;
+      const hyp = Math.sqrt(((py - 50) ** 2) + ((px - 50) ** 2)) / 50;
+      const x = (px / 100) * frameSize.width;
+      const y = (py / 100) * frameSize.height;
+      const tiltX = -(x - frameSize.width / 2) / 20;
+      const tiltY = -(y - frameSize.height / 2) / 20;
+      node.style.setProperty('--mx', `${px}%`);
+      node.style.setProperty('--my', `${py}%`);
+      node.style.setProperty('--rx', `${rx}deg`);
+      node.style.setProperty('--ry', `${ry}deg`);
+      node.style.setProperty('--posx', `${px}%`);
+      node.style.setProperty('--posy', `${py}%`);
+      node.style.setProperty('--hyp', `${Math.min(1.35, hyp)}`);
+      node.style.setProperty('--bg-y', `${tiltX / 2}`);
+      node.style.setProperty('--bg-x', `${tiltY / 2}`);
+      node.style.setProperty('--bg-y-flipped', `${tiltX}`);
+      node.style.setProperty('--bg-x-flipped', `${tiltY}`);
+      node.style.setProperty('transform', `perspective(600px) rotateX(${rx}deg) rotateY(${ry}deg)`);
+      node.style.setProperty('transition', 'none');
+      foundationAutoRafRef.current = requestAnimationFrame(animate);
+    };
+    foundationAutoRafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      mounted = false;
+      if (foundationAutoRafRef.current !== null) {
+        cancelAnimationFrame(foundationAutoRafRef.current);
+        foundationAutoRafRef.current = null;
+      }
+    };
+  }, [
+    shouldAutoFoundationOrbit,
+    foundationAutoProfile,
+    frameSize.width,
+    frameSize.height,
+    handlePointerLeave,
+  ]);
 
   useEffect(() => {
     if (ripTrigger <= 0) return;
@@ -396,7 +613,7 @@ export const Card = memo(function Card({
 
   return (
     <div
-      ref={registerElement}
+      ref={registerRootElement}
       className="relative"
       style={{
         ...(disableTilt ? {} : holoStyles),
@@ -405,13 +622,14 @@ export const Card = memo(function Card({
         zIndex: (!disableHoverLift && isHovered) ? 50 : 1,
       }}
       onPointerMove={disableTilt ? undefined : handlePointerMove}
-      onMouseLeave={(e) => {
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
         setIsHovered(false);
         if (!disableTilt) handlePointerLeave();
       }}
     >
       <div className={`card-3d-container h-full w-full ${faceDown ? 'flipped' : ''}`}>
-      {isShiny && !faceDown && (
+      {showLegacyShine && (
         <RarityAura
           rarity={effectiveRarity}
           cardWidth={frameSize.width}
@@ -430,7 +648,6 @@ export const Card = memo(function Card({
         whileHover={!disableHoverLift && !faceDown && !isAnyCardDragging && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
         whileTap={!faceDown && !isAnyCardDragging && !onDragStart && onClick ? { scale: 0.98 } : {}}
         initial={false}
-        onMouseEnter={() => setIsHovered(true)}
         className={`
           card-3d
           flex flex-col items-center ${isKeruAspectCard ? 'justify-start' : 'justify-center'} gap-0
@@ -439,10 +656,19 @@ export const Card = memo(function Card({
           ${onDragStart && !faceDown ? 'cursor-grab' : ''}
           ${!onClick && !onDragStart ? 'cursor-default' : ''}
           ${isDimmed ? 'opacity-50' : 'opacity-100'}
+          ${isFoundation && !foundationActorProfile ? '!bg-white' : ''}
+          ${foundationActorProfile ? 'overflow-hidden' : ''}
           ${frameClassName ?? ''}
         `}
+        backgroundColor={
+          isFoundation && !faceDown
+            ? (foundationActorProfile ? '#04060d' : '#ffffff')
+            : undefined
+        }
         style={{
-          color: faceDown ? 'transparent' : (isDimmed ? `${suitColor}44` : suitColor),
+          color: faceDown
+            ? 'transparent'
+            : (isDimmed ? dimmedTextColor : textColorBase),
           visibility: isDragging ? 'hidden' : 'visible',
           opacity: hideDomCard ? 0 : 1,
           // Prevent the browser from claiming touch gestures as scroll when the card
@@ -455,25 +681,83 @@ export const Card = memo(function Card({
       >
         {/* Back face */}
         <div
-          className="absolute inset-0 bg-game-bg-dark flex items-center justify-center rounded-lg border-2 border-game-purple/50"
+          className="absolute inset-0 flex items-center justify-center rounded-lg border-2"
           style={{
             backfaceVisibility: 'hidden',
             transform: 'rotateY(180deg) translateZ(1px)',
             zIndex: faceDown ? 20 : 0,
-            backgroundImage: 'var(--card-back)',
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            ...neonGlow('rgba(139, 92, 246, 0.4)'),
+            borderColor: 'rgba(151, 178, 193, 0.45)',
+            background:
+              'radial-gradient(circle at 20% 18%, rgba(196, 224, 229, 0.24) 0%, rgba(61, 95, 120, 0.24) 52%, rgba(7, 15, 24, 0.9) 100%)',
+            boxShadow: 'inset 0 0 0 1px rgba(202, 223, 235, 0.12)',
           }}
         >
           <div
-            className="w-10 h-10 border-2 border-game-purple rounded-full"
-            style={neonGlow('rgba(139, 92, 246, 0.4)')}
+            className="w-10 h-10 rounded-full border"
+            style={{
+              borderColor: 'rgba(183, 207, 220, 0.42)',
+              background: 'radial-gradient(circle, rgba(182, 213, 227, 0.14) 0%, rgba(10, 20, 30, 0) 72%)',
+            }}
           />
         </div>
 
-        {isShiny && !faceDown && (
+        {watercolorOnly && !faceDown && !foundationActorProfile && !neonMode && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 0,
+              borderRadius: 10,
+              background: getWatercolorBaseColor(),
+              filter: getWatercolorColorFilter(),
+            }}
+          />
+        )}
+        {watercolorOnly && !faceDown && !foundationActorProfile && elementKey === 'W' && !neonMode && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 1,
+              borderRadius: 10,
+              background: 'radial-gradient(circle at 42% 38%, #3f87ff 0%, #1d4fd3 48%, #0b2d8f 100%)',
+              mixBlendMode: 'multiply',
+              opacity: 0.88,
+            }}
+          />
+        )}
+        {watercolorOnly && !faceDown && !foundationActorProfile && elementKey === 'L' && !neonMode && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 1,
+              borderRadius: 10,
+            }}
+          >
+            <div
+              className="absolute inset-0 rounded-[10px]"
+              style={{
+                background: 'radial-gradient(circle at 52% 42%, rgba(255, 252, 228, 0.92) 0%, rgba(255, 245, 196, 0.78) 36%, rgba(255, 230, 150, 0.36) 66%, rgba(255, 230, 150, 0) 100%)',
+                mixBlendMode: 'screen',
+                opacity: 0.9,
+              }}
+            />
+            <div
+              className="absolute inset-0 rounded-[10px]"
+              style={{
+                background: 'radial-gradient(circle at 22% 16%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 40%)',
+                mixBlendMode: 'screen',
+                opacity: 0.78,
+              }}
+            />
+            <div
+              className="absolute inset-0 rounded-[10px]"
+              style={{
+                boxShadow: '0 0 18px rgba(255, 245, 190, 0.72), inset 0 0 14px rgba(255, 238, 176, 0.58)',
+                opacity: 0.72,
+              }}
+            />
+          </div>
+        )}
+        {showLegacyShine && (
           <>
             <div
               className="absolute inset-0 pointer-events-none"
@@ -499,54 +783,82 @@ export const Card = memo(function Card({
             <div 
               className="absolute inset-0 pointer-events-none card-holo-gradient"
               style={{
-                opacity: isHovered ? 0.88 : 0.5,
-                filter: `brightness(${isHovered ? 0.66 : 0.5}) contrast(${isHovered ? 1.33 : 1})`,
+                opacity: isHovered ? 0.94 : 0.58,
+                filter: `brightness(${isHovered ? 0.72 : 0.58}) contrast(${isHovered ? 1.5 : 1.2}) saturate(${isHovered ? 1.5 : 1.25})`,
+                mixBlendMode: 'screen',
               }}
             />
             <div 
               className="absolute inset-0 pointer-events-none card-holo-sparkle"
               style={{
-                opacity: isHovered ? 1 : 0.75,
+                opacity: isHovered ? 1 : 0.7,
+              }}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                zIndex: 8,
+                background:
+                  'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 60%), radial-gradient(circle at 70% 40%, rgba(255, 230, 179, 0.45) 0%, rgba(255, 230, 179, 0) 55%)',
+                mixBlendMode: 'screen',
+                opacity: isHovered ? 0.42 : 0.25,
+                transform: 'scale(1.02)',
+                animation: 'holoPulse 3.6s ease-in-out infinite',
               }}
             />
           </>
       )}
-      {cardWatercolorConfig && (
-        <WatercolorContext.Provider value={forceWatercolor || !!cardWatercolor}>
+      {showSecretActorHolo && (
+        <>
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute inset-0 pointer-events-none rounded-[10px] card-holo-legacy-rainbow-foundation"
             style={{
-              zIndex: 0,
-              borderRadius: 10,
-              mixBlendMode: overlayBlendMode,
+              zIndex: 11,
+              opacity: isHovered ? 0.72 : 0.62,
             }}
-          >
-            <div
-              className="absolute inset-0"
-              style={{
-                transform: `scale(${CARD_WATERCOLOR_CANVAS_SCALE})`,
-                transformOrigin: 'center',
-              }}
-            >
-              <WatercolorOverlay config={cardWatercolorConfig} />
-            </div>
-            {watercolorShadowGlyph && (
-              <div
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  color: '#050505',
-                  opacity: 0.35,
-                  mixBlendMode: 'multiply',
-                  fontSize: Math.round(frameSize.width * 0.55),
-                  filter: 'blur(1px)',
-                  transform: 'translateY(1px)',
-                }}
-              >
-                {watercolorShadowGlyph}
-              </div>
-            )}
-          </div>
-        </WatercolorContext.Provider>
+          />
+          <div
+            className="absolute inset-0 pointer-events-none rounded-[10px] card-holo-sparkle"
+            style={{
+              zIndex: 12,
+              opacity: isHovered ? 0.32 : 0.24,
+              mixBlendMode: 'screen',
+            }}
+          />
+          <motion.div
+            className="absolute inset-0 pointer-events-none rounded-[10px]"
+            style={{
+              zIndex: 13,
+              background:
+                'radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.07) 40%, rgba(255,255,255,0) 75%)',
+              mixBlendMode: 'screen',
+            }}
+            animate={{
+              opacity: [0.14, 0.3, 0.14],
+              scale: [0.997, 1.01, 0.997],
+            }}
+            transition={{
+              duration: 2.6,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+          />
+          <motion.div
+            className="absolute inset-0 pointer-events-none rounded-[10px]"
+            style={{
+              zIndex: 10,
+              boxShadow: '0 0 14px rgba(255, 128, 240, 0.3), inset 0 0 11px rgba(128, 214, 255, 0.24)',
+            }}
+            animate={{
+              opacity: [0.28, 0.52, 0.28],
+            }}
+            transition={{
+              duration: 3.2,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+          />
+        </>
       )}
       {showWaterArtOverlay && (
         <div
@@ -967,7 +1279,7 @@ export const Card = memo(function Card({
                       top: star.top,
                       filter: 'drop-shadow(0 0 5px rgba(255,255,255,0.8))',
                       transform: `scale(${star.size * 0.4})`,
-                      animation: isHovered ? `twinkle ${star.duration}s infinite ease-in-out ${star.delay}` : 'none',
+                      animation: 'none',
                     }}
                   >
                     <path
@@ -989,7 +1301,7 @@ export const Card = memo(function Card({
                     opacity: star.opacity,
                     boxShadow: star.type === 'glow' ? '0 0 8px 1px rgba(255, 255, 255, 0.6)' : 'none',
                     transform: `rotate(${star.rotate}deg)`,
-                    animation: isHovered ? `twinkle ${star.duration}s infinite ease-in-out ${star.delay}` : 'none',
+                    animation: 'none',
                   }}
                 />
               );
@@ -1004,6 +1316,11 @@ export const Card = memo(function Card({
             @keyframes twinkle {
               0%, 100% { opacity: 0.4; transform: scale(1); }
               50% { opacity: 1; transform: scale(1.1); }
+            }
+            @keyframes holoPulse {
+              0% { opacity: 0.2; transform: scale(0.98); }
+              50% { opacity: 0.6; transform: scale(1.03); }
+              100% { opacity: 0.2; transform: scale(0.98); }
             }
           `}</style>
         </div>
@@ -1096,29 +1413,13 @@ export const Card = memo(function Card({
                 left: 0,
                 right: 0,
                 textAlign: 'center',
-                textShadow: isDimmed ? 'none' : `0 0 10px ${suitColor}`,
+                textShadow: (isDimmed || watercolorOnly) ? 'none' : `0 0 10px ${suitColor}`,
                 WebkitFontSmoothing: 'subpixel-antialiased',
                 textRendering: 'geometricPrecision',
                 fontSmooth: 'always',
                 pointerEvents: 'none',
               }}
             >
-              {valueWatercolorConfig && (
-                <div
-                  className="absolute left-1/2 top-1/2"
-                  style={{
-                    width: Math.round(frameSize.width),
-                    height: Math.round(frameSize.height),
-                    transform: 'translate(-50%, -50%)',
-                    opacity: 1,
-                    filter: 'blur(0.2px)',
-                    mixBlendMode: 'screen',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <WatercolorOverlay config={valueWatercolorConfig} />
-                </div>
-              )}
               {keruAbilityProfile ? (
                 <div className="relative z-[2] flex h-full w-full flex-col items-center text-center px-3 pt-0 pb-0 overflow-hidden">
                   {/* 40% Header Section: Badge + Damage + Name */}
@@ -1276,6 +1577,156 @@ export const Card = memo(function Card({
                     ) : null}
                   </div>
                 </div>
+              ) : foundationActorProfile ? (
+                <div className="relative z-[2] flex h-full w-full flex-col items-center text-center px-3 pt-1 pb-1 overflow-hidden">
+                  {(() => {
+                    const roleLabel = foundationActorProfile.role.trim().toUpperCase();
+                    if (!roleLabel) return null;
+                    const labelLength = Math.max(roleLabel.length, 1);
+                    const maxWidth = frameSize.width - 24;
+                    const baseSize = frameSize.width * 0.082;
+                    const letterSpacing = Math.max(0.06, Math.min(0.14, 9 / labelLength));
+                    const fitSize = Math.floor(maxWidth / (labelLength * (0.62 + letterSpacing)));
+                    const fontSize = Math.max(7, Math.min(Math.round(baseSize), fitSize)) + 4;
+                    return (
+                      <div
+                        className="relative overflow-hidden rounded-full border border-game-teal/40 bg-game-bg-dark/80 px-3 py-[3px]"
+                        style={{
+                          marginTop: Math.max(2, Math.round(frameSize.height * 0.01)),
+                        }}
+                      >
+                        <div className="absolute inset-0 pointer-events-none" style={shaderOverlayStyle} />
+                        <span
+                          className="relative flex justify-center"
+                          style={{
+                            color: '#e6b31e',
+                            fontWeight: 700,
+                            fontSize,
+                            letterSpacing: `${letterSpacing}em`,
+                            textTransform: 'uppercase',
+                            textShadow: '0 0 6px rgba(230, 179, 30, 0.32)',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'clip',
+                          }}
+                        >
+                          {roleLabel}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const nameLabel = foundationActorProfile.name.toUpperCase();
+                    const nameLength = Math.max(nameLabel.length, 1);
+                    const nameMaxWidth = frameSize.width * 0.9;
+                    const baseNameSize = Math.round(frameSize.width * 0.13);
+                    const fitNameSize = Math.floor(nameMaxWidth / (nameLength * 0.64));
+                    const nameFontSize = Math.max(12, Math.min(baseNameSize, fitNameSize)) + 4;
+                    return (
+                      <div
+                        className="relative overflow-hidden rounded-full border border-game-gold/30 bg-game-bg-dark/70 px-4 py-[4px]"
+                        style={{
+                          marginTop: foundationActorProfile.role
+                            ? Math.max(0, Math.round(frameSize.height * 0.002))
+                            : Math.max(2, Math.round(frameSize.height * 0.02)),
+                        }}
+                      >
+                        <div className="absolute inset-0 pointer-events-none" style={shaderOverlayStyle} />
+                        <span
+                          className="relative flex justify-center"
+                          style={{
+                            color: '#f2fbff',
+                            fontWeight: 900,
+                            fontSize: nameFontSize,
+                            letterSpacing: '0.12em',
+                            textTransform: 'uppercase',
+                            lineHeight: 0.95,
+                            textShadow: '0 0 7px rgba(197, 236, 255, 0.38), 0 1px 0 rgba(7, 14, 21, 0.7)',
+                            maxWidth: '92%',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'clip',
+                          }}
+                        >
+                          {nameLabel}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const compactMode = frameSize.height <= 230 || frameSize.width <= 160;
+                    const desc = foundationActorProfile.description;
+                    const descFontSize = compactMode
+                      ? Math.max(6, Math.round(frameSize.width * 0.05))
+                      : Math.max(7, Math.round(frameSize.width * 0.055));
+                    const boostedDescFontSize = descFontSize + 4;
+                    const chipFontSize = compactMode ? 10 : 11;
+                    const targetLines = compactMode ? 2 : 3;
+                    const visibleAttributes = compactMode
+                      ? foundationActorProfile.attributes.slice(0, 2)
+                      : foundationActorProfile.attributes.slice(0, 4);
+                    const chipsBandHeight = Math.max(24, Math.round(frameSize.height * 0.22));
+                    return (
+                      <div style={{ width: '100%', minHeight: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div
+                          className="relative overflow-hidden rounded-2xl border border-game-white/15 bg-game-bg-dark/70 px-3 py-1"
+                          style={{
+                            marginTop: Math.max(3, Math.round(frameSize.height * 0.008)),
+                            display: '-webkit-box',
+                            WebkitLineClamp: targetLines,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          <div
+                            className="absolute inset-0 pointer-events-none"
+                            style={shaderOverlayStyle}
+                          />
+                          <span
+                            className="relative block"
+                            style={{
+                              color: '#d3edf5',
+                              fontSize: boostedDescFontSize,
+                              lineHeight: compactMode ? 1.05 : 1.12,
+                              overflow: 'hidden',
+                              WebkitLineClamp: targetLines,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
+                            {desc}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            height: chipsBandHeight,
+                            minHeight: chipsBandHeight,
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            justifyContent: 'center',
+                            paddingBottom: compactMode ? 2 : 3,
+                            marginTop: Math.max(2, Math.round(frameSize.height * 0.01)),
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {visibleAttributes.length > 0 && (
+                            <div className="flex flex-wrap items-center justify-center gap-[2px] px-1">
+                              {visibleAttributes.map((attr) => (
+                                <span
+                                  key={`${card.id}-${attr}`}
+                                  className="rounded border border-game-gold/45 bg-game-bg-dark/75 px-1 py-[1px] uppercase tracking-[0.1em] leading-[1]"
+                                  style={{ color: '#e6b31e', fontSize: chipFontSize }}
+                                >
+                                  {attr}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               ) : keruAspectProfile ? (
                 <div className="relative z-[2] flex h-full w-full flex-col items-center text-center px-3 pt-0 pb-2 overflow-hidden">
                   <div
@@ -1337,8 +1788,8 @@ export const Card = memo(function Card({
                           fontSize: nameFontSize,
                           letterSpacing: '0.12em',
                           textTransform: 'uppercase',
-                          lineHeight: 1.1,
-                          marginTop: Math.max(6, Math.round(frameSize.height * 0.02)),
+                          lineHeight: 0.92,
+                          marginTop: Math.max(2, Math.round(frameSize.height * 0.008)),
                           maxWidth: '92%',
                           textAlign: 'center',
                         }}
@@ -1351,43 +1802,52 @@ export const Card = memo(function Card({
                     );
                   })()}
                   {(() => {
-                    const chipsHeight = Math.round(frameSize.height * 0.2);
-                    const titleBlockHeight = Math.round(frameSize.height * 0.44);
-                    const descContainerHeight = Math.max(60, frameSize.height - chipsHeight - titleBlockHeight);
+                    const compactMode = frameSize.height <= 230 || frameSize.width <= 160;
                     const desc = keruAspectProfile.description ?? '';
-                    const baseDescSize = Math.max(8, Math.round(frameSize.width * 0.065));
-                    const targetLines = keruAspectProfile.attributes.length > 0 ? 3 : 4;
-                    const lineHeight = 1.35;
-                    const maxFontSize = Math.floor(descContainerHeight / (targetLines * lineHeight));
-                    const descFontSize = Math.max(7, Math.min(baseDescSize, maxFontSize));
+                    const descFontSize = compactMode
+                      ? Math.max(6, Math.round(frameSize.width * 0.05))
+                      : Math.max(7, Math.round(frameSize.width * 0.06));
+                    const targetLines = compactMode ? 2 : (keruAspectProfile.attributes.length > 0 ? 3 : 4);
+                    const visibleAttributes = compactMode
+                      ? keruAspectProfile.attributes.slice(0, 2)
+                      : keruAspectProfile.attributes;
                     return (
-                      <>
+                      <div
+                        style={{
+                          width: '100%',
+                          minHeight: 0,
+                          flex: 1,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'flex-end',
+                          marginTop: Math.max(6, Math.round(frameSize.height * 0.02)),
+                        }}
+                      >
                         <div
                           style={{
                             color: '#d9f9f3',
                             fontSize: descFontSize,
-                            lineHeight,
-                            height: descContainerHeight,
+                            lineHeight: compactMode ? 1.05 : 1.15,
                             overflow: 'hidden',
-                            marginTop: Math.max(8, Math.round(frameSize.height * 0.03)),
                             paddingLeft: Math.max(4, Math.round(frameSize.width * 0.03)),
                             paddingRight: Math.max(4, Math.round(frameSize.width * 0.03)),
+                            display: '-webkit-box',
+                            WebkitLineClamp: targetLines,
+                            WebkitBoxOrient: 'vertical',
                           }}
                         >
                           {desc}
                         </div>
-                        <div
-                          style={{
-                            height: chipsHeight,
-                            display: 'flex',
-                            alignItems: 'flex-end',
-                            justifyContent: 'center',
-                            paddingBottom: Math.max(8, Math.round(frameSize.height * 0.025)),
-                          }}
-                        >
-                          {keruAspectProfile.attributes.length > 0 && (
+                        {visibleAttributes.length > 0 && (
+                          <div
+                            style={{
+                              marginTop: compactMode ? 3 : 6,
+                              minHeight: 0,
+                              overflow: 'hidden',
+                            }}
+                          >
                             <div className="flex flex-wrap items-center justify-center gap-1">
-                              {keruAspectProfile.attributes.map((attr) => (
+                              {visibleAttributes.map((attr) => (
                                 <span
                                   key={`${card.id}-${attr}`}
                                   className="rounded border border-game-gold/60 bg-game-bg-dark/80 px-1.5 py-[2px] text-[8px] uppercase tracking-[0.12em]"
@@ -1397,9 +1857,9 @@ export const Card = memo(function Card({
                                 </span>
                               ))}
                             </div>
-                          )}
-                        </div>
-                      </>
+                          </div>
+                        )}
+                      </div>
                     );
                   })()}
                 </div>
@@ -1472,10 +1932,6 @@ export const Card = memo(function Card({
                       )}
                     </div>
                   );
-                  const definition = slot.definitionId && orimDefinitions
-                    ? orimDefinitions.find((item) => item.id === slot.definitionId) ?? null
-                    : null;
-                  const orimConfig = getOrimWatercolorConfig(definition, slot.definitionId);
                   const glyphNode = (
                     <div
                       className="relative flex items-center justify-center rounded-full"
@@ -1490,21 +1946,6 @@ export const Card = memo(function Card({
                         opacity: slot.dim ? 0.4 : 1,
                       }}
                     >
-                      {orimConfig && (
-                        <div
-                          className="absolute"
-                          style={{
-                            zIndex: 0,
-                            pointerEvents: 'none',
-                            width: orimSlotSize * ORIM_WATERCOLOR_CANVAS_SCALE,
-                            height: orimSlotSize * ORIM_WATERCOLOR_CANVAS_SCALE,
-                            left: (orimSlotSize - orimSlotSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
-                            top: (orimSlotSize - orimSlotSize * ORIM_WATERCOLOR_CANVAS_SCALE) / 2,
-                          }}
-                        >
-                          <WatercolorOverlay config={orimConfig} />
-                        </div>
-                      )}
                       <span style={{ zIndex: 1 }}>{slot.glyph}</span>
                     </div>
                   );
@@ -1548,7 +1989,7 @@ export const Card = memo(function Card({
                   );
                 })}
             </div>
-          ) : (!maskValue && !cardTitleMeta && !keruAspectProfile) ? (
+          ) : (!maskValue && !cardTitleMeta && !keruAspectProfile && !foundationActorProfile) ? (
             <div className="absolute bottom-2 left-0 right-0 flex justify-center">
               <div
                 className="text-xs force-sharp"
@@ -1561,7 +2002,24 @@ export const Card = memo(function Card({
                   mixBlendMode: isWaterElement ? 'normal' : undefined,
                 }}
               >
-                {suitDisplay}
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: 16,
+                    padding: '1px 6px',
+                    borderRadius: 999,
+                    border: elementChipStyle.border,
+                    background: elementChipStyle.background,
+                    color: elementChipStyle.color,
+                    textShadow: elementChipStyle.textShadow,
+                    boxShadow: elementChipStyle.boxShadow,
+                    lineHeight: 1,
+                  }}
+                >
+                  {suitDisplay}
+                </span>
               </div>
             </div>
           ) : null}
@@ -1583,7 +2041,7 @@ export const Card = memo(function Card({
           onSnapshotReady={() => setHideDomCard(true)}
         />
       )}
-      {isShiny && !faceDown && (
+      {showLegacyShine && (
         <RarityAura
           rarity={effectiveRarity}
           cardWidth={frameSize.width}

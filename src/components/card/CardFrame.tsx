@@ -17,6 +17,7 @@ interface CardFrameProps extends MotionProps {
   onPointerDown?: (e: React.PointerEvent) => void;
   onClick?: () => void;
   dataAttributes?: Record<string, string | number | boolean | undefined>;
+  backgroundColor?: string;
 }
 
 export const CardFrame = forwardRef<HTMLDivElement, CardFrameProps>(function CardFrame(
@@ -33,6 +34,7 @@ export const CardFrame = forwardRef<HTMLDivElement, CardFrameProps>(function Car
     onPointerDown,
     onClick,
     dataAttributes,
+    backgroundColor,
     ...motionProps
   },
   ref
@@ -56,8 +58,10 @@ export const CardFrame = forwardRef<HTMLDivElement, CardFrameProps>(function Car
     borderWidth: style?.borderWidth ?? GAME_BORDER_WIDTH,
     boxSizing: 'border-box',
     transformStyle: 'preserve-3d',
+    backgroundColor,
     ...style,
   };
+  const hasBackground = Boolean(backgroundColor);
 
   return (
     <motion.div
@@ -67,7 +71,7 @@ export const CardFrame = forwardRef<HTMLDivElement, CardFrameProps>(function Car
       onTouchStart={onTouchStart}
       onPointerDown={onPointerDown}
       onClick={onClick}
-      className={`rounded-lg border-solid bg-game-bg-dark transition-[border-color,box-shadow,opacity] select-none relative${className ? ` ${className}` : ''}`}
+      className={`rounded-lg border-solid ${hasBackground ? '' : 'bg-game-bg-dark'} transition-[border-color,box-shadow,opacity] select-none relative${className ? ` ${className}` : ''}`}
       style={baseStyle}
       {...dataAttributes}
       {...motionProps}

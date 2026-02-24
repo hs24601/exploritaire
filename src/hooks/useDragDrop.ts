@@ -147,6 +147,7 @@ export function useDragDrop(
     }
 
     // Check if dropped on a foundation
+    let hitFound = false;
     for (let i = 0; i < foundationRefs.current.length; i++) {
       const ref = foundationRefs.current[i];
       if (!ref) continue;
@@ -161,9 +162,18 @@ export function useDragDrop(
         if (import.meta.env.DEV) {
           console.debug('[drag] hit foundation', { index: i, rect });
         }
+        hitFound = true;
         onDropRef.current(current.tableauIndex, i, { x: dropX, y: dropY }, momentum);
         break;
       }
+    }
+
+    if (import.meta.env.DEV && !hitFound) {
+      const refInfo = foundationRefs.current.map((ref, index) => ({
+        index,
+        rect: ref ? ref.getBoundingClientRect() : null,
+      }));
+      console.warn('[drag] no foundation hit', { foundationCount: foundationRefs.current.length, refInfo });
     }
 
     setDragState(initialDragState);

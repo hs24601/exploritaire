@@ -1,6 +1,4 @@
 import { memo, useMemo, useState } from 'react';
-import { WatercolorOverlay } from '../watercolor/WatercolorOverlay';
-import type { WatercolorConfig } from '../watercolor/types';
 
 export const DIRECTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 export type Direction = (typeof DIRECTIONS)[number];
@@ -8,64 +6,7 @@ export type Direction = (typeof DIRECTIONS)[number];
 const FULL_TURN_DEG = 360;
 const STEP_DEG = FULL_TURN_DEG / DIRECTIONS.length;
 const ROTATION_ANIMATION_MS = 1200;
-const SHOW_COMPASS_PAINT = false;
 const COMPASS_SIZE = 131;
-
-// Watercolor backdrop extends beyond the 154px compass on all sides
-const COMPASS_WC_SIZE = 221;
-
-const noop = { count: 0, lengthMin: 0, lengthMax: 0, strokeWidth: 0, swayDuration: 0, swayAngle: 0 };
-const noSat = { count: 0, radiusMin: 0, radiusMax: 0, orbitRadius: 0, driftDuration: 0 };
-const noAnim = { breatheDuration: 9999, breatheScale: 1.0, highlightShiftDuration: 9999 };
-
-function g(mid: string, mo: number, o: number): WatercolorConfig['splotches'][number] {
-  return {
-    gradient: { light: mid, mid, dark: mid, lightOpacity: mo, midOpacity: mo, darkOpacity: mo },
-    scale: 0,
-    offset: [0, 0],
-    blendMode: 'screen',
-    opacity: o,
-    shape: 'circle',
-    tendrils: noop,
-    satellites: noSat,
-    animation: noAnim,
-  };
-}
-
-// Static rainbow watercolor backdrop config: N=blue, E=pink, S=orange, W=green
-const compassWatercolorConfig: WatercolorConfig = {
-  splotches: [
-    // Central body — soft purple base tying all arms together
-    { ...g('#9060c8', 0.75, 0.65), scale: 0.38, offset: [0, 0] },
-    // North arm — sky blue
-    { ...g('#42b8e8', 0.85, 0.85), scale: 0.32, offset: [0.015, -0.22] },
-    // North tip — blue-purple extension
-    { ...g('#7848cc', 0.75, 0.70), scale: 0.19, offset: [0.035, -0.32] },
-    // Upper-right blend — cyan meets purple
-    { ...g('#60a8d8', 0.65, 0.55), scale: 0.2, offset: [0.1, -0.19] },
-    // East arm — hot pink / rose
-    { ...g('#e85882', 0.85, 0.85), scale: 0.28, offset: [0.23, 0.015] },
-    // East extension — lighter pink bleed
-    { ...g('#f098b8', 0.70, 0.60), scale: 0.18, offset: [0.32, 0.05] },
-    // East-center lavender bridge
-    { ...g('#c070d8', 0.65, 0.55), scale: 0.22, offset: [0.1, -0.07] },
-    // South arm — vivid orange
-    { ...g('#f08028', 0.90, 0.85), scale: 0.32, offset: [0.015, 0.22] },
-    // South tip — golden yellow
-    { ...g('#f0c030', 0.80, 0.70), scale: 0.2, offset: [0.0, 0.32] },
-    // South-west blend — warm amber meets green
-    { ...g('#d8a020', 0.65, 0.55), scale: 0.19, offset: [-0.08, 0.2] },
-    // West arm — fresh green
-    { ...g('#48c868', 0.85, 0.85), scale: 0.28, offset: [-0.23, -0.015] },
-    // West lower — yellow-green accent
-    { ...g('#90c830', 0.70, 0.65), scale: 0.18, offset: [-0.14, 0.12] },
-    // West upper — teal hint blending into blue
-    { ...g('#38b8a0', 0.65, 0.55), scale: 0.19, offset: [-0.15, -0.14] },
-  ],
-  grain: { enabled: true, intensity: 0.04, frequency: 0.08, blendMode: 'soft-light' },
-  overallScale: 1.0,
-  luminous: false,
-};
 
 interface CompassProps {
   value?: Direction;
@@ -102,19 +43,6 @@ export const Compass = memo(function Compass({
           height: COMPASS_SIZE,
         }}
       >
-        {SHOW_COMPASS_PAINT && (
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              width: COMPASS_WC_SIZE,
-              height: COMPASS_WC_SIZE,
-              left: (COMPASS_SIZE - COMPASS_WC_SIZE) / 2,
-              top: (COMPASS_SIZE - COMPASS_WC_SIZE) / 2,
-            }}
-          >
-            <WatercolorOverlay config={compassWatercolorConfig} />
-          </div>
-        )}
         <svg
           viewBox="0 0 100 100"
           className="absolute inset-0 h-full w-full pointer-events-none"

@@ -24,7 +24,6 @@ import {
   assignTokenToTileSlot as assignTokenToTileSlotFn,
   clearTileGameProgress,
   updateTilePosition,
-  updateTileWatercolorConfig as updateTileWatercolorConfigFn,
   toggleTileLock as toggleTileLockFn,
   updateActorPosition,
   stackActorOnActor as stackActorOnActorFn,
@@ -42,9 +41,13 @@ import {
   endRandomBiomeTurn as endRandomBiomeTurnFn,
   endExplorationTurnInRandomBiome as endExplorationTurnInRandomBiomeFn,
   advanceRandomBiomeTurn as advanceRandomBiomeTurnFn,
+  regroupRandomBiomeDeal as regroupRandomBiomeDealFn,
   rerollRandomBiomeDeal as rerollRandomBiomeDealFn,
+  useSupplyForShortRest as useSupplyForShortRestFn,
   spawnRandomEnemyInRandomBiome as spawnRandomEnemyInRandomBiomeFn,
+  spawnEnemyActorInRandomBiome as spawnEnemyActorInRandomBiomeFn,
   cleanupDefeatedEnemies as cleanupDefeatedEnemiesFn,
+  removeWildcardsFromEnemyFoundations as removeWildcardsFromEnemyFoundationsFn,
   playRpgHandCardOnActor as playRpgHandCardOnActorFn,
   playEnemyRpgHandCardOnActor as playEnemyRpgHandCardOnActorFn,
   adjustRpgHandCardRarity as adjustRpgHandCardRarityFn,
@@ -85,6 +88,16 @@ const normalizeOrimId = (value: string) => value
   .replace(/[’']/g, '')
   .replace(/[^a-z0-9]+/g, '_')
   .replace(/^_+|_+$/g, '');
+
+const createEmptyElementCounts = (): Record<Element, number> => ({
+  W: 0,
+  E: 0,
+  A: 0,
+  F: 0,
+  D: 0,
+  L: 0,
+  N: 0,
+});
 
 const dedupeOrimDefinitions = (definitions: GameState['orimDefinitions']): GameState['orimDefinitions'] => {
   const seen = new Set<string>();
@@ -138,6 +151,21 @@ export function useGameEngine(
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(RELIC_STORAGE_KEY, JSON.stringify(gameState.relicDefinitions, null, 2));
   }, [gameState?.relicDefinitions]);
+
+  useEffect(() => {
+    if (!gameState || gameState.playtestVariant !== 'rpg') return;
+    const allowedAspectCardIds = new Set(
+      (gameState.orimDefinitions ?? [])
+        .filter((definition) => definition.isAspect)
+        .map((definition) => `keru-archetype-${String(definition.id ?? '').trim().toLowerCase()}`)
+    );
+    const hand = gameState.rpgHandCards ?? [];
+    const filteredHand = hand.filter((card) => (
+      !card.id.startsWith('keru-archetype-') || allowedAspectCardIds.has(card.id.toLowerCase())
+    ));
+    if (filteredHand.length === hand.length) return;
+    setGameState((prev) => (prev ? { ...prev, rpgHandCards: filteredHand } : prev));
+  }, [gameState]);
 
   // Derived state
   const derivedState = useMemo(() => {
@@ -596,11 +624,6 @@ export function useGameEngine(
     setGameState(updateTilePosition(gameState, tileId, col, row));
   }, [gameState]);
 
-  const updateTileWatercolorConfig = useCallback((tileId: string, watercolorConfig: GameState['tiles'][number]['watercolorConfig']) => {
-    if (!gameState) return;
-    setGameState(updateTileWatercolorConfigFn(gameState, tileId, watercolorConfig));
-  }, [gameState]);
-
   const toggleTileLock = useCallback((tileId: string) => {
     if (!gameState) return;
     setGameState(toggleTileLockFn(gameState, tileId));
@@ -837,13 +860,32 @@ export function useGameEngine(
     setGameState(rerollRandomBiomeDealFn(gameState));
     setSelectedCard(null);
   }, [gameState]);
+  const regroupRandomBiomeDeal = useCallback(() => {
+    if (!gameState) return;
+    setGameState(regroupRandomBiomeDealFn(gameState));
+    setSelectedCard(null);
+  }, [gameState]);
+  const useSupplyForShortRest = useCallback((recoveryCharges = 2) => {
+    if (!gameState) return false;
+    const nextState = useSupplyForShortRestFn(gameState, recoveryCharges);
+    if (nextState === gameState) return false;
+    setGameState(nextState);
+    return true;
+  }, [gameState]);
 
   const spawnRandomEnemyInRandomBiome = useCallback(() => {
     setGameState((prev) => (prev ? spawnRandomEnemyInRandomBiomeFn(prev) : prev));
     setSelectedCard(null);
   }, []);
+  const spawnEnemyActorInRandomBiome = useCallback((definitionId: string, foundationIndex: number) => {
+    setGameState((prev) => (prev ? spawnEnemyActorInRandomBiomeFn(prev, definitionId, foundationIndex) : prev));
+    setSelectedCard(null);
+  }, []);
   const cleanupDefeatedEnemies = useCallback(() => {
     setGameState((prev) => (prev ? cleanupDefeatedEnemiesFn(prev) : prev));
+  }, []);
+  const removeWildcardsFromEnemyFoundations = useCallback(() => {
+    setGameState((prev) => (prev ? removeWildcardsFromEnemyFoundationsFn(prev) : prev));
   }, []);
 
   const setBiomeTableaus = useCallback((tableaus: Card[][]) => {
@@ -852,6 +894,24 @@ export function useGameEngine(
       return {
         ...prev,
         tableaus,
+      };
+    });
+    setSelectedCard(null);
+  }, []);
+  const setBiomeFoundations = useCallback((foundations: Card[][]) => {
+    setGameState((prev) => {
+      if (!prev) return prev;
+      const nextFoundations = foundations.map((foundation) => [...foundation]);
+      const nextCombos = nextFoundations.map((_, index) => prev.foundationCombos?.[index] ?? 0);
+      const nextTokens = nextFoundations.map((_, index) => {
+        const existing = prev.foundationTokens?.[index];
+        return existing ? { ...existing } : createEmptyElementCounts();
+      });
+      return {
+        ...prev,
+        foundations: nextFoundations,
+        foundationCombos: nextCombos,
+        foundationTokens: nextTokens,
       };
     });
     setSelectedCard(null);
@@ -1036,7 +1096,7 @@ export function useGameEngine(
     setGameState((prev) => (prev ? processRelicCombatEventFn(prev, event) : prev));
   }, []);
 
-  const applyKeruArchetype = useCallback((archetype: 'lupus' | 'ursus' | 'felis') => {
+  const applyKeruArchetype = useCallback((archetype: 'felis') => {
     if (!gameState) return false;
     const newState = applyKeruArchetypeFn(gameState, archetype);
     if (newState === gameState) return false;
@@ -1098,7 +1158,6 @@ export function useGameEngine(
       assignActorToTileHome,
       clearTileProgress,
       updateTileGridPosition,
-      updateTileWatercolorConfig,
       toggleTileLock,
       updateActorGridPosition,
       updateTokenGridPosition,
@@ -1117,10 +1176,15 @@ export function useGameEngine(
       endRandomBiomeTurn,
       endExplorationTurnInRandomBiome,
       advanceRandomBiomeTurn,
+      regroupRandomBiomeDeal,
       rerollRandomBiomeDeal,
+      useSupplyForShortRest,
       spawnRandomEnemyInRandomBiome,
+      spawnEnemyActorInRandomBiome,
       cleanupDefeatedEnemies,
+      removeWildcardsFromEnemyFoundations,
       setBiomeTableaus,
+      setBiomeFoundations,
       playRpgHandCardOnActor,
       playEnemyRpgHandCardOnActor,
       adjustRpgHandCardRarity,

@@ -100,6 +100,12 @@ export function useHoloInteraction() {
     if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) {
       return;
     }
+    const isCoarsePointer = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(pointer: coarse)').matches
+      : false;
+    if (!isCoarsePointer) {
+      return;
+    }
 
     const handleOrientation = (event: DeviceOrientationEvent) => {
       const target = elementRef.current;
@@ -113,7 +119,7 @@ export function useHoloInteraction() {
       updateStylesFromPercent(px, py, rect);
     };
 
-    window.addEventListener('deviceorientation', handleOrientation, true);
+    window.addEventListener('deviceorientation', handleOrientation, { capture: true, passive: true });
     return () => window.removeEventListener('deviceorientation', handleOrientation, true);
   }, [updateStylesFromPercent]);
 

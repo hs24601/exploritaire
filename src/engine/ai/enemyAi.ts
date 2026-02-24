@@ -38,6 +38,7 @@ export function getEnemyPlayableMoves(state: GameState): Move[] {
     foundations.forEach((foundation, foundationIndex) => {
       const foundationActor = enemyActors[foundationIndex];
       if (foundationActor && (((foundationActor.hp ?? 0) <= 0) || ((foundationActor.stamina ?? 0) <= 0))) return;
+      if (foundationActor?.definitionId === 'target_dummy') return;
       const top = foundation[foundation.length - 1];
       if (!top) return;
       if (canPlay(card, top, state.activeEffects)) {

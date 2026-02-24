@@ -59,8 +59,7 @@ export function AssetEditorModal({
               <div />
             </div>
           )}
-          {/* Always render children, which contains the GodRaysEditor and the active slider */}
-          {/* If isGodRaysSliderDragging is true, the GodRaysEditor will need to ensure only the active slider is visible */}
+          {/* Keep editor content mounted so active sliders can remain interactive while dragging. */}
           <div className={`w-full h-full pt-8 pb-1 px-1 overflow-hidden ${isGodRaysSliderDragging ? 'pointer-events-none' : ''}`}>
             {children}
           </div>

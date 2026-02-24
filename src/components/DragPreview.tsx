@@ -2,15 +2,14 @@ import { memo, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useGraphics } from '../contexts/GraphicsContext';
 import type { Card as CardType } from '../engine/types';
-import { getRankDisplay } from '../engine/rules';
-import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT } from '../engine/constants';
-import { useCardScale } from '../contexts/CardScaleContext';
-import { CardFrame } from './card/CardFrame';
+import { CARD_SIZE } from '../engine/constants';
+import { useCardScalePreset } from '../contexts/CardScaleContext';
 import { Card } from './Card';
 import { JewelOrim } from './JewelModal';
-import { getOrimAccentColor } from '../watercolor/orimWatercolor';
+import { getOrimAccentColor } from '../utils/orimColors';
 import { ORIM_DEFINITIONS } from '../engine/orims';
 import { subscribeDragRaf } from '../hooks/dragRafCoordinator';
+import { FORCE_NEON_CARD_STYLE } from '../config/ui';
 
 interface DragPreviewProps {
   card: CardType;
@@ -19,20 +18,22 @@ interface DragPreviewProps {
   offset: { x: number; y: number };
   size?: { width: number; height: number };
   showText: boolean;
+  zIndex?: number;
 }
 
-export const DragPreview = memo(function DragPreview({ card, position, positionRef, offset, size, showText }: DragPreviewProps) {
+export const DragPreview = memo(function DragPreview({ card, position, positionRef, offset, size, showText, zIndex = 20050 }: DragPreviewProps) {
   const showGraphics = useGraphics();
-  const globalScale = useCardScale();
+  const dragScale = useCardScalePreset('drag');
   const rootRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const lastPositionRef = useRef<{ x: number; y: number } | null>(null);
   const velocityRef = useRef({ x: 0, y: 0 });
-  const defaultWidth = CARD_SIZE.width * globalScale;
-  const defaultHeight = CARD_SIZE.height * globalScale;
+  const defaultWidth = CARD_SIZE.width * dragScale;
+  const defaultHeight = CARD_SIZE.height * dragScale;
   const isKeruRewardCard = card.id.startsWith('keru-archetype-');
   const isRewardOrim = card.id.startsWith('reward-orim-');
   const isTutorialWatercolorCard = card.id.startsWith('initial_actions_');
+  const neonMode = FORCE_NEON_CARD_STYLE;
   
   const rawWidth = size?.width ?? defaultWidth;
   const rawHeight = size?.height ?? defaultHeight;
@@ -125,7 +126,7 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
           top: 0,
           width: cardWidth,
           height: cardHeight,
-          zIndex: 9999,
+          zIndex,
           pointerEvents: 'none',
           transform: 'translate3d(0, 0, 0)',
           willChange: 'transform',
@@ -154,27 +155,6 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
     );
   }
 
-  const suitColor = SUIT_COLORS[card.suit];
-  const suitDisplay = getSuitDisplay(card.suit, showGraphics);
-  const hasOrimSlots = !!card.orimSlots?.length;
-  const orimSlots = card.orimSlots ?? [];
-  const orimSlotSize = Math.max(6, Math.round(cardWidth * 0.16));
-  
-  const frameClassName = isKeruRewardCard
-    ? 'flex flex-col items-start justify-start p-2 gap-1 text-2xl font-bold'
-    : 'flex flex-col items-center justify-center gap-1 text-2xl font-bold';
-  const keruMeta = (() => {
-    if (card.id === 'keru-archetype-lupus') {
-      return { title: 'LUPUS', subtitle: 'Ranger Archetype', accent: '#f7d24b' };
-    }
-    if (card.id === 'keru-archetype-ursus') {
-      return { title: 'URSUS', subtitle: 'Tank Archetype', accent: '#ffb075' };
-    }
-    if (card.id === 'keru-archetype-felis') {
-      return { title: 'FELIS', subtitle: 'Rogue Archetype', accent: '#9de3ff' };
-    }
-    return null;
-  })();
   const tutorialBandFill = (() => {
     switch (card.element) {
       case 'W': return 'linear-gradient(165deg, rgba(182, 193, 225, 0.96) 0%, rgba(168, 180, 215, 0.95) 100%)';
@@ -198,7 +178,7 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
         top: 0,
         width: cardWidth,
         height: cardHeight,
-        zIndex: 9999,
+        zIndex,
         pointerEvents: 'none',
         transform: 'translate3d(0, 0, 0)',
         willChange: 'transform',
@@ -223,7 +203,7 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
             isAnyCardDragging={false}
             disableTilt
           />
-        ) : isTutorialWatercolorCard ? (
+        ) : (isTutorialWatercolorCard && !neonMode) ? (
           <div className="relative w-full h-full">
             <svg width="0" height="0" className="absolute" aria-hidden="true">
               <defs>
@@ -274,88 +254,23 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
             </div>
           </div>
         ) : (
-          <CardFrame
+          <Card
+            card={card}
             size={{ width: cardWidth, height: cardHeight }}
-            borderColor={suitColor}
-            boxShadow={`0 10px 40px rgba(0,0,0,0.5), 0 0 20px ${suitColor}66`}
-            className={frameClassName}
-            style={{
-              color: suitColor,
-            }}
-          >
-            {keruMeta ? (
-              <div className="absolute top-2 left-2 right-2 flex flex-col items-start justify-start gap-1">
-                <div
-                  style={{
-                    fontSize: Math.max(8, Math.round(cardWidth * 0.09)),
-                    letterSpacing: '0.12em',
-                    color: '#7fdbca',
-                    fontWeight: 700,
-                    lineHeight: 1,
-                  }}
-                >
-                  {keruMeta.subtitle}
-                </div>
-                <div
-                  style={{
-                    fontSize: Math.max(12, Math.round(cardWidth * 0.18)),
-                    letterSpacing: '0.1em',
-                    color: '#f8f8f8',
-                    fontWeight: 700,
-                    lineHeight: 1.05,
-                  }}
-                >
-                  {keruMeta.title}
-                </div>
-              </div>
-            ) : (
-              <div style={{ textShadow: `0 0 10px ${suitColor}` }}>
-                {getRankDisplay(card.rank)}
-              </div>
-            )}
-            {hasOrimSlots ? (
-              <div className="flex items-center justify-center gap-1">
-                {orimSlots.map((slot, index) => {
-                  const element = index === 0
-                    ? (card.tokenReward ?? (card.element !== 'N' ? card.element : undefined))
-                    : undefined;
-                  const suit = element ? ELEMENT_TO_SUIT[element] : null;
-                  const slotColor = suit ? SUIT_COLORS[suit] : '#7fdbca';
-                  const slotDisplay = suit ? getSuitDisplay(suit, showGraphics) : (showGraphics ? '◌' : '-');
-                  return (
-                    <div
-                      key={slot.id}
-                      className="flex items-center justify-center rounded-full"
-                      style={{
-                        width: orimSlotSize,
-                        height: orimSlotSize,
-                        borderWidth: 1,
-                        borderStyle: 'solid',
-                        borderColor: slotColor,
-                        color: slotColor,
-                        fontSize: Math.max(6, Math.round(orimSlotSize * 0.7)),
-                        opacity: suit ? 1 : 0.5,
-                      }}
-                    >
-                      {slotDisplay}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ fontSize: '1.2rem' }}>{suitDisplay}</div>
-            )}
-          </CardFrame>
+            showGraphics={false}
+            borderColorOverride={'rgba(6, 10, 14, 0.9)'}
+            boxShadowOverride={'none'}
+            isAnyCardDragging={false}
+            isDragging={false}
+            disableTilt={true}
+            disableHoverLift={true}
+            disableLegacyShine={true}
+            watercolorOnly={true}
+          />
         )}
       </div>
     </div>,
     document.body
   );
 });
-
-
-
-
-
-
 

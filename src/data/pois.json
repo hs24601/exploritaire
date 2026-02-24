@@ -9,13 +9,14 @@
       "tableauPresetId": "initial_actions_00",
       "rewards": [
         {
-          "type": "aspect-choice",
+          "type": "orim-choice",
           "trigger": "on_tableau_clear",
           "amount": 3,
           "drawCount": 3,
           "chooseCount": 1,
           "options": [
-            "felis"
+            "fireShard",
+            "iceShard"
           ]
         }
       ],
@@ -78,16 +79,15 @@
       "rewards": [
         {
           "id": "tutorial-c-aspects",
-          "type": "aspect-choice",
+          "type": "orim-choice",
           "trigger": "on_tableau_clear",
           "amount": 3,
           "drawCount": 3,
           "chooseCount": 1,
-          "description": "Choose 1: Lupus, Ursus, or Felis jumbo card aspect",
+          "description": "Choose 1 ORIM shard",
           "options": [
-            "lupus",
-            "ursus",
-            "felis"
+            "fireShard",
+            "iceShard"
           ]
         }
       ],

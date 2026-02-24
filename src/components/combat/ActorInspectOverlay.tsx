@@ -17,7 +17,6 @@ interface ActorInspectOverlayProps {
   nodeAssignments?: Record<string, string>;
   onAssignNodeOrim?: (actorId: string, nodeId: string, orimName: string) => void;
   onClearNodeOrim?: (actorId: string, nodeId: string) => void;
-  lupusPackMomentumActive?: boolean;
 }
 
 const ELEMENT_ACCENT: Record<string, string> = {
@@ -44,7 +43,6 @@ export const ActorInspectOverlay = memo(function ActorInspectOverlay({
   nodeAssignments,
   onAssignNodeOrim,
   onClearNodeOrim,
-  lupusPackMomentumActive = false,
 }: ActorInspectOverlayProps) {
   const definition = useMemo(
     () => (actor ? getActorDefinition(actor.definitionId) : null),
@@ -92,11 +90,6 @@ export const ActorInspectOverlay = memo(function ActorInspectOverlay({
   const galleryOrims = Array.from(new Set([...ownedOrimNames, 'Zephyr', 'Ferocity'].map((name) => name.trim()).filter(Boolean)));
   const nodeTitleResolver = (node: { id: string }) => {
     const assigned = enhancements[node.id];
-    if (definition.id === 'lupus' && node.id === 'apex') {
-      const status = lupusPackMomentumActive ? 'ACTIVE' : 'INACTIVE';
-      const slotted = assigned ? `Slotted: ${assigned}` : 'Slotted: none';
-      return `PACK MOMENTUM: Valid moves extend/reset combo timer when Ferocity is slotted on Apex. ${slotted}. Status: ${status}`;
-    }
     return assigned ? `${assigned} slotted` : 'No hard-wired ability';
   };
   const handleNodeSelect = (nodeId: string | null) => {
@@ -266,16 +259,12 @@ export const ActorInspectOverlay = memo(function ActorInspectOverlay({
             {focusNode ? (
               <>
                 <span className="font-bold">{focusNode.label ?? focusNode.id}</span>
-                {definition.id === 'lupus' && focusNode.id === 'apex'
-                  ? `: PACK MOMENTUM ${lupusPackMomentumActive ? 'ACTIVE' : 'INACTIVE'}`
-                  : ': No hard-wired ability'}
+                {': No hard-wired ability'}
               </>
             ) : 'Hover a node to inspect its ability/state.'}
           </div>
           <div className="mt-2 text-[10px] text-game-white/60">
-            {focusNode && definition.id === 'lupus' && focusNode.id === 'apex'
-              ? 'Pack Momentum enables combo timer extension on valid moves when Ferocity is slotted in Apex.'
-              : 'Click a node to open the Orim gallery, slot an owned Orim, or click again to remove.'}
+            {'Click a node to open the Orim gallery, slot an owned Orim, or click again to remove.'}
           </div>
         </div>
         {selectedNode && (

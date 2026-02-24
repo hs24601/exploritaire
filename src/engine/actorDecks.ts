@@ -47,11 +47,6 @@ export const ACTOR_DECK_TEMPLATES: Record<string, { values: number[]; slotsPerCa
     slotsPerCard: [1, 1],
     starterOrim: [],
   },
-  lupus: {
-    values: [8, 9],
-    slotsPerCard: [1, 1],
-    starterOrim: [],
-  },
 };
 // ACTOR_DECK_TEMPLATES_END
 

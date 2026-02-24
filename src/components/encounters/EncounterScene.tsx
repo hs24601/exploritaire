@@ -29,7 +29,7 @@ interface CombatActions {
   spawnRandomEnemyInRandomBiome: () => void;
   setBiomeTableaus: (tableaus: CardType[][]) => void;
   addRpgHandCard: (card: CardType) => boolean;
-  applyKeruArchetype: (archetype: 'lupus' | 'ursus' | 'felis') => boolean;
+  applyKeruArchetype: (archetype: 'felis') => boolean;
   puzzleCompleted: (payload?: PuzzleCompletedPayload | null) => void;
   startBiome: (tileId: string, biomeId: string) => void;
 }
@@ -92,6 +92,7 @@ interface EncounterSceneProps {
   onOpenSettings?: () => void;
   onTogglePause?: () => void;
   onToggleCombatSandbox: () => void;
+  combatSandboxOpen?: boolean;
   wildAnalysis?: { key: string; sequence: Move[]; maxCount: number } | null;
   combatActions: CombatActions;
   explorationStepRef: MutableRefObject<(() => void) | null>;
@@ -152,6 +153,7 @@ export function EncounterScene({
   onOpenSettings,
   onTogglePause,
   onToggleCombatSandbox,
+  combatSandboxOpen = false,
   wildAnalysis,
   combatActions,
   explorationStepRef,
@@ -226,6 +228,7 @@ export function EncounterScene({
       onOpenSettings={onOpenSettings}
       onTogglePause={onTogglePause}
       onToggleCombatSandbox={onToggleCombatSandbox}
+      combatSandboxOpen={combatSandboxOpen}
       wildAnalysis={wildAnalysis}
       actions={combatActions}
       explorationStepRef={explorationStepRef}

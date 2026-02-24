@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ActorDefinition, ActorType, Element, Suit, OrimDefinition, OrimCategory } from '../engine/types';
 import { SUITS, getSuitDisplay } from '../engine/constants';
 import { useGraphics } from '../contexts/GraphicsContext';
-import { WatercolorOverrideEditor } from './WatercolorOverrideEditor';
 
 const ELEMENTS: Element[] = ['W', 'E', 'A', 'F', 'L', 'D', 'N'];
 const ACTOR_TYPES: ActorType[] = ['adventurer', 'npc'];
@@ -168,7 +167,7 @@ export function ActorEditor({
   const showGraphics = useGraphics();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'details' | 'titles'>('details');
-  const [rightTab, setRightTab] = useState<'deck' | 'watercolor'>('deck');
+  const [rightTab, setRightTab] = useState<'deck'>('deck');
   const [definitions, setDefinitions] = useState<ActorDefinition[]>(definitionsProp);
   const [deckTemplates, setDeckTemplates] = useState(deckTemplatesProp);
   const [selectedId, setSelectedId] = useState<string | null>(() => (definitionsProp[0]?.id ?? null));
@@ -628,13 +627,6 @@ export function ActorEditor({
                 >
                   Deck Cards
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setRightTab('watercolor')}
-                  className={`text-[10px] font-mono px-2 py-1 rounded border ${rightTab === 'watercolor' ? 'border-game-gold text-game-gold' : 'border-game-teal/30 text-game-white/70'}`}
-                >
-                  Watercolor
-                </button>
               </div>
 
               {rightTab === 'deck' && (
@@ -787,17 +779,6 @@ export function ActorEditor({
                 )
               )}
 
-              {rightTab === 'watercolor' && (
-                selected ? (
-                  <WatercolorOverrideEditor
-                    mode="actor"
-                    actorDefinition={selected}
-                    showGraphics={showGraphics}
-                  />
-                ) : (
-                  <div className="text-xs text-game-white/50">No actor selected.</div>
-                )
-              )}
             </div>
           </div>
       </div>

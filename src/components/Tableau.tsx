@@ -1,8 +1,8 @@
-import { memo, useMemo, useCallback, useId, useState } from 'react';
+import { memo, useMemo, useCallback, type CSSProperties, type MutableRefObject } from 'react';
 import type { Card as CardType, Move, SelectedCard, InteractionMode } from '../engine/types';
 import { Card } from './Card';
 import { CARD_SIZE } from '../engine/constants';
-import { getElementCardWatercolor } from '../watercolor/elementCardWatercolor';
+import { FORCE_NEON_CARD_STYLE } from '../config/ui';
 
 interface TableauProps {
   cards: CardType[];
@@ -31,6 +31,36 @@ interface TableauProps {
   debugStepLabel?: string | null;
 }
 
+interface TableauGroupProps {
+  tableaus: CardType[][];
+  selectedCard: SelectedCard | null;
+  onCardSelect: (card: CardType, tableauIndex: number) => void;
+  guidanceMoves: Move[];
+  interactionMode: InteractionMode;
+  showGraphics: boolean;
+  cardScale: number;
+  onDragStart?: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
+  draggingCardId?: string | null;
+  isAnyCardDragging?: boolean;
+  revealNextRow?: boolean;
+  revealAllCards?: boolean;
+  tableauCanPlay?: boolean[];
+  noValidMoves?: boolean;
+  onTopCardRightClick?: (card: CardType, tableauIndex: number) => void;
+  ripTriggerByCardId?: Record<string, number>;
+  hideElements?: boolean;
+  dimTopCardIndexes?: Set<number>;
+  hiddenTopCardIndexes?: Set<number>;
+  maskTopValue?: boolean;
+  topCardStepIndexOverrideByColumn?: (columnIndex: number) => number | null;
+  debugStepLabelByColumn?: (columnIndex: number) => string | undefined;
+  tableauRefs?: MutableRefObject<Array<HTMLDivElement | null>>;
+  tableauItemStyle?: (cards: CardType[], idx: number) => CSSProperties | undefined;
+  mode?: 'flat' | 'perspective';
+  className?: string;
+  style?: CSSProperties;
+}
+
 export const Tableau = memo(function Tableau({
   cards,
   tableauIndex,
@@ -54,18 +84,9 @@ export const Tableau = memo(function Tableau({
   onTopCardRightClick,
   ripTriggerByCardId,
 }: TableauProps) {
-  const [hoveredTopCardId, setHoveredTopCardId] = useState<string | null>(null);
   const isSelected = selectedCard?.tableauIndex === tableauIndex;
-  const rawId = useId();
-  const tableauFilterId = useMemo(
-    () => `tableau-watercolor-${tableauIndex}-${rawId.replace(/[:]/g, '')}`,
-    [rawId, tableauIndex]
-  );
   const guidanceActive = guidanceMoves.length > 0;
-  const useTutorialWatercolorTopBand = useMemo(
-    () => cards.length > 0 && cards.every((card) => card.id.startsWith('initial_actions_')),
-    [cards]
-  );
+  const useTutorialWatercolorTopBand = false;
   const effectiveScale = cardScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
   const cardHeight = CARD_SIZE.height * effectiveScale;
@@ -94,6 +115,7 @@ export const Tableau = memo(function Tableau({
     const firstMove = guidanceMoves[0];
     return firstMove.tableauIndex === tableauIndex && firstMove.card.id === topCard.id;
   }, [cards, tableauIndex, guidanceMoves]);
+  const neonMode = FORCE_NEON_CARD_STYLE;
 
   const handleDragStart = useCallback(
     (card: CardType, clientX: number, clientY: number, rect: DOMRect) => {
@@ -125,36 +147,21 @@ export const Tableau = memo(function Tableau({
   }, []);
 
   const getElementFrameBorder = useCallback((element: string) => {
-    switch (element) {
-      case 'W': return 'rgba(147, 197, 253, 0.46)';
-      case 'F': return 'rgba(252, 165, 165, 0.44)';
-      case 'A': return 'rgba(191, 219, 254, 0.45)';
-      case 'E': return 'rgba(253, 230, 138, 0.42)';
-      case 'L': return 'rgba(254, 240, 138, 0.48)';
-      case 'D': return 'rgba(221, 214, 254, 0.44)';
-      case 'N':
-      default:
-        return 'rgba(186, 200, 220, 0.4)';
-    }
+    if (element) return 'rgba(166, 184, 196, 0.36)';
+    return 'rgba(166, 184, 196, 0.36)';
   }, []);
 
-  const getElementTopBandFill = useCallback((element: string) => {
+  const getTableauWatercolorPostFilter = useCallback((element: string) => {
     switch (element) {
-      case 'W':
-        return 'linear-gradient(165deg, rgba(182, 193, 225, 0.96) 0%, rgba(168, 180, 215, 0.95) 100%)';
-      case 'E':
-        return 'linear-gradient(165deg, rgba(227, 200, 71, 0.97) 0%, rgba(214, 182, 52, 0.95) 100%)';
-      case 'A':
-        return 'linear-gradient(165deg, rgba(244, 244, 248, 0.98) 0%, rgba(229, 229, 235, 0.96) 100%)';
-      case 'F':
-        return 'linear-gradient(165deg, rgba(255, 232, 121, 0.98) 0%, rgba(255, 133, 46, 0.97) 52%, rgba(221, 52, 34, 0.96) 100%)';
-      case 'L':
-        return 'linear-gradient(165deg, rgba(255, 248, 198, 0.98) 0%, rgba(246, 226, 146, 0.97) 55%, rgba(224, 194, 96, 0.95) 100%)';
-      case 'D':
-        return 'linear-gradient(165deg, rgba(154, 146, 133, 0.96) 0%, rgba(137, 130, 118, 0.95) 100%)';
+      case 'W': return 'sepia(1) brightness(0.98) contrast(1.05) saturate(0.68) hue-rotate(-14deg)';
+      case 'F': return 'sepia(1) brightness(0.95) contrast(1.08) saturate(0.7) hue-rotate(-34deg)';
+      case 'A': return 'sepia(1) brightness(1.02) contrast(1.04) saturate(0.62) hue-rotate(4deg)';
+      case 'E': return 'sepia(1) brightness(0.97) contrast(1.06) saturate(0.7) hue-rotate(18deg)';
+      case 'L': return 'sepia(1) brightness(1.03) contrast(1.03) saturate(0.6) hue-rotate(30deg)';
+      case 'D': return 'sepia(1) brightness(0.92) contrast(1.09) saturate(0.66) hue-rotate(66deg)';
       case 'N':
       default:
-        return 'linear-gradient(165deg, rgba(194, 190, 171, 0.96) 0%, rgba(177, 173, 156, 0.95) 100%)';
+        return 'sepia(1) brightness(0.97) contrast(1.05) saturate(0.52) hue-rotate(0deg)';
     }
   }, []);
 
@@ -166,33 +173,6 @@ export const Tableau = memo(function Tableau({
       }}
       className="relative"
     >
-      <svg width="0" height="0" className="absolute">
-        <defs>
-          <filter id={`${tableauFilterId}-paint`}>
-            <feTurbulence result="noise-lg" type="fractalNoise" baseFrequency=".0125" numOctaves="2" seed="1222" />
-            <feTurbulence result="noise-md" type="fractalNoise" baseFrequency=".12" numOctaves="3" seed="11413" />
-            <feComposite result="BaseGraphic" in="SourceGraphic" in2="noise-lg" operator="arithmetic" k1="0.3" k2="0.45" k4="-.07" />
-            <feMorphology result="layer-1" in="BaseGraphic" operator="dilate" radius="0.5" />
-            <feDisplacementMap result="layer-1" in="layer-1" in2="noise-lg" xChannelSelector="R" yChannelSelector="B" scale="2" />
-            <feDisplacementMap result="layer-1" in="layer-1" in2="noise-md" xChannelSelector="R" yChannelSelector="B" scale="3" />
-            <feDisplacementMap result="mask" in="layer-1" in2="noise-lg" xChannelSelector="A" yChannelSelector="A" scale="4" />
-            <feGaussianBlur result="mask" in="mask" stdDeviation="6" />
-            <feComposite result="layer-1" in="layer-1" in2="mask" operator="arithmetic" k1="1" k2=".25" k3="-.25" k4="0" />
-            <feDisplacementMap result="layer-2" in="BaseGraphic" in2="noise-lg" xChannelSelector="G" yChannelSelector="R" scale="2" />
-            <feDisplacementMap result="layer-2" in="layer-2" in2="noise-md" xChannelSelector="A" yChannelSelector="G" scale="3" />
-            <feDisplacementMap result="glow" in="BaseGraphic" in2="noise-lg" xChannelSelector="R" yChannelSelector="A" scale="5" />
-            <feMorphology result="glow-diff" in="glow" operator="erode" radius="2" />
-            <feComposite result="glow" in="glow" in2="glow-diff" operator="out" />
-            <feGaussianBlur result="glow" in="glow" stdDeviation=".5" />
-            <feComposite result="layer-2" in="layer-2" in2="glow" operator="arithmetic" k1="1.2" k2="0.55" k3=".3" k4="-0.2" />
-            <feComposite result="watercolor" in="layer-1" in2="layer-2" operator="over" />
-          </filter>
-          <filter id={tableauFilterId} x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="fractalNoise" baseFrequency={useTutorialWatercolorTopBand ? '0.012' : '0.018'} numOctaves={useTutorialWatercolorTopBand ? 2 : 3} seed="37" result="noise" />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale={useTutorialWatercolorTopBand ? 3 : 9} xChannelSelector="R" yChannelSelector="G" />
-          </filter>
-        </defs>
-      </svg>
       {cards.map((card, index) => {
         const isTopCard = index === topVisibleIndex;
         const isSecondCard = index === secondVisibleIndex;
@@ -201,23 +181,36 @@ export const Tableau = memo(function Tableau({
         const isDragging = card.id === draggingCardId;
         if (isDragging) return null;
         const isFaceDown = hiddenTopCard && isTopCard ? true : (!revealAllCards && layout !== 'vertical' && !isTopCard && !isSecondCard);
-        const tableauElementWatercolor = !isFaceDown ? getElementCardWatercolor(card.element) : null;
         const baseFilter = dimTopCard && isTopCard ? 'brightness(0.38) saturate(0.55)' : '';
-        const watercolorFilter = !isFaceDown && !useTutorialWatercolorTopBand ? `url(#${tableauFilterId})` : '';
+        const watercolorFilter = !neonMode && !isFaceDown ? getTableauWatercolorPostFilter(card.element) : '';
         const composedFilter = [baseFilter, watercolorFilter].filter(Boolean).join(' ');
         const usePeekStrip = layout === 'vertical' && !isTopCard;
-        const tutorialHoverLift =
-          useTutorialWatercolorTopBand &&
-          isTopCard &&
-          !isAnyCardDragging &&
-          hoveredTopCardId === card.id;
+        const renderLightweightPeek = usePeekStrip && !revealNextRow;
+        const tutorialHoverLift = false;
+
+        if (renderLightweightPeek && !neonMode) {
+          return (
+            <div
+              key={card.id}
+              className="absolute rounded-md pointer-events-none"
+              style={{
+                left: 0,
+                top: compactPeekTop + hoverHeadroom,
+                width: cardWidth,
+                height: peekHeight,
+                zIndex: index,
+                opacity: 0.8,
+                border: `1px solid ${getElementFrameBorder(card.element)}`,
+                background: getElementWatercolorTint(card.element),
+              }}
+            />
+          );
+        }
 
         return (
           <div
             key={card.id}
             className="absolute relative"
-            onMouseEnter={useTutorialWatercolorTopBand && isTopCard ? () => setHoveredTopCardId(card.id) : undefined}
-            onMouseLeave={useTutorialWatercolorTopBand && isTopCard ? () => setHoveredTopCardId((prev) => (prev === card.id ? null : prev)) : undefined}
             style={{
               left: layout === 'horizontal' ? index * horizontalStep : 0,
               top: layout === 'vertical'
@@ -264,7 +257,7 @@ export const Tableau = memo(function Tableau({
               isAnyCardDragging={isAnyCardDragging}
               isGuidanceTarget={isTopCard && isNextGuidanceMove}
               isDimmed={(guidanceActive && isTopCard && !isNextGuidanceMove) || (dimTopCard && isTopCard)}
-              showGraphics={useTutorialWatercolorTopBand ? false : showGraphics}
+              showGraphics={false}
               suitDisplayOverride={useTutorialWatercolorTopBand ? ({
                 A: 'AIR',
                 W: 'WATER',
@@ -274,15 +267,16 @@ export const Tableau = memo(function Tableau({
                 D: 'DARK',
                 N: 'NEUTRAL',
               }[card.element] ?? 'NEUTRAL') : undefined}
-              cardWatercolor={useTutorialWatercolorTopBand ? null : tableauElementWatercolor}
               borderColorOverride={!isFaceDown ? getElementFrameBorder(card.element) : undefined}
               boxShadowOverride={!isFaceDown ? 'none' : undefined}
               maskValue={maskTopValue && (isTopCard || isSecondCard)}
               disableTilt={true}
               disableHoverLift={useTutorialWatercolorTopBand}
+              disableLegacyShine={true}
+              watercolorOnly={true}
               ripTrigger={ripTriggerByCardId?.[card.id] ?? 0}
             />
-            {!isFaceDown && !useTutorialWatercolorTopBand && (
+            {false && !isFaceDown && !useTutorialWatercolorTopBand && (
               <div
                 className="absolute inset-0 pointer-events-none rounded-lg"
                 style={{
@@ -292,22 +286,6 @@ export const Tableau = memo(function Tableau({
                   mixBlendMode: 'overlay',
                 }}
               />
-            )}
-            {useTutorialWatercolorTopBand && !isFaceDown && (
-              <div
-                className="absolute inset-0 pointer-events-none rounded-lg"
-                style={{ zIndex: 100, isolation: 'isolate', mixBlendMode: 'normal' }}
-              >
-                <div
-                  className="absolute inset-0 rounded-lg"
-                  style={{
-                    background: getElementTopBandFill(card.element),
-                    filter: `url(#${tableauFilterId}-paint)`,
-                    opacity: 0.92,
-                    transform: 'translate(-1px, -1px)',
-                  }}
-                />
-              </div>
             )}
             {dimTopCard && isTopCard && (
               <div
@@ -325,6 +303,147 @@ export const Tableau = memo(function Tableau({
       {cards.length === 0 && (
         <div style={{ width: cardWidth, height: cardHeight }} />
       )}
+    </div>
+  );
+});
+
+export const TableauGroup = memo(function TableauGroup({
+  tableaus,
+  selectedCard,
+  onCardSelect,
+  guidanceMoves,
+  interactionMode,
+  showGraphics,
+  cardScale,
+  onDragStart,
+  draggingCardId,
+  isAnyCardDragging = false,
+  revealNextRow = false,
+  revealAllCards = false,
+  tableauCanPlay = [],
+  noValidMoves = false,
+  onTopCardRightClick,
+  ripTriggerByCardId,
+  hideElements = false,
+  dimTopCardIndexes,
+  hiddenTopCardIndexes,
+  maskTopValue = false,
+  topCardStepIndexOverrideByColumn,
+  debugStepLabelByColumn,
+  tableauRefs,
+  tableauItemStyle,
+  mode = 'flat',
+  className,
+  style,
+}: TableauGroupProps) {
+  if (mode === 'perspective') {
+    return (
+      <div className="tableau-group-perspective-container">
+        <div className="tableau-group-perspective-content flex items-start" style={{ gap: '0px' }}>
+          {tableaus.map((cards, idx) => (
+            <Tableau
+              key={idx}
+              cards={cards}
+              tableauIndex={idx}
+              canPlay={tableauCanPlay[idx] ?? true}
+              noValidMoves={noValidMoves}
+              selectedCard={selectedCard}
+              onCardSelect={onCardSelect}
+              guidanceMoves={guidanceMoves}
+              interactionMode={interactionMode}
+              onDragStart={onDragStart}
+              draggingCardId={draggingCardId}
+              isAnyCardDragging={isAnyCardDragging}
+              showGraphics={showGraphics}
+              cardScale={cardScale}
+              revealAllCards={true}
+              layout="horizontal"
+              revealNextRow={revealNextRow}
+              onTopCardRightClick={onTopCardRightClick}
+              ripTriggerByCardId={ripTriggerByCardId}
+              hideElements={hideElements}
+              dimTopCard={!!dimTopCardIndexes?.has(idx)}
+              hiddenTopCard={!!hiddenTopCardIndexes?.has(idx)}
+              maskTopValue={maskTopValue}
+              topCardStepIndexOverride={topCardStepIndexOverrideByColumn?.(idx) ?? null}
+              debugStepLabel={debugStepLabelByColumn?.(idx)}
+            />
+          ))}
+        </div>
+        <style>{`
+          .tableau-group-perspective-container {
+            padding: 0;
+            perspective: 2000px;
+            display: flex;
+            justify-content: center;
+            overflow: visible;
+            width: 100%;
+          }
+          .tableau-group-perspective-content {
+            transform: perspective(80em) rotateY(-42deg) rotateX(2.4deg);
+            box-shadow:
+              -20px 60px 123px -25px rgba(22, 31, 39, 0.6),
+              -10px 35px 75px -35px rgba(19, 26, 32, 0.2);
+            border-radius: 10px;
+            border: 1px solid rgba(213, 220, 226, 0.4);
+            border-bottom-color: rgba(184, 194, 204, 0.5);
+            transition: box-shadow 1.2s ease;
+            padding: 10px;
+            background: rgba(10, 15, 20, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            transform-style: preserve-3d;
+          }
+          .tableau-group-perspective-content:hover {
+            box-shadow:
+              -30px 80px 140px -20px rgba(22, 31, 39, 0.7),
+              -15px 45px 90px -30px rgba(19, 26, 32, 0.3);
+            background: rgba(20, 25, 35, 0.5);
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div className={className} style={style}>
+      {tableaus.map((cards, idx) => (
+        <div
+          key={idx}
+          ref={(el) => {
+            if (tableauRefs) tableauRefs.current[idx] = el;
+          }}
+          style={tableauItemStyle?.(cards, idx)}
+        >
+          <Tableau
+            cards={cards}
+            tableauIndex={idx}
+            canPlay={tableauCanPlay[idx] ?? true}
+            noValidMoves={noValidMoves}
+            selectedCard={selectedCard}
+            onCardSelect={onCardSelect}
+            guidanceMoves={guidanceMoves}
+            interactionMode={interactionMode}
+            onDragStart={onDragStart}
+            draggingCardId={draggingCardId}
+            isAnyCardDragging={isAnyCardDragging}
+            showGraphics={showGraphics}
+            cardScale={cardScale}
+            revealNextRow={revealNextRow}
+            revealAllCards={revealAllCards}
+            onTopCardRightClick={onTopCardRightClick}
+            ripTriggerByCardId={ripTriggerByCardId}
+            hideElements={hideElements}
+            dimTopCard={!!dimTopCardIndexes?.has(idx)}
+            hiddenTopCard={!!hiddenTopCardIndexes?.has(idx)}
+            maskTopValue={maskTopValue}
+            topCardStepIndexOverride={topCardStepIndexOverrideByColumn?.(idx) ?? null}
+            debugStepLabel={debugStepLabelByColumn?.(idx)}
+          />
+        </div>
+      ))}
     </div>
   );
 });

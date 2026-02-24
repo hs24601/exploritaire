@@ -225,8 +225,8 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
       {
         id: 'aspect',
         label: 'Attune',
-        description: 'The glade resonates with your spirit. Choose an aspect to absorb.',
-        rewards: [{ type: 'aspect-choice', amount: 1, chooseCount: 1, options: ['lupus', 'ursus', 'felis'] }],
+        description: 'The glade resonates with your spirit. Choose an ORIM to absorb.',
+        rewards: [{ type: 'orim-choice', amount: 1, chooseCount: 1, options: ['fireShard', 'iceShard'] }],
       },
       {
         id: 'rest',
@@ -269,8 +269,8 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
       {
         id: 'take_aspect',
         label: 'Read the Markings',
-        description: 'Strange glyphs on the wrapping contain knowledge. Gain an aspect choice.',
-        rewards: [{ type: 'aspect-choice', amount: 1, chooseCount: 1, options: ['lupus', 'ursus', 'felis'] }],
+        description: 'Strange glyphs on the wrapping contain knowledge. Gain an ORIM choice.',
+        rewards: [{ type: 'orim-choice', amount: 1, chooseCount: 1, options: ['fireShard', 'iceShard'] }],
       },
       {
         id: 'leave',

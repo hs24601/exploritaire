@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "balance:deck": "node tools/deck-balance.mjs"
   },
   "dependencies": {
     "@pixi/react": "^8.0.5",

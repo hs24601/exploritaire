@@ -1,5 +1,5 @@
-import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype, PuzzleCompletedPayload, RewardBundle, RewardSource, HitResult } from './types';
-import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, GARDEN_GRID, ALL_ELEMENTS, MAX_KARMA_DEALING_ATTEMPTS, TOKEN_PROXIMITY_THRESHOLD, randomIdSuffix, createFullWildSentinel } from './constants';
+import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype, PuzzleCompletedPayload, RewardBundle, RewardSource, HitResult, CombatDeckState, RestState } from './types';
+import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, GARDEN_GRID, ALL_ELEMENTS, MAX_KARMA_DEALING_ATTEMPTS, TOKEN_PROXIMITY_THRESHOLD, randomIdSuffix, createFullWildSentinel, WILD_SENTINEL_RANK } from './constants';
 import { createDeck, shuffleDeck } from './deck';
 import { canPlayCardWithWild, checkKarmaDealing } from './rules';
 import { createInitialProgress, clearAllProgress as clearAllProgressFn, clearPhaseProgress as clearPhaseProgressFn } from './challenges';
@@ -60,12 +60,15 @@ const DEFAULT_ENEMY_FOUNDATION_SEEDS: Array<{ id: string; rank: number; suit: Su
   { id: 'enemy-shadow', rank: 12, suit: '🌙', element: 'D' },
   { id: 'enemy-sun', rank: 8, suit: '☀️', element: 'L' },
 ];
-const DEFAULT_ENEMY_ACTOR_IDS = ['shadowcub', 'shadowkit'] as const;
+const DEFAULT_ENEMY_ACTOR_IDS = ['shadowcub', 'shadowkit', 'shade'] as const;
 const DEFAULT_EQUIPPED_RELIC_IDS = new Set<string>(['turtles_bide', 'koi_coin', 'heart_of_the_wild', 'hindsight', 'controlled_dragonfire', 'summon_darkspawn']);
 const HINDSIGHT_BEHAVIOR_ID = 'hindsight_v1';
 const HINDSIGHT_LAST_USED_REST_COUNTER = 'hindsightLastUsedRestCount';
 const DEFAULT_KERU_ID = 'keru-primary';
 const KERU_BASE_HP = 1;
+const DEFAULT_SHORT_REST_CHARGES = 4;
+const DEFAULT_RANDOM_BIOME_TABLEAU_COUNT = 7;
+const DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH = 4;
 
 function clampPartyForFoundations(partyActors: Actor[]): Actor[] {
   return partyActors.slice(0, PARTY_FOUNDATION_LIMIT);
@@ -258,42 +261,6 @@ function normalizeKeru(keru?: ActorKeru): ActorKeru {
 }
 
 function getKeruArchetypePatch(archetype: Exclude<ActorKeruArchetype, 'blank'>): Pick<ActorKeru, 'archetype' | 'label' | 'hp' | 'hpMax' | 'armor' | 'stamina' | 'staminaMax' | 'energy' | 'energyMax' | 'evasion' | 'sight' | 'mobility' | 'leadership' | 'tags'> {
-  if (archetype === 'lupus') {
-    return {
-      archetype: 'lupus',
-      label: 'Lupus Keru',
-      hp: 2,
-      hpMax: 2,
-      armor: 0,
-      stamina: 4,
-      staminaMax: 4,
-      energy: 3,
-      energyMax: 3,
-      evasion: 8,
-      sight: 1,
-      mobility: 2,
-      leadership: 3,
-      tags: ['stamina', 'leadership'],
-    };
-  }
-  if (archetype === 'ursus') {
-    return {
-      archetype: 'ursus',
-      label: 'Ursus Keru',
-      hp: 4,
-      hpMax: 4,
-      armor: 2,
-      stamina: 2,
-      staminaMax: 2,
-      energy: 2,
-      energyMax: 2,
-      evasion: 0,
-      sight: 0,
-      mobility: 0,
-      leadership: 1,
-      tags: ['hp', 'armor'],
-    };
-  }
   return {
     archetype: 'felis',
     label: 'Felis Keru',
@@ -487,6 +454,8 @@ export interface PersistedState {
   orimStash: OrimInstance[];
   orimInstances: Record<string, OrimInstance>;
   actorDecks: Record<string, ActorDeckState>;
+  combatDeck?: CombatDeckState;
+  restState?: RestState;
   globalRestCount?: number;
   noRegretCooldowns?: Record<string, number>;
   noRegretCooldown?: number;
@@ -514,6 +483,12 @@ function createActorFoundationCard(actor: Actor): Card {
     suit,
     element,
     id: `actor-${actor.id}-${Date.now()}-${randomIdSuffix()}`,
+    name: definition.name,
+    description: definition.description,
+    tags: definition.titles ?? [],
+    sourceActorId: actor.id,
+    rpgActorId: actor.id,
+    rpgCardKind: 'focus',
   };
 }
 
@@ -636,8 +611,16 @@ export function initializeGame(
     }
     const merged = new Map<string, OrimDefinition>();
     baseDefinitions.forEach((definition) => merged.set(definition.id, definition));
+    const allowedAspectIds = new Set(
+      baseDefinitions
+        .filter((definition) => definition.isAspect)
+        .map((definition) => definition.id)
+    );
     const legacyCombatIds = new Set(['scratch', 'bite', 'claw']);
     persistedDefinitions.forEach((definition) => {
+      if (definition.isAspect && !allowedAspectIds.has(definition.id)) {
+        return;
+      }
       const base = merged.get(definition.id);
       const legacyDomain = legacyCombatIds.has(definition.id) ? 'combat' : 'puzzle';
       merged.set(definition.id, {
@@ -732,6 +715,12 @@ export function initializeGame(
   const baseState: GameState = {
     tableaus: [],
     foundations: [],
+    combatDeck: persisted?.combatDeck,
+    restState: persisted?.restState ?? {
+      maxCharges: DEFAULT_SHORT_REST_CHARGES,
+      currentCharges: DEFAULT_SHORT_REST_CHARGES,
+      fullRestCount: 0,
+    },
     stock: [],
     activeEffects: [],
     turnCount: 0,
@@ -776,7 +765,7 @@ export function initializeGame(
   const randomWildsTile = baseState.tiles.find((tile) => tile.definitionId === 'random_wilds') || null;
   if (!randomWildsTile) return baseState;
 
-  const partyDefinitionIds = ['keru', 'lupus'];
+  const partyDefinitionIds = ['keru'];
   const queuedActors = baseState.availableActors.filter((actor) =>
     partyDefinitionIds.includes(actor.definitionId)
   );
@@ -946,7 +935,24 @@ export function playCard(
   tableauIndex: number,
   foundationIndex: number
 ): GameState | null {
-  const tableau = state.tableaus[tableauIndex];
+  const tableaus = state.tableaus ?? [];
+  const foundations = state.foundations ?? [];
+  const tableau = tableaus[tableauIndex];
+  const foundation = foundations[foundationIndex];
+
+  if (!tableau || !foundation) {
+    if (import.meta.env?.DEV) {
+      console.warn('[playCard] invalid indexes', {
+        tableauIndex,
+        foundationIndex,
+        tableausLength: tableaus.length,
+        foundationsLength: foundations.length,
+        tableauExists: !!tableau,
+        foundationExists: !!foundation,
+      });
+    }
+    return null;
+  }
   if (tableau.length === 0) return null;
 
   const partyActors = getPartyForTile(state, state.activeSessionTileId);
@@ -954,7 +960,6 @@ export function playCard(
   if (foundationActor && !isActorCombatEnabled(foundationActor)) return null;
 
   const card = tableau[tableau.length - 1];
-  const foundation = state.foundations[foundationIndex];
   const foundationTop = foundation[foundation.length - 1];
 
   if (!canPlayCardWithWild(card, foundationTop, state.activeEffects, foundation)) {
@@ -1050,10 +1055,11 @@ function createRandomEnemyActor(): Actor | null {
   const definitionId = DEFAULT_ENEMY_ACTOR_IDS[Math.floor(Math.random() * DEFAULT_ENEMY_ACTOR_IDS.length)];
   const actor = createActor(definitionId);
   if (!actor) return null;
+  const isShade = definitionId === 'shade';
   return {
     ...actor,
-    hpMax: 10,
-    hp: 10,
+    hpMax: isShade ? 25 : 10,
+    hp: isShade ? 25 : 10,
     armor: 0,
     evasion: 5,
     accuracy: 90,
@@ -1368,9 +1374,6 @@ function awardActorComboCards(
   if (foundationActor.definitionId === 'keru') {
     rewards.push(createRpgScratchCard(foundationActor.id));
   }
-  if (foundationActor.definitionId === 'lupus') {
-    if (combo % 3 === 0) rewards.push(createRpgBiteCard(foundationActor.id));
-  }
   const base = rewards.length > 0 ? [...(state.rpgHandCards ?? []), ...rewards] : (state.rpgHandCards ?? []);
   return upgradeRpgHandCards(base);
 }
@@ -1408,7 +1411,8 @@ export function playCardFromHand(
   state: GameState,
   card: Card,
   foundationIndex: number,
-  useWild = false
+  useWild = false,
+  bypassGolfRules = false
 ): GameState | null {
   const isWildCard = card.rank === 0;
   if (state.playtestVariant === 'rpg' && card.id.startsWith('rpg-') && !isWildCard) {
@@ -1416,6 +1420,14 @@ export function playCardFromHand(
   }
   const partyActors = getPartyForTile(state, state.activeSessionTileId);
   const foundationActor = partyActors[foundationIndex];
+  if (foundationActor && !isActorCombatEnabled(foundationActor)) return null;
+  const foundation = state.foundations[foundationIndex];
+  if (!foundation) return null;
+  if (!foundation) return null;
+  const foundationTop = foundation?.[foundation.length - 1];
+  if (!bypassGolfRules && !canPlayCardWithWild(card, foundationTop, state.activeEffects, foundation)) {
+    return null;
+  }
   // Cooldown disabled for now.
 
   const foundationCount = state.foundations.length;
@@ -1539,7 +1551,7 @@ export function playCardFromStock(
     if (!canPlay) return null;
   }
 
-  const nextState = playCardFromHand(state, stockCard, foundationIndex, useWild);
+  const nextState = playCardFromHand(state, stockCard, foundationIndex, useWild, force);
   if (!nextState) return null;
 
   if (!consumeStock) {
@@ -2190,18 +2202,6 @@ export function updateTilePosition(
   const tiles = updateItemInArray(state.tiles, tileId, tile => ({
     ...tile,
     gridPosition: { col: Math.round(col), row: Math.round(row) },
-  }));
-  return tiles === state.tiles ? state : { ...state, tiles };
-}
-
-export function updateTileWatercolorConfig(
-  state: GameState,
-  tileId: string,
-  watercolorConfig: Tile['watercolorConfig']
-): GameState {
-  const tiles = updateItemInArray(state.tiles, tileId, tile => ({
-    ...tile,
-    watercolorConfig: watercolorConfig ?? null,
   }));
   return tiles === state.tiles ? state : { ...state, tiles };
 }
@@ -3012,37 +3012,117 @@ function generateRandomCard(): Card {
 }
 
 /**
- * Generates random tableaus for a randomly generated biome.
- * Each card gets a random rank (1-13), random element from all 7,
- * suit derived from element, and tokenReward matching its element.
+ * Starter combat deck for random biomes.
+ * Intentionally limited so card additions are impactful.
  */
-function generateRandomTableaus(tableauCount: number = 7, cardsPerTableau: number = 4): Card[][] {
-  const tableaus: Card[][] = [];
-  for (let t = 0; t < tableauCount; t++) {
-    const cards: Card[] = [];
-    for (let c = 0; c < cardsPerTableau; c++) {
-      cards.push(generateRandomCard());
-    }
-    tableaus.push(cards);
-  }
-  return tableaus;
-}
-
-function generateShowcaseTableaus(tableauCount: number = 7, cardsPerTableau: number = 4): Card[][] {
-  const tableaus = generateRandomTableaus(tableauCount, cardsPerTableau);
-  const requiredElements: Element[] = ['A', 'E', 'W', 'F', 'D', 'L'];
-  requiredElements.forEach((element, index) => {
-    if (index >= tableaus.length) return;
-    const stack = tableaus[index];
-    if (stack.length === 0) return;
-    const rank = Math.floor(Math.random() * 13) + 1;
-    stack[stack.length - 1] = createCardFromElement(element, rank);
+function createStarterCombatDeckCards(): Card[] {
+  const starterElements: Element[] = ['A', 'E', 'W', 'F', 'D', 'L'];
+  const starterRanks = [3, 4, 5, 6, 7];
+  const cards: Card[] = [];
+  starterElements.forEach((element) => {
+    starterRanks.forEach((rank) => {
+      cards.push(createCardFromElement(element, rank));
+    });
   });
-  return tableaus;
+  return cards;
 }
 
-function generateRandomStock(size: number = 20): Card[] {
-  return Array.from({ length: size }, () => generateRandomCard());
+function createCombatDeckFromOwned(ownedCards: Card[]): CombatDeckState {
+  return {
+    ownedCards: [...ownedCards],
+    drawPile: shuffleDeck([...ownedCards]),
+    discardPile: [],
+  };
+}
+
+function ensureCombatDeck(state: GameState): CombatDeckState {
+  if (state.combatDeck && state.combatDeck.ownedCards.length > 0) {
+    return {
+      ownedCards: [...state.combatDeck.ownedCards],
+      drawPile: [...state.combatDeck.drawPile],
+      discardPile: [...state.combatDeck.discardPile],
+    };
+  }
+  return createCombatDeckFromOwned(createStarterCombatDeckCards());
+}
+
+function drawCardsFromCombatDeck(
+  deck: CombatDeckState,
+  count: number
+): { cards: Card[]; deck: CombatDeckState } {
+  const cards: Card[] = [];
+  let drawPile = [...deck.drawPile];
+  let discardPile = [...deck.discardPile];
+
+  for (let index = 0; index < count; index += 1) {
+    if (drawPile.length === 0) {
+      if (discardPile.length === 0) break;
+      drawPile = shuffleDeck(discardPile);
+      discardPile = [];
+    }
+    const nextCard = drawPile.pop();
+    if (!nextCard) break;
+    cards.push(nextCard);
+  }
+
+  return {
+    cards,
+    deck: {
+      ...deck,
+      drawPile,
+      discardPile,
+    },
+  };
+}
+
+function dealTableausFromCombatDeck(
+  deck: CombatDeckState,
+  tableauCount: number = DEFAULT_RANDOM_BIOME_TABLEAU_COUNT,
+  cardsPerTableau: number = DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH
+): { tableaus: Card[][]; deck: CombatDeckState } {
+  const tableaus: Card[][] = Array.from({ length: tableauCount }, () => []);
+  let nextDeck = deck;
+  for (let row = 0; row < cardsPerTableau; row += 1) {
+    for (let t = 0; t < tableauCount; t += 1) {
+      const drawn = drawCardsFromCombatDeck(nextDeck, 1);
+      nextDeck = drawn.deck;
+      const card = drawn.cards[0] ?? generateRandomCard();
+      tableaus[t].push(card);
+    }
+  }
+  return { tableaus, deck: nextDeck };
+}
+
+function collectAllCombatCardsForRedeal(state: GameState): Card[] {
+  const tableauCards = state.tableaus.flat();
+  const deck = ensureCombatDeck(state);
+  const stockCards = state.stock ?? [];
+  return [...deck.drawPile, ...deck.discardPile, ...tableauCards, ...stockCards];
+}
+
+function shuffleAllCombatCardsIntoDeck(state: GameState): CombatDeckState {
+  const deck = ensureCombatDeck(state);
+  const reshufflePool = collectAllCombatCardsForRedeal(state);
+  const fallbackOwned = deck.ownedCards.length > 0 ? deck.ownedCards : createStarterCombatDeckCards();
+  const ownedCards = reshufflePool.length > 0 ? reshufflePool : fallbackOwned;
+  return {
+    ownedCards: [...ownedCards],
+    drawPile: shuffleDeck([...ownedCards]),
+    discardPile: [],
+  };
+}
+
+function resetRandomBiomeDealFromCombatDeck(
+  state: GameState,
+  tableauCount: number = DEFAULT_RANDOM_BIOME_TABLEAU_COUNT,
+  cardsPerTableau: number = DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH
+): { tableaus: Card[][]; combatDeck: CombatDeckState } {
+  const refreshedDeck = shuffleAllCombatCardsIntoDeck(state);
+  const dealt = dealTableausFromCombatDeck(refreshedDeck, tableauCount, cardsPerTableau);
+  return {
+    tableaus: dealt.tableaus,
+    combatDeck: dealt.deck,
+  };
 }
 
 /**
@@ -3105,9 +3185,14 @@ function startRandomBiome(
     });
   }
 
-  const tableaus = generateShowcaseTableaus(7);
-  const stock = generateRandomStock(20);
   const playtestVariant = state.playtestVariant ?? 'single-foundation';
+  const initialDeck = ensureCombatDeck(state);
+  const useExplorationTableaus = playtestVariant === 'rpg';
+  const dealt = useExplorationTableaus
+    ? null
+    : dealTableausFromCombatDeck(initialDeck, DEFAULT_RANDOM_BIOME_TABLEAU_COUNT, DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH);
+  const tableaus = dealt?.tableaus ?? Array.from({ length: DEFAULT_RANDOM_BIOME_TABLEAU_COUNT }, () => []);
+  const combatDeck = dealt?.deck ?? initialDeck;
   const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const useEnemyFoundations = playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const partyLimit = isWaveBattle ? 1 : PARTY_FOUNDATION_LIMIT;
@@ -3149,7 +3234,13 @@ function startRandomBiome(
     biomeMovesCompleted: 0,
     tableaus,
     foundations,
-    stock,
+    stock: [],
+    combatDeck,
+    restState: state.restState ?? {
+      maxCharges: DEFAULT_SHORT_REST_CHARGES,
+      currentCharges: DEFAULT_SHORT_REST_CHARGES,
+      fullRestCount: 0,
+    },
     activeEffects: [],
     turnCount: 0,
     collectedTokens: createEmptyTokenCounts(),
@@ -3216,12 +3307,19 @@ export function playCardInRandomBiome(
   // Check if biome is infinite for backfill
   const biomeDef = state.currentBiome ? getBiomeDefinition(state.currentBiome) : null;
   const isInfinite = !!biomeDef?.infinite;
-
+  const isRpgExplorationOnly = state.playtestVariant === 'rpg'
+    && !(state.enemyFoundations ?? []).some((stack) => stack.length > 0);
+  const shouldBackfill = isInfinite && !isRpgExplorationOnly;
   const newTableaus = state.tableaus.map((t, i) => {
     if (i !== tableauIndex) return t;
     const remaining = t.slice(0, -1);
-    return isInfinite ? backfillTableau(remaining) : remaining;
+    return shouldBackfill ? backfillTableau(remaining) : remaining;
   });
+  const priorCombatDeck = ensureCombatDeck(state);
+  const nextCombatDeck = {
+    ...priorCombatDeck,
+    discardPile: [...priorCombatDeck.discardPile, card],
+  };
 
   const newFoundations = state.foundations.map((f, i) =>
     i === foundationIndex ? [...f, card] : f
@@ -3273,6 +3371,7 @@ export function playCardInRandomBiome(
     rpgHandCards: isRpgCombatActive(state)
       ? awardActorComboCards(state, foundationIndex, newActorCombos, { sourceSide: 'player' })
       : (state.rpgHandCards ?? []),
+    combatDeck: nextCombatDeck,
     actorDecks: foundationActor
       ? reduceDeckCooldowns({ ...state, actorDecks: state.actorDecks }, foundationActor.id, 1)
       : state.actorDecks,
@@ -3346,6 +3445,13 @@ export function playEnemyCardInRandomBiome(
   });
 
   const nextRpgEnemyHandCards = awardEnemyActorComboCards(state, enemyFoundationIndex, newCombos);
+  const nextCombatDeck = (() => {
+    const combatDeck = ensureCombatDeck(state);
+    return {
+      ...combatDeck,
+      discardPile: [...combatDeck.discardPile, card],
+    };
+  })();
 
   return {
     ...state,
@@ -3354,6 +3460,7 @@ export function playEnemyCardInRandomBiome(
     enemyFoundationCombos: newCombos,
     enemyFoundationTokens: newEnemyTokens,
     rpgEnemyHandCards: nextRpgEnemyHandCards,
+    combatDeck: nextCombatDeck,
     enemyBackfillQueues: nextQueues,
     turnCount: state.turnCount + 1,
   };
@@ -3419,9 +3526,17 @@ export function endRandomBiomeTurn(state: GameState): GameState {
   const partyActors = getPartyForTile(state, state.activeSessionTileId);
   if (partyActors.length === 0) return state;
 
-  const tableaus = generateShowcaseTableaus(7);
-  const stock = generateRandomStock(20);
   const playtestVariant = state.playtestVariant ?? 'single-foundation';
+  const useRpgStaticTableaus = playtestVariant === 'rpg';
+  const refreshedDeal = useRpgStaticTableaus
+    ? null
+    : resetRandomBiomeDealFromCombatDeck(
+      state,
+      state.tableaus.length || DEFAULT_RANDOM_BIOME_TABLEAU_COUNT,
+      state.tableaus[0]?.length || DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH
+    );
+  const tableaus = refreshedDeal?.tableaus ?? state.tableaus;
+  const combatDeck = refreshedDeal?.combatDeck ?? state.combatDeck;
   const usePartyFoundations = playtestVariant === 'party-foundations' || playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const useEnemyFoundations = playtestVariant === 'party-battle' || playtestVariant === 'rpg';
   const foundationActors = clampPartyForFoundations(partyActors);
@@ -3459,8 +3574,9 @@ export function endRandomBiomeTurn(state: GameState): GameState {
   let nextState: GameState = {
     ...state,
     tableaus,
+    combatDeck,
     foundations,
-    stock,
+    stock: [],
     foundationCombos,
     actorCombos: resetActorCombos,
     foundationTokens,
@@ -3516,24 +3632,91 @@ export function endExplorationTurnInRandomBiome(state: GameState): GameState {
 }
 
 /**
- * Rerolls the current random-biome deal in-place.
- * Rebuilds only tableaus (and enemy backfill queue if enemy side is active),
- * preserving active foundations/actors/turn-side so this is safe mid-match.
+ * Regroup in random-biome combat.
+ * Costs 1 short-rest charge and redeals from the persistent combat deck.
  */
-export function rerollRandomBiomeDeal(state: GameState): GameState {
+export function regroupRandomBiomeDeal(state: GameState): GameState {
   if (!state.currentBiome) return state;
   const biomeDef = getBiomeDefinition(state.currentBiome);
   if (!biomeDef?.randomlyGenerated) return state;
+  const restState = state.restState ?? {
+    maxCharges: DEFAULT_SHORT_REST_CHARGES,
+    currentCharges: DEFAULT_SHORT_REST_CHARGES,
+    fullRestCount: 0,
+  };
+  if (restState.currentCharges <= 0) return state;
+  if (state.playtestVariant === 'rpg') return state;
 
-  const nextTableaus = generateShowcaseTableaus(state.tableaus.length || 7);
+  const nextDeal = resetRandomBiomeDealFromCombatDeck(
+    state,
+    state.tableaus.length || DEFAULT_RANDOM_BIOME_TABLEAU_COUNT,
+    state.tableaus[0]?.length || DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH
+  );
   const nextEnemyQueue = state.randomBiomeActiveSide === 'enemy'
-    ? createEnemyBackfillQueues(nextTableaus, 10)
+    ? createEnemyBackfillQueues(nextDeal.tableaus, 10)
     : state.enemyBackfillQueues;
 
   return {
     ...state,
-    tableaus: nextTableaus,
+    tableaus: nextDeal.tableaus,
+    combatDeck: nextDeal.combatDeck,
+    stock: [],
+    restState: {
+      ...restState,
+      currentCharges: Math.max(0, restState.currentCharges - 1),
+    },
+    globalRestCount: (state.globalRestCount ?? 0) + 1,
     enemyBackfillQueues: nextEnemyQueue,
+  };
+}
+
+// Compatibility alias for existing callers.
+export function rerollRandomBiomeDeal(state: GameState): GameState {
+  return regroupRandomBiomeDeal(state);
+}
+
+export function fullRestAtCampfire(state: GameState): GameState {
+  const restState = state.restState ?? {
+    maxCharges: DEFAULT_SHORT_REST_CHARGES,
+    currentCharges: DEFAULT_SHORT_REST_CHARGES,
+    fullRestCount: 0,
+  };
+  return {
+    ...state,
+    restState: {
+      ...restState,
+      currentCharges: restState.maxCharges,
+      fullRestCount: (restState.fullRestCount ?? 0) + 1,
+    },
+  };
+}
+
+export function useSupplyForShortRest(state: GameState, recoveryCharges: number = 2): GameState {
+  const restState = state.restState ?? {
+    maxCharges: DEFAULT_SHORT_REST_CHARGES,
+    currentCharges: DEFAULT_SHORT_REST_CHARGES,
+    fullRestCount: 0,
+  };
+  if (restState.currentCharges >= restState.maxCharges) return state;
+  const recovered = Math.max(1, recoveryCharges);
+  return {
+    ...state,
+    restState: {
+      ...restState,
+      currentCharges: Math.min(restState.maxCharges, restState.currentCharges + recovered),
+    },
+  };
+}
+
+export function addCardToCombatDeck(state: GameState, card: Card): GameState {
+  const deck = ensureCombatDeck(state);
+  return {
+    ...state,
+    combatDeck: {
+      ownedCards: [...deck.ownedCards, card],
+      drawPile: [...deck.drawPile],
+      discardPile: [...deck.discardPile, card],
+    },
   };
 }
 
@@ -3580,6 +3763,74 @@ export function spawnRandomEnemyInRandomBiome(state: GameState): GameState {
     enemyFoundationCombos: nextEnemyCombos,
     enemyFoundationTokens: nextEnemyTokens,
     rpgEnemyHandCards: nextEnemyHands,
+  };
+}
+
+export function spawnEnemyActorInRandomBiome(
+  state: GameState,
+  definitionId: string,
+  foundationIndex: number
+): GameState {
+  if (state.phase !== 'biome') return state;
+  const biomeId = state.currentBiome;
+  if (!biomeId) return state;
+  const biomeDef = getBiomeDefinition(biomeId);
+  if (!biomeDef?.randomlyGenerated) return state;
+  if (state.playtestVariant !== 'rpg') return state;
+  const foundations = state.enemyFoundations;
+  if (!foundations || foundations.length === 0) return state;
+  if (foundationIndex < 0 || foundationIndex >= foundations.length) return state;
+
+  const actor = createActor(definitionId);
+  if (!actor) return state;
+  const card = createActorFoundationCard(actor);
+  const nextEnemyFoundations = foundations.map((foundation, index) => (
+    index === foundationIndex ? [card] : foundation
+  ));
+  const nextEnemyActors = [...(state.enemyActors ?? [])];
+  nextEnemyActors[foundationIndex] = actor;
+  const nextEnemyCombos = state.enemyFoundationCombos
+    ? state.enemyFoundationCombos.map((value, index) => (index === foundationIndex ? 0 : value))
+    : nextEnemyFoundations.map(() => 0);
+  const nextEnemyTokens = state.enemyFoundationTokens
+    ? state.enemyFoundationTokens.map((value, index) => (index === foundationIndex ? createEmptyTokenCounts() : value))
+    : nextEnemyFoundations.map(() => createEmptyTokenCounts());
+  const nextEnemyHands = (() => {
+    const current = state.rpgEnemyHandCards ?? [];
+    const next = nextEnemyFoundations.map((_, index) => [...(current[index] ?? [])]);
+    next[foundationIndex] = [];
+    return next;
+  })();
+
+  return {
+    ...state,
+    enemyFoundations: nextEnemyFoundations,
+    enemyActors: nextEnemyActors,
+    enemyFoundationCombos: nextEnemyCombos,
+    enemyFoundationTokens: nextEnemyTokens,
+    rpgEnemyHandCards: nextEnemyHands,
+  };
+}
+
+export function removeWildcardsFromEnemyFoundations(state: GameState): GameState {
+  const enemyFoundations = state.enemyFoundations ?? [];
+  const playerFoundations = state.foundations ?? [];
+  let changed = false;
+  const nextEnemyFoundations = enemyFoundations.map((foundation) => {
+    const cleaned = foundation.filter((card) => card.rank !== WILD_SENTINEL_RANK);
+    if (cleaned.length !== foundation.length) changed = true;
+    return cleaned;
+  });
+  const nextPlayerFoundations = playerFoundations.map((foundation) => {
+    const cleaned = foundation.filter((card) => card.rank !== WILD_SENTINEL_RANK);
+    if (cleaned.length !== foundation.length) changed = true;
+    return cleaned;
+  });
+  if (!changed) return state;
+  return {
+    ...state,
+    foundations: nextPlayerFoundations,
+    enemyFoundations: nextEnemyFoundations,
   };
 }
 

@@ -32,38 +32,6 @@ export const ORIM_DEFINITIONS: OrimDefinition[] = [
       "A"
     ],
     "effects": []
-  },
-  {
-    "id": "felis",
-    "name": "Felis",
-    "description": "Rogue Archetype",
-    "rarity": "common",
-    "elements": [
-      "N"
-    ],
-    "isAspect": true,
-    "aspectProfile": {
-      "key": "Felis",
-      "rarity": "common",
-      "attributes": []
-    },
-    "effects": [
-      {
-        "type": "evasion",
-        "value": 2,
-        "target": "self"
-      },
-      {
-        "type": "damage",
-        "value": 1,
-        "target": "enemy"
-      },
-      {
-        "type": "maxhp",
-        "value": 5,
-        "target": "enemy"
-      }
-    ]
   }
 ];
 

@@ -15,6 +15,7 @@ const DEFAULT_TABLEAU_DEPTH = 4;
 const ELEMENT_POOL: Array<CardType['element']> = ['N', 'A', 'E', 'W', 'F', 'D', 'L'];
 
 interface UseExplorationTableauDisplaySyncArgs {
+  suspendSync?: boolean;
   isRpgMode: boolean;
   hasSpawnedEnemies: boolean;
   poiMapsReady: boolean;
@@ -36,6 +37,7 @@ interface UseExplorationTableauDisplaySyncArgs {
 }
 
 export function useExplorationTableauDisplaySync({
+  suspendSync = false,
   isRpgMode,
   hasSpawnedEnemies,
   poiMapsReady,
@@ -231,6 +233,7 @@ export function useExplorationTableauDisplaySync({
   }, []);
 
   useEffect(() => {
+    if (suspendSync) return;
     if (!(isRpgMode && !hasSpawnedEnemies)) return;
     if (!setBiomeTableaus) return;
     if (!poiMapsReady) return;
@@ -262,6 +265,7 @@ export function useExplorationTableauDisplaySync({
     isRpgMode,
     poiMapsReady,
     setBiomeTableaus,
+    suspendSync,
     skipPoiCommitRef,
   ]);
 }

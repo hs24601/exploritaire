@@ -1,4 +1,3 @@
-import type { WatercolorConfig } from '../watercolor/types';
 import type { PoiReward } from './worldMapTypes';
 
 export type Suit = '💨' | '⛰️' | '🔥' | '💧' | '⭐' | '🌙' | '☀️';
@@ -101,7 +100,11 @@ export interface Card {
   suit: Suit;
   element: Element;
   id: string;
+  name?: string;
+  description?: string;
+  tags?: string[];
   tokenReward?: Element;
+  rarity?: OrimRarity;
   orimSlots?: OrimSlot[];
   orimDisplay?: {
     id: string;
@@ -119,6 +122,11 @@ export interface Card {
   sourceTableauIndex?: number;
   cooldown?: number;
   maxCooldown?: number;
+  rpgAbilityId?: string;
+  rpgActorId?: string;
+  rpgApCost?: number;
+  rpgCardKind?: 'ability' | 'fast' | 'focus' | 'wild';
+  rpgLevel?: number;
 }
 
 export type GamePhase = 'playing' | 'garden' | 'biome';
@@ -150,6 +158,7 @@ export interface ActorDefinition {
   sprite: string; // Emoji or sprite identifier
   artSrc?: string;
   aliases?: string[]; // Legacy ids or alternate identifiers
+  orimSlots?: Array<{ orimId?: string; locked?: boolean }>;
 }
 
 export interface GridPosition {
@@ -218,7 +227,7 @@ export interface HitResult {
   damageTaken?: number; // Original damage before multiplier (for graze calculation display)
 }
 
-export type ActorKeruArchetype = 'blank' | 'lupus' | 'ursus' | 'felis';
+export type ActorKeruArchetype = 'blank' | 'felis';
 
 export interface ActorKeru {
   id: string;
@@ -263,12 +272,26 @@ export interface RewardBundle {
   rewards: PoiReward[];
 }
 
+export interface CombatDeckState {
+  ownedCards: Card[];
+  drawPile: Card[];
+  discardPile: Card[];
+}
+
+export interface RestState {
+  maxCharges: number;
+  currentCharges: number;
+  fullRestCount: number;
+}
+
 export interface GameState {
   tableaus: Card[][];
   foundations: Card[][];
   enemyFoundations?: Card[][];
   enemyActors?: Actor[];
   rpgHandCards?: Card[];
+  combatDeck?: CombatDeckState;
+  restState?: RestState;
   stock: Card[];
   activeEffects: Effect[];
   turnCount: number;
@@ -497,7 +520,6 @@ export interface Tile {
   gridPosition?: GridPosition; // Position in garden grid
   upgradeLevel: number; // 0, 1, 2, etc.
   actorHomeSlots: ActorHomeSlot[]; // Creature housing slots
-  watercolorConfig?: WatercolorConfig | null;
 }
 
 // === BLUEPRINT SYSTEM ===

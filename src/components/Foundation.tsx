@@ -1,16 +1,19 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Card as CardType, InteractionMode } from '../engine/types';
-import { CARD_SIZE } from '../engine/constants';
+import { CARD_SIZE, WILD_SENTINEL_RANK } from '../engine/constants';
 import { useCardScale } from '../contexts/CardScaleContext';
 import { Card } from './Card';
 import { NEON_COLORS } from '../utils/styles';
+import { WildcardPaintOverlay } from './WildcardPaintOverlay';
+import { FORCE_NEON_CARD_STYLE, SHOW_WATERCOLOR_FILTERS } from '../config/ui';
 
 interface FoundationProps {
   cards: CardType[];
   index: number;
   onFoundationClick: (index: number) => void;
   canReceive: boolean;
+  scale?: number;
   isGuidanceTarget?: boolean;
   isDimmed?: boolean;
   interactionMode: InteractionMode;
@@ -23,6 +26,7 @@ interface FoundationProps {
   countPosition?: 'above' | 'below' | 'none';
   maskValue?: boolean;
   revealValue?: number | null;
+  watercolorOnlyCards?: boolean;
 }
 
 const FOUNDATION_TILT_MAX_DEG = 2.4;
@@ -58,6 +62,7 @@ export const Foundation = memo(function Foundation({
   index,
   onFoundationClick,
   canReceive,
+  scale = 1,
   isGuidanceTarget = false,
   isDimmed = false,
   interactionMode,
@@ -70,10 +75,11 @@ export const Foundation = memo(function Foundation({
   countPosition = 'below',
   maskValue = false,
   revealValue = null,
+  watercolorOnlyCards = false,
 }: FoundationProps) {
   const globalScale = useCardScale();
-  const cardWidth = CARD_SIZE.width * globalScale;
-  const cardHeight = CARD_SIZE.height * globalScale;
+  const cardWidth = CARD_SIZE.width * globalScale * scale;
+  const cardHeight = CARD_SIZE.height * globalScale * scale;
   const showClickHighlight = interactionMode === 'click' && (canReceive || isGuidanceTarget);
   const showDragHighlight = interactionMode === 'dnd' && isDragTarget;
   const showHighlight = showClickHighlight || showDragHighlight;
@@ -139,7 +145,7 @@ export const Foundation = memo(function Foundation({
         transition={
           showHighlight
             ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' }
-            : {}
+            : { duration: 0 }
         }
         className={`relative ${showClickHighlight ? 'cursor-pointer' : 'cursor-default'}`}
       >
@@ -275,8 +281,16 @@ export const Foundation = memo(function Foundation({
         <div className="relative" style={{ width: cardWidth, height: cardHeight }}>
           {stackCards.map((card, stackIndex) => {
             const isTop = stackIndex === stackCards.length - 1;
+            const isWildSentinelTop = isTop && card.rank === WILD_SENTINEL_RANK;
+            const showWatercolorOnlyForCard = watercolorOnlyCards && !FORCE_NEON_CARD_STYLE && !isWildSentinelTop;
             const tilt = stackCards.length <= 1 && isTop ? 0 : getTiltForCard(card.id);
             const offset = isTop ? { x: 0, y: 0 } : getOffsetForCard(card.id);
+            const borderColorOverride = showWatercolorOnlyForCard
+              ? 'rgba(6, 10, 14, 0.9)'
+              : (isWildSentinelTop ? 'transparent' : undefined);
+            const boxShadowOverride = showWatercolorOnlyForCard
+              ? 'none'
+              : (isWildSentinelTop ? 'none' : undefined);
             return (
               <div
                 key={card.id}
@@ -290,7 +304,25 @@ export const Foundation = memo(function Foundation({
                   transition: 'opacity 0.4s ease',
                 }}
               >
-                <Card card={card} isFoundation isDimmed={isDimmed} showGraphics={showGraphics} />
+                <Card
+                  card={card}
+                  isFoundation
+                  isDimmed={isDimmed}
+                  showGraphics={showWatercolorOnlyForCard ? false : showGraphics}
+                  borderColorOverride={borderColorOverride}
+                  boxShadowOverride={boxShadowOverride}
+                  disableLegacyShine={true}
+                  watercolorOnly={showWatercolorOnlyForCard}
+                  showFoundationActorSecretHolo={false}
+                />
+                {isWildSentinelTop && SHOW_WATERCOLOR_FILTERS && (
+                  <div
+                    className="absolute inset-0 rounded-[10px] overflow-hidden pointer-events-none"
+                    style={{ zIndex: 20, opacity: 0.96, width: '100%', height: '100%', background: '#ffffff' }}
+                  >
+                    <WildcardPaintOverlay />
+                  </div>
+                )}
               </div>
             );
           })}

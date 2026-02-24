@@ -15,18 +15,18 @@
       "tags": [],
       "effects": [
         {
-        "type": "damage",
-        "value": 1,
-        "valueByRarity": {
-          "common": 1,
-          "rare": 2,
-          "epic": 3,
-          "legendary": 4,
-          "mythic": 5
-        },
-        "target": "enemy"
-      }
-    ],
+          "type": "damage",
+          "value": 1,
+          "target": "enemy",
+          "valueByRarity": {
+            "common": 1,
+            "rare": 2,
+            "epic": 3,
+            "legendary": 4,
+            "mythic": 5
+          }
+        }
+      ],
       "equipCost": 0
     },
     {
@@ -78,7 +78,10 @@
         {
           "type": "damage",
           "value": 1,
-          "target": "enemy"
+          "target": "enemy",
+          "valueByRarity": {
+            "common": 1
+          }
         }
       ],
       "equipCost": 0
@@ -99,7 +102,10 @@
         {
           "type": "damage",
           "value": 1,
-          "target": "enemy"
+          "target": "enemy",
+          "valueByRarity": {
+            "common": 1
+          }
         }
       ],
       "equipCost": 0
@@ -120,7 +126,10 @@
         {
           "type": "evasion",
           "value": 2,
-          "target": "self"
+          "target": "self",
+          "valueByRarity": {
+            "common": 2
+          }
         }
       ],
       "equipCost": 0
@@ -142,7 +151,10 @@
         {
           "type": "damage",
           "value": 3,
-          "target": "enemy"
+          "target": "enemy",
+          "valueByRarity": {
+            "common": 3
+          }
         }
       ],
       "equipCost": 0
@@ -156,6 +168,7 @@
       "cardElements": [
         "N"
       ],
+      "rarity": "common",
       "abilityType": "exploration",
       "tags": [],
       "effects": [
@@ -163,9 +176,42 @@
           "type": "evasion",
           "value": 3,
           "target": "self",
+          "valueByRarity": {
+            "common": 3
+          },
           "charges": 10
         }
       ],
+      "equipCost": 0
+    },
+    {
+      "id": "zoomies",
+      "label": "Zoomies",
+      "damage": "",
+      "cardId": "",
+      "cardRank": 1,
+      "cardElements": [
+        "N"
+      ],
+      "rarity": "common",
+      "abilityType": "combat",
+      "tags": [],
+      "effects": [],
+      "equipCost": 0
+    },
+    {
+      "id": "nineLives",
+      "label": "Nine Lives",
+      "damage": "",
+      "cardId": "",
+      "cardRank": 1,
+      "cardElements": [
+        "N"
+      ],
+      "rarity": "common",
+      "abilityType": "combat",
+      "tags": [],
+      "effects": [],
       "equipCost": 0
     }
   ]

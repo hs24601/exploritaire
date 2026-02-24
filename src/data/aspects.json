@@ -1,34 +1,3 @@
 {
-  "aspects": [
-    {
-      "id": "ursus",
-      "label": "Ursus",
-      "tags": ["tank", "protection"],
-      "archetypeCard": {
-        "cardId": "keru-archetype-ursus",
-        "cardRank": 0,
-        "cardElement": "earth"
-      }
-    },
-    {
-      "id": "lupus",
-      "label": "Lupus",
-      "tags": ["ranger", "leader"],
-      "archetypeCard": {
-        "cardId": "keru-archetype-lupus",
-        "cardRank": 0,
-        "cardElement": "wind"
-      }
-    },
-    {
-      "id": "felis",
-      "label": "Felis",
-      "tags": ["rogue", "stealth"],
-      "archetypeCard": {
-        "cardId": "keru-archetype-felis",
-        "cardRank": 0,
-        "cardElement": "fire"
-      }
-    }
-  ]
+  "aspects": []
 }
