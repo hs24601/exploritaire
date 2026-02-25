@@ -1,4 +1,4 @@
-import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype, PuzzleCompletedPayload, RewardBundle, RewardSource, HitResult, CombatDeckState, RestState } from './types';
+import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype, PuzzleCompletedPayload, RewardBundle, RewardSource, HitResult, CombatDeckState, RestState, OrimEffectDef } from './types';
 import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, GARDEN_GRID, ALL_ELEMENTS, MAX_KARMA_DEALING_ATTEMPTS, TOKEN_PROXIMITY_THRESHOLD, randomIdSuffix, createFullWildSentinel, WILD_SENTINEL_RANK } from './constants';
 import { createDeck, shuffleDeck } from './deck';
 import { canPlayCardWithWild, checkKarmaDealing } from './rules';
@@ -684,8 +684,9 @@ export function initializeGame(
         ...deck,
         cards: deck.cards.map((card) => ({
           ...card,
+          cost: card.cost ?? 0,
           cooldown: card.cooldown ?? 0,
-          maxCooldown: card.maxCooldown ?? 5,
+          maxCooldown: card.maxCooldown ?? 0,
         })),
       },
     ]))
@@ -1363,19 +1364,92 @@ function awardActorComboCards(
   nextActorCombos: Record<string, number>,
   options?: { allowEnemyDefault?: boolean; sourceSide?: 'player' | 'enemy' }
 ): Card[] | undefined {
+  void foundationIndex;
+  void nextActorCombos;
   if (!canAwardPlayerActorCards(state, options)) return state.rpgHandCards;
   const partyActors = getPartyForTile(state, state.activeSessionTileId);
-  const foundationActor = partyActors[foundationIndex];
-  if (!foundationActor) return state.rpgHandCards;
-  const combo = nextActorCombos[foundationActor.id] ?? 0;
-  if (combo <= 0) return state.rpgHandCards;
-
-  const rewards: Card[] = [];
-  if (foundationActor.definitionId === 'keru') {
-    rewards.push(createRpgScratchCard(foundationActor.id));
-  }
-  const base = rewards.length > 0 ? [...(state.rpgHandCards ?? []), ...rewards] : (state.rpgHandCards ?? []);
-  return upgradeRpgHandCards(base);
+  const actorPool = [...partyActors, ...(state.availableActors ?? [])];
+  const foundations = state.foundations ?? [];
+  const usedActorIds = new Set<string>();
+  const actorIdsByFoundation = foundations.map((foundation, index) => {
+    const top = foundation[0];
+    const fromFoundation = top?.sourceActorId ?? top?.rpgActorId;
+    if (typeof fromFoundation === 'string' && fromFoundation.length > 0) {
+      usedActorIds.add(fromFoundation);
+      return fromFoundation;
+    }
+    const foundationName = String(top?.name ?? '').trim().toLowerCase();
+    if (foundationName) {
+      const matchedByName = actorPool.find((actor) => {
+        if (usedActorIds.has(actor.id)) return false;
+        if (!state.actorDecks[actor.id]) return false;
+        const definition = getActorDefinition(actor.definitionId);
+        return String(definition?.name ?? '').trim().toLowerCase() === foundationName;
+      });
+      if (matchedByName) {
+        usedActorIds.add(matchedByName.id);
+        return matchedByName.id;
+      }
+    }
+    const byIndex = partyActors[index]?.id;
+    if (byIndex && !usedActorIds.has(byIndex) && !!state.actorDecks[byIndex]) {
+      usedActorIds.add(byIndex);
+      return byIndex;
+    }
+    const nextUnused = actorPool.find((actor) => !usedActorIds.has(actor.id) && !!state.actorDecks[actor.id]);
+    if (nextUnused) {
+      usedActorIds.add(nextUnused.id);
+      return nextUnused.id;
+    }
+    return undefined;
+  }).filter((actorId): actorId is string => typeof actorId === 'string' && actorId.length > 0);
+  const uniqueActorIds = Array.from(new Set(actorIdsByFoundation.length > 0 ? actorIdsByFoundation : partyActors.map((actor) => actor.id)));
+  const result: Card[] = [];
+  uniqueActorIds.forEach((actorId, index) => {
+    const actor = partyActors.find((entry) => entry.id === actorId) ?? null;
+    if (actor && !isActorCombatEnabled(actor)) return;
+    if (index < 0 || index >= foundations.length) return;
+    let deck = state.actorDecks[actorId];
+    let orimInstances = state.orimInstances;
+    if (!deck && actor) {
+      const seeded = createActorDeckStateWithOrim(actor.id, actor.definitionId, state.orimDefinitions);
+      deck = seeded.deck;
+      orimInstances = {
+        ...orimInstances,
+        ...Object.fromEntries(seeded.orimInstances.map((instance) => [instance.id, instance])),
+      };
+    }
+    if (!deck) return;
+    deck.cards.forEach((deckCard) => {
+      const slotWithOrim = deckCard.slots.find((slot) => !!slot.orimId);
+      const orimId = slotWithOrim?.orimId ?? null;
+      const instance = orimId ? orimInstances[orimId] : undefined;
+      const inferredDefinitionId = instance?.definitionId
+        ?? (orimId && state.orimDefinitions.some((entry) => entry.id === orimId)
+          ? orimId
+            : state.orimDefinitions.find((entry) => !!orimId && orimId.includes(`orim-${entry.id}-`))?.id);
+        const definition = inferredDefinitionId
+          ? state.orimDefinitions.find((entry) => entry.id === inferredDefinitionId)
+          : undefined;
+        const element = definition?.elements?.[0] ?? 'N';
+        result.push({
+        id: `deckhand-${actorId}-${deckCard.id}`,
+        rank: Math.max(1, Math.min(13, deckCard.value)),
+        element,
+        suit: ELEMENT_TO_SUIT[element],
+        sourceActorId: actorId,
+        sourceDeckCardId: deckCard.id,
+        cooldown: deckCard.cooldown,
+        maxCooldown: deckCard.maxCooldown,
+        rpgApCost: deckCard.cost,
+        rpgAbilityId: definition?.id ?? inferredDefinitionId,
+          name: definition?.name ?? (inferredDefinitionId ? inferredDefinitionId.replace(/[_-]+/g, ' ') : `${actorId} ability`),
+        description: definition?.description,
+        orimSlots: deckCard.slots.map((slot) => ({ ...slot })),
+      });
+    });
+  });
+  return result;
 }
 
 function awardEnemyActorComboCards(
@@ -1428,7 +1502,9 @@ export function playCardFromHand(
   if (!bypassGolfRules && !canPlayCardWithWild(card, foundationTop, state.activeEffects, foundation)) {
     return null;
   }
-  // Cooldown disabled for now.
+  if ((card.cooldown ?? 0) > 0) {
+    return null;
+  }
 
   const foundationCount = state.foundations.length;
 
@@ -1443,13 +1519,7 @@ export function playCardFromHand(
       [foundationActor.id]: (state.actorCombos?.[foundationActor.id] ?? 0) + 1,
     }
     : (state.actorCombos ?? {});
-  const cooldownTicked = foundationActor
-    ? reduceDeckCooldowns(
-      { ...state, actorDecks: state.actorDecks },
-      foundationActor.id,
-      1
-    )
-    : state.actorDecks;
+  const cooldownTicked = state.actorDecks;
   const updatedDecks = card.sourceActorId && card.sourceDeckCardId
     ? setDeckCardCooldown({ ...state, actorDecks: cooldownTicked }, card.sourceActorId, card.sourceDeckCardId)
     : cooldownTicked;
@@ -1473,8 +1543,9 @@ export function playCardFromHand(
       rpgHandCards: isRpgCombatActive(state)
         ? awardActorComboCards({
           ...state,
+          foundations: newFoundations,
           actorCombos: nextActorCombos,
-          rpgHandCards: baseRpgHandCards,
+          actorDecks: updatedDecks,
         }, foundationIndex, nextActorCombos, { sourceSide: 'player' })
         : baseRpgHandCards,
     };
@@ -1521,8 +1592,9 @@ export function playCardFromHand(
     rpgHandCards: isRpgCombatActive(state)
       ? awardActorComboCards({
         ...state,
+        foundations: newFoundations,
         actorCombos: nextActorCombos,
-        rpgHandCards: baseRpgHandCards,
+        actorDecks: updatedDecks,
       }, foundationIndex, nextActorCombos, { sourceSide: 'player' })
       : baseRpgHandCards,
   };
@@ -2497,7 +2569,7 @@ function setDeckCardCooldown(
   const card = deck.cards[cardIndex];
   const updatedCard = {
     ...card,
-    cooldown: card.maxCooldown ?? 5,
+    cooldown: Math.max(0, card.maxCooldown ?? 0),
   };
   return {
     ...state.actorDecks,
@@ -3257,7 +3329,14 @@ function startRandomBiome(
     randomBiomeTurnNumber: 1,
     randomBiomeActiveSide: useEnemyFoundations ? 'player' : undefined,
     enemyDifficulty: useEnemyFoundations ? (biomeDef.enemyDifficulty ?? 'normal') : undefined,
-    rpgHandCards: state.playtestVariant === 'rpg' ? [] : state.rpgHandCards,
+    rpgHandCards: state.playtestVariant === 'rpg'
+      ? (awardActorComboCards({
+        ...state,
+        activeSessionTileId: tileId,
+        tileParties: nextTileParties,
+        foundations,
+      }, 0, actorCombos, { sourceSide: 'player' }) ?? [])
+      : state.rpgHandCards,
     rpgDots: [],
     rpgEnemyDragSlowUntil: 0,
     rpgEnemyDragSlowActorId: undefined,
@@ -3369,12 +3448,13 @@ export function playCardInRandomBiome(
     actorCombos: newActorCombos,
     foundationTokens: newFoundationTokens,
     rpgHandCards: isRpgCombatActive(state)
-      ? awardActorComboCards(state, foundationIndex, newActorCombos, { sourceSide: 'player' })
+      ? awardActorComboCards({
+        ...state,
+        foundations: newFoundations,
+      }, foundationIndex, newActorCombos, { sourceSide: 'player' })
       : (state.rpgHandCards ?? []),
     combatDeck: nextCombatDeck,
-    actorDecks: foundationActor
-      ? reduceDeckCooldowns({ ...state, actorDecks: state.actorDecks }, foundationActor.id, 1)
-      : state.actorDecks,
+    actorDecks: state.actorDecks,
   };
   return recordCardAction(state, nextState);
 }
@@ -3766,6 +3846,51 @@ export function spawnRandomEnemyInRandomBiome(state: GameState): GameState {
   };
 }
 
+function createDrawEffectCard(effect: OrimEffectDef): Card {
+  if (effect.drawWild) return generateRandomCard();
+  const rank = Math.max(1, Math.min(13, Math.floor(effect.drawRank ?? (1 + Math.random() * 13))));
+  const element = effect.drawElement ?? 'N';
+  return createCardFromElement(element, rank);
+}
+
+function applyRpgDrawEffects(
+  state: GameState,
+  effects: OrimEffectDef[],
+  options: {
+    sourceSide: 'player' | 'enemy';
+    targetEnemyIndex?: number;
+  }
+): GameState {
+  const drawEffects = effects.filter((effect) => effect.type === 'draw');
+  if (drawEffects.length === 0) return state;
+  let nextState = state;
+  for (const effect of drawEffects) {
+    const drawCount = Math.max(0, Math.floor(effect.value ?? 1));
+    if (drawCount <= 0) continue;
+    const cards = Array.from({ length: drawCount }, () => createDrawEffectCard(effect));
+    const targetKey = effect.target === 'self' || effect.target === 'ally'
+      ? options.sourceSide
+      : (options.sourceSide === 'player' ? 'enemy' : 'player');
+    if (targetKey === 'player') {
+      nextState = {
+        ...nextState,
+        rpgHandCards: upgradeRpgHandCards([...(nextState.rpgHandCards ?? []), ...cards]),
+      };
+      continue;
+    }
+    const enemyActors = nextState.enemyActors ?? [];
+    const enemyHands = nextState.rpgEnemyHandCards ?? enemyActors.map(() => []);
+    const modeAll = effect.target === 'all_enemies';
+    const targetIndex = options.targetEnemyIndex ?? 0;
+    const nextHands = enemyHands.map((hand, index) => {
+      if (modeAll || index === targetIndex) return [...hand, ...cards];
+      return [...hand];
+    });
+    nextState = { ...nextState, rpgEnemyHandCards: nextHands };
+  }
+  return nextState;
+}
+
 export function spawnEnemyActorInRandomBiome(
   state: GameState,
   definitionId: string,
@@ -3998,7 +4123,11 @@ export function playRpgHandCardOnActor(
         };
       }
     }
-    return stripCardFromHand(damagedState);
+    const withDrawEffects = applyRpgDrawEffects(damagedState, orimEffects, {
+      sourceSide: 'player',
+      targetEnemyIndex: actorIndex,
+    });
+    return stripCardFromHand(withDrawEffects);
   }
 
   if (!state.activeSessionTileId) return state;
@@ -4062,7 +4191,10 @@ export function playRpgHandCardOnActor(
       };
     }
   }
-  return stripCardFromHand(damagedState);
+  const withDrawEffects = applyRpgDrawEffects(damagedState, orimEffects, {
+    sourceSide: 'player',
+  });
+  return stripCardFromHand(withDrawEffects);
 }
 
 export function playEnemyRpgHandCardOnActor(
@@ -4195,10 +4327,13 @@ export function playEnemyRpgHandCardOnActor(
   const nextEnemyHands = enemyHands.map((cards, index) =>
     index === enemyActorIndex ? cards.filter((entry) => entry.id !== cardId) : [...cards]
   );
-  return {
+  const afterPlayCardState: GameState = {
     ...nextState,
     rpgEnemyHandCards: nextEnemyHands,
   };
+  return applyRpgDrawEffects(afterPlayCardState, orimEffects, {
+    sourceSide: 'enemy',
+  });
 }
 
 export function adjustRpgHandCardRarity(
@@ -4229,13 +4364,21 @@ export function adjustRpgHandCardRarity(
 
 export function tickRpgCombat(state: GameState, now: number = Date.now()): GameState {
   if (state.playtestVariant !== 'rpg') return state;
+  const lastDeckTickAt = state.rpgDeckCooldownLastTickAt ?? now;
+  const elapsedMs = Math.max(0, now - lastDeckTickAt);
+  const hasActiveDeckCooldowns = Object.values(state.actorDecks ?? {}).some((deck) =>
+    deck.cards.some((card) => (card.cooldown ?? 0) > 0)
+  );
+  const elapsedSeconds = elapsedMs / 1000;
   const slowExpired = (state.rpgEnemyDragSlowUntil ?? 0) > 0 && now >= (state.rpgEnemyDragSlowUntil ?? 0);
   const cloudExpired = (state.rpgCloudSightUntil ?? 0) > 0 && now >= (state.rpgCloudSightUntil ?? 0);
   const soarExpired = (state.rpgSoarEvasionUntil ?? 0) > 0 && now >= (state.rpgSoarEvasionUntil ?? 0);
   const blindedEnemyExpired = (state.rpgBlindedEnemyUntil ?? 0) > 0 && now >= (state.rpgBlindedEnemyUntil ?? 0);
   const blindedPlayerExpired = (state.rpgBlindedPlayerUntil ?? 0) > 0 && now >= (state.rpgBlindedPlayerUntil ?? 0);
   const dots = state.rpgDots ?? [];
-  if (dots.length === 0 && !slowExpired && !cloudExpired && !soarExpired && !blindedEnemyExpired && !blindedPlayerExpired) return state;
+  if (dots.length === 0 && !slowExpired && !cloudExpired && !soarExpired && !blindedEnemyExpired && !blindedPlayerExpired && !hasActiveDeckCooldowns) {
+    return state;
+  }
 
   let changed = false;
   let nextState: GameState = state;
@@ -4259,6 +4402,19 @@ export function tickRpgCombat(state: GameState, now: number = Date.now()): GameS
   }
   if (blindedPlayerExpired) {
     nextState = { ...nextState, rpgBlindedPlayerLevel: 0, rpgBlindedPlayerUntil: 0 };
+    changed = true;
+  }
+  if (hasActiveDeckCooldowns && elapsedSeconds > 0) {
+    const nextDecks = Object.fromEntries(
+      Object.entries(nextState.actorDecks).map(([actorId, deck]) => {
+        const nextCards = deck.cards.map((card) => ({
+          ...card,
+          cooldown: Math.max(0, (card.cooldown ?? 0) - elapsedSeconds),
+        }));
+        return [actorId, { ...deck, cards: nextCards }];
+      })
+    );
+    nextState = { ...nextState, actorDecks: nextDecks };
     changed = true;
   }
 
@@ -4315,10 +4471,19 @@ export function tickRpgCombat(state: GameState, now: number = Date.now()): GameS
 
   const filteredDots = nextDots.filter((dot) => dot.remainingTicks > 0);
   if (filteredDots.length !== dots.length) changed = true;
+  const canonicalHand = awardActorComboCards(nextState, 0, nextState.actorCombos ?? {}, { sourceSide: 'player' }) ?? [];
+  const currentHand = nextState.rpgHandCards ?? [];
+  const handChanged = canonicalHand.length !== currentHand.length
+    || canonicalHand.some((card, index) => card.id !== currentHand[index]?.id);
+  if (handChanged) {
+    nextState = { ...nextState, rpgHandCards: canonicalHand };
+    changed = true;
+  }
   if (!changed) return state;
   return {
     ...nextState,
     rpgDots: filteredDots,
+    rpgDeckCooldownLastTickAt: now,
   };
 }
 
@@ -4559,17 +4724,13 @@ export function playCardInBiome(
   }
 
   const partyActors = getPartyForTile(newState, newState.activeSessionTileId);
-  const foundationActor = partyActors[foundationIndex];
   const newCombos = incrementFoundationCombos(newState, foundationIndex);
-  const nextDecks = foundationActor
-    ? reduceDeckCooldowns({ ...newState, actorDecks: newState.actorDecks }, foundationActor.id, 1)
-    : newState.actorDecks;
   return {
     ...newState,
     biomeMovesCompleted: movesCompleted,
     pendingBlueprintCards,
     foundationCombos: newCombos,
-    actorDecks: nextDecks,
+    actorDecks: newState.actorDecks,
   };
 }
 

@@ -22,6 +22,13 @@ interface CardProps {
   card: CardType | null;
   faceDown?: boolean;
   isFoundation?: boolean;
+  foundationOverlay?: {
+    name: string;
+    hp?: number;
+    accentColor?: string;
+    rankDisplay?: string;
+    comboCount?: number;
+  };
   size?: { width: number; height: number };
   canPlay?: boolean;
   hasExpansion?: boolean;
@@ -44,6 +51,7 @@ interface CardProps {
   maskValue?: boolean;
   disableTilt?: boolean;
   disableHoverLift?: boolean;
+  disableHoverGlow?: boolean;
   hideElements?: boolean;
   rpgSubtitleRarityOnly?: boolean;
   ripTrigger?: number;
@@ -56,6 +64,7 @@ export const Card = memo(function Card({
   card,
   faceDown = false,
   isFoundation = false,
+  foundationOverlay,
   size,
   canPlay = false,
   hasExpansion = false,
@@ -78,6 +87,7 @@ export const Card = memo(function Card({
   maskValue = false,
   disableTilt = false,
   disableHoverLift = false,
+  disableHoverGlow = false,
   ripTrigger = 0,
   disableLegacyShine = false,
   watercolorOnly = false,
@@ -193,7 +203,26 @@ export const Card = memo(function Card({
     return Number.isFinite(parsed) ? parsed : 0;
   }, [card]);
   const rpgCardMeta = useMemo(() => {
-    if (!card || !card.id.startsWith('rpg-')) return null;
+    if (!card) return null;
+    const hasRpgData = !!card.rpgAbilityId || !!card.sourceDeckCardId || card.rpgApCost !== undefined;
+    if (!card.id.startsWith('rpg-') && !hasRpgData) return null;
+    if (hasRpgData && !card.id.startsWith('rpg-')) {
+      const normalizedAbilityId = String(card.rpgAbilityId ?? '')
+        .replace(/[_-]+/g, ' ')
+        .trim();
+      const displayName = card.name && card.name.trim().toLowerCase() !== 'ability'
+        ? card.name
+        : (normalizedAbilityId || 'Ability');
+      const title = displayName.toUpperCase();
+      const ap = Math.max(0, Number(card.rpgApCost ?? 0));
+      const cooldown = Math.max(0, Number(card.maxCooldown ?? 0));
+      return {
+        title,
+        subtitle: `AP ${ap}${cooldown > 0 ? `  CD ${cooldown}s` : ''}`,
+        titleColor: '#9de3ff',
+        subtitleColor: '#d4f3ff',
+      };
+    }
     if (card.id.startsWith('rpg-scratch-')) {
       return {
         title: 'SCRATCH',
@@ -381,7 +410,7 @@ export const Card = memo(function Card({
       const glowOpacity = elementKey === 'A' ? 'ee' : 'cc';
       return `0 0 ${outerSize}px ${neonColor}${glowOpacity}, inset 0 0 ${insetSize}px ${neonColor}55`;
     }
-    return `0 0 10px ${suitColor}33`;
+    return disableHoverGlow ? undefined : `0 0 10px ${suitColor}33`;
   };
 const getWatercolorColorFilter = () => {
   if (!SHOW_WATERCOLOR_FILTERS) return 'none';
@@ -406,6 +435,7 @@ const getWatercolorColorFilter = () => {
   const showDarkArtOverlay = showElementArtOverlays && showGraphics && elementKey === 'D' && !faceDown && !isAnyCardDragging;
   const textColorBase = neonMode ? neonColor : (watercolorOnly ? 'rgba(226, 233, 238, 0.95)' : suitColor);
   const dimmedTextColor = (neonMode || !watercolorOnly) ? `${textColorBase}44` : textColorBase;
+  const topOverlayZ = showFoundationActorSecretHolo ? 3 : 1;
   useEffect(() => {
     if (!showLightArtOverlay || !isHovered) return;
     const interval = setInterval(() => {
@@ -859,6 +889,70 @@ const getWatercolorColorFilter = () => {
             }}
           />
         </>
+      )}
+      {foundationOverlay && !faceDown && (
+        <div
+          className="absolute inset-[8%] rounded-xl pointer-events-none z-[30] flex flex-col items-center justify-center text-center px-3 py-3 gap-1"
+          style={{
+            background: 'linear-gradient(180deg, rgba(6, 8, 12, 0.86) 0%, rgba(6, 8, 12, 0.62) 100%)',
+            boxShadow: `0 0 18px ${(foundationOverlay.accentColor ?? suitColor)}aa, inset 0 0 0 1px ${(foundationOverlay.accentColor ?? suitColor)}b5`,
+            backdropFilter: 'blur(2px)',
+            mixBlendMode: 'normal',
+          }}
+        >
+          <div
+            className="absolute inset-0 opacity-70"
+            style={{
+              background: `radial-gradient(circle at 30% 30%, ${(foundationOverlay.accentColor ?? suitColor)}55 0 36%, transparent 70%)`,
+            }}
+          />
+          <div className="relative w-full flex flex-col items-center justify-center gap-1 text-center">
+            {foundationOverlay.rankDisplay && (
+              <div
+                className="font-black leading-none drop-shadow-md"
+                style={{
+                  fontSize: Math.max(20, Math.round(frameSize.width * 0.3)),
+                  letterSpacing: '0.08em',
+                  color: '#fefefe',
+                  textShadow: `0 0 18px ${(foundationOverlay.accentColor ?? suitColor)}dd`,
+                  lineHeight: 0.9,
+                }}
+              >
+                {foundationOverlay.rankDisplay}
+              </div>
+            )}
+            <div
+              className="text-[18px] font-black leading-tight drop-shadow-md px-2"
+              style={{ color: '#f5f8ff', textShadow: `0 0 16px ${(foundationOverlay.accentColor ?? suitColor)}cc` }}
+            >
+              {foundationOverlay.name}
+            </div>
+            {typeof foundationOverlay.hp === 'number' && (
+              <div
+                className="mt-1 rounded-full px-2 py-[2px] text-[10px] font-semibold"
+                style={{
+                  color: '#0a0a0a',
+                  backgroundColor: foundationOverlay.accentColor ?? suitColor,
+                  boxShadow: `0 0 10px ${(foundationOverlay.accentColor ?? suitColor)}99`,
+                }}
+              >
+                HP {foundationOverlay.hp}
+              </div>
+            )}
+            {typeof foundationOverlay.comboCount === 'number' && (
+              <div
+                className="mt-1 rounded-full px-2 py-[2px] text-[10px] font-bold tracking-[0.12em]"
+                style={{
+                  color: '#0a0a0a',
+                  backgroundColor: foundationOverlay.accentColor ?? suitColor,
+                  boxShadow: `0 0 8px ${(foundationOverlay.accentColor ?? suitColor)}99`,
+                }}
+              >
+                {foundationOverlay.comboCount}
+              </div>
+            )}
+          </div>
+        </div>
       )}
       {showWaterArtOverlay && (
         <div
@@ -1864,13 +1958,14 @@ const getWatercolorColorFilter = () => {
                   })()}
                 </div>
               ) : cardTitleMeta ? (
-                <div className="relative z-[2] flex flex-col items-center gap-0.5">
+                <div className="relative z-[2] flex flex-col items-center gap-0">
                   <span
                     style={{
                       color: cardTitleMeta.titleColor,
                       fontWeight: 800,
                       fontSize: Math.max(9, Math.round(frameSize.width * 0.11)),
                       letterSpacing: '0.16em',
+                      lineHeight: 0.92,
                       textShadow: `0 0 8px ${cardTitleMeta.titleColor}88`,
                     }}
                   >
@@ -1882,10 +1977,23 @@ const getWatercolorColorFilter = () => {
                       fontWeight: 800,
                       fontSize: Math.max(9, Math.round(frameSize.width * 0.1)),
                       letterSpacing: '0.12em',
+                      lineHeight: 0.9,
                       textShadow: `0 0 8px ${cardTitleMeta.subtitleColor}88`,
                     }}
                   >
                     {cardTitleMeta.subtitle}
+                  </span>
+                  <span
+                    style={{
+                      color: '#f4f6ff',
+                      fontWeight: 900,
+                      fontSize: Math.max(10, Math.round(frameSize.width * 0.14)),
+                      letterSpacing: '0.06em',
+                      lineHeight: 0.9,
+                      textShadow: '0 0 8px rgba(170, 220, 255, 0.85)',
+                    }}
+                  >
+                    {getRankDisplay(card.rank)}
                   </span>
                 </div>
               ) : (

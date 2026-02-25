@@ -21,13 +21,16 @@ export type OrimDomain = 'puzzle' | 'combat';
  * This is the engine-level representation of authored effects.
  */
 export interface OrimEffectDef {
-  type: 'damage' | 'healing' | 'armor' | 'evasion' | 'defense' | 'burn' | 'bleed' | 'stun';
+  type: 'damage' | 'healing' | 'armor' | 'evasion' | 'defense' | 'burn' | 'bleed' | 'stun' | 'draw';
   value?: number;
   target: 'self' | 'enemy' | 'all_enemies' | 'ally';
   element?: Element;
   elementalValue?: number;
   charges?: number;
   duration?: number;
+  drawWild?: boolean;
+  drawRank?: number;
+  drawElement?: Element;
 }
 
 export interface OrimAspectAttribute {
@@ -85,6 +88,7 @@ export type RelicCombatEvent =
 export interface DeckCardInstance {
   id: string;
   value: number;
+  cost: number;
   slots: OrimSlot[];
   cooldown: number;
   maxCooldown: number;
@@ -335,6 +339,7 @@ export interface GameState {
   enemyDifficulty?: EnemyDifficulty;
   enemyBackfillQueues?: Card[][]; // Pre-seeded backfill queues used on enemy turns
   rpgDots?: RpgDotEffect[];
+  rpgDeckCooldownLastTickAt?: number;
   rpgEnemyDragSlowUntil?: number;
   rpgEnemyDragSlowActorId?: string;
   rpgCloudSightUntil?: number;

@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Card as CardType, InteractionMode } from '../engine/types';
 import { CARD_SIZE, WILD_SENTINEL_RANK } from '../engine/constants';
+import { getRankDisplay } from '../engine/rules';
 import { useCardScale } from '../contexts/CardScaleContext';
 import { Card } from './Card';
 import { NEON_COLORS } from '../utils/styles';
@@ -27,6 +28,13 @@ interface FoundationProps {
   maskValue?: boolean;
   revealValue?: number | null;
   watercolorOnlyCards?: boolean;
+  foundationOverlay?: {
+    name: string;
+    title?: string;
+    subtitle?: string;
+    hp?: number;
+    accentColor?: string;
+  };
 }
 
 const FOUNDATION_TILT_MAX_DEG = 2.4;
@@ -76,6 +84,7 @@ export const Foundation = memo(function Foundation({
   maskValue = false,
   revealValue = null,
   watercolorOnlyCards = false,
+  foundationOverlay,
 }: FoundationProps) {
   const globalScale = useCardScale();
   const cardWidth = CARD_SIZE.width * globalScale * scale;
@@ -291,6 +300,8 @@ export const Foundation = memo(function Foundation({
             const boxShadowOverride = showWatercolorOnlyForCard
               ? 'none'
               : (isWildSentinelTop ? 'none' : undefined);
+            const rankDisplay = getRankDisplay(card.rank);
+            const comboCount = Math.max(0, cards.length - 1);
             return (
               <div
                 key={card.id}
@@ -314,15 +325,11 @@ export const Foundation = memo(function Foundation({
                   disableLegacyShine={true}
                   watercolorOnly={showWatercolorOnlyForCard}
                   showFoundationActorSecretHolo={false}
+                  disableTilt
+                  disableHoverLift
+                  disableHoverGlow
+                  foundationOverlay={isTop ? { ...foundationOverlay, rankDisplay, comboCount } : undefined}
                 />
-                {isWildSentinelTop && SHOW_WATERCOLOR_FILTERS && (
-                  <div
-                    className="absolute inset-0 rounded-[10px] overflow-hidden pointer-events-none"
-                    style={{ zIndex: 20, opacity: 0.96, width: '100%', height: '100%', background: '#ffffff' }}
-                  >
-                    <WildcardPaintOverlay />
-                  </div>
-                )}
               </div>
             );
           })}

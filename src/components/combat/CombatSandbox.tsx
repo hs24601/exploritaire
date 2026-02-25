@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGraphics } from '../../contexts/GraphicsContext';
+import { useCardScalePreset } from '../../contexts/CardScaleContext';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX, WILD_SENTINEL_RANK } from '../../engine/constants';
+import { getRankDisplay } from '../../engine/rules';
 import { getBiomeDefinition } from '../../engine/biomes';
 import { getActorDefinition } from '../../engine/actors';
+import { createActorDeckStateWithOrim } from '../../engine/actorDecks';
 import { Foundation } from '../Foundation';
 import { Hand } from '../Hand';
 import { DragPreview } from '../DragPreview';
-import { DedicatedEnemyTableau } from './DedicatedEnemyTableau';
 import { DedicatedPlayerTableau } from './DedicatedPlayerTableau';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import type { Actor, Card as CardType, GameState, SelectedCard } from '../../engine/types';
@@ -49,28 +51,30 @@ interface CombatSandboxProps {
 const DIFFICULTY_ORDER: NonNullable<GameState['enemyDifficulty']>[] = ['easy', 'normal', 'hard', 'divine'];
 const COMBAT_STANDARD_TABLEAU_COUNT = 7;
 const COMBAT_STANDARD_TABLEAU_DEPTH = 4;
-const COMBAT_STANDARD_HAND_COUNT = 5;
-const COMBAT_LAB_HAND_COUNT = 10;
 const COMBAT_RANDOM_ELEMENTAL_POOL: CardType['element'][] = ['A', 'W', 'E', 'F', 'L', 'D', 'N'];
-const COMBAT_LAB_FOUNDATION_ACTOR_DEFINITION_IDS: Array<'felis' | 'ursus'> = ['felis', 'ursus'];
+const COMBAT_LAB_FOUNDATION_ACTOR_DEFINITION_IDS: Array<'felis' | 'ursus' | 'lupus'> = ['felis', 'ursus', 'lupus'];
+const ENEMY_TABLEAU_STACK_PEEK_PX = 8;
+const ARENA_FIT_PADDING_X = 16;
+const ARENA_FIT_PADDING_Y = 20;
+const ARENA_MIN_SCALE = 0.35;
 
-function findActorForLabFoundation(state: GameState, definitionId: 'felis' | 'ursus'): Actor | null {
+function findActorForLabFoundation(state: GameState, definitionId: 'felis' | 'ursus' | 'lupus'): Actor | null {
   const partyActors = Object.values(state.tileParties ?? {}).flat();
   return partyActors.find((actor) => actor.definitionId === definitionId)
     ?? state.availableActors.find((actor) => actor.definitionId === definitionId)
     ?? null;
 }
 
-function createLabFoundationActorCard(definitionId: 'felis' | 'ursus', actor: Actor | null): CardType {
-  const fallbackName = definitionId === 'felis' ? 'Felis' : 'Ursus';
+function createLabFoundationActorCard(definitionId: 'felis' | 'ursus' | 'lupus', actor: Actor | null): CardType {
+  const fallbackName = definitionId === 'felis' ? 'Felis' : definitionId === 'ursus' ? 'Ursus' : 'Lupus';
   const actorDefinition = getActorDefinition(actor?.definitionId ?? definitionId);
   const actorName = actorDefinition?.name ?? fallbackName;
   const actorTitles = actorDefinition?.titles?.filter(Boolean) ?? [];
   return {
     id: `combatlab-foundation-${definitionId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    rank: WILD_SENTINEL_RANK,
-    suit: ELEMENT_TO_SUIT.N,
-    element: 'N',
+    rank: actorDefinition?.value ?? 1,
+    suit: actorDefinition?.suit ?? ELEMENT_TO_SUIT.N,
+    element: actorDefinition?.element ?? 'N',
     name: actorName,
     description: actorDefinition?.description ?? 'Primary foundation actor.',
     tags: actorTitles.slice(0, 3),
@@ -80,14 +84,25 @@ function createLabFoundationActorCard(definitionId: 'felis' | 'ursus', actor: Ac
   };
 }
 
+function inferFoundationDefinitionId(card: CardType | undefined): 'felis' | 'ursus' | 'lupus' | null {
+  if (!card) return null;
+  const normalized = String(card.name ?? '').trim().toLowerCase();
+  if (normalized === 'felis') return 'felis';
+  if (normalized === 'ursus') return 'ursus';
+  if (normalized === 'lupus') return 'lupus';
+  return null;
+}
+
 function buildLabSeededFoundations(state: GameState, existing: CardType[][]): CardType[][] {
   const felisActor = findActorForLabFoundation(state, COMBAT_LAB_FOUNDATION_ACTOR_DEFINITION_IDS[0]);
   const ursusActor = findActorForLabFoundation(state, COMBAT_LAB_FOUNDATION_ACTOR_DEFINITION_IDS[1]);
+  const lupusActor = findActorForLabFoundation(state, COMBAT_LAB_FOUNDATION_ACTOR_DEFINITION_IDS[2]);
+  const existingRest = existing.slice(3).map((stack) => [...stack]);
   return [
     [createLabFoundationActorCard('felis', felisActor)],
     [createLabFoundationActorCard('ursus', ursusActor)],
-    [...(existing[2] ?? [])],
-    [...(existing[3] ?? [])],
+    [createLabFoundationActorCard('lupus', lupusActor)],
+    ...existingRest,
   ];
 }
 
@@ -126,12 +141,6 @@ function createCombatStandardTableaus(): CardType[][] {
   ));
 }
 
-function createCombatStandardHandCards(count = COMBAT_STANDARD_HAND_COUNT): CardType[] {
-  return Array.from({ length: count }, (_value, handIndex) => (
-    createCombatStandardCard(-1, handIndex, count)
-  ));
-}
-
 export function CombatSandbox({
   open,
   isLabMode = false,
@@ -150,43 +159,134 @@ export function CombatSandbox({
 }: CombatSandboxProps) {
   if (!open) return null;
 
-  const enemyCount = gameState.enemyActors?.length ?? 0;
-  const enemyFoundationCount = gameState.enemyFoundations?.filter((foundation) => foundation.length > 0).length ?? 0;
   const activeSide = gameState.randomBiomeActiveSide ?? 'player';
+  const enemyCount = 1;
   const currentDifficulty = gameState.enemyDifficulty ?? 'normal';
   const currentDifficultyIndex = Math.max(0, DIFFICULTY_ORDER.indexOf(currentDifficulty));
   const nextDifficulty = DIFFICULTY_ORDER[(currentDifficultyIndex + 1) % DIFFICULTY_ORDER.length];
   const [configCollapsed, setConfigCollapsed] = useState(false);
   const fpsLabelRef = useRef<HTMLDivElement | null>(null);
   const showGraphics = useGraphics();
-  const enemyPreviewFoundations = gameState.enemyFoundations ?? [];
-  const activeEnemyCount = (gameState.enemyActors ?? []).filter((actor) => (actor?.hp ?? 0) > 0).length;
-  const enemyPreviewFoundationsForDisplay = activeEnemyCount > 1
-    ? enemyPreviewFoundations
-    : enemyPreviewFoundations.slice(0, 1);
-  const fallbackEnemyFoundationRef = useRef<CardType[][]>([[createLabTargetDummyFoundationCard()]]);
-  const hasEnemyFoundationCards = enemyPreviewFoundationsForDisplay.some((stack) => stack.length > 0);
-  const enemyFoundationsForDisplay = (isLabMode && !hasEnemyFoundationCards)
-    ? fallbackEnemyFoundationRef.current
-    : enemyPreviewFoundationsForDisplay;
+  const tableGlobalScale = useCardScalePreset('table');
+  const enemyFoundations = useMemo<CardType[][]>(() => {
+    const existing = gameState.enemyFoundations ?? [];
+    if (existing.length > 0) return existing;
+    return [[createLabTargetDummyFoundationCard()]];
+  }, [gameState.enemyFoundations]);
+  const enemyFoundationCount = enemyFoundations.length;
   const previewPlayerFoundations = gameState.foundations;
-  const getFoundationDropRef = (index: number) =>
-    index >= 0 && index < previewPlayerFoundations.length ? setFoundationRef : undefined;
-  const [fallbackHandCards, setFallbackHandCards] = useState<CardType[]>(() => createCombatStandardHandCards(isLabMode ? COMBAT_LAB_HAND_COUNT : COMBAT_STANDARD_HAND_COUNT));
-  const hasRenderableGameHandCards = (gameState.rpgHandCards?.length ?? 0) > 0;
-  const usingFallbackLabHandCards = isLabMode && !hasRenderableGameHandCards;
-  const previewHandCards = usingFallbackLabHandCards ? fallbackHandCards : (gameState.rpgHandCards ?? []);
+  const buildFoundationOverlay = (foundationIndex: number) => {
+    const base = previewPlayerFoundations[foundationIndex]?.[0];
+    if (!base) return undefined;
+    const name = base.name?.trim();
+    const accentColor = '#7fdbca';
+    const rankDisplay = getRankDisplay(base.rank);
+    if (!name) return undefined;
+    return {
+      name: name || 'Ally',
+      accentColor,
+      rankDisplay,
+    };
+  };
+  // Always register drop refs so drag hit-testing works even while foundations are seeding.
+  const getFoundationDropRef = (_index: number) => setFoundationRef;
+  const deckBackedLabHandCards = useMemo<CardType[]>(() => {
+    if (!isLabMode) return [];
+    const foundations = gameState.foundations ?? [];
+    const tileId = gameState.activeSessionTileId;
+    const party = tileId ? (gameState.tileParties[tileId] ?? []) : [];
+    const actorPool = [...party, ...(gameState.availableActors ?? [])];
+    const usedActorIds = new Set<string>();
+    const actorIdsFromFoundations = foundations.map((foundation, index) => {
+      const fromFoundation = foundation[0]?.sourceActorId ?? foundation[0]?.rpgActorId;
+      if (typeof fromFoundation === 'string' && fromFoundation.length > 0) {
+        usedActorIds.add(fromFoundation);
+        return fromFoundation;
+      }
+      const foundationName = String(foundation[0]?.name ?? '').trim().toLowerCase();
+      if (foundationName) {
+        const matchedByName = actorPool.find((actor) => {
+          if (usedActorIds.has(actor.id)) return false;
+          if (!gameState.actorDecks[actor.id]) return false;
+          const definition = getActorDefinition(actor.definitionId);
+          return String(definition?.name ?? '').trim().toLowerCase() === foundationName;
+        });
+        if (matchedByName) {
+          usedActorIds.add(matchedByName.id);
+          return matchedByName.id;
+        }
+      }
+      const byIndex = party[index]?.id;
+      if (byIndex && !usedActorIds.has(byIndex) && !!gameState.actorDecks[byIndex]) {
+        usedActorIds.add(byIndex);
+        return byIndex;
+      }
+      const nextUnused = actorPool.find((actor) => !usedActorIds.has(actor.id) && !!gameState.actorDecks[actor.id]);
+      if (nextUnused) {
+        usedActorIds.add(nextUnused.id);
+        return nextUnused.id;
+      }
+      return undefined;
+    }).filter((actorId): actorId is string => typeof actorId === 'string' && actorId.length > 0);
+    const actorIds = actorIdsFromFoundations.length > 0 ? actorIdsFromFoundations : party.map((actor) => actor.id);
+    const cards: CardType[] = [];
+    actorIds.forEach((actorId, index) => {
+      if (index < 0 || index >= foundations.length) return;
+      const foundationCard = foundations[index]?.[0];
+      const inferredDefinitionId = inferFoundationDefinitionId(foundationCard)
+        ?? actorPool.find((actor) => actor.id === actorId)?.definitionId
+        ?? null;
+      const deck = gameState.actorDecks[actorId]
+        ?? (inferredDefinitionId
+          ? createActorDeckStateWithOrim(actorId || `lab-${inferredDefinitionId}`, inferredDefinitionId, gameState.orimDefinitions).deck
+          : undefined);
+      if (!deck) return;
+      deck.cards.forEach((deckCard) => {
+        const slotWithOrim = deckCard.slots.find((slot) => !!slot.orimId);
+        const slotOrimId = slotWithOrim?.orimId;
+        const instance = slotOrimId ? gameState.orimInstances[slotOrimId] : undefined;
+        const inferredDefinitionId = instance?.definitionId
+          ?? (slotOrimId && gameState.orimDefinitions.some((entry) => entry.id === slotOrimId)
+            ? slotOrimId
+            : gameState.orimDefinitions.find((entry) => !!slotOrimId && slotOrimId.includes(`orim-${entry.id}-`))?.id);
+        const definition = inferredDefinitionId
+          ? gameState.orimDefinitions.find((entry) => entry.id === inferredDefinitionId)
+          : undefined;
+        const element = definition?.elements?.[0] ?? 'N';
+        cards.push({
+          id: `lab-deck-${actorId}-${deckCard.id}`,
+          rank: Math.max(1, Math.min(13, deckCard.value)),
+          element,
+          suit: ELEMENT_TO_SUIT[element],
+          sourceActorId: actorId,
+          sourceDeckCardId: deckCard.id,
+          cooldown: deckCard.cooldown,
+          maxCooldown: deckCard.maxCooldown,
+          rpgApCost: deckCard.cost,
+          rpgAbilityId: definition?.id ?? inferredDefinitionId,
+          name: definition?.name ?? (inferredDefinitionId ? inferredDefinitionId.replace(/[_-]+/g, ' ') : `${actorId} ability`),
+          description: definition?.description,
+          orimSlots: deckCard.slots.map((slot) => ({ ...slot })),
+        });
+      });
+    });
+    return cards;
+  }, [isLabMode, gameState.activeSessionTileId, gameState.tileParties, gameState.foundations, gameState.actorDecks, gameState.orimInstances, gameState.orimDefinitions]);
+  const previewHandCards = isLabMode
+    ? (deckBackedLabHandCards.length > 0 ? deckBackedLabHandCards : (gameState.rpgHandCards ?? []))
+    : (gameState.rpgHandCards ?? []);
   const previewTableauCardScale = 0.82;
   const secondaryTableauCardScale = Math.round(previewTableauCardScale * 0.9 * 1000) / 1000;
   const previewHandCardScale = 0.68;
   const previewTableauHeight = Math.round(CARD_SIZE.height * previewTableauCardScale);
   const previewFoundationWidth = Math.round(CARD_SIZE.width * 0.9);
-  const previewEnhancementFoundationScale = 0.9;
-  const previewEnhancementFoundationWidth = previewFoundationWidth;
   const [fallbackTableaus, setFallbackTableaus] = useState<CardType[][]>(() => createCombatStandardTableaus());
   const gameTableaus = gameState.tableaus ?? [];
   const hasRenderableGameTableaus = gameTableaus.length > 0 && gameTableaus.some((tableau) => tableau.length > 0);
   const previewTableaus = hasRenderableGameTableaus ? gameTableaus : fallbackTableaus;
+  // Enemy uses the same shared tableau; no separate enemy tableau cards.
+  const foundationIndexes = [0, 1, 2];
+  const enemyFoundationIndexes = [0];
   const [autoFitMultiplier, setAutoFitMultiplier] = useState(1);
   const draggedHandCardRef = useRef<CardType | null>(null);
   const fitViewportRef = useRef<HTMLDivElement | null>(null);
@@ -198,10 +298,7 @@ export function CombatSandbox({
     if (tableauIndex === HAND_SOURCE_INDEX) {
       const draggedHandCard = draggedHandCardRef.current;
       if (draggedHandCard) {
-        const played = actions.playFromHand(draggedHandCard, foundationIndex, useWild);
-        if (played && usingFallbackLabHandCards) {
-          setFallbackHandCards((prev) => prev.filter((card) => card.id !== draggedHandCard.id));
-        }
+        actions.playFromHand(draggedHandCard, foundationIndex, useWild);
       }
       draggedHandCardRef.current = null;
       return;
@@ -223,7 +320,7 @@ export function CombatSandbox({
       return;
     }
     actions.playFromTableau(tableauIndex, foundationIndex);
-  }, [actions, useWild, usingFallbackLabHandCards, previewPlayerFoundations.length]);
+  }, [actions, useWild, previewPlayerFoundations.length]);
   const { dragState, startDrag, setFoundationRef, dragPositionRef } = useDragDrop(handleSandboxDrop, isGamePaused);
   const handleSandboxCardSelect = (card: CardType, selectedTableauIndex: number) => {
     actions.selectCard(card, selectedTableauIndex);
@@ -251,50 +348,13 @@ export function CombatSandbox({
     if (gameState.interactionMode !== 'click') return;
     const firstPlayableFoundation = validFoundationsForSelected.findIndex((value) => value);
     if (firstPlayableFoundation >= 0) {
-      const played = actions.playFromHand(card, firstPlayableFoundation, useWild);
-      if (played && usingFallbackLabHandCards) {
-        setFallbackHandCards((prev) => prev.filter((entry) => entry.id !== card.id));
-      }
+      actions.playFromHand(card, firstPlayableFoundation, useWild);
     }
   };
   const handleSandboxHandLongPress = () => {};
-  const visibleFoundationIndexes = useMemo(
-    () => previewPlayerFoundations.map((_, index) => index).filter((index) => index !== 1),
-    [previewPlayerFoundations.length]
-  );
-  const foundationColumns = useMemo(
-    () => visibleFoundationIndexes.map((index) => ({
-      index,
-      width: index === 2 || index === 3 ? previewEnhancementFoundationWidth : previewFoundationWidth,
-      scale: index === 2 || index === 3 ? previewEnhancementFoundationScale : 1,
-    })),
-    [visibleFoundationIndexes, previewEnhancementFoundationScale, previewEnhancementFoundationWidth, previewFoundationWidth]
-  );
-  const foundationColumnIndexes = useMemo(
-    () => new Set<number>(foundationColumns.map((column) => column.index)),
-    [foundationColumns]
-  );
-  useEffect(() => {
-    const totalFoundations = previewPlayerFoundations.length;
-    for (let idx = 0; idx < totalFoundations; idx += 1) {
-      if (!foundationColumnIndexes.has(idx)) {
-        setFoundationRef(idx, null);
-      }
-    }
-  }, [previewPlayerFoundations.length, foundationColumnIndexes, setFoundationRef]);
-  const dragTargetFoundationByIndex = useMemo(() => {
-    if (!dragState.isDragging) return new Set<number>();
-    return foundationColumnIndexes;
-  }, [dragState.isDragging, foundationColumnIndexes]);
-  const handleSandboxFoundationClick = (foundationIndex: number) => {
-    if (gameState.interactionMode !== 'click') return;
-    actions.playToFoundation(foundationIndex);
-  };
   const handleRerollDeal = () => {
     const nextTableaus = createCombatStandardTableaus();
-    const nextHandCards = createCombatStandardHandCards(isLabMode ? COMBAT_LAB_HAND_COUNT : COMBAT_STANDARD_HAND_COUNT);
     setFallbackTableaus(nextTableaus);
-    setFallbackHandCards(nextHandCards);
     actions.setBiomeTableaus(nextTableaus);
   };
   useEffect(() => {
@@ -311,7 +371,7 @@ export function CombatSandbox({
       if (!normalizedName || normalizedName === 'party member') return true;
       return false;
     };
-    const shouldSeedLabFoundations = foundations.length < 4 || needsActorSeed(0) || needsActorSeed(1);
+    const shouldSeedLabFoundations = foundations.length < 3 || needsActorSeed(0) || needsActorSeed(1) || needsActorSeed(2);
     if (!shouldSeedLabFoundations) return;
     actions.setBiomeFoundations(buildLabSeededFoundations(gameState, foundations));
   }, [actions, gameState, isLabMode, open]);
@@ -322,6 +382,25 @@ export function CombatSandbox({
     if (hasCards) return;
     actions.setBiomeTableaus(fallbackTableaus);
   }, [actions, fallbackTableaus, gameState.tableaus, isLabMode, open]);
+  // Lab-only: keep tableau depth replenished to COMBAT_STANDARD_TABLEAU_DEPTH after plays.
+  useEffect(() => {
+    if (!isLabMode) return;
+    const tableaus = gameState.tableaus ?? [];
+    if (tableaus.length === 0) return;
+    let changed = false;
+    const next = tableaus.map((t, tableauIndex) => {
+      const arr = [...t];
+      while (arr.length < COMBAT_STANDARD_TABLEAU_DEPTH) {
+        arr.push(createCombatStandardCard(tableauIndex, arr.length, COMBAT_STANDARD_TABLEAU_DEPTH));
+        changed = true;
+      }
+      return arr;
+    });
+    if (changed) {
+      setFallbackTableaus(next);
+      actions.setBiomeTableaus(next);
+    }
+  }, [actions, gameState.tableaus, isLabMode]);
   useEffect(() => {
     if (hasRenderableGameTableaus) {
       setFallbackTableaus(gameTableaus);
@@ -350,8 +429,10 @@ export function CombatSandbox({
       const contentWidth = content.scrollWidth;
       const contentHeight = content.scrollHeight;
       if (viewportWidth <= 0 || viewportHeight <= 0 || contentWidth <= 0 || contentHeight <= 0) return;
-      const ratio = Math.min(viewportWidth / contentWidth, viewportHeight / contentHeight);
-      const next = Math.max(0.55, Math.min(1, ratio));
+      const availableWidth = Math.max(1, viewportWidth - ARENA_FIT_PADDING_X);
+      const availableHeight = Math.max(1, viewportHeight - ARENA_FIT_PADDING_Y);
+      const ratio = Math.min(availableWidth / contentWidth, availableHeight / contentHeight);
+      const next = Math.max(ARENA_MIN_SCALE, Math.min(1, ratio));
       if (Math.abs(next - autoFitMultiplierRef.current) > 0.01) {
         autoFitMultiplierRef.current = next;
         setAutoFitMultiplier(next);
@@ -563,54 +644,37 @@ export function CombatSandbox({
               FPS: --
             </div>
             <div ref={fitViewportRef} className="flex-1 min-h-0 w-full overflow-hidden">
-              <div className="flex h-full w-full items-start justify-center overflow-hidden">
+              <div className="flex h-full w-full items-start justify-center overflow-hidden pt-2">
                 <div
                   ref={fitContentRef}
-                  className="inline-flex w-max max-w-none flex-col items-center justify-start gap-2 pt-1"
+                  className="inline-flex w-max max-w-none flex-col items-center justify-center gap-2 py-6"
                   style={{
                     transform: `scale(${autoFitMultiplier})`,
                     transformOrigin: 'top center',
                   }}
                 >
-              <div className="flex w-full min-h-[96px] items-start justify-center px-1">
-                {enemyFoundationsForDisplay.length === 0 ? (
-                  <div
-                    className="rounded border border-dashed border-game-white/20 bg-black/20"
-                    style={{ width: previewFoundationWidth, height: Math.round(CARD_SIZE.height * 0.9) }}
-                  />
-                ) : (
-                  <div className="flex flex-wrap items-start justify-center gap-2">
-                    {enemyFoundationsForDisplay.map((cards, idx) => (
-                      <div
-                        key={`sandbox-enemy-${idx}`}
-                        className="rounded border border-game-teal/30 bg-black/45 p-[3px]"
-                        style={{ minWidth: previewFoundationWidth }}
-                      >
-                        <Foundation
-                          cards={cards}
-                          index={idx}
-                          onFoundationClick={() => {}}
-                          canReceive={false}
-                          interactionMode={gameState.interactionMode}
-                          showGraphics={showGraphics}
-                          countPosition="none"
-                          maskValue={false}
-                          watercolorOnlyCards={true}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-                  <div
-                className="flex w-full items-start justify-center gap-2 overflow-visible px-1"
-                style={{ minHeight: Math.round(previewTableauHeight * secondaryTableauCardScale / previewTableauCardScale) + 28 }}
-              >
-                <DedicatedEnemyTableau
-                  tableaus={previewTableaus}
-                  showGraphics={showGraphics}
-                  cardScale={secondaryTableauCardScale}
-                />
+                  <div className="flex w-full items-start justify-center px-1">
+                <div className="flex items-start justify-center gap-2">
+                  {enemyFoundationIndexes.map((idx) => (
+                    <div
+                      key={`enemy-foundation-${idx}`}
+                      className="rounded border border-game-teal/30 bg-black/45 p-[3px] shrink-0"
+                      style={{ minWidth: previewFoundationWidth }}
+                    >
+                      <Foundation
+                        cards={enemyFoundations[idx] ?? []}
+                        index={idx}
+                        onFoundationClick={() => {}}
+                        canReceive={false}
+                        interactionMode={gameState.interactionMode}
+                        showGraphics={showGraphics}
+                        countPosition="none"
+                        maskValue={false}
+                        watercolorOnlyCards={false}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
                   <div
                 className="flex w-full items-start justify-center gap-2 overflow-visible px-1"
@@ -628,29 +692,29 @@ export function CombatSandbox({
                   isAnyCardDragging={dragState.isDragging}
                   onTopCardSelect={handleSandboxCardSelect}
                   onTopCardDragStart={handleSandboxTableauDragStart}
+                  startIndex={0}
                 />
               </div>
               <div className="flex w-full items-start justify-center px-1">
                 <div className="flex items-start justify-center gap-2">
-                  {foundationColumns.map((column) => (
+                  {foundationIndexes.map((idx) => (
                     <div
-                      key={column.index}
+                      key={`player-foundation-${idx}`}
                       className="rounded border border-game-teal/30 bg-black/45 p-[3px] shrink-0"
-                      style={{ minWidth: column.width }}
+                      style={{ minWidth: previewFoundationWidth }}
                     >
                       <Foundation
-                        cards={previewPlayerFoundations[column.index] ?? []}
-                        index={column.index}
-                        scale={column.scale}
-                        onFoundationClick={handleSandboxFoundationClick}
-                        canReceive={!!selectedCard && !!validFoundationsForSelected[column.index]}
+                        cards={previewPlayerFoundations[idx] ?? []}
+                        index={idx}
+                        onFoundationClick={() => actions.playToFoundation(idx)}
+                        canReceive={!!selectedCard && !!validFoundationsForSelected[idx]}
                         interactionMode={gameState.interactionMode}
                         showGraphics={showGraphics}
                         countPosition="none"
                         maskValue={false}
-                        setDropRef={getFoundationDropRef(column.index)}
-                        isDragTarget={dragTargetFoundationByIndex.has(column.index)}
-                        watercolorOnlyCards={true}
+                        setDropRef={getFoundationDropRef(idx)}
+                        watercolorOnlyCards={false}
+                        foundationOverlay={buildFoundationOverlay(idx)}
                       />
                     </div>
                   ))}
@@ -690,7 +754,7 @@ export function CombatSandbox({
                       tooltipEnabled={false}
                       upgradedCardIds={[]}
                       disableSpringMotion={true}
-                      watercolorOnlyCards={true}
+                      watercolorOnlyCards={false}
                     />
                   </div>
                 )}

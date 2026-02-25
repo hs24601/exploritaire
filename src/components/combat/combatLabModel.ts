@@ -175,11 +175,6 @@ const LAB_STARTING_HAND: LabAbilityId[] = [
   'zoomies',
   'swipe',
   'roar',
-  'bearicade',
-  'conflagration',
-  'shadowstep',
-  'unyielding',
-  'sneak',
 ];
 
 function createCard(abilityId: LabAbilityId, level = 0): Card {

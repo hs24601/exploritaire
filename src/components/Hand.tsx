@@ -40,6 +40,7 @@ const FAN = {
 } as const;
 const INSPECT_HOLD_MS = 1000;
 const DRAG_START_THRESHOLD_PX = 10;
+const HAND_MAX_CARD_COUNT = 10;
 
 function computeFanPositions(n: number, minCenterDistance: number, maxCenterDistance: number) {
   if (n === 0) return [];
@@ -98,9 +99,53 @@ export const Hand = memo(function Hand({
   const cardSize = useMemo(() => ({ width: cardWidth, height: cardHeight }), [cardWidth, cardHeight]);
   const minCenterDistance = cardWidth;
   const maxCenterDistance = cardWidth * 1.5;
-  const positions = useMemo(
+  const rawPositions = useMemo(
     () => computeFanPositions(cards.length, minCenterDistance, maxCenterDistance),
     [cards.length, minCenterDistance, maxCenterDistance],
+  );
+  const maxHandWidth = useMemo(() => {
+    const maxPositions = computeFanPositions(HAND_MAX_CARD_COUNT, minCenterDistance, maxCenterDistance);
+    if (maxPositions.length === 0) return cardWidth * 2;
+    const halfW = cardWidth / 2;
+    const halfH = cardHeight / 2;
+    const rightEdge = maxPositions.reduce((max, pos) => {
+      const theta = (pos.rotation ?? 0) * DEG_TO_RAD;
+      const extentX = Math.abs(Math.cos(theta)) * halfW + Math.abs(Math.sin(theta)) * halfH;
+      return Math.max(max, pos.x + extentX);
+    }, -Infinity);
+    const leftEdge = maxPositions.reduce((min, pos) => {
+      const theta = (pos.rotation ?? 0) * DEG_TO_RAD;
+      const extentX = Math.abs(Math.cos(theta)) * halfW + Math.abs(Math.sin(theta)) * halfH;
+      return Math.min(min, pos.x - extentX);
+    }, Infinity);
+    return Math.max(rightEdge - leftEdge, cardWidth * 2);
+  }, [cardWidth, cardHeight, minCenterDistance, maxCenterDistance]);
+  const bounds = useMemo(() => {
+    if (rawPositions.length === 0) {
+      return { minLeft: -cardWidth / 2, maxRight: cardWidth / 2 };
+    }
+    const halfW = cardWidth / 2;
+    const halfH = cardHeight / 2;
+    const rightEdge = rawPositions.reduce((max, pos) => {
+      const theta = (pos.rotation ?? 0) * DEG_TO_RAD;
+      const extentX = Math.abs(Math.cos(theta)) * halfW + Math.abs(Math.sin(theta)) * halfH;
+      return Math.max(max, pos.x + extentX);
+    }, -Infinity);
+    const leftEdge = rawPositions.reduce((min, pos) => {
+      const theta = (pos.rotation ?? 0) * DEG_TO_RAD;
+      const extentX = Math.abs(Math.cos(theta)) * halfW + Math.abs(Math.sin(theta)) * halfH;
+      return Math.min(min, pos.x - extentX);
+    }, Infinity);
+    return { minLeft: leftEdge, maxRight: rightEdge };
+  }, [rawPositions, cardWidth, cardHeight]);
+  const centerShift = useMemo(() => {
+    if (rawPositions.length === 0) return 0;
+    const currentCenter = (bounds.maxRight + bounds.minLeft) / 2;
+    return maxHandWidth / 2 - currentCenter;
+  }, [bounds, maxHandWidth, rawPositions.length]);
+  const positions = useMemo(
+    () => rawPositions.map((pos) => ({ ...pos, x: pos.x + centerShift })),
+    [rawPositions, centerShift],
   );
   const maxRightEdge = useMemo(() => {
     const halfW = cardWidth / 2;
@@ -179,6 +224,24 @@ export const Hand = memo(function Hand({
         </div>
       );
     }
+    if (card.rpgAbilityId || card.sourceDeckCardId || card.rpgApCost !== undefined) {
+      const normalizedAbilityId = String(card.rpgAbilityId ?? '')
+        .replace(/[_-]+/g, ' ')
+        .trim();
+      const displayName = card.name && card.name.trim().toLowerCase() !== 'ability'
+        ? card.name
+        : (normalizedAbilityId || 'Ability');
+      const ap = Math.max(0, Number(card.rpgApCost ?? 0));
+      const cooldown = Math.max(0, Number(card.maxCooldown ?? 0));
+      return (
+        <div className="text-xs text-game-white">
+          <div className="text-game-teal font-bold mb-1 tracking-[2px]">{displayName.toUpperCase()}</div>
+          <div className="text-game-pink font-bold">Power {card.rank}</div>
+          <div className="text-[10px] text-game-white/60 mt-1">AP {ap}{cooldown > 0 ? `  CD ${cooldown}s` : ''}</div>
+          {card.description && <div className="text-[10px] text-game-white/50 mt-1">{card.description}</div>}
+        </div>
+      );
+    }
     return (
       <div className="text-xs text-game-white">
         <div className="text-game-teal font-bold mb-1 tracking-[2px]">HAND CARD</div>
@@ -200,8 +263,12 @@ export const Hand = memo(function Hand({
   return (
     <div
       className="relative flex justify-center"
-      style={{ height: cardHeight + 40, minWidth: cardWidth * 2 }}
+      style={{ height: cardHeight + 40, width: '100%' }}
     >
+      <div
+        className="relative"
+        style={{ width: maxHandWidth, minWidth: maxHandWidth, height: cardHeight + 40 }}
+      >
         <AnimatePresence>
           {cards.map((card, i) => {
             const pos = positions[i];
@@ -426,6 +493,7 @@ export const Hand = memo(function Hand({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 });

@@ -3,31 +3,30 @@
     {
       "id": "bite",
       "label": "Bite",
-      "description": "deals damage",
-      "damage": "",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "N"
-      ],
+      "description": "",
+      "abilityType": "ability",
+      "power": 0,
+      "element": "N",
       "rarity": "common",
-      "abilityType": "combat",
-      "tags": [],
       "effects": [
         {
           "type": "damage",
           "value": 1,
           "target": "enemy",
+          "element": "N",
           "valueByRarity": {
             "common": 1,
-            "rare": 2,
-            "epic": 3,
-            "legendary": 4,
-            "mythic": 5
-          }
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
         }
       ],
-      "equipCost": 0
+      "parentActorId": "lupus"
     },
     {
       "id": "goFish",
@@ -48,18 +47,31 @@
     {
       "id": "ironfur",
       "label": "Ironfur",
-      "description": "Defense +1 for",
-      "damage": "",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "N"
-      ],
+      "description": "",
+      "abilityType": "ability",
+      "power": 0,
+      "damage": 0,
+      "element": "N",
       "rarity": "common",
-      "abilityType": "combat",
-      "tags": [],
-      "effects": [],
-      "equipCost": 0
+      "effects": [
+        {
+          "type": "defense",
+          "value": 1,
+          "target": "self",
+          "charges": 5,
+          "element": "N",
+          "valueByRarity": {
+            "common": 1,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ]
     },
     {
       "id": "swipe",
@@ -79,9 +91,17 @@
           "type": "damage",
           "value": 1,
           "target": "enemy",
+          "element": "N",
           "valueByRarity": {
-            "common": 1
-          }
+            "common": 1,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
         }
       ],
       "equipCost": 0
@@ -89,50 +109,41 @@
     {
       "id": "claw",
       "label": "Claw",
-      "damage": "",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "N"
-      ],
-      "rarity": "common",
+      "description": "Claw at an enemy to deal damage",
       "abilityType": "exploration",
-      "tags": [],
-      "effects": [
-        {
-          "type": "damage",
-          "value": 1,
-          "target": "enemy",
-          "valueByRarity": {
-            "common": 1
-          }
-        }
-      ],
-      "equipCost": 0
+      "power": 0,
+      "damage": 1,
+      "element": "N",
+      "rarity": "common",
+      "effects": []
     },
     {
       "id": "prowl",
       "label": "Prowl",
-      "damage": "",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "N"
-      ],
+      "description": "",
+      "abilityType": "ability",
+      "power": 0,
+      "element": "N",
       "rarity": "common",
-      "abilityType": "exploration",
-      "tags": [],
       "effects": [
         {
           "type": "evasion",
-          "value": 2,
+          "value": 9,
           "target": "self",
+          "element": "N",
           "valueByRarity": {
-            "common": 2
-          }
+            "common": 9,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
         }
       ],
-      "equipCost": 0
+      "parentActorId": "felis"
     },
     {
       "id": "wigglebuttAmbush",
@@ -152,9 +163,17 @@
           "type": "damage",
           "value": 3,
           "target": "enemy",
+          "element": "N",
           "valueByRarity": {
-            "common": 3
-          }
+            "common": 3,
+            "uncommon": 3,
+            "rare": 3,
+            "epic": 3,
+            "legendary": 3,
+            "mythic": 3
+          },
+          "drawWild": false,
+          "drawElement": "N"
         }
       ],
       "equipCost": 0
@@ -176,10 +195,18 @@
           "type": "evasion",
           "value": 3,
           "target": "self",
+          "charges": 10,
+          "element": "N",
           "valueByRarity": {
-            "common": 3
+            "common": 3,
+            "uncommon": 3,
+            "rare": 3,
+            "epic": 3,
+            "legendary": 3,
+            "mythic": 3
           },
-          "charges": 10
+          "drawWild": false,
+          "drawElement": "N"
         }
       ],
       "equipCost": 0
@@ -213,6 +240,35 @@
       "tags": [],
       "effects": [],
       "equipCost": 0
+    },
+    {
+      "id": "wild_adaptation",
+      "parentActorId": "lupus",
+      "label": "Wild Adaptation",
+      "description": "",
+      "abilityType": "ability",
+      "power": 0,
+      "damage": 0,
+      "element": "N",
+      "rarity": "common",
+      "effects": [
+        {
+          "type": "draw",
+          "value": 1,
+          "target": "self",
+          "element": "N",
+          "valueByRarity": {
+            "common": 1,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": true,
+          "drawElement": "N"
+        }
+      ]
     }
   ]
 }

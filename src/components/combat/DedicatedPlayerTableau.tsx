@@ -18,6 +18,7 @@ interface DedicatedPlayerTableauProps {
   isAnyCardDragging?: boolean;
   onTopCardSelect: (card: CardType, tableauIndex: number) => void;
   onTopCardDragStart?: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
+  startIndex?: number;
 }
 
 const STACK_PEEK_PX = 7;
@@ -35,6 +36,7 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
   isAnyCardDragging = false,
   onTopCardSelect,
   onTopCardDragStart,
+  startIndex = 0,
 }: DedicatedPlayerTableauProps) {
   const neonMode = FORCE_NEON_CARD_STYLE;
   const tableGlobalScale = useCardScalePreset('table');
@@ -50,6 +52,7 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
           <div className="h-[1px] w-[1px]" />
         ) : (
           tableaus.map((stack, idx) => {
+            const tableauIndex = startIndex + idx;
             const renderStack = draggingCardId
               ? stack.filter((card) => card.id !== draggingCardId)
               : stack;
@@ -57,7 +60,7 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
             const stackHeight = cardSize.height + Math.max(0, renderStack.length - 1) * STACK_PEEK_PX;
             return (
               <div
-                key={`player-tableau-stack-${idx}`}
+                key={`player-tableau-stack-${tableauIndex}`}
                 className="relative rounded-md bg-[#080d12] px-1.5 pt-1.5 pb-1"
                 style={{
                   minWidth: cardSize.width + 12,
@@ -68,7 +71,7 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
                 <div
                   className="relative select-none"
                   style={{ width: cardSize.width, height: stackHeight, overflow: 'visible' }}
-                  aria-label={`Player stack ${idx + 1}`}
+                  aria-label={`Player stack ${tableauIndex + 1}`}
                 >
                   {renderStack.length === 0 ? (
                     <div
@@ -90,16 +93,16 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
                             size={cardSize}
                             borderColorOverride={!neonMode ? 'rgba(6, 10, 14, 0.9)' : undefined}
                             boxShadowOverride={!neonMode ? 'none' : undefined}
-                            canPlay={isTop && (tableauCanPlay[idx] ?? false)}
-                            isSelected={isTop && selectedCard?.tableauIndex === idx}
+                            canPlay={isTop && (tableauCanPlay[tableauIndex] ?? false)}
+                            isSelected={isTop && selectedCard?.tableauIndex === tableauIndex}
                             onClick={
                               isTop && interactionMode === 'click' && !noValidMoves
-                                ? () => onTopCardSelect(card, idx)
+                                ? () => onTopCardSelect(card, tableauIndex)
                                 : undefined
                             }
                             onDragStart={
                               isTop && interactionMode === 'dnd' && !noValidMoves && onTopCardDragStart
-                                ? (dragCard, clientX, clientY, rect) => onTopCardDragStart(dragCard, idx, clientX, clientY, rect)
+                                ? (dragCard, clientX, clientY, rect) => onTopCardDragStart(dragCard, tableauIndex, clientX, clientY, rect)
                                 : undefined
                             }
                             isAnyCardDragging={isAnyCardDragging}

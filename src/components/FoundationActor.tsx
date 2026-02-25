@@ -169,7 +169,9 @@ export const FoundationActor = memo(function FoundationActor({
 }: FoundationActorProps) {
   const effectiveScale = cardScale;
   const neonMode = FORCE_NEON_CARD_STYLE;
-  const foundationLocked = cards.length > 1;
+  const topCard = cards.length > 0 ? cards[cards.length - 1] : null;
+  // Lock hover/tilt once a non-actor card sits on top of this foundation.
+  const foundationLocked = !!topCard && !isFoundationActorCard(topCard);
   const showClickHighlight = !foundationLocked && interactionMode === 'click' && (canReceive || isGuidanceTarget);
   const showDragHighlight = !foundationLocked && interactionMode === 'dnd' && isDragTarget;
   const showHighlight = !foundationLocked && (showClickHighlight || showDragHighlight);
@@ -260,7 +262,6 @@ export const FoundationActor = memo(function FoundationActor({
     return acc;
   }, {} as Record<Element, number>);
 
-  const topCard = cards.length > 0 ? cards[cards.length - 1] : null;
   const isWildFoundation = !!topCard && topCard.rank === WILD_SENTINEL_RANK;
   const actorDefinition = actor ? getActorDefinition(actor.definitionId) : null;
   const actorPortraitSrc = showGraphics
@@ -408,9 +409,11 @@ export const FoundationActor = memo(function FoundationActor({
           <div className="relative" style={{ width: cardWidth, height: cardHeight }}>
             {stackCards.map((card, stackIndex) => {
               const isTop = stackIndex === stackCards.length - 1;
-              const tilt = stackCards.length <= 1 && isTop ? 0 : getTiltForCard(card.id);
-              const offset = isTop ? { x: 0, y: 0 } : getOffsetForCard(card.id);
+              const tilt = foundationLocked ? 0 : (stackCards.length <= 1 && isTop ? 0 : getTiltForCard(card.id));
+              const offset = foundationLocked ? { x: 0, y: 0 } : (isTop ? { x: 0, y: 0 } : getOffsetForCard(card.id));
               const showSecretActorHolo = isTop && isFoundationActorCard(card);
+              const actorOverlayColor = actorDefinition ? getOrimAccentColor(actorDefinition, actorDefinition.id) : '#7fdbca';
+              const actorOverlayText = actorDefinition?.name ?? actor.name ?? 'Party Member';
               return (
                 <div
                   key={card.id}
@@ -432,15 +435,21 @@ export const FoundationActor = memo(function FoundationActor({
                   frameClassName={`relative ${isTop ? 'z-[2]' : 'z-[1]'}`}
                   maskValue={maskValue}
                   showFoundationActorSecretHolo={showSecretActorHolo}
+                  disableTilt={foundationLocked}
+                  disableHoverLift={foundationLocked}
+                  disableHoverGlow={foundationLocked}
+                  foundationOverlay={
+                    isTop && actor && !isFoundationActorCard(card)
+                      ? {
+                        name: actorOverlayText,
+                        title: actorDefinition?.titles?.[0],
+                        subtitle: actorDefinition?.titles?.[1],
+                        hp: actor?.hp,
+                        accentColor: actorOverlayColor,
+                      }
+                      : undefined
+                  }
                 />
-                {isTop && isWildFoundation && SHOW_WATERCOLOR_FILTERS && !neonMode && (
-                  <div
-                    className="absolute inset-0 rounded-[10px] overflow-hidden pointer-events-none"
-                    style={{ zIndex: 20, opacity: 0.92, width: '100%', height: '100%' }}
-                  >
-                    <WildcardPaintOverlay />
-                  </div>
-                )}
               </div>
             );
             })}

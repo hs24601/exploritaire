@@ -292,8 +292,9 @@ export function GameShell({
         actorGlyph,
         sourceActorId: actor.id,
         sourceDeckCardId: card.id,
+        rpgApCost: card.cost ?? 0,
         cooldown: card.cooldown ?? 0,
-        maxCooldown: card.maxCooldown ?? 5,
+        maxCooldown: card.maxCooldown ?? 0,
         orimDisplay: [
           ...actorOrimDisplay,
           ...card.slots

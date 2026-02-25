@@ -9,6 +9,7 @@ interface DedicatedEnemyTableauProps {
   showGraphics: boolean;
   cardScale?: number;
   className?: string;
+  startIndex?: number;
 }
 
 const STACK_PEEK_PX = 8;
@@ -18,6 +19,7 @@ export const DedicatedEnemyTableau = memo(function DedicatedEnemyTableau({
   showGraphics,
   cardScale = 0.75,
   className,
+  startIndex = 0,
 }: DedicatedEnemyTableauProps) {
   const tableGlobalScale = useCardScalePreset('table');
   const cardSize = useMemo(() => ({
@@ -32,10 +34,11 @@ export const DedicatedEnemyTableau = memo(function DedicatedEnemyTableau({
           <div className="h-[1px] w-[1px]" />
         ) : (
           tableaus.map((stack, idx) => {
+            const tableauIndex = startIndex + idx;
             const stackHeight = cardSize.height + Math.max(0, stack.length - 1) * STACK_PEEK_PX;
             return (
               <div
-                key={`enemy-tableau-stack-${idx}`}
+                key={`enemy-tableau-stack-${tableauIndex}`}
                 className="relative rounded bg-transparent px-1.5 pt-1.5 pb-1"
                 style={{ minWidth: cardSize.width + 12 }}
               >

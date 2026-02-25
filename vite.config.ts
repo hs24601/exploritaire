@@ -5,6 +5,13 @@ import fs from 'fs';
 export default defineConfig({
   server: {
     host: '0.0.0.0',
+    port: 5178,
+    strictPort: true,
+    hmr: {
+      host: '192.168.50.27',
+      port: 5178,
+      clientPort: 5178,
+    },
   },
   plugins: [
     react(),

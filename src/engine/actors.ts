@@ -7,94 +7,39 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
   {
     id: 'felis',
     name: 'Felis',
-    titles: ['Night', 'Prowler'],
+    titles: ["Night","Prowler"],
     description: 'A fast striker specializing in tempo and precision damage.',
     type: 'adventurer',
     value: 2,
     suit: undefined,
     element: 'N',
     sprite: '🐈',
-    aliases: ['cat', 'roguecat'],
-    orimSlots: [],
   },
   {
     id: 'ursus',
     name: 'Ursus',
-    titles: ['Iron', 'Guardian'],
+    titles: ["Iron","Guardian"],
     description: 'A resilient frontliner that disrupts enemies and shields allies.',
     type: 'adventurer',
     value: 3,
     suit: undefined,
     element: 'N',
     sprite: '🐻',
-    aliases: ['bear', 'guardianbear'],
-    orimSlots: [],
   },
   {
-    id: 'keru',
-    name: 'Keru',
-    titles: ['Blank', 'Keru'],
-    description: 'A non-corporeal spirit that can absorb aspects and mutate',
+    id: 'lupus',
+    name: 'Lupus',
+    titles: ["Blank","Keru"],
+    description: 'Leader of the pack',
     type: 'adventurer',
-    value: 2,
+    value: 10,
     suit: undefined,
     element: 'N',
     sprite: '🦊',
-    aliases: ['fox', 'fennec'],
     orimSlots: [
-      { orimId: 'claw', locked: true },
+      { orimId: 'claw' },
       { orimId: 'bide' },
     ],
-  },
-  {
-    id: 'shadowcub',
-    name: 'Shadowcub',
-    titles: ['Shadow', 'Cub'],
-    description: 'A quick shadow cub that strikes from the fringe',
-    type: 'npc',
-    value: 6,
-    suit: undefined,
-    element: 'D',
-    sprite: '🐾',
-    orimSlots: [],
-  },
-  {
-    id: 'shadowkit',
-    name: 'Shadowkit',
-    titles: ['Shadow', 'Kit'],
-    description: 'A nimble shadow kit with lunar instincts',
-    type: 'npc',
-    value: 6,
-    suit: undefined,
-    element: 'D',
-    sprite: '🌘',
-    orimSlots: [],
-  },
-  {
-    id: 'shade',
-    name: 'Shade',
-    titles: ['Night', 'Shade'],
-    description: 'A lurking shade that fights with standard instincts.',
-    type: 'npc',
-    value: 7,
-    suit: undefined,
-    element: 'D',
-    sprite: '👤',
-    aliases: ['nightshade'],
-    orimSlots: [],
-  },
-  {
-    id: 'target_dummy',
-    name: 'Target Dummy',
-    titles: ['Target', 'Dummy'],
-    description: 'A durable training target that never takes actions.',
-    type: 'npc',
-    value: 1,
-    suit: undefined,
-    element: 'N',
-    sprite: '🎯',
-    aliases: ['dummy', 'target-dummy'],
-    orimSlots: [],
   },
 ];
 // ACTOR_DEFINITIONS_END
@@ -118,7 +63,7 @@ function getActorLetter(definition: ActorDefinition): string {
 export function getActorDisplayGlyph(definitionId: string, showGraphics: boolean): string {
   const definition = getActorDefinition(definitionId);
   if (!definition) return '?';
-  return showGraphics ? definition.sprite : getActorLetter(definition);
+  return showGraphics ? (definition.sprite ?? '?') : getActorLetter(definition);
 }
 
 /**
@@ -132,9 +77,10 @@ export function createActor(definitionId: string): Actor | null {
   const baseSlots = definition.orimSlots?.length ? definition.orimSlots : [{ locked: false }];
   const orimSlots = baseSlots.map((slot, index) => ({
     id: `${actorId}-orim-slot-${index + 1}`,
-    orimId: null,
+    orimId: slot.orimId ?? null,
     locked: slot.locked ?? false,
   }));
+
   return {
     definitionId,
     id: actorId,
@@ -174,6 +120,12 @@ export function createInitialActors(): Actor[] {
     actors.push(ursus);
   }
 
+  const lupus = createActor('lupus');
+  if (lupus) {
+    lupus.gridPosition = { col: 3, row: 2 };
+    actors.push(lupus);
+  }
+
   return actors;
 }
 
@@ -201,3 +153,4 @@ export function getActorValueDisplay(value: number): string {
       return String(value);
   }
 }
+

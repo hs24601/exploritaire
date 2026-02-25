@@ -94,6 +94,8 @@ type PoiNarrationDraft = {
 
 type ActorDeckTemplate = {
   values: number[];
+  costs?: number[];
+  cooldowns?: number[];
   slotsPerCard?: number[];
   starterOrim?: { cardIndex: number; slotIndex?: number; orimId: string }[];
   slotLocks?: { cardIndex: number; slotIndex?: number; locked: boolean }[];
