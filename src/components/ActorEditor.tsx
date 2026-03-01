@@ -176,6 +176,10 @@ const TURN_PLAYABILITY_OPTIONS: Array<{ value: TurnPlayability; label: string }>
   { value: 'enemy', label: 'Enemy Turn' },
   { value: 'anytime', label: 'Anytime' },
 ];
+const EFFECTS_GRID_TEMPLATE =
+  'minmax(96px,1.25fr) minmax(56px,0.55fr) minmax(96px,1.1fr) minmax(56px,0.55fr) minmax(64px,0.6fr) minmax(64px,0.6fr) minmax(72px,0.7fr) 24px';
+const TRIGGERS_GRID_TEMPLATE =
+  'minmax(132px,1.4fr) 56px 64px minmax(88px,1fr) minmax(132px,1.2fr) 24px';
 const resolveEffectValueForRarity = (effect: AbilityEffect, rarity: OrimRarity): number => {
   const map = effect.valueByRarity ?? {};
   if (typeof map[rarity] === 'number') return map[rarity]!;
@@ -1553,7 +1557,10 @@ export function ActorEditor({
                             <RowManager
                               rows={(newAbility.effects ?? []).map((fx, i) => ({ ...fx, id: i }))}
                               renderHeader={() => (
-                                <div className="px-2 grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10">
+                                <div
+                                  className="px-2 grid items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10"
+                                  style={{ gridTemplateColumns: EFFECTS_GRID_TEMPLATE }}
+                                >
                                   <span>Type</span>
                                   <span>Value</span>
                                   <span>Target</span>
@@ -1569,7 +1576,10 @@ export function ActorEditor({
                               )}
                               renderRow={(fx) => (
                                 <div className="space-y-1">
-                                  <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5">
+                                  <div
+                                    className="grid items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5"
+                                    style={{ gridTemplateColumns: EFFECTS_GRID_TEMPLATE }}
+                                  >
                                     <select
                                       value={fx.type}
                                       onChange={(e) => handleNewAbilityEffectChange(fx.id as number, 'type', e.target.value)}
@@ -1720,7 +1730,10 @@ export function ActorEditor({
                             <RowManager
                               rows={(newAbility.triggers ?? []).map((trigger, i) => ({ ...trigger, id: i }))}
                               renderHeader={() => (
-                                <div className="px-2 grid grid-cols-[auto_auto_auto_auto_auto_auto] items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10">
+                                <div
+                                  className="px-2 grid items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10"
+                                  style={{ gridTemplateColumns: TRIGGERS_GRID_TEMPLATE }}
+                                >
                                   <span>Type</span>
                                   <span>Op</span>
                                   <span>Value</span>
@@ -1743,7 +1756,10 @@ export function ActorEditor({
                                   && normalized.type !== 'notDiscarded'
                                 );
                                 return (
-                                  <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto] items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5">
+                                  <div
+                                    className="grid items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5"
+                                    style={{ gridTemplateColumns: TRIGGERS_GRID_TEMPLATE }}
+                                  >
                                     <select
                                       value={normalized.type}
                                       onChange={(e) => handleNewAbilityTriggerChange(trigger.id as number, 'type', e.target.value)}
