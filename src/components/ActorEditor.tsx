@@ -1383,7 +1383,7 @@ export function ActorEditor({
                         }}
                         className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-teal"
                       >
-                        + Slot
+                        + Orim
                       </button>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -1437,7 +1437,7 @@ export function ActorEditor({
                                 }}
                                 className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-teal disabled:opacity-40 disabled:cursor-not-allowed"
                               >
-                                - Slot
+                                - Orim
                               </button>
                             </div>
                             {selectedOrim && renderOrimPreview(selectedOrim)}
@@ -2210,7 +2210,7 @@ export function ActorEditor({
                                   }}
                                   className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-teal"
                                 >
-                                  + Slot
+                                  + Orim
                                 </button>
                                 <button
                                   type="button"
@@ -2230,7 +2230,7 @@ export function ActorEditor({
                                   }}
                                   className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-teal disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
-                                  - Slot
+                                  - Orim
                                 </button>
                               </div>
                             </div>
