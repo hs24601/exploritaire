@@ -67,7 +67,7 @@ function getOrimDisplay(definition: OrimDefinition | null, showGraphics: boolean
     return getSuitDisplay(suit, showGraphics);
   }
   if (showGraphics) return '◆';
-  return definition.category.slice(0, 1).toUpperCase();
+  return (definition.category ?? 'ability').slice(0, 1).toUpperCase();
 }
 
 function getOrimColor(definition: OrimDefinition | null): string {
@@ -663,6 +663,7 @@ const DragPreview = memo(function DragPreview({
   offset,
   showText,
   showGraphics,
+  orimDefinitions,
   stackActors,
   actorCardSize,
   hideActorTitle = false,
@@ -677,6 +678,7 @@ const DragPreview = memo(function DragPreview({
   offset: { x: number; y: number };
   showText: boolean;
   showGraphics: boolean;
+  orimDefinitions: OrimDefinition[];
   stackActors: Actor[];
   actorCardSize: { width: number; height: number };
   hideActorTitle?: boolean;
@@ -4546,9 +4548,9 @@ export const Table = memo(function Table({
               flickerSpeed={0.5}
               flickerAmount={0.08}
               actorLights={[...actorLights, ...(intentDragLight ? [intentDragLight] : [])]}
-              containerRef={containerRef}
-              anchorRef={gardenCenterRef}
-              lightAnchorRef={saplingRef}
+              containerRef={containerRef as React.RefObject<HTMLElement>}
+              anchorRef={gardenCenterRef as React.RefObject<HTMLElement>}
+              lightAnchorRef={saplingRef as React.RefObject<HTMLElement>}
               blockers={shadowBlockers}
               actorGlows={actorGlowPositions}
               worldWidth={gridDimensions.width}
@@ -5098,10 +5100,15 @@ export const Table = memo(function Table({
                     </button>
                   ));
                 }
-                const items = RPG_CARD_DEFINITIONS.filter((card) => {
-                  const label = `${card.id} ${card.title}`;
+                const items = pendingCards
+                  .map((card) => ({
+                    id: card.id,
+                    title: card.name ?? `${getSuitDisplay(card.suit, false)} ${card.rank}`,
+                  }))
+                  .filter((card) => {
+                    const label = `${card.id} ${card.title}`;
                   return normalizeToken(label).includes(query);
-                });
+                  });
                 return items.map((card) => (
                   <button
                     key={card.id}
@@ -5188,6 +5195,7 @@ export const Table = memo(function Table({
           offset={dragState.offset}
           showText={showText}
           showGraphics={showGraphics}
+          orimDefinitions={orimDefinitions}
           hideActorTitle={!!(dragState.actor && partyMembershipRef.current[dragState.actor.id])}
           stackActors={
             dragState.type === 'actor' && dragState.actor?.stackId

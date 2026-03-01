@@ -1,4 +1,4 @@
-import type { AbilityTriggerDef, Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype, PuzzleCompletedPayload, RewardBundle, RewardSource, HitResult, CombatDeckState, RestState, OrimEffectDef, CombatFlowMode, CombatFlowTelemetry, TurnPlayability, SourceCardPlayExpiringBonus } from './types';
+import type { AbilityTriggerDef, Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, DeckCardInstance, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype, PuzzleCompletedPayload, RewardBundle, RewardSource, HitResult, CombatDeckState, RestState, OrimEffectDef, CombatFlowMode, CombatFlowTelemetry, TurnPlayability, SourceCardPlayExpiringBonus, GamePhase } from './types';
 import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, GARDEN_GRID, ALL_ELEMENTS, MAX_KARMA_DEALING_ATTEMPTS, TOKEN_PROXIMITY_THRESHOLD, randomIdSuffix, createFullWildSentinel, WILD_SENTINEL_RANK } from './constants';
 import { createDeck, shuffleDeck } from './deck';
 import { canPlayCardWithWild, checkKarmaDealing } from './rules';
@@ -55,6 +55,7 @@ const RPG_BITE_BLEED_INTERVAL_MS = 1000;
 const RPG_CLOUD_SIGHT_MS = 10000;
 const RPG_GRAZE_THRESHOLD = 20; // Percentage points above dodge boundary for glancing blows
 const ORIM_RARITY_ORDER: OrimRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+const CARD_RARITY_UPGRADE_UNCOMMON_EFFECT_TYPE = 'upgrade_card_rarity_uncommon';
 const DEFAULT_ENEMY_FOUNDATION_SEEDS: Array<{ id: string; rank: number; suit: Suit; element: Element }> = [
   { id: 'enemy-shadow', rank: 12, suit: '🌙', element: 'D' },
   { id: 'enemy-sun', rank: 8, suit: '☀️', element: 'L' },
@@ -73,7 +74,13 @@ const DEFAULT_SHORT_REST_CHARGES = 4;
 const DEFAULT_RANDOM_BIOME_TABLEAU_COUNT = 7;
 const DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH = 4;
 const DEFAULT_RANDOM_BIOME_TURN_DURATION_MS = 10000;
-type AbilityFallback = { id?: string; effects?: OrimEffectDef[]; triggers?: AbilityTriggerDef[] };
+type AbilityFallback = {
+  id?: string;
+  rarity?: OrimRarity;
+  effects?: OrimEffectDef[];
+  effectsByRarity?: Partial<Record<OrimRarity, OrimEffectDef[]>>;
+  triggers?: AbilityTriggerDef[];
+};
 export type MoveAvailability = {
   playerTableauCanPlay: boolean[];
   enemyTableauCanPlay: boolean[];
@@ -84,12 +91,12 @@ export type MoveAvailability = {
   hasAnyValidMoves: boolean;
   noValidMoves: boolean;
 };
-const FALLBACK_ABILITY_EFFECTS_BY_ID = new Map<string, OrimEffectDef[]>(
+const FALLBACK_ABILITIES_BY_ID = new Map<string, AbilityFallback>(
   (((abilitiesJson as { abilities?: AbilityFallback[] }).abilities) ?? [])
     .filter((ability): ability is Required<Pick<AbilityFallback, 'id'>> & AbilityFallback =>
       typeof ability.id === 'string' && ability.id.length > 0
     )
-    .map((ability) => [ability.id, ability.effects ?? []])
+    .map((ability) => [ability.id, ability])
 );
 const FALLBACK_ABILITY_TRIGGERS_BY_ID = new Map<string, AbilityTriggerDef[]>(
   (((abilitiesJson as { abilities?: AbilityFallback[] }).abilities) ?? [])
@@ -98,9 +105,89 @@ const FALLBACK_ABILITY_TRIGGERS_BY_ID = new Map<string, AbilityTriggerDef[]>(
     )
     .map((ability) => [ability.id, ability.triggers ?? []])
 );
+function resolveEffectsForRarity(
+  entry: { effects?: OrimEffectDef[]; effectsByRarity?: Partial<Record<OrimRarity, OrimEffectDef[]>> } | null | undefined,
+  rarity: OrimRarity
+): OrimEffectDef[] {
+  if (!entry) return [];
+  const mapped = entry.effectsByRarity?.[rarity];
+  if (Array.isArray(mapped)) return mapped;
+  const commonMapped = entry.effectsByRarity?.common;
+  if (Array.isArray(commonMapped)) return commonMapped;
+  return entry.effects ?? [];
+}
 
-function clampPartyForFoundations(partyActors: Actor[]): Actor[] {
-  return partyActors.slice(0, PARTY_FOUNDATION_LIMIT);
+function normalizeCostByRarity(
+  map: Partial<Record<OrimRarity, number>> | undefined,
+  fallbackCost: number
+): Record<OrimRarity, number> {
+  const safeFallback = Number.isFinite(fallbackCost) ? Math.max(0, fallbackCost) : 0;
+  const normalized = {} as Record<OrimRarity, number>;
+  let anchor = safeFallback;
+  ORIM_RARITY_ORDER.forEach((rarity) => {
+    const raw = map?.[rarity];
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+      anchor = Math.max(0, raw);
+    }
+    normalized[rarity] = anchor;
+  });
+  return normalized;
+}
+
+function resolveDeckCardCostForRarity(
+  card: { cost?: number; costByRarity?: Partial<Record<OrimRarity, number>> } | null | undefined,
+  rarity: OrimRarity | undefined
+): number {
+  if (!card) return 0;
+  const targetRarity = rarity ?? 'common';
+  const normalized = normalizeCostByRarity(card.costByRarity, card.cost ?? 0);
+  return Math.max(0, Number(normalized[targetRarity] ?? normalized.common ?? 0));
+}
+
+function applyRarityFloor(current: OrimRarity, floor: OrimRarity): OrimRarity {
+  const currentIndex = ORIM_RARITY_ORDER.indexOf(current);
+  const floorIndex = ORIM_RARITY_ORDER.indexOf(floor);
+  if (currentIndex < 0 || floorIndex < 0) return current;
+  return floorIndex > currentIndex ? floor : current;
+}
+
+function resolveDeckCardRarityWithOrimEffects(
+  state: GameState,
+  deckCard: DeckCardInstance,
+  baseRarity: OrimRarity,
+  orimInstances: Record<string, OrimInstance>
+): OrimRarity {
+  let resolvedRarity = baseRarity;
+  if (!Array.isArray(deckCard.slots) || deckCard.slots.length === 0) {
+    return resolvedRarity;
+  }
+
+  for (const slot of deckCard.slots) {
+    const orimInstanceId = slot.orimId;
+    if (!orimInstanceId) continue;
+
+    const definitionId = orimInstances[orimInstanceId]?.definitionId
+      ?? inferDefinitionIdFromOrimInstanceId(state, orimInstanceId);
+    if (!definitionId) continue;
+
+    const definition = state.orimDefinitions.find((entry) => entry.id === definitionId);
+    const fallback = FALLBACK_ABILITIES_BY_ID.get(definitionId);
+    const effects = resolveEffectsForRarity(definition ?? fallback, resolvedRarity);
+    if (effects.length === 0) continue;
+
+    for (const effect of effects) {
+      const normalizedType = String(effect?.type ?? '').trim().toLowerCase();
+      if (normalizedType === CARD_RARITY_UPGRADE_UNCOMMON_EFFECT_TYPE) {
+        resolvedRarity = applyRarityFloor(resolvedRarity, 'uncommon');
+      }
+    }
+  }
+
+  return resolvedRarity;
+}
+
+function clampPartyForFoundations(partyActors: Actor[], limit = PARTY_FOUNDATION_LIMIT): Actor[] {
+  return partyActors.slice(0, Math.max(1, limit));
 }
 
 function getCombatFlowMode(state: GameState): CombatFlowMode {
@@ -594,6 +681,11 @@ export interface PersistedState {
   randomBiomeTurnTimerActive?: boolean;
   combatFlowTelemetry?: CombatFlowTelemetry;
   globalRestCount?: number;
+  actorCombos?: Record<string, number>;
+  currentLocationId?: string;
+  facingDirection?: GameState['facingDirection'];
+  rpgComboTimerBonusMs?: number;
+  rpgComboTimerBonusToken?: number;
   noRegretCooldowns?: Record<string, number>;
   noRegretCooldown?: number;
   tiles: Tile[];
@@ -825,17 +917,25 @@ export function initializeGame(
       actorId,
         {
           ...deck,
-          cards: deck.cards.map((card) => ({
-            ...card,
-            cost: card.cost ?? 0,
-            active: card.active ?? true,
-            notDiscarded: card.notDiscarded ?? false,
-            discarded: card.discarded ?? false,
-            discardedAtMs: card.discardedAtMs,
-            discardedAtCombo: card.discardedAtCombo,
-            cooldown: card.cooldown ?? 0,
-            maxCooldown: card.maxCooldown ?? 0,
-          })),
+          cards: deck.cards.map((card) => {
+            const normalizedCostByRarity = normalizeCostByRarity(card.costByRarity, card.cost ?? 0);
+            const normalizedEnabledRarity = ORIM_RARITY_ORDER.includes((card.enabledRarity ?? 'common') as OrimRarity)
+              ? (card.enabledRarity ?? 'common') as OrimRarity
+              : 'common';
+            return {
+              ...card,
+              cost: normalizedCostByRarity.common ?? 0,
+              costByRarity: normalizedCostByRarity,
+              enabledRarity: normalizedEnabledRarity,
+              active: card.active ?? true,
+              notDiscarded: card.notDiscarded ?? false,
+              discarded: card.discarded ?? false,
+              discardedAtMs: card.discardedAtMs,
+              discardedAtCombo: card.discardedAtCombo,
+              cooldown: card.cooldown ?? 0,
+              maxCooldown: card.maxCooldown ?? 0,
+            };
+          }),
         },
     ]))
   );
@@ -1118,7 +1218,7 @@ export function playCard(
   const card = tableau[tableau.length - 1];
   const foundationTop = foundation[foundation.length - 1];
 
-  if (!canPlayCardWithWild(card, foundationTop, state.activeEffects, foundation)) {
+  if (!canPlayCardWithWild(card, foundationTop, state.activeEffects)) {
     return null;
   }
 
@@ -1986,17 +2086,20 @@ function awardActorComboCards(
         };
         if (!areAbilityTriggersSatisfiedForActorHand(triggerStateView, actorId, index, nonNotDiscardedTriggers, { sourceSide })) continue;
         const element = definition?.elements?.[0] ?? 'N';
+        const baseRarity = (deckCard.enabledRarity ?? definition?.rarity ?? 'common') as OrimRarity;
+        const resolvedRarity = resolveDeckCardRarityWithOrimEffects(state, deckCard, baseRarity, orimInstances);
+        const resolvedApCost = resolveDeckCardCostForRarity(deckCard, resolvedRarity);
         result.push({
         id: `deckhand-${actorId}-${deckCard.id}`,
         rank: Math.max(1, Math.min(13, deckCard.value)),
         element,
         suit: ELEMENT_TO_SUIT[element],
-        rarity: definition?.rarity ?? 'common',
+        rarity: resolvedRarity,
         sourceActorId: actorId,
         sourceDeckCardId: deckCard.id,
         cooldown: deckCard.cooldown,
         maxCooldown: deckCard.maxCooldown,
-        rpgApCost: deckCard.cost,
+        rpgApCost: resolvedApCost,
         rpgTurnPlayability: deckCard.turnPlayability ?? 'player',
         rpgAbilityId: definition?.id ?? inferredDefinitionId,
           name: definition?.name ?? (inferredDefinitionId ? inferredDefinitionId.replace(/[_-]+/g, ' ') : `${actorId} ability`),
@@ -2064,18 +2167,25 @@ function canPayCardApCost(state: GameState, card: Card, foundationIndex: number)
 
 function isSelfTargetAbilityCard(state: GameState, card: Card): boolean {
   if (!card.rpgAbilityId) return false;
-  const effects = getAbilityEffectsById(state, card.rpgAbilityId);
+  const effects = getAbilityEffectsById(state, card.rpgAbilityId, card.rarity);
   if (effects.length === 0) return false;
   const hasSelfTarget = effects.some((effect) => effect.target === 'self');
   const hasHostileTarget = effects.some((effect) => effect.target === 'enemy' || effect.target === 'all_enemies');
   return hasSelfTarget && !hasHostileTarget;
 }
 
-function getAbilityEffectsById(state: GameState, abilityId: string | undefined): OrimEffectDef[] {
+function getAbilityEffectsById(
+  state: GameState,
+  abilityId: string | undefined,
+  rarity: OrimRarity | undefined
+): OrimEffectDef[] {
   if (!abilityId) return [];
-  const fromState = state.orimDefinitions.find((entry) => entry.id === abilityId)?.effects;
-  if (fromState && fromState.length > 0) return fromState;
-  return FALLBACK_ABILITY_EFFECTS_BY_ID.get(abilityId) ?? [];
+  const resolvedRarity = rarity ?? 'common';
+  const fromState = state.orimDefinitions.find((entry) => entry.id === abilityId);
+  const fromStateEffects = resolveEffectsForRarity(fromState, resolvedRarity);
+  if (fromStateEffects.length > 0) return fromStateEffects;
+  const fallback = FALLBACK_ABILITIES_BY_ID.get(abilityId);
+  return resolveEffectsForRarity(fallback, resolvedRarity);
 }
 
 function inferDefinitionIdFromOrimInstanceId(state: GameState, instanceId: string): string | null {
@@ -2085,7 +2195,7 @@ function inferDefinitionIdFromOrimInstanceId(state: GameState, instanceId: strin
   if (parsed) return parsed;
   const knownIds = [
     ...state.orimDefinitions.map((entry) => entry.id),
-    ...Array.from(FALLBACK_ABILITY_EFFECTS_BY_ID.keys()),
+    ...Array.from(FALLBACK_ABILITIES_BY_ID.keys()),
   ];
   return knownIds.find((id) => instanceId.includes(`orim-${id}-`)) ?? null;
 }
@@ -2404,7 +2514,7 @@ export function playCardFromHand(
   const shouldBypassGolfRules = bypassGolfRules || allowSelfTargetDrop || isAbilityCard || card.id.startsWith('lab-deck-');
   const playerTurnTimerState = startTurnTimerIfNeeded(state, 'player');
   const foundationTop = foundation?.[foundation.length - 1];
-  if (!shouldBypassGolfRules && !canPlayCardWithWild(card, foundationTop, state.activeEffects, foundation)) {
+  if (!shouldBypassGolfRules && !canPlayCardWithWild(card, foundationTop, state.activeEffects)) {
     return null;
   }
   if ((card.cooldown ?? 0) > 0) {
@@ -2454,7 +2564,7 @@ export function playCardFromHand(
   const slotEffects = collectCardOrimEffects(workingState, card);
   const definitionEffects = cardHasAbilityInOrimSlot(workingState, card, card.rpgAbilityId)
     ? []
-    : getAbilityEffectsById(workingState, card.rpgAbilityId);
+    : getAbilityEffectsById(workingState, card.rpgAbilityId, card.rarity);
   const allAbilityEffects = [...definitionEffects, ...slotEffects];
   if (import.meta.env.DEV && isAbilityCard && allAbilityEffects.length === 0) {
     console.debug('[engine] no ability effects resolved', {
@@ -2636,7 +2746,7 @@ export function playCardFromHandToEnemyFoundation(
   const playerTurnTimerState = startTurnTimerIfNeeded(ensuredState, 'player');
   const foundationTop = enemyFoundation[enemyFoundation.length - 1];
   if (!foundationTop) return reject('enemy_foundation_empty');
-  if (!shouldBypassGolfRules && !canPlayCardWithWild(card, foundationTop, ensuredState.activeEffects, enemyFoundation)) {
+  if (!shouldBypassGolfRules && !canPlayCardWithWild(card, foundationTop, ensuredState.activeEffects)) {
     return reject('golf_rules_blocked');
   }
   if ((card.cooldown ?? 0) > 0) {
@@ -2702,7 +2812,7 @@ export function playCardFromHandToEnemyFoundation(
   const slotEffects = collectCardOrimEffects(workingState, card);
   const definitionEffects = cardHasAbilityInOrimSlot(workingState, card, card.rpgAbilityId)
     ? []
-    : getAbilityEffectsById(workingState, card.rpgAbilityId);
+    : getAbilityEffectsById(workingState, card.rpgAbilityId, card.rarity);
   const allAbilityEffects = [...definitionEffects, ...slotEffects];
   if (import.meta.env.DEV && isAbilityCard && allAbilityEffects.length === 0) {
     console.debug('[engine] no ability effects resolved', {
@@ -2813,7 +2923,7 @@ export function playCardFromStock(
   if (!force) {
     const foundation = state.foundations[foundationIndex];
     const foundationTop = state.foundations[foundationIndex][state.foundations[foundationIndex].length - 1];
-    const canPlay = canPlayCardWithWild(stockCard, foundationTop, state.activeEffects, foundation);
+    const canPlay = canPlayCardWithWild(stockCard, foundationTop, state.activeEffects);
     if (!canPlay) return null;
   }
 
@@ -2910,7 +3020,7 @@ function buildTableauCanPlayForFoundations(
       if (!canUseFoundation(foundationIndex)) return false;
       if (!foundation || foundation.length === 0) return false;
       const foundationTop = foundation[foundation.length - 1];
-      return canPlayCardWithWild(topCard, foundationTop, activeEffects, foundation);
+      return canPlayCardWithWild(topCard, foundationTop, activeEffects);
     });
   });
 }
@@ -2979,7 +3089,7 @@ export function getValidFoundationsForCard(
   card: Card
 ): boolean[] {
   return state.foundations.map((foundation) =>
-    canPlayCardWithWild(card, foundation[foundation.length - 1], state.activeEffects, foundation)
+    canPlayCardWithWild(card, foundation[foundation.length - 1], state.activeEffects)
   );
 }
 
@@ -4692,7 +4802,7 @@ export function playCardInRandomBiome(
   const foundation = state.foundations[foundationIndex];
   const foundationTop = foundation[foundation.length - 1];
 
-  if (!canPlayCardWithWild(card, foundationTop, state.activeEffects, foundation)) {
+  if (!canPlayCardWithWild(card, foundationTop, state.activeEffects)) {
     return null;
   }
 
@@ -4808,7 +4918,7 @@ export function playEnemyCardInRandomBiome(
   const foundationTop = enemyFoundation[enemyFoundation.length - 1];
   if (!foundationTop) return null;
 
-  if (!canPlayCardWithWild(card, foundationTop, workingState.activeEffects, enemyFoundation)) {
+  if (!canPlayCardWithWild(card, foundationTop, workingState.activeEffects)) {
     return null;
   }
 
@@ -5827,9 +5937,19 @@ export function adjustRpgHandCardRarity(
   if (currentIndex === -1) return state;
   const nextIndex = Math.max(0, Math.min(ORIM_RARITY_ORDER.length - 1, currentIndex + delta));
   if (nextIndex === currentIndex) return state;
+  const nextRarity = ORIM_RARITY_ORDER[nextIndex];
+  const sourceActorId = target.sourceActorId;
+  const sourceDeckCardId = target.sourceDeckCardId;
+  const sourceDeck = sourceActorId ? state.actorDecks[sourceActorId] : undefined;
+  const sourceDeckCard = sourceDeckCardId
+    ? sourceDeck?.cards.find((entry) => entry.id === sourceDeckCardId)
+    : undefined;
+  const nextApCost = sourceDeckCard
+    ? resolveDeckCardCostForRarity(sourceDeckCard, nextRarity)
+    : Math.max(0, Number(target.rpgApCost ?? 0));
 
   const nextHand = hand.slice();
-  nextHand[index] = { ...target, rarity: ORIM_RARITY_ORDER[nextIndex] };
+  nextHand[index] = { ...target, rarity: nextRarity, rpgApCost: nextApCost };
   return {
     ...state,
     rpgHandCards: nextHand,

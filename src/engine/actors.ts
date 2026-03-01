@@ -30,7 +30,7 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     sprite: '🐻',
     baseHp: 18,
     baseArmor: 1,
-    baseSuperArmor: 1,
+    baseSuperArmor: 0,
   },
   {
     id: 'lupus',

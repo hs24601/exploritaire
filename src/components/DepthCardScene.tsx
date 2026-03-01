@@ -436,11 +436,14 @@ export const DepthCardScene = memo(function DepthCardScene() {
       transparent: true,
     });
     material.onBeforeCompile = (shader) => {
-      if (shader?.diagnostics?.vertexErrors?.length) {
-        console.warn('[DepthCardScene] Vertex shader errors:', shader.diagnostics.vertexErrors);
+      const diagnostics = (shader as typeof shader & {
+        diagnostics?: { vertexErrors?: unknown[]; fragmentErrors?: unknown[] };
+      }).diagnostics;
+      if (diagnostics?.vertexErrors?.length) {
+        console.warn('[DepthCardScene] Vertex shader errors:', diagnostics.vertexErrors);
       }
-      if (shader?.diagnostics?.fragmentErrors?.length) {
-        console.warn('[DepthCardScene] Fragment shader errors:', shader.diagnostics.fragmentErrors);
+      if (diagnostics?.fragmentErrors?.length) {
+        console.warn('[DepthCardScene] Fragment shader errors:', diagnostics.fragmentErrors);
       }
     };
 

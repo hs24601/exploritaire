@@ -9,7 +9,6 @@ export const ORIM_DEFINITIONS: OrimDefinition[] = [
     "id": "fireShard",
     "name": "Fire Shard",
     "description": "A splinter that is warm to the touch",
-    "legacyOrim": true,
     "rarity": "common",
     "elements": [
       "F"
@@ -27,7 +26,6 @@ export const ORIM_DEFINITIONS: OrimDefinition[] = [
     "id": "iceShard",
     "name": "Ice Shard",
     "description": "A splinter of sheer cold",
-    "legacyOrim": true,
     "rarity": "common",
     "elements": [
       "W",
@@ -39,14 +37,45 @@ export const ORIM_DEFINITIONS: OrimDefinition[] = [
     "id": "momentum_orim",
     "name": "Momentum",
     "description": "While equipped to a foundation actor, valid plays to that actor's foundation add +1.0s to your turn timer.",
-    "legacyOrim": false,
-    "timerBonusMs": 1000,
-    "domain": "combat",
     "rarity": "rare",
     "elements": [
       "N"
     ],
     "effects": []
+  },
+  {
+    "id": "card_rarity_upgrade_uncommon",
+    "name": "Card Rarity Upgrade: Uncommon",
+    "description": "Equip this orim to upgrade a common card to uncommon.",
+    "rarity": "uncommon",
+    "elements": [
+      "N"
+    ],
+    "effects": [
+      {
+        "type": "upgrade_card_rarity_uncommon",
+        "value": 1,
+        "target": "self"
+      }
+    ]
+  },
+  {
+    "id": "hydroshield",
+    "name": "Hydroshield",
+    "description": "Summons a magical bubble, adding water-element Super Armor to the owner of the card.",
+    "rarity": "rare",
+    "elements": [
+      "W"
+    ],
+    "effects": [
+      {
+        "type": "super_armor",
+        "value": 1,
+        "target": "enemy",
+        "element": "W",
+        "elementalValue": 1
+      }
+    ]
   }
 ];
 

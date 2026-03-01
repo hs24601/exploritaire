@@ -96,6 +96,7 @@ const SPARKLE_POI_TARGETS = [
 
 type GridCell = { x: number; y: number };
 type GridPoint = { x: number; y: number };
+type TableauWallCard = { x: number; y: number; width: number; height: number };
 
 function hashString(value: string): number {
   let hash = 2166136261 >>> 0;
@@ -1187,8 +1188,8 @@ export const ExplorationMap = memo(function ExplorationMap({
             style={{ zIndex: 8 }}
           >
             <ShadowCanvas
-              containerRef={shadowContainerRef}
-              anchorRef={shadowContainerRef}
+              containerRef={shadowContainerRef as React.RefObject<HTMLElement>}
+              anchorRef={shadowContainerRef as React.RefObject<HTMLElement>}
               lightX={playerScreenPos.px}
               lightY={playerScreenPos.py}
               lightRadius={cellSizeZ * 1.5}
@@ -1559,7 +1560,6 @@ export const ExplorationMap = memo(function ExplorationMap({
             step={0.05}
             value={zoom}
             onChange={handleZoomSliderChange}
-            orient="vertical"
             className="accent-[rgba(127,219,202,0.95)]"
             title="Zoom (locks to player)"
             data-dev-component="ExplorationMapZoomSlider"

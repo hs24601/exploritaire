@@ -33,12 +33,12 @@ interface ExploritaireProps {
   trailNodeIds: string[];
   nodes: ExplorationMapNode[];
   edges: ExplorationMapEdge[];
-  poiMarkers: Array<{ coordKey: string; label: string; tone: 'teal' | 'orange' | 'pink' | 'white' }>;
+  poiMarkers: Array<{ id: string; x: number; y: number; label?: string }>;
   blockedCells: ExplorationBlockedCell[];
-  blockedEdges: Array<ExplorationMapEdge & { blocked?: boolean }>;
-  conditionalEdges: ExplorationMapEdge[];
-  activeBlockedEdge?: ExplorationMapEdge | null;
-  tableauWall?: { fromX: number; fromY: number; toX: number; toY: number } | null;
+  blockedEdges: Array<{ fromX: number; fromY: number; toX: number; toY: number }>;
+  conditionalEdges: Array<{ fromX: number; fromY: number; toX: number; toY: number; locked: boolean }>;
+  activeBlockedEdge?: { fromX: number; fromY: number; toX: number; toY: number; reason?: string } | null;
+  tableauWall?: { fromX: number; fromY: number; toX: number; toY: number; tableaus: number; pathBlock?: boolean } | null;
   forcedPath?: Array<{ x: number; y: number }>;
   nextForcedPathIndex?: number | null;
   travelLabel?: string;
@@ -56,13 +56,11 @@ interface ExploritaireProps {
   pathingLocked: boolean;
   onTogglePathingLocked: () => void;
   onHeadingChange: (direction: Direction) => void;
-  onTeleport: (nodeId: string) => void;
+  onTeleport: (x: number, y: number) => void;
   showLighting: boolean;
   onMapAlignmentToggle: () => void;
   enableKeyboard?: boolean;
   onToggleMap?: () => void;
-  onStepForward?: () => void;
-  onStepBackward?: () => void;
   onRotateLeft?: () => void;
   onRotateRight?: () => void;
 }
@@ -99,9 +97,9 @@ export const Exploritaire = memo(function Exploritaire({
   stepCost,
   onStepCostDecrease,
   onStepCostIncrease,
-  onStepForward: onStepForwardControl,
+  onStepForward,
   canStepForward,
-  onStepBackward: onStepBackwardControl,
+  onStepBackward,
   canStepBackward,
   pathingLocked,
   onTogglePathingLocked,
@@ -111,8 +109,6 @@ export const Exploritaire = memo(function Exploritaire({
   onMapAlignmentToggle,
   enableKeyboard = false,
   onToggleMap,
-  onStepForward: onStepForwardKey,
-  onStepBackward: onStepBackwardKey,
   onRotateLeft,
   onRotateRight,
 }: ExploritaireProps) {
@@ -163,15 +159,15 @@ export const Exploritaire = memo(function Exploritaire({
         return;
       }
       if (key === 'arrowup' || key === 'w') {
-        if (!onStepForwardKey) return;
+        if (!onStepForward) return;
         event.preventDefault();
-        onStepForwardKey();
+        onStepForward();
         return;
       }
       if (key === 'arrowdown' || key === 's') {
-        if (!onStepBackwardKey) return;
+        if (!onStepBackward) return;
         event.preventDefault();
-        onStepBackwardKey();
+        onStepBackward();
         return;
       }
       if (key === 'arrowleft' || key === 'a') {
@@ -188,7 +184,7 @@ export const Exploritaire = memo(function Exploritaire({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [enableKeyboard, onRotateLeft, onRotateRight, onStepBackwardKey, onStepForwardKey, onToggleMap]);
+  }, [enableKeyboard, onRotateLeft, onRotateRight, onStepBackward, onStepForward, onToggleMap]);
 
   return (
     <>
@@ -313,9 +309,9 @@ export const Exploritaire = memo(function Exploritaire({
               stepCost={stepCost}
               onStepCostDecrease={onStepCostDecrease}
               onStepCostIncrease={onStepCostIncrease}
-              onStepForward={onStepForwardControl}
+              onStepForward={onStepForward}
               canStepForward={canStepForward}
-              onStepBackward={onStepBackwardControl}
+              onStepBackward={onStepBackward}
               canStepBackward={canStepBackward}
               pathingLocked={pathingLocked}
               onTogglePathingLocked={onTogglePathingLocked}

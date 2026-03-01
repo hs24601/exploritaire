@@ -12,7 +12,7 @@ interface ComboTimerControllerProps {
   onExpire: (value: number) => void;
   children: (state: {
     displayedCombo: number;
-    timerRef: RefObject<HTMLDivElement>;
+    timerRef: RefObject<HTMLDivElement | null>;
     remainingMs: number;
     visualMaxMs: number;
   }) => ReactNode;

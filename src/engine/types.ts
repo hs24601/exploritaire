@@ -14,6 +14,7 @@ export type OrimRarity =
   | 'epic'
   | 'legendary'
   | 'mythic';
+export type RelicRarity = OrimRarity;
 
 export type OrimDomain = 'puzzle' | 'combat';
 
@@ -22,7 +23,7 @@ export type OrimDomain = 'puzzle' | 'combat';
  * This is the engine-level representation of authored effects.
  */
 export interface OrimEffectDef {
-  type: 'damage' | 'healing' | 'armor' | 'evasion' | 'defense' | 'burn' | 'bleed' | 'stun' | 'draw' | 'redeal_tableau';
+  type: 'damage' | 'healing' | 'armor' | 'super_armor' | 'evasion' | 'defense' | 'burn' | 'bleed' | 'stun' | 'draw' | 'redeal_tableau' | 'upgrade_card_rarity_uncommon';
   value?: number;
   target: 'self' | 'enemy' | 'all_enemies' | 'ally' | 'all_allies' | 'anyone';
   element?: Element;
@@ -65,6 +66,20 @@ export interface AbilityTriggerDef {
   countdownValue?: number;
 }
 
+export type AbilityLifecycleDiscardPolicy = 'discard' | 'retain' | 'reshuffle' | 'banish';
+export type AbilityLifecycleExhaustScope = 'none' | 'turn' | 'battle' | 'rest' | 'run';
+export type AbilityLifecycleCooldownMode = 'none' | 'seconds' | 'turns' | 'combo';
+
+export interface AbilityLifecycleDef {
+  discardPolicy?: AbilityLifecycleDiscardPolicy;
+  exhaustScope?: AbilityLifecycleExhaustScope;
+  maxUsesPerScope?: number;
+  cooldownMode?: AbilityLifecycleCooldownMode;
+  cooldownValue?: number;
+  cooldownStartsOn?: 'use' | 'resolve';
+  cooldownResetsOn?: 'turn_start' | 'turn_end' | 'battle_end' | 'rest';
+}
+
 export interface SourceCardPlayExpiringBonus {
   id: string;
   sourceActorId: string;
@@ -92,8 +107,11 @@ export interface OrimDefinition {
   name: string;
   description: string;
   elements: Element[];
+  glyph?: string;
   effects?: OrimEffectDef[];
+  effectsByRarity?: Partial<Record<OrimRarity, OrimEffectDef[]>>;
   triggers?: AbilityTriggerDef[];
+  lifecycle?: AbilityLifecycleDef;
   legacyOrim?: boolean;
   timerBonusMs?: number;
   isAspect?: boolean; // Marks this orim as a character aspect (jumbo card option)
@@ -124,15 +142,47 @@ export interface OrimSlot {
 }
 
 export type RelicCombatEvent =
-  | { type: 'ORIM_CALLOUT_SHOWN' }
+  | { type: 'ORIM_CALLOUT_SHOWN'; side: 'player' | 'enemy' }
   | { type: 'NO_PLAYABLE_MOVES'; side: 'player' | 'enemy' }
   | { type: 'TURN_ENDED_EARLY'; side: 'player' | 'enemy'; bankedMs: number }
   | { type: 'VALID_MOVE_PLAYED'; side: 'player' };
 
+export interface RelicDefinition {
+  id: string;
+  name: string;
+  description: string;
+  rarity?: OrimRarity;
+  passive?: boolean;
+  scope?: 'self' | 'party' | 'global' | string;
+  behaviorId: string;
+  params?: Record<string, unknown>;
+}
+
+export interface RelicInstance {
+  instanceId: string;
+  relicId: string;
+  enabled: boolean;
+  level?: number;
+}
+
+export interface RelicRuntimeEntry {
+  counters?: Record<string, number>;
+  lastActivatedAt?: number;
+}
+
+export interface RelicLastActivation {
+  instanceId: string;
+  token: number;
+  procs: number;
+  armorGained: number;
+}
+
 export interface DeckCardInstance {
   id: string;
   value: number;
-  cost: number;
+  cost?: number;
+  costByRarity?: Partial<Record<OrimRarity, number>>;
+  enabledRarity?: OrimRarity;
   active?: boolean;
   notDiscarded?: boolean;
   discarded?: boolean;
@@ -182,6 +232,7 @@ export interface Card {
   rpgTurnPlayability?: TurnPlayability;
   rpgCardKind?: 'ability' | 'fast' | 'focus' | 'wild';
   rpgLevel?: number;
+  tableauStepIndex?: number;
 }
 
 export type GamePhase = 'playing' | 'garden' | 'biome';
@@ -236,6 +287,22 @@ export interface ActorDefinition {
   baseAccuracy?: number;
   basePower?: number;
   basePowerMax?: number;
+  orimEnhancements?: Record<string, string>;
+  constellation?: {
+    backgroundSrc?: string;
+    nodes?: Array<{
+      id: string;
+      label?: string;
+      xPct: number;
+      yPct: number;
+      requires: string[];
+      locked?: boolean;
+      maxPower?: number;
+      size?: 'major' | 'minor';
+    }>;
+    edges?: Array<[string, string]>;
+    links?: Array<{ fromNodeId: string; toNodeId: string }>;
+  };
 }
 
 export interface GridPosition {
@@ -246,6 +313,7 @@ export interface GridPosition {
 export interface Actor {
   definitionId: string;
   id: string; // Unique instance ID
+  name?: string;
   currentValue: number; // Can be modified by effects
   level: number; // Actor level (1+)
   stamina: number; // Current stamina pips
@@ -366,6 +434,7 @@ export interface GameState {
   foundations: Card[][];
   enemyFoundations?: Card[][];
   enemyActors?: Actor[];
+  rpgEnemyHandCards?: Card[][];
   rpgHandCards?: Card[];
   rpgDiscardPilesByActor?: Record<string, Card[]>;
   combatDeck?: CombatDeckState;
@@ -391,6 +460,11 @@ export interface GameState {
   actorDecks: Record<string, ActorDeckState>; // Actor decks with ORIM slots
   noRegretCooldowns?: Record<string, number>; // ActorId -> cooldown turns remaining (legacy)
   noRegretCooldown?: number; // Global cooldown turns remaining
+  relicDefinitions: RelicDefinition[];
+  equippedRelics: RelicInstance[];
+  relicRuntimeState: Record<string, RelicRuntimeEntry>;
+  relicLastActivation?: RelicLastActivation;
+  globalRestCount?: number;
   lastCardActionSnapshot?: Omit<GameState, 'lastCardActionSnapshot'>;
   // Tile system
   tiles: Tile[]; // Active tiles in the garden
@@ -418,6 +492,7 @@ export interface GameState {
   combatFlowTelemetry?: CombatFlowTelemetry;
   enemyDifficulty?: EnemyDifficulty;
   enemyBackfillQueues?: Card[][]; // Pre-seeded backfill queues used on enemy turns
+  enemyBackfillEnabled?: boolean;
   rpgDots?: RpgDotEffect[];
   rpgDeckCooldownLastTickAt?: number;
   rpgEnemyDragSlowUntil?: number;
@@ -431,6 +506,10 @@ export interface GameState {
   rpgSourceCardPlayBonuses?: SourceCardPlayExpiringBonus[];
   rpgLastCardPlayedAtByActor?: Record<string, number>;
   playtestVariant?: 'single-foundation' | 'party-foundations' | 'party-battle' | 'rpg';
+  currentLocationId?: string;
+  facingDirection?: 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
+  rpgComboTimerBonusMs?: number;
+  rpgComboTimerBonusToken?: number;
   actorKeru?: ActorKeru;
   lastResolvedOrimId?: string | null;
   lastResolvedOrimFoundationIndex?: number | null;
@@ -685,6 +764,8 @@ export interface BiomeDefinition {
   requiredMoves: number; // Total moves to complete
   /** Player choices shown after the event tableau. Only used when biomeType === 'event'. */
   eventChoices?: EventChoice[];
+  exits?: Partial<Record<'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW', string>>;
+  directionalTableaus?: Partial<Record<'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW', number[]>>;
 }
 
 // === NODE-EDGE TABLEAU SYSTEM ===

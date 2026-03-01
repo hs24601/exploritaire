@@ -94,6 +94,8 @@ type PoiNarrationDraft = {
 
 type ActorDeckTemplate = {
   values: number[];
+  costByRarity?: Partial<Record<OrimRarity, number>>[];
+  enabledRarities?: OrimRarity[];
   costs?: number[];
   activeCards?: boolean[];
   notDiscardedCards?: boolean[];
@@ -107,7 +109,8 @@ type ActorDeckTemplate = {
 type AbilityEffectType =
   | 'damage' | 'healing' | 'speed' | 'evasion'
   | 'armor' | 'super_armor' | 'defense' | 'draw' | 'maxhp'
-  | 'burn' | 'bleed' | 'stun' | 'freeze';
+  | 'burn' | 'bleed' | 'stun' | 'freeze' | 'redeal_tableau'
+  | 'upgrade_card_rarity_uncommon';
 
 type AbilityEffectTarget = 'self' | 'enemy' | 'all_enemies' | 'ally';
 
@@ -131,11 +134,13 @@ const ABILITY_EFFECT_TYPES: AbilityEffectType[] = [
   'super_armor',
   'defense',
   'draw',
+  'redeal_tableau',
   'maxhp',
   'burn',
   'bleed',
   'stun',
   'freeze',
+  'upgrade_card_rarity_uncommon',
 ];
 
 const resolveEffectValueForRarity = (effect: AbilityEffect, rarity: OrimRarity): number => {
@@ -178,6 +183,7 @@ const ensureElementList = (value?: Element[] | null): Element[] => {
 type AspectDraft = {
   id: string;
   name: string;
+  label?: string;
   abilityType: 'exploration' | 'combat';
   abilityRarity: OrimRarity;
   abilityDescription: string;
@@ -193,6 +199,9 @@ type AspectDraft = {
   effects: AbilityEffect[];
   equipCost: number;
 };
+
+const normalizeAbilityType = (value?: string): AspectDraft['abilityType'] =>
+  value === 'combat' ? 'combat' : 'exploration';
 
 type OrimDraft = {
   id: string;
@@ -242,7 +251,7 @@ const REWARD_TYPE_OPTIONS: Array<{ value: PoiRewardType; label: string }> = [
   { value: 'orim-choice', label: 'Orims (choice)' },
   { value: 'aspect-jumbo', label: 'Aspects (jumbo, legacy)' },
 ];
-const TIME_SCALE_OPTIONS = [0.5, 1, 1.5, 2];
+const TIME_SCALE_OPTIONS = [0.25, 0.5, 1, 1.5, 2, 3, 4];
 const DEFAULT_SPARKLE_CONFIG: Required<PoiSparkleConfig> = {
   proximityRange: 3,
   starCount: 6,
@@ -296,7 +305,7 @@ export default function App() {
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
   const [forcedPerspectiveEnabled, setForcedPerspectiveEnabled] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
-  const [toolingTab, setToolingTab] = useState<'poi' | 'ability' | 'orim' | 'synergies' | 'visuals' | 'actor'>('poi');
+  const [toolingTab, setToolingTab] = useState<'poi' | 'ability' | 'orim' | 'synergies' | 'visuals' | 'actor'>('actor');
   const [toolingVisualsOverlayActive, setToolingVisualsOverlayActive] = useState(false);
   const [assetEditorVisualsOverlayActive, setAssetEditorVisualsOverlayActive] = useState(false);
   const applySparkleConfig = useCallback((config?: PoiSparkleConfig) => {
@@ -331,6 +340,7 @@ export default function App() {
   const [poiEditorRewards, setPoiEditorRewards] = useState<PoiRewardDraft[]>([{
     id: 1,
     type: 'aspect-choice',
+    trigger: 'on_arrival',
     description: '',
     drawCount: 3,
     chooseCount: 1,
@@ -365,7 +375,8 @@ export default function App() {
     return source.map((entry) => ({
       id: entry.id ?? '',
       name: entry.label ?? '',
-      abilityType: entry.abilityType ?? 'exploration',
+      label: entry.label ?? '',
+      abilityType: normalizeAbilityType(entry.abilityType),
       abilityRarity: entry.rarity ?? 'common',
       abilityDescription: entry.description ?? '',
       abilityDamage: entry.damage ?? '',
@@ -399,7 +410,7 @@ export default function App() {
       description: orim.description,
       rarity: orim.rarity ?? 'common',
       elements: ensureElementList(orim.elements),
-      effects: [],
+      effects: Array.isArray(orim.effects) ? (orim.effects as AbilityEffect[]) : [],
       isAspect: orim.isAspect,
       aspectProfile: orim.aspectProfile
         ? {
@@ -436,6 +447,7 @@ export default function App() {
     jumbo: 1.25,
   });
   const [timeScale, setTimeScale] = useState(TIME_SCALE_OPTIONS[1]);
+  const applyLiveDeckTemplatesRef = useRef<(nextTemplates: Record<string, ActorDeckTemplate>) => boolean>(() => false);
   const [cameraDebug, setCameraDebug] = useState<{
     wheelCount: number;
     lastDelta: number;
@@ -474,6 +486,9 @@ export default function App() {
   const handleAssetEditorVisualsOverlayChange = useCallback((active: boolean) => {
     setAssetEditorVisualsOverlayActive(active);
   }, []);
+  const handleApplyLiveActorDeckTemplates = useCallback((nextTemplates: Record<string, ActorDeckTemplate>) => (
+    applyLiveDeckTemplatesRef.current(nextTemplates)
+  ), []);
   const assetEditorPanes = useMemo<AssetEditorPaneDefinition[]>(() => [
     {
       id: 'actor',
@@ -489,6 +504,7 @@ export default function App() {
               orimDefinitions={ORIM_DEFINITIONS}
               onChange={handleActorDefinitionChange}
               onDeckChange={setActorDeckTemplates}
+              onApplyLive={handleApplyLiveActorDeckTemplates}
             />
           </div>
         </div>
@@ -513,6 +529,7 @@ export default function App() {
     actorDeckTemplates,
     actorDefinitionsForEditor,
     handleActorDefinitionChange,
+    handleApplyLiveActorDeckTemplates,
     handleAssetEditorVisualsOverlayChange,
   ]);
   const initialGameState = useMemo(() => {
@@ -576,6 +593,9 @@ export default function App() {
     analysis,
     actions,
   } = useGameEngine(initialGameState, { devNoRegretEnabled });
+  useEffect(() => {
+    applyLiveDeckTemplatesRef.current = actions.applyLiveActorDeckTemplates;
+  }, [actions]);
   const ghostBackgroundEnabled = false;
   const playtestVariant = gameState?.playtestVariant ?? 'single-foundation';
   const isRpgVariant = playtestVariant === 'rpg';
@@ -736,7 +756,7 @@ export default function App() {
       if (haystack.includes(query)) {
         seenCoords.add(coords);
         results.push({
-          id: poi.id,
+          id: poi.id ?? coords,
           name: poi.name,
           coords,
           preview: poi.description
@@ -1312,7 +1332,8 @@ export default function App() {
         const nextDrafts = (data.abilities ?? []).map((entry) => ({
           id: entry.id ?? '',
           name: entry.label ?? '',
-          abilityType: entry.abilityType ?? 'exploration',
+          label: entry.label ?? '',
+          abilityType: normalizeAbilityType(entry.abilityType),
           abilityDescription: entry.description ?? '',
           abilityDamage: entry.damage ?? '',
           abilityCardId: entry.cardId ?? '',
@@ -1866,7 +1887,7 @@ export default function App() {
         setToolingOpen((prev) => {
           const next = !prev;
           if (next) {
-            setToolingTab('poi');
+            setToolingTab('actor');
             setPoiEditorSection('details');
           }
           return next;
@@ -1965,6 +1986,13 @@ export default function App() {
       const nextIndex = (currentIndex + 1) % TIME_SCALE_OPTIONS.length;
       return TIME_SCALE_OPTIONS[nextIndex];
     });
+  }, []);
+  const handleSetTimeScale = useCallback((next: number) => {
+    const normalized = Number.isFinite(next) ? Number(next) : 1;
+    const closest = TIME_SCALE_OPTIONS.reduce((best, candidate) => {
+      return Math.abs(candidate - normalized) < Math.abs(best - normalized) ? candidate : best;
+    }, TIME_SCALE_OPTIONS[0]);
+    setTimeScale(closest);
   }, []);
   const handleTogglePause = useCallback(() => {
     setHidePauseOverlay(false);
@@ -2201,7 +2229,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
-                      setToolingTab('poi');
+                      setToolingTab('actor');
                       setPoiEditorSection('details');
                       setToolingOpen(true);
                     }}
@@ -2357,12 +2385,19 @@ export default function App() {
               <div className="relative w-full h-full flex flex-col bg-game-bg-dark/95 border border-game-teal/40 rounded-2xl overflow-hidden menu-text shadow-[0_0_50px_rgba(0,0,0,0.8)]">
                 {/* Unified Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-game-teal/20 bg-black/40 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setToolingTab('poi')}
-                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'poi' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
-                    >
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setToolingTab('actor')}
+                    className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'actor' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
+                  >
+                    Actors
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setToolingTab('poi')}
+                    className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'poi' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
+                  >
                       POI
                     </button>
                     <button
@@ -2393,14 +2428,7 @@ export default function App() {
                     >
                       Visuals
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setToolingTab('actor')}
-                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'actor' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
-                    >
-                      Actors
-                    </button>
-                  </div>
+                </div>
 
                   <div className="flex items-center gap-3">
                     {toolingTab !== 'actor' && toolingTab !== 'visuals' && (
@@ -4070,6 +4098,7 @@ export default function App() {
                           orimDefinitions={gameState?.orimDefinitions ?? ORIM_DEFINITIONS}
                           onChange={handleActorDefinitionChange}
                           onDeckChange={setActorDeckTemplates}
+                          onApplyLive={handleApplyLiveActorDeckTemplates}
                         />
                       </div>
                     </div>
@@ -4094,7 +4123,9 @@ export default function App() {
         gameState={gameState}
         actions={actions}
         timeScale={timeScale}
+        timeScaleOptions={TIME_SCALE_OPTIONS}
         onCycleTimeScale={handleCycleTimeScale}
+        onSetTimeScale={handleSetTimeScale}
         isGamePaused={isGamePaused}
         onTogglePause={handleTogglePause}
         highPerformanceTimer={highPerformanceTimer}

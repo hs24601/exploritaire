@@ -1,4 +1,4 @@
-import { memo, useRef, useCallback, useMemo, useState, useEffect } from 'react';
+import { memo, useRef, useCallback, useMemo, useState, useEffect, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import type { Card as CardType, OrimDefinition, OrimRarity, Element } from '../engine/types';
 import { getRankDisplay } from '../engine/rules';
@@ -189,9 +189,8 @@ export const Card = memo(function Card({
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-    if (e.currentTarget && 'setPointerCapture' in e.currentTarget) {
-      (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    }
+    const target = e.currentTarget as unknown as HTMLElement | null;
+    target?.setPointerCapture?.(e.pointerId);
     const rect = cardRef.current.getBoundingClientRect();
     onDragStart(card, e.clientX, e.clientY, rect);
   }, [onDragStart, card, faceDown]);
@@ -463,6 +462,8 @@ export const Card = memo(function Card({
         target: string;
         duration?: number;
         charges?: number;
+        element?: Element;
+        elementalValue?: number;
       }>;
     }> }).abilities ?? [];
     if (abilityRows.length === 0) return null;
@@ -666,7 +667,7 @@ const getWatercolorColorFilter = () => {
     for (let i = 1; i < steps; i++) points.push(`${rand() * variance}% ${100 - (i / steps) * 100}%`);
     return `polygon(${points.join(', ')})`;
   }, [showDarkArtOverlay, card]);
-  const shaderOverlayStyle = useMemo(() => ({
+  const shaderOverlayStyle = useMemo<CSSProperties>(() => ({
     clipPath: darkJaggedPath || 'inset(0)',
     background: `
       radial-gradient(circle at 25% 20%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 45%),
@@ -2133,6 +2134,7 @@ const getWatercolorColorFilter = () => {
                             speed: '#9de3ff', evasion: '#9de3ff',
                             stun: '#b8d8ff', freeze: '#b8d8ff',
                             draw: '#f7d24b',
+                            upgrade_card_rarity_uncommon: '#f7d24b',
                           };
                           const color = effectColor[fx.type] ?? '#9de3ff';
                           const targetLabel = fx.target.replace('_', ' ');
@@ -2605,7 +2607,7 @@ const getWatercolorColorFilter = () => {
                 })
                 : orimSlots.map((slot, index) => {
                   const element = index === 0
-                    ? (card.tokenReward ?? (card.element !== 'N' ? card.element : undefined))
+                    ? (card?.tokenReward ?? (card?.element && card.element !== 'N' ? card.element : undefined))
                     : undefined;
                   const suit = element ? ELEMENT_TO_SUIT[element] : null;
                   const slotColor = suit

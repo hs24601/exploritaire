@@ -32,42 +32,42 @@ export function buildRelicTrayItems(
   const definitionsById = new Map(definitions.map((definition) => [definition.id, definition]));
 
   if (includeAllDefinitions) {
-    return definitions
-      .map((definition) => {
-        const instance = instancesByRelicId.get(definition.id);
-        const enabled = !!instance?.enabled;
-        if (enabledOnly && !enabled) return null;
-        return {
-          instanceId: instance?.instanceId ?? `relic-${definition.id}`,
-          relicId: definition.id,
-          behaviorId: definition.behaviorId,
-          name: definition.name,
-          description: definition.description,
-          rarity: definition.rarity,
-          level: instance?.level ?? 1,
-          params: definition.params,
-          enabled,
-        } satisfies RelicTrayItem;
-      })
-      .filter((item): item is RelicTrayItem => !!item);
-  }
-
-  return instances
-    .map((instance) => {
-      const definition = definitionsById.get(instance.relicId);
-      if (!definition) return null;
-      if (enabledOnly && !instance.enabled) return null;
-      return {
-        instanceId: instance.instanceId,
+    const items: RelicTrayItem[] = [];
+    definitions.forEach((definition) => {
+      const instance = instancesByRelicId.get(definition.id);
+      const enabled = !!instance?.enabled;
+      if (enabledOnly && !enabled) return;
+      items.push({
+        instanceId: instance?.instanceId ?? `relic-${definition.id}`,
         relicId: definition.id,
         behaviorId: definition.behaviorId,
         name: definition.name,
         description: definition.description,
         rarity: definition.rarity,
-        level: instance.level ?? 1,
+        level: instance?.level ?? 1,
         params: definition.params,
-        enabled: !!instance.enabled,
-      } satisfies RelicTrayItem;
-    })
-    .filter((item): item is RelicTrayItem => !!item);
+        enabled,
+      });
+    });
+    return items;
+  }
+
+  const items: RelicTrayItem[] = [];
+  instances.forEach((instance) => {
+    const definition = definitionsById.get(instance.relicId);
+    if (!definition) return;
+    if (enabledOnly && !instance.enabled) return;
+    items.push({
+      instanceId: instance.instanceId,
+      relicId: definition.id,
+      behaviorId: definition.behaviorId,
+      name: definition.name,
+      description: definition.description,
+      rarity: definition.rarity,
+      level: instance.level ?? 1,
+      params: definition.params,
+      enabled: !!instance.enabled,
+    });
+  });
+  return items;
 }

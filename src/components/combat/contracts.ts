@@ -55,6 +55,19 @@ export interface CombatSandboxActionsContract {
   playEnemyCardInRandomBiome: (tableauIndex: number, foundationIndex: number) => boolean;
   setBiomeTableaus: (tableaus: CardType[][]) => void;
   setBiomeFoundations: (foundations: CardType[][]) => void;
+  autoPlayNextMove?: () => void;
+  completeBiome?: () => void;
+  endExplorationTurnInRandomBiome?: () => void;
+  playRpgHandCardOnActor?: (
+    cardId: string,
+    side: 'player' | 'enemy',
+    actorIndex: number
+  ) => boolean;
+  playEnemyRpgHandCardOnActor?: (
+    enemyActorIndex: number,
+    cardId: string,
+    targetActorIndex: number
+  ) => boolean;
   tickRpgCombat?: RpgTickAction;
   updateEquippedRelics?: (equippedRelics: RelicInstanceLike[]) => void;
   devInjectOrimToActor?: (

@@ -105,7 +105,7 @@ function getOrimDisplay(definition: OrimDefinition | null, showGraphics: boolean
     return getSuitDisplay(suit, showGraphics);
   }
   if (showGraphics) return '◆';
-  return definition.category.slice(0, 1).toUpperCase();
+  return (definition.category ?? 'ability').slice(0, 1).toUpperCase();
 }
 
 interface TileProps {

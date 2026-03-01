@@ -1,5 +1,19 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import type { GameState, SelectedCard, Move, EffectType, Element, Token, Card, Actor, RelicCombatEvent, PuzzleCompletedPayload } from '../engine/types';
+import type {
+  GameState,
+  SelectedCard,
+  Move,
+  EffectType,
+  Element,
+  Token,
+  Card,
+  Actor,
+  RelicCombatEvent,
+  PuzzleCompletedPayload,
+  DeckCardInstance,
+  OrimRarity,
+  TurnPlayability,
+} from '../engine/types';
 import {
   initializeGame,
   playCard,
@@ -76,6 +90,7 @@ import {
   applyKeruArchetype as applyKeruArchetypeFn,
   puzzleCompleted as puzzleCompletedFn,
 } from '../engine/game';
+import { createActorDeckStateWithOrim } from '../engine/actorDecks';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { findBestMoveSequence, solveOptimally } from '../engine/guidance';
 import { canPlayCardWithWild } from '../engine/rules';
@@ -84,6 +99,28 @@ import { analyzeOptimalSequence, computeAnalysisKey } from '../engine/analysis';
 
 const ORIM_STORAGE_KEY = 'orimEditorDefinitions';
 const RELIC_STORAGE_KEY = 'relicEditorDefinitions';
+type LiveDeckTemplate = {
+  values: number[];
+  costByRarity?: Partial<Record<OrimRarity, number>>[];
+  costs?: number[];
+  enabledRarities?: OrimRarity[];
+  activeCards?: boolean[];
+  notDiscardedCards?: boolean[];
+  playableTurns?: TurnPlayability[];
+  cooldowns?: number[];
+  slotsPerCard?: number[];
+  starterOrim?: { cardIndex: number; slotIndex?: number; orimId: string }[];
+  slotLocks?: { cardIndex: number; slotIndex?: number; locked: boolean }[];
+};
+
+const resolveDeckCardCostForRarity = (deckCard: DeckCardInstance, rarity: OrimRarity): number => {
+  const costMap = deckCard.costByRarity ?? {};
+  const direct = costMap[rarity];
+  if (typeof direct === 'number' && Number.isFinite(direct)) return Math.max(0, direct);
+  const common = costMap.common;
+  if (typeof common === 'number' && Number.isFinite(common)) return Math.max(0, common);
+  return Math.max(0, Number(deckCard.cost ?? 0) || 0);
+};
 
 const normalizeOrimId = (value: string) => value
   .toLowerCase()
@@ -223,7 +260,7 @@ export function useGameEngine(
       if (isRandomBiome) {
         return gameState.foundations.map((foundation, index) =>
           hasFoundationStamina(index) &&
-          canPlayCardWithWild(selectedCard.card, foundation[foundation.length - 1], gameState.activeEffects, foundation)
+          canPlayCardWithWild(selectedCard.card, foundation[foundation.length - 1], gameState.activeEffects)
         );
       }
       return getValidFoundationsForCard(gameState, selectedCard.card).map(
@@ -702,7 +739,7 @@ export function useGameEngine(
         if (!hasStamina) continue;
         const foundation = gameState.foundations[fIdx];
         const top = foundation[foundation.length - 1];
-        const canPlay = canPlayCardWithWild(card, top, gameState.activeEffects, foundation);
+        const canPlay = canPlayCardWithWild(card, top, gameState.activeEffects);
         if (!canPlay) continue;
 
         const newState = useWild
@@ -946,6 +983,101 @@ export function useGameEngine(
     setGameState(newState);
     return true;
   }, [gameState]);
+
+  const applyLiveActorDeckTemplates = useCallback((templates: Record<string, LiveDeckTemplate>) => {
+    let applied = false;
+    setGameState((prev) => {
+      if (!prev) return prev;
+
+      const actorById = new Map<string, Actor>();
+      prev.availableActors.forEach((actor) => actorById.set(actor.id, actor));
+      Object.values(prev.tileParties ?? {}).flat().forEach((actor) => {
+        if (!actorById.has(actor.id)) actorById.set(actor.id, actor);
+      });
+      (prev.enemyActors ?? []).forEach((actor) => {
+        if (!actorById.has(actor.id)) actorById.set(actor.id, actor);
+      });
+
+      const nextActorDecks: GameState['actorDecks'] = { ...prev.actorDecks };
+      const nextOrimInstances = { ...prev.orimInstances };
+
+      Object.entries(prev.actorDecks).forEach(([actorId, currentDeck]) => {
+        const actor = actorById.get(actorId);
+        if (!actor) return;
+        const seeded = createActorDeckStateWithOrim(actorId, actor.definitionId, prev.orimDefinitions, templates);
+        seeded.orimInstances.forEach((instance) => {
+          nextOrimInstances[instance.id] = instance;
+        });
+        const mergedCards = seeded.deck.cards.map((seedCard, cardIndex) => {
+          const liveCard = currentDeck.cards[cardIndex];
+          if (!liveCard) return seedCard;
+          return {
+            ...seedCard,
+            cooldown: liveCard.cooldown ?? seedCard.cooldown,
+            discarded: liveCard.discarded ?? false,
+            discardedAtMs: liveCard.discardedAtMs,
+            discardedAtCombo: liveCard.discardedAtCombo,
+          };
+        });
+        nextActorDecks[actorId] = {
+          ...currentDeck,
+          cards: mergedCards,
+        };
+      });
+
+      const deckCardsByActor = new Map<string, Map<string, DeckCardInstance>>();
+      Object.entries(nextActorDecks).forEach(([actorId, deck]) => {
+        const byId = new Map<string, DeckCardInstance>();
+        deck.cards.forEach((deckCard) => byId.set(deckCard.id, deckCard));
+        deckCardsByActor.set(actorId, byId);
+      });
+
+      const remapCard = (card: Card): Card | null => {
+        const actorId = card.sourceActorId;
+        const deckCardId = card.sourceDeckCardId;
+        if (!actorId || !deckCardId) return card;
+        const deckById = deckCardsByActor.get(actorId);
+        if (!deckById) return card;
+        const deckCard = deckById.get(deckCardId);
+        if (!deckCard) return null;
+        const rarity = (deckCard.enabledRarity ?? card.rarity ?? 'common') as OrimRarity;
+        const apCost = resolveDeckCardCostForRarity(deckCard, rarity);
+        return {
+          ...card,
+          rank: Math.max(1, Math.min(13, deckCard.value)),
+          rarity,
+          rpgApCost: apCost,
+          cooldown: deckCard.cooldown,
+          maxCooldown: deckCard.maxCooldown,
+          rpgTurnPlayability: deckCard.turnPlayability,
+        };
+      };
+
+      const nextHand = (prev.rpgHandCards ?? [])
+        .map(remapCard)
+        .filter((card): card is Card => card !== null);
+
+      const nextDiscardPiles = Object.fromEntries(
+        Object.entries(prev.rpgDiscardPilesByActor ?? {}).map(([actorId, cards]) => ([
+          actorId,
+          cards
+            .map(remapCard)
+            .filter((card): card is Card => card !== null),
+        ]))
+      );
+
+      applied = true;
+      return {
+        ...prev,
+        actorDecks: nextActorDecks,
+        orimInstances: nextOrimInstances,
+        rpgHandCards: nextHand,
+        rpgDiscardPilesByActor: nextDiscardPiles,
+      };
+    });
+    return applied;
+  }, []);
+
   const addRpgHandCard = useCallback((card: Card) => {
     let added = false;
     setGameState((prev) => {
@@ -1204,6 +1336,7 @@ export function useGameEngine(
       playRpgHandCardOnActor,
       playEnemyRpgHandCardOnActor,
       adjustRpgHandCardRarity,
+      applyLiveActorDeckTemplates,
       addRpgHandCard,
       removeRpgHandCardById,
       tickRpgCombat,

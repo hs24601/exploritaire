@@ -1,5 +1,6 @@
 import { memo, useMemo, useCallback } from 'react';
 import { useGraphics } from '../contexts/GraphicsContext';
+import { useCardScale } from '../contexts/CardScaleContext';
 import type { GameState, Card as CardType, Move, SelectedCard, Actor } from '../engine/types';
 import { GameButton } from './GameButton';
 import { Tableau, TableauGroup } from './Tableau';
@@ -8,6 +9,14 @@ import { StatsPanel } from './StatsPanel';
 import { canPlayCard } from '../engine/rules';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { CARD_SIZE } from '../engine/constants';
+import { getActorDefinition } from '../engine/actors';
+
+const NO_MOVES_BADGE_STYLE = {
+  borderColor: 'rgba(247, 210, 75, 0.85)',
+  color: '#f7d24b',
+  backgroundColor: 'rgba(8, 8, 10, 0.95)',
+  boxShadow: '0 0 10px rgba(247, 210, 75, 0.32)',
+} as const;
 
 interface PlayingScreenProps {
   gameState: GameState;
@@ -160,7 +169,7 @@ export const PlayingScreen = memo(function PlayingScreen({
                 isGuidedFoundation && (isFollowingGuidance || !selectedCard);
               const shouldDim = guidanceActive && !isGuidedFoundation;
 
-              const actor = (idx === 0 && !foundationHasActor) ? null : activeParty[idx];
+              const actor = (idx === 0 && !foundationHasActor) ? undefined : activeParty[idx];
               const actorName = actor ? getActorDefinition(actor.definitionId)?.name : undefined;
               const hasStamina = (actor?.stamina ?? 0) > 0;
               const canReceiveDrag =

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Card as CardType, Element, InteractionMode } from '../engine/types';
 import { CARD_SIZE, WILD_SENTINEL_RANK } from '../engine/constants';
@@ -29,6 +29,10 @@ interface FoundationProps {
   maskValue?: boolean;
   revealValue?: number | null;
   watercolorOnlyCards?: boolean;
+  hideElements?: boolean;
+  hpOverlay?: ReactNode;
+  hpOverlayPlacement?: 'top' | 'bottom';
+  hpOverlayOffsetPx?: number;
   foundationOverlay?: {
     name: string;
     title?: string;
@@ -96,6 +100,10 @@ export const Foundation = memo(function Foundation({
   maskValue = false,
   revealValue = null,
   watercolorOnlyCards = false,
+  hideElements = false,
+  hpOverlay,
+  hpOverlayPlacement = 'top',
+  hpOverlayOffsetPx = 4,
   foundationOverlay,
   neonGlowColorOverride,
   neonGlowShadowOverride,
@@ -344,6 +352,13 @@ export const Foundation = memo(function Foundation({
               ? 'none'
               : (isWildSentinelTop ? 'none' : undefined);
             const comboCount = Math.max(0, cards.length - 1);
+            const resolvedFoundationOverlay = isTop && foundationOverlay
+              ? {
+                ...foundationOverlay,
+                name: foundationOverlay.name ?? actorName ?? 'Party Member',
+                comboCount,
+              }
+              : undefined;
             return (
               <div
                 key={card.id}
@@ -382,15 +397,28 @@ export const Foundation = memo(function Foundation({
                   }
                   disableLegacyShine={true}
                   watercolorOnly={showWatercolorOnlyForCard}
+                  hideElements={hideElements}
                   showFoundationActorSecretHolo={false}
                   disableTilt
                   disableHoverLift
                   disableHoverGlow
-                  foundationOverlay={isTop ? { ...foundationOverlay, comboCount } : undefined}
+                  foundationOverlay={resolvedFoundationOverlay}
                 />
               </div>
             );
           })}
+          {hpOverlay && (
+            <div
+              className="absolute left-1/2 z-[6] pointer-events-none"
+              style={{
+                transform: 'translateX(-50%)',
+                top: hpOverlayPlacement === 'top' ? -Math.max(6, hpOverlayOffsetPx) : undefined,
+                bottom: hpOverlayPlacement === 'bottom' ? -Math.max(6, hpOverlayOffsetPx) : undefined,
+              }}
+            >
+              {hpOverlay}
+            </div>
+          )}
           {maskValue && (
             <div
               className="absolute inset-0 rounded-lg flex items-center justify-center"

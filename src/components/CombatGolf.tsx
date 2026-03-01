@@ -98,7 +98,7 @@ const DEV_TRAVERSE_HOLD_INTERVAL_MS = 190;
 const JUMBO_LAYOUT_SCALE = 6;
 const KERU_CALLOUT_DURATION_MS = 6600;
 const START_OVERLAY_ENABLED = false;
-const HIDDEN_PLAYER_FOUNDATION_INDEXES = [1] as const;
+const HIDDEN_PLAYER_FOUNDATION_INDEXES: number[] = [1];
 
 type CombatGolfActions = EncounterCombatActions & {
   playEnemyRpgHandCardOnActor?: (enemyActorIndex: number, cardId: string, targetActorIndex: number) => boolean;
@@ -130,8 +130,8 @@ const KERU_STAT_DIFFS: Array<{ key: keyof ActorKeru; label: string }> = [
 ];
 const buildKeruStatLines = (previous: ActorKeru, next: ActorKeru): string[] =>
   KERU_STAT_DIFFS.reduce((lines, { key, label }) => {
-    const prevValue = previous[key] ?? 0;
-    const nextValue = next[key] ?? 0;
+    const prevValue = Number(previous[key] ?? 0);
+    const nextValue = Number(next[key] ?? 0);
     const diff = nextValue - prevValue;
     if (diff > 0) {
       lines.push(`${label}+${diff}`);
@@ -764,7 +764,7 @@ export const CombatGolf = memo(function CombatGolf({
   const upgradedFlashTimeoutsRef = useRef<Record<string, number>>({});
   const prevRpgHandIdsRef = useRef<Set<string>>(new Set());
   const rewardCardIdRef = useRef(0);
-  const prevKeruMutationAtRef = useRef<number | undefined>();
+  const prevKeruMutationAtRef = useRef<number | undefined>(undefined);
   const [comboExpiryTokens, setComboExpiryTokens] = useState<Array<{ id: number; value: number }>>([]);
   const comboTokenIdRef = useRef(0);
   const [ambientDarkness, setAmbientDarkness] = useState(0.85);
@@ -837,7 +837,7 @@ export const CombatGolf = memo(function CombatGolf({
   const tableauRefs = useRef<Array<HTMLDivElement | null>>([]);
   const foundationRefs = useRef<Array<HTMLDivElement | null>>([]);
   const foundationRowRef = useRef<HTMLDivElement | null>(null);
-  const biomeContainerRef = useRef<HTMLElement>(null!);
+  const biomeContainerRef = useRef<HTMLDivElement>(null!);
   const biomeContainerOriginRef = useRef({ left: 0, top: 0 });
   const globalCardScale = useCardScale();
   const layoutVariant = gameState.playtestVariant ?? 'single-foundation';
@@ -1537,6 +1537,7 @@ export const CombatGolf = memo(function CombatGolf({
       : (foundationActor ? [foundationActor] : []);
     if (!actors.length) return [];
     const entries = actors.flatMap((actor) => {
+      if (!actor) return [];
       const actorName = getActorDefinition(actor.definitionId)?.name ?? actor.definitionId;
       return (actor.orimSlots ?? []).flatMap((slot) => {
         if (!slot.orimId) return [];
@@ -1554,7 +1555,7 @@ export const CombatGolf = memo(function CombatGolf({
           rarity: definition.rarity,
           description: definition.description,
           actorName,
-          glyph: CATEGORY_GLYPHS[definition.category] ?? '◌',
+          glyph: definition.category ? (CATEGORY_GLYPHS[definition.category] ?? '◌') : '◌',
           color: getOrimAccentColor(definition, instance.definitionId),
           isSandbox: false,
         }];
@@ -1578,7 +1579,7 @@ export const CombatGolf = memo(function CombatGolf({
         rarity: definition.rarity,
         description: definition.description,
         actorName: 'Sandbox',
-        glyph: CATEGORY_GLYPHS[definition.category] ?? '◌',
+        glyph: definition.category ? (CATEGORY_GLYPHS[definition.category] ?? '◌') : '◌',
         color: getOrimAccentColor(definition, id),
         isSandbox: true,
       }];
@@ -2543,7 +2544,7 @@ export const CombatGolf = memo(function CombatGolf({
             tone="teal"
             autoFadeMs={3500}
             anchor={anchor}
-            secondaryCallouts={def.description ? [{ id: 1, text: def.description }] : []}
+            secondaryCallouts={def.description ? [{ text: def.description }] : []}
           />
         );
       })}
@@ -3077,9 +3078,9 @@ export const CombatGolf = memo(function CombatGolf({
     };
   }, [sunkCostPulseStartedAt]);
   const sunkCostTableauPulseStyle = useMemo(() => {
-    if (sunkCostPulseStartedAt === null) return null;
+    if (sunkCostPulseStartedAt === null) return undefined;
     const elapsed = Math.max(0, sunkCostPulseNowMs - sunkCostPulseStartedAt);
-    if (elapsed >= 4000) return null;
+    if (elapsed >= 4000) return undefined;
     const t = Math.min(1, elapsed / 4000);
     const decay = 1 - t;
     const flash = Math.max(0, Math.sin(t * Math.PI * 8)) * decay;
@@ -3109,7 +3110,7 @@ export const CombatGolf = memo(function CombatGolf({
         if (!hasFoundationStamina(foundationIndex)) return;
         const foundationTop = foundation[foundation.length - 1];
         if (!foundationTop) return;
-        if (canPlayCardWithWild(topCard, foundationTop, gameState.activeEffects, foundation)) {
+        if (canPlayCardWithWild(topCard, foundationTop, gameState.activeEffects)) {
           playablePairCount += 1;
         }
       });
@@ -4134,7 +4135,6 @@ export const CombatGolf = memo(function CombatGolf({
             difficulty={gameState.enemyDifficulty ?? biomeDef?.enemyDifficulty ?? 'normal'}
             timedMode={comboTimersEnabled}
             paused={isGamePaused || introBlocking}
-            timeScale={timeScale}
             speedFactor={enemyDragSpeedFactor}
             onTimerUpdate={(remainingMs) => {
               setEnemyTurnRemainingMs(remainingMs);
@@ -4310,14 +4310,7 @@ export const CombatGolf = memo(function CombatGolf({
                 });
               });
             }}
-            onEndTurn={(result) => {
-              if (result?.reason === 'no_actions' && (result.remainingMs ?? 0) > 0) {
-                const calloutId = Date.now() + Math.random();
-                setEnemyTurnEndCallouts((prev) => [...prev, { id: calloutId }]);
-                window.setTimeout(() => {
-                  setEnemyTurnEndCallouts((prev) => prev.filter((entry) => entry.id !== calloutId));
-                }, 1700);
-              }
+            onEndTurn={() => {
               (actions.advanceRandomBiomeTurn ?? actions.endRandomBiomeTurn)();
             }}
           />
@@ -4644,7 +4637,7 @@ export const CombatGolf = memo(function CombatGolf({
             hiddenPlayerTableaus={hiddenPlayerTableaus}
             maskAllPlayerTableauValues={maskAllPlayerTableauValues}
             getDisplayedStepIndexForColumn={getDisplayedStepIndexForColumn}
-            getDebugStepLabelForColumn={getDebugStepLabelForColumn}
+            getDebugStepLabelForColumn={(columnIndex) => getDebugStepLabelForColumn(columnIndex) ?? undefined}
             ripTriggerByCardId={tableauRipTriggerByCardId}
           />
             {!isRpgMode && comboExpiryTokens.length > 0 && (
@@ -4684,7 +4677,7 @@ export const CombatGolf = memo(function CombatGolf({
                         const isWild = foundation.length === 1 && foundation[0].rank === WILD_SENTINEL_RANK;
                         const showGoldHighlight = !!(selectedCard && validFoundationsForSelected[idx]);
                         const actor = false
-                          ? ((idx === 0 && !foundationHasActor) ? null : activeParty[idx])
+                          ? ((idx === 0 && !foundationHasActor) ? undefined : activeParty[idx])
                           : activeParty[idx];
                         const hasStamina = isActorCombatReady(actor);
                         const canReceiveDrag =
@@ -4693,8 +4686,7 @@ export const CombatGolf = memo(function CombatGolf({
                           canPlayCardWithWild(
                             dragState.card,
                             foundation[foundation.length - 1],
-                            gameState.activeEffects,
-                            foundation
+                            gameState.activeEffects
                           ) &&
                           hasStamina;
 
@@ -4720,18 +4712,6 @@ export const CombatGolf = memo(function CombatGolf({
                                 setArmedFoundationIndex((prev) => (prev === foundationIndex ? null : foundationIndex));
                                 return;
                               }
-                            if (selectedCard) {
-                              const played = actions.playCardInRandomBiome(
-                                selectedCard.tableauIndex,
-                                foundationIndex
-                              );
-                              if (played) {
-                                signalValidMove();
-                                maybeGainSupplyFromValidMove();
-                                awardExplorationActionPoint();
-                                setSelectedCard(null);
-                              }
-                            }
                               }}
                               canReceive={showGoldHighlight && hasStamina}
                               isGuidanceTarget={true && armedFoundationIndex === idx}
@@ -5149,9 +5129,8 @@ export const CombatGolf = memo(function CombatGolf({
                                 if (e.button !== 0) return;
                                 e.preventDefault();
                                 e.stopPropagation();
-                                if (e.currentTarget && 'setPointerCapture' in e.currentTarget) {
-                                  (e.currentTarget as Element).setPointerCapture(e.pointerId);
-                                }
+                                const target = e.currentTarget as unknown as HTMLElement | null;
+                                target?.setPointerCapture?.(e.pointerId);
                                 const rect = e.currentTarget.getBoundingClientRect();
                                 handleDragStartGuarded(card, HAND_SOURCE_INDEX, e.clientX, e.clientY, rect);
                               }}
@@ -5649,7 +5628,7 @@ export const CombatGolf = memo(function CombatGolf({
               const showGoldHighlight =
                 !!(selectedCard && validFoundationsForSelected[idx]);
             const actor = false
-              ? ((idx === 0 && !foundationHasActor) ? null : activeParty[idx])
+              ? ((idx === 0 && !foundationHasActor) ? undefined : activeParty[idx])
               : activeParty[idx];
             const hasStamina = isActorCombatReady(actor);
 
@@ -5659,8 +5638,7 @@ export const CombatGolf = memo(function CombatGolf({
               canPlayCardWithWild(
                 dragState.card,
                 foundation[foundation.length - 1],
-                gameState.activeEffects,
-                foundation
+                gameState.activeEffects
               ) &&
               hasStamina;
 

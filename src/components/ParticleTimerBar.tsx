@@ -18,11 +18,11 @@ export const ParticleTimerBar: React.FC<ParticleTimerBarProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestRef = useRef<number>();
-  const particlesRef = useRef<THREE.Points>();
-  const geometryRef = useRef<THREE.BufferGeometry>();
-  const materialRef = useRef<THREE.PointsMaterial>();
-  const rendererRef = useRef<THREE.WebGLRenderer>();
+  const requestRef = useRef<number | null>(null);
+  const particlesRef = useRef<THREE.Points | null>(null);
+  const geometryRef = useRef<THREE.BufferGeometry | null>(null);
+  const materialRef = useRef<THREE.PointsMaterial | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
   // Use refs for values needed in the animation loop to avoid re-running useEffect
   const fillRef = useRef(fill);

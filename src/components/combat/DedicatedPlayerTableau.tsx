@@ -18,6 +18,7 @@ interface DedicatedPlayerTableauProps {
   isAnyCardDragging?: boolean;
   onTopCardSelect: (card: CardType, tableauIndex: number) => void;
   onTopCardDragStart?: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
+  setTableauRef?: (tableauIndex: number, el: HTMLDivElement | null) => void;
   startIndex?: number;
 }
 
@@ -36,6 +37,7 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
   isAnyCardDragging = false,
   onTopCardSelect,
   onTopCardDragStart,
+  setTableauRef,
   startIndex = 0,
 }: DedicatedPlayerTableauProps) {
   const neonMode = FORCE_NEON_CARD_STYLE;
@@ -69,6 +71,7 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
                 }}
               >
                 <div
+                  ref={(el) => setTableauRef?.(tableauIndex, el)}
                   className="relative select-none"
                   style={{ width: cardSize.width, height: stackHeight, overflow: 'visible' }}
                   aria-label={`Player stack ${tableauIndex + 1}`}

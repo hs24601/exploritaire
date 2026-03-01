@@ -88,10 +88,9 @@ export const MapEditor = memo(function MapEditor({
               nodes={mapNodes}
               edges={[]} // No edges for now, just the grid of nodes
               currentNodeId={selectedCellId}
-              alignmentMode="north" // Keep the map aligned north for editor
-              onNodeClick={setSelectedCellId}
+              alignmentMode="map" // Keep the map aligned north for editor
+              onTeleport={(x, y) => setSelectedCellId(`${x},${y}`)}
               showLighting={false}
-              isEditorMode={true}
             />
           </div>
         </div>

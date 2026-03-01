@@ -352,7 +352,7 @@ export const TerrainView = memo(function TerrainView({
   nodeY,
   layer = 'all',
 }: TerrainViewProps) {
-  const config = (biome && BIOME_CONFIGS[biome]) ?? DEFAULT_BIOME;
+  const config = biome ? (BIOME_CONFIGS[biome] ?? DEFAULT_BIOME) : DEFAULT_BIOME;
 
   // ── ResizeObserver: measure real container width ──────────────────────────
   const bgDivRef = useRef<HTMLDivElement | null>(null);

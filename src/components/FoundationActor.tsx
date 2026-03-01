@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import type { CSSProperties } from 'react';
 import type { Card as CardType, Element, InteractionMode, Actor, ActorDeckState, OrimInstance, OrimDefinition } from '../engine/types';
@@ -136,6 +136,10 @@ interface FoundationActorProps {
   comboCount?: number;
   showTokenEdgeOverlay?: boolean;
   maskValue?: boolean;
+  hideElements?: boolean;
+  hpOverlay?: ReactNode;
+  hpOverlayPlacement?: 'top' | 'bottom';
+  hpOverlayOffsetPx?: number;
   splashDirectionDeg?: number;
   splashDirectionToken?: number;
   onActorLongPress?: (payload: { actor: Actor }) => void;
@@ -166,6 +170,10 @@ export const FoundationActor = memo(function FoundationActor({
   comboCount = 0,
   showTokenEdgeOverlay = true,
   maskValue = false,
+  hideElements = false,
+  hpOverlay,
+  hpOverlayPlacement = 'top',
+  hpOverlayOffsetPx = 4,
   splashDirectionDeg,
   splashDirectionToken,
   onActorLongPress,
@@ -321,7 +329,7 @@ export const FoundationActor = memo(function FoundationActor({
       if (definition.damage !== undefined) meta.push(`DMG ${definition.damage}`);
       return {
         id: slot.id,
-        glyph: CATEGORY_GLYPHS[definition.category] ?? '◌',
+        glyph: definition.category ? (CATEGORY_GLYPHS[definition.category] ?? '◌') : '◌',
         name: definition.name,
         description: definition.description,
         meta,
@@ -432,7 +440,7 @@ export const FoundationActor = memo(function FoundationActor({
               const isTop = stackIndex === stackCards.length - 1;
               const tilt = foundationLocked ? 0 : (stackCards.length <= 1 && isTop ? 0 : getTiltForCard(card.id));
               const offset = foundationLocked ? { x: 0, y: 0 } : (isTop ? { x: 0, y: 0 } : getOffsetForCard(card.id));
-              const actorOverlayText = actorDefinition?.name ?? actor.name ?? 'Party Member';
+              const actorOverlayText = actorDefinition?.name ?? actor?.name ?? 'Party Member';
               return (
                 <div
                   key={card.id}
@@ -455,6 +463,7 @@ export const FoundationActor = memo(function FoundationActor({
                   suitFontSizeOverride={isTop && neutralDisplay ? suitFontSize : undefined}
                   frameClassName={`relative ${isTop ? 'z-[2]' : 'z-[1]'}`}
                   maskValue
+                  hideElements={hideElements}
                   showFoundationActorSecretHolo={false}
                   disableTilt={foundationLocked}
                   disableHoverLift={foundationLocked}
@@ -675,6 +684,18 @@ export const FoundationActor = memo(function FoundationActor({
           )}
         </motion.div>
       </Tooltip>
+      {hpOverlay && (
+        <div
+          className="absolute left-1/2 pointer-events-none z-[40]"
+          style={{
+            transform: 'translateX(-50%)',
+            top: hpOverlayPlacement === 'top' ? -Math.max(6, hpOverlayOffsetPx) : undefined,
+            bottom: hpOverlayPlacement === 'bottom' ? -Math.max(6, hpOverlayOffsetPx) : undefined,
+          }}
+        >
+          {hpOverlay}
+        </div>
+      )}
               {false && actorOrimDisplay.length > 0 && ( // TEMP: hide orim presentation while iterating on new card/orim UI
         <div className="flex justify-center">
           <div

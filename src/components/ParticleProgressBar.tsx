@@ -18,7 +18,7 @@ export const ParticleProgressBar: React.FC<ParticleProgressBarProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number | null>(null);
   const progressRef = useRef(progress);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 

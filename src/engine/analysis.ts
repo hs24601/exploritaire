@@ -47,7 +47,7 @@ export function computeAnalysisKey(
 export function analyzeOptimalSequence(request: AnalysisRequest): AnalysisResult {
   const { tableaus, foundations, activeEffects = [], mode } = request;
   const baseTableaus = tableaus;
-  const foundationTops = foundations.map((f) => f[f.length - 1]);
+  const foundationTops: Array<Card | undefined> = foundations.map((f) => f[f.length - 1]);
   const canPlay = mode === 'wild' ? canPlayCardWithWild : canPlayCard;
 
   const initialLengths = baseTableaus.map((t) => t.length);

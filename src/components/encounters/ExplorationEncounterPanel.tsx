@@ -23,12 +23,12 @@ interface ExplorationEncounterPanelProps {
   explorationTrailNodeIds: string[];
   explorationNodes: ExplorationMapNode[];
   explorationEdges: ExplorationMapEdge[];
-  explorationPoiMarkers: Array<{ coordKey: string; label: string; tone: 'teal' | 'orange' | 'pink' | 'white' }>;
+  explorationPoiMarkers: Array<{ id: string; x: number; y: number; label?: string }>;
   explorationBlockedCells: ExplorationBlockedCell[];
-  explorationBlockedEdges: Array<ExplorationMapEdge & { blocked?: boolean }>;
-  explorationConditionalEdges: ExplorationMapEdge[];
-  explorationActiveBlockedEdge?: ExplorationMapEdge | null;
-  explorationTableauWall?: { fromX: number; fromY: number; toX: number; toY: number } | null;
+  explorationBlockedEdges: Array<{ fromX: number; fromY: number; toX: number; toY: number }>;
+  explorationConditionalEdges: Array<{ fromX: number; fromY: number; toX: number; toY: number; locked: boolean }>;
+  explorationActiveBlockedEdge?: { fromX: number; fromY: number; toX: number; toY: number; reason?: string } | null;
+  explorationTableauWall?: { fromX: number; fromY: number; toX: number; toY: number; tableaus: number; pathBlock?: boolean } | null;
   worldForcedPath?: Array<{ x: number; y: number }>;
   explorationForcedPathNextIndex?: number | null;
   explorationCurrentLocationTitle?: string;

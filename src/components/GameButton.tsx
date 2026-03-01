@@ -8,6 +8,7 @@ interface GameButtonProps {
   className?: string;
   style?: CSSProperties;
   disabled?: boolean;
+  title?: string;
 }
 
 const colorClasses = {
@@ -41,6 +42,7 @@ export function GameButton({
   className = '',
   style,
   disabled = false,
+  title,
 }: GameButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const classes = colorClasses[color];
@@ -55,6 +57,7 @@ export function GameButton({
       onMouseEnter={() => !disabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       disabled={disabled}
+      title={title}
       style={style}
       className={`
         bg-transparent border-2 rounded-md cursor-pointer font-mono inline-flex items-center justify-center w-auto

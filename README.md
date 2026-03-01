@@ -29,3 +29,12 @@
 
 ## Naming Conventions
 - System IDs (ability IDs, aspect identifiers, and similar tooling-driven values) use `thisTypeOfCase` (lower camel case) so they're consistent across the editors. Stick to that format when entering or reviewing system IDs.
+
+## Typecheck Guardrails
+- Run `npm run typecheck` to validate TypeScript without building.
+- A pre-push hook is available at `.githooks/pre-push`.
+- One-time setup for local hooks: `npm run setup:hooks`.
+- CI also runs typecheck on pull requests and pushes to `main` via `.github/workflows/typecheck.yml`.
+
+## Smoke Tests
+- Focused gameplay smoke checklist: `docs/smoke-gameplay-checklist.md`.

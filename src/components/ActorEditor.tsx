@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ActorDefinition, ActorType, Element, Suit, OrimDefinition, OrimCategory, OrimRarity, TurnPlayability } from '../engine/types';
+import type {
+  AbilityLifecycleDef,
+  AbilityLifecycleDiscardPolicy,
+  AbilityLifecycleExhaustScope,
+  AbilityLifecycleCooldownMode,
+  ActorDefinition,
+  ActorType,
+  Element,
+  Suit,
+  OrimDefinition,
+  OrimRarity,
+  TurnPlayability,
+} from '../engine/types';
 import { SUITS, getSuitDisplay } from '../engine/constants';
 import { useGraphics } from '../contexts/GraphicsContext';
 import abilitiesJson from '../data/abilities.json';
@@ -7,13 +19,6 @@ import { RowManager } from './RowManager';
 
 const ELEMENTS: Element[] = ['W', 'E', 'A', 'F', 'L', 'D', 'N'];
 const ACTOR_TYPES: ActorType[] = ['adventurer', 'npc'];
-const CATEGORY_GLYPHS: Record<OrimCategory, string> = {
-  ability: '⚡️',
-  utility: '💫',
-  trait: '🧬',
-  elemental: '◇',
-};
-
 type AbilityLike = {
   id?: string;
   label?: string;
@@ -22,7 +27,9 @@ type AbilityLike = {
   element?: Element;
   rarity?: OrimRarity;
   effects?: AbilityEffect[];
+  effectsByRarity?: Partial<Record<OrimRarity, AbilityEffect[]>>;
   triggers?: AbilityTrigger[];
+  lifecycle?: AbilityLifecycleDef;
   tags?: string[];
   parentActorId?: string;
 };
@@ -57,7 +64,8 @@ type AbilityTrigger = {
 type AbilityEffectType =
   | 'damage' | 'healing' | 'speed' | 'evasion'
   | 'armor' | 'super_armor' | 'defense' | 'draw' | 'maxhp'
-  | 'burn' | 'bleed' | 'stun' | 'freeze' | 'redeal_tableau';
+  | 'burn' | 'bleed' | 'stun' | 'freeze' | 'redeal_tableau'
+  | 'upgrade_card_rarity_uncommon';
 type AbilityEffectTarget = 'self' | 'enemy' | 'all_enemies' | 'ally' | 'all_allies' | 'anyone';
 type AbilityEffect = {
   id?: number;
@@ -75,7 +83,62 @@ type AbilityEffect = {
   drawRank?: number;
   drawElement?: Element;
 };
+const ABILITY_LIFECYCLE_DISCARD_POLICY_OPTIONS: Array<{ value: AbilityLifecycleDiscardPolicy; label: string }> = [
+  { value: 'discard', label: 'Discard' },
+  { value: 'retain', label: 'Retain' },
+  { value: 'reshuffle', label: 'Reshuffle' },
+  { value: 'banish', label: 'Banish' },
+];
+const ABILITY_LIFECYCLE_EXHAUST_SCOPE_OPTIONS: Array<{ value: AbilityLifecycleExhaustScope; label: string }> = [
+  { value: 'none', label: 'Reusable' },
+  { value: 'turn', label: 'Once / Turn' },
+  { value: 'battle', label: 'Once / Battle' },
+  { value: 'rest', label: 'Once / Rest' },
+  { value: 'run', label: 'Once / Run' },
+];
+const ABILITY_LIFECYCLE_COOLDOWN_MODE_OPTIONS: Array<{ value: AbilityLifecycleCooldownMode; label: string }> = [
+  { value: 'none', label: 'None' },
+  { value: 'seconds', label: 'Seconds' },
+  { value: 'turns', label: 'Turns' },
+  { value: 'combo', label: 'Combo' },
+];
+const ABILITY_LIFECYCLE_COOLDOWN_START_OPTIONS: Array<{ value: NonNullable<AbilityLifecycleDef['cooldownStartsOn']>; label: string }> = [
+  { value: 'use', label: 'On Use' },
+  { value: 'resolve', label: 'On Resolve' },
+];
+const ABILITY_LIFECYCLE_COOLDOWN_RESET_OPTIONS: Array<{ value: NonNullable<AbilityLifecycleDef['cooldownResetsOn']>; label: string }> = [
+  { value: 'turn_start', label: 'Turn Start' },
+  { value: 'turn_end', label: 'Turn End' },
+  { value: 'battle_end', label: 'Battle End' },
+  { value: 'rest', label: 'Rest' },
+];
+const DEFAULT_ABILITY_LIFECYCLE: AbilityLifecycleDef = {
+  discardPolicy: 'discard',
+  exhaustScope: 'none',
+  maxUsesPerScope: 1,
+  cooldownMode: 'none',
+  cooldownValue: 0,
+  cooldownStartsOn: 'use',
+  cooldownResetsOn: 'turn_start',
+};
 const ORIM_RARITY_OPTIONS: OrimRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+const ORIM_RARITY_SHORT_LABEL: Record<OrimRarity, string> = {
+  common: 'COM',
+  uncommon: 'UNC',
+  rare: 'RAR',
+  epic: 'EPI',
+  legendary: 'LEG',
+  mythic: 'MYT',
+};
+const ORIM_RARITY_TIER_INDEX: Record<OrimRarity, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  epic: 3,
+  legendary: 4,
+  mythic: 5,
+};
+type RarityCostMap = Partial<Record<OrimRarity, number>>;
 const ABILITY_EFFECT_TYPES: AbilityEffectType[] = [
   'damage',
   'healing',
@@ -91,6 +154,7 @@ const ABILITY_EFFECT_TYPES: AbilityEffectType[] = [
   'bleed',
   'stun',
   'freeze',
+  'upgrade_card_rarity_uncommon',
 ];
 const ABILITY_EFFECT_TARGETS: AbilityEffectTarget[] = ['self', 'enemy', 'all_enemies', 'ally', 'all_allies', 'anyone'];
 const ABILITY_TRIGGER_TYPES: AbilityTriggerType[] = [
@@ -127,7 +191,7 @@ const ABILITY_TRIGGER_LABELS: Record<AbilityTriggerType, string> = {
   combo_party: 'combo_party',
   has_armor: 'has_armor',
   has_super_armor: 'has_superArmor',
-  notDiscarded: 'notDiscarded',
+  notDiscarded: 'notDiscarded (legacy)',
   foundationDiscardCount: 'foundationDiscardCount',
   partyDiscardCount: 'partyDiscardCount',
   foundationActiveDeckCount: 'foundationActiveDeckCount',
@@ -195,6 +259,83 @@ const ensureEffectValueByRarity = (effect: AbilityEffect): AbilityEffect => {
     anchor = map[rarity] ?? anchor;
   });
   return { ...effect, valueByRarity: map };
+};
+const cloneAbilityEffect = (effect: AbilityEffect): AbilityEffect => {
+  const { valueByRarity, ...rest } = effect;
+  return {
+    ...rest,
+    valueByRarity: valueByRarity ? { ...valueByRarity } : undefined,
+  };
+};
+const normalizeEffectForRarity = (fx: AbilityEffect, rarity: OrimRarity): AbilityEffect => {
+  const normalized = ensureEffectValueByRarity({
+    type: (fx.type ?? 'damage') as AbilityEffectType,
+    value: Number(fx.value ?? 0),
+    target: (fx.target ?? 'enemy') as AbilityEffectTarget,
+    charges: fx.charges,
+    duration: fx.duration,
+    untilSourceCardPlay: fx.untilSourceCardPlay ?? false,
+    deadRunOnly: fx.deadRunOnly ?? false,
+    element: fx.element ?? 'N',
+    elementalValue: fx.elementalValue,
+    valueByRarity: fx.valueByRarity,
+    drawWild: fx.drawWild ?? false,
+    drawRank: fx.drawRank,
+    drawElement: fx.drawElement ?? 'N',
+  });
+  return {
+    ...normalized,
+    value: resolveEffectValueForRarity(normalized, rarity),
+  };
+};
+const buildEffectsByRarityLoadouts = (
+  entry: AbilityLike,
+  activeRarity: OrimRarity
+): Record<OrimRarity, AbilityEffect[]> => {
+  const rawMap = entry.effectsByRarity ?? {};
+  const hasAnyMappedLoadout = ORIM_RARITY_OPTIONS.some((rarity) => (
+    Object.prototype.hasOwnProperty.call(rawMap, rarity)
+  ));
+  const result: Partial<Record<OrimRarity, AbilityEffect[]>> = {};
+
+  if (hasAnyMappedLoadout) {
+    ORIM_RARITY_OPTIONS.forEach((rarity) => {
+      const source = rawMap[rarity];
+      if (!Array.isArray(source)) return;
+      result[rarity] = source.map((fx) => normalizeEffectForRarity(fx, rarity));
+    });
+  } else {
+    const legacyEffects = entry.effects ?? [];
+    ORIM_RARITY_OPTIONS.forEach((rarity) => {
+      result[rarity] = legacyEffects.map((fx) => normalizeEffectForRarity(fx, rarity));
+    });
+  }
+
+  ORIM_RARITY_OPTIONS.forEach((rarity, index) => {
+    if (Array.isArray(result[rarity])) return;
+    let fallback: AbilityEffect[] = [];
+    for (let priorIndex = index - 1; priorIndex >= 0; priorIndex -= 1) {
+      const prior = result[ORIM_RARITY_OPTIONS[priorIndex]];
+      if (Array.isArray(prior)) {
+        fallback = prior.map((fx) => cloneAbilityEffect(fx));
+        break;
+      }
+    }
+    if (fallback.length === 0 && Array.isArray(result.common)) {
+      fallback = result.common.map((fx) => cloneAbilityEffect(fx));
+    }
+    result[rarity] = fallback;
+  });
+
+  const map = result as Record<OrimRarity, AbilityEffect[]>;
+  if (!Array.isArray(map[activeRarity])) {
+    map[activeRarity] = [];
+  }
+  return map;
+};
+const stripEditorOnlyFields = (effect: AbilityEffect): AbilityEffect => {
+  const { id, valueByRarity, ...persisted } = effect;
+  return persisted;
 };
 const normalizeAbilityTrigger = (trigger: AbilityTrigger): AbilityTrigger => {
   const rawType = String(trigger.type ?? 'noValidMovesPlayer').trim();
@@ -271,41 +412,141 @@ const normalizeAbilityTrigger = (trigger: AbilityTrigger): AbilityTrigger => {
   return { type };
 };
 
-const sanitizeAbility = (entry: AbilityLike): AbilityLike => ({
-  id: entry.id,
-  label: entry.label,
-  description: entry.description,
-  abilityType: entry.abilityType,
-  element: entry.element,
-  rarity: entry.rarity,
-  effects: entry.effects,
-  triggers: entry.triggers,
-  tags: entry.tags,
-  parentActorId: entry.parentActorId,
-});
+const normalizeAbilityLifecycle = (lifecycle?: AbilityLifecycleDef): AbilityLifecycleDef => {
+  const discardPolicy: AbilityLifecycleDiscardPolicy = lifecycle?.discardPolicy === 'retain'
+    || lifecycle?.discardPolicy === 'reshuffle'
+    || lifecycle?.discardPolicy === 'banish'
+    ? lifecycle.discardPolicy
+    : 'discard';
+  const exhaustScope: AbilityLifecycleExhaustScope = lifecycle?.exhaustScope === 'turn'
+    || lifecycle?.exhaustScope === 'battle'
+    || lifecycle?.exhaustScope === 'rest'
+    || lifecycle?.exhaustScope === 'run'
+    ? lifecycle.exhaustScope
+    : 'none';
+  const cooldownMode: AbilityLifecycleCooldownMode = lifecycle?.cooldownMode === 'seconds'
+    || lifecycle?.cooldownMode === 'turns'
+    || lifecycle?.cooldownMode === 'combo'
+    ? lifecycle.cooldownMode
+    : 'none';
+  const cooldownStartsOn: NonNullable<AbilityLifecycleDef['cooldownStartsOn']> = lifecycle?.cooldownStartsOn === 'resolve'
+    ? 'resolve'
+    : 'use';
+  const cooldownResetsOn: NonNullable<AbilityLifecycleDef['cooldownResetsOn']> = lifecycle?.cooldownResetsOn === 'turn_end'
+    || lifecycle?.cooldownResetsOn === 'battle_end'
+    || lifecycle?.cooldownResetsOn === 'rest'
+    ? lifecycle.cooldownResetsOn
+    : 'turn_start';
+  const cooldownValueRaw = Number(lifecycle?.cooldownValue ?? 0);
+  const cooldownValue = Number.isFinite(cooldownValueRaw) ? Math.max(0, cooldownValueRaw) : 0;
+  const maxUsesRaw = Number(lifecycle?.maxUsesPerScope ?? 1);
+  const maxUsesPerScope = Number.isFinite(maxUsesRaw) ? Math.max(1, Math.floor(maxUsesRaw)) : 1;
+  return {
+    ...DEFAULT_ABILITY_LIFECYCLE,
+    discardPolicy,
+    exhaustScope,
+    maxUsesPerScope,
+    cooldownMode,
+    cooldownValue,
+    cooldownStartsOn,
+    cooldownResetsOn,
+  };
+};
+
+const applyLifecycleToTriggers = (triggers: AbilityTrigger[] | undefined, lifecycle?: AbilityLifecycleDef): AbilityTrigger[] => {
+  const normalizedLifecycle = normalizeAbilityLifecycle(lifecycle);
+  const base = (triggers ?? []).map((trigger) => normalizeAbilityTrigger(trigger))
+    .filter((trigger) => trigger.type !== 'notDiscarded');
+  const hardExhaust = normalizedLifecycle.exhaustScope === 'battle'
+    || normalizedLifecycle.exhaustScope === 'rest'
+    || normalizedLifecycle.exhaustScope === 'run';
+  const reusable = normalizedLifecycle.discardPolicy !== 'discard'
+    && normalizedLifecycle.discardPolicy !== 'banish'
+    && !hardExhaust;
+  if (!reusable) return base;
+  const countdownType: AbilityTriggerCountdownType = normalizedLifecycle.cooldownMode === 'seconds'
+    ? 'seconds'
+    : 'combo';
+  const countdownValue = normalizedLifecycle.cooldownMode === 'none'
+    ? 0
+    : Math.max(0, Math.floor(Number(normalizedLifecycle.cooldownValue ?? 0)));
+  base.push(normalizeAbilityTrigger({
+    type: 'notDiscarded',
+    countdownType,
+    countdownValue,
+  }));
+  return base;
+};
+
+const summarizeAbilityLifecycle = (lifecycle?: AbilityLifecycleDef): string => {
+  const normalized = normalizeAbilityLifecycle(lifecycle);
+  const cooldownLabel = normalized.cooldownMode === 'none'
+    ? 'no cooldown'
+    : `${normalized.cooldownValue}${normalized.cooldownMode === 'seconds' ? 's' : ` ${normalized.cooldownMode}`}`;
+  return `${normalized.discardPolicy} · ${normalized.exhaustScope} · ${cooldownLabel}`;
+};
 
 const hydrateAbility = (entry: AbilityLike): AbilityLike => {
   const rarity = entry.rarity ?? 'common';
-  const effects = (entry.effects ?? []).map((fx) => {
-    const normalized = ensureEffectValueByRarity({
-      type: (fx.type ?? 'damage') as AbilityEffectType,
-      value: Number(fx.value ?? 0),
-      target: (fx.target ?? 'enemy') as AbilityEffectTarget,
-      charges: fx.charges,
-      duration: fx.duration,
-      untilSourceCardPlay: fx.untilSourceCardPlay ?? false,
-      deadRunOnly: fx.deadRunOnly ?? false,
-      element: fx.element ?? 'N',
-      elementalValue: fx.elementalValue,
-      valueByRarity: fx.valueByRarity,
-      drawWild: fx.drawWild ?? false,
-      drawRank: fx.drawRank,
-      drawElement: fx.drawElement ?? 'N',
+  const effectsByRarity = buildEffectsByRarityLoadouts(entry, rarity);
+  const effects = (effectsByRarity[rarity] ?? []).map((fx) => cloneAbilityEffect(fx));
+  const lifecycle = normalizeAbilityLifecycle(entry.lifecycle);
+  const triggers = applyLifecycleToTriggers(entry.triggers, lifecycle);
+  return {
+    ...entry,
+    rarity,
+    effects,
+    effectsByRarity,
+    triggers,
+    lifecycle,
+  };
+};
+const sanitizeAbility = (entry: AbilityLike): AbilityLike => {
+  const rarity = (entry.rarity ?? 'common') as OrimRarity;
+  const lifecycle = normalizeAbilityLifecycle(entry.lifecycle);
+  const triggers = applyLifecycleToTriggers(entry.triggers, lifecycle);
+  const hasExplicitRarityLoadouts = ORIM_RARITY_OPTIONS.some((tier) => (
+    Object.prototype.hasOwnProperty.call(entry.effectsByRarity ?? {}, tier)
+  ));
+  if (!hasExplicitRarityLoadouts) {
+    const legacyEffects = (entry.effects ?? []).map((fx) => {
+      const { id, ...persisted } = fx;
+      return persisted;
     });
-    return { ...normalized, value: resolveEffectValueForRarity(normalized, rarity) };
+    return {
+      id: entry.id,
+      label: entry.label,
+      description: entry.description,
+      abilityType: entry.abilityType,
+      element: entry.element,
+      rarity: entry.rarity,
+      effects: legacyEffects,
+      triggers,
+      lifecycle,
+      tags: entry.tags,
+      parentActorId: entry.parentActorId,
+    };
+  }
+  const effectsByRarity = buildEffectsByRarityLoadouts(entry, rarity);
+  const persistedEffectsByRarity: Partial<Record<OrimRarity, AbilityEffect[]>> = {};
+  ORIM_RARITY_OPTIONS.forEach((tier) => {
+    persistedEffectsByRarity[tier] = (effectsByRarity[tier] ?? []).map((fx) => stripEditorOnlyFields(fx));
   });
-  const triggers = (entry.triggers ?? []).map((trigger) => normalizeAbilityTrigger(trigger));
-  return sanitizeAbility({ ...entry, rarity, effects, triggers });
+  const activeEffects = persistedEffectsByRarity[rarity] ?? [];
+  return {
+    id: entry.id,
+    label: entry.label,
+    description: entry.description,
+    abilityType: entry.abilityType,
+    element: entry.element,
+    rarity,
+    effects: activeEffects,
+    effectsByRarity: persistedEffectsByRarity,
+    triggers,
+    lifecycle,
+    tags: entry.tags,
+    parentActorId: entry.parentActorId,
+  };
 };
 const ABILITY_DEFS: AbilityLike[] = (abilitiesJson as { abilities?: AbilityLike[] }).abilities ?? [];
 const normalizeId = (value: string) => value
@@ -347,6 +588,9 @@ const createBlankActor = (name = 'New Actor', type: ActorType = 'adventurer'): A
 
 type DeckTemplate = {
   values: number[];
+  costByRarity?: RarityCostMap[];
+  enabledRarities?: OrimRarity[];
+  // Legacy support for older deck data shape.
   costs?: number[];
   activeCards?: boolean[];
   notDiscardedCards?: boolean[];
@@ -427,12 +671,20 @@ const serializeDeckTemplates = (
 ) => {
   const entries = Object.entries(templates);
   const lines: string[] = [];
-  lines.push('export const ACTOR_DECK_TEMPLATES: Record<string, { values: number[]; costs?: number[]; activeCards?: boolean[]; notDiscardedCards?: boolean[]; playableTurns?: TurnPlayability[]; cooldowns?: number[]; slotsPerCard?: number[]; starterOrim?: { cardIndex: number; slotIndex?: number; orimId: string }[]; slotLocks?: { cardIndex: number; slotIndex?: number; locked: boolean }[] }> = {');
-  entries.forEach(([key, value]) => {
+  lines.push('export const ACTOR_DECK_TEMPLATES: Record<string, { values: number[]; costByRarity?: Partial<Record<OrimRarity, number>>[]; enabledRarities?: OrimRarity[]; costs?: number[]; activeCards?: boolean[]; notDiscardedCards?: boolean[]; playableTurns?: TurnPlayability[]; cooldowns?: number[]; slotsPerCard?: number[]; starterOrim?: { cardIndex: number; slotIndex?: number; orimId: string }[]; slotLocks?: { cardIndex: number; slotIndex?: number; locked: boolean }[] }> = {');
+  entries.forEach(([key, rawValue]) => {
+    const value = normalizeDeckTemplate(rawValue);
     lines.push(`  ${key}: {`);
     lines.push(`    values: [${value.values.join(', ')}],`);
-    if (value.costs && value.costs.length > 0) {
-      lines.push(`    costs: [${value.costs.join(', ')}],`);
+    lines.push('    costByRarity: [');
+    value.costByRarity?.forEach((entry) => {
+      const normalized = normalizeCostByRarityEntry(entry, 0);
+      const parts = ORIM_RARITY_OPTIONS.map((rarity) => `${rarity}: ${normalized[rarity]}`);
+      lines.push(`      { ${parts.join(', ')} },`);
+    });
+    lines.push('    ],');
+    if (value.enabledRarities && value.enabledRarities.length > 0) {
+      lines.push(`    enabledRarities: [${value.enabledRarities.map((entry) => `'${entry}'`).join(', ')}],`);
     }
     if (value.activeCards && value.activeCards.length > 0) {
       lines.push(`    activeCards: [${value.activeCards.map((entry) => (entry ? 'true' : 'false')).join(', ')}],`);
@@ -443,7 +695,7 @@ const serializeDeckTemplates = (
     if (value.playableTurns && value.playableTurns.length > 0) {
       lines.push(`    playableTurns: [${value.playableTurns.map((entry) => `'${entry}'`).join(', ')}],`);
     }
-    if (value.cooldowns && value.cooldowns.length > 0) {
+    if (value.cooldowns && value.cooldowns.some((entry) => Number(entry) > 0)) {
       lines.push(`    cooldowns: [${value.cooldowns.join(', ')}],`);
     }
     if (value.slotsPerCard && value.slotsPerCard.length > 0) {
@@ -477,15 +729,38 @@ const createDefaultPlayableTurns = (count: number): TurnPlayability[] => (
   Array.from({ length: Math.max(0, count) }, () => 'player')
 );
 
+const normalizeCostByRarityEntry = (
+  entry: RarityCostMap | undefined,
+  fallbackCost: number
+): Record<OrimRarity, number> => {
+  const fallback = Number.isFinite(fallbackCost) ? Math.max(0, fallbackCost) : 0;
+  const result = {} as Record<OrimRarity, number>;
+  let anchor = fallback;
+  ORIM_RARITY_OPTIONS.forEach((rarity) => {
+    const raw = entry?.[rarity];
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+      anchor = Math.max(0, raw);
+    }
+    result[rarity] = anchor;
+  });
+  return result;
+};
+
 const normalizeDeckTemplate = (template: DeckTemplate) => {
   const values = (template.values ?? []).map((value) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 1;
   });
   const cardCount = values.length;
-  const costs = Array.from({ length: cardCount }, (_, index) => {
-    const parsed = Number(template.costs?.[index] ?? 0);
-    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+  const costByRarity = Array.from({ length: cardCount }, (_, index) => (
+    normalizeCostByRarityEntry(template.costByRarity?.[index], template.costs?.[index] ?? 0)
+  ));
+  const enabledRarities = Array.from({ length: cardCount }, (_, index) => {
+    const rarity = template.enabledRarities?.[index];
+    if (rarity === 'uncommon' || rarity === 'rare' || rarity === 'epic' || rarity === 'legendary' || rarity === 'mythic') {
+      return rarity;
+    }
+    return 'common';
   });
   const activeCards = Array.from({ length: cardCount }, (_, index) => (
     template.activeCards?.[index] ?? true
@@ -514,9 +789,9 @@ const normalizeDeckTemplate = (template: DeckTemplate) => {
     entry.cardIndex >= 0 && entry.cardIndex < cardCount
   ));
   return {
-    ...template,
     values,
-    costs,
+    costByRarity,
+    enabledRarities,
     activeCards,
     notDiscardedCards,
     playableTurns,
@@ -526,6 +801,14 @@ const normalizeDeckTemplate = (template: DeckTemplate) => {
     slotLocks,
   };
 };
+
+const normalizeDeckTemplates = (
+  templates: Record<string, DeckTemplate>
+): Record<string, DeckTemplate> => (
+  Object.fromEntries(
+    Object.entries(templates).map(([id, template]) => [id, normalizeDeckTemplate(template)])
+  )
+);
 
 const writeFileToDisk = async (path: string, content: string) => {
   const writer = (window as unknown as { __writeFile?: (path: string, content: string) => Promise<void> }).__writeFile;
@@ -550,6 +833,7 @@ export function ActorEditor({
   orimDefinitions,
   onChange,
   onDeckChange,
+  onApplyLive,
   embedded = false,
 }: {
   onClose: () => void;
@@ -558,19 +842,20 @@ export function ActorEditor({
   orimDefinitions: OrimDefinition[];
   onChange: (next: ActorDefinition[]) => void;
   onDeckChange: (next: Record<string, DeckTemplate>) => void;
+  onApplyLive?: (nextDeckTemplates: Record<string, DeckTemplate>) => boolean;
   embedded?: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const showGraphics = useGraphics();
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'details' | 'titles' | 'deck'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'titles' | 'deck'>('deck');
   const [actorSide, setActorSide] = useState<'party' | 'enemy'>('party');
   const [definitions, setDefinitions] = useState<ActorDefinition[]>(definitionsProp);
   const [deckTemplates, setDeckTemplates] = useState(deckTemplatesProp);
   const [selectedId, setSelectedId] = useState<string | null>(() => (definitionsProp[0]?.id ?? null));
-  const [abilities, setAbilities] = useState<AbilityLike[]>(() => ABILITY_DEFS.map(hydrateAbility));
+  const [abilities, setAbilities] = useState<AbilityLike[]>(() => ABILITY_DEFS.map((entry) => sanitizeAbility(entry)));
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
-  const [newAbility, setNewAbility] = useState<AbilityLike>({
+  const [editAbility, setEditAbility] = useState<AbilityLike>({
     id: '',
     label: '',
     description: '',
@@ -578,7 +863,9 @@ export function ActorEditor({
     element: 'N',
     rarity: 'common',
     effects: [],
+    effectsByRarity: { common: [] },
     triggers: [],
+    lifecycle: { ...DEFAULT_ABILITY_LIFECYCLE },
   });
   const [showNewAbilityForm, setShowNewAbilityForm] = useState(false);
 
@@ -591,7 +878,7 @@ export function ActorEditor({
   }, [deckTemplatesProp]);
 
   useEffect(() => {
-    setAbilities(ABILITY_DEFS.map(hydrateAbility));
+    setAbilities(ABILITY_DEFS.map((entry) => sanitizeAbility(entry)));
   }, []);
 
   useEffect(() => {
@@ -619,7 +906,7 @@ export function ActorEditor({
   const selectedDeck = useMemo(() => {
     if (!selected) return null;
     return normalizeDeckTemplate(
-      deckTemplates[selected.id] ?? { values: [], costs: [], activeCards: [], notDiscardedCards: [], playableTurns: [], cooldowns: [], slotsPerCard: [], starterOrim: [] }
+      deckTemplates[selected.id] ?? { values: [], costByRarity: [], activeCards: [], notDiscardedCards: [], playableTurns: [], cooldowns: [], slotsPerCard: [], starterOrim: [] }
     );
   }, [deckTemplates, selected]);
 
@@ -663,6 +950,7 @@ export function ActorEditor({
         <span>{ability.abilityType ?? 'ability'}</span>
         <span>{ability.rarity ?? 'common'}</span>
         {ability.element && <span>Element {ability.element}</span>}
+        <span>Lifecycle {summarizeAbilityLifecycle(ability.lifecycle)}</span>
       </div>
       {ability.description && (
         <div className="mt-1 text-game-white/60">
@@ -671,29 +959,48 @@ export function ActorEditor({
       )}
     </div>
   ), []);
+  const renderOrimPreview = useCallback((orim: OrimDefinition) => (
+    <div className="ml-6 rounded border border-game-teal/20 bg-game-bg-dark/60 px-2 py-1 text-[10px] text-game-white/70">
+      <div className="text-game-teal font-bold">{orim.name}</div>
+      <div className="flex flex-wrap gap-2">
+        <span>{orim.category}</span>
+        <span>{orim.rarity ?? 'common'}</span>
+        <span>{(orim.elements ?? []).join(' / ') || 'N'}</span>
+      </div>
+      {orim.description && (
+        <div className="mt-1 text-game-white/60">
+          {orim.description}
+        </div>
+      )}
+    </div>
+  ), []);
 
   const handleNewAbilityEffectAdd = useCallback(() => {
-    setNewAbility((prev) => {
-      const effects = [...(prev.effects ?? [])];
-      const nextId = effects.length;
-      const nextEffect = ensureEffectValueByRarity({
-        id: nextId,
+    setEditAbility((prev) => {
+      const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
+      const effectsByRarity = buildEffectsByRarityLoadouts(prev, activeRarity);
+      const nextEffect: AbilityEffect = {
         type: 'damage',
         value: 1,
         target: 'enemy',
         element: 'N',
-        valueByRarity: { common: 1 },
-      });
-      effects.push(nextEffect);
-      return { ...prev, effects };
+        drawWild: false,
+        drawElement: 'N',
+      };
+      const effects = [...(prev.effects ?? []), nextEffect];
+      effectsByRarity[activeRarity] = effects.map((fx) => cloneAbilityEffect(fx));
+      return { ...prev, effects, effectsByRarity };
     });
   }, []);
 
   const handleNewAbilityEffectRemove = useCallback((index: number) => {
-    setNewAbility((prev) => ({
-      ...prev,
-      effects: (prev.effects ?? []).filter((_, i) => i !== index),
-    }));
+    setEditAbility((prev) => {
+      const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
+      const effectsByRarity = buildEffectsByRarityLoadouts(prev, activeRarity);
+      const effects = (prev.effects ?? []).filter((_, i) => i !== index);
+      effectsByRarity[activeRarity] = effects.map((fx) => cloneAbilityEffect(fx));
+      return { ...prev, effects, effectsByRarity };
+    });
   }, []);
 
   const handleNewAbilityEffectChange = useCallback((
@@ -701,7 +1008,9 @@ export function ActorEditor({
     field: keyof AbilityEffect,
     value: string | number | boolean
   ) => {
-    setNewAbility((prev) => {
+    setEditAbility((prev) => {
+      const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
+      const effectsByRarity = buildEffectsByRarityLoadouts(prev, activeRarity);
       const effects = (prev.effects ?? []).map((fx, i) => {
         if (i !== index) return fx;
         let nextEffect: AbilityEffect = fx;
@@ -710,11 +1019,7 @@ export function ActorEditor({
         else if (field === 'element') nextEffect = { ...fx, element: value as Element };
         else if (field === 'value') {
           const numeric = Number(value);
-          nextEffect = {
-            ...fx,
-            value: numeric,
-            valueByRarity: { ...(fx.valueByRarity ?? {}), [(prev.rarity ?? 'common') as OrimRarity]: numeric },
-          };
+          nextEffect = { ...fx, value: Number.isFinite(numeric) ? numeric : fx.value };
         } else if (field === 'charges') {
           const txt = String(value);
           nextEffect = { ...fx, charges: txt === '' ? undefined : Number(txt) };
@@ -736,13 +1041,50 @@ export function ActorEditor({
         } else if (field === 'drawElement') {
           nextEffect = { ...fx, drawElement: value as Element };
         }
-        return ensureEffectValueByRarity(nextEffect);
+        return nextEffect;
       });
-      return { ...prev, effects };
+      effectsByRarity[activeRarity] = effects.map((fx) => cloneAbilityEffect(fx));
+      return { ...prev, effects, effectsByRarity };
+    });
+  }, []);
+  const handleSelectAbilityLoadoutRarity = useCallback((rarity: OrimRarity) => {
+    setEditAbility((prev) => {
+      const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
+      const effectsByRarity = buildEffectsByRarityLoadouts(prev, activeRarity);
+      effectsByRarity[activeRarity] = (prev.effects ?? []).map((fx) => cloneAbilityEffect(fx));
+      const nextEffects = (effectsByRarity[rarity] ?? []).map((fx) => cloneAbilityEffect(fx));
+      return {
+        ...prev,
+        rarity,
+        effects: nextEffects,
+        effectsByRarity,
+      };
+    });
+  }, []);
+  const handleAutoFillRarityLoadoutsFromCommon = useCallback(() => {
+    setEditAbility((prev) => {
+      const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
+      const effectsByRarity = buildEffectsByRarityLoadouts(prev, activeRarity);
+      const commonLoadout = (effectsByRarity.common ?? []).map((fx) => cloneAbilityEffect(fx));
+      const nextByRarity: Partial<Record<OrimRarity, AbilityEffect[]>> = {};
+      ORIM_RARITY_OPTIONS.forEach((rarity) => {
+        const tier = ORIM_RARITY_TIER_INDEX[rarity];
+        const multiplier = 1 + (0.35 * tier) + (0.1 * tier * tier);
+        nextByRarity[rarity] = commonLoadout.map((fx) => ({
+          ...cloneAbilityEffect(fx),
+          value: Math.max(0, Math.round((Number(fx.value ?? 0) || 0) * multiplier)),
+          valueByRarity: undefined,
+        }));
+      });
+      return {
+        ...prev,
+        effectsByRarity: nextByRarity,
+        effects: (nextByRarity[activeRarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
+      };
     });
   }, []);
   const handleNewAbilityTriggerAdd = useCallback(() => {
-    setNewAbility((prev) => {
+    setEditAbility((prev) => {
       const triggers = [...(prev.triggers ?? [])];
       triggers.push({ id: triggers.length, type: 'noValidMovesPlayer' });
       return { ...prev, triggers };
@@ -750,7 +1092,7 @@ export function ActorEditor({
   }, []);
 
   const handleNewAbilityTriggerRemove = useCallback((index: number) => {
-    setNewAbility((prev) => ({
+    setEditAbility((prev) => ({
       ...prev,
       triggers: (prev.triggers ?? []).filter((_, i) => i !== index),
     }));
@@ -761,7 +1103,7 @@ export function ActorEditor({
     field: keyof AbilityTrigger,
     value: string | number
   ) => {
-    setNewAbility((prev) => {
+    setEditAbility((prev) => {
       const triggers = (prev.triggers ?? []).map((trigger, i) => {
         if (i !== index) return trigger;
         const current = normalizeAbilityTrigger(trigger);
@@ -788,6 +1130,39 @@ export function ActorEditor({
         return current;
       });
       return { ...prev, triggers };
+    });
+  }, []);
+  const handleEditAbilityLifecycleChange = useCallback((
+    field: keyof AbilityLifecycleDef,
+    value: string | number
+  ) => {
+    setEditAbility((prev) => {
+      const currentLifecycle = normalizeAbilityLifecycle(prev.lifecycle);
+      let nextLifecycle: AbilityLifecycleDef = currentLifecycle;
+      if (field === 'discardPolicy') {
+        nextLifecycle = { ...currentLifecycle, discardPolicy: value as AbilityLifecycleDiscardPolicy };
+      } else if (field === 'exhaustScope') {
+        nextLifecycle = { ...currentLifecycle, exhaustScope: value as AbilityLifecycleExhaustScope };
+      } else if (field === 'cooldownMode') {
+        nextLifecycle = { ...currentLifecycle, cooldownMode: value as AbilityLifecycleCooldownMode };
+      } else if (field === 'cooldownValue') {
+        const numeric = Number(value);
+        nextLifecycle = { ...currentLifecycle, cooldownValue: Number.isFinite(numeric) ? Math.max(0, numeric) : 0 };
+      } else if (field === 'maxUsesPerScope') {
+        const numeric = Number(value);
+        nextLifecycle = { ...currentLifecycle, maxUsesPerScope: Number.isFinite(numeric) ? Math.max(1, Math.floor(numeric)) : 1 };
+      } else if (field === 'cooldownStartsOn') {
+        nextLifecycle = { ...currentLifecycle, cooldownStartsOn: value as NonNullable<AbilityLifecycleDef['cooldownStartsOn']> };
+      } else if (field === 'cooldownResetsOn') {
+        nextLifecycle = { ...currentLifecycle, cooldownResetsOn: value as NonNullable<AbilityLifecycleDef['cooldownResetsOn']> };
+      }
+      const normalizedLifecycle = normalizeAbilityLifecycle(nextLifecycle);
+      const nextTriggers = applyLifecycleToTriggers(prev.triggers, normalizedLifecycle);
+      return {
+        ...prev,
+        lifecycle: normalizedLifecycle,
+        triggers: nextTriggers,
+      };
     });
   }, []);
 
@@ -824,7 +1199,7 @@ export function ActorEditor({
     const fresh = createBlankActor(`New Actor ${definitions.length + 1}`, freshType);
     commitDefinitions([...definitions, fresh]);
     setSelectedId(fresh.id);
-    setActiveTab('details');
+    setActiveTab('deck');
   }, [commitDefinitions, definitions, actorSide]);
 
   const unwrapRawModule = useCallback((text: string) => {
@@ -890,6 +1265,12 @@ export function ActorEditor({
     }
   }, [definitions, deckTemplates, unwrapRawModule]);
 
+  const handleApplyLive = useCallback(() => {
+    if (!onApplyLive) return;
+    const applied = onApplyLive(normalizeDeckTemplates(deckTemplates));
+    setSaveStatus(applied ? 'Applied deck changes to live game.' : 'Live apply skipped.');
+  }, [deckTemplates, onApplyLive]);
+
   const handleRemoveActor = useCallback((id: string) => {
     setDefinitions((prev) => {
       const next = prev.filter((actor) => actor.id !== id);
@@ -901,12 +1282,28 @@ export function ActorEditor({
       delete next[id];
       return next;
     });
-    setActiveTab('details');
+    setActiveTab('deck');
   }, []);
 
+  const containerClassName = embedded
+    ? 'relative w-full h-full flex flex-col bg-game-bg-dark border border-game-teal/40 rounded-lg p-4 overflow-hidden text-game-white menu-text'
+    : 'relative w-[1200px] max-w-[95vw] max-h-[90vh] flex flex-col bg-game-bg-dark border border-game-teal/40 rounded-lg p-4 overflow-hidden text-game-white menu-text';
+  const bodyClassName = embedded
+    ? 'grid grid-cols-[0.34fr_1.66fr] gap-4 flex-1 min-h-0'
+    : 'grid grid-cols-[0.34fr_1.66fr] gap-4 h-[74vh]';
+
   const content = (
-    <div className="relative bg-game-bg-dark border border-game-teal/40 rounded-lg p-4 w-[1200px] max-w-[95vw] max-h-[90vh] overflow-hidden text-game-white menu-text">
+    <div className={containerClassName}>
       <div className="absolute top-3 right-3 flex items-center gap-2">
+        {onApplyLive && (
+          <button
+            type="button"
+            onClick={handleApplyLive}
+            className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-gold/50 px-3 py-1 rounded cursor-pointer text-game-gold"
+          >
+            Apply Live
+          </button>
+        )}
         <button
           type="button"
           onClick={writeToDisk}
@@ -925,7 +1322,7 @@ export function ActorEditor({
         )}
       </div>
       <div className="text-xs text-game-teal tracking-[4px] mb-3">ACTOR EDITOR</div>
-      <div className="grid grid-cols-[0.34fr_1.66fr] gap-4 h-[74vh]">
+      <div className={bodyClassName}>
         <div className="flex min-w-[220px] flex-col overflow-hidden border border-game-teal/25 rounded p-3 bg-game-bg-dark/40">
           <div className="flex items-center gap-2 mb-2">
             <button
@@ -974,7 +1371,7 @@ export function ActorEditor({
                   type="button"
                   onClick={() => {
                     setSelectedId(item.id);
-                    setActiveTab('details');
+                    setActiveTab('deck');
                   }}
                   className={`flex-1 text-[10px] font-mono text-left px-2 py-1 rounded border transition-colors ${
                     item.id === selectedId
@@ -1005,6 +1402,13 @@ export function ActorEditor({
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setActiveTab('deck')}
+              className={`text-[10px] font-mono px-2 py-1 rounded border ${activeTab === 'deck' ? 'border-game-gold text-game-gold' : 'border-game-teal/30 text-game-white/70'}`}
+            >
+              Deck
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveTab('details')}
               className={`text-[10px] font-mono px-2 py-1 rounded border ${activeTab === 'details' ? 'border-game-gold text-game-gold' : 'border-game-teal/30 text-game-white/70'}`}
             >
@@ -1016,13 +1420,6 @@ export function ActorEditor({
               className={`text-[10px] font-mono px-2 py-1 rounded border ${activeTab === 'titles' ? 'border-game-gold text-game-gold' : 'border-game-teal/30 text-game-white/70'}`}
             >
               Titles
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('deck')}
-              className={`text-[10px] font-mono px-2 py-1 rounded border ${activeTab === 'deck' ? 'border-game-gold text-game-gold' : 'border-game-teal/30 text-game-white/70'}`}
-            >
-              Deck Cards
             </button>
           </div>
 
@@ -1187,7 +1584,14 @@ export function ActorEditor({
                         onClick={() => {
                           if (!selected || !selectedDeck) return;
                           const nextValues = [...selectedDeck.values, 1];
-                          const nextCosts = [...(selectedDeck.costs ?? []), 0];
+                          const nextCostByRarity = [
+                            ...(selectedDeck.costByRarity ?? []),
+                            normalizeCostByRarityEntry(undefined, 0),
+                          ];
+                          const nextEnabledRarities: OrimRarity[] = [
+                            ...(selectedDeck.enabledRarities ?? selectedDeck.values.map(() => 'common' as OrimRarity)),
+                            'common',
+                          ];
                           const nextActiveCards = [...(selectedDeck.activeCards ?? selectedDeck.values.map(() => true)), true];
                           const nextNotDiscardedCards = [...(selectedDeck.notDiscardedCards ?? selectedDeck.values.map(() => false)), false];
                           const nextPlayableTurns: TurnPlayability[] = [
@@ -1201,7 +1605,8 @@ export function ActorEditor({
                             [selected.id]: {
                               ...selectedDeck,
                               values: nextValues,
-                              costs: nextCosts,
+                              costByRarity: nextCostByRarity,
+                              enabledRarities: nextEnabledRarities,
                               activeCards: nextActiveCards,
                               notDiscardedCards: nextNotDiscardedCards,
                               playableTurns: nextPlayableTurns,
@@ -1220,119 +1625,106 @@ export function ActorEditor({
                     ) : (
                       <div className="grid gap-2">
                         {(selectedDeck?.values ?? []).map((value, index) => {
-                          const costs = selectedDeck?.costs ?? [];
                           const activeCards = selectedDeck?.activeCards ?? (selectedDeck?.values ?? []).map(() => true);
-                          const notDiscardedCards = selectedDeck?.notDiscardedCards ?? (selectedDeck?.values ?? []).map(() => false);
                           const playableTurns = selectedDeck?.playableTurns ?? createDefaultPlayableTurns((selectedDeck?.values ?? []).length);
-                          const cooldowns = selectedDeck?.cooldowns ?? [];
                           const slotsPerCard = selectedDeck?.slotsPerCard ?? (selectedDeck?.values ?? []).map(() => 1);
+                          const enabledRarity = selectedDeck?.enabledRarities?.[index] ?? 'common';
                           return (
-                            <div key={`details-rpg-card-${index}`} className="grid grid-cols-[repeat(7,minmax(0,1fr))] gap-2">
-                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                                Value
-                                <input
-                                  type="number"
-                                  value={value}
-                                  onChange={(e) => {
-                                    if (!selected || !selectedDeck) return;
-                                    const nextValues = [...selectedDeck.values];
-                                    nextValues[index] = Number(e.target.value);
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, values: nextValues } });
-                                  }}
-                                  className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                />
-                              </label>
-                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                                Cost
-                                <input
-                                  type="number"
-                                  value={costs[index] ?? 0}
-                                  onChange={(e) => {
-                                    if (!selected || !selectedDeck) return;
-                                    const nextCosts = [...(selectedDeck.costs ?? selectedDeck.values.map(() => 0))];
-                                    nextCosts[index] = Number(e.target.value);
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, costs: nextCosts } });
-                                  }}
-                                  className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                />
-                              </label>
-                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                                Turn
-                                <select
-                                  value={playableTurns[index] ?? 'player'}
-                                  onChange={(e) => {
-                                    if (!selected || !selectedDeck) return;
-                                    const nextPlayableTurns = [...(selectedDeck.playableTurns ?? createDefaultPlayableTurns(selectedDeck.values.length))];
-                                    const nextValue = e.target.value as TurnPlayability;
-                                    nextPlayableTurns[index] = nextValue === 'enemy' || nextValue === 'anytime' ? nextValue : 'player';
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, playableTurns: nextPlayableTurns } });
-                                  }}
-                                  className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                >
-                                  {TURN_PLAYABILITY_OPTIONS.map((option) => (
-                                    <option key={`details-turn-${option.value}`} value={option.value}>
-                                      {option.label}
-                                    </option>
+                            <div key={`details-rpg-card-${index}`} className="grid gap-2">
+                              <div className="grid grid-cols-[repeat(4,minmax(0,1fr))] gap-2">
+                                <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                  Value
+                                  <input
+                                    type="number"
+                                    value={value}
+                                    onChange={(e) => {
+                                      if (!selected || !selectedDeck) return;
+                                      const nextValues = [...selectedDeck.values];
+                                      nextValues[index] = Number(e.target.value);
+                                      commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, values: nextValues } });
+                                    }}
+                                    className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                  />
+                                </label>
+                                <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                  Turn
+                                  <select
+                                    value={playableTurns[index] ?? 'player'}
+                                    onChange={(e) => {
+                                      if (!selected || !selectedDeck) return;
+                                      const nextPlayableTurns = [...(selectedDeck.playableTurns ?? createDefaultPlayableTurns(selectedDeck.values.length))];
+                                      const nextValue = e.target.value as TurnPlayability;
+                                      nextPlayableTurns[index] = nextValue === 'enemy' || nextValue === 'anytime' ? nextValue : 'player';
+                                      commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, playableTurns: nextPlayableTurns } });
+                                    }}
+                                    className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                  >
+                                    {TURN_PLAYABILITY_OPTIONS.map((option) => (
+                                      <option key={`details-turn-${option.value}`} value={option.value}>
+                                        {option.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                                <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                  Active
+                                  <input
+                                    type="checkbox"
+                                    checked={activeCards[index] ?? true}
+                                    onChange={(e) => {
+                                      if (!selected || !selectedDeck) return;
+                                      const nextActiveCards = [...(selectedDeck.activeCards ?? selectedDeck.values.map(() => true))];
+                                      nextActiveCards[index] = e.target.checked;
+                                      commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, activeCards: nextActiveCards } });
+                                    }}
+                                    className="h-6 w-6"
+                                  />
+                                </label>
+                                <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                  Slots
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={slotsPerCard[index] ?? 1}
+                                    onChange={(e) => {
+                                      if (!selected || !selectedDeck) return;
+                                      const nextSlots = [...(selectedDeck.slotsPerCard ?? selectedDeck.values.map(() => 1))];
+                                      nextSlots[index] = Math.max(1, Number(e.target.value));
+                                      commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, slotsPerCard: nextSlots } });
+                                    }}
+                                    className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                  />
+                                </label>
+                              </div>
+                              <div className="text-[9px] text-game-white/40">
+                                Lifecycle (discard/exhaust/cooldown) is authored on the primary ability card.
+                              </div>
+                              <div className="rounded border border-game-teal/20 bg-game-bg-dark/50 p-2">
+                                <div className="text-[9px] text-game-white/45 uppercase tracking-[0.12em] mb-1">Enabled rarity</div>
+                                <div className="grid grid-cols-[repeat(6,minmax(0,1fr))] gap-1">
+                                  {ORIM_RARITY_OPTIONS.map((rarity) => (
+                                    <button
+                                      key={`details-rarity-${index}-${rarity}`}
+                                      type="button"
+                                      onClick={() => {
+                                        if (!selected || !selectedDeck) return;
+                                        const nextEnabledRarities: OrimRarity[] = [
+                                          ...(selectedDeck.enabledRarities ?? selectedDeck.values.map(() => 'common' as OrimRarity)),
+                                        ];
+                                        nextEnabledRarities[index] = rarity;
+                                        commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, enabledRarities: nextEnabledRarities } });
+                                      }}
+                                      className={`text-[9px] font-mono rounded border px-2 py-1 uppercase tracking-[0.12em] ${
+                                        enabledRarity === rarity
+                                          ? 'border-game-gold text-game-gold bg-game-gold/10'
+                                          : 'border-game-teal/30 text-game-white/60 hover:border-game-teal/60'
+                                      }`}
+                                    >
+                                      {ORIM_RARITY_SHORT_LABEL[rarity]}
+                                    </button>
                                   ))}
-                                </select>
-                              </label>
-                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                                Active
-                                <input
-                                  type="checkbox"
-                                  checked={activeCards[index] ?? true}
-                                  onChange={(e) => {
-                                    if (!selected || !selectedDeck) return;
-                                    const nextActiveCards = [...(selectedDeck.activeCards ?? selectedDeck.values.map(() => true))];
-                                    nextActiveCards[index] = e.target.checked;
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, activeCards: nextActiveCards } });
-                                  }}
-                                  className="h-6 w-6"
-                                />
-                              </label>
-                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                                notDiscarded
-                                <input
-                                  type="checkbox"
-                                  checked={notDiscardedCards[index] ?? false}
-                                  onChange={(e) => {
-                                    if (!selected || !selectedDeck) return;
-                                    const nextNotDiscardedCards = [...(selectedDeck.notDiscardedCards ?? selectedDeck.values.map(() => false))];
-                                    nextNotDiscardedCards[index] = e.target.checked;
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, notDiscardedCards: nextNotDiscardedCards } });
-                                  }}
-                                  className="h-6 w-6"
-                                />
-                              </label>
-                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                                Cooldown
-                                <input
-                                  type="number"
-                                  value={cooldowns[index] ?? 0}
-                                  onChange={(e) => {
-                                    if (!selected || !selectedDeck) return;
-                                    const nextCooldowns = [...(selectedDeck.cooldowns ?? selectedDeck.values.map(() => 0))];
-                                    nextCooldowns[index] = Number(e.target.value);
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, cooldowns: nextCooldowns } });
-                                  }}
-                                  className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                />
-                              </label>
-                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                                Slots
-                                <input
-                                  type="number"
-                                  min={1}
-                                  value={slotsPerCard[index] ?? 1}
-                                  onChange={(e) => {
-                                    if (!selected || !selectedDeck) return;
-                                    const nextSlots = [...(selectedDeck.slotsPerCard ?? selectedDeck.values.map(() => 1))];
-                                    nextSlots[index] = Math.max(1, Number(e.target.value));
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: { ...selectedDeck, slotsPerCard: nextSlots } });
-                                  }}
-                                  className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                />
-                              </label>
+                                </div>
+                              </div>
                             </div>
                           );
                         })}
@@ -1464,7 +1856,7 @@ export function ActorEditor({
               {activeTab === 'deck' && (
                 (() => {
                   const deck = normalizeDeckTemplate(
-                    deckTemplates[selected.id] ?? { values: [], costs: [], activeCards: [], notDiscardedCards: [], playableTurns: [], cooldowns: [], slotsPerCard: [], starterOrim: [] }
+                    deckTemplates[selected.id] ?? { values: [], costByRarity: [], activeCards: [], notDiscardedCards: [], playableTurns: [], cooldowns: [], slotsPerCard: [], starterOrim: [] }
                   );
                   return (
                     <div className="flex flex-col gap-3 text-xs font-mono">
@@ -1485,10 +1877,10 @@ export function ActorEditor({
                               Label
                               <input
                                 className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={newAbility.label ?? ''}
+                                value={editAbility.label ?? ''}
                                 onChange={(e) => {
                                   const label = e.target.value;
-                                  setNewAbility((prev) => ({
+                                  setEditAbility((prev) => ({
                                     ...prev,
                                     label,
                                     id: normalizeId(label),
@@ -1500,8 +1892,8 @@ export function ActorEditor({
                               Element
                               <select
                                 className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={newAbility.element ?? 'N'}
-                                onChange={(e) => setNewAbility((prev) => ({ ...prev, element: e.target.value as Element }))}
+                                value={editAbility.element ?? 'N'}
+                                onChange={(e) => setEditAbility((prev) => ({ ...prev, element: e.target.value as Element }))}
                               >
                                 {ELEMENTS.map((el) => (
                                   <option key={el} value={el}>{el}</option>
@@ -1512,8 +1904,8 @@ export function ActorEditor({
                               Type
                               <select
                                 className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={newAbility.abilityType ?? 'ability'}
-                                onChange={(e) => setNewAbility((prev) => ({ ...prev, abilityType: e.target.value }))}
+                                value={editAbility.abilityType ?? 'ability'}
+                                onChange={(e) => setEditAbility((prev) => ({ ...prev, abilityType: e.target.value }))}
                               >
                                 <option value="ability">ability</option>
                                 <option value="utility">utility</option>
@@ -1521,21 +1913,11 @@ export function ActorEditor({
                               </select>
                             </label>
                             <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                              Rarity
+                              Loadout
                               <select
                                 className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={newAbility.rarity ?? 'common'}
-                                onChange={(e) => {
-                                  const rarity = e.target.value as OrimRarity;
-                                  setNewAbility((prev) => ({
-                                    ...prev,
-                                    rarity,
-                                    effects: (prev.effects ?? []).map((fx) => ({
-                                      ...ensureEffectValueByRarity(fx),
-                                      value: resolveEffectValueForRarity(ensureEffectValueByRarity(fx), rarity),
-                                    })),
-                                  }));
-                                }}
+                                value={editAbility.rarity ?? 'common'}
+                                onChange={(e) => handleSelectAbilityLoadoutRarity(e.target.value as OrimRarity)}
                               >
                                 {ORIM_RARITY_OPTIONS.map((rarity) => (
                                   <option key={rarity} value={rarity}>{rarity}</option>
@@ -1548,14 +1930,52 @@ export function ActorEditor({
                             <textarea
                               rows={3}
                               className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                              value={newAbility.description ?? ''}
-                              onChange={(e) => setNewAbility((prev) => ({ ...prev, description: e.target.value }))}
+                              value={editAbility.description ?? ''}
+                              onChange={(e) => setEditAbility((prev) => ({ ...prev, description: e.target.value }))}
                             />
                           </label>
                           <div className="flex flex-col gap-2">
                             <div className="text-[10px] text-game-white/60 uppercase tracking-wide">Effects</div>
+                            <div className="flex items-center justify-between gap-2 rounded border border-game-teal/20 bg-game-bg-dark/50 px-2 py-1.5">
+                              {(() => {
+                                const activeRarity = (editAbility.rarity ?? 'common') as OrimRarity;
+                                const effectsByRarity = buildEffectsByRarityLoadouts(editAbility, activeRarity);
+                                return (
+                                  <>
+                                    <div className="flex flex-wrap gap-1">
+                                      {ORIM_RARITY_OPTIONS.map((rarity) => {
+                                        const isActive = activeRarity === rarity;
+                                        const effectCount = effectsByRarity[rarity]?.length ?? 0;
+                                        return (
+                                          <button
+                                            key={`new-ability-loadout-${rarity}`}
+                                            type="button"
+                                            onClick={() => handleSelectAbilityLoadoutRarity(rarity)}
+                                            className={`px-2 py-1 rounded border text-[8px] uppercase tracking-[0.14em] transition-colors ${
+                                              isActive
+                                                ? 'border-game-gold text-game-gold bg-game-gold/10'
+                                                : 'border-game-teal/25 text-game-white/65 hover:border-game-teal/45'
+                                            }`}
+                                          >
+                                            {rarity} ({effectCount})
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={handleAutoFillRarityLoadoutsFromCommon}
+                                      className="text-[8px] px-2 py-1 rounded border border-game-gold/45 text-game-gold/80 hover:border-game-gold hover:text-game-gold transition-colors uppercase tracking-[0.14em]"
+                                      title="Generate all rarity load-outs from common using the power curve."
+                                    >
+                                      Auto-fill Curve
+                                    </button>
+                                  </>
+                                );
+                              })()}
+                            </div>
                             <RowManager
-                              rows={(newAbility.effects ?? []).map((fx, i) => ({ ...fx, id: i }))}
+                              rows={(editAbility.effects ?? []).map((fx, i) => ({ ...fx, id: i }))}
                               renderHeader={() => (
                                 <div
                                   className="px-2 grid items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10"
@@ -1701,21 +2121,6 @@ export function ActorEditor({
                                       )}
                                     </div>
                                   )}
-                                  <div className="flex flex-wrap gap-1 text-[9px]">
-                                    {ORIM_RARITY_OPTIONS.map((rarity) => {
-                                      const scaledValue = resolveEffectValueForRarity(ensureEffectValueByRarity(fx), rarity);
-                                      const isActive = (newAbility.rarity ?? 'common') === rarity;
-                                      return (
-                                        <div
-                                          key={`new-effect-${fx.id}-rarity-${rarity}`}
-                                          className={`flex flex-col items-center gap-0.5 px-2 py-0.5 rounded border tracking-[1px] uppercase ${isActive ? 'border-game-gold text-game-gold' : 'border-game-teal/20 text-game-white/60'}`}
-                                        >
-                                          <span className="text-[7px]">{rarity}</span>
-                                          <span className="text-[10px] font-bold">{scaledValue}</span>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
                                 </div>
                               )}
                               onAdd={handleNewAbilityEffectAdd}
@@ -1728,7 +2133,7 @@ export function ActorEditor({
                           <div className="flex flex-col gap-2">
                             <div className="text-[10px] text-game-white/60 uppercase tracking-wide">Triggers</div>
                             <RowManager
-                              rows={(newAbility.triggers ?? []).map((trigger, i) => ({ ...trigger, id: i }))}
+                              rows={(editAbility.triggers ?? []).map((trigger, i) => ({ ...trigger, id: i }))}
                               renderHeader={() => (
                                 <div
                                   className="px-2 grid items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10"
@@ -1841,12 +2246,90 @@ export function ActorEditor({
                               addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-gold/35 text-game-gold/70 hover:border-game-gold hover:text-game-gold transition-colors"
                             />
                           </div>
+                          <div className="rounded border border-game-teal/20 bg-game-bg-dark/40 p-2">
+                            <div className="mb-2 text-[10px] text-game-white/60 uppercase tracking-wide">Lifecycle</div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="flex flex-col gap-1 text-[10px]">
+                                <span className="text-game-teal/70">Dismissal</span>
+                                <select
+                                  value={normalizeAbilityLifecycle(editAbility.lifecycle).discardPolicy}
+                                  onChange={(e) => handleEditAbilityLifecycleChange('discardPolicy', e.target.value)}
+                                  className="bg-game-bg-dark border border-game-teal/30 rounded px-2 py-1 text-[10px] text-game-white outline-none focus:border-game-gold"
+                                >
+                                  {ABILITY_LIFECYCLE_DISCARD_POLICY_OPTIONS.map((option) => (
+                                    <option key={`lifecycle-discard-${option.value}`} value={option.value}>{option.label}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="flex flex-col gap-1 text-[10px]">
+                                <span className="text-game-teal/70">Exhaust Scope</span>
+                                <select
+                                  value={normalizeAbilityLifecycle(editAbility.lifecycle).exhaustScope}
+                                  onChange={(e) => handleEditAbilityLifecycleChange('exhaustScope', e.target.value)}
+                                  className="bg-game-bg-dark border border-game-teal/30 rounded px-2 py-1 text-[10px] text-game-white outline-none focus:border-game-gold"
+                                >
+                                  {ABILITY_LIFECYCLE_EXHAUST_SCOPE_OPTIONS.map((option) => (
+                                    <option key={`lifecycle-exhaust-${option.value}`} value={option.value}>{option.label}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="flex flex-col gap-1 text-[10px]">
+                                <span className="text-game-teal/70">Cooldown Mode</span>
+                                <select
+                                  value={normalizeAbilityLifecycle(editAbility.lifecycle).cooldownMode}
+                                  onChange={(e) => handleEditAbilityLifecycleChange('cooldownMode', e.target.value)}
+                                  className="bg-game-bg-dark border border-game-teal/30 rounded px-2 py-1 text-[10px] text-game-white outline-none focus:border-game-gold"
+                                >
+                                  {ABILITY_LIFECYCLE_COOLDOWN_MODE_OPTIONS.map((option) => (
+                                    <option key={`lifecycle-cooldown-mode-${option.value}`} value={option.value}>{option.label}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="flex flex-col gap-1 text-[10px]">
+                                <span className="text-game-teal/70">Cooldown Value</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={normalizeAbilityLifecycle(editAbility.lifecycle).cooldownValue ?? 0}
+                                  onChange={(e) => handleEditAbilityLifecycleChange('cooldownValue', e.target.value)}
+                                  className="number-input-no-spinner bg-game-bg-dark border border-game-teal/30 rounded px-2 py-1 text-[10px] text-game-white outline-none focus:border-game-gold"
+                                />
+                              </label>
+                              <label className="flex flex-col gap-1 text-[10px]">
+                                <span className="text-game-teal/70">Cooldown Starts</span>
+                                <select
+                                  value={normalizeAbilityLifecycle(editAbility.lifecycle).cooldownStartsOn ?? 'use'}
+                                  onChange={(e) => handleEditAbilityLifecycleChange('cooldownStartsOn', e.target.value)}
+                                  className="bg-game-bg-dark border border-game-teal/30 rounded px-2 py-1 text-[10px] text-game-white outline-none focus:border-game-gold"
+                                >
+                                  {ABILITY_LIFECYCLE_COOLDOWN_START_OPTIONS.map((option) => (
+                                    <option key={`lifecycle-cooldown-start-${option.value}`} value={option.value}>{option.label}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="flex flex-col gap-1 text-[10px]">
+                                <span className="text-game-teal/70">Cooldown Reset</span>
+                                <select
+                                  value={normalizeAbilityLifecycle(editAbility.lifecycle).cooldownResetsOn ?? 'turn_start'}
+                                  onChange={(e) => handleEditAbilityLifecycleChange('cooldownResetsOn', e.target.value)}
+                                  className="bg-game-bg-dark border border-game-teal/30 rounded px-2 py-1 text-[10px] text-game-white outline-none focus:border-game-gold"
+                                >
+                                  {ABILITY_LIFECYCLE_COOLDOWN_RESET_OPTIONS.map((option) => (
+                                    <option key={`lifecycle-cooldown-reset-${option.value}`} value={option.value}>{option.label}</option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                            <div className="mt-2 text-[9px] text-game-white/45">
+                              Lifecycle drives card dismissal/reuse and auto-syncs the `notDiscarded` trigger.
+                            </div>
+                          </div>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded cursor-pointer text-game-teal"
                               onClick={async () => {
-                                const generatedId = normalizeId(newAbility.label ?? '');
+                                const generatedId = normalizeId(editAbility.label ?? '');
                                 if (!generatedId) return;
                                 const hasForeignCollision = abilities.some((entry) => (
                                   entry.id === generatedId
@@ -1857,7 +2340,7 @@ export function ActorEditor({
                                   ? `${generatedId}_${selected.id}`
                                   : generatedId;
                                 const abilityToSave = hydrateAbility({
-                                  ...newAbility,
+                                  ...editAbility,
                                   id: scopedAbilityId,
                                   parentActorId: selected.id,
                                 });
@@ -1867,7 +2350,8 @@ export function ActorEditor({
                                 await commitAbilities(next);
                                 const assignAbilityToNextSlot = (currentDeck: DeckTemplate, abilityId: string): DeckTemplate => {
                                   const values = [...(currentDeck.values ?? [])];
-                                  const costs = [...(currentDeck.costs ?? values.map(() => 0))];
+                                  const costByRarity = [...(currentDeck.costByRarity ?? values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
+                                  const enabledRarities: OrimRarity[] = [...(currentDeck.enabledRarities ?? values.map(() => 'common' as OrimRarity))];
                                   const activeCards = [...(currentDeck.activeCards ?? values.map(() => true))];
                                   const notDiscardedCards = [...(currentDeck.notDiscardedCards ?? values.map(() => false))];
                                   const playableTurns = [...(currentDeck.playableTurns ?? createDefaultPlayableTurns(values.length))];
@@ -1876,14 +2360,15 @@ export function ActorEditor({
                                   const starterOrim = [...(currentDeck.starterOrim ?? [])];
                                   if (values.length === 0) {
                                     values.push(1);
-                                    costs.push(0);
+                                    costByRarity.push(normalizeCostByRarityEntry(undefined, 0));
+                                    enabledRarities.push('common');
                                     activeCards.push(true);
                                     notDiscardedCards.push(false);
                                     playableTurns.push('player');
                                     cooldowns.push(0);
                                     slotsPerCard.push(1);
                                     starterOrim.push({ cardIndex: 0, slotIndex: 0, orimId: abilityId });
-                                    return { ...currentDeck, values, costs, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
+                                    return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
                                   }
                                   for (let cardIndex = 0; cardIndex < values.length; cardIndex += 1) {
                                     const slotCount = Math.max(1, slotsPerCard[cardIndex] ?? 1);
@@ -1895,7 +2380,7 @@ export function ActorEditor({
                                     for (let slotIndex = 0; slotIndex < slotCount; slotIndex += 1) {
                                           if (occupied.has(slotIndex)) continue;
                                           starterOrim.push({ cardIndex, slotIndex, orimId: abilityId });
-                                      return { ...currentDeck, values, costs, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
+                                      return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
                                     }
                                   }
                                   const lastCardIndex = values.length - 1;
@@ -1903,11 +2388,11 @@ export function ActorEditor({
                                   const newSlotIndex = Math.max(1, expandedSlotsPerCard[lastCardIndex] ?? 1);
                                   expandedSlotsPerCard[lastCardIndex] = newSlotIndex + 1;
                                   starterOrim.push({ cardIndex: lastCardIndex, slotIndex: newSlotIndex, orimId: abilityId });
-                                  return { ...currentDeck, values, costs, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard: expandedSlotsPerCard, starterOrim };
+                                  return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard: expandedSlotsPerCard, starterOrim };
                                 };
                                 const updatedDeck = assignAbilityToNextSlot(deck, abilityToSave.id ?? scopedAbilityId);
                                 commitDeckTemplates({ ...deckTemplates, [selected.id]: updatedDeck });
-                                setNewAbility({
+                                setEditAbility({
                                   id: '',
                                   label: '',
                                   description: '',
@@ -1915,7 +2400,9 @@ export function ActorEditor({
                                   element: 'N',
                                   rarity: 'common',
                                   effects: [],
+                                  effectsByRarity: { common: [] },
                                   triggers: [],
+                                  lifecycle: { ...DEFAULT_ABILITY_LIFECYCLE },
                                 });
                                 setShowNewAbilityForm(false);
                               }}
@@ -1934,7 +2421,8 @@ export function ActorEditor({
                           type="button"
                           onClick={() => {
                             const nextValues = [...deck.values, 1];
-                            const nextCosts = [...(deck.costs ?? deck.values.map(() => 0)), 0];
+                            const nextCostByRarity = [...(deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0))), normalizeCostByRarityEntry(undefined, 0)];
+                            const nextEnabledRarities: OrimRarity[] = [...(deck.enabledRarities ?? deck.values.map(() => 'common' as OrimRarity)), 'common'];
                             const nextActiveCards = [...(deck.activeCards ?? deck.values.map(() => true)), true];
                             const nextNotDiscardedCards = [...(deck.notDiscardedCards ?? deck.values.map(() => false)), false];
                             const nextPlayableTurns: TurnPlayability[] = [
@@ -1946,7 +2434,8 @@ export function ActorEditor({
                             const next = {
                               ...deck,
                               values: nextValues,
-                              costs: nextCosts,
+                              costByRarity: nextCostByRarity,
+                              enabledRarities: nextEnabledRarities,
                               activeCards: nextActiveCards,
                               notDiscardedCards: nextNotDiscardedCards,
                               playableTurns: nextPlayableTurns,
@@ -1960,28 +2449,31 @@ export function ActorEditor({
                           + Add Card
                         </button>
                       </div>
-                      {deck.values.map((value, index) => {
-                        const starterSlots = deck.starterOrim?.filter((entry) => entry.cardIndex === index) ?? [];
-                        const slotLocks = deck.slotLocks?.filter((entry) => entry.cardIndex === index) ?? [];
-                        const baseSlotCount = deck.slotsPerCard?.[index] ?? 1;
-                        const primaryAbilityId = (
-                          starterSlots.find((entry) => (entry.slotIndex ?? 0) === 0)?.orimId
-                          ?? starterSlots[0]?.orimId
-                          ?? ''
-                        );
+                      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
+                        {deck.values.map((value, index) => {
+                          const starterSlots = deck.starterOrim?.filter((entry) => entry.cardIndex === index) ?? [];
+                          const slotLocks = deck.slotLocks?.filter((entry) => entry.cardIndex === index) ?? [];
+                          const baseSlotCount = deck.slotsPerCard?.[index] ?? 1;
+                          const primaryAbilityId = (
+                            starterSlots.find((entry) => (entry.slotIndex ?? 0) === 0)?.orimId
+                            ?? starterSlots[0]?.orimId
+                            ?? ''
+                          );
                         const primaryAbility = primaryAbilityId
                           ? abilities.find((ability) => ability.id === primaryAbilityId) ?? null
                           : null;
+                        const primaryLifecycle = normalizeAbilityLifecycle(primaryAbility?.lifecycle);
                         const actorScopedAbilities = abilities.filter((ability) => (
                           ability.parentActorId === selected.id || ability.id === primaryAbilityId
                         ));
-                        const maxSlotIndex = starterSlots.reduce((max, entry) => {
-                          const slotIndex = entry.slotIndex ?? 0;
-                          return Math.max(max, slotIndex);
-                        }, 0);
-                        const slotCount = Math.max(baseSlotCount, maxSlotIndex + 1);
-                        return (
-                          <div key={`${selected.id}-card-${index}`} className="border border-game-teal/20 rounded p-2">
+                          const maxSlotIndex = starterSlots.reduce((max, entry) => {
+                            const slotIndex = entry.slotIndex ?? 0;
+                            return Math.max(max, slotIndex);
+                          }, 0);
+                          const slotCount = Math.max(baseSlotCount, maxSlotIndex + 1);
+                          const enabledRarity = deck.enabledRarities?.[index] ?? 'common';
+                          return (
+                            <div key={`${selected.id}-card-${index}`} className="border border-game-teal/20 rounded p-2 min-w-0">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] text-game-white/60">Card {index + 1}</span>
@@ -1990,15 +2482,8 @@ export function ActorEditor({
                                   disabled={!primaryAbility}
                                   onClick={() => {
                                     if (!primaryAbility) return;
-                                    setNewAbility({
-                                      id: primaryAbility.id ?? '',
-                                      label: primaryAbility.label ?? '',
-                                      description: primaryAbility.description ?? '',
-                                      abilityType: primaryAbility.abilityType ?? 'ability',
-                                      element: primaryAbility.element ?? 'N',
-                                      rarity: primaryAbility.rarity ?? 'common',
-                                      effects: (primaryAbility.effects ?? []).map((fx) => ensureEffectValueByRarity(fx)),
-                                      triggers: (primaryAbility.triggers ?? []).map((trigger) => normalizeAbilityTrigger(trigger)),
+                                    setEditAbility({
+                                      ...hydrateAbility(primaryAbility),
                                       parentActorId: primaryAbility.parentActorId ?? selected.id,
                                     });
                                     setShowNewAbilityForm(true);
@@ -2011,7 +2496,9 @@ export function ActorEditor({
                                   type="button"
                                   onClick={() => {
                                     const nextValues = deck.values.filter((_, cardIndex) => cardIndex !== index);
-                                    const nextCosts = (deck.costs ?? deck.values.map(() => 0))
+                                    const nextCostByRarity = (deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))
+                                      .filter((_, cardIndex) => cardIndex !== index);
+                                    const nextEnabledRarities: OrimRarity[] = (deck.enabledRarities ?? deck.values.map(() => 'common' as OrimRarity))
                                       .filter((_, cardIndex) => cardIndex !== index);
                                     const nextActiveCards = (deck.activeCards ?? deck.values.map(() => true))
                                       .filter((_, cardIndex) => cardIndex !== index);
@@ -2040,7 +2527,8 @@ export function ActorEditor({
                                     const next = {
                                       ...deck,
                                       values: nextValues,
-                                      costs: nextCosts,
+                                      costByRarity: nextCostByRarity,
+                                      enabledRarities: nextEnabledRarities,
                                       activeCards: nextActiveCards,
                                       notDiscardedCards: nextNotDiscardedCards,
                                       playableTurns: nextPlayableTurns,
@@ -2056,7 +2544,8 @@ export function ActorEditor({
                                   Remove
                                 </button>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
                                 <label className="flex items-center gap-1 text-[10px] text-game-white/60">
                                   <span>Value</span>
                                   <input
@@ -2068,21 +2557,7 @@ export function ActorEditor({
                                       const next = { ...deck, values: nextValues };
                                       commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
                                     }}
-                                    className="w-12 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-1 py-[2px]"
-                                  />
-                                </label>
-                                <label className="flex items-center gap-1 text-[10px] text-game-white/60">
-                                  <span>Cost</span>
-                                  <input
-                                    type="number"
-                                    value={deck.costs?.[index] ?? 0}
-                                    onChange={(e) => {
-                                      const nextCosts = [...(deck.costs ?? deck.values.map(() => 0))];
-                                      nextCosts[index] = Math.max(0, Number(e.target.value) || 0);
-                                      const next = { ...deck, costs: nextCosts };
-                                      commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                    }}
-                                    className="w-12 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-1 py-[2px]"
+                                    className="number-input-no-spinner w-12 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-1 py-[2px]"
                                   />
                                 </label>
                                 <label className="flex items-center gap-1 text-[10px] text-game-white/60">
@@ -2105,36 +2580,31 @@ export function ActorEditor({
                                     ))}
                                   </select>
                                 </label>
-                                <label className="flex items-center gap-1 text-[10px] text-game-white/60">
-                                  <span>Cooldown (s)</span>
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    step={0.1}
-                                    value={deck.cooldowns?.[index] ?? 0}
-                                    onChange={(e) => {
-                                      const nextCooldowns = [...(deck.cooldowns ?? deck.values.map(() => 0))];
-                                      nextCooldowns[index] = Math.max(0, Number(e.target.value) || 0);
-                                      const next = { ...deck, cooldowns: nextCooldowns };
-                                      commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                    }}
-                                    className="w-16 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-1 py-[2px]"
-                                  />
-                                </label>
-                                <label className="flex items-center gap-1 text-[10px] text-game-white/60">
-                                  <span>notDiscarded</span>
-                                  <input
-                                    type="checkbox"
-                                    checked={deck.notDiscardedCards?.[index] ?? false}
-                                    onChange={(e) => {
-                                      const nextNotDiscardedCards = [...(deck.notDiscardedCards ?? deck.values.map(() => false))];
-                                      nextNotDiscardedCards[index] = e.target.checked;
-                                      const next = { ...deck, notDiscardedCards: nextNotDiscardedCards };
-                                      commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                    }}
-                                    className="h-4 w-4"
-                                  />
-                                </label>
+                                </div>
+                                <div className="text-[9px] text-game-white/45">
+                                  Lifecycle: {primaryAbility ? summarizeAbilityLifecycle(primaryLifecycle) : 'No primary ability on slot 1'}
+                                </div>
+                                <div className="grid grid-cols-[repeat(6,minmax(0,1fr))] gap-1 border border-game-teal/20 rounded px-2 py-1">
+                                  {ORIM_RARITY_OPTIONS.map((rarity) => (
+                                    <button
+                                      key={`${selected.id}-deck-card-${index}-rarity-${rarity}`}
+                                      type="button"
+                                      onClick={() => {
+                                        const nextEnabledRarities: OrimRarity[] = [...(deck.enabledRarities ?? deck.values.map(() => 'common' as OrimRarity))];
+                                        nextEnabledRarities[index] = rarity;
+                                        const next = { ...deck, enabledRarities: nextEnabledRarities };
+                                        commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
+                                      }}
+                                      className={`text-[9px] font-mono rounded border px-1 py-[2px] uppercase tracking-[0.12em] ${
+                                        enabledRarity === rarity
+                                          ? 'border-game-gold text-game-gold bg-game-gold/10'
+                                          : 'border-game-teal/30 text-game-white/60 hover:border-game-teal/60'
+                                      }`}
+                                    >
+                                      {ORIM_RARITY_SHORT_LABEL[rarity]}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                             <div className="flex flex-col gap-2">
@@ -2144,6 +2614,13 @@ export function ActorEditor({
                                 const isSlotLocked = slotLocks.some((entry) => (entry.slotIndex ?? 0) === slotIndex && entry.locked);
                                 const selectedAbility = starter?.orimId
                                   ? abilities.find((ability) => ability.id === starter.orimId) ?? null
+                                  : null;
+                                const selectedModifierOrim = starter?.orimId
+                                  ? orimDefinitions.find((orim) => orim.id === starter.orimId) ?? null
+                                  : null;
+                                const isPrimarySlot = slotIndex === 0;
+                                const legacyModifierId = !isPrimarySlot && starter?.orimId && !selectedModifierOrim
+                                  ? starter.orimId
                                   : null;
                                 return (
                                   <div key={`${selected.id}-card-${index}-slot-${slotIndex}`} className="flex flex-col gap-1">
@@ -2188,14 +2665,33 @@ export function ActorEditor({
                                         className="flex-1 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
                                       >
                                         <option value="">None</option>
-                                        {actorScopedAbilities.map((ability) => (
-                                          <option key={ability.id ?? ability.label} value={ability.id ?? ''}>
-                                            {ability.label ?? ability.id}
-                                          </option>
-                                        ))}
+                                        {isPrimarySlot ? (
+                                          actorScopedAbilities.map((ability) => (
+                                            <option key={ability.id ?? ability.label} value={ability.id ?? ''}>
+                                              {ability.label ?? ability.id}
+                                            </option>
+                                          ))
+                                        ) : (
+                                          <>
+                                            {legacyModifierId && (
+                                              <option value={legacyModifierId}>
+                                                {`Legacy: ${legacyModifierId}`}
+                                              </option>
+                                            )}
+                                            {orimDefinitions.map((orim) => (
+                                              <option key={orim.id} value={orim.id}>
+                                                {orim.name}
+                                              </option>
+                                            ))}
+                                          </>
+                                        )}
                                       </select>
                                     </div>
-                                    {selectedAbility && renderAbilityPreview(selectedAbility)}
+                                    {isPrimarySlot ? (
+                                      selectedAbility && renderAbilityPreview(selectedAbility)
+                                    ) : (
+                                      selectedModifierOrim && renderOrimPreview(selectedModifierOrim)
+                                    )}
                                   </div>
                                 );
                               })}
@@ -2234,9 +2730,10 @@ export function ActorEditor({
                                 </button>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })()
@@ -2265,4 +2762,5 @@ export function ActorEditor({
     </div>
   );
 }
+
 

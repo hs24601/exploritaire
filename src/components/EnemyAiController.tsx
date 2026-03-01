@@ -10,6 +10,7 @@ interface EnemyAiControllerProps {
   paused?: boolean;
   speedFactor?: number;
   onPlayMove: (tableauIndex: number, foundationIndex: number) => boolean | Promise<boolean>;
+  onPlayRpgAttack?: () => boolean | Promise<boolean>;
   onEndTurn: () => void;
   onTimerUpdate?: (remainingMs: number, totalMs: number) => void;
 }
@@ -41,6 +42,7 @@ export function EnemyAiController({
   paused = false,
   speedFactor = ENEMY_DRAG_SPEED_FACTOR,
   onPlayMove,
+  onPlayRpgAttack,
   onEndTurn,
   onTimerUpdate,
 }: EnemyAiControllerProps) {
@@ -49,6 +51,7 @@ export function EnemyAiController({
   const pauseStartedAtRef = useRef<number | null>(null);
   const speedFactorRef = useRef(speedFactor);
   const onPlayMoveRef = useRef(onPlayMove);
+  const onPlayRpgAttackRef = useRef(onPlayRpgAttack);
   const onEndTurnRef = useRef(onEndTurn);
   const onTimerUpdateRef = useRef(onTimerUpdate);
   const runningRef = useRef(false);
@@ -65,6 +68,10 @@ export function EnemyAiController({
   useEffect(() => {
     onPlayMoveRef.current = onPlayMove;
   }, [onPlayMove]);
+
+  useEffect(() => {
+    onPlayRpgAttackRef.current = onPlayRpgAttack;
+  }, [onPlayRpgAttack]);
 
   useEffect(() => {
     onEndTurnRef.current = onEndTurn;
@@ -170,6 +177,19 @@ export function EnemyAiController({
       }
       const move = selectEnemyMove(currentState, difficulty, movesMadeRef.current);
       if (!move) {
+        const rpgAttackApplied = onPlayRpgAttackRef.current
+          ? await Promise.resolve(onPlayRpgAttackRef.current())
+          : false;
+        if (rpgAttackApplied) {
+          movesMadeRef.current += 1;
+          timeoutRef.current = window.setTimeout(
+            () => {
+              void step();
+            },
+            getEnemyStepDelayMs(difficulty, speedFactorRef.current)
+          );
+          return;
+        }
         if (import.meta.env.DEV) {
           console.log('[EnemyAI] no move selected, ending turn');
         }

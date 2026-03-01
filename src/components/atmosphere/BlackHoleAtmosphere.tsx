@@ -113,7 +113,7 @@ export const BlackHoleAtmosphere = memo(function BlackHoleAtmosphere({ className
     controls.enableZoom = true;
     controls.minDistance = 2.5;
     controls.maxDistance = 100;
-    controls.touches = { ONE: THREE.TOUCH.NONE, TWO: THREE.TOUCH.DOLLY };
+    controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
     controls.target.set(0, 0, 0);
     controls.update();
 
@@ -475,4 +475,3 @@ export const BlackHoleAtmosphere = memo(function BlackHoleAtmosphere({ className
 
   return <div ref={rootRef} className={className} />;
 });
-

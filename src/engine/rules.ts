@@ -1,10 +1,15 @@
 import type { Card, Effect } from './types';
 import { EFFECT_IDS, KARMA_DEALING_MIN_CARDS, WILD_SENTINEL_RANK } from './constants';
 
-export function getRankDisplay(rank: number): string {
-  if (rank === 0) return '?'; // Wild sentinel
+export function getRankDisplay(rank: number | string | null | undefined): string {
+  const numericRank = Number(rank);
+  if (!Number.isFinite(numericRank)) {
+    return String(rank ?? '');
+  }
+  const normalizedRank = Math.round(numericRank);
+  if (normalizedRank === 0) return '?'; // Wild sentinel
   const faceCards: Record<number, string> = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
-  return faceCards[rank] || rank.toString();
+  return faceCards[normalizedRank] || normalizedRank.toString();
 }
 
 export function isSequential(rank1: number, rank2: number): boolean {

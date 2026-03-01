@@ -30,6 +30,8 @@ interface HandProps {
   disableSpringMotion?: boolean;
   watercolorOnlyCards?: boolean;
   isCardPlayable?: (card: CardType) => boolean;
+  hideElements?: boolean;
+  onAdjustRpgCardRarity?: (cardId: string, delta: 1 | -1) => boolean;
 }
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -162,6 +164,8 @@ export const Hand = memo(function Hand({
   disableSpringMotion = false,
   watercolorOnlyCards = false,
   isCardPlayable,
+  hideElements: _hideElements = false,
+  onAdjustRpgCardRarity: _onAdjustRpgCardRarity,
 }: HandProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const neonMode = FORCE_NEON_CARD_STYLE;

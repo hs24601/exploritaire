@@ -30,8 +30,8 @@ interface UseCameraControlsOptions {
 interface UseCameraControlsResult {
   cameraState: CameraState;
   effectiveScale: number;
-  containerRef: React.RefObject<HTMLDivElement>;
-  contentRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
   isPanning: boolean;
   resetCamera: () => void;
   centerOn: (elementRef: HTMLElement | null) => void;
@@ -624,15 +624,20 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       touchPanRef.current.active = false;
     };
 
-    target.addEventListener('touchstart', handleTouchStart, { passive: false });
-    target.addEventListener('touchmove', handleTouchMove, { passive: false });
-    target.addEventListener('touchend', handleTouchEnd);
-    target.addEventListener('touchcancel', handleTouchEnd);
+    const onTouchStart: EventListener = (event) => handleTouchStart(event as TouchEvent);
+    const onTouchMove: EventListener = (event) => handleTouchMove(event as TouchEvent);
+    const onTouchEnd: EventListener = () => handleTouchEnd();
+    const onTouchCancel: EventListener = () => handleTouchEnd();
+
+    target.addEventListener('touchstart', onTouchStart, { passive: false });
+    target.addEventListener('touchmove', onTouchMove, { passive: false });
+    target.addEventListener('touchend', onTouchEnd);
+    target.addEventListener('touchcancel', onTouchCancel);
     return () => {
-      target.removeEventListener('touchstart', handleTouchStart);
-      target.removeEventListener('touchmove', handleTouchMove);
-      target.removeEventListener('touchend', handleTouchEnd);
-      target.removeEventListener('touchcancel', handleTouchEnd);
+      target.removeEventListener('touchstart', onTouchStart);
+      target.removeEventListener('touchmove', onTouchMove);
+      target.removeEventListener('touchend', onTouchEnd);
+      target.removeEventListener('touchcancel', onTouchCancel);
     };
   }, [enabled, zoomEnabled, applyTransform, canStartPanAt, listenOnWindow]);
 
