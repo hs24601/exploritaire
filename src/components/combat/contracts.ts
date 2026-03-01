@@ -46,6 +46,7 @@ export interface CombatSandboxActionsContract {
   cleanupDefeatedEnemies: () => void;
   setEnemyDifficulty: (difficulty: GameState['enemyDifficulty']) => void;
   setCombatFlowMode: (mode: NonNullable<GameState['combatFlowMode']>) => void;
+  setRandomBiomeActiveSide?: (side: 'player' | 'enemy') => void;
   selectCard: (card: CardType, tableauIndex: number) => void;
   playToFoundation: (foundationIndex: number) => boolean;
   playFromTableau: (tableauIndex: number, foundationIndex: number) => boolean;

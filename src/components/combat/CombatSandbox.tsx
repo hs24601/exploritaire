@@ -1704,6 +1704,7 @@ export function CombatSandbox({
   }, [turnDurationMs]);
   const forceLocalTurnSide = useCallback((nextSide: 'player' | 'enemy') => {
     setLabTurnSide(nextSide);
+    actions.setRandomBiomeActiveSide?.(nextSide);
     setPendingTurnSide(null);
     setPendingFinalMoveResolution(false);
     setInterTurnCountdownMs(0);
@@ -1714,7 +1715,7 @@ export function CombatSandbox({
     }
     setLocalTurnTimerActive(true);
     syncTurnBarWidths(turnDurationMs);
-  }, [syncTurnBarWidths, turnDurationMs]);
+  }, [actions, syncTurnBarWidths, turnDurationMs]);
   const handleZenEndTurn = useCallback(() => {
     if (!zenRelicEnabled) return;
     if (!showTurnTimer || !enforceTurnOwnership) return;
@@ -3049,6 +3050,7 @@ export function CombatSandbox({
     localTurnRemainingRef.current = turnDurationMs;
     displayTurnRemainingRef.current = turnDurationMs;
     setLabTurnSide('player');
+    actions.setRandomBiomeActiveSide?.('player');
     setPendingTurnSide(null);
     setPendingFinalMoveResolution(false);
     setInterTurnCountdownMs(0);
@@ -3057,7 +3059,7 @@ export function CombatSandbox({
     }
     setLocalTurnTimerActive(false);
     syncTurnBarWidths(turnDurationMs);
-  }, [open, useLocalTurnSide, turnDurationMs, syncTurnBarWidths]);
+  }, [actions, open, useLocalTurnSide, turnDurationMs, syncTurnBarWidths]);
   useEffect(() => {
     if (!open) return;
     setOrimTrayCollapsed(true);
@@ -3085,6 +3087,7 @@ export function CombatSandbox({
     if (dragState.isDragging) return;
     setPendingFinalMoveResolution(false);
     setLabTurnSide('enemy');
+    actions.setRandomBiomeActiveSide?.('enemy');
     localTurnRemainingRef.current = turnDurationMs;
     displayTurnRemainingRef.current = turnDurationMs;
     if (!DISABLE_TURN_BAR_ANIMATION) {
@@ -3094,7 +3097,7 @@ export function CombatSandbox({
     setInterTurnCountdownMs(0);
     setLocalTurnTimerActive(true);
     syncTurnBarWidths(turnDurationMs);
-  }, [dragState.isDragging, open, pendingFinalMoveResolution, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
+  }, [actions, dragState.isDragging, open, pendingFinalMoveResolution, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
   useEffect(() => {
     if (useLocalTurnSide) return;
     const playerCount = gameState.combatFlowTelemetry?.playerCardsPlayed ?? 0;
@@ -3145,6 +3148,7 @@ export function CombatSandbox({
               }
             } else if (labTurnSide === 'player') {
               setLabTurnSide('enemy');
+              actions.setRandomBiomeActiveSide?.('enemy');
               localTurnRemainingRef.current = turnDurationMs;
               displayTurnRemainingRef.current = turnDurationMs;
               if (!DISABLE_TURN_BAR_ANIMATION) {
@@ -3188,6 +3192,7 @@ export function CombatSandbox({
         }
         if (countdownNext <= 0) {
           setLabTurnSide(pendingTurnSide);
+          actions.setRandomBiomeActiveSide?.(pendingTurnSide);
           setPendingTurnSide(null);
           setInterTurnCountdownMs(0);
           localTurnRemainingRef.current = turnDurationMs;
@@ -3203,7 +3208,7 @@ export function CombatSandbox({
       }
     }, TURN_TIMER_TICK_MS);
     return () => window.clearInterval(intervalId);
-  }, [dragState.isDragging, finalMoveRelicEnabled, interTurnCountdownActive, interTurnCountdownMs, isGamePaused, labTurnSide, localTurnTimerActive, masterStrategistRelicEnabled, open, pendingTurnSide, showTurnTimer, syncTurnBarWidths, timeScale, turnDurationMs, useLocalTurnSide, zenRelicEnabled]);
+  }, [actions, dragState.isDragging, finalMoveRelicEnabled, interTurnCountdownActive, interTurnCountdownMs, isGamePaused, labTurnSide, localTurnTimerActive, masterStrategistRelicEnabled, open, pendingTurnSide, showTurnTimer, syncTurnBarWidths, timeScale, turnDurationMs, useLocalTurnSide, zenRelicEnabled]);
   useRpgCombatTicker({
     enabled: open,
     paused: isGamePaused || (dragState.isDragging && masterStrategistRelicEnabled),

@@ -1308,6 +1308,10 @@ export function useGameEngine(
     });
   }, []);
 
+  const setRandomBiomeActiveSide = useCallback((side: 'player' | 'enemy') => {
+    setGameState((prev) => (prev ? { ...prev, randomBiomeActiveSide: side } : prev));
+  }, []);
+
   const toggleGraphics = useCallback(() => {
     setShowGraphics((prev) => !prev);
   }, []);
@@ -1412,6 +1416,7 @@ export function useGameEngine(
       puzzleCompleted,
       setEnemyDifficulty,
       setCombatFlowMode,
+      setRandomBiomeActiveSide,
       toggleGraphics,
     },
   };
