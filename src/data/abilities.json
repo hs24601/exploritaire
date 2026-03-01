@@ -5,7 +5,6 @@
       "label": "Bite",
       "description": "",
       "abilityType": "ability",
-      "power": 0,
       "element": "N",
       "rarity": "common",
       "effects": [
@@ -35,7 +34,6 @@
       "id": "goFish",
       "label": "Go Fish",
       "description": "Chance to catch a fish (+1 Supply) any time a water element is collected.",
-      "damage": "",
       "cardId": "",
       "cardRank": 1,
       "cardElements": [
@@ -53,8 +51,6 @@
       "label": "Ironfur",
       "description": "",
       "abilityType": "ability",
-      "power": 0,
-      "damage": 0,
       "element": "N",
       "rarity": "common",
       "effects": [
@@ -84,7 +80,6 @@
       "id": "swipe",
       "label": "Swipe",
       "description": "Swipe at an enemy, dealing damage",
-      "damage": "",
       "cardId": "",
       "cardRank": 1,
       "cardElements": [
@@ -121,8 +116,6 @@
       "label": "Claw",
       "description": "Claw at an enemy to deal damage",
       "abilityType": "exploration",
-      "power": 0,
-      "damage": 1,
       "element": "N",
       "rarity": "common",
       "effects": [
@@ -153,7 +146,6 @@
       "label": "Prowl",
       "description": "Attempts to meld with the shadows, increasing evasion by {value} until this actor plays an RPG card",
       "abilityType": "ability",
-      "power": 0,
       "element": "N",
       "rarity": "common",
       "effects": [
@@ -184,7 +176,6 @@
       "id": "wigglebuttAmbush",
       "label": "Wigglebutt Ambush",
       "description": "While in stealth, your next attack deals additional damage",
-      "damage": "",
       "cardId": "",
       "cardRank": 1,
       "cardElements": [
@@ -219,7 +210,6 @@
     {
       "id": "whiskersense",
       "label": "Whiskersense",
-      "damage": "",
       "cardId": "",
       "cardRank": 1,
       "cardElements": [
@@ -257,7 +247,6 @@
       "label": "Zoomies",
       "description": "",
       "abilityType": "ability",
-      "power": 0,
       "element": "N",
       "rarity": "common",
       "effects": [
@@ -286,7 +275,6 @@
     {
       "id": "nineLives",
       "label": "Nine Lives",
-      "damage": "",
       "cardId": "",
       "cardRank": 1,
       "cardElements": [
@@ -305,8 +293,6 @@
       "label": "Wild Adaptation",
       "description": "",
       "abilityType": "ability",
-      "power": 0,
-      "damage": 0,
       "element": "N",
       "rarity": "common",
       "effects": [
@@ -336,7 +322,6 @@
       "label": "Bearicade",
       "description": "Throw yourself between an enemy attack and your ally, taking the damage yourself. Adds 1 armor.",
       "abilityType": "ability",
-      "power": 1,
       "element": "N",
       "rarity": "common",
       "effects": [
@@ -367,7 +352,6 @@
       "label": "Aurora Bearealis",
       "description": "Casts super armor on Ursus",
       "abilityType": "ability",
-      "power": 0,
       "element": "L",
       "rarity": "epic",
       "effects": [
@@ -398,7 +382,6 @@
       "label": "Spite",
       "description": "Deals {elem value} damage to target.",
       "abilityType": "ability",
-      "power": 1,
       "element": "D",
       "rarity": "common",
       "effects": [
@@ -430,7 +413,6 @@
       "label": "Resentment",
       "description": "Twists shadows around itself, creating {elem value} armor for {duration}.",
       "abilityType": "ability",
-      "power": 0,
       "element": "D",
       "rarity": "common",
       "effects": [
@@ -463,7 +445,6 @@
       "label": "Skittish Scurry",
       "description": "Shuffle and redeal the entire tableau.",
       "abilityType": "ability",
-      "power": 0,
       "element": "N",
       "rarity": "common",
       "triggers": [
@@ -498,7 +479,6 @@
       "label": "Cheap Shot",
       "description": "",
       "abilityType": "ability",
-      "power": 0,
       "element": "N",
       "rarity": "common",
       "effects": [

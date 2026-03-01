@@ -18,10 +18,8 @@ type AbilityLike = {
   id?: string;
   label?: string;
   description?: string;
-  damage?: number;
   abilityType?: string;
   element?: Element;
-  power?: number;
   rarity?: OrimRarity;
   effects?: AbilityEffect[];
   triggers?: AbilityTrigger[];
@@ -268,6 +266,20 @@ const normalizeAbilityTrigger = (trigger: AbilityTrigger): AbilityTrigger => {
   }
   return { type };
 };
+
+const sanitizeAbility = (entry: AbilityLike): AbilityLike => ({
+  id: entry.id,
+  label: entry.label,
+  description: entry.description,
+  abilityType: entry.abilityType,
+  element: entry.element,
+  rarity: entry.rarity,
+  effects: entry.effects,
+  triggers: entry.triggers,
+  tags: entry.tags,
+  parentActorId: entry.parentActorId,
+});
+
 const hydrateAbility = (entry: AbilityLike): AbilityLike => {
   const rarity = entry.rarity ?? 'common';
   const effects = (entry.effects ?? []).map((fx) => {
@@ -289,7 +301,7 @@ const hydrateAbility = (entry: AbilityLike): AbilityLike => {
     return { ...normalized, value: resolveEffectValueForRarity(normalized, rarity) };
   });
   const triggers = (entry.triggers ?? []).map((trigger) => normalizeAbilityTrigger(trigger));
-  return { ...entry, rarity, effects, triggers };
+  return sanitizeAbility({ ...entry, rarity, effects, triggers });
 };
 const ABILITY_DEFS: AbilityLike[] = (abilitiesJson as { abilities?: AbilityLike[] }).abilities ?? [];
 const normalizeId = (value: string) => value
@@ -559,8 +571,6 @@ export function ActorEditor({
     label: '',
     description: '',
     abilityType: 'ability',
-    power: 0,
-    damage: undefined,
     element: 'N',
     rarity: 'common',
     effects: [],
@@ -630,9 +640,10 @@ export function ActorEditor({
   }, [onDeckChange]);
 
   const commitAbilities = useCallback(async (next: AbilityLike[]) => {
-    setAbilities(next);
+    const sanitized = next.map((entry) => sanitizeAbility(entry));
+    setAbilities(sanitized);
     try {
-      await writeFileToDisk('src/data/abilities.json', JSON.stringify({ abilities: next }, null, 2));
+      await writeFileToDisk('src/data/abilities.json', JSON.stringify({ abilities: sanitized }, null, 2));
       setSaveStatus('Saved abilities');
       setTimeout(() => setSaveStatus(null), 1200);
     } catch (err) {
@@ -647,8 +658,6 @@ export function ActorEditor({
       <div className="flex flex-wrap gap-2">
         <span>{ability.abilityType ?? 'ability'}</span>
         <span>{ability.rarity ?? 'common'}</span>
-        {ability.power !== undefined && <span>Power {ability.power}</span>}
-        {ability.damage !== undefined && <span>DMG {ability.damage}</span>}
         {ability.element && <span>Element {ability.element}</span>}
       </div>
       {ability.description && (
@@ -1529,27 +1538,6 @@ export function ActorEditor({
                                 ))}
                               </select>
                             </label>
-                            <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                              Power
-                              <input
-                                type="number"
-                                className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={newAbility.power ?? 0}
-                                onChange={(e) => setNewAbility((prev) => ({ ...prev, power: Number(e.target.value) }))}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                              Damage
-                              <input
-                                type="number"
-                                className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={newAbility.damage ?? ''}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setNewAbility((prev) => ({ ...prev, damage: val === '' ? undefined : Number(val) }));
-                                }}
-                              />
-                            </label>
                           </div>
                           <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
                             Description
@@ -1908,8 +1896,6 @@ export function ActorEditor({
                                   label: '',
                                   description: '',
                                   abilityType: 'ability',
-                                  power: 0,
-                                  damage: undefined,
                                   element: 'N',
                                   rarity: 'common',
                                   effects: [],
@@ -1993,8 +1979,6 @@ export function ActorEditor({
                                       label: primaryAbility.label ?? '',
                                       description: primaryAbility.description ?? '',
                                       abilityType: primaryAbility.abilityType ?? 'ability',
-                                      power: primaryAbility.power ?? 0,
-                                      damage: primaryAbility.damage,
                                       element: primaryAbility.element ?? 'N',
                                       rarity: primaryAbility.rarity ?? 'common',
                                       effects: (primaryAbility.effects ?? []).map((fx) => ensureEffectValueByRarity(fx)),

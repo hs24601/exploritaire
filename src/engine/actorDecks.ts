@@ -11,11 +11,9 @@ type AbilityLike = {
   id?: string;
   label?: string;
   description?: string;
-  damage?: number;
   abilityType?: string;
   element?: Element;
   rarity?: OrimDefinition['rarity'];
-  power?: number;
   tags?: string[];
   effects?: OrimEffectDef[];
   triggers?: AbilityTriggerDef[];
@@ -31,8 +29,7 @@ const abilityToOrimDefinition = (ability: AbilityLike): OrimDefinition => ({
   category: 'ability',
   domain: 'combat',
   rarity: ability.rarity ?? 'common',
-  powerCost: ability.power ?? 0,
-  damage: ability.damage,
+  powerCost: 0,
   effects: ability.effects ?? [],
   triggers: ability.triggers ?? [],
 });
