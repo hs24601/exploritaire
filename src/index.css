@@ -926,3 +926,15 @@ html[data-light-editor="on"] [data-tile-text],
   50% { opacity: 1; }
   100% { transform: rotate(360deg); opacity: 0.75; }
 }
+
+/* Drag-time perf mode: suppress expensive card animations while a card is being dragged. */
+html.drag-perf-mode .card-3d,
+html.drag-perf-mode .card-3d-container,
+html.drag-perf-mode .card-holo-legacy-common-uncommon,
+html.drag-perf-mode .card-holo-legacy-holofoil-rare,
+html.drag-perf-mode .splash-splotch,
+html.drag-perf-mode .target-swirl-ring,
+html.drag-perf-mode .target-swirl-sparkles {
+  animation: none !important;
+  transition: none !important;
+}

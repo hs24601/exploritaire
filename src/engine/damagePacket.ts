@@ -1,5 +1,39 @@
 import type { Element, GameState, Card, OrimDefinition, OrimEffectDef } from './types';
 import { getElementalMultiplier } from './elementalMatrix';
+import abilitiesJson from '../data/abilities.json';
+
+type AbilityFallback = {
+  id?: string;
+  effects?: OrimEffectDef[];
+};
+
+const FALLBACK_ABILITY_EFFECTS_BY_ID = new Map<string, OrimEffectDef[]>(
+  (((abilitiesJson as { abilities?: AbilityFallback[] }).abilities) ?? [])
+    .filter((ability): ability is Required<Pick<AbilityFallback, 'id'>> & AbilityFallback =>
+      typeof ability.id === 'string' && ability.id.length > 0
+    )
+    .map((ability) => [ability.id, ability.effects ?? []])
+);
+
+function inferOrimDefinitionIdFromInstanceId(
+  instanceId: string,
+  knownDefinitionIds: string[]
+): string | null {
+  // Preferred parse: orim-<definitionId>-<timestamp>-<suffix>
+  const timestampPattern = /^orim-(.+)-\d{10,16}-[a-z0-9]+$/i;
+  const parsed = instanceId.match(timestampPattern)?.[1];
+  if (parsed && parsed.length > 0) return parsed;
+
+  const byPrefix = knownDefinitionIds.find((id) => instanceId.includes(`orim-${id}-`));
+  return byPrefix ?? null;
+}
+
+function getEffectsForDefinitionId(state: GameState, definitionId: string | null): OrimEffectDef[] {
+  if (!definitionId) return [];
+  const fromState = state.orimDefinitions.find((o) => o.id === definitionId)?.effects;
+  if (fromState && fromState.length > 0) return fromState;
+  return FALLBACK_ABILITY_EFFECTS_BY_ID.get(definitionId) ?? [];
+}
 
 /**
  * Damage Packet: separates damage into normal (non-elemental) and elemental components.
@@ -88,18 +122,24 @@ export function collectCardOrimEffects(
   if (!card?.orimSlots) return [];
 
   const effects: OrimEffectDef[] = [];
+  const knownDefinitionIds = [
+    ...new Set([
+      ...state.orimDefinitions.map((definition) => definition.id),
+      ...FALLBACK_ABILITY_EFFECTS_BY_ID.keys(),
+    ]),
+  ];
 
   for (const slot of card.orimSlots) {
     const orimInstanceId = slot.orimId;
     if (!orimInstanceId) continue;
 
     const orimInstance = state.orimInstances[orimInstanceId];
-    if (!orimInstance) continue;
+    const definitionId = orimInstance?.definitionId
+      ?? inferOrimDefinitionIdFromInstanceId(orimInstanceId, knownDefinitionIds);
+    const resolvedEffects = getEffectsForDefinitionId(state, definitionId);
+    if (!resolvedEffects.length) continue;
 
-    const orimDef = state.orimDefinitions.find((o) => o.id === orimInstance.definitionId);
-    if (!orimDef || !orimDef.effects) continue;
-
-    effects.push(...orimDef.effects);
+    effects.push(...resolvedEffects);
   }
 
   return effects;

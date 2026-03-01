@@ -5,12 +5,14 @@ import {
   playCard,
   addEffect as addEffectToState,
   checkWin,
+  getMoveAvailability,
   getValidFoundationsForCard,
   returnToGarden as returnToGardenState,
   startAdventure as startAdventureState,
   abandonSession as abandonSessionState,
   applyMoves,
   playCardFromHand as playCardFromHandFn,
+  playCardFromHandToEnemyFoundation as playCardFromHandToEnemyFoundationFn,
   playCardFromStock as playCardFromStockFn,
   assignCardToChallenge as assignCardToChallengeFn,
   assignCardToBuildPile as assignCardToBuildPileFn,
@@ -173,15 +175,28 @@ export function useGameEngine(
       return {
         isWon: false,
         noValidMoves: false,
+        noValidMovesPlayer: false,
+        noValidMovesEnemy: false,
         tableauCanPlay: [] as boolean[],
         validFoundationsForSelected: [] as boolean[],
+        moveAvailability: {
+          playerTableauCanPlay: [] as boolean[],
+          enemyTableauCanPlay: [] as boolean[],
+          playerHasValidMoves: false,
+          enemyHasValidMoves: false,
+          noValidMovesPlayer: true,
+          noValidMovesEnemy: true,
+          hasAnyValidMoves: false,
+          noValidMoves: true,
+        },
       };
     }
 
     const isWon = gameState.phase === 'playing' ? checkWin(gameState) : false;
     const currentBiomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
     const isRandomBiome = !!currentBiomeDef?.randomlyGenerated;
-    const isEnemyTurn = gameState.randomBiomeActiveSide === 'enemy';
+    const enforceTurnOwnership = (gameState.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure';
+    const isEnemyTurn = enforceTurnOwnership && gameState.randomBiomeActiveSide === 'enemy';
     const allowPlayerMoves = !isEnemyTurn;
 
     const partyActors = gameState.activeSessionTileId
@@ -190,64 +205,16 @@ export function useGameEngine(
     const hasFoundationStamina = (index: number) =>
       (partyActors[index]?.stamina ?? 1) > 0 && (partyActors[index]?.hp ?? 1) > 0;
 
-    const noValidMoves = (() => {
-      if (gameState.phase === 'playing') {
-        return !gameState.tableaus.some((tableau) => {
-          if (tableau.length === 0) return false;
-          const topCard = tableau[tableau.length - 1];
-          return gameState.foundations.some((foundation, index) =>
-            hasFoundationStamina(index) &&
-            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
-          );
-        });
-      }
-      if (gameState.phase === 'biome' && gameState.tableaus.length > 0) {
-        if (isRandomBiome) {
-          if (!allowPlayerMoves) return false;
-          return !gameState.tableaus.some(tableau => {
-            if (tableau.length === 0) return false;
-            const topCard = tableau[tableau.length - 1];
-            return gameState.foundations.some((foundation, index) =>
-              hasFoundationStamina(index) &&
-              canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
-            );
-          });
-        }
-        return !gameState.tableaus.some((tableau) => {
-          if (tableau.length === 0) return false;
-          const topCard = tableau[tableau.length - 1];
-          return gameState.foundations.some((foundation, index) =>
-            hasFoundationStamina(index) &&
-            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
-          );
-        });
-      }
-      return false;
-    })();
+    const moveAvailability = getMoveAvailability(gameState);
+    const noValidMovesPlayer = moveAvailability.noValidMovesPlayer;
+    const noValidMovesEnemy = moveAvailability.noValidMovesEnemy;
+    const noValidMoves = noValidMovesPlayer;
 
     const tableauCanPlay = (() => {
-      if (gameState.phase === 'playing') {
-        return gameState.tableaus.map((tableau) => {
-          if (tableau.length === 0) return false;
-          const topCard = tableau[tableau.length - 1];
-          return gameState.foundations.some((foundation, index) =>
-            hasFoundationStamina(index) &&
-            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
-          );
-        });
-      }
       if (gameState.phase === 'biome' && isRandomBiome) {
         if (!allowPlayerMoves) return gameState.tableaus.map(() => false);
-        return gameState.tableaus.map(tableau => {
-          if (tableau.length === 0) return false;
-          const topCard = tableau[tableau.length - 1];
-          return gameState.foundations.some((foundation, index) =>
-            hasFoundationStamina(index) &&
-            canPlayCardWithWild(topCard, foundation[foundation.length - 1], gameState.activeEffects, foundation)
-          );
-        });
       }
-      return [];
+      return moveAvailability.playerTableauCanPlay;
     })();
 
     const validFoundationsForSelected = (() => {
@@ -266,8 +233,11 @@ export function useGameEngine(
     return {
       isWon,
       noValidMoves,
+      noValidMovesPlayer,
+      noValidMovesEnemy,
       tableauCanPlay,
       validFoundationsForSelected,
+      moveAvailability,
     };
   }, [gameState, selectedCard]);
 
@@ -369,6 +339,7 @@ export function useGameEngine(
           orimStash: gameState.orimStash,
           orimInstances: gameState.orimInstances,
           actorDecks: gameState.actorDecks,
+          rpgDiscardPilesByActor: gameState.rpgDiscardPilesByActor,
           actorKeru: gameState.actorKeru,
           noRegretCooldown: gameState.noRegretCooldown,
         }
@@ -456,6 +427,29 @@ export function useGameEngine(
       if (!gameState) return false;
       const newState = playCardFromHandFn(gameState, card, foundationIndex, useWild);
       if (!newState) return false;
+      setGameState(newState);
+      return true;
+    },
+    [gameState]
+  );
+
+  const playFromHandToEnemyFoundation = useCallback(
+    (card: Card, enemyFoundationIndex: number) => {
+      if (!gameState) return false;
+      const newState = playCardFromHandToEnemyFoundationFn(gameState, card, enemyFoundationIndex);
+      if (!newState) {
+        if (import.meta.env.DEV) {
+          console.debug('[engine] playFromHandToEnemyFoundation rejected', {
+            enemyFoundationIndex,
+            cardId: card.id,
+            rank: card.rank,
+            apCost: card.rpgApCost ?? 0,
+            cooldown: card.cooldown ?? 0,
+            abilityId: card.rpgAbilityId ?? null,
+          });
+        }
+        return false;
+      }
       setGameState(newState);
       return true;
     },
@@ -818,7 +812,8 @@ export function useGameEngine(
   const playCardInRandomBiome = useCallback(
     (tableauIndex: number, foundationIndex: number) => {
       if (!gameState || gameState.phase !== 'biome') return false;
-      if (gameState.randomBiomeActiveSide === 'enemy') return false;
+      const enforceTurnOwnership = (gameState.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure';
+      if (enforceTurnOwnership && gameState.randomBiomeActiveSide === 'enemy') return false;
       const newState = playCardInRandomBiomeFn(gameState, tableauIndex, foundationIndex);
       if (!newState) return false;
       setGameState(newState);
@@ -981,12 +976,15 @@ export function useGameEngine(
   }, []);
 
   const tickRpgCombat = useCallback((nowMs: number) => {
-    if (!gameState) return false;
-    const newState = tickRpgCombatFn(gameState, nowMs);
-    if (newState === gameState) return false;
-    setGameState(newState);
-    return true;
-  }, [gameState]);
+    let didChange = false;
+    setGameState((prev) => {
+      if (!prev) return prev;
+      const next = tickRpgCombatFn(prev, nowMs);
+      didChange = next !== prev;
+      return next;
+    });
+    return didChange;
+  }, []);
 
   const completeBiome = useCallback(() => {
     if (!gameState) return;
@@ -1113,6 +1111,23 @@ export function useGameEngine(
     setGameState((prev) => (prev ? { ...prev, enemyDifficulty: difficulty } : prev));
   }, []);
 
+  const setCombatFlowMode = useCallback((mode: NonNullable<GameState['combatFlowMode']>) => {
+    setGameState((prev) => {
+      if (!prev) return prev;
+      const durationMs = Math.max(1000, Math.round(prev.randomBiomeTurnDurationMs ?? 10000));
+      return {
+        ...prev,
+        combatFlowMode: mode,
+        randomBiomeTurnDurationMs: durationMs,
+        randomBiomeTurnRemainingMs: mode === 'turn_based_pressure'
+          ? Math.max(0, Number(prev.randomBiomeTurnRemainingMs ?? durationMs))
+          : 0,
+        randomBiomeTurnLastTickAt: Date.now(),
+        randomBiomeTurnTimerActive: false,
+      };
+    });
+  }, []);
+
   const toggleGraphics = useCallback(() => {
     setShowGraphics((prev) => !prev);
   }, []);
@@ -1134,6 +1149,7 @@ export function useGameEngine(
       playCardDirect,
       playFromTableau,
       playFromHand,
+      playFromHandToEnemyFoundation,
       playFromStock,
     rewindLastCard,
       addEffect,
@@ -1213,6 +1229,7 @@ export function useGameEngine(
       applyKeruArchetype,
       puzzleCompleted,
       setEnemyDifficulty,
+      setCombatFlowMode,
       toggleGraphics,
     },
   };

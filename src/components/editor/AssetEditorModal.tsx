@@ -9,6 +9,7 @@ export function AssetEditorModal({
   onTabChange,
   children,
   isGodRaysSliderDragging,
+  hideForOverlay,
 }: {
   open: boolean;
   onClose: () => void;
@@ -17,6 +18,7 @@ export function AssetEditorModal({
   onTabChange: (tab: AssetEditorTabId) => void;
   children: ReactNode;
   isGodRaysSliderDragging: boolean;
+  hideForOverlay?: boolean;
 }) {
   useEffect(() => {
     if (!open) return undefined;
@@ -34,7 +36,7 @@ export function AssetEditorModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[10030]">
+    <div className={`fixed inset-0 z-[10030]${hideForOverlay ? ' invisible pointer-events-none' : ''}`}>
       {!isGodRaysSliderDragging && (
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       )}

@@ -1,4 +1,4 @@
-import type { Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype, PuzzleCompletedPayload, RewardBundle, RewardSource, HitResult, CombatDeckState, RestState, OrimEffectDef } from './types';
+import type { AbilityTriggerDef, Actor, Card, ChallengeProgress, BuildPileProgress, Effect, EffectType, GameState, InteractionMode, Tile, Move, Suit, Element, Token, OrimInstance, ActorDeckState, OrimDefinition, OrimSlot, OrimRarity, RelicDefinition, RelicInstance, RelicRuntimeEntry, RelicCombatEvent, ActorKeru, ActorKeruArchetype, PuzzleCompletedPayload, RewardBundle, RewardSource, HitResult, CombatDeckState, RestState, OrimEffectDef, CombatFlowMode, CombatFlowTelemetry, TurnPlayability, SourceCardPlayExpiringBonus } from './types';
 import { GAME_CONFIG, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, GARDEN_GRID, ALL_ELEMENTS, MAX_KARMA_DEALING_ATTEMPTS, TOKEN_PROXIMITY_THRESHOLD, randomIdSuffix, createFullWildSentinel, WILD_SENTINEL_RANK } from './constants';
 import { createDeck, shuffleDeck } from './deck';
 import { canPlayCardWithWild, checkKarmaDealing } from './rules';
@@ -21,6 +21,8 @@ import { RELIC_DEFINITIONS } from './relics';
 import { canActivateOrim } from './orimTriggers';
 import { applyOrimTiming, actorHasOrimDefinition } from './orimEffects';
 import { buildDamagePacket, resolvePacketTotal, collectCardOrimEffects } from './damagePacket';
+import { appendCardToActorRpgDiscard, removeOneCardFromActorRpgDiscardByDeckCardId } from './rpgDiscard';
+import abilitiesJson from '../data/abilities.json';
 import {
   createInitialTiles,
   createTile,
@@ -51,9 +53,6 @@ const RPG_BITE_BLEED_DOT_POWER = 1;
 const RPG_BITE_BLEED_TICKS = 3;
 const RPG_BITE_BLEED_INTERVAL_MS = 1000;
 const RPG_CLOUD_SIGHT_MS = 10000;
-const RPG_SOAR_EVASION_BONUS = 75;
-const RPG_SOAR_EVASION_BASE_MS = 6000;
-const RPG_SOAR_EVASION_LEVEL_STEP_MS = 2000;
 const RPG_GRAZE_THRESHOLD = 20; // Percentage points above dodge boundary for glancing blows
 const ORIM_RARITY_ORDER: OrimRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
 const DEFAULT_ENEMY_FOUNDATION_SEEDS: Array<{ id: string; rank: number; suit: Suit; element: Element }> = [
@@ -61,17 +60,128 @@ const DEFAULT_ENEMY_FOUNDATION_SEEDS: Array<{ id: string; rank: number; suit: Su
   { id: 'enemy-sun', rank: 8, suit: '☀️', element: 'L' },
 ];
 const DEFAULT_ENEMY_ACTOR_IDS = ['shadowcub', 'shadowkit', 'shade'] as const;
-const DEFAULT_EQUIPPED_RELIC_IDS = new Set<string>(['turtles_bide', 'koi_coin', 'heart_of_the_wild', 'hindsight', 'controlled_dragonfire', 'summon_darkspawn']);
+const DEFAULT_COMBAT_LAB_ENEMY_ACTOR_ID = 'shade_of_resentment';
+const DEFAULT_EQUIPPED_RELIC_IDS = new Set<string>([
+  'zen',
+]);
 const HINDSIGHT_BEHAVIOR_ID = 'hindsight_v1';
+const ZEN_RELIC_BEHAVIOR_ID = 'zen_v1';
 const HINDSIGHT_LAST_USED_REST_COUNTER = 'hindsightLastUsedRestCount';
 const DEFAULT_KERU_ID = 'keru-primary';
 const KERU_BASE_HP = 1;
 const DEFAULT_SHORT_REST_CHARGES = 4;
 const DEFAULT_RANDOM_BIOME_TABLEAU_COUNT = 7;
 const DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH = 4;
+const DEFAULT_RANDOM_BIOME_TURN_DURATION_MS = 10000;
+type AbilityFallback = { id?: string; effects?: OrimEffectDef[]; triggers?: AbilityTriggerDef[] };
+export type MoveAvailability = {
+  playerTableauCanPlay: boolean[];
+  enemyTableauCanPlay: boolean[];
+  playerHasValidMoves: boolean;
+  enemyHasValidMoves: boolean;
+  noValidMovesPlayer: boolean;
+  noValidMovesEnemy: boolean;
+  hasAnyValidMoves: boolean;
+  noValidMoves: boolean;
+};
+const FALLBACK_ABILITY_EFFECTS_BY_ID = new Map<string, OrimEffectDef[]>(
+  (((abilitiesJson as { abilities?: AbilityFallback[] }).abilities) ?? [])
+    .filter((ability): ability is Required<Pick<AbilityFallback, 'id'>> & AbilityFallback =>
+      typeof ability.id === 'string' && ability.id.length > 0
+    )
+    .map((ability) => [ability.id, ability.effects ?? []])
+);
+const FALLBACK_ABILITY_TRIGGERS_BY_ID = new Map<string, AbilityTriggerDef[]>(
+  (((abilitiesJson as { abilities?: AbilityFallback[] }).abilities) ?? [])
+    .filter((ability): ability is Required<Pick<AbilityFallback, 'id'>> & AbilityFallback =>
+      typeof ability.id === 'string' && ability.id.length > 0
+    )
+    .map((ability) => [ability.id, ability.triggers ?? []])
+);
 
 function clampPartyForFoundations(partyActors: Actor[]): Actor[] {
   return partyActors.slice(0, PARTY_FOUNDATION_LIMIT);
+}
+
+function getCombatFlowMode(state: GameState): CombatFlowMode {
+  return state.combatFlowMode ?? 'turn_based_pressure';
+}
+
+function isTurnBasedPressureMode(state: GameState): boolean {
+  return getCombatFlowMode(state) === 'turn_based_pressure';
+}
+
+function shouldEnforceSideTurns(state: GameState): boolean {
+  return isTurnBasedPressureMode(state);
+}
+
+function isInterruptCard(card: Card): boolean {
+  if (card.rpgCardKind === 'fast') return true;
+  const normalizedTags = (card.tags ?? []).map((tag) => String(tag).trim().toLowerCase());
+  return normalizedTags.includes('interrupt') || normalizedTags.includes('quick');
+}
+
+function getCardTurnPlayability(card: Card): TurnPlayability | null {
+  const value = card.rpgTurnPlayability;
+  if (value === 'player' || value === 'enemy' || value === 'anytime') return value;
+  return null;
+}
+
+function canPlayCardOnTurn(
+  card: Card,
+  activeSide: 'player' | 'enemy',
+  fallbackToLegacyPlayerTurn = true
+): boolean {
+  const turnPlayability = getCardTurnPlayability(card);
+  if (turnPlayability) {
+    return turnPlayability === 'anytime' || turnPlayability === activeSide;
+  }
+  if (!fallbackToLegacyPlayerTurn) return true;
+  return activeSide === 'player';
+}
+
+function createEmptyCombatFlowTelemetry(): CombatFlowTelemetry {
+  return {
+    playerTurnsStarted: 0,
+    enemyTurnsStarted: 0,
+    playerTimeouts: 0,
+    enemyTimeouts: 0,
+    playerCardsPlayed: 0,
+    enemyCardsPlayed: 0,
+  };
+}
+
+function updateCombatFlowTelemetry(
+  state: GameState,
+  updater: (current: CombatFlowTelemetry) => CombatFlowTelemetry
+): CombatFlowTelemetry {
+  return updater(state.combatFlowTelemetry ?? createEmptyCombatFlowTelemetry());
+}
+
+function startTurnTimerIfNeeded(state: GameState, side: 'player' | 'enemy'): Pick<GameState, 'randomBiomeTurnTimerActive' | 'randomBiomeTurnLastTickAt'> {
+  if (!shouldEnforceSideTurns(state)) {
+    return {
+      randomBiomeTurnTimerActive: false,
+      randomBiomeTurnLastTickAt: state.randomBiomeTurnLastTickAt,
+    };
+  }
+  const activeSide = state.randomBiomeActiveSide ?? 'player';
+  if (activeSide !== side) {
+    return {
+      randomBiomeTurnTimerActive: state.randomBiomeTurnTimerActive ?? false,
+      randomBiomeTurnLastTickAt: state.randomBiomeTurnLastTickAt,
+    };
+  }
+  if (state.randomBiomeTurnTimerActive) {
+    return {
+      randomBiomeTurnTimerActive: true,
+      randomBiomeTurnLastTickAt: state.randomBiomeTurnLastTickAt,
+    };
+  }
+  return {
+    randomBiomeTurnTimerActive: true,
+    randomBiomeTurnLastTickAt: Date.now(),
+  };
 }
 
 function tickNoRegretCooldown(cooldown: number | undefined): number {
@@ -98,6 +208,12 @@ function getHindsightInstance(state: GameState): RelicInstance | null {
   return state.equippedRelics.find((instance) => instance.relicId === hindsightRelic.id && instance.enabled) ?? null;
 }
 
+function hasEnabledRelicBehavior(state: GameState, behaviorId: string): boolean {
+  const definition = state.relicDefinitions.find((entry) => entry.behaviorId === behaviorId);
+  if (!definition) return false;
+  return state.equippedRelics.some((instance) => instance.relicId === definition.id && instance.enabled);
+}
+
 function canUseHindsightRewind(state: GameState, instance: RelicInstance): boolean {
   const restCount = state.globalRestCount ?? 0;
   const runtime = state.relicRuntimeState[instance.instanceId];
@@ -117,10 +233,24 @@ function stripLastCardSnapshot(state: GameState): Omit<GameState, 'lastCardActio
 function recordCardAction(prev: GameState, next: GameState): GameState {
   const snapshot = stripLastCardSnapshot(prev);
   const baseCooldown = next.noRegretCooldown ?? prev.noRegretCooldown;
+  const shouldAutoStartTurnTimer = (() => {
+    if (!shouldEnforceSideTurns(prev)) return false;
+    if (prev.randomBiomeTurnTimerActive) return false;
+    if (prev.phase !== 'biome' || !prev.currentBiome) return false;
+    const biomeDef = getBiomeDefinition(prev.currentBiome);
+    if (!biomeDef?.randomlyGenerated) return false;
+    return !!prev.randomBiomeActiveSide;
+  })();
   return {
     ...next,
     lastCardActionSnapshot: snapshot,
     noRegretCooldown: tickNoRegretCooldown(baseCooldown),
+    randomBiomeTurnTimerActive: shouldAutoStartTurnTimer
+      ? true
+      : (next.randomBiomeTurnTimerActive ?? prev.randomBiomeTurnTimerActive),
+    randomBiomeTurnLastTickAt: shouldAutoStartTurnTimer
+      ? Date.now()
+      : (next.randomBiomeTurnLastTickAt ?? prev.randomBiomeTurnLastTickAt),
   };
 }
 
@@ -454,8 +584,15 @@ export interface PersistedState {
   orimStash: OrimInstance[];
   orimInstances: Record<string, OrimInstance>;
   actorDecks: Record<string, ActorDeckState>;
+  rpgDiscardPilesByActor?: Record<string, Card[]>;
   combatDeck?: CombatDeckState;
   restState?: RestState;
+  combatFlowMode?: CombatFlowMode;
+  randomBiomeTurnDurationMs?: number;
+  randomBiomeTurnRemainingMs?: number;
+  randomBiomeTurnLastTickAt?: number;
+  randomBiomeTurnTimerActive?: boolean;
+  combatFlowTelemetry?: CombatFlowTelemetry;
   globalRestCount?: number;
   noRegretCooldowns?: Record<string, number>;
   noRegretCooldown?: number;
@@ -606,11 +743,18 @@ export function initializeGame(
     baseDefinitions: OrimDefinition[],
     persistedDefinitions?: OrimDefinition[]
   ): OrimDefinition[] => {
+    const normalizeDefinition = (definition: OrimDefinition, base?: OrimDefinition): OrimDefinition => ({
+      ...(base ?? definition),
+      ...definition,
+      domain: definition.domain ?? base?.domain ?? 'puzzle',
+      legacyOrim: definition.legacyOrim ?? base?.legacyOrim ?? true,
+      timerBonusMs: Math.max(0, Number(definition.timerBonusMs ?? base?.timerBonusMs ?? 0)),
+    });
     if (!persistedDefinitions || persistedDefinitions.length === 0) {
-      return baseDefinitions;
+      return baseDefinitions.map((definition) => normalizeDefinition(definition));
     }
     const merged = new Map<string, OrimDefinition>();
-    baseDefinitions.forEach((definition) => merged.set(definition.id, definition));
+    baseDefinitions.forEach((definition) => merged.set(definition.id, normalizeDefinition(definition)));
     const allowedAspectIds = new Set(
       baseDefinitions
         .filter((definition) => definition.isAspect)
@@ -622,12 +766,11 @@ export function initializeGame(
         return;
       }
       const base = merged.get(definition.id);
-      const legacyDomain = legacyCombatIds.has(definition.id) ? 'combat' : 'puzzle';
-      merged.set(definition.id, {
-        ...(base ?? definition),
-        ...definition,
-        domain: definition.domain ?? base?.domain ?? legacyDomain,
-      });
+      const normalized = normalizeDefinition(definition, base);
+      if (!definition.domain && legacyCombatIds.has(definition.id)) {
+        normalized.domain = 'combat';
+      }
+      merged.set(definition.id, normalized);
     });
     return Array.from(merged.values());
   };
@@ -680,15 +823,20 @@ export function initializeGame(
   const actorDecks = Object.fromEntries(
     Object.entries(actorDecksRaw).map(([actorId, deck]) => ([
       actorId,
-      {
-        ...deck,
-        cards: deck.cards.map((card) => ({
-          ...card,
-          cost: card.cost ?? 0,
-          cooldown: card.cooldown ?? 0,
-          maxCooldown: card.maxCooldown ?? 0,
-        })),
-      },
+        {
+          ...deck,
+          cards: deck.cards.map((card) => ({
+            ...card,
+            cost: card.cost ?? 0,
+            active: card.active ?? true,
+            notDiscarded: card.notDiscarded ?? false,
+            discarded: card.discarded ?? false,
+            discardedAtMs: card.discardedAtMs,
+            discardedAtCombo: card.discardedAtCombo,
+            cooldown: card.cooldown ?? 0,
+            maxCooldown: card.maxCooldown ?? 0,
+          })),
+        },
     ]))
   );
   const orimInstances = persisted?.orimInstances ?? {
@@ -745,6 +893,13 @@ export function initializeGame(
     orimInstances,
     actorDecks,
     actorCombos: persisted?.actorCombos ?? {},
+    rpgDiscardPilesByActor: persisted?.rpgDiscardPilesByActor ?? {},
+    combatFlowMode: persisted?.combatFlowMode ?? 'turn_based_pressure',
+    randomBiomeTurnDurationMs: persisted?.randomBiomeTurnDurationMs ?? DEFAULT_RANDOM_BIOME_TURN_DURATION_MS,
+    randomBiomeTurnRemainingMs: persisted?.randomBiomeTurnRemainingMs ?? DEFAULT_RANDOM_BIOME_TURN_DURATION_MS,
+    randomBiomeTurnLastTickAt: persisted?.randomBiomeTurnLastTickAt ?? 0,
+    randomBiomeTurnTimerActive: persisted?.randomBiomeTurnTimerActive ?? false,
+    combatFlowTelemetry: persisted?.combatFlowTelemetry ?? createEmptyCombatFlowTelemetry(),
     globalRestCount: persisted?.globalRestCount ?? 0,
     noRegretCooldown: typeof persisted?.noRegretCooldown === 'number'
       ? persisted.noRegretCooldown
@@ -1031,6 +1186,62 @@ function createDefaultEnemyActors(): Actor[] {
   return actors;
 }
 
+function ensureEnemyFoundationsForPlay(state: GameState): {
+  state: GameState;
+  enemyFoundations: Card[][];
+  enemyActors: Actor[];
+} {
+  const existingFoundations = state.enemyFoundations;
+  const existingActors = state.enemyActors ?? [];
+  if (existingFoundations && existingFoundations.length > 0) {
+    const ensuredActors = existingActors.length >= existingFoundations.length
+      ? existingActors
+      : ensureEnemyActorsForFoundations(existingActors, existingFoundations.length);
+    const actorsChanged = (
+      ensuredActors.length !== existingActors.length
+      || ensuredActors.some((actor, index) => actor !== existingActors[index])
+    );
+    const ensuredState = !actorsChanged
+      ? state
+      : { ...state, enemyActors: ensuredActors };
+    return {
+      state: ensuredState,
+      enemyFoundations: existingFoundations,
+      enemyActors: ensuredActors,
+    };
+  }
+
+  const targetDummyActor = existingActors.find((actor) => actor.definitionId === DEFAULT_COMBAT_LAB_ENEMY_ACTOR_ID)
+    ?? existingActors.find((actor) => actor.definitionId === 'target_dummy')
+    ?? createActor(DEFAULT_COMBAT_LAB_ENEMY_ACTOR_ID)
+    ?? createActor('target_dummy');
+  if (!targetDummyActor) {
+    return {
+      state,
+      enemyFoundations: [],
+      enemyActors: existingActors,
+    };
+  }
+  const ensuredEnemyActors = existingActors.some((actor) => actor.id === targetDummyActor.id)
+    ? existingActors
+    : [...existingActors, targetDummyActor];
+  const ensuredEnemyFoundations: Card[][] = [[createActorFoundationCard(targetDummyActor)]];
+  const existingEnemyHandLane = state.rpgEnemyHandCards?.[0] ?? [];
+  const ensuredEnemyState: GameState = {
+    ...state,
+    enemyActors: ensuredEnemyActors,
+    enemyFoundations: ensuredEnemyFoundations,
+    enemyFoundationCombos: [0],
+    enemyFoundationTokens: [createEmptyTokenCounts()],
+    rpgEnemyHandCards: [existingEnemyHandLane.slice()],
+  };
+  return {
+    state: ensuredEnemyState,
+    enemyFoundations: ensuredEnemyFoundations,
+    enemyActors: ensuredEnemyActors,
+  };
+}
+
 function ensureEnemyActorsForFoundations(
   existingActors: Actor[] | undefined,
   foundationCount: number
@@ -1223,11 +1434,11 @@ function getEffectiveEvasion(
   side: 'player' | 'enemy',
   now: number
 ): number {
+  void state;
+  void side;
+  void now;
   const base = actor.evasion ?? 0;
-  const soarActive = (state.rpgSoarEvasionUntil ?? 0) > now
-    && state.rpgSoarEvasionActorId === actor.id
-    && (state.rpgSoarEvasionSide ?? 'player') === side;
-  return base + (soarActive ? RPG_SOAR_EVASION_BONUS : 0);
+  return base;
 }
 
 function getRpgCardRarity(count: number): OrimRarity {
@@ -1349,6 +1560,28 @@ function upgradeRpgHandCards(cards: Card[]): Card[] {
   return normalized;
 }
 
+function mergeCanonicalHandWithRuntimeExtras(canonicalHand: Card[], currentHand: Card[]): Card[] {
+  if (canonicalHand.length === 0) return upgradeRpgHandCards(currentHand);
+  const canonicalIds = new Set(canonicalHand.map((card) => card.id));
+  const canonicalCardKeys = new Set(canonicalHand.map((card) => (
+    `${card.sourceActorId ?? ''}|${card.sourceDeckCardId ?? ''}|${card.rpgAbilityId ?? ''}`
+  )));
+  const canonicalActorAbilityKeys = new Set(canonicalHand.map((card) => (
+    `${card.sourceActorId ?? ''}|${card.rpgAbilityId ?? ''}`
+  )));
+  const runtimeExtras = currentHand.filter((card) => {
+    if (canonicalIds.has(card.id)) return false;
+    const cardKey = `${card.sourceActorId ?? ''}|${card.sourceDeckCardId ?? ''}|${card.rpgAbilityId ?? ''}`;
+    const actorAbilityKey = `${card.sourceActorId ?? ''}|${card.rpgAbilityId ?? ''}`;
+    const looksDeckBacked = !!card.sourceActorId && (!!card.sourceDeckCardId || !!card.rpgAbilityId);
+    if (looksDeckBacked && (canonicalCardKeys.has(cardKey) || canonicalActorAbilityKeys.has(actorAbilityKey))) {
+      return false;
+    }
+    return true;
+  });
+  return upgradeRpgHandCards([...canonicalHand, ...runtimeExtras]);
+}
+
 function canAwardPlayerActorCards(
   state: GameState,
   options?: { allowEnemyDefault?: boolean; sourceSide?: 'player' | 'enemy' }
@@ -1358,18 +1591,268 @@ function canAwardPlayerActorCards(
   return true;
 }
 
+function normalizeTriggerType(rawType: string): string {
+  const normalized = String(rawType ?? '').trim().toLowerCase();
+  if (normalized === 'novalidmovesplayer' || normalized === 'no_valid_moves_player') return 'noValidMovesPlayer';
+  if (normalized === 'novalidmovesenemy' || normalized === 'no_valid_moves_enemy') return 'noValidMovesEnemy';
+  if (normalized === 'deadtableau' || normalized === 'dead_tableau') return 'noValidMovesPlayer';
+  if (normalized === 'belowhppct' || normalized === 'below_hp_pct') return 'below_hp_pct';
+  if (normalized === 'isstunned' || normalized === 'is_stunned') return 'is_stunned';
+  if (normalized === "ko'd" || normalized === 'ko_d' || normalized === 'kod' || normalized === 'koed' || normalized === 'ko') return 'ko';
+  if (normalized === 'combopersonal' || normalized === 'combo_personal') return 'combo_personal';
+  if (normalized === 'comboparty' || normalized === 'combo_party') return 'combo_party';
+  if (normalized === 'hasarmor' || normalized === 'has_armor') return 'has_armor';
+  if (normalized === 'hassuperarmor' || normalized === 'has_superarmor' || normalized === 'has_super_armor') return 'has_super_armor';
+  if (normalized === 'inactiveduration' || normalized === 'inactive_duration') return 'inactive_duration';
+  if (normalized === 'notdiscarded' || normalized === 'not_discarded') return 'notDiscarded';
+  if (normalized === 'foundationdiscardcount' || normalized === 'foundation_discard_count') return 'foundationDiscardCount';
+  if (normalized === 'partydiscardcount' || normalized === 'party_discard_count') return 'partyDiscardCount';
+  if (normalized === 'foundationactivedeckcount' || normalized === 'foundation_active_deck_count') return 'foundationActiveDeckCount';
+  if (normalized === 'actoractivedeckcount' || normalized === 'actor_active_deck_count') return 'actorActiveDeckCount';
+  return normalized;
+}
+
+function normalizeTriggerOperator(rawOperator: unknown): '<' | '<=' | '>' | '>=' | '=' | '!=' {
+  const normalized = String(rawOperator ?? '').trim();
+  if (normalized === '<' || normalized === '<=' || normalized === '>' || normalized === '>=' || normalized === '=' || normalized === '!=') {
+    return normalized;
+  }
+  return '>=';
+}
+
+function compareTriggerMetric(metric: number, threshold: number, operator: '<' | '<=' | '>' | '>=' | '=' | '!='): boolean {
+  if (operator === '<') return metric < threshold;
+  if (operator === '<=') return metric <= threshold;
+  if (operator === '>') return metric > threshold;
+  if (operator === '=') return metric === threshold;
+  if (operator === '!=') return metric !== threshold;
+  return metric >= threshold;
+}
+
+function getActorDiscardCount(state: GameState, actorId: string): number {
+  return Math.max(0, Number(state.rpgDiscardPilesByActor?.[actorId]?.length ?? 0));
+}
+
+function getActorActiveDeckCount(state: GameState, actorId: string): number {
+  const cards = state.actorDecks[actorId]?.cards ?? [];
+  return cards.filter((card) => card.discarded !== true).length;
+}
+
+function getPlayerPartyActorIds(state: GameState): string[] {
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  if (partyActors.length > 0) {
+    return partyActors.map((actor) => actor.id);
+  }
+  return Object.keys(state.actorDecks ?? {});
+}
+
+function getEnemyActorIds(state: GameState): string[] {
+  return (state.enemyActors ?? []).map((actor) => actor.id);
+}
+
+type NotDiscardedTriggerConfig = {
+  countdownType: 'combo' | 'seconds';
+  countdownValue: number;
+};
+
+function getNotDiscardedTriggerConfig(triggers?: AbilityTriggerDef[]): NotDiscardedTriggerConfig | null {
+  if (!triggers || triggers.length === 0) return null;
+  for (const trigger of triggers) {
+    const triggerType = normalizeTriggerType(String(trigger?.type ?? ''));
+    if (triggerType !== 'notDiscarded') continue;
+    const countdownTypeRaw = String(trigger.countdownType ?? 'combo').trim().toLowerCase();
+    const countdownType: 'combo' | 'seconds' = countdownTypeRaw === 'seconds' ? 'seconds' : 'combo';
+    const countdownValueRaw = Number(trigger.countdownValue ?? 1);
+    const countdownValue = Number.isFinite(countdownValueRaw)
+      ? Math.max(0, Math.floor(countdownValueRaw))
+      : 1;
+    return { countdownType, countdownValue };
+  }
+  return null;
+}
+
+function getActorComboMetric(state: GameState, actorId: string, sourceSide: 'player' | 'enemy'): number {
+  if (sourceSide === 'player') {
+    return Math.max(0, Number(state.actorCombos?.[actorId] ?? 0));
+  }
+  const enemyPartyCombo = (state.enemyFoundationCombos ?? []).reduce((sum, value) => (
+    sum + Math.max(0, Number(value ?? 0))
+  ), 0);
+  return enemyPartyCombo;
+}
+
+function areAbilityTriggersSatisfiedForActorHand(
+  state: GameState,
+  sourceActorId: string,
+  sourceFoundationIndex: number,
+  triggers?: AbilityTriggerDef[],
+  options?: { sourceSide?: 'player' | 'enemy'; includeNotDiscarded?: boolean }
+): boolean {
+  if (!triggers || triggers.length === 0) return true;
+  const includeNotDiscarded = options?.includeNotDiscarded ?? false;
+  const sourceActor = findActorById(state, sourceActorId);
+  const enemyActors = state.enemyActors ?? [];
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const playerActorIds = getPlayerPartyActorIds(state);
+  const enemyActorIds = getEnemyActorIds(state);
+  const playerCombos = state.foundationCombos ?? [];
+  const enemyCombos = state.enemyFoundationCombos ?? [];
+  const playerPartyCombo = playerCombos.reduce((sum, value) => sum + Math.max(0, Number(value ?? 0)), 0);
+  const enemyPartyCombo = enemyCombos.reduce((sum, value) => sum + Math.max(0, Number(value ?? 0)), 0);
+  const sourceAp = Math.max(0, Number(sourceActor?.power ?? 0));
+  const enemyMaxAp = enemyActors.reduce((max, actor) => Math.max(max, Math.max(0, Number(actor?.power ?? 0))), 0);
+  const playerPartyAp = partyActors.reduce((sum, actor) => sum + Math.max(0, Number(actor?.power ?? 0)), 0);
+  const enemyPartyAp = enemyActors.reduce((sum, actor) => sum + Math.max(0, Number(actor?.power ?? 0)), 0);
+  const moveAvailability = getMoveAvailability(state);
+  const nowMs = Date.now();
+
+  const evaluateActorTrigger = (
+    type: string,
+    actor: Actor | null,
+    triggerValue: number,
+    triggerOperator: '<' | '<=' | '>' | '>=' | '=' | '!='
+  ): boolean => {
+    if (!actor) return false;
+    const hp = Math.max(0, Number(actor.hp ?? 0));
+    const hpMax = Math.max(1, Number(actor.hpMax ?? 1));
+    if (type === 'below_hp_pct') {
+      return compareTriggerMetric((hp / hpMax) * 100, triggerValue, triggerOperator);
+    }
+    if (type === 'ko') {
+      return hp <= 0;
+    }
+    if (type === 'has_armor') {
+      return Math.max(0, Number(actor.armor ?? 0)) > 0;
+    }
+    if (type === 'has_super_armor') {
+      return Math.max(0, Number(actor.superArmor ?? 0)) > 0;
+    }
+    if (type === 'inactive_duration') {
+      const lastPlayedAt = state.rpgLastCardPlayedAtByActor?.[actor.id];
+      if (!lastPlayedAt || !Number.isFinite(lastPlayedAt)) return false;
+      return compareTriggerMetric(nowMs - lastPlayedAt, triggerValue * 1000, triggerOperator);
+    }
+    if (type === 'is_stunned') {
+      return false;
+    }
+    return false;
+  };
+
+  return triggers.every((trigger) => {
+    const triggerType = normalizeTriggerType(String(trigger?.type ?? ''));
+    if (!triggerType) return true;
+    if (triggerType === 'notDiscarded') {
+      return includeNotDiscarded;
+    }
+    const target = trigger?.target ?? 'self';
+    const triggerOperatorRaw = normalizeTriggerOperator(trigger?.operator);
+    const triggerOperator = (() => {
+      if (triggerType === 'below_hp_pct') {
+        return trigger?.operator ? triggerOperatorRaw : '<=';
+      }
+      if (triggerType === 'inactive_duration') {
+        return trigger?.operator ? triggerOperatorRaw : '>=';
+      }
+      if (triggerType === 'combo_personal' || triggerType === 'combo_party') {
+        return trigger?.operator ? triggerOperatorRaw : '>=';
+      }
+      if (triggerType === 'foundationDiscardCount' || triggerType === 'partyDiscardCount' || triggerType === 'foundationActiveDeckCount' || triggerType === 'actorActiveDeckCount') {
+        return trigger?.operator ? triggerOperatorRaw : '>=';
+      }
+      return triggerOperatorRaw;
+    })();
+    const triggerValueDefault = (
+      triggerType === 'below_hp_pct'
+        ? 10
+        : (triggerType === 'inactive_duration'
+          ? 5
+          : ((triggerType === 'combo_personal' || triggerType === 'combo_party') ? 1 : 0))
+    );
+    const triggerValueRaw = Number(trigger?.value ?? triggerValueDefault);
+    const triggerValue = Number.isFinite(triggerValueRaw)
+      ? Math.max(0, Math.floor(triggerValueRaw))
+      : triggerValueDefault;
+
+    if (triggerType === 'noValidMovesPlayer') {
+      return moveAvailability.noValidMovesPlayer;
+    }
+    if (triggerType === 'noValidMovesEnemy') {
+      return moveAvailability.noValidMovesEnemy;
+    }
+    if (triggerType === 'combo_personal') {
+      const selfCombo = Math.max(0, Number(playerCombos[sourceFoundationIndex] ?? 0));
+      const enemyComboHit = enemyCombos.some((value) => Math.max(0, Number(value ?? 0)) >= triggerValue);
+      const selfMetric = Math.max(selfCombo, sourceAp);
+      const enemyMetric = Math.max(
+        enemyComboHit ? triggerValue : 0,
+        Math.max(0, enemyMaxAp)
+      );
+      if (target === 'self') return compareTriggerMetric(selfMetric, triggerValue, triggerOperator);
+      if (target === 'enemy') return compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+      return compareTriggerMetric(selfMetric, triggerValue, triggerOperator) || compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+    }
+    if (triggerType === 'combo_party') {
+      const selfMetric = Math.max(playerPartyCombo, playerPartyAp);
+      const enemyMetric = Math.max(enemyPartyCombo, enemyPartyAp);
+      if (target === 'self') return compareTriggerMetric(selfMetric, triggerValue, triggerOperator);
+      if (target === 'enemy') return compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+      return compareTriggerMetric(selfMetric, triggerValue, triggerOperator) || compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+    }
+    if (triggerType === 'foundationDiscardCount') {
+      const selfMetric = getActorDiscardCount(state, sourceActorId);
+      const enemyMetric = enemyActorIds.reduce((max, actorId) => Math.max(max, getActorDiscardCount(state, actorId)), 0);
+      if (target === 'self') return compareTriggerMetric(selfMetric, triggerValue, triggerOperator);
+      if (target === 'enemy') return compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+      return compareTriggerMetric(selfMetric, triggerValue, triggerOperator) || compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+    }
+    if (triggerType === 'partyDiscardCount') {
+      const selfMetric = playerActorIds.reduce((sum, actorId) => sum + getActorDiscardCount(state, actorId), 0);
+      const enemyMetric = enemyActorIds.reduce((sum, actorId) => sum + getActorDiscardCount(state, actorId), 0);
+      if (target === 'self') return compareTriggerMetric(selfMetric, triggerValue, triggerOperator);
+      if (target === 'enemy') return compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+      return compareTriggerMetric(selfMetric, triggerValue, triggerOperator) || compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+    }
+    if (triggerType === 'foundationActiveDeckCount' || triggerType === 'actorActiveDeckCount') {
+      const selfMetric = getActorActiveDeckCount(state, sourceActorId);
+      const enemyMetric = enemyActorIds.reduce((max, actorId) => Math.max(max, getActorActiveDeckCount(state, actorId)), 0);
+      if (target === 'self') return compareTriggerMetric(selfMetric, triggerValue, triggerOperator);
+      if (target === 'enemy') return compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+      return compareTriggerMetric(selfMetric, triggerValue, triggerOperator) || compareTriggerMetric(enemyMetric, triggerValue, triggerOperator);
+    }
+
+    const selfHit = evaluateActorTrigger(triggerType, sourceActor, triggerValue, triggerOperator);
+    const enemyHit = enemyActors.some((actor) => evaluateActorTrigger(triggerType, actor, triggerValue, triggerOperator));
+    if (target === 'self') return selfHit;
+    if (target === 'enemy') return enemyHit;
+    return selfHit || enemyHit;
+  });
+}
+
 function awardActorComboCards(
   state: GameState,
   foundationIndex: number,
   nextActorCombos: Record<string, number>,
   options?: { allowEnemyDefault?: boolean; sourceSide?: 'player' | 'enemy' }
-): Card[] | undefined {
+): {
+  hand: Card[] | undefined;
+  actorDecks: Record<string, ActorDeckState>;
+  rpgDiscardPilesByActor?: Record<string, Card[]>;
+} {
   void foundationIndex;
   void nextActorCombos;
-  if (!canAwardPlayerActorCards(state, options)) return state.rpgHandCards;
+  if (!canAwardPlayerActorCards(state, options)) {
+    return {
+      hand: state.rpgHandCards,
+      actorDecks: state.actorDecks,
+      rpgDiscardPilesByActor: state.rpgDiscardPilesByActor,
+    };
+  }
+  const sourceSide = options?.sourceSide ?? 'player';
   const partyActors = getPartyForTile(state, state.activeSessionTileId);
   const actorPool = [...partyActors, ...(state.availableActors ?? [])];
   const foundations = state.foundations ?? [];
+  let nextActorDecks: Record<string, ActorDeckState> = { ...state.actorDecks };
+  let nextDiscardPilesByActor = state.rpgDiscardPilesByActor;
   const usedActorIds = new Set<string>();
   const actorIdsByFoundation = foundations.map((foundation, index) => {
     const top = foundation[0];
@@ -1409,18 +1892,24 @@ function awardActorComboCards(
     const actor = partyActors.find((entry) => entry.id === actorId) ?? null;
     if (actor && !isActorCombatEnabled(actor)) return;
     if (index < 0 || index >= foundations.length) return;
-    let deck = state.actorDecks[actorId];
+    let deck = nextActorDecks[actorId];
     let orimInstances = state.orimInstances;
     if (!deck && actor) {
       const seeded = createActorDeckStateWithOrim(actor.id, actor.definitionId, state.orimDefinitions);
       deck = seeded.deck;
+      nextActorDecks = {
+        ...nextActorDecks,
+        [actorId]: deck,
+      };
       orimInstances = {
         ...orimInstances,
         ...Object.fromEntries(seeded.orimInstances.map((instance) => [instance.id, instance])),
       };
     }
     if (!deck) return;
-    deck.cards.forEach((deckCard) => {
+    for (let deckCardIndex = 0; deckCardIndex < deck.cards.length; deckCardIndex += 1) {
+      let deckCard = deck.cards[deckCardIndex];
+      if (deckCard.active === false) continue;
       const slotWithOrim = deckCard.slots.find((slot) => !!slot.orimId);
       const orimId = slotWithOrim?.orimId ?? null;
       const instance = orimId ? orimInstances[orimId] : undefined;
@@ -1431,25 +1920,96 @@ function awardActorComboCards(
         const definition = inferredDefinitionId
           ? state.orimDefinitions.find((entry) => entry.id === inferredDefinitionId)
           : undefined;
+        const triggerDefs = (
+          definition?.triggers
+          ?? (inferredDefinitionId ? FALLBACK_ABILITY_TRIGGERS_BY_ID.get(inferredDefinitionId) : undefined)
+          ?? []
+        );
+        const nonNotDiscardedTriggers = triggerDefs.filter((trigger) => {
+          const triggerType = normalizeTriggerType(String(trigger?.type ?? ''));
+          return triggerType !== 'notDiscarded';
+        });
+        if (deckCard.discarded) {
+          if (!deckCard.notDiscarded) continue;
+          const returnConfig = getNotDiscardedTriggerConfig(triggerDefs) ?? {
+            countdownType: 'combo',
+            countdownValue: 0,
+          };
+          const cooldownReady = (() => {
+            if (returnConfig.countdownType === 'seconds') {
+              const discardedAtMs = Number(deckCard.discardedAtMs ?? 0);
+              if (!discardedAtMs || !Number.isFinite(discardedAtMs)) return returnConfig.countdownValue <= 0;
+              return (Date.now() - discardedAtMs) >= (Math.max(0, returnConfig.countdownValue) * 1000);
+            }
+            const currentCombo = getActorComboMetric(state, actorId, sourceSide);
+            const comboAtDiscard = Math.max(0, Number(deckCard.discardedAtCombo ?? currentCombo));
+            return (currentCombo - comboAtDiscard) >= Math.max(0, returnConfig.countdownValue);
+          })();
+          if (!cooldownReady) continue;
+          const returnStateView: GameState = {
+            ...state,
+            actorDecks: nextActorDecks,
+            rpgDiscardPilesByActor: nextDiscardPilesByActor,
+          };
+          const canReturn = areAbilityTriggersSatisfiedForActorHand(
+            returnStateView,
+            actorId,
+            index,
+            nonNotDiscardedTriggers,
+            { sourceSide }
+          );
+          if (!canReturn) continue;
+          const restoredCard = {
+            ...deckCard,
+            discarded: false,
+            discardedAtMs: undefined,
+            discardedAtCombo: undefined,
+          };
+          const nextCards = [...deck.cards];
+          nextCards[deckCardIndex] = restoredCard;
+          deck = {
+            ...deck,
+            cards: nextCards,
+          };
+          deckCard = restoredCard;
+          nextActorDecks = {
+            ...nextActorDecks,
+            [actorId]: deck,
+          };
+          nextDiscardPilesByActor = removeOneCardFromActorRpgDiscardByDeckCardId(nextDiscardPilesByActor, actorId, deckCard.id);
+        }
+        if (deckCard.discarded) continue;
+        const triggerStateView: GameState = {
+          ...state,
+          actorDecks: nextActorDecks,
+          rpgDiscardPilesByActor: nextDiscardPilesByActor,
+        };
+        if (!areAbilityTriggersSatisfiedForActorHand(triggerStateView, actorId, index, nonNotDiscardedTriggers, { sourceSide })) continue;
         const element = definition?.elements?.[0] ?? 'N';
         result.push({
         id: `deckhand-${actorId}-${deckCard.id}`,
         rank: Math.max(1, Math.min(13, deckCard.value)),
         element,
         suit: ELEMENT_TO_SUIT[element],
+        rarity: definition?.rarity ?? 'common',
         sourceActorId: actorId,
         sourceDeckCardId: deckCard.id,
         cooldown: deckCard.cooldown,
         maxCooldown: deckCard.maxCooldown,
         rpgApCost: deckCard.cost,
+        rpgTurnPlayability: deckCard.turnPlayability ?? 'player',
         rpgAbilityId: definition?.id ?? inferredDefinitionId,
           name: definition?.name ?? (inferredDefinitionId ? inferredDefinitionId.replace(/[_-]+/g, ' ') : `${actorId} ability`),
         description: definition?.description,
         orimSlots: deckCard.slots.map((slot) => ({ ...slot })),
       });
-    });
+    }
   });
-  return result;
+  return {
+    hand: result,
+    actorDecks: nextActorDecks,
+    rpgDiscardPilesByActor: nextDiscardPilesByActor,
+  };
 }
 
 function awardEnemyActorComboCards(
@@ -1481,6 +2041,333 @@ function isRpgCombatActive(state: GameState): boolean {
   return (state.enemyFoundations ?? []).some((foundation) => foundation.length > 0);
 }
 
+function resolveFoundationActorId(state: GameState, foundationIndex: number): string | null {
+  const top = state.foundations[foundationIndex]?.[0];
+  const foundationActorId = top?.sourceActorId ?? top?.rpgActorId;
+  if (foundationActorId) return foundationActorId;
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  return partyActors[foundationIndex]?.id ?? null;
+}
+
+function getActorApForCard(state: GameState, card: Card, foundationIndex: number): number {
+  const actorId = card.sourceActorId ?? resolveFoundationActorId(state, foundationIndex);
+  if (!actorId) return 0;
+  const actor = findActorById(state, actorId);
+  return Math.max(0, Number(actor?.power ?? 0));
+}
+
+function canPayCardApCost(state: GameState, card: Card, foundationIndex: number): boolean {
+  const cost = Math.max(0, Number(card.rpgApCost ?? 0));
+  if (cost <= 0) return true;
+  return getActorApForCard(state, card, foundationIndex) >= cost;
+}
+
+function isSelfTargetAbilityCard(state: GameState, card: Card): boolean {
+  if (!card.rpgAbilityId) return false;
+  const effects = getAbilityEffectsById(state, card.rpgAbilityId);
+  if (effects.length === 0) return false;
+  const hasSelfTarget = effects.some((effect) => effect.target === 'self');
+  const hasHostileTarget = effects.some((effect) => effect.target === 'enemy' || effect.target === 'all_enemies');
+  return hasSelfTarget && !hasHostileTarget;
+}
+
+function getAbilityEffectsById(state: GameState, abilityId: string | undefined): OrimEffectDef[] {
+  if (!abilityId) return [];
+  const fromState = state.orimDefinitions.find((entry) => entry.id === abilityId)?.effects;
+  if (fromState && fromState.length > 0) return fromState;
+  return FALLBACK_ABILITY_EFFECTS_BY_ID.get(abilityId) ?? [];
+}
+
+function inferDefinitionIdFromOrimInstanceId(state: GameState, instanceId: string): string | null {
+  const fromInstance = state.orimInstances[instanceId]?.definitionId;
+  if (fromInstance) return fromInstance;
+  const parsed = instanceId.match(/^orim-(.+)-\d{10,16}-[a-z0-9]+$/i)?.[1];
+  if (parsed) return parsed;
+  const knownIds = [
+    ...state.orimDefinitions.map((entry) => entry.id),
+    ...Array.from(FALLBACK_ABILITY_EFFECTS_BY_ID.keys()),
+  ];
+  return knownIds.find((id) => instanceId.includes(`orim-${id}-`)) ?? null;
+}
+
+function cardHasAbilityInOrimSlot(state: GameState, card: Card, abilityId: string | undefined): boolean {
+  if (!abilityId) return false;
+  return !!card.orimSlots?.some((slot) => {
+    if (!slot.orimId) return false;
+    return inferDefinitionIdFromOrimInstanceId(state, slot.orimId) === abilityId;
+  });
+}
+
+type EffectSide = 'player' | 'enemy';
+type EffectTargetRef = { side: EffectSide; index: number };
+
+function clearSourceCardPlayExpiringBonuses(state: GameState, sourceActorId: string | undefined): GameState {
+  if (!sourceActorId) return state;
+  const pendingBonuses = state.rpgSourceCardPlayBonuses ?? [];
+  if (pendingBonuses.length === 0) return state;
+
+  const expiringBonuses = pendingBonuses.filter((bonus) => bonus.sourceActorId === sourceActorId);
+  if (expiringBonuses.length === 0) return state;
+
+  const remainingBonuses = pendingBonuses.filter((bonus) => bonus.sourceActorId !== sourceActorId);
+  const reductionByTarget = new Map<string, number>();
+  expiringBonuses.forEach((bonus) => {
+    if (bonus.stat !== 'evasion') return;
+    const key = `${bonus.targetSide}:${bonus.targetActorId}`;
+    reductionByTarget.set(key, (reductionByTarget.get(key) ?? 0) + Math.max(0, Number(bonus.value ?? 0)));
+  });
+
+  let nextState = state;
+  const tileId = state.activeSessionTileId;
+  const partyActors = getPartyForTile(state, tileId);
+  const currentPlayerActors = partyActors.length > 0 ? partyActors : (state.availableActors ?? []);
+  let playerChanged = false;
+  const nextPlayerActors = currentPlayerActors.map((actor) => {
+    const reduction = reductionByTarget.get(`player:${actor.id}`) ?? 0;
+    if (reduction <= 0) return actor;
+    playerChanged = true;
+    return {
+      ...actor,
+      evasion: Math.max(0, Number(actor.evasion ?? 0) - reduction),
+    };
+  });
+  if (playerChanged) {
+    if (tileId && partyActors.length > 0) {
+      nextState = {
+        ...nextState,
+        tileParties: {
+          ...nextState.tileParties,
+          [tileId]: nextPlayerActors,
+        },
+      };
+    } else {
+      nextState = {
+        ...nextState,
+        availableActors: nextPlayerActors,
+      };
+    }
+  }
+
+  const currentEnemyActors = nextState.enemyActors ?? [];
+  let enemyChanged = false;
+  const nextEnemyActors = currentEnemyActors.map((actor) => {
+    const reduction = reductionByTarget.get(`enemy:${actor.id}`) ?? 0;
+    if (reduction <= 0) return actor;
+    enemyChanged = true;
+    return {
+      ...actor,
+      evasion: Math.max(0, Number(actor.evasion ?? 0) - reduction),
+    };
+  });
+  if (enemyChanged) {
+    nextState = {
+      ...nextState,
+      enemyActors: nextEnemyActors,
+    };
+  }
+
+  return {
+    ...nextState,
+    rpgSourceCardPlayBonuses: remainingBonuses.length > 0 ? remainingBonuses : undefined,
+  };
+}
+
+function applyFoundationAbilityActorEffects(
+  state: GameState,
+  effects: OrimEffectDef[],
+  options: {
+    sourceSide: EffectSide;
+    selectedTargetSide: EffectSide;
+    selectedTargetIndex: number;
+    sourceActorId?: string;
+  }
+): GameState {
+  if (effects.length === 0) return state;
+
+  const tileId = state.activeSessionTileId;
+  const partyActors = getPartyForTile(state, tileId);
+  const currentPlayerActors = partyActors.length > 0 ? partyActors : (state.availableActors ?? []);
+  const currentEnemyActors = state.enemyActors ?? [];
+  let nextPlayerActors = currentPlayerActors;
+  let nextEnemyActors = currentEnemyActors;
+  let playerChanged = false;
+  let enemyChanged = false;
+  const nextSourceCardPlayBonuses = [...(state.rpgSourceCardPlayBonuses ?? [])];
+
+  const getActorsForSide = (side: EffectSide) => (side === 'player' ? nextPlayerActors : nextEnemyActors);
+
+  const findSourceActorRef = (): EffectTargetRef | null => {
+    if (!options.sourceActorId) return null;
+    const playerIndex = nextPlayerActors.findIndex((actor) => actor.id === options.sourceActorId);
+    if (playerIndex >= 0) return { side: 'player', index: playerIndex };
+    const enemyIndex = nextEnemyActors.findIndex((actor) => actor.id === options.sourceActorId);
+    if (enemyIndex >= 0) return { side: 'enemy', index: enemyIndex };
+    return null;
+  };
+
+  const sourceActorRef = findSourceActorRef();
+  const oppositeSide: EffectSide = options.sourceSide === 'player' ? 'enemy' : 'player';
+
+  const addTargetIfValid = (
+    refs: EffectTargetRef[],
+    side: EffectSide,
+    index: number,
+    effect: OrimEffectDef
+  ) => {
+    const actors = getActorsForSide(side);
+    if (index < 0 || index >= actors.length) return;
+    const actor = actors[index];
+    if (!actor) return;
+    const canTarget = isActorCombatEnabled(actor) || effect.type === 'healing';
+    if (!canTarget) return;
+    refs.push({ side, index });
+  };
+
+  const resolveTargets = (effect: OrimEffectDef): EffectTargetRef[] => {
+    const refs: EffectTargetRef[] = [];
+    switch (effect.target) {
+      case 'self': {
+        if (sourceActorRef && sourceActorRef.side === options.sourceSide) {
+          addTargetIfValid(refs, sourceActorRef.side, sourceActorRef.index, effect);
+        } else if (options.selectedTargetSide === options.sourceSide) {
+          addTargetIfValid(refs, options.selectedTargetSide, options.selectedTargetIndex, effect);
+        }
+        break;
+      }
+      case 'ally': {
+        if (options.selectedTargetSide === options.sourceSide) {
+          addTargetIfValid(refs, options.selectedTargetSide, options.selectedTargetIndex, effect);
+        } else if (sourceActorRef && sourceActorRef.side === options.sourceSide) {
+          addTargetIfValid(refs, sourceActorRef.side, sourceActorRef.index, effect);
+        }
+        break;
+      }
+      case 'all_allies': {
+        const allies = getActorsForSide(options.sourceSide);
+        allies.forEach((_, index) => addTargetIfValid(refs, options.sourceSide, index, effect));
+        break;
+      }
+      case 'enemy': {
+        if (options.selectedTargetSide === oppositeSide) {
+          addTargetIfValid(refs, options.selectedTargetSide, options.selectedTargetIndex, effect);
+        }
+        break;
+      }
+      case 'all_enemies': {
+        const enemies = getActorsForSide(oppositeSide);
+        enemies.forEach((_, index) => addTargetIfValid(refs, oppositeSide, index, effect));
+        break;
+      }
+      case 'anyone': {
+        addTargetIfValid(refs, options.selectedTargetSide, options.selectedTargetIndex, effect);
+        break;
+      }
+      default:
+        break;
+    }
+    const deduped = new Map<string, EffectTargetRef>();
+    refs.forEach((ref) => deduped.set(`${ref.side}:${ref.index}`, ref));
+    return Array.from(deduped.values());
+  };
+
+  const applyToTarget = (ref: EffectTargetRef, updater: (actor: Actor) => Actor) => {
+    if (ref.side === 'player') {
+      if (!playerChanged) {
+        nextPlayerActors = [...nextPlayerActors];
+        playerChanged = true;
+      }
+      nextPlayerActors[ref.index] = updater(nextPlayerActors[ref.index]);
+      return;
+    }
+    if (!enemyChanged) {
+      nextEnemyActors = [...nextEnemyActors];
+      enemyChanged = true;
+    }
+    nextEnemyActors[ref.index] = updater(nextEnemyActors[ref.index]);
+  };
+
+  effects.forEach((effect) => {
+    const magnitude = Math.max(0, Number(effect.value ?? 0));
+    if (!Number.isFinite(magnitude) || magnitude <= 0) return;
+    const targets = resolveTargets(effect);
+    if (targets.length === 0) return;
+    if (import.meta.env.DEV && effect.type === 'armor') {
+      console.debug('[engine] armor effect apply', {
+        target: effect.target,
+        magnitude,
+        targets,
+        sourceSide: options.sourceSide,
+        selectedTargetSide: options.selectedTargetSide,
+        selectedTargetIndex: options.selectedTargetIndex,
+      });
+    }
+
+    targets.forEach((ref) => {
+      if (effect.type === 'armor') {
+        applyToTarget(ref, (actor) => ({ ...actor, armor: Math.max(0, Number(actor.armor ?? 0) + magnitude) }));
+        return;
+      }
+      if (effect.type === 'defense') {
+        applyToTarget(ref, (actor) => ({ ...actor, defense: Math.max(0, Number(actor.defense ?? 0) + magnitude) }));
+        return;
+      }
+      if (effect.type === 'evasion') {
+        const targetActor = getActorsForSide(ref.side)[ref.index];
+        applyToTarget(ref, (actor) => ({ ...actor, evasion: Math.max(0, Number(actor.evasion ?? 0) + magnitude) }));
+        if (effect.untilSourceCardPlay && options.sourceActorId && targetActor?.id) {
+          const bonus: SourceCardPlayExpiringBonus = {
+            id: `source-card-bonus-${Date.now()}-${randomIdSuffix()}`,
+            sourceActorId: options.sourceActorId,
+            targetSide: ref.side,
+            targetActorId: targetActor.id,
+            stat: 'evasion',
+            value: magnitude,
+          };
+          nextSourceCardPlayBonuses.push(bonus);
+        }
+        return;
+      }
+      if (effect.type === 'healing') {
+        applyToTarget(ref, (actor) => {
+          const hpMax = Math.max(1, Number(actor.hpMax ?? 1));
+          const hp = Math.max(0, Number(actor.hp ?? 0));
+          return { ...actor, hp: Math.min(hpMax, hp + magnitude) };
+        });
+      }
+    });
+  });
+
+  if (!playerChanged && !enemyChanged) return state;
+  let nextState = state;
+  if (playerChanged) {
+    if (tileId && partyActors.length > 0) {
+      nextState = {
+        ...nextState,
+        tileParties: {
+          ...nextState.tileParties,
+          [tileId]: nextPlayerActors,
+        },
+      };
+    } else {
+      nextState = {
+        ...nextState,
+        availableActors: nextPlayerActors,
+      };
+    }
+  }
+  if (enemyChanged) {
+    nextState = {
+      ...nextState,
+      enemyActors: nextEnemyActors,
+    };
+  }
+  nextState = {
+    ...nextState,
+    rpgSourceCardPlayBonuses: nextSourceCardPlayBonuses.length > 0 ? nextSourceCardPlayBonuses : undefined,
+  };
+  return nextState;
+}
+
 export function playCardFromHand(
   state: GameState,
   card: Card,
@@ -1488,6 +2375,14 @@ export function playCardFromHand(
   useWild = false,
   bypassGolfRules = false
 ): GameState | null {
+  const activeSide = state.randomBiomeActiveSide ?? 'player';
+  if (shouldEnforceSideTurns(state)) {
+    const turnPlayable = canPlayCardOnTurn(card, activeSide, true);
+    const legacyInterruptOverride = activeSide === 'enemy'
+      && getCardTurnPlayability(card) === null
+      && isInterruptCard(card);
+    if (!turnPlayable && !legacyInterruptOverride) return null;
+  }
   const isWildCard = card.rank === 0;
   if (state.playtestVariant === 'rpg' && card.id.startsWith('rpg-') && !isWildCard) {
     return null;
@@ -1498,69 +2393,80 @@ export function playCardFromHand(
   const foundation = state.foundations[foundationIndex];
   if (!foundation) return null;
   if (!foundation) return null;
+  if (!canPayCardApCost(state, card, foundationIndex)) {
+    return null;
+  }
+  const isAbilityCard = (
+    (typeof card.rpgAbilityId === 'string' && card.rpgAbilityId.length > 0)
+    || (typeof card.sourceDeckCardId === 'string' && card.sourceDeckCardId.length > 0)
+  );
+  const allowSelfTargetDrop = isSelfTargetAbilityCard(state, card);
+  const shouldBypassGolfRules = bypassGolfRules || allowSelfTargetDrop || isAbilityCard || card.id.startsWith('lab-deck-');
+  const playerTurnTimerState = startTurnTimerIfNeeded(state, 'player');
   const foundationTop = foundation?.[foundation.length - 1];
-  if (!bypassGolfRules && !canPlayCardWithWild(card, foundationTop, state.activeEffects, foundation)) {
+  if (!shouldBypassGolfRules && !canPlayCardWithWild(card, foundationTop, state.activeEffects, foundation)) {
     return null;
   }
   if ((card.cooldown ?? 0) > 0) {
     return null;
   }
+  const workingState = clearSourceCardPlayExpiringBonuses(state, card.sourceActorId);
+  const nextLastCardPlayedAtByActor = card.sourceActorId
+    ? {
+      ...(workingState.rpgLastCardPlayedAtByActor ?? {}),
+      [card.sourceActorId]: Date.now(),
+    }
+    : workingState.rpgLastCardPlayedAtByActor;
 
-  const foundationCount = state.foundations.length;
+  const foundationCount = workingState.foundations.length;
 
-  const newFoundations = state.foundations.map((f, i) =>
+  const newFoundations = workingState.foundations.map((f, i) =>
     i === foundationIndex ? [...f, card] : f
   );
 
-  const combos = incrementFoundationCombos(state, foundationIndex);
+  const combos = incrementFoundationCombos(workingState, foundationIndex);
   const nextActorCombos = foundationActor
     ? {
-      ...(state.actorCombos ?? {}),
-      [foundationActor.id]: (state.actorCombos?.[foundationActor.id] ?? 0) + 1,
+      ...(workingState.actorCombos ?? {}),
+      [foundationActor.id]: (workingState.actorCombos?.[foundationActor.id] ?? 0) + 1,
     }
-    : (state.actorCombos ?? {});
-  const cooldownTicked = state.actorDecks;
+    : (workingState.actorCombos ?? {});
+  const discardComboMetric = card.sourceActorId
+    ? Math.max(0, Number(nextActorCombos[card.sourceActorId] ?? workingState.actorCombos?.[card.sourceActorId] ?? 0))
+    : 0;
+  const cooldownTicked = workingState.actorDecks;
   const updatedDecks = card.sourceActorId && card.sourceDeckCardId
-    ? setDeckCardCooldown({ ...state, actorDecks: cooldownTicked }, card.sourceActorId, card.sourceDeckCardId)
+    ? setDeckCardCooldown(
+      { ...workingState, actorDecks: cooldownTicked },
+      card.sourceActorId,
+      card.sourceDeckCardId,
+      { discardedAtCombo: discardComboMetric }
+    )
     : cooldownTicked;
-
-  if (!useWild) {
-    const baseRpgHandCards = state.playtestVariant === 'rpg'
-      ? (state.rpgHandCards ?? []).filter((entry) => entry.id !== card.id)
-      : state.rpgHandCards;
-    const nextState = {
-      ...state,
-      foundations: newFoundations,
-      activeEffects: processEffects(state.activeEffects),
-      turnCount: state.turnCount + 1,
-      collectedTokens: applyTokenReward(
-        state.collectedTokens || createEmptyTokenCounts(),
-        card
-      ),
-      foundationCombos: combos,
-      actorCombos: nextActorCombos,
-      actorDecks: updatedDecks,
-      rpgHandCards: isRpgCombatActive(state)
-        ? awardActorComboCards({
-          ...state,
-          foundations: newFoundations,
-          actorCombos: nextActorCombos,
-          actorDecks: updatedDecks,
-        }, foundationIndex, nextActorCombos, { sourceSide: 'player' })
-        : baseRpgHandCards,
-    };
-    const recorded = recordCardAction(state, nextState);
-    if (!foundationActor) return recorded;
-    return applyOrimTiming(recorded, 'play', foundationActor.id, {
-      card,
-      foundationIndex,
+  const timingActorId = card.sourceActorId ?? foundationActor?.id;
+  const rpgDiscardPilesByActor = workingState.playtestVariant === 'rpg'
+    ? appendCardToActorRpgDiscard(
+      workingState.rpgDiscardPilesByActor,
+      card.sourceActorId ?? foundationActor?.id,
+      card
+    )
+    : workingState.rpgDiscardPilesByActor;
+  const slotEffects = collectCardOrimEffects(workingState, card);
+  const definitionEffects = cardHasAbilityInOrimSlot(workingState, card, card.rpgAbilityId)
+    ? []
+    : getAbilityEffectsById(workingState, card.rpgAbilityId);
+  const allAbilityEffects = [...definitionEffects, ...slotEffects];
+  if (import.meta.env.DEV && isAbilityCard && allAbilityEffects.length === 0) {
+    console.debug('[engine] no ability effects resolved', {
+      cardId: card.id,
+      abilityId: card.rpgAbilityId ?? null,
+      sourceActorId: card.sourceActorId ?? null,
+      sourceDeckCardId: card.sourceDeckCardId ?? null,
     });
   }
 
-  const newCombos = combos;
-
-  const tokensSeed = state.foundationTokens && state.foundationTokens.length === foundationCount
-    ? state.foundationTokens
+  const tokensSeed = workingState.foundationTokens && workingState.foundationTokens.length === foundationCount
+    ? workingState.foundationTokens
     : Array.from({ length: foundationCount }, () => createEmptyTokenCounts());
   const newFoundationTokens = tokensSeed.map((tokens, i) => {
     if (i !== foundationIndex || !card.tokenReward) return { ...tokens };
@@ -1574,35 +2480,323 @@ export function playCardFromHand(
     state.collectedTokens || createEmptyTokenCounts(),
     card
   );
-  const baseRpgHandCards = state.playtestVariant === 'rpg'
-    ? (state.rpgHandCards ?? []).filter((entry) => entry.id !== card.id)
-    : state.rpgHandCards;
 
-  const nextState = {
-    ...state,
-    foundations: newFoundations,
-    activeEffects: processEffects(state.activeEffects),
-    turnCount: state.turnCount + 1,
-    biomeMovesCompleted: (state.biomeMovesCompleted || 0) + 1,
-    collectedTokens: newCollectedTokens,
-    foundationCombos: newCombos,
-    actorCombos: nextActorCombos,
-    foundationTokens: newFoundationTokens,
-    actorDecks: updatedDecks,
-    rpgHandCards: isRpgCombatActive(state)
+  if (!useWild) {
+    const baseRpgHandCards = workingState.playtestVariant === 'rpg'
+      ? (workingState.rpgHandCards ?? []).filter((entry) => entry.id !== card.id)
+      : workingState.rpgHandCards;
+    const awarded = isRpgCombatActive(workingState)
       ? awardActorComboCards({
-        ...state,
+        ...workingState,
         foundations: newFoundations,
         actorCombos: nextActorCombos,
         actorDecks: updatedDecks,
+        rpgDiscardPilesByActor,
       }, foundationIndex, nextActorCombos, { sourceSide: 'player' })
-      : baseRpgHandCards,
+      : null;
+    const nextState = {
+      ...workingState,
+      foundations: newFoundations,
+      activeEffects: processEffects(workingState.activeEffects),
+      turnCount: workingState.turnCount + 1,
+      collectedTokens: newCollectedTokens,
+      foundationCombos: combos,
+      actorCombos: nextActorCombos,
+      foundationTokens: newFoundationTokens,
+      rpgLastCardPlayedAtByActor: nextLastCardPlayedAtByActor,
+      ...playerTurnTimerState,
+      rpgHandCards: awarded?.hand ?? baseRpgHandCards,
+      actorDecks: awarded?.actorDecks ?? updatedDecks,
+      rpgDiscardPilesByActor: awarded?.rpgDiscardPilesByActor ?? rpgDiscardPilesByActor,
+      combatFlowTelemetry: updateCombatFlowTelemetry(workingState, (current) => ({
+        ...current,
+        playerCardsPlayed: current.playerCardsPlayed + 1,
+      })),
+    };
+    const withActorEffects = applyFoundationAbilityActorEffects(nextState, allAbilityEffects, {
+      sourceSide: 'player',
+      selectedTargetSide: 'player',
+      selectedTargetIndex: foundationIndex,
+      sourceActorId: card.sourceActorId,
+    });
+    const withDrawEffects = applyRpgDrawEffects(withActorEffects, allAbilityEffects, {
+      sourceSide: 'player',
+      selectedTargetSide: 'player',
+      selectedTargetIndex: foundationIndex,
+    });
+    const recorded = recordCardAction(state, withDrawEffects);
+    if (!timingActorId) return recorded;
+    return applyOrimTiming(recorded, 'play', timingActorId, {
+      card,
+      foundationIndex,
+    });
+  }
+  const baseRpgHandCards = workingState.playtestVariant === 'rpg'
+    ? (workingState.rpgHandCards ?? []).filter((entry) => entry.id !== card.id)
+    : workingState.rpgHandCards;
+  const awarded = isRpgCombatActive(workingState)
+    ? awardActorComboCards({
+      ...workingState,
+      foundations: newFoundations,
+      actorCombos: nextActorCombos,
+      actorDecks: updatedDecks,
+      rpgDiscardPilesByActor,
+    }, foundationIndex, nextActorCombos, { sourceSide: 'player' })
+    : null;
+
+  const nextState = {
+    ...workingState,
+    foundations: newFoundations,
+    activeEffects: processEffects(workingState.activeEffects),
+    turnCount: workingState.turnCount + 1,
+    biomeMovesCompleted: (workingState.biomeMovesCompleted || 0) + 1,
+    collectedTokens: newCollectedTokens,
+    foundationCombos: combos,
+    actorCombos: nextActorCombos,
+    foundationTokens: newFoundationTokens,
+    actorDecks: awarded?.actorDecks ?? updatedDecks,
+    rpgLastCardPlayedAtByActor: nextLastCardPlayedAtByActor,
+    ...playerTurnTimerState,
+    rpgHandCards: awarded?.hand ?? baseRpgHandCards,
+    rpgDiscardPilesByActor: awarded?.rpgDiscardPilesByActor ?? rpgDiscardPilesByActor,
+    combatFlowTelemetry: updateCombatFlowTelemetry(workingState, (current) => ({
+      ...current,
+      playerCardsPlayed: current.playerCardsPlayed + 1,
+    })),
   };
-  const recorded = recordCardAction(state, nextState);
-  if (!foundationActor) return recorded;
-  return applyOrimTiming(recorded, 'play', foundationActor.id, {
+  const withActorEffects = applyFoundationAbilityActorEffects(nextState, allAbilityEffects, {
+    sourceSide: 'player',
+    selectedTargetSide: 'player',
+    selectedTargetIndex: foundationIndex,
+    sourceActorId: card.sourceActorId,
+  });
+  const withDrawEffects = applyRpgDrawEffects(withActorEffects, allAbilityEffects, {
+    sourceSide: 'player',
+    selectedTargetSide: 'player',
+    selectedTargetIndex: foundationIndex,
+  });
+  const recorded = recordCardAction(state, withDrawEffects);
+  if (!timingActorId) return recorded;
+  return applyOrimTiming(recorded, 'play', timingActorId, {
     card,
     foundationIndex,
+  });
+}
+
+export function playCardFromHandToEnemyFoundation(
+  state: GameState,
+  card: Card,
+  enemyFoundationIndex: number,
+  bypassGolfRules = false
+): GameState | null {
+  const activeSide = state.randomBiomeActiveSide ?? 'player';
+  if (shouldEnforceSideTurns(state)) {
+    const turnPlayable = canPlayCardOnTurn(card, activeSide, true);
+    const legacyInterruptOverride = activeSide === 'enemy'
+      && getCardTurnPlayability(card) === null
+      && isInterruptCard(card);
+    if (!turnPlayable && !legacyInterruptOverride) return null;
+  }
+  const reject = (reason: string, details?: Record<string, unknown>): null => {
+    if (import.meta.env.DEV) {
+      console.debug('[engine] enemyFoundation hand play rejected', {
+        reason,
+        enemyFoundationIndex,
+        cardId: card.id,
+        rank: card.rank,
+        abilityId: card.rpgAbilityId ?? null,
+        ...details,
+      });
+    }
+    return null;
+  };
+  const ensured = ensureEnemyFoundationsForPlay(state);
+  const ensuredState = ensured.state;
+  const ensuredEnemyFoundations = ensured.enemyFoundations;
+  const ensuredEnemyActors = ensured.enemyActors;
+  if (!ensuredEnemyFoundations || ensuredEnemyFoundations.length === 0) return reject('no_enemy_foundations');
+  const enemyFoundation = ensuredEnemyFoundations[enemyFoundationIndex];
+  if (!enemyFoundation) return reject('enemy_foundation_missing');
+  if (ensuredEnemyActors[enemyFoundationIndex] && !isActorCombatEnabled(ensuredEnemyActors[enemyFoundationIndex])) {
+    return reject('enemy_actor_not_combat_enabled');
+  }
+  const isWildCard = card.rank === 0;
+  if (ensuredState.playtestVariant === 'rpg' && card.id.startsWith('rpg-') && !isWildCard) {
+    return reject('rpg_prefab_rank_card_blocked');
+  }
+  const isAbilityCard = (
+    (typeof card.rpgAbilityId === 'string' && card.rpgAbilityId.length > 0)
+    || (typeof card.sourceDeckCardId === 'string' && card.sourceDeckCardId.length > 0)
+  );
+  if (!isAbilityCard && !canPayCardApCost(ensuredState, card, 0)) {
+    return reject('insufficient_ap');
+  }
+  const allowSelfTargetDrop = isSelfTargetAbilityCard(ensuredState, card);
+  const shouldBypassGolfRules = bypassGolfRules || allowSelfTargetDrop || isAbilityCard || card.id.startsWith('lab-deck-');
+  const playerTurnTimerState = startTurnTimerIfNeeded(ensuredState, 'player');
+  const foundationTop = enemyFoundation[enemyFoundation.length - 1];
+  if (!foundationTop) return reject('enemy_foundation_empty');
+  if (!shouldBypassGolfRules && !canPlayCardWithWild(card, foundationTop, ensuredState.activeEffects, enemyFoundation)) {
+    return reject('golf_rules_blocked');
+  }
+  if ((card.cooldown ?? 0) > 0) {
+    return reject('card_on_cooldown');
+  }
+
+  const workingState = clearSourceCardPlayExpiringBonuses(ensuredState, card.sourceActorId);
+  const nextLastCardPlayedAtByActor = card.sourceActorId
+    ? {
+      ...(workingState.rpgLastCardPlayedAtByActor ?? {}),
+      [card.sourceActorId]: Date.now(),
+    }
+    : workingState.rpgLastCardPlayedAtByActor;
+  const enemyFoundations = workingState.enemyFoundations ?? ensuredEnemyFoundations;
+  const enemyActors = workingState.enemyActors ?? ensuredEnemyActors;
+
+  const foundationCount = enemyFoundations.length;
+  const newEnemyFoundations = enemyFoundations.map((f, i) =>
+    i === enemyFoundationIndex ? [...f, card] : f
+  );
+  const comboSeed = workingState.enemyFoundationCombos && workingState.enemyFoundationCombos.length === foundationCount
+    ? workingState.enemyFoundationCombos
+    : Array.from({ length: foundationCount }, () => 0);
+  const newEnemyCombos = [...comboSeed];
+  newEnemyCombos[enemyFoundationIndex] = (newEnemyCombos[enemyFoundationIndex] || 0) + 1;
+  const tokensSeed = workingState.enemyFoundationTokens && workingState.enemyFoundationTokens.length === foundationCount
+    ? workingState.enemyFoundationTokens
+    : Array.from({ length: foundationCount }, () => createEmptyTokenCounts());
+  const newEnemyTokens = tokensSeed.map((tokens, i) => {
+    if (i !== enemyFoundationIndex || !card.tokenReward) return { ...tokens };
+    return {
+      ...tokens,
+      [card.tokenReward]: (tokens[card.tokenReward] || 0) + 1,
+    };
+  });
+
+  const baseRpgHandCards = workingState.playtestVariant === 'rpg'
+    ? (workingState.rpgHandCards ?? []).filter((entry) => entry.id !== card.id)
+    : workingState.rpgHandCards;
+  const discardComboMetric = card.sourceActorId
+    ? Math.max(0, Number(workingState.actorCombos?.[card.sourceActorId] ?? 0))
+    : 0;
+  const cooldownTicked = workingState.actorDecks;
+  const updatedDecks = card.sourceActorId && card.sourceDeckCardId
+    ? setDeckCardCooldown(
+      { ...workingState, actorDecks: cooldownTicked },
+      card.sourceActorId,
+      card.sourceDeckCardId,
+      { discardedAtCombo: discardComboMetric }
+    )
+    : cooldownTicked;
+  const timingActorId = card.sourceActorId ?? null;
+  const rpgDiscardPilesByActor = workingState.playtestVariant === 'rpg'
+    ? appendCardToActorRpgDiscard(workingState.rpgDiscardPilesByActor, card.sourceActorId, card)
+    : workingState.rpgDiscardPilesByActor;
+  const awarded = isRpgCombatActive(workingState)
+    ? awardActorComboCards({
+      ...workingState,
+      actorDecks: updatedDecks,
+      rpgDiscardPilesByActor,
+    }, 0, workingState.actorCombos ?? {}, { sourceSide: 'player' })
+    : null;
+  const slotEffects = collectCardOrimEffects(workingState, card);
+  const definitionEffects = cardHasAbilityInOrimSlot(workingState, card, card.rpgAbilityId)
+    ? []
+    : getAbilityEffectsById(workingState, card.rpgAbilityId);
+  const allAbilityEffects = [...definitionEffects, ...slotEffects];
+  if (import.meta.env.DEV && isAbilityCard && allAbilityEffects.length === 0) {
+    console.debug('[engine] no ability effects resolved', {
+      cardId: card.id,
+      abilityId: card.rpgAbilityId ?? null,
+      sourceActorId: card.sourceActorId ?? null,
+      sourceDeckCardId: card.sourceDeckCardId ?? null,
+      enemyFoundationIndex,
+    });
+  }
+  let nextEnemyActors = enemyActors;
+  if (allAbilityEffects.length > 0 && enemyActors.length > 0) {
+    const damageEffects = allAbilityEffects.filter((effect) =>
+      effect.type === 'damage' && (effect.target === 'enemy' || effect.target === 'all_enemies')
+    );
+    if (damageEffects.length > 0) {
+      const hitsAllEnemies = damageEffects.some((effect) => effect.target === 'all_enemies');
+      const normalizedDamageEffects = damageEffects.map((effect) => (
+        effect.element && effect.element !== 'N'
+          ? {
+            ...effect,
+            elementalValue: effect.elementalValue ?? effect.value ?? 0,
+            value: 0,
+          }
+          : effect
+      ));
+      const baseDamage = normalizedDamageEffects.reduce((sum, effect) => {
+        if (effect.element && effect.element !== 'N') return sum;
+        return sum + Math.max(0, Number(effect.value ?? 0));
+      }, 0);
+      const damagePacket = buildDamagePacket(baseDamage, normalizedDamageEffects);
+      nextEnemyActors = enemyActors.map((actor, index) => {
+        if (!isActorCombatEnabled(actor)) return actor;
+        if (!hitsAllEnemies && index !== enemyFoundationIndex) return actor;
+        const totalDamage = resolvePacketTotal(damagePacket, actor.element);
+        if (totalDamage <= 0) return actor;
+        return applyDamageToActor(actor, Math.max(1, Math.round(totalDamage)));
+      });
+    }
+  }
+
+  const withDrawEffects = applyRpgDrawEffects({
+    ...workingState,
+    enemyFoundations: newEnemyFoundations,
+    enemyActors: nextEnemyActors,
+    enemyFoundationCombos: newEnemyCombos,
+    enemyFoundationTokens: newEnemyTokens,
+    activeEffects: processEffects(workingState.activeEffects),
+    turnCount: workingState.turnCount + 1,
+    actorDecks: awarded?.actorDecks ?? updatedDecks,
+    rpgLastCardPlayedAtByActor: nextLastCardPlayedAtByActor,
+    ...playerTurnTimerState,
+    rpgHandCards: awarded?.hand ?? baseRpgHandCards,
+    rpgDiscardPilesByActor: awarded?.rpgDiscardPilesByActor ?? rpgDiscardPilesByActor,
+    combatFlowTelemetry: updateCombatFlowTelemetry(workingState, (current) => ({
+      ...current,
+      playerCardsPlayed: current.playerCardsPlayed + 1,
+    })),
+  }, allAbilityEffects, {
+    sourceSide: 'player',
+    selectedTargetSide: 'enemy',
+    selectedTargetIndex: enemyFoundationIndex,
+    targetEnemyIndex: enemyFoundationIndex,
+  });
+  const withActorEffects = applyFoundationAbilityActorEffects(withDrawEffects, allAbilityEffects, {
+    sourceSide: 'player',
+    selectedTargetSide: 'enemy',
+    selectedTargetIndex: enemyFoundationIndex,
+    sourceActorId: card.sourceActorId,
+  });
+  const recorded = recordCardAction(state, withActorEffects);
+  if (import.meta.env.DEV) {
+    const hpBefore = enemyActors[enemyFoundationIndex]?.hp;
+    const hpAfter = nextEnemyActors[enemyFoundationIndex]?.hp;
+    const armorBefore = enemyActors[enemyFoundationIndex]?.armor;
+    const armorAfter = nextEnemyActors[enemyFoundationIndex]?.armor;
+    const superArmorBefore = enemyActors[enemyFoundationIndex]?.superArmor;
+    const superArmorAfter = nextEnemyActors[enemyFoundationIndex]?.superArmor;
+    console.debug('[engine] enemyFoundation hand play success', {
+      enemyFoundationIndex,
+      cardId: card.id,
+      newFoundationSize: newEnemyFoundations[enemyFoundationIndex]?.length ?? 0,
+      hpBefore,
+      hpAfter,
+      armorBefore,
+      armorAfter,
+      superArmorBefore,
+      superArmorAfter,
+    });
+  }
+  if (!timingActorId) return recorded;
+  return applyOrimTiming(recorded, 'play', timingActorId, {
+    card,
+    foundationIndex: enemyFoundationIndex,
   });
 }
 
@@ -1703,24 +2897,81 @@ export function checkWin(state: GameState): boolean {
   return state.tableaus.every((t) => t.length === 0);
 }
 
-export function checkNoValidMoves(state: GameState): boolean {
-  return !state.tableaus.some((tableau) => {
+function buildTableauCanPlayForFoundations(
+  tableaus: Card[][],
+  foundations: Card[][],
+  activeEffects: Effect[],
+  canUseFoundation: (foundationIndex: number) => boolean
+): boolean[] {
+  return tableaus.map((tableau) => {
     if (tableau.length === 0) return false;
     const topCard = tableau[tableau.length - 1];
-    return state.foundations.some((foundation) =>
-      canPlayCardWithWild(topCard, foundation[foundation.length - 1], state.activeEffects, foundation)
-    );
+    return foundations.some((foundation, foundationIndex) => {
+      if (!canUseFoundation(foundationIndex)) return false;
+      if (!foundation || foundation.length === 0) return false;
+      const foundationTop = foundation[foundation.length - 1];
+      return canPlayCardWithWild(topCard, foundationTop, activeEffects, foundation);
+    });
   });
 }
 
+export function getMoveAvailability(state: GameState): MoveAvailability {
+  const tableaus = state.tableaus ?? [];
+  const playerFoundations = state.foundations ?? [];
+  const enemyFoundations = state.enemyFoundations ?? [];
+  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const enemyActors = state.enemyActors ?? [];
+
+  const playerTableauCanPlay = buildTableauCanPlayForFoundations(
+    tableaus,
+    playerFoundations,
+    state.activeEffects,
+    (foundationIndex) => {
+      const actor = partyActors[foundationIndex];
+      return !actor || isActorCombatEnabled(actor);
+    }
+  );
+
+  const enemyTableauCanPlay = buildTableauCanPlayForFoundations(
+    tableaus,
+    enemyFoundations,
+    state.activeEffects,
+    (foundationIndex) => {
+      const actor = enemyActors[foundationIndex];
+      return !actor || isActorCombatEnabled(actor);
+    }
+  );
+
+  const playerHasValidMoves = playerTableauCanPlay.some(Boolean);
+  const enemyHasValidMoves = enemyTableauCanPlay.some(Boolean);
+  const noValidMovesPlayer = !playerHasValidMoves;
+  const noValidMovesEnemy = !enemyHasValidMoves;
+  const hasAnyValidMoves = playerHasValidMoves || enemyHasValidMoves;
+
+  return {
+    playerTableauCanPlay,
+    enemyTableauCanPlay,
+    playerHasValidMoves,
+    enemyHasValidMoves,
+    noValidMovesPlayer,
+    noValidMovesEnemy,
+    hasAnyValidMoves,
+    noValidMoves: !hasAnyValidMoves,
+  };
+}
+
+export function checkNoValidMoves(state: GameState): boolean {
+  // Backward-compatible helper: player-side no-valid-moves.
+  return !getMoveAvailability(state).playerHasValidMoves;
+}
+
 export function getTableauCanPlay(state: GameState): boolean[] {
-  return state.tableaus.map((tableau) => {
-    if (tableau.length === 0) return false;
-    const topCard = tableau[tableau.length - 1];
-    return state.foundations.some((foundation) =>
-      canPlayCardWithWild(topCard, foundation[foundation.length - 1], state.activeEffects, foundation)
-    );
-  });
+  // Backward-compatible helper: player-side playable tableaus.
+  return getMoveAvailability(state).playerTableauCanPlay;
+}
+
+export function checkNoValidMovesGlobal(state: GameState): boolean {
+  return getMoveAvailability(state).noValidMoves;
 }
 
 export function getValidFoundationsForCard(
@@ -1765,6 +3016,12 @@ export function returnToGarden(state: GameState): GameState {
     foundationCombos: undefined,
     foundationTokens: undefined,
     randomBiomeTurnNumber: undefined,
+    randomBiomeActiveSide: undefined,
+    randomBiomeTurnRemainingMs: undefined,
+    randomBiomeTurnLastTickAt: undefined,
+    randomBiomeTurnTimerActive: undefined,
+    actorDecks: resetDeckDiscardStates(state.actorDecks),
+    rpgDiscardPilesByActor: undefined,
     currentLocationId: undefined, // Clear current location
     facingDirection: undefined, // Clear facing direction
   };
@@ -1796,6 +3053,12 @@ export function abandonSession(state: GameState): GameState {
     foundationCombos: undefined,
     foundationTokens: undefined,
     randomBiomeTurnNumber: undefined,
+    randomBiomeActiveSide: undefined,
+    randomBiomeTurnRemainingMs: undefined,
+    randomBiomeTurnLastTickAt: undefined,
+    randomBiomeTurnTimerActive: undefined,
+    actorDecks: resetDeckDiscardStates(state.actorDecks),
+    rpgDiscardPilesByActor: undefined,
     currentLocationId: undefined, // Clear current location
     facingDirection: undefined, // Clear facing direction
   };
@@ -2560,16 +3823,24 @@ function updateActorDeckSlot(
 function setDeckCardCooldown(
   state: GameState,
   actorId: string,
-  cardId: string
+  cardId: string,
+  options?: { discardedAtMs?: number; discardedAtCombo?: number }
 ): Record<string, ActorDeckState> {
   const deck = state.actorDecks[actorId];
   if (!deck) return state.actorDecks;
   const cardIndex = deck.cards.findIndex((card) => card.id === cardId);
   if (cardIndex === -1) return state.actorDecks;
   const card = deck.cards[cardIndex];
+  const discardedAtMs = options?.discardedAtMs ?? Date.now();
+  const discardedAtCombo = Number.isFinite(Number(options?.discardedAtCombo))
+    ? Math.max(0, Number(options?.discardedAtCombo))
+    : Math.max(0, Number(card.discardedAtCombo ?? 0));
   const updatedCard = {
     ...card,
     cooldown: Math.max(0, card.maxCooldown ?? 0),
+    discarded: true,
+    discardedAtMs,
+    discardedAtCombo,
   };
   return {
     ...state.actorDecks,
@@ -2602,6 +3873,23 @@ function reduceDeckCooldowns(
       cards: updatedCards,
     },
   };
+}
+
+function resetDeckDiscardStates(actorDecks: Record<string, ActorDeckState>): Record<string, ActorDeckState> {
+  return Object.fromEntries(
+    Object.entries(actorDecks).map(([actorId, deck]) => ([
+      actorId,
+      {
+        ...deck,
+        cards: deck.cards.map((card) => ({
+          ...card,
+          discarded: false,
+          discardedAtMs: undefined,
+          discardedAtCombo: undefined,
+        })),
+      },
+    ]))
+  );
 }
 
 function incrementFoundationCombos(
@@ -2856,7 +4144,9 @@ export function applyKeruArchetype(
 export function devInjectOrimToActor(
   state: GameState,
   actorId: string,
-  orimDefinitionId: string
+  orimDefinitionId: string,
+  foundationIndex?: number,
+  dropPoint?: { x: number; y: number }
 ): GameState {
   const actor = findActorById(state, actorId);
   if (!actor) return state;
@@ -2885,6 +4175,7 @@ export function devInjectOrimToActor(
     item.id === actorId ? { ...item, orimSlots: nextSlots } : item;
 
   const nextAvailable = state.availableActors.map(updateActor);
+  const nextEnemyActors = (state.enemyActors ?? []).map(updateActor);
   const nextParties = Object.fromEntries(
     Object.entries(state.tileParties).map(([tileId, party]) => [
       tileId,
@@ -2896,7 +4187,11 @@ export function devInjectOrimToActor(
     ...state,
     orimInstances: nextInstances,
     availableActors: nextAvailable,
+    enemyActors: nextEnemyActors,
     tileParties: nextParties,
+    lastResolvedOrimId: definition.id,
+    lastResolvedOrimFoundationIndex: Number.isInteger(foundationIndex) ? foundationIndex : null,
+    lastResolvedOrimDropPoint: dropPoint ?? null,
   };
 }
 
@@ -3290,6 +4585,8 @@ function startRandomBiome(
   const enemyFoundationCombos = enemyFoundations ? enemyFoundations.map(() => 0) : undefined;
   const enemyFoundationTokens = enemyFoundations ? enemyFoundations.map(() => createEmptyTokenCounts()) : undefined;
   const rpgEnemyHandCards = useEnemyFoundations ? (enemyFoundations?.map(() => []) ?? []) : undefined;
+  const flowMode = getCombatFlowMode(state);
+  const turnDurationMs = Math.max(1000, Math.round(state.randomBiomeTurnDurationMs ?? DEFAULT_RANDOM_BIOME_TURN_DURATION_MS));
   const actorCombos = {
     ...(state.actorCombos ?? {}),
     ...Object.fromEntries(partyActors.map((actor) => [actor.id, state.actorCombos?.[actor.id] ?? 0])),
@@ -3297,6 +4594,19 @@ function startRandomBiome(
   const nextTileParties = equipAllOrims
     ? { ...tileParties, [tileId]: sandboxActors }
     : (isWaveBattle ? { ...tileParties, [tileId]: foundationActors } : tileParties);
+  const sessionActorDecks = state.playtestVariant === 'rpg'
+    ? resetDeckDiscardStates(state.actorDecks)
+    : state.actorDecks;
+  const openingAward = state.playtestVariant === 'rpg'
+    ? awardActorComboCards({
+      ...state,
+      activeSessionTileId: tileId,
+      tileParties: nextTileParties,
+      foundations,
+      actorDecks: sessionActorDecks,
+      rpgDiscardPilesByActor: {},
+    }, 0, actorCombos, { sourceSide: 'player' })
+    : null;
 
   return {
     ...state,
@@ -3328,24 +4638,24 @@ function startRandomBiome(
     enemyBackfillQueues: undefined,
     randomBiomeTurnNumber: 1,
     randomBiomeActiveSide: useEnemyFoundations ? 'player' : undefined,
+    randomBiomeTurnDurationMs: turnDurationMs,
+    randomBiomeTurnRemainingMs: shouldEnforceSideTurns(state) && useEnemyFoundations ? turnDurationMs : 0,
+    randomBiomeTurnLastTickAt: Date.now(),
+    randomBiomeTurnTimerActive: false,
+    combatFlowMode: flowMode,
+    combatFlowTelemetry: updateCombatFlowTelemetry(state, (current) => ({
+      ...current,
+      playerTurnsStarted: current.playerTurnsStarted + (useEnemyFoundations ? 1 : 0),
+    })),
     enemyDifficulty: useEnemyFoundations ? (biomeDef.enemyDifficulty ?? 'normal') : undefined,
-    rpgHandCards: state.playtestVariant === 'rpg'
-      ? (awardActorComboCards({
-        ...state,
-        activeSessionTileId: tileId,
-        tileParties: nextTileParties,
-        foundations,
-      }, 0, actorCombos, { sourceSide: 'player' }) ?? [])
-      : state.rpgHandCards,
+    rpgHandCards: openingAward?.hand ?? (state.playtestVariant === 'rpg' ? [] : state.rpgHandCards),
+    actorDecks: openingAward?.actorDecks ?? sessionActorDecks,
+    rpgDiscardPilesByActor: openingAward?.rpgDiscardPilesByActor ?? {},
     rpgDots: [],
     rpgEnemyDragSlowUntil: 0,
     rpgEnemyDragSlowActorId: undefined,
     rpgCloudSightUntil: 0,
     rpgCloudSightActorId: undefined,
-    rpgSoarEvasionUntil: 0,
-    rpgSoarEvasionActorId: undefined,
-    rpgSoarEvasionSide: undefined,
-    rpgSoarEvasionTotalMs: 0,
     rpgComboTimerBonusMs: 0,
     rpgComboTimerBonusToken: undefined,
     rpgBlindedPlayerLevel: 0,
@@ -3368,6 +4678,9 @@ export function playCardInRandomBiome(
   tableauIndex: number,
   foundationIndex: number
 ): GameState | null {
+  if (shouldEnforceSideTurns(state) && (state.randomBiomeActiveSide ?? 'player') !== 'player') {
+    return null;
+  }
   const tableau = state.tableaus[tableauIndex];
   if (!tableau || tableau.length === 0) return null;
 
@@ -3386,6 +4699,7 @@ export function playCardInRandomBiome(
   // Check if biome is infinite for backfill
   const biomeDef = state.currentBiome ? getBiomeDefinition(state.currentBiome) : null;
   const isInfinite = !!biomeDef?.infinite;
+  const playerTurnTimerState = startTurnTimerIfNeeded(state, 'player');
   const isRpgExplorationOnly = state.playtestVariant === 'rpg'
     && !(state.enemyFoundations ?? []).some((stack) => stack.length > 0);
   const shouldBackfill = isInfinite && !isRpgExplorationOnly;
@@ -3435,6 +4749,13 @@ export function playCardInRandomBiome(
     state.collectedTokens || createEmptyTokenCounts(),
     card
   );
+  const awarded = isRpgCombatActive(state)
+    ? awardActorComboCards({
+      ...state,
+      foundations: newFoundations,
+      actorCombos: newActorCombos,
+    }, foundationIndex, newActorCombos, { sourceSide: 'player' })
+    : null;
 
   const nextState = {
     ...state,
@@ -3447,14 +4768,15 @@ export function playCardInRandomBiome(
     foundationCombos: newCombos,
     actorCombos: newActorCombos,
     foundationTokens: newFoundationTokens,
-    rpgHandCards: isRpgCombatActive(state)
-      ? awardActorComboCards({
-        ...state,
-        foundations: newFoundations,
-      }, foundationIndex, newActorCombos, { sourceSide: 'player' })
-      : (state.rpgHandCards ?? []),
+    rpgHandCards: awarded?.hand ?? (state.rpgHandCards ?? []),
     combatDeck: nextCombatDeck,
-    actorDecks: state.actorDecks,
+    actorDecks: awarded?.actorDecks ?? state.actorDecks,
+    rpgDiscardPilesByActor: awarded?.rpgDiscardPilesByActor ?? state.rpgDiscardPilesByActor,
+    ...playerTurnTimerState,
+    combatFlowTelemetry: updateCombatFlowTelemetry(state, (current) => ({
+      ...current,
+      playerCardsPlayed: current.playerCardsPlayed + 1,
+    })),
   };
   return recordCardAction(state, nextState);
 }
@@ -3468,10 +4790,15 @@ export function playEnemyCardInRandomBiome(
   tableauIndex: number,
   enemyFoundationIndex: number
 ): GameState | null {
-  const enemyFoundations = state.enemyFoundations;
-  const enemyActors = state.enemyActors ?? [];
+  if (shouldEnforceSideTurns(state) && (state.randomBiomeActiveSide ?? 'player') !== 'enemy') {
+    return null;
+  }
+  const ensured = ensureEnemyFoundationsForPlay(state);
+  const workingState = ensured.state;
+  const enemyFoundations = ensured.enemyFoundations;
+  const enemyActors = ensured.enemyActors;
   if (!enemyFoundations || enemyFoundations.length === 0) return null;
-  const tableau = state.tableaus[tableauIndex];
+  const tableau = workingState.tableaus[tableauIndex];
   if (!tableau || tableau.length === 0) return null;
   const enemyFoundation = enemyFoundations[enemyFoundationIndex];
   if (!enemyFoundation) return null;
@@ -3481,15 +4808,16 @@ export function playEnemyCardInRandomBiome(
   const foundationTop = enemyFoundation[enemyFoundation.length - 1];
   if (!foundationTop) return null;
 
-  if (!canPlayCardWithWild(card, foundationTop, state.activeEffects, enemyFoundation)) {
+  if (!canPlayCardWithWild(card, foundationTop, workingState.activeEffects, enemyFoundation)) {
     return null;
   }
 
-  const biomeDef = state.currentBiome ? getBiomeDefinition(state.currentBiome) : null;
+  const biomeDef = workingState.currentBiome ? getBiomeDefinition(workingState.currentBiome) : null;
   const isInfinite = !!biomeDef?.infinite;
-  const useQueue = state.randomBiomeActiveSide === 'enemy';
-  let nextQueues = state.enemyBackfillQueues ? state.enemyBackfillQueues.map((q) => [...q]) : undefined;
-  const newTableaus = state.tableaus.map((t, i) => {
+  const enemyTurnTimerState = startTurnTimerIfNeeded(workingState, 'enemy');
+  const useQueue = workingState.randomBiomeActiveSide === 'enemy';
+  let nextQueues = workingState.enemyBackfillQueues ? workingState.enemyBackfillQueues.map((q) => [...q]) : undefined;
+  const newTableaus = workingState.tableaus.map((t, i) => {
     if (i !== tableauIndex) return t;
     const remaining = t.slice(0, -1);
     if (!isInfinite) return remaining;
@@ -3507,14 +4835,14 @@ export function playEnemyCardInRandomBiome(
   );
 
   const foundationCount = newEnemyFoundations.length;
-  const comboSeed = state.enemyFoundationCombos && state.enemyFoundationCombos.length === foundationCount
-    ? state.enemyFoundationCombos
+  const comboSeed = workingState.enemyFoundationCombos && workingState.enemyFoundationCombos.length === foundationCount
+    ? workingState.enemyFoundationCombos
     : Array.from({ length: foundationCount }, () => 0);
   const newCombos = [...comboSeed];
   newCombos[enemyFoundationIndex] = (newCombos[enemyFoundationIndex] || 0) + 1;
 
-  const tokensSeed = state.enemyFoundationTokens && state.enemyFoundationTokens.length === foundationCount
-    ? state.enemyFoundationTokens
+  const tokensSeed = workingState.enemyFoundationTokens && workingState.enemyFoundationTokens.length === foundationCount
+    ? workingState.enemyFoundationTokens
     : Array.from({ length: foundationCount }, () => createEmptyTokenCounts());
   const newEnemyTokens = tokensSeed.map((tokens, i) => {
     if (i !== enemyFoundationIndex || !card.tokenReward) return { ...tokens };
@@ -3524,9 +4852,9 @@ export function playEnemyCardInRandomBiome(
     };
   });
 
-  const nextRpgEnemyHandCards = awardEnemyActorComboCards(state, enemyFoundationIndex, newCombos);
+  const nextRpgEnemyHandCards = awardEnemyActorComboCards(workingState, enemyFoundationIndex, newCombos);
   const nextCombatDeck = (() => {
-    const combatDeck = ensureCombatDeck(state);
+    const combatDeck = ensureCombatDeck(workingState);
     return {
       ...combatDeck,
       discardPile: [...combatDeck.discardPile, card],
@@ -3534,7 +4862,7 @@ export function playEnemyCardInRandomBiome(
   })();
 
   return {
-    ...state,
+    ...workingState,
     tableaus: newTableaus,
     enemyFoundations: newEnemyFoundations,
     enemyFoundationCombos: newCombos,
@@ -3542,7 +4870,12 @@ export function playEnemyCardInRandomBiome(
     rpgEnemyHandCards: nextRpgEnemyHandCards,
     combatDeck: nextCombatDeck,
     enemyBackfillQueues: nextQueues,
-    turnCount: state.turnCount + 1,
+    turnCount: workingState.turnCount + 1,
+    ...enemyTurnTimerState,
+    combatFlowTelemetry: updateCombatFlowTelemetry(workingState, (current) => ({
+      ...current,
+      enemyCardsPlayed: current.enemyCardsPlayed + 1,
+    })),
   };
 }
 
@@ -3560,6 +4893,7 @@ export function advanceRandomBiomeTurn(state: GameState): GameState {
     return endRandomBiomeTurn(state);
   }
   const activeSide = state.randomBiomeActiveSide ?? 'player';
+  const turnDurationMs = Math.max(1000, Math.round(state.randomBiomeTurnDurationMs ?? DEFAULT_RANDOM_BIOME_TURN_DURATION_MS));
   if (activeSide === 'player') {
     const ensuredEnemyFoundations: Card[][] = state.playtestVariant === 'rpg'
       ? (state.enemyFoundations ?? createEmptyEnemyFoundations())
@@ -3577,6 +4911,10 @@ export function advanceRandomBiomeTurn(state: GameState): GameState {
     const nextState: GameState = {
       ...state,
       randomBiomeActiveSide: 'enemy',
+      randomBiomeTurnDurationMs: turnDurationMs,
+      randomBiomeTurnRemainingMs: shouldEnforceSideTurns(state) ? turnDurationMs : 0,
+      randomBiomeTurnLastTickAt: Date.now(),
+      randomBiomeTurnTimerActive: false,
       enemyBackfillQueues: createEnemyBackfillQueues(state.tableaus, 10),
       enemyFoundations: ensuredEnemyFoundations,
       enemyActors: ensuredEnemyActors,
@@ -3587,6 +4925,10 @@ export function advanceRandomBiomeTurn(state: GameState): GameState {
         const mapped = ensuredEnemyFoundations.map((_, idx) => [...(existing[idx] ?? [])]);
         return mapped;
       })(),
+      combatFlowTelemetry: updateCombatFlowTelemetry(state, (current) => ({
+        ...current,
+        enemyTurnsStarted: current.enemyTurnsStarted + 1,
+      })),
     };
     warnOnUnexpectedHpIncrease(state, nextState, 'advanceRandomBiomeTurn:player->enemy');
     return nextState;
@@ -3607,6 +4949,7 @@ export function endRandomBiomeTurn(state: GameState): GameState {
   if (partyActors.length === 0) return state;
 
   const playtestVariant = state.playtestVariant ?? 'single-foundation';
+  const turnDurationMs = Math.max(1000, Math.round(state.randomBiomeTurnDurationMs ?? DEFAULT_RANDOM_BIOME_TURN_DURATION_MS));
   const useRpgStaticTableaus = playtestVariant === 'rpg';
   const refreshedDeal = useRpgStaticTableaus
     ? null
@@ -3671,6 +5014,10 @@ export function endRandomBiomeTurn(state: GameState): GameState {
       : state.tileParties,
     randomBiomeTurnNumber: (state.randomBiomeTurnNumber || 1) + 1,
     randomBiomeActiveSide: useEnemyFoundations ? 'player' : undefined,
+    randomBiomeTurnDurationMs: turnDurationMs,
+    randomBiomeTurnRemainingMs: shouldEnforceSideTurns(state) && useEnemyFoundations ? turnDurationMs : 0,
+    randomBiomeTurnLastTickAt: Date.now(),
+    randomBiomeTurnTimerActive: false,
     enemyDifficulty: useEnemyFoundations ? (state.enemyDifficulty ?? biomeDef.enemyDifficulty ?? 'normal') : undefined,
     rpgHandCards: state.rpgHandCards ?? [],
     rpgDots: state.rpgDots ?? [],
@@ -3678,16 +5025,16 @@ export function endRandomBiomeTurn(state: GameState): GameState {
     rpgEnemyDragSlowActorId: state.rpgEnemyDragSlowActorId,
     rpgCloudSightUntil: state.rpgCloudSightUntil ?? 0,
     rpgCloudSightActorId: state.rpgCloudSightActorId,
-    rpgSoarEvasionUntil: state.rpgSoarEvasionUntil ?? 0,
-    rpgSoarEvasionActorId: state.rpgSoarEvasionActorId,
-    rpgSoarEvasionSide: state.rpgSoarEvasionSide,
-    rpgSoarEvasionTotalMs: state.rpgSoarEvasionTotalMs ?? 0,
     rpgComboTimerBonusMs: 0,
     rpgComboTimerBonusToken: undefined,
     rpgBlindedPlayerLevel: state.rpgBlindedPlayerLevel ?? 0,
     rpgBlindedPlayerUntil: state.rpgBlindedPlayerUntil ?? 0,
     rpgBlindedEnemyLevel: state.rpgBlindedEnemyLevel ?? 0,
     rpgBlindedEnemyUntil: state.rpgBlindedEnemyUntil ?? 0,
+    combatFlowTelemetry: updateCombatFlowTelemetry(state, (current) => ({
+      ...current,
+      playerTurnsStarted: current.playerTurnsStarted + (useEnemyFoundations ? 1 : 0),
+    })),
   };
   partyActors.forEach((actor) => {
     nextState = applyOrimTiming(nextState, 'turn-end', actor.id);
@@ -3847,10 +5194,49 @@ export function spawnRandomEnemyInRandomBiome(state: GameState): GameState {
 }
 
 function createDrawEffectCard(effect: OrimEffectDef): Card {
-  if (effect.drawWild) return generateRandomCard();
+  if (effect.drawWild) {
+    const rawElement = effect.drawElement ?? effect.element ?? 'N';
+    const tokenElement: Element = ALL_ELEMENTS.includes(rawElement) ? rawElement : 'N';
+    return {
+      ...createFullWildSentinel(0),
+      id: `draw-wild-${Date.now()}-${randomIdSuffix()}`,
+      element: tokenElement,
+      suit: ELEMENT_TO_SUIT[tokenElement],
+      tokenReward: tokenElement,
+      rpgCardKind: 'wild',
+    };
+  }
   const rank = Math.max(1, Math.min(13, Math.floor(effect.drawRank ?? (1 + Math.random() * 13))));
   const element = effect.drawElement ?? 'N';
   return createCardFromElement(element, rank);
+}
+
+function applyRpgTableauRedealEffects(state: GameState, effects: OrimEffectDef[]): GameState {
+  const redealEffects = effects.filter((effect) => effect.type === 'redeal_tableau');
+  if (redealEffects.length === 0) return state;
+
+  let nextState = state;
+  for (let i = 0; i < redealEffects.length; i += 1) {
+    const tableauCount = Math.max(
+      DEFAULT_RANDOM_BIOME_TABLEAU_COUNT,
+      nextState.tableaus.length || 0
+    );
+    const cardsPerTableau = Math.max(
+      DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH,
+      ...nextState.tableaus.map((tableau) => tableau.length)
+    );
+    const nextDeal = resetRandomBiomeDealFromCombatDeck(nextState, tableauCount, cardsPerTableau);
+    nextState = {
+      ...nextState,
+      tableaus: nextDeal.tableaus,
+      combatDeck: nextDeal.combatDeck,
+      stock: [],
+      enemyBackfillQueues: nextState.enemyBackfillEnabled
+        ? createEnemyBackfillQueues(nextDeal.tableaus, 10)
+        : nextState.enemyBackfillQueues,
+    };
+  }
+  return nextState;
 }
 
 function applyRpgDrawEffects(
@@ -3859,18 +5245,31 @@ function applyRpgDrawEffects(
   options: {
     sourceSide: 'player' | 'enemy';
     targetEnemyIndex?: number;
+    selectedTargetSide?: 'player' | 'enemy';
+    selectedTargetIndex?: number;
   }
 ): GameState {
   const drawEffects = effects.filter((effect) => effect.type === 'draw');
-  if (drawEffects.length === 0) return state;
+  const hasTableauRedealEffect = effects.some((effect) => effect.type === 'redeal_tableau');
+  if (drawEffects.length === 0 && !hasTableauRedealEffect) return state;
   let nextState = state;
+  const oppositeSide: 'player' | 'enemy' = options.sourceSide === 'player' ? 'enemy' : 'player';
+  const selectedTargetSide = options.selectedTargetSide
+    ?? (typeof options.targetEnemyIndex === 'number' ? oppositeSide : options.sourceSide);
+  const selectedTargetIndex = options.selectedTargetIndex ?? options.targetEnemyIndex ?? 0;
   for (const effect of drawEffects) {
     const drawCount = Math.max(0, Math.floor(effect.value ?? 1));
     if (drawCount <= 0) continue;
     const cards = Array.from({ length: drawCount }, () => createDrawEffectCard(effect));
-    const targetKey = effect.target === 'self' || effect.target === 'ally'
-      ? options.sourceSide
-      : (options.sourceSide === 'player' ? 'enemy' : 'player');
+    const targetKey: 'player' | 'enemy' = (() => {
+      if (effect.target === 'self' || effect.target === 'ally' || effect.target === 'all_allies') {
+        return options.sourceSide;
+      }
+      if (effect.target === 'anyone') {
+        return selectedTargetSide;
+      }
+      return oppositeSide;
+    })();
     if (targetKey === 'player') {
       nextState = {
         ...nextState,
@@ -3880,15 +5279,16 @@ function applyRpgDrawEffects(
     }
     const enemyActors = nextState.enemyActors ?? [];
     const enemyHands = nextState.rpgEnemyHandCards ?? enemyActors.map(() => []);
-    const modeAll = effect.target === 'all_enemies';
-    const targetIndex = options.targetEnemyIndex ?? 0;
+    const modeAll = effect.target === 'all_enemies' || effect.target === 'all_allies';
+    const targetIndex = selectedTargetIndex;
     const nextHands = enemyHands.map((hand, index) => {
       if (modeAll || index === targetIndex) return [...hand, ...cards];
       return [...hand];
     });
     nextState = { ...nextState, rpgEnemyHandCards: nextHands };
   }
-  return nextState;
+  if (!hasTableauRedealEffect) return nextState;
+  return applyRpgTableauRedealEffects(nextState, effects);
 }
 
 export function spawnEnemyActorInRandomBiome(
@@ -3896,30 +5296,58 @@ export function spawnEnemyActorInRandomBiome(
   definitionId: string,
   foundationIndex: number
 ): GameState {
-  if (state.phase !== 'biome') return state;
-  const biomeId = state.currentBiome;
-  if (!biomeId) return state;
-  const biomeDef = getBiomeDefinition(biomeId);
-  if (!biomeDef?.randomlyGenerated) return state;
   if (state.playtestVariant !== 'rpg') return state;
-  const foundations = state.enemyFoundations;
-  if (!foundations || foundations.length === 0) return state;
-  if (foundationIndex < 0 || foundationIndex >= foundations.length) return state;
+  if (foundationIndex < 0) return state;
+
+  const inRandomBiome = (() => {
+    if (state.phase !== 'biome') return false;
+    const biomeId = state.currentBiome;
+    if (!biomeId) return false;
+    const biomeDef = getBiomeDefinition(biomeId);
+    return !!biomeDef?.randomlyGenerated;
+  })();
+  const inCombatLabRpg = state.phase !== 'biome';
+  if (!inRandomBiome && !inCombatLabRpg) return state;
 
   const actor = createActor(definitionId);
   if (!actor) return state;
   const card = createActorFoundationCard(actor);
-  const nextEnemyFoundations = foundations.map((foundation, index) => (
-    index === foundationIndex ? [card] : foundation
+
+  const existingFoundations = (state.enemyFoundations ?? []).map((foundation) => [...foundation]);
+  if (existingFoundations.length === 0) {
+    const seededTarget = (state.enemyActors ?? []).find((entry) => entry.definitionId === DEFAULT_COMBAT_LAB_ENEMY_ACTOR_ID)
+      ?? (state.enemyActors ?? []).find((entry) => entry.definitionId === 'target_dummy')
+      ?? createActor(DEFAULT_COMBAT_LAB_ENEMY_ACTOR_ID)
+      ?? createActor('target_dummy');
+    if (seededTarget) {
+      existingFoundations.push([createActorFoundationCard(seededTarget)]);
+    } else {
+      existingFoundations.push([]);
+    }
+  }
+  const requiredFoundationCount = Math.max(
+    foundationIndex + 1,
+    inCombatLabRpg ? 3 : 1,
+    existingFoundations.length
+  );
+  while (existingFoundations.length < requiredFoundationCount) {
+    existingFoundations.push([]);
+  }
+
+  const nextEnemyFoundations = existingFoundations.map((foundation, index) => (
+    index === foundationIndex ? [card] : [...foundation]
   ));
   const nextEnemyActors = [...(state.enemyActors ?? [])];
   nextEnemyActors[foundationIndex] = actor;
-  const nextEnemyCombos = state.enemyFoundationCombos
-    ? state.enemyFoundationCombos.map((value, index) => (index === foundationIndex ? 0 : value))
-    : nextEnemyFoundations.map(() => 0);
-  const nextEnemyTokens = state.enemyFoundationTokens
-    ? state.enemyFoundationTokens.map((value, index) => (index === foundationIndex ? createEmptyTokenCounts() : value))
-    : nextEnemyFoundations.map(() => createEmptyTokenCounts());
+
+  const nextEnemyCombos = nextEnemyFoundations.map((_, index) => (
+    index === foundationIndex ? 0 : (state.enemyFoundationCombos?.[index] ?? 0)
+  ));
+  const nextEnemyTokens = nextEnemyFoundations.map((_, index) => (
+    index === foundationIndex
+      ? createEmptyTokenCounts()
+      : { ...(state.enemyFoundationTokens?.[index] ?? createEmptyTokenCounts()) }
+  ));
   const nextEnemyHands = (() => {
     const current = state.rpgEnemyHandCards ?? [];
     const next = nextEnemyFoundations.map((_, index) => [...(current[index] ?? [])]);
@@ -4014,6 +5442,15 @@ export function playRpgHandCardOnActor(
   const hand = state.rpgHandCards ?? [];
   const card = hand.find((entry) => entry.id === cardId);
   if (!card) return state;
+  if (shouldEnforceSideTurns(state)) {
+    const activeSide = state.randomBiomeActiveSide ?? 'player';
+    const turnPlayable = canPlayCardOnTurn(card, activeSide, true);
+    const legacyInterruptOverride = activeSide === 'enemy'
+      && getCardTurnPlayability(card) === null
+      && isInterruptCard(card);
+    if (!turnPlayable && !legacyInterruptOverride) return state;
+  }
+  const playerTurnTimerState = startTurnTimerIfNeeded(state, 'player');
   const rpcFamily = getRpcFamily(card);
   const rpcCount = rpcFamily ? getRpcCount(card) : 0;
   const rpcProfile = rpcFamily ? getRpcProfile(rpcFamily, rpcCount) : null;
@@ -4021,6 +5458,7 @@ export function playRpgHandCardOnActor(
   if (!rpcFamily && !isCloudSight) return state;
   const sourceActor = card.sourceActorId ? findActorById(state, card.sourceActorId) : null;
   const attackerAccuracy = sourceActor?.accuracy ?? 100;
+  const rpgDiscardActorId = card.sourceActorId ?? sourceActor?.id;
 
   const resolveDirectDamage = (target: Actor, baseDamage: number): HitResult => {
     if ((target.hp ?? 0) <= 0) {
@@ -4079,10 +5517,33 @@ export function playRpgHandCardOnActor(
     intervalMs,
     effectKind,
   });
-  const stripCardFromHand = (next: GameState): GameState => ({
-    ...next,
-    rpgHandCards: upgradeRpgHandCards(hand.filter((entry) => entry.id !== cardId)),
-  });
+  const stripCardFromHand = (next: GameState): GameState => {
+    const baseHand = hand.filter((entry) => entry.id !== cardId);
+    const discardComboMetric = card.sourceActorId
+      ? Math.max(0, Number(next.actorCombos?.[card.sourceActorId] ?? 0))
+      : 0;
+    const nextDecks = card.sourceActorId && card.sourceDeckCardId
+      ? setDeckCardCooldown(next, card.sourceActorId, card.sourceDeckCardId, { discardedAtCombo: discardComboMetric })
+      : next.actorDecks;
+    const nextDiscardPiles = appendCardToActorRpgDiscard(next.rpgDiscardPilesByActor, rpgDiscardActorId, card);
+    const awarded = awardActorComboCards({
+      ...next,
+      actorDecks: nextDecks,
+      rpgDiscardPilesByActor: nextDiscardPiles,
+    }, 0, next.actorCombos ?? {}, { sourceSide: 'player' });
+    const mergedHand = mergeCanonicalHandWithRuntimeExtras(awarded.hand ?? [], baseHand);
+    return {
+      ...next,
+      ...playerTurnTimerState,
+      actorDecks: awarded.actorDecks,
+      rpgHandCards: mergedHand,
+      rpgDiscardPilesByActor: awarded.rpgDiscardPilesByActor ?? nextDiscardPiles,
+      combatFlowTelemetry: updateCombatFlowTelemetry(next, (current) => ({
+        ...current,
+        playerCardsPlayed: current.playerCardsPlayed + 1,
+      })),
+    };
+  };
 
   if (side === 'enemy') {
     const enemyActors = state.enemyActors ?? [];
@@ -4140,16 +5601,10 @@ export function playRpgHandCardOnActor(
     if (sourceActor?.id && sourceActor.id !== target.id) return state;
     const cloudSightLevel = getCloudSightCount(card);
     const grantsTimerBonus = cloudSightLevel >= 2;
-    const grantsEvasion = cloudSightLevel >= 4;
-    const scaledEvasionDurationMs = RPG_SOAR_EVASION_BASE_MS + Math.max(0, cloudSightLevel - 4) * RPG_SOAR_EVASION_LEVEL_STEP_MS;
     return stripCardFromHand({
       ...state,
       rpgCloudSightUntil: Math.max(state.rpgCloudSightUntil ?? 0, now + RPG_CLOUD_SIGHT_MS),
       rpgCloudSightActorId: target.id,
-      rpgSoarEvasionUntil: grantsEvasion ? Math.max(state.rpgSoarEvasionUntil ?? 0, now + scaledEvasionDurationMs) : (state.rpgSoarEvasionUntil ?? 0),
-      rpgSoarEvasionActorId: grantsEvasion ? target.id : state.rpgSoarEvasionActorId,
-      rpgSoarEvasionSide: grantsEvasion ? 'player' : state.rpgSoarEvasionSide,
-      rpgSoarEvasionTotalMs: grantsEvasion ? scaledEvasionDurationMs : (state.rpgSoarEvasionTotalMs ?? 0),
       rpgComboTimerBonusMs: grantsTimerBonus ? 2000 : (state.rpgComboTimerBonusMs ?? 0),
       rpgComboTimerBonusToken: grantsTimerBonus ? (now + Math.random()) : state.rpgComboTimerBonusToken,
     });
@@ -4204,6 +5659,8 @@ export function playEnemyRpgHandCardOnActor(
   targetActorIndex: number
 ): GameState {
   if (state.playtestVariant !== 'rpg') return state;
+  if (shouldEnforceSideTurns(state) && (state.randomBiomeActiveSide ?? 'player') !== 'enemy') return state;
+  const enemyTurnTimerState = startTurnTimerIfNeeded(state, 'enemy');
   const enemyActors = state.enemyActors ?? [];
   if (enemyActorIndex < 0 || enemyActorIndex >= enemyActors.length) return state;
   const enemyActor = enemyActors[enemyActorIndex];
@@ -4213,6 +5670,8 @@ export function playEnemyRpgHandCardOnActor(
   const enemyHand = enemyHands[enemyActorIndex] ?? [];
   const card = enemyHand.find((entry) => entry.id === cardId);
   if (!card) return state;
+  if (!canPlayCardOnTurn(card, 'enemy', false)) return state;
+  const rpgDiscardActorId = card.sourceActorId ?? enemyActor.id;
 
   const party = getPartyForTile(state, state.activeSessionTileId);
   if (targetActorIndex < 0 || targetActorIndex >= party.length) return state;
@@ -4327,9 +5786,24 @@ export function playEnemyRpgHandCardOnActor(
   const nextEnemyHands = enemyHands.map((cards, index) =>
     index === enemyActorIndex ? cards.filter((entry) => entry.id !== cardId) : [...cards]
   );
+  const discardComboMetric = Math.max(
+    0,
+    (nextState.enemyFoundationCombos ?? []).reduce((sum, value) => sum + Math.max(0, Number(value ?? 0)), 0)
+  );
+  const nextDecks = card.sourceActorId && card.sourceDeckCardId
+    ? setDeckCardCooldown(nextState, card.sourceActorId, card.sourceDeckCardId, { discardedAtCombo: discardComboMetric })
+    : nextState.actorDecks;
+  const nextDiscardPiles = appendCardToActorRpgDiscard(nextState.rpgDiscardPilesByActor, rpgDiscardActorId, card);
   const afterPlayCardState: GameState = {
     ...nextState,
+    ...enemyTurnTimerState,
+    actorDecks: nextDecks,
     rpgEnemyHandCards: nextEnemyHands,
+    rpgDiscardPilesByActor: nextDiscardPiles,
+    combatFlowTelemetry: updateCombatFlowTelemetry(nextState, (current) => ({
+      ...current,
+      enemyCardsPlayed: current.enemyCardsPlayed + 1,
+    })),
   };
   return applyRpgDrawEffects(afterPlayCardState, orimEffects, {
     sourceSide: 'enemy',
@@ -4362,26 +5836,85 @@ export function adjustRpgHandCardRarity(
   };
 }
 
+function tickRandomBiomeTurnTimer(state: GameState, now: number): GameState {
+  if (!shouldEnforceSideTurns(state)) return state;
+  if (state.phase !== 'biome' || !state.currentBiome) return state;
+  const biomeDef = getBiomeDefinition(state.currentBiome);
+  if (!biomeDef?.randomlyGenerated) return state;
+  const hasEnemySide = (state.enemyFoundations?.length ?? 0) > 0;
+  if (!hasEnemySide) return state;
+
+  const activeSide = state.randomBiomeActiveSide ?? 'player';
+  const durationMs = Math.max(1000, Math.round(state.randomBiomeTurnDurationMs ?? DEFAULT_RANDOM_BIOME_TURN_DURATION_MS));
+  const remainingMs = Math.max(0, Number(state.randomBiomeTurnRemainingMs ?? durationMs));
+  const timerActive = !!state.randomBiomeTurnTimerActive;
+  if (!timerActive) return state;
+  const lastTickAt = Number(state.randomBiomeTurnLastTickAt ?? now);
+  if (hasEnabledRelicBehavior(state, ZEN_RELIC_BEHAVIOR_ID)) {
+    return {
+      ...state,
+      randomBiomeTurnDurationMs: durationMs,
+      randomBiomeTurnRemainingMs: remainingMs,
+      randomBiomeTurnLastTickAt: now,
+    };
+  }
+  const elapsedMs = Math.max(0, now - lastTickAt);
+  const nextRemainingMs = remainingMs - elapsedMs;
+
+  if (nextRemainingMs > 0) {
+    return {
+      ...state,
+      randomBiomeTurnDurationMs: durationMs,
+      randomBiomeTurnRemainingMs: nextRemainingMs,
+      randomBiomeTurnLastTickAt: now,
+    };
+  }
+
+  const progressed = advanceRandomBiomeTurn({
+    ...state,
+    randomBiomeTurnDurationMs: durationMs,
+    randomBiomeTurnRemainingMs: 0,
+    randomBiomeTurnLastTickAt: now,
+  });
+
+  const timeoutTelemetry = updateCombatFlowTelemetry(progressed, (current) => ({
+    ...current,
+    playerTimeouts: current.playerTimeouts + (activeSide === 'player' ? 1 : 0),
+    enemyTimeouts: current.enemyTimeouts + (activeSide === 'enemy' ? 1 : 0),
+  }));
+
+  return {
+    ...progressed,
+    randomBiomeTurnDurationMs: durationMs,
+    randomBiomeTurnLastTickAt: now,
+    randomBiomeTurnRemainingMs: shouldEnforceSideTurns(progressed) && progressed.randomBiomeActiveSide
+      ? Math.max(0, Number(progressed.randomBiomeTurnRemainingMs ?? durationMs))
+      : 0,
+    combatFlowTelemetry: timeoutTelemetry,
+  };
+}
+
 export function tickRpgCombat(state: GameState, now: number = Date.now()): GameState {
   if (state.playtestVariant !== 'rpg') return state;
-  const lastDeckTickAt = state.rpgDeckCooldownLastTickAt ?? now;
+  const timerState = tickRandomBiomeTurnTimer(state, now);
+  const timerChanged = timerState !== state;
+  const lastDeckTickAt = timerState.rpgDeckCooldownLastTickAt ?? now;
   const elapsedMs = Math.max(0, now - lastDeckTickAt);
-  const hasActiveDeckCooldowns = Object.values(state.actorDecks ?? {}).some((deck) =>
+  const hasActiveDeckCooldowns = Object.values(timerState.actorDecks ?? {}).some((deck) =>
     deck.cards.some((card) => (card.cooldown ?? 0) > 0)
   );
   const elapsedSeconds = elapsedMs / 1000;
-  const slowExpired = (state.rpgEnemyDragSlowUntil ?? 0) > 0 && now >= (state.rpgEnemyDragSlowUntil ?? 0);
-  const cloudExpired = (state.rpgCloudSightUntil ?? 0) > 0 && now >= (state.rpgCloudSightUntil ?? 0);
-  const soarExpired = (state.rpgSoarEvasionUntil ?? 0) > 0 && now >= (state.rpgSoarEvasionUntil ?? 0);
-  const blindedEnemyExpired = (state.rpgBlindedEnemyUntil ?? 0) > 0 && now >= (state.rpgBlindedEnemyUntil ?? 0);
-  const blindedPlayerExpired = (state.rpgBlindedPlayerUntil ?? 0) > 0 && now >= (state.rpgBlindedPlayerUntil ?? 0);
-  const dots = state.rpgDots ?? [];
-  if (dots.length === 0 && !slowExpired && !cloudExpired && !soarExpired && !blindedEnemyExpired && !blindedPlayerExpired && !hasActiveDeckCooldowns) {
-    return state;
+  const slowExpired = (timerState.rpgEnemyDragSlowUntil ?? 0) > 0 && now >= (timerState.rpgEnemyDragSlowUntil ?? 0);
+  const cloudExpired = (timerState.rpgCloudSightUntil ?? 0) > 0 && now >= (timerState.rpgCloudSightUntil ?? 0);
+  const blindedEnemyExpired = (timerState.rpgBlindedEnemyUntil ?? 0) > 0 && now >= (timerState.rpgBlindedEnemyUntil ?? 0);
+  const blindedPlayerExpired = (timerState.rpgBlindedPlayerUntil ?? 0) > 0 && now >= (timerState.rpgBlindedPlayerUntil ?? 0);
+  const dots = timerState.rpgDots ?? [];
+  if (dots.length === 0 && !slowExpired && !cloudExpired && !blindedEnemyExpired && !blindedPlayerExpired && !hasActiveDeckCooldowns) {
+    return timerChanged ? { ...timerState, rpgDeckCooldownLastTickAt: now } : timerState;
   }
 
   let changed = false;
-  let nextState: GameState = state;
+  let nextState: GameState = timerState;
   const nextDots = dots.map((dot) => ({ ...dot }));
 
   if (slowExpired) {
@@ -4390,10 +5923,6 @@ export function tickRpgCombat(state: GameState, now: number = Date.now()): GameS
   }
   if (cloudExpired) {
     nextState = { ...nextState, rpgCloudSightUntil: 0, rpgCloudSightActorId: undefined };
-    changed = true;
-  }
-  if (soarExpired) {
-    nextState = { ...nextState, rpgSoarEvasionUntil: 0, rpgSoarEvasionActorId: undefined, rpgSoarEvasionSide: undefined, rpgSoarEvasionTotalMs: 0 };
     changed = true;
   }
   if (blindedEnemyExpired) {
@@ -4421,11 +5950,12 @@ export function tickRpgCombat(state: GameState, now: number = Date.now()): GameS
   const applyTickDamage = (
     actor: Actor,
     sourceActor: Actor | null,
-    baseDamage: number
+    baseDamage: number,
+    targetSide: 'player' | 'enemy'
   ): Actor => {
     if ((actor.hp ?? 0) <= 0) return actor;
     const sourceAccuracy = sourceActor?.accuracy ?? 100;
-    const targetEvasion = getEffectiveEvasion(nextState, actor, dot.targetSide, now);
+    const targetEvasion = getEffectiveEvasion(nextState, actor, targetSide, now);
     const hitChance = clampPercent(sourceAccuracy - targetEvasion, 5, 95);
     const didHit = Math.random() * 100 < hitChance;
     if (!didHit) return actor;
@@ -4442,7 +5972,7 @@ export function tickRpgCombat(state: GameState, now: number = Date.now()): GameS
       const idx = enemyActors.findIndex((actor) => actor.id === dot.targetActorId);
       if (idx !== -1) {
         const updatedEnemyActors = enemyActors.map((actor, index) =>
-          index === idx ? applyTickDamage(actor, sourceActor, dot.damagePerTick) : actor
+          index === idx ? applyTickDamage(actor, sourceActor, dot.damagePerTick, dot.targetSide) : actor
         );
         nextState = { ...nextState, enemyActors: updatedEnemyActors };
         changed = true;
@@ -4452,7 +5982,7 @@ export function tickRpgCombat(state: GameState, now: number = Date.now()): GameS
       const idx = party.findIndex((actor) => actor.id === dot.targetActorId);
       if (idx !== -1) {
         const updatedParty = party.map((actor, index) =>
-          index === idx ? applyTickDamage(actor, sourceActor, dot.damagePerTick) : actor
+          index === idx ? applyTickDamage(actor, sourceActor, dot.damagePerTick, dot.targetSide) : actor
         );
         nextState = {
           ...nextState,
@@ -4471,15 +6001,29 @@ export function tickRpgCombat(state: GameState, now: number = Date.now()): GameS
 
   const filteredDots = nextDots.filter((dot) => dot.remainingTicks > 0);
   if (filteredDots.length !== dots.length) changed = true;
-  const canonicalHand = awardActorComboCards(nextState, 0, nextState.actorCombos ?? {}, { sourceSide: 'player' }) ?? [];
+  const handAward = awardActorComboCards(nextState, 0, nextState.actorCombos ?? {}, { sourceSide: 'player' });
+  const canonicalHand = handAward.hand ?? [];
   const currentHand = nextState.rpgHandCards ?? [];
+  const deckChanged = handAward.actorDecks !== nextState.actorDecks;
+  const discardChanged = handAward.rpgDiscardPilesByActor !== nextState.rpgDiscardPilesByActor;
   const handChanged = canonicalHand.length !== currentHand.length
     || canonicalHand.some((card, index) => card.id !== currentHand[index]?.id);
-  if (handChanged) {
-    nextState = { ...nextState, rpgHandCards: canonicalHand };
+  if (handChanged || deckChanged || discardChanged) {
+    nextState = {
+      ...nextState,
+      rpgHandCards: canonicalHand,
+      actorDecks: handAward.actorDecks,
+      rpgDiscardPilesByActor: handAward.rpgDiscardPilesByActor,
+    };
     changed = true;
   }
-  if (!changed) return state;
+  if (!changed) {
+    if (!timerChanged) return timerState;
+    return {
+      ...timerState,
+      rpgDeckCooldownLastTickAt: now,
+    };
+  }
   return {
     ...nextState,
     rpgDots: filteredDots,
@@ -4849,17 +6393,18 @@ export function traverse(state: GameState): GameState | null {
     enemyBackfillQueues: undefined,
     randomBiomeTurnNumber: undefined,
     randomBiomeActiveSide: undefined,
+    randomBiomeTurnRemainingMs: undefined,
+    randomBiomeTurnLastTickAt: undefined,
+    randomBiomeTurnTimerActive: undefined,
     enemyDifficulty: undefined,
     rpgHandCards: undefined, // Clear RPG hand for new biome
+    actorDecks: resetDeckDiscardStates(state.actorDecks),
+    rpgDiscardPilesByActor: undefined,
     rpgDots: [],
     rpgEnemyDragSlowUntil: 0,
     rpgEnemyDragSlowActorId: undefined,
     rpgCloudSightUntil: 0,
     rpgCloudSightActorId: undefined,
-    rpgSoarEvasionUntil: 0,
-    rpgSoarEvasionActorId: undefined,
-    rpgSoarEvasionSide: undefined,
-    rpgSoarEvasionTotalMs: 0,
     rpgComboTimerBonusMs: 0,
     rpgComboTimerBonusToken: undefined,
     rpgBlindedPlayerLevel: 0,

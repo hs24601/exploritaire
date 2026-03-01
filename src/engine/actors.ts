@@ -14,6 +14,9 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     suit: undefined,
     element: 'N',
     sprite: '🐈',
+    baseStamina: 1,
+    baseHp: 8,
+    baseEvasion: 1,
   },
   {
     id: 'ursus',
@@ -25,6 +28,9 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     suit: undefined,
     element: 'N',
     sprite: '🐻',
+    baseHp: 18,
+    baseArmor: 1,
+    baseSuperArmor: 1,
   },
   {
     id: 'lupus',
@@ -39,6 +45,56 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     orimSlots: [
       { orimId: 'claw' },
       { orimId: 'bide' },
+    ],
+  },
+  {
+    id: 'target_dummy',
+    name: 'Target Dummy',
+    titles: ["New Actor 4"],
+    description: '',
+    type: 'npc',
+    value: 1,
+    suit: undefined,
+    element: 'N',
+    sprite: '✨',
+    baseLevel: 1,
+    baseStamina: 3,
+    baseEnergy: 3,
+    baseHp: 100,
+    baseArmor: 1,
+    baseSuperArmor: 0,
+    baseDefense: 0,
+    baseEvasion: 0,
+    baseAccuracy: 0,
+    basePower: 0,
+    basePowerMax: 1,
+    orimSlots: [
+      {  },
+    ],
+  },
+  {
+    id: 'shade_of_resentment',
+    name: 'Shade of Resentment',
+    titles: ["New Actor 5"],
+    description: '',
+    type: 'npc',
+    value: 6,
+    suit: '🌙',
+    element: 'N',
+    sprite: '',
+    baseLevel: 1,
+    baseStamina: 1,
+    baseEnergy: 1,
+    baseHp: 5,
+    baseArmor: 0,
+    baseSuperArmor: 0,
+    baseDefense: 0,
+    baseEvasion: 0,
+    baseAccuracy: 100,
+    basePower: 0,
+    basePowerMax: 3,
+    orimSlots: [
+      {  },
     ],
   },
 ];
@@ -81,23 +137,37 @@ export function createActor(definitionId: string): Actor | null {
     locked: slot.locked ?? false,
   }));
 
+  const baseLevel = Math.max(1, definition.baseLevel ?? 1);
+  const baseStamina = Math.max(0, definition.baseStamina ?? 3);
+  const baseEnergy = Math.max(0, definition.baseEnergy ?? 3);
+  const baseHp = Math.max(1, definition.baseHp ?? 10);
+  const baseArmor = Math.max(0, definition.baseArmor ?? 0);
+  const baseSuperArmor = Math.max(0, definition.baseSuperArmor ?? 0);
+  const baseDefense = Math.max(0, definition.baseDefense ?? 0);
+  const baseEvasion = Math.max(0, definition.baseEvasion ?? 0);
+  const baseAccuracy = Math.max(0, definition.baseAccuracy ?? 100);
+  const basePower = Math.max(0, definition.basePower ?? 0);
+  const basePowerMax = Math.max(0, definition.basePowerMax ?? 3);
+
   return {
     definitionId,
     id: actorId,
     currentValue: definition.value,
-    level: 1,
-    stamina: 3,
-    staminaMax: 3,
-    energy: 3,
-    energyMax: 3,
-    hp: 10,
-    hpMax: 10,
-    armor: 0,
-    evasion: 0,
-    accuracy: 100,
+    level: baseLevel,
+    stamina: baseStamina,
+    staminaMax: baseStamina,
+    energy: baseEnergy,
+    energyMax: baseEnergy,
+    hp: baseHp,
+    hpMax: baseHp,
+    armor: baseArmor,
+    superArmor: baseSuperArmor,
+    defense: baseDefense,
+    evasion: baseEvasion,
+    accuracy: baseAccuracy,
     damageTaken: 0,
-    power: 0,
-    powerMax: 3,
+    power: basePower,
+    powerMax: basePowerMax,
     orimSlots,
   };
 }
@@ -153,4 +223,3 @@ export function getActorValueDisplay(value: number): string {
       return String(value);
   }
 }
-

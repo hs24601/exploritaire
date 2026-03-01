@@ -8,6 +8,7 @@ export function AssetEditorEngine({
   onTabChange,
   panes,
   isGodRaysSliderDragging,
+  hideForOverlay,
 }: {
   open: boolean;
   onClose: () => void;
@@ -15,6 +16,7 @@ export function AssetEditorEngine({
   onTabChange: (tab: AssetEditorTabId) => void;
   panes: AssetEditorPaneDefinition[];
   isGodRaysSliderDragging: boolean;
+  hideForOverlay?: boolean;
 }) {
   const activePane = panes.find((pane) => pane.id === activeTab) ?? panes[0] ?? null;
 
@@ -26,6 +28,7 @@ export function AssetEditorEngine({
       activeTab={activePane?.id ?? activeTab}
       onTabChange={onTabChange}
       isGodRaysSliderDragging={isGodRaysSliderDragging}
+      hideForOverlay={hideForOverlay}
     >
       {activePane?.render() ?? null}
     </AssetEditorModal>

@@ -2,37 +2,11 @@ import type { MutableRefObject } from 'react';
 import { getBiomeDefinition } from '../../engine/biomes';
 import type { Actor, Card as CardType, EncounterDefinition, GameState, Move, PuzzleCompletedPayload, SelectedCard } from '../../engine/types';
 import type { DragState } from '../../hooks/useDragDrop';
+import type { EncounterCombatActions } from '../combat/contracts';
 import { CombatGolf } from '../CombatGolf';
 import { EventEncounter } from '../EventEncounter';
 
 type SandboxOrimResult = { id: string; name: string; domain: 'puzzle' | 'combat' };
-
-interface CombatActions {
-  selectCard: (card: CardType, tableauIndex: number) => void;
-  playToFoundation: (foundationIndex: number) => boolean;
-  playCardDirect: (tableauIndex: number, foundationIndex: number) => boolean;
-  playCardInRandomBiome: (tableauIndex: number, foundationIndex: number) => boolean;
-  playEnemyCardInRandomBiome: (tableauIndex: number, foundationIndex: number) => boolean;
-  playFromHand: (card: CardType, foundationIndex: number, useWild?: boolean) => boolean;
-  playFromStock: (foundationIndex: number, useWild?: boolean, force?: boolean) => boolean;
-  completeBiome: () => void;
-  autoSolveBiome: () => void;
-  playCardInNodeBiome: (nodeId: string, foundationIndex: number) => void;
-  endRandomBiomeTurn: () => void;
-  endExplorationTurnInRandomBiome: () => void;
-  advanceRandomBiomeTurn: () => void;
-  tickRpgCombat: (elapsedMs: number) => void;
-  setEnemyDifficulty: (difficulty: GameState['enemyDifficulty']) => void;
-  rewindLastCard: () => boolean;
-  swapPartyLead: (actorId: string) => void;
-  playWildAnalysisSequence: () => void;
-  spawnRandomEnemyInRandomBiome: () => void;
-  setBiomeTableaus: (tableaus: CardType[][]) => void;
-  addRpgHandCard: (card: CardType) => boolean;
-  applyKeruArchetype: (archetype: 'felis') => boolean;
-  puzzleCompleted: (payload?: PuzzleCompletedPayload | null) => void;
-  startBiome: (tileId: string, biomeId: string) => void;
-}
 
 interface EncounterSceneProps {
   gameState: GameState;
@@ -88,13 +62,14 @@ interface EncounterSceneProps {
   onTogglePaintLuminosity?: () => void;
   zenModeEnabled?: boolean;
   isGamePaused?: boolean;
+  highPerformanceTimer?: boolean;
   timeScale?: number;
   onOpenSettings?: () => void;
   onTogglePause?: () => void;
   onToggleCombatSandbox: () => void;
   combatSandboxOpen?: boolean;
   wildAnalysis?: { key: string; sequence: Move[]; maxCount: number } | null;
-  combatActions: CombatActions;
+  combatActions: EncounterCombatActions;
   explorationStepRef: MutableRefObject<(() => void) | null>;
   onPositionChange: (x: number, y: number) => void;
   forcedPerspectiveEnabled?: boolean;
@@ -149,6 +124,7 @@ export function EncounterScene({
   onTogglePaintLuminosity,
   zenModeEnabled,
   isGamePaused,
+  highPerformanceTimer = false,
   timeScale,
   onOpenSettings,
   onTogglePause,
@@ -229,6 +205,7 @@ export function EncounterScene({
       onTogglePause={onTogglePause}
       onToggleCombatSandbox={onToggleCombatSandbox}
       combatSandboxOpen={combatSandboxOpen}
+      highPerformanceTimer={highPerformanceTimer}
       wildAnalysis={wildAnalysis}
       actions={combatActions}
       explorationStepRef={explorationStepRef}

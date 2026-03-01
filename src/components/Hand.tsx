@@ -1,12 +1,14 @@
 import { memo, useState, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Card as CardType, Element, InteractionMode, OrimDefinition } from '../engine/types';
+import type { Card as CardType, Element, InteractionMode, OrimDefinition, OrimRarity } from '../engine/types';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
 import { Card } from './Card';
 import { useCardScalePreset } from '../contexts/CardScaleContext';
 import { Tooltip } from './Tooltip';
 import { useLongPressStateMachine } from '../hooks/useLongPressStateMachine';
 import { FORCE_NEON_CARD_STYLE } from '../config/ui';
+import { getNeonElementColor } from '../utils/styles';
+import abilitiesJson from '../data/abilities.json';
 
 interface HandProps {
   cards: CardType[];
@@ -27,6 +29,7 @@ interface HandProps {
   upgradedCardIds?: string[];
   disableSpringMotion?: boolean;
   watercolorOnlyCards?: boolean;
+  isCardPlayable?: (card: CardType) => boolean;
 }
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -41,6 +44,83 @@ const FAN = {
 const INSPECT_HOLD_MS = 1000;
 const DRAG_START_THRESHOLD_PX = 10;
 const HAND_MAX_CARD_COUNT = 10;
+const FOUNDATION_STYLE_ELEMENTS: Element[] = ['W', 'E', 'A', 'F', 'L', 'D', 'N'];
+
+function getFoundationStyleHandName(card: CardType): string {
+  const explicitName = card.name?.trim();
+  if (explicitName && explicitName.length > 0) return explicitName;
+  if (card.rpgAbilityId) return card.rpgAbilityId.replace(/[_-]+/g, ' ').trim();
+  if (card.rpgCardKind === 'wild' || card.rank === 0) return 'Wild';
+  return 'Ability';
+}
+
+function getHandCardElement(card: CardType): Element {
+  const fromCard = card.element;
+  if (fromCard && FOUNDATION_STYLE_ELEMENTS.includes(fromCard)) return fromCard;
+  const fromToken = card.tokenReward;
+  if (typeof fromToken === 'string' && FOUNDATION_STYLE_ELEMENTS.includes(fromToken as Element)) {
+    return fromToken as Element;
+  }
+  return 'N';
+}
+
+function normalizeAbilityKey(value: string | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function getCatalogRarity(card: CardType): OrimRarity | undefined {
+  const rows = (abilitiesJson as { abilities?: Array<{ id?: string; cardId?: string; label?: string; rarity?: OrimRarity }> }).abilities ?? [];
+  if (rows.length === 0) return undefined;
+  const candidates = [
+    normalizeAbilityKey(card.rpgAbilityId),
+    normalizeAbilityKey(card.sourceDeckCardId),
+    normalizeAbilityKey(card.name),
+    normalizeAbilityKey(card.id.replace(/^deckhand-[^-]+-/, '')),
+    normalizeAbilityKey(card.id.replace(/^ability-/, '')),
+  ].filter(Boolean);
+  if (candidates.length === 0) return undefined;
+  const found = rows.find((entry) => {
+    const keys = [normalizeAbilityKey(entry.id), normalizeAbilityKey(entry.cardId), normalizeAbilityKey(entry.label)];
+    return keys.some((key) => key.length > 0 && candidates.includes(key));
+  });
+  return found?.rarity;
+}
+
+function getDefinitionRarity(card: CardType, defs: OrimDefinition[] | undefined): OrimRarity | undefined {
+  const rows = defs ?? [];
+  if (rows.length === 0) return undefined;
+  const slotIds = (card.orimSlots ?? [])
+    .map((slot) => slot.orimId)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  const candidates = [
+    normalizeAbilityKey(card.rpgAbilityId),
+    normalizeAbilityKey(card.sourceDeckCardId),
+    normalizeAbilityKey(card.name),
+    normalizeAbilityKey(card.id.replace(/^deckhand-[^-]+-/, '')),
+    ...slotIds.map((id) => normalizeAbilityKey(id)),
+  ].filter(Boolean);
+  if (candidates.length === 0) return undefined;
+  const direct = rows.find((entry) => candidates.includes(normalizeAbilityKey(entry.id)));
+  if (direct?.rarity) return direct.rarity;
+  const byName = rows.find((entry) => candidates.includes(normalizeAbilityKey(entry.name)));
+  return byName?.rarity;
+}
+
+function resolveEffectiveRarity(card: CardType, defs: OrimDefinition[] | undefined): OrimRarity {
+  const cardRarity = card.rarity;
+  const definitionRarity = getDefinitionRarity(card, defs);
+  const catalogRarity = getCatalogRarity(card);
+
+  // Respect explicit non-common rarity on the card, but allow definition/catalog
+  // data to override placeholder "common" values.
+  if (cardRarity && cardRarity !== 'common') return cardRarity;
+  if (definitionRarity && definitionRarity !== 'common') return definitionRarity;
+  if (catalogRarity && catalogRarity !== 'common') return catalogRarity;
+  return (cardRarity ?? definitionRarity ?? catalogRarity ?? 'common') as OrimRarity;
+}
 
 function computeFanPositions(n: number, minCenterDistance: number, maxCenterDistance: number) {
   if (n === 0) return [];
@@ -81,6 +161,7 @@ export const Hand = memo(function Hand({
   upgradedCardIds = [],
   disableSpringMotion = false,
   watercolorOnlyCards = false,
+  isCardPlayable,
 }: HandProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const neonMode = FORCE_NEON_CARD_STYLE;
@@ -92,16 +173,25 @@ export const Hand = memo(function Hand({
     startY: number;
     rect: DOMRect;
   } | null>(null);
-  const handGlobalScale = useCardScalePreset('hand');
+  const handGlobalScale = useCardScalePreset('table');
   const effectiveScale = cardScale * handGlobalScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
   const cardHeight = CARD_SIZE.height * effectiveScale;
   const cardSize = useMemo(() => ({ width: cardWidth, height: cardHeight }), [cardWidth, cardHeight]);
+  const isHandCardPlayable = useCallback((card: CardType) => {
+    const isOnCooldown = (card.cooldown ?? 0) > 0;
+    const externallyPlayable = isCardPlayable ? isCardPlayable(card) : !isOnCooldown;
+    return !isOnCooldown && externallyPlayable;
+  }, [isCardPlayable]);
+  const visibleCards = useMemo(
+    () => cards.filter(isHandCardPlayable),
+    [cards, isHandCardPlayable],
+  );
   const minCenterDistance = cardWidth;
   const maxCenterDistance = cardWidth * 1.5;
   const rawPositions = useMemo(
-    () => computeFanPositions(cards.length, minCenterDistance, maxCenterDistance),
-    [cards.length, minCenterDistance, maxCenterDistance],
+    () => computeFanPositions(visibleCards.length, minCenterDistance, maxCenterDistance),
+    [visibleCards.length, minCenterDistance, maxCenterDistance],
   );
   const maxHandWidth = useMemo(() => {
     const maxPositions = computeFanPositions(HAND_MAX_CARD_COUNT, minCenterDistance, maxCenterDistance);
@@ -147,6 +237,14 @@ export const Hand = memo(function Hand({
     () => rawPositions.map((pos) => ({ ...pos, x: pos.x + centerShift })),
     [rawPositions, centerShift],
   );
+  const renderKeys = useMemo(() => {
+    const seen = new Map<string, number>();
+    return visibleCards.map((card, index) => {
+      const count = seen.get(card.id) ?? 0;
+      seen.set(card.id, count + 1);
+      return count === 0 ? card.id : `${card.id}__dup${count}__${index}`;
+    });
+  }, [visibleCards]);
   const maxRightEdge = useMemo(() => {
     const halfW = cardWidth / 2;
     const halfH = cardHeight / 2;
@@ -258,7 +356,7 @@ export const Hand = memo(function Hand({
     onLongPress: handleLongPressInspect,
   });
 
-  if (cards.length === 0 && stockCount === 0) return null;
+  if (visibleCards.length === 0 && stockCount === 0) return null;
 
   return (
     <div
@@ -270,9 +368,10 @@ export const Hand = memo(function Hand({
         style={{ width: maxHandWidth, minWidth: maxHandWidth, height: cardHeight + 40 }}
       >
         <AnimatePresence>
-          {cards.map((card, i) => {
+          {visibleCards.map((card, i) => {
             const pos = positions[i];
             if (!pos) return null;
+            const renderKey = renderKeys[i] ?? `${card.id}__idx${i}`;
             const isHovered = hoveredId === card.id;
             const isDragging = card.id === draggingCardId;
             const isUpgraded = upgradedCardIds.includes(card.id);
@@ -281,16 +380,58 @@ export const Hand = memo(function Hand({
               cardHash = ((cardHash << 5) - cardHash + card.id.charCodeAt(h)) | 0;
             }
             const flashOffsetSec = (Math.abs(cardHash) % 120) / 100;
-            const isOnCooldown = (card.cooldown ?? 0) > 0;
-            const cooldownScale = isOnCooldown ? 0.67 : 1;
+            const isPlayable = isHandCardPlayable(card);
+            const rawApCost = Number(card.rpgApCost ?? 0);
+            const apCost = Number.isFinite(rawApCost) ? Math.max(0, Math.round(rawApCost)) : 0;
+            const effectiveRarity = resolveEffectiveRarity(card, orimDefinitions);
+            const effectiveCard = effectiveRarity === card.rarity ? card : { ...card, rarity: effectiveRarity };
+            const handMinimalOverlay = {
+              title: getFoundationStyleHandName(effectiveCard),
+              cost: String(apCost),
+            };
+            const rarityKey = String(effectiveCard.rarity ?? 'common').toLowerCase();
+            const useRarityVisuals = rarityKey !== 'common';
+            const rarityGlowByKey: Record<string, string> = {
+              uncommon: '#8ee3a5',
+              rare: '#5f7fe8',
+              epic: '#8468d8',
+              legendary: '#f29a58',
+              mythic: '#de5b75',
+            };
+            const rarityGlow = rarityGlowByKey[rarityKey];
+            const glowElement = getHandCardElement(card);
+            const handGlowColor = isPlayable
+              ? (glowElement === 'N' ? '#ffffff' : getNeonElementColor(glowElement))
+              : '#8a8f98';
+            const cooldownScale = isPlayable ? 1 : 0.67;
             const baseScale = isHovered ? FAN.hoverScale : 1;
             const finalScale = isHovered ? baseScale : baseScale * cooldownScale;
-            const canDrag = interactionMode === 'dnd' && !isOnCooldown;
+            const canDrag = interactionMode === 'dnd' && isPlayable;
+            const handBorderColorOverride = effectiveWatercolorOnly
+              ? 'rgba(6, 10, 14, 0.9)'
+              : useRarityVisuals
+                ? rarityGlow
+                : handGlowColor;
+            const handBoxShadowOverride = effectiveWatercolorOnly
+              ? 'none'
+              : useRarityVisuals
+                ? `0 0 26px ${rarityGlow ?? '#ffffff'}dd, inset 0 0 16px ${rarityGlow ?? '#ffffff'}55`
+                : (
+                isPlayable
+                  ? `0 0 24px ${handGlowColor}dd, inset 0 0 16px ${handGlowColor}55`
+                  : `0 0 14px ${handGlowColor}aa, inset 0 0 10px ${handGlowColor}44`
+              );
             const inspectProgress = longPressInspect.getProgressForId(card.id);
             const isInspecting = longPressInspect.isPressingId(card.id);
             const handlePressStart = (event: React.PointerEvent) => {
+              if (!isPlayable) return;
+              if (canDrag && onCardLongPress && event.pointerType === 'touch') {
+                pendingDragRef.current = null;
+                longPressInspect.handlePointerEnd();
+                handleDragStart(card, event.clientX, event.clientY, event.currentTarget.getBoundingClientRect());
+                return;
+              }
               if (!onCardLongPress) return;
-              if (isOnCooldown) return;
               if (canDrag) {
                 pendingDragRef.current = {
                   id: card.id,
@@ -335,7 +476,7 @@ export const Hand = memo(function Hand({
 
             return (
               <motion.div
-                key={card.id}
+                key={renderKey}
                 layout={!disableSpringMotion}
                 initial={disableSpringMotion ? false : { opacity: 0, y: 50, scale: 0.8 }}
                 animate={{
@@ -377,25 +518,27 @@ export const Hand = memo(function Hand({
                   disabled={!tooltipEnabled}
                 >
                   <Card
-                    card={card}
+                    card={effectiveCard}
                     size={cardSize}
-                    canPlay={!isOnCooldown}
+                    handMinimalOverlay={handMinimalOverlay}
+                    canPlay={isPlayable}
                     isDragging={isDragging}
                     isAnyCardDragging={isAnyCardDragging}
                     onClick={
-                      interactionMode === 'click' && !isOnCooldown && onCardClick
+                      interactionMode === 'click' && isPlayable && onCardClick
                         ? handleCardClick
                         : undefined
                     }
                     onDragStart={canDrag && !onCardLongPress ? handleDragStart : undefined}
                     showGraphics={effectiveWatercolorOnly ? false : showGraphics}
-                    isDimmed={isOnCooldown}
+                    isDimmed={false}
                     orimDefinitions={orimDefinitions}
-                    borderColorOverride={effectiveWatercolorOnly ? 'rgba(6, 10, 14, 0.9)' : undefined}
-                    boxShadowOverride={effectiveWatercolorOnly ? 'none' : undefined}
+                    borderColorOverride={handBorderColorOverride}
+                    boxShadowOverride={handBoxShadowOverride}
                     disableTilt={effectiveWatercolorOnly}
                     disableLegacyShine={effectiveWatercolorOnly}
                     watercolorOnly={effectiveWatercolorOnly}
+                    disableTemplateArt
                   />
                 </Tooltip>
                 {isInspecting && (

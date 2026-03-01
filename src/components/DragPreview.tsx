@@ -9,6 +9,8 @@ import { JewelOrim } from './JewelModal';
 import { getOrimAccentColor } from '../utils/orimColors';
 import { ORIM_DEFINITIONS } from '../engine/orims';
 import { subscribeDragRaf } from '../hooks/dragRafCoordinator';
+import { getRankDisplay } from '../engine/rules';
+import { getNeonElementColor } from '../utils/styles';
 import { FORCE_NEON_CARD_STYLE } from '../config/ui';
 
 interface DragPreviewProps {
@@ -89,6 +91,20 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
       return base;
     };
   }, [positionRef, fallbackPosition, isKeruRewardCard, isRewardOrim, offset.x, offset.y, adjustedOffset.x, adjustedOffset.y]);
+  const DRAG_PREVIEW_SIMPLE = true;
+  const DRAG_PREVIEW_MAX_FPS = 30;
+  const previewElement = card.element ?? 'N';
+  const previewGlow = getNeonElementColor(previewElement);
+  const previewTitle = (() => {
+    if (card.name && card.name.trim().length > 0) return card.name.trim();
+    if (card.rpgAbilityId) return card.rpgAbilityId.replace(/[_-]+/g, ' ').trim();
+    return 'Card';
+  })();
+  const previewFooter = typeof card.rpgApCost === 'number'
+    ? `AP ${Math.max(0, Math.round(card.rpgApCost))}`
+    : getRankDisplay(card.rank ?? 0);
+  const isRpgPreviewCard = !!card.rpgAbilityId || !!card.sourceDeckCardId || card.rpgApCost !== undefined;
+  const playingCardValue = getRankDisplay(card.rank ?? 0);
 
   useEffect(() => {
     const node = rootRef.current;
@@ -98,16 +114,26 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
     if (!positionRef) {
       const base = resolvePosition();
       node.style.transform = `translate3d(${base.x}px, ${base.y}px, 0)`;
-      applyInnerTransform(base.x, base.y);
+      if (!DRAG_PREVIEW_SIMPLE) {
+        applyInnerTransform(base.x, base.y);
+      }
       return;
     }
+    const minFrameMs = 1000 / DRAG_PREVIEW_MAX_FPS;
+    let lastFrameTime = 0;
     const update = () => {
       const base = resolvePosition();
       node.style.transform = `translate3d(${base.x}px, ${base.y}px, 0)`;
-      applyInnerTransform(base.x, base.y);
+      if (!DRAG_PREVIEW_SIMPLE) {
+        applyInnerTransform(base.x, base.y);
+      }
     };
     update();
-    const unsubscribe = subscribeDragRaf(() => update());
+    const unsubscribe = subscribeDragRaf((time) => {
+      if (time - lastFrameTime < minFrameMs) return;
+      lastFrameTime = time;
+      update();
+    });
     return unsubscribe;
   }, [positionRef, resolvePosition, adjustedOffset.x, adjustedOffset.y, rotation]);
 
@@ -149,6 +175,97 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
           }}
         >
           <JewelOrim color={jewelColor} size={jewelSize} />
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  if (DRAG_PREVIEW_SIMPLE && !isKeruRewardCard && !isTutorialWatercolorCard) {
+    return createPortal(
+      <div
+        ref={rootRef}
+        style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          width: cardWidth,
+          height: cardHeight,
+          zIndex,
+          pointerEvents: 'none',
+          transform: 'translate3d(0, 0, 0)',
+          willChange: 'transform',
+        }}
+        className={showText ? '' : 'textless-mode'}
+      >
+        <div
+          ref={innerRef}
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: 10,
+            border: `1px solid ${previewGlow}`,
+            background: 'linear-gradient(180deg, rgba(10,14,20,0.96), rgba(4,8,12,0.94))',
+            boxShadow: `0 0 14px ${previewGlow}cc, inset 0 0 9px ${previewGlow}44`,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '6px 8px',
+            transform: `rotateZ(${rotation.toFixed(2)}deg) scale(1.02)`,
+            transformOrigin: `${adjustedOffset.x}px ${adjustedOffset.y}px`,
+          }}
+        >
+          <div
+            style={{
+              color: '#eef6ff',
+              fontSize: 11,
+              fontWeight: 800,
+              lineHeight: 1.1,
+              textTransform: 'none',
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+            }}
+          >
+            {isRpgPreviewCard ? previewTitle : playingCardValue}
+          </div>
+          {isRpgPreviewCard ? (
+            <div
+              style={{
+                alignSelf: 'center',
+                minWidth: 32,
+                borderRadius: 999,
+                border: '1px solid rgba(230,244,255,0.55)',
+                background: 'rgba(7, 13, 20, 0.92)',
+                color: '#f2f7ff',
+                fontWeight: 800,
+                fontSize: 11,
+                lineHeight: 1,
+                textAlign: 'center',
+                padding: '2px 7px',
+                textShadow: `0 0 6px ${previewGlow}99`,
+              }}
+            >
+              {previewFooter}
+            </div>
+          ) : (
+            <div
+              style={{
+                alignSelf: 'flex-end',
+                minWidth: 18,
+                color: '#f2f7ff',
+                fontWeight: 800,
+                fontSize: 11,
+                lineHeight: 1,
+                textAlign: 'right',
+                textShadow: `0 0 6px ${previewGlow}99`,
+                paddingRight: 1,
+              }}
+            >
+              {playingCardValue}
+            </div>
+          )}
         </div>
       </div>,
       document.body
@@ -200,8 +317,11 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
             card={card}
             size={{ width: cardWidth, height: cardHeight }}
             showGraphics={showGraphics}
-            isAnyCardDragging={false}
+            isAnyCardDragging={true}
             disableTilt
+            disableHoverLift
+            disableHoverGlow
+            disableLegacyShine
           />
         ) : (isTutorialWatercolorCard && !neonMode) ? (
           <div className="relative w-full h-full">
@@ -233,10 +353,12 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
               size={{ width: cardWidth, height: cardHeight }}
               showGraphics={false}
               suitDisplayOverride={({ A: 'AIR', W: 'WATER', E: 'EARTH', F: 'FIRE', L: 'LIGHT', D: 'DARK', N: 'NEUTRAL' }[card.element] ?? 'NEUTRAL')}
-              isAnyCardDragging={false}
+              isAnyCardDragging={true}
               disableTilt
               isDragging={false}
               disableHoverLift
+              disableHoverGlow
+              disableLegacyShine
             />
             <div
               className="absolute inset-0 pointer-events-none rounded-lg"
@@ -260,10 +382,11 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
             showGraphics={false}
             borderColorOverride={'rgba(6, 10, 14, 0.9)'}
             boxShadowOverride={'none'}
-            isAnyCardDragging={false}
+            isAnyCardDragging={true}
             isDragging={false}
             disableTilt={true}
             disableHoverLift={true}
+            disableHoverGlow={true}
             disableLegacyShine={true}
             watercolorOnly={true}
           />
@@ -273,4 +396,3 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
     document.body
   );
 });
-

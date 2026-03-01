@@ -29,6 +29,7 @@ import { Die } from './Die';
 import { NodeEdgeBiomeScreen } from './NodeEdgeBiomeScreen';
 import { FoundationTokenGrid } from './FoundationTokenGrid';
 import { Foundation } from './Foundation';
+import { ParticleProgressBar } from './ParticleProgressBar';
 import { DIRECTIONS, type Direction } from './Compass';
 import type { ExplorationMapEdge, ExplorationMapNode, ExplorationBlockedCell } from './ExplorationMap';
 import type { PoiNarration } from './Exploritaire';
@@ -56,7 +57,7 @@ import { canPlayCardWithWild, isSequential } from '../engine/rules';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { getActorDefinition } from '../engine/actors';
 import { ORIM_DEFINITIONS } from '../engine/orims';
-import { getActiveBlindLevel, getBlindedDetail, getBlindedHiddenTableauIndexes, getBlindedLabel } from '../engine/rpgBlind';
+import { getActiveBlindLevel, getBlindedHiddenTableauIndexes } from '../engine/rpgBlind';
 import { getOrimAccentColor } from '../utils/orimColors';
 import { getBiomeDefinition } from '../engine/biomes';
 import { createDie } from '../engine/dice';
@@ -69,6 +70,14 @@ import { StartMatchOverlay, type StartOverlayPhase } from './combat/StartMatchOv
 import { CombatOverlayFrame } from './combat/CombatOverlayFrame';
 import { RpgCardInspectOverlay, getRpgCardMeta } from './combat/RpgCardInspectOverlay';
 import { ActorInspectOverlay } from './combat/ActorInspectOverlay';
+import { StatusBadges } from './combat/StatusBadges';
+import { buildActorStatusBadges } from './combat/buildActorStatusBadges';
+import { RelicTray, type RelicTrayItem } from './combat/RelicTray';
+import { FpsBadge } from './combat/FpsBadge';
+import { buildRelicTrayItems } from './combat/relicTrayModel';
+import { getPlayableFoundationIndexesForCard } from './combat/playIntent';
+import type { EncounterCombatActions } from './combat/contracts';
+import { useRpgCombatTicker } from './combat/hooks/useRpgCombatTicker';
 import { TargetSwirlIndicator } from './TargetSwirlIndicator';
 import { Callout } from './Callout';
 import { ExplorationEncounterPanel } from './encounters/ExplorationEncounterPanel';
@@ -90,6 +99,18 @@ const JUMBO_LAYOUT_SCALE = 6;
 const KERU_CALLOUT_DURATION_MS = 6600;
 const START_OVERLAY_ENABLED = false;
 const HIDDEN_PLAYER_FOUNDATION_INDEXES = [1] as const;
+
+type CombatGolfActions = EncounterCombatActions & {
+  playEnemyRpgHandCardOnActor?: (enemyActorIndex: number, cardId: string, targetActorIndex: number) => boolean;
+  regroupRandomBiomeDeal?: () => void;
+  rerollRandomBiomeDeal?: () => void;
+  useSupplyForShortRest?: (recoveryCharges?: number) => boolean;
+  cleanupDefeatedEnemies?: () => void;
+  processRelicCombatEvent?: (event: RelicCombatEvent) => void;
+  adjustRpgHandCardRarity?: (cardId: string, delta: -1 | 1) => boolean;
+  removeRpgHandCardById?: (cardId: string) => boolean;
+};
+
 const getAspectLabel = (archetype?: string) => {
   if (!archetype || archetype === 'blank') return undefined;
   return ASPECT_DISPLAY_TEXT[archetype as KeruAspect] ??
@@ -326,42 +347,10 @@ interface CombatGolfProps {
   onTogglePause?: () => void;
   onToggleCombatSandbox?: () => void;
   combatSandboxOpen?: boolean;
+  highPerformanceTimer?: boolean;
   onPositionChange?: (x: number, y: number) => void;
   wildAnalysis?: { key: string; sequence: Move[]; maxCount: number } | null;
-  actions: {
-    selectCard: (card: CardType, tableauIndex: number) => void;
-    playToFoundation: (foundationIndex: number) => boolean;
-    playCardDirect: (tableauIndex: number, foundationIndex: number) => boolean;
-    playCardInRandomBiome: (tableauIndex: number, foundationIndex: number) => boolean;
-    playEnemyCardInRandomBiome?: (tableauIndex: number, foundationIndex: number) => boolean;
-    playEnemyRpgHandCardOnActor?: (enemyActorIndex: number, cardId: string, targetActorIndex: number) => boolean;
-    playFromHand: (card: CardType, foundationIndex: number, useWild?: boolean) => boolean;
-    playFromStock: (foundationIndex: number, useWild?: boolean, force?: boolean) => boolean;
-    completeBiome: () => void;
-    autoSolveBiome: () => void;
-    playCardInNodeBiome: (nodeId: string, foundationIndex: number) => void;
-    endRandomBiomeTurn: () => void;
-    endExplorationTurnInRandomBiome?: () => void;
-    advanceRandomBiomeTurn?: () => void;
-    regroupRandomBiomeDeal?: () => void;
-    rerollRandomBiomeDeal?: () => void;
-    useSupplyForShortRest?: (recoveryCharges?: number) => boolean;
-    spawnRandomEnemyInRandomBiome?: () => void;
-    cleanupDefeatedEnemies?: () => void;
-    setBiomeTableaus?: (tableaus: CardType[][]) => void;
-    tickRpgCombat?: (nowMs: number) => boolean;
-    processRelicCombatEvent?: (event: RelicCombatEvent) => void;
-    adjustRpgHandCardRarity?: (cardId: string, delta: -1 | 1) => boolean;
-    addRpgHandCard?: (card: CardType) => boolean;
-    removeRpgHandCardById?: (cardId: string) => boolean;
-    applyKeruArchetype?: (archetype: 'felis') => boolean;
-    setEnemyDifficulty?: (difficulty: GameState['enemyDifficulty']) => void;
-    rewindLastCard: () => boolean;
-    swapPartyLead: (actorId: string) => void;
-    playWildAnalysisSequence: () => void;
-    puzzleCompleted?: (payload?: { coord?: { x: number; y: number } | null; poiId?: string | null; tableauId?: string | null } | null) => void;
-    startBiome?: (tileId: string, biomeId: string) => void;
-  };
+  actions: CombatGolfActions;
   benchSwapCount?: number;
   infiniteBenchSwapsEnabled?: boolean;
   onToggleInfiniteBenchSwaps?: () => void;
@@ -388,6 +377,7 @@ interface TurnTimerRailProps {
   onKeyDown?: KeyboardEventHandler<HTMLDivElement>;
   cursor?: 'pointer' | 'default';
   elevateForSandbox?: boolean;
+  highPerformanceMode?: boolean;
 }
 
 function TurnTimerRail({
@@ -408,6 +398,7 @@ function TurnTimerRail({
   onKeyDown,
   cursor = 'default',
   elevateForSandbox = false,
+  highPerformanceMode = false,
 }: TurnTimerRailProps) {
   const parsePercent = useCallback((value?: string) => {
     if (!value) return 100;
@@ -468,14 +459,25 @@ function TurnTimerRail({
           ['--combo-fill' as string]: `${resolvedFillPct}%`,
         }}
       >
-        <div
-          className="absolute inset-x-0 bottom-0"
-          style={{
-            height: 'var(--combo-fill)',
-            backgroundColor: 'rgba(230, 179, 30, 0.95)',
-            transition: 'height 90ms linear',
-          }}
-        />
+        {highPerformanceMode ? (
+          <div className="absolute inset-0">
+            <ParticleProgressBar
+              progress={resolvedFillPct / 100}
+              orientation="vertical"
+              color="rgba(230, 179, 30, 0.95)"
+              isPaused={isGamePaused}
+            />
+          </div>
+        ) : (
+          <div
+            className="absolute inset-x-0 bottom-0"
+            style={{
+              height: 'var(--combo-fill)',
+              backgroundColor: 'rgba(230, 179, 30, 0.95)',
+              transition: 'height 90ms linear',
+            }}
+          />
+        )}
         <div
           className="absolute left-1/2 pointer-events-none px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-[1px]"
           style={{
@@ -654,6 +656,7 @@ export const CombatGolf = memo(function CombatGolf({
   onTogglePause,
   onToggleCombatSandbox,
   combatSandboxOpen = false,
+  highPerformanceTimer = false,
   wildAnalysis = null,
   actions,
   benchSwapCount = 0,
@@ -827,8 +830,6 @@ export const CombatGolf = memo(function CombatGolf({
   const isGamePausedRef = useRef(isGamePaused);
   const introBiomeRef = useRef(gameState.currentBiome ?? 'none');
   const enemyRevealTimers = useRef<Record<number, number>>({});
-  const rpgTickClockRef = useRef<number>(Date.now());
-  const rpgTickLastRealNowRef = useRef<number>(performance.now());
   const hpLagTimeoutsRef = useRef<Record<string, number>>({});
   const hpDamageTimeoutsRef = useRef<Record<string, number>>({});
   const prevHpMapRef = useRef<Record<string, number>>({});
@@ -1344,7 +1345,7 @@ export const CombatGolf = memo(function CombatGolf({
   const explorationMapFrameWidth = explorationMapWidth + 14;
   const foundationOffset = cardHeight * 1.25;
   const handOffset = Math.max(12, Math.round(cardHeight * 0.35));
-  const handCardScale = viewportAutoCardScaleFactor;
+  const handCardScale = tableauCardScale;
   const PARTY_BENCH_ENABLED = true;
   const isRpgMode = true; // Hardcoded to commit to RPG variant
   const isEnemyTurn = gameState.randomBiomeActiveSide === 'enemy';
@@ -2008,11 +2009,7 @@ export const CombatGolf = memo(function CombatGolf({
         ? [...party, ...(gs.enemyActors ?? [])].find((actor) => actor.id === draggedCard.sourceActorId)
         : null;
       const attackerAccuracy = sourceActor?.accuracy ?? 100;
-      const now = Date.now();
-      const soarActive = (gs.rpgSoarEvasionUntil ?? 0) > now
-        && gs.rpgSoarEvasionActorId === targetActor.id
-        && (gs.rpgSoarEvasionSide ?? 'player') === side;
-      const targetEvasion = (targetActor.evasion ?? 0) + (soarActive ? 75 : 0);
+      const targetEvasion = targetActor.evasion ?? 0;
       const hitChance = clampPercent(attackerAccuracy - targetEvasion);
       // Mirror the engine damage formula: defense → super armor → armor → HP
       const afterDefense = Math.max(0, baseDamage - (targetActor.defense ?? 0));
@@ -2235,19 +2232,7 @@ export const CombatGolf = memo(function CombatGolf({
       </div>
     );
   };
-  type ActorStatusView = {
-    id: string;
-    kind: 'buff' | 'debuff';
-    label: string;
-    detail: string;
-    remainingMs?: number;
-    totalMs?: number;
-  };
   const statusClockMs = isRpgMode ? Date.now() : 0;
-  const formatStatusSeconds = (remainingMs: number): string => {
-    const seconds = Math.max(0, remainingMs) / 1000;
-    return `${seconds.toFixed(seconds >= 10 ? 0 : 1)}s`;
-  };
   const playerBlindLevel = useMemo(
     () => getActiveBlindLevel(gameState, 'player', statusClockMs),
     [gameState, statusClockMs]
@@ -2258,169 +2243,28 @@ export const CombatGolf = memo(function CombatGolf({
   );
   const maskAllPlayerTableauValues = playerBlindLevel >= 4;
   const maskPlayerFoundationValues = isGamePaused;
-  const getActorStatuses = useCallback((actor: Actor | null | undefined, side: HpBarSide): ActorStatusView[] => {
-    if (!isRpgMode || !actor) return [];
-    const statuses: ActorStatusView[] = [];
-    const nowMs = statusClockMs;
-
-    const enemySlowUntil = gameState.rpgEnemyDragSlowUntil ?? 0;
-    if (
-      side === 'enemy'
-      && gameState.rpgEnemyDragSlowActorId === actor.id
-      && enemySlowUntil > nowMs
-    ) {
-      statuses.push({
-        id: `slow-${actor.id}`,
-        kind: 'debuff',
-        label: 'SLOW',
-        detail: 'Drag speed reduced by 90%',
-        remainingMs: enemySlowUntil - nowMs,
-        totalMs: 3000,
-      });
-    }
-
-    const cloudSightUntil = gameState.rpgCloudSightUntil ?? 0;
-    if (
-      side === 'player'
-      && gameState.rpgCloudSightActorId === actor.id
-      && cloudSightUntil > nowMs
-    ) {
-      statuses.push({
-        id: `cloud-sight-${actor.id}`,
-        kind: 'buff',
-        label: 'SOAR',
-        detail: 'Second tableau row revealed',
-        remainingMs: cloudSightUntil - nowMs,
-        totalMs: 10000,
-      });
-    }
-    const soarEvasionUntil = gameState.rpgSoarEvasionUntil ?? 0;
-    if (
-      gameState.rpgSoarEvasionActorId === actor.id
-      && (gameState.rpgSoarEvasionSide ?? 'player') === side
-      && soarEvasionUntil > nowMs
-    ) {
-      statuses.push({
-        id: `soar-evasion-${side}-${actor.id}`,
-        kind: 'buff',
-        label: 'SOAR',
-        detail: '+75% EVASION',
-        remainingMs: soarEvasionUntil - nowMs,
-        totalMs: Math.max(1, gameState.rpgSoarEvasionTotalMs ?? 6000),
-      });
-    }
-
-    const blindLevel = getActiveBlindLevel(gameState, side, nowMs);
-    if (blindLevel > 0) {
-      const blindUntil = side === 'enemy' ? (gameState.rpgBlindedEnemyUntil ?? 0) : (gameState.rpgBlindedPlayerUntil ?? 0);
-      statuses.push({
-        id: `blinded-${side}-${actor.id}`,
-        kind: 'debuff',
-        label: getBlindedLabel(blindLevel),
-        detail: getBlindedDetail(blindLevel),
-        remainingMs: Math.max(0, blindUntil - nowMs),
-        totalMs: 10000,
-      });
-    }
-
-    (gameState.rpgDots ?? []).forEach((dot) => {
-      if (dot.targetActorId !== actor.id) return;
-      if (dot.targetSide !== side) return;
-      if (dot.remainingTicks <= 0) return;
-      const remainingMs = Math.max(
-        0,
-        (dot.nextTickAt - nowMs) + Math.max(0, dot.remainingTicks - 1) * dot.intervalMs
-      );
-      const dotLabel = dot.effectKind === 'bleed' ? 'BLEED' : 'VICE GRIP';
-      statuses.push({
-        id: dot.id,
-        kind: 'debuff',
-        label: dotLabel,
-        detail: `${dot.damagePerTick} damage/sec (${dot.remainingTicks} ticks left)`,
-        remainingMs,
-        totalMs: (dot.initialTicks ?? dot.remainingTicks) * dot.intervalMs,
-      });
-    });
-
-    return statuses;
-  }, [
-    gameState.rpgCloudSightActorId,
-    gameState.rpgCloudSightUntil,
-    gameState.rpgSoarEvasionActorId,
-    gameState.rpgSoarEvasionSide,
-    gameState.rpgSoarEvasionTotalMs,
-    gameState.rpgSoarEvasionUntil,
-    gameState.rpgDots,
-    gameState.rpgBlindedEnemyUntil,
-    gameState.rpgBlindedPlayerUntil,
-    gameState.rpgEnemyDragSlowActorId,
-    gameState.rpgEnemyDragSlowUntil,
-    isRpgMode,
-    statusClockMs,
-  ]);
+  const getActorStatuses = useCallback((actor: Actor | null | undefined, side: HpBarSide) => (
+    buildActorStatusBadges(gameState, actor, side, {
+      nowMs: statusClockMs,
+      requireRpgMode: true,
+    })
+  ), [gameState, statusClockMs]);
   const renderStatusBadges = (actor: Actor | null | undefined, side: HpBarSide = 'player') => {
     const statuses = getActorStatuses(actor, side);
     if (statuses.length === 0) return null;
-    return (
-      <div className="mt-1 flex flex-wrap items-center justify-center gap-1">
-        {statuses.map((status) => {
-          const isBuff = status.kind === 'buff';
-          const chipColor = isBuff ? '#7fdbca' : '#ff8080';
-          const chipBg = isBuff ? 'rgba(18, 56, 52, 0.7)' : 'rgba(64, 20, 20, 0.74)';
-          const hasDuration = typeof status.remainingMs === 'number' && typeof status.totalMs === 'number' && status.totalMs > 0;
-          const remainingMs = hasDuration ? Number(status.remainingMs) : 0;
-          const totalMs = hasDuration ? Number(status.totalMs) : 1;
-          const fillPct = hasDuration
-            ? Math.max(0, Math.min(100, (remainingMs / totalMs) * 100))
-            : 0;
-          const tooltipContent = (
-            <div className="text-xs leading-snug">
-              <div className="font-bold tracking-[1.5px]" style={{ color: chipColor }}>{status.label}</div>
-              <div className="mt-1 text-game-white/85">{status.detail}</div>
-              {typeof status.remainingMs === 'number' && (
-                <div className="mt-1 text-[11px] text-game-white/70">
-                  Remaining: {formatStatusSeconds(status.remainingMs)}
-                </div>
-              )}
-            </div>
-          );
-          return (
-            <Tooltip
-              key={status.id}
-              content={tooltipContent}
-              pinnable
-              disabled={tooltipSuppressed}
-            >
-              <div
-                className="relative overflow-hidden rounded-full border px-2 py-0.5 text-[9px] font-bold tracking-[1.4px]"
-                style={{
-                  color: chipColor,
-                  borderColor: `${chipColor}AA`,
-                  backgroundColor: chipBg,
-                  boxShadow: `0 0 8px ${chipColor}33`,
-                  cursor: tooltipSuppressed ? 'default' : 'help',
-                }}
-              >
-                {hasDuration && (
-                  <div
-                    className="absolute inset-y-0 left-0"
-                    style={{
-                      width: `${fillPct}%`,
-                      backgroundColor: `${chipColor}33`,
-                      transition: 'width 120ms linear',
-                    }}
-                  />
-                )}
-                <span className="relative z-[1]">{status.label}</span>
-              </div>
-            </Tooltip>
-          );
-        })}
-      </div>
-    );
+    return <StatusBadges statuses={statuses} compact className="mt-1" tooltipDisabled={tooltipSuppressed} />;
   };
   const isActorCombatReady = (actor: Actor | null | undefined) =>
     (actor?.stamina ?? 0) > 0 && (actor?.hp ?? 0) > 0;
+  const getPlayableFoundationsForCard = useCallback((card: CardType) => (
+    getPlayableFoundationIndexesForCard({
+      card,
+      foundations: gameState.foundations,
+      activeEffects: gameState.activeEffects,
+      actors: activeParty,
+      canActorPlay: (actor) => isActorCombatReady(actor),
+    })
+  ), [activeParty, gameState.activeEffects, gameState.foundations]);
   const renderActorNameLabel = (actor: Actor | null | undefined) => {
     const displayName = getActorDisplayLabel(actor);
     if (!displayName) return null;
@@ -2729,36 +2573,10 @@ export const CombatGolf = memo(function CombatGolf({
       `}</style>
     </>
   );
-  const equippedRelics = useMemo(() => {
-    const definitionsById = new Map(
-      (gameState.relicDefinitions ?? []).map((definition) => [definition.id, definition])
-    );
-    return (gameState.equippedRelics ?? [])
-      .filter((instance) => instance.enabled)
-      .map((instance) => {
-        const definition = definitionsById.get(instance.relicId);
-        if (!definition) return null;
-    const knownGlyphByBehaviorId: Record<string, string> = {
-      turtle_bide_v1: '🛡',
-      heart_of_wild_v1: '🐾',
-      sunk_cost_v1: '🐚',
-      [CONTROLLED_DRAGONFIRE_BEHAVIOR_ID]: '🐉',
-      koi_coin_v1: '🪙',
-      hindsight_v1: '⌛',
-      momentum_v1: '⏱️',
-      [SUMMON_DARKSPAWN_BEHAVIOR_ID]: '⚔',
-    };
-        const fallbackGlyph = definition.name
-          .split(/\s+/)
-          .filter(Boolean)
-          .slice(0, 2)
-          .map((chunk) => (chunk.length > 0 ? chunk.charAt(0).toUpperCase() : ''))
-          .join('');
-        const glyph = knownGlyphByBehaviorId[definition.behaviorId] ?? (fallbackGlyph || 'R');
-        return { instance, definition, glyph };
-      })
-      .filter((entry): entry is { instance: NonNullable<GameState['equippedRelics']>[number]; definition: NonNullable<GameState['relicDefinitions']>[number]; glyph: string } => !!entry);
-  }, [gameState.equippedRelics, gameState.relicDefinitions]);
+  const equippedRelics = useMemo(
+    () => buildRelicTrayItems(gameState, { enabledOnly: true, includeAllDefinitions: false }),
+    [gameState]
+  );
   // DEV OVERRIDE: keep relic debug interactions enabled during active prototyping.
   // TODO: replace with dedicated variant/config param when pre-prod gating is wired.
   const relicDevModeEnabled = true;
@@ -2779,153 +2597,48 @@ export const CombatGolf = memo(function CombatGolf({
   const handleSummonDarkspawnRelicClick = useCallback(() => {
     actions.spawnRandomEnemyInRandomBiome?.();
   }, [actions.spawnRandomEnemyInRandomBiome]);
+  const handleRelicTrayItemClick = useCallback((item: RelicTrayItem) => {
+    if (item.behaviorId === CONTROLLED_DRAGONFIRE_BEHAVIOR_ID) {
+      handleControlledDragonfireRelicClick();
+      return;
+    }
+    if (item.behaviorId === SUMMON_DARKSPAWN_BEHAVIOR_ID) {
+      handleSummonDarkspawnRelicClick();
+      return;
+    }
+    if (
+      relicDevModeEnabled
+      && item.behaviorId === 'turtle_bide_v1'
+      && !!actions.processRelicCombatEvent
+    ) {
+      const bankMs = Number(item.params?.msPerArmor ?? 5000);
+      actions.processRelicCombatEvent({
+        type: 'TURN_ENDED_EARLY',
+        side: 'player',
+        bankedMs: Number.isFinite(bankMs) && bankMs > 0 ? bankMs : 5000,
+      });
+    }
+  }, [
+    actions.processRelicCombatEvent,
+    handleControlledDragonfireRelicClick,
+    handleSummonDarkspawnRelicClick,
+    relicDevModeEnabled,
+  ]);
   const relicTray = (
-    <div
-      className="rounded border pointer-events-none w-full max-w-[640px]"
+    <RelicTray
+      items={equippedRelics}
+      onRelicClick={handleRelicTrayItemClick}
+      tooltipDisabled={tooltipSuppressed}
+      layout="horizontal"
+      className="h-[34px] w-full min-w-[240px] max-w-[640px] pointer-events-auto"
       style={{
-        height: '34px',
-        minWidth: '240px',
         borderColor: 'rgba(127, 219, 202, 0.7)',
         backgroundColor: 'rgba(10, 10, 10, 0.72)',
         boxShadow: '0 0 10px rgba(127, 219, 202, 0.28)',
       }}
-    >
-      <div className="h-full w-full px-2 flex items-center gap-2 overflow-x-auto pointer-events-auto">
-        {equippedRelics.map(({ instance, definition, glyph }) => {
-        const justActivated = relicLastActivation?.instanceId === instance.instanceId;
-        const isTurtleBide = definition.behaviorId === 'turtle_bide_v1';
-        const isControlledDragonfire = definition.behaviorId === CONTROLLED_DRAGONFIRE_BEHAVIOR_ID;
-        const isSummonDarkspawn = definition.behaviorId === SUMMON_DARKSPAWN_BEHAVIOR_ID;
-        const isMomentum = definition.behaviorId === 'momentum_v1';
-        let relicAccent = 'rgba(255, 215, 64, 0.6)';
-        let relicText = '#ffd740';
-        let relicBg = 'rgba(18, 12, 2, 0.72)';
-        let relicGlowIdle = '0 0 8px rgba(255, 215, 64, 0.25)';
-        let relicGlowActive = '0 0 22px rgba(255, 215, 64, 0.95), 0 0 42px rgba(255, 185, 40, 0.75)';
-        if (isMomentum) {
-          relicAccent = 'rgba(103, 225, 255, 0.78)';
-          relicText = '#8ff3ff';
-          relicBg = 'rgba(6, 10, 18, 0.85)';
-          relicGlowIdle = '0 0 8px rgba(103, 225, 255, 0.3)';
-          relicGlowActive = '0 0 22px rgba(103, 225, 255, 0.95), 0 0 42px rgba(70, 195, 255, 0.75)';
-        }
-        if (isTurtleBide) {
-          relicAccent = 'rgba(90, 170, 255, 0.75)';
-          relicText = '#6cb6ff';
-          relicBg = 'rgba(6, 14, 30, 0.78)';
-          relicGlowIdle = '0 0 8px rgba(90, 170, 255, 0.3)';
-          relicGlowActive = '0 0 22px rgba(90, 170, 255, 0.95), 0 0 42px rgba(70, 140, 255, 0.75)';
-        } else if (isControlledDragonfire) {
-          relicAccent = 'rgba(255, 118, 82, 0.78)';
-          relicText = '#ff8e66';
-          relicBg = 'rgba(26, 8, 5, 0.8)';
-          relicGlowIdle = '0 0 8px rgba(255, 118, 82, 0.3)';
-          relicGlowActive = '0 0 22px rgba(255, 118, 82, 0.95), 0 0 42px rgba(255, 80, 56, 0.75)';
-        } else if (isSummonDarkspawn) {
-          relicAccent = 'rgba(168, 100, 220, 0.78)';
-          relicText = '#c87de8';
-          relicBg = 'rgba(16, 5, 26, 0.85)';
-          relicGlowIdle = '0 0 8px rgba(168, 100, 220, 0.3)';
-          relicGlowActive = '0 0 22px rgba(168, 100, 220, 0.95), 0 0 42px rgba(140, 60, 200, 0.75)';
-        }
-          const canDevActivate = relicDevModeEnabled
-            && definition.behaviorId === 'turtle_bide_v1'
-            && !!actions.processRelicCombatEvent;
-          const canControlledDragonfireActivate = definition.behaviorId === CONTROLLED_DRAGONFIRE_BEHAVIOR_ID
-            && isRpgMode
-            && !!partyLeaderActor
-            && !!actions.addRpgHandCard;
-          const canSummonDarkspawnActivate = isSummonDarkspawn
-            && isRpgMode
-            && !!actions.spawnRandomEnemyInRandomBiome;
-          const tooltipContent = (
-            <div className="space-y-2">
-              <div className="text-game-gold text-sm tracking-[2px]">{definition.name}</div>
-              <div className="text-[10px] text-game-teal/80 uppercase tracking-[2px]">
-                {definition.rarity} • passive • party
-              </div>
-              {definition.description && (
-                <div className="text-xs text-game-white/80 leading-relaxed">{definition.description}</div>
-              )}
-              {canControlledDragonfireActivate && (
-                <div className="text-[10px] text-game-white/65">Click relic to add Dragonfire card to leader hand.</div>
-              )}
-              {canSummonDarkspawnActivate && (
-                <div className="text-[10px] text-game-white/65">Click relic to summon a random enemy to the field.</div>
-              )}
-              <div className="text-[10px] text-game-white/60">Lvl {instance.level}</div>
-              {definition.params && Object.keys(definition.params).length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {Object.entries(definition.params).map(([key, value]) => (
-                    <span
-                      key={`${instance.instanceId}-${key}`}
-                      className="text-[10px] px-2 py-[2px] rounded border border-game-gold/40 text-game-gold/90"
-                    >
-                      {key}: {String(value)}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {canDevActivate && (
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    className="text-[10px] px-2 py-1 rounded border border-game-gold/60 text-game-gold bg-game-bg-dark/70 hover:bg-game-bg-dark/90"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      const bankMs = Number(definition.params?.msPerArmor ?? 5000);
-                      actions.processRelicCombatEvent?.({
-                        type: 'TURN_ENDED_EARLY',
-                        side: 'player',
-                        bankedMs: Number.isFinite(bankMs) && bankMs > 0 ? bankMs : 5000,
-                      });
-                    }}
-                  >
-                    Activate (Dev)
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-          return (
-            <Tooltip key={instance.instanceId} content={tooltipContent} disabled={tooltipSuppressed} pinnable>
-              <div
-                key={`${instance.instanceId}-${justActivated ? relicLastActivation?.token : 'idle'}`}
-                className="w-6 h-6 rounded-full border flex items-center justify-center text-[11px] leading-none cursor-help select-none"
-                onClick={() => {
-                  if (canControlledDragonfireActivate) {
-                    handleControlledDragonfireRelicClick();
-                  } else if (canSummonDarkspawnActivate) {
-                    handleSummonDarkspawnRelicClick();
-                  }
-                }}
-                style={{
-                  borderColor: relicAccent,
-                  color: relicText,
-                  backgroundColor: relicBg,
-                  boxShadow: justActivated
-                    ? relicGlowActive
-                    : relicGlowIdle,
-                  animation: justActivated ? 'relic-activation-flash 880ms cubic-bezier(0.2, 0.9, 0.25, 1) 1' : undefined,
-                  cursor: (canControlledDragonfireActivate || canSummonDarkspawnActivate) ? 'pointer' : 'help',
-                }}
-                title={definition.name}
-              >
-                {glyph}
-              </div>
-            </Tooltip>
-          );
-        })}
-      </div>
-      <style>{`
-        @keyframes relic-activation-flash {
-          0% { transform: scale(0.92); filter: brightness(1); }
-          20% { transform: scale(1.12); filter: brightness(1.75); }
-          56% { transform: scale(1.02); filter: brightness(1.25); }
-          100% { transform: scale(1); filter: brightness(1); }
-        }
-      `}</style>
-    </div>
+      itemSizePx={24}
+      highlightInstanceId={relicLastActivation?.instanceId ?? null}
+    />
   );
 
   useEffect(() => {
@@ -2976,23 +2689,14 @@ export const CombatGolf = memo(function CombatGolf({
     if (isEnemyTurn) return;
     setComboPaused(false);
   }, [introBlocking, isEnemyTurn, true, zenModeEnabled]);
-  useEffect(() => {
-    rpgTickClockRef.current = Date.now();
-    rpgTickLastRealNowRef.current = performance.now();
-  }, [timeScale]);
-  useEffect(() => {
-    if (!isRpgMode) return;
-    if (!actions.tickRpgCombat) return;
-    if (isGamePaused || introBlocking) return;
-    const intervalId = window.setInterval(() => {
-      const nowReal = performance.now();
-      const deltaReal = Math.max(0, nowReal - rpgTickLastRealNowRef.current);
-      rpgTickLastRealNowRef.current = nowReal;
-      rpgTickClockRef.current += deltaReal * Math.max(0.1, timeScale);
-      actions.tickRpgCombat?.(rpgTickClockRef.current);
-    }, 50);
-    return () => window.clearInterval(intervalId);
-  }, [actions, introBlocking, isGamePaused, isRpgMode, timeScale]);
+  useRpgCombatTicker({
+    enabled: isRpgMode,
+    paused: isGamePaused || introBlocking,
+    timeScale,
+    tickAction: actions.tickRpgCombat,
+    intervalMs: 50,
+    resetClockDeps: [isRpgMode, timeScale, actions.tickRpgCombat],
+  });
   const registerEnemyReveal = useCallback((foundationIndex: number, value: number) => {
     setEnemyRevealMap((prev) => ({ ...prev, [foundationIndex]: value }));
     const existing = enemyRevealTimers.current[foundationIndex];
@@ -3595,9 +3299,6 @@ export const CombatGolf = memo(function CombatGolf({
   );
   };
 
-  const fpsLabel = serverAlive === false
-    ? 'server down'
-    : `${Math.round(Math.max(0, Math.floor(fps ?? 0)))}fps`;
   const handleToggleSound = useCallback(() => {
     const next = !soundMuted;
     setSoundMuted(next);
@@ -3634,19 +3335,13 @@ export const CombatGolf = memo(function CombatGolf({
     </button>
   );
   const topLeftFpsCounter = (
-    <button
-      type="button"
-      onClick={() => onOpenSettings?.()}
-      onContextMenu={(event) => {
-        event.preventDefault();
-      }}
-      aria-disabled={!onOpenSettings}
+    <FpsBadge
+      fps={fps}
+      serverAlive={serverAlive}
+      onClick={onOpenSettings}
       className="h-[30px] rounded border border-game-teal/70 bg-game-bg-dark/90 px-2 text-[12px] font-mono tracking-[0.5px] text-game-teal shadow-neon-teal"
-      style={{ opacity: onOpenSettings ? 1 : 0.8, WebkitTouchCallout: 'none' }}
       title="Open settings / report fps"
-    >
-      {fpsLabel}
-    </button>
+    />
   );
   const topRightSoundToggle = (
     <button
@@ -3666,7 +3361,7 @@ export const CombatGolf = memo(function CombatGolf({
         <div className="justify-self-start pointer-events-auto">
           {topLeftFpsCounter}
         </div>
-        <div className="justify-self-center w-full max-w-[min(90vw,960px)]">
+        <div className="justify-self-center w-full max-w-[min(90vw,960px)] pointer-events-auto">
           {relicTray}
         </div>
         <div className="justify-self-end pointer-events-auto flex items-center gap-2">
@@ -3946,15 +3641,10 @@ export const CombatGolf = memo(function CombatGolf({
       const x1 = tRect.left + tRect.width / 2 - containerRect.left;
       const y1 = tRect.top + tRect.height / 2 - containerRect.top;
 
-      for (let fIdx = 0; fIdx < gameState.foundations.length; fIdx += 1) {
-        const foundation = gameState.foundations[fIdx];
+      const playableFoundationIndexes = getPlayableFoundationsForCard(card);
+      for (const fIdx of playableFoundationIndexes) {
         const actor = activeParty[fIdx];
-        const hasStamina = isActorCombatReady(actor);
-        if (!hasStamina) continue;
         if (autoPathMode) continue;
-        const top = foundation[foundation.length - 1];
-        const canPlay = canPlayCardWithWild(card, top, gameState.activeEffects, foundation);
-        if (!canPlay) continue;
         const foundationEl = foundationRefs.current[fIdx];
         if (!foundationEl) continue;
         const fRect = foundationEl.getBoundingClientRect();
@@ -3989,7 +3679,7 @@ export const CombatGolf = memo(function CombatGolf({
         ))}
       </svg>
     );
-  }, [ctrlHeld, gameState.tableaus, gameState.foundations, gameState.activeEffects, activeParty, isEnemyTurn]);
+  }, [ctrlHeld, gameState.tableaus, activeParty, getPlayableFoundationsForCard, isEnemyTurn]);
 
   // Compute foundation blockers for light shadows (only in party-foundations with lighting enabled)
   useEffect(() => {
@@ -4241,19 +3931,7 @@ export const CombatGolf = memo(function CombatGolf({
       }
       if (!tableauCanPlay[tableauIndex] || noValidMoves) return;
 
-      const validFoundations = gameState.foundations
-        .map((foundation, idx) => {
-          const actor = activeParty[idx];
-          const hasStamina = isActorCombatReady(actor);
-          const canPlay = hasStamina && canPlayCardWithWild(
-            card,
-            foundation[foundation.length - 1],
-            gameState.activeEffects,
-            foundation
-          );
-          return canPlay ? idx : -1;
-        })
-        .filter((idx) => idx !== -1);
+      const validFoundations = getPlayableFoundationsForCard(card);
 
       if (true) {
         if (armedFoundationIndex !== null) {
@@ -4305,16 +3983,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (isEnemyTurn) return;
       if (gameState.interactionMode !== 'click') return;
 
-      const foundationIndex = gameState.foundations.findIndex((foundation, idx) => {
-        const actor = activeParty[idx];
-        const hasStamina = isActorCombatReady(actor);
-        return hasStamina && canPlayCardWithWild(
-          card,
-          foundation[foundation.length - 1],
-          gameState.activeEffects,
-          foundation
-        );
-      });
+      const foundationIndex = getPlayableFoundationsForCard(card)[0] ?? -1;
 
       if (foundationIndex === -1) return;
       const played = actions.playFromHand(card, foundationIndex, true);
@@ -4334,16 +4003,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (gameState.stock.length === 0) return;
       const stockCard = gameState.stock[gameState.stock.length - 1];
 
-      const foundationIndex = gameState.foundations.findIndex((foundation, idx) => {
-        const actor = activeParty[idx];
-        const hasStamina = isActorCombatReady(actor);
-        return hasStamina && canPlayCardWithWild(
-          stockCard,
-          foundation[foundation.length - 1],
-          gameState.activeEffects,
-          foundation
-        );
-      });
+      const foundationIndex = getPlayableFoundationsForCard(stockCard)[0] ?? -1;
 
       const fallbackIndex = foundationIndex !== -1
         ? foundationIndex
@@ -4889,6 +4549,7 @@ export const CombatGolf = memo(function CombatGolf({
             <TurnTimerRail
               label={sharedTimerLabel}
               fillPercent={sharedTimerFillPercent}
+              highPerformanceMode={highPerformanceTimer}
               elevateForSandbox={combatSandboxOpen}
               timerRef={!isEnemyTurn && !introBlocking ? timerRef : undefined}
               totalMs={isEnemyTurn ? ENEMY_TURN_TIME_BUDGET_MS : playerVisualMaxMs}
@@ -5049,7 +4710,6 @@ export const CombatGolf = memo(function CombatGolf({
                               setFoundationRef(idx, el);
                             }}
                           >
-                          {renderStatusBadges(actor, 'player')}
                           <FoundationActor
                             cards={foundation}
                             index={idx}
@@ -5100,6 +4760,7 @@ export const CombatGolf = memo(function CombatGolf({
                                   : undefined
                               }
                               disableFoundationSplashes
+                              statusBadges={getActorStatuses(actor, 'player')}
                               comboCount={showActorComboCounts && actor ? (true
                                 ? (actorComboCounts[actor.id] ?? 0)
                                 : ((gameState.foundationCombos || [])[idx] || 0)) : 0}
@@ -5646,19 +5307,7 @@ export const CombatGolf = memo(function CombatGolf({
     }
     if (!tableauCanPlay[tableauIndex] || noValidMoves) return;
 
-    const validFoundations = gameState.foundations
-      .map((foundation, idx) => {
-        const actor = activeParty[idx];
-        const hasStamina = isActorCombatReady(actor);
-        const canPlay = hasStamina && canPlayCardWithWild(
-          card,
-          foundation[foundation.length - 1],
-          gameState.activeEffects,
-          foundation
-        );
-        return canPlay ? idx : -1;
-      })
-      .filter((idx) => idx !== -1);
+    const validFoundations = getPlayableFoundationsForCard(card);
 
     if (true) {
       if (armedFoundationIndex !== null) {
@@ -5709,16 +5358,7 @@ export const CombatGolf = memo(function CombatGolf({
     if (isGamePaused) return;
     if (gameState.interactionMode !== 'click') return;
 
-    const foundationIndex = gameState.foundations.findIndex((foundation, idx) => {
-      const actor = activeParty[idx];
-      const hasStamina = isActorCombatReady(actor);
-      return hasStamina && canPlayCardWithWild(
-        card,
-        foundation[foundation.length - 1],
-        gameState.activeEffects,
-        foundation
-      );
-    });
+    const foundationIndex = getPlayableFoundationsForCard(card)[0] ?? -1;
 
     if (foundationIndex === -1) return;
     const played = actions.playFromHand(card, foundationIndex, false);
@@ -5737,16 +5377,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (gameState.stock.length === 0) return;
       const stockCard = gameState.stock[gameState.stock.length - 1];
 
-    const foundationIndex = gameState.foundations.findIndex((foundation, idx) => {
-      const actor = activeParty[idx];
-      const hasStamina = isActorCombatReady(actor);
-      return hasStamina && canPlayCardWithWild(
-        stockCard,
-        foundation[foundation.length - 1],
-        gameState.activeEffects,
-        foundation
-      );
-    });
+    const foundationIndex = getPlayableFoundationsForCard(stockCard)[0] ?? -1;
 
     const fallbackIndex = foundationIndex !== -1
       ? foundationIndex
@@ -5794,6 +5425,7 @@ export const CombatGolf = memo(function CombatGolf({
         <TurnTimerRail
           label={sharedTimerLabel}
           fillPercent={sharedTimerFillPercent}
+          highPerformanceMode={highPerformanceTimer}
           elevateForSandbox={combatSandboxOpen}
           timerRef={!isEnemyTurn && !introBlocking ? timerRef : undefined}
           totalMs={isEnemyTurn ? ENEMY_TURN_TIME_BUDGET_MS : playerVisualMaxMs}
@@ -6046,7 +5678,6 @@ export const CombatGolf = memo(function CombatGolf({
                   setFoundationRef(idx, el);
                 }}
                 >
-                {renderStatusBadges(actor, 'player')}
                 <FoundationActor
                   cards={foundation}
                   index={idx}
@@ -6088,6 +5719,7 @@ export const CombatGolf = memo(function CombatGolf({
                       : undefined
                   }
                   disableFoundationSplashes
+                  statusBadges={getActorStatuses(actor, 'player')}
                   comboCount={showActorComboCounts && actor ? (true
                     ? (actorComboCounts[actor.id] ?? 0)
                     : ((gameState.foundationCombos || [])[idx] || 0)) : 0}

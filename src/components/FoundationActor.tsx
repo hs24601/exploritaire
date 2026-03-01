@@ -11,7 +11,9 @@ import { CardFrame } from './card/CardFrame';
 import { getOrimAccentColor } from '../utils/orimColors';
 import { useLongPressStateMachine } from '../hooks/useLongPressStateMachine';
 import { WildcardPaintOverlay } from './WildcardPaintOverlay';
+import { DestructionParticles } from './DestructionParticles';
 import { FORCE_NEON_CARD_STYLE, SHOW_WATERCOLOR_FILTERS } from '../config/ui';
+import { StatusBadges, type StatusBadgeData } from './combat/StatusBadges';
 
 const ELEMENT_ORDER: Element[] = ['A', 'W', 'E', 'F', 'L', 'D'];
 const FOUNDATION_TILT_MAX_DEG = 2.4;
@@ -137,6 +139,7 @@ interface FoundationActorProps {
   splashDirectionDeg?: number;
   splashDirectionToken?: number;
   onActorLongPress?: (payload: { actor: Actor }) => void;
+  statusBadges?: StatusBadgeData[];
 }
 
 export const FoundationActor = memo(function FoundationActor({
@@ -166,6 +169,7 @@ export const FoundationActor = memo(function FoundationActor({
   splashDirectionDeg,
   splashDirectionToken,
   onActorLongPress,
+  statusBadges = [],
 }: FoundationActorProps) {
   const effectiveScale = cardScale;
   const neonMode = FORCE_NEON_CARD_STYLE;
@@ -183,6 +187,8 @@ export const FoundationActor = memo(function FoundationActor({
   const [orimHoverToken, setOrimHoverToken] = useState(0);
   const [isCardHovering, setIsCardHovering] = useState(false);
   const [cardHoverToken, setCardHoverToken] = useState(0);
+  const [showDestruction, setShowDestruction] = useState(false);
+  const prevHpRef = useRef(actor?.hp ?? 0);
   const prevCardCountRef = useRef(cards.length);
   const foundationTiltRef = useRef(new Map<string, number>());
   const foundationOffsetRef = useRef(new Map<string, { x: number; y: number }>());
@@ -218,6 +224,17 @@ export const FoundationActor = memo(function FoundationActor({
     }
     onFoundationClick(index);
   }, [actor, index, longPressInspect, onActorLongPress, onFoundationClick]);
+
+  // Trigger destruction effect when actor HP drops to zero
+  useEffect(() => {
+    const currentHp = actor?.hp ?? 0;
+    const prevHp = prevHpRef.current;
+    prevHpRef.current = currentHp;
+
+    if (prevHp > 0 && currentHp <= 0) {
+      setShowDestruction(true);
+    }
+  }, [actor?.hp]);
 
   // Detect when a new card is placed and trigger visual timing updates.
   useEffect(() => {
@@ -323,6 +340,9 @@ export const FoundationActor = memo(function FoundationActor({
   const getOffsetForCard = useCallback((cardId: string) => {
     return foundationOffsetRef.current.get(cardId) ?? getFoundationOffset(cardId);
   }, []);
+  const foundationGlowColor = '#ffffff';
+  const rankBadgeSize = Math.max(26, Math.round(cardWidth * 0.18));
+  const topStackCard = stackCards[stackCards.length - 1];
 
   if (showEmptyFoundation) {
     return (
@@ -373,6 +393,7 @@ export const FoundationActor = memo(function FoundationActor({
           className={`relative ${showClickHighlight ? 'cursor-pointer' : 'cursor-default'}`}
           style={{ touchAction: foundationLocked ? 'auto' : 'none', pointerEvents: foundationLocked ? 'none' : 'auto' }}
         >
+          {/* header removed to avoid duplicate HP bars */}
           {isActorInspecting && (
             <svg
               className="absolute -inset-1 pointer-events-none z-[100]"
@@ -411,8 +432,6 @@ export const FoundationActor = memo(function FoundationActor({
               const isTop = stackIndex === stackCards.length - 1;
               const tilt = foundationLocked ? 0 : (stackCards.length <= 1 && isTop ? 0 : getTiltForCard(card.id));
               const offset = foundationLocked ? { x: 0, y: 0 } : (isTop ? { x: 0, y: 0 } : getOffsetForCard(card.id));
-              const showSecretActorHolo = isTop && isFoundationActorCard(card);
-              const actorOverlayColor = actorDefinition ? getOrimAccentColor(actorDefinition, actorDefinition.id) : '#7fdbca';
               const actorOverlayText = actorDefinition?.name ?? actor.name ?? 'Party Member';
               return (
                 <div
@@ -430,11 +449,13 @@ export const FoundationActor = memo(function FoundationActor({
                   isFoundation
                   isDimmed={isDimmed}
                   showGraphics={showGraphics}
+                  borderColorOverride={!isDimmed ? foundationGlowColor : undefined}
+                  boxShadowOverride={!isDimmed ? `0 0 28px ${foundationGlowColor}ee, inset 0 0 20px ${foundationGlowColor}55` : undefined}
                   suitDisplayOverride={isTop ? neutralDisplay : undefined}
                   suitFontSizeOverride={isTop && neutralDisplay ? suitFontSize : undefined}
                   frameClassName={`relative ${isTop ? 'z-[2]' : 'z-[1]'}`}
-                  maskValue={maskValue}
-                  showFoundationActorSecretHolo={showSecretActorHolo}
+                  maskValue
+                  showFoundationActorSecretHolo={false}
                   disableTilt={foundationLocked}
                   disableHoverLift={foundationLocked}
                   disableHoverGlow={foundationLocked}
@@ -442,10 +463,8 @@ export const FoundationActor = memo(function FoundationActor({
                     isTop && actor && !isFoundationActorCard(card)
                       ? {
                         name: actorOverlayText,
-                        title: actorDefinition?.titles?.[0],
-                        subtitle: actorDefinition?.titles?.[1],
-                        hp: actor?.hp,
-                        accentColor: actorOverlayColor,
+                        accentColor: foundationGlowColor,
+                        comboCount: Math.max(0, comboCount),
                       }
                       : undefined
                   }
@@ -647,6 +666,13 @@ export const FoundationActor = memo(function FoundationActor({
               </div>
             </div>
           )}
+          {showDestruction && (
+            <DestructionParticles 
+              color={actorOrimDisplay[0]?.color ?? '#ff4800'} 
+              scale={effectiveScale}
+              onComplete={() => setShowDestruction(false)} 
+            />
+          )}
         </motion.div>
       </Tooltip>
               {false && actorOrimDisplay.length > 0 && ( // TEMP: hide orim presentation while iterating on new card/orim UI
@@ -719,6 +745,14 @@ export const FoundationActor = memo(function FoundationActor({
               );
             })}
           </div>
+        </div>
+      )}
+      {statusBadges.length > 0 && (
+        <div
+          className="flex w-full justify-center"
+          style={{ maxWidth: cardWidth + 16 }}
+        >
+          <StatusBadges statuses={statusBadges} compact tooltipDisabled={tooltipDisabled} />
         </div>
       )}
       {actorName && (

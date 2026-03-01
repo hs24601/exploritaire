@@ -16,6 +16,16 @@ export interface DragMomentum {
   y: number;
 }
 
+export interface DragDropPerfSnapshot {
+  moveAvgMs: number;
+  moveP95Ms: number;
+  moveMaxMs: number;
+  endAvgMs: number;
+  endP95Ms: number;
+  endMaxMs: number;
+  lastEndMs: number;
+}
+
 const initialDragState: DragState = {
   card: null,
   tableauIndex: null,
@@ -23,6 +33,28 @@ const initialDragState: DragState = {
   offset: { x: 0, y: 0 },
   size: undefined,
   isDragging: false,
+};
+
+const DRAG_DEBUG = false;
+const PERF_SAMPLE_CAP = 180;
+
+const pushPerfSample = (buffer: number[], value: number) => {
+  if (!Number.isFinite(value) || value < 0) return;
+  buffer.push(value);
+  if (buffer.length > PERF_SAMPLE_CAP) {
+    buffer.splice(0, buffer.length - PERF_SAMPLE_CAP);
+  }
+};
+
+const summarizePerfSamples = (samples: number[]) => {
+  if (samples.length === 0) {
+    return { avg: 0, p95: 0, max: 0 };
+  }
+  const sorted = [...samples].sort((a, b) => a - b);
+  const avg = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+  const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
+  const max = sorted[sorted.length - 1];
+  return { avg, p95, max };
 };
 
 export function useDragDrop(
@@ -40,13 +72,29 @@ export function useDragDrop(
   const onDropRef = useRef(onDrop);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const pendingPosRef = useRef<{ x: number; y: number } | null>(null);
+  const dragRafScheduledRef = useRef(false);
   const dragPositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const samplePointsRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
   const pausedRef = useRef(paused);
+  const dragMoveDurationsRef = useRef<number[]>([]);
+  const dragEndDurationsRef = useRef<number[]>([]);
+  const lastDragEndDurationRef = useRef(0);
 
   useEffect(() => {
     dragStateRef.current = dragState;
   }, [dragState]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (dragState.isDragging) {
+      root.classList.add('drag-perf-mode');
+      return () => {
+        root.classList.remove('drag-perf-mode');
+      };
+    }
+    root.classList.remove('drag-perf-mode');
+    return undefined;
+  }, [dragState.isDragging]);
 
   useEffect(() => {
     onDropRef.current = onDrop;
@@ -56,10 +104,7 @@ export function useDragDrop(
     pausedRef.current = paused;
     if (!paused) return;
     if (!dragStateRef.current.isDragging) return;
-    if (rafRef.current !== null) {
-      window.cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
+    dragRafScheduledRef.current = false;
     pendingPosRef.current = null;
     samplePointsRef.current = [];
     dragStateRef.current = initialDragState;
@@ -104,7 +149,10 @@ export function useDragDrop(
     if (samplePointsRef.current.length > 8) {
       samplePointsRef.current.shift();
     }
+    if (dragRafScheduledRef.current) return;
+    dragRafScheduledRef.current = true;
     scheduleDragRafOnce(() => {
+      dragRafScheduledRef.current = false;
       const pending = pendingPosRef.current;
       const current = dragStateRef.current;
       if (!pending || !current.isDragging) return;
@@ -115,13 +163,18 @@ export function useDragDrop(
   }, []);
 
   const endDrag = useCallback((clientX: number, clientY: number) => {
+    const endStart = performance.now();
     const current = dragStateRef.current;
     if (!current.card || current.tableauIndex === null) {
       setLastDragEndAt(Date.now());
       setDragState(initialDragState);
+      const endMs = performance.now() - endStart;
+      lastDragEndDurationRef.current = endMs;
+      pushPerfSample(dragEndDurationsRef.current, endMs);
       return;
     }
     pendingPosRef.current = null;
+    dragRafScheduledRef.current = false;
     let momentum: DragMomentum | undefined;
     const samples = samplePointsRef.current;
     if (samples.length >= 2) {
@@ -137,7 +190,7 @@ export function useDragDrop(
 
     const dropX = clientX;
     const dropY = clientY;
-    if (import.meta.env.DEV) {
+    if (DRAG_DEBUG) {
       console.debug('[drag] end', {
         cardId: current.card.id,
         tableauIndex: current.tableauIndex,
@@ -159,7 +212,7 @@ export function useDragDrop(
         dropY >= rect.top &&
         dropY <= rect.bottom
       ) {
-        if (import.meta.env.DEV) {
+        if (DRAG_DEBUG) {
           console.debug('[drag] hit foundation', { index: i, rect });
         }
         hitFound = true;
@@ -168,7 +221,7 @@ export function useDragDrop(
       }
     }
 
-    if (import.meta.env.DEV && !hitFound) {
+    if (DRAG_DEBUG && !hitFound) {
       const refInfo = foundationRefs.current.map((ref, index) => ({
         index,
         rect: ref ? ref.getBoundingClientRect() : null,
@@ -179,10 +232,14 @@ export function useDragDrop(
     setDragState(initialDragState);
     setLastDragEndAt(Date.now());
     samplePointsRef.current = [];
+    const endMs = performance.now() - endStart;
+    lastDragEndDurationRef.current = endMs;
+    pushPerfSample(dragEndDurationsRef.current, endMs);
   }, []);
 
   const cancelDrag = useCallback(() => {
     pendingPosRef.current = null;
+    dragRafScheduledRef.current = false;
     samplePointsRef.current = [];
     dragStateRef.current = initialDragState;
     setDragState(initialDragState);
@@ -190,7 +247,15 @@ export function useDragDrop(
   }, []);
 
   const setFoundationRef = useCallback((index: number, ref: HTMLDivElement | null) => {
+    if (foundationRefs.current[index] === ref) return;
     foundationRefs.current[index] = ref;
+    if (DRAG_DEBUG) {
+      console.debug('[drag] set foundation ref', {
+        index,
+        hasRef: !!ref,
+        foundationCount: foundationRefs.current.length,
+      });
+    }
   }, []);
 
   // Global mouse/touch move and up handlers
@@ -199,7 +264,9 @@ export function useDragDrop(
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragStateRef.current.isDragging) return;
+      const moveStart = performance.now();
       updateDrag(e.clientX, e.clientY);
+      pushPerfSample(dragMoveDurationsRef.current, performance.now() - moveStart);
     };
 
     const handleMouseUp = (e: MouseEvent) => {
@@ -210,9 +277,11 @@ export function useDragDrop(
     const handleTouchMove = (e: TouchEvent) => {
       if (!dragStateRef.current.isDragging) return;
       if (e.touches.length !== 1) return;
+      const moveStart = performance.now();
       e.preventDefault();
       const touch = e.touches[0];
       updateDrag(touch.clientX, touch.clientY);
+      pushPerfSample(dragMoveDurationsRef.current, performance.now() - moveStart);
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
@@ -231,11 +300,15 @@ export function useDragDrop(
 
     const handlePointerMove = (e: PointerEvent) => {
       if (!dragStateRef.current.isDragging) return;
+      const moveStart = performance.now();
       // Prevent the browser from claiming the gesture as a scroll while we own the drag.
       // Without this, a downward swipe on mobile fires pointercancel (scroll wins) and
       // snaps the card back to its origin before it ever leaves the source column.
-      e.preventDefault();
+      if (e.pointerType !== 'mouse') {
+        e.preventDefault();
+      }
       updateDrag(e.clientX, e.clientY);
+      pushPerfSample(dragMoveDurationsRef.current, performance.now() - moveStart);
     };
 
     const handlePointerUp = (e: PointerEvent) => {
@@ -289,11 +362,26 @@ export function useDragDrop(
     };
   }, [updateDrag, endDrag, cancelDrag]);
 
+  const getPerfSnapshot = useCallback((): DragDropPerfSnapshot => {
+    const move = summarizePerfSamples(dragMoveDurationsRef.current);
+    const end = summarizePerfSamples(dragEndDurationsRef.current);
+    return {
+      moveAvgMs: move.avg,
+      moveP95Ms: move.p95,
+      moveMaxMs: move.max,
+      endAvgMs: end.avg,
+      endP95Ms: end.p95,
+      endMaxMs: end.max,
+      lastEndMs: lastDragEndDurationRef.current,
+    };
+  }, []);
+
   return {
     dragState,
     startDrag,
     setFoundationRef,
     lastDragEndAt,
     dragPositionRef,
+    getPerfSnapshot,
   };
 }

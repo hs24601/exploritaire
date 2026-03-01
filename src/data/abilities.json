@@ -13,6 +13,8 @@
           "type": "damage",
           "value": 1,
           "target": "enemy",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
           "element": "N",
           "valueByRarity": {
             "common": 1,
@@ -26,7 +28,8 @@
           "drawElement": "N"
         }
       ],
-      "parentActorId": "lupus"
+      "parentActorId": "lupus",
+      "triggers": []
     },
     {
       "id": "goFish",
@@ -42,7 +45,8 @@
       "abilityType": "exploration",
       "tags": [],
       "effects": [],
-      "equipCost": 0
+      "equipCost": 0,
+      "triggers": []
     },
     {
       "id": "ironfur",
@@ -59,6 +63,8 @@
           "value": 1,
           "target": "self",
           "charges": 5,
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
           "element": "N",
           "valueByRarity": {
             "common": 1,
@@ -71,7 +77,8 @@
           "drawWild": false,
           "drawElement": "N"
         }
-      ]
+      ],
+      "triggers": []
     },
     {
       "id": "swipe",
@@ -91,6 +98,8 @@
           "type": "damage",
           "value": 1,
           "target": "enemy",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
           "element": "N",
           "valueByRarity": {
             "common": 1,
@@ -104,7 +113,8 @@
           "drawElement": "N"
         }
       ],
-      "equipCost": 0
+      "equipCost": 0,
+      "triggers": []
     },
     {
       "id": "claw",
@@ -115,12 +125,33 @@
       "damage": 1,
       "element": "N",
       "rarity": "common",
-      "effects": []
+      "effects": [
+        {
+          "type": "damage",
+          "value": 1,
+          "target": "enemy",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
+          "element": "N",
+          "valueByRarity": {
+            "common": 1,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ],
+      "parentActorId": "felis",
+      "triggers": []
     },
     {
       "id": "prowl",
       "label": "Prowl",
-      "description": "",
+      "description": "Attempts to meld with the shadows, increasing evasion by {value} until this actor plays an RPG card",
       "abilityType": "ability",
       "power": 0,
       "element": "N",
@@ -130,7 +161,10 @@
           "type": "evasion",
           "value": 9,
           "target": "self",
-          "element": "N",
+          "charges": 25,
+          "untilSourceCardPlay": true,
+          "deadRunOnly": false,
+          "element": "D",
           "valueByRarity": {
             "common": 9,
             "uncommon": 1,
@@ -143,7 +177,8 @@
           "drawElement": "N"
         }
       ],
-      "parentActorId": "felis"
+      "parentActorId": "felis",
+      "triggers": []
     },
     {
       "id": "wigglebuttAmbush",
@@ -163,6 +198,8 @@
           "type": "damage",
           "value": 3,
           "target": "enemy",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
           "element": "N",
           "valueByRarity": {
             "common": 3,
@@ -176,7 +213,8 @@
           "drawElement": "N"
         }
       ],
-      "equipCost": 0
+      "equipCost": 0,
+      "triggers": []
     },
     {
       "id": "whiskersense",
@@ -196,6 +234,8 @@
           "value": 3,
           "target": "self",
           "charges": 10,
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
           "element": "N",
           "valueByRarity": {
             "common": 3,
@@ -209,22 +249,39 @@
           "drawElement": "N"
         }
       ],
-      "equipCost": 0
+      "equipCost": 0,
+      "triggers": []
     },
     {
       "id": "zoomies",
       "label": "Zoomies",
-      "damage": "",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "N"
-      ],
+      "description": "",
+      "abilityType": "ability",
+      "power": 0,
+      "element": "N",
       "rarity": "common",
-      "abilityType": "combat",
-      "tags": [],
-      "effects": [],
-      "equipCost": 0
+      "effects": [
+        {
+          "type": "speed",
+          "value": 2,
+          "target": "self",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
+          "element": "N",
+          "valueByRarity": {
+            "common": 2,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ],
+      "parentActorId": "felis",
+      "triggers": []
     },
     {
       "id": "nineLives",
@@ -239,7 +296,8 @@
       "abilityType": "combat",
       "tags": [],
       "effects": [],
-      "equipCost": 0
+      "equipCost": 0,
+      "triggers": []
     },
     {
       "id": "wild_adaptation",
@@ -256,6 +314,8 @@
           "type": "draw",
           "value": 1,
           "target": "self",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
           "element": "N",
           "valueByRarity": {
             "common": 1,
@@ -268,7 +328,207 @@
           "drawWild": true,
           "drawElement": "N"
         }
-      ]
+      ],
+      "triggers": []
+    },
+    {
+      "id": "bearicade",
+      "label": "Bearicade",
+      "description": "Throw yourself between an enemy attack and your ally, taking the damage yourself. Adds 1 armor.",
+      "abilityType": "ability",
+      "power": 1,
+      "element": "N",
+      "rarity": "common",
+      "effects": [
+        {
+          "type": "armor",
+          "value": 1,
+          "target": "anyone",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
+          "element": "N",
+          "valueByRarity": {
+            "common": 1,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ],
+      "parentActorId": "ursus",
+      "triggers": []
+    },
+    {
+      "id": "aurora_bearealis",
+      "label": "Aurora Bearealis",
+      "description": "Casts super armor on Ursus",
+      "abilityType": "ability",
+      "power": 0,
+      "element": "L",
+      "rarity": "epic",
+      "effects": [
+        {
+          "type": "super_armor",
+          "value": 1,
+          "target": "self",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
+          "element": "L",
+          "valueByRarity": {
+            "common": 1,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ],
+      "parentActorId": "ursus",
+      "triggers": []
+    },
+    {
+      "id": "spite",
+      "label": "Spite",
+      "description": "Deals {elem value} damage to target.",
+      "abilityType": "ability",
+      "power": 1,
+      "element": "D",
+      "rarity": "common",
+      "effects": [
+        {
+          "type": "damage",
+          "value": 0,
+          "target": "enemy",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
+          "element": "D",
+          "elementalValue": 1,
+          "valueByRarity": {
+            "common": 0,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ],
+      "parentActorId": "shade_of_resentment",
+      "triggers": []
+    },
+    {
+      "id": "resentment",
+      "label": "Resentment",
+      "description": "Twists shadows around itself, creating {elem value} armor for {duration}.",
+      "abilityType": "ability",
+      "power": 0,
+      "element": "D",
+      "rarity": "common",
+      "effects": [
+        {
+          "type": "armor",
+          "value": 0,
+          "target": "self",
+          "charges": 25,
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
+          "element": "D",
+          "elementalValue": 1,
+          "valueByRarity": {
+            "common": 0,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ],
+      "parentActorId": "shade_of_resentment",
+      "triggers": []
+    },
+    {
+      "id": "skittish_scurry",
+      "label": "Skittish Scurry",
+      "description": "Shuffle and redeal the entire tableau.",
+      "abilityType": "ability",
+      "power": 0,
+      "element": "N",
+      "rarity": "common",
+      "triggers": [
+        {
+          "type": "noValidMovesPlayer"
+        }
+      ],
+      "effects": [
+        {
+          "type": "redeal_tableau",
+          "value": 1,
+          "target": "self",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": true,
+          "element": "N",
+          "valueByRarity": {
+            "common": 1,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ],
+      "parentActorId": "felis"
+    },
+    {
+      "id": "cheap_shot",
+      "label": "Cheap Shot",
+      "description": "",
+      "abilityType": "ability",
+      "power": 0,
+      "element": "N",
+      "rarity": "common",
+      "effects": [
+        {
+          "type": "damage",
+          "value": 1,
+          "target": "enemy",
+          "untilSourceCardPlay": false,
+          "deadRunOnly": false,
+          "element": "N",
+          "valueByRarity": {
+            "common": 1,
+            "uncommon": 1,
+            "rare": 1,
+            "epic": 1,
+            "legendary": 1,
+            "mythic": 1
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ],
+      "triggers": [
+        {
+          "type": "combo_personal",
+          "target": "self",
+          "value": 5
+        }
+      ],
+      "parentActorId": "felis"
     }
   ]
 }

@@ -50,6 +50,8 @@ export const NEON_COLORS = {
   purpleRgba: (a: number) => `rgba(139, 92, 246, ${a})`,
   teal: '#7fdbca',
   tealRgba: (a: number) => `rgba(127, 219, 202, ${a})`,
+  neutral: '#8a8f98',
+  neutralRgba: (a: number) => `rgba(138, 143, 152, ${a})`,
   red: '#ff6b6b',
   redRgba: (a: number) => `rgba(255, 107, 107, ${a})`,
   orange: '#f97316',
@@ -73,10 +75,10 @@ export const NEON_ELEMENT_COLORS: Record<Element, string> = {
   F: NEON_COLORS.orange,
   L: NEON_COLORS.gold,
   D: NEON_COLORS.purple,
-  N: NEON_COLORS.teal,
+  N: NEON_COLORS.neutral,
 };
 
-export const getNeonElementColor = (element?: Element) => NEON_ELEMENT_COLORS[element ?? 'N'] ?? NEON_COLORS.teal;
+export const getNeonElementColor = (element?: Element) => NEON_ELEMENT_COLORS[element ?? 'N'] ?? NEON_COLORS.neutral;
 
 /**
  * Universal border width for game objects (cards, tiles, tokens, slots, previews).

@@ -19,6 +19,7 @@ import { getOrimAccentColor } from '../utils/orimColors';
 import { mainWorldMap } from '../data/worldMap';
 import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element, OrimDefinition } from '../engine/types';
 import type { useGameEngine } from '../hooks/useGameEngine';
+import type { EncounterCombatActions } from './combat/contracts';
 
 type EngineOutput = ReturnType<typeof useGameEngine>;
 
@@ -43,6 +44,7 @@ export interface GameShellProps {
   showText: boolean;
   zenModeEnabled: boolean;
   isGamePaused: boolean;
+  highPerformanceTimer?: boolean;
   timeScale: number;
   discoveryEnabled: boolean;
   hidePauseOverlay: boolean;
@@ -101,6 +103,7 @@ export function GameShell({
   showText,
   zenModeEnabled,
   isGamePaused,
+  highPerformanceTimer = false,
   timeScale,
   discoveryEnabled,
   onTogglePause,
@@ -633,7 +636,7 @@ export function GameShell({
     rewindLastCard: actions.rewindLastCard,
   }), [actions.selectCard, actions.playToFoundation, actions.returnToGarden, actions.autoPlay, actions.rewindLastCard]);
 
-  const combatActions = useMemo(() => ({
+  const combatActions = useMemo<EncounterCombatActions>(() => ({
     selectCard: actions.selectCard,
     playToFoundation: actions.playToFoundation,
     playCardDirect: actions.playCardDirect,

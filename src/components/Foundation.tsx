@@ -1,12 +1,12 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { Card as CardType, InteractionMode } from '../engine/types';
+import type { Card as CardType, Element, InteractionMode } from '../engine/types';
 import { CARD_SIZE, WILD_SENTINEL_RANK } from '../engine/constants';
-import { getRankDisplay } from '../engine/rules';
 import { useCardScale } from '../contexts/CardScaleContext';
 import { Card } from './Card';
 import { NEON_COLORS } from '../utils/styles';
 import { WildcardPaintOverlay } from './WildcardPaintOverlay';
+import { DestructionParticles } from './DestructionParticles';
 import { FORCE_NEON_CARD_STYLE, SHOW_WATERCOLOR_FILTERS } from '../config/ui';
 
 interface FoundationProps {
@@ -19,6 +19,7 @@ interface FoundationProps {
   isDimmed?: boolean;
   interactionMode: InteractionMode;
   isDragTarget?: boolean;
+  isAnyCardDragging?: boolean;
   setDropRef?: (index: number, ref: HTMLDivElement | null) => void;
   actorName?: string;
   showGraphics: boolean;
@@ -33,8 +34,18 @@ interface FoundationProps {
     title?: string;
     subtitle?: string;
     hp?: number;
+    hpMax?: number;
+    armor?: number;
+    superArmor?: number;
     accentColor?: string;
+    rankDisplay?: string;
+    comboCount?: number;
+    apSegments?: Element[];
+    shimmerElement?: Element;
   };
+  neonGlowColorOverride?: string;
+  neonGlowShadowOverride?: string;
+  onDestructionComplete?: () => void;
 }
 
 const FOUNDATION_TILT_MAX_DEG = 2.4;
@@ -75,6 +86,7 @@ export const Foundation = memo(function Foundation({
   isDimmed = false,
   interactionMode,
   isDragTarget = false,
+  isAnyCardDragging = false,
   setDropRef,
   actorName,
   showGraphics,
@@ -85,6 +97,9 @@ export const Foundation = memo(function Foundation({
   revealValue = null,
   watercolorOnlyCards = false,
   foundationOverlay,
+  neonGlowColorOverride,
+  neonGlowShadowOverride,
+  onDestructionComplete,
 }: FoundationProps) {
   const globalScale = useCardScale();
   const cardWidth = CARD_SIZE.width * globalScale * scale;
@@ -104,6 +119,8 @@ export const Foundation = memo(function Foundation({
   );
   const lastCountRef = useRef(cards.length);
   const [comboPulse, setComboPulse] = useState(0);
+  const [showDestruction, setShowDestruction] = useState(false);
+  const prevHpRef = useRef(foundationOverlay?.hp ?? 0);
   const foundationTiltRef = useRef(new Map<string, number>());
   const foundationOffsetRef = useRef(new Map<string, { x: number; y: number }>());
   useEffect(() => {
@@ -123,6 +140,12 @@ export const Foundation = memo(function Foundation({
   const getOffsetForCard = useCallback((cardId: string) => {
     return foundationOffsetRef.current.get(cardId) ?? getFoundationOffset(cardId);
   }, []);
+  const topCard = stackCards[stackCards.length - 1];
+  const overlayAccent = foundationOverlay?.accentColor ?? '#7fdbca';
+  const overlayHp = foundationOverlay?.hp;
+  const overlayHpMax = typeof foundationOverlay?.hpMax === 'number'
+    ? foundationOverlay.hpMax
+    : (typeof overlayHp === 'number' ? overlayHp : undefined);
 
   useEffect(() => {
     const prevCount = lastCountRef.current;
@@ -131,6 +154,16 @@ export const Foundation = memo(function Foundation({
     }
     lastCountRef.current = cards.length;
   }, [cards.length, manualPlayCounter]);
+
+  useEffect(() => {
+    const currentHp = foundationOverlay?.hp ?? 0;
+    const prevHp = prevHpRef.current;
+    prevHpRef.current = currentHp;
+
+    if (prevHp > 0 && currentHp <= 0) {
+      setShowDestruction(true);
+    }
+  }, [foundationOverlay?.hp]);
 
   return (
     <div className="flex flex-col items-center gap-2 transition-opacity duration-300">
@@ -275,6 +308,16 @@ export const Foundation = memo(function Foundation({
             </motion.div>
           )}
         </AnimatePresence>
+        {showDestruction && (
+          <DestructionParticles 
+            color={foundationOverlay?.accentColor ?? '#ff4800'} 
+            scale={scale}
+            onComplete={() => {
+              setShowDestruction(false);
+              onDestructionComplete?.();
+            }} 
+          />
+        )}
         {showHighlight && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -300,7 +343,6 @@ export const Foundation = memo(function Foundation({
             const boxShadowOverride = showWatercolorOnlyForCard
               ? 'none'
               : (isWildSentinelTop ? 'none' : undefined);
-            const rankDisplay = getRankDisplay(card.rank);
             const comboCount = Math.max(0, cards.length - 1);
             return (
               <div
@@ -318,17 +360,33 @@ export const Foundation = memo(function Foundation({
                 <Card
                   card={card}
                   isFoundation
+                  isAnyCardDragging={isAnyCardDragging}
                   isDimmed={isDimmed}
                   showGraphics={showWatercolorOnlyForCard ? false : showGraphics}
-                  borderColorOverride={borderColorOverride}
-                  boxShadowOverride={boxShadowOverride}
+                  borderColorOverride={
+                    borderColorOverride
+                    ?? (neonGlowColorOverride && !isDimmed ? neonGlowColorOverride : undefined)
+                  }
+                  boxShadowOverride={
+                    boxShadowOverride
+                    ?? (
+                      !isDimmed && !showWatercolorOnlyForCard && !isWildSentinelTop
+                        ? (
+                          neonGlowShadowOverride
+                            ?? (neonGlowColorOverride
+                              ? `0 0 28px ${neonGlowColorOverride}ee, inset 0 0 20px ${neonGlowColorOverride}55`
+                              : undefined)
+                        )
+                        : undefined
+                    )
+                  }
                   disableLegacyShine={true}
                   watercolorOnly={showWatercolorOnlyForCard}
                   showFoundationActorSecretHolo={false}
                   disableTilt
                   disableHoverLift
                   disableHoverGlow
-                  foundationOverlay={isTop ? { ...foundationOverlay, rankDisplay, comboCount } : undefined}
+                  foundationOverlay={isTop ? { ...foundationOverlay, comboCount } : undefined}
                 />
               </div>
             );

@@ -3,6 +3,7 @@ import type { PoiReward } from './worldMapTypes';
 export type Suit = '💨' | '⛰️' | '🔥' | '💧' | '⭐' | '🌙' | '☀️';
 
 export type Element = 'W' | 'E' | 'A' | 'F' | 'L' | 'D' | 'N';
+export type TurnPlayability = 'player' | 'enemy' | 'anytime';
 
 export type OrimCategory = 'ability' | 'utility' | 'trait';
 
@@ -21,16 +22,56 @@ export type OrimDomain = 'puzzle' | 'combat';
  * This is the engine-level representation of authored effects.
  */
 export interface OrimEffectDef {
-  type: 'damage' | 'healing' | 'armor' | 'evasion' | 'defense' | 'burn' | 'bleed' | 'stun' | 'draw';
+  type: 'damage' | 'healing' | 'armor' | 'evasion' | 'defense' | 'burn' | 'bleed' | 'stun' | 'draw' | 'redeal_tableau';
   value?: number;
-  target: 'self' | 'enemy' | 'all_enemies' | 'ally';
+  target: 'self' | 'enemy' | 'all_enemies' | 'ally' | 'all_allies' | 'anyone';
   element?: Element;
   elementalValue?: number;
   charges?: number;
   duration?: number;
+  untilSourceCardPlay?: boolean;
+  deadRunOnly?: boolean;
   drawWild?: boolean;
   drawRank?: number;
   drawElement?: Element;
+}
+
+export type AbilityTriggerType =
+  | 'below_hp_pct'
+  | 'is_stunned'
+  | 'noValidMovesPlayer'
+  | 'noValidMovesEnemy'
+  | 'inactive_duration'
+  | 'ko'
+  | 'combo_personal'
+  | 'combo_party'
+  | 'has_armor'
+  | 'has_super_armor'
+  | 'notDiscarded'
+  | 'foundationDiscardCount'
+  | 'partyDiscardCount'
+  | 'foundationActiveDeckCount'
+  | 'actorActiveDeckCount';
+export type AbilityTriggerTarget = 'self' | 'enemy' | 'anyone';
+export type AbilityTriggerOperator = '<' | '<=' | '>' | '>=' | '=' | '!=';
+export type AbilityTriggerCountdownType = 'combo' | 'seconds';
+
+export interface AbilityTriggerDef {
+  type: AbilityTriggerType;
+  target?: AbilityTriggerTarget;
+  value?: number;
+  operator?: AbilityTriggerOperator;
+  countdownType?: AbilityTriggerCountdownType;
+  countdownValue?: number;
+}
+
+export interface SourceCardPlayExpiringBonus {
+  id: string;
+  sourceActorId: string;
+  targetSide: 'player' | 'enemy';
+  targetActorId: string;
+  stat: 'evasion';
+  value: number;
 }
 
 export interface OrimAspectAttribute {
@@ -52,6 +93,9 @@ export interface OrimDefinition {
   description: string;
   elements: Element[];
   effects?: OrimEffectDef[];
+  triggers?: AbilityTriggerDef[];
+  legacyOrim?: boolean;
+  timerBonusMs?: number;
   isAspect?: boolean; // Marks this orim as a character aspect (jumbo card option)
   aspectProfile?: OrimAspectProfile;
   // Legacy fields below — kept for backwards compatibility, will be deprecated
@@ -89,6 +133,12 @@ export interface DeckCardInstance {
   id: string;
   value: number;
   cost: number;
+  active?: boolean;
+  notDiscarded?: boolean;
+  discarded?: boolean;
+  discardedAtMs?: number;
+  discardedAtCombo?: number;
+  turnPlayability: TurnPlayability;
   slots: OrimSlot[];
   cooldown: number;
   maxCooldown: number;
@@ -129,6 +179,7 @@ export interface Card {
   rpgAbilityId?: string;
   rpgActorId?: string;
   rpgApCost?: number;
+  rpgTurnPlayability?: TurnPlayability;
   rpgCardKind?: 'ability' | 'fast' | 'focus' | 'wild';
   rpgLevel?: number;
 }
@@ -138,6 +189,17 @@ export type GamePhase = 'playing' | 'garden' | 'biome';
 export type InteractionMode = 'click' | 'dnd';
 
 export type EffectType = 'buff' | 'debuff';
+
+export type CombatFlowMode = 'turn_based_pressure' | 'real_time_shared';
+
+export interface CombatFlowTelemetry {
+  playerTurnsStarted: number;
+  enemyTurnsStarted: number;
+  playerTimeouts: number;
+  enemyTimeouts: number;
+  playerCardsPlayed: number;
+  enemyCardsPlayed: number;
+}
 
 export interface Effect {
   id: string;
@@ -163,6 +225,17 @@ export interface ActorDefinition {
   artSrc?: string;
   aliases?: string[]; // Legacy ids or alternate identifiers
   orimSlots?: Array<{ orimId?: string; locked?: boolean }>;
+  baseLevel?: number;
+  baseStamina?: number;
+  baseEnergy?: number;
+  baseHp?: number;
+  baseArmor?: number;
+  baseSuperArmor?: number;
+  baseDefense?: number;
+  baseEvasion?: number;
+  baseAccuracy?: number;
+  basePower?: number;
+  basePowerMax?: number;
 }
 
 export interface GridPosition {
@@ -294,6 +367,7 @@ export interface GameState {
   enemyFoundations?: Card[][];
   enemyActors?: Actor[];
   rpgHandCards?: Card[];
+  rpgDiscardPilesByActor?: Record<string, Card[]>;
   combatDeck?: CombatDeckState;
   restState?: RestState;
   stock: Card[];
@@ -336,6 +410,12 @@ export interface GameState {
   enemyFoundationTokens?: Record<Element, number>[]; // Tokens collected per enemy foundation this turn
   randomBiomeTurnNumber?: number; // Current turn number in random biome
   randomBiomeActiveSide?: 'player' | 'enemy';
+  combatFlowMode?: CombatFlowMode;
+  randomBiomeTurnDurationMs?: number;
+  randomBiomeTurnRemainingMs?: number;
+  randomBiomeTurnLastTickAt?: number;
+  randomBiomeTurnTimerActive?: boolean;
+  combatFlowTelemetry?: CombatFlowTelemetry;
   enemyDifficulty?: EnemyDifficulty;
   enemyBackfillQueues?: Card[][]; // Pre-seeded backfill queues used on enemy turns
   rpgDots?: RpgDotEffect[];
@@ -348,6 +428,8 @@ export interface GameState {
   rpgBlindedPlayerUntil?: number;
   rpgBlindedEnemyLevel?: number;
   rpgBlindedEnemyUntil?: number;
+  rpgSourceCardPlayBonuses?: SourceCardPlayExpiringBonus[];
+  rpgLastCardPlayedAtByActor?: Record<string, number>;
   playtestVariant?: 'single-foundation' | 'party-foundations' | 'party-battle' | 'rpg';
   actorKeru?: ActorKeru;
   lastResolvedOrimId?: string | null;

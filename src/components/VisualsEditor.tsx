@@ -1,8 +1,10 @@
 import { memo, useState, useRef, useEffect, type MouseEvent, type TouchEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { ThreeJsElementsDemo } from './ThreeJsElementCards';
 import { CardFrame } from './card/CardFrame';
 import { useHoloInteraction } from '../hooks/useHoloInteraction';
 import { NEON_COLORS } from '../utils/styles';
-import { DepthCardScene } from './DepthCardScene';
+import { AuroraForestAtmosphere } from './atmosphere/AuroraForestAtmosphere';
 import { DynamicPaintCanvas } from './DynamicPaintCanvas';
 import { ELEMENT_WATERCOLOR_SWATCH_ORDER, ELEMENT_WATERCOLOR_SWATCHES } from '../watercolor/elementalSwatches';
 
@@ -393,6 +395,7 @@ type DepthInteraction = {
   shadowTransform: string;
   titleTransform: string;
   subtitleTransform: string;
+  sceneTransform: string;
 };
 
 const DEFAULT_DEPTH_INTERACTION: DepthInteraction = {
@@ -402,6 +405,7 @@ const DEFAULT_DEPTH_INTERACTION: DepthInteraction = {
   shadowTransform: 'scale(.9,.9) translateX(12px) translateY(12px) scale(1.0) rotateY(0deg) rotateX(0deg)',
   titleTransform: 'translateX(0px) translateY(0px)',
   subtitleTransform: 'translateX(0px) translateY(0px) translateZ(60px)',
+  sceneTransform: 'translate3d(0px, 0px, 0px) scale(1.05)',
 };
 
 const DepthCardDemo = () => {
@@ -425,6 +429,8 @@ const DepthCardDemo = () => {
     const mousePositionY = 50 + percentY * 30;
 
     const BASE_SCALE = 1.04;
+    const sceneShiftX = ((dx / bounds.width) * 24).toFixed(2);
+    const sceneShiftY = ((dy / bounds.height) * 18).toFixed(2);
     setInteraction({
       cardTransform: `translate3d(${transX}px, ${transY}px, 0) scale(${BASE_SCALE}) rotateX(${aroundX}deg) rotateY(${aroundY}deg)`,
       backgroundPosition: `${mousePositionX}% ${mousePositionY}%`,
@@ -432,6 +438,7 @@ const DepthCardDemo = () => {
       shadowTransform: `scale(.9,.9) translateX(${(-dx * 0.02 + 12).toFixed(2)}px) translateY(${(-dy * 0.02 + 12).toFixed(2)}px) scale(1.0) rotateY(${((dx / 25) * 0.5).toFixed(2)}deg) rotateX(${(-dy / 25).toFixed(2)}deg)`,
       titleTransform: `translateX(${((dx / 25) * 0.7).toFixed(2)}px) translateY(${((dy / 25) * 1.65).toFixed(2)}px)`,
       subtitleTransform: `translateX(${((dx / 25) * 0.5).toFixed(2)}px) translateY(${((dy / 25) * 1.15).toFixed(2)}px) translateZ(60px)`,
+      sceneTransform: `translate3d(${sceneShiftX}px, ${sceneShiftY}px, 0px) scale(1.08)`,
     });
   };
 
@@ -495,7 +502,7 @@ const DepthCardDemo = () => {
               : 'border-game-teal/20 text-game-white/40 hover:border-game-teal/40'
           }`}
         >
-          Flat Image
+          Flat Image (Bluevee)
         </button>
       </div>
       <div
@@ -516,7 +523,17 @@ const DepthCardDemo = () => {
             backgroundPosition: depthMode === 'image' ? interaction.backgroundPosition : 'center',
           }}
         >
-          {depthMode === 'scene' && <DepthCardScene />}
+          {depthMode === 'scene' && (
+            <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
+              <div
+                className="absolute -inset-4 will-change-transform transition-transform duration-150 ease-out"
+                style={{ transform: interaction.sceneTransform }}
+              >
+                <AuroraForestAtmosphere className="h-full w-full" />
+              </div>
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/45" />
+            </div>
+          )}
           <div className="depth-card-shine" style={{ background: interaction.shineBackground }} />
           <div className="depth-card-front">
             <div className="depth-card-title text-center">BIOME</div>
@@ -528,6 +545,250 @@ const DepthCardDemo = () => {
   );
 };
 
+// ─── Flip Card Demo ─────────────────────────────────────────────────────────
+
+const FLIP_DEMO_CARDS = [
+  { id: 'fire',  symbol: 'F', label: 'Fire',  rank: 'K',  colorA: '#7a1c0a', colorB: '#c0392b', glow: '#ff4500' },
+  { id: 'water', symbol: 'W', label: 'Water', rank: 'Q',  colorA: '#0d2d4a', colorB: '#1a6fa0', glow: '#00bfff' },
+  { id: 'earth', symbol: 'E', label: 'Earth', rank: 'J',  colorA: '#0d3320', colorB: '#1e7a40', glow: '#00c850' },
+  { id: 'air',   symbol: 'A', label: 'Air',   rank: '10', colorA: '#1c2b3a', colorB: '#4a7fa0', glow: '#87ceeb' },
+  { id: 'light', symbol: 'L', label: 'Light', rank: 'A',  colorA: '#4a3800', colorB: '#a07800', glow: '#ffd700' },
+  { id: 'dark',  symbol: 'D', label: 'Dark',  rank: '9',  colorA: '#1a0a2a', colorB: '#4a1e6e', glow: '#9b59b6' },
+];
+
+type FlipCardDemoProps = {
+  isFlipped: boolean;
+  card: typeof FLIP_DEMO_CARDS[number];
+  speed: number;
+  onFlip: () => void;
+};
+
+const FlipDemoCard = memo(function FlipDemoCard({ isFlipped, card, speed, onFlip }: FlipCardDemoProps) {
+  const W = 140;
+  const H = 196;
+
+  return (
+    <button
+      type="button"
+      onClick={onFlip}
+      aria-label={`Flip ${card.label} card`}
+      style={{ width: W, height: H, perspective: '1000px', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+    >
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          transition: `transform ${speed}ms cubic-bezier(0.4, 0.2, 0.2, 1)`,
+          transformStyle: 'preserve-3d',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+        }}
+      >
+        {/* Front face */}
+        <div
+          style={{
+            position: 'absolute', inset: 0,
+            backfaceVisibility: 'hidden',
+            borderRadius: 12,
+            overflow: 'hidden',
+            boxShadow: `0 0 0 1px rgba(255,255,255,0.08), 0 8px 28px rgba(0,0,0,0.6), 0 0 18px ${card.glow}44`,
+            background: `linear-gradient(145deg, ${card.colorA}, ${card.colorB})`,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          {/* Corner rank — top-left */}
+          <div style={{
+            position: 'absolute', top: 8, left: 10,
+            fontFamily: 'monospace', fontWeight: 900, fontSize: 14,
+            color: `${card.glow}cc`, lineHeight: 1,
+          }}>{card.rank}</div>
+          {/* Element symbol */}
+          <div style={{
+            fontSize: 52,
+            fontWeight: 900,
+            fontFamily: 'monospace',
+            color: card.glow,
+            textShadow: `0 0 16px ${card.glow}, 0 0 32px ${card.glow}88`,
+            lineHeight: 1,
+            userSelect: 'none',
+          }}>{card.symbol}</div>
+          <div style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.25em',
+            textTransform: 'uppercase',
+            color: `${card.glow}99`,
+            fontFamily: 'monospace',
+          }}>{card.label}</div>
+          {/* Corner rank — bottom-right (rotated) */}
+          <div style={{
+            position: 'absolute', bottom: 8, right: 10,
+            fontFamily: 'monospace', fontWeight: 900, fontSize: 14,
+            color: `${card.glow}cc`, lineHeight: 1,
+            transform: 'rotate(180deg)',
+          }}>{card.rank}</div>
+          {/* Subtle inner vignette */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 12, pointerEvents: 'none',
+            boxShadow: 'inset 0 0 30px rgba(0,0,0,0.45)',
+          }} />
+        </div>
+
+        {/* Back face */}
+        <div
+          style={{
+            position: 'absolute', inset: 0,
+            backfaceVisibility: 'hidden',
+            borderRadius: 12,
+            overflow: 'hidden',
+            transform: 'rotateY(180deg)',
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 8px 28px rgba(0,0,0,0.7)',
+            background: 'linear-gradient(135deg, #0a0f1a 0%, #121c2e 40%, #0d1525 100%)',
+          }}
+        >
+          {/* Diamond grid pattern */}
+          <svg
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.18 }}
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <pattern id={`dp-${card.id}`} x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                <polygon points="10,2 18,10 10,18 2,10" fill="none" stroke="#7fdbca" strokeWidth="0.8"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill={`url(#dp-${card.id})`} />
+          </svg>
+          {/* Center emblem */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{
+              width: 54, height: 54,
+              border: '1.5px solid rgba(127,219,202,0.3)',
+              borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 14px rgba(127,219,202,0.15)',
+            }}>
+              <div style={{
+                fontSize: 22, color: 'rgba(127,219,202,0.55)',
+                fontWeight: 900, fontFamily: 'monospace', userSelect: 'none',
+              }}>✦</div>
+            </div>
+          </div>
+          {/* Corner ornaments */}
+          {[
+            { top: 8, left: 10 }, { top: 8, right: 10 },
+            { bottom: 8, left: 10 }, { bottom: 8, right: 10 },
+          ].map((pos, i) => (
+            <div key={i} style={{
+              position: 'absolute', ...pos,
+              width: 8, height: 8,
+              border: '1px solid rgba(127,219,202,0.25)',
+              borderRadius: 2,
+              transform: 'rotate(45deg)',
+            }} />
+          ))}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 12, pointerEvents: 'none',
+            boxShadow: 'inset 0 0 30px rgba(0,0,0,0.5)',
+          }} />
+        </div>
+      </div>
+    </button>
+  );
+});
+
+const FlipCardDemo = memo(function FlipCardDemo() {
+  const [flippedIds, setFlippedIds] = useState<Set<string>>(new Set());
+  const [speed, setSpeed] = useState(700);
+
+  const toggle = (id: string) => {
+    setFlippedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const flipAll = () => {
+    if (flippedIds.size === FLIP_DEMO_CARDS.length) {
+      setFlippedIds(new Set());
+    } else {
+      setFlippedIds(new Set(FLIP_DEMO_CARDS.map((c) => c.id)));
+    }
+  };
+
+  const allFlipped = flippedIds.size === FLIP_DEMO_CARDS.length;
+
+  return (
+    <div className="h-full overflow-y-auto pr-4 custom-scrollbar pb-10">
+      <div className="space-y-8">
+
+        {/* Controls */}
+        <div className="flex items-center gap-6 flex-wrap">
+          <button
+            type="button"
+            onClick={flipAll}
+            className="px-4 py-1.5 rounded-lg border border-game-gold text-[9px] text-game-gold font-black uppercase tracking-[0.2em] hover:bg-game-gold/10 transition-colors shadow-lg"
+          >
+            {allFlipped ? '↩ Unflip All' : '↻ Flip All'}
+          </button>
+          <label className="flex items-center gap-3 text-[10px] text-game-white/60 uppercase tracking-wider font-bold">
+            <span>Speed</span>
+            <input
+              type="range"
+              min={200}
+              max={1400}
+              step={100}
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              className="w-28 accent-game-gold"
+            />
+            <span className="text-game-gold/80 font-mono w-12">{speed}ms</span>
+          </label>
+        </div>
+
+        {/* Card grid */}
+        <div className="flex flex-wrap gap-8 items-end">
+          {FLIP_DEMO_CARDS.map((card) => (
+            <div key={card.id} className="flex flex-col items-center gap-3">
+              <FlipDemoCard
+                card={card}
+                isFlipped={flippedIds.has(card.id)}
+                speed={speed}
+                onFlip={() => toggle(card.id)}
+              />
+              <div className="text-[9px] uppercase tracking-[0.18em] text-game-gold/80 text-center font-bold">
+                {card.label}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Spec notes */}
+        <div className="border-t border-game-teal/10 pt-6 space-y-2">
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-game-teal/70">Technique</h3>
+          <ul className="space-y-1 text-[9px] text-game-white/40 font-mono">
+            <li>perspective: 1000px — container establishes 3-D space</li>
+            <li>transform-style: preserve-3d — children inherit the 3-D context</li>
+            <li>backface-visibility: hidden — hides each face when rotated ≥ 90°</li>
+            <li>back face pre-rotated rotateY(180deg) — sits behind front at rest</li>
+            <li>flip: inner rotates rotateY(180deg) — swaps visible faces</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  );
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+
 type OverlayTransform = {
   translateX: number;
   translateY: number;
@@ -538,8 +799,8 @@ type OverlayTransform = {
 
 const SPIN_ZOOM_DURATION_MS = 1500;
 
-export const VisualsEditor = memo(function VisualsEditor() {
-  const [activeSubtab, setActiveSubtab] = useState<'holo' | 'watercolor' | 'depth'>('holo');
+export const VisualsEditor = memo(function VisualsEditor({ onHoloOverlayVisibleChange }: { onHoloOverlayVisibleChange?: (visible: boolean) => void } = {}) {
+  const [activeSubtab, setActiveSubtab] = useState<'holo' | 'watercolor' | 'depth' | 'flip' | '3js'>('holo');
   const [showLegacyEffects, setShowLegacyEffects] = useState(false);
   const activeHoloLibrary = showLegacyEffects ? LEGACY_EFFECT_PRESETS : NEXT_EFFECT_PRESETS;
   const [selectedId, setSelectedId] = useState(NEXT_EFFECT_PRESETS[0].id);
@@ -622,6 +883,10 @@ export const VisualsEditor = memo(function VisualsEditor() {
   }, [overlayVisible, overlayPreset, overlayKey]);
 
   useEffect(() => {
+    onHoloOverlayVisibleChange?.(overlayVisible);
+  }, [overlayVisible, onHoloOverlayVisibleChange]);
+
+  useEffect(() => {
     if (activeSubtab !== 'holo') {
       closeOverlay();
     }
@@ -667,6 +932,26 @@ export const VisualsEditor = memo(function VisualsEditor() {
               }`}
             >
               Depth Cards
+            </button>
+            <button
+              onClick={() => setActiveSubtab('flip')}
+              className={`px-3 py-1 rounded text-[10px] uppercase tracking-wider font-bold transition-all border ${
+                activeSubtab === 'flip'
+                  ? 'border-game-gold text-game-gold bg-game-gold/10'
+                  : 'border-game-teal/20 text-game-white/40 hover:border-game-teal/40'
+              }`}
+            >
+              Flip Animation
+            </button>
+            <button
+              onClick={() => setActiveSubtab('3js')}
+              className={`px-3 py-1 rounded text-[10px] uppercase tracking-wider font-bold transition-all border ${
+                activeSubtab === '3js'
+                  ? 'border-game-gold text-game-gold bg-game-gold/10'
+                  : 'border-game-teal/20 text-game-white/40 hover:border-game-teal/40'
+              }`}
+            >
+              3js Elements
             </button>
           </div>
           {activeSubtab === 'holo' && (
@@ -885,6 +1170,10 @@ export const VisualsEditor = memo(function VisualsEditor() {
                       </section>
                     </div>
                   </div>
+                ) : activeSubtab === 'flip' ? (
+                  <FlipCardDemo />
+                ) : activeSubtab === '3js' ? (
+                  <ThreeJsElementsDemo />
                 ) : (
                   <div className="h-full overflow-y-auto pr-4 custom-scrollbar pb-10">
                     <div className="max-w-3xl mx-auto">
@@ -893,8 +1182,8 @@ export const VisualsEditor = memo(function VisualsEditor() {
                   </div>
         )}
       </div>
-      {activeSubtab === 'holo' && overlayVisible && overlayPreset && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center p-6">
+      {activeSubtab === 'holo' && overlayVisible && overlayPreset && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[50000] flex items-center justify-center p-6">
           <button
             type="button"
             aria-label="Close focused card preview"
@@ -925,7 +1214,7 @@ export const VisualsEditor = memo(function VisualsEditor() {
             />
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 });

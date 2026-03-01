@@ -18,16 +18,87 @@ import { FORCE_NEON_CARD_STYLE, SHOW_WATERCOLOR_FILTERS } from '../config/ui';
 
 const BLUEVEE_ASSET = '/assets/Bluevee.png';
 
+function getFoundationOverlayTitleFontPx(title: string): number {
+  const length = title.trim().length;
+  if (length <= 7) return 16;
+  if (length <= 10) return 14;
+  if (length <= 14) return 12;
+  if (length <= 18) return 10;
+  if (length <= 24) return 9;
+  if (length <= 30) return 8;
+  return 7;
+}
+
+function hashStringToUnit(input: string, salt = 0): number {
+  let hash = (2166136261 ^ salt) >>> 0;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
+function withAlphaColor(color: string, alpha: number): string {
+  const clamped = Math.max(0, Math.min(1, alpha));
+  const normalized = color.trim();
+  const hexMatch = normalized.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!hexMatch) return normalized;
+  const hex = hexMatch[1];
+  const expanded = hex.length === 3 ? hex.split('').map((ch) => ch + ch).join('') : hex;
+  const r = parseInt(expanded.slice(0, 2), 16);
+  const g = parseInt(expanded.slice(2, 4), 16);
+  const b = parseInt(expanded.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${clamped.toFixed(3)})`;
+}
+
+function normalizeLookupKey(value: string | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function toDisplayName(raw: string | undefined): string {
+  const seed = String(raw ?? '').trim();
+  if (!seed) return '';
+  return seed
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1).toLowerCase()}`)
+    .join(' ');
+}
+
+function getElementLabel(element: Element | undefined): string {
+  const key = String(element ?? 'N').toUpperCase();
+  if (key === 'A') return 'Air';
+  if (key === 'W') return 'Water';
+  if (key === 'E') return 'Earth';
+  if (key === 'F') return 'Fire';
+  if (key === 'L') return 'Light';
+  if (key === 'D') return 'Dark';
+  return 'Neutral';
+}
+
 interface CardProps {
   card: CardType | null;
   faceDown?: boolean;
   isFoundation?: boolean;
+  handMinimalOverlay?: {
+    title: string;
+    cost: string | number;
+  };
   foundationOverlay?: {
     name: string;
     hp?: number;
+    hpMax?: number;
+    armor?: number;
+    superArmor?: number;
     accentColor?: string;
     rankDisplay?: string;
     comboCount?: number;
+    apSegments?: Element[];
+    shimmerElement?: Element;
+    autoSizeTitle?: boolean;
   };
   size?: { width: number; height: number };
   canPlay?: boolean;
@@ -57,6 +128,7 @@ interface CardProps {
   ripTrigger?: number;
   disableLegacyShine?: boolean;
   watercolorOnly?: boolean;
+  disableTemplateArt?: boolean;
   showFoundationActorSecretHolo?: boolean;
 }
 
@@ -64,6 +136,7 @@ export const Card = memo(function Card({
   card,
   faceDown = false,
   isFoundation = false,
+  handMinimalOverlay,
   foundationOverlay,
   size,
   canPlay = false,
@@ -91,6 +164,7 @@ export const Card = memo(function Card({
   ripTrigger = 0,
   disableLegacyShine = false,
   watercolorOnly = false,
+  disableTemplateArt = false,
   showFoundationActorSecretHolo = false,
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -103,6 +177,11 @@ export const Card = memo(function Card({
   const foundationAutoRafRef = useRef<number | null>(null);
   const foundationAutoWasActiveRef = useRef(false);
   const foundationAutoLastUpdateRef = useRef(0);
+  const foundationShimmerTimerRef = useRef<number | null>(null);
+  const foundationComboInitializedRef = useRef(false);
+  const foundationPrevComboRef = useRef<number>(0);
+  const [foundationShimmerBurst, setFoundationShimmerBurst] = useState(0);
+  const [foundationShimmerActive, setFoundationShimmerActive] = useState(false);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!onDragStart || !card || faceDown) return;
@@ -310,6 +389,7 @@ export const Card = memo(function Card({
   }, [card, orimDefinitions]);
   const foundationActorProfile = useMemo(() => {
     if (!card || !isFoundation) return null;
+    if (!showFoundationActorSecretHolo) return null;
     const isActorFoundationCard = card.id.startsWith('actor-')
       || card.id.startsWith('combatlab-foundation-')
       || card.id.startsWith('lab-foundation-');
@@ -334,7 +414,7 @@ export const Card = memo(function Card({
       description: card.description ?? '',
       attributes: (role ? tags.slice(1, 4) : tags.slice(0, 3)),
     };
-  }, [card, isFoundation]);
+  }, [card, isFoundation, showFoundationActorSecretHolo]);
   const keruAbilityProfile = useMemo(() => {
     if (!card || !card.id.startsWith('ability-')) return null;
     const key = card.id.replace('ability-', '').toLowerCase();
@@ -369,6 +449,65 @@ export const Card = memo(function Card({
       effects: match.effects ?? [],
     };
   }, [card]);
+  const resolvedRpgAbility = useMemo(() => {
+    if (!card) return null;
+    const abilityRows = (abilitiesJson as { abilities?: Array<{
+      id?: string;
+      cardId?: string;
+      label?: string;
+      description?: string;
+      rarity?: OrimRarity;
+      effects?: Array<{
+        type: string;
+        value: number;
+        target: string;
+        duration?: number;
+        charges?: number;
+      }>;
+    }> }).abilities ?? [];
+    if (abilityRows.length === 0) return null;
+    const candidates = [
+      normalizeLookupKey(card.rpgAbilityId),
+      normalizeLookupKey(card.sourceDeckCardId),
+      normalizeLookupKey(card.name),
+      normalizeLookupKey(card.id.replace(/^deckhand-[^-]+-/, '')),
+      normalizeLookupKey(card.id.replace(/^ability-/, '')),
+    ].filter(Boolean);
+    if (candidates.length === 0) return null;
+    return abilityRows.find((entry) => {
+      const keys = [
+        normalizeLookupKey(entry.id),
+        normalizeLookupKey(entry.cardId),
+        normalizeLookupKey(entry.label),
+      ];
+      return keys.some((key) => key.length > 0 && candidates.includes(key));
+    }) ?? null;
+  }, [card]);
+  const renderedRpgDescription = useMemo(() => {
+    if (!card) return '';
+    const hasRpgCardData = !!card.rpgAbilityId || !!card.sourceDeckCardId || card.rpgApCost !== undefined;
+    if (!hasRpgCardData) return '';
+    const template = String(card.description ?? resolvedRpgAbility?.description ?? '').trim();
+    if (!template) return '';
+    const primaryEffect = resolvedRpgAbility?.effects?.[0];
+    const actorSeed = card.sourceActorId?.split('-')[0] ?? card.name;
+    const selfName = toDisplayName(actorSeed) || 'Self';
+    return template.replace(/\{([^}]+)\}/g, (match, token) => {
+      const key = String(token).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      if (key === 'value') return String(primaryEffect?.value ?? card.rank ?? 0);
+      if (key === 'duration') return String(primaryEffect?.duration ?? 0);
+      if (key === 'charges') return String(primaryEffect?.charges ?? 0);
+      if (key === 'target') return String(primaryEffect?.target ?? 'target').replace(/_/g, ' ');
+      if (key === 'elem_value' || key === 'elemental_value') {
+        const elementalValue = Math.max(0, Number(primaryEffect?.elementalValue ?? 0));
+        const elementalLabel = getElementLabel(primaryEffect?.element ?? card.element);
+        return `${elementalValue} ${elementalLabel}`;
+      }
+      if (key === 'self' || key === 'actor' || key === 'owner') return selfName;
+      // Keep unknown tokens visible so malformed templates are obvious in-game.
+      return match;
+    });
+  }, [card, resolvedRpgAbility]);
   const isUpgradedRpgCard = !!card && (
     card.id.startsWith('rpg-vice-bite-')
     || card.id.startsWith('rpg-blinding-peck-')
@@ -391,8 +530,9 @@ export const Card = memo(function Card({
     if (borderColorOverride !== undefined) return borderColorOverride;
     if (isSelected) return '#e6b31e'; // gold
     if (faceDown) return 'rgba(156, 181, 198, 0.34)';
+    if (isDimmed) return 'rgba(134, 146, 156, 0.65)';
     const baseColor = neonMode ? neonColor : suitColor;
-    return isDimmed ? `${baseColor}44` : baseColor;
+    return baseColor;
   };
 
   const getBoxShadow = () => {
@@ -426,7 +566,7 @@ const getWatercolorColorFilter = () => {
 
   const neonMode = FORCE_NEON_CARD_STYLE;
   const neonColor = getNeonElementColor(elementKey as Element);
-  const showElementArtOverlays = !watercolorOnly && !neonMode;
+  const showElementArtOverlays = !watercolorOnly && !neonMode && !handMinimalOverlay && !disableTemplateArt;
   const showWaterDepthOverlay = showElementArtOverlays && isWaterElement && !faceDown && !isAnyCardDragging;
   const showWaterArtOverlay = showElementArtOverlays && showGraphics && isWaterElement && !faceDown && !isAnyCardDragging;
   const showLightArtOverlay = showElementArtOverlays && showGraphics && elementKey === 'L' && !faceDown && !isAnyCardDragging;
@@ -443,6 +583,53 @@ const getWatercolorColorFilter = () => {
     }, 50);
     return () => clearInterval(interval);
   }, [showLightArtOverlay, isHovered]);
+
+  const foundationComboCount = Math.max(0, Number(foundationOverlay?.comboCount ?? 0));
+  useEffect(() => {
+    if (!isFoundation || handMinimalOverlay || !foundationOverlay) {
+      foundationComboInitializedRef.current = false;
+      foundationPrevComboRef.current = 0;
+      setFoundationShimmerActive(false);
+      if (foundationShimmerTimerRef.current !== null) {
+        window.clearTimeout(foundationShimmerTimerRef.current);
+        foundationShimmerTimerRef.current = null;
+      }
+      return;
+    }
+    const triggerFoundationShimmer = () => {
+      setFoundationShimmerBurst((prev) => prev + 1);
+      setFoundationShimmerActive(true);
+      if (foundationShimmerTimerRef.current !== null) {
+        window.clearTimeout(foundationShimmerTimerRef.current);
+      }
+      foundationShimmerTimerRef.current = window.setTimeout(() => {
+        setFoundationShimmerActive(false);
+        foundationShimmerTimerRef.current = null;
+      }, 700);
+    };
+    if (!foundationComboInitializedRef.current) {
+      foundationComboInitializedRef.current = true;
+      foundationPrevComboRef.current = foundationComboCount;
+      // Foundation top card remounts on each play; trigger shimmer once on mount when combo exists.
+      if (foundationComboCount > 0) {
+        triggerFoundationShimmer();
+      }
+      return;
+    }
+    if (foundationComboCount > foundationPrevComboRef.current) {
+      triggerFoundationShimmer();
+    }
+    foundationPrevComboRef.current = foundationComboCount;
+  }, [isFoundation, handMinimalOverlay, foundationOverlay, foundationComboCount]);
+
+  useEffect(() => {
+    return () => {
+      if (foundationShimmerTimerRef.current !== null) {
+        window.clearTimeout(foundationShimmerTimerRef.current);
+        foundationShimmerTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const waterFish = useMemo(() => {
     if (!showWaterArtOverlay || !card) return [];
@@ -513,7 +700,8 @@ const getWatercolorColorFilter = () => {
 
   const isKeruAspectCard = !!keruAspectProfile;
   const { styles: holoStyles, handlePointerMove, handlePointerLeave, registerElement } = useHoloInteraction();
-  const rarity = (keruAspectProfile?.rarity || card?.rarity || 'common').toLowerCase() as OrimRarity;
+  const resolvedRpgRarity = resolvedRpgAbility?.rarity;
+  const rarity = (keruAspectProfile?.rarity || card?.rarity || resolvedRpgRarity || 'common').toLowerCase() as OrimRarity;
   const isShiny = rarity !== 'common' || isUpgradedRpgCard;
   const effectiveRarity = rarity === 'common' && isUpgradedRpgCard ? 'rare' : rarity;
   const showSecretActorHolo = showFoundationActorSecretHolo && !!foundationActorProfile && !faceDown && !hideDomCard;
@@ -687,7 +875,7 @@ const getWatercolorColorFilter = () => {
           ${!onClick && !onDragStart ? 'cursor-default' : ''}
           ${isDimmed ? 'opacity-50' : 'opacity-100'}
           ${isFoundation && !foundationActorProfile ? '!bg-white' : ''}
-          ${foundationActorProfile ? 'overflow-hidden' : ''}
+          ${foundationActorProfile && !foundationOverlay ? 'overflow-hidden' : ''}
           ${frameClassName ?? ''}
         `}
         backgroundColor={
@@ -789,17 +977,19 @@ const getWatercolorColorFilter = () => {
         )}
         {showLegacyShine && (
           <>
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                zIndex: 9,
-                backgroundImage: `url('${BLUEVEE_ASSET}')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                opacity: isHovered ? 0.45 : 0.35,
-              }}
-            />
+            {!disableTemplateArt && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  zIndex: 9,
+                  backgroundImage: `url('${BLUEVEE_ASSET}')`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  opacity: isHovered ? 0.45 : 0.35,
+                }}
+              />
+            )}
             {/* Glare Layer */}
             <div
               className="absolute inset-0 pointer-events-none"
@@ -890,70 +1080,351 @@ const getWatercolorColorFilter = () => {
           />
         </>
       )}
-      {foundationOverlay && !faceDown && (
-        <div
-          className="absolute inset-[8%] rounded-xl pointer-events-none z-[30] flex flex-col items-center justify-center text-center px-3 py-3 gap-1"
-          style={{
-            background: 'linear-gradient(180deg, rgba(6, 8, 12, 0.86) 0%, rgba(6, 8, 12, 0.62) 100%)',
-            boxShadow: `0 0 18px ${(foundationOverlay.accentColor ?? suitColor)}aa, inset 0 0 0 1px ${(foundationOverlay.accentColor ?? suitColor)}b5`,
-            backdropFilter: 'blur(2px)',
-            mixBlendMode: 'normal',
-          }}
-        >
+      {foundationOverlay && !faceDown && (() => {
+        const accent = foundationOverlay.accentColor ?? suitColor;
+        const hpValue = typeof foundationOverlay.hp === 'number' ? Math.max(0, foundationOverlay.hp) : null;
+        const hpMaxValue = typeof foundationOverlay.hpMax === 'number'
+          ? Math.max(1, foundationOverlay.hpMax)
+          : (hpValue !== null ? Math.max(1, hpValue) : null);
+        const armorValue = typeof foundationOverlay.armor === 'number'
+          ? Math.max(0, Math.round(foundationOverlay.armor))
+          : 0;
+        const superArmorValue = typeof foundationOverlay.superArmor === 'number'
+          ? Math.max(0, Math.round(foundationOverlay.superArmor))
+          : 0;
+        const hpPercent = hpValue !== null && hpMaxValue !== null
+          ? Math.max(0, Math.min(100, (hpValue / hpMaxValue) * 100))
+          : 0;
+        const foundationRankDisplay = foundationOverlay.rankDisplay
+          ?? (card ? getRankDisplay(card.rank) : '');
+        const foundationRankFontPx = Math.max(30, Math.round(frameSize.width * 0.42));
+        const apSegments = Array.isArray(foundationOverlay.apSegments)
+          ? foundationOverlay.apSegments
+              .map((entry) => (typeof entry === 'string' ? entry : 'N'))
+              .filter((entry): entry is Element => ['W', 'E', 'A', 'F', 'L', 'D', 'N'].includes(entry))
+          : [];
+        const overlayTitle = foundationOverlay.name ?? '';
+        const autoSizeTitle = !!foundationOverlay.autoSizeTitle;
+        const titleFontPx = autoSizeTitle ? getFoundationOverlayTitleFontPx(overlayTitle) : 16;
+        const titleLetterSpacing = autoSizeTitle ? (titleFontPx <= 8 ? '-0.2px' : '0px') : undefined;
+        const shimmerElement = foundationOverlay.shimmerElement
+          ?? apSegments[apSegments.length - 1]
+          ?? undefined;
+        const shimmerColor = shimmerElement ? getNeonElementColor(shimmerElement) : '#8ee3a5';
+        const shimmerKey = `${card?.id ?? 'foundation'}-${overlayTitle}-burst-${foundationShimmerBurst}`;
+        const shimmerAngle = 26 + hashStringToUnit(shimmerKey, 11) * 30;
+        const shimmerDuration = 0.45 + hashStringToUnit(shimmerKey, 23) * 0.2;
+        const shimmerStartX = -66 - hashStringToUnit(shimmerKey, 41) * 26;
+        const shimmerEndX = 148 + hashStringToUnit(shimmerKey, 43) * 74;
+        const shimmerStartY = -52 - hashStringToUnit(shimmerKey, 67) * 20;
+        const shimmerEndY = 42 + hashStringToUnit(shimmerKey, 71) * 24;
+        const shimmerPeakOpacity = 0.48 + hashStringToUnit(shimmerKey, 47) * 0.18;
+        const shimmerBandWidthPct = 26 + hashStringToUnit(shimmerKey, 73) * 18;
+        const shimmerBandHeightPct = 180 + hashStringToUnit(shimmerKey, 79) * 60;
+        const shimmerBlurPx = 0;
+        const superArmorSparkleColor = 'rgba(255, 220, 110, 0.98)';
+        const hpBarSparkles = [
+          { left: '30%', top: '12%', size: 8, delay: 0.0, dur: 1.6 },
+          { left: '52%', top: '8%', size: 7, delay: 0.45, dur: 1.8 },
+          { left: '74%', top: '14%', size: 6, delay: 0.85, dur: 1.55 },
+        ];
+        const armorTokenSparkles = [
+          { left: '100%', top: '10px', size: 8, delay: 0.15, dur: 1.5 },
+          { left: '100%', top: '35px', size: 7, delay: 0.7, dur: 1.75 },
+          { left: '100%', top: '58px', size: 6, delay: 1.05, dur: 1.65 },
+        ];
+        return (
           <div
-            className="absolute inset-0 opacity-70"
-            style={{
-              background: `radial-gradient(circle at 30% 30%, ${(foundationOverlay.accentColor ?? suitColor)}55 0 36%, transparent 70%)`,
-            }}
-          />
-          <div className="relative w-full flex flex-col items-center justify-center gap-1 text-center">
+            className="absolute inset-0 rounded-[10px] pointer-events-none z-[30] overflow-visible"
+          >
+            {superArmorValue > 0 && (
+              <style>{`
+                @keyframes foundation-superarmor-sparkle-float {
+                  0%   { transform: translate(-50%, -50%) translateY(0px) scale(1); opacity: 0.72; }
+                  50%  { transform: translate(-50%, -50%) translateY(-5px) scale(1.22); opacity: 1; }
+                  100% { transform: translate(-50%, -50%) translateY(0px) scale(1); opacity: 0.72; }
+                }
+              `}</style>
+            )}
+            <div
+              className="absolute inset-0 rounded-[10px] overflow-hidden"
+              style={{
+                background: 'linear-gradient(180deg, rgba(6, 8, 12, 0.9) 0%, rgba(6, 8, 12, 0.68) 100%)',
+                boxShadow: `0 0 18px ${accent}aa, inset 0 0 0 1px ${accent}b5`,
+                backdropFilter: 'blur(2px)',
+                mixBlendMode: 'normal',
+              }}
+            >
+              <div
+                className="absolute inset-0 opacity-70"
+                style={{
+                  background: `radial-gradient(circle at 30% 30%, ${accent}55 0 36%, transparent 70%)`,
+                }}
+              />
+              <div className="absolute inset-[4px] flex flex-col">
+                <div className="relative min-h-[24px]">
+                  {hpValue !== null && hpMaxValue !== null && (
+                    <div
+                      className={`absolute inset-y-0 right-[1px] flex items-center ${foundationOverlay.rankDisplay ? 'left-[20px]' : 'left-0'}`}
+                    >
+                      <div
+                        className="relative h-[14px] w-full rounded-full overflow-hidden border"
+                        style={{
+                          borderColor: 'rgba(255,255,255,0.16)',
+                          backgroundColor: 'rgba(255,255,255,0.08)',
+                          boxShadow: `0 0 8px ${accent}55`,
+                        }}
+                      >
+                        <div
+                          className="absolute inset-y-0 left-0 rounded-full"
+                          style={{
+                            width: `${hpPercent}%`,
+                            background: `linear-gradient(90deg, ${accent}dd, ${accent}aa)`,
+                            boxShadow: `0 0 6px ${accent}66`,
+                            transition: 'width 180ms ease-out',
+                          }}
+                        />
+                        <div
+                          className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold tracking-[0.2px]"
+                          style={{ color: '#e9f7ff', textShadow: `0 0 6px ${accent}55` }}
+                        >
+                          {Math.round(hpValue)}/{Math.round(hpMaxValue)}
+                        </div>
+                        {superArmorValue > 0 && hpBarSparkles.map((sparkle, index) => (
+                          <svg
+                            key={`hp-superarmor-sparkle-${index}`}
+                            viewBox="0 0 10 10"
+                            className="absolute pointer-events-none"
+                            style={{
+                              left: sparkle.left,
+                              top: sparkle.top,
+                              width: sparkle.size,
+                              height: sparkle.size,
+                              transform: 'translate(-50%, -50%)',
+                              filter: `drop-shadow(0 0 2px ${superArmorSparkleColor}) drop-shadow(0 0 7px rgba(255, 202, 88, 0.68))`,
+                              animation: `foundation-superarmor-sparkle-float ${sparkle.dur}s ease-in-out infinite`,
+                              animationDelay: `${sparkle.delay}s`,
+                              opacity: 0.9,
+                            }}
+                          >
+                            <path d="M5,0 L5.8,4.2 L10,5 L5.8,5.8 L5,10 L4.2,5.8 L0,5 L4.2,4.2 Z" fill={superArmorSparkleColor} />
+                            <circle cx="5" cy="5" r="1.4" fill="rgba(255,255,255,0.92)" />
+                          </svg>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div
+                  className={`mt-[4px] rounded-md border px-2 py-[2px] text-left font-black leading-tight ${autoSizeTitle ? 'whitespace-nowrap' : 'text-[16px] truncate'}`}
+                  style={{
+                    borderColor: `${accent}8a`,
+                    color: '#f5f8ff',
+                    backgroundColor: 'rgba(4, 8, 12, 0.78)',
+                    textShadow: `0 0 12px ${accent}aa`,
+                    fontSize: `${titleFontPx}px`,
+                    letterSpacing: titleLetterSpacing,
+                  }}
+                >
+                  {overlayTitle}
+                </div>
+              <div
+                className="relative mt-[4px] rounded-md border px-2 py-[3px] text-left text-[10px] leading-tight flex-1 min-h-0 overflow-hidden"
+                style={{
+                  borderColor: `${accent}66`,
+                  color: '#d8e9ff',
+                  backgroundColor: 'rgba(8, 12, 18, 0.7)',
+                }}
+              >
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background:
+                      `radial-gradient(circle at 30% 22%, ${withAlphaColor(shimmerColor, 0.22)} 0%, ${withAlphaColor(shimmerColor, 0)} 58%), linear-gradient(180deg, rgba(12,18,26,0.15) 0%, rgba(3,6,10,0.4) 100%)`,
+                  }}
+                />
+                {foundationRankDisplay && (
+                  <div className="absolute inset-0 z-[1] flex items-center justify-center">
+                    <span
+                      style={{
+                        fontSize: `${foundationRankFontPx}px`,
+                        fontWeight: 900,
+                        letterSpacing: '-0.02em',
+                        lineHeight: 1,
+                        color: '#f5f8ff',
+                        textShadow: `0 0 10px ${accent}cc, 0 0 22px ${withAlphaColor(accent, 0.75)}`,
+                      }}
+                    >
+                      {foundationRankDisplay}
+                    </span>
+                  </div>
+                )}
+                {foundationShimmerActive && (
+                  <>
+                    <motion.div
+                      key={`foundation-shimmer-band-${foundationShimmerBurst}`}
+                      className="absolute pointer-events-none"
+                      style={{
+                        background:
+                          `linear-gradient(110deg, rgba(255,255,255,0) 0%, ${withAlphaColor(shimmerColor, 0.08)} 22%, ${withAlphaColor(shimmerColor, 0.22)} 38%, rgba(255,255,255,0.34) 50%, ${withAlphaColor(shimmerColor, 0.25)} 63%, ${withAlphaColor(shimmerColor, 0.08)} 78%, rgba(255,255,255,0) 100%)`,
+                        mixBlendMode: 'screen',
+                        transform: `rotate(${shimmerAngle.toFixed(2)}deg)`,
+                        transformOrigin: 'center',
+                        width: `${shimmerBandWidthPct.toFixed(2)}%`,
+                        height: `${shimmerBandHeightPct.toFixed(2)}%`,
+                        left: '-36%',
+                        top: '-54%',
+                        filter: `blur(${shimmerBlurPx.toFixed(2)}px)`,
+                      }}
+                      initial={{
+                        x: `${shimmerStartX.toFixed(1)}%`,
+                        y: `${shimmerStartY.toFixed(1)}%`,
+                        opacity: 0,
+                      }}
+                      animate={{
+                        x: `${shimmerEndX.toFixed(1)}%`,
+                        y: `${shimmerEndY.toFixed(1)}%`,
+                        opacity: [0, shimmerPeakOpacity, 0],
+                      }}
+                      transition={{ duration: shimmerDuration, ease: 'easeInOut' }}
+                    />
+                  </>
+                )}
+              </div>
+              <div
+                className="relative mt-[4px] rounded-md border h-[14px] flex items-center px-[2px] overflow-hidden"
+                style={{
+                  borderColor: `${accent}55`,
+                  backgroundColor: 'rgba(6, 10, 14, 0.6)',
+                }}
+              >
+                {apSegments.length > 0 ? (
+                  <div className="flex h-full w-full gap-0">
+                    {apSegments.map((element, segmentIndex) => {
+                      const segmentColor = element === 'N' ? '#8a8f98' : getNeonElementColor(element);
+                      const isFirst = segmentIndex === 0;
+                      return (
+                        <div
+                          key={`ap-segment-${segmentIndex}-${element}`}
+                          className="h-full flex-1 rounded-[2px]"
+                          style={{
+                            background: `linear-gradient(180deg, ${segmentColor}dd 0%, ${segmentColor}99 100%)`,
+                            boxShadow: `0 0 6px ${segmentColor}99`,
+                            borderLeft: isFirst ? 'none' : '1px solid rgba(6, 10, 14, 0.82)',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-full w-full rounded-[2px] bg-game-bg-dark/50" />
+                )}
+                {apSegments.length > 0 && (
+                  <div className="pointer-events-none absolute inset-0 z-[2]">
+                    {apSegments.map((element, segmentIndex) => {
+                      const sparkleColor = element === 'N' ? 'rgba(220, 228, 238, 0.95)' : withAlphaColor(getNeonElementColor(element), 0.95);
+                      return (
+                        <svg
+                          key={`ap-combo-sparkle-${segmentIndex}-${element}`}
+                          viewBox="0 0 10 10"
+                          className="absolute"
+                          style={{
+                            left: `${((segmentIndex + 0.5) / apSegments.length) * 100}%`,
+                            top: '52%',
+                            width: 6,
+                            height: 6,
+                            transform: 'translate(-50%, -50%)',
+                            filter: `drop-shadow(0 0 2px ${sparkleColor}) drop-shadow(0 0 5px ${sparkleColor})`,
+                            animation: `foundation-superarmor-sparkle-float ${1.4 + (segmentIndex % 3) * 0.2}s ease-in-out infinite`,
+                            animationDelay: `${segmentIndex * 0.12}s`,
+                            opacity: 0.88,
+                          }}
+                        >
+                          <path d="M5,0 L5.8,4.2 L10,5 L5.8,5.8 L5,10 L4.2,5.8 L0,5 L4.2,4.2 Z" fill={sparkleColor} />
+                          <circle cx="5" cy="5" r="1.15" fill="rgba(255,255,255,0.9)" />
+                        </svg>
+                      );
+                    })}
+                  </div>
+                )}
+                </div>
+              </div>
+            </div>
             {foundationOverlay.rankDisplay && (
               <div
-                className="font-black leading-none drop-shadow-md"
+                className="absolute -top-[4px] -left-[4px] w-[27px] h-[27px] rounded-full flex items-center justify-center text-[13px] font-black"
                 style={{
-                  fontSize: Math.max(20, Math.round(frameSize.width * 0.3)),
-                  letterSpacing: '0.08em',
-                  color: '#fefefe',
-                  textShadow: `0 0 18px ${(foundationOverlay.accentColor ?? suitColor)}dd`,
-                  lineHeight: 0.9,
+                  color: '#0b0d10',
+                  backgroundColor: accent,
+                  border: '2px solid rgba(10,12,16,0.95)',
+                  boxShadow: `0 0 12px ${accent}99`,
+                  textShadow: '0 1px 2px rgba(0,0,0,0.35)',
                 }}
               >
                 {foundationOverlay.rankDisplay}
               </div>
             )}
-            <div
-              className="text-[18px] font-black leading-tight drop-shadow-md px-2"
-              style={{ color: '#f5f8ff', textShadow: `0 0 16px ${(foundationOverlay.accentColor ?? suitColor)}cc` }}
-            >
-              {foundationOverlay.name}
-            </div>
-            {typeof foundationOverlay.hp === 'number' && (
-              <div
-                className="mt-1 rounded-full px-2 py-[2px] text-[10px] font-semibold"
-                style={{
-                  color: '#0a0a0a',
-                  backgroundColor: foundationOverlay.accentColor ?? suitColor,
-                  boxShadow: `0 0 10px ${(foundationOverlay.accentColor ?? suitColor)}99`,
-                }}
-              >
-                HP {foundationOverlay.hp}
-              </div>
-            )}
-            {typeof foundationOverlay.comboCount === 'number' && (
-              <div
-                className="mt-1 rounded-full px-2 py-[2px] text-[10px] font-bold tracking-[0.12em]"
-                style={{
-                  color: '#0a0a0a',
-                  backgroundColor: foundationOverlay.accentColor ?? suitColor,
-                  boxShadow: `0 0 8px ${(foundationOverlay.accentColor ?? suitColor)}99`,
-                }}
-              >
-                {foundationOverlay.comboCount}
+            {(armorValue > 0 || superArmorValue > 0) && (
+              <div className="absolute right-0 top-[16px] -translate-y-1/2 translate-x-1/2 flex flex-col gap-[2px]">
+                {superArmorValue > 0 && armorTokenSparkles.map((sparkle, index) => (
+                  <svg
+                    key={`armor-superarmor-sparkle-${index}`}
+                    viewBox="0 0 10 10"
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: sparkle.left,
+                      top: sparkle.top,
+                      width: sparkle.size,
+                      height: sparkle.size,
+                      transform: 'translate(-50%, -50%)',
+                      filter: `drop-shadow(0 0 2px ${superArmorSparkleColor}) drop-shadow(0 0 8px rgba(255, 202, 88, 0.72))`,
+                      animation: `foundation-superarmor-sparkle-float ${sparkle.dur}s ease-in-out infinite`,
+                      animationDelay: `${sparkle.delay}s`,
+                      opacity: 0.92,
+                      zIndex: 2,
+                    }}
+                  >
+                    <path d="M5,0 L5.8,4.2 L10,5 L5.8,5.8 L5,10 L4.2,5.8 L0,5 L4.2,4.2 Z" fill={superArmorSparkleColor} />
+                    <circle cx="5" cy="5" r="1.4" fill="rgba(255,255,255,0.92)" />
+                  </svg>
+                ))}
+                {superArmorValue > 0 && (
+                  <div
+                    className="w-[24px] h-[24px] rounded-full border flex items-center justify-center gap-[1px] font-bold leading-none"
+                    style={{
+                      color: '#ffd23c',
+                      borderColor: 'rgba(255, 210, 60, 0.55)',
+                      backgroundColor: 'rgba(32, 20, 0, 0.72)',
+                      textShadow: '0 0 8px rgba(255, 210, 60, 0.85)',
+                      fontSize: 8,
+                    }}
+                    title={`Super Armor ${superArmorValue}`}
+                  >
+                    <span className="leading-none">✦</span>
+                    <span className="leading-none">{superArmorValue}</span>
+                  </div>
+                )}
+                {armorValue > 0 && (
+                  <div
+                    className="w-[28px] h-[28px] rounded-full border flex items-center justify-center gap-[1px] font-bold leading-none"
+                    style={{
+                      color: '#00c8ff',
+                      borderColor: '#00c8ff',
+                      backgroundColor: '#001c30',
+                      textShadow: '0 0 8px rgba(0, 196, 255, 0.85)',
+                      fontSize: 9,
+                    }}
+                    title={`Armor ${armorValue}`}
+                  >
+                    <span className="leading-none">🛡</span>
+                    <span className="leading-none">{armorValue}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        </div>
-      )}
+        );
+      })()}
       {showWaterArtOverlay && (
         <div
           className="absolute inset-0 pointer-events-none"
@@ -1499,11 +1970,12 @@ const getWatercolorColorFilter = () => {
               })}
             </div>
           )}
-          {!maskValue && (
+          {!maskValue && !foundationOverlay && (
             <div
               className="force-sharp absolute"
               style={{
-                top: Math.max(6, Math.round(frameSize.height * 0.07)),
+                top: handMinimalOverlay ? 0 : Math.max(6, Math.round(frameSize.height * 0.07)),
+                bottom: handMinimalOverlay ? 0 : undefined,
                 left: 0,
                 right: 0,
                 textAlign: 'center',
@@ -1514,7 +1986,55 @@ const getWatercolorColorFilter = () => {
                 pointerEvents: 'none',
               }}
             >
-              {keruAbilityProfile ? (
+              {handMinimalOverlay ? (
+                <div className="relative z-[2] flex h-full w-full flex-col px-2 py-[6px]">
+                  {(() => {
+                    const title = toDisplayName(handMinimalOverlay.title) || 'Ability';
+                    const safeLength = Math.max(1, title.length);
+                    const maxWidth = frameSize.width - 16;
+                    const baseSize = Math.round(frameSize.width * 0.13);
+                    const fitSize = Math.floor(maxWidth / (safeLength * 0.46));
+                    const fontSize = Math.max(7, Math.min(baseSize, fitSize));
+                    return (
+                      <div
+                        className="w-full rounded-md border px-2 py-[2px] text-center font-black leading-tight"
+                        style={{
+                          borderColor: 'rgba(127, 219, 202, 0.45)',
+                          backgroundColor: 'rgba(4, 8, 12, 0.8)',
+                          color: '#f3f8ff',
+                          fontSize: `${fontSize}px`,
+                          letterSpacing: fontSize <= 8 ? '-0.2px' : '0px',
+                          textShadow: '0 0 8px rgba(127, 219, 202, 0.55)',
+                          whiteSpace: 'normal',
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          minHeight: `${Math.round(fontSize * 2.35)}px`,
+                          textTransform: 'none',
+                        }}
+                      >
+                        {title}
+                      </div>
+                    );
+                  })()}
+                  <div className="mt-auto w-full flex justify-center">
+                    <div
+                      className="rounded-full border px-3 py-[2px] text-center font-black leading-none"
+                      style={{
+                        minWidth: Math.max(24, Math.round(frameSize.width * 0.35)),
+                        borderColor: 'rgba(232, 243, 255, 0.62)',
+                        backgroundColor: 'rgba(7, 13, 20, 0.9)',
+                        color: '#f2f6ff',
+                        fontSize: `${Math.max(10, Math.round(frameSize.width * 0.15))}px`,
+                        textShadow: '0 0 8px rgba(170, 220, 255, 0.8)',
+                      }}
+                    >
+                      {handMinimalOverlay.cost}
+                    </div>
+                  </div>
+                </div>
+              ) : keruAbilityProfile ? (
                 <div className="relative z-[2] flex h-full w-full flex-col items-center text-center px-3 pt-0 pb-0 overflow-hidden">
                   {/* 40% Header Section: Badge + Damage + Name */}
                   <div style={{ height: `${frameSize.height * 0.4}px`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', width: '100%', paddingTop: Math.max(6, Math.round(frameSize.height * 0.02)), gap: Math.max(3, Math.round(frameSize.height * 0.015)) }}>
@@ -1983,18 +2503,37 @@ const getWatercolorColorFilter = () => {
                   >
                     {cardTitleMeta.subtitle}
                   </span>
-                  <span
-                    style={{
-                      color: '#f4f6ff',
-                      fontWeight: 900,
-                      fontSize: Math.max(10, Math.round(frameSize.width * 0.14)),
-                      letterSpacing: '0.06em',
-                      lineHeight: 0.9,
-                      textShadow: '0 0 8px rgba(170, 220, 255, 0.85)',
-                    }}
-                  >
-                    {getRankDisplay(card.rank)}
-                  </span>
+                  {renderedRpgDescription ? (
+                    <div
+                      style={{
+                        color: '#d9f9f3',
+                        fontSize: Math.max(7, Math.round(frameSize.width * 0.07)),
+                        lineHeight: 1.05,
+                        maxWidth: '92%',
+                        textAlign: 'center',
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        textShadow: '0 0 8px rgba(120, 230, 210, 0.35)',
+                      }}
+                    >
+                      {renderedRpgDescription}
+                    </div>
+                  ) : (
+                    <span
+                      style={{
+                        color: '#f4f6ff',
+                        fontWeight: 900,
+                        fontSize: Math.max(10, Math.round(frameSize.width * 0.14)),
+                        letterSpacing: '0.06em',
+                        lineHeight: 0.9,
+                        textShadow: '0 0 8px rgba(170, 220, 255, 0.85)',
+                      }}
+                    >
+                      {getRankDisplay(card.rank)}
+                    </span>
+                  )}
                 </div>
               ) : (
                 <span
@@ -2097,7 +2636,7 @@ const getWatercolorColorFilter = () => {
                   );
                 })}
             </div>
-          ) : (!maskValue && !cardTitleMeta && !keruAspectProfile && !foundationActorProfile) ? (
+          ) : (!maskValue && !foundationOverlay && !handMinimalOverlay && !cardTitleMeta && !keruAspectProfile && !foundationActorProfile) ? (
             <div className="absolute bottom-2 left-0 right-0 flex justify-center">
               <div
                 className="text-xs force-sharp"
@@ -2131,7 +2670,7 @@ const getWatercolorColorFilter = () => {
               </div>
             </div>
           ) : null}
-          {cooldownValue > 0 && cooldownMax > 0 && (
+          {cooldownValue > 0 && cooldownMax > 0 && !handMinimalOverlay && (
             <div className="absolute bottom-1 left-1 right-1 text-[9px] text-game-white/70 pointer-events-none">
               <span>Cooling down</span>
             </div>

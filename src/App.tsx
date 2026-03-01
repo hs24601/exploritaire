@@ -11,7 +11,7 @@ import { MapEditor } from './components/MapEditor';
 import { ActorEditor } from './components/ActorEditor';
 import { AssetEditorEngine } from './components/editor/AssetEditorEngine';
 import type { AssetEditorPaneDefinition, AssetEditorTabId } from './components/editor/types';
-import type { ActorDefinition, Element, OrimRarity } from './engine/types';
+import type { ActorDefinition, Element, OrimRarity, TurnPlayability } from './engine/types';
 import { ACTOR_DEFINITIONS, getActorDefinition } from './engine/actors';
 import { ACTOR_DECK_TEMPLATES } from './engine/actorDecks';
 import { initializeGame } from './engine/game';
@@ -95,6 +95,9 @@ type PoiNarrationDraft = {
 type ActorDeckTemplate = {
   values: number[];
   costs?: number[];
+  activeCards?: boolean[];
+  notDiscardedCards?: boolean[];
+  playableTurns?: TurnPlayability[];
   cooldowns?: number[];
   slotsPerCard?: number[];
   starterOrim?: { cardIndex: number; slotIndex?: number; orimId: string }[];
@@ -120,9 +123,19 @@ interface AbilityEffect {
 }
 
 const ABILITY_EFFECT_TYPES: AbilityEffectType[] = [
-  'damage', 'healing', 'speed', 'evasion',
-  'armor', 'super_armor', 'defense', 'draw', 'maxhp',
-  'burn', 'bleed', 'stun', 'freeze',
+  'damage',
+  'healing',
+  'speed',
+  'evasion',
+  'armor',
+  'super_armor',
+  'defense',
+  'draw',
+  'maxhp',
+  'burn',
+  'bleed',
+  'stun',
+  'freeze',
 ];
 
 const resolveEffectValueForRarity = (effect: AbilityEffect, rarity: OrimRarity): number => {
@@ -275,15 +288,17 @@ export default function App() {
   });
   const [assetEditorOpen, setAssetEditorOpen] = useState(false);
   const [assetEditorTab, setAssetEditorTab] = useState<AssetEditorTabId>('visuals');
-  const [actorEditorGroup, setActorEditorGroup] = useState<'party' | 'enemy'>('party');
   const [actorDefinitions, setActorDefinitions] = useState<ActorDefinition[]>(ACTOR_DEFINITIONS);
   const [actorDeckTemplates, setActorDeckTemplates] = useState<Record<string, ActorDeckTemplate>>(ACTOR_DECK_TEMPLATES);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [isGamePaused, setIsGamePaused] = useState(false);
+  const [highPerformanceTimer, setHighPerformanceTimer] = useState(false);
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
   const [forcedPerspectiveEnabled, setForcedPerspectiveEnabled] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
   const [toolingTab, setToolingTab] = useState<'poi' | 'ability' | 'orim' | 'synergies' | 'visuals' | 'actor'>('poi');
+  const [toolingVisualsOverlayActive, setToolingVisualsOverlayActive] = useState(false);
+  const [assetEditorVisualsOverlayActive, setAssetEditorVisualsOverlayActive] = useState(false);
   const applySparkleConfig = useCallback((config?: PoiSparkleConfig) => {
     const resolved = { ...DEFAULT_SPARKLE_CONFIG, ...config };
     setPoiEditorProximityRange(resolved.proximityRange);
@@ -414,7 +429,7 @@ export default function App() {
   const [isSavingSynergy, setIsSavingSynergy] = useState(false);
   const [useGhostBackground, setUseGhostBackground] = useState(false);
   const [cardScaleProfile, setCardScaleProfile] = useState<CardScaleProfile>({
-    zoom: 2,
+    zoom: 2 * 0.85, // shrink all card scales by 15%
     table: 1,
     hand: 1,
     drag: 1,
@@ -449,71 +464,22 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleZoomKeys);
   }, []);
   const spawnDieRef = useRef<((clientX: number, clientY: number) => void) | null>(null);
-  const actorTypeFilter = actorEditorGroup === 'party' ? 'adventurer' : 'npc';
   const actorDefinitionsForEditor = useMemo(
-    () => actorDefinitions.filter((definition) => definition.type === actorTypeFilter),
-    [actorDefinitions, actorTypeFilter]
+    () => actorDefinitions,
+    [actorDefinitions]
   );
-  const handleActorDefinitionChange = useCallback((nextScopedDefinitions: ActorDefinition[]) => {
-    const normalizedScopedDefinitions = nextScopedDefinitions.map((definition) => ({
-      ...definition,
-      type: actorTypeFilter,
-    }));
-    setActorDefinitions((previous) => {
-      const scopedIds = new Set(
-        previous
-          .filter((definition) => definition.type === actorTypeFilter)
-          .map((definition) => definition.id)
-      );
-      const nextById = new Map(normalizedScopedDefinitions.map((definition) => [definition.id, definition]));
-      const merged: ActorDefinition[] = [];
-
-      previous.forEach((definition) => {
-        if (!scopedIds.has(definition.id)) {
-          merged.push(definition);
-          return;
-        }
-        const replacement = nextById.get(definition.id);
-        if (replacement) {
-          merged.push(replacement);
-          nextById.delete(definition.id);
-        }
-      });
-
-      nextById.forEach((definition) => {
-        merged.push(definition);
-      });
-
-      return merged;
-    });
-  }, [actorTypeFilter]);
+  const handleActorDefinitionChange = useCallback((nextDefinitions: ActorDefinition[]) => {
+    setActorDefinitions(nextDefinitions);
+  }, []);
+  const handleAssetEditorVisualsOverlayChange = useCallback((active: boolean) => {
+    setAssetEditorVisualsOverlayActive(active);
+  }, []);
   const assetEditorPanes = useMemo<AssetEditorPaneDefinition[]>(() => [
     {
       id: 'actor',
       label: 'Actors',
       render: () => (
         <div className="flex h-full min-h-0 flex-col gap-2">
-          <div className="flex items-center justify-end">
-            <div className="inline-flex items-center rounded border border-game-teal/40 bg-game-bg-dark/70 p-0.5 text-[10px] font-mono">
-              <button
-                type="button"
-                onClick={() => setActorEditorGroup('party')}
-                className={`rounded px-3 py-1 transition-colors ${actorEditorGroup === 'party' ? 'bg-game-teal/25 text-game-gold' : 'text-game-white/70 hover:text-game-white'}`}
-              >
-                Party
-              </button>
-              <button
-                type="button"
-                onClick={() => setActorEditorGroup('enemy')}
-                className={`rounded px-3 py-1 transition-colors ${actorEditorGroup === 'enemy' ? 'bg-game-teal/25 text-game-gold' : 'text-game-white/70 hover:text-game-white'}`}
-              >
-                Enemy
-              </button>
-            </div>
-          </div>
-          <div className="px-1 text-[10px] text-game-white/45">
-            Editing {actorEditorGroup === 'party' ? 'party' : 'enemy'} actors only.
-          </div>
           <div className="min-h-0 flex-1 overflow-hidden">
             <ActorEditor
               embedded
@@ -531,7 +497,7 @@ export default function App() {
     {
       id: 'visuals',
       label: 'Visuals',
-      render: () => <VisualsEditor />,
+      render: () => <VisualsEditor onHoloOverlayVisibleChange={handleAssetEditorVisualsOverlayChange} />,
     },
     {
       id: 'map',
@@ -546,8 +512,8 @@ export default function App() {
   ], [
     actorDeckTemplates,
     actorDefinitionsForEditor,
-    actorEditorGroup,
     handleActorDefinitionChange,
+    handleAssetEditorVisualsOverlayChange,
   ]);
   const initialGameState = useMemo(() => {
     if (typeof window === 'undefined') {
@@ -602,6 +568,8 @@ export default function App() {
     showGraphics,
     isWon,
     noValidMoves,
+    noValidMovesPlayer,
+    noValidMovesEnemy,
     tableauCanPlay,
     validFoundationsForSelected,
     noRegretStatus,
@@ -1824,7 +1792,6 @@ export default function App() {
 
 
   useEffect(() => {
-    console.log('[App] phase', gameState?.phase);
     if (typeof window !== 'undefined') {
       (window as typeof window & { __EXPLORA_PHASE__?: string }).__EXPLORA_PHASE__ = gameState?.phase ?? 'unknown';
     }
@@ -1883,15 +1850,15 @@ export default function App() {
       const key = event.key.toLowerCase();
       const code = event.code;
 
-      if (toolingOpen && key !== 'e') {
-        return;
-      }
-
       if (code === 'Space') {
         if (event.repeat) return;
         event.preventDefault();
         setHidePauseOverlay(false);
         setIsGamePaused((prev) => !prev);
+        return;
+      }
+
+      if (toolingOpen && key !== 'e') {
         return;
       }
 
@@ -1927,6 +1894,12 @@ export default function App() {
       if (key === 'p') {
         event.preventDefault();
         setUseGhostBackground((prev) => !prev);
+        return;
+      }
+
+      if (key === 'v') {
+        event.preventDefault();
+        setHighPerformanceTimer((prev) => !prev);
         return;
       }
 
@@ -2249,11 +2222,24 @@ export default function App() {
                     >
                     {combatSandboxOpen ? '🥊 Lab: ON' : '🥊 Lab: OFF'}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setHighPerformanceTimer((prev) => !prev)}
+                    className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
+                    style={{
+                      color: highPerformanceTimer ? '#e6b31e' : '#7fdbca',
+                      borderColor: highPerformanceTimer ? 'rgba(230, 179, 30, 0.6)' : 'rgba(127, 219, 202, 0.6)',
+                    }}
+                    title="Toggle high performance particle timers"
+                  >
+                    {highPerformanceTimer ? '✨ Particles: ON' : '✨ Particles: OFF'}
+                  </button>
                   <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
                     <div className="text-[10px] text-game-white/70 tracking-[2px]">HOTKEYS</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">C — Combat lab</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">E — Editor</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">P — Background toggle</div>
+                    <div className="text-[10px] text-game-teal/80 font-mono">V — Particle Timers</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">G — Graphics toggle</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">D — Touch vs Drag</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">` — Orim Tray Dev</div>
@@ -2365,7 +2351,7 @@ export default function App() {
           </div>
         )}
         {toolingOpen && (
-          <div className="fixed inset-0 z-[10030]">
+          <div className={`fixed inset-0 z-[10030]${toolingVisualsOverlayActive ? ' invisible pointer-events-none' : ''}`}>
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
             <div className="relative w-full h-full flex items-center justify-center p-4">
               <div className="relative w-full h-full flex flex-col bg-game-bg-dark/95 border border-game-teal/40 rounded-2xl overflow-hidden menu-text shadow-[0_0_50px_rgba(0,0,0,0.8)]">
@@ -4071,28 +4057,10 @@ export default function App() {
                   )}
 
                   {toolingTab === 'visuals' && (
-                    <VisualsEditor />
+                    <VisualsEditor onHoloOverlayVisibleChange={setToolingVisualsOverlayActive} />
                   )}
                   {toolingTab === 'actor' && (
                     <div className="flex h-full min-h-0 flex-col gap-2">
-                      <div className="flex items-center justify-end">
-                        <div className="inline-flex items-center rounded border border-game-teal/40 bg-game-bg-dark/70 p-0.5 text-[10px] font-mono">
-                          <button
-                            type="button"
-                            onClick={() => setActorEditorGroup('party')}
-                            className={`rounded px-3 py-1 transition-colors ${actorEditorGroup === 'party' ? 'bg-game-teal/25 text-game-gold' : 'text-game-white/70 hover:text-game-white'}`}
-                          >
-                            Party
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setActorEditorGroup('enemy')}
-                            className={`rounded px-3 py-1 transition-colors ${actorEditorGroup === 'enemy' ? 'bg-game-teal/25 text-game-gold' : 'text-game-white/70 hover:text-game-white'}`}
-                          >
-                            Enemy
-                          </button>
-                        </div>
-                      </div>
                       <div className="min-h-0 flex-1 overflow-hidden">
                         <ActorEditor
                           embedded
@@ -4129,10 +4097,14 @@ export default function App() {
         onCycleTimeScale={handleCycleTimeScale}
         isGamePaused={isGamePaused}
         onTogglePause={handleTogglePause}
+        highPerformanceTimer={highPerformanceTimer}
         selectedCard={selectedCard}
         validFoundationsForSelected={validFoundationsForSelected}
         noValidMoves={noValidMoves}
+        noValidMovesPlayer={noValidMovesPlayer}
+        noValidMovesEnemy={noValidMovesEnemy}
         tableauCanPlay={tableauCanPlay}
+        hideGameContent={toolingVisualsOverlayActive || assetEditorVisualsOverlayActive}
       />
 
       {!combatLabMode && (
@@ -4154,6 +4126,7 @@ export default function App() {
           showText={showText}
           zenModeEnabled={zenModeEnabled}
           isGamePaused={isGamePaused}
+          highPerformanceTimer={highPerformanceTimer}
           timeScale={timeScale}
           discoveryEnabled={discoveryEnabled}
           hidePauseOverlay={hidePauseOverlay}
@@ -4189,6 +4162,15 @@ export default function App() {
         />
       )}
 
+      {(assetEditorOpen || toolingOpen) && (
+        <div className="fixed top-2 right-3 z-[10060] pointer-events-none menu-text">
+          <div className="rounded border border-game-teal/50 bg-game-bg-dark/85 px-2 py-1 text-[10px] tracking-[1px] text-game-gold">
+            FPS: {fps}
+            {serverAlive === false ? ' (offline)' : ''}
+          </div>
+        </div>
+      )}
+
       <AssetEditorEngine
         open={assetEditorOpen}
         onClose={() => setAssetEditorOpen(false)}
@@ -4196,6 +4178,7 @@ export default function App() {
         onTabChange={setAssetEditorTab}
         panes={assetEditorPanes}
         isGodRaysSliderDragging={false}
+        hideForOverlay={assetEditorVisualsOverlayActive}
       />
 
       </div>

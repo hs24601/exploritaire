@@ -2,9 +2,6 @@ import { memo, useEffect, useMemo, useRef } from 'react';
 import type { Card as CardType } from '../../engine/types';
 import { CombatOverlayFrame } from './CombatOverlayFrame';
 
-const SOAR_EVASION_BASE_MS = 6000;
-const SOAR_EVASION_LEVEL_STEP_MS = 2000;
-
 interface RpgCardInspectOverlayProps {
   card: CardType | null;
   open: boolean;
@@ -81,22 +78,13 @@ export function getRpgCardMeta(card: CardType) {
     };
   }
   if (card.id.startsWith('rpg-cloud-sight-')) {
-    const rarity = card.rarity ? String(card.rarity).toLowerCase() : '';
-    const evasionEnabled = level >= 4 || rarity === 'mythic';
-    const evasionDurationSeconds = Math.max(
-      1,
-      Math.round((SOAR_EVASION_BASE_MS + Math.max(0, level - 4) * SOAR_EVASION_LEVEL_STEP_MS) / 1000)
-    );
     const details = [
       `Level ${level}`,
       'Effect: Reveal 2nd layer',
       level >= 2 ? '+2s combo timer' : 'No timer extension',
     ];
-    if (evasionEnabled) {
-      details.push(`+75% evasion for ${evasionDurationSeconds}s`);
-    }
     return {
-      title: 'Soar',
+      title: 'Cloud Sight',
       subtitle: 'Signature',
       body: 'Reveal second-layer tableau values and improve tempo.',
       details,

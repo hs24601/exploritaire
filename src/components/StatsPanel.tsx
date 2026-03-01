@@ -1,6 +1,5 @@
 import { memo } from 'react';
 import type { GameState } from '../engine/types';
-import { EffectsDisplay } from './EffectsDisplay';
 
 interface StatsPanelProps {
   gameState: GameState;
@@ -8,6 +7,7 @@ interface StatsPanelProps {
 }
 
 export const StatsPanel = memo(function StatsPanel({ gameState, showGraphics }: StatsPanelProps) {
+  void showGraphics;
   const cardsRemaining = gameState.tableaus.reduce((sum, t) => sum + t.length, 0);
 
   return (
@@ -15,7 +15,6 @@ export const StatsPanel = memo(function StatsPanel({ gameState, showGraphics }: 
       <div>Cards Remaining: {cardsRemaining}</div>
       <div>Stock: {gameState.stock.length}</div>
       <div>Turn: {gameState.turnCount}</div>
-      <EffectsDisplay effects={gameState.activeEffects} showGraphics={showGraphics} />
     </div>
   );
 });
