@@ -36,5 +36,32 @@
 - One-time setup for local hooks: `npm run setup:hooks`.
 - CI also runs typecheck on pull requests and pushes to `main` via `.github/workflows/typecheck.yml`.
 
+## Dev Startup Guardrails
+- `npm run dev` now runs `dev:doctor:fix` before Vite to clear stale duplicate listeners on the dev port.
+- Manual diagnostics:
+  - `npm run dev:doctor`
+  - `npm run dev:doctor:fix`
+
+## Dev Host/HMR Configuration
+- Default dev host/port: `0.0.0.0:5178`.
+- Optional env overrides:
+  - `VITE_DEV_HOST` (example: `0.0.0.0`)
+  - `VITE_DEV_PORT` (example: `5178`)
+  - `VITE_DEV_HMR_HOST` (example: `192.168.50.27`)
+  - `VITE_DEV_HMR_PORT` (example: `5178`)
+- If `VITE_DEV_HMR_HOST` is not set, Vite HMR host is not forced.
+
+## 426 Troubleshooting
+- Symptom: browser request to `http://<LAN-IP>:5178` returns `426 Upgrade Required`.
+- Cause: conflicting listeners on the same port (typically duplicate Vite/WS processes).
+- Fix:
+  1. Run `npm run dev:doctor`.
+  2. If duplicates are reported, run `npm run dev:doctor:fix`.
+  3. Restart dev server with `npm run dev`.
+
 ## Smoke Tests
 - Focused gameplay smoke checklist: `docs/smoke-gameplay-checklist.md`.
+- Automated preflight (typecheck + build + preview reachability): `npm run smoke:preflight`.
+
+## Rarity Balance
+- Default rarity auto-fill curve and guardrails: `docs/rarity-balance-curve.md`.

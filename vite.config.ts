@@ -2,16 +2,31 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
+
+const parsePort = (value: string | undefined, fallback: number): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const DEV_HOST = process.env.VITE_DEV_HOST?.trim() || '0.0.0.0';
+const DEV_PORT = parsePort(process.env.VITE_DEV_PORT, 5178);
+const DEV_HMR_HOST = process.env.VITE_DEV_HMR_HOST?.trim();
+const DEV_HMR_PORT = parsePort(process.env.VITE_DEV_HMR_PORT, DEV_PORT);
+
 export default defineConfig({
   server: {
-    host: '0.0.0.0',
-    port: 5178,
+    host: DEV_HOST,
+    port: DEV_PORT,
     strictPort: true,
-    hmr: {
-      host: '192.168.50.27',
-      port: 5178,
-      clientPort: 5178,
-    },
+    ...(DEV_HMR_HOST
+      ? {
+        hmr: {
+          host: DEV_HMR_HOST,
+          port: DEV_HMR_PORT,
+          clientPort: DEV_HMR_PORT,
+        },
+      }
+      : {}),
   },
   plugins: [
     react(),

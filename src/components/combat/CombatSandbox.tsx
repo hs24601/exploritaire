@@ -7,6 +7,7 @@ import { getBiomeDefinition } from '../../engine/biomes';
 import { ACTOR_DEFINITIONS, getActorDefinition } from '../../engine/actors';
 import { createActorDeckStateWithOrim } from '../../engine/actorDecks';
 import { analyzeOptimalSequence } from '../../engine/analysis';
+import { resolveCostByRarity } from '../../engine/rarityLoadouts';
 import { Foundation } from '../Foundation';
 import { Hand } from '../Hand';
 import { DragPreview } from '../DragPreview';
@@ -22,7 +23,7 @@ import { useRpgCombatTicker } from './hooks/useRpgCombatTicker';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { getNeonElementColor } from '../../utils/styles';
 import { ParticleProgressBar } from '../ParticleProgressBar';
-import type { Actor, Card as CardType, Element, GameState, OrimDefinition, OrimRarity, SelectedCard } from '../../engine/types';
+import type { AbilityLifecycleDef, AbilityLifecycleExhaustScope, AbilityLifecycleUsageEntry, Actor, Card as CardType, Element, GameState, OrimDefinition, OrimRarity, SelectedCard } from '../../engine/types';
 import abilitiesJson from '../../data/abilities.json';
 import { LostInStarsAtmosphere } from '../atmosphere/LostInStarsAtmosphere';
 import { AuroraForestAtmosphere } from '../atmosphere/AuroraForestAtmosphere';
@@ -85,6 +86,8 @@ const DEFAULT_TIME_SCALE_OPTIONS = [0.25, 0.5, 1, 1.5, 2, 3, 4];
 const AUTO_PLAY_SPEED_OPTIONS = [0.5, 1, 2, 4];
 const AUTO_PLAY_BASE_STEP_MS = 430;
 const AUTO_PLAY_MAX_TRACE = 10;
+const AUTO_PLAY_STALL_LIMIT = 4;
+const AUTO_PLAY_DEFAULT_SEED = 1337;
 const AUTO_PLAY_DRAG_CARD_WIDTH = 66;
 const AUTO_PLAY_DRAG_CARD_HEIGHT = 92;
 const AUTO_EFFECT_WEIGHTS: Partial<Record<string, number>> = {
@@ -100,22 +103,11 @@ const AUTO_EFFECT_WEIGHTS: Partial<Record<string, number>> = {
   redeal_tableau: 6,
   upgrade_card_rarity_uncommon: 3.5,
 };
-const ORIM_RARITY_OPTIONS: OrimRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
-
 function resolveDeckCardApCost(
   deckCard: { cost?: number; costByRarity?: Partial<Record<OrimRarity, number>> },
   rarity: OrimRarity
 ): number {
-  const fallback = Number.isFinite(deckCard.cost) ? Math.max(0, Number(deckCard.cost)) : 0;
-  let anchor = fallback;
-  for (const tier of ORIM_RARITY_OPTIONS) {
-    const raw = deckCard.costByRarity?.[tier];
-    if (typeof raw === 'number' && Number.isFinite(raw)) {
-      anchor = Math.max(0, raw);
-    }
-    if (tier === rarity) return anchor;
-  }
-  return anchor;
+  return resolveCostByRarity(deckCard, rarity);
 }
 
 type PerfSummary = { avg: number; p95: number; max: number };
@@ -155,6 +147,28 @@ const PERF_SAMPLE_CAP = 180;
 function easeInOutCubic(value: number): number {
   if (value < 0.5) return 4 * value * value * value;
   return 1 - (Math.pow(-2 * value + 2, 3) / 2);
+}
+
+function nextAutoPlaySeed(seed: number): number {
+  return (Math.imul(seed >>> 0, 1664525) + 1013904223) >>> 0;
+}
+
+function runWithDeterministicRandom<T>(
+  enabled: boolean,
+  seedRef: { current: number },
+  run: () => T
+): T {
+  if (!enabled) return run();
+  const originalRandom = Math.random;
+  Math.random = () => {
+    seedRef.current = nextAutoPlaySeed(seedRef.current);
+    return seedRef.current / 0x100000000;
+  };
+  try {
+    return run();
+  } finally {
+    Math.random = originalRandom;
+  }
 }
 
 function pushPerfSample(buffer: number[], value: number) {
@@ -210,6 +224,7 @@ type AbilityCatalogEntry = {
     countdownType?: 'combo' | 'seconds';
     countdownValue?: number;
   }>;
+  lifecycle?: AbilityLifecycleDef;
 };
 
 function normalizeAbilityTriggerType(rawType: unknown): string {
@@ -240,6 +255,95 @@ function compareAbilityTriggerMetric(metric: number, threshold: number, operator
   if (operator === '=') return metric === threshold;
   if (operator === '!=') return metric !== threshold;
   return metric >= threshold;
+}
+
+type NormalizedLifecyclePreview = {
+  exhaustScope: NonNullable<AbilityLifecycleDef['exhaustScope']>;
+  maxUsesPerScope: number;
+  cooldownMode: NonNullable<AbilityLifecycleDef['cooldownMode']>;
+  cooldownValue: number;
+  cooldownResetsOn: NonNullable<AbilityLifecycleDef['cooldownResetsOn']>;
+};
+
+function normalizeLifecycleForPreview(lifecycle?: AbilityLifecycleDef): NormalizedLifecyclePreview {
+  const exhaustScope = lifecycle?.exhaustScope === 'turn'
+    || lifecycle?.exhaustScope === 'battle'
+    || lifecycle?.exhaustScope === 'rest'
+    || lifecycle?.exhaustScope === 'run'
+    ? lifecycle.exhaustScope
+    : 'none';
+  const cooldownMode = lifecycle?.cooldownMode === 'seconds'
+    || lifecycle?.cooldownMode === 'turns'
+    || lifecycle?.cooldownMode === 'combo'
+    ? lifecycle.cooldownMode
+    : 'none';
+  const cooldownResetsOn = lifecycle?.cooldownResetsOn === 'turn_end'
+    || lifecycle?.cooldownResetsOn === 'battle_end'
+    || lifecycle?.cooldownResetsOn === 'rest'
+    ? lifecycle.cooldownResetsOn
+    : 'turn_start';
+  const maxUsesRaw = Number(lifecycle?.maxUsesPerScope ?? 1);
+  const cooldownValueRaw = Number(lifecycle?.cooldownValue ?? 0);
+  return {
+    exhaustScope,
+    maxUsesPerScope: Number.isFinite(maxUsesRaw) ? Math.max(0, Math.floor(maxUsesRaw)) : 1,
+    cooldownMode,
+    cooldownValue: Number.isFinite(cooldownValueRaw) ? Math.max(0, Math.floor(cooldownValueRaw)) : 0,
+    cooldownResetsOn,
+  };
+}
+
+function getLifecycleCounterForPreview(state: GameState, scope: AbilityLifecycleExhaustScope): number {
+  if (scope === 'turn') return Math.max(0, Number(state.lifecycleTurnCounter ?? state.randomBiomeTurnNumber ?? state.turnCount ?? 0));
+  if (scope === 'battle') return Math.max(0, Number(state.lifecycleBattleCounter ?? 0));
+  if (scope === 'rest') return Math.max(0, Number(state.lifecycleRestCounter ?? state.globalRestCount ?? 0));
+  if (scope === 'run') return Math.max(1, Number(state.lifecycleRunCounter ?? 1));
+  return 0;
+}
+
+function getLifecycleScopeUsageForPreview(
+  entry: AbilityLifecycleUsageEntry | undefined,
+  scope: AbilityLifecycleExhaustScope,
+  counter: number
+): number {
+  if (!entry) return 0;
+  if (scope === 'turn') return entry.turnCounter === counter ? Math.max(0, Number(entry.turnUses ?? 0)) : 0;
+  if (scope === 'battle') return entry.battleCounter === counter ? Math.max(0, Number(entry.battleUses ?? 0)) : 0;
+  if (scope === 'rest') return entry.restCounter === counter ? Math.max(0, Number(entry.restUses ?? 0)) : 0;
+  if (scope === 'run') return entry.runCounter === counter ? Math.max(0, Number(entry.runUses ?? 0)) : 0;
+  return 0;
+}
+
+function canUseDeckCardLifecycleForPreview(
+  state: GameState,
+  deckCardId: string | undefined,
+  lifecycle?: AbilityLifecycleDef
+): boolean {
+  if (!deckCardId) return true;
+  const normalized = normalizeLifecycleForPreview(lifecycle);
+  const usageEntry = state.abilityLifecycleUsageByDeckCard?.[deckCardId];
+  if (normalized.cooldownMode === 'turns' && normalized.cooldownValue > 0) {
+    const currentTurnCounter = getLifecycleCounterForPreview(state, 'turn');
+    const readyAt = Math.max(0, Number(usageEntry?.turnCooldownReadyAt ?? 0));
+    if (currentTurnCounter < readyAt) {
+      if (normalized.cooldownResetsOn === 'battle_end') {
+        const priorBattleCounter = Number(usageEntry?.turnCooldownBattleCounter ?? -1);
+        const currentBattleCounter = getLifecycleCounterForPreview(state, 'battle');
+        if (!(priorBattleCounter >= 0 && currentBattleCounter !== priorBattleCounter)) return false;
+      } else if (normalized.cooldownResetsOn === 'rest') {
+        const priorRestCounter = Number(usageEntry?.turnCooldownRestCounter ?? -1);
+        const currentRestCounter = getLifecycleCounterForPreview(state, 'rest');
+        if (!(priorRestCounter >= 0 && currentRestCounter !== priorRestCounter)) return false;
+      } else {
+        return false;
+      }
+    }
+  }
+  if (normalized.exhaustScope === 'none') return true;
+  if (normalized.maxUsesPerScope <= 0) return true;
+  const counter = getLifecycleCounterForPreview(state, normalized.exhaustScope);
+  const used = getLifecycleScopeUsageForPreview(usageEntry, normalized.exhaustScope, counter);
+  return used < normalized.maxUsesPerScope;
 }
 
 function withAlpha(color: string, alpha: number): string {
@@ -553,6 +657,8 @@ export function CombatSandbox({
   const [hudFps, setHudFps] = useState(0);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const [autoPlaySpeedIndex, setAutoPlaySpeedIndex] = useState(1);
+  const [autoPlayDeterministic, setAutoPlayDeterministic] = useState(false);
+  const [autoPlaySeed, setAutoPlaySeed] = useState(AUTO_PLAY_DEFAULT_SEED);
   const [autoPlayStalls, setAutoPlayStalls] = useState(0);
   const [autoPlayLastDecision, setAutoPlayLastDecision] = useState<AutoPlayDecisionEntry | null>(null);
   const [autoPlayTrace, setAutoPlayTrace] = useState<AutoPlayDecisionEntry[]>([]);
@@ -560,6 +666,13 @@ export function CombatSandbox({
   const autoPlayDragNodeRef = useRef<HTMLDivElement | null>(null);
   const autoPlayStallRef = useRef(0);
   const autoPlayBusyRef = useRef(false);
+  const autoPlayRngStateRef = useRef<number>(AUTO_PLAY_DEFAULT_SEED >>> 0);
+  const resetAutoPlayDeterministicRng = useCallback((seedOverride?: number) => {
+    const seedSource = seedOverride ?? autoPlaySeed;
+    const normalizedSeed = Math.max(0, Math.floor(Number(seedSource) || 0)) >>> 0;
+    autoPlayRngStateRef.current = normalizedSeed;
+    return normalizedSeed;
+  }, [autoPlaySeed]);
   const showGraphics = useGraphics();
   const tableGlobalScale = useCardScalePreset('table');
   const autoPlayTableauRefsRef = useRef<Record<number, HTMLDivElement | null>>({});
@@ -1186,6 +1299,8 @@ export function CombatSandbox({
           ? gameState.orimDefinitions.find((entry) => entry.id === inferredDefinitionId)
           : undefined;
         const catalogAbility = inferredDefinitionId ? abilityCatalogById.get(inferredDefinitionId) : undefined;
+        const lifecycle = definition?.lifecycle ?? catalogAbility?.lifecycle;
+        if (!canUseDeckCardLifecycleForPreview(gameState, deckCard.id, lifecycle)) return;
         const abilityEffects = definition?.effects ?? catalogAbility?.effects ?? [];
         const abilityTriggers = definition?.triggers ?? catalogAbility?.triggers ?? [];
         const nonNotDiscardedTriggers = abilityTriggers.filter((trigger) => (
@@ -1306,8 +1421,13 @@ export function CombatSandbox({
     gameState.actorCombos,
     gameState.foundations,
     gameState.actorDecks,
+    gameState.abilityLifecycleUsageByDeckCard,
     gameState.orimInstances,
     gameState.orimDefinitions,
+    gameState.lifecycleTurnCounter,
+    gameState.lifecycleBattleCounter,
+    gameState.lifecycleRestCounter,
+    gameState.lifecycleRunCounter,
     abilityCatalogById,
     areAbilityTriggersSatisfied,
     effectiveActiveSide,
@@ -1358,12 +1478,73 @@ export function CombatSandbox({
       if (!turnPlayable && !legacyInterruptOverride) return false;
     }
     if ((card.cooldown ?? 0) > 0) return false;
+    if (card.sourceDeckCardId) {
+      const lifecycleAbilityId = card.rpgAbilityId;
+      const definition = lifecycleAbilityId
+        ? gameState.orimDefinitions.find((entry) => entry.id === lifecycleAbilityId)
+        : undefined;
+      const lifecycle = definition?.lifecycle ?? (lifecycleAbilityId ? abilityCatalogById.get(lifecycleAbilityId)?.lifecycle : undefined);
+      if (!canUseDeckCardLifecycleForPreview(gameState, card.sourceDeckCardId, lifecycle)) return false;
+    }
     const cost = Math.max(0, Number(card.rpgApCost ?? 0));
     if (cost <= 0) return true;
     if (!card.sourceActorId) return false;
     const actorAp = actorApById.get(card.sourceActorId) ?? 0;
     return actorAp >= cost;
-  }, [actorApById, effectiveActiveSide, enforceTurnOwnership, interTurnCountdownActive]);
+  }, [abilityCatalogById, actorApById, effectiveActiveSide, enforceTurnOwnership, gameState, interTurnCountdownActive]);
+  const getHandCardLockReason = useCallback((card: CardType): string | undefined => {
+    if (interTurnCountdownActive) return 'Inter-turn countdown';
+    if (enforceTurnOwnership) {
+      const turnPlayable = canPlayCardOnTurn(card, effectiveActiveSide, true);
+      const legacyInterruptOverride = effectiveActiveSide === 'enemy'
+        && getCardTurnPlayability(card) === null
+        && isInterruptHandCard(card);
+      if (!turnPlayable && !legacyInterruptOverride) {
+        return effectiveActiveSide === 'enemy' ? 'Enemy turn only' : 'Player turn only';
+      }
+    }
+    if ((card.cooldown ?? 0) > 0) {
+      return `Cooldown ${Math.max(0, Number(card.cooldown ?? 0))}`;
+    }
+    if (card.sourceDeckCardId) {
+      const lifecycleAbilityId = card.rpgAbilityId;
+      const definition = lifecycleAbilityId
+        ? gameState.orimDefinitions.find((entry) => entry.id === lifecycleAbilityId)
+        : undefined;
+      const lifecycle = definition?.lifecycle ?? (lifecycleAbilityId ? abilityCatalogById.get(lifecycleAbilityId)?.lifecycle : undefined);
+      if (lifecycle && !canUseDeckCardLifecycleForPreview(gameState, card.sourceDeckCardId, lifecycle)) {
+        const normalized = normalizeLifecycleForPreview(lifecycle);
+        const usage = gameState.abilityLifecycleUsageByDeckCard?.[card.sourceDeckCardId];
+        if (normalized.cooldownMode === 'turns' && normalized.cooldownValue > 0) {
+          const readyAt = Math.max(0, Number(usage?.turnCooldownReadyAt ?? 0));
+          const remaining = Math.max(0, readyAt - getLifecycleCounterForPreview(gameState, 'turn'));
+          if (remaining > 0) return `Ready in ${remaining} turn${remaining === 1 ? '' : 's'}`;
+        }
+        if (normalized.exhaustScope !== 'none' && normalized.maxUsesPerScope > 0) {
+          const scopeCounter = getLifecycleCounterForPreview(gameState, normalized.exhaustScope);
+          const used = getLifecycleScopeUsageForPreview(usage, normalized.exhaustScope, scopeCounter);
+          if (used >= normalized.maxUsesPerScope) {
+            return `Exhausted (${normalized.exhaustScope})`;
+          }
+        }
+        return 'Lifecycle locked';
+      }
+    }
+    const cost = Math.max(0, Number(card.rpgApCost ?? 0));
+    if (cost > 0) {
+      if (!card.sourceActorId) return 'No source actor';
+      const actorAp = actorApById.get(card.sourceActorId) ?? 0;
+      if (actorAp < cost) return `Need ${cost} AP`;
+    }
+    return undefined;
+  }, [
+    abilityCatalogById,
+    actorApById,
+    effectiveActiveSide,
+    enforceTurnOwnership,
+    gameState,
+    interTurnCountdownActive,
+  ]);
   const labTrayOrims = useMemo(() => {
     const definitions = gameState.orimDefinitions ?? [];
     const combatCandidates = definitions.filter((definition) => (
@@ -1678,11 +1859,37 @@ export function CombatSandbox({
     const rpgTickPerf = summarizePerfSamples(rpgTickDurationSamplesRef.current);
     const reactCommitPerf = summarizePerfSamples(reactCommitDurationSamplesRef.current);
     const longTaskPerf = summarizePerfSamples(longTaskDurationSamplesRef.current);
+    const lifecycle = {
+      run: getLifecycleCounterForPreview(gameState, 'run'),
+      battle: getLifecycleCounterForPreview(gameState, 'battle'),
+      turn: getLifecycleCounterForPreview(gameState, 'turn'),
+      rest: getLifecycleCounterForPreview(gameState, 'rest'),
+    };
+    const lifecycleUsageEntries = Object.entries(gameState.abilityLifecycleUsageByDeckCard ?? {})
+      .slice(0, 12)
+      .map(([deckCardId, usage]) => ({ deckCardId, usage }));
     return {
       capturedAt: new Date().toISOString(),
       mode: isLabMode ? 'combat-lab' : 'combat-sandbox',
       activeSide: effectiveActiveSide,
+      timeScale,
       fps: fpsPerf,
+      autoPlay: {
+        enabled: autoPlayEnabled,
+        speed: autoPlaySpeed,
+        stepMs: autoPlayStepMs,
+        stalls: autoPlayStalls,
+        deterministic: autoPlayDeterministic,
+        seed: autoPlaySeed,
+        rngState: autoPlayRngStateRef.current,
+        lastDecision: autoPlayLastDecision,
+        traceHead: autoPlayTrace.slice(0, 6),
+      },
+      lifecycle: {
+        ...lifecycle,
+        trackedDeckCards: Object.keys(gameState.abilityLifecycleUsageByDeckCard ?? {}).length,
+        sampleUsage: lifecycleUsageEntries,
+      },
       drag: {
         ...dragPerf,
       },
@@ -1705,7 +1912,22 @@ export function CombatSandbox({
       },
       latest: perfSnapshot,
     };
-  }, [effectiveActiveSide, getPerfSnapshot, isLabMode, perfSnapshot]);
+  }, [
+    autoPlayDeterministic,
+    autoPlayEnabled,
+    autoPlayLastDecision,
+    autoPlaySeed,
+    autoPlaySpeed,
+    autoPlayStalls,
+    autoPlayStepMs,
+    autoPlayTrace,
+    effectiveActiveSide,
+    gameState,
+    getPerfSnapshot,
+    isLabMode,
+    perfSnapshot,
+    timeScale,
+  ]);
   const handleCapturePerf = useCallback(() => {
     const payload = buildPerfCapturePayload();
     const json = JSON.stringify(payload, null, 2);
@@ -1916,19 +2138,20 @@ export function CombatSandbox({
     autoPlayBusyRef.current = true;
     actions.cleanupDefeatedEnemies();
     try {
+      runWithDeterministicRandom(autoPlayDeterministic, autoPlayRngStateRef, () => {
 
-    const aliveEnemyTargets = enemyActors
-      .map((actor, enemyIndex) => ({ actor, enemyIndex }))
-      .filter((entry) => isActorAlive(entry.actor));
-    const alivePlayerTargets = partyActors
-      .map((actor, actorIndex) => ({ actor, actorIndex }))
-      .filter((entry) => isActorAlive(entry.actor));
-    const bestEnemyTarget = aliveEnemyTargets
-      .slice()
-      .sort((a, b) => (a.actor.hp ?? 0) - (b.actor.hp ?? 0))[0];
-    const bestPlayerTarget = alivePlayerTargets
-      .slice()
-      .sort((a, b) => (a.actor.hp ?? 0) - (b.actor.hp ?? 0))[0];
+      const aliveEnemyTargets = enemyActors
+        .map((actor, enemyIndex) => ({ actor, enemyIndex }))
+        .filter((entry) => isActorAlive(entry.actor));
+      const alivePlayerTargets = partyActors
+        .map((actor, actorIndex) => ({ actor, actorIndex }))
+        .filter((entry) => isActorAlive(entry.actor));
+      const bestEnemyTarget = aliveEnemyTargets
+        .slice()
+        .sort((a, b) => (a.actor.hp ?? 0) - (b.actor.hp ?? 0))[0];
+      const bestPlayerTarget = alivePlayerTargets
+        .slice()
+        .sort((a, b) => (a.actor.hp ?? 0) - (b.actor.hp ?? 0))[0];
 
     type Candidate = {
       side: AutoPlayActorSide | 'system';
@@ -2175,7 +2398,16 @@ export function CombatSandbox({
       }
     }
 
-    const sortedCandidates = [...candidates].sort((a, b) => b.score - a.score);
+    const sortedCandidates = [...candidates]
+      .map((candidate) => ({
+        candidate,
+        tieBreaker: Math.random(),
+      }))
+      .sort((a, b) => {
+        if (b.candidate.score !== a.candidate.score) return b.candidate.score - a.candidate.score;
+        return a.tieBreaker - b.tieBreaker;
+      })
+      .map((entry) => entry.candidate);
     for (const candidate of sortedCandidates) {
       if (candidate.drag) {
         startAutoPlayDragAnimation(
@@ -2291,8 +2523,9 @@ export function CombatSandbox({
       return;
     }
 
-    autoPlayStallRef.current += 1;
-    setAutoPlayStalls(autoPlayStallRef.current);
+    const nextStalls = autoPlayStallRef.current + 1;
+    autoPlayStallRef.current = nextStalls;
+    setAutoPlayStalls(nextStalls);
     appendAutoPlayDecision({
       side: 'system',
       kind: 'wait',
@@ -2301,7 +2534,41 @@ export function CombatSandbox({
       accepted: false,
       at: Date.now(),
     });
+    if (nextStalls >= AUTO_PLAY_STALL_LIMIT) {
+      executeAutoPlayDecision(
+        {
+          side: 'system',
+          kind: 'advance_turn',
+          score: 0.2,
+          label: `stall guard (${nextStalls}): force encounter progress`,
+        },
+        () => {
+          if (enforceTurnOwnership) {
+            if (useLocalTurnSide) {
+              forceLocalTurnSide(effectiveActiveSide === 'player' ? 'enemy' : 'player');
+            } else {
+              actions.advanceRandomBiomeTurn();
+            }
+            return true;
+          }
+          if (gameState.phase === 'biome') {
+            actions.endRandomBiomeTurn();
+            return true;
+          }
+          if (gameState.phase === 'playing' && actions.autoPlayNextMove) {
+            actions.autoPlayNextMove();
+            return true;
+          }
+          if (useWild && actions.endExplorationTurnInRandomBiome) {
+            actions.endExplorationTurnInRandomBiome();
+            return true;
+          }
+          return false;
+        }
+      );
+    }
     return;
+      });
     } finally {
       autoPlayBusyRef.current = false;
     }
@@ -2310,6 +2577,7 @@ export function CombatSandbox({
     appendAutoPlayDecision,
     applyFoundationTimerBonus,
     autoPlayEnabled,
+    autoPlayDeterministic,
     dragState.isDragging,
     effectiveActiveSide,
     enforceTurnOwnership,
@@ -2348,10 +2616,21 @@ export function CombatSandbox({
     return () => window.clearInterval(intervalId);
   }, [autoPlayEnabled, autoPlayStepMs, isLabMode, open, performAutoPlayStep]);
   useEffect(() => {
+    resetAutoPlayDeterministicRng();
+  }, [autoPlaySeed, resetAutoPlayDeterministicRng]);
+  useEffect(() => {
     if (autoPlayEnabled) return;
     autoPlayStallRef.current = 0;
     setAutoPlayStalls(0);
   }, [autoPlayEnabled]);
+  useEffect(() => {
+    if (!autoPlayEnabled) return;
+    autoPlayStallRef.current = 0;
+    setAutoPlayStalls(0);
+    if (autoPlayDeterministic) {
+      resetAutoPlayDeterministicRng();
+    }
+  }, [autoPlayDeterministic, autoPlayEnabled, resetAutoPlayDeterministicRng]);
   useEffect(() => {
     if (open || !autoPlayEnabled) return;
     setAutoPlayEnabled(false);
@@ -2717,6 +2996,83 @@ export function CombatSandbox({
     observer.observe(target);
     return () => observer.disconnect();
   }, [open, previewTableaus.length]);
+  const lifecycleCounters = useMemo(() => ({
+    run: Math.max(1, Number(gameState.lifecycleRunCounter ?? 1)),
+    battle: Math.max(0, Number(gameState.lifecycleBattleCounter ?? 0)),
+    turn: Math.max(0, Number(gameState.lifecycleTurnCounter ?? gameState.randomBiomeTurnNumber ?? gameState.turnCount ?? 0)),
+    rest: Math.max(0, Number(gameState.lifecycleRestCounter ?? gameState.globalRestCount ?? 0)),
+  }), [
+    gameState.globalRestCount,
+    gameState.lifecycleBattleCounter,
+    gameState.lifecycleRestCounter,
+    gameState.lifecycleRunCounter,
+    gameState.lifecycleTurnCounter,
+    gameState.randomBiomeTurnNumber,
+    gameState.turnCount,
+  ]);
+  const lifecycleDebugRows = useMemo(() => {
+    const seenDeckCardIds = new Set<string>();
+    return previewHandCards
+      .filter((card) => !!card.sourceDeckCardId)
+      .filter((card) => {
+        const deckCardId = card.sourceDeckCardId as string;
+        if (seenDeckCardIds.has(deckCardId)) return false;
+        seenDeckCardIds.add(deckCardId);
+        return true;
+      })
+      .map((card) => {
+        const deckCardId = card.sourceDeckCardId as string;
+        const abilityId = card.rpgAbilityId;
+        const definition = abilityId ? gameState.orimDefinitions.find((entry) => entry.id === abilityId) : undefined;
+        const catalog = abilityId ? abilityCatalogById.get(abilityId) : undefined;
+        const lifecycle = definition?.lifecycle ?? catalog?.lifecycle;
+        if (!lifecycle) return null;
+        const normalized = normalizeLifecycleForPreview(lifecycle);
+        const usage = gameState.abilityLifecycleUsageByDeckCard?.[deckCardId];
+        const canUse = canUseDeckCardLifecycleForPreview(gameState, deckCardId, lifecycle);
+        const scopeUsage = (() => {
+          if (normalized.exhaustScope === 'none' || normalized.maxUsesPerScope <= 0) return '--';
+          const scopeCounter = getLifecycleCounterForPreview(gameState, normalized.exhaustScope);
+          const used = getLifecycleScopeUsageForPreview(usage, normalized.exhaustScope, scopeCounter);
+          return `${used}/${normalized.maxUsesPerScope}`;
+        })();
+        const turnsRemaining = (() => {
+          if (normalized.cooldownMode !== 'turns' || normalized.cooldownValue <= 0) return 0;
+          const readyAt = Math.max(0, Number(usage?.turnCooldownReadyAt ?? 0));
+          const currentTurn = lifecycleCounters.turn;
+          const baseline = Math.max(0, readyAt - currentTurn);
+          if (baseline <= 0) return 0;
+          if (normalized.cooldownResetsOn === 'battle_end') {
+            const stamped = Number(usage?.turnCooldownBattleCounter ?? -1);
+            if (stamped >= 0 && stamped !== lifecycleCounters.battle) return 0;
+          }
+          if (normalized.cooldownResetsOn === 'rest') {
+            const stamped = Number(usage?.turnCooldownRestCounter ?? -1);
+            if (stamped >= 0 && stamped !== lifecycleCounters.rest) return 0;
+          }
+          return baseline;
+        })();
+        const actorLabel = card.sourceActorId ? card.sourceActorId.slice(0, 8) : 'actor';
+        const abilityLabel = card.name ?? abilityId ?? deckCardId;
+        return {
+          key: `${deckCardId}-${abilityId ?? 'ability'}`,
+          label: `${actorLabel}:${abilityLabel}`,
+          scope: normalized.exhaustScope === 'none' ? 'none' : normalized.exhaustScope,
+          usage: scopeUsage,
+          turnsRemaining,
+          canUse,
+        };
+      })
+      .filter((entry): entry is { key: string; label: string; scope: string; usage: string; turnsRemaining: number; canUse: boolean } => !!entry)
+      .slice(0, 5);
+  }, [
+    abilityCatalogById,
+    gameState,
+    lifecycleCounters.battle,
+    lifecycleCounters.rest,
+    lifecycleCounters.turn,
+    previewHandCards,
+  ]);
   const configPanelWidth = configCollapsed ? 34 : 180;
   const showCombatHud = !atmosphereOnlyMode;
   const effectiveConfigPanelWidth = showCombatHud ? configPanelWidth : 0;
@@ -2813,7 +3169,42 @@ export function CombatSandbox({
         </div>
         <div className="flex items-center justify-between">
           <span>Stalls</span>
-          <span>{autoPlayStalls}</span>
+          <span>{autoPlayStalls}/{AUTO_PLAY_STALL_LIMIT}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Deterministic</span>
+          <button
+            type="button"
+            onClick={() => setAutoPlayDeterministic((prev) => !prev)}
+            className={`rounded border px-1.5 py-0 text-[8px] uppercase tracking-[0.12em] transition-colors ${autoPlayDeterministic ? 'border-game-gold/60 text-game-gold' : 'border-game-teal/40 text-game-teal/80'}`}
+          >
+            {autoPlayDeterministic ? 'on' : 'off'}
+          </button>
+        </div>
+        <div className="mt-1 flex items-center gap-1 text-[8px]">
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={autoPlaySeed}
+            onChange={(event) => {
+              const raw = Number(event.target.value);
+              const nextSeed = Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 0;
+              setAutoPlaySeed(nextSeed);
+            }}
+            className="w-[72px] rounded border border-game-teal/30 bg-black/60 px-1 py-0.5 text-[8px] text-game-teal"
+            title="Deterministic seed"
+            aria-label="Deterministic autoplay seed"
+          />
+          <button
+            type="button"
+            onClick={() => resetAutoPlayDeterministicRng()}
+            className="rounded border border-game-teal/35 px-1.5 py-0 text-[8px] text-game-teal hover:border-game-teal/70"
+            title="Reset deterministic RNG state from seed"
+          >
+            reset rng
+          </button>
+          <span className="ml-auto text-game-teal/65">rng {autoPlayRngStateRef.current}</span>
         </div>
         <div className="mt-1 border-t border-game-teal/20 pt-1 text-[8px] leading-tight text-game-teal/70">
           {autoPlayLastDecision ? summarizeAutoPlayEntry(autoPlayLastDecision) : 'No decision yet'}
@@ -2823,6 +3214,31 @@ export function CombatSandbox({
             {autoPlayTrace.slice(0, 3).map((entry) => (
               <div key={`autoplay-trace-${entry.at}-${entry.kind}`}>{summarizeAutoPlayEntry(entry)}</div>
             ))}
+          </div>
+        )}
+      </div>
+      <div className="mb-3 rounded border border-game-teal/25 bg-game-bg-dark/45 px-2 py-1 text-[9px] text-game-teal/80">
+        <div className="mb-1 uppercase tracking-[0.14em] text-game-teal/70">Lifecycle</div>
+        <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[8px]">
+          <div>Run/Battle</div>
+          <div className="text-right">{lifecycleCounters.run}/{lifecycleCounters.battle}</div>
+          <div>Turn/Rest</div>
+          <div className="text-right">{lifecycleCounters.turn}/{lifecycleCounters.rest}</div>
+        </div>
+        {lifecycleDebugRows.length > 0 ? (
+          <div className="mt-1 border-t border-game-teal/20 pt-1 space-y-0.5 text-[8px] text-game-teal/70">
+            {lifecycleDebugRows.map((row) => (
+              <div key={row.key} className="flex items-center justify-between gap-2">
+                <span className="truncate">{row.label}</span>
+                <span className={`shrink-0 ${row.canUse ? 'text-game-teal/70' : 'text-game-gold/80'}`}>
+                  {row.scope}:{row.usage} {row.turnsRemaining > 0 ? `· t-${row.turnsRemaining}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-1 border-t border-game-teal/20 pt-1 text-[8px] text-game-teal/60">
+            No lifecycle-tracked hand cards.
           </div>
         )}
       </div>
@@ -3035,6 +3451,15 @@ export function CombatSandbox({
                     aria-label="Cycle auto play speed"
                   >
                     Auto x{autoPlaySpeed.toFixed(1)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAutoPlayDeterministic((prev) => !prev)}
+                    className={`rounded border px-2 py-1 text-[10px] transition-colors ${autoPlayDeterministic ? 'border-game-gold/70 bg-game-gold/10 text-game-gold' : 'border-game-teal/45 bg-black/70 text-game-teal hover:border-game-teal'}`}
+                    title="Toggle deterministic autoplay (seeded RNG)"
+                    aria-label="Toggle deterministic autoplay"
+                  >
+                    {autoPlayDeterministic ? 'Det ✓' : 'Det'}
                   </button>
                   <button
                     type="button"
@@ -3441,6 +3866,7 @@ export function CombatSandbox({
                       disableSpringMotion={true}
                       watercolorOnlyCards={false}
                       isCardPlayable={isHandCardPlayable}
+                      getCardLockReason={getHandCardLockReason}
                     />
                   </div>
                 )}

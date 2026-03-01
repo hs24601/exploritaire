@@ -12,6 +12,7 @@ import type {
 } from './types';
 import { randomIdSuffix } from './constants';
 import abilitiesJson from '../data/abilities.json';
+import { normalizeRarityValueMap } from './rarityLoadouts';
 
 const createOrimInstance = (definition: OrimDefinition): OrimInstance => ({
   id: `orim-${definition.id}-${Date.now()}-${randomIdSuffix()}`,
@@ -75,24 +76,12 @@ type DeckTemplate = {
   slotLocks?: { cardIndex: number; slotIndex?: number; locked: boolean }[];
 };
 
-const ORIM_RARITY_OPTIONS: OrimRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
-
 const normalizeRarityCostMap = (
   map: RarityCostMap | undefined,
   fallbackCost: number
-): Record<OrimRarity, number> => {
-  const normalizedFallback = Number.isFinite(fallbackCost) ? Math.max(0, fallbackCost) : 0;
-  const result = {} as Record<OrimRarity, number>;
-  let anchor = normalizedFallback;
-  ORIM_RARITY_OPTIONS.forEach((rarity) => {
-    const rawValue = map?.[rarity];
-    if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
-      anchor = Math.max(0, rawValue);
-    }
-    result[rarity] = anchor;
-  });
-  return result;
-};
+): Record<OrimRarity, number> => (
+  normalizeRarityValueMap(map, fallbackCost)
+);
 
 const buildSlots = (
   count: number,
