@@ -88,6 +88,7 @@ const AUTO_PLAY_BASE_STEP_MS = 430;
 const AUTO_PLAY_MAX_TRACE = 10;
 const AUTO_PLAY_STALL_LIMIT = 4;
 const AUTO_PLAY_DEFAULT_SEED = 1337;
+const AUTO_PLAY_REPLAY_VERSION = 1;
 const AUTO_PLAY_DRAG_CARD_WIDTH = 66;
 const AUTO_PLAY_DRAG_CARD_HEIGHT = 92;
 const AUTO_EFFECT_WEIGHTS: Partial<Record<string, number>> = {
@@ -141,8 +142,71 @@ type AutoPlayDragAnim = {
   startedAtMs: number;
   durationMs: number;
 };
+type AutoPlayPolicyProfile = {
+  id: NonNullable<GameState['enemyDifficulty']>;
+  playerAggro: number;
+  enemyAggro: number;
+  playerSupportBias: number;
+  enemySupportBias: number;
+  tacticalWeight: number;
+  fallbackWeight: number;
+};
+type AutoPlayReplayBundle = {
+  version: number;
+  capturedAt: string;
+  deterministic: boolean;
+  seed: number;
+  difficulty: NonNullable<GameState['enemyDifficulty']>;
+  timeScale: number;
+  autoPlaySpeed: number;
+  trace: AutoPlayDecisionEntry[];
+  startSnapshot: Partial<GameState>;
+  finalSnapshot: Partial<GameState>;
+};
 
 const PERF_SAMPLE_CAP = 180;
+const AUTO_PLAY_POLICY_BY_DIFFICULTY: Record<NonNullable<GameState['enemyDifficulty']>, AutoPlayPolicyProfile> = {
+  easy: {
+    id: 'easy',
+    playerAggro: 0.92,
+    enemyAggro: 0.84,
+    playerSupportBias: 1.08,
+    enemySupportBias: 1.16,
+    tacticalWeight: 0.88,
+    fallbackWeight: 1.2,
+  },
+  normal: {
+    id: 'normal',
+    playerAggro: 1,
+    enemyAggro: 1,
+    playerSupportBias: 1,
+    enemySupportBias: 1,
+    tacticalWeight: 1,
+    fallbackWeight: 1,
+  },
+  hard: {
+    id: 'hard',
+    playerAggro: 1.08,
+    enemyAggro: 1.15,
+    playerSupportBias: 0.96,
+    enemySupportBias: 0.94,
+    tacticalWeight: 1.14,
+    fallbackWeight: 0.85,
+  },
+  divine: {
+    id: 'divine',
+    playerAggro: 1.15,
+    enemyAggro: 1.24,
+    playerSupportBias: 0.92,
+    enemySupportBias: 0.88,
+    tacticalWeight: 1.26,
+    fallbackWeight: 0.72,
+  },
+};
+
+function deepCloneReplayValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
 
 function easeInOutCubic(value: number): number {
   if (value < 0.5) return 4 * value * value * value;
@@ -232,6 +296,7 @@ function normalizeAbilityTriggerType(rawType: unknown): string {
   if (normalized === 'deadtableau' || normalized === 'dead_tableau') return 'noValidMovesPlayer';
   if (normalized === 'novalidmovesplayer' || normalized === 'no_valid_moves_player') return 'noValidMovesPlayer';
   if (normalized === 'novalidmovesenemy' || normalized === 'no_valid_moves_enemy') return 'noValidMovesEnemy';
+  if (normalized === 'ondeath' || normalized === 'on_death') return 'on_death';
   if (normalized === 'notdiscarded' || normalized === 'not_discarded') return 'notDiscarded';
   if (normalized === 'foundationdiscardcount' || normalized === 'foundation_discard_count') return 'foundationDiscardCount';
   if (normalized === 'partydiscardcount' || normalized === 'party_discard_count') return 'partyDiscardCount';
@@ -650,6 +715,7 @@ export function CombatSandbox({
   const currentDifficulty = gameState.enemyDifficulty ?? 'normal';
   const currentDifficultyIndex = Math.max(0, DIFFICULTY_ORDER.indexOf(currentDifficulty));
   const nextDifficulty = DIFFICULTY_ORDER[(currentDifficultyIndex + 1) % DIFFICULTY_ORDER.length];
+  const autoPlayPolicyProfile = AUTO_PLAY_POLICY_BY_DIFFICULTY[currentDifficulty] ?? AUTO_PLAY_POLICY_BY_DIFFICULTY.normal;
   const [configCollapsed, setConfigCollapsed] = useState(true);
   const [atmosphereMenuOpen, setAtmosphereMenuOpen] = useState(false);
   const [selectedAtmosphere, setSelectedAtmosphere] = useState<AtmosphereEffectId>('none');
@@ -659,6 +725,7 @@ export function CombatSandbox({
   const [autoPlaySpeedIndex, setAutoPlaySpeedIndex] = useState(1);
   const [autoPlayDeterministic, setAutoPlayDeterministic] = useState(false);
   const [autoPlaySeed, setAutoPlaySeed] = useState(AUTO_PLAY_DEFAULT_SEED);
+  const [autoPlayReplayNotice, setAutoPlayReplayNotice] = useState('');
   const [autoPlayStalls, setAutoPlayStalls] = useState(0);
   const [autoPlayLastDecision, setAutoPlayLastDecision] = useState<AutoPlayDecisionEntry | null>(null);
   const [autoPlayTrace, setAutoPlayTrace] = useState<AutoPlayDecisionEntry[]>([]);
@@ -667,6 +734,8 @@ export function CombatSandbox({
   const autoPlayStallRef = useRef(0);
   const autoPlayBusyRef = useRef(false);
   const autoPlayRngStateRef = useRef<number>(AUTO_PLAY_DEFAULT_SEED >>> 0);
+  const autoPlayReplayStartSnapshotRef = useRef<Partial<GameState> | null>(null);
+  const autoPlayWasEnabledRef = useRef(false);
   const resetAutoPlayDeterministicRng = useCallback((seedOverride?: number) => {
     const seedSource = seedOverride ?? autoPlaySeed;
     const normalizedSeed = Math.max(0, Math.floor(Number(seedSource) || 0)) >>> 0;
@@ -1129,7 +1198,7 @@ export function CombatSandbox({
         const pct = (hp / hpMax) * 100;
         return compareAbilityTriggerMetric(pct, triggerValue, triggerOperator);
       }
-      if (type === 'ko') {
+      if (type === 'ko' || type === 'on_death') {
         return hp <= 0;
       }
       if (type === 'has_armor') {
@@ -1851,6 +1920,199 @@ export function CombatSandbox({
     event.preventDefault();
     startDrag(buildOrimTrayDragCard(definition), ORIM_TRAY_SOURCE_INDEX, event.clientX, event.clientY, rect);
   }, [buildOrimTrayDragCard, isLabMode, startDrag]);
+  const buildAutoPlayReplaySnapshot = useCallback((state: GameState): Partial<GameState> => (
+    deepCloneReplayValue({
+      phase: state.phase,
+      playtestVariant: state.playtestVariant,
+      currentBiome: state.currentBiome,
+      activeSessionTileId: state.activeSessionTileId,
+      turnCount: state.turnCount,
+      biomeMovesCompleted: state.biomeMovesCompleted,
+      enemyDifficulty: state.enemyDifficulty,
+      combatFlowMode: state.combatFlowMode,
+      randomBiomeActiveSide: state.randomBiomeActiveSide,
+      randomBiomeTurnNumber: state.randomBiomeTurnNumber,
+      randomBiomeTurnDurationMs: state.randomBiomeTurnDurationMs,
+      randomBiomeTurnRemainingMs: state.randomBiomeTurnRemainingMs,
+      randomBiomeTurnLastTickAt: state.randomBiomeTurnLastTickAt,
+      randomBiomeTurnTimerActive: state.randomBiomeTurnTimerActive,
+      tableaus: state.tableaus ?? [],
+      foundations: state.foundations ?? [],
+      enemyFoundations: state.enemyFoundations ?? [],
+      foundationCombos: state.foundationCombos ?? [],
+      enemyFoundationCombos: state.enemyFoundationCombos ?? [],
+      foundationTokens: state.foundationTokens ?? [],
+      enemyFoundationTokens: state.enemyFoundationTokens ?? [],
+      actorCombos: state.actorCombos ?? {},
+      actorDecks: state.actorDecks ?? {},
+      collectedTokens: state.collectedTokens,
+      activeEffects: state.activeEffects ?? [],
+      availableActors: state.availableActors ?? [],
+      tileParties: state.tileParties ?? {},
+      enemyActors: state.enemyActors ?? [],
+      rpgHandCards: state.rpgHandCards ?? [],
+      rpgEnemyHandCards: state.rpgEnemyHandCards ?? [],
+      rpgDiscardPilesByActor: state.rpgDiscardPilesByActor ?? {},
+      rpgDots: state.rpgDots ?? [],
+      rpgEnemyDragSlowUntil: state.rpgEnemyDragSlowUntil,
+      rpgEnemyDragSlowActorId: state.rpgEnemyDragSlowActorId,
+      rpgCloudSightUntil: state.rpgCloudSightUntil,
+      rpgCloudSightActorId: state.rpgCloudSightActorId,
+      lifecycleRunCounter: state.lifecycleRunCounter,
+      lifecycleBattleCounter: state.lifecycleBattleCounter,
+      lifecycleTurnCounter: state.lifecycleTurnCounter,
+      lifecycleRestCounter: state.lifecycleRestCounter,
+      abilityLifecycleUsageByDeckCard: state.abilityLifecycleUsageByDeckCard ?? {},
+      combatFlowTelemetry: state.combatFlowTelemetry,
+    })
+  ), []);
+  const emitAutoPlayReplayNotice = useCallback((label: string) => {
+    setAutoPlayReplayNotice(label);
+    window.setTimeout(() => setAutoPlayReplayNotice(''), 2600);
+  }, []);
+  const buildAutoPlayReplayBundle = useCallback((): AutoPlayReplayBundle => {
+    const startSnapshot = autoPlayReplayStartSnapshotRef.current
+      ?? buildAutoPlayReplaySnapshot(gameState);
+    autoPlayReplayStartSnapshotRef.current = startSnapshot;
+    return {
+      version: AUTO_PLAY_REPLAY_VERSION,
+      capturedAt: new Date().toISOString(),
+      deterministic: autoPlayDeterministic,
+      seed: autoPlaySeed,
+      difficulty: currentDifficulty,
+      timeScale,
+      autoPlaySpeed,
+      trace: autoPlayTrace,
+      startSnapshot,
+      finalSnapshot: buildAutoPlayReplaySnapshot(gameState),
+    };
+  }, [
+    autoPlayDeterministic,
+    autoPlaySeed,
+    autoPlaySpeed,
+    autoPlayTrace,
+    buildAutoPlayReplaySnapshot,
+    currentDifficulty,
+    gameState,
+    timeScale,
+  ]);
+  const handleExportAutoPlayReplay = useCallback(() => {
+    const payload = buildAutoPlayReplayBundle();
+    const json = JSON.stringify(payload, null, 2);
+    const globalWindow = window as Window & { __combatLabLastAutoPlayReplay?: AutoPlayReplayBundle };
+    globalWindow.__combatLabLastAutoPlayReplay = payload;
+    if (navigator?.clipboard?.writeText) {
+      void navigator.clipboard.writeText(json)
+        .then(() => emitAutoPlayReplayNotice('Replay copied'))
+        .catch(() => {
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = `combat-lab-replay-${Date.now()}.json`;
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+          URL.revokeObjectURL(url);
+          emitAutoPlayReplayNotice('Replay downloaded');
+        });
+      return;
+    }
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `combat-lab-replay-${Date.now()}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    emitAutoPlayReplayNotice('Replay downloaded');
+  }, [buildAutoPlayReplayBundle, emitAutoPlayReplayNotice]);
+  const handleImportAutoPlayReplay = useCallback(async () => {
+    const parseBundle = (raw: string): AutoPlayReplayBundle | null => {
+      try {
+        const parsed = JSON.parse(raw) as Partial<AutoPlayReplayBundle>;
+        const fallbackDifficulty = currentDifficulty;
+        const fallbackSpeed = autoPlaySpeed;
+        const difficulty = DIFFICULTY_ORDER.includes((parsed.difficulty ?? fallbackDifficulty) as NonNullable<GameState['enemyDifficulty']>)
+          ? (parsed.difficulty as NonNullable<GameState['enemyDifficulty']>)
+          : fallbackDifficulty;
+        return {
+          version: Number(parsed.version ?? AUTO_PLAY_REPLAY_VERSION),
+          capturedAt: String(parsed.capturedAt ?? new Date().toISOString()),
+          deterministic: parsed.deterministic !== false,
+          seed: Math.max(0, Math.floor(Number(parsed.seed ?? AUTO_PLAY_DEFAULT_SEED))),
+          difficulty,
+          timeScale: Math.max(0.25, Number(parsed.timeScale ?? timeScale)),
+          autoPlaySpeed: Math.max(0.5, Number(parsed.autoPlaySpeed ?? fallbackSpeed)),
+          trace: Array.isArray(parsed.trace) ? parsed.trace.slice(0, AUTO_PLAY_MAX_TRACE) as AutoPlayDecisionEntry[] : [],
+          startSnapshot: (parsed.startSnapshot ?? parsed.finalSnapshot ?? {}) as Partial<GameState>,
+          finalSnapshot: (parsed.finalSnapshot ?? parsed.startSnapshot ?? {}) as Partial<GameState>,
+        };
+      } catch {
+        return null;
+      }
+    };
+    let raw = '';
+    try {
+      raw = await navigator.clipboard.readText();
+    } catch {
+      const manual = window.prompt('Paste replay JSON');
+      raw = manual ?? '';
+    }
+    if (!raw.trim()) {
+      emitAutoPlayReplayNotice('No replay payload');
+      return;
+    }
+    const bundle = parseBundle(raw.trim());
+    if (!bundle) {
+      emitAutoPlayReplayNotice('Invalid replay payload');
+      return;
+    }
+    if (!actions.restoreCombatLabSnapshot) {
+      emitAutoPlayReplayNotice('Snapshot restore unavailable');
+      return;
+    }
+    const snapshot = bundle.startSnapshot && Object.keys(bundle.startSnapshot).length > 0
+      ? bundle.startSnapshot
+      : bundle.finalSnapshot;
+    const applied = actions.restoreCombatLabSnapshot(snapshot);
+    if (!applied) {
+      emitAutoPlayReplayNotice('Replay apply failed');
+      return;
+    }
+    setAutoPlayEnabled(false);
+    if (bundle.difficulty !== currentDifficulty) {
+      actions.setEnemyDifficulty(bundle.difficulty);
+    }
+    if (onSetTimeScale) {
+      onSetTimeScale(bundle.timeScale);
+    }
+    setAutoPlayDeterministic(bundle.deterministic);
+    setAutoPlaySeed(bundle.seed);
+    resetAutoPlayDeterministicRng(bundle.seed);
+    const closestSpeedIndex = AUTO_PLAY_SPEED_OPTIONS.reduce((bestIndex, option, index) => {
+      const bestDistance = Math.abs(AUTO_PLAY_SPEED_OPTIONS[bestIndex] - bundle.autoPlaySpeed);
+      const currentDistance = Math.abs(option - bundle.autoPlaySpeed);
+      return currentDistance < bestDistance ? index : bestIndex;
+    }, 0);
+    setAutoPlaySpeedIndex(closestSpeedIndex);
+    setAutoPlayTrace(bundle.trace);
+    setAutoPlayLastDecision(bundle.trace[0] ?? null);
+    autoPlayReplayStartSnapshotRef.current = deepCloneReplayValue(snapshot);
+    autoPlayStallRef.current = 0;
+    setAutoPlayStalls(0);
+    emitAutoPlayReplayNotice('Replay imported');
+  }, [
+    actions,
+    autoPlaySpeed,
+    currentDifficulty,
+    emitAutoPlayReplayNotice,
+    onSetTimeScale,
+    resetAutoPlayDeterministicRng,
+    timeScale,
+  ]);
   const buildPerfCapturePayload = useCallback(() => {
     const dragPerf = getPerfSnapshot();
     const fpsPerf = summarizeFpsFromFrameTimes(frameDeltaSamplesRef.current);
@@ -1879,9 +2141,11 @@ export function CombatSandbox({
         speed: autoPlaySpeed,
         stepMs: autoPlayStepMs,
         stalls: autoPlayStalls,
+        policy: autoPlayPolicyProfile.id,
         deterministic: autoPlayDeterministic,
         seed: autoPlaySeed,
         rngState: autoPlayRngStateRef.current,
+        replayStartCaptured: !!autoPlayReplayStartSnapshotRef.current,
         lastDecision: autoPlayLastDecision,
         traceHead: autoPlayTrace.slice(0, 6),
       },
@@ -1916,6 +2180,7 @@ export function CombatSandbox({
     autoPlayDeterministic,
     autoPlayEnabled,
     autoPlayLastDecision,
+    autoPlayPolicyProfile.id,
     autoPlaySeed,
     autoPlaySpeed,
     autoPlayStalls,
@@ -2152,6 +2417,7 @@ export function CombatSandbox({
       const bestPlayerTarget = alivePlayerTargets
         .slice()
         .sort((a, b) => (a.actor.hp ?? 0) - (b.actor.hp ?? 0))[0];
+      const policy = autoPlayPolicyProfile;
 
     type Candidate = {
       side: AutoPlayActorSide | 'system';
@@ -2171,36 +2437,36 @@ export function CombatSandbox({
     const scoreAbilityCard = (card: CardType, targetSide: AutoPlayActorSide, targetIndex: number): number => {
       const entry = card.rpgAbilityId ? abilityCatalogById.get(card.rpgAbilityId) : undefined;
       const effects = entry?.effects ?? [];
-      let score = 8;
+      let score = 8 * policy.tacticalWeight;
       let projectedDamage = 0;
       for (const effect of effects) {
         const normalizedType = String(effect.type ?? '').trim().toLowerCase();
         const value = Math.max(1, Number(effect.value ?? 1));
-        const baseWeight = AUTO_EFFECT_WEIGHTS[normalizedType] ?? 2.5;
+        const baseWeight = (AUTO_EFFECT_WEIGHTS[normalizedType] ?? 2.5) * policy.tacticalWeight;
         score += baseWeight * value;
         if (normalizedType === 'damage' || normalizedType === 'burn' || normalizedType === 'bleed' || normalizedType === 'stun') {
           projectedDamage += value;
         }
-        if (effect.drawWild || effect.drawElement) score += 2.5;
+        if (effect.drawWild || effect.drawElement) score += 2.5 * policy.playerSupportBias;
         const effectTarget = String(effect.target ?? '').toLowerCase();
         if (targetSide === 'enemy' && (effectTarget === 'enemy' || effectTarget === 'all_enemies' || effectTarget === 'anyone')) {
-          score += 5;
+          score += 5 * policy.playerAggro;
         }
         if (targetSide === 'player' && (effectTarget === 'self' || effectTarget === 'ally' || effectTarget === 'all_allies' || effectTarget === 'anyone')) {
-          score += 4;
+          score += 4 * policy.playerSupportBias;
         }
       }
-      if (isDeadRunOnlyAbilityCard(card) && noValidMovesForPlayer) score += 12;
-      if (card.rpgCardKind === 'fast') score += 2.5;
+      if (isDeadRunOnlyAbilityCard(card) && noValidMovesForPlayer) score += 12 * policy.tacticalWeight;
+      if (card.rpgCardKind === 'fast') score += 2.5 * policy.tacticalWeight;
       const apCost = Math.max(0, Number(card.rpgApCost ?? 0));
       score -= apCost * 1.4;
       score -= Math.max(0, Number(card.cooldown ?? 0)) * 2;
       if (targetSide === 'enemy') {
         const target = aliveEnemyTargets.find((entryItem) => entryItem.enemyIndex === targetIndex)?.actor;
-        if (target && projectedDamage >= Math.max(1, Number(target.hp ?? 0))) score += 16;
+        if (target && projectedDamage >= Math.max(1, Number(target.hp ?? 0))) score += 16 * policy.playerAggro;
       } else {
         const target = alivePlayerTargets.find((entryItem) => entryItem.actorIndex === targetIndex)?.actor;
-        if (target && (target.hp ?? 0) <= Math.max(3, (target.hpMax ?? 0) * 0.4)) score += 8;
+        if (target && (target.hp ?? 0) <= Math.max(3, (target.hpMax ?? 0) * 0.4)) score += 8 * policy.playerSupportBias;
       }
       return score;
     };
@@ -2219,7 +2485,7 @@ export function CombatSandbox({
             const targetHp = bestPlayerTarget?.actor.hp ?? 0;
             const targetHpMax = Math.max(1, bestPlayerTarget?.actor.hpMax ?? 1);
             const missingHpPct = Math.max(0, (targetHpMax - targetHp) / targetHpMax);
-            const score = 10 + missingHpPct * 10;
+            const score = (10 + missingHpPct * 10) * policy.playerSupportBias;
             candidates.push({
               side: 'player',
               kind: 'player_rpg_attack',
@@ -2231,7 +2497,7 @@ export function CombatSandbox({
           }
           if (!bestEnemyTarget) continue;
           const lowHpBonus = Math.max(0, (bestEnemyTarget.actor.hpMax ?? 1) - (bestEnemyTarget.actor.hp ?? 0));
-          const score = 14 + power * 6 + lowHpBonus * 0.35;
+          const score = (14 + power * 6 + lowHpBonus * 0.35) * policy.playerAggro;
           candidates.push({
             side: 'player',
             kind: 'player_rpg_attack',
@@ -2248,7 +2514,7 @@ export function CombatSandbox({
           if (!previewPlayerFoundations[foundationIndex]) continue;
           const actor = resolvePlayerFoundationActor(foundationIndex, previewPlayerFoundations[foundationIndex] ?? []);
           if (actor && !isActorAlive(actor)) continue;
-          const score = scoreAbilityCard(card, 'player', foundationIndex);
+          const score = scoreAbilityCard(card, 'player', foundationIndex) * policy.playerSupportBias;
           candidates.push({
             side: 'player',
             kind: 'player_hand_player_foundation',
@@ -2270,7 +2536,7 @@ export function CombatSandbox({
           if ((enemyFoundations[enemyFoundationIndex]?.length ?? 0) === 0) continue;
           const actor = resolveEnemyFoundationActor(enemyFoundationIndex, enemyFoundations[enemyFoundationIndex] ?? []);
           if (actor && !isActorAlive(actor)) continue;
-          const score = scoreAbilityCard(card, 'enemy', enemyFoundationIndex) + 3;
+          const score = (scoreAbilityCard(card, 'enemy', enemyFoundationIndex) + 3) * policy.playerAggro;
           candidates.push({
             side: 'player',
             kind: 'player_hand_enemy_foundation',
@@ -2300,7 +2566,7 @@ export function CombatSandbox({
           candidates.push({
             side: 'player',
             kind: 'player_tableau',
-            score: 18 + analysis.maxCount * 4 + rankBoost,
+            score: (18 + analysis.maxCount * 4 + rankBoost) * policy.tacticalWeight,
             label: `t#${bestMove.tableauIndex} -> p#${bestMove.foundationIndex}`,
             run: () => {
               const accepted = useWild
@@ -2328,7 +2594,7 @@ export function CombatSandbox({
           if (!isActorAlive(enemyActor)) return;
           handCards.forEach((card) => {
             if (!isDirectRpgAttackCard(card)) return;
-            const baseScore = 12 + estimateRpgAttackPower(card) * 5;
+            const baseScore = (12 + estimateRpgAttackPower(card) * 5) * policy.enemyAggro;
             candidates.push({
               side: 'enemy',
               kind: 'enemy_rpg_attack',
@@ -2355,7 +2621,7 @@ export function CombatSandbox({
           candidates.push({
             side: 'enemy',
             kind: 'enemy_tableau',
-            score: 16 + analysis.maxCount * 3.5 + Math.max(0, Number(bestMove.card.rank ?? 0)) * 0.2,
+            score: (16 + analysis.maxCount * 3.5 + Math.max(0, Number(bestMove.card.rank ?? 0)) * 0.2) * policy.enemyAggro * policy.tacticalWeight,
             label: `t#${bestMove.tableauIndex} -> e#${bestMove.foundationIndex}`,
             run: () => actions.playEnemyCardInRandomBiome(bestMove.tableauIndex, bestMove.foundationIndex),
             drag: {
@@ -2380,7 +2646,7 @@ export function CombatSandbox({
           if (queuedEnemyTableauMoves.has(moveKey)) continue;
           const topFoundationCard = enemyFoundations[enemyFoundationIndex]?.[enemyFoundations[enemyFoundationIndex].length - 1];
           const rankGap = Math.abs(Number(topCard.rank ?? 0) - Number(topFoundationCard?.rank ?? 0));
-          const score = 9 + Math.max(0, Number(topCard.rank ?? 0)) * 0.12 - Math.min(6, rankGap) * 0.35;
+          const score = (9 + Math.max(0, Number(topCard.rank ?? 0)) * 0.12 - Math.min(6, rankGap) * 0.35) * policy.enemyAggro * policy.fallbackWeight;
           candidates.push({
             side: 'enemy',
             kind: 'enemy_tableau',
@@ -2607,6 +2873,7 @@ export function CombatSandbox({
     abilityCatalogById,
     startAutoPlayDragAnimation,
     autoPlayDragAnim,
+    autoPlayPolicyProfile,
   ]);
   useEffect(() => {
     if (!open || !autoPlayEnabled || !isLabMode) return;
@@ -2623,6 +2890,15 @@ export function CombatSandbox({
     autoPlayStallRef.current = 0;
     setAutoPlayStalls(0);
   }, [autoPlayEnabled]);
+  useEffect(() => {
+    const wasEnabled = autoPlayWasEnabledRef.current;
+    if (!wasEnabled && autoPlayEnabled) {
+      autoPlayReplayStartSnapshotRef.current = buildAutoPlayReplaySnapshot(gameState);
+      setAutoPlayTrace([]);
+      setAutoPlayLastDecision(null);
+    }
+    autoPlayWasEnabledRef.current = autoPlayEnabled;
+  }, [autoPlayEnabled, buildAutoPlayReplaySnapshot, gameState]);
   useEffect(() => {
     if (!autoPlayEnabled) return;
     autoPlayStallRef.current = 0;
@@ -3168,6 +3444,10 @@ export function CombatSandbox({
           <span>x{autoPlaySpeed.toFixed(1)}</span>
         </div>
         <div className="flex items-center justify-between">
+          <span>Policy</span>
+          <span>{autoPlayPolicyProfile.id}</span>
+        </div>
+        <div className="flex items-center justify-between">
           <span>Stalls</span>
           <span>{autoPlayStalls}/{AUTO_PLAY_STALL_LIMIT}</span>
         </div>
@@ -3205,6 +3485,25 @@ export function CombatSandbox({
             reset rng
           </button>
           <span className="ml-auto text-game-teal/65">rng {autoPlayRngStateRef.current}</span>
+        </div>
+        <div className="mt-1 grid grid-cols-2 gap-1">
+          <button
+            type="button"
+            onClick={handleExportAutoPlayReplay}
+            className="rounded border border-game-teal/35 px-1.5 py-0.5 text-[8px] text-game-teal hover:border-game-teal/70"
+          >
+            Export Replay
+          </button>
+          <button
+            type="button"
+            onClick={() => { void handleImportAutoPlayReplay(); }}
+            className="rounded border border-game-teal/35 px-1.5 py-0.5 text-[8px] text-game-teal hover:border-game-teal/70"
+          >
+            Import Replay
+          </button>
+        </div>
+        <div className="mt-1 min-h-[12px] text-[8px] text-game-teal/65">
+          {autoPlayReplayNotice}
         </div>
         <div className="mt-1 border-t border-game-teal/20 pt-1 text-[8px] leading-tight text-game-teal/70">
           {autoPlayLastDecision ? summarizeAutoPlayEntry(autoPlayLastDecision) : 'No decision yet'}

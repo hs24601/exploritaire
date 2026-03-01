@@ -377,6 +377,13 @@ export function useGameEngine(
           orimInstances: gameState.orimInstances,
           actorDecks: gameState.actorDecks,
           rpgDiscardPilesByActor: gameState.rpgDiscardPilesByActor,
+          globalRestCount: gameState.globalRestCount,
+          actorCombos: gameState.actorCombos,
+          lifecycleRunCounter: gameState.lifecycleRunCounter,
+          lifecycleBattleCounter: gameState.lifecycleBattleCounter,
+          lifecycleTurnCounter: gameState.lifecycleTurnCounter,
+          lifecycleRestCounter: gameState.lifecycleRestCounter,
+          abilityLifecycleUsageByDeckCard: gameState.abilityLifecycleUsageByDeckCard,
           actorKeru: gameState.actorKeru,
           noRegretCooldown: gameState.noRegretCooldown,
         }
@@ -948,6 +955,47 @@ export function useGameEngine(
     });
     setSelectedCard(null);
   }, []);
+  const restoreCombatLabSnapshot = useCallback((snapshot: Partial<GameState>) => {
+    if (!snapshot || typeof snapshot !== 'object') return false;
+    let applied = false;
+    setGameState((prev) => {
+      if (!prev) return prev;
+      const serialized = JSON.stringify(snapshot);
+      const safeSnapshot = serialized ? (JSON.parse(serialized) as Partial<GameState>) : {};
+      const merged = {
+        ...prev,
+        ...safeSnapshot,
+      };
+      const nextFoundations = (merged.foundations ?? prev.foundations ?? []).map((foundation) => [...foundation]);
+      const nextEnemyFoundations = (merged.enemyFoundations ?? prev.enemyFoundations ?? []).map((foundation) => [...foundation]);
+      const nextFoundationCombos = nextFoundations.map((_, index) => Number(merged.foundationCombos?.[index] ?? 0));
+      const nextEnemyCombos = nextEnemyFoundations.map((_, index) => Number(merged.enemyFoundationCombos?.[index] ?? 0));
+      const nextFoundationTokens = nextFoundations.map((_, index) => {
+        const existing = merged.foundationTokens?.[index];
+        return existing ? { ...existing } : createEmptyElementCounts();
+      });
+      const nextEnemyTokens = nextEnemyFoundations.map((_, index) => {
+        const existing = merged.enemyFoundationTokens?.[index];
+        return existing ? { ...existing } : createEmptyElementCounts();
+      });
+      applied = true;
+      return {
+        ...merged,
+        foundations: nextFoundations,
+        enemyFoundations: nextEnemyFoundations,
+        foundationCombos: nextFoundationCombos,
+        enemyFoundationCombos: nextEnemyCombos,
+        foundationTokens: nextFoundationTokens,
+        enemyFoundationTokens: nextEnemyTokens,
+      };
+    });
+    if (applied) {
+      setSelectedCard(null);
+      setGuidanceMoves([]);
+      return true;
+    }
+    return false;
+  }, []);
 
   const playRpgHandCardOnActor = useCallback((
     cardId: string,
@@ -1333,6 +1381,7 @@ export function useGameEngine(
       removeWildcardsFromEnemyFoundations,
       setBiomeTableaus,
       setBiomeFoundations,
+      restoreCombatLabSnapshot,
       playRpgHandCardOnActor,
       playEnemyRpgHandCardOnActor,
       adjustRpgHandCardRarity,

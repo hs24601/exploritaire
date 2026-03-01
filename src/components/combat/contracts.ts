@@ -55,6 +55,7 @@ export interface CombatSandboxActionsContract {
   playEnemyCardInRandomBiome: (tableauIndex: number, foundationIndex: number) => boolean;
   setBiomeTableaus: (tableaus: CardType[][]) => void;
   setBiomeFoundations: (foundations: CardType[][]) => void;
+  restoreCombatLabSnapshot?: (snapshot: Partial<GameState>) => boolean;
   autoPlayNextMove?: () => void;
   completeBiome?: () => void;
   endExplorationTurnInRandomBiome?: () => void;
