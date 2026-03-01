@@ -27,8 +27,9 @@ export function FpsBadge({
       onClick={onClick}
       onContextMenu={(event) => event.preventDefault()}
       aria-disabled={!onClick}
-      className={className}
+      className={`inline-flex items-center justify-center whitespace-nowrap ${className}`.trim()}
       style={{
+        width: 'fit-content',
         opacity: onClick ? 1 : 0.8,
         WebkitTouchCallout: 'none',
         ...style,

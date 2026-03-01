@@ -2235,7 +2235,7 @@ export function CombatSandbox({
               fps={hudFps}
               onClick={() => setAtmosphereOnlyMode((prev) => !prev)}
               title={showCombatHud ? 'Hide HUD (atmosphere only)' : 'Show HUD'}
-              className="relative z-10 mb-2 rounded border border-game-gold/60 bg-black/70 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-game-gold"
+              className="relative z-10 mb-2 self-start rounded border border-game-gold/60 bg-black/70 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-game-gold"
               style={
                 hideGameContent
                   ? {
