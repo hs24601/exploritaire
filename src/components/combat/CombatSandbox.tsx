@@ -104,6 +104,11 @@ const AUTO_EFFECT_WEIGHTS: Partial<Record<string, number>> = {
   redeal_tableau: 6,
   upgrade_card_rarity_uncommon: 3.5,
 };
+const FALLBACK_ABILITY_IDS = new Set(
+  (((abilitiesJson as { abilities?: AbilityCatalogEntry[] }).abilities) ?? [])
+    .map((entry) => String(entry.id ?? '').trim())
+    .filter((id) => id.length > 0)
+);
 function resolveDeckCardApCost(
   deckCard: { cost?: number; costByRarity?: Partial<Record<OrimRarity, number>> },
   rarity: OrimRarity
@@ -538,8 +543,18 @@ function resolveOrimDefinitionIdFromSlot(
   if (!slotOrimId) return undefined;
   const byInstance = orimInstances[slotOrimId]?.definitionId;
   if (byInstance) return byInstance;
+  if (FALLBACK_ABILITY_IDS.has(slotOrimId)) return slotOrimId;
   if (orimDefinitions.some((entry) => entry.id === slotOrimId)) return slotOrimId;
-  return orimDefinitions.find((entry) => slotOrimId.includes(`orim-${entry.id}-`))?.id;
+  const parsed = slotOrimId.match(/^orim-(.+)-\d{10,16}-[a-z0-9]+$/i)?.[1];
+  if (parsed) {
+    if (orimDefinitions.some((entry) => entry.id === parsed)) return parsed;
+    if (FALLBACK_ABILITY_IDS.has(parsed)) return parsed;
+  }
+  const knownIds = [
+    ...orimDefinitions.map((entry) => entry.id),
+    ...Array.from(FALLBACK_ABILITY_IDS),
+  ].sort((a, b) => b.length - a.length);
+  return knownIds.find((id) => slotOrimId.includes(`orim-${id}-`));
 }
 
 function findActorForLabFoundation(state: GameState, definitionId: 'felis' | 'ursus' | 'lupus'): Actor | null {
@@ -2434,6 +2449,17 @@ export function CombatSandbox({
       };
     };
     const candidates: Candidate[] = [];
+    const tryPlayerTableauPlay = (tableauIndex: number, foundationIndex: number): boolean => {
+      let accepted = false;
+      if (gameState.phase === 'biome') {
+        accepted = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
+      }
+      if (!accepted) {
+        accepted = actions.playFromTableau(tableauIndex, foundationIndex);
+      }
+      if (accepted) applyFoundationTimerBonus(foundationIndex);
+      return accepted;
+    };
 
     const scoreAbilityCard = (card: CardType, targetSide: AutoPlayActorSide, targetIndex: number): number => {
       const entry = card.rpgAbilityId ? abilityCatalogById.get(card.rpgAbilityId) : undefined;
@@ -2569,18 +2595,40 @@ export function CombatSandbox({
             kind: 'player_tableau',
             score: (18 + analysis.maxCount * 4 + rankBoost) * policy.tacticalWeight,
             label: `t#${bestMove.tableauIndex} -> p#${bestMove.foundationIndex}`,
-            run: () => {
-              const accepted = useWild
-                ? actions.playCardInRandomBiome(bestMove.tableauIndex, bestMove.foundationIndex)
-                : actions.playFromTableau(bestMove.tableauIndex, bestMove.foundationIndex);
-              if (accepted) applyFoundationTimerBonus(bestMove.foundationIndex);
-              return accepted;
-            },
+            run: () => tryPlayerTableauPlay(bestMove.tableauIndex, bestMove.foundationIndex),
             drag: {
               card: bestMove.card,
               source: 'tableau',
               targetDropIndex: bestMove.foundationIndex,
               tableauIndex: bestMove.tableauIndex,
+            },
+          });
+        }
+      }
+
+      // Solver can occasionally return no move in lab snapshots where direct engine
+      // play is still possible; add a low-priority brute-force fallback.
+      for (let tableauIndex = 0; tableauIndex < previewTableaus.length; tableauIndex += 1) {
+        const tableauCards = previewTableaus[tableauIndex] ?? [];
+        const topCard = tableauCards[tableauCards.length - 1];
+        if (!topCard) continue;
+        const canPlayFromTableau = tableauCanPlay[tableauIndex] ?? true;
+        if (!canPlayFromTableau) continue;
+        for (let foundationIndex = 0; foundationIndex < previewPlayerFoundations.length; foundationIndex += 1) {
+          if (!previewPlayerFoundations[foundationIndex]) continue;
+          const actor = resolvePlayerFoundationActor(foundationIndex, previewPlayerFoundations[foundationIndex] ?? []);
+          if (actor && !isActorAlive(actor)) continue;
+          candidates.push({
+            side: 'player',
+            kind: 'player_tableau',
+            score: (2.5 + Math.max(0, Number(topCard.rank ?? 0)) * 0.1) * policy.fallbackWeight,
+            label: `brute t#${tableauIndex} -> p#${foundationIndex}`,
+            run: () => tryPlayerTableauPlay(tableauIndex, foundationIndex),
+            drag: {
+              card: topCard,
+              source: 'tableau',
+              targetDropIndex: foundationIndex,
+              tableauIndex,
             },
           });
         }
