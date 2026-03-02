@@ -1707,6 +1707,7 @@ export function CombatSandbox({
     ));
     actions.updateEquippedRelics(nextRelics);
   }, [actions, gameState.equippedRelics]);
+  const setRandomBiomeActiveSide = actions.setRandomBiomeActiveSide;
   const syncTurnBarWidths = useCallback((remainingMs: number, totalMs = turnDurationMs) => {
     if (DISABLE_TURN_BAR_ANIMATION) return;
     const normalizedTotal = Math.max(1, totalMs);
@@ -1719,7 +1720,7 @@ export function CombatSandbox({
   }, [turnDurationMs]);
   const forceLocalTurnSide = useCallback((nextSide: 'player' | 'enemy') => {
     setLabTurnSide(nextSide);
-    actions.setRandomBiomeActiveSide?.(nextSide);
+    setRandomBiomeActiveSide?.(nextSide);
     setPendingTurnSide(null);
     setPendingFinalMoveResolution(false);
     setInterTurnCountdownMs(0);
@@ -1730,7 +1731,7 @@ export function CombatSandbox({
     }
     setLocalTurnTimerActive(true);
     syncTurnBarWidths(turnDurationMs);
-  }, [actions, syncTurnBarWidths, turnDurationMs]);
+  }, [setRandomBiomeActiveSide, syncTurnBarWidths, turnDurationMs]);
   const handleZenEndTurn = useCallback(() => {
     if (!zenRelicEnabled) return;
     if (!showTurnTimer || !enforceTurnOwnership) return;
@@ -3147,7 +3148,7 @@ export function CombatSandbox({
     localTurnRemainingRef.current = turnDurationMs;
     displayTurnRemainingRef.current = turnDurationMs;
     setLabTurnSide('player');
-    actions.setRandomBiomeActiveSide?.('player');
+    setRandomBiomeActiveSide?.('player');
     setPendingTurnSide(null);
     setPendingFinalMoveResolution(false);
     setInterTurnCountdownMs(0);
@@ -3156,7 +3157,7 @@ export function CombatSandbox({
     }
     setLocalTurnTimerActive(false);
     syncTurnBarWidths(turnDurationMs);
-  }, [actions, open, useLocalTurnSide, turnDurationMs, syncTurnBarWidths]);
+  }, [open, setRandomBiomeActiveSide, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
   useEffect(() => {
     if (!open) return;
     setOrimTrayCollapsed(true);
@@ -3184,7 +3185,7 @@ export function CombatSandbox({
     if (dragState.isDragging) return;
     setPendingFinalMoveResolution(false);
     setLabTurnSide('enemy');
-    actions.setRandomBiomeActiveSide?.('enemy');
+    setRandomBiomeActiveSide?.('enemy');
     localTurnRemainingRef.current = turnDurationMs;
     displayTurnRemainingRef.current = turnDurationMs;
     if (!DISABLE_TURN_BAR_ANIMATION) {
@@ -3194,7 +3195,7 @@ export function CombatSandbox({
     setInterTurnCountdownMs(0);
     setLocalTurnTimerActive(true);
     syncTurnBarWidths(turnDurationMs);
-  }, [actions, dragState.isDragging, open, pendingFinalMoveResolution, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
+  }, [dragState.isDragging, open, pendingFinalMoveResolution, setRandomBiomeActiveSide, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
   useEffect(() => {
     if (useLocalTurnSide) return;
     const playerCount = gameState.combatFlowTelemetry?.playerCardsPlayed ?? 0;
