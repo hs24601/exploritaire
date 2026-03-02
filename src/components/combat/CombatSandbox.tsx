@@ -89,6 +89,7 @@ const AUTO_PLAY_MAX_TRACE = 10;
 const AUTO_PLAY_STALL_LIMIT = 4;
 const AUTO_PLAY_DEFAULT_SEED = 1337;
 const AUTO_PLAY_REPLAY_VERSION = 1;
+const AUTO_PLAY_ANALYSIS_CACHE_LIMIT = 96;
 const AUTO_PLAY_DRAG_CARD_WIDTH = 66;
 const AUTO_PLAY_DRAG_CARD_HEIGHT = 92;
 const AUTO_EFFECT_WEIGHTS: Partial<Record<string, number>> = {
@@ -146,6 +147,11 @@ type AutoPlayDragAnim = {
   to: { x: number; y: number };
   startedAtMs: number;
   durationMs: number;
+};
+type PendingAutoPlayDecision = {
+  side: AutoPlayActorSide | 'system';
+  entry: Omit<AutoPlayDecisionEntry, 'accepted' | 'at'>;
+  run: () => boolean;
 };
 type AutoPlayPolicyProfile = {
   id: NonNullable<GameState['enemyDifficulty']>;
@@ -211,6 +217,25 @@ const AUTO_PLAY_POLICY_BY_DIFFICULTY: Record<NonNullable<GameState['enemyDifficu
 
 function deepCloneReplayValue<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function buildAutoPlayBoardKey(
+  tableaus: CardType[][],
+  foundations: CardType[][],
+  activeEffects: GameState['activeEffects'],
+  mode: 'wild' | 'standard'
+): string {
+  const packCard = (card: CardType) => `${card.id}|${card.rank}|${card.element}|${card.suit}`;
+  const tableausKey = tableaus
+    .map((stack) => stack.map(packCard).join(','))
+    .join('||');
+  const foundationsKey = foundations
+    .map((stack) => stack.map(packCard).join(','))
+    .join('||');
+  const effectsKey = (activeEffects ?? [])
+    .map((effect) => `${effect.type}:${effect.duration}`)
+    .join('|');
+  return `${mode}::T[${tableausKey}]::F[${foundationsKey}]::E[${effectsKey}]`;
 }
 
 function easeInOutCubic(value: number): number {
@@ -739,6 +764,8 @@ export function CombatSandbox({
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const [autoPlaySpeedIndex, setAutoPlaySpeedIndex] = useState(1);
   const [autoPlayDeterministic, setAutoPlayDeterministic] = useState(false);
+  const [autoPlayNoDragAnim, setAutoPlayNoDragAnim] = useState(false);
+  const [autoPlayAdaptivePacing, setAutoPlayAdaptivePacing] = useState(true);
   const [autoPlaySeed, setAutoPlaySeed] = useState(AUTO_PLAY_DEFAULT_SEED);
   const [autoPlayReplayNotice, setAutoPlayReplayNotice] = useState('');
   const [autoPlayStalls, setAutoPlayStalls] = useState(0);
@@ -746,11 +773,13 @@ export function CombatSandbox({
   const [autoPlayTrace, setAutoPlayTrace] = useState<AutoPlayDecisionEntry[]>([]);
   const [autoPlayDragAnim, setAutoPlayDragAnim] = useState<AutoPlayDragAnim | null>(null);
   const autoPlayDragNodeRef = useRef<HTMLDivElement | null>(null);
+  const pendingAutoPlayDecisionRef = useRef<PendingAutoPlayDecision | null>(null);
   const autoPlayStallRef = useRef(0);
   const autoPlayBusyRef = useRef(false);
   const autoPlayRngStateRef = useRef<number>(AUTO_PLAY_DEFAULT_SEED >>> 0);
   const autoPlayReplayStartSnapshotRef = useRef<Partial<GameState> | null>(null);
   const autoPlayWasEnabledRef = useRef(false);
+  const autoPlayAnalysisCacheRef = useRef<Map<string, ReturnType<typeof analyzeOptimalSequence>>>(new Map());
   const resetAutoPlayDeterministicRng = useCallback((seedOverride?: number) => {
     const seedSource = seedOverride ?? autoPlaySeed;
     const normalizedSeed = Math.max(0, Math.floor(Number(seedSource) || 0)) >>> 0;
@@ -825,10 +854,19 @@ export function CombatSandbox({
     return Array.from(new Set(source.map((value) => Number(value)))).sort((a, b) => a - b);
   }, [timeScaleOptions]);
   const autoPlaySpeed = AUTO_PLAY_SPEED_OPTIONS[Math.max(0, Math.min(AUTO_PLAY_SPEED_OPTIONS.length - 1, autoPlaySpeedIndex))];
-  const autoPlayStepMs = Math.max(
+  const autoPlayStepMsBase = Math.max(
     45,
     Math.round(AUTO_PLAY_BASE_STEP_MS / Math.max(0.2, autoPlaySpeed * Math.max(0.25, timeScale)))
   );
+  const autoPlayFpsBackoffFactor = useMemo(() => {
+    if (!autoPlayAdaptivePacing) return 1;
+    if (hudFps <= 0) return 1;
+    if (hudFps < 20) return 4;
+    if (hudFps < 30) return 2.6;
+    if (hudFps < 45) return 1.6;
+    return 1;
+  }, [autoPlayAdaptivePacing, hudFps]);
+  const autoPlayStepMs = Math.max(45, Math.round(autoPlayStepMsBase * autoPlayFpsBackoffFactor));
   const shiftTimeScale = useCallback((direction: -1 | 1) => {
     if (normalizedTimeScaleOptions.length === 0) {
       onCycleTimeScale();
@@ -1369,6 +1407,15 @@ export function CombatSandbox({
           ? createActorDeckStateWithOrim(actorId || `lab-${inferredDefinitionId}`, inferredDefinitionId, gameState.orimDefinitions).deck
           : undefined);
       if (!deck) return;
+      const hasConfiguredSkittishCard = deck.cards.some((deckCard) => {
+        const slotWithOrim = deckCard.slots.find((slot) => !!slot.orimId);
+        const slotAbilityId = resolveOrimDefinitionIdFromSlot(
+          slotWithOrim?.orimId,
+          gameState.orimInstances,
+          gameState.orimDefinitions
+        );
+        return slotAbilityId === 'skittish_scurry';
+      });
       const nowMs = Date.now();
       deck.cards.forEach((deckCard, deckCardIndex) => {
         if (deckCard.active === false) return;
@@ -1448,7 +1495,7 @@ export function CombatSandbox({
           },
         });
       });
-      if (inferredDefinitionId === 'felis') {
+      if (inferredDefinitionId === 'felis' && !hasConfiguredSkittishCard) {
         const hasSkittishReadyCard = candidates.some((entry) => (
           entry.card.sourceActorId === actorId
           && entry.card.rpgAbilityId === 'skittish_scurry'
@@ -1672,6 +1719,9 @@ export function CombatSandbox({
   const dropActionDurationSamplesRef = useRef<number[]>([]);
   const reactCommitDurationSamplesRef = useRef<number[]>([]);
   const longTaskDurationSamplesRef = useRef<number[]>([]);
+  const autoPlayStepDurationSamplesRef = useRef<number[]>([]);
+  const autoPlayAnalysisDurationSamplesRef = useRef<number[]>([]);
+  const autoPlayCandidateCountSamplesRef = useRef<number[]>([]);
   const [perfSnapshot, setPerfSnapshot] = useState({
     fpsAvg: 0,
     fpsP95: 0,
@@ -1682,6 +1732,9 @@ export function CombatSandbox({
     dropTotalP95: 0,
     dropActionP95: 0,
     rpgTickP95: 0,
+    autoPlayStepP95: 0,
+    autoPlayAnalysisP95: 0,
+    autoPlayCandidatesAvg: 0,
     reactCommitP95: 0,
     longTaskP95: 0,
     longTaskMax: 0,
@@ -2136,6 +2189,9 @@ export function CombatSandbox({
     const dropTotalPerf = summarizePerfSamples(dropTotalDurationSamplesRef.current);
     const dropActionPerf = summarizePerfSamples(dropActionDurationSamplesRef.current);
     const rpgTickPerf = summarizePerfSamples(rpgTickDurationSamplesRef.current);
+    const autoPlayStepPerf = summarizePerfSamples(autoPlayStepDurationSamplesRef.current);
+    const autoPlayAnalysisPerf = summarizePerfSamples(autoPlayAnalysisDurationSamplesRef.current);
+    const autoPlayCandidatePerf = summarizePerfSamples(autoPlayCandidateCountSamplesRef.current);
     const reactCommitPerf = summarizePerfSamples(reactCommitDurationSamplesRef.current);
     const longTaskPerf = summarizePerfSamples(longTaskDurationSamplesRef.current);
     const lifecycle = {
@@ -2156,6 +2212,10 @@ export function CombatSandbox({
       autoPlay: {
         enabled: autoPlayEnabled,
         speed: autoPlaySpeed,
+        noDragAnim: autoPlayNoDragAnim,
+        adaptivePacing: autoPlayAdaptivePacing,
+        stepMsBase: autoPlayStepMsBase,
+        fpsBackoffFactor: autoPlayFpsBackoffFactor,
         stepMs: autoPlayStepMs,
         stalls: autoPlayStalls,
         policy: autoPlayPolicyProfile.id,
@@ -2163,6 +2223,11 @@ export function CombatSandbox({
         seed: autoPlaySeed,
         rngState: autoPlayRngStateRef.current,
         replayStartCaptured: !!autoPlayReplayStartSnapshotRef.current,
+        perf: {
+          step: autoPlayStepPerf,
+          analysis: autoPlayAnalysisPerf,
+          candidates: autoPlayCandidatePerf,
+        },
         lastDecision: autoPlayLastDecision,
         traceHead: autoPlayTrace.slice(0, 6),
       },
@@ -2197,10 +2262,14 @@ export function CombatSandbox({
     autoPlayDeterministic,
     autoPlayEnabled,
     autoPlayLastDecision,
+    autoPlayAdaptivePacing,
+    autoPlayFpsBackoffFactor,
+    autoPlayNoDragAnim,
     autoPlayPolicyProfile.id,
     autoPlaySeed,
     autoPlaySpeed,
     autoPlayStalls,
+    autoPlayStepMsBase,
     autoPlayStepMs,
     autoPlayTrace,
     effectiveActiveSide,
@@ -2303,13 +2372,13 @@ export function CombatSandbox({
     tableauIndex?: number
   ) => {
     const viewportRect = fitViewportRef.current?.getBoundingClientRect();
-    if (!viewportRect) return;
+    if (!viewportRect) return false;
     const targetRect = autoPlayFoundationRefsRef.current[targetDropIndex]?.getBoundingClientRect();
-    if (!targetRect) return;
+    if (!targetRect) return false;
     const sourceRect = source === 'hand'
       ? handZoneRef.current?.getBoundingClientRect()
       : autoPlayTableauRefsRef.current[tableauIndex ?? -1]?.getBoundingClientRect();
-    if (!sourceRect) return;
+    if (!sourceRect) return false;
     const pointerAnchorOffsetX = AUTO_PLAY_DRAG_CARD_WIDTH / 2;
     const pointerAnchorOffsetY = AUTO_PLAY_DRAG_CARD_HEIGHT / 2;
     const from = {
@@ -2337,6 +2406,7 @@ export function CombatSandbox({
         )
       ),
     });
+    return true;
   }, [autoPlaySpeed, timeScale]);
   const dropRefCallbacksRef = useRef<Record<number, (index: number, ref: HTMLDivElement | null) => void>>({});
   useEffect(() => {
@@ -2413,12 +2483,84 @@ export function CombatSandbox({
     }
     return accepted;
   }, [appendAutoPlayDecision]);
+  const handleAutoPlayAcceptedFollowUp = useCallback((candidateSide: AutoPlayActorSide | 'system') => {
+    const shouldHandoffEnemyAfterSinglePlay = (
+      enforceTurnOwnership
+      && effectiveActiveSide === 'enemy'
+      && candidateSide === 'enemy'
+      && currentDifficulty === 'normal'
+    );
+    if (!shouldHandoffEnemyAfterSinglePlay) return;
+    appendAutoPlayDecision({
+      side: 'system',
+      kind: 'advance_turn',
+      score: 1.5,
+      label: 'normal difficulty: handoff to player after enemy play',
+      accepted: true,
+      at: Date.now(),
+    });
+    if (useLocalTurnSide) {
+      forceLocalTurnSide('player');
+    } else {
+      actions.advanceRandomBiomeTurn();
+    }
+  }, [
+    actions,
+    appendAutoPlayDecision,
+    currentDifficulty,
+    effectiveActiveSide,
+    enforceTurnOwnership,
+    forceLocalTurnSide,
+    useLocalTurnSide,
+  ]);
+  useEffect(() => {
+    if (autoPlayDragAnim) return;
+    const pending = pendingAutoPlayDecisionRef.current;
+    if (!pending) return;
+    pendingAutoPlayDecisionRef.current = null;
+    const accepted = executeAutoPlayDecision(pending.entry, pending.run);
+    if (accepted) {
+      handleAutoPlayAcceptedFollowUp(pending.side);
+    }
+  }, [autoPlayDragAnim, executeAutoPlayDecision, handleAutoPlayAcceptedFollowUp]);
+  const getCachedOptimalSequence = useCallback((
+    tableaus: CardType[][],
+    foundations: CardType[][],
+    mode: 'wild' | 'standard'
+  ) => {
+    const key = buildAutoPlayBoardKey(tableaus, foundations, gameState.activeEffects, mode);
+    const cached = autoPlayAnalysisCacheRef.current.get(key);
+    if (cached) return cached;
+    const computed = analyzeOptimalSequence({
+      tableaus,
+      foundations,
+      activeEffects: gameState.activeEffects,
+      mode,
+    });
+    const cache = autoPlayAnalysisCacheRef.current;
+    cache.set(key, computed);
+    if (cache.size > AUTO_PLAY_ANALYSIS_CACHE_LIMIT) {
+      const firstKey = cache.keys().next().value;
+      if (typeof firstKey === 'string') cache.delete(firstKey);
+    }
+    return computed;
+  }, [gameState.activeEffects]);
   const performAutoPlayStep = useCallback(() => {
-    if (!autoPlayEnabled || isGamePaused || dragState.isDragging || interTurnCountdownActive || autoPlayDragAnim) return;
+    if (
+      !autoPlayEnabled
+      || isGamePaused
+      || dragState.isDragging
+      || interTurnCountdownActive
+      || autoPlayDragAnim
+      || pendingAutoPlayDecisionRef.current
+    ) return;
     if (!isLabMode) return;
     if (autoPlayBusyRef.current) return;
     autoPlayBusyRef.current = true;
     actions.cleanupDefeatedEnemies();
+    const stepStartedAt = performance.now();
+    let analysisDurationMs = 0;
+    let candidateCount = 0;
     try {
       runWithDeterministicRandom(autoPlayDeterministic, autoPlayRngStateRef, () => {
 
@@ -2582,12 +2724,13 @@ export function CombatSandbox({
 
       const playerFoundationForAnalysis = previewPlayerFoundations.filter((foundation) => foundation.length > 0);
       if (playerFoundationForAnalysis.length > 0) {
-        const analysis = analyzeOptimalSequence({
-          tableaus: previewTableaus,
-          foundations: previewPlayerFoundations,
-          activeEffects: gameState.activeEffects,
-          mode: useWild ? 'wild' : 'standard',
-        });
+        const analysisStartedAt = performance.now();
+        const analysis = getCachedOptimalSequence(
+          previewTableaus,
+          previewPlayerFoundations,
+          useWild ? 'wild' : 'standard'
+        );
+        analysisDurationMs += performance.now() - analysisStartedAt;
         const bestMove = analysis.sequence[0];
         if (bestMove) {
           const rankBoost = Math.max(0, Number(bestMove.card.rank ?? 0)) * 0.25;
@@ -2657,12 +2800,13 @@ export function CombatSandbox({
       const enemyFoundationForAnalysis = enemyFoundations.filter((foundation) => foundation.length > 0);
       const queuedEnemyTableauMoves = new Set<string>();
       if (enemyFoundationForAnalysis.length > 0) {
-        const analysis = analyzeOptimalSequence({
-          tableaus: previewTableaus,
-          foundations: enemyFoundations,
-          activeEffects: gameState.activeEffects,
-          mode: useWild ? 'wild' : 'standard',
-        });
+        const analysisStartedAt = performance.now();
+        const analysis = getCachedOptimalSequence(
+          previewTableaus,
+          enemyFoundations,
+          useWild ? 'wild' : 'standard'
+        );
+        analysisDurationMs += performance.now() - analysisStartedAt;
         const bestMove = analysis.sequence[0];
         if (bestMove) {
           queuedEnemyTableauMoves.add(`${bestMove.tableauIndex}:${bestMove.foundationIndex}`);
@@ -2712,6 +2856,7 @@ export function CombatSandbox({
       }
     }
 
+    candidateCount = candidates.length;
     const sortedCandidates = [...candidates]
       .map((candidate) => ({
         candidate,
@@ -2723,46 +2868,34 @@ export function CombatSandbox({
       })
       .map((entry) => entry.candidate);
     for (const candidate of sortedCandidates) {
-      if (candidate.drag) {
-        startAutoPlayDragAnimation(
+      const decisionEntry: Omit<AutoPlayDecisionEntry, 'accepted' | 'at'> = {
+        side: candidate.side,
+        kind: candidate.kind,
+        score: candidate.score,
+        label: candidate.label,
+      };
+      if (!autoPlayNoDragAnim && candidate.drag) {
+        const animationStarted = startAutoPlayDragAnimation(
           candidate.drag.card,
           candidate.drag.source,
           candidate.drag.targetDropIndex,
           candidate.drag.tableauIndex
         );
+        if (animationStarted) {
+          pendingAutoPlayDecisionRef.current = {
+            side: candidate.side,
+            entry: decisionEntry,
+            run: candidate.run,
+          };
+          return;
+        }
       }
       const accepted = executeAutoPlayDecision(
-        {
-          side: candidate.side,
-          kind: candidate.kind,
-          score: candidate.score,
-          label: candidate.label,
-        },
+        decisionEntry,
         candidate.run
       );
       if (!accepted) continue;
-
-      const shouldHandoffEnemyAfterSinglePlay = (
-        enforceTurnOwnership
-        && effectiveActiveSide === 'enemy'
-        && candidate.side === 'enemy'
-        && currentDifficulty === 'normal'
-      );
-      if (shouldHandoffEnemyAfterSinglePlay) {
-        appendAutoPlayDecision({
-          side: 'system',
-          kind: 'advance_turn',
-          score: 1.5,
-          label: 'normal difficulty: handoff to player after enemy play',
-          accepted: true,
-          at: Date.now(),
-        });
-        if (useLocalTurnSide) {
-          forceLocalTurnSide('player');
-        } else {
-          actions.advanceRandomBiomeTurn();
-        }
-      }
+      handleAutoPlayAcceptedFollowUp(candidate.side);
       return;
     }
 
@@ -2935,6 +3068,10 @@ export function CombatSandbox({
     return;
       });
     } finally {
+      const totalStepMs = performance.now() - stepStartedAt;
+      pushPerfSample(autoPlayStepDurationSamplesRef.current, totalStepMs);
+      pushPerfSample(autoPlayAnalysisDurationSamplesRef.current, analysisDurationMs);
+      pushPerfSample(autoPlayCandidateCountSamplesRef.current, candidateCount);
       autoPlayBusyRef.current = false;
     }
   }, [
@@ -2943,6 +3080,7 @@ export function CombatSandbox({
     applyFoundationTimerBonus,
     autoPlayEnabled,
     autoPlayDeterministic,
+    autoPlayNoDragAnim,
     dragState.isDragging,
     effectiveActiveSide,
     enforceTurnOwnership,
@@ -2952,7 +3090,6 @@ export function CombatSandbox({
     executeAutoPlayDecision,
     forceLocalTurnSide,
     currentDifficulty,
-    gameState.activeEffects,
     gameState.currentBiome,
     gameState.phase,
     interTurnCountdownActive,
@@ -2970,9 +3107,11 @@ export function CombatSandbox({
     useLocalTurnSide,
     useWild,
     abilityCatalogById,
+    getCachedOptimalSequence,
     startAutoPlayDragAnimation,
     autoPlayDragAnim,
     autoPlayPolicyProfile,
+    handleAutoPlayAcceptedFollowUp,
   ]);
   useEffect(() => {
     if (!open || !autoPlayEnabled || !isLabMode) return;
@@ -2982,10 +3121,16 @@ export function CombatSandbox({
     return () => window.clearInterval(intervalId);
   }, [autoPlayEnabled, autoPlayStepMs, isLabMode, open, performAutoPlayStep]);
   useEffect(() => {
+    if (!autoPlayNoDragAnim) return;
+    if (!autoPlayDragAnim) return;
+    setAutoPlayDragAnim(null);
+  }, [autoPlayDragAnim, autoPlayNoDragAnim]);
+  useEffect(() => {
     resetAutoPlayDeterministicRng();
   }, [autoPlaySeed, resetAutoPlayDeterministicRng]);
   useEffect(() => {
     if (autoPlayEnabled) return;
+    pendingAutoPlayDecisionRef.current = null;
     autoPlayStallRef.current = 0;
     setAutoPlayStalls(0);
   }, [autoPlayEnabled]);
@@ -3010,6 +3155,10 @@ export function CombatSandbox({
     if (open || !autoPlayEnabled) return;
     setAutoPlayEnabled(false);
   }, [autoPlayEnabled, open]);
+  useEffect(() => {
+    if (open) return;
+    autoPlayAnalysisCacheRef.current.clear();
+  }, [open]);
   useEffect(() => {
     if (!open || !isLabMode) return;
     const foundations = gameState.foundations ?? [];
@@ -3147,17 +3296,19 @@ export function CombatSandbox({
     if (!open || !useLocalTurnSide) return;
     localTurnRemainingRef.current = turnDurationMs;
     displayTurnRemainingRef.current = turnDurationMs;
-    setLabTurnSide('player');
-    setRandomBiomeActiveSide?.('player');
-    setPendingTurnSide(null);
-    setPendingFinalMoveResolution(false);
-    setInterTurnCountdownMs(0);
-    if (!DISABLE_TURN_BAR_ANIMATION) {
-      setLocalTurnRemainingMs(turnDurationMs);
+    setLabTurnSide((prev) => (prev === 'player' ? prev : 'player'));
+    if (activeSide !== 'player') {
+      setRandomBiomeActiveSide?.('player');
     }
-    setLocalTurnTimerActive(false);
+    setPendingTurnSide((prev) => (prev === null ? prev : null));
+    setPendingFinalMoveResolution((prev) => (prev ? false : prev));
+    setInterTurnCountdownMs((prev) => (prev === 0 ? prev : 0));
+    if (!DISABLE_TURN_BAR_ANIMATION) {
+      setLocalTurnRemainingMs((prev) => (Math.abs(prev - turnDurationMs) < 1 ? prev : turnDurationMs));
+    }
+    setLocalTurnTimerActive((prev) => (prev ? false : prev));
     syncTurnBarWidths(turnDurationMs);
-  }, [open, setRandomBiomeActiveSide, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
+  }, [activeSide, open, setRandomBiomeActiveSide, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
   useEffect(() => {
     if (!open) return;
     setOrimTrayCollapsed(true);
@@ -3343,6 +3494,9 @@ export function CombatSandbox({
       const dropTotalPerf = summarizePerfSamples(dropTotalDurationSamplesRef.current);
       const dropActionPerf = summarizePerfSamples(dropActionDurationSamplesRef.current);
       const rpgTickPerf = summarizePerfSamples(rpgTickDurationSamplesRef.current);
+      const autoPlayStepPerf = summarizePerfSamples(autoPlayStepDurationSamplesRef.current);
+      const autoPlayAnalysisPerf = summarizePerfSamples(autoPlayAnalysisDurationSamplesRef.current);
+      const autoPlayCandidatePerf = summarizePerfSamples(autoPlayCandidateCountSamplesRef.current);
       const reactCommitPerf = summarizePerfSamples(reactCommitDurationSamplesRef.current);
       const longTaskPerf = summarizePerfSamples(longTaskDurationSamplesRef.current);
       setPerfSnapshot({
@@ -3355,6 +3509,9 @@ export function CombatSandbox({
         dropTotalP95: dropTotalPerf.p95,
         dropActionP95: dropActionPerf.p95,
         rpgTickP95: rpgTickPerf.p95,
+        autoPlayStepP95: autoPlayStepPerf.p95,
+        autoPlayAnalysisP95: autoPlayAnalysisPerf.p95,
+        autoPlayCandidatesAvg: autoPlayCandidatePerf.avg,
         reactCommitP95: reactCommitPerf.p95,
         longTaskP95: longTaskPerf.p95,
         longTaskMax: longTaskPerf.max,
@@ -3547,6 +3704,14 @@ export function CombatSandbox({
           <span>x{autoPlaySpeed.toFixed(1)}</span>
         </div>
         <div className="flex items-center justify-between">
+          <span>Step Base</span>
+          <span>{autoPlayStepMsBase}ms</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>FPS Backoff</span>
+          <span>x{autoPlayFpsBackoffFactor.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center justify-between">
           <span>Policy</span>
           <span>{autoPlayPolicyProfile.id}</span>
         </div>
@@ -3588,6 +3753,22 @@ export function CombatSandbox({
             reset rng
           </button>
           <span className="ml-auto text-game-teal/65">rng {autoPlayRngStateRef.current}</span>
+        </div>
+        <div className="mt-1 grid grid-cols-2 gap-1">
+          <button
+            type="button"
+            onClick={() => setAutoPlayNoDragAnim((prev) => !prev)}
+            className={`rounded border px-1.5 py-0.5 text-[8px] ${autoPlayNoDragAnim ? 'border-game-gold/60 text-game-gold' : 'border-game-teal/35 text-game-teal'}`}
+          >
+            {autoPlayNoDragAnim ? 'No Drag: on' : 'No Drag: off'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setAutoPlayAdaptivePacing((prev) => !prev)}
+            className={`rounded border px-1.5 py-0.5 text-[8px] ${autoPlayAdaptivePacing ? 'border-game-gold/60 text-game-gold' : 'border-game-teal/35 text-game-teal'}`}
+          >
+            {autoPlayAdaptivePacing ? 'Adaptive: on' : 'Adaptive: off'}
+          </button>
         </div>
         <div className="mt-1 grid grid-cols-2 gap-1">
           <button
@@ -3657,6 +3838,10 @@ export function CombatSandbox({
           <div className="text-right">{perfSnapshot.dropTotalP95.toFixed(1)}/{perfSnapshot.dropActionP95.toFixed(1)}ms</div>
           <div>RPG tick p95</div>
           <div className="text-right">{perfSnapshot.rpgTickP95.toFixed(1)}ms</div>
+          <div>Auto step/analysis p95</div>
+          <div className="text-right">{perfSnapshot.autoPlayStepP95.toFixed(1)}/{perfSnapshot.autoPlayAnalysisP95.toFixed(1)}ms</div>
+          <div>Auto candidates avg</div>
+          <div className="text-right">{perfSnapshot.autoPlayCandidatesAvg.toFixed(1)}</div>
           <div>React commit p95</div>
           <div className="text-right">{perfSnapshot.reactCommitP95.toFixed(1)}ms</div>
           <div>Long task p95/max</div>
@@ -4004,74 +4189,80 @@ export function CombatSandbox({
                   {enemyFoundationIndexes.map((idx) => {
                     const statuses = buildFoundationStatuses('enemy', idx);
                     const foundationCards = enemyFoundations[idx] ?? [];
+                    const foundationActor = resolveEnemyFoundationActor(idx, foundationCards);
+                    const foundationAp = Math.max(0, Number(foundationActor?.power ?? 0));
                     const showSpawnControl = isLabMode && foundationCards.length === 0;
                     const spawnSelection = getSelectedEnemySpawnId(idx);
                     return (
-                      <div
-                        key={`enemy-foundation-${idx}`}
-                        className="relative rounded border border-game-teal/30 bg-black/45 p-[3px] shrink-0"
-                        style={{ minWidth: previewFoundationWidth }}
-                      >
-                        <Foundation
-                          cards={foundationCards}
-                          index={idx}
-                          onFoundationClick={() => {}}
-                          canReceive={false}
-                          interactionMode={gameState.interactionMode}
-                          showGraphics={showGraphics}
-                          countPosition="none"
-                          maskValue={false}
-                          watercolorOnlyCards={false}
-                          foundationOverlay={buildEnemyFoundationOverlay(idx)}
-                          neonGlowColorOverride={enemyFoundationNeonStyles[idx]?.color ?? DEFAULT_ENEMY_FOUNDATION_GLOW}
-                          neonGlowShadowOverride={enemyFoundationNeonStyles[idx]?.shadow}
-                          setDropRef={getFoundationDropRef(enemyFoundationDropBase + idx)}
-                          onDestructionComplete={() => handleEnemyFoundationDestructionComplete(idx)}
-                        />
-                        {showSpawnControl && (
-                          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-                            <button
-                              type="button"
-                              className="pointer-events-auto h-10 w-10 rounded-full border border-game-teal/60 bg-black/80 text-xl leading-none text-game-teal transition-colors hover:border-game-teal hover:bg-black"
-                              onClick={() => setEnemySpawnPickerIndex((prev) => (prev === idx ? null : idx))}
-                              aria-label="Spawn enemy actor"
-                            >
-                              +
-                            </button>
-                          </div>
-                        )}
-                        {showSpawnControl && enemySpawnPickerIndex === idx && (
-                          <div className="absolute left-1/2 top-full z-30 mt-2 w-[180px] -translate-x-1/2 rounded border border-game-teal/40 bg-black/90 p-2">
-                            <select
-                              className="mb-2 w-full rounded border border-game-teal/35 bg-black/80 px-2 py-1 text-[11px] text-game-teal"
-                              value={spawnSelection}
-                              onChange={(event) => handleEnemySpawnSelectionChange(idx, event.target.value)}
-                            >
-                              {enemyActorSpawnOptions.map((option) => (
-                                <option key={option.id} value={option.id}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="flex items-center gap-2">
+                      <div key={`enemy-foundation-${idx}`} className="flex items-start gap-2">
+                        <div
+                          className="relative rounded border border-game-teal/30 bg-black/45 p-[3px] shrink-0"
+                          style={{ minWidth: previewFoundationWidth }}
+                        >
+                          <Foundation
+                            cards={foundationCards}
+                            index={idx}
+                            onFoundationClick={() => {}}
+                            canReceive={false}
+                            interactionMode={gameState.interactionMode}
+                            showGraphics={showGraphics}
+                            countPosition="none"
+                            maskValue={false}
+                            watercolorOnlyCards={false}
+                            foundationOverlay={buildEnemyFoundationOverlay(idx)}
+                            neonGlowColorOverride={enemyFoundationNeonStyles[idx]?.color ?? DEFAULT_ENEMY_FOUNDATION_GLOW}
+                            neonGlowShadowOverride={enemyFoundationNeonStyles[idx]?.shadow}
+                            setDropRef={getFoundationDropRef(enemyFoundationDropBase + idx)}
+                            onDestructionComplete={() => handleEnemyFoundationDestructionComplete(idx)}
+                          />
+                          {showSpawnControl && (
+                            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
                               <button
                                 type="button"
-                                className="flex-1 rounded border border-game-teal/45 px-2 py-1 text-[11px] text-game-teal hover:border-game-teal"
-                                onClick={() => handleSpawnEnemyActor(idx)}
+                                className="pointer-events-auto h-10 w-10 rounded-full border border-game-teal/60 bg-black/80 text-xl leading-none text-game-teal transition-colors hover:border-game-teal hover:bg-black"
+                                onClick={() => setEnemySpawnPickerIndex((prev) => (prev === idx ? null : idx))}
+                                aria-label="Spawn enemy actor"
                               >
-                                Spawn
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded border border-game-white/25 px-2 py-1 text-[11px] text-game-white/75 hover:border-game-white/50"
-                                onClick={() => setEnemySpawnPickerIndex(null)}
-                              >
-                                Cancel
+                                +
                               </button>
                             </div>
-                          </div>
-                        )}
-                        <StatusBadges statuses={statuses} compact className="mt-1" />
+                          )}
+                          {showSpawnControl && enemySpawnPickerIndex === idx && (
+                            <div className="absolute left-1/2 top-full z-30 mt-2 w-[180px] -translate-x-1/2 rounded border border-game-teal/40 bg-black/90 p-2">
+                              <select
+                                className="mb-2 w-full rounded border border-game-teal/35 bg-black/80 px-2 py-1 text-[11px] text-game-teal"
+                                value={spawnSelection}
+                                onChange={(event) => handleEnemySpawnSelectionChange(idx, event.target.value)}
+                              >
+                                {enemyActorSpawnOptions.map((option) => (
+                                  <option key={option.id} value={option.id}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  className="flex-1 rounded border border-game-teal/45 px-2 py-1 text-[11px] text-game-teal hover:border-game-teal"
+                                  onClick={() => handleSpawnEnemyActor(idx)}
+                                >
+                                  Spawn
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded border border-game-white/25 px-2 py-1 text-[11px] text-game-white/75 hover:border-game-white/50"
+                                  onClick={() => setEnemySpawnPickerIndex(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          <StatusBadges statuses={statuses} compact className="mt-1" />
+                        </div>
+                        <div className="mt-2 flex h-6 min-w-[44px] items-center justify-center rounded border border-[#ff8a00]/60 bg-black/55 px-2 text-[10px] font-semibold text-[#ffb347] shadow-[0_0_10px_rgba(255,138,0,0.35)]">
+                          AP {foundationAp}
+                        </div>
                       </div>
                     );
                   })}
@@ -4198,36 +4389,43 @@ export function CombatSandbox({
                 <div className="flex items-start justify-center gap-[50px]">
                   {foundationIndexes.map((idx) => {
                     const statuses = buildFoundationStatuses('player', idx);
+                    const foundationCards = previewPlayerFoundations[idx] ?? [];
+                    const foundationActor = resolvePlayerFoundationActor(idx, foundationCards);
+                    const foundationAp = Math.max(0, Number(foundationActor?.power ?? 0));
                     return (
-                      <div
-                        key={`player-foundation-${idx}`}
-                        className="rounded border border-game-white/30 bg-black/45 p-[3px] shrink-0"
-                        style={{ minWidth: previewFoundationWidth }}
-                      >
-                        <Foundation
-                          cards={previewPlayerFoundations[idx] ?? []}
-                          index={idx}
-                          onFoundationClick={() => {
-                            if (interTurnCountdownActive) return;
-                            if (enforceTurnOwnership && effectiveActiveSide !== 'player') return;
-                            const accepted = actions.playToFoundation(idx);
-                            if (accepted) {
-                              setLocalTurnTimerActive(true);
-                              applyFoundationTimerBonus(idx);
-                            }
-                          }}
-                          canReceive={!!selectedCard && !!validFoundationsForSelected[idx]}
-                          interactionMode={gameState.interactionMode}
-                          showGraphics={showGraphics}
-                          countPosition="none"
-                          maskValue={false}
-                          setDropRef={getFoundationDropRef(idx)}
-                          watercolorOnlyCards={false}
-                          neonGlowColorOverride={DEFAULT_PLAYER_FOUNDATION_GLOW}
-                          neonGlowShadowOverride={`0 0 28px ${DEFAULT_PLAYER_FOUNDATION_GLOW}ee, inset 0 0 20px ${DEFAULT_PLAYER_FOUNDATION_GLOW}55`}
-                          foundationOverlay={buildFoundationOverlay(idx)}
-                        />
-                        <StatusBadges statuses={statuses} compact className="mt-1" />
+                      <div key={`player-foundation-${idx}`} className="flex items-start gap-2">
+                        <div
+                          className="relative rounded border border-game-white/30 bg-black/45 p-[3px] shrink-0"
+                          style={{ minWidth: previewFoundationWidth }}
+                        >
+                          <Foundation
+                            cards={foundationCards}
+                            index={idx}
+                            onFoundationClick={() => {
+                              if (interTurnCountdownActive) return;
+                              if (enforceTurnOwnership && effectiveActiveSide !== 'player') return;
+                              const accepted = actions.playToFoundation(idx);
+                              if (accepted) {
+                                setLocalTurnTimerActive(true);
+                                applyFoundationTimerBonus(idx);
+                              }
+                            }}
+                            canReceive={!!selectedCard && !!validFoundationsForSelected[idx]}
+                            interactionMode={gameState.interactionMode}
+                            showGraphics={showGraphics}
+                            countPosition="none"
+                            maskValue={false}
+                            setDropRef={getFoundationDropRef(idx)}
+                            watercolorOnlyCards={false}
+                            neonGlowColorOverride={DEFAULT_PLAYER_FOUNDATION_GLOW}
+                            neonGlowShadowOverride={`0 0 28px ${DEFAULT_PLAYER_FOUNDATION_GLOW}ee, inset 0 0 20px ${DEFAULT_PLAYER_FOUNDATION_GLOW}55`}
+                            foundationOverlay={buildFoundationOverlay(idx)}
+                          />
+                          <StatusBadges statuses={statuses} compact className="mt-1" />
+                        </div>
+                        <div className="mt-2 flex h-6 min-w-[44px] items-center justify-center rounded border border-game-teal/55 bg-black/55 px-2 text-[10px] font-semibold text-game-teal shadow-[0_0_10px_rgba(88,255,252,0.3)]">
+                          AP {foundationAp}
+                        </div>
                       </div>
                     );
                   })}
