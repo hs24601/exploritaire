@@ -1369,6 +1369,15 @@ export function CombatSandbox({
           ? createActorDeckStateWithOrim(actorId || `lab-${inferredDefinitionId}`, inferredDefinitionId, gameState.orimDefinitions).deck
           : undefined);
       if (!deck) return;
+      const hasConfiguredSkittishCard = deck.cards.some((deckCard) => {
+        const slotWithOrim = deckCard.slots.find((slot) => !!slot.orimId);
+        const slotAbilityId = resolveOrimDefinitionIdFromSlot(
+          slotWithOrim?.orimId,
+          gameState.orimInstances,
+          gameState.orimDefinitions
+        );
+        return slotAbilityId === 'skittish_scurry';
+      });
       const nowMs = Date.now();
       deck.cards.forEach((deckCard, deckCardIndex) => {
         if (deckCard.active === false) return;
@@ -1448,7 +1457,7 @@ export function CombatSandbox({
           },
         });
       });
-      if (inferredDefinitionId === 'felis') {
+      if (inferredDefinitionId === 'felis' && !hasConfiguredSkittishCard) {
         const hasSkittishReadyCard = candidates.some((entry) => (
           entry.card.sourceActorId === actorId
           && entry.card.rpgAbilityId === 'skittish_scurry'
