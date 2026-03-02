@@ -2612,8 +2612,6 @@ export function CombatSandbox({
         const tableauCards = previewTableaus[tableauIndex] ?? [];
         const topCard = tableauCards[tableauCards.length - 1];
         if (!topCard) continue;
-        const canPlayFromTableau = tableauCanPlay[tableauIndex] ?? true;
-        if (!canPlayFromTableau) continue;
         for (let foundationIndex = 0; foundationIndex < previewPlayerFoundations.length; foundationIndex += 1) {
           if (!previewPlayerFoundations[foundationIndex]) continue;
           const actor = resolvePlayerFoundationActor(foundationIndex, previewPlayerFoundations[foundationIndex] ?? []);
@@ -2781,6 +2779,57 @@ export function CombatSandbox({
         }
       );
       return;
+    }
+
+    // Last-chance player fallback: try direct legal plays before handing off turn.
+    if (enforceTurnOwnership && effectiveActiveSide === 'player') {
+      for (const card of previewHandCards) {
+        if (!isHandCardPlayable(card)) continue;
+        for (let foundationIndex = 0; foundationIndex < previewPlayerFoundations.length; foundationIndex += 1) {
+          const accepted = executeAutoPlayDecision(
+            {
+              side: 'player',
+              kind: 'player_hand_player_foundation',
+              score: 0.95,
+              label: `forced hand -> p#${foundationIndex}`,
+            },
+            () => {
+              const runAccepted = actions.playFromHand(card, foundationIndex, useWild);
+              if (runAccepted) applyFoundationTimerBonus(foundationIndex);
+              return runAccepted;
+            }
+          );
+          if (accepted) return;
+        }
+        for (let enemyFoundationIndex = 0; enemyFoundationIndex < enemyFoundations.length; enemyFoundationIndex += 1) {
+          const accepted = executeAutoPlayDecision(
+            {
+              side: 'player',
+              kind: 'player_hand_enemy_foundation',
+              score: 0.9,
+              label: `forced hand -> e#${enemyFoundationIndex}`,
+            },
+            () => actions.playFromHandToEnemyFoundation(card, enemyFoundationIndex)
+          );
+          if (accepted) return;
+        }
+      }
+      for (let tableauIndex = 0; tableauIndex < previewTableaus.length; tableauIndex += 1) {
+        const tableauCards = previewTableaus[tableauIndex] ?? [];
+        if (tableauCards.length === 0) continue;
+        for (let foundationIndex = 0; foundationIndex < previewPlayerFoundations.length; foundationIndex += 1) {
+          const accepted = executeAutoPlayDecision(
+            {
+              side: 'player',
+              kind: 'player_tableau',
+              score: 0.85,
+              label: `forced t#${tableauIndex} -> p#${foundationIndex}`,
+            },
+            () => tryPlayerTableauPlay(tableauIndex, foundationIndex)
+          );
+          if (accepted) return;
+        }
+      }
     }
 
     if (gameState.phase === 'biome' && gameState.currentBiome && !useWild && actions.completeBiome) {
