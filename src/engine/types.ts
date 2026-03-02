@@ -44,6 +44,7 @@ export type AbilityTriggerType =
   | 'noValidMovesEnemy'
   | 'inactive_duration'
   | 'ko'
+  | 'on_death'
   | 'combo_personal'
   | 'combo_party'
   | 'has_armor'
@@ -80,6 +81,21 @@ export interface AbilityLifecycleDef {
   cooldownResetsOn?: 'turn_start' | 'turn_end' | 'battle_end' | 'rest';
 }
 
+export interface AbilityLifecycleUsageEntry {
+  totalUses?: number;
+  turnCounter?: number;
+  turnUses?: number;
+  battleCounter?: number;
+  battleUses?: number;
+  restCounter?: number;
+  restUses?: number;
+  runCounter?: number;
+  runUses?: number;
+  turnCooldownReadyAt?: number;
+  turnCooldownBattleCounter?: number;
+  turnCooldownRestCounter?: number;
+}
+
 export interface SourceCardPlayExpiringBonus {
   id: string;
   sourceActorId: string;
@@ -113,6 +129,9 @@ export interface OrimDefinition {
   triggers?: AbilityTriggerDef[];
   lifecycle?: AbilityLifecycleDef;
   legacyOrim?: boolean;
+  canTap?: boolean;
+  tapEffects?: OrimEffectDef[];
+  tapEffectsByRarity?: Partial<Record<OrimRarity, OrimEffectDef[]>>;
   timerBonusMs?: number;
   isAspect?: boolean; // Marks this orim as a character aspect (jumbo card option)
   aspectProfile?: OrimAspectProfile;
@@ -233,6 +252,7 @@ export interface Card {
   rpgCardKind?: 'ability' | 'fast' | 'focus' | 'wild';
   rpgLevel?: number;
   tableauStepIndex?: number;
+  canTap?: boolean; // UI hint that the card supports tap/flipping interaction
 }
 
 export type GamePhase = 'playing' | 'garden' | 'biome';
@@ -250,6 +270,14 @@ export interface CombatFlowTelemetry {
   enemyTimeouts: number;
   playerCardsPlayed: number;
   enemyCardsPlayed: number;
+  deadlockSurges: number;
+}
+
+export interface RandomBiomeWorldEvent {
+  id: 'deadlock_surge';
+  label: string;
+  detail?: string;
+  at: number;
 }
 
 export interface Effect {
@@ -465,6 +493,11 @@ export interface GameState {
   relicRuntimeState: Record<string, RelicRuntimeEntry>;
   relicLastActivation?: RelicLastActivation;
   globalRestCount?: number;
+  lifecycleRunCounter?: number;
+  lifecycleBattleCounter?: number;
+  lifecycleTurnCounter?: number;
+  lifecycleRestCounter?: number;
+  abilityLifecycleUsageByDeckCard?: Record<string, AbilityLifecycleUsageEntry>;
   lastCardActionSnapshot?: Omit<GameState, 'lastCardActionSnapshot'>;
   // Tile system
   tiles: Tile[]; // Active tiles in the garden
@@ -489,6 +522,7 @@ export interface GameState {
   randomBiomeTurnRemainingMs?: number;
   randomBiomeTurnLastTickAt?: number;
   randomBiomeTurnTimerActive?: boolean;
+  randomBiomeLastWorldEvent?: RandomBiomeWorldEvent;
   combatFlowTelemetry?: CombatFlowTelemetry;
   enemyDifficulty?: EnemyDifficulty;
   enemyBackfillQueues?: Card[][]; // Pre-seeded backfill queues used on enemy turns
@@ -794,20 +828,4 @@ export interface NodeEdgePattern {
   description: string;
   nodes: NodePatternDefinition[];
   totalCards: number; // Total cards to deal across all nodes
-}
-
-// === DICE SYSTEM ===
-
-export type DieValue = 1 | 2 | 3 | 4 | 5 | 6;
-
-export interface Die {
-  id: string; // Unique instance ID
-  value: DieValue; // Current face value (1-6)
-  locked: boolean; // Whether this die is locked from rerolling
-  rolling: boolean; // Animation state - whether currently rolling
-}
-
-export interface DicePool {
-  dice: Die[]; // Collection of dice in this pool
-  rollCount: number; // Number of times the pool has been rolled
 }

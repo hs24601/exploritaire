@@ -6,18 +6,16 @@ import { DragPreview } from './DragPreview';
 import { PlayingScreen } from './PlayingScreen';
 import { EncounterScene } from './encounters/EncounterScene';
 import { JewelModal } from './JewelModal';
-import { Die } from './Die';
 import { GameButton } from './GameButton';
 import { canPlayCard, canPlayCardWithWild } from '../engine/rules';
 import { ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
 import { getBiomeDefinition } from '../engine/biomes';
 import { getTileDefinition } from '../engine/tiles';
 import { getBlueprintDefinition } from '../engine/blueprints';
-import { createDie } from '../engine/dice';
 import { getActorDisplayGlyph } from '../engine/actors';
 import { getOrimAccentColor } from '../utils/orimColors';
 import { mainWorldMap } from '../data/worldMap';
-import type { Blueprint, BlueprintCard, Card as CardType, Die as DieType, Suit, Element, OrimDefinition } from '../engine/types';
+import type { Blueprint, BlueprintCard, Card as CardType, Suit, Element, OrimDefinition } from '../engine/types';
 import type { useGameEngine } from '../hooks/useGameEngine';
 import type { EncounterCombatActions } from './combat/contracts';
 
@@ -62,7 +60,6 @@ export interface GameShellProps {
   serverAlive: boolean;
   onOpenPoiEditorAt?: (x: number, y: number) => void;
 
-  // Sandbox/dev props for CombatGolf
   sandboxOrimIds: string[];
   onAddSandboxOrim: (id: string) => void;
   onRemoveSandboxOrim: (id: string) => void;
@@ -79,8 +76,6 @@ export interface GameShellProps {
   infiniteBenchSwapsEnabled: boolean;
   onToggleInfiniteBenchSwaps: () => void;
 
-  // Die spawn: App's Roll Dice button sets this ref to call GameShell's spawn handler
-  spawnDieRef?: React.MutableRefObject<((clientX: number, clientY: number) => void) | null>;
 }
 
 const DEFAULT_CARD_PLACEMENT_SPLASH_ENABLED = false;
@@ -130,7 +125,6 @@ export function GameShell({
   onConsumeBenchSwap,
   infiniteBenchSwapsEnabled,
   onToggleInfiniteBenchSwaps,
-  spawnDieRef,
 }: GameShellProps) {
   // ── State ────────────────────────────────────────────────────────────────
   const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
@@ -145,12 +139,6 @@ export function GameShell({
     blueprints: [],
   });
   const [tokenReturnNotice, setTokenReturnNotice] = useState<{ id: number; count: number } | null>(null);
-  const [spawnedDie, setSpawnedDie] = useState<DieType | null>(null);
-  const [diceComboPulse, setDiceComboPulse] = useState(0);
-  const [diePosition, setDiePosition] = useState({ x: 0, y: 0 });
-  const [dieAnimating, setDieAnimating] = useState(false);
-  const [dieDragging, setDieDragging] = useState(false);
-  const [dieDragOffset, setDieDragOffset] = useState({ x: 0, y: 0 });
   const [handCards, setHandCards] = useState<CardType[]>([]);
   const [foundationSplashHint, setFoundationSplashHint] = useState<{
     foundationIndex: number;
@@ -195,15 +183,6 @@ export function GameShell({
     : 'ADVENTURE';
 
   // ── Effects ───────────────────────────────────────────────────────────────
-
-  // diceComboPulse timeout
-  useEffect(() => {
-    if (diceComboPulse <= 0) return;
-    const timer = window.setTimeout(() => {
-      setDiceComboPulse(0);
-    }, 1000);
-    return () => window.clearTimeout(timer);
-  }, [diceComboPulse]);
 
   // Phase detection → isPuzzleOpen
   useEffect(() => {
@@ -481,100 +460,6 @@ export function GameShell({
     },
     [startDrag]
   );
-
-  // Die spawn handler (also exposed via spawnDieRef for App's Roll Dice button)
-  const handleSpawnDie = useCallback((clientX: number, clientY: number) => {
-    const newDie = createDie();
-    setSpawnedDie(newDie);
-    setDieAnimating(true);
-
-    const dieSize = 64;
-    const margin = 120;
-
-    const targetX = Math.max(margin, Math.min(
-      clientX - dieSize / 2,
-      window.innerWidth - margin - dieSize
-    ));
-    const targetY = Math.max(margin, Math.min(
-      clientY - dieSize / 2,
-      window.innerHeight - margin - dieSize
-    ));
-
-    setDiePosition({ x: targetX, y: targetY });
-
-    setTimeout(() => {
-      setDiceComboPulse((prev) => prev + 1);
-      setDieAnimating(false);
-      setSpawnedDie((prev) => prev ? { ...prev, rolling: false } : null);
-    }, 1200);
-  }, []);
-
-  // Wire spawnDieRef so App's Roll Dice button can trigger a die spawn
-  useEffect(() => {
-    if (spawnDieRef) {
-      spawnDieRef.current = handleSpawnDie;
-    }
-    return () => {
-      if (spawnDieRef) spawnDieRef.current = null;
-    };
-  }, [spawnDieRef, handleSpawnDie]);
-
-  const handleDieMouseDown = useCallback((e: React.MouseEvent) => {
-    if (dieAnimating) return;
-    e.preventDefault();
-    setDieDragging(true);
-    setDieDragOffset({
-      x: e.clientX - diePosition.x,
-      y: e.clientY - diePosition.y,
-    });
-  }, [dieAnimating, diePosition]);
-
-  const handleDieTouchStart = useCallback((e: React.TouchEvent) => {
-    if (dieAnimating) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    setDieDragging(true);
-    setDieDragOffset({
-      x: touch.clientX - diePosition.x,
-      y: touch.clientY - diePosition.y,
-    });
-  }, [dieAnimating, diePosition]);
-
-  // Die dragging mouse/touch events
-  useEffect(() => {
-    if (!dieDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      setDiePosition({
-        x: e.clientX - dieDragOffset.x,
-        y: e.clientY - dieDragOffset.y,
-      });
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      setDiePosition({
-        x: touch.clientX - dieDragOffset.x,
-        y: touch.clientY - dieDragOffset.y,
-      });
-    };
-
-    const handleEnd = () => {
-      setDieDragging(false);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleEnd);
-    window.addEventListener('touchmove', handleTouchMove);
-    window.addEventListener('touchend', handleEnd);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleEnd);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleEnd);
-    };
-  }, [dieDragging, dieDragOffset]);
 
   const handleStartAdventure = useCallback((tileId: string) => {
     if (gameState.activeSessionTileId && gameState.activeSessionTileId !== tileId) return;
@@ -944,123 +829,6 @@ export function GameShell({
         />
       )}
 
-      {/* Spawned die with bounce animation */}
-      <AnimatePresence>
-        {spawnedDie && (
-          <motion.div
-            initial={dieAnimating ? { x: 16, y: -100, rotate: -45, scale: 0 } : false}
-            animate={dieAnimating ? {
-              x: [16, diePosition.x, diePosition.x],
-              y: [-100, diePosition.y, diePosition.y],
-              rotate: [0, 720, 720],
-              scale: [0, 1.2, 1]
-            } : {
-              x: diePosition.x,
-              y: diePosition.y,
-              rotate: 0,
-              scale: 1
-            }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={dieAnimating ? {
-              duration: 1.2,
-              times: [0, 0.7, 1],
-              ease: [0.34, 1.56, 0.64, 1]
-            } : {
-              duration: 0
-            }}
-            style={{
-              cursor: dieAnimating ? 'default' : (dieDragging ? 'grabbing' : 'grab')
-            }}
-            className="fixed z-[9999]"
-            onMouseDown={handleDieMouseDown}
-            onTouchStart={handleDieTouchStart}
-          >
-            <div className="relative">
-              {/* Combo effect */}
-              <AnimatePresence>
-                {diceComboPulse > 0 && (
-                  <motion.div
-                    key={diceComboPulse}
-                    initial={{ opacity: 0, scale: 0.3, rotate: -12, y: -6 }}
-                    animate={{ opacity: 1, scale: 1.25, rotate: 10, y: -80 }}
-                    exit={{ opacity: 0, scale: 1.6, rotate: 0, y: -100 }}
-                    transition={{ duration: 0.5, ease: 'backOut' }}
-                    className="absolute -top-10 left-1/2 -translate-x-1/2 pointer-events-none"
-                  >
-                    <div className="relative">
-                      {/* Glow effect */}
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.6, rotate: -18 }}
-                        animate={{ opacity: 0.8, scale: 1.5, rotate: -8 }}
-                        exit={{ opacity: 0, scale: 1.8 }}
-                        transition={{ duration: 0.35, ease: 'backOut' }}
-                        className="absolute -inset-8 rounded-full"
-                        style={{
-                          background: 'radial-gradient(circle, rgba(230,179,30,0.8) 0%, rgba(230,179,30,0) 70%)',
-                          boxShadow: '0 0 40px rgba(230, 179, 30, 0.9)',
-                        }}
-                      />
-
-                      {/* Rotating ring */}
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.5, rotate: 12 }}
-                        animate={{ opacity: 0.9, scale: 1.3, rotate: 6 }}
-                        exit={{ opacity: 0, scale: 1.6 }}
-                        transition={{ duration: 0.4, ease: 'backOut' }}
-                        className="absolute -inset-6 rotate-6"
-                        style={{
-                          background:
-                            'repeating-conic-gradient(from 0deg, rgba(230,179,30,0.3) 0deg 10deg, rgba(10,10,10,0) 10deg 20deg)',
-                          maskImage: 'radial-gradient(circle, black 55%, transparent 72%)',
-                        }}
-                      />
-
-                      {/* Burst text */}
-                      <motion.div
-                        initial={{ opacity: 0, y: -6, rotate: -8 }}
-                        animate={{ opacity: 1, y: -24, rotate: 4 }}
-                        exit={{ opacity: 0, y: -32 }}
-                        transition={{ duration: 0.35, ease: 'backOut' }}
-                        className="absolute -left-16 -top-8 text-xs font-bold tracking-[3px]"
-                        style={{ color: '#f97316', textShadow: '0 0 10px rgba(249, 115, 22, 0.9)' }}
-                      >
-                        POW!
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ opacity: 0, y: 6, rotate: 8 }}
-                        animate={{ opacity: 0.9, y: 24, rotate: -4 }}
-                        exit={{ opacity: 0, y: 32 }}
-                        transition={{ duration: 0.4, ease: 'backOut' }}
-                        className="absolute -right-16 -bottom-8 text-xs font-bold tracking-[3px]"
-                        style={{ color: '#38bdf8', textShadow: '0 0 10px rgba(56, 189, 248, 0.9)' }}
-                      >
-                        BAM!
-                      </motion.div>
-
-                      {/* Result badge */}
-                      <div
-                        className="relative z-10 px-4 py-2 text-sm font-bold tracking-[3px] rounded border-2"
-                        style={{
-                          color: '#e6b31e',
-                          borderColor: '#e6b31e',
-                          background: 'rgba(10, 10, 10, 0.9)',
-                          boxShadow: '0 0 24px rgba(230, 179, 30, 0.8)',
-                          textShadow: '0 0 12px rgba(230, 179, 30, 0.9)',
-                        }}
-                      >
-                        {spawnedDie.value}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <Die die={spawnedDie} size={64} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

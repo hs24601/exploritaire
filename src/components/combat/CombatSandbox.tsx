@@ -557,11 +557,24 @@ function resolveOrimDefinitionIdFromSlot(
   return knownIds.find((id) => slotOrimId.includes(`orim-${id}-`));
 }
 
-function findActorForLabFoundation(state: GameState, definitionId: 'felis' | 'ursus' | 'lupus'): Actor | null {
+type LabFoundationActors = {
+  felis: Actor | null;
+  ursus: Actor | null;
+  lupus: Actor | null;
+};
+
+function resolveLabFoundationActors(state: Pick<GameState, 'tileParties' | 'availableActors'>): LabFoundationActors {
   const partyActors = Object.values(state.tileParties ?? {}).flat();
-  return partyActors.find((actor) => actor.definitionId === definitionId)
+  const findActor = (definitionId: 'felis' | 'ursus' | 'lupus'): Actor | null => (
+    partyActors.find((actor) => actor.definitionId === definitionId)
     ?? state.availableActors.find((actor) => actor.definitionId === definitionId)
-    ?? null;
+    ?? null
+  );
+  return {
+    felis: findActor('felis'),
+    ursus: findActor('ursus'),
+    lupus: findActor('lupus'),
+  };
 }
 
 function createLabFoundationActorCard(definitionId: 'felis' | 'ursus' | 'lupus', actor: Actor | null): CardType {
@@ -592,15 +605,12 @@ function inferFoundationDefinitionId(card: CardType | undefined): 'felis' | 'urs
   return null;
 }
 
-function buildLabSeededFoundations(state: GameState, existing: CardType[][]): CardType[][] {
-  const felisActor = findActorForLabFoundation(state, COMBAT_LAB_FOUNDATION_ACTOR_DEFINITION_IDS[0]);
-  const ursusActor = findActorForLabFoundation(state, COMBAT_LAB_FOUNDATION_ACTOR_DEFINITION_IDS[1]);
-  const lupusActor = findActorForLabFoundation(state, COMBAT_LAB_FOUNDATION_ACTOR_DEFINITION_IDS[2]);
+function buildLabSeededFoundations(existing: CardType[][], actors: LabFoundationActors): CardType[][] {
   const existingRest = existing.slice(3).map((stack) => [...stack]);
   return [
-    [createLabFoundationActorCard('felis', felisActor)],
-    [createLabFoundationActorCard('ursus', ursusActor)],
-    [createLabFoundationActorCard('lupus', lupusActor)],
+    [createLabFoundationActorCard('felis', actors.felis)],
+    [createLabFoundationActorCard('ursus', actors.ursus)],
+    [createLabFoundationActorCard('lupus', actors.lupus)],
     ...existingRest,
   ];
 }
@@ -744,8 +754,11 @@ export function CombatSandbox({
   const [autoPlayStalls, setAutoPlayStalls] = useState(0);
   const [autoPlayLastDecision, setAutoPlayLastDecision] = useState<AutoPlayDecisionEntry | null>(null);
   const [autoPlayTrace, setAutoPlayTrace] = useState<AutoPlayDecisionEntry[]>([]);
+  const [worldEventBanner, setWorldEventBanner] = useState<{ token: string; label: string; detail?: string } | null>(null);
   const [autoPlayDragAnim, setAutoPlayDragAnim] = useState<AutoPlayDragAnim | null>(null);
   const autoPlayDragNodeRef = useRef<HTMLDivElement | null>(null);
+  const worldEventSeenRef = useRef<string>('');
+  const labFoundationSeedTokenRef = useRef<string>('');
   const autoPlayStallRef = useRef(0);
   const autoPlayBusyRef = useRef(false);
   const autoPlayRngStateRef = useRef<number>(AUTO_PLAY_DEFAULT_SEED >>> 0);
@@ -1541,6 +1554,18 @@ export function CombatSandbox({
       const cardKey = `${card.sourceActorId ?? ''}|${card.sourceDeckCardId ?? ''}|${card.rpgAbilityId ?? ''}`;
       const actorAbilityKey = `${card.sourceActorId ?? ''}|${card.rpgAbilityId ?? ''}`;
       const looksDeckBacked = !!card.sourceActorId && (!!card.sourceDeckCardId || !!card.rpgAbilityId);
+      if (looksDeckBacked && card.sourceActorId && card.sourceDeckCardId) {
+        const sourceDeck = gameState.actorDecks[card.sourceActorId];
+        const sourceDeckCard = sourceDeck?.cards.find((entry) => entry.id === card.sourceDeckCardId);
+        if (sourceDeckCard) {
+          if (sourceDeckCard.active === false || sourceDeckCard.discarded) {
+            return false;
+          }
+          if (!deckCardKeys.has(cardKey)) {
+            return false;
+          }
+        }
+      }
       if (looksDeckBacked && (deckCardKeys.has(cardKey) || deckActorAbilityKeys.has(actorAbilityKey))) {
         return false;
       }
@@ -1550,7 +1575,7 @@ export function CombatSandbox({
       return true;
     });
     return [...deckBackedLabHandCards, ...runtimeExtras];
-  }, [isLabMode, deckBackedLabHandCards, gameState.rpgHandCards, isDeadRunOnlyAbilityCard, noValidMovesForPlayer]);
+  }, [isLabMode, deckBackedLabHandCards, gameState.rpgHandCards, gameState.actorDecks, isDeadRunOnlyAbilityCard, noValidMovesForPlayer]);
   const actorApById = useMemo(() => {
     const ap = new Map<string, number>();
     const tileId = gameState.activeSessionTileId;
@@ -1660,6 +1685,28 @@ export function CombatSandbox({
   const gameTableaus = gameState.tableaus ?? [];
   const hasRenderableGameTableaus = gameTableaus.length > 0 && gameTableaus.some((tableau) => tableau.length > 0);
   const previewTableaus = hasRenderableGameTableaus ? gameTableaus : fallbackTableaus;
+  const toCardSignature = useCallback((card: CardType): string => (
+    card.id
+    ?? `${card.rank}-${card.suit}-${card.element ?? 'N'}-${card.sourceActorId ?? ''}`
+  ), []);
+  const toTableauSignature = useCallback((tableaus: CardType[][]): string => (
+    tableaus
+      .map((tableau) => tableau.map((card) => toCardSignature(card)).join(','))
+      .join('|')
+  ), [toCardSignature]);
+  const gameTableauSignature = useMemo(() => toTableauSignature(gameTableaus), [gameTableaus, toTableauSignature]);
+  const labFoundationActors = useMemo(
+    () => resolveLabFoundationActors({ tileParties: gameState.tileParties, availableActors: gameState.availableActors }),
+    [gameState.availableActors, gameState.tileParties]
+  );
+  const previewTableauShapeSignature = useMemo(
+    () => previewTableaus.map((tableau) => tableau.length).join(','),
+    [previewTableaus]
+  );
+  const previewFoundationShapeSignature = useMemo(
+    () => previewPlayerFoundations.map((foundation) => foundation.length).join(','),
+    [previewPlayerFoundations]
+  );
   // Enemy uses the same shared tableau; no separate enemy tableau cards.
   const foundationIndexes = [0, 1, 2];
   const enemyFoundationIndexes = isLabMode ? [1, 0, 2] : [0];
@@ -2404,24 +2451,34 @@ export function CombatSandbox({
     setFallbackTableaus(nextTableaus);
     actions.setBiomeTableaus(nextTableaus);
   };
-  const executeAutoPlayDecision = useCallback((entry: Omit<AutoPlayDecisionEntry, 'accepted' | 'at'>, run: () => boolean) => {
+  const executeAutoPlayDecision = useCallback((
+    entry: Omit<AutoPlayDecisionEntry, 'accepted' | 'at'>,
+    run: () => boolean,
+    options?: {
+      recordRejected?: boolean;
+      countRejectedAsStall?: boolean;
+    }
+  ) => {
     const accepted = run();
-    const stamped: AutoPlayDecisionEntry = {
-      ...entry,
-      accepted,
-      at: Date.now(),
-    };
-    appendAutoPlayDecision(stamped);
+    if (accepted || options?.recordRejected !== false) {
+      const stamped: AutoPlayDecisionEntry = {
+        ...entry,
+        accepted,
+        at: Date.now(),
+      };
+      appendAutoPlayDecision(stamped);
+    }
     if (accepted) {
       autoPlayStallRef.current = 0;
       setAutoPlayStalls(0);
       setLocalTurnTimerActive(true);
-    } else {
+    } else if (options?.countRejectedAsStall !== false) {
       autoPlayStallRef.current += 1;
       setAutoPlayStalls(autoPlayStallRef.current);
     }
     return accepted;
   }, [appendAutoPlayDecision]);
+  const performAutoPlayStepRef = useRef<() => void>(() => {});
   const performAutoPlayStep = useCallback(() => {
     if (!autoPlayEnabled || isGamePaused || dragState.isDragging || interTurnCountdownActive || autoPlayDragAnim) return;
     if (!isLabMode) return;
@@ -2732,6 +2789,20 @@ export function CombatSandbox({
       })
       .map((entry) => entry.candidate);
     for (const candidate of sortedCandidates) {
+      const accepted = executeAutoPlayDecision(
+        {
+          side: candidate.side,
+          kind: candidate.kind,
+          score: candidate.score,
+          label: candidate.label,
+        },
+        candidate.run,
+        {
+          recordRejected: false,
+          countRejectedAsStall: false,
+        }
+      );
+      if (!accepted) continue;
       if (candidate.drag) {
         startAutoPlayDragAnimation(
           candidate.drag.card,
@@ -2740,16 +2811,6 @@ export function CombatSandbox({
           candidate.drag.tableauIndex
         );
       }
-      const accepted = executeAutoPlayDecision(
-        {
-          side: candidate.side,
-          kind: candidate.kind,
-          score: candidate.score,
-          label: candidate.label,
-        },
-        candidate.run
-      );
-      if (!accepted) continue;
 
       const shouldHandoffEnemyAfterSinglePlay = (
         enforceTurnOwnership
@@ -2794,7 +2855,6 @@ export function CombatSandbox({
     // Last-chance player fallback: try direct legal plays before handing off turn.
     if (enforceTurnOwnership && effectiveActiveSide === 'player') {
       for (const card of previewHandCards) {
-        if (!isHandCardPlayable(card)) continue;
         for (let foundationIndex = 0; foundationIndex < previewPlayerFoundations.length; foundationIndex += 1) {
           const accepted = executeAutoPlayDecision(
             {
@@ -2807,6 +2867,10 @@ export function CombatSandbox({
               const runAccepted = actions.playFromHand(card, foundationIndex, useWild);
               if (runAccepted) applyFoundationTimerBonus(foundationIndex);
               return runAccepted;
+            },
+            {
+              recordRejected: false,
+              countRejectedAsStall: false,
             }
           );
           if (accepted) return;
@@ -2819,7 +2883,11 @@ export function CombatSandbox({
               score: 0.9,
               label: `forced hand -> e#${enemyFoundationIndex}`,
             },
-            () => actions.playFromHandToEnemyFoundation(card, enemyFoundationIndex)
+            () => actions.playFromHandToEnemyFoundation(card, enemyFoundationIndex),
+            {
+              recordRejected: false,
+              countRejectedAsStall: false,
+            }
           );
           if (accepted) return;
         }
@@ -2835,7 +2903,11 @@ export function CombatSandbox({
               score: 0.85,
               label: `forced t#${tableauIndex} -> p#${foundationIndex}`,
             },
-            () => tryPlayerTableauPlay(tableauIndex, foundationIndex)
+            () => tryPlayerTableauPlay(tableauIndex, foundationIndex),
+            {
+              recordRejected: false,
+              countRejectedAsStall: false,
+            }
           );
           if (accepted) return;
         }
@@ -2984,12 +3056,15 @@ export function CombatSandbox({
     autoPlayPolicyProfile,
   ]);
   useEffect(() => {
+    performAutoPlayStepRef.current = performAutoPlayStep;
+  }, [performAutoPlayStep]);
+  useEffect(() => {
     if (!open || !autoPlayEnabled || !isLabMode) return;
     const intervalId = window.setInterval(() => {
-      performAutoPlayStep();
+      performAutoPlayStepRef.current();
     }, autoPlayStepMs);
     return () => window.clearInterval(intervalId);
-  }, [autoPlayEnabled, autoPlayStepMs, isLabMode, open, performAutoPlayStep]);
+  }, [autoPlayEnabled, autoPlayStepMs, isLabMode, open]);
   useEffect(() => {
     resetAutoPlayDeterministicRng();
   }, [autoPlaySeed, resetAutoPlayDeterministicRng]);
@@ -3020,6 +3095,33 @@ export function CombatSandbox({
     setAutoPlayEnabled(false);
   }, [autoPlayEnabled, open]);
   useEffect(() => {
+    if (!open) {
+      worldEventSeenRef.current = '';
+      setWorldEventBanner(null);
+      return;
+    }
+    const worldEvent = gameState.randomBiomeLastWorldEvent;
+    if (!worldEvent || !worldEvent.id || !Number.isFinite(worldEvent.at)) return;
+    const token = `${worldEvent.id}:${worldEvent.at}`;
+    if (worldEventSeenRef.current === token) return;
+    worldEventSeenRef.current = token;
+    setWorldEventBanner({
+      token,
+      label: worldEvent.label || 'World Event',
+      detail: worldEvent.detail,
+    });
+    const timeoutId = window.setTimeout(() => {
+      setWorldEventBanner((prev) => (prev?.token === token ? null : prev));
+    }, 1900);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    gameState.randomBiomeLastWorldEvent?.at,
+    gameState.randomBiomeLastWorldEvent?.detail,
+    gameState.randomBiomeLastWorldEvent?.id,
+    gameState.randomBiomeLastWorldEvent?.label,
+    open,
+  ]);
+  useEffect(() => {
     if (!open || !isLabMode) return;
     const foundations = gameState.foundations ?? [];
     const needsActorSeed = (foundationIndex: number) => {
@@ -3034,9 +3136,23 @@ export function CombatSandbox({
       return false;
     };
     const shouldSeedLabFoundations = foundations.length < 3 || needsActorSeed(0) || needsActorSeed(1) || needsActorSeed(2);
-    if (!shouldSeedLabFoundations) return;
-    actions.setBiomeFoundations(buildLabSeededFoundations(gameState, foundations));
-  }, [actions, gameState, isLabMode, open]);
+    if (!shouldSeedLabFoundations) {
+      labFoundationSeedTokenRef.current = '';
+      return;
+    }
+    const topCardSeed = [0, 1, 2]
+      .map((foundationIndex) => {
+        const topCard = foundations[foundationIndex]?.[0];
+        if (!topCard) return `${foundationIndex}:none`;
+        return `${foundationIndex}:${topCard.id}:${String(topCard.name ?? '').trim().toLowerCase()}:${topCard.sourceActorId ?? ''}`;
+      })
+      .join('|');
+    const actorSeed = `${labFoundationActors.felis?.id ?? ''}|${labFoundationActors.ursus?.id ?? ''}|${labFoundationActors.lupus?.id ?? ''}`;
+    const seedToken = `${topCardSeed}::${actorSeed}`;
+    if (labFoundationSeedTokenRef.current === seedToken) return;
+    labFoundationSeedTokenRef.current = seedToken;
+    actions.setBiomeFoundations(buildLabSeededFoundations(foundations, labFoundationActors));
+  }, [actions, gameState.foundations, isLabMode, labFoundationActors, open]);
   useEffect(() => {
     if (!open || !isLabMode) return;
     const tableaus = gameState.tableaus ?? [];
@@ -3066,9 +3182,12 @@ export function CombatSandbox({
   }, [actions, gameState.tableaus, isLabMode]);
   useEffect(() => {
     if (hasRenderableGameTableaus) {
-      setFallbackTableaus(gameTableaus);
+      setFallbackTableaus((prev) => {
+        if (toTableauSignature(prev) === gameTableauSignature) return prev;
+        return gameTableaus.map((tableau) => [...tableau]);
+      });
     }
-  }, [gameTableaus, hasRenderableGameTableaus]);
+  }, [gameTableauSignature, gameTableaus, hasRenderableGameTableaus, toTableauSignature]);
   useEffect(() => {
     if (!open) {
       autoFitMultiplierRef.current = 1;
@@ -3120,7 +3239,7 @@ export function CombatSandbox({
       observer.disconnect();
       if (rafId) window.cancelAnimationFrame(rafId);
     };
-  }, [open, previewTableaus, previewPlayerFoundations, previewHandCards.length, isLabMode]);
+  }, [open, previewTableauShapeSignature, previewFoundationShapeSignature, previewHandCards.length, isLabMode]);
   useEffect(() => {
     if (!open) {
       setHudFps(0);
@@ -3822,6 +3941,14 @@ export function CombatSandbox({
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+            {showCombatHud && worldEventBanner && (
+              <div className="pointer-events-none absolute left-1/2 top-2 z-[10017] -translate-x-1/2 rounded border border-[#ff8a00]/70 bg-black/78 px-3 py-1 text-center">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-[#ffb347]">{worldEventBanner.label}</div>
+                {worldEventBanner.detail && (
+                  <div className="mt-0.5 text-[9px] text-[#ffd18d]/90">{worldEventBanner.detail}</div>
+                )}
               </div>
             )}
             <div

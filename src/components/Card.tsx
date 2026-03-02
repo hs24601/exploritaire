@@ -130,6 +130,7 @@ interface CardProps {
   watercolorOnly?: boolean;
   disableTemplateArt?: boolean;
   showFoundationActorSecretHolo?: boolean;
+  canTap?: boolean;
 }
 
 export const Card = memo(function Card({
@@ -166,6 +167,7 @@ export const Card = memo(function Card({
   watercolorOnly = false,
   disableTemplateArt = false,
   showFoundationActorSecretHolo = false,
+  canTap = false,
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [shimmer, setShimmer] = useState(0);
@@ -2680,6 +2682,14 @@ const getWatercolorColorFilter = () => {
         </div>
       )}
       </CardFrame>
+      {canTap && !faceDown && (
+        <div
+          className="absolute top-2 right-2 z-50 flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.35em] text-white/80"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Tap
+        </div>
+      )}
       </div>
       {showRipOverlay && !faceDown && (
         <HorizontalRipThreeEffect

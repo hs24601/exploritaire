@@ -76,6 +76,16 @@ export const ORIM_DEFINITIONS: OrimDefinition[] = [
         "elementalValue": 1
       }
     ]
+  },
+  {
+    "id": "luckyDice",
+    "name": "Lucky Dice",
+    "description": "Roll the dice! The value of the roll will be added to this card's primary effect.",
+    "rarity": "common",
+    "elements": [
+      "N"
+    ],
+    "effects": []
   }
 ];
 

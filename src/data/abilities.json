@@ -74,6 +74,69 @@
           "drawElement": "N"
         }
       ],
+      "canTap": true,
+      "tapEffects": [
+        {
+          "type": "armor",
+          "value": 2,
+          "target": "self",
+          "charges": 3,
+          "deadRunOnly": false,
+          "element": "N",
+          "valueByRarity": {
+            "common": 2,
+            "uncommon": 3,
+            "rare": 4,
+            "epic": 5,
+            "legendary": 6,
+            "mythic": 8
+          },
+          "drawWild": false,
+          "drawElement": "N"
+        }
+      ],
+      "tapEffectsByRarity": {
+        "common": [
+          {
+            "type": "armor",
+            "value": 2,
+            "target": "self",
+            "charges": 3,
+            "deadRunOnly": false,
+            "element": "N",
+            "valueByRarity": {
+              "common": 2,
+              "uncommon": 3,
+              "rare": 4,
+              "epic": 5,
+              "legendary": 6,
+              "mythic": 8
+            },
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "rare": [
+          {
+            "type": "super_armor",
+            "value": 2,
+            "target": "self",
+            "charges": 2,
+            "deadRunOnly": false,
+            "element": "N",
+            "valueByRarity": {
+              "common": 1,
+              "uncommon": 1,
+              "rare": 2,
+              "epic": 3,
+              "legendary": 4,
+              "mythic": 4
+            },
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ]
+      },
       "triggers": []
     },
     {

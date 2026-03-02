@@ -29,6 +29,9 @@ type AbilityLike = {
   tags?: string[];
   effects?: OrimEffectDef[];
   effectsByRarity?: Partial<Record<OrimRarity, OrimEffectDef[]>>;
+  canTap?: boolean;
+  tapEffects?: OrimEffectDef[];
+  tapEffectsByRarity?: Partial<Record<OrimRarity, OrimEffectDef[]>>;
   triggers?: AbilityTriggerDef[];
   lifecycle?: AbilityLifecycleDef;
 };
@@ -58,6 +61,9 @@ const abilityToOrimDefinition = (ability: AbilityLike): OrimDefinition => {
     effectsByRarity,
     triggers: ability.triggers ?? [],
     lifecycle: ability.lifecycle,
+    canTap: ability.canTap,
+    tapEffects: ability.tapEffects,
+    tapEffectsByRarity: ability.tapEffectsByRarity,
   };
 };
 
@@ -204,11 +210,11 @@ export const ACTOR_DECK_TEMPLATES: Record<string, { values: number[]; costByRari
     values: [5, 1, 1],
     costByRarity: [
       { common: 2, uncommon: 2, rare: 2, epic: 2, legendary: 2, mythic: 2 },
-      { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 },
+      { common: 5, uncommon: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 },
       { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 },
     ],
-    enabledRarities: ['uncommon', 'common', 'common'],
-    activeCards: [true, true, true],
+    enabledRarities: ['mythic', 'common', 'common'],
+    activeCards: [true, false, true],
     playableTurns: ['player', 'player', 'player'],
     cooldowns: [1, 1, 0],
     slotsPerCard: [1, 1, 1],
@@ -226,9 +232,9 @@ export const ACTOR_DECK_TEMPLATES: Record<string, { values: number[]; costByRari
     values: [1, 1],
     costByRarity: [
       { common: 2, uncommon: 2, rare: 2, epic: 2, legendary: 2, mythic: 2 },
-      { common: 5, uncommon: 5, rare: 5, epic: 5, legendary: 5, mythic: 5 },
+      { common: 1, uncommon: 5, rare: 5, epic: 5, legendary: 5, mythic: 5 },
     ],
-    enabledRarities: ['common', 'common'],
+    enabledRarities: ['common', 'rare'],
     activeCards: [true, true],
     playableTurns: ['anytime', 'anytime'],
     cooldowns: [1, 1],

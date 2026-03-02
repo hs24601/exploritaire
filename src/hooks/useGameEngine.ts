@@ -1309,7 +1309,11 @@ export function useGameEngine(
   }, []);
 
   const setRandomBiomeActiveSide = useCallback((side: 'player' | 'enemy') => {
-    setGameState((prev) => (prev ? { ...prev, randomBiomeActiveSide: side } : prev));
+    setGameState((prev) => {
+      if (!prev) return prev;
+      if ((prev.randomBiomeActiveSide ?? 'player') === side) return prev;
+      return { ...prev, randomBiomeActiveSide: side };
+    });
   }, []);
 
   const toggleGraphics = useCallback(() => {

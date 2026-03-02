@@ -11,7 +11,16 @@ import { MapEditor } from './components/MapEditor';
 import { ActorEditor } from './components/ActorEditor';
 import { AssetEditorEngine } from './components/editor/AssetEditorEngine';
 import type { AssetEditorPaneDefinition, AssetEditorTabId } from './components/editor/types';
-import type { ActorDefinition, Element, OrimRarity, TurnPlayability } from './engine/types';
+import type {
+  ActorDefinition,
+  Element,
+  OrimRarity,
+  TurnPlayability,
+  AbilityTriggerType,
+  AbilityTriggerTarget,
+  AbilityTriggerOperator,
+  AbilityTriggerCountdownType,
+} from './engine/types';
 import { ACTOR_DEFINITIONS, getActorDefinition } from './engine/actors';
 import { ACTOR_DECK_TEMPLATES } from './engine/actorDecks';
 import { initializeGame } from './engine/game';
@@ -20,6 +29,10 @@ import { mainWorldMap, initializeWorldMapPois } from './data/worldMap';
 import { KERU_ARCHETYPE_OPTIONS, KeruAspect } from './data/keruAspects';
 import abilitiesJson from './data/abilities.json';
 import { ORIM_DEFINITIONS } from './engine/orims';
+import {
+  autoFillEffectsByRarityFromCommon,
+  buildEffectsByRarityLoadouts as buildEffectsByRarityLoadoutsShared,
+} from './engine/rarityLoadouts';
 import type { PoiReward, PoiRewardType, PoiSparkleConfig } from './engine/worldMapTypes';
 import { GameShell } from './components/GameShell';
 import { CombatSandbox } from './components/combat/CombatSandbox';
@@ -112,7 +125,7 @@ type AbilityEffectType =
   | 'burn' | 'bleed' | 'stun' | 'freeze' | 'redeal_tableau'
   | 'upgrade_card_rarity_uncommon';
 
-type AbilityEffectTarget = 'self' | 'enemy' | 'all_enemies' | 'ally';
+type AbilityEffectTarget = 'self' | 'enemy' | 'all_enemies' | 'ally' | 'all_allies' | 'anyone';
 
 interface AbilityEffect {
   type: AbilityEffectType;
@@ -122,8 +135,105 @@ interface AbilityEffect {
   duration?: number;
   element?: Element;
   elementalValue?: number;
+  untilSourceCardPlay?: boolean;
+  deadRunOnly?: boolean;
+  drawWild?: boolean;
+  drawRank?: number;
+  drawElement?: Element;
   valueByRarity?: Partial<Record<OrimRarity, number>>;
 }
+
+type AbilityTrigger = {
+  type: AbilityTriggerType;
+  target?: AbilityTriggerTarget;
+  value?: number;
+  operator?: AbilityTriggerOperator;
+  countdownType?: AbilityTriggerCountdownType;
+  countdownValue?: number;
+};
+
+const ABILITY_TRIGGER_TYPES: AbilityTriggerType[] = [
+  'below_hp_pct',
+  'is_stunned',
+  'noValidMovesPlayer',
+  'noValidMovesEnemy',
+  'inactive_duration',
+  'ko',
+  'on_death',
+  'combo_personal',
+  'combo_party',
+  'has_armor',
+  'has_super_armor',
+  'notDiscarded',
+  'foundationDiscardCount',
+  'partyDiscardCount',
+  'foundationActiveDeckCount',
+  'actorActiveDeckCount',
+];
+const ABILITY_TRIGGER_TARGETS: AbilityTriggerTarget[] = ['self', 'enemy', 'anyone'];
+const ABILITY_TRIGGER_OPERATORS: AbilityTriggerOperator[] = ['>=', '<=', '>', '<', '=', '!='];
+const ABILITY_TRIGGER_COUNTDOWN_TYPES: Array<{ value: AbilityTriggerCountdownType; label: string }> = [
+  { value: 'combo', label: 'combo cooldown' },
+  { value: 'seconds', label: 'seconds cooldown' },
+];
+const ABILITY_TRIGGER_LABELS: Record<AbilityTriggerType, string> = {
+  below_hp_pct: 'below % hp',
+  is_stunned: 'isStunned',
+  noValidMovesPlayer: 'noValidMovesPlayer',
+  noValidMovesEnemy: 'noValidMovesEnemy',
+  inactive_duration: 'inactive_duration',
+  ko: "KO'd",
+  on_death: 'on_death',
+  combo_personal: 'combo_personal',
+  combo_party: 'combo_party',
+  has_armor: 'has_armor',
+  has_super_armor: 'has_superArmor',
+  notDiscarded: 'notDiscarded',
+  foundationDiscardCount: 'foundationDiscardCount',
+  partyDiscardCount: 'partyDiscardCount',
+  foundationActiveDeckCount: 'foundationActiveDeckCount',
+  actorActiveDeckCount: 'actorActiveDeckCount',
+};
+const TRIGGER_TYPES_WITH_NUMERIC_VALUE = new Set<AbilityTriggerType>([
+  'below_hp_pct',
+  'inactive_duration',
+  'combo_personal',
+  'combo_party',
+  'foundationDiscardCount',
+  'partyDiscardCount',
+  'foundationActiveDeckCount',
+  'actorActiveDeckCount',
+]);
+const DEFAULT_TRIGGER_VALUES: Partial<Record<AbilityTriggerType, number>> = {
+  below_hp_pct: 10,
+  inactive_duration: 5,
+  combo_personal: 2,
+  combo_party: 3,
+  foundationDiscardCount: 1,
+  partyDiscardCount: 1,
+  foundationActiveDeckCount: 1,
+  actorActiveDeckCount: 1,
+};
+const DEFAULT_TRIGGER_OPERATORS: Partial<Record<AbilityTriggerType, AbilityTriggerOperator>> = {
+  below_hp_pct: '<=',
+  inactive_duration: '>=',
+  combo_personal: '>=',
+  combo_party: '>=',
+  foundationDiscardCount: '>=',
+  partyDiscardCount: '>=',
+  foundationActiveDeckCount: '>=',
+  actorActiveDeckCount: '>=',
+};
+const triggerValuePlaceholder = (type: AbilityTriggerType): string => {
+  if (type === 'below_hp_pct') return '%';
+  if (type === 'inactive_duration') return 'sec';
+  if (type === 'combo_personal' || type === 'combo_party') return '#';
+  if (type === 'foundationDiscardCount' || type === 'partyDiscardCount') return 'discard count';
+  if (type === 'foundationActiveDeckCount' || type === 'actorActiveDeckCount') return 'active deck count';
+  return '';
+};
+const TRIGGERS_GRID_TEMPLATE =
+  'minmax(132px,1.4fr) 56px 64px minmax(88px,1fr) minmax(132px,1.2fr) 24px';
 
 const ABILITY_EFFECT_TYPES: AbilityEffectType[] = [
   'damage',
@@ -159,6 +269,73 @@ const ensureEffectValueByRarity = (effect: AbilityEffect): AbilityEffect => {
   return { ...effect, valueByRarity: map };
 };
 
+const cloneAbilityEffect = (effect: AbilityEffect): AbilityEffect => ({
+  ...effect,
+  valueByRarity: effect.valueByRarity ? { ...effect.valueByRarity } : undefined,
+});
+
+const normalizeAbilityTrigger = (trigger: AbilityTrigger): AbilityTrigger => {
+  const rawType = String(trigger.type ?? 'noValidMovesPlayer').trim();
+  const normalizedType = rawType.toLowerCase();
+  const map: Record<string, AbilityTriggerType> = {
+    'below_hp_pct': 'below_hp_pct',
+    'belowhppct': 'below_hp_pct',
+    'is_stunned': 'is_stunned',
+    'isstunned': 'is_stunned',
+    'novalidmoves': 'noValidMovesPlayer',
+    'novalidmovesplayer': 'noValidMovesPlayer',
+    'novalidmovesenemy': 'noValidMovesEnemy',
+    'inactive_duration': 'inactive_duration',
+    'inactiveduration': 'inactive_duration',
+    'on_death': 'on_death',
+    'ondeath': 'on_death',
+    'ko': 'ko',
+    'combo_personal': 'combo_personal',
+    'combopersonal': 'combo_personal',
+    'combo_party': 'combo_party',
+    'comboparty': 'combo_party',
+    'has_armor': 'has_armor',
+    'hasarmor': 'has_armor',
+    'has_super_armor': 'has_super_armor',
+    'hassuperarmor': 'has_super_armor',
+    'notdiscarded': 'notDiscarded',
+    'foundationdiscardcount': 'foundationDiscardCount',
+    'partydiscardcount': 'partyDiscardCount',
+    'foundationactivedeckcount': 'foundationActiveDeckCount',
+    'actoractivedeckcount': 'actorActiveDeckCount',
+  };
+  const type = map[normalizedType] ?? 'noValidMovesPlayer';
+  if (!TRIGGER_TYPES_WITH_NUMERIC_VALUE.has(type)) {
+    if (type === 'notDiscarded') {
+      const countdownType: AbilityTriggerCountdownType = trigger.countdownType === 'seconds' ? 'seconds' : 'combo';
+      const countdownValue = Number.isFinite(Number(trigger.countdownValue))
+        ? Math.max(0, Number(trigger.countdownValue))
+        : 1;
+      return {
+        type,
+        countdownType,
+        countdownValue,
+      };
+    }
+    return { type };
+  }
+  const value = Number.isFinite(Number(trigger.value))
+    ? Math.max(0, Number(trigger.value))
+    : (DEFAULT_TRIGGER_VALUES[type] ?? 1);
+  const operator = (trigger.operator && ABILITY_TRIGGER_OPERATORS.includes(trigger.operator))
+    ? trigger.operator
+    : (DEFAULT_TRIGGER_OPERATORS[type] ?? '>=');
+  const target = (trigger.target && ABILITY_TRIGGER_TARGETS.includes(trigger.target))
+    ? trigger.target
+    : 'self';
+  return {
+    type,
+    target,
+    value,
+    operator,
+  };
+};
+
 const hydrateAbilityEffects = (effects: AbilityEffect[] | undefined, rarity: OrimRarity): AbilityEffect[] => {
   return (effects ?? []).map((fx) => {
     const normalized = ensureEffectValueByRarity(fx);
@@ -174,6 +351,35 @@ const formatEffectValue = (value?: number): string => {
 
 const ELEMENT_OPTIONS: Element[] = ['N', 'W', 'E', 'A', 'F', 'L', 'D'];
 const ORIM_RARITY_OPTIONS: OrimRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+
+const buildTapEffectsByRarityLoadouts = (
+  entry: { tapEffects?: AbilityEffect[]; tapEffectsByRarity?: Partial<Record<OrimRarity, AbilityEffect[]>> },
+  activeRarity: OrimRarity
+): Record<OrimRarity, AbilityEffect[]> => (
+  buildEffectsByRarityLoadoutsShared<AbilityEffect>({
+    effects: entry.tapEffects ?? [],
+    effectsByRarity: entry.tapEffectsByRarity,
+  }, activeRarity)
+);
+
+const hydrateTapEffects = (
+  effects: AbilityEffect[] | undefined,
+  effectsByRarity: Partial<Record<OrimRarity, AbilityEffect[]>> | undefined,
+  rarity: OrimRarity
+): { tapEffects: AbilityEffect[]; tapEffectsByRarity: Record<OrimRarity, AbilityEffect[]> } => {
+  const loadouts = buildTapEffectsByRarityLoadouts({
+    tapEffects: effects,
+    tapEffectsByRarity: effectsByRarity,
+  }, rarity);
+  const normalized = ORIM_RARITY_OPTIONS.reduce<Record<OrimRarity, AbilityEffect[]>>((acc, tier) => {
+    acc[tier] = (loadouts[tier] ?? []).map((fx) => cloneAbilityEffect(fx));
+    return acc;
+  }, {} as Record<OrimRarity, AbilityEffect[]>);
+  return {
+    tapEffects: normalized[rarity] ?? [],
+    tapEffectsByRarity: normalized,
+  };
+};
 
 const ensureElementList = (value?: Element[] | null): Element[] => {
   if (!Array.isArray(value)) return [];
@@ -198,6 +404,9 @@ type AspectDraft = {
   archetypeCardElement: Element;
   effects: AbilityEffect[];
   equipCost: number;
+  canTap?: boolean;
+  tapEffects?: AbilityEffect[];
+  tapEffectsByRarity?: Partial<Record<OrimRarity, AbilityEffect[]>>;
 };
 
 const normalizeAbilityType = (value?: string): AspectDraft['abilityType'] =>
@@ -210,6 +419,10 @@ type OrimDraft = {
   rarity: OrimRarity;
   elements: Element[];
   effects: AbilityEffect[];
+  triggers: AbilityTrigger[];
+  canTap?: boolean;
+  tapEffects?: AbilityEffect[];
+  tapEffectsByRarity?: Partial<Record<OrimRarity, AbilityEffect[]>>;
   isAspect?: boolean;
   aspectProfile?: {
     key: string;
@@ -370,32 +583,47 @@ export default function App() {
       abilityType?: string;
       tags?: string[];
       effects?: AbilityEffect[];
+      tapEffects?: AbilityEffect[];
+      tapEffectsByRarity?: Partial<Record<OrimRarity, AbilityEffect[]>>;
+      canTap?: boolean;
       equipCost?: number;
     }> }).abilities ?? [];
-    return source.map((entry) => ({
-      id: entry.id ?? '',
-      name: entry.label ?? '',
-      label: entry.label ?? '',
-      abilityType: normalizeAbilityType(entry.abilityType),
-      abilityRarity: entry.rarity ?? 'common',
-      abilityDescription: entry.description ?? '',
-      abilityDamage: entry.damage ?? '',
-      abilityCardId: entry.cardId ?? '',
-      abilityCardRank: entry.cardRank ?? 1,
-      abilityCardElements: ensureElementList(entry.cardElements),
-      abilityCardGlyph: entry.cardGlyph ?? '',
-      tagsText: (entry.tags ?? []).join(', '),
-      archetypeCardId: '',
-      archetypeCardRank: 1,
-      archetypeCardElement: 'N' as Element,
+    return source.map((entry) => {
+      const rarity = entry.rarity ?? 'common';
+      const tapData = hydrateTapEffects(
+        Array.isArray(entry.tapEffects) ? entry.tapEffects : undefined,
+        entry.tapEffectsByRarity,
+        rarity
+      );
+      return {
+        id: entry.id ?? '',
+        name: entry.label ?? '',
+        label: entry.label ?? '',
+        abilityType: normalizeAbilityType(entry.abilityType),
+        abilityRarity: rarity,
+        abilityDescription: entry.description ?? '',
+        abilityDamage: entry.damage ?? '',
+        abilityCardId: entry.cardId ?? '',
+        abilityCardRank: entry.cardRank ?? 1,
+        abilityCardElements: ensureElementList(entry.cardElements),
+        abilityCardGlyph: entry.cardGlyph ?? '',
+        tagsText: (entry.tags ?? []).join(', '),
+        archetypeCardId: '',
+        archetypeCardRank: 1,
+        archetypeCardElement: 'N' as Element,
         effects: hydrateAbilityEffects(
           entry.effects as AbilityEffect[] | undefined,
-          entry.rarity ?? 'common'
+          rarity
         ),
-      equipCost: entry.equipCost ?? 0,
-    }));
+        equipCost: entry.equipCost ?? 0,
+        canTap: Boolean(entry.canTap),
+        tapEffects: tapData.tapEffects,
+        tapEffectsByRarity: tapData.tapEffectsByRarity,
+      };
+    });
   });
   const [abilitySearch, setAbilitySearch] = useState('');
+  const [tapEditorRarity, setTapEditorRarity] = useState<OrimRarity>('common');
   const [abilityTypeFilter, setAbilityTypeFilter] = useState<'all' | 'exploration' | 'combat'>('all');
   const [selectedAbilityId, setSelectedAbilityId] = useState<string | null>(null);
   const [abilityEditorMessage, setAbilityEditorMessage] = useState<string | null>(null);
@@ -404,32 +632,44 @@ export default function App() {
   const [orimAspectFilter, setOrimAspectFilter] = useState<'all' | 'aspects' | 'non-aspects'>('all');
   const [selectedOrimId, setSelectedOrimId] = useState<string | null>(null);
   const [orimDrafts, setOrimDrafts] = useState<OrimDraft[]>(() =>
-    ORIM_DEFINITIONS.map((orim) => ({
-      id: orim.id,
-      name: orim.name,
-      description: orim.description,
-      rarity: orim.rarity ?? 'common',
-      elements: ensureElementList(orim.elements),
-      effects: Array.isArray(orim.effects) ? (orim.effects as AbilityEffect[]) : [],
-      isAspect: orim.isAspect,
-      aspectProfile: orim.aspectProfile
-        ? {
-          key: orim.aspectProfile.key ?? '',
-          archetype: orim.aspectProfile.archetype ?? '',
-          rarity: orim.aspectProfile.rarity ?? 'common',
-          attributes: (orim.aspectProfile.attributes ?? []).map((attr) => {
-            if (typeof attr === 'string') {
-              return { stat: attr, op: '+', value: '' };
-            }
-            return {
-              stat: String(attr.stat ?? ''),
-              op: String(attr.op ?? '+'),
-              value: attr.value ?? '',
-            };
-          }),
-        }
-        : undefined,
-    }))
+    ORIM_DEFINITIONS.map((orim) => {
+      const rarity = orim.rarity ?? 'common';
+      const tapData = hydrateTapEffects(
+        Array.isArray(orim.tapEffects) ? (orim.tapEffects as AbilityEffect[]) : undefined,
+        orim.tapEffectsByRarity as Partial<Record<OrimRarity, AbilityEffect[]>> | undefined,
+        rarity
+      );
+      return {
+        id: orim.id,
+        name: orim.name,
+        description: orim.description,
+        rarity,
+        elements: ensureElementList(orim.elements),
+        effects: Array.isArray(orim.effects) ? (orim.effects as AbilityEffect[]) : [],
+        triggers: Array.isArray(orim.triggers) ? orim.triggers.map((trigger) => normalizeAbilityTrigger(trigger as AbilityTrigger)) : [],
+        canTap: Boolean(orim.canTap),
+        tapEffects: tapData.tapEffects,
+        tapEffectsByRarity: tapData.tapEffectsByRarity,
+        isAspect: orim.isAspect,
+        aspectProfile: orim.aspectProfile
+          ? {
+            key: orim.aspectProfile.key ?? '',
+            archetype: orim.aspectProfile.archetype ?? '',
+            rarity: orim.aspectProfile.rarity ?? 'common',
+            attributes: (orim.aspectProfile.attributes ?? []).map((attr) => {
+              if (typeof attr === 'string') {
+                return { stat: attr, op: '+', value: '' };
+              }
+              return {
+                stat: String(attr.stat ?? ''),
+                op: String(attr.op ?? '+'),
+                value: attr.value ?? '',
+              };
+            }),
+          }
+          : undefined,
+      };
+    })
   );
   const [orimEditorMessage, setOrimEditorMessage] = useState<string | null>(null);
   const [isSavingOrim, setIsSavingOrim] = useState(false);
@@ -475,7 +715,6 @@ export default function App() {
     window.addEventListener('keydown', handleZoomKeys);
     return () => window.removeEventListener('keydown', handleZoomKeys);
   }, []);
-  const spawnDieRef = useRef<((clientX: number, clientY: number) => void) | null>(null);
   const actorDefinitionsForEditor = useMemo(
     () => actorDefinitions,
     [actorDefinitions]
@@ -1122,6 +1361,7 @@ export default function App() {
       suffix += 1;
       nextId = `${nextIdBase}-${suffix}`;
     }
+    const { tapEffects: defaultTapEffects, tapEffectsByRarity: defaultTapEffectsByRarity } = hydrateTapEffects(undefined, undefined, 'common');
     const nextDraft: AspectDraft = {
       id: nextId,
       name: '',
@@ -1139,6 +1379,9 @@ export default function App() {
       archetypeCardElement: 'N',
       effects: [],
       equipCost: 0,
+      canTap: false,
+      tapEffects: defaultTapEffects,
+      tapEffectsByRarity: defaultTapEffectsByRarity,
     };
     setAbilityDrafts((prev) => [...prev, nextDraft]);
     setSelectedAbilityId(nextId);
@@ -1207,17 +1450,127 @@ export default function App() {
     }));
   }, []);
 
-  const handleAbilityChange = useCallback((id: string, key: keyof AspectDraft, value: string | number) => {
+  const handleAbilityTapEffectAdd = useCallback((abilityId: string, rarity: OrimRarity) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      const nextMap = { ...(entry.tapEffectsByRarity ?? {}) };
+      const current = nextMap[rarity] ?? [];
+      const nextEffect: AbilityEffect = {
+        type: 'damage',
+        value: 0,
+        target: 'self',
+        valueByRarity: { [rarity]: 0 },
+      };
+      nextMap[rarity] = [...current, nextEffect];
+      const nextTapEffects = rarity === entry.abilityRarity
+        ? nextMap[rarity].map((fx) => cloneAbilityEffect(fx))
+        : entry.tapEffects;
+      return {
+        ...entry,
+        tapEffectsByRarity: nextMap,
+        tapEffects: nextTapEffects,
+      };
+    }));
+  }, []);
+
+  const handleAbilityTapEffectRemove = useCallback((abilityId: string, rarity: OrimRarity, index: number) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      const nextMap = { ...(entry.tapEffectsByRarity ?? {}) };
+      const current = nextMap[rarity] ?? [];
+      if (index < 0 || index >= current.length) return entry;
+      nextMap[rarity] = current.filter((_, i) => i !== index);
+      const nextTapEffects = rarity === entry.abilityRarity
+        ? nextMap[rarity].map((fx) => cloneAbilityEffect(fx))
+        : entry.tapEffects;
+      return {
+        ...entry,
+        tapEffectsByRarity: nextMap,
+        tapEffects: nextTapEffects,
+      };
+    }));
+  }, []);
+
+  const handleAbilityTapEffectChange = useCallback((
+    abilityId: string,
+    rarity: OrimRarity,
+    index: number,
+    field: keyof AbilityEffect,
+    value: unknown,
+  ) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      const nextMap = { ...(entry.tapEffectsByRarity ?? {}) };
+      const current = nextMap[rarity] ?? [];
+      const next = current.map((fx, i) => {
+        if (i !== index) return fx;
+        if (field === 'value') {
+          const safeValue = Math.max(0, Number(value) || 0);
+          return {
+            ...fx,
+            value: safeValue,
+            valueByRarity: {
+              ...(fx.valueByRarity ?? {}),
+              [rarity]: safeValue,
+            },
+          };
+        }
+        if (field === 'charges' || field === 'duration') {
+          const n = value === '' || value === undefined ? undefined : Math.max(1, Number(value) || 1);
+          return { ...fx, [field]: n };
+        }
+        if (field === 'elementalValue') {
+          const n = value === '' ? undefined : Number(value) || undefined;
+          return { ...fx, elementalValue: n };
+        }
+        return { ...fx, [field]: value };
+      });
+      nextMap[rarity] = next;
+      const nextTapEffects = rarity === entry.abilityRarity
+        ? next.map((fx) => cloneAbilityEffect(fx))
+        : entry.tapEffects;
+      return {
+        ...entry,
+        tapEffectsByRarity: nextMap,
+        tapEffects: nextTapEffects,
+      };
+    }));
+  }, []);
+
+  const handleAutoFillTapLoadoutsFromCommon = useCallback((abilityId: string) => {
+    setAbilityDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== abilityId) return entry;
+      const commonLoadout = entry.tapEffectsByRarity?.common ?? [];
+      const nextMap = autoFillEffectsByRarityFromCommon<AbilityEffect>(commonLoadout);
+      return {
+        ...entry,
+        tapEffectsByRarity: nextMap,
+        tapEffects: (nextMap[entry.abilityRarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
+      };
+    }));
+  }, []);
+
+  const handleAbilityChange = useCallback((id: string, key: keyof AspectDraft, value: string | number | boolean) => {
     setAbilityDrafts((prev) => prev.map((entry) => {
       if (entry.id !== id) return entry;
         const nextEntry = { ...entry, [key]: value };
-        if (key === 'abilityRarity') {
-          const nextRarity = value as OrimRarity;
-          nextEntry.effects = nextEntry.effects.map((fx) => ({
-            ...fx,
-            value: resolveEffectValueForRarity(fx, nextRarity),
-          }));
-        }
+    if (key === 'abilityRarity') {
+      const nextRarity = value as OrimRarity;
+      nextEntry.effects = nextEntry.effects.map((fx) => ({
+        ...fx,
+        value: resolveEffectValueForRarity(fx, nextRarity),
+      }));
+      const tapLoadouts = buildTapEffectsByRarityLoadouts(nextEntry, nextRarity);
+      const nextTapByRarity = {
+        ...(nextEntry.tapEffectsByRarity ?? {}),
+        [nextRarity]: (tapLoadouts[nextRarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
+      };
+      nextEntry.tapEffectsByRarity = nextTapByRarity;
+      nextEntry.tapEffects = (nextTapByRarity[nextRarity] ?? []).map((fx) => cloneAbilityEffect(fx));
+    }
+    if (key === 'canTap') {
+      nextEntry.canTap = Boolean(value);
+    }
         if (key === 'name') {
           nextEntry.id = toThisTypeOfCase(String(value));
         }
@@ -1287,6 +1640,9 @@ export default function App() {
             ...(fx.elementalValue !== undefined ? { elementalValue: fx.elementalValue } : {}),
           })),
           equipCost: entry.equipCost,
+          canTap: Boolean(entry.canTap),
+          ...(entry.tapEffects && entry.tapEffects.length > 0 ? { tapEffects: entry.tapEffects } : {}),
+          ...(entry.tapEffectsByRarity ? { tapEffectsByRarity: entry.tapEffectsByRarity } : {}),
         })),
       };
       const response = await fetch('/__abilities/save', {
@@ -1325,32 +1681,46 @@ export default function App() {
             abilityType?: string;
             tags?: string[];
             effects?: AbilityEffect[];
+            tapEffects?: AbilityEffect[];
+            tapEffectsByRarity?: Partial<Record<OrimRarity, AbilityEffect[]>>;
+            canTap?: boolean;
             equipCost?: number;
           }>;
         };
         if (!active) return;
-        const nextDrafts = (data.abilities ?? []).map((entry) => ({
-          id: entry.id ?? '',
-          name: entry.label ?? '',
-          label: entry.label ?? '',
-          abilityType: normalizeAbilityType(entry.abilityType),
-          abilityDescription: entry.description ?? '',
-          abilityDamage: entry.damage ?? '',
-          abilityCardId: entry.cardId ?? '',
-          abilityCardRank: entry.cardRank ?? 1,
-          abilityCardElements: ensureElementList(entry.cardElements),
-          abilityCardGlyph: entry.cardGlyph ?? '',
-          abilityRarity: entry.rarity ?? 'common',
-          tagsText: (entry.tags ?? []).join(', '),
-          archetypeCardId: '',
-          archetypeCardRank: 1,
-          archetypeCardElement: 'N' as Element,
+        const nextDrafts = (data.abilities ?? []).map((entry) => {
+          const rarity = entry.rarity ?? 'common';
+          const tapData = hydrateTapEffects(
+            Array.isArray(entry.tapEffects) ? entry.tapEffects : undefined,
+            entry.tapEffectsByRarity,
+            rarity
+          );
+          return {
+            id: entry.id ?? '',
+            name: entry.label ?? '',
+            label: entry.label ?? '',
+            abilityType: normalizeAbilityType(entry.abilityType),
+            abilityDescription: entry.description ?? '',
+            abilityDamage: entry.damage ?? '',
+            abilityCardId: entry.cardId ?? '',
+            abilityCardRank: entry.cardRank ?? 1,
+            abilityCardElements: ensureElementList(entry.cardElements),
+            abilityCardGlyph: entry.cardGlyph ?? '',
+            abilityRarity: rarity,
+            tagsText: (entry.tags ?? []).join(', '),
+            archetypeCardId: '',
+            archetypeCardRank: 1,
+            archetypeCardElement: 'N' as Element,
             effects: hydrateAbilityEffects(
               Array.isArray(entry.effects) ? entry.effects : undefined,
-              entry.rarity ?? 'common'
+              rarity
             ),
-          equipCost: entry.equipCost ?? 0,
-        }));
+            equipCost: entry.equipCost ?? 0,
+            canTap: Boolean(entry.canTap),
+            tapEffects: tapData.tapEffects,
+            tapEffectsByRarity: tapData.tapEffectsByRarity,
+          };
+        });
         setAbilityDrafts(nextDrafts);
       } catch (err) {
         console.error('[App] failed to load abilities', err);
@@ -1361,6 +1731,20 @@ export default function App() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const active = abilityDrafts.find((entry) => entry.id === selectedAbilityId) ?? abilityDrafts[0];
+    if (active) {
+      setTapEditorRarity(active.abilityRarity);
+    }
+  }, [selectedAbilityId, abilityDrafts]);
+
+  useEffect(() => {
+    const active = orimDrafts.find((entry) => entry.id === selectedOrimId) ?? orimDrafts[0];
+    if (active) {
+      setTapEditorRarity(active.rarity);
+    }
+  }, [selectedOrimId, orimDrafts]);
 
   useEffect(() => {
     let active = true;
@@ -1375,6 +1759,10 @@ export default function App() {
             description: string;
             elements?: Element[];
             effects?: AbilityEffect[];
+            triggers?: AbilityTrigger[];
+            canTap?: boolean;
+            tapEffects?: AbilityEffect[];
+            tapEffectsByRarity?: Partial<Record<OrimRarity, AbilityEffect[]>>;
             isAspect?: boolean;
             rarity?: OrimRarity;
             aspectProfile?: {
@@ -1386,32 +1774,44 @@ export default function App() {
           }>;
         };
         if (!active) return;
-        const nextDrafts = (data.orims ?? []).map((entry) => ({
-          id: entry.id,
-          name: entry.name,
-          description: entry.description,
-          rarity: entry.rarity ?? 'common',
-          elements: ensureElementList(entry.elements),
-          effects: Array.isArray(entry.effects) ? entry.effects : [],
-          isAspect: entry.isAspect,
-          aspectProfile: entry.aspectProfile
-            ? {
-              key: entry.aspectProfile.key ?? '',
-              archetype: entry.aspectProfile.archetype ?? '',
-              rarity: entry.aspectProfile.rarity ?? 'common',
-              attributes: (entry.aspectProfile.attributes ?? []).map((attr) => {
-                if (typeof attr === 'string') {
-                  return { stat: attr, op: '+', value: '' };
-                }
-                return {
-                  stat: String(attr.stat ?? ''),
-                  op: String(attr.op ?? '+'),
-                  value: attr.value ?? '',
-                };
-              }),
-            }
-            : undefined,
-        }));
+        const nextDrafts = (data.orims ?? []).map((entry) => {
+          const rarity = entry.rarity ?? 'common';
+          const tapData = hydrateTapEffects(
+            Array.isArray(entry.tapEffects) ? entry.tapEffects : undefined,
+            entry.tapEffectsByRarity,
+            rarity
+          );
+          return {
+            id: entry.id,
+            name: entry.name,
+            description: entry.description,
+            rarity,
+            elements: ensureElementList(entry.elements),
+            effects: Array.isArray(entry.effects) ? entry.effects : [],
+            triggers: Array.isArray(entry.triggers) ? entry.triggers.map((trigger) => normalizeAbilityTrigger(trigger)) : [],
+            canTap: Boolean(entry.canTap),
+            tapEffects: tapData.tapEffects,
+            tapEffectsByRarity: tapData.tapEffectsByRarity,
+            isAspect: entry.isAspect,
+            aspectProfile: entry.aspectProfile
+              ? {
+                key: entry.aspectProfile.key ?? '',
+                archetype: entry.aspectProfile.archetype ?? '',
+                rarity: entry.aspectProfile.rarity ?? 'common',
+                attributes: (entry.aspectProfile.attributes ?? []).map((attr) => {
+                  if (typeof attr === 'string') {
+                    return { stat: attr, op: '+', value: '' };
+                  }
+                  return {
+                    stat: String(attr.stat ?? ''),
+                    op: String(attr.op ?? '+'),
+                    value: attr.value ?? '',
+                  };
+                }),
+              }
+              : undefined,
+          };
+        });
         setOrimDrafts(nextDrafts);
       } catch (err) {
         console.error('[App] failed to load orims', err);
@@ -1481,6 +1881,10 @@ export default function App() {
       rarity: 'common',
       elements: ['N'],
       effects: [],
+      triggers: [],
+      canTap: false,
+      tapEffects: [],
+      tapEffectsByRarity: { common: [] },
       aspectProfile: undefined,
     };
     setOrimDrafts((prev) => [...prev, nextDraft]);
@@ -1499,7 +1903,20 @@ export default function App() {
       if (key === 'isAspect' && typeof value === 'string') {
         nextValue = value === 'true';
       }
-      const nextEntry = { ...entry, [key]: nextValue };
+      const nextEntry: OrimDraft = { ...entry, [key]: nextValue };
+      if (key === 'rarity') {
+        const nextRarity = value as OrimRarity;
+        const tapLoadouts = buildTapEffectsByRarityLoadouts(nextEntry, nextRarity);
+        const nextTapByRarity = {
+          ...(nextEntry.tapEffectsByRarity ?? {}),
+          [nextRarity]: (tapLoadouts[nextRarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
+        };
+        nextEntry.tapEffectsByRarity = nextTapByRarity;
+        nextEntry.tapEffects = (nextTapByRarity[nextRarity] ?? []).map((fx) => cloneAbilityEffect(fx));
+      }
+      if (key === 'canTap') {
+        nextEntry.canTap = Boolean(value);
+      }
       if (key === 'isAspect' && nextValue === true && !entry.aspectProfile) {
         nextEntry.aspectProfile = {
           key: '',
@@ -1609,6 +2026,21 @@ export default function App() {
     setIsSavingOrim(true);
     setOrimEditorMessage('Saving orims...');
     try {
+      const serializeEffect = (fx: AbilityEffect) => ({
+        type: fx.type,
+        value: fx.value,
+        target: fx.target,
+        ...(fx.valueByRarity ? { valueByRarity: fx.valueByRarity } : {}),
+        ...(fx.charges !== undefined ? { charges: fx.charges } : {}),
+        ...(fx.duration !== undefined ? { duration: fx.duration } : {}),
+        ...(fx.element !== undefined && fx.element !== 'N' ? { element: fx.element } : {}),
+        ...(fx.elementalValue !== undefined ? { elementalValue: fx.elementalValue } : {}),
+        ...(fx.untilSourceCardPlay ? { untilSourceCardPlay: true } : {}),
+        ...(fx.deadRunOnly ? { deadRunOnly: true } : {}),
+        ...(fx.drawWild ? { drawWild: true } : {}),
+        ...(fx.drawRank !== undefined ? { drawRank: fx.drawRank } : {}),
+        ...(fx.drawElement !== undefined && fx.drawElement !== 'N' ? { drawElement: fx.drawElement } : {}),
+      });
       const payload = {
         orims: orimDrafts.map((entry) => ({
           id: entry.id.trim(),
@@ -1616,6 +2048,7 @@ export default function App() {
           description: entry.description.trim(),
           rarity: entry.rarity,
           elements: entry.elements,
+          canTap: Boolean(entry.canTap),
           ...(entry.isAspect ? { isAspect: entry.isAspect } : {}),
           ...(entry.isAspect && entry.aspectProfile
             ? {
@@ -1631,15 +2064,33 @@ export default function App() {
               },
             }
             : {}),
-          effects: entry.effects.map((fx) => ({
-            type: fx.type,
-            value: fx.value,
-            target: fx.target,
-            ...(fx.charges !== undefined ? { charges: fx.charges } : {}),
-            ...(fx.duration !== undefined ? { duration: fx.duration } : {}),
-            ...(fx.element !== undefined && fx.element !== 'N' ? { element: fx.element } : {}),
-            ...(fx.elementalValue !== undefined ? { elementalValue: fx.elementalValue } : {}),
-          })),
+          triggers: (entry.triggers ?? []).map((trigger) => {
+            const normalized = normalizeAbilityTrigger(trigger);
+            if (normalized.type === 'notDiscarded') {
+              return {
+                type: normalized.type,
+                countdownType: normalized.countdownType ?? 'combo',
+                countdownValue: normalized.countdownValue ?? 1,
+              };
+            }
+            if (!TRIGGER_TYPES_WITH_NUMERIC_VALUE.has(normalized.type)) {
+              return { type: normalized.type };
+            }
+            return {
+              type: normalized.type,
+              target: normalized.target ?? 'self',
+              operator: normalized.operator ?? (DEFAULT_TRIGGER_OPERATORS[normalized.type] ?? '>='),
+              value: normalized.value ?? (DEFAULT_TRIGGER_VALUES[normalized.type] ?? 1),
+            };
+          }),
+          effects: entry.effects.map((fx) => serializeEffect(fx)),
+          ...(entry.tapEffects && entry.tapEffects.length > 0 ? { tapEffects: entry.tapEffects.map((fx) => serializeEffect(fx)) } : {}),
+          ...(entry.tapEffectsByRarity ? {
+            tapEffectsByRarity: ORIM_RARITY_OPTIONS.reduce<Partial<Record<OrimRarity, ReturnType<typeof serializeEffect>[]>>>((acc, tier) => {
+              acc[tier] = (entry.tapEffectsByRarity?.[tier] ?? []).map((fx) => serializeEffect(fx));
+              return acc;
+            }, {}),
+          } : {}),
         })),
       };
       const response = await fetch('/__orims/save', {
@@ -1697,6 +2148,167 @@ export default function App() {
     },
     []
   );
+
+  const handleOrimTapEffectAdd = useCallback((orimId: string, rarity: OrimRarity) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      const nextMap = { ...(entry.tapEffectsByRarity ?? {}) };
+      const current = nextMap[rarity] ?? [];
+      const nextEffect: AbilityEffect = {
+        type: 'damage',
+        value: 0,
+        target: 'self',
+        valueByRarity: { [rarity]: 0 },
+      };
+      nextMap[rarity] = [...current, nextEffect];
+      const nextTapEffects = rarity === entry.rarity
+        ? nextMap[rarity].map((fx) => cloneAbilityEffect(fx))
+        : entry.tapEffects;
+      return {
+        ...entry,
+        tapEffectsByRarity: nextMap,
+        tapEffects: nextTapEffects,
+      };
+    }));
+  }, []);
+
+  const handleOrimTapEffectRemove = useCallback((orimId: string, rarity: OrimRarity, index: number) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      const nextMap = { ...(entry.tapEffectsByRarity ?? {}) };
+      const current = nextMap[rarity] ?? [];
+      if (index < 0 || index >= current.length) return entry;
+      nextMap[rarity] = current.filter((_, i) => i !== index);
+      const nextTapEffects = rarity === entry.rarity
+        ? nextMap[rarity].map((fx) => cloneAbilityEffect(fx))
+        : entry.tapEffects;
+      return {
+        ...entry,
+        tapEffectsByRarity: nextMap,
+        tapEffects: nextTapEffects,
+      };
+    }));
+  }, []);
+
+  const handleOrimTapEffectChange = useCallback((
+    orimId: string,
+    rarity: OrimRarity,
+    index: number,
+    field: keyof AbilityEffect,
+    value: unknown,
+  ) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      const nextMap = { ...(entry.tapEffectsByRarity ?? {}) };
+      const current = nextMap[rarity] ?? [];
+      const next = current.map((fx, i) => {
+        if (i !== index) return fx;
+        if (field === 'value') {
+          const safeValue = Math.max(0, Number(value) || 0);
+          return {
+            ...fx,
+            value: safeValue,
+            valueByRarity: {
+              ...(fx.valueByRarity ?? {}),
+              [rarity]: safeValue,
+            },
+          };
+        }
+        if (field === 'charges' || field === 'duration') {
+          const n = value === '' || value === undefined ? undefined : Math.max(1, Number(value) || 1);
+          return { ...fx, [field]: n };
+        }
+        if (field === 'elementalValue') {
+          const n = value === '' ? undefined : Number(value) || undefined;
+          return { ...fx, elementalValue: n };
+        }
+        if (field === 'drawWild') {
+          return { ...fx, drawWild: Boolean(value) };
+        }
+        if (field === 'drawRank') {
+          const raw = String(value ?? '');
+          return { ...fx, drawRank: raw === '' ? undefined : Number(raw) };
+        }
+        if (field === 'drawElement') {
+          return { ...fx, drawElement: value as Element };
+        }
+        return { ...fx, [field]: value };
+      });
+      nextMap[rarity] = next;
+      const nextTapEffects = rarity === entry.rarity
+        ? next.map((fx) => cloneAbilityEffect(fx))
+        : entry.tapEffects;
+      return {
+        ...entry,
+        tapEffectsByRarity: nextMap,
+        tapEffects: nextTapEffects,
+      };
+    }));
+  }, []);
+
+  const handleAutoFillOrimTapLoadoutsFromCommon = useCallback((orimId: string) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      const commonLoadout = entry.tapEffectsByRarity?.common ?? [];
+      const nextMap = autoFillEffectsByRarityFromCommon<AbilityEffect>(commonLoadout);
+      return {
+        ...entry,
+        tapEffectsByRarity: nextMap,
+        tapEffects: (nextMap[entry.rarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
+      };
+    }));
+  }, []);
+
+  const handleOrimTriggerAdd = useCallback((orimId: string) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      return { ...entry, triggers: [...(entry.triggers ?? []), { type: 'noValidMovesPlayer' }] };
+    }));
+  }, []);
+
+  const handleOrimTriggerRemove = useCallback((orimId: string, index: number) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      return { ...entry, triggers: (entry.triggers ?? []).filter((_, i) => i !== index) };
+    }));
+  }, []);
+
+  const handleOrimTriggerChange = useCallback((
+    orimId: string,
+    index: number,
+    field: keyof AbilityTrigger,
+    value: string | number
+  ) => {
+    setOrimDrafts((prev) => prev.map((entry) => {
+      if (entry.id !== orimId) return entry;
+      const triggers = (entry.triggers ?? []).map((trigger, i) => {
+        if (i !== index) return trigger;
+        const current = normalizeAbilityTrigger(trigger);
+        if (field === 'type') {
+          return normalizeAbilityTrigger({ ...current, type: value as AbilityTriggerType });
+        }
+        if (field === 'target') {
+          return normalizeAbilityTrigger({ ...current, target: value as AbilityTriggerTarget });
+        }
+        if (field === 'value') {
+          const numeric = Number(value);
+          return normalizeAbilityTrigger({ ...current, value: Number.isFinite(numeric) ? numeric : current.value });
+        }
+        if (field === 'operator') {
+          return normalizeAbilityTrigger({ ...current, operator: value as AbilityTriggerOperator });
+        }
+        if (field === 'countdownType') {
+          return normalizeAbilityTrigger({ ...current, countdownType: value as AbilityTriggerCountdownType });
+        }
+        if (field === 'countdownValue') {
+          const numeric = Number(value);
+          return normalizeAbilityTrigger({ ...current, countdownValue: Number.isFinite(numeric) ? numeric : current.countdownValue });
+        }
+        return current;
+      });
+      return { ...entry, triggers };
+    }));
+  }, []);
 
   const handleCreateSynergy = useCallback(
     (abilityId: string, orimId: string) => {
@@ -1966,10 +2578,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [actions, toolingOpen]);
 
-  const handleSpawnDie = useCallback((e: React.MouseEvent) => {
-    spawnDieRef.current?.(e.clientX, e.clientY);
-  }, []);
-
   useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault();
@@ -2185,14 +2793,6 @@ export default function App() {
                     title="Toggle Zen Mode (disable countdown timers)"
                   >
                     🧘 Zen Mode
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSpawnDie}
-                    className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
-                    title="Roll dice"
-                  >
-                    🎲 Roll Dice
                   </button>
                   {import.meta.env.DEV && (
                     <div className="relative">
@@ -3850,6 +4450,303 @@ export default function App() {
                                         <span>inst = instant (no duration)</span>
                                       </div>
                                     )}
+                                    <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-game-white/70">
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(active.canTap)}
+                                        onChange={(event) => handleOrimChange(active.id, 'canTap', event.target.checked)}
+                                        className="h-4 w-4 accent-game-teal"
+                                      />
+                                      <span className="font-semibold">Enable tap loadouts</span>
+                                    </label>
+                                    {active.canTap && (
+                                      <div className="space-y-2 rounded border border-game-teal/15 bg-game-bg-dark/60 px-2 py-2">
+                                        <div className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.2em] text-game-white/70">
+                                          <div className="flex flex-wrap gap-2">
+                                            {ORIM_RARITY_OPTIONS.map((rarity) => (
+                                              <button
+                                                key={`tap-rarity-${rarity}`}
+                                                type="button"
+                                                onClick={() => setTapEditorRarity(rarity)}
+                                                className={`flex items-center gap-1 rounded border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] transition-all ${
+                                                  tapEditorRarity === rarity
+                                                    ? 'border-game-gold text-game-gold bg-game-gold/10'
+                                                    : 'border-game-teal/20 text-game-white/50 hover:border-game-teal/40 hover:text-game-white'
+                                                }`}
+                                              >
+                                                <span>{rarity}</span>
+                                                <span className="text-game-teal/60">{active.tapEffectsByRarity?.[rarity]?.length ?? 0}</span>
+                                              </button>
+                                            ))}
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAutoFillOrimTapLoadoutsFromCommon(active.id)}
+                                            className="text-[8px] px-2 py-1 rounded border border-game-gold/45 text-game-gold/80 hover:border-game-gold hover:text-game-gold transition-colors uppercase tracking-[0.14em]"
+                                          >
+                                            Auto-fill Tap Curve
+                                          </button>
+                                        </div>
+                                        <RowManager
+                                          rows={(active.tapEffectsByRarity?.[tapEditorRarity] ?? []).map((fx, i) => ({ ...fx, id: i }))}
+                                          renderHeader={() => (
+                                            <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10">
+                                              <span>Type</span>
+                                              <span>Value</span>
+                                              <span>Target</span>
+                                              <span>Charges</span>
+                                              <span>Duration</span>
+                                              <span>Element</span>
+                                              <span>Elem Value</span>
+                                              <span />
+                                            </div>
+                                          )}
+                                          renderEmpty={() => (
+                                            <div className="text-[9px] text-game-white/30 italic">Tap is enabled but no tap effects yet. Click + Add Tap Effect to begin.</div>
+                                          )}
+                                          renderRow={(fx) => (
+                                            <div className="space-y-1">
+                                              <div className="grid grid-cols-[auto_auto_auto_auto_auto_auto_auto_auto_auto] items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5">
+                                                <select
+                                                  value={fx.type}
+                                                  onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'type', e.target.value)}
+                                                  className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                                >
+                                                  {ABILITY_EFFECT_TYPES.map((t) => (
+                                                    <option key={`tap-${t}`} value={t}>{t}</option>
+                                                  ))}
+                                                </select>
+                                                <input
+                                                  type="number"
+                                                  value={fx.value}
+                                                  min={0}
+                                                  onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'value', e.target.value)}
+                                                  className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                                />
+                                                <select
+                                                  value={fx.target}
+                                                  onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'target', e.target.value)}
+                                                  className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                                >
+                                                  {(['self', 'enemy', 'all_enemies', 'ally'] as AbilityEffectTarget[]).map((t) => (
+                                                    <option key={`tap-${t}`} value={t}>{t}</option>
+                                                  ))}
+                                                </select>
+                                                <input
+                                                  type="number"
+                                                  value={fx.charges ?? ''}
+                                                  min={1}
+                                                  onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'charges', e.target.value)}
+                                                  className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                                  placeholder="∞"
+                                                />
+                                                <input
+                                                  type="number"
+                                                  value={fx.duration ?? ''}
+                                                  min={1}
+                                                  onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'duration', e.target.value)}
+                                                  className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                                  placeholder="inst"
+                                                />
+                                                <select
+                                                  value={fx.element ?? 'N'}
+                                                  onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'element', e.target.value)}
+                                                  className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                                >
+                                                  {ELEMENT_OPTIONS.map((element) => (
+                                                    <option key={`tap-${element}`} value={element}>{element}</option>
+                                                  ))}
+                                                </select>
+                                                <input
+                                                  type="number"
+                                                  value={fx.elementalValue ?? ''}
+                                                  min={0}
+                                                  onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'elementalValue', e.target.value)}
+                                                  className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleOrimTapEffectRemove(active.id, tapEditorRarity, fx.id as number)}
+                                                  className="text-[9px] text-game-pink/50 hover:text-game-pink px-1.5 py-0.5 rounded border border-transparent hover:border-game-pink/30 transition-colors justify-self-end"
+                                                >
+                                                  ×
+                                                </button>
+                                              </div>
+                                              {fx.type === 'draw' && (
+                                                <div className="grid grid-cols-[auto_auto_auto] items-center gap-1 px-2 py-1 rounded border border-game-teal/15 bg-game-bg-dark/50">
+                                                  <label className="flex items-center gap-1 text-[9px] text-game-white/70">
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={fx.drawWild ?? false}
+                                                      onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'drawWild', e.target.checked)}
+                                                    />
+                                                    Draw Wild
+                                                  </label>
+                                                  <input
+                                                    type="number"
+                                                    min={1}
+                                                    max={13}
+                                                    value={fx.drawRank ?? ''}
+                                                    onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'drawRank', e.target.value)}
+                                                    disabled={fx.drawWild ?? false}
+                                                    placeholder="Card Value"
+                                                    className="w-20 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold disabled:opacity-40"
+                                                  />
+                                                  <select
+                                                    value={fx.drawElement ?? 'N'}
+                                                    onChange={(e) => handleOrimTapEffectChange(active.id, tapEditorRarity, fx.id as number, 'drawElement', e.target.value)}
+                                                    disabled={fx.drawWild ?? false}
+                                                    className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold disabled:opacity-40"
+                                                  >
+                                                    {ELEMENT_OPTIONS.map((element) => (
+                                                      <option key={`tap-draw-${element}`} value={element}>{element}</option>
+                                                    ))}
+                                                  </select>
+                                                </div>
+                                              )}
+                                              <div className="flex flex-wrap gap-1 text-[9px]">
+                                                {ORIM_RARITY_OPTIONS.map((rarity) => {
+                                                  const scaledValue = resolveEffectValueForRarity(fx, rarity);
+                                                  const labelValue = formatEffectValue(scaledValue);
+                                                  const isActive = active.rarity === rarity;
+                                                  return (
+                                                    <div
+                                                      key={`tap-effect-${fx.id}-rarity-${rarity}`}
+                                                      className={`flex flex-col items-center gap-0.5 px-2 py-0.5 rounded border tracking-[1px] uppercase ${isActive ? 'border-game-gold text-game-gold' : 'border-game-teal/20 text-game-white/60'}`}
+                                                    >
+                                                      <span className="text-[7px]">{rarity}</span>
+                                                      <span className="text-[10px] font-bold">{labelValue}</span>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          )}
+                                          onAdd={() => handleOrimTapEffectAdd(active.id, tapEditorRarity)}
+                                          onRemove={(id) => handleOrimTapEffectRemove(active.id, tapEditorRarity, id as number)}
+                                          containerClassName="space-y-3"
+                                          addButtonLabel="+ Add Tap Effect"
+                                          addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-teal/40 text-game-teal/70 hover:border-game-teal hover:text-game-teal transition-colors"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-col gap-2">
+                                    <div className="text-[10px] text-game-white/60 uppercase tracking-wide">Triggers</div>
+                                    <RowManager
+                                      rows={(active.triggers ?? []).map((trigger, i) => ({ ...trigger, id: i }))}
+                                      renderHeader={() => (
+                                        <div
+                                          className="px-2 grid items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10"
+                                          style={{ gridTemplateColumns: TRIGGERS_GRID_TEMPLATE }}
+                                        >
+                                          <span>Type</span>
+                                          <span>Op</span>
+                                          <span>Value</span>
+                                          <span>Target</span>
+                                          <span>Countdown</span>
+                                          <span />
+                                        </div>
+                                      )}
+                                      renderEmpty={() => (
+                                        <div className="text-[9px] text-game-white/30 italic">No triggers. Click + Add Trigger to begin.</div>
+                                      )}
+                                      renderRow={(trigger) => {
+                                        const normalized = normalizeAbilityTrigger(trigger);
+                                        const needsValue = TRIGGER_TYPES_WITH_NUMERIC_VALUE.has(normalized.type);
+                                        const needsOperator = needsValue;
+                                        const isNotDiscardedTrigger = normalized.type === 'notDiscarded';
+                                        const needsTarget = (
+                                          normalized.type !== 'noValidMovesPlayer'
+                                          && normalized.type !== 'noValidMovesEnemy'
+                                          && normalized.type !== 'notDiscarded'
+                                        );
+                                        return (
+                                          <div
+                                            className="grid items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5"
+                                            style={{ gridTemplateColumns: TRIGGERS_GRID_TEMPLATE }}
+                                          >
+                                            <select
+                                              value={normalized.type}
+                                              onChange={(e) => handleOrimTriggerChange(active.id, trigger.id as number, 'type', e.target.value)}
+                                              className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                            >
+                                              {ABILITY_TRIGGER_TYPES.map((type) => (
+                                                <option key={`trigger-type-${type}`} value={type}>{ABILITY_TRIGGER_LABELS[type]}</option>
+                                              ))}
+                                            </select>
+                                            <select
+                                              value={needsOperator ? (normalized.operator ?? DEFAULT_TRIGGER_OPERATORS[normalized.type] ?? '>=') : '>='}
+                                              disabled={!needsOperator}
+                                              onChange={(e) => handleOrimTriggerChange(active.id, trigger.id as number, 'operator', e.target.value)}
+                                              className="w-[52px] bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/70 outline-none text-center focus:border-game-gold disabled:opacity-35"
+                                            >
+                                              {ABILITY_TRIGGER_OPERATORS.map((operator) => (
+                                                <option key={`trigger-operator-${operator}`} value={operator}>{operator}</option>
+                                              ))}
+                                            </select>
+                                            <input
+                                              type="number"
+                                              min={0}
+                                              max={normalized.type === 'below_hp_pct' ? 100 : undefined}
+                                              value={needsValue ? (normalized.value ?? DEFAULT_TRIGGER_VALUES[normalized.type] ?? 1) : ''}
+                                              disabled={!needsValue}
+                                              placeholder={triggerValuePlaceholder(normalized.type)}
+                                              onChange={(e) => handleOrimTriggerChange(active.id, trigger.id as number, 'value', e.target.value)}
+                                              className="w-14 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/70 outline-none text-center focus:border-game-gold disabled:opacity-35"
+                                            />
+                                            <select
+                                              value={needsTarget ? (normalized.target ?? 'self') : 'self'}
+                                              disabled={!needsTarget}
+                                              onChange={(e) => handleOrimTriggerChange(active.id, trigger.id as number, 'target', e.target.value)}
+                                              className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold disabled:opacity-35"
+                                            >
+                                              {ABILITY_TRIGGER_TARGETS.map((target) => (
+                                                <option key={`trigger-target-${target}`} value={target}>{target}</option>
+                                              ))}
+                                            </select>
+                                            <div className="flex items-center gap-1">
+                                              {isNotDiscardedTrigger ? (
+                                                <>
+                                                  <select
+                                                    value={normalized.countdownType ?? 'combo'}
+                                                    onChange={(e) => handleOrimTriggerChange(active.id, trigger.id as number, 'countdownType', e.target.value)}
+                                                    className="w-[112px] bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/70 outline-none focus:border-game-gold"
+                                                  >
+                                                    {ABILITY_TRIGGER_COUNTDOWN_TYPES.map((option) => (
+                                                      <option key={`trigger-cooldown-type-${option.value}`} value={option.value}>{option.label}</option>
+                                                    ))}
+                                                  </select>
+                                                  <input
+                                                    type="number"
+                                                    min={0}
+                                                    value={normalized.countdownValue ?? 1}
+                                                    placeholder={normalized.countdownType === 'seconds' ? 'sec' : 'combo'}
+                                                    onChange={(e) => handleOrimTriggerChange(active.id, trigger.id as number, 'countdownValue', e.target.value)}
+                                                    className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/70 outline-none text-center focus:border-game-gold"
+                                                  />
+                                                </>
+                                              ) : (
+                                                <span className="px-1 text-[8px] uppercase tracking-wide text-game-white/25">-</span>
+                                              )}
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleOrimTriggerRemove(active.id, trigger.id as number)}
+                                              className="text-[9px] text-game-pink/50 hover:text-game-pink px-1.5 py-0.5 rounded border border-transparent hover:border-game-pink/30 transition-colors justify-self-end"
+                                            >
+                                              x
+                                            </button>
+                                          </div>
+                                        );
+                                      }}
+                                      onAdd={() => handleOrimTriggerAdd(active.id)}
+                                      onRemove={(id) => handleOrimTriggerRemove(active.id, id as number)}
+                                      containerClassName="space-y-2"
+                                      addButtonLabel="+ Add Trigger"
+                                      addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-gold/35 text-game-gold/70 hover:border-game-gold hover:text-game-gold transition-colors"
+                                    />
                                   </div>
                                 </div>
 
@@ -4188,7 +5085,6 @@ export default function App() {
           onConsumeBenchSwap={() => setBenchSwapCount((prev) => Math.max(0, prev - 1))}
           infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
           onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
-          spawnDieRef={spawnDieRef}
           onToggleCombatSandbox={() => setCombatSandboxOpen((prev) => !prev)}
         />
       )}

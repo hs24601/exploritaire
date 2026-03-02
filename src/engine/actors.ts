@@ -146,8 +146,8 @@ export function createActor(definitionId: string): Actor | null {
   const baseDefense = Math.max(0, definition.baseDefense ?? 0);
   const baseEvasion = Math.max(0, definition.baseEvasion ?? 0);
   const baseAccuracy = Math.max(0, definition.baseAccuracy ?? 100);
-  const basePower = Math.max(0, definition.basePower ?? 0);
   const basePowerMax = Math.max(0, definition.basePowerMax ?? 3);
+  const basePower = Math.max(0, definition.basePower ?? basePowerMax);
 
   return {
     definitionId,

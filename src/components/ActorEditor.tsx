@@ -36,12 +36,20 @@ type AbilityLike = {
   abilityType?: string;
   element?: Element;
   rarity?: OrimRarity;
+  cost?: number;
+  value?: number;
   effects?: AbilityEffect[];
   effectsByRarity?: Partial<Record<OrimRarity, AbilityEffect[]>>;
+  canTap?: boolean;
+  tapEffects?: AbilityEffect[];
+  tapEffectsByRarity?: Partial<Record<OrimRarity, AbilityEffect[]>>;
   triggers?: AbilityTrigger[];
   lifecycle?: AbilityLifecycleDef;
   tags?: string[];
   parentActorId?: string;
+  // Legacy fields retained for backward compatibility with older abilities.json rows.
+  equipCost?: number;
+  cardRank?: number;
 };
 type AbilityTriggerType =
   | 'below_hp_pct'
@@ -50,6 +58,7 @@ type AbilityTriggerType =
   | 'noValidMovesEnemy'
   | 'inactive_duration'
   | 'ko'
+  | 'on_death'
   | 'combo_personal'
   | 'combo_party'
   | 'has_armor'
@@ -174,6 +183,7 @@ const ABILITY_TRIGGER_TYPES: AbilityTriggerType[] = [
   'noValidMovesEnemy',
   'inactive_duration',
   'ko',
+  'on_death',
   'combo_personal',
   'combo_party',
   'has_armor',
@@ -197,6 +207,7 @@ const ABILITY_TRIGGER_LABELS: Record<AbilityTriggerType, string> = {
   noValidMovesEnemy: 'noValidMovesEnemy',
   inactive_duration: 'inactive_duration',
   ko: "KO'd",
+  on_death: 'on_death',
   combo_personal: 'combo_personal',
   combo_party: 'combo_party',
   has_armor: 'has_armor',
@@ -280,6 +291,16 @@ const buildEffectsByRarityLoadouts = (
 ): Record<OrimRarity, AbilityEffect[]> => (
   buildEffectsByRarityLoadoutsShared(entry, activeRarity) as Record<OrimRarity, AbilityEffect[]>
 );
+const buildTapEffectsByRarityLoadouts = (
+  entry: AbilityLike,
+  activeRarity: OrimRarity
+): Record<OrimRarity, AbilityEffect[]> => (
+  buildEffectsByRarityLoadoutsShared({
+    ...entry,
+    effects: entry.tapEffects ?? [],
+    effectsByRarity: entry.tapEffectsByRarity,
+  }, activeRarity) as Record<OrimRarity, AbilityEffect[]>
+);
 const stripEditorOnlyFields = (effect: AbilityEffect): AbilityEffect => {
   const { id, valueByRarity, ...persisted } = effect;
   return persisted;
@@ -298,6 +319,8 @@ const normalizeAbilityTrigger = (trigger: AbilityTrigger): AbilityTrigger => {
             ? 'is_stunned'
             : normalizedType === 'inactive_duration' || normalizedType === 'inactiveduration'
               ? 'inactive_duration'
+              : normalizedType === 'on_death' || normalizedType === 'ondeath'
+                ? 'on_death'
               : normalizedType === 'ko' || normalizedType === "ko'd" || normalizedType === 'ko_d' || normalizedType === 'kod' || normalizedType === 'koed'
                 ? 'ko'
                 : normalizedType === 'combo_personal' || normalizedType === 'combopersonal'
@@ -435,10 +458,26 @@ const summarizeAbilityLifecycle = (lifecycle?: AbilityLifecycleDef): string => {
   return `${normalized.discardPolicy} · ${normalized.exhaustScope} · ${cooldownLabel}`;
 };
 
+const normalizeAbilityCost = (value: unknown): number => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.floor(parsed));
+};
+
+const normalizeAbilityValue = (value: unknown): number => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.max(1, Math.min(13, Math.floor(parsed)));
+};
+
 const hydrateAbility = (entry: AbilityLike): AbilityLike => {
   const rarity = entry.rarity ?? 'common';
+  const cost = normalizeAbilityCost(entry.cost ?? entry.equipCost ?? 0);
+  const value = normalizeAbilityValue(entry.value ?? entry.cardRank ?? 1);
   const effectsByRarity = buildEffectsByRarityLoadouts(entry, rarity);
   const effects = (effectsByRarity[rarity] ?? []).map((fx) => cloneAbilityEffect(fx));
+  const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(entry, rarity);
+  const tapEffects = (tapEffectsByRarity[rarity] ?? []).map((fx) => cloneAbilityEffect(fx));
   const lifecycle = normalizeAbilityLifecycle(entry.lifecycle);
   const triggers = applyLifecycleToTriggers(entry.triggers, lifecycle);
   return {
@@ -446,17 +485,30 @@ const hydrateAbility = (entry: AbilityLike): AbilityLike => {
     rarity,
     effects,
     effectsByRarity,
+    canTap: Boolean(entry.canTap),
+    tapEffects,
+    tapEffectsByRarity,
     triggers,
     lifecycle,
+    cost,
+    value,
   };
 };
 const sanitizeAbility = (entry: AbilityLike): AbilityLike => {
   const rarity = (entry.rarity ?? 'common') as OrimRarity;
+  const cost = normalizeAbilityCost(entry.cost ?? entry.equipCost ?? 0);
+  const value = normalizeAbilityValue(entry.value ?? entry.cardRank ?? 1);
   const lifecycle = normalizeAbilityLifecycle(entry.lifecycle);
   const triggers = applyLifecycleToTriggers(entry.triggers, lifecycle);
   const hasExplicitRarityLoadouts = ORIM_RARITY_OPTIONS.some((tier) => (
     Object.prototype.hasOwnProperty.call(entry.effectsByRarity ?? {}, tier)
   ));
+  const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(entry, rarity);
+  const persistedTapEffectsByRarity: Partial<Record<OrimRarity, AbilityEffect[]>> = {};
+  ORIM_RARITY_OPTIONS.forEach((tier) => {
+    persistedTapEffectsByRarity[tier] = (tapEffectsByRarity[tier] ?? []).map((fx) => stripEditorOnlyFields(fx));
+  });
+  const activeTapEffects = persistedTapEffectsByRarity[rarity] ?? [];
   if (!hasExplicitRarityLoadouts) {
     const legacyEffects = (entry.effects ?? []).map((fx) => {
       const { id, ...persisted } = fx;
@@ -469,11 +521,16 @@ const sanitizeAbility = (entry: AbilityLike): AbilityLike => {
       abilityType: entry.abilityType,
       element: entry.element,
       rarity: entry.rarity,
+      cost,
+      value,
       effects: legacyEffects,
       triggers,
       lifecycle,
       tags: entry.tags,
       parentActorId: entry.parentActorId,
+      canTap: Boolean(entry.canTap),
+      tapEffects: activeTapEffects,
+      tapEffectsByRarity: persistedTapEffectsByRarity,
     };
   }
   const effectsByRarity = buildEffectsByRarityLoadouts(entry, rarity);
@@ -489,8 +546,13 @@ const sanitizeAbility = (entry: AbilityLike): AbilityLike => {
     abilityType: entry.abilityType,
     element: entry.element,
     rarity,
+    cost,
+    value,
     effects: activeEffects,
     effectsByRarity: persistedEffectsByRarity,
+    canTap: Boolean(entry.canTap),
+    tapEffects: activeTapEffects,
+    tapEffectsByRarity: persistedTapEffectsByRarity,
     triggers,
     lifecycle,
     tags: entry.tags,
@@ -811,8 +873,13 @@ export function ActorEditor({
     abilityType: 'ability',
     element: 'N',
     rarity: 'common',
+    cost: 0,
+    value: 1,
     effects: [],
     effectsByRarity: { common: [] },
+    canTap: false,
+    tapEffects: [],
+    tapEffectsByRarity: { common: [] },
     triggers: [],
     lifecycle: { ...DEFAULT_ABILITY_LIFECYCLE },
   });
@@ -828,6 +895,79 @@ export function ActorEditor({
 
   useEffect(() => {
     setAbilities(ABILITY_DEFS.map((entry) => sanitizeAbility(entry)));
+  }, []);
+
+  const handleNewAbilityTapEffectAdd = useCallback(() => {
+    setEditAbility((prev) => {
+      const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
+      const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(prev, activeRarity);
+      const nextEffect: AbilityEffect = {
+        type: 'damage',
+        value: 1,
+        target: 'enemy',
+        element: 'N',
+        drawWild: false,
+        drawElement: 'N',
+      };
+      const tapEffects = [...(prev.tapEffects ?? []), nextEffect];
+      tapEffectsByRarity[activeRarity] = tapEffects.map((fx) => cloneAbilityEffect(fx));
+      return { ...prev, tapEffects, tapEffectsByRarity };
+    });
+  }, []);
+
+  const handleNewAbilityTapEffectRemove = useCallback((index: number) => {
+    setEditAbility((prev) => {
+      const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
+      const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(prev, activeRarity);
+      const tapEffects = (prev.tapEffects ?? []).filter((_, i) => i !== index);
+      tapEffectsByRarity[activeRarity] = tapEffects.map((fx) => cloneAbilityEffect(fx));
+      return { ...prev, tapEffects, tapEffectsByRarity };
+    });
+  }, []);
+
+  const handleNewAbilityTapEffectChange = useCallback((
+    index: number,
+    field: keyof AbilityEffect,
+    value: string | number | boolean
+  ) => {
+    setEditAbility((prev) => {
+      const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
+      const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(prev, activeRarity);
+      const tapEffects = (prev.tapEffects ?? []).map((fx, i) => {
+        if (i !== index) return fx;
+        let nextEffect: AbilityEffect = fx;
+        if (field === 'type') nextEffect = { ...fx, type: value as AbilityEffectType };
+        else if (field === 'target') nextEffect = { ...fx, target: value as AbilityEffectTarget };
+        else if (field === 'element') nextEffect = { ...fx, element: value as Element };
+        else if (field === 'value') {
+          const numeric = Number(value);
+          nextEffect = { ...fx, value: Number.isFinite(numeric) ? numeric : fx.value };
+        } else if (field === 'charges') {
+          const txt = String(value);
+          nextEffect = { ...fx, charges: txt === '' ? undefined : Number(txt) };
+        } else if (field === 'duration') {
+          const txt = String(value);
+          nextEffect = { ...fx, duration: txt === '' ? undefined : Number(txt) };
+        } else if (field === 'untilSourceCardPlay') {
+          nextEffect = { ...fx, untilSourceCardPlay: Boolean(value) };
+        } else if (field === 'deadRunOnly') {
+          nextEffect = { ...fx, deadRunOnly: Boolean(value) };
+        } else if (field === 'elementalValue') {
+          const txt = String(value);
+          nextEffect = { ...fx, elementalValue: txt === '' ? undefined : Number(txt) };
+        } else if (field === 'drawWild') {
+          nextEffect = { ...fx, drawWild: Boolean(value) };
+        } else if (field === 'drawRank') {
+          const txt = String(value);
+          nextEffect = { ...fx, drawRank: txt === '' ? undefined : Number(txt) };
+        } else if (field === 'drawElement') {
+          nextEffect = { ...fx, drawElement: value as Element };
+        }
+        return nextEffect;
+      });
+      tapEffectsByRarity[activeRarity] = tapEffects.map((fx) => cloneAbilityEffect(fx));
+      return { ...prev, tapEffects, tapEffectsByRarity };
+    });
   }, []);
 
   useEffect(() => {
@@ -900,6 +1040,7 @@ export function ActorEditor({
         <span>{ability.rarity ?? 'common'}</span>
         {ability.element && <span>Element {ability.element}</span>}
         <span>Lifecycle {summarizeAbilityLifecycle(ability.lifecycle)}</span>
+        {ability.canTap && <span className="text-game-emerald">Tap-enabled</span>}
       </div>
       {ability.description && (
         <div className="mt-1 text-game-white/60">
@@ -1001,12 +1142,17 @@ export function ActorEditor({
       const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
       const effectsByRarity = buildEffectsByRarityLoadouts(prev, activeRarity);
       effectsByRarity[activeRarity] = (prev.effects ?? []).map((fx) => cloneAbilityEffect(fx));
+      const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(prev, activeRarity);
+      tapEffectsByRarity[activeRarity] = (prev.tapEffects ?? []).map((fx) => cloneAbilityEffect(fx));
       const nextEffects = (effectsByRarity[rarity] ?? []).map((fx) => cloneAbilityEffect(fx));
+      const nextTapEffects = (tapEffectsByRarity[rarity] ?? []).map((fx) => cloneAbilityEffect(fx));
       return {
         ...prev,
         rarity,
         effects: nextEffects,
         effectsByRarity,
+        tapEffects: nextTapEffects,
+        tapEffectsByRarity,
       };
     });
   }, []);
@@ -1016,10 +1162,29 @@ export function ActorEditor({
       const effectsByRarity = buildEffectsByRarityLoadouts(prev, activeRarity);
       const commonLoadout = (effectsByRarity.common ?? []).map((fx) => cloneAbilityEffect(fx));
       const nextByRarity = autoFillEffectsByRarityFromCommon(commonLoadout) as Partial<Record<OrimRarity, AbilityEffect[]>>;
+      const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(prev, activeRarity);
+      const commonTapLoadout = (tapEffectsByRarity.common ?? []).map((fx) => cloneAbilityEffect(fx));
+      const nextTapByRarity = autoFillEffectsByRarityFromCommon(commonTapLoadout) as Partial<Record<OrimRarity, AbilityEffect[]>>;
       return {
         ...prev,
         effectsByRarity: nextByRarity,
         effects: (nextByRarity[activeRarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
+        tapEffectsByRarity: nextTapByRarity,
+        tapEffects: (nextTapByRarity[activeRarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
+      };
+    });
+  }, []);
+
+  const handleAutoFillTapLoadoutsFromCommon = useCallback(() => {
+    setEditAbility((prev) => {
+      const activeRarity = (prev.rarity ?? 'common') as OrimRarity;
+      const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(prev, activeRarity);
+      const commonLoadout = (tapEffectsByRarity.common ?? []).map((fx) => cloneAbilityEffect(fx));
+      const nextByRarity = autoFillEffectsByRarityFromCommon(commonLoadout) as Partial<Record<OrimRarity, AbilityEffect[]>>;
+      return {
+        ...prev,
+        tapEffectsByRarity: nextByRarity,
+        tapEffects: (nextByRarity[activeRarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
       };
     });
   }, []);
@@ -1844,58 +2009,85 @@ export function ActorEditor({
                       </div>
                       {showNewAbilityForm && (
                         <div className="grid gap-2 border border-game-teal/25 rounded px-3 py-2 bg-game-bg-dark/70">
-                          <div className="grid grid-cols-2 gap-2">
-                            <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                              Label
-                              <input
-                                className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={editAbility.label ?? ''}
-                                onChange={(e) => {
-                                  const label = e.target.value;
-                                  setEditAbility((prev) => ({
-                                    ...prev,
-                                    label,
-                                    id: normalizeId(label),
-                                  }));
-                                }}
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                              Element
-                              <select
-                                className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={editAbility.element ?? 'N'}
-                                onChange={(e) => setEditAbility((prev) => ({ ...prev, element: e.target.value as Element }))}
-                              >
-                                {ELEMENTS.map((el) => (
-                                  <option key={el} value={el}>{el}</option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                              Type
-                              <select
-                                className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={editAbility.abilityType ?? 'ability'}
-                                onChange={(e) => setEditAbility((prev) => ({ ...prev, abilityType: e.target.value }))}
-                              >
-                                <option value="ability">ability</option>
-                                <option value="utility">utility</option>
-                                <option value="trait">trait</option>
-                              </select>
-                            </label>
-                            <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
-                              Loadout
-                              <select
-                                className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                value={editAbility.rarity ?? 'common'}
-                                onChange={(e) => handleSelectAbilityLoadoutRarity(e.target.value as OrimRarity)}
-                              >
-                                {ORIM_RARITY_OPTIONS.map((rarity) => (
-                                  <option key={rarity} value={rarity}>{rarity}</option>
-                                ))}
-                              </select>
-                            </label>
+                          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                            <div className="grid gap-2">
+                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                Label
+                                <input
+                                  className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                  value={editAbility.label ?? ''}
+                                  onChange={(e) => {
+                                    const label = e.target.value;
+                                    setEditAbility((prev) => ({
+                                      ...prev,
+                                      label,
+                                      id: normalizeId(label),
+                                    }));
+                                  }}
+                                />
+                              </label>
+                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                Type
+                                <select
+                                  className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                  value={editAbility.abilityType ?? 'ability'}
+                                  onChange={(e) => setEditAbility((prev) => ({ ...prev, abilityType: e.target.value }))}
+                                >
+                                  <option value="ability">ability</option>
+                                  <option value="utility">utility</option>
+                                  <option value="trait">trait</option>
+                                </select>
+                              </label>
+                            </div>
+                            <div className="grid gap-2">
+                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                Element
+                                <select
+                                  className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                  value={editAbility.element ?? 'N'}
+                                  onChange={(e) => setEditAbility((prev) => ({ ...prev, element: e.target.value as Element }))}
+                                >
+                                  {ELEMENTS.map((el) => (
+                                    <option key={el} value={el}>{el}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                Loadout
+                                <select
+                                  className="text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                  value={editAbility.rarity ?? 'common'}
+                                  onChange={(e) => handleSelectAbilityLoadoutRarity(e.target.value as OrimRarity)}
+                                >
+                                  {ORIM_RARITY_OPTIONS.map((rarity) => (
+                                    <option key={rarity} value={rarity}>{rarity}</option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                            <div className="grid gap-2">
+                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                Cost
+                                <input
+                                  type="number"
+                                  min={0}
+                                  className="number-input-no-spinner text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                  value={editAbility.cost ?? 0}
+                                  onChange={(e) => setEditAbility((prev) => ({ ...prev, cost: normalizeAbilityCost(e.target.value) }))}
+                                />
+                              </label>
+                              <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
+                                Value
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={13}
+                                  className="number-input-no-spinner text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                  value={editAbility.value ?? 1}
+                                  onChange={(e) => setEditAbility((prev) => ({ ...prev, value: normalizeAbilityValue(e.target.value) }))}
+                                />
+                              </label>
+                            </div>
                           </div>
                           <label className="flex flex-col gap-1 text-[10px] text-game-white/60">
                             Description
@@ -1906,12 +2098,22 @@ export function ActorEditor({
                               onChange={(e) => setEditAbility((prev) => ({ ...prev, description: e.target.value }))}
                             />
                           </label>
+                          <label className="flex items-center gap-2 text-[10px] text-game-white/60">
+                            <input
+                              type="checkbox"
+                              checked={editAbility.canTap ?? false}
+                              onChange={(e) => setEditAbility((prev) => ({ ...prev, canTap: e.target.checked }))}
+                              className="h-4 w-4 rounded border border-game-teal/40 bg-game-bg-dark/80 text-game-teal focus:ring-0"
+                            />
+                            Allow tap configuration (actor/foundation interaction)
+                          </label>
                           <div className="flex flex-col gap-2">
                             <div className="text-[10px] text-game-white/60 uppercase tracking-wide">Effects</div>
                             <div className="flex items-center justify-between gap-2 rounded border border-game-teal/20 bg-game-bg-dark/50 px-2 py-1.5">
                               {(() => {
                                 const activeRarity = (editAbility.rarity ?? 'common') as OrimRarity;
                                 const effectsByRarity = buildEffectsByRarityLoadouts(editAbility, activeRarity);
+                                const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(editAbility, activeRarity);
                                 return (
                                   <>
                                     <div className="flex flex-wrap gap-1">
@@ -2101,6 +2303,185 @@ export function ActorEditor({
                               addButtonLabel="+ Add Effect"
                               addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-teal/40 text-game-teal/70 hover:border-game-teal hover:text-game-teal transition-colors"
                             />
+                          {editAbility.canTap && (
+                            <div className="space-y-2 rounded border border-game-teal/15 bg-game-bg-dark/60 px-2 py-2">
+                              <div className="flex items-center justify-between gap-2 text-[8px] uppercase tracking-[0.14em] text-game-white/40">
+                                <div className="flex flex-wrap gap-1">
+                                  {ORIM_RARITY_OPTIONS.map((tier) => (
+                                    <div
+                                      key={`tap-count-${tier}`}
+                                      className="flex items-center gap-1 rounded border border-game-teal/20 px-2 py-0.5"
+                                    >
+                                      <span className="font-semibold text-game-white/70">{tier}</span>
+                                      <span className="text-game-teal/60">{editAbility.tapEffectsByRarity?.[tier]?.length ?? 0}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleAutoFillTapLoadoutsFromCommon}
+                                  className="text-[8px] px-2 py-0.5 rounded border border-game-gold/45 text-game-gold/80 hover:border-game-gold hover:text-game-gold transition-colors uppercase tracking-[0.14em]"
+                                >
+                                  Auto-fill Tap Curve
+                                </button>
+                              </div>
+                              <RowManager
+                                rows={(editAbility.tapEffects ?? []).map((fx, i) => ({ ...fx, id: i }))}
+                                renderHeader={() => (
+                                  <div
+                                    className="px-2 grid items-center gap-x-1 gap-y-1 text-[8px] text-game-white/30 uppercase tracking-wide pb-0.5 border-b border-game-teal/10"
+                                    style={{ gridTemplateColumns: EFFECTS_GRID_TEMPLATE }}
+                                  >
+                                    <span>Type</span>
+                                    <span>Value</span>
+                                    <span>Target</span>
+                                    <span>Charges</span>
+                                    <span>Duration</span>
+                                    <span>Element</span>
+                                    <span>Elem Value</span>
+                                    <span />
+                                  </div>
+                                )}
+                                renderEmpty={() => (
+                                  <div className="text-[9px] text-game-white/30 italic">Tap mode enabled but no tap effects yet. Click + Add Tap Effect to begin.</div>
+                                )}
+                                renderRow={(fx) => (
+                                  <div className="space-y-1">
+                                    <div
+                                      className="grid items-center gap-x-1 bg-game-bg-dark/60 border border-game-teal/20 rounded px-2 py-1.5"
+                                      style={{ gridTemplateColumns: EFFECTS_GRID_TEMPLATE }}
+                                    >
+                                      <select
+                                        value={fx.type}
+                                        onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'type', e.target.value)}
+                                        className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                      >
+                                        {ABILITY_EFFECT_TYPES.map((t) => (
+                                          <option key={`tap-${t}`} value={t}>{t}</option>
+                                        ))}
+                                      </select>
+                                      <input
+                                        type="number"
+                                        value={fx.value}
+                                        min={0}
+                                        onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'value', e.target.value)}
+                                        className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                      />
+                                      <select
+                                        value={fx.target}
+                                        onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'target', e.target.value)}
+                                        className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                      >
+                                        {ABILITY_EFFECT_TARGETS.map((t) => (
+                                          <option key={`tap-target-${t}`} value={t}>{t}</option>
+                                        ))}
+                                      </select>
+                                      <input
+                                        type="number"
+                                        value={fx.charges ?? ''}
+                                        min={1}
+                                        onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'charges', e.target.value)}
+                                        className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                        placeholder="∞"
+                                      />
+                                      <input
+                                        type="number"
+                                        value={fx.duration ?? ''}
+                                        min={1}
+                                        onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'duration', e.target.value)}
+                                        className="w-12 bg-game-bg-dark border border-game-teal/20 rounded px-1 py-0.5 text-[9px] text-game-white/60 outline-none text-center focus:border-game-gold"
+                                        placeholder="inst"
+                                      />
+                                      <select
+                                        value={fx.element ?? 'N'}
+                                        onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'element', e.target.value)}
+                                        className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold"
+                                      >
+                                        {ELEMENTS.map((el) => (
+                                          <option key={`tap-${el}`} value={el}>{el}</option>
+                                        ))}
+                                      </select>
+                                      <input
+                                        type="number"
+                                        value={fx.elementalValue ?? ''}
+                                        min={0}
+                                        onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'elementalValue', e.target.value)}
+                                        className="w-12 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleNewAbilityTapEffectRemove(fx.id as number)}
+                                        className="text-[9px] text-game-pink/50 hover:text-game-pink px-1.5 py-0.5 rounded border border-transparent hover:border-game-pink/30 transition-colors justify-self-end"
+                                      >
+                                        x
+                                      </button>
+                                    </div>
+                                    {fx.type === 'draw' && (
+                                      <div className="grid grid-cols-[auto_auto_auto] items-center gap-1 px-2 py-1 rounded border border-game-teal/15 bg-game-bg-dark/50">
+                                        <label className="flex items-center gap-1 text-[9px] text-game-white/70">
+                                          <input
+                                            type="checkbox"
+                                            checked={fx.drawWild ?? false}
+                                            onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'drawWild', e.target.checked)}
+                                          />
+                                          Draw Wild
+                                        </label>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          max={13}
+                                          value={fx.drawRank ?? ''}
+                                          onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'drawRank', e.target.value)}
+                                          disabled={fx.drawWild ?? false}
+                                          placeholder="Card Value"
+                                          className="w-20 bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none text-center focus:border-game-gold disabled:opacity-40"
+                                        />
+                                        <select
+                                          value={fx.drawElement ?? 'N'}
+                                          onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'drawElement', e.target.value)}
+                                          disabled={fx.drawWild ?? false}
+                                          className="bg-game-bg-dark border border-game-teal/30 rounded px-1 py-0.5 text-[9px] text-game-white outline-none focus:border-game-gold disabled:opacity-40"
+                                        >
+                                          {ELEMENTS.map((el) => (
+                                            <option key={`tap-draw-${el}`} value={el}>{el}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    )}
+                                    {(fx.type === 'evasion' || fx.type === 'redeal_tableau') && (
+                                      <div className="grid grid-cols-[auto_auto] items-center gap-2 px-2 py-1 rounded border border-game-teal/15 bg-game-bg-dark/50">
+                                        {fx.type === 'evasion' && (
+                                          <label className="flex items-center gap-1 text-[9px] text-game-white/70">
+                                            <input
+                                              type="checkbox"
+                                              checked={fx.untilSourceCardPlay ?? false}
+                                              onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'untilSourceCardPlay', e.target.checked)}
+                                            />
+                                            Until source actor plays card
+                                          </label>
+                                        )}
+                                        {fx.type === 'redeal_tableau' && (
+                                          <label className="flex items-center gap-1 text-[9px] text-game-white/70">
+                                            <input
+                                              type="checkbox"
+                                              checked={fx.deadRunOnly ?? false}
+                                              onChange={(e) => handleNewAbilityTapEffectChange(fx.id as number, 'deadRunOnly', e.target.checked)}
+                                            />
+                                            Dead run only
+                                          </label>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                onAdd={handleNewAbilityTapEffectAdd}
+                                onRemove={(id) => handleNewAbilityTapEffectRemove(id as number)}
+                                containerClassName="space-y-3"
+                                addButtonLabel="+ Add Tap Effect"
+                                addButtonClassName="text-[9px] px-2 py-0.5 rounded border border-game-teal/40 text-game-teal/70 hover:border-game-teal hover:text-game-teal transition-colors"
+                              />
+                            </div>
+                          )}
                           </div>
                           <div className="flex flex-col gap-2">
                             <div className="text-[10px] text-game-white/60 uppercase tracking-wide">Triggers</div>
@@ -2341,6 +2722,8 @@ export function ActorEditor({
                                   : [...abilities, abilityToSave];
                                 await commitAbilities(next);
                                 const assignAbilityToNextSlot = (currentDeck: DeckTemplate, abilityId: string): DeckTemplate => {
+                                  const abilityDefaultValue = normalizeAbilityValue(abilityToSave.value ?? abilityToSave.cardRank ?? 1);
+                                  const abilityDefaultCost = normalizeAbilityCost(abilityToSave.cost ?? abilityToSave.equipCost ?? 0);
                                   const values = [...(currentDeck.values ?? [])];
                                   const costByRarity = [...(currentDeck.costByRarity ?? values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
                                   const enabledRarities: OrimRarity[] = [...(currentDeck.enabledRarities ?? values.map(() => 'common' as OrimRarity))];
@@ -2351,8 +2734,8 @@ export function ActorEditor({
                                   const slotsPerCard = [...(currentDeck.slotsPerCard ?? values.map(() => 1))];
                                   const starterOrim = [...(currentDeck.starterOrim ?? [])];
                                   if (values.length === 0) {
-                                    values.push(1);
-                                    costByRarity.push(normalizeCostByRarityEntry(undefined, 0));
+                                    values.push(abilityDefaultValue);
+                                    costByRarity.push(normalizeCostByRarityEntry(undefined, abilityDefaultCost));
                                     enabledRarities.push('common');
                                     activeCards.push(true);
                                     notDiscardedCards.push(false);
@@ -2371,6 +2754,10 @@ export function ActorEditor({
                                     );
                                     for (let slotIndex = 0; slotIndex < slotCount; slotIndex += 1) {
                                           if (occupied.has(slotIndex)) continue;
+                                          if (slotIndex === 0) {
+                                            values[cardIndex] = abilityDefaultValue;
+                                            costByRarity[cardIndex] = normalizeCostByRarityEntry(costByRarity[cardIndex], abilityDefaultCost);
+                                          }
                                           starterOrim.push({ cardIndex, slotIndex, orimId: abilityId });
                                       return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
                                     }
@@ -2391,6 +2778,8 @@ export function ActorEditor({
                                   abilityType: 'ability',
                                   element: 'N',
                                   rarity: 'common',
+                                  cost: 0,
+                                  value: 1,
                                   effects: [],
                                   effectsByRarity: { common: [] },
                                   triggers: [],
@@ -2539,14 +2928,17 @@ export function ActorEditor({
                               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                                 <span className="text-[10px] text-game-white/60">Card {index + 1}</span>
                                 <label className="flex items-center gap-1 text-[10px] text-game-white/60">
-                                  <span>Value</span>
+                                  <span>Cost</span>
                                   <input
                                     type="number"
-                                    value={value}
+                                    min={0}
+                                    value={cardCostByRarity[enabledRarity] ?? 0}
                                     onChange={(e) => {
-                                      const nextValues = [...deck.values];
-                                      nextValues[index] = Number(e.target.value);
-                                      const next = { ...deck, values: nextValues };
+                                      const nextCostByRarity = [...(deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
+                                      const currentCosts = normalizeCostByRarityEntry(nextCostByRarity[index], 0);
+                                      currentCosts[enabledRarity] = normalizeAbilityCost(e.target.value);
+                                      nextCostByRarity[index] = normalizeCostByRarityEntry(currentCosts, currentCosts.common ?? 0);
+                                      const next = { ...deck, costByRarity: nextCostByRarity };
                                       commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
                                     }}
                                     className="number-input-no-spinner w-12 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-1 py-[2px]"
@@ -2622,7 +3014,19 @@ export function ActorEditor({
                                     if (abilityId) {
                                       nextStarters.push({ cardIndex: index, slotIndex: 0, orimId: abilityId });
                                     }
-                                    const next = { ...deck, starterOrim: nextStarters };
+                                    const next: DeckTemplate = { ...deck, starterOrim: nextStarters };
+                                    if (abilityId && !primaryStarter?.orimId) {
+                                      const selectedAbility = actorScopedAbilities.find((ability) => ability.id === abilityId);
+                                      if (selectedAbility) {
+                                        const nextValues = [...deck.values];
+                                        nextValues[index] = normalizeAbilityValue(selectedAbility.value ?? selectedAbility.cardRank ?? nextValues[index] ?? 1);
+                                        const nextCostByRarity = [...(deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
+                                        const seededCost = normalizeAbilityCost(selectedAbility.cost ?? selectedAbility.equipCost ?? 0);
+                                        nextCostByRarity[index] = normalizeCostByRarityEntry(nextCostByRarity[index], seededCost);
+                                        next.values = nextValues;
+                                        next.costByRarity = nextCostByRarity;
+                                      }
+                                    }
                                     commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
                                   }}
                                   className="flex-1 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"

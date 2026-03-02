@@ -24,7 +24,6 @@ export type RarityMappableEffect = {
   type?: string;
   value?: number;
   valueByRarity?: RarityValueMap;
-  [key: string]: unknown;
 };
 
 const AUTO_FILL_BASE_MULTIPLIER: Record<OrimRarity, number> = {

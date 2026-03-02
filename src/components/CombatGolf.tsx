@@ -1,6 +1,6 @@
 import { memo, useEffect, useState, useMemo, useCallback, useRef, type RefObject, type KeyboardEventHandler, type MutableRefObject } from 'react';
 import { useGraphics } from '../contexts/GraphicsContext';
-import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition, Die as DieType, RelicCombatEvent, ActorKeru, ActorKeruArchetype, EncounterDefinition } from '../engine/types';
+import type { GameState, Card as CardType, Element, Move, SelectedCard, Actor, ActorDefinition, RelicCombatEvent, ActorKeru, ActorKeruArchetype, EncounterDefinition } from '../engine/types';
 import type { PoiReward } from '../engine/worldMapTypes';
 import type { DragState } from '../hooks/useDragDrop';
 import { subscribeDragRaf } from '../hooks/dragRafCoordinator';
@@ -25,7 +25,6 @@ import { Tableau } from './Tableau';
 import { FoundationActor } from './FoundationActor';
 import { Card } from './Card';
 import { JewelOrim } from './JewelModal';
-import { Die } from './Die';
 import { NodeEdgeBiomeScreen } from './NodeEdgeBiomeScreen';
 import { FoundationTokenGrid } from './FoundationTokenGrid';
 import { Foundation } from './Foundation';
@@ -60,7 +59,6 @@ import { ORIM_DEFINITIONS } from '../engine/orims';
 import { getActiveBlindLevel, getBlindedHiddenTableauIndexes } from '../engine/rpgBlind';
 import { getOrimAccentColor } from '../utils/orimColors';
 import { getBiomeDefinition } from '../engine/biomes';
-import { createDie } from '../engine/dice';
 import { useDevModeFlag } from '../utils/devMode';
 import { mainWorldMap } from '../data/worldMap';
 import type { PoiTableauPresetId } from '../data/poiTableaus';
@@ -76,6 +74,7 @@ import { RelicTray, type RelicTrayItem } from './combat/RelicTray';
 import { FpsBadge } from './combat/FpsBadge';
 import { buildRelicTrayItems } from './combat/relicTrayModel';
 import { getPlayableFoundationIndexesForCard } from './combat/playIntent';
+import { PhysicsDiceRoller } from './PhysicsDiceRoller';
 import type { EncounterCombatActions } from './combat/contracts';
 import { useRpgCombatTicker } from './combat/hooks/useRpgCombatTicker';
 import { TargetSwirlIndicator } from './TargetSwirlIndicator';
@@ -825,6 +824,7 @@ export const CombatGolf = memo(function CombatGolf({
   const enemyFoundationRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [enemyRevealMap, setEnemyRevealMap] = useState<Record<number, number | null>>({});
   const [enemyTurnRemainingMs, setEnemyTurnRemainingMs] = useState(ENEMY_TURN_TIME_BUDGET_MS);
+  const [rerollRolling, setRerollRolling] = useState(false);
   // Runtime-tunable speed scaffold; downstream systems can update this mid-match.
   const [enemyDragBaseSpeedFactor] = useState(() => ENEMY_DRAG_SPEED_FACTOR * 2);
   const isGamePausedRef = useRef(isGamePaused);
@@ -843,8 +843,6 @@ export const CombatGolf = memo(function CombatGolf({
   const layoutVariant = gameState.playtestVariant ?? 'single-foundation';
   const isPartyBattleLayout = layoutVariant === 'party-battle' || layoutVariant === 'rpg';
   const isPartyFoundationsLayout = layoutVariant === 'party-foundations' || isPartyBattleLayout;
-  const [rerollDie, setRerollDie] = useState<DieType>(() => createDie());
-  const [rerollRolling, setRerollRolling] = useState(false);
   useEffect(() => {
     explorationCurrentNodeIdRef.current = explorationCurrentNodeId;
   }, [explorationCurrentNodeId]);
@@ -3571,35 +3569,28 @@ export const CombatGolf = memo(function CombatGolf({
   const regroupLockedInExploration = isRpgMode;
   const randomBiomeRegroupAction = actions.regroupRandomBiomeDeal ?? actions.rerollRandomBiomeDeal;
   const showRerollDealControl = !!biomeDef?.randomlyGenerated && !!randomBiomeRegroupAction;
-  const handleRerollDeal = useCallback(() => {
-    if (!randomBiomeRegroupAction || rerollRolling || regroupLockedInExploration) return;
-    const nextDie = createDie();
-    setRerollRolling(true);
-    setRerollDie({
-      id: nextDie.id,
-      value: nextDie.value,
-      locked: false,
-      rolling: true,
-    });
-    window.setTimeout(() => {
-      randomBiomeRegroupAction();
-      setRerollDie(createDie());
-      setRerollRolling(false);
-    }, 700);
-  }, [randomBiomeRegroupAction, regroupLockedInExploration, rerollRolling]);
-  const rerollDealControl = showRerollDealControl ? (
-    <button
-      type="button"
-      onClick={handleRerollDeal}
-      disabled={rerollRolling || isEnemyTurn || introBlocking || shortRestCharges <= 0 || regroupLockedInExploration}
-      className="flex items-center justify-center gap-1 opacity-90 hover:opacity-100 disabled:opacity-50"
-      title={regroupLockedInExploration
-        ? 'Regroup is disabled in RPG mode to preserve POI tableau styling.'
-        : `Regroup: reshuffle and redeal (costs 1 short-rest charge). Charges left: ${shortRestCharges}`}
-    >
-      <Die die={rerollDie} size={32} />
-      <span className="text-[9px] font-mono uppercase tracking-[0.12em] text-game-teal/90">Regroup {shortRestCharges}</span>
-    </button>
+  const rerollDisabled =
+    rerollRolling
+    || isEnemyTurn
+    || introBlocking
+    || shortRestCharges <= 0
+    || regroupLockedInExploration;
+  const rerollInfo = regroupLockedInExploration
+    ? 'Regroup disabled in RPG mode.'
+    : `Charges left: ${shortRestCharges}`;
+  const rerollDiceControl = showRerollDealControl ? (
+    <PhysicsDiceRoller
+      diceCount={2}
+      className="w-[220px] h-[220px]"
+      rollLabel="Regroup"
+      statusLabel={rerollInfo}
+      disabled={rerollDisabled}
+      onRollStart={() => setRerollRolling(true)}
+      onRollComplete={() => {
+        randomBiomeRegroupAction?.();
+        setRerollRolling(false);
+      }}
+    />
   ) : null;
 
   useEffect(() => {
@@ -4876,7 +4867,7 @@ export const CombatGolf = memo(function CombatGolf({
                   <div className="absolute" style={leftFoundationAccessoryStyle}>
                     <div className="flex flex-col items-center gap-2">
                       {wildAnalysisButton}
-                      {rerollDealControl}
+                      {rerollDiceControl}
                     </div>
                   </div>
                 )}

@@ -1,4 +1,4 @@
-import { memo, useState, useMemo, useCallback, useRef } from 'react';
+import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Card as CardType, Element, InteractionMode, OrimDefinition, OrimRarity } from '../engine/types';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../engine/constants';
@@ -30,6 +30,7 @@ interface HandProps {
   disableSpringMotion?: boolean;
   watercolorOnlyCards?: boolean;
   isCardPlayable?: (card: CardType) => boolean;
+  getCardLockReason?: (card: CardType) => string | undefined;
   hideElements?: boolean;
   onAdjustRpgCardRarity?: (cardId: string, delta: 1 | -1) => boolean;
 }
@@ -164,10 +165,12 @@ export const Hand = memo(function Hand({
   disableSpringMotion = false,
   watercolorOnlyCards = false,
   isCardPlayable,
+  getCardLockReason,
   hideElements: _hideElements = false,
   onAdjustRpgCardRarity: _onAdjustRpgCardRarity,
 }: HandProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [tappedCards, setTappedCards] = useState<Record<string, boolean>>({});
   const neonMode = FORCE_NEON_CARD_STYLE;
   const effectiveWatercolorOnly = watercolorOnlyCards && !neonMode;
   const pendingDragRef = useRef<{
@@ -191,6 +194,34 @@ export const Hand = memo(function Hand({
     () => cards.filter(isHandCardPlayable),
     [cards, isHandCardPlayable],
   );
+  const cardIdSet = useMemo(() => new Set(cards.map((card) => card.id)), [cards]);
+
+  useEffect(() => {
+    setTappedCards((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      Object.keys(next).forEach((id) => {
+        if (!cardIdSet.has(id)) {
+          delete next[id];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [cardIdSet]);
+
+  const handleCardTap = useCallback((card: CardType) => {
+    if (!card.canTap) return;
+    setTappedCards((prev) => {
+      const next = { ...prev };
+      if (next[card.id]) {
+        delete next[card.id];
+      } else {
+        next[card.id] = true;
+      }
+      return next;
+    });
+  }, []);
   const minCenterDistance = cardWidth;
   const maxCenterDistance = cardWidth * 1.5;
   const rawPositions = useMemo(
@@ -385,6 +416,7 @@ export const Hand = memo(function Hand({
             }
             const flashOffsetSec = (Math.abs(cardHash) % 120) / 100;
             const isPlayable = isHandCardPlayable(card);
+            const lockReason = !isPlayable ? getCardLockReason?.(card) : undefined;
             const rawApCost = Number(card.rpgApCost ?? 0);
             const apCost = Number.isFinite(rawApCost) ? Math.max(0, Math.round(rawApCost)) : 0;
             const effectiveRarity = resolveEffectiveRarity(card, orimDefinitions);
@@ -427,6 +459,8 @@ export const Hand = memo(function Hand({
               );
             const inspectProgress = longPressInspect.getProgressForId(card.id);
             const isInspecting = longPressInspect.isPressingId(card.id);
+            const isTapped = card.canTap ? Boolean(tappedCards[card.id]) : false;
+            const cardClickEnabled = interactionMode === 'click' && isPlayable && (onCardClick || card.canTap);
             const handlePressStart = (event: React.PointerEvent) => {
               if (!isPlayable) return;
               if (canDrag && onCardLongPress && event.pointerType === 'touch') {
@@ -475,6 +509,9 @@ export const Hand = memo(function Hand({
               if (longPressInspect.shouldSuppressClick(card.id)) {
                 return;
               }
+              if (card.canTap) {
+                handleCardTap(card);
+              }
               onCardClick?.(card);
             };
 
@@ -504,6 +541,7 @@ export const Hand = memo(function Hand({
                 onPointerMove={handlePressMove}
                 onPointerUp={handlePressEnd}
                 onPointerCancel={handlePressEnd}
+                title={lockReason}
               >
                 {isUpgraded && (
                   <div
@@ -521,29 +559,27 @@ export const Hand = memo(function Hand({
                   pinnable
                   disabled={!tooltipEnabled}
                 >
-                  <Card
-                    card={effectiveCard}
-                    size={cardSize}
-                    handMinimalOverlay={handMinimalOverlay}
-                    canPlay={isPlayable}
-                    isDragging={isDragging}
-                    isAnyCardDragging={isAnyCardDragging}
-                    onClick={
-                      interactionMode === 'click' && isPlayable && onCardClick
-                        ? handleCardClick
-                        : undefined
-                    }
-                    onDragStart={canDrag && !onCardLongPress ? handleDragStart : undefined}
-                    showGraphics={effectiveWatercolorOnly ? false : showGraphics}
-                    isDimmed={false}
-                    orimDefinitions={orimDefinitions}
-                    borderColorOverride={handBorderColorOverride}
-                    boxShadowOverride={handBoxShadowOverride}
-                    disableTilt={effectiveWatercolorOnly}
-                    disableLegacyShine={effectiveWatercolorOnly}
-                    watercolorOnly={effectiveWatercolorOnly}
-                    disableTemplateArt
-                  />
+                    <Card
+                      card={effectiveCard}
+                      size={cardSize}
+                      handMinimalOverlay={handMinimalOverlay}
+                      canPlay={isPlayable}
+                      isDragging={isDragging}
+                      isAnyCardDragging={isAnyCardDragging}
+                      onClick={cardClickEnabled ? handleCardClick : undefined}
+                      onDragStart={canDrag && !onCardLongPress ? handleDragStart : undefined}
+                      showGraphics={effectiveWatercolorOnly ? false : showGraphics}
+                      isDimmed={false}
+                      orimDefinitions={orimDefinitions}
+                      borderColorOverride={handBorderColorOverride}
+                      boxShadowOverride={handBoxShadowOverride}
+                      disableTilt={effectiveWatercolorOnly}
+                      disableLegacyShine={effectiveWatercolorOnly}
+                      watercolorOnly={effectiveWatercolorOnly}
+                      disableTemplateArt
+                      faceDown={isTapped}
+                      canTap={!!card.canTap}
+                    />
                 </Tooltip>
                 {isInspecting && (
                   <svg
@@ -565,6 +601,11 @@ export const Hand = memo(function Hand({
                       strokeDashoffset={472 * (1 - inspectProgress)}
                     />
                   </svg>
+                )}
+                {!isPlayable && lockReason && (
+                  <div className="pointer-events-none absolute -bottom-4 left-1/2 max-w-[92%] -translate-x-1/2 truncate rounded border border-game-teal/30 bg-black/75 px-1 py-[1px] text-[8px] text-game-teal/75">
+                    {lockReason}
+                  </div>
                 )}
               </motion.div>
             );
