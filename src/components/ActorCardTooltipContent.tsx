@@ -94,9 +94,7 @@ export function ActorCardTooltipContent({
         </div>
         <div>
           <span className="text-game-white/50">Power:</span>{' '}
-          <span className={powerUsed > (actor.powerMax ?? 0) ? 'text-game-pink' : 'text-game-teal'}>
-            {powerUsed}/{actor.powerMax ?? 0}
-          </span>
+          <span className="text-game-teal">{powerUsed}</span>
         </div>
       </div>
 

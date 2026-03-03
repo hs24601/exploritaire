@@ -949,3 +949,41 @@ html.drag-perf-mode .target-swirl-sparkles {
   animation: none !important;
   transition: none !important;
 }
+
+/* --- Perspective Shift Tableau Method Styles --- */
+.perspective-foundation-container,
+.tableau-group-perspective-container {
+  padding: 0;
+  perspective: 2000px;
+  display: flex;
+  justify-content: center;
+  overflow: visible;
+  width: 100%;
+}
+
+.perspective-foundation-content,
+.tableau-group-perspective-content {
+  transform: perspective(80em) rotateY(-42deg) rotateX(2.4deg);
+  box-shadow:
+    -20px 60px 123px -25px rgba(22, 31, 39, 0.6),
+    -10px 35px 75px -35px rgba(19, 26, 32, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(213, 220, 226, 0.4);
+  border-bottom-color: rgba(184, 194, 204, 0.5);
+  transition: box-shadow 1.2s ease, background 0.3s ease;
+  padding: 10px;
+  background: rgba(10, 15, 20, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  transform-style: preserve-3d;
+}
+
+.perspective-foundation-content:hover,
+.tableau-group-perspective-content:hover {
+  box-shadow:
+    -30px 80px 140px -20px rgba(22, 31, 39, 0.7),
+    -15px 45px 90px -30px rgba(19, 26, 32, 0.3);
+  background: rgba(20, 25, 35, 0.5);
+}

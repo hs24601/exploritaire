@@ -13,6 +13,7 @@ interface FoundationProps {
   cards: CardType[];
   index: number;
   onFoundationClick: (index: number) => void;
+  allowClickInDnd?: boolean;
   canReceive: boolean;
   scale?: number;
   isGuidanceTarget?: boolean;
@@ -50,9 +51,11 @@ interface FoundationProps {
   neonGlowColorOverride?: string;
   neonGlowShadowOverride?: string;
   onDestructionComplete?: () => void;
+  isTapped?: boolean;
 }
 
 const FOUNDATION_TILT_MAX_DEG = 2.4;
+const FOUNDATION_TAP_FLIP_DURATION_MS = 700;
 
 const getFoundationTilt = (cardId: string) => {
   let hash = 0;
@@ -84,6 +87,7 @@ export const Foundation = memo(function Foundation({
   cards,
   index,
   onFoundationClick,
+  allowClickInDnd = false,
   canReceive,
   scale = 1,
   isGuidanceTarget = false,
@@ -108,11 +112,13 @@ export const Foundation = memo(function Foundation({
   neonGlowColorOverride,
   neonGlowShadowOverride,
   onDestructionComplete,
+  isTapped = false,
 }: FoundationProps) {
   const globalScale = useCardScale();
   const cardWidth = CARD_SIZE.width * globalScale * scale;
   const cardHeight = CARD_SIZE.height * globalScale * scale;
-  const showClickHighlight = interactionMode === 'click' && (canReceive || isGuidanceTarget);
+  const canClickFoundation = interactionMode === 'click' || (interactionMode === 'dnd' && allowClickInDnd);
+  const showClickHighlight = canClickFoundation && (canReceive || isGuidanceTarget);
   const showDragHighlight = interactionMode === 'dnd' && isDragTarget;
   const showHighlight = showClickHighlight || showDragHighlight;
   const highlightColor = isGuidanceTarget ? '#7fdbca' : '#e6b31e';
@@ -184,7 +190,7 @@ export const Foundation = memo(function Foundation({
       )}
       <motion.div
         ref={refCallback}
-        onClick={interactionMode === 'click' ? () => onFoundationClick(index) : undefined}
+        onClick={canClickFoundation ? () => onFoundationClick(index) : undefined}
         whileHover={showClickHighlight ? { scale: 1.05 } : {}}
         whileTap={showClickHighlight ? { scale: 0.98 } : {}}
         animate={
@@ -359,6 +365,12 @@ export const Foundation = memo(function Foundation({
                 comboCount,
               }
               : undefined;
+            const tappedFoundationOverlay = isTop && resolvedFoundationOverlay
+              ? {
+                ...resolvedFoundationOverlay,
+                rankDisplay: '<>',
+              }
+              : undefined;
             return (
               <div
                 key={card.id}
@@ -372,38 +384,126 @@ export const Foundation = memo(function Foundation({
                   transition: 'opacity 0.4s ease',
                 }}
               >
-                <Card
-                  card={card}
-                  isFoundation
-                  isAnyCardDragging={isAnyCardDragging}
-                  isDimmed={isDimmed}
-                  showGraphics={showWatercolorOnlyForCard ? false : showGraphics}
-                  borderColorOverride={
-                    borderColorOverride
-                    ?? (neonGlowColorOverride && !isDimmed ? neonGlowColorOverride : undefined)
-                  }
-                  boxShadowOverride={
-                    boxShadowOverride
-                    ?? (
-                      !isDimmed && !showWatercolorOnlyForCard && !isWildSentinelTop
-                        ? (
-                          neonGlowShadowOverride
-                            ?? (neonGlowColorOverride
-                              ? `0 0 28px ${neonGlowColorOverride}ee, inset 0 0 20px ${neonGlowColorOverride}55`
-                              : undefined)
-                        )
-                        : undefined
-                    )
-                  }
-                  disableLegacyShine={true}
-                  watercolorOnly={showWatercolorOnlyForCard}
-                  hideElements={hideElements}
-                  showFoundationActorSecretHolo={false}
-                  disableTilt
-                  disableHoverLift
-                  disableHoverGlow
-                  foundationOverlay={resolvedFoundationOverlay}
-                />
+                {isTop ? (
+                  <div className="relative h-full w-full" style={{ perspective: '1000px' }}>
+                    <div
+                      className="relative h-full w-full"
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        transition: `transform ${FOUNDATION_TAP_FLIP_DURATION_MS}ms cubic-bezier(0.4, 0.2, 0.2, 1)`,
+                        transform: isTapped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                      }}
+                    >
+                      <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden' }}>
+                        <Card
+                          card={card}
+                          isFoundation
+                          isAnyCardDragging={isAnyCardDragging}
+                          isDimmed={isDimmed}
+                          showGraphics={showWatercolorOnlyForCard ? false : showGraphics}
+                          borderColorOverride={
+                            borderColorOverride
+                            ?? (neonGlowColorOverride && !isDimmed ? neonGlowColorOverride : undefined)
+                          }
+                          boxShadowOverride={
+                            boxShadowOverride
+                            ?? (
+                              !isDimmed && !showWatercolorOnlyForCard && !isWildSentinelTop
+                                ? (
+                                  neonGlowShadowOverride
+                                    ?? (neonGlowColorOverride
+                                      ? `0 0 28px ${neonGlowColorOverride}ee, inset 0 0 20px ${neonGlowColorOverride}55`
+                                      : undefined)
+                                )
+                                : undefined
+                            )
+                          }
+                          disableLegacyShine={true}
+                          watercolorOnly={showWatercolorOnlyForCard}
+                          hideElements={hideElements}
+                          showFoundationActorSecretHolo={false}
+                          disableTilt
+                          disableHoverLift
+                          disableHoverGlow
+                          foundationOverlay={resolvedFoundationOverlay}
+                          faceDown={false}
+                        />
+                      </div>
+                      <div
+                        className="absolute inset-0"
+                        style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                      >
+                        <Card
+                          card={card}
+                          isFoundation
+                          isAnyCardDragging={isAnyCardDragging}
+                          isDimmed={isDimmed}
+                          showGraphics={showWatercolorOnlyForCard ? false : showGraphics}
+                          borderColorOverride={
+                            borderColorOverride
+                            ?? (neonGlowColorOverride && !isDimmed ? neonGlowColorOverride : undefined)
+                          }
+                          boxShadowOverride={
+                            boxShadowOverride
+                            ?? (
+                              !isDimmed && !showWatercolorOnlyForCard && !isWildSentinelTop
+                                ? (
+                                  neonGlowShadowOverride
+                                    ?? (neonGlowColorOverride
+                                      ? `0 0 28px ${neonGlowColorOverride}ee, inset 0 0 20px ${neonGlowColorOverride}55`
+                                      : undefined)
+                                )
+                                : undefined
+                            )
+                          }
+                          disableLegacyShine={true}
+                          watercolorOnly={showWatercolorOnlyForCard}
+                          hideElements={hideElements}
+                          showFoundationActorSecretHolo={false}
+                          disableTilt
+                          disableHoverLift
+                          disableHoverGlow
+                          foundationOverlay={tappedFoundationOverlay}
+                          faceDown={false}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Card
+                    card={card}
+                    isFoundation
+                    isAnyCardDragging={isAnyCardDragging}
+                    isDimmed={isDimmed}
+                    showGraphics={showWatercolorOnlyForCard ? false : showGraphics}
+                    borderColorOverride={
+                      borderColorOverride
+                      ?? (neonGlowColorOverride && !isDimmed ? neonGlowColorOverride : undefined)
+                    }
+                    boxShadowOverride={
+                      boxShadowOverride
+                      ?? (
+                        !isDimmed && !showWatercolorOnlyForCard && !isWildSentinelTop
+                          ? (
+                            neonGlowShadowOverride
+                              ?? (neonGlowColorOverride
+                                ? `0 0 28px ${neonGlowColorOverride}ee, inset 0 0 20px ${neonGlowColorOverride}55`
+                                : undefined)
+                          )
+                          : undefined
+                      )
+                    }
+                    disableLegacyShine={true}
+                    watercolorOnly={showWatercolorOnlyForCard}
+                    hideElements={hideElements}
+                    showFoundationActorSecretHolo={false}
+                    disableTilt
+                    disableHoverLift
+                    disableHoverGlow
+                    foundationOverlay={resolvedFoundationOverlay}
+                    faceDown={false}
+                  />
+                )}
               </div>
             );
           })}

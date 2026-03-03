@@ -1,6 +1,7 @@
 import { memo, useMemo, useCallback } from 'react';
 import { useGraphics } from '../contexts/GraphicsContext';
 import { useCardScale } from '../contexts/CardScaleContext';
+import { usePerspective } from '../contexts/PerspectiveContext';
 import type { GameState, Card as CardType, Move, SelectedCard, Actor } from '../engine/types';
 import { GameButton } from './GameButton';
 import { Tableau, TableauGroup } from './Tableau';
@@ -41,7 +42,6 @@ interface PlayingScreenProps {
     autoPlay: () => void;
     rewindLastCard: () => boolean;
   };
-  forcedPerspectiveEnabled?: boolean;
 }
 
 export const PlayingScreen = memo(function PlayingScreen({
@@ -61,10 +61,10 @@ export const PlayingScreen = memo(function PlayingScreen({
   handleDragStart,
   setFoundationRef,
   actions,
-  forcedPerspectiveEnabled = true,
 }: PlayingScreenProps) {
   const showGraphics = useGraphics();
   const globalCardScale = useCardScale();
+  const { perspectiveEnabled: forcedPerspectiveEnabled } = usePerspective();
   const handleFoundationClick = useCallback((foundationIndex: number) => {
     actions.playToFoundation(foundationIndex);
   }, [actions.playToFoundation]);
@@ -108,46 +108,22 @@ export const PlayingScreen = memo(function PlayingScreen({
           {activeTileName.toUpperCase()}
         </div>
         {/* Tableaus */}
-        {forcedPerspectiveEnabled ? (
-          <TableauGroup
-            mode="perspective"
-            tableaus={gameState.tableaus}
-            selectedCard={selectedCard}
-            onCardSelect={actions.selectCard}
-            guidanceMoves={guidanceMoves}
-            interactionMode={gameState.interactionMode}
-            showGraphics={showGraphics}
-            cardScale={foundationCardScale}
-            onDragStart={handleDragStart}
-            draggingCardId={isDragging ? draggingCard?.id : null}
-            isAnyCardDragging={isDragging}
-            revealNextRow={cloudSightActive}
-            tableauCanPlay={tableauCanPlay}
-            noValidMoves={noValidMoves}
-          />
-        ) : (
-          <div className="relative flex gap-3">
-            {gameState.tableaus.map((tableau, idx) => (
-              <Tableau
-                key={idx}
-                cards={tableau}
-                tableauIndex={idx}
-                canPlay={tableauCanPlay[idx]}
-                noValidMoves={noValidMoves}
-                selectedCard={selectedCard}
-                onCardSelect={actions.selectCard}
-                guidanceMoves={guidanceMoves}
-                interactionMode={gameState.interactionMode}
-                onDragStart={handleDragStart}
-                draggingCardId={isDragging ? draggingCard?.id : null}
-                isAnyCardDragging={isDragging}
-                showGraphics={showGraphics}
-                cardScale={foundationCardScale}
-                revealNextRow={cloudSightActive}
-              />
-            ))}
-          </div>
-        )}
+        <TableauGroup
+          tableaus={gameState.tableaus}
+          selectedCard={selectedCard}
+          onCardSelect={actions.selectCard}
+          guidanceMoves={guidanceMoves}
+          interactionMode={gameState.interactionMode}
+          showGraphics={showGraphics}
+          cardScale={foundationCardScale}
+          onDragStart={handleDragStart}
+          draggingCardId={isDragging ? draggingCard?.id : null}
+          isAnyCardDragging={isDragging}
+          revealNextRow={cloudSightActive}
+          tableauCanPlay={tableauCanPlay}
+          noValidMoves={noValidMoves}
+          className="relative flex gap-3"
+        />
 
         {/* Foundations */}
         <div className="flex flex-col items-center gap-4" style={{ marginTop: -foundationOffsetAdjusted }}>
