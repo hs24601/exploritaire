@@ -15,6 +15,7 @@ import { getBlueprintDefinition } from '../engine/blueprints';
 import { getActorDisplayGlyph } from '../engine/actors';
 import { getOrimAccentColor } from '../utils/orimColors';
 import { mainWorldMap } from '../data/worldMap';
+import { usePerspective } from '../contexts/PerspectiveContext';
 import type { Blueprint, BlueprintCard, Card as CardType, Suit, Element, OrimDefinition } from '../engine/types';
 import type { useGameEngine } from '../hooks/useGameEngine';
 import type { EncounterCombatActions } from './combat/contracts';
@@ -38,7 +39,6 @@ export interface GameShellProps {
   // Global settings
   lightingEnabled: boolean;
   paintLuminosityEnabled: boolean;
-  forcedPerspectiveEnabled: boolean;
   showText: boolean;
   zenModeEnabled: boolean;
   isGamePaused: boolean;
@@ -52,8 +52,6 @@ export interface GameShellProps {
   onOpenSettings: () => void;
   onTogglePaintLuminosity: () => void;
   onPositionChange: (x: number, y: number) => void;
-  onToggleCombatSandbox: () => void;
-  combatSandboxOpen: boolean;
 
   // Dev/monitoring
   fps: number;
@@ -94,7 +92,6 @@ export function GameShell({
   showGraphics,
   lightingEnabled,
   paintLuminosityEnabled,
-  forcedPerspectiveEnabled,
   showText,
   zenModeEnabled,
   isGamePaused,
@@ -105,8 +102,6 @@ export function GameShell({
   onOpenSettings,
   onTogglePaintLuminosity,
   onPositionChange,
-  onToggleCombatSandbox,
-  combatSandboxOpen,
   fps,
   serverAlive,
   onOpenPoiEditorAt,
@@ -196,7 +191,6 @@ export function GameShell({
   // Auto wave-battle trigger
   useEffect(() => {
     if (!currentPlayerCoords) return;
-    if (gameState.playtestVariant !== 'rpg') return;
     const cell = mainWorldMap.cells.find(
       (entry) =>
         entry.gridPosition.col === currentPlayerCoords.x
@@ -330,7 +324,7 @@ export function GameShell({
           });
         }
         if (card) {
-          if (gameState.playtestVariant === 'rpg' && card.id.startsWith('keru-archetype-')) {
+          if (card.id.startsWith('keru-archetype-')) {
             const archetype = card.id.replace('keru-archetype-', '');
             const availableAspectIds = new Set(
               (gameState.orimDefinitions ?? [])
@@ -353,7 +347,7 @@ export function GameShell({
             draggedHandCardRef.current = null;
             return;
           }
-          if (gameState.playtestVariant === 'rpg' && card.id.startsWith('reward-orim-')) {
+          if (card.id.startsWith('reward-orim-')) {
             const orimId = card.id.replace('reward-orim-', '');
             const party = gameState.activeSessionTileId
               ? gameState.tileParties[gameState.activeSessionTileId] ?? []
@@ -367,7 +361,7 @@ export function GameShell({
             draggedHandCardRef.current = null;
             return;
           }
-          if (gameState.playtestVariant === 'rpg' && card.id.startsWith('rpg-')) {
+          if (card.id.startsWith('rpg-')) {
             const point = dropPoint;
             if (point) {
               const actorTarget = document
@@ -588,7 +582,7 @@ export function GameShell({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      {showPuzzleOverlay && isPuzzleOpen && !combatSandboxOpen && (gameState.phase === 'playing' || gameState.phase === 'biome') && (
+      {showPuzzleOverlay && isPuzzleOpen && (gameState.phase === 'playing' || gameState.phase === 'biome') && (
         <div className="fixed inset-0 z-[9000]">
           <div
             className="absolute inset-0 pointer-events-none"
@@ -620,7 +614,6 @@ export function GameShell({
                 handleDragStart={handleDragStart}
                 setFoundationRef={setFoundationRef}
                 actions={playingScreenActions}
-                forcedPerspectiveEnabled={forcedPerspectiveEnabled}
               />
             )}
 
@@ -673,13 +666,10 @@ export function GameShell({
                 timeScale={timeScale}
                 onOpenSettings={onOpenSettings}
                 onTogglePause={onTogglePause}
-                onToggleCombatSandbox={onToggleCombatSandbox}
-                combatSandboxOpen={combatSandboxOpen}
                 wildAnalysis={wildAnalysis}
                 combatActions={combatActions}
                 explorationStepRef={explorationStepRef}
                 onPositionChange={handleCombatPositionChange}
-                forcedPerspectiveEnabled={forcedPerspectiveEnabled}
                 eventActions={eventActions}
               />
             )}
@@ -689,11 +679,7 @@ export function GameShell({
       )}
 
       {/* Garden screen */}
-      {gameState.playtestVariant !== 'party-foundations'
-        && gameState.playtestVariant !== 'party-battle'
-        && gameState.playtestVariant !== 'rpg'
-        && !(gameState.phase === 'biome' && combatSandboxOpen) && (
-        <Table
+      <Table
           pendingCards={gameState.pendingCards}
           buildPileProgress={gameState.buildPileProgress}
           tiles={gameState.tiles}
@@ -746,8 +732,7 @@ export function GameShell({
           showGraphics={showGraphics}
           serverAlive={serverAlive}
           fps={fps}
-        />
-      )}
+      />
 
       {returnModal.open && (
         <div className="fixed inset-0 z-[9500]">

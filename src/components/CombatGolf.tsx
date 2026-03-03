@@ -50,6 +50,7 @@ import {
   WILD_SENTINEL_RANK,
 } from '../engine/constants';
 import { useCardScale, useCardScalePreset } from '../contexts/CardScaleContext';
+import { usePerspective } from '../contexts/PerspectiveContext';
 import { Hand } from './Hand';
 import { PartyBench } from './PartyBench';
 import { canPlayCardWithWild, isSequential } from '../engine/rules';
@@ -344,8 +345,6 @@ interface CombatGolfProps {
   isGamePaused?: boolean;
   timeScale?: number;
   onTogglePause?: () => void;
-  onToggleCombatSandbox?: () => void;
-  combatSandboxOpen?: boolean;
   highPerformanceTimer?: boolean;
   onPositionChange?: (x: number, y: number) => void;
   wildAnalysis?: { key: string; sequence: Move[]; maxCount: number } | null;
@@ -355,7 +354,6 @@ interface CombatGolfProps {
   onToggleInfiniteBenchSwaps?: () => void;
   onConsumeBenchSwap?: () => void;
   explorationStepRef?: { current: (() => void) | null };
-  forcedPerspectiveEnabled?: boolean;
 }
 
 interface TurnTimerRailProps {
@@ -653,8 +651,6 @@ export const CombatGolf = memo(function CombatGolf({
   isGamePaused = false,
   timeScale = 1,
   onTogglePause,
-  onToggleCombatSandbox,
-  combatSandboxOpen = false,
   highPerformanceTimer = false,
   wildAnalysis = null,
   actions,
@@ -666,9 +662,9 @@ export const CombatGolf = memo(function CombatGolf({
   onOpenPoiEditorAt,
   poiRewardResolvedAt,
   explorationStepRef,
-  forcedPerspectiveEnabled = true,
 }: CombatGolfProps) {
   const showGraphics = useGraphics();
+  const { perspectiveEnabled: forcedPerspectiveEnabled } = usePerspective();
   const [explorationHeading, setExplorationHeading] = useState<Direction>('N');
   const explorationSpawnX = mainWorldMap.defaultSpawnPosition.col;
   const explorationSpawnY = mainWorldMap.defaultSpawnPosition.row;
@@ -840,9 +836,8 @@ export const CombatGolf = memo(function CombatGolf({
   const biomeContainerRef = useRef<HTMLDivElement>(null!);
   const biomeContainerOriginRef = useRef({ left: 0, top: 0 });
   const globalCardScale = useCardScale();
-  const layoutVariant = gameState.playtestVariant ?? 'single-foundation';
-  const isPartyBattleLayout = layoutVariant === 'party-battle' || layoutVariant === 'rpg';
-  const isPartyFoundationsLayout = layoutVariant === 'party-foundations' || isPartyBattleLayout;
+  const isPartyBattleLayout = true;
+  const isPartyFoundationsLayout = true;
   useEffect(() => {
     explorationCurrentNodeIdRef.current = explorationCurrentNodeId;
   }, [explorationCurrentNodeId]);
@@ -2888,7 +2883,7 @@ export const CombatGolf = memo(function CombatGolf({
     getColumnSourcesForDirection,
     getExplorationSourceKey,
   });
-  const suspendExplorationTableauSync = combatSandboxOpen || gameState.currentBiome === 'random_wilds';
+  const suspendExplorationTableauSync = gameState.currentBiome === 'random_wilds';
   useExplorationTableauDisplaySync({
     suspendSync: suspendExplorationTableauSync,
     isRpgMode,
@@ -3304,21 +3299,7 @@ export const CombatGolf = memo(function CombatGolf({
     setGameAudioMuted(next);
   }, [soundMuted]);
   const currentCoords = getExplorationNodeCoordinates(explorationCurrentNodeId);
-  const handleBattleButtonClick = useCallback(() => {
-    onToggleCombatSandbox?.();
-  }, [onToggleCombatSandbox]);
   const coordsLabel = currentCoords ? `${currentCoords.x},${currentCoords.y}` : '--,--';
-  const topRightBattleButton = (
-    <button
-      type="button"
-      onClick={handleBattleButtonClick}
-      className="h-[30px] min-w-[58px] rounded border border-game-gold/70 bg-game-bg-dark/90 px-2 text-[12px] font-mono tracking-[0.5px] text-game-gold shadow-neon-gold flex items-center justify-center"
-      title="Toggle combat sandbox"
-      aria-label="Toggle combat sandbox"
-    >
-      BATTLE
-    </button>
-  );
   const topRightCoords = (
     <button
       type="button"
@@ -3364,7 +3345,6 @@ export const CombatGolf = memo(function CombatGolf({
           {relicTray}
         </div>
         <div className="justify-self-end pointer-events-auto flex items-center gap-2">
-          {topRightBattleButton}
           {topRightCoords}
           {topRightSoundToggle}
         </div>
@@ -3673,7 +3653,7 @@ export const CombatGolf = memo(function CombatGolf({
     );
   }, [ctrlHeld, gameState.tableaus, activeParty, getPlayableFoundationsForCard, isEnemyTurn]);
 
-  // Compute foundation blockers for light shadows (only in party-foundations with lighting enabled)
+  // Compute foundation blockers for light shadows in RPG combat layout.
   useEffect(() => {
     if (!lightingEnabled || !true) {
       setFoundationBlockers([]);
@@ -4534,7 +4514,6 @@ export const CombatGolf = memo(function CombatGolf({
               label={sharedTimerLabel}
               fillPercent={sharedTimerFillPercent}
               highPerformanceMode={highPerformanceTimer}
-              elevateForSandbox={combatSandboxOpen}
               timerRef={!isEnemyTurn && !introBlocking ? timerRef : undefined}
               totalMs={isEnemyTurn ? ENEMY_TURN_TIME_BUDGET_MS : playerVisualMaxMs}
               remainingMsOverride={!isEnemyTurn && !introBlocking ? playerRemainingMs : undefined}
@@ -4605,7 +4584,6 @@ export const CombatGolf = memo(function CombatGolf({
             handleToggleMap={handleToggleMap}
             onRotateLeft={() => handleExplorationHeadingStep(false)}
             onRotateRight={() => handleExplorationHeadingStep(true)}
-            forcedPerspectiveEnabled={forcedPerspectiveEnabled}
             gameState={gameState}
             selectedCard={selectedCard}
             handleTableauClick={handleTableauClick}
@@ -5396,7 +5374,6 @@ export const CombatGolf = memo(function CombatGolf({
           label={sharedTimerLabel}
           fillPercent={sharedTimerFillPercent}
           highPerformanceMode={highPerformanceTimer}
-          elevateForSandbox={combatSandboxOpen}
           timerRef={!isEnemyTurn && !introBlocking ? timerRef : undefined}
           totalMs={isEnemyTurn ? ENEMY_TURN_TIME_BUDGET_MS : playerVisualMaxMs}
           remainingMsOverride={!isEnemyTurn && !introBlocking ? playerRemainingMs : undefined}

@@ -269,7 +269,6 @@ const ActorCard = memo(function ActorCard({
   if (!definition) return null;
   const deckCards = actorDeck?.cards ?? [];
   const powerUsed = getDeckPowerUsed(actorDeck, orimInstances, orimDefinitions);
-  const powerMax = actor.powerMax ?? 0;
   const renderSize = size ?? ACTOR_CARD_SIZE;
   const renderScale = scale ?? (renderSize.height / ACTOR_CARD_SIZE.height);
   const zoomLevel = cameraScale ?? 1;
@@ -492,13 +491,7 @@ const ActorCard = memo(function ActorCard({
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between text-[11px] text-game-white/70">
                       <span>Power</span>
-                      <span
-                        style={{
-                          color: powerMax > 0 && powerUsed > powerMax ? '#ff6b6b' : '#7fdbca',
-                        }}
-                      >
-                        {powerUsed}/{powerMax}
-                      </span>
+                      <span style={{ color: '#7fdbca' }}>{powerUsed}</span>
                     </div>
                     {deckCards.length === 0 ? (
                       <div className="text-[11px] text-game-white/50">No deck configured</div>
@@ -2329,13 +2322,9 @@ export const Table = memo(function Table({
             const targetCard = deck?.cards.find((card) => card.id === cardId);
             const targetSlot = targetCard?.slots.find((slot) => slot.id === slotId);
             if (targetSlot && !targetSlot.orimId) {
-              const definition = getOrimDefinition(orimDefinitions, current.orim.definitionId);
-              const powerCost = definition?.powerCost ?? 0;
               const actor = availableActorsRef.current.find((entry) => entry.id === actorId)
                 ?? Object.values(tilePartiesRef.current).flat().find((entry) => entry.id === actorId);
-              const currentPower = getDeckPowerUsed(deck, orimInstances, orimDefinitions);
-              const powerMax = actor?.powerMax ?? 0;
-              const canEquip = powerMax === 0 || currentPower + powerCost <= powerMax;
+              const canEquip = !!actor;
               if (current.orimSource?.type === 'slot') {
                 if (
                   current.orimSource.actorId !== actorId ||

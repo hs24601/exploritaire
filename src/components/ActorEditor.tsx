@@ -593,7 +593,6 @@ const createBlankActor = (name = 'New Actor', type: ActorType = 'adventurer'): A
   baseEvasion: 0,
   baseAccuracy: 100,
   basePower: 0,
-  basePowerMax: 3,
   orimSlots: [{ locked: false }],
 });
 
@@ -647,7 +646,6 @@ const serializeActorDefinitions = (definitions: ActorDefinition[]) => {
     if (actor.baseEvasion !== undefined) lines.push(`    baseEvasion: ${actor.baseEvasion},`);
     if (actor.baseAccuracy !== undefined) lines.push(`    baseAccuracy: ${actor.baseAccuracy},`);
     if (actor.basePower !== undefined) lines.push(`    basePower: ${actor.basePower},`);
-    if (actor.basePowerMax !== undefined) lines.push(`    basePowerMax: ${actor.basePowerMax},`);
     if (actor.orimSlots && actor.orimSlots.length > 0) {
       lines.push('    orimSlots: [');
       actor.orimSlots.forEach((slot) => {
@@ -883,6 +881,8 @@ export function ActorEditor({
     triggers: [],
     lifecycle: { ...DEFAULT_ABILITY_LIFECYCLE },
   });
+  const [editAbilityDeckCardIndex, setEditAbilityDeckCardIndex] = useState<number | null>(null);
+  const [editAbilityTurn, setEditAbilityTurn] = useState<TurnPlayability>('player');
   const [showNewAbilityForm, setShowNewAbilityForm] = useState(false);
 
   useEffect(() => {
@@ -1695,10 +1695,6 @@ export function ActorEditor({
                         <span className="text-[10px] text-game-white/60">Power</span>
                         <input type="number" value={selected.basePower ?? 0} onChange={(e) => updateSelected((prev) => ({ ...prev, basePower: Number(e.target.value) }))} className="text-xs font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1" />
                       </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] text-game-white/60">Power Max</span>
-                        <input type="number" value={selected.basePowerMax ?? 3} onChange={(e) => updateSelected((prev) => ({ ...prev, basePowerMax: Number(e.target.value) }))} className="text-xs font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1" />
-                      </label>
                     </div>
                   </div>
 
@@ -1998,10 +1994,17 @@ export function ActorEditor({
                   return (
                     <div className="flex flex-col gap-3 text-xs font-mono">
                       <div className="flex items-center justify-between border border-game-teal/25 rounded px-2 py-2 bg-game-bg-dark/60">
-                        <div className="text-[11px] text-game-white/70 font-semibold">Create Card</div>
+                        <div className="text-[11px] text-game-white/70 font-semibold">Edit Card</div>
                         <button
                           type="button"
-                          onClick={() => setShowNewAbilityForm((prev) => !prev)}
+                          onClick={() => setShowNewAbilityForm((prev) => {
+                            const next = !prev;
+                            if (next) {
+                              setEditAbilityDeckCardIndex(null);
+                              setEditAbilityTurn('player');
+                            }
+                            return next;
+                          })}
                           className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-teal"
                         >
                           {showNewAbilityForm ? 'Close' : '+ New'}
@@ -2107,6 +2110,35 @@ export function ActorEditor({
                             />
                             Allow tap configuration (actor/foundation interaction)
                           </label>
+                          <div className="flex flex-wrap items-center gap-2 text-[10px] text-game-white/60">
+                            <label className="flex items-center gap-1 text-[10px] text-game-white/60">
+                              <span>Turn</span>
+                              <select
+                                value={editAbilityTurn}
+                                onChange={(e) => {
+                                  const nextTurn = e.target.value as TurnPlayability;
+                                  const normalizedTurn = nextTurn === 'enemy' || nextTurn === 'anytime' ? nextTurn : 'player';
+                                  setEditAbilityTurn(normalizedTurn);
+                                  if (!selected || editAbilityDeckCardIndex == null || editAbilityDeckCardIndex < 0) return;
+                                  const nextPlayableTurns = [...(deck.playableTurns ?? createDefaultPlayableTurns(deck.values.length))];
+                                  while (nextPlayableTurns.length < deck.values.length) nextPlayableTurns.push('player');
+                                  nextPlayableTurns[editAbilityDeckCardIndex] = normalizedTurn;
+                                  const next = { ...deck, playableTurns: nextPlayableTurns };
+                                  commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
+                                }}
+                                className="w-[106px] text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-1 py-[2px]"
+                              >
+                                {TURN_PLAYABILITY_OPTIONS.map((option) => (
+                                  <option key={`edit-ability-turn-${option.value}`} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <div className="text-[10px] text-game-white/45">
+                              Lifecycle: {summarizeAbilityLifecycle(editAbilityLifecycle)}
+                            </div>
+                          </div>
                           <div className="flex flex-col gap-2">
                             <div className="text-[10px] text-game-white/60 uppercase tracking-wide">Effects</div>
                             <div className="flex items-center justify-between gap-2 rounded border border-game-teal/20 bg-game-bg-dark/50 px-2 py-1.5">
@@ -2739,7 +2771,7 @@ export function ActorEditor({
                                     enabledRarities.push('common');
                                     activeCards.push(true);
                                     notDiscardedCards.push(false);
-                                    playableTurns.push('player');
+                                    playableTurns.push(editAbilityTurn);
                                     cooldowns.push(0);
                                     slotsPerCard.push(1);
                                     starterOrim.push({ cardIndex: 0, slotIndex: 0, orimId: abilityId });
@@ -2757,6 +2789,7 @@ export function ActorEditor({
                                           if (slotIndex === 0) {
                                             values[cardIndex] = abilityDefaultValue;
                                             costByRarity[cardIndex] = normalizeCostByRarityEntry(costByRarity[cardIndex], abilityDefaultCost);
+                                            playableTurns[cardIndex] = editAbilityTurn;
                                           }
                                           starterOrim.push({ cardIndex, slotIndex, orimId: abilityId });
                                       return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
@@ -2785,6 +2818,8 @@ export function ActorEditor({
                                   triggers: [],
                                   lifecycle: { ...DEFAULT_ABILITY_LIFECYCLE },
                                 });
+                                setEditAbilityDeckCardIndex(null);
+                                setEditAbilityTurn('player');
                                 setShowNewAbilityForm(false);
                               }}
                             >
@@ -2840,7 +2875,6 @@ export function ActorEditor({
                           const primaryAbility = primaryAbilityId
                             ? abilities.find((ability) => ability.id === primaryAbilityId) ?? null
                             : null;
-                          const primaryLifecycle = normalizeAbilityLifecycle(primaryAbility?.lifecycle);
                           const actorScopedAbilities = abilities.filter((ability) => (
                             ability.parentActorId === selected.id || ability.id === primaryAbilityId
                           ));
@@ -2875,6 +2909,8 @@ export function ActorEditor({
                               ...hydrateAbility(primaryAbility),
                               parentActorId: primaryAbility.parentActorId ?? selected.id,
                             });
+                            setEditAbilityDeckCardIndex(index);
+                            setEditAbilityTurn(deck.playableTurns?.[index] ?? 'player');
                             setShowNewAbilityForm(true);
                           };
                           const handleRemoveCard = () => {
@@ -3038,33 +3074,6 @@ export function ActorEditor({
                                     </option>
                                   ))}
                                 </select>
-                              </div>
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <label className="flex items-center gap-1 text-[10px] text-game-white/60">
-                                    <span>Turn</span>
-                                    <select
-                                      value={deck.playableTurns?.[index] ?? 'player'}
-                                      onChange={(e) => {
-                                        const nextPlayableTurns = [...(deck.playableTurns ?? createDefaultPlayableTurns(deck.values.length))];
-                                        const nextValue = e.target.value as TurnPlayability;
-                                        nextPlayableTurns[index] = nextValue === 'enemy' || nextValue === 'anytime' ? nextValue : 'player';
-                                        const next = { ...deck, playableTurns: nextPlayableTurns };
-                                        commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                      }}
-                                      className="w-[106px] text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-1 py-[2px]"
-                                    >
-                                      {TURN_PLAYABILITY_OPTIONS.map((option) => (
-                                        <option key={`${selected.id}-turn-${index}-${option.value}`} value={option.value}>
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
-                                  <div className="text-[9px] text-game-white/45">
-                                    Lifecycle: {primaryAbility ? summarizeAbilityLifecycle(primaryLifecycle) : 'No primary ability on slot 1'}
-                                  </div>
-                                </div>
                               </div>
                               <div className="rounded border border-game-teal/20 bg-game-bg-dark/60 px-2 py-2">
                                 <div className="flex items-center justify-center">

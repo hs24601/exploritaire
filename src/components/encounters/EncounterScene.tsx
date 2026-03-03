@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react';
 import { getBiomeDefinition } from '../../engine/biomes';
+import { usePerspective } from '../../contexts/PerspectiveContext';
 import type { Actor, Card as CardType, EncounterDefinition, GameState, Move, PuzzleCompletedPayload, SelectedCard } from '../../engine/types';
 import type { DragState } from '../../hooks/useDragDrop';
 import type { EncounterCombatActions } from '../combat/contracts';
@@ -66,13 +67,10 @@ interface EncounterSceneProps {
   timeScale?: number;
   onOpenSettings?: () => void;
   onTogglePause?: () => void;
-  onToggleCombatSandbox: () => void;
-  combatSandboxOpen?: boolean;
   wildAnalysis?: { key: string; sequence: Move[]; maxCount: number } | null;
   combatActions: EncounterCombatActions;
   explorationStepRef: MutableRefObject<(() => void) | null>;
   onPositionChange: (x: number, y: number) => void;
-  forcedPerspectiveEnabled?: boolean;
   eventActions: {
     puzzleCompleted: (payload?: PuzzleCompletedPayload | null) => void;
     completeBiome: () => void;
@@ -128,15 +126,13 @@ export function EncounterScene({
   timeScale,
   onOpenSettings,
   onTogglePause,
-  onToggleCombatSandbox,
-  combatSandboxOpen = false,
   wildAnalysis,
   combatActions,
   explorationStepRef,
   onPositionChange,
-  forcedPerspectiveEnabled,
   eventActions,
 }: EncounterSceneProps) {
+  const { perspectiveEnabled: forcedPerspectiveEnabled } = usePerspective();
   const isEventBiome = gameState.currentBiome
     ? getBiomeDefinition(gameState.currentBiome)?.biomeType === 'event'
     : false;
@@ -203,14 +199,11 @@ export function EncounterScene({
       timeScale={timeScale}
       onOpenSettings={onOpenSettings}
       onTogglePause={onTogglePause}
-      onToggleCombatSandbox={onToggleCombatSandbox}
-      combatSandboxOpen={combatSandboxOpen}
       highPerformanceTimer={highPerformanceTimer}
       wildAnalysis={wildAnalysis}
       actions={combatActions}
       explorationStepRef={explorationStepRef}
       onPositionChange={onPositionChange}
-      forcedPerspectiveEnabled={forcedPerspectiveEnabled}
     />
   );
 }

@@ -4,6 +4,7 @@ import { GraphicsContext } from './contexts/GraphicsContext';
 import { SHOW_WATERCOLOR_FILTERS } from './config/ui';
 import { InteractionModeContext } from './contexts/InteractionModeContext';
 import { useGameEngine } from './hooks/useGameEngine';
+import { PerspectiveProvider } from './contexts/PerspectiveContext';
 import { RowManager } from './components/RowManager';
 import { DebugConsole } from './components/DebugConsole';
 import { VisualsEditor } from './components/VisualsEditor';
@@ -494,13 +495,6 @@ export default function App() {
   const [infiniteBenchSwapsEnabled, setInfiniteBenchSwapsEnabled] = useState(false);
   const [cameraDebugOpen, setCameraDebugOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [combatSandboxOpen, setCombatSandboxOpen] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const params = new URLSearchParams(window.location.search);
-    const value = params.get('sandbox');
-    if (value === null) return false;
-    return value === '1' || value === 'combat' || value === 'true';
-  });
   const [combatLabMode] = useState(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
@@ -516,8 +510,8 @@ export default function App() {
   const [isGamePaused, setIsGamePaused] = useState(false);
   const [highPerformanceTimer, setHighPerformanceTimer] = useState(false);
   const [hidePauseOverlay, setHidePauseOverlay] = useState(false);
-  const [forcedPerspectiveEnabled, setForcedPerspectiveEnabled] = useState(false);
   const [toolingOpen, setToolingOpen] = useState(false);
+  const [editorLightMode, setEditorLightMode] = useState(false);
   const [toolingTab, setToolingTab] = useState<'poi' | 'ability' | 'orim' | 'synergies' | 'visuals' | 'actor'>('actor');
   const [toolingVisualsOverlayActive, setToolingVisualsOverlayActive] = useState(false);
   const [assetEditorVisualsOverlayActive, setAssetEditorVisualsOverlayActive] = useState(false);
@@ -780,14 +774,6 @@ export default function App() {
     const startPhase = mode === 'biome' || mode === 'playing' || mode === 'garden'
       ? mode
       : undefined;
-    const variantParam = params.get('var');
-    const playtestVariant = variantParam === 'sf'
-      ? 'single-foundation'
-      : (variantParam === 'pb'
-        ? 'party-battle'
-        : (variantParam === 'og'
-          ? 'party-foundations'
-          : 'rpg'));
     const stored = window.localStorage.getItem('orimEditorDefinitions');
     const orimDefinitions = stored ? (() => {
       try {
@@ -812,7 +798,6 @@ export default function App() {
       orimDefinitions ? { orimDefinitions } : undefined,
       {
         startPhase,
-        playtestVariant,
       }
     );
   }, []);
@@ -836,9 +821,7 @@ export default function App() {
     applyLiveDeckTemplatesRef.current = actions.applyLiveActorDeckTemplates;
   }, [actions]);
   const ghostBackgroundEnabled = false;
-  const playtestVariant = gameState?.playtestVariant ?? 'single-foundation';
-  const isRpgVariant = playtestVariant === 'rpg';
-  const hasSpawnedEnemies = !isRpgVariant || (gameState?.enemyFoundations ?? []).some((foundation) => foundation.length > 0);
+  const hasSpawnedEnemies = (gameState?.enemyFoundations ?? []).some((foundation) => foundation.length > 0);
   const isTimeScaleVisible = !zenModeEnabled && hasSpawnedEnemies;
 
   const parsePoiCoords = useCallback((value: string) => {
@@ -2507,11 +2490,6 @@ export default function App() {
         return;
       }
 
-      if (key === '/') {
-        setForcedPerspectiveEnabled((prev) => !prev);
-        return;
-      }
-
       if (code === 'Enter') {
         event.preventDefault();
         actions.autoPlayNextMove();
@@ -2684,6 +2662,7 @@ export default function App() {
   if (!gameState) return null;
 
   return (
+    <PerspectiveProvider combatLabPerspectiveHotkeyEnabled={combatLabMode}>
     <GraphicsContext.Provider value={showGraphics}>
     <InteractionModeContext.Provider value={gameState.interactionMode}>
     <CardScaleProvider value={cardScaleProfile}>
@@ -2838,18 +2817,6 @@ export default function App() {
                   >
                     🧰 Tooling
                   </button>
-                    <button
-                      type="button"
-                      onClick={() => setCombatSandboxOpen((prev) => !prev)}
-                      className="command-button font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-2 rounded cursor-pointer text-game-teal"
-                      style={{
-                        color: combatSandboxOpen ? '#e6b31e' : '#7fdbca',
-                        borderColor: combatSandboxOpen ? 'rgba(230, 179, 30, 0.6)' : 'rgba(127, 219, 202, 0.6)',
-                      }}
-                      title="Toggle combat lab panel"
-                    >
-                    {combatSandboxOpen ? '🥊 Lab: ON' : '🥊 Lab: OFF'}
-                  </button>
                   <button
                     type="button"
                     onClick={() => setHighPerformanceTimer((prev) => !prev)}
@@ -2864,7 +2831,6 @@ export default function App() {
                   </button>
                   <div className="flex flex-col gap-2 border border-game-teal/30 rounded-lg p-2 bg-game-bg-dark/70">
                     <div className="text-[10px] text-game-white/70 tracking-[2px]">HOTKEYS</div>
-                    <div className="text-[10px] text-game-teal/80 font-mono">C — Combat lab</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">E — Editor</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">P — Background toggle</div>
                     <div className="text-[10px] text-game-teal/80 font-mono">V — Particle Timers</div>
@@ -2979,10 +2945,13 @@ export default function App() {
           </div>
         )}
         {toolingOpen && (
-          <div className={`fixed inset-0 z-[10030]${toolingVisualsOverlayActive ? ' invisible pointer-events-none' : ''}`}>
+          <div
+            className={`fixed inset-0 z-[10030]${toolingVisualsOverlayActive ? ' invisible pointer-events-none' : ''}`}
+            data-editor-theme={editorLightMode ? 'light' : 'dark'}
+          >
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
             <div className="relative w-full h-full flex items-center justify-center p-4">
-              <div className="relative w-full h-full flex flex-col bg-game-bg-dark/95 border border-game-teal/40 rounded-2xl overflow-hidden menu-text shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+              <div className="editor-contrast-shell relative w-full h-full flex flex-col bg-game-bg-dark/95 border border-game-teal/40 rounded-2xl overflow-hidden menu-text shadow-[0_0_50px_rgba(0,0,0,0.8)]">
                 {/* Unified Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-game-teal/20 bg-black/40 shrink-0">
                 <div className="flex items-center gap-2">
@@ -3069,6 +3038,14 @@ export default function App() {
                         })()}
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setEditorLightMode((prev) => !prev)}
+                      className="text-[10px] border border-game-teal/40 rounded px-2 h-7 flex items-center justify-center text-game-teal hover:border-game-gold hover:text-game-gold transition-all bg-game-bg-dark/40"
+                      title={editorLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
+                    >
+                      {editorLightMode ? 'Dark' : 'Light'}
+                    </button>
                     <button
                       onClick={() => setToolingOpen(false)}
                       className="text-xs text-game-pink border border-game-pink/40 rounded w-7 h-7 flex items-center justify-center opacity-70 hover:opacity-100 hover:border-game-pink transition-all bg-game-pink/5"
@@ -5006,36 +4983,33 @@ export default function App() {
           </div>
         )}
 
-      <CombatSandbox
-        open={combatLabMode || combatSandboxOpen}
-        isLabMode={combatLabMode}
-        onClose={() => {
-          if (combatLabMode) return;
-          setCombatSandboxOpen(false);
-        }}
-        onOpenEditor={() => {
-          setAssetEditorTab('actor');
-          setAssetEditorOpen(true);
-        }}
-        gameState={gameState}
-        actions={actions}
-        timeScale={timeScale}
-        timeScaleOptions={TIME_SCALE_OPTIONS}
-        onCycleTimeScale={handleCycleTimeScale}
-        onSetTimeScale={handleSetTimeScale}
-        isGamePaused={isGamePaused}
-        onTogglePause={handleTogglePause}
-        highPerformanceTimer={highPerformanceTimer}
-        selectedCard={selectedCard}
-        validFoundationsForSelected={validFoundationsForSelected}
-        noValidMoves={noValidMoves}
-        noValidMovesPlayer={noValidMovesPlayer}
-        noValidMovesEnemy={noValidMovesEnemy}
-        tableauCanPlay={tableauCanPlay}
-        hideGameContent={toolingVisualsOverlayActive || assetEditorVisualsOverlayActive}
-      />
-
-      {!combatLabMode && (
+      {combatLabMode ? (
+        <CombatSandbox
+          open
+          isLabMode
+          onClose={() => {}}
+          onOpenEditor={() => {
+            setAssetEditorTab('actor');
+            setAssetEditorOpen(true);
+          }}
+          gameState={gameState}
+          actions={actions}
+          timeScale={timeScale}
+          timeScaleOptions={TIME_SCALE_OPTIONS}
+          onCycleTimeScale={handleCycleTimeScale}
+          onSetTimeScale={handleSetTimeScale}
+          isGamePaused={isGamePaused}
+          onTogglePause={handleTogglePause}
+          highPerformanceTimer={highPerformanceTimer}
+          selectedCard={selectedCard}
+          validFoundationsForSelected={validFoundationsForSelected}
+          noValidMoves={noValidMoves}
+          noValidMovesPlayer={noValidMovesPlayer}
+          noValidMovesEnemy={noValidMovesEnemy}
+          tableauCanPlay={tableauCanPlay}
+          hideGameContent={toolingVisualsOverlayActive || assetEditorVisualsOverlayActive}
+        />
+      ) : (
         <GameShell
           gameState={gameState}
           actions={actions}
@@ -5050,7 +5024,6 @@ export default function App() {
           showGraphics={showGraphics}
           lightingEnabled={lightingEnabled}
           paintLuminosityEnabled={paintLuminosityEnabled}
-          forcedPerspectiveEnabled={forcedPerspectiveEnabled}
           showText={showText}
           zenModeEnabled={zenModeEnabled}
           isGamePaused={isGamePaused}
@@ -5064,7 +5037,6 @@ export default function App() {
           onPositionChange={(x, y) => setCurrentPlayerCoords({ x, y })}
           fps={fps}
           serverAlive={serverAlive}
-          combatSandboxOpen={combatSandboxOpen}
           onOpenPoiEditorAt={handleOpenPoiEditorAt}
           sandboxOrimIds={sandboxOrimIds}
           onAddSandboxOrim={(id) => {
@@ -5085,7 +5057,6 @@ export default function App() {
           onConsumeBenchSwap={() => setBenchSwapCount((prev) => Math.max(0, prev - 1))}
           infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
           onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
-          onToggleCombatSandbox={() => setCombatSandboxOpen((prev) => !prev)}
         />
       )}
 
@@ -5113,5 +5084,6 @@ export default function App() {
     </CardScaleProvider>
     </InteractionModeContext.Provider>
     </GraphicsContext.Provider>
+    </PerspectiveProvider>
   );
 }

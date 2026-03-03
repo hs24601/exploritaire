@@ -105,8 +105,6 @@ export function buildActorStatusBadges(
   options?: BuildActorStatusBadgesOptions
 ): StatusBadgeData[] {
   if (!actor) return [];
-  if (options?.requireRpgMode && gameState.playtestVariant !== 'rpg') return [];
-
   const nowMs = options?.nowMs ?? Date.now();
   const statuses: StatusBadgeData[] = [];
   const equippedOrims = getEquippedOrimDefinitionsForActor(gameState, actor);

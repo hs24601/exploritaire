@@ -1,5 +1,6 @@
 import type { CSSProperties, MutableRefObject } from 'react';
 import { Tableau, TableauGroup } from '../Tableau';
+import { usePerspective } from '../../contexts/PerspectiveContext';
 import { Exploritaire, type PoiNarration } from '../Exploritaire';
 import type { Direction } from '../Compass';
 import type { ExplorationBlockedCell, ExplorationMapEdge, ExplorationMapNode } from '../ExplorationMap';
@@ -53,7 +54,6 @@ interface ExplorationEncounterPanelProps {
   handleToggleMap: () => void;
   onRotateLeft: () => void;
   onRotateRight: () => void;
-  forcedPerspectiveEnabled?: boolean;
   gameState: GameState;
   selectedCard: SelectedCard | null;
   handleTableauClick: (card: CardType, tableauIndex: number) => void;
@@ -131,7 +131,6 @@ export function ExplorationEncounterPanel({
   handleToggleMap,
   onRotateLeft,
   onRotateRight,
-  forcedPerspectiveEnabled = true,
   gameState,
   selectedCard,
   handleTableauClick,
@@ -157,6 +156,7 @@ export function ExplorationEncounterPanel({
   getDebugStepLabelForColumn,
   ripTriggerByCardId,
 }: ExplorationEncounterPanelProps) {
+  const { perspectiveEnabled: forcedPerspectiveEnabled } = usePerspective();
   return (
     <>
       <Exploritaire
@@ -207,71 +207,40 @@ export function ExplorationEncounterPanel({
         onRotateRight={onRotateRight}
       />
       {hasUnclearedVisibleTableaus && (
-        forcedPerspectiveEnabled ? (
-          <TableauGroup
-            mode="perspective"
-            tableaus={gameState.tableaus}
-            selectedCard={selectedCard}
-            onCardSelect={handleTableauClick}
-            guidanceMoves={[]}
-            interactionMode={gameState.interactionMode}
-            showGraphics={showGraphics}
-            cardScale={tableauCardScale}
-            onDragStart={handleDragStartGuarded}
-            draggingCardId={dragState.isDragging ? dragState.card?.id : null}
-            isAnyCardDragging={dragState.isDragging}
-            revealNextRow={cloudSightActive}
-            tableauCanPlay={tableauCanPlay}
-            noValidMoves={noValidMoves}
-            onTopCardRightClick={handleTableauTopCardRightClick}
-            ripTriggerByCardId={ripTriggerByCardId}
-          />
-        ) : (
-          <div
-            className="flex w-full justify-center gap-3 px-2 sm:px-3"
-            style={{
-              alignItems: 'flex-start',
-              height: `${explorationTableauRowHeightPx}px`,
-              overflow: 'hidden',
-              transform: `translateX(${tableauSlideOffsetPx}px)`,
-              transition: tableauSlideAnimating ? `transform ${explorationSlideAnimationMs}ms cubic-bezier(0.2, 0.9, 0.25, 1)` : 'none',
-              willChange: 'transform',
-            }}
-          >
-            {gameState.tableaus.map((tableau, idx) => (
-              <div
-                key={idx}
-                ref={(el) => { tableauRefs.current[idx] = el; }}
-                style={tableau.length > 0 && sunkCostTableauPulseStyle ? sunkCostTableauPulseStyle : undefined}
-              >
-                <Tableau
-                  cards={tableau}
-                  tableauIndex={idx}
-                  canPlay={tableauCanPlay[idx]}
-                  noValidMoves={noValidMoves}
-                  selectedCard={selectedCard}
-                  onCardSelect={handleTableauClick}
-                  guidanceMoves={[]}
-                  interactionMode={gameState.interactionMode}
-                  onDragStart={handleDragStartGuarded}
-                  draggingCardId={dragState.isDragging ? dragState.card?.id : null}
-                  showGraphics={showGraphics}
-                  cardScale={tableauCardScale}
-                  revealNextRow={cloudSightActive}
-                  revealAllCards={revealAllCardsForIntro}
-                  dimTopCard={enemyDraggingTableauIndexes.has(idx)}
-                  hiddenTopCard={isRpgMode && hiddenPlayerTableaus.has(idx)}
-                  maskTopValue={isRpgMode && maskAllPlayerTableauValues}
-                  hideElements={isRpgMode}
-                  topCardStepIndexOverride={isRpgMode && !hasSpawnedEnemies ? getDisplayedStepIndexForColumn(idx) : null}
-                  debugStepLabel={getDebugStepLabelForColumn(idx)}
-                  onTopCardRightClick={handleTableauTopCardRightClick}
-                  ripTriggerByCardId={ripTriggerByCardId}
-                />
-              </div>
-            ))}
-          </div>
-        )
+        <TableauGroup
+          tableaus={gameState.tableaus}
+          selectedCard={selectedCard}
+          onCardSelect={handleTableauClick}
+          guidanceMoves={[]}
+          interactionMode={gameState.interactionMode}
+          showGraphics={showGraphics}
+          cardScale={tableauCardScale}
+          onDragStart={handleDragStartGuarded}
+          draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+          isAnyCardDragging={dragState.isDragging}
+          revealNextRow={cloudSightActive}
+          tableauCanPlay={tableauCanPlay}
+          noValidMoves={noValidMoves}
+          onTopCardRightClick={handleTableauTopCardRightClick}
+          ripTriggerByCardId={ripTriggerByCardId}
+          dimTopCardIndexes={enemyDraggingTableauIndexes}
+          hiddenTopCardIndexes={isRpgMode ? hiddenPlayerTableaus : undefined}
+          maskTopValue={isRpgMode && maskAllPlayerTableauValues}
+          hideElements={isRpgMode}
+          topCardStepIndexOverrideByColumn={(idx) => isRpgMode && !hasSpawnedEnemies ? getDisplayedStepIndexForColumn(idx) : null}
+          debugStepLabelByColumn={getDebugStepLabelForColumn}
+          tableauRefs={tableauRefs}
+          tableauItemStyle={(tableau) => (tableau.length > 0 && sunkCostTableauPulseStyle ? sunkCostTableauPulseStyle : undefined)}
+          className="flex w-full justify-center gap-3 px-2 sm:px-3"
+          style={{
+            alignItems: 'flex-start',
+            height: `${explorationTableauRowHeightPx}px`,
+            overflow: 'hidden',
+            transform: `translateX(${tableauSlideOffsetPx}px)`,
+            transition: tableauSlideAnimating ? `transform ${explorationSlideAnimationMs}ms cubic-bezier(0.2, 0.9, 0.25, 1)` : 'none',
+            willChange: 'transform',
+          }}
+        />
       )}
     </>
   );

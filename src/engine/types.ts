@@ -314,7 +314,6 @@ export interface ActorDefinition {
   baseEvasion?: number;
   baseAccuracy?: number;
   basePower?: number;
-  basePowerMax?: number;
   orimEnhancements?: Record<string, string>;
   constellation?: {
     backgroundSrc?: string;
@@ -357,7 +356,6 @@ export interface Actor {
   accuracy?: number; // Chance to land outgoing hits
   damageTaken?: number; // Damage taken this bout
   power: number; // Current power usage
-  powerMax: number; // Max power capacity
   orimSlots: OrimSlot[]; // Actor-level ORIM slots
   element?: Element; // Elemental vulnerability for damage calculations
   gridPosition?: GridPosition; // Position in garden grid (available actors only)
@@ -539,7 +537,6 @@ export interface GameState {
   rpgBlindedEnemyUntil?: number;
   rpgSourceCardPlayBonuses?: SourceCardPlayExpiringBonus[];
   rpgLastCardPlayedAtByActor?: Record<string, number>;
-  playtestVariant?: 'single-foundation' | 'party-foundations' | 'party-battle' | 'rpg';
   currentLocationId?: string;
   facingDirection?: 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
   rpgComboTimerBonusMs?: number;

@@ -213,7 +213,7 @@ export const ACTOR_DECK_TEMPLATES: Record<string, { values: number[]; costByRari
       { common: 5, uncommon: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 },
       { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 },
     ],
-    enabledRarities: ['mythic', 'common', 'common'],
+    enabledRarities: ['common', 'common', 'common'],
     activeCards: [true, false, true],
     playableTurns: ['player', 'player', 'player'],
     cooldowns: [1, 1, 0],

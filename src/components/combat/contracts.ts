@@ -70,6 +70,7 @@ export interface CombatSandboxActionsContract {
     cardId: string,
     targetActorIndex: number
   ) => boolean;
+  spendActorAp?: (actorId: string, amount: number) => boolean;
   tickRpgCombat?: RpgTickAction;
   updateEquippedRelics?: (equippedRelics: RelicInstanceLike[]) => void;
   devInjectOrimToActor?: (

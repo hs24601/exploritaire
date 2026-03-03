@@ -67,7 +67,6 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     baseEvasion: 0,
     baseAccuracy: 0,
     basePower: 0,
-    basePowerMax: 1,
     orimSlots: [
       {  },
     ],
@@ -92,7 +91,6 @@ export const ACTOR_DEFINITIONS: ActorDefinition[] = [
     baseEvasion: 0,
     baseAccuracy: 100,
     basePower: 0,
-    basePowerMax: 3,
     orimSlots: [
       {  },
     ],
@@ -146,8 +144,7 @@ export function createActor(definitionId: string): Actor | null {
   const baseDefense = Math.max(0, definition.baseDefense ?? 0);
   const baseEvasion = Math.max(0, definition.baseEvasion ?? 0);
   const baseAccuracy = Math.max(0, definition.baseAccuracy ?? 100);
-  const basePowerMax = Math.max(0, definition.basePowerMax ?? 3);
-  const basePower = Math.max(0, definition.basePower ?? basePowerMax);
+  const basePower = Math.max(0, definition.basePower ?? 0);
 
   return {
     definitionId,
@@ -167,7 +164,6 @@ export function createActor(definitionId: string): Actor | null {
     accuracy: baseAccuracy,
     damageTaken: 0,
     power: basePower,
-    powerMax: basePowerMax,
     orimSlots,
   };
 }

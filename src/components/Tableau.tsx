@@ -3,6 +3,8 @@ import type { Card as CardType, Move, SelectedCard, InteractionMode } from '../e
 import { Card } from './Card';
 import { CARD_SIZE } from '../engine/constants';
 import { FORCE_NEON_CARD_STYLE } from '../config/ui';
+import { usePerspective } from '../contexts/PerspectiveContext';
+import { useInteractionMode } from '../contexts/InteractionModeContext';
 
 interface TableauProps {
   cards: CardType[];
@@ -312,7 +314,7 @@ export const TableauGroup = memo(function TableauGroup({
   selectedCard,
   onCardSelect,
   guidanceMoves,
-  interactionMode,
+  interactionMode: interactionModeProp,
   showGraphics,
   cardScale,
   onDragStart,
@@ -332,10 +334,16 @@ export const TableauGroup = memo(function TableauGroup({
   debugStepLabelByColumn,
   tableauRefs,
   tableauItemStyle,
-  mode = 'flat',
+  mode: modeProp,
   className,
   style,
 }: TableauGroupProps) {
+  const { perspectiveEnabled } = usePerspective();
+  const contextInteractionMode = useInteractionMode();
+  
+  const mode = modeProp || (perspectiveEnabled ? 'perspective' : 'flat');
+  const interactionMode = interactionModeProp || contextInteractionMode;
+
   if (mode === 'perspective') {
     return (
       <div className="tableau-group-perspective-container">
@@ -370,39 +378,6 @@ export const TableauGroup = memo(function TableauGroup({
             />
           ))}
         </div>
-        <style>{`
-          .tableau-group-perspective-container {
-            padding: 0;
-            perspective: 2000px;
-            display: flex;
-            justify-content: center;
-            overflow: visible;
-            width: 100%;
-          }
-          .tableau-group-perspective-content {
-            transform: perspective(80em) rotateY(-42deg) rotateX(2.4deg);
-            box-shadow:
-              -20px 60px 123px -25px rgba(22, 31, 39, 0.6),
-              -10px 35px 75px -35px rgba(19, 26, 32, 0.2);
-            border-radius: 10px;
-            border: 1px solid rgba(213, 220, 226, 0.4);
-            border-bottom-color: rgba(184, 194, 204, 0.5);
-            transition: box-shadow 1.2s ease;
-            padding: 10px;
-            background: rgba(10, 15, 20, 0.4);
-            backdrop-filter: blur(4px);
-            display: flex;
-            flex-direction: row;
-            align-items: flex-start;
-            transform-style: preserve-3d;
-          }
-          .tableau-group-perspective-content:hover {
-            box-shadow:
-              -30px 80px 140px -20px rgba(22, 31, 39, 0.7),
-              -15px 45px 90px -30px rgba(19, 26, 32, 0.3);
-            background: rgba(20, 25, 35, 0.5);
-          }
-        `}</style>
       </div>
     );
   }

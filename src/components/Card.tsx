@@ -97,6 +97,7 @@ interface CardProps {
     rankDisplay?: string;
     comboCount?: number;
     apSegments?: Element[];
+    apCount?: number;
     shimmerElement?: Element;
     autoSizeTitle?: boolean;
   };
@@ -1106,6 +1107,14 @@ const getWatercolorColorFilter = () => {
               .map((entry) => (typeof entry === 'string' ? entry : 'N'))
               .filter((entry): entry is Element => ['W', 'E', 'A', 'F', 'L', 'D', 'N'].includes(entry))
           : [];
+        const apCount = Math.max(
+          0,
+          Math.round(
+            Number.isFinite(Number(foundationOverlay.apCount))
+              ? Number(foundationOverlay.apCount)
+              : apSegments.length
+          )
+        );
         const overlayTitle = foundationOverlay.name ?? '';
         const autoSizeTitle = !!foundationOverlay.autoSizeTitle;
         const titleFontPx = autoSizeTitle ? getFoundationOverlayTitleFontPx(overlayTitle) : 16;
@@ -1301,55 +1310,66 @@ const getWatercolorColorFilter = () => {
                   backgroundColor: 'rgba(6, 10, 14, 0.6)',
                 }}
               >
-                {apSegments.length > 0 ? (
-                  <div className="flex h-full w-full gap-0">
-                    {apSegments.map((element, segmentIndex) => {
-                      const segmentColor = element === 'N' ? '#8a8f98' : getNeonElementColor(element);
-                      const isFirst = segmentIndex === 0;
-                      return (
-                        <div
-                          key={`ap-segment-${segmentIndex}-${element}`}
-                          className="h-full flex-1 rounded-[2px]"
-                          style={{
-                            background: `linear-gradient(180deg, ${segmentColor}dd 0%, ${segmentColor}99 100%)`,
-                            boxShadow: `0 0 6px ${segmentColor}99`,
-                            borderLeft: isFirst ? 'none' : '1px solid rgba(6, 10, 14, 0.82)',
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="h-full w-full rounded-[2px] bg-game-bg-dark/50" />
-                )}
-                {apSegments.length > 0 && (
-                  <div className="pointer-events-none absolute inset-0 z-[2]">
-                    {apSegments.map((element, segmentIndex) => {
-                      const sparkleColor = element === 'N' ? 'rgba(220, 228, 238, 0.95)' : withAlphaColor(getNeonElementColor(element), 0.95);
-                      return (
-                        <svg
-                          key={`ap-combo-sparkle-${segmentIndex}-${element}`}
-                          viewBox="0 0 10 10"
-                          className="absolute"
-                          style={{
-                            left: `${((segmentIndex + 0.5) / apSegments.length) * 100}%`,
-                            top: '52%',
-                            width: 6,
-                            height: 6,
-                            transform: 'translate(-50%, -50%)',
-                            filter: `drop-shadow(0 0 2px ${sparkleColor}) drop-shadow(0 0 5px ${sparkleColor})`,
-                            animation: `foundation-superarmor-sparkle-float ${1.4 + (segmentIndex % 3) * 0.2}s ease-in-out infinite`,
-                            animationDelay: `${segmentIndex * 0.12}s`,
-                            opacity: 0.88,
-                          }}
-                        >
-                          <path d="M5,0 L5.8,4.2 L10,5 L5.8,5.8 L5,10 L4.2,5.8 L0,5 L4.2,4.2 Z" fill={sparkleColor} />
-                          <circle cx="5" cy="5" r="1.15" fill="rgba(255,255,255,0.9)" />
-                        </svg>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="relative h-full min-w-0 flex-1 overflow-hidden rounded-[2px]">
+                  {apSegments.length > 0 ? (
+                    <div className="flex h-full w-full gap-0">
+                      {apSegments.map((element, segmentIndex) => {
+                        const segmentColor = element === 'N' ? '#8a8f98' : getNeonElementColor(element);
+                        const isFirst = segmentIndex === 0;
+                        return (
+                          <div
+                            key={`ap-segment-${segmentIndex}-${element}`}
+                            className="h-full flex-1 rounded-[2px]"
+                            style={{
+                              background: `linear-gradient(180deg, ${segmentColor}dd 0%, ${segmentColor}99 100%)`,
+                              boxShadow: `0 0 6px ${segmentColor}99`,
+                              borderLeft: isFirst ? 'none' : '1px solid rgba(6, 10, 14, 0.82)',
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="h-full w-full rounded-[2px] bg-game-bg-dark/50" />
+                  )}
+                  {apSegments.length > 0 && (
+                    <div className="pointer-events-none absolute inset-0 z-[2]">
+                      {apSegments.map((element, segmentIndex) => {
+                        const sparkleColor = element === 'N' ? 'rgba(220, 228, 238, 0.95)' : withAlphaColor(getNeonElementColor(element), 0.95);
+                        return (
+                          <svg
+                            key={`ap-combo-sparkle-${segmentIndex}-${element}`}
+                            viewBox="0 0 10 10"
+                            className="absolute"
+                            style={{
+                              left: `${((segmentIndex + 0.5) / apSegments.length) * 100}%`,
+                              top: '52%',
+                              width: 6,
+                              height: 6,
+                              transform: 'translate(-50%, -50%)',
+                              filter: `drop-shadow(0 0 2px ${sparkleColor}) drop-shadow(0 0 5px ${sparkleColor})`,
+                              animation: `foundation-superarmor-sparkle-float ${1.4 + (segmentIndex % 3) * 0.2}s ease-in-out infinite`,
+                              animationDelay: `${segmentIndex * 0.12}s`,
+                              opacity: 0.88,
+                            }}
+                          >
+                            <path d="M5,0 L5.8,4.2 L10,5 L5.8,5.8 L5,10 L4.2,5.8 L0,5 L4.2,4.2 Z" fill={sparkleColor} />
+                            <circle cx="5" cy="5" r="1.15" fill="rgba(255,255,255,0.9)" />
+                          </svg>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div
+                  className="ml-[4px] min-w-[14px] pr-[1px] text-right text-[9px] font-black leading-none"
+                  style={{
+                    color: '#f5f8ff',
+                    textShadow: `0 0 8px ${accent}aa`,
+                  }}
+                >
+                  {apCount}
+                </div>
                 </div>
               </div>
             </div>
