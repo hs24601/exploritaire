@@ -1,12 +1,14 @@
 import { Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGraphics } from '../../contexts/GraphicsContext';
 import { useCardScalePreset } from '../../contexts/CardScaleContext';
+import { usePerspective } from '../../contexts/PerspectiveContext';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../../engine/constants';
-import { getRankDisplay } from '../../engine/rules';
+import { canPlayCardWithWild, getRankDisplay } from '../../engine/rules';
 import { getBiomeDefinition } from '../../engine/biomes';
 import { ACTOR_DEFINITIONS, getActorDefinition } from '../../engine/actors';
 import { createActorDeckStateWithOrim } from '../../engine/actorDecks';
 import { analyzeOptimalSequence } from '../../engine/analysis';
+import { isCombatSessionActive, isRandomGeneratedBiomeSession } from '../../engine/combatSession';
 import { resolveCostByRarity } from '../../engine/rarityLoadouts';
 import { Foundation } from '../Foundation';
 import { Hand } from '../Hand';
@@ -641,7 +643,8 @@ function findLabDefaultEnemyActor(state: GameState): Actor | null {
 
 function isActorAlive(actor: Actor | null | undefined): boolean {
   if (!actor) return false;
-  return (actor.hp ?? 0) > 0 && (actor.stamina ?? 1) > 0;
+  // Mirror engine-side combat gating so autoplay/UI targeting never drifts.
+  return (actor.hp ?? 0) > 0 && (actor.stamina ?? 0) > 0;
 }
 
 function estimateRpgAttackPower(card: CardType): number {
@@ -715,6 +718,12 @@ export function CombatSandbox({
 }: CombatSandboxProps) {
   if (!open) return null;
 
+  const { perspectiveEnabled, setCombatLabPerspectiveHotkeyEnabled } = usePerspective();
+  useEffect(() => {
+    setCombatLabPerspectiveHotkeyEnabled(open && isLabMode);
+    return () => setCombatLabPerspectiveHotkeyEnabled(false);
+  }, [isLabMode, open, setCombatLabPerspectiveHotkeyEnabled]);
+
   const activeSide = gameState.randomBiomeActiveSide ?? 'player';
   const noValidMovesForPlayer = noValidMovesPlayer ?? noValidMoves;
   const noValidMovesForEnemy = noValidMovesEnemy ?? false;
@@ -731,7 +740,7 @@ export function CombatSandbox({
   const [pendingTurnSide, setPendingTurnSide] = useState<'player' | 'enemy' | null>(null);
   const [pendingFinalMoveResolution, setPendingFinalMoveResolution] = useState(false);
   const [interTurnCountdownMs, setInterTurnCountdownMs] = useState(0);
-  const useLocalTurnSide = isLabMode && gameState.phase !== 'biome' && enforceTurnOwnership;
+  const useLocalTurnSide = isLabMode && enforceTurnOwnership;
   const effectiveActiveSide: 'player' | 'enemy' = useLocalTurnSide ? labTurnSide : activeSide;
   const interTurnCountdownActive = useLocalTurnSide && interTurnCountdownMs > 0;
   const turnRemainingMs = Math.max(0, localTurnRemainingMs);
@@ -756,6 +765,8 @@ export function CombatSandbox({
   const [autoPlayTrace, setAutoPlayTrace] = useState<AutoPlayDecisionEntry[]>([]);
   const [worldEventBanner, setWorldEventBanner] = useState<{ token: string; label: string; detail?: string } | null>(null);
   const [autoPlayDragAnim, setAutoPlayDragAnim] = useState<AutoPlayDragAnim | null>(null);
+  const [tappedPlayerFoundations, setTappedPlayerFoundations] = useState<Record<number, boolean>>({});
+  const lastProcessedTapActionCountRef = useRef(Math.max(0, Math.floor(Number(gameState.turnCount ?? 0))));
   const autoPlayDragNodeRef = useRef<HTMLDivElement | null>(null);
   const worldEventSeenRef = useRef<string>('');
   const labFoundationSeedTokenRef = useRef<string>('');
@@ -1005,21 +1016,38 @@ export function CombatSandbox({
     foundationCards: CardType[],
     tokenCounts?: Partial<Record<Element, number>>
   ): Element[] => {
-    if (tokenCounts) {
-      const segments: Element[] = [];
-      AP_SEGMENT_ORDER.forEach((element) => {
-        const count = Math.max(0, Math.floor(Number(tokenCounts[element] ?? 0)));
-        for (let i = 0; i < count; i += 1) {
-          segments.push(element);
-        }
-      });
-      if (segments.length > 0) return segments;
-    }
-    if (foundationCards.length <= 1) return [];
-    return foundationCards
+    const orderedByFoundation = foundationCards
       .slice(1)
       .map((card) => card.tokenReward)
-      .filter((element): element is Element => typeof element === 'string');
+      .filter((element): element is Element => (
+        typeof element === 'string'
+        && AP_SEGMENT_ORDER.includes(element as Element)
+      ));
+    if (tokenCounts) {
+      const remaining: Partial<Record<Element, number>> = {};
+      let remainingTotal = 0;
+      AP_SEGMENT_ORDER.forEach((element) => {
+        const count = Math.max(0, Math.floor(Number(tokenCounts[element] ?? 0)));
+        if (count <= 0) return;
+        remaining[element] = count;
+        remainingTotal += count;
+      });
+      if (remainingTotal <= 0) return [];
+      const segments: Element[] = [];
+      orderedByFoundation.forEach((element) => {
+        const count = Math.max(0, Math.floor(Number(remaining[element] ?? 0)));
+        if (count <= 0) return;
+        segments.push(element);
+        remaining[element] = count - 1;
+      });
+      AP_SEGMENT_ORDER.forEach((element) => {
+        const count = Math.max(0, Math.floor(Number(remaining[element] ?? 0)));
+        if (count <= 0) return;
+        for (let i = 0; i < count; i += 1) segments.push(element);
+      });
+      return segments;
+    }
+    return orderedByFoundation;
   };
   const buildFoundationOverlay = (foundationIndex: number) => {
     const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
@@ -1068,6 +1096,7 @@ export function CombatSandbox({
       superArmor: superArmorValue,
       rankDisplay,
       apSegments: buildApSegments(foundationCards, foundationTokenCounts),
+      apCount: Math.max(0, Math.round(actor?.power ?? 0)),
       shimmerElement: preferredElement ?? fallbackElement,
       accentColor: neonStyle.color ?? DEFAULT_PLAYER_FOUNDATION_GLOW,
     };
@@ -1118,6 +1147,7 @@ export function CombatSandbox({
       superArmor: superArmorValue,
       rankDisplay,
       apSegments: buildApSegments(foundationCards, foundationTokenCounts),
+      apCount: Math.max(0, Math.round(enemyActor?.power ?? 0)),
       shimmerElement: preferredElement ?? fallbackElement,
       accentColor: neonStyle.color ?? DEFAULT_ENEMY_FOUNDATION_GLOW,
     };
@@ -1582,6 +1612,8 @@ export function CombatSandbox({
     const party = tileId ? (gameState.tileParties[tileId] ?? []) : [];
     const pool = [...party, ...(gameState.availableActors ?? [])];
     pool.forEach((actor) => {
+      // Prefer active party values when duplicate actor ids exist in availableActors.
+      if (ap.has(actor.id)) return;
       ap.set(actor.id, Math.max(0, Number(actor.power ?? 0)));
     });
     return ap;
@@ -1838,6 +1870,107 @@ export function CombatSandbox({
     }
     syncTurnBarWidths(boostedRemaining);
   }, [getActorFoundationTimerBonusMs, previewPlayerFoundations, resolvePlayerFoundationActor, syncTurnBarWidths]);
+  useEffect(() => {
+    const actionCount = Math.max(0, Math.floor(Number(gameState.turnCount ?? 0)));
+    const prevActionCount = lastProcessedTapActionCountRef.current;
+    lastProcessedTapActionCountRef.current = actionCount;
+    if (actionCount <= prevActionCount) return;
+    const delta = actionCount - prevActionCount;
+    if (delta <= 0) return;
+    const tappedIndexes = Object.entries(tappedPlayerFoundations)
+      .filter(([, tapped]) => !!tapped)
+      .map(([index]) => Number(index))
+      .filter((index) => Number.isFinite(index) && index >= 0);
+    if (tappedIndexes.length === 0) return;
+    tappedIndexes.forEach((foundationIndex) => {
+      const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
+      const actor = resolvePlayerFoundationActor(foundationIndex, foundationCards);
+      if (!actor?.id) return;
+      actions.spendActorAp?.(actor.id, delta);
+    });
+  }, [
+    actions,
+    gameState.turnCount,
+    previewPlayerFoundations,
+    resolvePlayerFoundationActor,
+    tappedPlayerFoundations,
+  ]);
+  useEffect(() => {
+    setTappedPlayerFoundations((prev) => {
+      const next: Record<number, boolean> = {};
+      let changed = false;
+      Object.entries(prev).forEach(([foundationIndexKey, tapped]) => {
+        if (!tapped) {
+          changed = true;
+          return;
+        }
+        const foundationIndex = Number(foundationIndexKey);
+        const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
+        const actor = resolvePlayerFoundationActor(foundationIndex, foundationCards);
+        if (!actor?.id) {
+          changed = true;
+          return;
+        }
+        next[foundationIndex] = true;
+      });
+      if (!changed && Object.keys(next).length === Object.keys(prev).length) return prev;
+      return next;
+    });
+  }, [previewPlayerFoundations, resolvePlayerFoundationActor]);
+  const isFoundationTableauLocked = useCallback(
+    (foundationIndex: number) => Boolean(tappedPlayerFoundations[foundationIndex]),
+    [tappedPlayerFoundations]
+  );
+  const handleSandboxFoundationClick = useCallback((foundationIndex: number) => {
+    if (interTurnCountdownActive) return;
+    if (enforceTurnOwnership && effectiveActiveSide !== 'player') return;
+    const canPlaySelected = !!selectedCard && !!validFoundationsForSelected[foundationIndex];
+    if (canPlaySelected) {
+      if (isFoundationTableauLocked(foundationIndex)) {
+        setTappedPlayerFoundations((prev) => {
+          if (!prev[foundationIndex]) return prev;
+          const next = { ...prev };
+          delete next[foundationIndex];
+          return next;
+        });
+        return;
+      }
+      const accepted = actions.playToFoundation(foundationIndex);
+      if (accepted) {
+        setLocalTurnTimerActive(true);
+        applyFoundationTimerBonus(foundationIndex);
+      }
+      return;
+    }
+    const wasTapped = isFoundationTableauLocked(foundationIndex);
+    if (!wasTapped) {
+      const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
+      const actor = resolvePlayerFoundationActor(foundationIndex, foundationCards);
+      if (!actor?.id) return;
+      const spent = actions.spendActorAp?.(actor.id, 1) ?? false;
+      if (!spent) return;
+    }
+    setTappedPlayerFoundations((prev) => {
+      const next = { ...prev };
+      if (next[foundationIndex]) {
+        delete next[foundationIndex];
+      } else {
+        next[foundationIndex] = true;
+      }
+      return next;
+    });
+  }, [
+    interTurnCountdownActive,
+    enforceTurnOwnership,
+    effectiveActiveSide,
+    selectedCard,
+    validFoundationsForSelected,
+    isFoundationTableauLocked,
+    previewPlayerFoundations,
+    resolvePlayerFoundationActor,
+    actions,
+    applyFoundationTimerBonus,
+  ]);
   const buildOrimTrayDragCard = useCallback((definition: OrimDefinition): CardType => {
     const element = definition.elements?.[0] ?? 'N';
     return {
@@ -1947,6 +2080,10 @@ export function CombatSandbox({
       recordDropMetrics(performance.now() - dropStart, actionMs);
       return;
     }
+    if (isFoundationTableauLocked(foundationIndex)) {
+      recordDropMetrics(performance.now() - dropStart, actionMs);
+      return;
+    }
     if (enforceTurnOwnership && effectiveActiveSide !== 'player') {
       recordDropMetrics(performance.now() - dropStart, actionMs);
       return;
@@ -1982,7 +2119,7 @@ export function CombatSandbox({
       applyFoundationTimerBonus(foundationIndex);
     }
     recordDropMetrics(performance.now() - dropStart, actionMs);
-  }, [actions, useWild, enemyFoundationDropBase, enemyFoundations, gameState.phase, enforceTurnOwnership, effectiveActiveSide, interTurnCountdownActive, recordDropMetrics, resolveEnemyFoundationActor, resolvePlayerFoundationActor, previewPlayerFoundations, applyFoundationTimerBonus]);
+  }, [actions, useWild, enemyFoundationDropBase, enemyFoundations, gameState.phase, enforceTurnOwnership, effectiveActiveSide, interTurnCountdownActive, recordDropMetrics, resolveEnemyFoundationActor, resolvePlayerFoundationActor, previewPlayerFoundations, applyFoundationTimerBonus, isFoundationTableauLocked]);
   const { dragState, startDrag, setFoundationRef, dragPositionRef, getPerfSnapshot, lastDragEndAt } = useDragDrop(handleSandboxDrop, isGamePaused);
   const handleOrimTrayDragStart = useCallback((event: any, definition: OrimDefinition) => {
     if (!isLabMode) return;
@@ -1996,7 +2133,6 @@ export function CombatSandbox({
   const buildAutoPlayReplaySnapshot = useCallback((state: GameState): Partial<GameState> => (
     deepCloneReplayValue({
       phase: state.phase,
-      playtestVariant: state.playtestVariant,
       currentBiome: state.currentBiome,
       activeSessionTileId: state.activeSessionTileId,
       turnCount: state.turnCount,
@@ -2445,7 +2581,6 @@ export function CombatSandbox({
       if (accepted) setLocalTurnTimerActive(true);
     }
   };
-  const handleSandboxHandLongPress = () => {};
   const handleRerollDeal = () => {
     const nextTableaus = createCombatStandardTableaus();
     setFallbackTableaus(nextTableaus);
@@ -2487,6 +2622,19 @@ export function CombatSandbox({
     actions.cleanupDefeatedEnemies();
     try {
       runWithDeterministicRandom(autoPlayDeterministic, autoPlayRngStateRef, () => {
+      const engineActiveSide = gameState.randomBiomeActiveSide ?? 'player';
+      if (enforceTurnOwnership && useLocalTurnSide && engineActiveSide !== effectiveActiveSide) {
+        actions.setRandomBiomeActiveSide?.(effectiveActiveSide);
+        appendAutoPlayDecision({
+          side: 'system',
+          kind: 'advance_turn',
+          score: 1.1,
+          label: `sync side ${engineActiveSide} -> ${effectiveActiveSide}`,
+          accepted: true,
+          at: Date.now(),
+        });
+        return;
+      }
 
       const aliveEnemyTargets = enemyActors
         .map((actor, enemyIndex) => ({ actor, enemyIndex }))
@@ -2517,10 +2665,8 @@ export function CombatSandbox({
     };
     const candidates: Candidate[] = [];
     const tryPlayerTableauPlay = (tableauIndex: number, foundationIndex: number): boolean => {
-      let accepted = false;
-      if (gameState.phase === 'biome') {
-        accepted = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
-      }
+      if (isFoundationTableauLocked(foundationIndex)) return false;
+      let accepted = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
       if (!accepted) {
         accepted = actions.playFromTableau(tableauIndex, foundationIndex);
       }
@@ -2759,6 +2905,8 @@ export function CombatSandbox({
           const moveKey = `${tableauIndex}:${enemyFoundationIndex}`;
           if (queuedEnemyTableauMoves.has(moveKey)) continue;
           const topFoundationCard = enemyFoundations[enemyFoundationIndex]?.[enemyFoundations[enemyFoundationIndex].length - 1];
+          if (!topFoundationCard) continue;
+          if (!canPlayCardWithWild(topCard, topFoundationCard, gameState.activeEffects)) continue;
           const rankGap = Math.abs(Number(topCard.rank ?? 0) - Number(topFoundationCard?.rank ?? 0));
           const score = (9 + Math.max(0, Number(topCard.rank ?? 0)) * 0.12 - Math.min(6, rankGap) * 0.35) * policy.enemyAggro * policy.fallbackWeight;
           candidates.push({
@@ -2855,7 +3003,10 @@ export function CombatSandbox({
     // Last-chance player fallback: try direct legal plays before handing off turn.
     if (enforceTurnOwnership && effectiveActiveSide === 'player') {
       for (const card of previewHandCards) {
+        if (!isHandCardPlayable(card)) continue;
         for (let foundationIndex = 0; foundationIndex < previewPlayerFoundations.length; foundationIndex += 1) {
+          const actor = resolvePlayerFoundationActor(foundationIndex, previewPlayerFoundations[foundationIndex] ?? []);
+          if (actor && !isActorAlive(actor)) continue;
           const accepted = executeAutoPlayDecision(
             {
               side: 'player',
@@ -2876,6 +3027,9 @@ export function CombatSandbox({
           if (accepted) return;
         }
         for (let enemyFoundationIndex = 0; enemyFoundationIndex < enemyFoundations.length; enemyFoundationIndex += 1) {
+          if ((enemyFoundations[enemyFoundationIndex]?.length ?? 0) === 0) continue;
+          const actor = resolveEnemyFoundationActor(enemyFoundationIndex, enemyFoundations[enemyFoundationIndex] ?? []);
+          if (actor && !isActorAlive(actor)) continue;
           const accepted = executeAutoPlayDecision(
             {
               side: 'player',
@@ -2914,7 +3068,7 @@ export function CombatSandbox({
       }
     }
 
-    if (gameState.phase === 'biome' && gameState.currentBiome && !useWild && actions.completeBiome) {
+    if (isRandomGeneratedBiomeSession(gameState) && gameState.currentBiome && !useWild && actions.completeBiome) {
       const hasAnyTableauCards = previewTableaus.some((tableau) => tableau.length > 0);
       if (!hasAnyTableauCards) {
         executeAutoPlayDecision(
@@ -2997,7 +3151,7 @@ export function CombatSandbox({
             }
             return true;
           }
-          if (gameState.phase === 'biome') {
+          if (isCombatSessionActive(gameState)) {
             actions.endRandomBiomeTurn();
             return true;
           }
@@ -3048,6 +3202,7 @@ export function CombatSandbox({
     previewTableaus,
     resolveEnemyFoundationActor,
     resolvePlayerFoundationActor,
+    isFoundationTableauLocked,
     useLocalTurnSide,
     useWild,
     abilityCatalogById,
@@ -3600,6 +3755,10 @@ export function CombatSandbox({
     ? 'relative h-full w-full flex flex-col overflow-hidden text-[10px] font-mono text-game-white menu-text'
     : 'relative rounded-lg border border-game-teal/30 bg-black/90 p-3 text-[10px] font-mono text-game-white shadow-[0_12px_40px_rgba(0,0,0,0.75)] backdrop-blur-sm menu-text h-full w-full flex flex-col overflow-hidden';
   const activeAiTurnLabel = effectiveActiveSide === 'enemy' ? 'Enemy AI Turn' : 'Player AI Turn';
+  const totalTurnsCompleted = Math.max(
+    0,
+    Number(gameState.randomBiomeTurnNumber ?? gameState.lifecycleTurnCounter ?? gameState.turnCount ?? 0) - 1
+  );
 
   return (
     <Profiler id="CombatSandbox" onRender={handleSandboxProfilerRender}>
@@ -4008,24 +4167,13 @@ export function CombatSandbox({
                   >
                     {isGamePaused ? 'Resume' : 'Pause'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => shiftTimeScale(-1)}
-                    className="rounded border border-game-teal/45 bg-black/70 px-2 py-1 text-[10px] text-game-teal hover:border-game-teal transition-colors"
-                    title="Decrease time scale ([)"
-                    aria-label="Decrease time scale"
+                  <div
+                    className="rounded border border-game-teal/45 bg-black/70 px-2 py-1 text-[10px] text-game-teal"
+                    title="Total turns completed"
+                    aria-label="Total turns completed"
                   >
-                    -
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => shiftTimeScale(1)}
-                    className="rounded border border-game-teal/45 bg-black/70 px-2 py-1 text-[10px] text-game-teal hover:border-game-teal transition-colors"
-                    title="Increase time scale (])"
-                    aria-label="Increase time scale"
-                  >
-                    +
-                  </button>
+                    Turns {totalTurnsCompleted}
+                  </div>
                 </>
               )}
             </div>
@@ -4135,8 +4283,8 @@ export function CombatSandbox({
                     transformOrigin: 'top center',
                   }}
                 >
-              <div className="flex w-full items-start justify-center px-1">
-                <div className="flex items-start justify-center gap-[50px]">
+              <div className={`flex w-full items-start justify-center px-1 ${perspectiveEnabled ? 'perspective-foundation-container' : ''}`}>
+                <div className={`flex items-start justify-center gap-[50px] ${perspectiveEnabled ? 'perspective-foundation-content' : ''}`}>
                   {enemyFoundationIndexes.map((idx) => {
                     const statuses = buildFoundationStatuses('enemy', idx);
                     const foundationCards = enemyFoundations[idx] ?? [];
@@ -4152,6 +4300,7 @@ export function CombatSandbox({
                           cards={foundationCards}
                           index={idx}
                           onFoundationClick={() => {}}
+                          allowClickInDnd
                           canReceive={false}
                           interactionMode={gameState.interactionMode}
                           showGraphics={showGraphics}
@@ -4231,29 +4380,31 @@ export function CombatSandbox({
                       </div>
                     </div>
                   )}
-                  <div
-                ref={tableauBandRef}
-                className="relative flex w-full items-start justify-center gap-2 overflow-visible px-1"
-                style={{ minHeight: previewTableauHeight + 30 }}
-              >
-                <DedicatedPlayerTableau
-                  tableaus={previewTableaus}
-                  showGraphics={showGraphics}
-                  cardScale={previewTableauCardScale}
-                  interactionMode={gameState.interactionMode}
-                  noValidMoves={noValidMovesForPlayer}
-                  tableauCanPlay={tableauCanPlay}
-                  selectedCard={selectedCard}
-                  draggingCardId={dragState.isDragging ? dragState.card?.id : null}
-                  onTopCardSelect={handleSandboxCardSelect}
-                  onTopCardDragStart={handleSandboxTableauDragStart}
-                  setTableauRef={(tableauIndex, el) => {
-                    autoPlayTableauRefsRef.current[tableauIndex] = el;
-                  }}
-                  startIndex={0}
-                />
-                <TableauNoMovesOverlay active={noValidMovesForPlayer} />
-              </div>
+                  <div className={perspectiveEnabled ? 'tableau-group-perspective-container' : ''}>
+                    <div
+                      ref={tableauBandRef}
+                      className={`relative flex w-full items-start justify-center gap-2 overflow-visible px-1 ${perspectiveEnabled ? 'tableau-group-perspective-content' : ''}`}
+                      style={{ minHeight: previewTableauHeight + 30 }}
+                    >
+                      <DedicatedPlayerTableau
+                        tableaus={previewTableaus}
+                        showGraphics={showGraphics}
+                        cardScale={previewTableauCardScale}
+                        interactionMode={gameState.interactionMode}
+                        noValidMoves={noValidMovesForPlayer}
+                        tableauCanPlay={tableauCanPlay}
+                        selectedCard={selectedCard}
+                        draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+                        onTopCardSelect={handleSandboxCardSelect}
+                        onTopCardDragStart={handleSandboxTableauDragStart}
+                        setTableauRef={(tableauIndex, el) => {
+                          autoPlayTableauRefsRef.current[tableauIndex] = el;
+                        }}
+                        startIndex={0}
+                      />
+                      <TableauNoMovesOverlay active={noValidMovesForPlayer} />
+                    </div>
+                  </div>
               {shouldRenderTurnBars && !zenRelicEnabled && effectiveActiveSide === 'player' && !interTurnCountdownActive && (
                 <div className="flex w-full justify-center px-1">
                   <div
@@ -4330,29 +4481,23 @@ export function CombatSandbox({
                   </button>
                 </div>
               )}
-              <div className="flex w-full items-start justify-center px-1">
-                <div className="flex items-start justify-center gap-[50px]">
+              <div className={`flex w-full items-start justify-center px-1 ${perspectiveEnabled ? 'perspective-foundation-container' : ''}`}>
+                <div className={`flex items-start justify-center gap-[50px] ${perspectiveEnabled ? 'perspective-foundation-content' : ''}`}>
                   {foundationIndexes.map((idx) => {
                     const statuses = buildFoundationStatuses('player', idx);
+                    const isTapped = Boolean(tappedPlayerFoundations[idx]);
                     return (
                       <div
                         key={`player-foundation-${idx}`}
                         className="rounded border border-game-white/30 bg-black/45 p-[3px] shrink-0"
                         style={{ minWidth: previewFoundationWidth }}
                       >
-                        <Foundation
+                    <Foundation
                           cards={previewPlayerFoundations[idx] ?? []}
                           index={idx}
-                          onFoundationClick={() => {
-                            if (interTurnCountdownActive) return;
-                            if (enforceTurnOwnership && effectiveActiveSide !== 'player') return;
-                            const accepted = actions.playToFoundation(idx);
-                            if (accepted) {
-                              setLocalTurnTimerActive(true);
-                              applyFoundationTimerBonus(idx);
-                            }
-                          }}
-                          canReceive={!!selectedCard && !!validFoundationsForSelected[idx]}
+                          onFoundationClick={() => handleSandboxFoundationClick(idx)}
+                          allowClickInDnd
+                          canReceive={!!selectedCard && !!validFoundationsForSelected[idx] && !isFoundationTableauLocked(idx)}
                           interactionMode={gameState.interactionMode}
                           showGraphics={showGraphics}
                           countPosition="none"
@@ -4362,6 +4507,7 @@ export function CombatSandbox({
                           neonGlowColorOverride={DEFAULT_PLAYER_FOUNDATION_GLOW}
                           neonGlowShadowOverride={`0 0 28px ${DEFAULT_PLAYER_FOUNDATION_GLOW}ee, inset 0 0 20px ${DEFAULT_PLAYER_FOUNDATION_GLOW}55`}
                           foundationOverlay={buildFoundationOverlay(idx)}
+                          isTapped={isTapped}
                         />
                         <StatusBadges statuses={statuses} compact className="mt-1" />
                       </div>
@@ -4394,7 +4540,6 @@ export function CombatSandbox({
                       cardScale={previewHandCardScale}
                       onDragStart={handleSandboxHandDragStart}
                       onCardClick={handleSandboxHandClick}
-                      onCardLongPress={handleSandboxHandLongPress}
                       stockCount={0}
                       showGraphics={showGraphics}
                       interactionMode={gameState.interactionMode}

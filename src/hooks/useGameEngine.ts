@@ -67,6 +67,7 @@ import {
   playRpgHandCardOnActor as playRpgHandCardOnActorFn,
   playEnemyRpgHandCardOnActor as playEnemyRpgHandCardOnActorFn,
   adjustRpgHandCardRarity as adjustRpgHandCardRarityFn,
+  spendApFromActorById as spendApFromActorByIdFn,
   tickRpgCombat as tickRpgCombatFn,
   completeBiome as completeBiomeFn,
   collectBlueprint as collectBlueprintFn,
@@ -96,6 +97,11 @@ import { findBestMoveSequence, solveOptimally } from '../engine/guidance';
 import { canPlayCardWithWild } from '../engine/rules';
 import { getBiomeDefinition } from '../engine/biomes';
 import { analyzeOptimalSequence, computeAnalysisKey } from '../engine/analysis';
+import {
+  isCombatSessionActive,
+  isRandomGeneratedBiomeSession,
+  isRpgCore,
+} from '../engine/combatSession';
 
 const ORIM_STORAGE_KEY = 'orimEditorDefinitions';
 const RELIC_STORAGE_KEY = 'relicEditorDefinitions';
@@ -192,7 +198,7 @@ export function useGameEngine(
   }, [gameState?.relicDefinitions]);
 
   useEffect(() => {
-    if (!gameState || gameState.playtestVariant !== 'rpg') return;
+    if (!gameState || !isRpgCore(gameState)) return;
     const allowedAspectCardIds = new Set(
       (gameState.orimDefinitions ?? [])
         .filter((definition) => definition.isAspect)
@@ -230,8 +236,8 @@ export function useGameEngine(
     }
 
     const isWon = gameState.phase === 'playing' ? checkWin(gameState) : false;
-    const currentBiomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
-    const isRandomBiome = !!currentBiomeDef?.randomlyGenerated;
+    const isRandomBiome = isRandomGeneratedBiomeSession(gameState);
+    const isCombatSession = isCombatSessionActive(gameState);
     const enforceTurnOwnership = (gameState.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure';
     const isEnemyTurn = enforceTurnOwnership && gameState.randomBiomeActiveSide === 'enemy';
     const allowPlayerMoves = !isEnemyTurn;
@@ -247,12 +253,9 @@ export function useGameEngine(
     const noValidMovesEnemy = moveAvailability.noValidMovesEnemy;
     const noValidMoves = noValidMovesPlayer;
 
-    const tableauCanPlay = (() => {
-      if (gameState.phase === 'biome' && isRandomBiome) {
-        if (!allowPlayerMoves) return gameState.tableaus.map(() => false);
-      }
-      return moveAvailability.playerTableauCanPlay;
-    })();
+    const tableauCanPlay = !allowPlayerMoves && isCombatSession
+      ? gameState.tableaus.map(() => false)
+      : moveAvailability.playerTableauCanPlay;
 
     const validFoundationsForSelected = (() => {
       if (!selectedCard) return [];
@@ -321,7 +324,7 @@ export function useGameEngine(
   }, [gameState, devNoRegretEnabled]);
 
   useEffect(() => {
-    if (!gameState || gameState.phase !== 'biome') {
+    if (!gameState || !isRandomGeneratedBiomeSession(gameState)) {
       if (wildAnalysis) setWildAnalysis(null);
       return;
     }
@@ -727,10 +730,9 @@ export function useGameEngine(
       return;
     }
 
-    if (gameState.phase !== 'biome') return;
+    if (!isCombatSessionActive(gameState)) return;
 
-    const biomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
-    const useWild = !!biomeDef?.randomlyGenerated;
+    const useWild = isRandomGeneratedBiomeSession(gameState);
     const partyActors = gameState.activeSessionTileId
       ? gameState.tileParties[gameState.activeSessionTileId] ?? []
       : [];
@@ -749,9 +751,8 @@ export function useGameEngine(
         const canPlay = canPlayCardWithWild(card, top, gameState.activeEffects);
         if (!canPlay) continue;
 
-        const newState = useWild
-          ? playCardInRandomBiomeFn(gameState, tIdx, fIdx)
-          : playCardInBiomeFn(gameState, tIdx, fIdx);
+        const newState = playCardInRandomBiomeFn(gameState, tIdx, fIdx)
+          ?? (useWild ? null : playCardInBiomeFn(gameState, tIdx, fIdx));
         if (!newState) return;
         setGameState(newState);
         setSelectedCard(null);
@@ -774,7 +775,7 @@ export function useGameEngine(
   }, [gameState]);
 
   const autoSolveBiome = useCallback(() => {
-    if (!gameState || gameState.phase !== 'biome' || gameState.tableaus.length === 0) return;
+    if (!gameState || !isCombatSessionActive(gameState) || gameState.tableaus.length === 0) return;
 
     const optimalMoves = solveOptimally(
       gameState.tableaus,
@@ -786,7 +787,8 @@ export function useGameEngine(
 
     let nextState = gameState;
     for (const move of optimalMoves) {
-      const updated = playCardInBiomeFn(nextState, move.tableauIndex, move.foundationIndex);
+      const updated = playCardInRandomBiomeFn(nextState, move.tableauIndex, move.foundationIndex)
+        ?? playCardInBiomeFn(nextState, move.tableauIndex, move.foundationIndex);
       if (!updated) break;
       nextState = updated;
     }
@@ -797,7 +799,7 @@ export function useGameEngine(
   }, [gameState]);
 
   const playWildAnalysisSequence = useCallback(() => {
-    if (!gameState || gameState.phase !== 'biome' || !wildAnalysis?.sequence.length) return;
+    if (!gameState || !isRandomGeneratedBiomeSession(gameState) || !wildAnalysis?.sequence.length) return;
     const biomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
     if (!biomeDef?.randomlyGenerated || biomeDef.id !== 'random_wilds') return;
 
@@ -815,9 +817,10 @@ export function useGameEngine(
 
   const playToBiomeFoundation = useCallback(
     (foundationIndex: number) => {
-      if (!selectedCard || !gameState || gameState.phase !== 'biome') return false;
+      if (!selectedCard || !gameState || !isCombatSessionActive(gameState)) return false;
 
-      const newState = playCardInBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex);
+      const newState = playCardInRandomBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex)
+        ?? playCardInBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex);
 
       if (!newState) {
         setSelectedCard(null);
@@ -844,9 +847,10 @@ export function useGameEngine(
   );
 
   const playCardInNodeBiome = useCallback((nodeId: string, foundationIndex: number) => {
-    if (!gameState || gameState.phase !== 'biome' || !selectedCard) return;
+    if (!gameState || !isCombatSessionActive(gameState) || !selectedCard) return;
     void nodeId;
-    const newState = playCardInBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex);
+    const newState = playCardInRandomBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex)
+      ?? playCardInBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex);
     if (newState) {
       setGameState(newState);
       setSelectedCard(null);
@@ -855,7 +859,7 @@ export function useGameEngine(
 
   const playCardInRandomBiome = useCallback(
     (tableauIndex: number, foundationIndex: number) => {
-      if (!gameState || gameState.phase !== 'biome') return false;
+      if (!gameState || !isCombatSessionActive(gameState)) return false;
       const enforceTurnOwnership = (gameState.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure';
       if (enforceTurnOwnership && gameState.randomBiomeActiveSide === 'enemy') return false;
       const newState = playCardInRandomBiomeFn(gameState, tableauIndex, foundationIndex);
@@ -869,7 +873,7 @@ export function useGameEngine(
 
   const playEnemyCardInRandomBiome = useCallback(
     (tableauIndex: number, foundationIndex: number) => {
-      if (!gameState || gameState.phase !== 'biome') return false;
+      if (!gameState || !isCombatSessionActive(gameState)) return false;
       const newState = playEnemyCardInRandomBiomeFn(gameState, tableauIndex, foundationIndex);
       if (!newState) return false;
       setGameState(newState);
@@ -1032,6 +1036,16 @@ export function useGameEngine(
     return true;
   }, [gameState]);
 
+  const spendActorAp = useCallback((actorId: string, amount: number) => {
+    if (!gameState) return false;
+    const spend = Number.isFinite(amount) ? Math.max(0, Math.floor(amount)) : 0;
+    if (spend <= 0) return false;
+    const newState = spendApFromActorByIdFn(gameState, actorId, spend);
+    if (newState === gameState) return false;
+    setGameState(newState);
+    return true;
+  }, [gameState]);
+
   const applyLiveActorDeckTemplates = useCallback((templates: Record<string, LiveDeckTemplate>) => {
     let applied = false;
     setGameState((prev) => {
@@ -1130,7 +1144,7 @@ export function useGameEngine(
     let added = false;
     setGameState((prev) => {
       if (!prev) return prev;
-      if (prev.playtestVariant !== 'rpg') return prev;
+      if (!isRpgCore(prev)) return prev;
       added = true;
       return {
         ...prev,
@@ -1143,7 +1157,7 @@ export function useGameEngine(
     let removed = false;
     setGameState((prev) => {
       if (!prev) return prev;
-      if (prev.playtestVariant !== 'rpg') return prev;
+      if (!isRpgCore(prev)) return prev;
       const hand = prev.rpgHandCards ?? [];
       if (!hand.some((card) => card.id === cardId)) return prev;
       removed = true;
@@ -1393,6 +1407,7 @@ export function useGameEngine(
       playRpgHandCardOnActor,
       playEnemyRpgHandCardOnActor,
       adjustRpgHandCardRarity,
+      spendActorAp,
       applyLiveActorDeckTemplates,
       addRpgHandCard,
       removeRpgHandCardById,
