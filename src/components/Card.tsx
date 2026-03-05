@@ -1177,7 +1177,7 @@ const getWatercolorColorFilter = () => {
                 <div className="relative min-h-[24px]">
                   {hpValue !== null && hpMaxValue !== null && (
                     <div
-                      className={`absolute inset-y-0 right-[1px] flex items-center ${foundationOverlay.rankDisplay ? 'left-[20px]' : 'left-0'}`}
+                      className={`absolute inset-y-0 right-[1px] flex items-center ${apCount > 0 ? 'left-[20px]' : 'left-0'}`}
                     >
                       <div
                         className="relative h-[14px] w-full rounded-full overflow-hidden border"
@@ -1255,22 +1255,6 @@ const getWatercolorColorFilter = () => {
                       `radial-gradient(circle at 30% 22%, ${withAlphaColor(shimmerColor, 0.22)} 0%, ${withAlphaColor(shimmerColor, 0)} 58%), linear-gradient(180deg, rgba(12,18,26,0.15) 0%, rgba(3,6,10,0.4) 100%)`,
                   }}
                 />
-                {foundationRankDisplay && (
-                  <div className="absolute inset-0 z-[1] flex items-center justify-center">
-                    <span
-                      style={{
-                        fontSize: `${foundationRankFontPx}px`,
-                        fontWeight: 900,
-                        letterSpacing: '-0.02em',
-                        lineHeight: 1,
-                        color: '#f5f8ff',
-                        textShadow: `0 0 10px ${accent}cc, 0 0 22px ${withAlphaColor(accent, 0.75)}`,
-                      }}
-                    >
-                      {foundationRankDisplay}
-                    </span>
-                  </div>
-                )}
                 {foundationShimmerActive && (
                   <>
                     <motion.div
@@ -1373,7 +1357,7 @@ const getWatercolorColorFilter = () => {
                 </div>
               </div>
             </div>
-            {foundationOverlay.rankDisplay && (
+            {apCount > 0 && (
               <div
                 className="absolute -top-[4px] -left-[4px] w-[27px] h-[27px] rounded-full flex items-center justify-center text-[13px] font-black"
                 style={{
@@ -1384,7 +1368,7 @@ const getWatercolorColorFilter = () => {
                   textShadow: '0 1px 2px rgba(0,0,0,0.35)',
                 }}
               >
-                {foundationOverlay.rankDisplay}
+                {apCount}
               </div>
             )}
             {(armorValue > 0 || superArmorValue > 0) && (
