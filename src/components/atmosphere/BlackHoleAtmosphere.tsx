@@ -10,11 +10,11 @@ type Props = {
   className?: string;
 };
 
-const BLACK_HOLE_RADIUS = 1.3;
-const DISK_INNER_RADIUS = BLACK_HOLE_RADIUS + 0.2;
-const DISK_OUTER_RADIUS = 8.0;
-const DISK_TILT_ANGLE = Math.PI / 3.0;
-const STAR_COUNT = 100000;
+const STAR_COUNT = 4000;
+const BLACK_HOLE_RADIUS = 1.4;
+const DISK_INNER_RADIUS = 1.8;
+const DISK_OUTER_RADIUS = 8.5;
+const DISK_TILT_ANGLE = Math.PI * 0.42;
 
 export const BlackHoleAtmosphere = memo(function BlackHoleAtmosphere({ className }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -27,6 +27,7 @@ export const BlackHoleAtmosphere = memo(function BlackHoleAtmosphere({ className
     scene.fog = new THREE.FogExp2(0x020104, 0.035);
 
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 4000);
+    // LOCKED POSITION
     camera.position.set(-6.5, 5.0, 6.5);
 
     const renderer = new THREE.WebGLRenderer({
@@ -108,13 +109,12 @@ export const BlackHoleAtmosphere = memo(function BlackHoleAtmosphere({ className
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.04;
-    controls.enableRotate = false;
-    controls.enablePan = false;
+    controls.enableRotate = false; // LOCKED
+    controls.enablePan = false;    // LOCKED
     controls.enableZoom = true;
     controls.minDistance = 2.5;
     controls.maxDistance = 100;
-    controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
-    controls.target.set(0, 0, 0);
+    controls.target.set(0, 0, 0); // LOCKED
     controls.update();
 
     const starGeometry = new THREE.BufferGeometry();
@@ -357,44 +357,8 @@ export const BlackHoleAtmosphere = memo(function BlackHoleAtmosphere({ className
     let rafId = 0;
     let disposed = false;
 
-    const gyroTarget = { yaw: 0, pitch: 0 };
-    const gyroCurrent = { yaw: 0, pitch: 0 };
-    let orbitRadius = camera.position.distanceTo(controls.target);
-
-    const handleDeviceOrientation = (event: DeviceOrientationEvent) => {
-      if (event.beta == null || event.gamma == null) return;
-      const mappedYaw = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(event.gamma, -60, 60) * 0.6);
-      const mappedPitch = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(event.beta - 45, -45, 45) * 0.5);
-      gyroTarget.yaw = mappedYaw;
-      gyroTarget.pitch = mappedPitch;
-    };
-
-    const requestGyroPermission = () => {
-      const maybeDeviceOrientation = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
-        requestPermission?: () => Promise<'granted' | 'denied'>;
-      };
-      if (typeof maybeDeviceOrientation.requestPermission === 'function') {
-        maybeDeviceOrientation.requestPermission()
-          .then((state) => {
-            if (state === 'granted') {
-              window.addEventListener('deviceorientation', handleDeviceOrientation);
-            }
-          })
-          .catch(() => {});
-      } else {
-        window.addEventListener('deviceorientation', handleDeviceOrientation);
-      }
-    };
-
-    const handleFirstInteraction = () => {
-      requestGyroPermission();
-      window.removeEventListener('pointerdown', handleFirstInteraction);
-      window.removeEventListener('touchstart', handleFirstInteraction);
-    };
-    window.addEventListener('pointerdown', handleFirstInteraction, { passive: true });
-    window.addEventListener('touchstart', handleFirstInteraction, { passive: true });
-
     const resize = () => {
+      if (!mount) return;
       const width = Math.max(1, mount.clientWidth);
       const height = Math.max(1, mount.clientHeight);
       const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -416,18 +380,6 @@ export const BlackHoleAtmosphere = memo(function BlackHoleAtmosphere({ className
       const elapsed = clock.getElapsedTime();
       const delta = clock.getDelta();
 
-      gyroCurrent.yaw = THREE.MathUtils.lerp(gyroCurrent.yaw, gyroTarget.yaw, 0.04);
-      gyroCurrent.pitch = THREE.MathUtils.lerp(gyroCurrent.pitch, gyroTarget.pitch, 0.04);
-      orbitRadius = camera.position.distanceTo(controls.target);
-
-      const desired = new THREE.Vector3(
-        Math.sin(gyroCurrent.yaw) * Math.cos(gyroCurrent.pitch),
-        Math.sin(gyroCurrent.pitch),
-        Math.cos(gyroCurrent.yaw) * Math.cos(gyroCurrent.pitch),
-      ).multiplyScalar(orbitRadius);
-
-      camera.position.lerp(desired, 0.08);
-      camera.lookAt(controls.target);
       controls.update();
 
       diskMaterial.uniforms.uTime.value = elapsed;
@@ -451,9 +403,6 @@ export const BlackHoleAtmosphere = memo(function BlackHoleAtmosphere({ className
       disposed = true;
       if (rafId) window.cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('pointerdown', handleFirstInteraction);
-      window.removeEventListener('touchstart', handleFirstInteraction);
-      window.removeEventListener('deviceorientation', handleDeviceOrientation);
       controls.dispose();
       composer.dispose();
 
@@ -473,5 +422,5 @@ export const BlackHoleAtmosphere = memo(function BlackHoleAtmosphere({ className
     };
   }, []);
 
-  return <div ref={rootRef} className={className} />;
+  return <div ref={rootRef} className={`w-full h-full ${className}`} />;
 });
