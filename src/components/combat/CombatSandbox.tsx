@@ -1708,11 +1708,11 @@ export function CombatSandbox({
     () => buildRelicTrayItems(gameState, { includeAllDefinitions: true }),
     [gameState]
   );
-  const previewTableauCardScale = 0.82;
+  const previewTableauCardScale = 0.98;
   const secondaryTableauCardScale = Math.round(previewTableauCardScale * 0.9 * 1000) / 1000;
   const previewHandCardScale = 1;
   const previewTableauHeight = Math.round(CARD_SIZE.height * previewTableauCardScale);
-  const previewFoundationWidth = Math.round(CARD_SIZE.width * 0.9);
+  const previewFoundationWidth = Math.round(CARD_SIZE.width * 1.2);
   const [fallbackTableaus, setFallbackTableaus] = useState<CardType[][]>(() => createCombatStandardTableaus());
   const gameTableaus = gameState.tableaus ?? [];
   const hasRenderableGameTableaus = gameTableaus.length > 0 && gameTableaus.some((tableau) => tableau.length > 0);
@@ -4293,7 +4293,7 @@ export function CombatSandbox({
                     return (
                       <div
                         key={`enemy-foundation-${idx}`}
-                        className="relative rounded border border-game-teal/30 bg-black/45 p-[3px] shrink-0"
+                        className="relative rounded bg-black/45 p-[3px] shrink-0"
                         style={{ minWidth: previewFoundationWidth }}
                       >
                         <Foundation
@@ -4304,6 +4304,7 @@ export function CombatSandbox({
                           canReceive={false}
                           interactionMode={gameState.interactionMode}
                           showGraphics={showGraphics}
+                          scale={1.12}
                           countPosition="none"
                           maskValue={false}
                           watercolorOnlyCards={false}
@@ -4489,7 +4490,7 @@ export function CombatSandbox({
                     return (
                       <div
                         key={`player-foundation-${idx}`}
-                        className="rounded border border-game-white/30 bg-black/45 p-[3px] shrink-0"
+                        className="rounded bg-black/45 p-[3px] shrink-0"
                         style={{ minWidth: previewFoundationWidth }}
                       >
                     <Foundation
@@ -4500,6 +4501,7 @@ export function CombatSandbox({
                           canReceive={!!selectedCard && !!validFoundationsForSelected[idx] && !isFoundationTableauLocked(idx)}
                           interactionMode={gameState.interactionMode}
                           showGraphics={showGraphics}
+                          scale={1.12}
                           countPosition="none"
                           maskValue={false}
                           setDropRef={getFoundationDropRef(idx)}
