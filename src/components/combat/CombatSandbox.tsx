@@ -22,15 +22,12 @@ import { DragPreview } from '../DragPreview';
 import { DedicatedPlayerTableau } from './DedicatedPlayerTableau';
 import { StatusBadges } from './StatusBadges';
 import { buildActorStatusBadges } from './buildActorStatusBadges';
-import { RelicTray } from './RelicTray';
 import { TableauNoMovesOverlay } from './TableauNoMovesOverlay';
 import { FpsBadge } from './FpsBadge';
-import { buildRelicTrayItems } from './relicTrayModel';
 import type { CombatSandboxActionsContract } from './contracts';
 import { useRpgCombatTicker } from './hooks/useRpgCombatTicker';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { getNeonElementColor } from '../../utils/styles';
-import { ParticleProgressBar } from '../ParticleProgressBar';
 import type { AbilityLifecycleDef, AbilityLifecycleExhaustScope, AbilityLifecycleUsageEntry, Actor, Card as CardType, Element, GameState, OrimDefinition, OrimRarity, SelectedCard } from '../../engine/types';
 import abilitiesJson from '../../data/abilities.json';
 import { LostInStarsAtmosphere } from '../atmosphere/LostInStarsAtmosphere';
@@ -98,10 +95,6 @@ const ENEMY_FOUNDATION_LAB_SLOT_COUNT = 3;
 const DISABLE_TURN_BAR_ANIMATION = false;
 const TURN_TIMER_TICK_MS = 150;
 const RPG_TICK_INTERVAL_MS = 80;
-const ORIM_TRAY_SOURCE_INDEX = -2;
-const ORIM_TRAY_WIDTH_PX = 50;
-const RELIC_TRAY_WIDTH_PX = 50;
-const COLLAPSED_TRAY_WIDTH_PX = 22;
 const FINAL_MOVE_RELIC_BEHAVIOR_ID = 'final_move_v1';
 const MASTER_STRATEGIST_RELIC_BEHAVIOR_ID = 'master_strategist_v1';
 const ZEN_RELIC_BEHAVIOR_ID = 'zen_v1';
@@ -109,6 +102,8 @@ const LAB_DEFAULT_ENEMY_DEFINITION_ID = 'shade_of_resentment';
 const DEFAULT_TIME_SCALE_OPTIONS = [0.25, 0.5, 1, 1.5, 2, 3, 4];
 const AUTO_PLAY_SPEED_OPTIONS = [0.5, 1, 2, 4];
 const AUTO_PLAY_BASE_STEP_MS = 430;
+const AUTO_PLAY_DRAG_DURATION_MULTIPLIER = 2;
+const AUTO_PLAY_MAX_DRAG_DURATION_MS = 1960;
 const AUTO_PLAY_MAX_TRACE = 10;
 const AUTO_PLAY_STALL_LIMIT = 4;
 const AUTO_PLAY_DEFAULT_SEED = 1337;
@@ -301,6 +296,7 @@ type AbilityCatalogEntry = {
   element?: Element;
   rarity?: string;
   power?: number;
+  canTap?: boolean;
   effects?: Array<{
     type?: string;
     value?: number;
@@ -790,6 +786,13 @@ export function CombatSandbox({
   const [tappedPlayerFoundations, setTappedPlayerFoundations] = useState<Record<number, boolean>>({});
   const lastProcessedTapActionCountRef = useRef(Math.max(0, Math.floor(Number(gameState.turnCount ?? 0))));
   const autoPlayDragNodeRef = useRef<HTMLDivElement | null>(null);
+  const autoPlayDragRafRef = useRef<number>(0);
+  const autoPlayDragTimeoutRef = useRef<number>(0);
+  const autoPlayDragStartedAtRef = useRef(0);
+  const autoPlayDragRemainingMsRef = useRef(0);
+  const autoPlayDragPausedTransformRef = useRef<string | null>(null);
+  const autoPlayDragTargetTransformRef = useRef<string | null>(null);
+  const autoPlayDragAnimIdRef = useRef<string | null>(null);
   const worldEventSeenRef = useRef<string>('');
   const labFoundationSeedTokenRef = useRef<string>('');
   const autoPlayStallRef = useRef(0);
@@ -953,7 +956,6 @@ export function CombatSandbox({
     }
   }, [enemyFoundations, enemySpawnPickerIndex]);
   const showTurnTimer = enforceTurnOwnership && enemyFoundationCount > 0;
-  const shouldRenderTurnBars = showTurnTimer && !DISABLE_TURN_BAR_ANIMATION;
   const previewPlayerFoundations = gameState.foundations;
   const activeTileId = getActiveCombatPartyId(gameState);
   const partyActors = activeTileId ? (getPartyAssignments(gameState)[activeTileId] ?? []) : [];
@@ -1721,19 +1723,6 @@ export function CombatSandbox({
     gameState,
     interTurnCountdownActive,
   ]);
-  const labTrayOrims = useMemo(() => {
-    const definitions = gameState.orimDefinitions ?? [];
-    const combatCandidates = definitions.filter((definition) => (
-      !definition.isAspect
-      && (definition.domain ?? 'combat') === 'combat'
-    ));
-    const nonLegacy = combatCandidates.filter((definition) => !definition.legacyOrim);
-    return nonLegacy.length > 0 ? nonLegacy : combatCandidates;
-  }, [gameState.orimDefinitions]);
-  const labTrayRelics = useMemo(
-    () => buildRelicTrayItems(gameState, { includeAllDefinitions: true }),
-    [gameState]
-  );
   const previewTableauCardScale = 0.98;
   const secondaryTableauCardScale = Math.round(previewTableauCardScale * 0.9 * 1000) / 1000;
   const previewHandCardScale = 1;
@@ -1770,10 +1759,7 @@ export function CombatSandbox({
   const enemyFoundationIndexes = isLabMode ? [1, 0, 2] : [0];
   const enemyFoundationDropBase = foundationIndexes.length;
   const [autoFitMultiplier, setAutoFitMultiplier] = useState(1);
-  const [orimTrayCollapsed, setOrimTrayCollapsed] = useState(true);
-  const [relicTrayCollapsed, setRelicTrayCollapsed] = useState(true);
   const draggedHandCardRef = useRef<CardType | null>(null);
-  const draggedOrimDefinitionRef = useRef<OrimDefinition | null>(null);
   const fitViewportRef = useRef<HTMLDivElement | null>(null);
   const fitContentRef = useRef<HTMLDivElement | null>(null);
   const tableauBandRef = useRef<HTMLDivElement | null>(null);
@@ -1809,18 +1795,6 @@ export function CombatSandbox({
     pushPerfSample(reactCommitDurationSamplesRef.current, actualDuration);
   }, []);
   const [tableauBandWidthPx, setTableauBandWidthPx] = useState(420);
-  const orimTrayWidthPx = isLabMode ? (orimTrayCollapsed ? COLLAPSED_TRAY_WIDTH_PX : ORIM_TRAY_WIDTH_PX) : 0;
-  const relicTrayWidthPx = isLabMode ? (relicTrayCollapsed ? COLLAPSED_TRAY_WIDTH_PX : RELIC_TRAY_WIDTH_PX) : 0;
-  const handleToggleLabRelic = useCallback((instanceId: string) => {
-    if (!actions.updateEquippedRelics) return;
-    const equippedRelics = gameState.equippedRelics ?? [];
-    const nextRelics = equippedRelics.map((instance) => (
-      instance.instanceId === instanceId
-        ? { ...instance, enabled: !instance.enabled }
-        : instance
-    ));
-    actions.updateEquippedRelics(nextRelics);
-  }, [actions, gameState.equippedRelics]);
   const setActiveSide = actions.setActiveSide;
   const syncTurnBarWidths = useCallback((remainingMs: number, totalMs = turnDurationMs) => {
     if (DISABLE_TURN_BAR_ANIMATION) return;
@@ -1946,6 +1920,34 @@ export function CombatSandbox({
     (foundationIndex: number) => Boolean(tappedPlayerFoundations[foundationIndex]),
     [tappedPlayerFoundations]
   );
+  const canTapFriendlyFoundation = useCallback((foundationIndex: number): boolean => {
+    const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
+    const actor = resolvePlayerFoundationActor(foundationIndex, foundationCards);
+    if (!actor?.id) return false;
+    const deck = gameState.actorDecks[actor.id];
+    if (!deck?.cards?.length) return false;
+    return deck.cards.some((deckCard) => {
+      if (deckCard.active === false) return false;
+      return deckCard.slots.some((slot) => {
+        const definitionId = resolveOrimDefinitionIdFromSlot(
+          slot.orimId,
+          gameState.orimInstances,
+          gameState.orimDefinitions
+        );
+        if (!definitionId) return false;
+        const definition = gameState.orimDefinitions.find((entry) => entry.id === definitionId);
+        const catalogEntry = abilityCatalogById.get(definitionId);
+        return !!(definition?.canTap ?? catalogEntry?.canTap);
+      });
+    });
+  }, [
+    abilityCatalogById,
+    gameState.actorDecks,
+    gameState.orimDefinitions,
+    gameState.orimInstances,
+    previewPlayerFoundations,
+    resolvePlayerFoundationActor,
+  ]);
   const handleSandboxFoundationClick = useCallback((foundationIndex: number) => {
     if (interTurnCountdownActive) return;
     if (enforceTurnOwnership && effectiveActiveSide !== 'player') return;
@@ -1967,14 +1969,7 @@ export function CombatSandbox({
       }
       return;
     }
-    const wasTapped = isFoundationTableauLocked(foundationIndex);
-    if (!wasTapped) {
-      const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
-      const actor = resolvePlayerFoundationActor(foundationIndex, foundationCards);
-      if (!actor?.id) return;
-      const spent = actions.spendActorAp?.(actor.id, 1) ?? false;
-      if (!spent) return;
-    }
+    if (!canTapFriendlyFoundation(foundationIndex)) return;
     setTappedPlayerFoundations((prev) => {
       const next = { ...prev };
       if (next[foundationIndex]) {
@@ -1990,26 +1985,10 @@ export function CombatSandbox({
     effectiveActiveSide,
     selectedCard,
     validFoundationsForSelected,
+    canTapFriendlyFoundation,
     isFoundationTableauLocked,
-    previewPlayerFoundations,
-    resolvePlayerFoundationActor,
-    actions,
     applyFoundationTimerBonus,
   ]);
-  const buildOrimTrayDragCard = useCallback((definition: OrimDefinition): CardType => {
-    const element = definition.elements?.[0] ?? 'N';
-    return {
-      id: `combat-lab-orim-${definition.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      rank: 1,
-      element,
-      suit: ELEMENT_TO_SUIT[element],
-      rarity: definition.rarity ?? 'common',
-      name: definition.name,
-      description: definition.description,
-      rpgAbilityId: definition.id,
-      rpgCardKind: 'focus',
-    };
-  }, []);
   const useWild = false;
   const recordDropMetrics = useCallback((totalMs: number, actionMs: number) => {
     pushPerfSample(dropTotalDurationSamplesRef.current, totalMs);
@@ -2024,32 +2003,6 @@ export function CombatSandbox({
     }
     const isEnemyFoundationDrop = foundationIndex >= enemyFoundationDropBase
       && foundationIndex < enemyFoundationDropBase + enemyFoundations.length;
-    if (tableauIndex === ORIM_TRAY_SOURCE_INDEX) {
-      const definition = draggedOrimDefinitionRef.current;
-      draggedOrimDefinitionRef.current = null;
-      if (!definition || !actions.devInjectOrimToActor) {
-        recordDropMetrics(performance.now() - dropStart, actionMs);
-        return;
-      }
-      const targetActor = isEnemyFoundationDrop
-        ? resolveEnemyFoundationActor(
-          foundationIndex - enemyFoundationDropBase,
-          enemyFoundations[foundationIndex - enemyFoundationDropBase] ?? []
-        )
-        : resolvePlayerFoundationActor(
-          foundationIndex,
-          previewPlayerFoundations[foundationIndex] ?? []
-        );
-      if (!targetActor) {
-        recordDropMetrics(performance.now() - dropStart, actionMs);
-        return;
-      }
-      const actionStart = performance.now();
-      actions.devInjectOrimToActor(targetActor.id, definition.id, foundationIndex, dropPoint);
-      actionMs = performance.now() - actionStart;
-      recordDropMetrics(performance.now() - dropStart, actionMs);
-      return;
-    }
     if (isEnemyFoundationDrop) {
       const enemyFoundationIndex = foundationIndex - enemyFoundationDropBase;
       if (tableauIndex === HAND_SOURCE_INDEX) {
@@ -2145,15 +2098,6 @@ export function CombatSandbox({
     recordDropMetrics(performance.now() - dropStart, actionMs);
   }, [actions, useWild, enemyFoundationDropBase, enemyFoundations, gameState.phase, enforceTurnOwnership, effectiveActiveSide, interTurnCountdownActive, recordDropMetrics, resolveEnemyFoundationActor, resolvePlayerFoundationActor, previewPlayerFoundations, applyFoundationTimerBonus, isFoundationTableauLocked]);
   const { dragState, startDrag, setFoundationRef, dragPositionRef, getPerfSnapshot, lastDragEndAt } = useDragDrop(handleSandboxDrop, isGamePaused);
-  const handleOrimTrayDragStart = useCallback((event: any, definition: OrimDefinition) => {
-    if (!isLabMode) return;
-    if (event.button !== 0) return;
-    const target = event.currentTarget;
-    const rect = target.getBoundingClientRect();
-    draggedOrimDefinitionRef.current = definition;
-    event.preventDefault();
-    startDrag(buildOrimTrayDragCard(definition), ORIM_TRAY_SOURCE_INDEX, event.clientX, event.clientY, rect);
-  }, [buildOrimTrayDragCard, isLabMode, startDrag]);
   const buildAutoPlayReplaySnapshot = useCallback((state: GameState): Partial<GameState> => (
     deepCloneReplayValue({
       phase: state.phase,
@@ -2473,44 +2417,106 @@ export function CombatSandbox({
     globalWindow.__combatLabAutoPlayTrace = [entry, ...(globalWindow.__combatLabAutoPlayTrace ?? [])].slice(0, AUTO_PLAY_MAX_TRACE);
   }, []);
   useEffect(() => {
-    if (!autoPlayDragAnim) return;
-    let rafId = 0;
-    let cancelled = false;
+    if (!autoPlayDragAnim) {
+      autoPlayDragAnimIdRef.current = null;
+      autoPlayDragStartedAtRef.current = 0;
+      autoPlayDragRemainingMsRef.current = 0;
+      autoPlayDragPausedTransformRef.current = null;
+      autoPlayDragTargetTransformRef.current = null;
+      if (autoPlayDragRafRef.current) {
+        window.cancelAnimationFrame(autoPlayDragRafRef.current);
+        autoPlayDragRafRef.current = 0;
+      }
+      if (autoPlayDragTimeoutRef.current) {
+        window.clearTimeout(autoPlayDragTimeoutRef.current);
+        autoPlayDragTimeoutRef.current = 0;
+      }
+      return;
+    }
     const node = autoPlayDragNodeRef.current;
+    if (!node) return;
+
+    if (autoPlayDragAnimIdRef.current !== autoPlayDragAnim.id) {
+      autoPlayDragAnimIdRef.current = autoPlayDragAnim.id;
+      autoPlayDragStartedAtRef.current = 0;
+      autoPlayDragRemainingMsRef.current = autoPlayDragAnim.durationMs;
+      autoPlayDragPausedTransformRef.current = null;
+    }
+
+    if (autoPlayDragRafRef.current) {
+      window.cancelAnimationFrame(autoPlayDragRafRef.current);
+      autoPlayDragRafRef.current = 0;
+    }
+    if (autoPlayDragTimeoutRef.current) {
+      window.clearTimeout(autoPlayDragTimeoutRef.current);
+      autoPlayDragTimeoutRef.current = 0;
+    }
+
     const dx = autoPlayDragAnim.to.x - autoPlayDragAnim.from.x;
     const dy = autoPlayDragAnim.to.y - autoPlayDragAnim.from.y;
-    const distance = Math.hypot(dx, dy);
-    const arcLiftPx = Math.min(26, Math.max(8, distance * 0.06));
-    const tick = (now: number) => {
-      if (cancelled) return;
-      const elapsed = now - autoPlayDragAnim.startedAtMs;
-      const rawProgress = Math.max(0, Math.min(1, elapsed / autoPlayDragAnim.durationMs));
-      const eased = easeInOutCubic(rawProgress);
-      const arc = Math.sin(Math.PI * rawProgress) * arcLiftPx;
-      const x = autoPlayDragAnim.from.x + (dx * eased);
-      const y = autoPlayDragAnim.from.y + (dy * eased) - arc;
-      const headingDegrees = Math.atan2(dy, dx) * (180 / Math.PI);
-      const dragRotation = (headingDegrees * 0.08) + (Math.sin(Math.PI * rawProgress) * 4.5);
-      if (node) {
-        node.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0)`;
-        node.style.setProperty('--autoplay-drag-rotation', `${dragRotation.toFixed(2)}deg`);
+    const headingDegrees = Math.atan2(dy, dx) * (180 / Math.PI);
+    const startRotation = 0;
+    const endRotation = headingDegrees * 0.08;
+    const initialTransform = `translate3d(${autoPlayDragAnim.from.x.toFixed(2)}px, ${autoPlayDragAnim.from.y.toFixed(2)}px, 0) rotate(${startRotation.toFixed(2)}deg)`;
+    const targetTransform = `translate3d(${autoPlayDragAnim.to.x.toFixed(2)}px, ${autoPlayDragAnim.to.y.toFixed(2)}px, 0) rotate(${endRotation.toFixed(2)}deg)`;
+    autoPlayDragTargetTransformRef.current = targetTransform;
+
+    if (isGamePaused) {
+      if (autoPlayDragStartedAtRef.current > 0) {
+        const elapsed = Math.max(0, performance.now() - autoPlayDragStartedAtRef.current);
+        autoPlayDragRemainingMsRef.current = Math.max(0, autoPlayDragRemainingMsRef.current - elapsed);
+        autoPlayDragStartedAtRef.current = 0;
       }
-      if (rawProgress >= 1) {
-        setAutoPlayDragAnim(null);
-        return;
+      const computedTransform = window.getComputedStyle(node).transform;
+      node.style.transition = 'none';
+      if (computedTransform && computedTransform !== 'none') {
+        node.style.transform = computedTransform;
+        autoPlayDragPausedTransformRef.current = computedTransform;
+      } else {
+        node.style.transform = autoPlayDragPausedTransformRef.current ?? initialTransform;
+        autoPlayDragPausedTransformRef.current = node.style.transform;
       }
-      rafId = window.requestAnimationFrame(tick);
-    };
-    if (node) {
-      node.style.transform = `translate3d(${autoPlayDragAnim.from.x.toFixed(2)}px, ${autoPlayDragAnim.from.y.toFixed(2)}px, 0)`;
-      node.style.setProperty('--autoplay-drag-rotation', '0deg');
+      return;
     }
-    rafId = window.requestAnimationFrame(tick);
+
+    const remainingMs = Math.max(1, autoPlayDragRemainingMsRef.current || autoPlayDragAnim.durationMs);
+    const resumeTransform = autoPlayDragPausedTransformRef.current ?? initialTransform;
+    node.style.transition = 'none';
+    node.style.transform = resumeTransform;
+
+    autoPlayDragRafRef.current = window.requestAnimationFrame(() => {
+      const activeNode = autoPlayDragNodeRef.current;
+      if (!activeNode) return;
+      activeNode.style.transition = `transform ${remainingMs}ms cubic-bezier(0.33, 1, 0.68, 1)`;
+      activeNode.style.transform = targetTransform;
+      autoPlayDragStartedAtRef.current = performance.now();
+      autoPlayDragRemainingMsRef.current = remainingMs;
+      autoPlayDragPausedTransformRef.current = null;
+      autoPlayDragTimeoutRef.current = window.setTimeout(() => {
+        autoPlayDragAnimIdRef.current = null;
+        autoPlayDragStartedAtRef.current = 0;
+        autoPlayDragRemainingMsRef.current = 0;
+        autoPlayDragPausedTransformRef.current = null;
+        autoPlayDragTargetTransformRef.current = null;
+        autoPlayDragTimeoutRef.current = 0;
+        setAutoPlayDragAnim(null);
+      }, remainingMs);
+    });
+
     return () => {
-      cancelled = true;
-      if (rafId) window.cancelAnimationFrame(rafId);
+      if (autoPlayDragRafRef.current) {
+        window.cancelAnimationFrame(autoPlayDragRafRef.current);
+        autoPlayDragRafRef.current = 0;
+      }
+      if (autoPlayDragTimeoutRef.current) {
+        window.clearTimeout(autoPlayDragTimeoutRef.current);
+        autoPlayDragTimeoutRef.current = 0;
+      }
+      if (node) {
+        node.style.transition = 'none';
+      }
     };
-  }, [autoPlayDragAnim]);
+  }, [autoPlayDragAnim, isGamePaused]);
   const startAutoPlayDragAnimation = useCallback((
     card: CardType,
     source: AutoPlayDragSource,
@@ -2537,8 +2543,9 @@ export function CombatSandbox({
     };
     const distance = Math.hypot(to.x - from.x, to.y - from.y);
     // Keep autoplay speed visibly coupled to drag travel time across all speed presets.
+    // Multiplier slows all drag motion uniformly without changing autoplay decision cadence.
     const speedScale = Math.max(0.25, autoPlaySpeed) * Math.max(0.5, timeScale);
-    const baseDurationMs = 360 + (distance * 0.9);
+    const baseDurationMs = (360 + (distance * 0.9)) * AUTO_PLAY_DRAG_DURATION_MULTIPLIER;
     setAutoPlayDragAnim({
       id: `autoplay-drag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       card,
@@ -2548,7 +2555,7 @@ export function CombatSandbox({
       durationMs: Math.max(
         90,
         Math.min(
-          980,
+          AUTO_PLAY_MAX_DRAG_DURATION_MS,
           Math.round(baseDurationMs / speedScale)
         )
       ),
@@ -2557,7 +2564,6 @@ export function CombatSandbox({
   const dropRefCallbacksRef = useRef<Record<number, (index: number, ref: HTMLDivElement | null) => void>>({});
   useEffect(() => {
     if (dragState.isDragging) return;
-    draggedOrimDefinitionRef.current = null;
   }, [dragState.isDragging, lastDragEndAt]);
   // Register explicit drop indices so player and enemy foundations both participate in hit-testing.
   const getFoundationDropRef = useCallback((mappedIndex: number) => {
@@ -3450,11 +3456,6 @@ export function CombatSandbox({
     syncTurnBarWidths(turnDurationMs);
   }, [open, setActiveSide, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
   useEffect(() => {
-    if (!open) return;
-    setOrimTrayCollapsed(true);
-    setRelicTrayCollapsed(true);
-  }, [open]);
-  useEffect(() => {
     localTurnRemainingRef.current = turnDurationMs;
     displayTurnRemainingRef.current = turnDurationMs;
     if (!DISABLE_TURN_BAR_ANIMATION) {
@@ -4223,72 +4224,21 @@ export function CombatSandbox({
                 atmosphere only
               </div>
             )}
-            {showCombatHud && isLabMode && (
-              <div
-                className="absolute bottom-0 left-0 top-[30px] z-20 border-r border-game-teal/30 bg-black/70"
-                style={{ width: `${orimTrayWidthPx}px` }}
-              >
-                <div className="flex h-full flex-col items-center gap-1 overflow-y-auto px-1 py-2">
-                  <button
-                    type="button"
-                    onClick={() => setOrimTrayCollapsed((prev) => !prev)}
-                    className="flex h-5 w-5 items-center justify-center rounded border border-game-teal/50 bg-black/80 text-[10px] font-bold text-game-gold transition-colors hover:bg-black"
-                    aria-label={orimTrayCollapsed ? 'Expand orim tray' : 'Collapse orim tray'}
-                    title={orimTrayCollapsed ? 'Expand orim tray' : 'Collapse orim tray'}
-                  >
-                    {orimTrayCollapsed ? '»' : '«'}
-                  </button>
-                  {orimTrayCollapsed ? null : labTrayOrims.map((definition) => {
-                    const element = definition.elements?.[0] ?? 'N';
-                    const neon = getNeonElementColor(element);
-                    return (
-                      <button
-                        key={`lab-orim-${definition.id}`}
-                        type="button"
-                        onPointerDown={(event) => handleOrimTrayDragStart(event, definition)}
-                        className="flex h-10 w-10 flex-col items-center justify-center rounded border bg-black/75 px-0.5 text-center text-[8px] leading-tight text-game-white transition-colors hover:bg-black active:scale-95"
-                        style={{
-                          borderColor: `${neon}aa`,
-                          boxShadow: `0 0 8px ${neon}66`,
-                          touchAction: 'none',
-                        }}
-                        title={definition.name}
-                        aria-label={`Drag ${definition.name} to a foundation`}
-                      >
-                        <span className="max-w-[34px] overflow-hidden text-ellipsis whitespace-nowrap">{definition.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {showCombatHud && isLabMode && (
-              <RelicTray
-                items={labTrayRelics}
-                onToggleRelic={handleToggleLabRelic}
-                widthPx={RELIC_TRAY_WIDTH_PX}
-                collapsedWidthPx={COLLAPSED_TRAY_WIDTH_PX}
-                topOffsetPx={30}
-                side="right"
-                collapsed={relicTrayCollapsed}
-                onToggleCollapsed={() => setRelicTrayCollapsed((prev) => !prev)}
-              />
-            )}
             {showCombatHud && (
             <div
               ref={fitViewportRef}
               className="relative z-10 flex-1 min-h-0 w-full overflow-hidden"
-              style={{
-                paddingLeft: isLabMode ? `${orimTrayWidthPx + 6}px` : undefined,
-                paddingRight: isLabMode ? `${relicTrayWidthPx + 6}px` : undefined,
-              }}
             >
               {autoPlayDragAnim && (
                 <div className="pointer-events-none absolute inset-0 z-[10120]">
                   <div
                     ref={autoPlayDragNodeRef}
                     className="pointer-events-none absolute left-0 top-0"
-                    style={{ willChange: 'transform' }}
+                    style={{
+                      willChange: 'transform',
+                      transform: `translate3d(${autoPlayDragAnim.from.x.toFixed(2)}px, ${autoPlayDragAnim.from.y.toFixed(2)}px, 0) rotate(0deg)`,
+                      transition: 'none',
+                    }}
                   >
                     <div className="relative h-0 w-0">
                       <div
@@ -4404,24 +4354,6 @@ export function CombatSandbox({
                   })}
                 </div>
               </div>
-                  {shouldRenderTurnBars && effectiveActiveSide === 'enemy' && !interTurnCountdownActive && (
-                    <div className="flex w-full justify-center px-1">
-                      <div className="w-[420px] max-w-[70vw] px-2 py-1">
-                        <div className="mb-1 text-center text-[9px] uppercase tracking-[0.2em] text-[#ff8a00]">Enemy Turn</div>
-                        <div className="flex justify-center">
-                          <div
-                            ref={enemyTurnBarRef}
-                            className="h-[8px] rounded transition-[width] duration-75 ease-linear"
-                            style={{
-                              width: `${turnProgressPercent}%`,
-                              background: '#ff8a00',
-                              boxShadow: '0 0 8px rgba(255,138,0,0.9), 0 0 18px rgba(255,138,0,0.6)',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
                   <div className={perspectiveEnabled ? 'tableau-group-perspective-container' : ''}>
                     <div
                       ref={tableauBandRef}
@@ -4447,71 +4379,6 @@ export function CombatSandbox({
                       <TableauNoMovesOverlay active={noValidMovesForPlayer} />
                     </div>
                   </div>
-              {shouldRenderTurnBars && !zenRelicEnabled && effectiveActiveSide === 'player' && !interTurnCountdownActive && (
-                <div className="flex w-full justify-center px-1">
-                  <div
-                    className="max-w-[78vw] px-2 py-1"
-                    style={{ width: `${tableauBandWidthPx}px` }}
-                  >
-                    <div className="mb-1 flex items-center justify-between text-[9px] uppercase tracking-[0.2em] text-[#ff8a00]">
-                      <span>Player Turn</span>
-                      <span>{zenRelicEnabled ? '∞' : `${(turnRemainingMs / 1000).toFixed(1)}s`}</span>
-                    </div>
-                    <div className="relative h-[10px] overflow-hidden rounded">
-                      {highPerformanceTimer ? (
-                        <ParticleProgressBar
-                          progress={turnProgressPercent / 100}
-                          color="#ff8a00"
-                          isPaused={isGamePaused}
-                        />
-                      ) : (
-                        <div
-                          ref={playerTurnBarRef}
-                          className="absolute left-1/2 top-0 h-full -translate-x-1/2 rounded transition-[width] duration-75 ease-linear"
-                          style={{
-                            width: `${turnProgressPercent}%`,
-                            background: '#ff8a00',
-                            boxShadow: '0 0 10px rgba(255,138,0,0.95), 0 0 24px rgba(255,138,0,0.65)',
-                          }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-              {shouldRenderTurnBars && interTurnCountdownActive && (
-                <div className="flex w-full justify-center px-1">
-                  <div
-                    className="max-w-[78vw] px-2 py-1"
-                    style={{ width: `${tableauBandWidthPx}px` }}
-                  >
-                    <div className="mb-1 text-center text-[9px] uppercase tracking-[0.2em] text-[#ff8a00]">
-                      {pendingTurnSide === 'player'
-                        ? `GET READY: YOUR TURN IN ${(interTurnCountdownMs / 1000).toFixed(1)}`
-                        : `GET READY: ENEMY TURN IN ${(interTurnCountdownMs / 1000).toFixed(1)}`}
-                    </div>
-                    <div className="relative h-[10px] overflow-hidden rounded">
-                      {highPerformanceTimer ? (
-                        <ParticleProgressBar
-                          progress={Math.max(0, Math.min(100, (interTurnCountdownMs / INTER_TURN_COUNTDOWN_MS))) / 100}
-                          color="#ff8a00"
-                          isPaused={isGamePaused}
-                        />
-                      ) : (
-                        <div
-                          ref={playerTurnBarRef}
-                          className="absolute left-1/2 top-0 h-full -translate-x-1/2 rounded transition-[width] duration-75 ease-linear"
-                          style={{
-                            width: `${Math.max(0, Math.min(100, (interTurnCountdownMs / INTER_TURN_COUNTDOWN_MS) * 100))}%`,
-                            background: '#ff8a00',
-                            boxShadow: '0 0 10px rgba(255,138,0,0.95), 0 0 24px rgba(255,138,0,0.65)',
-                          }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
               {showTurnTimer && zenRelicEnabled && !interTurnCountdownActive && (
                 <div className="flex w-full justify-center px-1 py-1">
                   <button
@@ -4539,7 +4406,10 @@ export function CombatSandbox({
                           index={idx}
                           onFoundationClick={() => handleSandboxFoundationClick(idx)}
                           allowClickInDnd
-                          canReceive={!!selectedCard && !!validFoundationsForSelected[idx] && !isFoundationTableauLocked(idx)}
+                          canReceive={
+                            (!!selectedCard && !!validFoundationsForSelected[idx] && !isFoundationTableauLocked(idx))
+                            || canTapFriendlyFoundation(idx)
+                          }
                           interactionMode={gameState.interactionMode}
                           showGraphics={showGraphics}
                           scale={1.12}

@@ -16,6 +16,7 @@ import { createActorFoundationCard } from '../engine/combat/foundationCard';
 import { createEmptyEnemyFoundations } from '../engine/combat/enemyFoundations';
 import { generateRandomCombatCard } from '../engine/combat/backfill';
 import { getMoveAvailability, getValidFoundationsForCard } from '../engine/combat/moveAvailability';
+import { createActorDeckStateWithOrim } from '../engine/actorDecks';
 import type { CombatSandboxActionsContract } from '../components/combat/contracts';
 
 const PLAYER_ACTOR_IDS: Array<'felis' | 'ursus' | 'lupus'> = ['felis', 'ursus', 'lupus'];
@@ -42,6 +43,16 @@ function createCombatLabState(): GameState {
     enemyFoundations[CENTER_ENEMY_FOUNDATION_INDEX] = [createActorFoundationCard(initialEnemy)];
     enemyActors[CENTER_ENEMY_FOUNDATION_INDEX] = initialEnemy;
   }
+  const seededActors = [...playerActors, ...enemyActors].filter((actor): actor is Actor => !!actor);
+  const actorDecks: GameState['actorDecks'] = {};
+  const orimInstances: GameState['orimInstances'] = {};
+  seededActors.forEach((actor) => {
+    const seeded = createActorDeckStateWithOrim(actor.id, actor.definitionId, []);
+    actorDecks[actor.id] = seeded.deck;
+    seeded.orimInstances.forEach((instance) => {
+      orimInstances[instance.id] = instance;
+    });
+  });
   return {
     phase: 'combat',
     currentEncounterId: undefined,
@@ -65,8 +76,8 @@ function createCombatLabState(): GameState {
     resourceStash: { A: 0, E: 0, W: 0, F: 0, L: 0, D: 0, N: 0 },
     orimDefinitions: [],
     orimStash: [],
-    orimInstances: {},
-    actorDecks: {},
+    orimInstances,
+    actorDecks,
     relicDefinitions: [],
     equippedRelics: [],
     relicRuntimeState: {},
