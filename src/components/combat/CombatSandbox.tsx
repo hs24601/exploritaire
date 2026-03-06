@@ -1,4 +1,4 @@
-import { Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Profiler, useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { useGraphics } from '../../contexts/GraphicsContext';
 import { useCardScalePreset } from '../../contexts/CardScaleContext';
 import { usePerspective } from '../../contexts/PerspectiveContext';
@@ -29,9 +29,25 @@ import abilitiesJson from '../../data/abilities.json';
 import { LostInStarsAtmosphere } from '../atmosphere/LostInStarsAtmosphere';
 import { AuroraForestAtmosphere } from '../atmosphere/AuroraForestAtmosphere';
 import { BlackHoleAtmosphere } from '../atmosphere/BlackHoleAtmosphere';
+import { BrownianMotionAtmosphere } from '../atmosphere/BrownianMotionAtmosphere';
+import { ChaosSplitAtmosphere } from '../atmosphere/ChaosSplitAtmosphere';
+import { CometRainAtmosphere } from '../atmosphere/CometRainAtmosphere';
+import { CosmicLintAtmosphere } from '../atmosphere/CosmicLintAtmosphere';
 import { DriftingPurpleAtmosphere } from '../atmosphere/DriftingPurpleAtmosphere';
+import { EinsteinRosenAtmosphere } from '../atmosphere/EinsteinRosenAtmosphere';
+import { ElectricSkiesAtmosphere } from '../atmosphere/ElectricSkiesAtmosphere';
+import { FallingSnowAtmosphere } from '../atmosphere/FallingSnowAtmosphere';
+import { FlorpusForestAtmosphere } from '../atmosphere/FlorpusForestAtmosphere';
+import { GravitySplitAtmosphere } from '../atmosphere/GravitySplitAtmosphere';
 import { SmokeGreenAtmosphere } from '../atmosphere/SmokeGreenAtmosphere';
 import { InfernoMaelstromAtmosphere } from '../atmosphere/InfernoMaelstromAtmosphere';
+import { OceanSolarCycleAtmosphere } from '../atmosphere/OceanSolarCycleAtmosphere';
+import { RagingWavesAtmosphere } from '../atmosphere/RagingWavesAtmosphere';
+import { RaritySquaresTunnelAtmosphere } from '../atmosphere/RaritySquaresTunnelAtmosphere';
+import { SacredRealmAtmosphere } from '../atmosphere/SacredRealmAtmosphere';
+import { SakuraBlossomsAtmosphere } from '../atmosphere/SakuraBlossomsAtmosphere';
+import { SolarisPrimeAtmosphere } from '../atmosphere/SolarisPrimeAtmosphere';
+import { StarsTwinklePerformantAtmosphere } from '../atmosphere/StarsTwinklePerformantAtmosphere';
 import { ATMOSPHERE_PRESETS, type AtmosphereEffectId } from '../atmosphere/atmosphereLibrary';
 
 interface CombatSandboxProps {
@@ -915,10 +931,14 @@ export function CombatSandbox({
         shiftTimeScale(1);
         return;
       }
+      if (key === 'e') {
+        event.preventDefault();
+        onOpenEditor?.();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isLabMode, open, shiftTimeScale]);
+  }, [isLabMode, onOpenEditor, open, shiftTimeScale]);
   useEffect(() => {
     if (enemySpawnPickerIndex == null) return;
     if ((enemyFoundations[enemySpawnPickerIndex]?.length ?? 0) > 0) {
@@ -1895,27 +1915,26 @@ export function CombatSandbox({
     tappedPlayerFoundations,
   ]);
   useEffect(() => {
-    setTappedPlayerFoundations((prev) => {
-      const next: Record<number, boolean> = {};
-      let changed = false;
-      Object.entries(prev).forEach(([foundationIndexKey, tapped]) => {
-        if (!tapped) {
-          changed = true;
-          return;
-        }
-        const foundationIndex = Number(foundationIndexKey);
-        const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
-        const actor = resolvePlayerFoundationActor(foundationIndex, foundationCards);
-        if (!actor?.id) {
-          changed = true;
-          return;
-        }
-        next[foundationIndex] = true;
-      });
-      if (!changed && Object.keys(next).length === Object.keys(prev).length) return prev;
-      return next;
+    const prevKeys = Object.keys(tappedPlayerFoundations);
+    if (prevKeys.length === 0) return;
+    let changed = false;
+    const next: Record<number, boolean> = {};
+    prevKeys.forEach((foundationIndexKey) => {
+      if (!tappedPlayerFoundations[Number(foundationIndexKey)]) {
+        changed = true;
+        return;
+      }
+      const foundationIndex = Number(foundationIndexKey);
+      const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
+      if (foundationCards.length === 0) {
+        changed = true;
+        return;
+      }
+      next[foundationIndex] = true;
     });
-  }, [previewPlayerFoundations, resolvePlayerFoundationActor]);
+    if (!changed && Object.keys(next).length === prevKeys.length) return;
+    setTappedPlayerFoundations(next);
+  }, [previewPlayerFoundations, tappedPlayerFoundations]);
   const isFoundationTableauLocked = useCallback(
     (foundationIndex: number) => Boolean(tappedPlayerFoundations[foundationIndex]),
     [tappedPlayerFoundations]
@@ -2510,8 +2529,9 @@ export function CombatSandbox({
       y: targetRect.top - viewportRect.top + targetRect.height / 2 + pointerAnchorOffsetY,
     };
     const distance = Math.hypot(to.x - from.x, to.y - from.y);
-    const speedScale = Math.max(0.3, autoPlaySpeed * Math.max(0.55, timeScale));
-    const baseDurationMs = 260 + (distance * 0.55);
+    // Keep autoplay speed visibly coupled to drag travel time across all speed presets.
+    const speedScale = Math.max(0.25, autoPlaySpeed) * Math.max(0.5, timeScale);
+    const baseDurationMs = 360 + (distance * 0.9);
     setAutoPlayDragAnim({
       id: `autoplay-drag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       card,
@@ -2519,9 +2539,9 @@ export function CombatSandbox({
       to,
       startedAtMs: performance.now(),
       durationMs: Math.max(
-        180,
+        90,
         Math.min(
-          820,
+          980,
           Math.round(baseDurationMs / speedScale)
         )
       ),
@@ -4047,24 +4067,57 @@ export function CombatSandbox({
 
       <div className={arenaDockClassName} style={arenaDockStyle}>
         <div className={`${arenaPanelClassName}${hideGameContent ? ' invisible' : ''}`}>
-            {selectedAtmosphere === 'lost_in_stars' && (
-              <LostInStarsAtmosphere className="pointer-events-none absolute inset-0 z-0 h-full w-full visible" />
-            )}
-            {selectedAtmosphere === 'aurora_forest' && (
-              <AuroraForestAtmosphere className="pointer-events-none absolute inset-0 z-0 h-full w-full visible" />
-            )}
-            {selectedAtmosphere === 'black_hole' && (
-              <BlackHoleAtmosphere className="pointer-events-none absolute inset-0 z-0 h-full w-full visible" />
-            )}
-            {selectedAtmosphere === 'drifting_purple' && (
-              <DriftingPurpleAtmosphere className="pointer-events-none fixed inset-0 z-0 h-screen w-screen visible" />
-            )}
-            {selectedAtmosphere === 'smoke_green' && (
-              <SmokeGreenAtmosphere className="pointer-events-none fixed inset-0 z-0 h-screen w-screen visible" />
-            )}
-            {selectedAtmosphere === 'inferno_maelstrom' && (
-              <InfernoMaelstromAtmosphere className="pointer-events-none fixed inset-0 z-0 h-screen w-screen visible" />
-            )}
+            {(() => {
+              const className = 'pointer-events-none absolute inset-0 z-0 h-full w-full visible';
+              const atmosphereComponents: Partial<Record<AtmosphereEffectId, unknown>> = {
+                lost_in_stars: LostInStarsAtmosphere,
+                aurora_forest: AuroraForestAtmosphere,
+                black_hole: BlackHoleAtmosphere,
+                brownian_motion: BrownianMotionAtmosphere,
+                chaos_split: ChaosSplitAtmosphere,
+                comet_rain: CometRainAtmosphere,
+                cosmic_lint: CosmicLintAtmosphere,
+                drifting_purple: DriftingPurpleAtmosphere,
+                einstein_rosen: EinsteinRosenAtmosphere,
+                electric_skies: ElectricSkiesAtmosphere,
+                falling_snow: FallingSnowAtmosphere,
+                florpus_forest: FlorpusForestAtmosphere,
+                gravity_split: GravitySplitAtmosphere,
+                inferno_maelstrom: InfernoMaelstromAtmosphere,
+                ocean_solar_cycle: OceanSolarCycleAtmosphere,
+                raging_waves: RagingWavesAtmosphere,
+                rarity_squares_tunnel: RaritySquaresTunnelAtmosphere,
+                sacred_realm: SacredRealmAtmosphere,
+                solaris_prime: SolarisPrimeAtmosphere,
+                sakura_blossoms: SakuraBlossomsAtmosphere,
+                smoke_green: SmokeGreenAtmosphere,
+                stars_twinkle_performant: StarsTwinklePerformantAtmosphere,
+              };
+              if (selectedAtmosphere === 'none') return null;
+              const candidate = atmosphereComponents[selectedAtmosphere] as
+                | ComponentType<{ className?: string }>
+                | { default?: ComponentType<{ className?: string }> }
+                | undefined;
+              const AtmosphereComponent = (
+                candidate
+                && typeof candidate === 'object'
+                && 'default' in candidate
+                && candidate.default
+              ) ? candidate.default : candidate;
+              const isRenderable = Boolean(
+                AtmosphereComponent
+                && (
+                  typeof AtmosphereComponent === 'function'
+                  || (typeof AtmosphereComponent === 'object' && '$$typeof' in (AtmosphereComponent as object))
+                )
+              );
+              if (!isRenderable) {
+                if (import.meta.env.DEV) console.warn('[atmosphere] unresolved preset', selectedAtmosphere);
+                return null;
+              }
+              const RenderAtmosphere = AtmosphereComponent as ComponentType<{ className?: string }>;
+              return <RenderAtmosphere className={className} />;
+            })()}
             {showCombatHud && atmosphereMenuOpen && (
               <div className="pointer-events-none absolute right-2 top-2 z-[10018] flex flex-col items-end gap-1">
                 <div className="pointer-events-auto rounded border border-game-teal/50 bg-black/70 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-game-teal">

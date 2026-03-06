@@ -21,6 +21,8 @@ import type { CombatSandboxActionsContract } from '../components/combat/contract
 const PLAYER_ACTOR_IDS: Array<'felis' | 'ursus' | 'lupus'> = ['felis', 'ursus', 'lupus'];
 const TABLEAU_COUNT = 7;
 const TABLEAU_DEPTH = 4;
+const CENTER_ENEMY_FOUNDATION_INDEX = 0;
+const DEFAULT_ENEMY_DEFINITION_ID = 'shade_of_resentment';
 
 function createCombatTableaus(): Card[][] {
   return Array.from({ length: TABLEAU_COUNT }, () => (
@@ -33,13 +35,20 @@ function createCombatLabState(): GameState {
     .map((id) => createActor(id))
     .filter((actor): actor is Actor => !!actor);
   const foundations: Card[][] = playerActors.map((actor) => [createActorFoundationCard(actor)]);
+  const initialEnemy = createActor(DEFAULT_ENEMY_DEFINITION_ID);
+  const enemyFoundations = createEmptyEnemyFoundations();
+  const enemyActors: Actor[] = [];
+  if (initialEnemy && enemyFoundations[CENTER_ENEMY_FOUNDATION_INDEX]) {
+    enemyFoundations[CENTER_ENEMY_FOUNDATION_INDEX] = [createActorFoundationCard(initialEnemy)];
+    enemyActors[CENTER_ENEMY_FOUNDATION_INDEX] = initialEnemy;
+  }
   return {
     phase: 'playing',
     currentBiome: undefined,
     tableaus: createCombatTableaus(),
     foundations,
-    enemyFoundations: createEmptyEnemyFoundations(),
-    enemyActors: [],
+    enemyFoundations,
+    enemyActors,
     rpgEnemyHandCards: [[], [], []],
     rpgHandCards: [],
     stock: [],
@@ -147,10 +156,16 @@ export function useCombatLabEngine() {
         enemyFoundations: nextFoundations,
       };
     }),
-    setEnemyDifficulty: (difficulty) => setGameState((prev) => ({ ...prev, enemyDifficulty: difficulty })),
-    setCombatFlowMode: (mode) => setGameState((prev) => ({ ...prev, combatFlowMode: mode })),
+    setEnemyDifficulty: (difficulty) => setGameState((prev) => (
+      prev.enemyDifficulty === difficulty ? prev : { ...prev, enemyDifficulty: difficulty }
+    )),
+    setCombatFlowMode: (mode) => setGameState((prev) => (
+      prev.combatFlowMode === mode ? prev : { ...prev, combatFlowMode: mode }
+    )),
     setActiveSide: (side: 'player' | 'enemy') => (
-      setGameState((prev) => ({ ...prev, randomBiomeActiveSide: side }))
+      setGameState((prev) => (
+        prev.randomBiomeActiveSide === side ? prev : { ...prev, randomBiomeActiveSide: side }
+      ))
     ),
     selectCard: (card, tableauIndex) => setSelectedCard({ card, tableauIndex }),
     playToFoundation: (foundationIndex) => {

@@ -1479,7 +1479,7 @@ export const VisualsEditor = memo(function VisualsEditor({
                 <div className="grid grid-cols-3 gap-6">
                   {ELEMENT_WATERCOLOR_SWATCH_ORDER.map((element) => (
                     <div key={element} className="h-48 rounded-xl border border-game-teal/10 bg-black/40 overflow-hidden relative group">
-                      <DynamicPaintCanvas element={element} className="w-full h-full" />
+                      <DynamicPaintCanvas />
                     </div>
                   ))}
                 </div>
