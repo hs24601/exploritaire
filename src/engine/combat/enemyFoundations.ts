@@ -92,3 +92,4 @@ export function ensureEnemyFoundationsForPlay(
 export function createDefaultEnemyFoundations(): Card[][] {
   return DEFAULT_ENEMY_FOUNDATION_SEEDS.map((seed) => [createEnemyFoundationCard(seed)]);
 }
+

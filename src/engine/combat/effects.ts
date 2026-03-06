@@ -8,3 +8,4 @@ export function processEffects(effects: Effect[]): Effect[] {
     }))
     .filter((effect) => effect.duration !== 0);
 }
+

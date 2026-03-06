@@ -14,7 +14,7 @@ function createCardFromElement(element: Element, rank: number): Card {
         orimId: element !== 'N' ? `element-${element}` : null,
       },
     ],
-    id: `biome-${element}-${rank}-${Date.now()}-${randomIdSuffix()}`,
+    id: `combat-${element}-${rank}-${Date.now()}-${randomIdSuffix()}`,
   };
 }
 
@@ -48,3 +48,4 @@ export function ensureCombatDeck(state: GameState): CombatDeckState {
   }
   return createCombatDeckFromOwned(createStarterCombatDeckCards());
 }
+

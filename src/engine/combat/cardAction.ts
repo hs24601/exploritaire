@@ -39,3 +39,4 @@ export function recordCardAction(prev: GameState, next: GameState): GameState {
     ...nextTimerPatch,
   };
 }
+

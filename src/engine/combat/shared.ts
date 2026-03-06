@@ -75,16 +75,15 @@ export function createEmptyTokenCounts(): Record<Element, number> {
   };
 }
 
-export function getPartyForTile(state: GameState, tileId?: string): Actor[] {
-  if (!tileId) return [];
-  return state.tileParties[tileId] ?? [];
+export function getCombatParty(state: GameState): Actor[] {
+  return Array.isArray(state.availableActors) ? state.availableActors : [];
 }
 
 export function resolveFoundationActorId(state: GameState, foundationIndex: number): string | null {
   const top = state.foundations[foundationIndex]?.[0];
   const foundationActorId = top?.sourceActorId ?? top?.rpgActorId;
   if (foundationActorId) return foundationActorId;
-  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const partyActors = getCombatParty(state);
   return partyActors[foundationIndex]?.id ?? null;
 }
 
@@ -96,7 +95,7 @@ export function isRpgCombatActive(state: GameState): boolean {
 export function warnOnUnexpectedHpIncrease(prev: GameState, next: GameState, context: string): void {
   const collectById = (state: GameState): Map<string, number> => {
     const map = new Map<string, number>();
-    const playerParty = getPartyForTile(state, state.activeSessionTileId);
+    const playerParty = getCombatParty(state);
     playerParty.forEach((actor) => {
       map.set(actor.id, actor.hp ?? 0);
     });
@@ -121,3 +120,4 @@ export function warnOnUnexpectedHpIncrease(prev: GameState, next: GameState, con
   if (increases.length === 0) return;
   console.warn('[Invariant][HP Increase]', context, increases);
 }
+

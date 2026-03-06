@@ -25,3 +25,4 @@ export function createActorFoundationCard(actor: Actor): Card {
     rpgCardKind: 'focus',
   };
 }
+

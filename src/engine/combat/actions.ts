@@ -1,8 +1,9 @@
 import type { Actor, Card, GameState } from '../types';
-import { createFullWildSentinel, randomIdSuffix } from '../constants';
-import { getBiomeDefinition } from '../biomes';
-import { isCombatSessionActive, isRandomGeneratedBiomeSession, isRpgCombatSession, isRpgCore } from '../combatSession';
+import { randomIdSuffix } from '../constants';
+import { isCombatSessionActive, isRpgCore } from '../combatSession';
 import { createActor } from '../actors';
+import { canPlayCardWithWild } from '../rules';
+import { applyOrimTiming } from '../orimEffects';
 import { grantApToActorById } from './ap';
 import { awardActorComboCards } from './actorRewards';
 import { findActorById } from './actorLookup';
@@ -12,7 +13,6 @@ import { ensureCombatDeck } from './deck';
 import { processEffects } from './effects';
 import { createActorFoundationCard } from './foundationCard';
 import { getMoveAvailability } from './moveAvailability';
-import { completeEncounterFromBiomeRewards } from './encounterCompletion';
 import {
   applyTokenReward,
   awardEnemyActorComboCards,
@@ -44,7 +44,6 @@ import {
 import {
   clampPartyForFoundations,
   createEmptyTokenCounts,
-  getPartyForTile,
   isActorCombatEnabled,
   isRpgCombatActive,
   resolveFoundationActorId,
@@ -53,8 +52,23 @@ import {
   updateCombatFlowTelemetry,
   warnOnUnexpectedHpIncrease,
 } from './shared';
-import { canPlayCardWithWild } from '../rules';
-import { applyOrimTiming } from '../orimEffects';
+
+function deriveFoundationActors(state: GameState): Actor[] {
+  const actors = state.foundations
+    .map((stack) => {
+      const actorId = stack[0]?.sourceActorId ?? stack[0]?.rpgActorId;
+      if (!actorId) return null;
+      return findActorById(state, actorId);
+    })
+    .filter((actor): actor is Actor => !!actor);
+  const fallbackPool = actors.length > 0 ? actors : (state.availableActors ?? []);
+  if (fallbackPool.length > 0) return clampPartyForFoundations(fallbackPool);
+  const seeds: Array<'felis' | 'ursus' | 'lupus'> = ['felis', 'ursus', 'lupus'];
+  const generated = state.foundations
+    .map((_, index) => createActor(seeds[index] ?? 'felis'))
+    .filter((actor): actor is Actor => !!actor);
+  return clampPartyForFoundations(generated);
+}
 
 export function playTableauCard(
   state: GameState,
@@ -62,8 +76,7 @@ export function playTableauCard(
   foundationIndex: number
 ): GameState | null {
   if (!isCombatSessionActive(state)) return null;
-  const enforceTurnOwnership = (state.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure';
-  if (enforceTurnOwnership && getCombatActiveSide(state) === 'enemy') return null;
+  if ((state.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure' && getCombatActiveSide(state) === 'enemy') return null;
   const tableau = state.tableaus[tableauIndex];
   if (!tableau || tableau.length === 0) return null;
 
@@ -76,28 +89,19 @@ export function playTableauCard(
   const foundationTop = foundation[foundation.length - 1];
   if (!canPlayCardWithWild(card, foundationTop, state.activeEffects)) return null;
 
-  const biomeDef = state.currentBiome ? getBiomeDefinition(state.currentBiome) : null;
-  const isInfinite = !!biomeDef?.infinite;
   const playerTurnTimerState = startTurnTimerIfNeeded(state, 'player');
-  const isRpgExplorationOnly = isRpgCore(state)
-    && !(state.enemyFoundations ?? []).some((stack) => stack.length > 0);
-  const shouldBackfill = isInfinite && !isRpgExplorationOnly;
-
-  const newTableaus = state.tableaus.map((t, i) => {
-    if (i !== tableauIndex) return t;
-    const remaining = t.slice(0, -1);
+  const shouldBackfill = false;
+  const newTableaus = state.tableaus.map((stack, i) => {
+    if (i !== tableauIndex) return stack;
+    const remaining = stack.slice(0, -1);
     return shouldBackfill ? backfillTableau(remaining) : remaining;
   });
-  const priorCombatDeck = ensureCombatDeck(state);
-  const nextCombatDeck = {
-    ...priorCombatDeck,
-    discardPile: [...priorCombatDeck.discardPile, card],
-  };
 
-  const newFoundations = state.foundations.map((f, i) =>
-    i === foundationIndex ? [...f, card] : f
-  );
-
+  const nextCombatDeck = (() => {
+    const deck = ensureCombatDeck(state);
+    return { ...deck, discardPile: [...deck.discardPile, card] };
+  })();
+  const newFoundations = state.foundations.map((stack, i) => (i === foundationIndex ? [...stack, card] : stack));
   const foundationCount = state.foundations.length;
   const comboSeed = state.foundationCombos && state.foundationCombos.length === foundationCount
     ? state.foundationCombos
@@ -105,45 +109,35 @@ export function playTableauCard(
   const newCombos = [...comboSeed];
   newCombos[foundationIndex] = (newCombos[foundationIndex] || 0) + 1;
   const newActorCombos = foundationActorId
-    ? {
-      ...(state.actorCombos ?? {}),
-      [foundationActorId]: (state.actorCombos?.[foundationActorId] ?? 0) + 1,
-    }
+    ? { ...(state.actorCombos ?? {}), [foundationActorId]: (state.actorCombos?.[foundationActorId] ?? 0) + 1 }
     : (state.actorCombos ?? {});
-  const stateWithApGain = foundationActorId
-    ? grantApToActorById(state, foundationActorId, 1)
-    : state;
+  const stateWithApGain = foundationActorId ? grantApToActorById(state, foundationActorId, 1) : state;
 
   const tokensSeed = state.foundationTokens && state.foundationTokens.length === foundationCount
     ? state.foundationTokens
     : Array.from({ length: foundationCount }, () => createEmptyTokenCounts());
-  const newFoundationTokens = tokensSeed.map((tokens, i) => {
-    if (i !== foundationIndex || !card.tokenReward) return { ...tokens };
-    return {
-      ...tokens,
-      [card.tokenReward]: (tokens[card.tokenReward] || 0) + 1,
-    };
-  });
-
-  const newCollectedTokens = applyTokenReward(
-    state.collectedTokens || createEmptyTokenCounts(),
-    card
-  );
+  const newFoundationTokens = tokensSeed.map((tokens, i) => (
+    i !== foundationIndex || !card.tokenReward
+      ? { ...tokens }
+      : { ...tokens, [card.tokenReward]: (tokens[card.tokenReward] || 0) + 1 }
+  ));
+  const newCollectedTokens = applyTokenReward(state.collectedTokens || createEmptyTokenCounts(), card);
   const awarded = isRpgCombatActive(stateWithApGain)
-    ? awardActorComboCards({
-      ...stateWithApGain,
-      foundations: newFoundations,
-      actorCombos: newActorCombos,
-    }, foundationIndex, newActorCombos, getMoveAvailability, { sourceSide: 'player' })
+    ? awardActorComboCards(
+      { ...stateWithApGain, foundations: newFoundations, actorCombos: newActorCombos },
+      foundationIndex,
+      newActorCombos,
+      getMoveAvailability,
+      { sourceSide: 'player' }
+    )
     : null;
 
-  const nextState = {
+  return recordCardAction(state, {
     ...stateWithApGain,
     tableaus: newTableaus,
     foundations: newFoundations,
     activeEffects: processEffects(stateWithApGain.activeEffects),
     turnCount: stateWithApGain.turnCount + 1,
-    biomeMovesCompleted: (stateWithApGain.biomeMovesCompleted || 0) + 1,
     collectedTokens: newCollectedTokens,
     foundationCombos: newCombos,
     actorCombos: newActorCombos,
@@ -157,8 +151,7 @@ export function playTableauCard(
       ...current,
       playerCardsPlayed: current.playerCardsPlayed + 1,
     })),
-  };
-  return recordCardAction(state, nextState);
+  });
 }
 
 export function playEnemyTableauCard(
@@ -167,8 +160,7 @@ export function playEnemyTableauCard(
   foundationIndex: number
 ): GameState | null {
   if (!isCombatSessionActive(state)) return null;
-  const enforceTurnOwnership = (state.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure';
-  if (enforceTurnOwnership && getCombatActiveSide(state) !== 'enemy') return null;
+  if ((state.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure' && getCombatActiveSide(state) !== 'enemy') return null;
   const ensured = ensureEnemyFoundationsForPlay(state, createActorFoundationCard);
   const workingState = ensured.state;
   const enemyFoundations = ensured.enemyFoundations;
@@ -182,18 +174,14 @@ export function playEnemyTableauCard(
 
   const card = tableau[tableau.length - 1];
   const foundationTop = enemyFoundation[enemyFoundation.length - 1];
-  if (!foundationTop) return null;
-  if (!canPlayCardWithWild(card, foundationTop, workingState.activeEffects)) return null;
+  if (!foundationTop || !canPlayCardWithWild(card, foundationTop, workingState.activeEffects)) return null;
 
-  const biomeDef = workingState.currentBiome ? getBiomeDefinition(workingState.currentBiome) : null;
-  const isInfinite = !!biomeDef?.infinite;
   const enemyTurnTimerState = startTurnTimerIfNeeded(workingState, 'enemy');
   const useQueue = getCombatActiveSide(workingState) === 'enemy';
   let nextQueues = workingState.enemyBackfillQueues ? workingState.enemyBackfillQueues.map((q) => [...q]) : undefined;
-  const newTableaus = workingState.tableaus.map((t, i) => {
-    if (i !== tableauIndex) return t;
-    const remaining = t.slice(0, -1);
-    if (!isInfinite) return remaining;
+  const newTableaus = workingState.tableaus.map((stack, i) => {
+    if (i !== tableauIndex) return stack;
+    const remaining = stack.slice(0, -1);
     if (useQueue) {
       const queue = nextQueues?.[i] ?? [];
       const result = backfillTableauFromQueue(remaining, queue);
@@ -203,9 +191,7 @@ export function playEnemyTableauCard(
     return backfillTableau(remaining);
   });
 
-  const newEnemyFoundations = enemyFoundations.map((f, i) =>
-    i === foundationIndex ? [...f, card] : f
-  );
+  const newEnemyFoundations = enemyFoundations.map((stack, i) => (i === foundationIndex ? [...stack, card] : stack));
   const foundationCount = newEnemyFoundations.length;
   const comboSeed = workingState.enemyFoundationCombos && workingState.enemyFoundationCombos.length === foundationCount
     ? workingState.enemyFoundationCombos
@@ -215,25 +201,18 @@ export function playEnemyTableauCard(
   const stateWithApGain = enemyActors[foundationIndex]
     ? grantApToActorById(workingState, enemyActors[foundationIndex].id, 1)
     : workingState;
-
   const tokensSeed = workingState.enemyFoundationTokens && workingState.enemyFoundationTokens.length === foundationCount
     ? workingState.enemyFoundationTokens
     : Array.from({ length: foundationCount }, () => createEmptyTokenCounts());
-  const newEnemyTokens = tokensSeed.map((tokens, i) => {
-    if (i !== foundationIndex || !card.tokenReward) return { ...tokens };
-    return {
-      ...tokens,
-      [card.tokenReward]: (tokens[card.tokenReward] || 0) + 1,
-    };
-  });
+  const newEnemyTokens = tokensSeed.map((tokens, i) => (
+    i !== foundationIndex || !card.tokenReward
+      ? { ...tokens }
+      : { ...tokens, [card.tokenReward]: (tokens[card.tokenReward] || 0) + 1 }
+  ));
 
-  const nextRpgEnemyHandCards = awardEnemyActorComboCards(stateWithApGain, foundationIndex, newCombos);
   const nextCombatDeck = (() => {
-    const combatDeck = ensureCombatDeck(stateWithApGain);
-    return {
-      ...combatDeck,
-      discardPile: [...combatDeck.discardPile, card],
-    };
+    const deck = ensureCombatDeck(stateWithApGain);
+    return { ...deck, discardPile: [...deck.discardPile, card] };
   })();
 
   return {
@@ -242,7 +221,7 @@ export function playEnemyTableauCard(
     enemyFoundations: newEnemyFoundations,
     enemyFoundationCombos: newCombos,
     enemyFoundationTokens: newEnemyTokens,
-    rpgEnemyHandCards: nextRpgEnemyHandCards,
+    rpgEnemyHandCards: awardEnemyActorComboCards(stateWithApGain, foundationIndex, newCombos),
     combatDeck: nextCombatDeck,
     enemyBackfillQueues: nextQueues,
     turnCount: stateWithApGain.turnCount + 1,
@@ -258,16 +237,11 @@ export function advanceTurn(state: GameState): GameState {
   if (!isCombatSessionActive(state)) return state;
   const deadlockResolved = resolveRandomBiomeDeadlockSurge(state);
   if (deadlockResolved !== state) return deadlockResolved;
-  if (!state.currentBiome) return state;
-  const biomeDef = getBiomeDefinition(state.currentBiome);
-  if (!biomeDef?.randomlyGenerated) return state;
   const useEnemyFoundations = (state.enemyFoundations?.length ?? 0) > 0;
-  if (!useEnemyFoundations) {
-    return endTurn(state);
-  }
-  const activeSide = getCombatActiveSide(state);
-  const turnDurationMs = getCombatTurnDurationMs(state, 10000);
-  if (activeSide === 'player') {
+  if (!useEnemyFoundations) return endTurn(state);
+
+  if (getCombatActiveSide(state) === 'player') {
+    const turnDurationMs = getCombatTurnDurationMs(state, 10000);
     const ensuredEnemyFoundations: Card[][] = state.enemyFoundations ?? createEmptyEnemyFoundations();
     const ensuredEnemyActors = state.enemyActors ?? [];
     const nextState: GameState = {
@@ -284,10 +258,7 @@ export function advanceTurn(state: GameState): GameState {
       enemyActors: ensuredEnemyActors,
       enemyFoundationCombos: ensuredEnemyFoundations.map(() => 0),
       enemyFoundationTokens: ensuredEnemyFoundations.map(() => createEmptyTokenCounts()),
-      rpgEnemyHandCards: (() => {
-        const existing = state.rpgEnemyHandCards ?? [];
-        return ensuredEnemyFoundations.map((_, idx) => [...(existing[idx] ?? [])]);
-      })(),
+      rpgEnemyHandCards: ensuredEnemyFoundations.map((_, idx) => [...(state.rpgEnemyHandCards?.[idx] ?? [])]),
       lifecycleTurnCounter: getNextCombatTurnCounter(state),
       combatFlowTelemetry: updateCombatFlowTelemetry(state, (current) => ({
         ...current,
@@ -302,42 +273,16 @@ export function advanceTurn(state: GameState): GameState {
 
 export function endTurn(state: GameState): GameState {
   if (!isCombatSessionActive(state)) return state;
-  if (!state.currentBiome) return state;
-  const biomeDef = getBiomeDefinition(state.currentBiome);
-  if (!biomeDef?.randomlyGenerated) return state;
-  const partyActors = getPartyForTile(state, state.activeSessionTileId);
-  if (partyActors.length === 0) return state;
-
   const turnDurationMs = getCombatTurnDurationMs(state, 10000);
   const tableaus = state.tableaus;
   const combatDeck = state.combatDeck;
-  const useEnemyFoundations = true;
-  const foundationActors = clampPartyForFoundations(partyActors);
-  const useSingleWildFoundation = biomeDef.id === 'random_wilds';
-  const foundations: Card[][] = useSingleWildFoundation
-    ? [[createFullWildSentinel(0)]]
-    : foundationActors.map((actor) => [createActorFoundationCard(actor)]);
+  const foundationActors = deriveFoundationActors(state);
+  if (foundationActors.length === 0) return state;
+  const foundations: Card[][] = foundationActors.map((actor) => [createActorFoundationCard(actor)]);
   const foundationCombos = foundations.map(() => 0);
   const foundationTokens = foundations.map(() => createEmptyTokenCounts());
   const enemyFoundations = createEmptyEnemyFoundations();
   const enemyActors: Actor[] = [];
-  const enemyFoundationCombos = enemyFoundations ? enemyFoundations.map(() => 0) : undefined;
-  const enemyFoundationTokens = enemyFoundations ? enemyFoundations.map(() => createEmptyTokenCounts()) : undefined;
-  const nextRpgEnemyHandCards = useEnemyFoundations
-    ? (() => {
-      const existing = state.rpgEnemyHandCards ?? [];
-      return (enemyFoundations ?? []).map((_, idx) => [...(existing[idx] ?? [])]);
-    })()
-    : undefined;
-  const updatedParty = partyActors.map((actor) => ({
-    ...actor,
-    stamina: Math.max(0, (actor.stamina ?? 0) - 1),
-  }));
-  const resetActorCombos = {
-    ...(state.actorCombos ?? {}),
-    ...Object.fromEntries(updatedParty.map((actor) => [actor.id, 0])),
-  };
-
   let nextState: GameState = {
     ...state,
     tableaus,
@@ -345,27 +290,26 @@ export function endTurn(state: GameState): GameState {
     foundations,
     stock: [],
     foundationCombos,
-    actorCombos: resetActorCombos,
     foundationTokens,
+    actorCombos: {
+      ...(state.actorCombos ?? {}),
+      ...Object.fromEntries(foundationActors.map((actor) => [actor.id, 0])),
+    },
     enemyFoundations,
     enemyActors,
-    enemyFoundationCombos,
-    enemyFoundationTokens,
-    rpgEnemyHandCards: nextRpgEnemyHandCards,
+    enemyFoundationCombos: enemyFoundations.map(() => 0),
+    enemyFoundationTokens: enemyFoundations.map(() => createEmptyTokenCounts()),
+    rpgEnemyHandCards: enemyFoundations.map(() => []),
     enemyBackfillQueues: undefined,
-    tileParties: state.activeSessionTileId
-      ? { ...state.tileParties, [state.activeSessionTileId]: updatedParty }
-      : state.tileParties,
     ...setCombatTurnNumber(getCombatTurnNumber(state) + 1),
     ...setCombatTurnRuntime({
-      side: useEnemyFoundations ? 'player' : undefined,
+      side: 'player',
       durationMs: turnDurationMs,
-      remainingMs: shouldEnforceSideTurns(state) && useEnemyFoundations ? turnDurationMs : 0,
+      remainingMs: shouldEnforceSideTurns(state) ? turnDurationMs : 0,
       lastTickAt: Date.now(),
       timerActive: false,
     }),
     ...setCombatWorldEvent(undefined),
-    enemyDifficulty: useEnemyFoundations ? (state.enemyDifficulty ?? biomeDef.enemyDifficulty ?? 'normal') : undefined,
     rpgHandCards: state.rpgHandCards ?? [],
     rpgDots: state.rpgDots ?? [],
     rpgEnemyDragSlowUntil: state.rpgEnemyDragSlowUntil ?? 0,
@@ -374,17 +318,13 @@ export function endTurn(state: GameState): GameState {
     rpgCloudSightActorId: state.rpgCloudSightActorId,
     rpgComboTimerBonusMs: 0,
     rpgComboTimerBonusToken: undefined,
-    rpgBlindedPlayerLevel: state.rpgBlindedPlayerLevel ?? 0,
-    rpgBlindedPlayerUntil: state.rpgBlindedPlayerUntil ?? 0,
-    rpgBlindedEnemyLevel: state.rpgBlindedEnemyLevel ?? 0,
-    rpgBlindedEnemyUntil: state.rpgBlindedEnemyUntil ?? 0,
     lifecycleTurnCounter: getNextCombatTurnCounter(state),
     combatFlowTelemetry: updateCombatFlowTelemetry(state, (current) => ({
       ...current,
-      playerTurnsStarted: current.playerTurnsStarted + (useEnemyFoundations ? 1 : 0),
+      playerTurnsStarted: current.playerTurnsStarted + 1,
     })),
   };
-  partyActors.forEach((actor) => {
+  foundationActors.forEach((actor) => {
     nextState = applyOrimTiming(nextState, 'turn-end', actor.id);
   });
   warnOnUnexpectedHpIncrease(state, nextState, 'endTurn');
@@ -393,12 +333,6 @@ export function endTurn(state: GameState): GameState {
 
 export function endExplorationTurn(state: GameState): GameState {
   if (!isCombatSessionActive(state)) return state;
-  if (!state.currentBiome) return state;
-  const biomeDef = getBiomeDefinition(state.currentBiome);
-  if (!biomeDef?.randomlyGenerated) return state;
-  if (!isRpgCore(state)) return state;
-  const hasEnemies = (state.enemyFoundations ?? []).some((foundation) => foundation.length > 0);
-  if (hasEnemies) return state;
   return {
     ...state,
     globalRestCount: (state.globalRestCount ?? 0) + 1,
@@ -410,8 +344,7 @@ export function endExplorationTurn(state: GameState): GameState {
 }
 
 export function spawnEnemy(state: GameState): GameState {
-  if (!isCombatSessionActive(state)) return state;
-  if (!isRpgCore(state)) return state;
+  if (!isCombatSessionActive(state) || !isRpgCore(state)) return state;
   const foundations = state.enemyFoundations;
   if (!foundations || foundations.length === 0) return state;
   const emptyIndexes = foundations
@@ -429,12 +362,6 @@ export function spawnEnemy(state: GameState): GameState {
   if (spawnedActor) {
     nextEnemyActors[spawnIndex] = { ...spawnedActor, id: `${spawnedActor.id}-${randomIdSuffix()}` };
   }
-  const nextEnemyCombos = state.enemyFoundationCombos
-    ? state.enemyFoundationCombos.map((value, index) => (index === spawnIndex ? 0 : value))
-    : nextEnemyFoundations.map(() => 0);
-  const nextEnemyTokens = state.enemyFoundationTokens
-    ? state.enemyFoundationTokens.map((value, index) => (index === spawnIndex ? createEmptyTokenCounts() : value))
-    : nextEnemyFoundations.map(() => createEmptyTokenCounts());
   const nextEnemyHands = (() => {
     const current = state.rpgEnemyHandCards ?? [];
     const next = nextEnemyFoundations.map((_, index) => [...(current[index] ?? [])]);
@@ -445,8 +372,10 @@ export function spawnEnemy(state: GameState): GameState {
     ...state,
     enemyFoundations: nextEnemyFoundations,
     enemyActors: nextEnemyActors,
-    enemyFoundationCombos: nextEnemyCombos,
-    enemyFoundationTokens: nextEnemyTokens,
+    enemyFoundationCombos: nextEnemyFoundations.map((_, index) => (index === spawnIndex ? 0 : (state.enemyFoundationCombos?.[index] ?? 0))),
+    enemyFoundationTokens: nextEnemyFoundations.map((_, index) => (
+      index === spawnIndex ? createEmptyTokenCounts() : { ...(state.enemyFoundationTokens?.[index] ?? createEmptyTokenCounts()) }
+    )),
     rpgEnemyHandCards: nextEnemyHands,
   };
 }
@@ -456,14 +385,7 @@ export function spawnEnemyActor(
   definitionId: string,
   foundationIndex: number
 ): GameState {
-  if (!isCombatSessionActive(state)) return state;
-  if (!isRpgCore(state)) return state;
-  if (foundationIndex < 0) return state;
-
-  const inRandomBiome = isRandomGeneratedBiomeSession(state);
-  const inCombatLabRpg = isRpgCombatSession(state) && !inRandomBiome;
-  if (!inRandomBiome && !inCombatLabRpg) return state;
-
+  if (!isCombatSessionActive(state) || !isRpgCore(state) || foundationIndex < 0) return state;
   const actor = createActor(definitionId);
   if (!actor) return state;
   const card = createActorFoundationCard(actor);
@@ -471,52 +393,56 @@ export function spawnEnemyActor(
   const existingFoundations = (state.enemyFoundations ?? []).map((foundation) => [...foundation]);
   if (existingFoundations.length === 0) {
     const seededTarget = resolveCombatLabTargetActor(state.enemyActors ?? []);
-    if (seededTarget) {
-      existingFoundations.push([createActorFoundationCard(seededTarget)]);
-    } else {
-      existingFoundations.push([]);
-    }
+    existingFoundations.push(seededTarget ? [createActorFoundationCard(seededTarget)] : []);
   }
-  const requiredFoundationCount = Math.max(
-    foundationIndex + 1,
-    inCombatLabRpg ? 3 : 1,
-    existingFoundations.length
-  );
-  while (existingFoundations.length < requiredFoundationCount) {
-    existingFoundations.push([]);
-  }
+  const requiredFoundationCount = Math.max(foundationIndex + 1, 3, existingFoundations.length);
+  while (existingFoundations.length < requiredFoundationCount) existingFoundations.push([]);
 
   const nextEnemyFoundations = existingFoundations.map((foundation, index) => (
     index === foundationIndex ? [card] : [...foundation]
   ));
   const nextEnemyActors = [...(state.enemyActors ?? [])];
   nextEnemyActors[foundationIndex] = actor;
-
-  const nextEnemyCombos = nextEnemyFoundations.map((_, index) => (
-    index === foundationIndex ? 0 : (state.enemyFoundationCombos?.[index] ?? 0)
-  ));
-  const nextEnemyTokens = nextEnemyFoundations.map((_, index) => (
-    index === foundationIndex
-      ? createEmptyTokenCounts()
-      : { ...(state.enemyFoundationTokens?.[index] ?? createEmptyTokenCounts()) }
-  ));
   const nextEnemyHands = (() => {
     const current = state.rpgEnemyHandCards ?? [];
     const next = nextEnemyFoundations.map((_, index) => [...(current[index] ?? [])]);
     next[foundationIndex] = [];
     return next;
   })();
-
   return {
     ...state,
     enemyFoundations: nextEnemyFoundations,
     enemyActors: nextEnemyActors,
-    enemyFoundationCombos: nextEnemyCombos,
-    enemyFoundationTokens: nextEnemyTokens,
+    enemyFoundationCombos: nextEnemyFoundations.map((_, index) => (index === foundationIndex ? 0 : (state.enemyFoundationCombos?.[index] ?? 0))),
+    enemyFoundationTokens: nextEnemyFoundations.map((_, index) => (
+      index === foundationIndex ? createEmptyTokenCounts() : { ...(state.enemyFoundationTokens?.[index] ?? createEmptyTokenCounts()) }
+    )),
     rpgEnemyHandCards: nextEnemyHands,
   };
 }
 
 export function completeEncounter(state: GameState): GameState {
-  return completeEncounterFromBiomeRewards(state);
+  return {
+    ...state,
+    currentBiome: undefined,
+    activeSessionTileId: undefined,
+    turnCount: 0,
+    ...setCombatTurnNumber(1),
+    ...setCombatTurnRuntime({
+      side: 'player',
+      durationMs: getCombatTurnDurationMs(state, 10000),
+      remainingMs: getCombatTurnDurationMs(state, 10000),
+      lastTickAt: Date.now(),
+      timerActive: false,
+    }),
+    ...setCombatWorldEvent(undefined),
+    tableaus: state.tableaus.map(() => []),
+    foundations: state.foundations.map((stack) => [stack[0]].filter(Boolean) as Card[]),
+    enemyFoundations: createEmptyEnemyFoundations(),
+    enemyActors: [],
+    enemyFoundationCombos: [0, 0, 0],
+    enemyFoundationTokens: [createEmptyTokenCounts(), createEmptyTokenCounts(), createEmptyTokenCounts()],
+    rpgEnemyHandCards: [[], [], []],
+  };
 }
+

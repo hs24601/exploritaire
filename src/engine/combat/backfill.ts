@@ -20,7 +20,7 @@ export function generateRandomCombatCard(): Card {
         orimId: element !== 'N' ? `element-${element}` : null,
       },
     ],
-    id: `rbiome-${Date.now()}-${randomIdSuffix()}`,
+    id: `combat-${Date.now()}-${randomIdSuffix()}`,
   };
 }
 
@@ -42,3 +42,4 @@ export function backfillTableauFromQueue(
 export function createEnemyBackfillQueues(tableaus: Card[][], sizePerTableau: number): Card[][] {
   return tableaus.map(() => Array.from({ length: sizePerTableau }, () => generateRandomCombatCard()));
 }
+

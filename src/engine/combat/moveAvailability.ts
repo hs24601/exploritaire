@@ -1,6 +1,6 @@
 import type { Card, Effect, GameState } from '../types';
 import { canPlayCardWithWild } from '../rules';
-import { getPartyForTile, isActorCombatEnabled } from './shared';
+import { getCombatParty, isActorCombatEnabled } from './shared';
 
 export type MoveAvailability = {
   playerTableauCanPlay: boolean[];
@@ -35,7 +35,7 @@ export function getMoveAvailability(state: GameState): MoveAvailability {
   const tableaus = state.tableaus ?? [];
   const playerFoundations = state.foundations ?? [];
   const enemyFoundations = state.enemyFoundations ?? [];
-  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const partyActors = getCombatParty(state);
   const enemyActors = state.enemyActors ?? [];
 
   const playerTableauCanPlay = buildTableauCanPlayForFoundations(
@@ -93,3 +93,5 @@ export function getValidFoundationsForCard(state: GameState, card: Card): boolea
     canPlayCardWithWild(card, foundation[foundation.length - 1], state.activeEffects)
   );
 }
+
+

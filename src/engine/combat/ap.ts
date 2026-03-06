@@ -60,3 +60,4 @@ export function grantApToActorById(
     enemyActors: enemyChanged ? nextEnemyActors : state.enemyActors,
   };
 }
+

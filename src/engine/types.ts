@@ -1,4 +1,18 @@
-import type { PoiReward } from './worldMapTypes';
+export type PoiRewardType = 'aspect-choice' | 'ability-choice' | 'aspect-jumbo' | 'card-choice' | 'orim-choice';
+export type PoiRewardTrigger = 'on_arrival' | 'on_tableau_clear' | 'on_condition';
+export interface PoiReward {
+  id?: string;
+  type: PoiRewardType;
+  trigger?: PoiRewardTrigger;
+  description?: string;
+  amount: number;
+  options?: string[];
+  chooseCount?: number;
+  drawCount?: number;
+  overtitle?: string;
+  summary?: string;
+  instructions?: string;
+}
 
 export type Suit = '💨' | '⛰️' | '🔥' | '💧' | '⭐' | '🌙' | '☀️';
 

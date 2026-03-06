@@ -4,11 +4,10 @@ import { useCardScalePreset } from '../../contexts/CardScaleContext';
 import { usePerspective } from '../../contexts/PerspectiveContext';
 import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../../engine/constants';
 import { canPlayCardWithWild, getRankDisplay } from '../../engine/rules';
-import { getBiomeDefinition } from '../../engine/biomes';
 import { ACTOR_DEFINITIONS, getActorDefinition } from '../../engine/actors';
 import { createActorDeckStateWithOrim } from '../../engine/actorDecks';
 import { analyzeOptimalSequence } from '../../engine/analysis';
-import { isCombatSessionActive, isRandomGeneratedBiomeSession } from '../../engine/combatSession';
+import { isCombatSessionActive } from '../../engine/combatSession';
 import { resolveCostByRarity } from '../../engine/rarityLoadouts';
 import { Foundation } from '../Foundation';
 import { Hand } from '../Hand';
@@ -129,8 +128,8 @@ type AutoPlayDecisionKind =
   | 'player_rpg_attack'
   | 'enemy_rpg_attack'
   | 'advance_turn'
-  | 'exploration_turn'
-  | 'complete_biome'
+  | 'rest_turn'
+  | 'complete_encounter'
   | 'wait';
 type AutoPlayDecisionEntry = {
   side: AutoPlayActorSide | 'system';
@@ -812,7 +811,7 @@ export function CombatSandbox({
   const handleSpawnEnemyActor = useCallback((foundationIndex: number) => {
     const definitionId = getSelectedEnemySpawnId(foundationIndex);
     if (!definitionId) return;
-    actions.spawnEnemyActorInRandomBiome(definitionId, foundationIndex);
+    actions.spawnEnemyActor(definitionId, foundationIndex);
     setEnemySpawnPickerIndex(null);
   }, [actions, getSelectedEnemySpawnId]);
   const enemyFoundations = useMemo<CardType[][]>(() => {
@@ -973,7 +972,7 @@ export function CombatSandbox({
     const respawnFoundationIndex = enemyFoundations.findIndex((foundation, index) => (
       index !== foundationIndex && (foundation?.length ?? 0) === 0
     ));
-    actions.spawnEnemyActorInRandomBiome(
+    actions.spawnEnemyActor(
       defeatedDefinitionId,
       respawnFoundationIndex >= 0 ? respawnFoundationIndex : foundationIndex
     );
@@ -1795,7 +1794,7 @@ export function CombatSandbox({
     ));
     actions.updateEquippedRelics(nextRelics);
   }, [actions, gameState.equippedRelics]);
-  const setRandomBiomeActiveSide = actions.setRandomBiomeActiveSide;
+  const setActiveSide = actions.setActiveSide;
   const syncTurnBarWidths = useCallback((remainingMs: number, totalMs = turnDurationMs) => {
     if (DISABLE_TURN_BAR_ANIMATION) return;
     const normalizedTotal = Math.max(1, totalMs);
@@ -1808,7 +1807,7 @@ export function CombatSandbox({
   }, [turnDurationMs]);
   const forceLocalTurnSide = useCallback((nextSide: 'player' | 'enemy') => {
     setLabTurnSide(nextSide);
-    setRandomBiomeActiveSide?.(nextSide);
+    setActiveSide?.(nextSide);
     setPendingTurnSide(null);
     setPendingFinalMoveResolution(false);
     setInterTurnCountdownMs(0);
@@ -1819,7 +1818,7 @@ export function CombatSandbox({
     }
     setLocalTurnTimerActive(true);
     syncTurnBarWidths(turnDurationMs);
-  }, [setRandomBiomeActiveSide, syncTurnBarWidths, turnDurationMs]);
+  }, [setActiveSide, syncTurnBarWidths, turnDurationMs]);
   const handleZenEndTurn = useCallback(() => {
     if (!zenRelicEnabled) return;
     if (!showTurnTimer || !enforceTurnOwnership) return;
@@ -1831,7 +1830,7 @@ export function CombatSandbox({
       return;
     }
 
-    actions.advanceRandomBiomeTurn();
+    actions.advanceTurn();
   }, [
     actions,
     effectiveActiveSide,
@@ -1985,8 +1984,7 @@ export function CombatSandbox({
       rpgCardKind: 'focus',
     };
   }, []);
-  const currentBiomeDef = gameState.currentBiome ? getBiomeDefinition(gameState.currentBiome) : null;
-  const useWild = !!currentBiomeDef?.randomlyGenerated;
+  const useWild = false;
   const recordDropMetrics = useCallback((totalMs: number, actionMs: number) => {
     pushPerfSample(dropTotalDurationSamplesRef.current, totalMs);
     pushPerfSample(dropActionDurationSamplesRef.current, actionMs);
@@ -2048,7 +2046,7 @@ export function CombatSandbox({
         return;
       }
       const actionStart = performance.now();
-      const accepted = actions.playEnemyCardInRandomBiome(tableauIndex, enemyFoundationIndex);
+      const accepted = actions.playEnemyFromTableau(tableauIndex, enemyFoundationIndex);
       actionMs = performance.now() - actionStart;
       if (accepted) setLocalTurnTimerActive(true);
       if (import.meta.env.DEV) {
@@ -2099,8 +2097,8 @@ export function CombatSandbox({
     }
     if (useWild) {
       const actionStart = performance.now();
-      let accepted = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
-      if (!accepted && gameState.phase === 'garden') {
+      let accepted = actions.playFromTableau(tableauIndex, foundationIndex);
+      if (!accepted) {
         accepted = actions.playFromTableau(tableauIndex, foundationIndex);
       }
       actionMs = performance.now() - actionStart;
@@ -2136,7 +2134,6 @@ export function CombatSandbox({
       currentBiome: state.currentBiome,
       activeSessionTileId: state.activeSessionTileId,
       turnCount: state.turnCount,
-      biomeMovesCompleted: state.biomeMovesCompleted,
       enemyDifficulty: state.enemyDifficulty,
       combatFlowMode: state.combatFlowMode,
       randomBiomeActiveSide: state.randomBiomeActiveSide,
@@ -2584,7 +2581,7 @@ export function CombatSandbox({
   const handleRerollDeal = () => {
     const nextTableaus = createCombatStandardTableaus();
     setFallbackTableaus(nextTableaus);
-    actions.setBiomeTableaus(nextTableaus);
+    actions.setTableaus(nextTableaus);
   };
   const executeAutoPlayDecision = useCallback((
     entry: Omit<AutoPlayDecisionEntry, 'accepted' | 'at'>,
@@ -2624,7 +2621,7 @@ export function CombatSandbox({
       runWithDeterministicRandom(autoPlayDeterministic, autoPlayRngStateRef, () => {
       const engineActiveSide = gameState.randomBiomeActiveSide ?? 'player';
       if (enforceTurnOwnership && useLocalTurnSide && engineActiveSide !== effectiveActiveSide) {
-        actions.setRandomBiomeActiveSide?.(effectiveActiveSide);
+        actions.setActiveSide?.(effectiveActiveSide);
         appendAutoPlayDecision({
           side: 'system',
           kind: 'advance_turn',
@@ -2666,7 +2663,7 @@ export function CombatSandbox({
     const candidates: Candidate[] = [];
     const tryPlayerTableauPlay = (tableauIndex: number, foundationIndex: number): boolean => {
       if (isFoundationTableauLocked(foundationIndex)) return false;
-      let accepted = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
+      let accepted = actions.playFromTableau(tableauIndex, foundationIndex);
       if (!accepted) {
         accepted = actions.playFromTableau(tableauIndex, foundationIndex);
       }
@@ -2883,7 +2880,7 @@ export function CombatSandbox({
             kind: 'enemy_tableau',
             score: (16 + analysis.maxCount * 3.5 + Math.max(0, Number(bestMove.card.rank ?? 0)) * 0.2) * policy.enemyAggro * policy.tacticalWeight,
             label: `t#${bestMove.tableauIndex} -> e#${bestMove.foundationIndex}`,
-            run: () => actions.playEnemyCardInRandomBiome(bestMove.tableauIndex, bestMove.foundationIndex),
+            run: () => actions.playEnemyFromTableau(bestMove.tableauIndex, bestMove.foundationIndex),
             drag: {
               card: bestMove.card,
               source: 'tableau',
@@ -2914,7 +2911,7 @@ export function CombatSandbox({
             kind: 'enemy_tableau',
             score,
             label: `fallback t#${tableauIndex} -> e#${enemyFoundationIndex}`,
-            run: () => actions.playEnemyCardInRandomBiome(tableauIndex, enemyFoundationIndex),
+            run: () => actions.playEnemyFromTableau(tableauIndex, enemyFoundationIndex),
             drag: {
               card: topCard,
               source: 'tableau',
@@ -2978,7 +2975,7 @@ export function CombatSandbox({
         if (useLocalTurnSide) {
           forceLocalTurnSide('player');
         } else {
-          actions.advanceRandomBiomeTurn();
+          actions.advanceTurn();
         }
       }
       return;
@@ -3068,18 +3065,18 @@ export function CombatSandbox({
       }
     }
 
-    if (isRandomGeneratedBiomeSession(gameState) && gameState.currentBiome && !useWild && actions.completeBiome) {
+    if (actions.completeEncounter) {
       const hasAnyTableauCards = previewTableaus.some((tableau) => tableau.length > 0);
       if (!hasAnyTableauCards) {
         executeAutoPlayDecision(
           {
             side: 'system',
-            kind: 'complete_biome',
+            kind: 'advance_turn',
             score: 3,
-            label: 'complete biome',
+            label: 'complete encounter',
           },
           () => {
-            actions.completeBiome?.();
+            actions.completeEncounter?.();
             return true;
           }
         );
@@ -3100,23 +3097,7 @@ export function CombatSandbox({
             forceLocalTurnSide(effectiveActiveSide === 'player' ? 'enemy' : 'player');
             return true;
           }
-          actions.advanceRandomBiomeTurn();
-          return true;
-        }
-      );
-      return;
-    }
-
-    if (useWild && actions.endExplorationTurnInRandomBiome) {
-      executeAutoPlayDecision(
-        {
-          side: 'system',
-          kind: 'exploration_turn',
-          score: 0.5,
-          label: 'exploration turn',
-        },
-        () => {
-          actions.endExplorationTurnInRandomBiome?.();
+          actions.advanceTurn();
           return true;
         }
       );
@@ -3147,20 +3128,20 @@ export function CombatSandbox({
             if (useLocalTurnSide) {
               forceLocalTurnSide(effectiveActiveSide === 'player' ? 'enemy' : 'player');
             } else {
-              actions.advanceRandomBiomeTurn();
+              actions.advanceTurn();
             }
             return true;
           }
           if (isCombatSessionActive(gameState)) {
-            actions.endRandomBiomeTurn();
+            actions.endTurn();
             return true;
           }
           if (gameState.phase === 'playing' && actions.autoPlayNextMove) {
             actions.autoPlayNextMove();
             return true;
           }
-          if (useWild && actions.endExplorationTurnInRandomBiome) {
-            actions.endExplorationTurnInRandomBiome();
+          if (useWild && actions.endRestTurn) {
+            actions.endRestTurn();
             return true;
           }
           return false;
@@ -3306,14 +3287,14 @@ export function CombatSandbox({
     const seedToken = `${topCardSeed}::${actorSeed}`;
     if (labFoundationSeedTokenRef.current === seedToken) return;
     labFoundationSeedTokenRef.current = seedToken;
-    actions.setBiomeFoundations(buildLabSeededFoundations(foundations, labFoundationActors));
+    actions.setFoundations(buildLabSeededFoundations(foundations, labFoundationActors));
   }, [actions, gameState.foundations, isLabMode, labFoundationActors, open]);
   useEffect(() => {
     if (!open || !isLabMode) return;
     const tableaus = gameState.tableaus ?? [];
     const hasCards = tableaus.some((t) => (t?.length ?? 0) > 0);
     if (hasCards) return;
-    actions.setBiomeTableaus(fallbackTableaus);
+    actions.setTableaus(fallbackTableaus);
   }, [actions, fallbackTableaus, gameState.tableaus, isLabMode, open]);
   // Lab-only: keep tableau depth replenished to COMBAT_STANDARD_TABLEAU_DEPTH after plays.
   useEffect(() => {
@@ -3332,7 +3313,7 @@ export function CombatSandbox({
     });
     if (changed) {
       setFallbackTableaus(next);
-      actions.setBiomeTableaus(next);
+      actions.setTableaus(next);
     }
   }, [actions, gameState.tableaus, isLabMode]);
   useEffect(() => {
@@ -3431,7 +3412,7 @@ export function CombatSandbox({
     localTurnRemainingRef.current = turnDurationMs;
     displayTurnRemainingRef.current = turnDurationMs;
     setLabTurnSide('player');
-    setRandomBiomeActiveSide?.('player');
+    setActiveSide?.('player');
     setPendingTurnSide(null);
     setPendingFinalMoveResolution(false);
     setInterTurnCountdownMs(0);
@@ -3440,7 +3421,7 @@ export function CombatSandbox({
     }
     setLocalTurnTimerActive(false);
     syncTurnBarWidths(turnDurationMs);
-  }, [open, setRandomBiomeActiveSide, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
+  }, [open, setActiveSide, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
   useEffect(() => {
     if (!open) return;
     setOrimTrayCollapsed(true);
@@ -3468,7 +3449,7 @@ export function CombatSandbox({
     if (dragState.isDragging) return;
     setPendingFinalMoveResolution(false);
     setLabTurnSide('enemy');
-    setRandomBiomeActiveSide?.('enemy');
+    setActiveSide?.('enemy');
     localTurnRemainingRef.current = turnDurationMs;
     displayTurnRemainingRef.current = turnDurationMs;
     if (!DISABLE_TURN_BAR_ANIMATION) {
@@ -3478,7 +3459,7 @@ export function CombatSandbox({
     setInterTurnCountdownMs(0);
     setLocalTurnTimerActive(true);
     syncTurnBarWidths(turnDurationMs);
-  }, [dragState.isDragging, open, pendingFinalMoveResolution, setRandomBiomeActiveSide, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
+  }, [dragState.isDragging, open, pendingFinalMoveResolution, setActiveSide, syncTurnBarWidths, turnDurationMs, useLocalTurnSide]);
   useEffect(() => {
     if (useLocalTurnSide) return;
     const playerCount = gameState.combatFlowTelemetry?.playerCardsPlayed ?? 0;
@@ -3529,7 +3510,7 @@ export function CombatSandbox({
               }
             } else if (labTurnSide === 'player') {
               setLabTurnSide('enemy');
-              actions.setRandomBiomeActiveSide?.('enemy');
+              actions.setActiveSide?.('enemy');
               localTurnRemainingRef.current = turnDurationMs;
               displayTurnRemainingRef.current = turnDurationMs;
               if (!DISABLE_TURN_BAR_ANIMATION) {
@@ -3573,7 +3554,7 @@ export function CombatSandbox({
         }
         if (countdownNext <= 0) {
           setLabTurnSide(pendingTurnSide);
-          actions.setRandomBiomeActiveSide?.(pendingTurnSide);
+          actions.setActiveSide?.(pendingTurnSide);
           setPendingTurnSide(null);
           setInterTurnCountdownMs(0);
           localTurnRemainingRef.current = turnDurationMs;
@@ -3966,7 +3947,7 @@ export function CombatSandbox({
       <div className="mb-3 grid grid-cols-2 gap-2">
         <button
           type="button"
-          onClick={actions.spawnRandomEnemyInRandomBiome}
+          onClick={actions.spawnEnemy}
           className="rounded border border-game-teal/45 px-2 py-1 text-game-teal hover:border-game-teal transition-colors"
         >
           Spawn Enemy
@@ -3980,14 +3961,14 @@ export function CombatSandbox({
         </button>
         <button
           type="button"
-          onClick={actions.endRandomBiomeTurn}
+          onClick={actions.endTurn}
           className="rounded border border-game-teal/45 px-2 py-1 text-game-teal hover:border-game-teal transition-colors"
         >
           {autoPlayEnabled ? activeAiTurnLabel : 'End Turn'}
         </button>
         <button
           type="button"
-          onClick={actions.advanceRandomBiomeTurn}
+          onClick={actions.advanceTurn}
           className="rounded border border-game-teal/45 px-2 py-1 text-game-teal hover:border-game-teal transition-colors"
         >
           Next Turn
@@ -4575,3 +4556,4 @@ export function CombatSandbox({
     </Profiler>
   );
 }
+

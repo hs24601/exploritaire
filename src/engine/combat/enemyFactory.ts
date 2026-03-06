@@ -66,3 +66,4 @@ export function resolveCombatLabTargetActor(existingActors: Actor[]): Actor | nu
     ?? createActor(DEFAULT_COMBAT_LAB_ENEMY_ACTOR_ID)
     ?? createActor('target_dummy');
 }
+

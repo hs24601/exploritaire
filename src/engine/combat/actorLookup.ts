@@ -11,3 +11,4 @@ export function findActorById(state: GameState, actorId: string): Actor | null {
   if (available) return available;
   return null;
 }
+

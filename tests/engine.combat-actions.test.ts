@@ -33,7 +33,7 @@ function createBaseState(overrides: Partial<GameState> = {}): GameState {
   const tableauTop = makeCard('t0', 6);
   const foundationTop = makeCard('f0', 5);
   return {
-    phase: 'biome',
+    phase: 'playing',
     currentBiome: 'random_wilds',
     tableaus: [[tableauTop]],
     foundations: [[foundationTop]],
@@ -183,7 +183,7 @@ describe('engine/combat/actions', () => {
   it('completeEncounter clears active session markers', () => {
     const state = createBaseState({ currentBiome: 'random_wilds', activeSessionTileId: 'tile-1' });
     const next = completeEncounter(state);
-    expect(next.phase).toBe('garden');
+    expect(next.phase).toBe('playing');
     expect(next.currentBiome).toBeUndefined();
     expect(next.activeSessionTileId).toBeUndefined();
   });

@@ -6,7 +6,7 @@ import {
   DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH,
   DEFAULT_RANDOM_BIOME_TURN_DURATION_MS,
   RANDOM_BIOME_DEADLOCK_SURGE_COOLDOWN_MS,
-  RANDOM_BIOME_DEADLOCK_SURGE_DETAIL,
+  COMBAT_DEADLOCK_SURGE_DETAIL,
   RANDOM_BIOME_DEADLOCK_SURGE_LABEL,
 } from './flowConstants';
 import { resetRandomBiomeDealFromCombatDeck } from './deal';
@@ -54,7 +54,7 @@ export function resolveRandomBiomeDeadlockSurge(
   const nextEvent: RandomBiomeWorldEvent = {
     id: 'deadlock_surge',
     label: RANDOM_BIOME_DEADLOCK_SURGE_LABEL,
-    detail: RANDOM_BIOME_DEADLOCK_SURGE_DETAIL,
+    detail: COMBAT_DEADLOCK_SURGE_DETAIL,
     at: nowMs,
   };
   return {
@@ -76,3 +76,4 @@ export function resolveRandomBiomeDeadlockSurge(
     })),
   };
 }
+

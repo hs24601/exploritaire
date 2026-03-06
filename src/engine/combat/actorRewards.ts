@@ -17,7 +17,7 @@ import { createActorDeckStateWithOrim } from '../actorDecks';
 import { getActorDefinition } from '../actors';
 import { removeOneCardFromActorRpgDiscardByDeckCardId } from '../rpgDiscard';
 import { ORIM_RARITY_ORDER, resolveCostByRarity } from '../rarityLoadouts';
-import { getPartyForTile, isActorCombatEnabled } from './shared';
+import { getCombatParty, isActorCombatEnabled } from './shared';
 import { getCombatActiveSide, getCombatTurnCounter } from './sessionBridge';
 import abilitiesJson from '../../data/abilities.json';
 
@@ -177,7 +177,7 @@ function getActorActiveDeckCount(state: GameState, actorId: string): number {
 }
 
 function getPlayerPartyActorIds(state: GameState): string[] {
-  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const partyActors = getCombatParty(state);
   if (partyActors.length > 0) return partyActors.map((actor) => actor.id);
   return Object.keys(state.actorDecks ?? {});
 }
@@ -347,7 +347,7 @@ function areAbilityTriggersSatisfiedForActorHand(
   const includeNotDiscarded = options?.includeNotDiscarded ?? false;
   const sourceActor = findActorById(state, sourceActorId);
   const enemyActors = state.enemyActors ?? [];
-  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const partyActors = getCombatParty(state);
   const playerActorIds = getPlayerPartyActorIds(state);
   const enemyActorIds = getEnemyActorIds(state);
   const playerCombos = state.foundationCombos ?? [];
@@ -471,7 +471,7 @@ export function awardActorComboCards(
     };
   }
   const sourceSide = options?.sourceSide ?? 'player';
-  const partyActors = getPartyForTile(state, state.activeSessionTileId);
+  const partyActors = getCombatParty(state);
   const actorPool = [...partyActors, ...(state.availableActors ?? [])];
   const foundations = state.foundations ?? [];
   let nextActorDecks: Record<string, ActorDeckState> = { ...state.actorDecks };
@@ -640,3 +640,5 @@ export function awardActorComboCards(
     rpgDiscardPilesByActor: nextDiscardPilesByActor,
   };
 }
+
+

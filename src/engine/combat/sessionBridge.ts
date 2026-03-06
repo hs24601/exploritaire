@@ -96,3 +96,4 @@ export function setCombatWorldEvent(event: RandomBiomeWorldEvent | undefined): C
 export function setCombatTurnRemainingMs(remainingMs: number | undefined): CombatTurnRemainingPatch {
   return { randomBiomeTurnRemainingMs: remainingMs };
 }
+
