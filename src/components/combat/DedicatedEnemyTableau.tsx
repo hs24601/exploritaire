@@ -69,7 +69,6 @@ export const DedicatedEnemyTableau = memo(function DedicatedEnemyTableau({
                           size={cardSize}
                           disableTilt={true}
                           disableHoverLift={true}
-                          disableLegacyShine={true}
                         />
                       </div>
                     ))

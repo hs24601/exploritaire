@@ -48,7 +48,8 @@ export function analyzeOptimalSequence(request: AnalysisRequest): AnalysisResult
   const { tableaus, foundations, activeEffects = [], mode } = request;
   const baseTableaus = tableaus;
   const foundationTops: Array<Card | undefined> = foundations.map((f) => f[f.length - 1]);
-  const canPlay = mode === 'wild' ? canPlayCardWithWild : canPlayCard;
+  // Use canPlayCardWithWild to ensure we handle actor foundations and wild sentinels correctly
+  const canPlay = canPlayCardWithWild;
 
   const initialLengths = baseTableaus.map((t) => t.length);
   const memo = new Map<string, MemoEntry>();

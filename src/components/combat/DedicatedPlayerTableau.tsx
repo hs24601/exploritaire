@@ -55,6 +55,9 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
         ) : (
           tableaus.map((stack, idx) => {
             const tableauIndex = startIndex + idx;
+            const draggingCard = draggingCardId ? stack.find((card) => card.id === draggingCardId) : null;
+            const draggingCardIndex = draggingCard ? stack.findIndex((card) => card.id === draggingCardId) : -1;
+            const isDraggingTopCard = draggingCard && draggingCardIndex === stack.length - 1;
             const renderStack = draggingCardId
               ? stack.filter((card) => card.id !== draggingCardId)
               : stack;
@@ -73,7 +76,12 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
                 <div
                   ref={(el) => setTableauRef?.(tableauIndex, el)}
                   className="relative select-none"
-                  style={{ width: cardSize.width, height: stackHeight, overflow: 'visible' }}
+                  style={{
+                    width: cardSize.width,
+                    height: stackHeight,
+                    overflow: 'visible',
+                    transitionProperty: 'none',
+                  }}
                   aria-label={`Player stack ${tableauIndex + 1}`}
                 >
                   {renderStack.length === 0 ? (
@@ -110,12 +118,42 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
                             }
                             isAnyCardDragging={isAnyCardDragging}
                             disableTilt={true}
-                            disableLegacyShine={true}
                             watercolorOnly={!neonMode}
+                            disableHoverGlow={isDraggingTopCard || isAnyCardDragging}
+                            disableHoverLift={isDraggingTopCard || isAnyCardDragging}
                           />
                         </div>
                       );
                     })
+                  )}
+                  {isDraggingTopCard && draggingCard && (
+                    <div
+                      className="pointer-events-none absolute left-0"
+                      style={{
+                        top: draggingCardIndex * STACK_PEEK_PX,
+                        zIndex: stackHeight + 2,
+                        filter: 'brightness(0.25) saturate(0.4)',
+                        opacity: 1,
+                      }}
+                    >
+                      <div style={{ width: cardSize.width, height: cardSize.height, position: 'relative' }}>
+                        <Card
+                          card={draggingCard}
+                          showGraphics={false}
+                          size={cardSize}
+                          borderColorOverride={!neonMode ? 'rgba(6, 10, 14, 0.9)' : undefined}
+                          boxShadowOverride={!neonMode ? 'none' : undefined}
+                          canPlay={false}
+                          isSelected={false}
+                          isAnyCardDragging={isAnyCardDragging}
+                          disableTilt
+                          disableHoverGlow
+                          disableHoverLift
+                          watercolorOnly={!neonMode}
+                          textColorOverride="rgba(10, 10, 12, 0.4)"
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

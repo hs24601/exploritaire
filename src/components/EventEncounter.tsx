@@ -50,7 +50,7 @@ function EventCard({ rank, element }: EventCardProps) {
 
 interface EventEncounterActions {
   puzzleCompleted: (payload?: PuzzleCompletedPayload | null) => void;
-  completeBiome: () => void;
+  completeEncounter: () => void;
 }
 
 interface EventEncounterProps {
@@ -76,7 +76,7 @@ export function EventEncounter({ gameState, actions }: EventEncounterProps) {
       source: 'event',
       rewards: choice.rewards,
     });
-    actions.completeBiome();
+    actions.completeEncounter();
   }
 
   return (

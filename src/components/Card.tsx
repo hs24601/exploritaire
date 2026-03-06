@@ -127,11 +127,11 @@ interface CardProps {
   hideElements?: boolean;
   rpgSubtitleRarityOnly?: boolean;
   ripTrigger?: number;
-  disableLegacyShine?: boolean;
   watercolorOnly?: boolean;
   disableTemplateArt?: boolean;
   showFoundationActorSecretHolo?: boolean;
   canTap?: boolean;
+  textColorOverride?: string;
 }
 
 export const Card = memo(function Card({
@@ -164,11 +164,11 @@ export const Card = memo(function Card({
   disableHoverLift = false,
   disableHoverGlow = false,
   ripTrigger = 0,
-  disableLegacyShine = false,
   watercolorOnly = false,
   disableTemplateArt = false,
   showFoundationActorSecretHolo = false,
   canTap = false,
+  textColorOverride,
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [shimmer, setShimmer] = useState(0);
@@ -709,7 +709,6 @@ const getWatercolorColorFilter = () => {
   const isShiny = rarity !== 'common' || isUpgradedRpgCard;
   const effectiveRarity = rarity === 'common' && isUpgradedRpgCard ? 'rare' : rarity;
   const showSecretActorHolo = showFoundationActorSecretHolo && !!foundationActorProfile && !faceDown && !hideDomCard;
-  const showLegacyShine = isShiny && !faceDown && !hideDomCard && !disableLegacyShine && !showSecretActorHolo;
   const shouldAutoFoundationOrbit = showSecretActorHolo && !isHovered && !disableTilt && !isDragging && !isAnyCardDragging;
   const registerRootElement = useCallback((element: HTMLDivElement | null) => {
     rootRef.current = element;
@@ -851,15 +850,7 @@ const getWatercolorColorFilter = () => {
       }}
     >
       <div className={`card-3d-container h-full w-full ${faceDown ? 'flipped' : ''}`}>
-      {showLegacyShine && (
-        <RarityAura
-          rarity={effectiveRarity}
-          cardWidth={frameSize.width}
-          cardHeight={frameSize.height}
-          layer="behind"
-          hyp={holoStyles['--hyp']}
-        />
-      )}
+
       <CardFrame
         ref={cardRef}
         size={frameSize}
@@ -888,9 +879,11 @@ const getWatercolorColorFilter = () => {
             : undefined
         }
         style={{
-          color: faceDown
-            ? 'transparent'
-            : (isDimmed ? dimmedTextColor : textColorBase),
+          color: textColorOverride ?? (
+            faceDown
+              ? 'transparent'
+              : (isDimmed ? dimmedTextColor : textColorBase)
+          ),
           visibility: isDragging ? 'hidden' : 'visible',
           opacity: hideDomCard ? 0 : 1,
           // Prevent the browser from claiming touch gestures as scroll when the card
@@ -979,59 +972,7 @@ const getWatercolorColorFilter = () => {
             />
           </div>
         )}
-        {showLegacyShine && (
-          <>
-            {!disableTemplateArt && (
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  zIndex: 9,
-                  backgroundImage: `url('${BLUEVEE_ASSET}')`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                  opacity: isHovered ? 0.45 : 0.35,
-                }}
-              />
-            )}
-            {/* Glare Layer */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                zIndex: 10,
-                background: `radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,${isHovered ? 0.35 : 0}) 0%, transparent 80%)`,
-                mixBlendMode: 'soft-light',
-              }}
-            />
-            {/* Multi-layer Holo/Sparkle System */}
-            <div 
-              className="absolute inset-0 pointer-events-none card-holo-gradient"
-              style={{
-                opacity: isHovered ? 0.94 : 0.58,
-                filter: `brightness(${isHovered ? 0.72 : 0.58}) contrast(${isHovered ? 1.5 : 1.2}) saturate(${isHovered ? 1.5 : 1.25})`,
-                mixBlendMode: 'screen',
-              }}
-            />
-            <div 
-              className="absolute inset-0 pointer-events-none card-holo-sparkle"
-              style={{
-                opacity: isHovered ? 1 : 0.7,
-              }}
-            />
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                zIndex: 8,
-                background:
-                  'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 60%), radial-gradient(circle at 70% 40%, rgba(255, 230, 179, 0.45) 0%, rgba(255, 230, 179, 0) 55%)',
-                mixBlendMode: 'screen',
-                opacity: isHovered ? 0.42 : 0.25,
-                transform: 'scale(1.02)',
-                animation: 'holoPulse 3.6s ease-in-out infinite',
-              }}
-            />
-          </>
-      )}
+
       {showSecretActorHolo && (
         <>
           <div
@@ -1039,14 +980,6 @@ const getWatercolorColorFilter = () => {
             style={{
               zIndex: 11,
               opacity: isHovered ? 0.72 : 0.62,
-            }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none rounded-[10px] card-holo-sparkle"
-            style={{
-              zIndex: 12,
-              opacity: isHovered ? 0.32 : 0.24,
-              mixBlendMode: 'screen',
             }}
           />
           <motion.div
@@ -1373,7 +1306,7 @@ const getWatercolorColorFilter = () => {
                 </div>
               </div>
             </div>
-            {foundationOverlay.rankDisplay && (
+            {(
               <div
                 className="absolute -top-[4px] -left-[4px] w-[27px] h-[27px] rounded-full flex items-center justify-center text-[13px] font-black"
                 style={{
@@ -1384,7 +1317,7 @@ const getWatercolorColorFilter = () => {
                   textShadow: '0 1px 2px rgba(0,0,0,0.35)',
                 }}
               >
-                {foundationOverlay.rankDisplay}
+                {apCount}
               </div>
             )}
             {(armorValue > 0 || superArmorValue > 0) && (
@@ -2718,15 +2651,6 @@ const getWatercolorColorFilter = () => {
           width={frameSize.width}
           height={frameSize.height}
           onSnapshotReady={() => setHideDomCard(true)}
-        />
-      )}
-      {showLegacyShine && (
-        <RarityAura
-          rarity={effectiveRarity}
-          cardWidth={frameSize.width}
-          cardHeight={frameSize.height}
-          layer="front"
-          hyp={holoStyles['--hyp']}
         />
       )}
     </div>

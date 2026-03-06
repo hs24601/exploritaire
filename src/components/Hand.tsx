@@ -574,7 +574,6 @@ export const Hand = memo(function Hand({
                       borderColorOverride={handBorderColorOverride}
                       boxShadowOverride={handBoxShadowOverride}
                       disableTilt={effectiveWatercolorOnly}
-                      disableLegacyShine={effectiveWatercolorOnly}
                       watercolorOnly={effectiveWatercolorOnly}
                       disableTemplateArt
                       faceDown={isTapped}

@@ -35,7 +35,6 @@ import {
   buildEffectsByRarityLoadouts as buildEffectsByRarityLoadoutsShared,
 } from './engine/rarityLoadouts';
 import type { PoiReward, PoiRewardType, PoiSparkleConfig } from './engine/worldMapTypes';
-import { GameShell } from './components/GameShell';
 import { CombatSandbox } from './components/combat/CombatSandbox';
 
 interface ErrorBoundaryProps {
@@ -495,13 +494,6 @@ export default function App() {
   const [infiniteBenchSwapsEnabled, setInfiniteBenchSwapsEnabled] = useState(false);
   const [cameraDebugOpen, setCameraDebugOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [combatLabMode] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const params = new URLSearchParams(window.location.search);
-    const mode = (params.get('mode') ?? '').toLowerCase();
-    const explicit = (params.get('combatlab') ?? params.get('combat_lab') ?? '').toLowerCase();
-    return mode === 'combat-lab' || mode === 'combatlab' || explicit === '1' || explicit === 'true';
-  });
   const [assetEditorOpen, setAssetEditorOpen] = useState(false);
   const [assetEditorTab, setAssetEditorTab] = useState<AssetEditorTabId>('visuals');
   const [actorDefinitions, setActorDefinitions] = useState<ActorDefinition[]>(ACTOR_DEFINITIONS);
@@ -746,7 +738,12 @@ export default function App() {
     {
       id: 'visuals',
       label: 'Visuals',
-      render: () => <VisualsEditor onHoloOverlayVisibleChange={handleAssetEditorVisualsOverlayChange} />,
+      render: () => <VisualsEditor 
+                        onHoloOverlayVisibleChange={handleAssetEditorVisualsOverlayChange} 
+                        onClose={() => setAssetEditorOpen(false)}
+                        fps={fps}
+                        serverAlive={serverAlive}
+                      />,
     },
     {
       id: 'map',
@@ -2662,7 +2659,7 @@ export default function App() {
   if (!gameState) return null;
 
   return (
-    <PerspectiveProvider combatLabPerspectiveHotkeyEnabled={combatLabMode}>
+    <PerspectiveProvider>
     <GraphicsContext.Provider value={showGraphics}>
     <InteractionModeContext.Provider value={gameState.interactionMode}>
     <CardScaleProvider value={cardScaleProfile}>
@@ -2945,110 +2942,85 @@ export default function App() {
           </div>
         )}
         {toolingOpen && (
-          <div
-            className={`fixed inset-0 z-[10030]${toolingVisualsOverlayActive ? ' invisible pointer-events-none' : ''}`}
-            data-editor-theme={editorLightMode ? 'light' : 'dark'}
-          >
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-            <div className="relative w-full h-full flex items-center justify-center p-4">
-              <div className="editor-contrast-shell relative w-full h-full flex flex-col bg-game-bg-dark/95 border border-game-teal/40 rounded-2xl overflow-hidden menu-text shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+          <>
+            {toolingTab === 'visuals' && (
+              <VisualsEditor 
+                onHoloOverlayVisibleChange={setToolingVisualsOverlayActive} 
+                onClose={() => setToolingOpen(false)}
+                fps={fps}
+                serverAlive={serverAlive}
+              />
+            )}
+            <div
+              className={`fixed inset-0 z-[10030]${toolingVisualsOverlayActive ? ' invisible pointer-events-none' : ''}`}
+              data-editor-theme={editorLightMode ? 'light' : 'dark'}
+            >
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+            <div className="relative w-full h-full flex items-center justify-center p-3 sm:p-4">
+              <div className={`relative w-[min(1320px,calc(100vw-1rem))] h-[min(920px,calc(100vh-1rem))] bg-[#0a0a0a] border border-game-teal/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden menu-text`}>
                 {/* Unified Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-game-teal/20 bg-black/40 shrink-0">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setToolingTab('actor')}
-                    className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'actor' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
-                  >
-                    Actors
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setToolingTab('poi')}
-                    className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'poi' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
-                  >
-                      POI
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setToolingTab('ability')}
-                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'ability' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
-                    >
-                      Ability
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setToolingTab('orim')}
-                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'orim' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
-                    >
-                      Orims
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setToolingTab('synergies')}
-                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'synergies' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
-                    >
-                      Synergies
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setToolingTab('visuals')}
-                      className={`text-[10px] font-mono px-3 py-1 rounded border transition-colors ${toolingTab === 'visuals' ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/40 text-game-white/70 hover:border-game-teal/60'}`}
-                    >
-                      Visuals
-                    </button>
-                </div>
-
-                  <div className="flex items-center gap-3">
-                    {toolingTab !== 'actor' && toolingTab !== 'visuals' && (
+                <div className="px-6 py-4 border-b border-game-teal/20 flex items-center justify-between bg-black/40 shrink-0">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-black text-game-white tracking-tighter flex items-center gap-2"><span className="text-game-teal">✦</span>TOOLING BROWSER</h2>
+                    <div className="h-4 w-[1px] bg-game-teal/20 mx-2" />
+                    <div className="flex gap-1">
                       <button
                         type="button"
-                        onClick={() => {
-                          if (toolingTab === 'poi') {
-                            void handleSavePoi();
-                            return;
-                          }
-                          if (toolingTab === 'orim') {
-                            void handleSaveOrim();
-                            return;
-                          }
-                          if (toolingTab === 'synergies') {
-                            void handleSaveSynergy();
-                            return;
-                          }
-                          void handleSaveAbility();
-                        }}
-                        disabled={
-                          toolingTab === 'poi'
-                            ? isSavingPoi
-                            : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility))
-                        }
-                        className={`text-[10px] uppercase tracking-[0.4em] px-4 py-1.5 rounded border font-black transition-all ${
-                          (toolingTab === 'poi'
-                            ? isSavingPoi
-                            : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility)))
-                            ? 'border-game-teal/30 text-game-teal/30 scale-95'
-                            : 'border-game-gold text-game-gold bg-game-gold/5 hover:bg-game-gold/15 active:scale-95 shadow-[0_0_15px_rgba(230,179,30,0.2)]'
-                        }`}
+                        onClick={() => setToolingTab('actor')}
+                        className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${toolingTab === 'actor' ? 'bg-game-gold text-black shadow-[0_0_15px_rgba(230,179,30,0.3)]' : 'text-game-white/40 hover:text-game-white hover:bg-game-white/5'}`}
                       >
-                        {(() => {
-                          const isSaving = toolingTab === 'poi' ? isSavingPoi : (toolingTab === 'orim' ? isSavingOrim : (toolingTab === 'synergies' ? isSavingSynergy : isSavingAbility));
-                          if (isSaving) return 'Saving…';
-                          return `Save ${toolingTab === 'poi' ? 'POI' : (toolingTab === 'orim' ? 'Orims' : (toolingTab === 'synergies' ? 'Synergies' : 'Ability'))}`;
-                        })()}
+                        Actors
                       </button>
-                    )}
+                      <button
+                        type="button"
+                        onClick={() => setToolingTab('poi')}
+                        className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${toolingTab === 'poi' ? 'bg-game-gold text-black shadow-[0_0_15px_rgba(230,179,30,0.3)]' : 'text-game-white/40 hover:text-game-white hover:bg-game-white/5'}`}
+                      >
+                        POI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setToolingTab('ability')}
+                        className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${toolingTab === 'ability' ? 'bg-game-gold text-black shadow-[0_0_15px_rgba(230,179,30,0.3)]' : 'text-game-white/40 hover:text-game-white hover:bg-game-white/5'}`}
+                      >
+                        Ability
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setToolingTab('orim')}
+                        className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${toolingTab === 'orim' ? 'bg-game-gold text-black shadow-[0_0_15px_rgba(230,179,30,0.3)]' : 'text-game-white/40 hover:text-game-white hover:bg-game-white/5'}`}
+                      >
+                        Orims
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setToolingTab('synergies')}
+                        className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${toolingTab === 'synergies' ? 'bg-game-gold text-black shadow-[0_0_15px_rgba(230,179,30,0.3)]' : 'text-game-white/40 hover:text-game-white hover:bg-game-white/5'}`}
+                      >
+                        Synergies
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setToolingTab('visuals')}
+                        className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${toolingTab === 'visuals' ? 'bg-game-gold text-black shadow-[0_0_15px_rgba(230,179,30,0.3)]' : 'text-game-white/40 hover:text-game-white hover:bg-game-white/5'}`}
+                      >
+                        Visuals
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setEditorLightMode((prev) => !prev)}
-                      className="text-[10px] border border-game-teal/40 rounded px-2 h-7 flex items-center justify-center text-game-teal hover:border-game-gold hover:text-game-gold transition-all bg-game-bg-dark/40"
+                      onClick={() => setEditorLightMode(!editorLightMode)}
+                      className="text-[9px] font-black uppercase tracking-widest border border-game-teal/30 px-3 py-1.5 rounded-full text-game-teal/60 hover:text-game-teal hover:border-game-teal transition-all bg-game-bg-dark/40"
                       title={editorLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
                     >
                       {editorLightMode ? 'Dark' : 'Light'}
                     </button>
                     <button
+                      type="button"
                       onClick={() => setToolingOpen(false)}
-                      className="text-xs text-game-pink border border-game-pink/40 rounded w-7 h-7 flex items-center justify-center opacity-70 hover:opacity-100 hover:border-game-pink transition-all bg-game-pink/5"
+                      className="w-8 h-8 flex items-center justify-center rounded-full border border-game-pink/30 text-game-pink hover:bg-game-pink hover:text-white transition-all bg-game-pink/5"
                       title="Close"
                     >
                       ×
@@ -3056,7 +3028,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="p-6 flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div className="flex-1 overflow-hidden p-6 min-h-0 flex flex-col">
                   {toolingTab === 'poi' && (
                     <div className="flex flex-col flex-1 min-h-0 gap-4">
                       {/* Sub-navigation for POI Editor */}
@@ -4958,9 +4930,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {toolingTab === 'visuals' && (
-                    <VisualsEditor onHoloOverlayVisibleChange={setToolingVisualsOverlayActive} />
-                  )}
                   {toolingTab === 'actor' && (
                     <div className="flex h-full min-h-0 flex-col gap-2">
                       <div className="min-h-0 flex-1 overflow-hidden">
@@ -4981,93 +4950,35 @@ export default function App() {
               </div>
             </div>
           </div>
+          </>
         )}
 
-      {combatLabMode ? (
-        <CombatSandbox
-          open
-          isLabMode
-          onClose={() => {}}
-          onOpenEditor={() => {
-            setAssetEditorTab('actor');
-            setAssetEditorOpen(true);
-          }}
-          gameState={gameState}
-          actions={actions}
-          timeScale={timeScale}
-          timeScaleOptions={TIME_SCALE_OPTIONS}
-          onCycleTimeScale={handleCycleTimeScale}
-          onSetTimeScale={handleSetTimeScale}
-          isGamePaused={isGamePaused}
-          onTogglePause={handleTogglePause}
-          highPerformanceTimer={highPerformanceTimer}
-          selectedCard={selectedCard}
-          validFoundationsForSelected={validFoundationsForSelected}
-          noValidMoves={noValidMoves}
-          noValidMovesPlayer={noValidMovesPlayer}
-          noValidMovesEnemy={noValidMovesEnemy}
-          tableauCanPlay={tableauCanPlay}
-          hideGameContent={toolingVisualsOverlayActive || assetEditorVisualsOverlayActive}
-        />
-      ) : (
-        <GameShell
-          gameState={gameState}
-          actions={actions}
-          selectedCard={selectedCard}
-          guidanceMoves={guidanceMoves}
-          validFoundationsForSelected={validFoundationsForSelected}
-          tableauCanPlay={tableauCanPlay}
-          noValidMoves={noValidMoves}
-          isWon={isWon}
-          noRegretStatus={noRegretStatus}
-          wildAnalysis={analysis.wild}
-          showGraphics={showGraphics}
-          lightingEnabled={lightingEnabled}
-          paintLuminosityEnabled={paintLuminosityEnabled}
-          showText={showText}
-          zenModeEnabled={zenModeEnabled}
-          isGamePaused={isGamePaused}
-          highPerformanceTimer={highPerformanceTimer}
-          timeScale={timeScale}
-          discoveryEnabled={discoveryEnabled}
-          hidePauseOverlay={hidePauseOverlay}
-          onTogglePause={handleTogglePause}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onTogglePaintLuminosity={() => setPaintLuminosityEnabled((prev) => !prev)}
-          onPositionChange={(x, y) => setCurrentPlayerCoords({ x, y })}
-          fps={fps}
-          serverAlive={serverAlive}
-          onOpenPoiEditorAt={handleOpenPoiEditorAt}
-          sandboxOrimIds={sandboxOrimIds}
-          onAddSandboxOrim={(id) => {
-            setSandboxOrimIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-          }}
-          onRemoveSandboxOrim={(id) => {
-            setSandboxOrimIds((prev) => prev.filter((entry) => entry !== id));
-          }}
-          sandboxOrimSearch={sandboxOrimSearch}
-          onSandboxOrimSearchChange={setSandboxOrimSearch}
-          sandboxOrimResults={sandboxOrimResults}
-          orimTrayDevMode={orimTrayDevMode}
-          orimTrayTab={orimTrayTab}
-          onOrimTrayTabChange={setOrimTrayTab}
-          infiniteStockEnabled={infiniteStockEnabled}
-          onToggleInfiniteStock={() => setInfiniteStockEnabled((prev) => !prev)}
-          benchSwapCount={benchSwapCount}
-          onConsumeBenchSwap={() => setBenchSwapCount((prev) => Math.max(0, prev - 1))}
-          infiniteBenchSwapsEnabled={infiniteBenchSwapsEnabled}
-          onToggleInfiniteBenchSwaps={() => setInfiniteBenchSwapsEnabled((prev) => !prev)}
-        />
-      )}
-
-      {(assetEditorOpen || toolingOpen) && (
-        <div className="fixed top-2 right-3 z-[10060] pointer-events-none menu-text">
-          <div className="rounded border border-game-teal/50 bg-game-bg-dark/85 px-2 py-1 text-[10px] tracking-[1px] text-game-gold">
-            FPS: {fps}
-            {serverAlive === false ? ' (offline)' : ''}
-          </div>
-        </div>
-      )}
+      <CombatSandbox
+        open
+        isLabMode
+        onClose={() => {}}
+        onOpenEditor={() => {
+          setAssetEditorTab('actor');
+          setAssetEditorOpen(true);
+        }}
+        gameState={gameState}
+        actions={actions}
+        timeScale={timeScale}
+        timeScaleOptions={TIME_SCALE_OPTIONS}
+        onCycleTimeScale={handleCycleTimeScale}
+        onSetTimeScale={handleSetTimeScale}
+        isGamePaused={isGamePaused}
+        onTogglePause={handleTogglePause}
+        highPerformanceTimer={highPerformanceTimer}
+        selectedCard={selectedCard}
+        validFoundationsForSelected={validFoundationsForSelected}
+        noValidMoves={noValidMoves}
+        noValidMovesPlayer={noValidMovesPlayer}
+        noValidMovesEnemy={noValidMovesEnemy}
+        tableauCanPlay={tableauCanPlay}
+        hideGameContent={toolingVisualsOverlayActive || assetEditorVisualsOverlayActive}
+        hideHudFps={assetEditorOpen || toolingOpen}
+      />
 
       <AssetEditorEngine
         open={assetEditorOpen}

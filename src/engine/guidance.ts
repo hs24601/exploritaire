@@ -1,5 +1,5 @@
 import type { Card, Effect, Move } from './types';
-import { canPlayCard } from './rules';
+import { canPlayCardWithWild } from './rules';
 
 /**
  * Finds the best sequence of moves using depth-first search.
@@ -33,7 +33,7 @@ export function findBestMoveSequence(
       for (let fIdx = 0; fIdx < founds.length; fIdx++) {
         const foundationTop = founds[fIdx][founds[fIdx].length - 1];
 
-        if (canPlayCard(topCard, foundationTop, activeEffects)) {
+        if (canPlayCardWithWild(topCard, foundationTop, activeEffects)) {
           // Simulate the move
           const newTabs = tabs.map((t, i) => (i === tIdx ? t.slice(0, -1) : t));
           const newFounds = founds.map((f, i) => (i === fIdx ? [...f, topCard] : f));
@@ -90,7 +90,7 @@ export function solveOptimally(
       for (let fIdx = 0; fIdx < founds.length; fIdx++) {
         const foundationTop = founds[fIdx][founds[fIdx].length - 1];
 
-        if (canPlayCard(topCard, foundationTop, activeEffects)) {
+        if (canPlayCardWithWild(topCard, foundationTop, activeEffects)) {
           validMoves.push({
             tableauIndex: tIdx,
             foundationIndex: fIdx,

@@ -22,7 +22,7 @@ interface UseExplorationTableauDisplaySyncArgs {
   explorationCurrentNodeId: string;
   explorationHeading: Direction;
   currentTableaus: CardType[][];
-  setBiomeTableaus?: (tableaus: CardType[][]) => void;
+  setCombatTableaus?: (tableaus: CardType[][]) => void;
   getExplorationNodeCoordinates: (nodeId: string) => { x: number; y: number } | null;
   getColumnSourcesForDirection: (direction: Direction) => TableauColumnSource[];
   poiByCoordinateKey: Map<string, PoiTableauPresetId>;
@@ -44,7 +44,7 @@ export function useExplorationTableauDisplaySync({
   explorationCurrentNodeId,
   explorationHeading,
   currentTableaus,
-  setBiomeTableaus,
+  setCombatTableaus,
   getExplorationNodeCoordinates,
   getColumnSourcesForDirection,
   poiByCoordinateKey,
@@ -235,7 +235,7 @@ export function useExplorationTableauDisplaySync({
   useEffect(() => {
     if (suspendSync) return;
     if (!(isRpgMode && !hasSpawnedEnemies)) return;
-    if (!setBiomeTableaus) return;
+    if (!setCombatTableaus) return;
     if (!poiMapsReady) return;
     const nodeId = explorationCurrentNodeId;
     const heading = explorationHeading;
@@ -248,7 +248,7 @@ export function useExplorationTableauDisplaySync({
     }
     const desiredDisplay = getDisplayTableausForHeading(nodeId, heading);
     if (!areTableausEquivalent(currentTableaus, desiredDisplay)) {
-      setBiomeTableaus(desiredDisplay);
+      setCombatTableaus(desiredDisplay);
       explorationDisplayedContextRef.current = { nodeId, heading };
       return;
     }
@@ -264,7 +264,7 @@ export function useExplorationTableauDisplaySync({
     hasSpawnedEnemies,
     isRpgMode,
     poiMapsReady,
-    setBiomeTableaus,
+    setCombatTableaus,
     suspendSync,
     skipPoiCommitRef,
   ]);

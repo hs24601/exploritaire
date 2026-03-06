@@ -274,7 +274,6 @@ export const Tableau = memo(function Tableau({
               maskValue={maskTopValue && (isTopCard || isSecondCard)}
               disableTilt={true}
               disableHoverLift={useTutorialWatercolorTopBand}
-              disableLegacyShine={true}
               watercolorOnly={true}
               ripTrigger={ripTriggerByCardId?.[card.id] ?? 0}
             />

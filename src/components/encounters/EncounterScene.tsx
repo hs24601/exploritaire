@@ -73,7 +73,7 @@ interface EncounterSceneProps {
   onPositionChange: (x: number, y: number) => void;
   eventActions: {
     puzzleCompleted: (payload?: PuzzleCompletedPayload | null) => void;
-    completeBiome: () => void;
+    completeEncounter: () => void;
   };
 }
 

@@ -418,7 +418,6 @@ export const Foundation = memo(function Foundation({
                                 : undefined
                             )
                           }
-                          disableLegacyShine={true}
                           watercolorOnly={showWatercolorOnlyForCard}
                           hideElements={hideElements}
                           showFoundationActorSecretHolo={false}
@@ -456,7 +455,6 @@ export const Foundation = memo(function Foundation({
                                 : undefined
                             )
                           }
-                          disableLegacyShine={true}
                           watercolorOnly={showWatercolorOnlyForCard}
                           hideElements={hideElements}
                           showFoundationActorSecretHolo={false}
@@ -493,7 +491,6 @@ export const Foundation = memo(function Foundation({
                           : undefined
                       )
                     }
-                    disableLegacyShine={true}
                     watercolorOnly={showWatercolorOnlyForCard}
                     hideElements={hideElements}
                     showFoundationActorSecretHolo={false}

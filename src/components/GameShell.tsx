@@ -409,20 +409,14 @@ export function GameShell({
       const card = tableau[tableau.length - 1];
       const canPlace = canPlayCardWithWild(card, foundationTop, gameState.activeEffects);
 
-      if (useWild) {
-        if (canPlace) {
-          const played = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
-          if (played) {
-            applySplashHint();
+      if (canPlace) {
+        const played = actions.playTableauCard(tableauIndex, foundationIndex);
+        if (played) {
+          applySplashHint();
+          if (useWild) {
             explorationStepRef.current?.();
           }
         }
-        return;
-      }
-
-      if (canPlace) {
-        const played = actions.playFromTableau(tableauIndex, foundationIndex);
-        if (played) applySplashHint();
       }
     },
     [gameState, actions]
@@ -519,24 +513,24 @@ export function GameShell({
     selectCard: actions.selectCard,
     playToFoundation: actions.playToFoundation,
     playCardDirect: actions.playCardDirect,
-    playCardInRandomBiome: actions.playCardInRandomBiome,
-    playEnemyCardInRandomBiome: actions.playEnemyCardInRandomBiome,
+    playTableauCard: actions.playTableauCard,
+    playEnemyTableauCard: actions.playEnemyTableauCard,
+    advanceTurn: actions.advanceTurn,
+    endTurn: actions.endTurn,
+    endExplorationTurn: actions.endExplorationTurn,
+    completeEncounter: actions.completeEncounter,
+    spawnEnemy: actions.spawnEnemy,
+    setCombatTableaus: actions.setCombatTableaus,
     playFromHand: actions.playFromHand,
     playFromStock: (foundationIndex: number, useWild = false, force = false) =>
       actions.playFromStock(foundationIndex, useWild, force, !infiniteStockEnabled),
-    completeBiome: actions.completeBiome,
     autoSolveBiome: actions.autoSolveBiome,
     playCardInNodeBiome: actions.playCardInNodeBiome,
-    endRandomBiomeTurn: actions.endRandomBiomeTurn,
-    endExplorationTurnInRandomBiome: actions.endExplorationTurnInRandomBiome,
-    advanceRandomBiomeTurn: actions.advanceRandomBiomeTurn,
     tickRpgCombat: actions.tickRpgCombat,
     setEnemyDifficulty: actions.setEnemyDifficulty,
     rewindLastCard: actions.rewindLastCard,
     swapPartyLead: actions.swapPartyLead,
     playWildAnalysisSequence: actions.playWildAnalysisSequence,
-    spawnRandomEnemyInRandomBiome: actions.spawnRandomEnemyInRandomBiome,
-    setBiomeTableaus: actions.setBiomeTableaus,
     addRpgHandCard: actions.addRpgHandCard,
     applyKeruArchetype: actions.applyKeruArchetype,
     puzzleCompleted: actions.puzzleCompleted,
@@ -545,23 +539,23 @@ export function GameShell({
     actions.selectCard,
     actions.playToFoundation,
     actions.playCardDirect,
-    actions.playCardInRandomBiome,
-    actions.playEnemyCardInRandomBiome,
+    actions.playTableauCard,
+    actions.playEnemyTableauCard,
+    actions.advanceTurn,
+    actions.endTurn,
+    actions.endExplorationTurn,
+    actions.completeEncounter,
+    actions.spawnEnemy,
+    actions.setCombatTableaus,
     actions.playFromHand,
     actions.playFromStock,
-    actions.completeBiome,
     actions.autoSolveBiome,
     actions.playCardInNodeBiome,
-    actions.endRandomBiomeTurn,
-    actions.endExplorationTurnInRandomBiome,
-    actions.advanceRandomBiomeTurn,
     actions.tickRpgCombat,
     actions.setEnemyDifficulty,
     actions.rewindLastCard,
     actions.swapPartyLead,
     actions.playWildAnalysisSequence,
-    actions.spawnRandomEnemyInRandomBiome,
-    actions.setBiomeTableaus,
     actions.addRpgHandCard,
     actions.applyKeruArchetype,
     actions.puzzleCompleted,
@@ -571,8 +565,8 @@ export function GameShell({
 
   const eventActions = useMemo(() => ({
     puzzleCompleted: actions.puzzleCompleted,
-    completeBiome: actions.completeBiome,
-  }), [actions.puzzleCompleted, actions.completeBiome]);
+    completeEncounter: actions.completeEncounter,
+  }), [actions.puzzleCompleted, actions.completeEncounter]);
 
   const handleCombatPositionChange = useCallback((x: number, y: number) => {
     setCurrentPlayerCoords({ x, y });

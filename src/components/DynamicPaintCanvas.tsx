@@ -1,6 +1,13 @@
 import { useRef, useEffect, memo } from 'react';
+import type { Element } from '../engine/types';
+import { ELEMENT_WATERCOLOR_SWATCHES } from '../watercolor/elementalSwatches';
 
-export const DynamicPaintCanvas = memo(function DynamicPaintCanvas() {
+interface Props {
+  element?: Element;
+  className?: string;
+}
+
+export const DynamicPaintCanvas = memo(function DynamicPaintCanvas({ element, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +41,9 @@ export const DynamicPaintCanvas = memo(function DynamicPaintCanvas() {
 
     let colorHue = -25;
     function randomColor() {
+      if (element && ELEMENT_WATERCOLOR_SWATCHES[element]) {
+        return ELEMENT_WATERCOLOR_SWATCHES[element].baseColor;
+      }
       colorHue = Math.floor((colorHue % 360) + 25 + 15 * Math.random());
       return 'hsl(' + colorHue + ', 50%, 55%)';
     }

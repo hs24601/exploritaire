@@ -321,7 +321,6 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
             disableTilt
             disableHoverLift
             disableHoverGlow
-            disableLegacyShine
           />
         ) : (isTutorialWatercolorCard && !neonMode) ? (
           <div className="relative w-full h-full">
@@ -358,7 +357,6 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
               isDragging={false}
               disableHoverLift
               disableHoverGlow
-              disableLegacyShine
             />
             <div
               className="absolute inset-0 pointer-events-none rounded-lg"
@@ -387,7 +385,6 @@ export const DragPreview = memo(function DragPreview({ card, position, positionR
             disableTilt={true}
             disableHoverLift={true}
             disableHoverGlow={true}
-            disableLegacyShine={true}
             watercolorOnly={true}
           />
         )}

@@ -2589,8 +2589,8 @@ export const CombatGolf = memo(function CombatGolf({
     actions.addRpgHandCard(card);
   }, [actions.addRpgHandCard, partyLeaderActor]);
   const handleSummonDarkspawnRelicClick = useCallback(() => {
-    actions.spawnRandomEnemyInRandomBiome?.();
-  }, [actions.spawnRandomEnemyInRandomBiome]);
+    actions.spawnEnemy?.();
+  }, [actions.spawnEnemy]);
   const handleRelicTrayItemClick = useCallback((item: RelicTrayItem) => {
     if (item.behaviorId === CONTROLLED_DRAGONFIRE_BEHAVIOR_ID) {
       handleControlledDragonfireRelicClick();
@@ -2706,11 +2706,11 @@ export const CombatGolf = memo(function CombatGolf({
     }
     if (true && !zenModeEnabled && !isEnemyTurn) {
       setComboPaused(true);
-      (actions.advanceRandomBiomeTurn ?? actions.endRandomBiomeTurn)();
+      (actions.advanceTurn ?? actions.endTurn)();
     }
   }, [
-    actions.advanceRandomBiomeTurn,
-    actions.endRandomBiomeTurn,
+    actions.advanceTurn,
+    actions.endTurn,
     isEnemyTurn,
     isRpgMode,
     true,
@@ -2812,7 +2812,7 @@ export const CombatGolf = memo(function CombatGolf({
     }
     if (waveBattleSpawnPendingRef.current) return;
     waveBattleSpawnPendingRef.current = true;
-    actions.spawnRandomEnemyInRandomBiome?.();
+    actions.spawnEnemy?.();
     setWaveBattleCount((prev) => {
       const next = prev + 1;
       const calloutId = Date.now() + Math.random();
@@ -2822,7 +2822,7 @@ export const CombatGolf = memo(function CombatGolf({
       }, 1800);
       return next;
     });
-  }, [actions.cleanupDefeatedEnemies, actions.spawnRandomEnemyInRandomBiome, hasLivingEnemy, true, false]);
+  }, [actions.cleanupDefeatedEnemies, actions.spawnEnemy, hasLivingEnemy, true, false]);
   const showPauseButton = !zenModeEnabled && true && hasSpawnedEnemies;
   /*
   const pauseButton = (
@@ -2892,7 +2892,7 @@ export const CombatGolf = memo(function CombatGolf({
     explorationCurrentNodeId,
     explorationHeading,
     currentTableaus: gameState.tableaus,
-    setBiomeTableaus: actions.setBiomeTableaus,
+    setCombatTableaus: actions.setCombatTableaus,
     getExplorationNodeCoordinates,
     getColumnSourcesForDirection,
     poiByCoordinateKey,
@@ -3158,16 +3158,16 @@ export const CombatGolf = memo(function CombatGolf({
   }, [awardExplorationActionPoint, explorationStepRef]);
   const runDevTraversePulse = useCallback(() => {
     if (!(isRpgMode && !hasSpawnedEnemies)) return;
-    if (!actions.setBiomeTableaus) return;
+    if (!actions.setCombatTableaus) return;
     const nextTableaus = gameState.tableaus.map((tableau) => (
       tableau.length > 0 ? tableau.slice(0, tableau.length - 1) : tableau
     ));
-    actions.setBiomeTableaus(nextTableaus);
+    actions.setCombatTableaus(nextTableaus);
     const moved = advanceExplorationMap(explorationHeading);
     if (!moved) return;
     registerExplorationTraversal(travelRowsPerStep);
   }, [
-    actions.setBiomeTableaus,
+    actions.setCombatTableaus,
     advanceExplorationMap,
     explorationHeading,
     gameState.tableaus,
@@ -3203,15 +3203,15 @@ export const CombatGolf = memo(function CombatGolf({
   const handleExplorationEndTurn = useCallback(() => {
     if (!canTriggerEndTurnFromCombo) return;
     setComboPaused(true);
-    if (isRpgMode && !hasSpawnedEnemies && actions.endExplorationTurnInRandomBiome) {
-      actions.endExplorationTurnInRandomBiome();
+    if (isRpgMode && !hasSpawnedEnemies && actions.endExplorationTurn) {
+      actions.endExplorationTurn();
       return;
     }
-    (actions.advanceRandomBiomeTurn ?? actions.endRandomBiomeTurn)();
+    (actions.advanceTurn ?? actions.endTurn)();
   }, [
-    actions.endExplorationTurnInRandomBiome,
-    actions.advanceRandomBiomeTurn,
-    actions.endRandomBiomeTurn,
+    actions.endExplorationTurn,
+    actions.advanceTurn,
+    actions.endTurn,
     canTriggerEndTurnFromCombo,
     hasSpawnedEnemies,
     isRpgMode,
@@ -3908,7 +3908,7 @@ export const CombatGolf = memo(function CombatGolf({
       if (true) {
         if (armedFoundationIndex !== null) {
           if (!validFoundations.includes(armedFoundationIndex)) return;
-          const played = actions.playCardInRandomBiome(tableauIndex, armedFoundationIndex);
+          const played = actions.playTableauCard(tableauIndex, armedFoundationIndex);
           if (!played) return;
           triggerCardPlayFlash(armedFoundationIndex, partyComboTotal + 1);
           maybeGainSupplyFromValidMove();
@@ -3917,7 +3917,7 @@ export const CombatGolf = memo(function CombatGolf({
           return;
         }
         if (validFoundations.length === 1) {
-          const played = actions.playCardInRandomBiome(tableauIndex, validFoundations[0]);
+          const played = actions.playTableauCard(tableauIndex, validFoundations[0]);
           if (!played) return;
           triggerCardPlayFlash(validFoundations[0], partyComboTotal + 1);
           maybeGainSupplyFromValidMove();
@@ -3928,7 +3928,7 @@ export const CombatGolf = memo(function CombatGolf({
 
       const foundationIndex = validFoundations[0] ?? -1;
       if (foundationIndex === -1) return;
-      const played = actions.playCardInRandomBiome(tableauIndex, foundationIndex);
+      const played = actions.playTableauCard(tableauIndex, foundationIndex);
       if (!played) return;
       triggerCardPlayFlash(foundationIndex, partyComboTotal + 1);
       maybeGainSupplyFromValidMove();
@@ -4152,7 +4152,7 @@ export const CombatGolf = memo(function CombatGolf({
                 const finishMove = () => {
                   setEnemyMoveAnims((prev) => prev.filter((anim) => anim.id !== animationId));
                   registerEnemyReveal(foundationIndex, card.rank);
-                  const applied = actions.playEnemyCardInRandomBiome?.(tableauIndex, foundationIndex) ?? false;
+                  const applied = actions.playEnemyTableauCard?.(tableauIndex, foundationIndex) ?? false;
                   resolve(applied);
                 };
 
@@ -4282,7 +4282,7 @@ export const CombatGolf = memo(function CombatGolf({
               });
             }}
             onEndTurn={() => {
-              (actions.advanceRandomBiomeTurn ?? actions.endRandomBiomeTurn)();
+              (actions.advanceTurn ?? actions.endTurn)();
             }}
           />
         )}
@@ -4858,7 +4858,7 @@ export const CombatGolf = memo(function CombatGolf({
                       <GameButton
                         onClick={() => {
                           setComboPaused(true);
-                          (actions.advanceRandomBiomeTurn ?? actions.endRandomBiomeTurn)();
+                          (actions.advanceTurn ?? actions.endTurn)();
                         }}
                         color="gold"
                         size="sm"
@@ -4957,7 +4957,7 @@ export const CombatGolf = memo(function CombatGolf({
               >
                 <div className="flex items-center gap-2">
                   <GameButton
-                    onClick={actions.advanceRandomBiomeTurn ?? actions.endRandomBiomeTurn}
+                    onClick={actions.advanceTurn ?? actions.endTurn}
                     color="gold"
                     size="sm"
                     disabled={isEnemyTurn}
@@ -5224,7 +5224,7 @@ export const CombatGolf = memo(function CombatGolf({
           gameState={gameState}
           activeParty={activeParty}
           onPlayCard={actions.playCardInNodeBiome}
-          onComplete={actions.completeBiome}
+          onComplete={actions.completeEncounter}
           onExit={handleExitBiome}
           onAutoSolve={actions.autoSolveBiome}
           hasCollectedLoot={hasCollectedLoot}
@@ -5747,7 +5747,7 @@ export const CombatGolf = memo(function CombatGolf({
 
         {/* Complete biome button */}
         {isWon && (
-          <GameButton onClick={actions.completeBiome} color="gold">
+          <GameButton onClick={actions.completeEncounter} color="gold">
             Complete Adventure
           </GameButton>
         )}
@@ -5838,3 +5838,4 @@ export const CombatGolf = memo(function CombatGolf({
 });
 
 export default CombatGolf;
+
