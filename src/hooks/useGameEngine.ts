@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type {
   GameState,
   SelectedCard,
@@ -19,8 +19,6 @@ import {
   playCard,
   addEffect as addEffectToState,
   checkWin,
-  getMoveAvailability,
-  getValidFoundationsForCard,
   returnToGarden as returnToGardenState,
   startAdventure as startAdventureState,
   abandonSession as abandonSessionState,
@@ -51,17 +49,10 @@ import {
   removeActorFromTileHome as removeActorFromTileHomeFn,
   startBiome as startBiomeFn,
   playCardInBiome as playCardInBiomeFn,
-  playCardInRandomBiome as playCardInRandomBiomeFn,
-  playEnemyCardInRandomBiome as playEnemyCardInRandomBiomeFn,
   rewindLastCardAction as rewindLastCardActionFn,
-  endRandomBiomeTurn as endRandomBiomeTurnFn,
-  endExplorationTurnInRandomBiome as endExplorationTurnInRandomBiomeFn,
-  advanceRandomBiomeTurn as advanceRandomBiomeTurnFn,
   regroupRandomBiomeDeal as regroupRandomBiomeDealFn,
   rerollRandomBiomeDeal as rerollRandomBiomeDealFn,
   useSupplyForShortRest as useSupplyForShortRestFn,
-  spawnRandomEnemyInRandomBiome as spawnRandomEnemyInRandomBiomeFn,
-  spawnEnemyActorInRandomBiome as spawnEnemyActorInRandomBiomeFn,
   cleanupDefeatedEnemies as cleanupDefeatedEnemiesFn,
   removeWildcardsFromEnemyFoundations as removeWildcardsFromEnemyFoundationsFn,
   playRpgHandCardOnActor as playRpgHandCardOnActorFn,
@@ -69,7 +60,6 @@ import {
   adjustRpgHandCardRarity as adjustRpgHandCardRarityFn,
   spendApFromActorById as spendApFromActorByIdFn,
   tickRpgCombat as tickRpgCombatFn,
-  completeBiome as completeBiomeFn,
   collectBlueprint as collectBlueprintFn,
   addTileToGarden as addTileToGardenFn,
   addTileToGardenAt as addTileToGardenAtFn,
@@ -91,6 +81,17 @@ import {
   applyKeruArchetype as applyKeruArchetypeFn,
   puzzleCompleted as puzzleCompletedFn,
 } from '../engine/game';
+import { getMoveAvailability, getValidFoundationsForCard } from '../engine/combat/moveAvailability';
+import {
+  advanceTurn as advanceTurnFn,
+  completeEncounter as completeEncounterFn,
+  endExplorationTurn as endExplorationTurnFn,
+  endTurn as endTurnFn,
+  playEnemyTableauCard as playEnemyTableauCardFn,
+  playTableauCard as playTableauCardFn,
+  spawnEnemy as spawnEnemyFn,
+  spawnEnemyActor as spawnEnemyActorFn,
+} from '../engine/combat';
 import { createActorDeckStateWithOrim } from '../engine/actorDecks';
 import { actorHasOrimDefinition } from '../engine/orimEffects';
 import { findBestMoveSequence, solveOptimally } from '../engine/guidance';
@@ -165,6 +166,8 @@ export function useGameEngine(
   options?: { devNoRegretEnabled?: boolean }
 ) {
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const gameStateRef = useRef<GameState | null>(null);
+  gameStateRef.current = gameState;
   const [selectedCard, setSelectedCard] = useState<SelectedCard | null>(null);
   const [guidanceMoves, setGuidanceMoves] = useState<Move[]>([]);
   const [showGraphics, setShowGraphics] = useState(false);
@@ -471,19 +474,21 @@ export function useGameEngine(
 
   const playFromHand = useCallback(
     (card: Card, foundationIndex: number, useWild = false) => {
-      if (!gameState) return false;
-      const newState = playCardFromHandFn(gameState, card, foundationIndex, useWild);
+      const current = gameStateRef.current;
+      if (!current) return false;
+      const newState = playCardFromHandFn(current, card, foundationIndex, useWild);
       if (!newState) return false;
       setGameState(newState);
       return true;
     },
-    [gameState]
+    []
   );
 
   const playFromHandToEnemyFoundation = useCallback(
     (card: Card, enemyFoundationIndex: number) => {
-      if (!gameState) return false;
-      const newState = playCardFromHandToEnemyFoundationFn(gameState, card, enemyFoundationIndex);
+      const current = gameStateRef.current;
+      if (!current) return false;
+      const newState = playCardFromHandToEnemyFoundationFn(current, card, enemyFoundationIndex);
       if (!newState) {
         if (import.meta.env.DEV) {
           console.debug('[engine] playFromHandToEnemyFoundation rejected', {
@@ -500,7 +505,7 @@ export function useGameEngine(
       setGameState(newState);
       return true;
     },
-    [gameState]
+    []
   );
 
   const playFromStock = useCallback(
@@ -711,18 +716,19 @@ export function useGameEngine(
   }, [gameState]);
 
   const autoPlayNextMove = useCallback(() => {
-    if (!gameState) return;
+    const current = gameStateRef.current;
+    if (!current) return;
 
-    if (gameState.phase === 'playing') {
+    if (current.phase === 'playing') {
       const sequence = findBestMoveSequence(
-        gameState.tableaus,
-        gameState.foundations,
-        gameState.activeEffects,
+        current.tableaus,
+        current.foundations,
+        current.activeEffects,
         1
       );
       const move = sequence[0];
       if (!move) return;
-      const newState = playCard(gameState, move.tableauIndex, move.foundationIndex);
+      const newState = playCard(current, move.tableauIndex, move.foundationIndex);
       if (!newState) return;
       setGameState(newState);
       setSelectedCard(null);
@@ -730,37 +736,36 @@ export function useGameEngine(
       return;
     }
 
-    if (!isCombatSessionActive(gameState)) return;
+    if (!isCombatSessionActive(current)) return;
 
-    const useWild = isRandomGeneratedBiomeSession(gameState);
-    const partyActors = gameState.activeSessionTileId
-      ? gameState.tileParties[gameState.activeSessionTileId] ?? []
+    const useWild = isRandomGeneratedBiomeSession(current);
+    const partyActors = current.activeSessionTileId
+      ? current.tileParties[current.activeSessionTileId] ?? []
       : [];
 
-    for (let tIdx = 0; tIdx < gameState.tableaus.length; tIdx += 1) {
-      const tableau = gameState.tableaus[tIdx];
+    for (let tIdx = 0; tIdx < current.tableaus.length; tIdx += 1) {
+      const tableau = current.tableaus[tIdx];
       if (!tableau || tableau.length === 0) continue;
       const card = tableau[tableau.length - 1];
 
-      for (let fIdx = 0; fIdx < gameState.foundations.length; fIdx += 1) {
+      for (let fIdx = 0; fIdx < current.foundations.length; fIdx += 1) {
         const actor = partyActors[fIdx];
         const hasStamina = (actor?.stamina ?? 0) > 0 && (actor?.hp ?? 0) > 0;
         if (!hasStamina) continue;
-        const foundation = gameState.foundations[fIdx];
+        const foundation = current.foundations[fIdx];
         const top = foundation[foundation.length - 1];
-        const canPlay = canPlayCardWithWild(card, top, gameState.activeEffects);
+        const canPlay = canPlayCardWithWild(card, top, current.activeEffects);
         if (!canPlay) continue;
 
-        const newState = playCardInRandomBiomeFn(gameState, tIdx, fIdx)
-          ?? (useWild ? null : playCardInBiomeFn(gameState, tIdx, fIdx));
-        if (!newState) return;
+        const newState = playTableauCardFn(current, tIdx, fIdx);
+        if (!newState) continue;
         setGameState(newState);
         setSelectedCard(null);
         setGuidanceMoves([]);
         return;
       }
     }
-  }, [gameState]);
+  }, []);
 
   const swapPartyLead = useCallback((actorId: string) => {
     if (!gameState) return;
@@ -777,6 +782,10 @@ export function useGameEngine(
   const autoSolveBiome = useCallback(() => {
     if (!gameState || !isCombatSessionActive(gameState) || gameState.tableaus.length === 0) return;
 
+    // Check turn ownership
+    const currentSide = gameState.randomBiomeActiveSide ?? 'player';
+    if (currentSide !== 'player') return;
+
     const optimalMoves = solveOptimally(
       gameState.tableaus,
       gameState.foundations,
@@ -787,7 +796,7 @@ export function useGameEngine(
 
     let nextState = gameState;
     for (const move of optimalMoves) {
-      const updated = playCardInRandomBiomeFn(nextState, move.tableauIndex, move.foundationIndex)
+      const updated = playTableauCardFn(nextState, move.tableauIndex, move.foundationIndex)
         ?? playCardInBiomeFn(nextState, move.tableauIndex, move.foundationIndex);
       if (!updated) break;
       nextState = updated;
@@ -805,7 +814,7 @@ export function useGameEngine(
 
     let nextState = gameState;
     for (const move of wildAnalysis.sequence) {
-      const updated = playCardInRandomBiomeFn(nextState, move.tableauIndex, move.foundationIndex);
+      const updated = playTableauCardFn(nextState, move.tableauIndex, move.foundationIndex);
       if (!updated) break;
       nextState = updated;
     }
@@ -819,7 +828,7 @@ export function useGameEngine(
     (foundationIndex: number) => {
       if (!selectedCard || !gameState || !isCombatSessionActive(gameState)) return false;
 
-      const newState = playCardInRandomBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex)
+      const newState = playTableauCardFn(gameState, selectedCard.tableauIndex, foundationIndex)
         ?? playCardInBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex);
 
       if (!newState) {
@@ -836,65 +845,67 @@ export function useGameEngine(
 
   const playFromTableau = useCallback(
     (tableauIndex: number, foundationIndex: number) => {
-      if (!gameState) return false;
-      const newState = playCard(gameState, tableauIndex, foundationIndex);
+      const current = gameStateRef.current;
+      if (!current) return false;
+      const newState = playCard(current, tableauIndex, foundationIndex);
       if (!newState) return false;
       setGameState(newState);
       setSelectedCard(null);
       return true;
     },
-    [gameState]
+    []
   );
 
   const playCardInNodeBiome = useCallback((nodeId: string, foundationIndex: number) => {
-    if (!gameState || !isCombatSessionActive(gameState) || !selectedCard) return;
+    const current = gameStateRef.current;
+    if (!current || !isCombatSessionActive(current) || !selectedCard) return;
     void nodeId;
-    const newState = playCardInRandomBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex)
-      ?? playCardInBiomeFn(gameState, selectedCard.tableauIndex, foundationIndex);
+    const newState = playTableauCardFn(current, selectedCard.tableauIndex, foundationIndex)
+      ?? playCardInBiomeFn(current, selectedCard.tableauIndex, foundationIndex);
     if (newState) {
       setGameState(newState);
       setSelectedCard(null);
     }
-  }, [gameState, selectedCard]);
+  }, [selectedCard]);
 
-  const playCardInRandomBiome = useCallback(
+  const playTableauCard = useCallback(
     (tableauIndex: number, foundationIndex: number) => {
-      if (!gameState || !isCombatSessionActive(gameState)) return false;
-      const enforceTurnOwnership = (gameState.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure';
-      if (enforceTurnOwnership && gameState.randomBiomeActiveSide === 'enemy') return false;
-      const newState = playCardInRandomBiomeFn(gameState, tableauIndex, foundationIndex);
+      const current = gameStateRef.current;
+      if (!current) return false;
+      const newState = playTableauCardFn(current, tableauIndex, foundationIndex);
       if (!newState) return false;
       setGameState(newState);
       setSelectedCard(null);
       return true;
     },
-    [gameState]
+    []
   );
 
-  const playEnemyCardInRandomBiome = useCallback(
+  const playEnemyTableauCard = useCallback(
     (tableauIndex: number, foundationIndex: number) => {
-      if (!gameState || !isCombatSessionActive(gameState)) return false;
-      const newState = playEnemyCardInRandomBiomeFn(gameState, tableauIndex, foundationIndex);
+      const current = gameStateRef.current;
+      if (!current) return false;
+      const newState = playEnemyTableauCardFn(current, tableauIndex, foundationIndex);
       if (!newState) return false;
       setGameState(newState);
       setSelectedCard(null);
       return true;
     },
-    [gameState]
+    []
   );
 
-  const endRandomBiomeTurn = useCallback(() => {
-    setGameState((prev) => (prev ? endRandomBiomeTurnFn(prev) : prev));
+  const endTurn = useCallback(() => {
+    setGameState((prev) => (prev ? endTurnFn(prev) : prev));
     setSelectedCard(null);
   }, []);
 
-  const endExplorationTurnInRandomBiome = useCallback(() => {
-    setGameState((prev) => (prev ? endExplorationTurnInRandomBiomeFn(prev) : prev));
+  const endExplorationTurn = useCallback(() => {
+    setGameState((prev) => (prev ? endExplorationTurnFn(prev) : prev));
     setSelectedCard(null);
   }, []);
 
-  const advanceRandomBiomeTurn = useCallback(() => {
-    setGameState((prev) => (prev ? advanceRandomBiomeTurnFn(prev) : prev));
+  const advanceTurn = useCallback(() => {
+    setGameState((prev) => (prev ? advanceTurnFn(prev) : prev));
     setSelectedCard(null);
   }, []);
 
@@ -916,12 +927,12 @@ export function useGameEngine(
     return true;
   }, [gameState]);
 
-  const spawnRandomEnemyInRandomBiome = useCallback(() => {
-    setGameState((prev) => (prev ? spawnRandomEnemyInRandomBiomeFn(prev) : prev));
+  const spawnEnemy = useCallback(() => {
+    setGameState((prev) => (prev ? spawnEnemyFn(prev) : prev));
     setSelectedCard(null);
   }, []);
-  const spawnEnemyActorInRandomBiome = useCallback((definitionId: string, foundationIndex: number) => {
-    setGameState((prev) => (prev ? spawnEnemyActorInRandomBiomeFn(prev, definitionId, foundationIndex) : prev));
+  const spawnEnemyActor = useCallback((definitionId: string, foundationIndex: number) => {
+    setGameState((prev) => (prev ? spawnEnemyActorFn(prev, definitionId, foundationIndex) : prev));
     setSelectedCard(null);
   }, []);
   const cleanupDefeatedEnemies = useCallback(() => {
@@ -931,7 +942,7 @@ export function useGameEngine(
     setGameState((prev) => (prev ? removeWildcardsFromEnemyFoundationsFn(prev) : prev));
   }, []);
 
-  const setBiomeTableaus = useCallback((tableaus: Card[][]) => {
+  const setCombatTableaus = useCallback((tableaus: Card[][]) => {
     setGameState((prev) => {
       if (!prev) return prev;
       return {
@@ -941,7 +952,7 @@ export function useGameEngine(
     });
     setSelectedCard(null);
   }, []);
-  const setBiomeFoundations = useCallback((foundations: Card[][]) => {
+  const setCombatFoundations = useCallback((foundations: Card[][]) => {
     setGameState((prev) => {
       if (!prev) return prev;
       const nextFoundations = foundations.map((foundation) => [...foundation]);
@@ -1006,24 +1017,26 @@ export function useGameEngine(
     side: 'player' | 'enemy',
     actorIndex: number
   ) => {
-    if (!gameState) return false;
-    const newState = playRpgHandCardOnActorFn(gameState, cardId, side, actorIndex);
-    if (newState === gameState) return false;
+    const current = gameStateRef.current;
+    if (!current) return false;
+    const newState = playRpgHandCardOnActorFn(current, cardId, side, actorIndex);
+    if (newState === current) return false;
     setGameState(newState);
     return true;
-  }, [gameState]);
+  }, []);
 
   const playEnemyRpgHandCardOnActor = useCallback((
     enemyActorIndex: number,
     cardId: string,
     targetActorIndex: number
   ) => {
-    if (!gameState) return false;
-    const newState = playEnemyRpgHandCardOnActorFn(gameState, enemyActorIndex, cardId, targetActorIndex);
-    if (newState === gameState) return false;
+    const current = gameStateRef.current;
+    if (!current) return false;
+    const newState = playEnemyRpgHandCardOnActorFn(current, enemyActorIndex, cardId, targetActorIndex);
+    if (newState === current) return false;
     setGameState(newState);
     return true;
-  }, [gameState]);
+  }, []);
 
   const adjustRpgHandCardRarity = useCallback((
     cardId: string,
@@ -1180,9 +1193,9 @@ export function useGameEngine(
     return didChange;
   }, []);
 
-  const completeBiome = useCallback(() => {
+  const completeEncounter = useCallback(() => {
     if (!gameState) return;
-    setGameState(completeBiomeFn(gameState));
+    setGameState(completeEncounterFn(gameState));
     setSelectedCard(null);
     setGuidanceMoves([]);
   }, [gameState]);
@@ -1322,7 +1335,7 @@ export function useGameEngine(
     });
   }, []);
 
-  const setRandomBiomeActiveSide = useCallback((side: 'player' | 'enemy') => {
+  const setCombatActiveSide = useCallback((side: 'player' | 'enemy') => {
     setGameState((prev) => {
       if (!prev) return prev;
       if ((prev.randomBiomeActiveSide ?? 'player') === side) return prev;
@@ -1387,22 +1400,24 @@ export function useGameEngine(
       swapPartyLead,
       removeActorFromTileHome,
       startBiome,
+      playTableauCard,
+      playEnemyTableauCard,
+      advanceTurn,
+      endTurn,
+      endExplorationTurn,
+      completeEncounter,
+      spawnEnemy,
+      spawnEnemyActor,
+      setCombatTableaus,
+      setCombatFoundations,
+      setCombatActiveSide,
       playToBiomeFoundation,
       playCardInNodeBiome,
-      playCardInRandomBiome,
-      playEnemyCardInRandomBiome,
-      endRandomBiomeTurn,
-      endExplorationTurnInRandomBiome,
-      advanceRandomBiomeTurn,
       regroupRandomBiomeDeal,
       rerollRandomBiomeDeal,
       useSupplyForShortRest,
-      spawnRandomEnemyInRandomBiome,
-      spawnEnemyActorInRandomBiome,
       cleanupDefeatedEnemies,
       removeWildcardsFromEnemyFoundations,
-      setBiomeTableaus,
-      setBiomeFoundations,
       restoreCombatLabSnapshot,
       playRpgHandCardOnActor,
       playEnemyRpgHandCardOnActor,
@@ -1412,7 +1427,6 @@ export function useGameEngine(
       addRpgHandCard,
       removeRpgHandCardById,
       tickRpgCombat,
-      completeBiome,
       collectBlueprint,
       abandonSession,
       addTileToGarden,
@@ -1435,8 +1449,8 @@ export function useGameEngine(
       puzzleCompleted,
       setEnemyDifficulty,
       setCombatFlowMode,
-      setRandomBiomeActiveSide,
       toggleGraphics,
     },
   };
 }
+
