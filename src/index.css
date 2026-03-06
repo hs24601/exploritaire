@@ -468,31 +468,13 @@ div, span, p, h1, h2, h3, h4, h5, h6 {
 }
 
 
-body[data-light-editor="on"] [data-tile-title],
-html[data-light-editor="on"] [data-tile-title],
-[data-light-editor="on"] [data-tile-title],
-#root[data-light-editor="on"] [data-tile-title],
-[data-light-editor="on"] [data-tile-title] {
-  display: none !important;
-}
-
-body[data-light-editor="on"] [data-tile-text],
-html[data-light-editor="on"] [data-tile-text],
-[data-light-editor="on"] [data-tile-text],
-#root[data-light-editor="on"] [data-tile-text],
-[data-light-editor="on"] [data-tile-text] {
-  display: none !important;
-}
-
 .textless-mode [data-card-face],
-.textless-mode [data-tile-face],
 .textless-mode [data-token-face] {
   color: transparent !important;
   text-shadow: none !important;
 }
 
 .textless-mode [data-card-face] *,
-.textless-mode [data-tile-face] *,
 .textless-mode [data-token-face] * {
   color: transparent !important;
   text-shadow: none !important;

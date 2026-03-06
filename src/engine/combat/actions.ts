@@ -52,6 +52,7 @@ import {
   updateCombatFlowTelemetry,
   warnOnUnexpectedHpIncrease,
 } from './shared';
+import { clearActiveCombatParty, setPartyAssignments } from './stateAliases';
 
 function deriveFoundationActors(state: GameState): Actor[] {
   const actors = state.foundations
@@ -424,8 +425,8 @@ export function spawnEnemyActor(
 export function completeEncounter(state: GameState): GameState {
   return {
     ...state,
-    currentBiome: undefined,
-    activeSessionTileId: undefined,
+    currentEncounterId: undefined,
+    ...clearActiveCombatParty(),
     turnCount: 0,
     ...setCombatTurnNumber(1),
     ...setCombatTurnRuntime({
@@ -443,6 +444,7 @@ export function completeEncounter(state: GameState): GameState {
     enemyFoundationCombos: [0, 0, 0],
     enemyFoundationTokens: [createEmptyTokenCounts(), createEmptyTokenCounts(), createEmptyTokenCounts()],
     rpgEnemyHandCards: [[], [], []],
+    ...setPartyAssignments(state, state.partyAssignments ?? {}),
   };
 }
 

@@ -7,7 +7,7 @@ export type CosmicLintConfig = {
   volsteps: number;
   stepsize: number;
   zoom: number;
-  tile: number;
+  cell: number;
   speed: number;
   brightness: number;
   darkmatter: number;
@@ -21,7 +21,7 @@ export const DEFAULT_COSMIC_LINT_CONFIG: CosmicLintConfig = {
   volsteps: 10,
   stepsize: 0.2,
   zoom: 1.2,
-  tile: 1.0,
+  cell: 1.0,
   speed: 0.002,
   brightness: 0.0015,
   darkmatter: 0.50,
@@ -48,7 +48,7 @@ const fragmentShader = `
   uniform int volsteps;
   uniform float stepsize;
   uniform float zoom;
-  uniform float tile;
+  uniform float cell;
   uniform float speed;
   uniform float brightness;
   uniform float darkmatter;
@@ -93,7 +93,7 @@ const fragmentShader = `
     for (int r = 0; r < 20; r++) { // Max volsteps loop
       if (r >= volsteps) break;
       vec3 p = from + s * dir * 0.5;
-      p = abs(vec3(tile) - mod(p, vec3(tile * 2.0)));
+      p = abs(vec3(cell) - mod(p, vec3(cell * 2.0))); 
       float pa, a = pa = 0.0;
       for (int i = 0; i < 20; i++) { // Max iterations loop
         if (i >= iterations) break;
@@ -153,7 +153,7 @@ export const CosmicLintAtmosphere = memo(function CosmicLintAtmosphere({
         volsteps: { value: config.volsteps },
         stepsize: { value: config.stepsize },
         zoom: { value: config.zoom },
-        tile: { value: config.tile },
+        cell: { value: config.cell },
         speed: { value: config.speed },
         brightness: { value: config.brightness },
         darkmatter: { value: config.darkmatter },
@@ -200,7 +200,7 @@ export const CosmicLintAtmosphere = memo(function CosmicLintAtmosphere({
     u.volsteps.value = config.volsteps;
     u.stepsize.value = config.stepsize;
     u.zoom.value = config.zoom;
-    u.tile.value = config.tile;
+    u.cell.value = config.cell;
     u.speed.value = config.speed;
     u.brightness.value = config.brightness;
     u.darkmatter.value = config.darkmatter;
@@ -210,3 +210,4 @@ export const CosmicLintAtmosphere = memo(function CosmicLintAtmosphere({
 
   return <div ref={rootRef} className={`w-full h-full ${className}`} />;
 });
+

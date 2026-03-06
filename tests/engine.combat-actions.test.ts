@@ -33,8 +33,8 @@ function createBaseState(overrides: Partial<GameState> = {}): GameState {
   const tableauTop = makeCard('t0', 6);
   const foundationTop = makeCard('f0', 5);
   return {
-    phase: 'playing',
-    currentBiome: 'random_wilds',
+    phase: 'combat',
+    currentEncounterId: 'random_wilds',
     tableaus: [[tableauTop]],
     foundations: [[foundationTop]],
     enemyFoundations: [],
@@ -49,7 +49,7 @@ function createBaseState(overrides: Partial<GameState> = {}): GameState {
     challengeProgress: { challengeId: 0, collected: { '💧': 0, '⛰️': 0, '💨': 0, '🔥': 0 } },
     buildPileProgress: [],
     availableActors: [],
-    tileParties: {},
+    partyAssignments: {},
     tokens: [],
     collectedTokens: { A: 0, E: 0, W: 0, F: 0, L: 0, D: 0, N: 0 },
     resourceStash: { A: 0, E: 0, W: 0, F: 0, L: 0, D: 0, N: 0 },
@@ -60,7 +60,7 @@ function createBaseState(overrides: Partial<GameState> = {}): GameState {
     relicDefinitions: [],
     equippedRelics: [],
     relicRuntimeState: {},
-    tiles: [],
+    arenaSlots: [],
     blueprints: [],
     pendingBlueprintCards: [],
     foundationCombos: [0],
@@ -68,12 +68,12 @@ function createBaseState(overrides: Partial<GameState> = {}): GameState {
     foundationTokens: [{ A: 0, E: 0, W: 0, F: 0, L: 0, D: 0, N: 0 }],
     enemyFoundationCombos: [],
     enemyFoundationTokens: [],
-    randomBiomeActiveSide: 'player',
-    randomBiomeTurnNumber: 1,
-    randomBiomeTurnDurationMs: 10000,
-    randomBiomeTurnRemainingMs: 10000,
-    randomBiomeTurnLastTickAt: 0,
-    randomBiomeTurnTimerActive: false,
+    activeCombatSide: 'player',
+    combatTurnNumber: 1,
+    combatTurnDurationMs: 10000,
+    combatTurnRemainingMs: 10000,
+    combatTurnLastTickAt: 0,
+    combatTurnTimerActive: false,
     combatFlowMode: 'turn_based_pressure',
     combatFlowTelemetry: {
       playerTurnsStarted: 0,
@@ -107,7 +107,7 @@ describe('engine/combat/actions', () => {
   });
 
   it('playTableauCard blocks player move on enemy side in turn-based mode', () => {
-    const state = createBaseState({ randomBiomeActiveSide: 'enemy' });
+    const state = createBaseState({ activeCombatSide: 'enemy' });
     const next = playTableauCard(state, 0, 0);
     expect(next).toBeNull();
   });
@@ -115,7 +115,7 @@ describe('engine/combat/actions', () => {
   it('playEnemyTableauCard applies card to enemy foundation on enemy turn', () => {
     const enemyBase = makeCard('enemy-base', 5);
     const state = createBaseState({
-      randomBiomeActiveSide: 'enemy',
+      activeCombatSide: 'enemy',
       enemyFoundations: [[enemyBase]],
       enemyActors: [makeActor('enemy-1')],
       enemyFoundationCombos: [0],
@@ -135,22 +135,22 @@ describe('engine/combat/actions', () => {
       enemyFoundationCombos: [0],
       enemyFoundationTokens: [{ A: 0, E: 0, W: 0, F: 0, L: 0, D: 0, N: 0 }],
       rpgEnemyHandCards: [[]],
-      randomBiomeActiveSide: 'player',
-      randomBiomeTurnNumber: 3,
+      activeCombatSide: 'player',
+      combatTurnNumber: 3,
       lifecycleTurnCounter: 3,
     });
     const next = advanceTurn(state);
-    expect(next.randomBiomeActiveSide).toBe('enemy');
+    expect(next.activeCombatSide).toBe('enemy');
     expect(next.lifecycleTurnCounter).toBe(4);
   });
 
   it('endTurn rotates back to player side and advances turn number', () => {
     const party = makeActor('party-1');
     const state = createBaseState({
-      activeSessionTileId: 'tile-1',
-      tileParties: { 'tile-1': [party] },
-      randomBiomeActiveSide: 'enemy',
-      randomBiomeTurnNumber: 7,
+      activeCombatPartyId: 'party-1',
+      partyAssignments: { 'party-1': [party] },
+      activeCombatSide: 'enemy',
+      combatTurnNumber: 7,
       lifecycleTurnCounter: 7,
       enemyFoundations: [[makeCard('enemy-base', 8)]],
       enemyActors: [makeActor('enemy-1')],
@@ -159,8 +159,8 @@ describe('engine/combat/actions', () => {
       rpgEnemyHandCards: [[]],
     });
     const next = endTurn(state);
-    expect(next.randomBiomeActiveSide).toBe('player');
-    expect(next.randomBiomeTurnNumber).toBe(8);
+    expect(next.activeCombatSide).toBe('player');
+    expect(next.combatTurnNumber).toBe(8);
     expect(next.lifecycleTurnCounter).toBe(8);
   });
 
@@ -181,10 +181,10 @@ describe('engine/combat/actions', () => {
   });
 
   it('completeEncounter clears active session markers', () => {
-    const state = createBaseState({ currentBiome: 'random_wilds', activeSessionTileId: 'tile-1' });
+    const state = createBaseState({ currentEncounterId: 'random_wilds', activeCombatPartyId: 'party-1' });
     const next = completeEncounter(state);
-    expect(next.phase).toBe('playing');
-    expect(next.currentBiome).toBeUndefined();
-    expect(next.activeSessionTileId).toBeUndefined();
+    expect(next.phase).toBe('combat');
+    expect(next.currentEncounterId).toBeUndefined();
+    expect(next.activeCombatPartyId).toBeUndefined();
   });
 });

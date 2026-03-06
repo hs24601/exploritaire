@@ -30,7 +30,7 @@ export type OrimRarity =
   | 'mythic';
 export type RelicRarity = OrimRarity;
 
-export type OrimDomain = 'puzzle' | 'combat';
+export type OrimDomain = 'combat' | 'support';
 
 /**
  * Orim effect definition — used by orims to add damage components and other effects.
@@ -269,7 +269,7 @@ export interface Card {
   canTap?: boolean; // UI hint that the card supports tap/flipping interaction
 }
 
-export type GamePhase = 'playing' | 'garden' | 'biome';
+export type GamePhase = 'combat' | 'playing';
 
 export type InteractionMode = 'click' | 'dnd';
 
@@ -351,6 +351,11 @@ export interface GridPosition {
   row: number;
 }
 
+export interface ArenaSlot {
+  id: string;
+  position?: GridPosition;
+}
+
 export interface Actor {
   definitionId: string;
   id: string; // Unique instance ID
@@ -372,8 +377,10 @@ export interface Actor {
   power: number; // Current power usage
   orimSlots: OrimSlot[]; // Actor-level ORIM slots
   element?: Element; // Elemental vulnerability for damage calculations
-  gridPosition?: GridPosition; // Position in garden grid (available actors only)
-  homeTileId?: string; // ID of tile where this actor is homed
+  gridPosition?: GridPosition; // Position in actor grid (available actors only)
+  homeSlotId?: string; // ID of slot where this actor is homed
+  /** @deprecated Legacy alias; use homeSlotId. */
+  homeTileId?: string;
   stackId?: string; // Stack identifier for grouped actors
   stackIndex?: number; // Order within stack (0 = top)
   // Future: stats, traits, equipment, etc.
@@ -488,12 +495,12 @@ export interface GameState {
   buildPileProgress: BuildPileProgress[]; // Persistent build pile progress
   interactionMode: InteractionMode;
   // Actor system
-  availableActors: Actor[]; // Actors in the garden
-  tileParties: Record<string, Actor[]>; // Party per adventure tile
-  activeSessionTileId?: string; // Tile currently running a puzzle session
-  tokens: Token[]; // Resource tokens in the garden
+  availableActors: Actor[]; // Actors in the combat roster pool
+  partyAssignments: Record<string, Actor[]>; // Party by combat party id
+  activeCombatPartyId?: string; // Party currently in active combat
+  tokens: Token[]; // Resource tokens in the combat roster scene
   collectedTokens: Record<Element, number>; // Tokens collected during a run
-  resourceStash: Record<Element, number>; // Banked tokens in garden
+  resourceStash: Record<Element, number>; // Banked combat tokens
   orimDefinitions: OrimDefinition[];
   orimStash: OrimInstance[]; // Shared stash for ORIM
   orimInstances: Record<string, OrimInstance>; // All ORIM instances by id
@@ -511,30 +518,28 @@ export interface GameState {
   lifecycleRestCounter?: number;
   abilityLifecycleUsageByDeckCard?: Record<string, AbilityLifecycleUsageEntry>;
   lastCardActionSnapshot?: Omit<GameState, 'lastCardActionSnapshot'>;
-  // Tile system
-  tiles: Tile[]; // Active tiles in the garden
+  // Combat slot system
+  arenaSlots: ArenaSlot[]; // Active arena slots
   // Blueprint system
   blueprints: Blueprint[]; // Unlocked blueprints in player's library
   pendingBlueprintCards: BlueprintCard[]; // Blueprints in chaos state to collect
-  // Biome system
-  currentBiome?: string; // Active biome ID (during biome phase)
-  biomeMovesCompleted?: number; // Track progress in biome
-  // Node-edge tableau system
-  nodeTableau?: TableauNode[]; // Only populated when biome mode === 'node-edge'
-  // Random biome state
+  // Encounter system
+  currentEncounterId?: string; // Active encounter ID
+  encounterMovesCompleted?: number; // Track progress in the encounter
+  // Combat runtime state
   foundationCombos?: number[]; // Combo count per foundation this turn
   actorCombos?: Record<string, number>; // Combo count per actor this turn
   foundationTokens?: Record<Element, number>[]; // Tokens collected per foundation this turn
   enemyFoundationCombos?: number[]; // Combo count per enemy foundation this turn
   enemyFoundationTokens?: Record<Element, number>[]; // Tokens collected per enemy foundation this turn
-  randomBiomeTurnNumber?: number; // Current turn number in random biome
-  randomBiomeActiveSide?: 'player' | 'enemy';
+  combatTurnNumber?: number; // Current combat turn number
+  activeCombatSide?: 'player' | 'enemy';
   combatFlowMode?: CombatFlowMode;
-  randomBiomeTurnDurationMs?: number;
-  randomBiomeTurnRemainingMs?: number;
-  randomBiomeTurnLastTickAt?: number;
-  randomBiomeTurnTimerActive?: boolean;
-  randomBiomeLastWorldEvent?: RandomBiomeWorldEvent;
+  combatTurnDurationMs?: number;
+  combatTurnRemainingMs?: number;
+  combatTurnLastTickAt?: number;
+  combatTurnTimerActive?: boolean;
+  combatLastWorldEvent?: RandomBiomeWorldEvent;
   combatFlowTelemetry?: CombatFlowTelemetry;
   enemyDifficulty?: EnemyDifficulty;
   enemyBackfillQueues?: Card[][]; // Pre-seeded backfill queues used on enemy turns
@@ -581,7 +586,7 @@ export type EncounterDefinition =
       loot?: RewardBundle[];
     }
   | {
-      type: 'puzzle';
+      type: 'support';
       turnLimit?: number;
       specificCardGoals?: string[];
       enemyActors?: Actor[];
@@ -673,66 +678,6 @@ export interface BuildPileProgress {
   isComplete: boolean; // For perpetual piles, this stays false
 }
 
-// === TILE (CARDCEPTION) SYSTEM ===
-
-// Actor home slot within a tile
-export interface ActorHomeSlot {
-  id: string;
-  actorId: string | null; // ID of homed actor, or null if empty
-}
-
-// Requirement for a card slot
-export interface CardSlotRequirement {
-  suit?: Suit;      // Optional suit restriction
-  minRank?: number; // Optional minimum rank
-  maxRank?: number; // Optional maximum rank
-}
-
-// A slot that can hold a card within a tile
-export interface CardSlot {
-  id: string;
-  requirement: CardSlotRequirement;
-  card: Card | null;
-}
-
-// A group of slots (e.g., "2 water slots")
-export interface CardSlotGroup {
-  slots: CardSlot[];
-  label?: string;
-}
-
-// Template definition for a tile type
-export interface TileDefinition {
-  id: string;
-  name: string;
-  description: string;
-  isBiome?: boolean;
-  isProp?: boolean; // Non-interactive scenery tile
-  lockable?: boolean; // Whether lock toggle is available
-  blocksLight?: boolean; // Fully blocks light rays
-  lightFilter?: 'grove'; // Partial light filter (tree trunks with gaps)
-  lightBlockerShape?: 'card' | 'tile'; // Shape footprint for light blockers
-  buildPileId?: string; // Build pile linkage (e.g., sapling)
-  slotGroups: {
-    requirement: CardSlotRequirement;
-    count: number;
-    label?: string;
-  }[];
-}
-
-// Instance of a tile with current progress
-export interface Tile {
-  definitionId: string;
-  id: string;
-  createdAt?: number;
-  slotGroups: CardSlotGroup[];
-  isComplete: boolean;
-  isLocked: boolean;
-  gridPosition?: GridPosition; // Position in garden grid
-  upgradeLevel: number; // 0, 1, 2, etc.
-  actorHomeSlots: ActorHomeSlot[]; // Creature housing slots
-}
-
 // === BLUEPRINT SYSTEM ===
 
 // Blueprint definition - template for unlockable schematics
@@ -760,83 +705,3 @@ export interface BlueprintCard {
   id: string;
 }
 
-// === BIOME SYSTEM ===
-
-// Predefined layout for a biome
-export interface BiomeLayout {
-  tableaus: number[][]; // Ranks for each tableau
-  elements: Element[][]; // Elements for each tableau (using element encoding)
-}
-
-// Rewards for completing a biome
-export interface BiomeReward {
-  cards: { element: Element; count: number }[];
-  blueprints?: string[]; // Blueprint IDs to unlock
-}
-
-// Blueprint spawn configuration
-export interface BiomeBlueprintSpawn {
-  blueprintId: string;
-  afterMoves: number; // Spawn after N moves
-}
-
-// A single choice presented to the player at the end of an event encounter
-export interface EventChoice {
-  id: string;
-  label: string;
-  description: string;
-  rewards: PoiReward[];
-}
-
-// Biome definition
-export interface BiomeDefinition {
-  id: string;
-  name: string;
-  description: string;
-  seed: string; // Deterministic seed for RNG
-  /** 'combat' = CombatGolf (default). 'event' = EventEncounter (peaceful, choice-based). */
-  biomeType?: 'combat' | 'event';
-  mode?: 'traditional' | 'node-edge'; // Defaults to 'traditional'
-  randomlyGenerated?: boolean; // Random tableau generation each turn
-  infinite?: boolean; // Tableaus backfill with new random cards when cards are removed
-  /** Wave battle mode: auto-spawn sequential enemies with callouts. */
-  waveBattle?: boolean;
-  nodePattern?: string; // NodeEdgePattern ID (for node-edge biomes)
-  enemyDifficulty?: EnemyDifficulty;
-  layout: BiomeLayout;
-  rewards: BiomeReward;
-  blueprintSpawn?: BiomeBlueprintSpawn;
-  requiredMoves: number; // Total moves to complete
-  /** Player choices shown after the event tableau. Only used when biomeType === 'event'. */
-  eventChoices?: EventChoice[];
-  exits?: Partial<Record<'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW', string>>;
-  directionalTableaus?: Partial<Record<'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW', number[]>>;
-}
-
-// === NODE-EDGE TABLEAU SYSTEM ===
-
-// Node in a node-edge tableau with spatial positioning and blocking relationships
-export interface TableauNode {
-  id: string;
-  position: { x: number; y: number; z: number }; // x,y spatial coords, z for visual layering
-  cards: Card[]; // Stack of cards at this node (top = last element)
-  blockedBy: string[]; // IDs of nodes that block this node
-  revealed: boolean; // Whether top card is face-up and playable
-}
-
-// Definition of a single node within a pattern template
-export interface NodePatternDefinition {
-  id: string;
-  position: { x: number; y: number; z: number };
-  cardCount: number; // Number of cards to stack at this node
-  blockedBy: string[]; // IDs of other nodes in pattern that block this one
-}
-
-// Pattern template for node-edge tableaus
-export interface NodeEdgePattern {
-  id: string;
-  name: string;
-  description: string;
-  nodes: NodePatternDefinition[];
-  totalCards: number; // Total cards to deal across all nodes
-}

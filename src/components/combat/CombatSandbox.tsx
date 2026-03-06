@@ -8,6 +8,13 @@ import { ACTOR_DEFINITIONS, getActorDefinition } from '../../engine/actors';
 import { createActorDeckStateWithOrim } from '../../engine/actorDecks';
 import { analyzeOptimalSequence } from '../../engine/analysis';
 import { isCombatSessionActive } from '../../engine/combatSession';
+import {
+  getCombatActiveSide,
+  getCombatLastWorldEvent,
+  getCombatTurnDurationMs,
+  getCombatTurnNumber,
+} from '../../engine/combat/sessionBridge';
+import { getActiveCombatPartyId, getPartyAssignments } from '../../engine/combat/stateAliases';
 import { resolveCostByRarity } from '../../engine/rarityLoadouts';
 import { Foundation } from '../Foundation';
 import { Hand } from '../Hand';
@@ -381,7 +388,7 @@ function normalizeLifecycleForPreview(lifecycle?: AbilityLifecycleDef): Normaliz
 }
 
 function getLifecycleCounterForPreview(state: GameState, scope: AbilityLifecycleExhaustScope): number {
-  if (scope === 'turn') return Math.max(0, Number(state.lifecycleTurnCounter ?? state.randomBiomeTurnNumber ?? state.turnCount ?? 0));
+  if (scope === 'turn') return Math.max(0, Number(state.lifecycleTurnCounter ?? getCombatTurnNumber(state) ?? state.turnCount ?? 0));
   if (scope === 'battle') return Math.max(0, Number(state.lifecycleBattleCounter ?? 0));
   if (scope === 'rest') return Math.max(0, Number(state.lifecycleRestCounter ?? state.globalRestCount ?? 0));
   if (scope === 'run') return Math.max(1, Number(state.lifecycleRunCounter ?? 1));
@@ -580,8 +587,8 @@ type LabFoundationActors = {
   lupus: Actor | null;
 };
 
-function resolveLabFoundationActors(state: Pick<GameState, 'tileParties' | 'availableActors'>): LabFoundationActors {
-  const partyActors = Object.values(state.tileParties ?? {}).flat();
+function resolveLabFoundationActors(state: Pick<GameState, 'partyAssignments' | 'availableActors'>): LabFoundationActors {
+  const partyActors = Object.values(getPartyAssignments(state as GameState)).flat();
   const findActor = (definitionId: 'felis' | 'ursus' | 'lupus'): Actor | null => (
     partyActors.find((actor) => actor.definitionId === definitionId)
     ?? state.availableActors.find((actor) => actor.definitionId === definitionId)
@@ -739,12 +746,12 @@ export function CombatSandbox({
     return () => setCombatLabPerspectiveHotkeyEnabled(false);
   }, [isLabMode, open, setCombatLabPerspectiveHotkeyEnabled]);
 
-  const activeSide = gameState.randomBiomeActiveSide ?? 'player';
+  const activeSide = getCombatActiveSide(gameState);
   const noValidMovesForPlayer = noValidMovesPlayer ?? noValidMoves;
   const noValidMovesForEnemy = noValidMovesEnemy ?? false;
   const combatFlowMode = gameState.combatFlowMode ?? 'turn_based_pressure';
   const enforceTurnOwnership = combatFlowMode === 'turn_based_pressure';
-  const turnDurationMs = Math.max(1000, Math.round(gameState.randomBiomeTurnDurationMs ?? 10000));
+  const turnDurationMs = getCombatTurnDurationMs(gameState, 10000);
   const [localTurnRemainingMs, setLocalTurnRemainingMs] = useState(turnDurationMs);
   const [localTurnTimerActive, setLocalTurnTimerActive] = useState(false);
   const localTurnRemainingRef = useRef(turnDurationMs);
@@ -797,7 +804,7 @@ export function CombatSandbox({
     return normalizedSeed;
   }, [autoPlaySeed]);
   const showGraphics = useGraphics();
-  const tableGlobalScale = useCardScalePreset('table');
+  const tableGlobalScale = useCardScalePreset('board');
   const autoPlayTableauRefsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const autoPlayFoundationRefsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const handZoneRef = useRef<HTMLDivElement | null>(null);
@@ -948,8 +955,8 @@ export function CombatSandbox({
   const showTurnTimer = enforceTurnOwnership && enemyFoundationCount > 0;
   const shouldRenderTurnBars = showTurnTimer && !DISABLE_TURN_BAR_ANIMATION;
   const previewPlayerFoundations = gameState.foundations;
-  const activeTileId = gameState.activeSessionTileId;
-  const partyActors = activeTileId ? (gameState.tileParties[activeTileId] ?? []) : [];
+  const activeTileId = getActiveCombatPartyId(gameState);
+  const partyActors = activeTileId ? (getPartyAssignments(gameState)[activeTileId] ?? []) : [];
   const playerActorPool = [...partyActors, ...(gameState.availableActors ?? [])];
   const enemyActors = gameState.enemyActors ?? [];
   const getOverlayRankDisplay = (card: CardType | undefined, fallbackRank?: number): string | undefined => {
@@ -1383,8 +1390,8 @@ export function CombatSandbox({
   const deckBackedLabHandCards = useMemo<CardType[]>(() => {
     if (!isLabMode) return [];
     const foundations = gameState.foundations ?? [];
-    const tileId = gameState.activeSessionTileId;
-    const party = tileId ? (gameState.tileParties[tileId] ?? []) : [];
+    const tileId = getActiveCombatPartyId(gameState);
+    const party = tileId ? (getPartyAssignments(gameState)[tileId] ?? []) : [];
     const actorPool = [...party, ...(gameState.availableActors ?? [])];
     const usedActorIds = new Set<string>();
     const actorIdsFromFoundations = foundations.map((foundation, index) => {
@@ -1570,8 +1577,8 @@ export function CombatSandbox({
     });
   }, [
     isLabMode,
-    gameState.activeSessionTileId,
-    gameState.tileParties,
+    gameState.activeCombatPartyId,
+    gameState.partyAssignments,
     gameState.availableActors,
     gameState.actorCombos,
     gameState.foundations,
@@ -1627,8 +1634,8 @@ export function CombatSandbox({
   }, [isLabMode, deckBackedLabHandCards, gameState.rpgHandCards, gameState.actorDecks, isDeadRunOnlyAbilityCard, noValidMovesForPlayer]);
   const actorApById = useMemo(() => {
     const ap = new Map<string, number>();
-    const tileId = gameState.activeSessionTileId;
-    const party = tileId ? (gameState.tileParties[tileId] ?? []) : [];
+    const tileId = getActiveCombatPartyId(gameState);
+    const party = tileId ? (getPartyAssignments(gameState)[tileId] ?? []) : [];
     const pool = [...party, ...(gameState.availableActors ?? [])];
     pool.forEach((actor) => {
       // Prefer active party values when duplicate actor ids exist in availableActors.
@@ -1636,7 +1643,7 @@ export function CombatSandbox({
       ap.set(actor.id, Math.max(0, Number(actor.power ?? 0)));
     });
     return ap;
-  }, [gameState.activeSessionTileId, gameState.tileParties, gameState.availableActors]);
+  }, [gameState.activeCombatPartyId, gameState.partyAssignments, gameState.availableActors]);
   const isHandCardPlayable = useCallback((card: CardType) => {
     if (interTurnCountdownActive) return false;
     if (enforceTurnOwnership) {
@@ -1718,7 +1725,7 @@ export function CombatSandbox({
     const definitions = gameState.orimDefinitions ?? [];
     const combatCandidates = definitions.filter((definition) => (
       !definition.isAspect
-      && (definition.domain ?? 'puzzle') === 'combat'
+      && (definition.domain ?? 'combat') === 'combat'
     ));
     const nonLegacy = combatCandidates.filter((definition) => !definition.legacyOrim);
     return nonLegacy.length > 0 ? nonLegacy : combatCandidates;
@@ -1747,8 +1754,8 @@ export function CombatSandbox({
   ), [toCardSignature]);
   const gameTableauSignature = useMemo(() => toTableauSignature(gameTableaus), [gameTableaus, toTableauSignature]);
   const labFoundationActors = useMemo(
-    () => resolveLabFoundationActors({ tileParties: gameState.tileParties, availableActors: gameState.availableActors }),
-    [gameState.availableActors, gameState.tileParties]
+    () => resolveLabFoundationActors({ partyAssignments: gameState.partyAssignments, availableActors: gameState.availableActors }),
+    [gameState.availableActors, gameState.partyAssignments]
   );
   const previewTableauShapeSignature = useMemo(
     () => previewTableaus.map((tableau) => tableau.length).join(','),
@@ -2150,17 +2157,17 @@ export function CombatSandbox({
   const buildAutoPlayReplaySnapshot = useCallback((state: GameState): Partial<GameState> => (
     deepCloneReplayValue({
       phase: state.phase,
-      currentBiome: state.currentBiome,
-      activeSessionTileId: state.activeSessionTileId,
+      currentEncounterId: state.currentEncounterId,
+      activeCombatPartyId: state.activeCombatPartyId,
       turnCount: state.turnCount,
       enemyDifficulty: state.enemyDifficulty,
       combatFlowMode: state.combatFlowMode,
-      randomBiomeActiveSide: state.randomBiomeActiveSide,
-      randomBiomeTurnNumber: state.randomBiomeTurnNumber,
-      randomBiomeTurnDurationMs: state.randomBiomeTurnDurationMs,
-      randomBiomeTurnRemainingMs: state.randomBiomeTurnRemainingMs,
-      randomBiomeTurnLastTickAt: state.randomBiomeTurnLastTickAt,
-      randomBiomeTurnTimerActive: state.randomBiomeTurnTimerActive,
+      activeCombatSide: state.activeCombatSide,
+      combatTurnNumber: state.combatTurnNumber,
+      combatTurnDurationMs: state.combatTurnDurationMs,
+      combatTurnRemainingMs: state.combatTurnRemainingMs,
+      combatTurnLastTickAt: state.combatTurnLastTickAt,
+      combatTurnTimerActive: state.combatTurnTimerActive,
       tableaus: state.tableaus ?? [],
       foundations: state.foundations ?? [],
       enemyFoundations: state.enemyFoundations ?? [],
@@ -2173,7 +2180,7 @@ export function CombatSandbox({
       collectedTokens: state.collectedTokens,
       activeEffects: state.activeEffects ?? [],
       availableActors: state.availableActors ?? [],
-      tileParties: state.tileParties ?? {},
+      partyAssignments: getPartyAssignments(state),
       enemyActors: state.enemyActors ?? [],
       rpgHandCards: state.rpgHandCards ?? [],
       rpgEnemyHandCards: state.rpgEnemyHandCards ?? [],
@@ -2639,7 +2646,7 @@ export function CombatSandbox({
     actions.cleanupDefeatedEnemies();
     try {
       runWithDeterministicRandom(autoPlayDeterministic, autoPlayRngStateRef, () => {
-      const engineActiveSide = gameState.randomBiomeActiveSide ?? 'player';
+      const engineActiveSide = getCombatActiveSide(gameState);
       if (enforceTurnOwnership && useLocalTurnSide && engineActiveSide !== effectiveActiveSide) {
         actions.setActiveSide?.(effectiveActiveSide);
         appendAutoPlayDecision({
@@ -3001,13 +3008,13 @@ export function CombatSandbox({
       return;
     }
 
-    if (gameState.phase === 'playing' && actions.autoPlayNextMove) {
+    if ((gameState.phase === 'combat' || gameState.phase === 'playing') && actions.autoPlayNextMove) {
       executeAutoPlayDecision(
         {
           side: 'system',
           kind: 'player_tableau',
           score: 4,
-          label: 'phase=playing autopilot',
+          label: 'phase=combat autopilot',
         },
         () => {
           actions.autoPlayNextMove?.();
@@ -3156,7 +3163,7 @@ export function CombatSandbox({
             actions.endTurn();
             return true;
           }
-          if (gameState.phase === 'playing' && actions.autoPlayNextMove) {
+          if ((gameState.phase === 'combat' || gameState.phase === 'playing') && actions.autoPlayNextMove) {
             actions.autoPlayNextMove();
             return true;
           }
@@ -3189,7 +3196,7 @@ export function CombatSandbox({
     forceLocalTurnSide,
     currentDifficulty,
     gameState.activeEffects,
-    gameState.currentBiome,
+    gameState.currentEncounterId,
     gameState.phase,
     interTurnCountdownActive,
     isDeadRunOnlyAbilityCard,
@@ -3256,7 +3263,7 @@ export function CombatSandbox({
       setWorldEventBanner(null);
       return;
     }
-    const worldEvent = gameState.randomBiomeLastWorldEvent;
+    const worldEvent = getCombatLastWorldEvent(gameState);
     if (!worldEvent || !worldEvent.id || !Number.isFinite(worldEvent.at)) return;
     const token = `${worldEvent.id}:${worldEvent.at}`;
     if (worldEventSeenRef.current === token) return;
@@ -3271,10 +3278,10 @@ export function CombatSandbox({
     }, 1900);
     return () => window.clearTimeout(timeoutId);
   }, [
-    gameState.randomBiomeLastWorldEvent?.at,
-    gameState.randomBiomeLastWorldEvent?.detail,
-    gameState.randomBiomeLastWorldEvent?.id,
-    gameState.randomBiomeLastWorldEvent?.label,
+    gameState.combatLastWorldEvent?.at,
+    gameState.combatLastWorldEvent?.detail,
+    gameState.combatLastWorldEvent?.id,
+    gameState.combatLastWorldEvent?.label,
     open,
   ]);
   useEffect(() => {
@@ -3662,7 +3669,7 @@ export function CombatSandbox({
   const lifecycleCounters = useMemo(() => ({
     run: Math.max(1, Number(gameState.lifecycleRunCounter ?? 1)),
     battle: Math.max(0, Number(gameState.lifecycleBattleCounter ?? 0)),
-    turn: Math.max(0, Number(gameState.lifecycleTurnCounter ?? gameState.randomBiomeTurnNumber ?? gameState.turnCount ?? 0)),
+    turn: Math.max(0, Number(gameState.lifecycleTurnCounter ?? getCombatTurnNumber(gameState) ?? gameState.turnCount ?? 0)),
     rest: Math.max(0, Number(gameState.lifecycleRestCounter ?? gameState.globalRestCount ?? 0)),
   }), [
     gameState.globalRestCount,
@@ -3670,7 +3677,7 @@ export function CombatSandbox({
     gameState.lifecycleRestCounter,
     gameState.lifecycleRunCounter,
     gameState.lifecycleTurnCounter,
-    gameState.randomBiomeTurnNumber,
+    gameState.combatTurnNumber,
     gameState.turnCount,
   ]);
   const lifecycleDebugRows = useMemo(() => {
@@ -3758,7 +3765,7 @@ export function CombatSandbox({
   const activeAiTurnLabel = effectiveActiveSide === 'enemy' ? 'Enemy AI Turn' : 'Player AI Turn';
   const totalTurnsCompleted = Math.max(
     0,
-    Number(gameState.randomBiomeTurnNumber ?? gameState.lifecycleTurnCounter ?? gameState.turnCount ?? 0) - 1
+    Number(getCombatTurnNumber(gameState) ?? gameState.lifecycleTurnCounter ?? gameState.turnCount ?? 0) - 1
   );
 
   return (
@@ -3800,8 +3807,8 @@ export function CombatSandbox({
       <div className="mb-3 grid grid-cols-2 gap-1 rounded border border-game-teal/30 bg-game-bg-dark/60 p-2 text-[9px] text-game-teal/90">
         <div>Phase: {gameState.phase}</div>
         <div>Side: {effectiveActiveSide}</div>
-        <div>Biome: {gameState.currentBiome ?? '--'}</div>
-        <div>Turn: {gameState.randomBiomeTurnNumber ?? '--'}</div>
+        <div>Encounter: {gameState.currentEncounterId ?? '--'}</div>
+        <div>Turn: {getCombatTurnNumber(gameState) ?? '--'}</div>
         <div>Enemies: {enemyCount}</div>
         <div>Enemy stacks: {enemyFoundationCount}</div>
         <div>Hand: {previewHandCards.length}</div>
@@ -4609,4 +4616,6 @@ export function CombatSandbox({
     </Profiler>
   );
 }
+
+
 

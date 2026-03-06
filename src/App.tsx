@@ -89,7 +89,7 @@ export default function App() {
           <CardScaleProvider
             value={{
               zoom: 1.1,
-              table: 1.25,
+              board: 1.25,
               hand: 1.15,
               drag: 1.2,
               jumbo: 1,

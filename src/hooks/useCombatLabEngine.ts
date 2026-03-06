@@ -43,8 +43,8 @@ function createCombatLabState(): GameState {
     enemyActors[CENTER_ENEMY_FOUNDATION_INDEX] = initialEnemy;
   }
   return {
-    phase: 'playing',
-    currentBiome: undefined,
+    phase: 'combat',
+    currentEncounterId: undefined,
     tableaus: createCombatTableaus(),
     foundations,
     enemyFoundations,
@@ -59,7 +59,7 @@ function createCombatLabState(): GameState {
     challengeProgress: { challengeId: 0, collected: { '💧': 0, '⛰️': 0, '💨': 0, '🔥': 0, '⭐': 0, '🌙': 0, '☀️': 0 } },
     buildPileProgress: [],
     availableActors: playerActors,
-    tileParties: {},
+    partyAssignments: {},
     tokens: [],
     collectedTokens: { A: 0, E: 0, W: 0, F: 0, L: 0, D: 0, N: 0 },
     resourceStash: { A: 0, E: 0, W: 0, F: 0, L: 0, D: 0, N: 0 },
@@ -70,7 +70,7 @@ function createCombatLabState(): GameState {
     relicDefinitions: [],
     equippedRelics: [],
     relicRuntimeState: {},
-    tiles: [],
+    arenaSlots: [],
     blueprints: [],
     pendingBlueprintCards: [],
     foundationCombos: foundations.map(() => 0),
@@ -82,12 +82,12 @@ function createCombatLabState(): GameState {
       { A: 0, E: 0, W: 0, F: 0, L: 0, D: 0, N: 0 },
       { A: 0, E: 0, W: 0, F: 0, L: 0, D: 0, N: 0 },
     ],
-    randomBiomeActiveSide: 'player',
-    randomBiomeTurnNumber: 1,
-    randomBiomeTurnDurationMs: 10000,
-    randomBiomeTurnRemainingMs: 10000,
-    randomBiomeTurnLastTickAt: 0,
-    randomBiomeTurnTimerActive: false,
+    activeCombatSide: 'player',
+    combatTurnNumber: 1,
+    combatTurnDurationMs: 10000,
+    combatTurnRemainingMs: 10000,
+    combatTurnLastTickAt: 0,
+    combatTurnTimerActive: false,
     combatFlowMode: 'turn_based_pressure',
     combatFlowTelemetry: {
       playerTurnsStarted: 0,
@@ -164,7 +164,9 @@ export function useCombatLabEngine() {
     )),
     setActiveSide: (side: 'player' | 'enemy') => (
       setGameState((prev) => (
-        prev.randomBiomeActiveSide === side ? prev : { ...prev, randomBiomeActiveSide: side }
+        prev.activeCombatSide === side
+          ? prev
+          : { ...prev, activeCombatSide: side }
       ))
     ),
     selectCard: (card, tableauIndex) => setSelectedCard({ card, tableauIndex }),

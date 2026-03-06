@@ -19,6 +19,7 @@ import { removeOneCardFromActorRpgDiscardByDeckCardId } from '../rpgDiscard';
 import { ORIM_RARITY_ORDER, resolveCostByRarity } from '../rarityLoadouts';
 import { getCombatParty, isActorCombatEnabled } from './shared';
 import { getCombatActiveSide, getCombatTurnCounter } from './sessionBridge';
+import { getPartyAssignments } from './stateAliases';
 import abilitiesJson from '../../data/abilities.json';
 
 type MoveAvailabilityLike = Pick<{
@@ -326,7 +327,7 @@ function canUseDeckCardByLifecycle(
 function findActorById(state: GameState, actorId: string): Actor | null {
   const enemy = state.enemyActors?.find((actor) => actor.id === actorId);
   if (enemy) return enemy;
-  for (const party of Object.values(state.tileParties)) {
+  for (const party of Object.values(getPartyAssignments(state))) {
     const match = party.find((actor) => actor.id === actorId);
     if (match) return match;
   }

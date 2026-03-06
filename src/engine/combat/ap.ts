@@ -1,4 +1,5 @@
 import type { Actor, GameState } from '../types';
+import { getPartyAssignments, setPartyAssignments } from './stateAliases';
 
 function incrementActorAp(actor: Actor, amount: number): Actor {
   const gain = Number.isFinite(amount) ? Math.max(0, Math.floor(amount)) : 0;
@@ -29,9 +30,10 @@ export function grantApToActorById(
     return updated;
   });
 
-  let tilePartiesChanged = false;
-  const nextTileParties = Object.fromEntries(
-    Object.entries(state.tileParties).map(([tileId, actors]) => {
+  const partyAssignments = getPartyAssignments(state);
+  let partyAssignmentsChanged = false;
+  const nextPartyAssignments = Object.fromEntries(
+    Object.entries(partyAssignments).map(([partyId, actors]) => {
       let partyChanged = false;
       const nextActors = actors.map((actor) => {
         if (actor.id !== actorId) return actor;
@@ -39,8 +41,8 @@ export function grantApToActorById(
         if (updated !== actor) partyChanged = true;
         return updated;
       });
-      if (partyChanged) tilePartiesChanged = true;
-      return [tileId, nextActors];
+      if (partyChanged) partyAssignmentsChanged = true;
+      return [partyId, nextActors];
     })
   );
 
@@ -52,11 +54,11 @@ export function grantApToActorById(
     return updated;
   });
 
-  if (!availableChanged && !tilePartiesChanged && !enemyChanged) return state;
+  if (!availableChanged && !partyAssignmentsChanged && !enemyChanged) return state;
   return {
     ...state,
     availableActors: availableChanged ? nextAvailableActors : state.availableActors,
-    tileParties: tilePartiesChanged ? nextTileParties : state.tileParties,
+    ...(partyAssignmentsChanged ? setPartyAssignments(state, nextPartyAssignments) : setPartyAssignments(state, partyAssignments)),
     enemyActors: enemyChanged ? nextEnemyActors : state.enemyActors,
   };
 }

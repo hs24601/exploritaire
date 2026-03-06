@@ -180,7 +180,7 @@ export const Hand = memo(function Hand({
     startY: number;
     rect: DOMRect;
   } | null>(null);
-  const handGlobalScale = useCardScalePreset('table');
+  const handGlobalScale = useCardScalePreset('board');
   const effectiveScale = cardScale * handGlobalScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
   const cardHeight = CARD_SIZE.height * effectiveScale;
