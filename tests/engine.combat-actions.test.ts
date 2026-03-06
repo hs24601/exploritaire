@@ -183,7 +183,7 @@ describe('engine/combat/actions', () => {
   it('completeEncounter clears active session markers', () => {
     const state = createBaseState({ currentBiome: 'random_wilds', activeSessionTileId: 'tile-1' });
     const next = completeEncounter(state);
-    expect(next.phase).toBe('biome');
+    expect(next.phase).toBe('garden');
     expect(next.currentBiome).toBeUndefined();
     expect(next.activeSessionTileId).toBeUndefined();
   });

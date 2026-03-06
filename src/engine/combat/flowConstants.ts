@@ -1,0 +1,6 @@
+export const DEFAULT_RANDOM_BIOME_TABLEAU_COUNT = 7;
+export const DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH = 4;
+export const DEFAULT_RANDOM_BIOME_TURN_DURATION_MS = 10000;
+export const RANDOM_BIOME_DEADLOCK_SURGE_LABEL = 'Deadlock Surge';
+export const RANDOM_BIOME_DEADLOCK_SURGE_DETAIL = 'The biome rejects stagnation. Paths reweave.';
+export const RANDOM_BIOME_DEADLOCK_SURGE_COOLDOWN_MS = 1200;

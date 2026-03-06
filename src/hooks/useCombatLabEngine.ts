@@ -124,22 +124,13 @@ export function useCombatLabEngine() {
       setSelectedCard(null);
     },
     startBiome: () => {},
-    playTableauCard: (tableauIndex, foundationIndex) => (
-      applyStateResult(playTableauCard(gameState, tableauIndex, foundationIndex))
+    spawnRandomEnemyInRandomBiome: () => setGameState((prev) => spawnEnemy(prev)),
+    spawnEnemyActorInRandomBiome: (definitionId: string, foundationIndex: number) => (
+      setGameState((prev) => spawnEnemyActor(prev, definitionId, foundationIndex))
     ),
-    playEnemyTableauCard: (tableauIndex, foundationIndex) => (
-      applyStateResult(playEnemyTableauCard(gameState, tableauIndex, foundationIndex))
-    ),
-    advanceTurn: () => setGameState((prev) => advanceTurn(prev)),
-    endTurn: () => setGameState((prev) => endTurn(prev)),
-    endExplorationTurn: () => setGameState((prev) => endExplorationTurn(prev)),
-    completeEncounter: () => setGameState((prev) => completeEncounter(prev)),
-    spawnEnemy: () => setGameState((prev) => spawnEnemy(prev)),
-    spawnEnemyActor: (definitionId, foundationIndex) => setGameState((prev) => spawnEnemyActor(prev, definitionId, foundationIndex)),
-    setCombatTableaus: (tableaus) => setGameState((prev) => ({ ...prev, tableaus })),
-    setCombatFoundations: (foundations) => setGameState((prev) => ({ ...prev, foundations })),
-    setCombatActiveSide: (side) => setGameState((prev) => ({ ...prev, randomBiomeActiveSide: side })),
     rerollRandomBiomeDeal: () => setGameState((prev) => ({ ...prev, tableaus: createCombatTableaus() })),
+    endRandomBiomeTurn: () => setGameState((prev) => endTurn(prev)),
+    advanceRandomBiomeTurn: () => setGameState((prev) => advanceTurn(prev)),
     cleanupDefeatedEnemies: () => setGameState((prev) => {
       const nextActors = (prev.enemyActors ?? []).map((actor) => ({ ...actor }));
       const nextFoundations = (prev.enemyFoundations ?? []).map((foundation) => [...foundation]);
@@ -157,6 +148,9 @@ export function useCombatLabEngine() {
     }),
     setEnemyDifficulty: (difficulty) => setGameState((prev) => ({ ...prev, enemyDifficulty: difficulty })),
     setCombatFlowMode: (mode) => setGameState((prev) => ({ ...prev, combatFlowMode: mode })),
+    setRandomBiomeActiveSide: (side: 'player' | 'enemy') => (
+      setGameState((prev) => ({ ...prev, randomBiomeActiveSide: side }))
+    ),
     selectCard: (card, tableauIndex) => setSelectedCard({ card, tableauIndex }),
     playToFoundation: (foundationIndex) => {
       if (!selectedCard) return false;
@@ -164,7 +158,7 @@ export function useCombatLabEngine() {
       if (ok) setSelectedCard(null);
       return ok;
     },
-    playFromTableau: (tableauIndex, foundationIndex) => (
+    playFromTableau: (tableauIndex: number, foundationIndex: number) => (
       applyStateResult(playTableauCard(gameState, tableauIndex, foundationIndex))
     ),
     playFromHand: (card, foundationIndex, useWild) => {
@@ -187,10 +181,20 @@ export function useCombatLabEngine() {
       return true;
     },
     playFromHandToEnemyFoundation: () => false,
+    playCardInRandomBiome: (tableauIndex: number, foundationIndex: number) => (
+      applyStateResult(playTableauCard(gameState, tableauIndex, foundationIndex))
+    ),
+    playEnemyCardInRandomBiome: (tableauIndex: number, foundationIndex: number) => (
+      applyStateResult(playEnemyTableauCard(gameState, tableauIndex, foundationIndex))
+    ),
+    setBiomeTableaus: (tableaus: Card[][]) => setGameState((prev) => ({ ...prev, tableaus })),
+    setBiomeFoundations: (foundations: Card[][]) => setGameState((prev) => ({ ...prev, foundations })),
     restoreCombatLabSnapshot: (snapshot) => {
       setGameState((prev) => ({ ...prev, ...snapshot }));
       return true;
     },
+    completeBiome: () => setGameState((prev) => completeEncounter(prev)),
+    endExplorationTurnInRandomBiome: () => setGameState((prev) => endExplorationTurn(prev)),
     autoPlayNextMove: () => {},
     playRpgHandCardOnActor: () => false,
     playEnemyRpgHandCardOnActor: () => false,
