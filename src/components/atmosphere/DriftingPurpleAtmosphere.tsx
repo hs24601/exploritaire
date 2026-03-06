@@ -342,7 +342,7 @@ export const DriftingPurpleAtmosphere = memo(function DriftingPurpleAtmosphere({
   return (
     <div
       ref={rootRef}
-      className={className}
+      className={`w-full h-full ${className}`}
       style={{
         background:
           'radial-gradient(circle at 50% 50%, #1a0632 0%, #140426 25%, #0c021a 50%, #06020e 75%, #020108 100%)',

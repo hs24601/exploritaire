@@ -299,7 +299,7 @@ export const InfernoMaelstromAtmosphere = memo(function InfernoMaelstromAtmosphe
   return (
     <div
       ref={rootRef}
-      className={className}
+      className={`w-full h-full ${className}`}
       style={{
         background:
           'radial-gradient(circle at 50% 45%, #5e1608 0%, #2c0905 38%, #150503 66%, #090201 100%)',

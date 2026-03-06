@@ -260,6 +260,6 @@ void main(void) {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={className} />;
+  return <canvas ref={canvasRef} className={`w-full h-full ${className}`} />;
 });
 

@@ -389,5 +389,5 @@ export const AuroraForestAtmosphere = memo(function AuroraForestAtmosphere({ cla
     };
   }, []);
 
-  return <div ref={rootRef} className={className} />;
+  return <div ref={rootRef} className={`w-full h-full ${className}`} />;
 });
