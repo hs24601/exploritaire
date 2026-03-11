@@ -1,12 +1,12 @@
 import { memo, useState } from 'react';
 
 const CARDS = [
-  { id: 1, front: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/English_pattern_ace_of_spades.svg/1024px-English_pattern_ace_of_spades.svg.png" },
-  { id: 2, front: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/English_pattern_2_of_spades.svg/1024px-English_pattern_2_of_spades.svg.png" },
-  { id: 3, front: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/English_pattern_3_of_spades.svg/1024px-English_pattern_3_of_spades.svg.png" },
+  { id: 1, front: '/assets/Bluevee.png' },
+  { id: 2, front: '/assets/actors/fox_cub.png' },
+  { id: 3, front: '/assets/actors/wolf_cub.png' },
 ];
 
-const BACK_IMAGE = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTkKnlurWcUYrlDbGvf8IUz6rLX7oX1hHt7FW_6e4vNOwFfPhmPURXxGK45qVAqW7dtxsY&usqp=CAU";
+const BACK_IMAGE = '/assets/Blueevee.png';
 
 export const MidairFlipDemo = memo(function MidairFlipDemo() {
   const [flippedStates, setFlippedIds] = useState<Record<number, boolean>>({});

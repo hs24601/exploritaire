@@ -1,5 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
-import { gsap } from 'gsap';
+import { memo, useMemo } from 'react';
 
 export type DisassembledTextConfig = {
   text: string;
@@ -28,7 +27,7 @@ export const DEFAULT_DISASSEMBLED_TEXT_CONFIG: DisassembledTextConfig = {
   velocityMax: 600,
   delayBeforeExplosion: 3,
   fontSize: '4rem',
-  fontFamily: '"Rubik Scribble", system-ui, sans-serif'
+  fontFamily: '"Rubik Scribble", system-ui, sans-serif',
 };
 
 type Props = {
@@ -36,79 +35,100 @@ type Props = {
   config?: DisassembledTextConfig;
 };
 
-export const DisassembledTextEffect = memo(function DisassembledTextEffect({ 
-  className, 
-  config = DEFAULT_DISASSEMBLED_TEXT_CONFIG 
+type CharacterMotion = {
+  char: string;
+  id: string;
+  driftX: number;
+  driftY: number;
+  rotation: number;
+  delay: number;
+  duration: number;
+};
+
+export const DisassembledTextEffect = memo(function DisassembledTextEffect({
+  className,
+  config = DEFAULT_DISASSEMBLED_TEXT_CONFIG,
 }: Props) {
-  const containerRef = useRef<HTMLHeadingElement>(null);
-  const timelineRef = useRef<gsap.core.Timeline | null>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    // Clear existing content
-    containerRef.current.innerHTML = '';
-    
-    // Split text into spans
-    const chars = config.text.split('').map(char => {
-      const span = document.createElement('span');
-      span.textContent = char === ' ' ? '\u00A0' : char;
-      span.style.display = 'inline-block';
-      span.style.whiteSpace = 'pre';
-      containerRef.current?.appendChild(span);
-      return span;
+  const chars = useMemo<CharacterMotion[]>(() => {
+    return config.text.split('').map((char, index) => {
+      const spread = Math.max(config.velocityMin, config.velocityMax);
+      const driftX = ((index % 2 === 0 ? 1 : -1) * (spread * 0.35 + index * 8));
+      const driftY = Math.max(160, config.gravity * 0.35) + (index * 12);
+      const rotation = ((index % 2 === 0 ? 1 : -1) * (config.rotationRange * 0.18 + index * 14));
+      const delay = (index * config.inStagger) + config.delayBeforeExplosion;
+      const duration = Math.max(0.6, config.outDuration + index * config.outStagger);
+      return {
+        char,
+        id: `disassembled-${index}-${char}`,
+        driftX,
+        driftY,
+        rotation,
+        delay,
+        duration,
+      };
     });
-
-    // Create GSAP timeline
-    const tl = gsap.timeline({ repeat: -1 });
-    timelineRef.current = tl;
-
-    gsap.set(containerRef.current, { opacity: 1 });
-
-    // Intro animation
-    tl.from(chars, {
-      duration: config.inDuration,
-      y: 100,
-      rotation: 90,
-      opacity: 0,
-      ease: "elastic.out(1, 0.3)",
-      stagger: config.inStagger
-    });
-
-    // Exploding animation (simulated without Physics2D plugin)
-    tl.to(chars, {
-      duration: config.outDuration,
-      opacity: 0,
-      stagger: config.outStagger,
-      onUpdate: function() {
-        // This is a bit tricky to simulate perfectly without the plugin
-        // But we can use simple custom ease or logic
-      },
-      // Manually simulate physics for each char
-      x: () => (Math.random() - 0.5) * 400,
-      y: () => 400 + Math.random() * 200,
-      rotation: () => (Math.random() - 0.5) * config.rotationRange,
-      ease: "power1.in"
-    }, `+=${config.delayBeforeExplosion}`);
-
-    return () => {
-      tl.kill();
-    };
   }, [config]);
 
+  const totalCycleSeconds = useMemo(() => {
+    if (chars.length === 0) return config.inDuration + config.outDuration + config.delayBeforeExplosion;
+    const last = chars[chars.length - 1];
+    return Math.max(
+      config.inDuration + (chars.length * config.inStagger),
+      last.delay + last.duration,
+    );
+  }, [chars, config.delayBeforeExplosion, config.inDuration, config.outDuration]);
+
   return (
-    <h1 
-      ref={containerRef} 
-      className={`text-white text-center whitespace-nowrap ${className}`}
-      style={{ 
-        fontSize: config.fontSize, 
+    <h1
+      className={`absolute left-1/2 top-1/2 m-0 w-max -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-center text-white ${className ?? ''}`}
+      style={{
+        fontSize: config.fontSize,
         fontFamily: config.fontFamily,
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: 'max-content'
       }}
-    />
+    >
+      {chars.map((entry, index) => (
+        <span
+          key={entry.id}
+          className="inline-block whitespace-pre"
+          style={{
+            animationName: 'disassembled-text-cycle',
+            animationDuration: `${totalCycleSeconds}s`,
+            animationDelay: `${index * config.inStagger}s`,
+            animationIterationCount: 'infinite',
+            animationTimingFunction: 'linear',
+            transformOrigin: 'center center',
+            ['--disassembled-end-x' as string]: `${entry.driftX}px`,
+            ['--disassembled-end-y' as string]: `${entry.driftY}px`,
+            ['--disassembled-rotate' as string]: `${entry.rotation}deg`,
+            ['--disassembled-in-duration' as string]: `${Math.max(0.2, config.inDuration)}s`,
+            ['--disassembled-out-start' as string]: `${Math.max(0, entry.delay / totalCycleSeconds) * 100}%`,
+          }}
+        >
+          {entry.char === ' ' ? '\u00A0' : entry.char}
+        </span>
+      ))}
+      <style>
+        {`
+          @keyframes disassembled-text-cycle {
+            0% {
+              opacity: 0;
+              transform: translate3d(0, 100px, 0) rotate(90deg);
+            }
+            12% {
+              opacity: 1;
+              transform: translate3d(0, 0, 0) rotate(0deg);
+            }
+            58% {
+              opacity: 1;
+              transform: translate3d(0, 0, 0) rotate(0deg);
+            }
+            100% {
+              opacity: 0;
+              transform: translate3d(var(--disassembled-end-x), var(--disassembled-end-y), 0) rotate(var(--disassembled-rotate));
+            }
+          }
+        `}
+      </style>
+    </h1>
   );
 });

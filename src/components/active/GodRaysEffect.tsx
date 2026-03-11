@@ -60,18 +60,15 @@ export const GodRaysEffect = memo(function GodRaysEffect({
   className,
   config = DEFAULT_GOD_RAYS_CONFIG,
 }: Props) {
-  const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const bgCanvas = bgCanvasRef.current;
     const mainCanvas = mainCanvasRef.current;
     const container = containerRef.current;
-    if (!bgCanvas || !mainCanvas || !container) return;
+    if (!mainCanvas || !container) return;
     const mainCanvasEl = mainCanvas;
 
-    const bgCtx = bgCanvas.getContext('2d')!;
     const mainCtx = mainCanvas.getContext('2d', { alpha: true })!;
 
     let raf = 0;
@@ -89,8 +86,6 @@ export const GodRaysEffect = memo(function GodRaysEffect({
     const resize = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
-      bgCanvas.width = w;
-      bgCanvas.height = h;
       mainCanvas.width = w;
       mainCanvas.height = h;
       mouse.targetPosition.x = 0.5 * w;
@@ -252,33 +247,8 @@ export const GodRaysEffect = memo(function GodRaysEffect({
       particles = Array.from({ length: config.particleCount }, () => new Particle());
     };
 
-    const drawBackground = () => {
-      const w = bgCanvas.width;
-      const h = bgCanvas.height;
-      
-      const color1 = "rgb(31,31,18)";
-      const color2 = "rgb(159,159,101)";
-      
-      const gradient = bgCtx.createLinearGradient(0.5 * w, 0, 0.5 * w, h);
-      gradient.addColorStop(0, color1);
-      gradient.addColorStop(0.5, color2);
-      gradient.addColorStop(1, color1);
-      
-      bgCtx.fillStyle = gradient;
-      bgCtx.fillRect(0, 0, w, h);
-      
-      // Draw the main canvas content blurred onto the background for glow
-      bgCtx.save();
-      bgCtx.filter = "blur(6px)";
-      bgCtx.globalCompositeOperation = "lighter";
-      bgCtx.drawImage(mainCanvas, 0, 0);
-      bgCtx.restore();
-    };
-
     const render = () => {
       mouse.update();
-      
-      // Clear main canvas (rays and particles)
       mainCtx.clearRect(0, 0, mainCanvasEl.width, mainCanvasEl.height);
 
       for (const ray of rays) {
@@ -290,9 +260,6 @@ export const GodRaysEffect = memo(function GodRaysEffect({
         particle.update();
         particle.draw(mainCtx);
       }
-
-      // Draw background and the blurred glow pass
-      drawBackground();
 
       raf = requestAnimationFrame(render);
     };
@@ -328,13 +295,8 @@ export const GodRaysEffect = memo(function GodRaysEffect({
   }, [config.rayCount, config.particleCount]);
 
   return (
-    <div ref={containerRef} className={`w-full h-full bg-black relative overflow-hidden flex items-center justify-center ${className ?? ''}`}>
-      <canvas ref={bgCanvasRef} className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }} />
-      <canvas ref={mainCanvasRef} className="absolute inset-0 w-full h-full opacity-75" style={{ zIndex: 1 }} />
-      
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <div className="text-game-teal font-mono text-[10px] uppercase tracking-widest opacity-30">Active Effect: god_rays</div>
-      </div>
+    <div ref={containerRef} className={`w-full h-full bg-transparent relative overflow-hidden flex items-center justify-center ${className ?? ''}`}>
+      <canvas ref={mainCanvasRef} className="absolute inset-0 w-full h-full opacity-90" />
     </div>
   );
 });

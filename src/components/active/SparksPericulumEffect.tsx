@@ -160,8 +160,7 @@ export const SparksPericulumEffect = memo(function SparksPericulumEffect({ class
       origin.x = lerp(origin.x, hover ? mouse.x : 0.5 * canvas.width, 0.05);
       origin.y = lerp(origin.y, hover ? mouse.y : 0.5 * canvas.height, 0.05);
 
-      ctx.fillStyle = 'rgba(0,0,0,0.05)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // Transparent clearing
 
       for (let i = particles.length - 1; i >= 0; i -= 1) {
         const particle = particles[i];
@@ -214,12 +213,9 @@ export const SparksPericulumEffect = memo(function SparksPericulumEffect({ class
   }, []);
 
   return (
-    <div className={`w-full h-full bg-black/80 flex items-center justify-center p-10 ${className ?? ''}`}>
-      <div className="relative w-full h-full border border-game-teal/20 rounded-xl overflow-hidden">
+    <div className={`w-full h-full bg-transparent flex items-center justify-center ${className ?? ''}`}>
+      <div className="relative w-full h-full overflow-hidden">
         <canvas ref={canvasRef} className="w-full h-full" />
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="text-game-teal font-mono text-[10px] uppercase tracking-widest opacity-30">Active Effect: sparks_periculum</div>
-        </div>
       </div>
     </div>
   );

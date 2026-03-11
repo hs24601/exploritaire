@@ -23,19 +23,9 @@ export function hasElementMatchBuff(effects: Effect[]): boolean {
   );
 }
 
-function isActorFoundationCard(card?: Card): boolean {
-  if (!card) return false;
-  if (card.rpgCardKind === 'focus' && card.sourceActorId) return true;
-  const cardId = card.id ?? '';
-  return cardId.startsWith('actor-')
-    || cardId.startsWith('combatlab-foundation-')
-    || cardId.startsWith('lab-foundation-');
-}
-
 export function canPlayCardWithWild(card: Card, foundationTop?: Card, effects: Effect[] = []): boolean {
-  if (!foundationTop) return false;
+  if (!foundationTop) return true;
   if (foundationTop.rank === WILD_SENTINEL_RANK) return true;
-  if (isActorFoundationCard(foundationTop)) return true;
   return canPlayCard(card, foundationTop, effects);
 }
 
@@ -69,10 +59,9 @@ export function countPlayableTableauTops(
     if (tableau.length === 0) continue;
 
     const topCard = tableau[tableau.length - 1];
-    const canPlay = foundations.some((foundation) => {
-      if (foundation.length === 0) return false;
-      return canPlayCard(topCard, foundation[foundation.length - 1], effects);
-    });
+    const canPlay = foundations.some((foundation) => (
+      canPlayCardWithWild(topCard, foundation[foundation.length - 1], effects)
+    ));
 
     if (canPlay) {
       count++;

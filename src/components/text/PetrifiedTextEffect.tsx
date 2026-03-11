@@ -32,7 +32,11 @@ export const PetrifiedTextEffect = memo(function PetrifiedTextEffect({
   return (
     <div className="absolute inset-0 overflow-hidden">
       <style>{`
-        @import url("https://fonts.googleapis.com/css2?family=Rubik+Distressed&display=swap");
+        @font-face {
+          font-family: "Rubik Distressed Local";
+          src: url('/assets/vis/fonts/rubik-distressed-0.ttf') format('truetype');
+          font-display: swap;
+        }
 
         .petrified-root {
           position: relative;
@@ -44,7 +48,7 @@ export const PetrifiedTextEffect = memo(function PetrifiedTextEffect({
           overflow: hidden;
           text-align: center;
           background-color: ${config.backgroundColor};
-          font-family: "Rubik Distressed", system-ui, sans-serif;
+          font-family: "Rubik Distressed Local", system-ui, sans-serif;
         }
 
         .petrified-root::before,

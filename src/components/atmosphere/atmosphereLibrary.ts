@@ -1,11 +1,13 @@
 export type AtmosphereEffectId =
   | 'none'
   | 'aurora_forest'
-  | 'black_hole'
+  | 'gargantua'
   | 'brownian_motion'
   | 'chaos_split'
+  | 'comet_barrage'
   | 'comet_rain'
   | 'cosmic_lint'
+  | 'door_sands_time'
   | 'drifting_purple'
   | 'einstein_rosen'
   | 'electric_skies'
@@ -21,6 +23,7 @@ export type AtmosphereEffectId =
   | 'solaris_prime'
   | 'sakura_blossoms'
   | 'smoke_green'
+  | 'spinning_starfield'
   | 'stars_twinkle_performant';
 
 export type AtmospherePreset = {
@@ -32,11 +35,13 @@ export type AtmospherePreset = {
 export const ATMOSPHERE_PRESETS: AtmospherePreset[] = [
   { id: 'none', label: 'None', category: 'atmosphere' },
   { id: 'aurora_forest', label: 'aurora_forest', category: 'atmosphere' },
-  { id: 'black_hole', label: 'black_hole', category: 'atmosphere' },
+  { id: 'gargantua', label: 'gargantua', category: 'atmosphere' },
   { id: 'brownian_motion', label: 'brownian_motion', category: 'atmosphere' },
   { id: 'chaos_split', label: 'chaos_split', category: 'atmosphere' },
+  { id: 'comet_barrage', label: 'comet_barrage', category: 'atmosphere' },
   { id: 'comet_rain', label: 'comet_rain', category: 'atmosphere' },
   { id: 'cosmic_lint', label: 'cosmic_lint', category: 'atmosphere' },
+  { id: 'door_sands_time', label: 'door_sands_time', category: 'atmosphere' },
   { id: 'drifting_purple', label: 'drifting_purple', category: 'atmosphere' },
   { id: 'einstein_rosen', label: 'einstein_rosen', category: 'atmosphere' },
   { id: 'electric_skies', label: 'electric_skies', category: 'atmosphere' },
@@ -52,5 +57,6 @@ export const ATMOSPHERE_PRESETS: AtmospherePreset[] = [
   { id: 'solaris_prime', label: 'solaris_prime', category: 'atmosphere' },
   { id: 'sakura_blossoms', label: 'sakura_blossoms', category: 'atmosphere' },
   { id: 'smoke_green', label: 'smoke_green', category: 'atmosphere' },
+  { id: 'spinning_starfield', label: 'spinning_starfield', category: 'atmosphere' },
   { id: 'stars_twinkle_performant', label: 'stars_twinkle_performant', category: 'atmosphere' },
 ];

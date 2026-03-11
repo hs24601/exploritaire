@@ -1,8 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { EasePack } from 'gsap/EasePack';
-
-gsap.registerPlugin(EasePack);
+import { memo, useEffect, useMemo, useState } from 'react';
 
 const DEFAULT_TEXT =
   'one two three four five six seven eight nine ten ' +
@@ -39,77 +35,118 @@ type Props = {
   config?: BarrageTextConfig;
 };
 
+type TimedWord = {
+  word: string;
+  durationMs: number;
+};
+
+const SENTENCE_END_EXP = /(\.|\?|!)$/;
+
+function buildTimedWords(text: string): TimedWord[] {
+  return text
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .map((word) => {
+      const isSentenceEnd = SENTENCE_END_EXP.test(word);
+      let durationMs = Math.max(500, Math.round(word.length * 80));
+      if (isSentenceEnd) {
+        durationMs += 600;
+      }
+      return { word, durationMs };
+    });
+}
+
 export const BarrageTextEffect = memo(function BarrageTextEffect({
   className,
   config = DEFAULT_BARRAGE_TEXT_CONFIG,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const timedWords = useMemo(() => buildTimedWords(config.text), [config.text]);
+  const [wordIndex, setWordIndex] = useState(0);
+  const [cycleCount, setCycleCount] = useState(0);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
-    const _sentenceEndExp = /(\.|\?|!)$/;
+    setWordIndex(0);
+    setCycleCount(0);
+  }, [timedWords, config.delay, config.repeat, config.repeatDelay]);
 
-    const words = config.text.split(' ');
-    const tl = gsap.timeline({
-      delay: config.delay,
-      repeat: config.repeat,
-      repeatDelay: config.repeatDelay,
-    });
+  useEffect(() => {
+    if (timedWords.length === 0) return;
 
-    let time = 0;
-    const elements: HTMLElement[] = [];
+    const current = timedWords[wordIndex] ?? timedWords[0];
+    const isLastWord = wordIndex >= timedWords.length - 1;
+    const hasInfiniteRepeat = config.repeat < 0;
+    const hasRemainingRepeat = cycleCount < config.repeat;
+    const delayMs = (wordIndex === 0 && cycleCount === 0)
+      ? Math.max(0, Math.round(config.delay * 1000))
+      : 0;
+    const pauseAfterWordMs = isLastWord ? Math.max(0, Math.round(config.repeatDelay * 1000)) : 0;
+    const nextTickMs = delayMs + current.durationMs + pauseAfterWordMs;
 
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      const isSentenceEnd = _sentenceEndExp.test(word);
-      let duration = Math.max(0.5, word.length * 0.08);
-
-      if (isSentenceEnd) {
-        duration += 0.6;
+    const timeoutId = window.setTimeout(() => {
+      if (!isLastWord) {
+        setWordIndex((prev) => prev + 1);
+        return;
       }
-
-      const el = document.createElement('h3');
-      el.textContent = word;
-      Object.assign(el.style, {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        fontSize: config.fontSize,
-        fontFamily: config.fontFamily,
-        color: config.color,
-        whiteSpace: 'nowrap',
-        margin: '0',
-        padding: '0',
-        fontWeight: 'bold',
-      });
-      container.appendChild(el);
-      elements.push(el);
-
-      gsap.set(el, { autoAlpha: 0, scale: 0, z: 0.01 });
-
-      tl.to(el, { duration, scale: 1.2, ease: 'slow(0.25, 0.9)' }, time)
-        .to(el, { duration, autoAlpha: 1, ease: 'slow(0.25, 0.9, true)' }, time);
-
-      time += duration - 0.05;
-
-      if (isSentenceEnd) {
-        time += 0.6;
+      if (hasInfiniteRepeat || hasRemainingRepeat) {
+        setWordIndex(0);
+        setCycleCount((prev) => prev + 1);
       }
-    }
+    }, nextTickMs);
 
-    return () => {
-      tl.kill();
-      elements.forEach(el => el.remove());
-    };
-  }, [config]);
+    return () => window.clearTimeout(timeoutId);
+  }, [config.delay, config.repeat, config.repeatDelay, cycleCount, timedWords, wordIndex]);
+
+  const currentWord = timedWords[wordIndex]?.word ?? '';
+  const currentDurationMs = timedWords[wordIndex]?.durationMs ?? 800;
 
   return (
     <div
-      ref={containerRef}
       className={`absolute inset-0 pointer-events-none overflow-hidden ${className ?? ''}`}
       style={{ perspective: '1000px' }}
-    />
+    >
+      {currentWord ? (
+        <h3
+          key={`${cycleCount}-${wordIndex}-${currentWord}`}
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            fontSize: config.fontSize,
+            fontFamily: config.fontFamily,
+            color: config.color,
+            whiteSpace: 'nowrap',
+            margin: 0,
+            padding: 0,
+            fontWeight: 'bold',
+            animationName: 'barrage-text-pulse',
+            animationDuration: `${currentDurationMs}ms`,
+            animationTimingFunction: 'ease-out',
+            animationFillMode: 'both',
+          }}
+        >
+          {currentWord}
+        </h3>
+      ) : null}
+      <style>
+        {`
+          @keyframes barrage-text-pulse {
+            0% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(0.2);
+            }
+            22% {
+              opacity: 1;
+              transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(1.2);
+            }
+          }
+        `}
+      </style>
+    </div>
   );
 });

@@ -8,12 +8,14 @@ import { NEON_COLORS } from '../utils/styles';
 
 // Atmosphere Imports (Alphabetized)
 import { AuroraForestAtmosphere } from './atmosphere/AuroraForestAtmosphere';
-import { BlackHoleAtmosphere } from './atmosphere/BlackHoleAtmosphere';
+import { GargantuaAtmosphere } from './atmosphere/GargantuaAtmosphere';
 import { BrownianMotionAtmosphere } from './atmosphere/BrownianMotionAtmosphere';
 import { ChaosSplitAtmosphere } from './atmosphere/ChaosSplitAtmosphere';
+import { CometBarrageAtmosphere } from './atmosphere/CometBarrageAtmosphere';
 import { CometRainAtmosphere, DEFAULT_COMET_RAIN_CONFIG, type CometRainConfig } from './atmosphere/CometRainAtmosphere';
 import { CosmicLintAtmosphere, DEFAULT_COSMIC_LINT_CONFIG, type CosmicLintConfig } from './atmosphere/CosmicLintAtmosphere';
 import { DriftingPurpleAtmosphere } from './atmosphere/DriftingPurpleAtmosphere';
+import { DoorSandsTimeAtmosphere, DEFAULT_DOOR_SANDS_TIME_CONFIG, type DoorSandsTimeConfig } from './atmosphere/DoorSandsTimeAtmosphere';
 import { EinsteinRosenAtmosphere } from './atmosphere/EinsteinRosenAtmosphere';
 import { FallingSnowAtmosphere, DEFAULT_FALLING_SNOW_CONFIG, type FallingSnowConfig } from './atmosphere/FallingSnowAtmosphere';
 import { FlorpusForestAtmosphere } from './atmosphere/FlorpusForestAtmosphere';
@@ -27,6 +29,7 @@ import { SacredRealmAtmosphere } from './atmosphere/SacredRealmAtmosphere';
 import { SolarisPrimeAtmosphere } from './atmosphere/SolarisPrimeAtmosphere';
 import { SakuraBlossomsAtmosphere } from './atmosphere/SakuraBlossomsAtmosphere';
 import { SmokeGreenAtmosphere } from './atmosphere/SmokeGreenAtmosphere';
+import { SpinningStarfieldAtmosphere } from './atmosphere/SpinningStarfieldAtmosphere';
 import { ElectricSkiesAtmosphere, DEFAULT_ELECTRIC_SKIES_CONFIG, type ElectricSkiesConfig } from './atmosphere/ElectricSkiesAtmosphere';
 import { StarsTwinklePerformantAtmosphere, DEFAULT_STARS_TWINKLE_CONFIG, type StarsTwinkleConfig } from './atmosphere/StarsTwinklePerformantAtmosphere';
 
@@ -38,11 +41,29 @@ import { Depth3DShiftDemo, DEFAULT_DEPTH_3D_SHIFT_CONFIG, type Depth3DShiftConfi
 import { FlowerGeneratorEffect, DEFAULT_FLOWER_GENERATOR_CONFIG, type FlowerGeneratorConfig } from './active/FlowerGeneratorEffect';
 import { ElectronPaintingEffect } from './active/ElectronPaintingEffect';
 import { CosmicNeutronBarrageEffect } from './active/CosmicNeutronBarrageEffect';
+import { ConfettiFallEffect } from './active/ConfettiFallEffect';
 import { LocalizedBlackHoleEffect } from './active/LocalizedBlackHoleEffect';
+import { BatFlyEffect } from './active/BatFlyEffect';
+import { FlowerFallEffect } from './active/FlowerFallEffect';
 import { SparksPericulumEffect } from './active/SparksPericulumEffect';
 import { SpawnNaviEffect } from './active/SpawnNaviEffect';
 import { ProtegoBlastEffect, DEFAULT_PROTEGO_BLAST_CONFIG, type ProtegoBlastConfig } from './active/ProtegoBlastEffect';
+import { GommageEffect, DEFAULT_GOMMAGE_CONFIG, type GommageConfig } from './active/GommageEffect';
+import { ColorSwarmEffect, DEFAULT_COLOR_SWARM_CONFIG, type ColorSwarmConfig } from './active/ColorSwarmEffect';
+import { CollectStarsEffect, DEFAULT_COLLECT_STARS_CONFIG, type CollectStarsConfig } from './active/CollectStarsEffect';
+import { RingsOfTimeEffect, DEFAULT_RINGS_OF_TIME_CONFIG, type RingsOfTimeConfig } from './active/RingsOfTimeEffect';
+import { ConfusionSpiralEffect, DEFAULT_CONFUSION_SPIRAL_CONFIG, type ConfusionSpiralConfig } from './active/ConfusionSpiralEffect';
+import { BurnEdgesEffect, DEFAULT_BURN_EDGES_CONFIG, type BurnEdgesConfig } from './active/BurnEdgesEffect';
+import { WatercolorStormyEffect, DEFAULT_WATERCOLOR_STORMY_CONFIG, type WatercolorStormyConfig } from './active/WatercolorStormyEffect';
+import { GreenBloomEffect, DEFAULT_GREEN_BLOOM_CONFIG, type GreenBloomConfig } from './active/GreenBloomEffect';
+import { ContinualRepaintEffect, DEFAULT_CONTINUAL_REPAINT_CONFIG, type ContinualRepaintConfig } from './active/ContinualRepaintEffect';
+import { TraceCompleteEffect, DEFAULT_TRACE_COMPLETE_CONFIG, type TraceCompleteConfig } from './active/TraceCompleteEffect';
+import { VortexGlassEffect, DEFAULT_VORTEX_GLASS_CONFIG, type VortexGlassConfig } from './active/VortexGlassEffect';
 import { GodRaysEffect, DEFAULT_GOD_RAYS_CONFIG, type GodRaysConfig } from './active/GodRaysEffect';
+import { OsmosBubbleEffect, DEFAULT_OSMOS_BUBBLE_CONFIG, type OsmosBubbleConfig } from './active/OsmosBubbleEffect';
+import { HyperWispEffect } from './active/HyperWispEffect';
+import { TopoRainbowEffect, DEFAULT_TOPO_RAINBOW_CONFIG, type TopoRainbowConfig } from './active/TopoRainbowEffect';
+import { SuperNovaEffect, DEFAULT_SUPER_NOVA_CONFIG, type SuperNovaConfig } from './active/SuperNovaEffect';
 
 // Text Effect Imports
 import { DisassembledTextEffect, DEFAULT_DISASSEMBLED_TEXT_CONFIG, type DisassembledTextConfig } from './text/DisassembledTextEffect';
@@ -54,6 +75,7 @@ import { DoubleCutTextEffect, DEFAULT_DOUBLE_CUT_TEXT_CONFIG, type DoubleCutText
 import { FrostTextEffect, DEFAULT_FROST_TEXT_CONFIG, type FrostTextConfig } from './text/FrostTextEffect';
 import { ComboPunchTextEffect, DEFAULT_COMBO_PUNCH_TEXT_CONFIG, type ComboPunchTextConfig } from './text/ComboPunchTextEffect';
 import { PetrifiedTextEffect, DEFAULT_PETRIFIED_TEXT_CONFIG, type PetrifiedTextConfig } from './text/PetrifiedTextEffect';
+import { GommageTextEffect, DEFAULT_GOMMAGE_TEXT_CONFIG, type GommageTextConfig } from './text/GommageTextEffect';
 import { ThanosDismantleTextEffect, DEFAULT_THANOS_DISMANTLE_TEXT_CONFIG, type ThanosDismantleTextConfig } from './text/ThanosDismantleTextEffect';
 
 import { LiquidHoloDemo } from './LiquidHoloDemo';
@@ -66,6 +88,7 @@ import { ELEMENT_WATERCOLOR_SWATCH_ORDER, ELEMENT_WATERCOLOR_SWATCHES } from '..
 import { FpsBadge } from './combat/FpsBadge';
 
 const BLUEYCHU_ASSET = '/assets/Bluevee.png';
+const PARALLAX_ASSET_ROOT = '/assets/vis/parallax';
 
 interface SubEditorProps {
   leftCollapsed: boolean;
@@ -266,6 +289,7 @@ const AtmosEditor = memo(function AtmosEditor({
   const [cometRainConfig, setCometRainConfig] = useState<CometRainConfig>(DEFAULT_COMET_RAIN_CONFIG);
   const [electricSkiesConfig, setElectricSkiesConfig] = useState<ElectricSkiesConfig>(DEFAULT_ELECTRIC_SKIES_CONFIG);
   const [starsTwinkleConfig, setStarsTwinkleConfig] = useState<StarsTwinkleConfig>(DEFAULT_STARS_TWINKLE_CONFIG);
+  const [doorSandsTimeConfig, setDoorSandsTimeConfig] = useState<DoorSandsTimeConfig>(DEFAULT_DOOR_SANDS_TIME_CONFIG);
   
   const [userPresets, setUserPresets] = useState<Record<string, { baseId: AtmosphereEffectId, config: any }>>({});
   const [activePresetName, setActivePresetName] = useState<string | null>(null);
@@ -287,7 +311,8 @@ const AtmosEditor = memo(function AtmosEditor({
                         selectedBaseId === 'cosmic_lint' ? cosmicLintConfig : 
                         selectedBaseId === 'comet_rain' ? cometRainConfig : 
                         selectedBaseId === 'electric_skies' ? electricSkiesConfig : 
-                        selectedBaseId === 'stars_twinkle_performant' ? starsTwinkleConfig : null;
+                        selectedBaseId === 'stars_twinkle_performant' ? starsTwinkleConfig : 
+                        selectedBaseId === 'door_sands_time' ? doorSandsTimeConfig : null;
     const nextPresets = { ...userPresets, [saveName]: { baseId: selectedBaseId, config: currentConfig } };
     setUserPresets(nextPresets);
     localStorage.setItem('exploritaire_atmos_presets', JSON.stringify(nextPresets));
@@ -306,6 +331,7 @@ const AtmosEditor = memo(function AtmosEditor({
       if (preset.baseId === 'comet_rain') setCometRainConfig(preset.config);
       if (preset.baseId === 'electric_skies') setElectricSkiesConfig(preset.config);
       if (preset.baseId === 'stars_twinkle_performant') setStarsTwinkleConfig(preset.config);
+      if (preset.baseId === 'door_sands_time') setDoorSandsTimeConfig(preset.config);
       setActivePresetName(name);
     }
   };
@@ -326,17 +352,20 @@ const AtmosEditor = memo(function AtmosEditor({
     if (selectedBaseId === 'comet_rain') setCometRainConfig(DEFAULT_COMET_RAIN_CONFIG);
     if (selectedBaseId === 'electric_skies') setElectricSkiesConfig(DEFAULT_ELECTRIC_SKIES_CONFIG);
     if (selectedBaseId === 'stars_twinkle_performant') setStarsTwinkleConfig(DEFAULT_STARS_TWINKLE_CONFIG);
+    if (selectedBaseId === 'door_sands_time') setDoorSandsTimeConfig(DEFAULT_DOOR_SANDS_TIME_CONFIG);
     setActivePresetName(null);
   };
 
   const renderPreview = () => {
     switch (selectedBaseId) {
       case 'aurora_forest': return <AuroraForestAtmosphere />;
-      case 'black_hole': return <BlackHoleAtmosphere />;
+      case 'gargantua': return <GargantuaAtmosphere />;
       case 'brownian_motion': return <BrownianMotionAtmosphere />;
       case 'chaos_split': return <ChaosSplitAtmosphere />;
+      case 'comet_barrage': return <CometBarrageAtmosphere />;
       case 'comet_rain': return <CometRainAtmosphere config={cometRainConfig} />;
       case 'cosmic_lint': return <CosmicLintAtmosphere config={cosmicLintConfig} />;
+      case 'door_sands_time': return <DoorSandsTimeAtmosphere config={doorSandsTimeConfig} />;
       case 'drifting_purple': return <DriftingPurpleAtmosphere />;
       case 'einstein_rosen': return <EinsteinRosenAtmosphere />;
       case 'falling_snow': return <FallingSnowAtmosphere config={fallingSnowConfig} />;
@@ -351,13 +380,14 @@ const AtmosEditor = memo(function AtmosEditor({
       case 'solaris_prime': return <SolarisPrimeAtmosphere />;
       case 'sakura_blossoms': return <SakuraBlossomsAtmosphere />;
       case 'smoke_green': return <SmokeGreenAtmosphere />;
+      case 'spinning_starfield': return <SpinningStarfieldAtmosphere />;
       case 'electric_skies': return <ElectricSkiesAtmosphere config={electricSkiesConfig} />;
       case 'stars_twinkle_performant': return <StarsTwinklePerformantAtmosphere config={starsTwinkleConfig} />;
       default: return <div className="flex items-center justify-center h-full text-game-white/20">No preview available</div>;
     }
   };
 
-  const hasConfig = ['raging_waves', 'falling_snow', 'ocean_solar_cycle', 'cosmic_lint', 'comet_rain', 'electric_skies', 'stars_twinkle_performant'].includes(selectedBaseId);
+  const hasConfig = ['raging_waves', 'falling_snow', 'ocean_solar_cycle', 'cosmic_lint', 'comet_rain', 'electric_skies', 'stars_twinkle_performant', 'door_sands_time'].includes(selectedBaseId);
 
   return (
     <div className="flex h-full gap-4 overflow-hidden relative">
@@ -458,6 +488,9 @@ const AtmosEditor = memo(function AtmosEditor({
                 <ConfigColorPicker label="Glow Color" value={starsTwinkleConfig.glowColor} onChange={(v) => setStarsTwinkleConfig({ ...starsTwinkleConfig, glowColor: v })} />
               </>
             )}
+            {selectedBaseId === 'door_sands_time' && (
+              <ConfigSlider label="Speed" value={doorSandsTimeConfig.speed} min={0} max={4} step={0.01} onChange={(v) => setDoorSandsTimeConfig({ ...doorSandsTimeConfig, speed: v })} />
+            )}
           </div>
         </CollapsibleSidebar>
       )}
@@ -480,6 +513,7 @@ const TextEffectsEditor = memo(function TextEffectsEditor({
   const [comboPunchConfig, setComboPunchConfig] = useState<ComboPunchTextConfig>(DEFAULT_COMBO_PUNCH_TEXT_CONFIG);
   const [petrifiedConfig, setPetrifiedConfig] = useState<PetrifiedTextConfig>(DEFAULT_PETRIFIED_TEXT_CONFIG);
   const [thanosDismantleConfig, setThanosDismantleConfig] = useState<ThanosDismantleTextConfig>(DEFAULT_THANOS_DISMANTLE_TEXT_CONFIG);
+  const [gommageTextConfig, setGommageTextConfig] = useState<GommageTextConfig>(DEFAULT_GOMMAGE_TEXT_CONFIG);
   
   const [userPresets, setUserPresets] = useState<Record<string, { baseId: TextEffectId, config: any }>>({});
   const [activePresetName, setActivePresetName] = useState<string | null>(null);
@@ -504,7 +538,8 @@ const TextEffectsEditor = memo(function TextEffectsEditor({
                         selectedBaseId === 'frost' ? frostConfig :
                         selectedBaseId === 'combo_punch' ? comboPunchConfig :
                         selectedBaseId === 'petrified' ? petrifiedConfig :
-                        selectedBaseId === 'thanos_dismantle' ? thanosDismantleConfig : null;
+                        selectedBaseId === 'thanos_dismantle' ? thanosDismantleConfig :
+                        selectedBaseId === 'gommage' ? gommageTextConfig : null;
     const nextPresets = { ...userPresets, [saveName]: { baseId: selectedBaseId, config: currentConfig } };
     setUserPresets(nextPresets);
     localStorage.setItem('exploritaire_text_presets', JSON.stringify(nextPresets));
@@ -526,6 +561,7 @@ const TextEffectsEditor = memo(function TextEffectsEditor({
       if (preset.baseId === 'combo_punch') setComboPunchConfig(preset.config);
       if (preset.baseId === 'petrified') setPetrifiedConfig(preset.config);
       if (preset.baseId === 'thanos_dismantle') setThanosDismantleConfig(preset.config);
+      if (preset.baseId === 'gommage') setGommageTextConfig(preset.config);
       setActivePresetName(name);
     }
   };
@@ -549,6 +585,7 @@ const TextEffectsEditor = memo(function TextEffectsEditor({
     if (selectedBaseId === 'combo_punch') setComboPunchConfig(DEFAULT_COMBO_PUNCH_TEXT_CONFIG);
     if (selectedBaseId === 'petrified') setPetrifiedConfig(DEFAULT_PETRIFIED_TEXT_CONFIG);
     if (selectedBaseId === 'thanos_dismantle') setThanosDismantleConfig(DEFAULT_THANOS_DISMANTLE_TEXT_CONFIG);
+    if (selectedBaseId === 'gommage') setGommageTextConfig(DEFAULT_GOMMAGE_TEXT_CONFIG);
     setActivePresetName(null);
   };
 
@@ -564,6 +601,7 @@ const TextEffectsEditor = memo(function TextEffectsEditor({
       case 'combo_punch': return <ComboPunchTextEffect config={comboPunchConfig} />;
       case 'petrified': return <PetrifiedTextEffect config={petrifiedConfig} />;
       case 'thanos_dismantle': return <ThanosDismantleTextEffect config={thanosDismantleConfig} />;
+      case 'gommage': return <GommageTextEffect config={gommageTextConfig} />;
       default: return <div className="flex items-center justify-center h-full text-game-white/20">No preview available</div>;
     }
   };
@@ -610,11 +648,11 @@ const TextEffectsEditor = memo(function TextEffectsEditor({
           <button onClick={resetToDefault} className="text-[8px] text-game-gold/60 hover:text-game-gold uppercase font-bold tracking-tighter">Reset</button>
         </div>
         <div className="space-y-4 pb-8">
-          {(selectedBaseId === 'disassembled' || selectedBaseId === 'float_away' || selectedBaseId === 'shimmer' || selectedBaseId === 'fog_out' || selectedBaseId === 'barrage_text' || selectedBaseId === 'double_cut' || selectedBaseId === 'frost' || selectedBaseId === 'combo_punch' || selectedBaseId === 'petrified' || selectedBaseId === 'thanos_dismantle') && (
+          {(selectedBaseId === 'disassembled' || selectedBaseId === 'float_away' || selectedBaseId === 'shimmer' || selectedBaseId === 'fog_out' || selectedBaseId === 'barrage_text' || selectedBaseId === 'double_cut' || selectedBaseId === 'frost' || selectedBaseId === 'combo_punch' || selectedBaseId === 'petrified' || selectedBaseId === 'thanos_dismantle' || selectedBaseId === 'gommage') && (
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[9px] text-game-white/60 uppercase font-mono block">Text String</label>
-                <input type="text" value={selectedBaseId === 'disassembled' ? disassembledConfig.text : selectedBaseId === 'float_away' ? floatAwayConfig.text : selectedBaseId === 'shimmer' ? shimmerConfig.text : selectedBaseId === 'barrage_text' ? barrageTextConfig.text : selectedBaseId === 'double_cut' ? doubleCutConfig.text : selectedBaseId === 'frost' ? frostConfig.text : selectedBaseId === 'combo_punch' ? comboPunchConfig.text : selectedBaseId === 'petrified' ? petrifiedConfig.text : selectedBaseId === 'thanos_dismantle' ? thanosDismantleConfig.text : fogOutConfig.text} onChange={(e) => {
+                <input type="text" value={selectedBaseId === 'disassembled' ? disassembledConfig.text : selectedBaseId === 'float_away' ? floatAwayConfig.text : selectedBaseId === 'shimmer' ? shimmerConfig.text : selectedBaseId === 'barrage_text' ? barrageTextConfig.text : selectedBaseId === 'double_cut' ? doubleCutConfig.text : selectedBaseId === 'frost' ? frostConfig.text : selectedBaseId === 'combo_punch' ? comboPunchConfig.text : selectedBaseId === 'petrified' ? petrifiedConfig.text : selectedBaseId === 'thanos_dismantle' ? thanosDismantleConfig.text : selectedBaseId === 'gommage' ? gommageTextConfig.text : fogOutConfig.text} onChange={(e) => {
                   if (selectedBaseId === 'disassembled') setDisassembledConfig({ ...disassembledConfig, text: e.target.value });
                   if (selectedBaseId === 'float_away') setFloatAwayConfig({ ...floatAwayConfig, text: e.target.value });
                   if (selectedBaseId === 'shimmer') setShimmerConfig({ ...shimmerConfig, text: e.target.value });
@@ -625,8 +663,18 @@ const TextEffectsEditor = memo(function TextEffectsEditor({
                   if (selectedBaseId === 'combo_punch') setComboPunchConfig({ ...comboPunchConfig, text: e.target.value });
                   if (selectedBaseId === 'petrified') setPetrifiedConfig({ ...petrifiedConfig, text: e.target.value });
                   if (selectedBaseId === 'thanos_dismantle') setThanosDismantleConfig({ ...thanosDismantleConfig, text: e.target.value });
+                  if (selectedBaseId === 'gommage') setGommageTextConfig({ ...gommageTextConfig, text: e.target.value });
                 }} className="w-full bg-black/40 border border-game-teal/20 rounded px-2 py-1 text-[9px] text-game-white outline-none focus:border-game-gold/50 font-mono" />
               </div>
+              {selectedBaseId === 'gommage' && (
+                <>
+                  <ConfigSlider label="Noise Scale" value={gommageTextConfig.noiseScale} min={0.001} max={0.1} step={0.001} onChange={(v) => setGommageTextConfig({ ...gommageTextConfig, noiseScale: v })} />
+
+                  <ConfigSlider label="Speed" value={gommageTextConfig.speed} min={0.1} max={2} step={0.1} onChange={(v) => setGommageTextConfig({ ...gommageTextConfig, speed: v })} />
+                  <ConfigColorPicker label="Color" value={gommageTextConfig.color} onChange={(v) => setGommageTextConfig({ ...gommageTextConfig, color: v })} />
+                  <ConfigColorPicker label="Edge" value={gommageTextConfig.edgeColor} onChange={(v) => setGommageTextConfig({ ...gommageTextConfig, edgeColor: v })} />
+                </>
+              )}
               {selectedBaseId === 'petrified' && (
                 <>
                   <ConfigSlider label="Duration" value={petrifiedConfig.duration} min={1} max={30} step={0.1} onChange={(v) => setPetrifiedConfig({ ...petrifiedConfig, duration: v })} />
@@ -714,23 +762,155 @@ const CardDepthEffectsDemo = memo(function CardDepthEffectsDemo({
   const [depth3DConfig, setDepth3DConfig] = useState<Depth3DShiftConfig>(DEFAULT_DEPTH_3D_SHIFT_CONFIG);
 
   const RISE_AND_TILT_CARDS = [
-    { id: 'dark-rider', cover: 'https://ggayane.github.io/css-experiments/cards/dark_rider-cover.jpg', title: 'https://ggayane.github.io/css-experiments/cards/dark_rider-title.png', character: 'https://ggayane.github.io/css-experiments/cards/dark_rider-character.webp' },
-    { id: 'force-mage', cover: 'https://ggayane.github.io/css-experiments/cards/force_mage-cover.jpg', title: 'https://ggayane.github.io/css-experiments/cards/force_mage-title.png', character: 'https://ggayane.github.io/css-experiments/cards/force_mage-character.webp' }
+    { 
+      id: 'dark-rider',  
+      rank: 7, 
+      suit: '🔥', 
+      name: 'Dark Rider',  
+      color: '#ff4500', 
+      cover: '/assets/actors/constellations/const_fox.png',
+      character: '/assets/actors/fox_cub.png'
+    },
+    { 
+      id: 'force-mage', 
+      rank: 5, 
+      suit: '💧', 
+      name: 'Force Mage', 
+      color: '#00bfff',   
+      cover: '/assets/actors/wolf_cub.png',
+      character: '/assets/actors/wolf_cub.png'
+    },
+    { 
+      id: 'bluevee',  
+      rank: 9, 
+      suit: '⭐', 
+      name: 'Bluevee',  
+      color: NEON_COLORS.teal,   
+      cover: '/assets/Bluevee.png',                           
+      character: '/assets/actors/battle_back_eevee.png' 
+    },
   ];
 
-  const RiseAndTiltCard = ({ card }: { card: any }) => (
-    <div className="rise-and-tilt-card relative w-[200px] h-[300px] perspective-[1000px] group/tilt">
+  const CARD_DEPTH = 8;
+  const RiseAndTiltCard = ({ card }: { card: typeof RISE_AND_TILT_CARDS[number] }) => (
+    <div className="rat-root relative w-[200px] h-[300px] group/rat cursor-pointer flex justify-center items-end px-9" style={{ perspective: '2500px' }}>
       <style>{`
-        .rise-and-tilt-wrapper { transition: all 0.5s ease; transform-style: preserve-3d; border-radius: 12px; overflow: hidden; }
-        .group\\/tilt:hover .rise-and-tilt-wrapper { transform: perspective(900px) translateY(-5%) rotateX(25deg) translateZ(0); box-shadow: 2px 35px 32px -8px rgba(0, 0, 0, 0.75); }
-        .rise-and-tilt-title { width: 80%; transition: transform 0.5s; transform-style: preserve-3d; position: absolute; bottom: 40px; left: 10%; pointer-events: none; }
-        .group\\/tilt:hover .rise-and-tilt-title { transform: translate3d(0, -20px, 40px); }
-        .rise-and-tilt-character { width: 100%; opacity: 0; transition: all 0.5s; position: absolute; z-index: 5; left: 0; bottom: 0; pointer-events: none; }
-        .group\\/tilt:hover .rise-and-tilt-character { opacity: 1; transform: translate3d(0, -10%, 60px); }
+        .rat-wrapper { 
+          transition: all 0.5s;
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          z-index: -1;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+        .group\\/rat:hover .rat-wrapper {
+          transform: perspective(900px) translateY(-5%) rotateX(25deg) translateZ(0);
+          box-shadow: 2px 35px 32px -8px rgba(0, 0, 0, 0.75);
+        }
+        .rat-wrapper::before,
+        .rat-wrapper::after {
+          content: "";
+          opacity: 0;
+          width: 100%;
+          height: 80px;
+          transition: all 0.5s;
+          position: absolute;
+          left: 0;
+          z-index: 2;
+        }
+        .rat-wrapper::before {
+          top: 0;
+          height: 100%;
+          background-image: linear-gradient(
+            to top,
+            transparent 46%,
+            rgba(12, 13, 19, 0.5) 68%,
+            rgba(12, 13, 19) 97%
+          );
+        }
+        .rat-wrapper::after {
+          bottom: 0;
+          opacity: 1;
+          background-image: linear-gradient(
+            to bottom,
+            transparent 46%,
+            rgba(12, 13, 19, 0.5) 68%,
+            rgba(12, 13, 19) 97%
+          );
+        }
+        .group\\/rat:hover .rat-wrapper::before,
+        .rat-wrapper::after {
+          opacity: 1;
+        }
+        .group\\/rat:hover .rat-wrapper::after {
+          height: 120px;
+        }
+        .rat-title {
+          width: 100%;
+          transition: transform 0.5s;
+          z-index: 3;
+        }
+        .group\\/rat:hover .rat-title {
+          transform: translate3d(0%, -50px, 100px);
+        }
+        .rat-character {
+          width: 100%;
+          opacity: 0;
+          transition: all 0.5s;
+          position: absolute;
+          z-index: 4;
+          left: 0;
+          bottom: 0;
+          pointer-events: none;
+        }
+        .group\\/rat:hover .rat-character {
+          opacity: 1;
+          transform: translate3d(0%, -30%, 100px) scale(1.0);
+        }
+        .group\\/rat:hover .rat-character-eevee {
+          transform: translate3d(0%, -75%, 120px) scale(1.0);
+        }
       `}</style>
-      <div className="rise-and-tilt-wrapper h-full"><img src={card.cover} className="w-full h-full object-cover" alt="" /></div>
-      <img src={card.title} className="rise-and-tilt-title" alt="" />
-      <img src={card.character} className="rise-and-tilt-character" alt="" />
+
+      <div className="rat-wrapper">
+        <img src={card.cover} className="w-full h-full object-cover" alt="" />
+        <div className="absolute top-2 left-3 text-3xl font-black text-white z-[5]" style={{ textShadow: `0 0 10px ${card.color}` }}>{card.rank}</div>
+        <div className="absolute top-2 right-3 text-xl z-[5]">{card.suit}</div>
+      </div>
+
+      {'title' in card && card.title ? (
+        <img src={card.title as string} className="rat-title" alt="" />
+      ) : (
+        <div className="rat-title mb-10 text-center">
+           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.18em', color: '#fff', textTransform: 'uppercase', textShadow: `0 0 10px ${card.color}, 0 2px 4px #000` }}>{card.name}</span>
+        </div>
+      )}
+
+      {card.id === 'bluevee' ? (
+        <div className={`rat-character rat-character-eevee w-full h-[200px]`}>
+          <ContinualRepaintEffect 
+            config={{
+              ...DEFAULT_CONTINUAL_REPAINT_CONFIG,
+              imgUrl: card.character,
+              strokeMax: 20,
+              varRot: 0.785,
+              countPerFrame: 150,
+              varW: 5,
+              velocity: 1.0,
+              highFidelity: false,
+            }}
+            transparent
+            className="w-full h-full"
+          />
+        </div>
+      ) : (
+        <img 
+          src={card.character} 
+          className="rat-character" 
+          alt="" 
+        />
+      )}
     </div>
   );
 
@@ -740,9 +920,9 @@ const CardDepthEffectsDemo = memo(function CardDepthEffectsDemo({
     const [applyParallax, setApplyParallax] = useState(false);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const game = PARALLAX_ZOOM_GAMES[currentGameIdx];
-    const assetBgr = `https://assets.codepen.io/264161/${game}-background.jpg`;
-    const assetFgr = `https://assets.codepen.io/264161/${game}-foreground.png`;
-    const assetLogo = `https://assets.codepen.io/264161/${game}-logo.png`;
+    const assetBgr = `${PARALLAX_ASSET_ROOT}/${game}-background.jpg`;
+    const assetFgr = `${PARALLAX_ASSET_ROOT}/${game}-foreground.png`;
+    const assetLogo = `${PARALLAX_ASSET_ROOT}/${game}-logo.png`;
     const calcValue = (val: number, dimension: number) => (((val * 100) / dimension) * (config.range / 100) - (config.range / 2)).toFixed(1);
     const xValue = applyParallax ? parseFloat(calcValue(mousePos.x, window.innerWidth)) : 0;
     const yValue = applyParallax ? parseFloat(calcValue(mousePos.y, window.innerHeight)) : 0;
@@ -1248,20 +1428,66 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
   leftCollapsed, setLeftCollapsed, 
   rightCollapsed, setRightCollapsed 
 }: SubEditorProps) {
-  const [activeSubsubtab, setActiveSubsubtab] = useState<'electricity_node' | 'siphon_shape' | 'flower_generator' | 'protego_blast' | 'sparks_periculum' | 'spawn_navi' | 'localized_black_hole' | 'electron_painting' | 'cosmic_neutron_barrage' | 'god_rays'>('electricity_node');
+  const [activeSubsubtab, setActiveSubsubtab] = useState<'bat_fly' | 'burn_edges' | 'collect_stars' | 'color_swarm' | 'confetti_fall' | 'confusion_spiral' | 'continual_repaint' | 'cosmic_neutron_barrage' | 'electricity_node' | 'electron_painting' | 'flower_fall' | 'flower_generator' | 'god_rays' | 'gommage' | 'green_bloom' | 'hyper_wisp' | 'localized_black_hole' | 'osmos_bubble' | 'protego_blast' | 'rings_of_time' | 'siphon_shape' | 'sparks_periculum' | 'spawn_navi' | 'super_nova' | 'topo_rainbow' | 'trace_complete' | 'vortex_glass' | 'watercolor_stormy'>('bat_fly');
   const [flowerConfig, setFlowerConfig] = useState<FlowerGeneratorConfig>(DEFAULT_FLOWER_GENERATOR_CONFIG);
   const [protegoConfig, setProtegoConfig] = useState<ProtegoBlastConfig>(DEFAULT_PROTEGO_BLAST_CONFIG);
+  const [gommageConfig, setGommageConfig] = useState<GommageConfig>(DEFAULT_GOMMAGE_CONFIG);
+  const [osmosBubbleConfig, setOsmosBubbleConfig] = useState<OsmosBubbleConfig>(DEFAULT_OSMOS_BUBBLE_CONFIG);
+  const [topoRainbowConfig, setTopoRainbowConfig] = useState<TopoRainbowConfig>(DEFAULT_TOPO_RAINBOW_CONFIG);
+  const [superNovaConfig, setSuperNovaConfig] = useState<SuperNovaConfig>(DEFAULT_SUPER_NOVA_CONFIG);
+  const [vortexGlassConfig, setVortexGlassConfig] = useState<VortexGlassConfig>(DEFAULT_VORTEX_GLASS_CONFIG);
+  const [colorSwarmConfig, setColorSwarmConfig] = useState<ColorSwarmConfig>(DEFAULT_COLOR_SWARM_CONFIG);
+  const [collectStarsConfig, setCollectStarsConfig] = useState<CollectStarsConfig>(DEFAULT_COLLECT_STARS_CONFIG);
+  const [ringsOfTimeConfig, setRingsOfTimeConfig] = useState<RingsOfTimeConfig>(DEFAULT_RINGS_OF_TIME_CONFIG);
+  const [confusionSpiralConfig, setConfusionSpiralConfig] = useState<ConfusionSpiralConfig>(DEFAULT_CONFUSION_SPIRAL_CONFIG);
+  const [burnEdgesConfig, setBurnEdgesConfig] = useState<BurnEdgesConfig>(DEFAULT_BURN_EDGES_CONFIG);
+  const [watercolorStormyConfig, setWatercolorStormyConfig] = useState<WatercolorStormyConfig>(DEFAULT_WATERCOLOR_STORMY_CONFIG);
+  const [greenBloomConfig, setGreenBloomConfig] = useState<GreenBloomConfig>(DEFAULT_GREEN_BLOOM_CONFIG);
+  const [continualRepaintConfig, setContinualRepaintConfig] = useState<ContinualRepaintConfig>(DEFAULT_CONTINUAL_REPAINT_CONFIG);
+  const [traceCompleteConfig, setTraceCompleteConfig] = useState<TraceCompleteConfig>(DEFAULT_TRACE_COMPLETE_CONFIG);
   const [godRaysConfig, setGodRaysConfig] = useState<GodRaysConfig>(DEFAULT_GOD_RAYS_CONFIG);
+  const [isAnimatingBurn, setIsAnimatingBurn] = useState(false);
+
+  useEffect(() => {
+    if (!isAnimatingBurn) return;
+
+    let start = performance.now();
+    const duration = 3906; // 3.906 seconds (another 25% slower)
+
+    const animate = (time: number) => {
+      const elapsed = time - start;
+      const p = Math.min(elapsed / duration, 1);
+      // We go slightly over 1 to ensure full burn (1.2 as in the component)
+      const burnProgress = p * 1.2;
+
+      setBurnEdgesConfig(prev => ({ ...prev, progress: burnProgress }));
+
+      if (p < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setIsAnimatingBurn(false);
+      }
+    };
+
+    const rafId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafId);
+  }, [isAnimatingBurn]);
+
+  const effectIds: Array<typeof activeSubsubtab> = [
+    'bat_fly', 'burn_edges', 'collect_stars', 'color_swarm', 'confetti_fall', 'confusion_spiral', 'continual_repaint', 'cosmic_neutron_barrage',
+    'electricity_node', 'electron_painting', 'flower_fall', 'flower_generator', 'god_rays', 'gommage', 'green_bloom', 'hyper_wisp',
+    'localized_black_hole', 'osmos_bubble', 'protego_blast', 'rings_of_time', 'siphon_shape', 'sparks_periculum', 'spawn_navi', 'super_nova', 'topo_rainbow', 'trace_complete', 'vortex_glass', 'watercolor_stormy'
+  ];
 
   return (
     <div className="flex h-full gap-4 overflow-hidden relative">
       <CollapsibleSidebar side="left" collapsed={leftCollapsed} setCollapsed={setLeftCollapsed} widthClass="w-40">
         <h3 className="text-[9px] font-bold uppercase tracking-[0.2em] text-game-teal/60">Active Effects</h3>
-        <div className="flex flex-col gap-1">
-          {['electricity_node', 'siphon_shape', 'flower_generator', 'protego_blast', 'sparks_periculum', 'spawn_navi', 'localized_black_hole', 'electron_painting', 'cosmic_neutron_barrage', 'god_rays'].map(id => (
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-1">
+          {effectIds.map(id => (
             <button
               key={id}
-              onClick={() => setActiveSubsubtab(id as any)}
+              onClick={() => setActiveSubsubtab(id)}
               className={`text-[9px] font-mono text-left px-2 py-1 rounded border transition-all truncate ${activeSubsubtab === id ? 'border-game-gold text-game-gold bg-game-gold/5' : 'border-game-teal/20 text-game-white/40 hover:border-game-teal/40'}`}
             >
               {id}
@@ -1271,27 +1497,59 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
       </CollapsibleSidebar>
 
       <div className="flex-1 relative rounded-xl border border-game-teal/10 bg-black/40 overflow-hidden">
+        {activeSubsubtab === 'bat_fly' && <BatFlyEffect />}
+        {activeSubsubtab === 'burn_edges' && <BurnEdgesEffect config={burnEdgesConfig} />}
+        {activeSubsubtab === 'collect_stars' && <CollectStarsEffect config={collectStarsConfig} />}
+        {activeSubsubtab === 'color_swarm' && <ColorSwarmEffect config={colorSwarmConfig} />}
+        {activeSubsubtab === 'confetti_fall' && <ConfettiFallEffect />}
+        {activeSubsubtab === 'confusion_spiral' && <ConfusionSpiralEffect config={confusionSpiralConfig} />}
+        {activeSubsubtab === 'continual_repaint' && <ContinualRepaintEffect config={continualRepaintConfig} />}
+        {activeSubsubtab === 'cosmic_neutron_barrage' && <CosmicNeutronBarrageEffect />}
         {activeSubsubtab === 'electricity_node' && <ElectricityNodeEffect />}
-        {activeSubsubtab === 'siphon_shape' && <SiphonShapeEffect />}
+        {activeSubsubtab === 'electron_painting' && <ElectronPaintingEffect />}
+        {activeSubsubtab === 'flower_fall' && <FlowerFallEffect />}
         {activeSubsubtab === 'flower_generator' && <FlowerGeneratorEffect config={flowerConfig} />}
+        {activeSubsubtab === 'god_rays' && <GodRaysEffect config={godRaysConfig} />}
+        {activeSubsubtab === 'gommage' && <GommageEffect config={gommageConfig} />}
+        {activeSubsubtab === 'green_bloom' && <GreenBloomEffect config={greenBloomConfig} />}
+        {activeSubsubtab === 'hyper_wisp' && <HyperWispEffect />}
+        {activeSubsubtab === 'localized_black_hole' && <LocalizedBlackHoleEffect />}
+        {activeSubsubtab === 'topo_rainbow' && <TopoRainbowEffect config={topoRainbowConfig} />}
+        {activeSubsubtab === 'osmos_bubble' && <OsmosBubbleEffect config={osmosBubbleConfig} />}
         {activeSubsubtab === 'protego_blast' && <ProtegoBlastEffect config={protegoConfig} />}
+        {activeSubsubtab === 'rings_of_time' && <RingsOfTimeEffect config={ringsOfTimeConfig} />}
+        {activeSubsubtab === 'siphon_shape' && <SiphonShapeEffect />}
         {activeSubsubtab === 'sparks_periculum' && <SparksPericulumEffect />}
         {activeSubsubtab === 'spawn_navi' && <SpawnNaviEffect />}
-        {activeSubsubtab === 'localized_black_hole' && <LocalizedBlackHoleEffect />}
-        {activeSubsubtab === 'electron_painting' && <ElectronPaintingEffect />}
-        {activeSubsubtab === 'cosmic_neutron_barrage' && <CosmicNeutronBarrageEffect />}
-        {activeSubsubtab === 'god_rays' && <GodRaysEffect config={godRaysConfig} />}
+        {activeSubsubtab === 'super_nova' && <SuperNovaEffect config={superNovaConfig} />}
+        {activeSubsubtab === 'trace_complete' && <TraceCompleteEffect config={traceCompleteConfig} />}
+        {activeSubsubtab === 'vortex_glass' && <VortexGlassEffect config={vortexGlassConfig} />}
+        {activeSubsubtab === 'watercolor_stormy' && <WatercolorStormyEffect config={watercolorStormyConfig} />}
       </div>
 
       <CollapsibleSidebar side="right" collapsed={rightCollapsed} setCollapsed={setRightCollapsed} widthClass="w-56">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-[9px] font-bold uppercase tracking-[0.2em] text-game-teal/60">Config</h3>
-          {(activeSubsubtab === 'flower_generator' || activeSubsubtab === 'protego_blast' || activeSubsubtab === 'god_rays') && (
+          {(['flower_generator', 'protego_blast', 'gommage', 'vortex_glass', 'color_swarm', 'green_bloom', 'continual_repaint', 'trace_complete', 'god_rays', 'collect_stars', 'burn_edges', 'rings_of_time', 'confusion_spiral', 'watercolor_stormy', 'osmos_bubble', 'super_nova', 'topo_rainbow'].includes(activeSubsubtab)) && (
             <button 
               onClick={() => {
                 if (activeSubsubtab === 'flower_generator') setFlowerConfig(DEFAULT_FLOWER_GENERATOR_CONFIG);
                 else if (activeSubsubtab === 'protego_blast') setProtegoConfig(DEFAULT_PROTEGO_BLAST_CONFIG);
+                else if (activeSubsubtab === 'gommage') setGommageConfig(DEFAULT_GOMMAGE_CONFIG);
+                else if (activeSubsubtab === 'vortex_glass') setVortexGlassConfig(DEFAULT_VORTEX_GLASS_CONFIG);
+                else if (activeSubsubtab === 'color_swarm') setColorSwarmConfig(DEFAULT_COLOR_SWARM_CONFIG);
+                else if (activeSubsubtab === 'green_bloom') setGreenBloomConfig(DEFAULT_GREEN_BLOOM_CONFIG);
+                else if (activeSubsubtab === 'continual_repaint') setContinualRepaintConfig(DEFAULT_CONTINUAL_REPAINT_CONFIG);
+                else if (activeSubsubtab === 'trace_complete') setTraceCompleteConfig(DEFAULT_TRACE_COMPLETE_CONFIG);
                 else if (activeSubsubtab === 'god_rays') setGodRaysConfig(DEFAULT_GOD_RAYS_CONFIG);
+                else if (activeSubsubtab === 'collect_stars') setCollectStarsConfig(DEFAULT_COLLECT_STARS_CONFIG);
+                else if (activeSubsubtab === 'burn_edges') setBurnEdgesConfig(DEFAULT_BURN_EDGES_CONFIG);
+                else if (activeSubsubtab === 'rings_of_time') setRingsOfTimeConfig(DEFAULT_RINGS_OF_TIME_CONFIG);
+                else if (activeSubsubtab === 'confusion_spiral') setConfusionSpiralConfig(DEFAULT_CONFUSION_SPIRAL_CONFIG);
+                else if (activeSubsubtab === 'osmos_bubble') setOsmosBubbleConfig(DEFAULT_OSMOS_BUBBLE_CONFIG);
+                else if (activeSubsubtab === 'super_nova') setSuperNovaConfig(DEFAULT_SUPER_NOVA_CONFIG);
+                else if (activeSubsubtab === 'topo_rainbow') setTopoRainbowConfig(DEFAULT_TOPO_RAINBOW_CONFIG);
+                else if (activeSubsubtab === 'watercolor_stormy') setWatercolorStormyConfig(DEFAULT_WATERCOLOR_STORMY_CONFIG);
               }} 
               className="text-[8px] text-game-gold/60 hover:text-game-gold uppercase font-bold tracking-tighter"
             >
@@ -1299,10 +1557,236 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
             </button>
           )}
         </div>
+
+        {activeSubsubtab === 'watercolor_stormy' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Scale" value={watercolorStormyConfig.scale} min={0.5} max={5.0} step={0.1} onChange={(v) => setWatercolorStormyConfig({ ...watercolorStormyConfig, scale: v })} />
+            <ConfigSlider label="Speed" value={watercolorStormyConfig.speed} min={0} max={0.5} step={0.01} onChange={(v) => setWatercolorStormyConfig({ ...watercolorStormyConfig, speed: v })} />
+            <ConfigSlider label="Density" value={watercolorStormyConfig.density} min={0} max={1.0} step={0.01} onChange={(v) => setWatercolorStormyConfig({ ...watercolorStormyConfig, density: v })} />
+            <ConfigSlider label="Softness" value={watercolorStormyConfig.softness} min={0} max={1.0} step={0.01} onChange={(v) => setWatercolorStormyConfig({ ...watercolorStormyConfig, softness: v })} />
+            <ConfigColorPicker label="Color 1" value={watercolorStormyConfig.color1} onChange={(v) => setWatercolorStormyConfig({ ...watercolorStormyConfig, color1: v })} />
+            <ConfigColorPicker label="Color 2" value={watercolorStormyConfig.color2} onChange={(v) => setWatercolorStormyConfig({ ...watercolorStormyConfig, color2: v })} />
+            <ConfigColorPicker label="Color 3" value={watercolorStormyConfig.color3} onChange={(v) => setWatercolorStormyConfig({ ...watercolorStormyConfig, color3: v })} />
+            <ConfigColorPicker label="BG Color" value={watercolorStormyConfig.bgColor} onChange={(v) => setWatercolorStormyConfig({ ...watercolorStormyConfig, bgColor: v })} />
+          </div>
+        )}
+
+        {activeSubsubtab === 'confusion_spiral' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Count" value={confusionSpiralConfig.count} min={10} max={200} step={1} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, count: Math.round(v) })} />
+            <ConfigSlider label="Radius" value={confusionSpiralConfig.radius} min={1} max={20} step={0.5} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, radius: v })} />
+            <ConfigSlider label="Turns" value={confusionSpiralConfig.turns} min={1} max={10} step={0.5} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, turns: v })} />
+            <ConfigSlider label="Tube Radius" value={confusionSpiralConfig.tubeRadius} min={0.005} max={0.1} step={0.005} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, tubeRadius: v })} />
+            <ConfigSlider label="Speed" value={confusionSpiralConfig.speed} min={0} max={0.2} step={0.005} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, speed: v })} />
+            <ConfigSlider label="Wave" value={confusionSpiralConfig.waveAmplitude} min={0} max={0.2} step={0.005} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, waveAmplitude: v })} />
+            <ConfigColorPicker label="Color 1" value={confusionSpiralConfig.color1} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, color1: v })} />
+            <ConfigColorPicker label="Color 2" value={confusionSpiralConfig.color2} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, color2: v })} />
+            <ConfigColorPicker label="Color 3" value={confusionSpiralConfig.color3} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, color3: v })} />
+            <ConfigColorPicker label="Color 4" value={confusionSpiralConfig.color4} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, color4: v })} />
+            <ConfigSlider label="Bloom Str" value={confusionSpiralConfig.bloomStrength} min={0} max={3} step={0.1} onChange={(v) => setConfusionSpiralConfig({ ...confusionSpiralConfig, bloomStrength: v })} />
+          </div>
+        )}
+        {activeSubsubtab === 'rings_of_time' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Rings" value={ringsOfTimeConfig.nRings} min={1} max={15} step={1} onChange={(v) => setRingsOfTimeConfig({ ...ringsOfTimeConfig, nRings: Math.round(v) })} />
+            <ConfigSlider label="Freq Ratio" value={ringsOfTimeConfig.frequencyRatio} min={1} max={10} step={0.1} onChange={(v) => setRingsOfTimeConfig({ ...ringsOfTimeConfig, frequencyRatio: v })} />
+            <ConfigSlider label="Speed" value={ringsOfTimeConfig.speedScale} min={0.1} max={5} step={0.1} onChange={(v) => setRingsOfTimeConfig({ ...ringsOfTimeConfig, speedScale: v })} />
+          </div>
+        )}
+        {activeSubsubtab === 'burn_edges' && (
+          <div className="space-y-4 pb-8">
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-game-white/60 uppercase font-mono block">Animation</label>
+              <button
+                onClick={() => {
+                  setBurnEdgesConfig(prev => ({ ...prev, progress: 0 }));
+                  setIsAnimatingBurn(true);
+                }}
+                disabled={isAnimatingBurn}
+                className={`w-full py-2 rounded border font-black uppercase tracking-widest text-[9px] transition-all ${isAnimatingBurn ? 'border-game-teal/20 text-game-teal/40 bg-game-teal/5 cursor-not-allowed' : 'border-game-gold text-game-gold hover:bg-game-gold/10 active:scale-95'}`}
+              >
+                {isAnimatingBurn ? 'Burning...' : '▶ Play Burn'}
+              </button>
+            </div>
+            <ConfigSlider label="Noise" value={burnEdgesConfig.noiseScale} min={0.1} max={5} step={0.05} onChange={(v) => setBurnEdgesConfig({ ...burnEdgesConfig, noiseScale: v })} />
+            <ConfigColorPicker label="Burn Color" value={burnEdgesConfig.burnColor} onChange={(v) => setBurnEdgesConfig({ ...burnEdgesConfig, burnColor: v })} />
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-game-white/60 uppercase font-mono block">Image URL</label>
+              <input 
+                type="text" 
+                value={burnEdgesConfig.cardImageUrl} 
+                onChange={(e) => setBurnEdgesConfig({ ...burnEdgesConfig, cardImageUrl: e.target.value })} 
+                className="w-full bg-black/40 border border-game-teal/20 rounded px-2 py-1 text-[8px] text-game-white outline-none focus:border-game-gold/50 font-mono" 
+              />
+            </div>
+          </div>
+        )}
+        {activeSubsubtab === 'collect_stars' && (
+          <div className="space-y-4 pb-8">
+            <div className="text-[9px] text-game-white/40 font-mono italic">Assets managed locally via /public/assets.</div>
+          </div>
+        )}
+        {activeSubsubtab === 'continual_repaint' && (
+          <div className="space-y-4 pb-8">
+            <div className="nm-row flex items-center justify-between">
+              <p className="text-[9px] text-game-white/60 uppercase font-mono">Desaturate</p>
+              <button
+                onClick={() => setContinualRepaintConfig({ ...continualRepaintConfig, desaturate: !continualRepaintConfig.desaturate })}
+                className={`text-[8px] font-mono px-2 py-0.5 border transition-colors ${continualRepaintConfig.desaturate ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/30 text-game-white/40 hover:border-game-teal/60'}`}
+              >
+                {continualRepaintConfig.desaturate ? 'ON' : 'OFF'}
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-game-white/60 uppercase font-mono block">Source Image</label>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => document.getElementById('repaint-file-picker')?.click()}
+                  className="w-full py-2 rounded border border-game-teal/30 bg-game-teal/5 text-[9px] text-game-teal font-mono hover:bg-game-teal/10 transition-all flex items-center justify-center gap-2"
+                >
+                  <span>📁 Load Local Image</span>
+                </button>
+                <input 
+                  id="repaint-file-picker"
+                  type="file" 
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const dataUrl = event.target?.result as string;
+                        setContinualRepaintConfig({ ...continualRepaintConfig, imgUrl: dataUrl });
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }} 
+                />
+                {continualRepaintConfig.imgUrl && !continualRepaintConfig.imgUrl.startsWith('data:') && (
+                  <div className="text-[8px] text-game-white/30 truncate font-mono">{continualRepaintConfig.imgUrl}</div>
+                )}
+                {continualRepaintConfig.imgUrl?.startsWith('data:') && (
+                  <div className="text-[8px] text-game-gold/60 font-mono italic">Local image loaded.</div>
+                )}
+              </div>
+            </div>
+            <ConfigSlider label="Stroke Max" value={continualRepaintConfig.strokeMax} min={1} max={100} step={1} onChange={(v) => setContinualRepaintConfig({ ...continualRepaintConfig, strokeMax: v })} />
+            <ConfigSlider label="Rotation" value={continualRepaintConfig.varRot} min={0} max={Math.PI * 2} step={0.01} onChange={(v) => setContinualRepaintConfig({ ...continualRepaintConfig, varRot: v })} />
+            <ConfigSlider label="Strokes/F" value={continualRepaintConfig.countPerFrame} min={10} max={1000} step={10} onChange={(v) => setContinualRepaintConfig({ ...continualRepaintConfig, countPerFrame: Math.round(v) })} />
+            <ConfigSlider label="Brush Var" value={continualRepaintConfig.varW} min={0.1} max={20} step={0.1} onChange={(v) => setContinualRepaintConfig({ ...continualRepaintConfig, varW: v })} />
+            <ConfigSlider label="Velocity" value={continualRepaintConfig.velocity} min={0.1} max={8} step={0.1} onChange={(v) => setContinualRepaintConfig({ ...continualRepaintConfig, velocity: v })} />
+            <div className="nm-row flex items-center justify-between">
+              <p className="text-[9px] text-game-white/60 uppercase font-mono">Desaturate</p>
+              <button
+                onClick={() => setContinualRepaintConfig({ ...continualRepaintConfig, desaturate: !continualRepaintConfig.desaturate })}
+                className={`text-[8px] font-mono px-2 py-0.5 border transition-colors ${continualRepaintConfig.desaturate ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/30 text-game-white/40 hover:border-game-teal/60'}`}
+              >
+                {continualRepaintConfig.desaturate ? 'ON' : 'OFF'}
+              </button>
+            </div>
+            <div className="nm-row flex items-center justify-between">
+              <p className="text-[9px] text-game-white/60 uppercase font-mono">Hi-Fi Mode</p>
+              <button
+                onClick={() => setContinualRepaintConfig({ ...continualRepaintConfig, highFidelity: !continualRepaintConfig.highFidelity })}
+                className={`text-[8px] font-mono px-2 py-0.5 border transition-colors ${continualRepaintConfig.highFidelity ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/30 text-game-white/40 hover:border-game-teal/60'}`}
+              >
+                {continualRepaintConfig.highFidelity ? 'ON' : 'OFF'}
+              </button>
+            </div>
+          </div>
+        )}
+        {activeSubsubtab === 'green_bloom' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Particles" value={greenBloomConfig.particleCount} min={10} max={1000} step={10} onChange={(v) => setGreenBloomConfig({ ...greenBloomConfig, particleCount: Math.round(v) })} />
+            <ConfigSlider label="Layers" value={greenBloomConfig.bloomLayers} min={1} max={40} step={1} onChange={(v) => setGreenBloomConfig({ ...greenBloomConfig, bloomLayers: Math.round(v) })} />
+            <ConfigSlider label="Rotation" value={greenBloomConfig.rotationSpeed} min={0} max={20} step={0.5} onChange={(v) => setGreenBloomConfig({ ...greenBloomConfig, rotationSpeed: v })} />
+            <ConfigSlider label="Persistence" value={greenBloomConfig.persistence} min={0.1} max={0.99} step={0.01} onChange={(v) => setGreenBloomConfig({ ...greenBloomConfig, persistence: v })} />
+          </div>
+        )}
+        {activeSubsubtab === 'color_swarm' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Max Particles" value={colorSwarmConfig.maxParticles} min={10} max={2000} step={10} onChange={(v) => setColorSwarmConfig({ ...colorSwarmConfig, maxParticles: Math.round(v) })} />
+            <ConfigSlider label="Size" value={colorSwarmConfig.size} min={1} max={20} step={1} onChange={(v) => setColorSwarmConfig({ ...colorSwarmConfig, size: v })} />
+            <ConfigSlider label="Noise Scale" value={colorSwarmConfig.noiseScale} min={0.0001} max={0.01} step={0.0001} onChange={(v) => setColorSwarmConfig({ ...colorSwarmConfig, noiseScale: v })} />
+            <ConfigSlider label="Speed Scale" value={colorSwarmConfig.speedScale} min={0.1} max={5} step={0.1} onChange={(v) => setColorSwarmConfig({ ...colorSwarmConfig, speedScale: v })} />
+          </div>
+        )}
+        {activeSubsubtab === 'super_nova' && (
+          <div className="space-y-4 pb-8">
+            <div className="space-y-1">
+              <label className="text-[9px] text-game-white/60 uppercase font-mono block">Theme</label>
+              <div className="grid grid-cols-3 gap-1">
+                {(['helios', 'neutron', 'crimson'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setSuperNovaConfig({ ...superNovaConfig, theme: t })}
+                    className={`text-[8px] font-mono py-1 rounded border transition-all ${superNovaConfig.theme === t ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/20 text-game-white/40 hover:border-game-teal/40'}`}
+                  >
+                    {t.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <ConfigSlider label="Surface Heat" value={superNovaConfig.heat} min={0} max={2} step={0.1} onChange={(v) => setSuperNovaConfig({ ...superNovaConfig, heat: v })} />
+            <ConfigSlider label="Magnetic Flux" value={superNovaConfig.flux} min={0} max={1} step={0.01} onChange={(v) => setSuperNovaConfig({ ...superNovaConfig, flux: v })} />
+            <ConfigSlider label="Glass Opacity" value={superNovaConfig.corona} min={0} max={1} step={0.01} onChange={(v) => setSuperNovaConfig({ ...superNovaConfig, corona: v })} />
+          </div>
+        )}
+        {activeSubsubtab === 'trace_complete' && (
+          <div className="space-y-4 pb-8">
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-game-white/60 uppercase font-mono block">Image URL</label>
+              <input 
+                type="text" 
+                value={traceCompleteConfig.imgUrl} 
+                onChange={(e) => setTraceCompleteConfig({ ...traceCompleteConfig, imgUrl: e.target.value })} 
+                className="w-full bg-black/40 border border-game-teal/20 rounded px-2 py-1 text-[8px] text-game-white outline-none focus:border-game-gold/50 font-mono" 
+              />
+            </div>
+            <ConfigSlider label="Particles" value={traceCompleteConfig.particleCount} min={100} max={5000} step={100} onChange={(v) => setTraceCompleteConfig({ ...traceCompleteConfig, particleCount: Math.round(v) })} />
+            <ConfigSlider label="Speed" value={traceCompleteConfig.speed} min={0.1} max={10} step={0.1} onChange={(v) => setTraceCompleteConfig({ ...traceCompleteConfig, speed: v })} />
+            <ConfigSlider label="Line Width" value={traceCompleteConfig.lineWidth} min={0.1} max={5} step={0.1} onChange={(v) => setTraceCompleteConfig({ ...traceCompleteConfig, lineWidth: v })} />
+            <ConfigSlider label="Noise Impact" value={traceCompleteConfig.noiseImpact} min={0} max={2} step={0.1} onChange={(v) => setTraceCompleteConfig({ ...traceCompleteConfig, noiseImpact: v })} />
+            <ConfigSlider label="Color Impact" value={traceCompleteConfig.colorImpact} min={0} max={2} step={0.1} onChange={(v) => setTraceCompleteConfig({ ...traceCompleteConfig, colorImpact: v })} />
+          </div>
+        )}
         {activeSubsubtab === 'god_rays' && (
           <div className="space-y-4 pb-8">
             <ConfigSlider label="Ray Count" value={godRaysConfig.rayCount} min={0} max={500} step={10} onChange={(v) => setGodRaysConfig({ ...godRaysConfig, rayCount: Math.round(v) })} />
             <ConfigSlider label="Particles" value={godRaysConfig.particleCount} min={0} max={500} step={10} onChange={(v) => setGodRaysConfig({ ...godRaysConfig, particleCount: Math.round(v) })} />
+          </div>
+        )}
+        {activeSubsubtab === 'localized_black_hole' && (
+          <div className="space-y-4 pb-8">
+            <div className="text-[9px] text-game-white/40 font-mono italic">No controls yet.</div>
+          </div>
+        )}
+        {activeSubsubtab === 'topo_rainbow' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Noise Scale" value={topoRainbowConfig.noiseScale} min={0.1} max={5.0} step={0.1} onChange={(v) => setTopoRainbowConfig({ ...topoRainbowConfig, noiseScale: v })} />
+            <ConfigSlider label="Vein Scale" value={topoRainbowConfig.veinScale} min={0.5} max={10.0} step={0.1} onChange={(v) => setTopoRainbowConfig({ ...topoRainbowConfig, veinScale: v })} />
+            <ConfigColorPicker label="Base" value={topoRainbowConfig.color1} onChange={(v) => setTopoRainbowConfig({ ...topoRainbowConfig, color1: v })} />
+            <ConfigColorPicker label="Veins" value={topoRainbowConfig.color2} onChange={(v) => setTopoRainbowConfig({ ...topoRainbowConfig, color2: v })} />
+            <ConfigSlider label="Size" value={topoRainbowConfig.shieldSize} min={0.5} max={3.0} step={0.1} onChange={(v) => setTopoRainbowConfig({ ...topoRainbowConfig, shieldSize: v })} />
+            <ConfigSlider label="Rotation" value={topoRainbowConfig.rotationSpeed} min={0} max={0.05} step={0.001} onChange={(v) => setTopoRainbowConfig({ ...topoRainbowConfig, rotationSpeed: v })} />
+          </div>
+        )}
+        {activeSubsubtab === 'osmos_bubble' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Time Scale" value={osmosBubbleConfig.timeScale} min={0.1} max={3.0} step={0.01} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, timeScale: v })} />
+            <ConfigSlider label="Rot X" value={osmosBubbleConfig.rotationSpeedX} min={0} max={0.02} step={0.0001} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, rotationSpeedX: v })} />
+            <ConfigSlider label="Rot Y" value={osmosBubbleConfig.rotationSpeedY} min={0} max={0.02} step={0.0001} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, rotationSpeedY: v })} />
+            <ConfigSlider label="Scale" value={osmosBubbleConfig.plasmaScale} min={0.01} max={0.5} step={0.0001} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, plasmaScale: v })} />
+            <ConfigSlider label="Brightness" value={osmosBubbleConfig.plasmaBrightness} min={0.5} max={3.0} step={0.01} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, plasmaBrightness: v })} />
+            <ConfigSlider label="Void Thresh" value={osmosBubbleConfig.voidThreshold} min={0} max={0.5} step={0.001} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, voidThreshold: v })} />
+            <ConfigColorPicker label="Deep" value={osmosBubbleConfig.colorDeep} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, colorDeep: v })} />
+            <ConfigColorPicker label="Mid" value={osmosBubbleConfig.colorMid} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, colorMid: v })} />
+            <ConfigColorPicker label="Bright" value={osmosBubbleConfig.colorBright} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, colorBright: v })} />
+            <ConfigColorPicker label="Shell" value={osmosBubbleConfig.shellColor} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, shellColor: v })} />
+            <ConfigSlider label="Shell Opacity" value={osmosBubbleConfig.shellOpacity} min={0} max={1} step={0.01} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, shellOpacity: v })} />
+            <ConfigSlider label="Particle Count" value={osmosBubbleConfig.particleCount} min={0} max={2000} step={10} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, particleCount: Math.round(v) })} />
+            <ConfigSlider label="Particle Size" value={osmosBubbleConfig.particleSize} min={0.001} max={0.1} step={0.001} onChange={(v) => setOsmosBubbleConfig({ ...osmosBubbleConfig, particleSize: v })} />
           </div>
         )}
         {activeSubsubtab === 'protego_blast' && (
@@ -1312,6 +1796,36 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
             <ConfigSlider label="Pressure" value={protegoConfig.pressureDissipation} min={0.1} max={0.99} step={0.01} onChange={(v) => setProtegoConfig({ ...protegoConfig, pressureDissipation: v })} />
             <ConfigSlider label="Curl" value={protegoConfig.curl} min={0} max={100} step={1} onChange={(v) => setProtegoConfig({ ...protegoConfig, curl: v })} />
             <ConfigSlider label="Radius" value={protegoConfig.splatRadius} min={0.0001} max={0.02} step={0.0001} onChange={(v) => setProtegoConfig({ ...protegoConfig, splatRadius: v })} />
+          </div>
+        )}
+        {activeSubsubtab === 'gommage' && (
+          <div className="space-y-4 pb-8">
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-game-white/60 uppercase font-mono block">Text</label>
+              <input 
+                type="text" 
+                value={gommageConfig.text} 
+                onChange={(e) => setGommageConfig({ ...gommageConfig, text: e.target.value })} 
+                className="w-full bg-black/40 border border-game-teal/20 rounded px-2 py-1 text-[10px] text-game-white outline-none focus:border-game-gold/50 font-mono" 
+              />
+            </div>
+            <ConfigSlider label="Progress" value={gommageConfig.progress} min={0} max={1} step={0.01} onChange={(v) => setGommageConfig({ ...gommageConfig, progress: v })} />
+            <ConfigSlider label="Noise Scale" value={gommageConfig.noiseScale} min={0.001} max={0.1} step={0.001} onChange={(v) => setGommageConfig({ ...gommageConfig, noiseScale: v })} />
+
+            <ConfigSlider label="Edge Width" value={gommageConfig.edgeWidth} min={0} max={0.2} step={0.01} onChange={(v) => setGommageConfig({ ...gommageConfig, edgeWidth: v })} />
+            <ConfigSlider label="Particles" value={gommageConfig.particleSpeed} min={0} max={10} step={0.1} onChange={(v) => setGommageConfig({ ...gommageConfig, particleSpeed: v })} />
+            <ConfigColorPicker label="Edge Color" value={gommageConfig.edgeColor} onChange={(v) => setGommageConfig({ ...gommageConfig, edgeColor: v })} />
+          </div>
+        )}
+        {activeSubsubtab === 'vortex_glass' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Swirl" value={vortexGlassConfig.swirlStrength} min={0} max={10} step={0.1} onChange={(v) => setVortexGlassConfig({ ...vortexGlassConfig, swirlStrength: v })} />
+            <ConfigSlider label="Speed" value={vortexGlassConfig.vortexSpeed} min={0} max={2} step={0.01} onChange={(v) => setVortexGlassConfig({ ...vortexGlassConfig, vortexSpeed: v })} />
+            <ConfigSlider label="IOR" value={vortexGlassConfig.glassIOR} min={1} max={2.5} step={0.01} onChange={(v) => setVortexGlassConfig({ ...vortexGlassConfig, glassIOR: v })} />
+            <ConfigSlider label="Thickness" value={vortexGlassConfig.glassThickness} min={0} max={2} step={0.01} onChange={(v) => setVortexGlassConfig({ ...vortexGlassConfig, glassThickness: v })} />
+            <ConfigSlider label="Dispersion" value={vortexGlassConfig.dispersion} min={0} max={20} step={0.1} onChange={(v) => setVortexGlassConfig({ ...vortexGlassConfig, dispersion: v })} />
+            <ConfigColorPicker label="Color 1" value={vortexGlassConfig.vortexColor1} onChange={(v) => setVortexGlassConfig({ ...vortexGlassConfig, vortexColor1: v })} />
+            <ConfigColorPicker label="Color 2" value={vortexGlassConfig.vortexColor2} onChange={(v) => setVortexGlassConfig({ ...vortexGlassConfig, vortexColor2: v })} />
           </div>
         )}
         {activeSubsubtab === 'flower_generator' && (
@@ -1326,8 +1840,15 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
             <ConfigColorPicker label="Tint" value={flowerConfig.flowerTint} onChange={(v) => setFlowerConfig((prev) => ({ ...prev, flowerTint: v }))} />
           </div>
         )}
-        {activeSubsubtab !== 'flower_generator' && activeSubsubtab !== 'protego_blast' && (
-          <div className="text-[8px] text-game-white/35 font-mono italic">No controls yet.</div>
+        {activeSubsubtab === 'siphon_shape' && (
+          <div className="space-y-4 pb-8">
+            <div className="text-[9px] text-game-white/40 font-mono italic">No controls yet.</div>
+          </div>
+        )}
+        {['electricity_node', 'flower_fall', 'spawn_navi', 'localized_black_hole', 'electron_painting', 'cosmic_neutron_barrage', 'bat_fly', 'hyper_wisp', 'confetti_fall'].includes(activeSubsubtab) && (
+          <div className="space-y-4 pb-8">
+            <div className="text-[9px] text-game-white/40 font-mono italic">No controls yet.</div>
+          </div>
         )}
       </CollapsibleSidebar>
     </div>
@@ -1408,9 +1929,9 @@ export const VisualsEditor = memo(function VisualsEditor({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/90 backdrop-blur-md" style={{ visibility: 'visible' }}>
+    <div className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/90 backdrop-blur-md p-1 sm:p-2" style={{ visibility: 'visible' }}>
       <SVGFilters />
-      <div ref={containerRef} className="relative w-[min(1320px,calc(100vw-1rem))] h-[min(920px,calc(100vh-1rem))] bg-[#0a0a0a] border border-game-teal/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div ref={containerRef} className="relative w-[min(96vw,1800px)] h-[min(96vh,1200px)] bg-[#0a0a0a] border border-game-teal/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         <div className="px-6 py-4 border-b border-game-teal/20 flex items-center justify-between bg-black/40">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-black text-game-white tracking-tighter flex items-center gap-2"><span className="text-game-teal">✦</span>VISUAL EFFECTS BROWSER</h2>

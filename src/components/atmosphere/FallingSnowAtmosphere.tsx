@@ -28,6 +28,8 @@ type Props = {
   config?: FallingSnowConfig;
 };
 
+const SNOWFLAKE_TEXTURE_URL = '/assets/vis/textures/snowflake.png';
+
 export const FallingSnowAtmosphere = memo(function FallingSnowAtmosphere({ 
   className, 
   config = DEFAULT_FALLING_SNOW_CONFIG 
@@ -64,7 +66,7 @@ export const FallingSnowAtmosphere = memo(function FallingSnowAtmosphere({
 
     // Create Material
     const textureLoader = new THREE.TextureLoader();
-    const snowflakeTexture = textureLoader.load('https://s3-us-west-2.amazonaws.com/s.cdpn.io/82015/snowflake.png');
+    const snowflakeTexture = textureLoader.load(SNOWFLAKE_TEXTURE_URL);
 
     const material = new THREE.PointsMaterial({
       size: config.particleSize,

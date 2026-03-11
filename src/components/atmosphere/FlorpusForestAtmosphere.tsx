@@ -193,7 +193,7 @@ void main() {
   float angle_rot = -0.65; 
   mat2 rMat = mat2(cos(angle_rot), -sin(angle_rot), sin(angle_rot), cos(angle_rot));
   // Keep it roughly where it was but slightly offset to not overlap planet too much
-  vec2 rp = rMat * (p - vec2(0.55 * aspect, 0.2)); 
+  vec2 rp = rMat * (p - vec2(0.45 * aspect, 0.45)); // Moved up and right 
   
   // Chaotic jaggedness using multiple noise scales
   float jagged = fbm(vec2(rp.x * 3.0, globalTime * 0.2)) * 0.15;
@@ -440,9 +440,9 @@ export const FlorpusForestAtmosphere = memo(function FlorpusForestAtmosphere({ c
       const portraitScale = isPortrait ? 0.68 : 1;
       const sceneYOffset = isPortrait ? -2 : -10;
       const cameraY = isPortrait ? 0 : -8;
-      const cameraZ = isPortrait ? 48 : 40;
+      const cameraZ = isPortrait ? 60 : 55; // Zoomed out
       const lookAtY = isPortrait ? -12 : sceneYOffset;
-      camera.fov = isPortrait ? 78 : 70;
+      camera.fov = isPortrait ? 78 : 75; // Increased FOV
       camera.position.set(0, cameraY, cameraZ);
       camera.lookAt(0, lookAtY, 0);
       treeMesh.position.y = sceneYOffset;

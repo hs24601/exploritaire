@@ -169,14 +169,13 @@ export const LocalizedBlackHoleEffect = memo(function LocalizedBlackHoleEffect({
       buffer.save();
       buffer.beginPath();
       buffer.filter = 'blur(2px)';
-      buffer.fillStyle = 'rgba(0,0,0,0.1)';
+      buffer.fillStyle = 'rgba(0,0,0,0)'; // Transparent
       buffer.arc(center[0], center[1], EVENT_HORIZON, 0, TAU);
       buffer.fill();
       buffer.closePath();
       buffer.restore();
 
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(0, 0, visibleCanvas.width, visibleCanvas.height);
+      ctx.clearRect(0, 0, visibleCanvas.width, visibleCanvas.height); // Clear instead of fill black
 
       const target: Vec2 = hover ? mouse : [0.5 * bufferCanvas.width, 0.5 * bufferCanvas.height];
       const nextCenter = lerpVec2(center, target, 0.05);
@@ -209,12 +208,9 @@ export const LocalizedBlackHoleEffect = memo(function LocalizedBlackHoleEffect({
   }, []);
 
   return (
-    <div className={`w-full h-full bg-black flex items-center justify-center p-10 ${className ?? ''}`}>
-      <div className="relative w-full h-full border border-game-teal/20 rounded-xl overflow-hidden">
+    <div className={`w-full h-full bg-transparent flex items-center justify-center ${className ?? ''}`}>
+      <div className="relative w-full h-full overflow-hidden">
         <canvas ref={canvasRef} className="w-full h-full" />
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="text-game-teal font-mono text-[10px] uppercase tracking-widest opacity-30">Active Effect: localized_black_hole</div>
-        </div>
       </div>
     </div>
   );

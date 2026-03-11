@@ -698,13 +698,13 @@ const serializeDeckTemplates = (
     if (value.activeCards && value.activeCards.length > 0) {
       lines.push(`    activeCards: [${value.activeCards.map((entry) => (entry ? 'true' : 'false')).join(', ')}],`);
     }
-    if (value.notDiscardedCards && value.notDiscardedCards.some(Boolean)) {
+    if (value.notDiscardedCards && value.notDiscardedCards.length > 0) {
       lines.push(`    notDiscardedCards: [${value.notDiscardedCards.map((entry) => (entry ? 'true' : 'false')).join(', ')}],`);
     }
     if (value.playableTurns && value.playableTurns.length > 0) {
       lines.push(`    playableTurns: [${value.playableTurns.map((entry) => `'${entry}'`).join(', ')}],`);
     }
-    if (value.cooldowns && value.cooldowns.some((entry) => Number(entry) > 0)) {
+    if (value.cooldowns && value.cooldowns.length > 0) {
       lines.push(`    cooldowns: [${value.cooldowns.join(', ')}],`);
     }
     if (value.slotsPerCard && value.slotsPerCard.length > 0) {
@@ -884,6 +884,7 @@ export function ActorEditor({
   const [editAbilityDeckCardIndex, setEditAbilityDeckCardIndex] = useState<number | null>(null);
   const [editAbilityTurn, setEditAbilityTurn] = useState<TurnPlayability>('player');
   const [showNewAbilityForm, setShowNewAbilityForm] = useState(false);
+  const [showDeleteCardConfirm, setShowDeleteCardConfirm] = useState(false);
 
   useEffect(() => {
     setDefinitions(definitionsProp);
@@ -1365,8 +1366,225 @@ export function ActorEditor({
     }
   }, []);
 
+  const persistDeckTemplatesToDisk = useCallback(async (nextDeckTemplates: Record<string, DeckTemplate>) => {
+    const decksPath = '/src/engine/actorDecks.ts?raw';
+    const decksResponse = await fetch(decksPath);
+    if (!decksResponse.ok) {
+      throw new Error('Failed to load actorDecks.ts from dev server.');
+    }
+    const decksText = unwrapRawModule(await decksResponse.text());
+    const deckReplacement = serializeDeckTemplates(nextDeckTemplates);
+    const updatedDecks = replaceSection(decksText, '// ACTOR_DECK_TEMPLATES_START', '// ACTOR_DECK_TEMPLATES_END', deckReplacement);
+    if (!updatedDecks) {
+      throw new Error('Could not find ACTOR_DECK_TEMPLATES markers in actorDecks.ts.');
+    }
+    await writeFileToDisk('src/engine/actorDecks.ts', updatedDecks);
+  }, [unwrapRawModule]);
+
+  const removeDeckCardAtIndex = useCallback(async (actorId: string, deck: DeckTemplate, index: number) => {
+    const nextValues = deck.values.filter((_, cardIndex) => cardIndex !== index);
+    const nextCostByRarity = (deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))
+      .filter((_, cardIndex) => cardIndex !== index);
+    const nextEnabledRarities: OrimRarity[] = (deck.enabledRarities ?? deck.values.map(() => 'common' as OrimRarity))
+      .filter((_, cardIndex) => cardIndex !== index);
+    const nextActiveCards = (deck.activeCards ?? deck.values.map(() => true))
+      .filter((_, cardIndex) => cardIndex !== index);
+    const nextNotDiscardedCards = (deck.notDiscardedCards ?? deck.values.map(() => false))
+      .filter((_, cardIndex) => cardIndex !== index);
+    const nextPlayableTurns = (deck.playableTurns ?? createDefaultPlayableTurns(deck.values.length))
+      .filter((_, cardIndex) => cardIndex !== index);
+    const nextCooldowns = (deck.cooldowns ?? deck.values.map(() => 0))
+      .filter((_, cardIndex) => cardIndex !== index);
+    const nextSlotsPerCard = (deck.slotsPerCard ?? deck.values.map(() => 1))
+      .filter((_, cardIndex) => cardIndex !== index);
+    const nextStarterOrim = (deck.starterOrim ?? [])
+      .filter((entry) => entry.cardIndex !== index)
+      .map((entry) => (
+        entry.cardIndex > index
+          ? { ...entry, cardIndex: entry.cardIndex - 1 }
+          : entry
+      ));
+    const nextSlotLocks = (deck.slotLocks ?? [])
+      .filter((entry) => entry.cardIndex !== index)
+      .map((entry) => (
+        entry.cardIndex > index
+          ? { ...entry, cardIndex: entry.cardIndex - 1 }
+          : entry
+      ));
+    const nextDeck: DeckTemplate = {
+      ...deck,
+      values: nextValues,
+      costByRarity: nextCostByRarity,
+      enabledRarities: nextEnabledRarities,
+      activeCards: nextActiveCards,
+      notDiscardedCards: nextNotDiscardedCards,
+      playableTurns: nextPlayableTurns,
+      cooldowns: nextCooldowns,
+      slotsPerCard: nextSlotsPerCard,
+      starterOrim: nextStarterOrim,
+      slotLocks: nextSlotLocks,
+    };
+    const nextDeckTemplates = { ...deckTemplates, [actorId]: nextDeck };
+    commitDeckTemplates(nextDeckTemplates);
+    await persistDeckTemplatesToDisk(nextDeckTemplates);
+    return nextDeckTemplates;
+  }, [commitDeckTemplates, deckTemplates, persistDeckTemplatesToDisk]);
+
+  const saveEditedAbility = useCallback(async (options?: { closeAfterSave?: boolean }) => {
+    if (!selected || !selectedDeck) return null;
+    const closeAfterSave = options?.closeAfterSave ?? true;
+    const generatedId = normalizeId(editAbility.label ?? '');
+    if (!generatedId) return null;
+    const deck = selectedDeck;
+    const existingPrimaryEntry = editAbilityDeckCardIndex != null && editAbilityDeckCardIndex >= 0
+      ? (deck.starterOrim ?? []).find((entry) => (
+          entry.cardIndex === editAbilityDeckCardIndex
+          && (entry.slotIndex ?? 0) === 0
+        )) ?? null
+      : null;
+    const existingAbilityId = editAbility.id || existingPrimaryEntry?.orimId || '';
+    const hasForeignCollision = abilities.some((entry) => (
+      entry.id === generatedId
+      && entry.id !== existingAbilityId
+      && entry.parentActorId
+      && entry.parentActorId !== selected.id
+    ));
+    const scopedAbilityId = existingAbilityId || (
+      hasForeignCollision
+        ? `${generatedId}_${selected.id}`
+        : generatedId
+    );
+    const abilityToSave = hydrateAbility({
+      ...editAbility,
+      id: scopedAbilityId,
+      parentActorId: selected.id,
+    });
+    const nextAbilities = abilities.some((a) => a.id === abilityToSave.id)
+      ? abilities.map((a) => (a.id === abilityToSave.id ? abilityToSave : a))
+      : [...abilities, abilityToSave];
+    await commitAbilities(nextAbilities);
+    const assignAbilityToNextSlot = (currentDeck: DeckTemplate, abilityId: string): DeckTemplate => {
+      const abilityDefaultValue = normalizeAbilityValue(abilityToSave.value ?? abilityToSave.cardRank ?? 1);
+      const abilityDefaultCost = normalizeAbilityCost(abilityToSave.cost ?? abilityToSave.equipCost ?? 0);
+      const values = [...(currentDeck.values ?? [])];
+      const costByRarity = [...(currentDeck.costByRarity ?? values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
+      const enabledRarities: OrimRarity[] = [...(currentDeck.enabledRarities ?? values.map(() => 'common' as OrimRarity))];
+      const activeCards = [...(currentDeck.activeCards ?? values.map(() => true))];
+      const notDiscardedCards = [...(currentDeck.notDiscardedCards ?? values.map(() => false))];
+      const playableTurns = [...(currentDeck.playableTurns ?? createDefaultPlayableTurns(values.length))];
+      const cooldowns = [...(currentDeck.cooldowns ?? values.map(() => 0))];
+      const slotsPerCard = [...(currentDeck.slotsPerCard ?? values.map(() => 1))];
+      const starterOrim = [...(currentDeck.starterOrim ?? [])];
+      if (values.length === 0) {
+        values.push(abilityDefaultValue);
+        costByRarity.push(normalizeCostByRarityEntry(undefined, abilityDefaultCost));
+        enabledRarities.push((abilityToSave.rarity ?? 'common') as OrimRarity);
+        activeCards.push(true);
+        notDiscardedCards.push(false);
+        playableTurns.push(editAbilityTurn);
+        cooldowns.push(0);
+        slotsPerCard.push(1);
+        starterOrim.push({ cardIndex: 0, slotIndex: 0, orimId: abilityId });
+        return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
+      }
+      for (let cardIndex = 0; cardIndex < values.length; cardIndex += 1) {
+        const slotCount = Math.max(1, slotsPerCard[cardIndex] ?? 1);
+        const occupied = new Set(
+          starterOrim
+            .filter((entry) => entry.cardIndex === cardIndex)
+            .map((entry) => entry.slotIndex ?? 0)
+        );
+        for (let slotIndex = 0; slotIndex < slotCount; slotIndex += 1) {
+          if (occupied.has(slotIndex)) continue;
+          if (slotIndex === 0) {
+            values[cardIndex] = abilityDefaultValue;
+            costByRarity[cardIndex] = normalizeCostByRarityEntry(costByRarity[cardIndex], abilityDefaultCost);
+            enabledRarities[cardIndex] = (abilityToSave.rarity ?? 'common') as OrimRarity;
+            playableTurns[cardIndex] = editAbilityTurn;
+          }
+          starterOrim.push({ cardIndex, slotIndex, orimId: abilityId });
+          return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
+        }
+      }
+      const lastCardIndex = values.length - 1;
+      const expandedSlotsPerCard = [...slotsPerCard];
+      const newSlotIndex = Math.max(1, expandedSlotsPerCard[lastCardIndex] ?? 1);
+      expandedSlotsPerCard[lastCardIndex] = newSlotIndex + 1;
+      starterOrim.push({ cardIndex: lastCardIndex, slotIndex: newSlotIndex, orimId: abilityId });
+      return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard: expandedSlotsPerCard, starterOrim };
+    };
+    let updatedDeck: DeckTemplate = deck;
+    if (existingPrimaryEntry) {
+      const existingPrimaryAbility = abilities.find((entry) => entry.id === existingPrimaryEntry.orimId) ?? null;
+      const nextStarterOrim = (deck.starterOrim ?? []).map((entry) => (
+        entry.cardIndex === editAbilityDeckCardIndex && (entry.slotIndex ?? 0) === 0
+          ? { ...entry, orimId: abilityToSave.id ?? scopedAbilityId }
+          : entry
+      ));
+      const nextPlayableTurns = [...(deck.playableTurns ?? createDefaultPlayableTurns(deck.values.length))];
+      nextPlayableTurns[editAbilityDeckCardIndex ?? 0] = editAbilityTurn;
+      const nextEnabledRarities: OrimRarity[] = [
+        ...(deck.enabledRarities ?? deck.values.map(() => 'common' as OrimRarity)),
+      ];
+      nextEnabledRarities[editAbilityDeckCardIndex ?? 0] = (abilityToSave.rarity ?? 'common') as OrimRarity;
+      const nextValues = [...deck.values];
+      nextValues[editAbilityDeckCardIndex ?? 0] = normalizeAbilityValue(
+        abilityToSave.value ?? abilityToSave.cardRank ?? nextValues[editAbilityDeckCardIndex ?? 0] ?? 1
+      );
+      const nextCostByRarity = [...(deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
+      const previousCostSeed = normalizeAbilityCost(existingPrimaryAbility?.cost ?? existingPrimaryAbility?.equipCost ?? 0);
+      const nextCostSeed = normalizeAbilityCost(abilityToSave.cost ?? abilityToSave.equipCost ?? 0);
+      const targetCardIndex = editAbilityDeckCardIndex ?? 0;
+      const currentCosts = normalizeCostByRarityEntry(nextCostByRarity[targetCardIndex], previousCostSeed);
+      if (currentCosts[abilityToSave.rarity ?? 'common'] === previousCostSeed || !existingPrimaryAbility) {
+        currentCosts[abilityToSave.rarity ?? 'common'] = nextCostSeed;
+      }
+      nextCostByRarity[targetCardIndex] = normalizeCostByRarityEntry(currentCosts, currentCosts.common ?? nextCostSeed);
+      updatedDeck = {
+        ...deck,
+        starterOrim: nextStarterOrim,
+        playableTurns: nextPlayableTurns,
+        enabledRarities: nextEnabledRarities,
+        values: nextValues,
+        costByRarity: nextCostByRarity,
+      };
+    } else {
+      updatedDeck = assignAbilityToNextSlot(deck, abilityToSave.id ?? scopedAbilityId);
+    }
+    const nextDeckTemplates = { ...deckTemplates, [selected.id]: updatedDeck };
+    commitDeckTemplates(nextDeckTemplates);
+    await persistDeckTemplatesToDisk(nextDeckTemplates);
+    if (closeAfterSave) {
+      setEditAbility({
+        id: '',
+        label: '',
+        description: '',
+        abilityType: 'ability',
+        element: 'N',
+        rarity: 'common',
+        cost: 0,
+        value: 1,
+        effects: [],
+        effectsByRarity: { common: [] },
+        triggers: [],
+        lifecycle: { ...DEFAULT_ABILITY_LIFECYCLE },
+      });
+      setEditAbilityDeckCardIndex(null);
+      setEditAbilityTurn('player');
+      setShowNewAbilityForm(false);
+    }
+    return nextDeckTemplates;
+  }, [abilities, commitAbilities, commitDeckTemplates, deckTemplates, editAbility, editAbilityDeckCardIndex, editAbilityTurn, persistDeckTemplatesToDisk, selected, selectedDeck]);
+
   const writeToDisk = useCallback(async () => {
     try {
+      let effectiveDeckTemplates = deckTemplates;
+      if (showNewAbilityForm && selected && activeTab === 'deck' && (editAbility.label ?? '').trim()) {
+        const savedDeckTemplates = await saveEditedAbility({ closeAfterSave: false });
+        if (savedDeckTemplates) {
+          effectiveDeckTemplates = savedDeckTemplates;
+        }
+      }
       const actorsPath = '/src/engine/actors.ts?raw';
       const decksPath = '/src/engine/actorDecks.ts?raw';
       const actorsResponse = await fetch(actorsPath);
@@ -1382,7 +1600,7 @@ export function ActorEditor({
       const actorsText = unwrapRawModule(await actorsResponse.text());
       const decksText = unwrapRawModule(await decksResponse.text());
       const actorReplacement = serializeActorDefinitions(definitions);
-      const deckReplacement = serializeDeckTemplates(deckTemplates);
+      const deckReplacement = serializeDeckTemplates(effectiveDeckTemplates);
       const updatedActors = replaceSection(actorsText, '// ACTOR_DEFINITIONS_START', '// ACTOR_DEFINITIONS_END', actorReplacement);
       const updatedDecks = replaceSection(decksText, '// ACTOR_DECK_TEMPLATES_START', '// ACTOR_DECK_TEMPLATES_END', deckReplacement);
       if (!updatedActors) {
@@ -1395,11 +1613,11 @@ export function ActorEditor({
       }
       await writeFileToDisk('src/engine/actors.ts', updatedActors);
       await writeFileToDisk('src/engine/actorDecks.ts', updatedDecks);
-      setSaveStatus(`Saved ${definitions.length} actors and ${Object.keys(deckTemplates).length} decks.`);
+      setSaveStatus(`Saved ${definitions.length} actors and ${Object.keys(effectiveDeckTemplates).length} decks.`);
     } catch (error) {
       setSaveStatus('Save failed. Ensure the dev server write hook is available.');
     }
-  }, [definitions, deckTemplates, unwrapRawModule]);
+  }, [activeTab, deckTemplates, definitions, editAbility.label, saveEditedAbility, selected, showNewAbilityForm, unwrapRawModule]);
 
   const handleApplyLive = useCallback(() => {
     if (!onApplyLive) return;
@@ -1439,6 +1657,37 @@ export function ActorEditor({
           >
             Apply Live
           </button>
+        )}
+        {selected && activeTab === 'deck' && (
+          <>
+            {showNewAbilityForm && editAbilityDeckCardIndex != null && editAbilityDeckCardIndex >= 0 && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteCardConfirm(true)}
+                className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-pink/45 px-3 py-1 rounded cursor-pointer text-game-pink/85 hover:border-game-pink hover:text-game-pink"
+              >
+                Delete Card
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setShowNewAbilityForm((prev) => {
+                  const next = !prev;
+                  if (next) {
+                    setEditAbilityDeckCardIndex(null);
+                    setEditAbilityTurn('player');
+                  } else {
+                    setShowDeleteCardConfirm(false);
+                  }
+                  return next;
+                });
+              }}
+              className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded cursor-pointer text-game-teal"
+            >
+              {showNewAbilityForm ? 'Close Card' : '+ New Card'}
+            </button>
+          </>
         )}
         <button
           type="button"
@@ -1993,23 +2242,6 @@ export function ActorEditor({
                   );
                   return (
                     <div className="flex flex-col gap-3 text-xs font-mono">
-                      <div className="flex items-center justify-between border border-game-teal/25 rounded px-2 py-2 bg-game-bg-dark/60">
-                        <div className="text-[11px] text-game-white/70 font-semibold">Edit Card</div>
-                        <button
-                          type="button"
-                          onClick={() => setShowNewAbilityForm((prev) => {
-                            const next = !prev;
-                            if (next) {
-                              setEditAbilityDeckCardIndex(null);
-                              setEditAbilityTurn('player');
-                            }
-                            return next;
-                          })}
-                          className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-teal"
-                        >
-                          {showNewAbilityForm ? 'Close' : '+ New'}
-                        </button>
-                      </div>
                       {showNewAbilityForm && (
                         <div className="grid gap-2 border border-game-teal/25 rounded px-3 py-2 bg-game-bg-dark/70">
                           <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
@@ -2734,93 +2966,12 @@ export function ActorEditor({
                               type="button"
                               className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-3 py-1 rounded cursor-pointer text-game-teal"
                               onClick={async () => {
-                                const generatedId = normalizeId(editAbility.label ?? '');
-                                if (!generatedId) return;
-                                const hasForeignCollision = abilities.some((entry) => (
-                                  entry.id === generatedId
-                                  && entry.parentActorId
-                                  && entry.parentActorId !== selected.id
-                                ));
-                                const scopedAbilityId = hasForeignCollision
-                                  ? `${generatedId}_${selected.id}`
-                                  : generatedId;
-                                const abilityToSave = hydrateAbility({
-                                  ...editAbility,
-                                  id: scopedAbilityId,
-                                  parentActorId: selected.id,
-                                });
-                                const next = abilities.some((a) => a.id === abilityToSave.id)
-                                  ? abilities.map((a) => (a.id === abilityToSave.id ? abilityToSave : a))
-                                  : [...abilities, abilityToSave];
-                                await commitAbilities(next);
-                                const assignAbilityToNextSlot = (currentDeck: DeckTemplate, abilityId: string): DeckTemplate => {
-                                  const abilityDefaultValue = normalizeAbilityValue(abilityToSave.value ?? abilityToSave.cardRank ?? 1);
-                                  const abilityDefaultCost = normalizeAbilityCost(abilityToSave.cost ?? abilityToSave.equipCost ?? 0);
-                                  const values = [...(currentDeck.values ?? [])];
-                                  const costByRarity = [...(currentDeck.costByRarity ?? values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
-                                  const enabledRarities: OrimRarity[] = [...(currentDeck.enabledRarities ?? values.map(() => 'common' as OrimRarity))];
-                                  const activeCards = [...(currentDeck.activeCards ?? values.map(() => true))];
-                                  const notDiscardedCards = [...(currentDeck.notDiscardedCards ?? values.map(() => false))];
-                                  const playableTurns = [...(currentDeck.playableTurns ?? createDefaultPlayableTurns(values.length))];
-                                  const cooldowns = [...(currentDeck.cooldowns ?? values.map(() => 0))];
-                                  const slotsPerCard = [...(currentDeck.slotsPerCard ?? values.map(() => 1))];
-                                  const starterOrim = [...(currentDeck.starterOrim ?? [])];
-                                  if (values.length === 0) {
-                                    values.push(abilityDefaultValue);
-                                    costByRarity.push(normalizeCostByRarityEntry(undefined, abilityDefaultCost));
-                                    enabledRarities.push('common');
-                                    activeCards.push(true);
-                                    notDiscardedCards.push(false);
-                                    playableTurns.push(editAbilityTurn);
-                                    cooldowns.push(0);
-                                    slotsPerCard.push(1);
-                                    starterOrim.push({ cardIndex: 0, slotIndex: 0, orimId: abilityId });
-                                    return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
-                                  }
-                                  for (let cardIndex = 0; cardIndex < values.length; cardIndex += 1) {
-                                    const slotCount = Math.max(1, slotsPerCard[cardIndex] ?? 1);
-                                    const occupied = new Set(
-                                      starterOrim
-                                        .filter((entry) => entry.cardIndex === cardIndex)
-                                        .map((entry) => entry.slotIndex ?? 0)
-                                    );
-                                    for (let slotIndex = 0; slotIndex < slotCount; slotIndex += 1) {
-                                          if (occupied.has(slotIndex)) continue;
-                                          if (slotIndex === 0) {
-                                            values[cardIndex] = abilityDefaultValue;
-                                            costByRarity[cardIndex] = normalizeCostByRarityEntry(costByRarity[cardIndex], abilityDefaultCost);
-                                            playableTurns[cardIndex] = editAbilityTurn;
-                                          }
-                                          starterOrim.push({ cardIndex, slotIndex, orimId: abilityId });
-                                      return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard, starterOrim };
-                                    }
-                                  }
-                                  const lastCardIndex = values.length - 1;
-                                  const expandedSlotsPerCard = [...slotsPerCard];
-                                  const newSlotIndex = Math.max(1, expandedSlotsPerCard[lastCardIndex] ?? 1);
-                                  expandedSlotsPerCard[lastCardIndex] = newSlotIndex + 1;
-                                  starterOrim.push({ cardIndex: lastCardIndex, slotIndex: newSlotIndex, orimId: abilityId });
-                                  return { ...currentDeck, values, costByRarity, enabledRarities, activeCards, notDiscardedCards, playableTurns, cooldowns, slotsPerCard: expandedSlotsPerCard, starterOrim };
-                                };
-                                const updatedDeck = assignAbilityToNextSlot(deck, abilityToSave.id ?? scopedAbilityId);
-                                commitDeckTemplates({ ...deckTemplates, [selected.id]: updatedDeck });
-                                setEditAbility({
-                                  id: '',
-                                  label: '',
-                                  description: '',
-                                  abilityType: 'ability',
-                                  element: 'N',
-                                  rarity: 'common',
-                                  cost: 0,
-                                  value: 1,
-                                  effects: [],
-                                  effectsByRarity: { common: [] },
-                                  triggers: [],
-                                  lifecycle: { ...DEFAULT_ABILITY_LIFECYCLE },
-                                });
-                                setEditAbilityDeckCardIndex(null);
-                                setEditAbilityTurn('player');
-                                setShowNewAbilityForm(false);
+                                try {
+                                  await saveEditedAbility({ closeAfterSave: true });
+                                } catch {
+                                  setSaveStatus('Failed to save card.');
+                                  setTimeout(() => setSaveStatus(null), 2000);
+                                }
                               }}
                             >
                               Save Card
@@ -2829,43 +2980,7 @@ export function ActorEditor({
                           </div>
                         </div>
                       )}
-                      <div className="flex items-center justify-between">
-                        <div className="text-[10px] text-game-white/50">
-                          {deck.values.length === 0 ? 'No deck defined.' : `Cards: ${deck.values.length}`}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextValues = [...deck.values, 1];
-                            const nextCostByRarity = [...(deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0))), normalizeCostByRarityEntry(undefined, 0)];
-                            const nextEnabledRarities: OrimRarity[] = [...(deck.enabledRarities ?? deck.values.map(() => 'common' as OrimRarity)), 'common'];
-                            const nextActiveCards = [...(deck.activeCards ?? deck.values.map(() => true)), true];
-                            const nextNotDiscardedCards = [...(deck.notDiscardedCards ?? deck.values.map(() => false)), false];
-                            const nextPlayableTurns: TurnPlayability[] = [
-                              ...(deck.playableTurns ?? createDefaultPlayableTurns(deck.values.length)),
-                              'player',
-                            ];
-                            const nextCooldowns = [...(deck.cooldowns ?? deck.values.map(() => 0)), 0];
-                            const nextSlots = [...(deck.slotsPerCard ?? deck.values.map(() => 1)), 1];
-                            const next = {
-                              ...deck,
-                              values: nextValues,
-                              costByRarity: nextCostByRarity,
-                              enabledRarities: nextEnabledRarities,
-                              activeCards: nextActiveCards,
-                              notDiscardedCards: nextNotDiscardedCards,
-                              playableTurns: nextPlayableTurns,
-                              cooldowns: nextCooldowns,
-                              slotsPerCard: nextSlots,
-                            };
-                            commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                          }}
-                          className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-teal"
-                        >
-                          + Add Card
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
+                      <div className="grid grid-cols-1 gap-2 xl:grid-cols-3 items-start">
                         {deck.values.map((value, index) => {
                           const starterSlots = deck.starterOrim?.filter((entry) => entry.cardIndex === index) ?? [];
                           const slotLocks = deck.slotLocks?.filter((entry) => entry.cardIndex === index) ?? [];
@@ -2905,8 +3020,15 @@ export function ActorEditor({
                           };
                           const handleEditPrimary = () => {
                             if (!primaryAbility) return;
+                            const hydrated = hydrateAbility(primaryAbility);
+                            const activeRarity = (deck.enabledRarities?.[index] ?? hydrated.rarity ?? 'common') as OrimRarity;
+                            const effectsByRarity = buildEffectsByRarityLoadouts(hydrated, activeRarity);
+                            const tapEffectsByRarity = buildTapEffectsByRarityLoadouts(hydrated, activeRarity);
                             setEditAbility({
-                              ...hydrateAbility(primaryAbility),
+                              ...hydrated,
+                              rarity: activeRarity,
+                              effects: (effectsByRarity[activeRarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
+                              tapEffects: (tapEffectsByRarity[activeRarity] ?? []).map((fx) => cloneAbilityEffect(fx)),
                               parentActorId: primaryAbility.parentActorId ?? selected.id,
                             });
                             setEditAbilityDeckCardIndex(index);
@@ -2914,275 +3036,218 @@ export function ActorEditor({
                             setShowNewAbilityForm(true);
                           };
                           const handleRemoveCard = () => {
-                            const nextValues = deck.values.filter((_, cardIndex) => cardIndex !== index);
-                            const nextCostByRarity = (deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))
-                              .filter((_, cardIndex) => cardIndex !== index);
-                            const nextEnabledRarities: OrimRarity[] = (deck.enabledRarities ?? deck.values.map(() => 'common' as OrimRarity))
-                              .filter((_, cardIndex) => cardIndex !== index);
-                            const nextActiveCards = (deck.activeCards ?? deck.values.map(() => true))
-                              .filter((_, cardIndex) => cardIndex !== index);
-                            const nextNotDiscardedCards = (deck.notDiscardedCards ?? deck.values.map(() => false))
-                              .filter((_, cardIndex) => cardIndex !== index);
-                            const nextPlayableTurns = (deck.playableTurns ?? createDefaultPlayableTurns(deck.values.length))
-                              .filter((_, cardIndex) => cardIndex !== index);
-                            const nextCooldowns = (deck.cooldowns ?? deck.values.map(() => 0))
-                              .filter((_, cardIndex) => cardIndex !== index);
-                            const nextSlotsPerCard = (deck.slotsPerCard ?? deck.values.map(() => 1))
-                              .filter((_, cardIndex) => cardIndex !== index);
-                            const nextStarterOrim = (deck.starterOrim ?? [])
-                              .filter((entry) => entry.cardIndex !== index)
-                              .map((entry) => (
-                                entry.cardIndex > index
-                                  ? { ...entry, cardIndex: entry.cardIndex - 1 }
-                                  : entry
-                              ));
-                            const nextSlotLocks = (deck.slotLocks ?? [])
-                              .filter((entry) => entry.cardIndex !== index)
-                              .map((entry) => (
-                                entry.cardIndex > index
-                                  ? { ...entry, cardIndex: entry.cardIndex - 1 }
-                                  : entry
-                              ));
-                            const next = {
-                              ...deck,
-                              values: nextValues,
-                              costByRarity: nextCostByRarity,
-                              enabledRarities: nextEnabledRarities,
-                              activeCards: nextActiveCards,
-                              notDiscardedCards: nextNotDiscardedCards,
-                              playableTurns: nextPlayableTurns,
-                              cooldowns: nextCooldowns,
-                              slotsPerCard: nextSlotsPerCard,
-                              starterOrim: nextStarterOrim,
-                              slotLocks: nextSlotLocks,
-                            };
-                            commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
+                            void removeDeckCardAtIndex(selected.id, deck, index);
                           };
                           return (
-                            <div key={`${selected.id}-card-${index}`} className="border border-game-teal/20 rounded p-2 min-w-0">
-                            <div className="mb-2 flex items-start justify-between gap-2">
-                              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                                <span className="text-[10px] text-game-white/60">Card {index + 1}</span>
-                                <label className="flex items-center gap-1 text-[10px] text-game-white/60">
-                                  <span>Cost</span>
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={cardCostByRarity[enabledRarity] ?? 0}
-                                    onChange={(e) => {
-                                      const nextCostByRarity = [...(deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
-                                      const currentCosts = normalizeCostByRarityEntry(nextCostByRarity[index], 0);
-                                      currentCosts[enabledRarity] = normalizeAbilityCost(e.target.value);
-                                      nextCostByRarity[index] = normalizeCostByRarityEntry(currentCosts, currentCosts.common ?? 0);
-                                      const next = { ...deck, costByRarity: nextCostByRarity };
-                                      commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                    }}
-                                    className="number-input-no-spinner w-12 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-1 py-[2px]"
-                                  />
-                                </label>
-                                <div className="grid min-w-[200px] flex-1 grid-cols-[repeat(6,minmax(0,1fr))] gap-1 border border-game-teal/20 rounded px-2 py-1">
-                                  {ORIM_RARITY_OPTIONS.map((rarity) => (
-                                    <button
-                                      key={`${selected.id}-deck-card-${index}-rarity-${rarity}`}
-                                      type="button"
-                                      title={ORIM_RARITY_TEXT_LABEL[rarity]}
-                                      onClick={() => {
-                                        const nextEnabledRarities: OrimRarity[] = [...(deck.enabledRarities ?? deck.values.map(() => 'common' as OrimRarity))];
-                                        nextEnabledRarities[index] = rarity;
-                                        const next = { ...deck, enabledRarities: nextEnabledRarities };
-                                        commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                      }}
-                                      className={`text-[9px] font-mono rounded border px-1 py-[2px] ${
-                                        enabledRarity === rarity
-                                          ? 'border-game-gold text-game-gold bg-game-gold/10'
-                                          : 'border-game-teal/30 text-game-white/60 hover:border-game-teal/60'
-                                      }`}
-                                    >
-                                      {ORIM_RARITY_SHORT_LABEL[rarity]}
-                                    </button>
-                                  ))}
+                            <div key={`${selected.id}-card-${index}`} className="min-w-0 rounded-lg border border-game-teal/20 bg-black/45 p-2.5 shadow-[0_0_0_1px_rgba(80,255,255,0.05)]">
+                              <div className="mb-2 flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-game-white/55">Card {index + 1}</div>
+                                  <div className="mt-1 text-[9px] font-mono uppercase tracking-[0.16em] text-game-white/35">
+                                    Preview rarity: {ORIM_RARITY_TEXT_LABEL[enabledRarity]}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    title="Edit"
+                                    aria-label="Edit"
+                                    disabled={!primaryAbility}
+                                    onClick={handleEditPrimary}
+                                    className="h-9 w-9 text-[14px] font-mono bg-game-bg-dark/85 border border-game-teal/40 rounded-lg cursor-pointer text-game-teal shadow-[0_0_18px_rgba(80,255,255,0.12)] disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    ✎
+                                  </button>
+                                  <button
+                                    type="button"
+                                    title="Remove"
+                                    aria-label="Remove"
+                                    onClick={handleRemoveCard}
+                                    className="h-9 w-9 text-[14px] font-mono bg-game-bg-dark/85 border border-game-pink/40 rounded-lg cursor-pointer text-game-pink/80 shadow-[0_0_18px_rgba(255,80,180,0.1)] hover:text-game-pink hover:border-game-pink"
+                                  >
+                                    ✕
+                                  </button>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  title="Edit"
-                                  aria-label="Edit"
-                                  disabled={!primaryAbility}
-                                  onClick={handleEditPrimary}
-                                  className="h-6 w-6 text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 rounded cursor-pointer text-game-teal disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                  ✎
-                                </button>
-                                <button
-                                  type="button"
-                                  title="Remove"
-                                  aria-label="Remove"
-                                  onClick={handleRemoveCard}
-                                  className="h-6 w-6 text-[10px] font-mono bg-game-bg-dark/80 border border-game-pink/40 rounded cursor-pointer text-game-pink/80 hover:text-game-pink hover:border-game-pink"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                              <div className="flex items-center gap-2">
-                                <label className="flex items-center gap-2 text-[10px] text-game-white/60">
-                                  <input
-                                    type="checkbox"
-                                    checked={deck.activeCards?.[index] ?? true}
-                                    onChange={(e) => {
-                                      const nextActiveCards = [...(deck.activeCards ?? deck.values.map(() => true))];
-                                      nextActiveCards[index] = e.target.checked;
-                                      const next = { ...deck, activeCards: nextActiveCards };
-                                      commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                    }}
-                                  />
-                                  <span>Active</span>
-                                </label>
-                                <select
-                                  value={primaryStarter?.orimId ?? ''}
-                                  onChange={(e) => {
-                                    const abilityId = e.target.value;
-                                    const nextStarters = (deck.starterOrim ?? []).filter((entry) => (
-                                      !(entry.cardIndex === index && (entry.slotIndex ?? 0) === 0)
-                                    ));
-                                    if (abilityId) {
-                                      nextStarters.push({ cardIndex: index, slotIndex: 0, orimId: abilityId });
-                                    }
-                                    const next: DeckTemplate = { ...deck, starterOrim: nextStarters };
-                                    if (abilityId && !primaryStarter?.orimId) {
-                                      const selectedAbility = actorScopedAbilities.find((ability) => ability.id === abilityId);
-                                      if (selectedAbility) {
-                                        const nextValues = [...deck.values];
-                                        nextValues[index] = normalizeAbilityValue(selectedAbility.value ?? selectedAbility.cardRank ?? nextValues[index] ?? 1);
-                                        const nextCostByRarity = [...(deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
-                                        const seededCost = normalizeAbilityCost(selectedAbility.cost ?? selectedAbility.equipCost ?? 0);
-                                        nextCostByRarity[index] = normalizeCostByRarityEntry(nextCostByRarity[index], seededCost);
-                                        next.values = nextValues;
-                                        next.costByRarity = nextCostByRarity;
-                                      }
-                                    }
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                  }}
-                                  className="flex-1 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                >
-                                  <option value="">None</option>
-                                  {actorScopedAbilities.map((ability) => (
-                                    <option key={ability.id ?? ability.label} value={ability.id ?? ''}>
-                                      {ability.label ?? ability.id}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="rounded border border-game-teal/20 bg-game-bg-dark/60 px-2 py-2">
-                                <div className="flex items-center justify-center">
-                                  <GameCard
-                                    card={previewCard}
-                                    showGraphics={showGraphics}
-                                    size={{ width: 128, height: 184 }}
-                                    disableTilt
-                                    disableHoverLift
-                                    disableHoverGlow
-                                  />
-                                </div>
-                              </div>
-                              {secondarySlotIndexes.map((slotIndex) => {
-                                const starter = starterSlots.find((entry) => (entry.slotIndex ?? 0) === slotIndex);
-                                const isSlotLocked = slotLocks.some((entry) => (entry.slotIndex ?? 0) === slotIndex && entry.locked);
-                                const selectedModifierOrim = starter?.orimId
-                                  ? orimDefinitions.find((orim) => orim.id === starter.orimId) ?? null
-                                  : null;
-                                const legacyModifierId = starter?.orimId && !selectedModifierOrim
-                                  ? starter.orimId
-                                  : null;
-                                return (
-                                  <div key={`${selected.id}-card-${index}-slot-${slotIndex}`} className="flex flex-col gap-1">
-                                    <div className="flex items-center gap-2">
-                                      <label className="flex items-center gap-2 text-[10px] text-game-white/60">
-                                        <input
-                                          type="checkbox"
-                                          checked={isSlotLocked}
-                                          onChange={(e) => {
-                                            const nextLocks = (deck.slotLocks ?? []).filter((entry) => !(
-                                              entry.cardIndex === index && (entry.slotIndex ?? 0) === slotIndex
-                                            ));
-                                            if (e.target.checked) {
-                                              nextLocks.push({ cardIndex: index, slotIndex, locked: true });
-                                            }
-                                            const next = { ...deck, slotLocks: nextLocks };
-                                            commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                          }}
-                                        />
-                                        <span>{`Slot ${slotIndex + 1}`}</span>
-                                      </label>
-                                      <select
-                                        value={starter?.orimId ?? ''}
+                              <div className="grid items-start gap-3 grid-cols-[minmax(0,1fr)_132px]">
+                                <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-game-teal/15 bg-black/35 p-2.5">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <label className="flex items-center gap-2 text-[10px] text-game-white/60">
+                                      <span className="font-mono uppercase tracking-[0.14em] text-game-white/45">Cost</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={cardCostByRarity[enabledRarity] ?? 0}
                                         onChange={(e) => {
-                                          const abilityId = e.target.value;
-                                          const nextStarters = (deck.starterOrim ?? []).filter((entry) => (
-                                            !(entry.cardIndex === index && (entry.slotIndex ?? 0) === slotIndex)
-                                          ));
-                                          if (abilityId) {
-                                            nextStarters.push({ cardIndex: index, slotIndex, orimId: abilityId });
-                                          }
-                                          const next = { ...deck, starterOrim: nextStarters };
+                                          const nextCostByRarity = [...(deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
+                                          const currentCosts = normalizeCostByRarityEntry(nextCostByRarity[index], 0);
+                                          currentCosts[enabledRarity] = normalizeAbilityCost(e.target.value);
+                                          nextCostByRarity[index] = normalizeCostByRarityEntry(currentCosts, currentCosts.common ?? 0);
+                                          const next = { ...deck, costByRarity: nextCostByRarity };
                                           commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
                                         }}
-                                        className="flex-1 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
-                                      >
-                                        <option value="">None</option>
-                                        {legacyModifierId && (
-                                          <option value={legacyModifierId}>
-                                            {`Legacy: ${legacyModifierId}`}
-                                          </option>
-                                        )}
-                                        {orimDefinitions.map((orim) => (
-                                          <option key={orim.id} value={orim.id}>
-                                            {orim.name}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                    {selectedModifierOrim && renderOrimPreview(selectedModifierOrim)}
+                                        className="number-input-no-spinner w-12 text-[12px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded-md px-2 py-1"
+                                      />
+                                    </label>
                                   </div>
-                                );
-                              })}
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const nextSlots = [...(deck.slotsPerCard ?? deck.values.map(() => 1))];
-                                    nextSlots[index] = (nextSlots[index] ?? 1) + 1;
-                                    const next = { ...deck, slotsPerCard: nextSlots };
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                  }}
-                                  className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-teal"
-                                >
-                                  + Orim
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={slotCount <= 1}
-                                  onClick={() => {
-                                    if (slotCount <= 1) return;
-                                    const nextSlots = [...(deck.slotsPerCard ?? deck.values.map(() => 1))];
-                                    nextSlots[index] = Math.max(1, (nextSlots[index] ?? 1) - 1);
-                                    const nextStarters = (deck.starterOrim ?? []).filter((entry) => (
-                                      entry.cardIndex !== index || (entry.slotIndex ?? 0) < nextSlots[index]
-                                    ));
-                                    const nextLocks = (deck.slotLocks ?? []).filter((entry) => (
-                                      entry.cardIndex !== index || (entry.slotIndex ?? 0) < nextSlots[index]
-                                    ));
-                                    const next = { ...deck, slotsPerCard: nextSlots, starterOrim: nextStarters, slotLocks: nextLocks };
-                                    commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
-                                  }}
-                                  className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2 py-1 rounded cursor-pointer text-game-teal disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                  - Orim
-                                </button>
+                                  <div className="flex flex-col items-stretch gap-2">
+                                    <label className="flex items-center gap-2 text-[10px] text-game-white/60">
+                                      <input
+                                        type="checkbox"
+                                        checked={deck.activeCards?.[index] ?? true}
+                                        onChange={(e) => {
+                                          const nextActiveCards = [...(deck.activeCards ?? deck.values.map(() => true))];
+                                          nextActiveCards[index] = e.target.checked;
+                                          const next = { ...deck, activeCards: nextActiveCards };
+                                          commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
+                                        }}
+                                      />
+                                      <span className="font-mono text-[10px]">Active</span>
+                                    </label>
+                                    <select
+                                      value={primaryStarter?.orimId ?? ''}
+                                      onChange={(e) => {
+                                        const abilityId = e.target.value;
+                                        const nextStarters = (deck.starterOrim ?? []).filter((entry) => (
+                                          !(entry.cardIndex === index && (entry.slotIndex ?? 0) === 0)
+                                        ));
+                                        if (abilityId) {
+                                          nextStarters.push({ cardIndex: index, slotIndex: 0, orimId: abilityId });
+                                        }
+                                        const next: DeckTemplate = { ...deck, starterOrim: nextStarters };
+                                        if (abilityId && !primaryStarter?.orimId) {
+                                          const selectedAbility = actorScopedAbilities.find((ability) => ability.id === abilityId);
+                                          if (selectedAbility) {
+                                            const nextValues = [...deck.values];
+                                            nextValues[index] = normalizeAbilityValue(selectedAbility.value ?? selectedAbility.cardRank ?? nextValues[index] ?? 1);
+                                            const nextCostByRarity = [...(deck.costByRarity ?? deck.values.map(() => normalizeCostByRarityEntry(undefined, 0)))];
+                                            const seededCost = normalizeAbilityCost(selectedAbility.cost ?? selectedAbility.equipCost ?? 0);
+                                            nextCostByRarity[index] = normalizeCostByRarityEntry(nextCostByRarity[index], seededCost);
+                                            next.values = nextValues;
+                                            next.costByRarity = nextCostByRarity;
+                                          }
+                                        }
+                                        commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
+                                      }}
+                                      className="w-full min-w-0 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded-md px-2 py-2"
+                                    >
+                                      <option value="">None</option>
+                                      {actorScopedAbilities.map((ability) => (
+                                        <option key={ability.id ?? ability.label} value={ability.id ?? ''}>
+                                          {ability.label ?? ability.id}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  {secondarySlotIndexes.map((slotIndex) => {
+                                    const starter = starterSlots.find((entry) => (entry.slotIndex ?? 0) === slotIndex);
+                                    const isSlotLocked = slotLocks.some((entry) => (entry.slotIndex ?? 0) === slotIndex && entry.locked);
+                                    const selectedModifierOrim = starter?.orimId
+                                      ? orimDefinitions.find((orim) => orim.id === starter.orimId) ?? null
+                                      : null;
+                                    const legacyModifierId = starter?.orimId && !selectedModifierOrim
+                                      ? starter.orimId
+                                      : null;
+                                    return (
+                                      <div key={`${selected.id}-card-${index}-slot-${slotIndex}`} className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
+                                          <label className="flex items-center gap-2 text-[10px] text-game-white/60">
+                                            <input
+                                              type="checkbox"
+                                              checked={isSlotLocked}
+                                              onChange={(e) => {
+                                                const nextLocks = (deck.slotLocks ?? []).filter((entry) => !(
+                                                  entry.cardIndex === index && (entry.slotIndex ?? 0) === slotIndex
+                                                ));
+                                                if (e.target.checked) {
+                                                  nextLocks.push({ cardIndex: index, slotIndex, locked: true });
+                                                }
+                                                const next = { ...deck, slotLocks: nextLocks };
+                                                commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
+                                              }}
+                                            />
+                                            <span>{`Slot ${slotIndex + 1}`}</span>
+                                          </label>
+                                          <select
+                                            value={starter?.orimId ?? ''}
+                                            onChange={(e) => {
+                                              const abilityId = e.target.value;
+                                              const nextStarters = (deck.starterOrim ?? []).filter((entry) => (
+                                                !(entry.cardIndex === index && (entry.slotIndex ?? 0) === slotIndex)
+                                              ));
+                                              if (abilityId) {
+                                                nextStarters.push({ cardIndex: index, slotIndex, orimId: abilityId });
+                                              }
+                                              const next = { ...deck, starterOrim: nextStarters };
+                                              commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
+                                            }}
+                                            className="flex-1 text-[10px] font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
+                                          >
+                                            <option value="">None</option>
+                                            {legacyModifierId && (
+                                              <option value={legacyModifierId}>
+                                                {`Legacy: ${legacyModifierId}`}
+                                              </option>
+                                            )}
+                                            {orimDefinitions.map((orim) => (
+                                              <option key={orim.id} value={orim.id}>
+                                                {orim.name}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                        {selectedModifierOrim && renderOrimPreview(selectedModifierOrim)}
+                                      </div>
+                                    );
+                                  })}
+                                  <div className="flex items-center gap-2 pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const nextSlots = [...(deck.slotsPerCard ?? deck.values.map(() => 1))];
+                                        nextSlots[index] = (nextSlots[index] ?? 1) + 1;
+                                        const next = { ...deck, slotsPerCard: nextSlots };
+                                        commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
+                                      }}
+                                      className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2.5 py-1.5 rounded-md cursor-pointer text-game-teal"
+                                    >
+                                      + Orim
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={slotCount <= 1}
+                                      onClick={() => {
+                                        if (slotCount <= 1) return;
+                                        const nextSlots = [...(deck.slotsPerCard ?? deck.values.map(() => 1))];
+                                        nextSlots[index] = Math.max(1, (nextSlots[index] ?? 1) - 1);
+                                        const nextStarters = (deck.starterOrim ?? []).filter((entry) => (
+                                          entry.cardIndex !== index || (entry.slotIndex ?? 0) < nextSlots[index]
+                                        ));
+                                        const nextLocks = (deck.slotLocks ?? []).filter((entry) => (
+                                          entry.cardIndex !== index || (entry.slotIndex ?? 0) < nextSlots[index]
+                                        ));
+                                        const next = { ...deck, slotsPerCard: nextSlots, starterOrim: nextStarters, slotLocks: nextLocks };
+                                        commitDeckTemplates({ ...deckTemplates, [selected.id]: next });
+                                      }}
+                                      className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/40 px-2.5 py-1.5 rounded-md cursor-pointer text-game-teal disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      - Orim
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="rounded-[18px] border border-game-teal/15 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.14),rgba(0,0,0,0)_38%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.08))] px-2 py-3 shadow-[0_0_28px_rgba(255,255,255,0.1)]">
+                                  <div className="flex items-center justify-center">
+                                    <GameCard
+                                      card={previewCard}
+                                      showGraphics={showGraphics}
+                                      size={{ width: 112, height: 162 }}
+                                      disableTilt
+                                      disableHoverLift
+                                      disableHoverGlow
+                                    />
+                                  </div>
+                                </div>
                               </div>
-                            </div>
                             </div>
                           );
                         })}
@@ -3199,6 +3264,49 @@ export function ActorEditor({
           )}
         </div>
       </div>
+      {showDeleteCardConfirm && selected && selectedDeck && editAbilityDeckCardIndex != null && editAbilityDeckCardIndex >= 0 && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/65 backdrop-blur-[2px]">
+          <div className="w-full max-w-md rounded-lg border border-game-pink/35 bg-game-bg-dark px-5 py-4 shadow-[0_18px_48px_rgba(0,0,0,0.55)]">
+            <div className="text-[12px] font-mono uppercase tracking-[0.18em] text-game-pink/85">Delete Card</div>
+            <div className="mt-3 text-sm text-game-white/85">
+              Delete this card from the current deck?
+            </div>
+            <div className="mt-2 text-[11px] text-game-white/50">
+              This removes the deck card and its slot assignments. The underlying ability definition is kept.
+            </div>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteCardConfirm(false)}
+                className="text-[10px] font-mono bg-game-bg-dark/80 border border-game-teal/35 px-3 py-1.5 rounded cursor-pointer text-game-white/75"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await removeDeckCardAtIndex(selected.id, selectedDeck, editAbilityDeckCardIndex);
+                    setShowDeleteCardConfirm(false);
+                    setShowNewAbilityForm(false);
+                    setEditAbilityDeckCardIndex(null);
+                    setEditAbilityTurn('player');
+                    setSaveStatus('Deleted card.');
+                    setTimeout(() => setSaveStatus(null), 1500);
+                  } catch {
+                    setShowDeleteCardConfirm(false);
+                    setSaveStatus('Failed to delete card.');
+                    setTimeout(() => setSaveStatus(null), 2000);
+                  }
+                }}
+                className="text-[10px] font-mono bg-game-pink/10 border border-game-pink/50 px-3 py-1.5 rounded cursor-pointer text-game-pink hover:border-game-pink"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

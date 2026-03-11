@@ -18,6 +18,7 @@ import { generateRandomCombatCard } from '../engine/combat/backfill';
 import { getMoveAvailability, getValidFoundationsForCard } from '../engine/combat/moveAvailability';
 import { createActorDeckStateWithOrim } from '../engine/actorDecks';
 import type { CombatSandboxActionsContract } from '../components/combat/contracts';
+import { WILD_SENTINEL_RANK } from '../engine/constants';
 
 const PLAYER_ACTOR_IDS: Array<'felis' | 'ursus' | 'lupus'> = ['felis', 'ursus', 'lupus'];
 const TABLEAU_COUNT = 7;
@@ -35,7 +36,10 @@ function createCombatLabState(): GameState {
   const playerActors: Actor[] = PLAYER_ACTOR_IDS
     .map((id) => createActor(id))
     .filter((actor): actor is Actor => !!actor);
-  const foundations: Card[][] = playerActors.map((actor) => [createActorFoundationCard(actor)]);
+  const foundations: Card[][] = playerActors.map((actor) => {
+    const foundationCard = createActorFoundationCard(actor);
+    return [{ ...foundationCard, rank: WILD_SENTINEL_RANK }];
+  });
   const initialEnemy = createActor(DEFAULT_ENEMY_DEFINITION_ID);
   const enemyFoundations = createEmptyEnemyFoundations();
   const enemyActors: Actor[] = [];
@@ -163,7 +167,7 @@ export function useCombatLabEngine() {
       }
       return {
         ...prev,
-        enemyActors: nextActors.filter((actor) => !!actor),
+        enemyActors: nextActors,
         enemyFoundations: nextFoundations,
       };
     }),
@@ -196,17 +200,50 @@ export function useCombatLabEngine() {
       if (!useWild && !canPlayCardWithWild(card, top, gameState.activeEffects)) return false;
       const hand = gameState.rpgHandCards ?? [];
       const idx = hand.findIndex((entry) => entry.id === card.id);
-      if (idx < 0) return false;
-      const nextHand = [...hand];
-      nextHand.splice(idx, 1);
-      const nextFoundations = gameState.foundations.map((stack, i) => (
-        i === foundationIndex ? [...stack, card] : stack
-      ));
-      setGameState((prev) => ({
-        ...prev,
-        foundations: nextFoundations,
-        rpgHandCards: nextHand,
-      }));
+      const actorId = card.sourceActorId;
+      const deckCardId = card.sourceDeckCardId;
+      const sourceDeck = actorId ? gameState.actorDecks[actorId] : undefined;
+      const sourceDeckIndex = sourceDeck && deckCardId
+        ? sourceDeck.cards.findIndex((entry) => entry.id === deckCardId)
+        : -1;
+      if (idx < 0 && sourceDeckIndex < 0) return false;
+      setGameState((prev) => {
+        const nextHand = [...(prev.rpgHandCards ?? [])];
+        const runtimeHandIndex = nextHand.findIndex((entry) => entry.id === card.id);
+        if (runtimeHandIndex >= 0) {
+          nextHand.splice(runtimeHandIndex, 1);
+        }
+        const nextFoundations = prev.foundations.map((stack, i) => (
+          i === foundationIndex ? [...stack, card] : stack
+        ));
+        let nextActorDecks = prev.actorDecks;
+        if (actorId && deckCardId) {
+          const prevDeck = prev.actorDecks[actorId];
+          const prevDeckIndex = prevDeck?.cards.findIndex((entry) => entry.id === deckCardId) ?? -1;
+          if (prevDeck && prevDeckIndex >= 0) {
+            const nextCards = [...prevDeck.cards];
+            nextCards[prevDeckIndex] = {
+              ...nextCards[prevDeckIndex],
+              discarded: true,
+              discardedAtMs: Date.now(),
+              discardedAtCombo: Math.max(0, Number(prev.actorCombos?.[actorId] ?? 0)),
+            };
+            nextActorDecks = {
+              ...prev.actorDecks,
+              [actorId]: {
+                ...prevDeck,
+                cards: nextCards,
+              },
+            };
+          }
+        }
+        return {
+          ...prev,
+          foundations: nextFoundations,
+          rpgHandCards: nextHand,
+          actorDecks: nextActorDecks,
+        };
+      });
       return true;
     },
     playFromHandToEnemyFoundation: () => false,

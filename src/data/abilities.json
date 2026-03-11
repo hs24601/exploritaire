@@ -7,6 +7,8 @@
       "abilityType": "ability",
       "element": "N",
       "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "damage",
@@ -27,24 +29,58 @@
           "drawElement": "N"
         }
       ],
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
       "parentActorId": "lupus",
-      "triggers": []
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "goFish",
       "label": "Go Fish",
       "description": "Chance to catch a fish (+1 Supply) any time a water element is collected.",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "W"
-      ],
-      "rarity": "common",
       "abilityType": "exploration",
-      "tags": [],
+      "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [],
-      "equipCost": 0,
-      "triggers": []
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "tags": [],
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "ironfur",
@@ -53,6 +89,8 @@
       "abilityType": "ability",
       "element": "N",
       "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "defense",
@@ -74,6 +112,16 @@
           "drawElement": "N"
         }
       ],
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
       "canTap": true,
       "tapEffects": [
         {
@@ -83,14 +131,6 @@
           "charges": 3,
           "deadRunOnly": false,
           "element": "N",
-          "valueByRarity": {
-            "common": 2,
-            "uncommon": 3,
-            "rare": 4,
-            "epic": 5,
-            "legendary": 6,
-            "mythic": 8
-          },
           "drawWild": false,
           "drawElement": "N"
         }
@@ -104,14 +144,18 @@
             "charges": 3,
             "deadRunOnly": false,
             "element": "N",
-            "valueByRarity": {
-              "common": 2,
-              "uncommon": 3,
-              "rare": 4,
-              "epic": 5,
-              "legendary": 6,
-              "mythic": 8
-            },
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "uncommon": [
+          {
+            "type": "armor",
+            "value": 2,
+            "target": "self",
+            "charges": 3,
+            "deadRunOnly": false,
+            "element": "N",
             "drawWild": false,
             "drawElement": "N"
           }
@@ -124,33 +168,56 @@
             "charges": 2,
             "deadRunOnly": false,
             "element": "N",
-            "valueByRarity": {
-              "common": 1,
-              "uncommon": 1,
-              "rare": 2,
-              "epic": 3,
-              "legendary": 4,
-              "mythic": 4
-            },
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "epic": [
+          {
+            "type": "super_armor",
+            "value": 2,
+            "target": "self",
+            "charges": 2,
+            "deadRunOnly": false,
+            "element": "N",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "legendary": [
+          {
+            "type": "super_armor",
+            "value": 2,
+            "target": "self",
+            "charges": 2,
+            "deadRunOnly": false,
+            "element": "N",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "mythic": [
+          {
+            "type": "super_armor",
+            "value": 2,
+            "target": "self",
+            "charges": 2,
+            "deadRunOnly": false,
+            "element": "N",
             "drawWild": false,
             "drawElement": "N"
           }
         ]
-      },
-      "triggers": []
+      }
     },
     {
       "id": "swipe",
       "label": "Swipe",
       "description": "Swipe at an enemy, dealing damage",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "N"
-      ],
-      "rarity": "common",
       "abilityType": "combat",
-      "tags": [],
+      "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "damage",
@@ -171,8 +238,27 @@
           "drawElement": "N"
         }
       ],
-      "equipCost": 0,
-      "triggers": []
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "tags": [],
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "claw",
@@ -181,6 +267,8 @@
       "abilityType": "exploration",
       "element": "N",
       "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "damage",
@@ -201,8 +289,27 @@
           "drawElement": "N"
         }
       ],
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
       "parentActorId": "felis",
-      "triggers": []
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "prowl",
@@ -211,6 +318,8 @@
       "abilityType": "ability",
       "element": "N",
       "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "evasion",
@@ -232,21 +341,36 @@
           "drawElement": "N"
         }
       ],
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
       "parentActorId": "felis",
-      "triggers": []
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "wigglebuttAmbush",
       "label": "Wigglebutt Ambush",
       "description": "While in stealth, your next attack deals additional damage",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "N"
-      ],
-      "rarity": "common",
       "abilityType": "exploration",
-      "tags": [],
+      "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "damage",
@@ -267,20 +391,35 @@
           "drawElement": "N"
         }
       ],
-      "equipCost": 0,
-      "triggers": []
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "tags": [],
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "whiskersense",
       "label": "Whiskersense",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "N"
-      ],
-      "rarity": "common",
       "abilityType": "exploration",
-      "tags": [],
+      "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "evasion",
@@ -302,62 +441,170 @@
           "drawElement": "N"
         }
       ],
-      "equipCost": 0,
-      "triggers": []
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "tags": [],
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "zoomies",
       "label": "Zoomies",
-      "description": "",
+      "description": "Increase speed!",
       "abilityType": "ability",
       "element": "N",
       "rarity": "common",
+      "cost": 1,
+      "value": 9,
       "effects": [
         {
           "type": "speed",
-          "value": 2,
+          "value": 5,
           "target": "self",
-          "untilSourceCardPlay": false,
-          "deadRunOnly": false,
           "element": "N",
-          "valueByRarity": {
-            "common": 2,
-            "uncommon": 1,
-            "rare": 1,
-            "epic": 1,
-            "legendary": 1,
-            "mythic": 1
-          },
           "drawWild": false,
           "drawElement": "N"
         }
       ],
-      "parentActorId": "felis",
-      "triggers": []
+      "effectsByRarity": {
+        "common": [
+          {
+            "type": "speed",
+            "value": 5,
+            "target": "self",
+            "element": "N",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "uncommon": [
+          {
+            "type": "speed",
+            "value": 7,
+            "target": "self",
+            "element": "N",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "rare": [
+          {
+            "type": "speed",
+            "value": 9,
+            "target": "self",
+            "element": "N",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "epic": [
+          {
+            "type": "speed",
+            "value": 12,
+            "target": "self",
+            "element": "N",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "legendary": [
+          {
+            "type": "speed",
+            "value": 15,
+            "target": "self",
+            "element": "N",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "mythic": [
+          {
+            "type": "speed",
+            "value": 16,
+            "target": "self",
+            "element": "N",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ]
+      },
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      },
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "parentActorId": "felis"
     },
     {
       "id": "nineLives",
       "label": "Nine Lives",
-      "cardId": "",
-      "cardRank": 1,
-      "cardElements": [
-        "N"
-      ],
-      "rarity": "common",
       "abilityType": "combat",
-      "tags": [],
+      "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [],
-      "equipCost": 0,
-      "triggers": []
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "tags": [],
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "wild_adaptation",
-      "parentActorId": "lupus",
       "label": "Wild Adaptation",
       "description": "",
       "abilityType": "ability",
       "element": "N",
       "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "draw",
@@ -378,7 +625,27 @@
           "drawElement": "N"
         }
       ],
-      "triggers": []
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "parentActorId": "lupus",
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "bearicade",
@@ -387,6 +654,8 @@
       "abilityType": "ability",
       "element": "N",
       "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "armor",
@@ -407,8 +676,27 @@
           "drawElement": "N"
         }
       ],
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
       "parentActorId": "ursus",
-      "triggers": []
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "aurora_bearealis",
@@ -416,7 +704,9 @@
       "description": "Casts super armor on Ursus",
       "abilityType": "ability",
       "element": "L",
-      "rarity": "epic",
+      "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "super_armor",
@@ -425,20 +715,105 @@
           "untilSourceCardPlay": false,
           "deadRunOnly": false,
           "element": "L",
-          "valueByRarity": {
-            "common": 1,
-            "uncommon": 1,
-            "rare": 1,
-            "epic": 1,
-            "legendary": 1,
-            "mythic": 1
-          },
           "drawWild": false,
           "drawElement": "N"
         }
       ],
-      "parentActorId": "ursus",
-      "triggers": []
+      "effectsByRarity": {
+        "common": [
+          {
+            "type": "super_armor",
+            "value": 1,
+            "target": "self",
+            "untilSourceCardPlay": false,
+            "deadRunOnly": false,
+            "element": "L",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "uncommon": [
+          {
+            "type": "super_armor",
+            "value": 1,
+            "target": "self",
+            "untilSourceCardPlay": false,
+            "deadRunOnly": false,
+            "element": "L",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "rare": [
+          {
+            "type": "super_armor",
+            "value": 1,
+            "target": "self",
+            "untilSourceCardPlay": false,
+            "deadRunOnly": false,
+            "element": "L",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "epic": [
+          {
+            "type": "super_armor",
+            "value": 1,
+            "target": "self",
+            "untilSourceCardPlay": false,
+            "deadRunOnly": false,
+            "element": "L",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "legendary": [
+          {
+            "type": "super_armor",
+            "value": 1,
+            "target": "self",
+            "untilSourceCardPlay": false,
+            "deadRunOnly": false,
+            "element": "L",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ],
+        "mythic": [
+          {
+            "type": "super_armor",
+            "value": 1,
+            "target": "self",
+            "untilSourceCardPlay": false,
+            "deadRunOnly": false,
+            "element": "L",
+            "drawWild": false,
+            "drawElement": "N"
+          }
+        ]
+      },
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      },
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "parentActorId": "ursus"
     },
     {
       "id": "spite",
@@ -447,6 +822,8 @@
       "abilityType": "ability",
       "element": "D",
       "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "damage",
@@ -468,8 +845,27 @@
           "drawElement": "N"
         }
       ],
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
       "parentActorId": "shade_of_resentment",
-      "triggers": []
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "resentment",
@@ -478,6 +874,8 @@
       "abilityType": "ability",
       "element": "D",
       "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "armor",
@@ -500,8 +898,27 @@
           "drawElement": "N"
         }
       ],
+      "triggers": [],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
       "parentActorId": "shade_of_resentment",
-      "triggers": []
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "skittish_scurry",
@@ -510,11 +927,8 @@
       "abilityType": "ability",
       "element": "N",
       "rarity": "common",
-      "triggers": [
-        {
-          "type": "noValidMovesPlayer"
-        }
-      ],
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "redeal_tableau",
@@ -535,7 +949,31 @@
           "drawElement": "N"
         }
       ],
-      "parentActorId": "felis"
+      "triggers": [
+        {
+          "type": "noValidMovesPlayer"
+        }
+      ],
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "parentActorId": "felis",
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     },
     {
       "id": "cheap_shot",
@@ -544,6 +982,8 @@
       "abilityType": "ability",
       "element": "N",
       "rarity": "common",
+      "cost": 0,
+      "value": 1,
       "effects": [
         {
           "type": "damage",
@@ -568,10 +1008,30 @@
         {
           "type": "combo_personal",
           "target": "self",
-          "value": 5
+          "value": 5,
+          "operator": ">="
         }
       ],
-      "parentActorId": "felis"
+      "lifecycle": {
+        "discardPolicy": "discard",
+        "exhaustScope": "none",
+        "maxUsesPerScope": 1,
+        "cooldownMode": "none",
+        "cooldownValue": 0,
+        "cooldownStartsOn": "use",
+        "cooldownResetsOn": "turn_start"
+      },
+      "parentActorId": "felis",
+      "canTap": false,
+      "tapEffects": [],
+      "tapEffectsByRarity": {
+        "common": [],
+        "uncommon": [],
+        "rare": [],
+        "epic": [],
+        "legendary": [],
+        "mythic": []
+      }
     }
   ]
 }

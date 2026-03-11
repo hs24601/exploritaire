@@ -1,11 +1,13 @@
 import { memo, useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { AuroraForestAtmosphere } from './atmosphere/AuroraForestAtmosphere';
-import { BlackHoleAtmosphere } from './atmosphere/BlackHoleAtmosphere';
+import { GargantuaAtmosphere } from './atmosphere/GargantuaAtmosphere';
 import { BrownianMotionAtmosphere } from './atmosphere/BrownianMotionAtmosphere';
 import { ChaosSplitAtmosphere } from './atmosphere/ChaosSplitAtmosphere';
+import { CometBarrageAtmosphere } from './atmosphere/CometBarrageAtmosphere';
 import { CometRainAtmosphere, DEFAULT_COMET_RAIN_CONFIG } from './atmosphere/CometRainAtmosphere';
 import { CosmicLintAtmosphere, DEFAULT_COSMIC_LINT_CONFIG } from './atmosphere/CosmicLintAtmosphere';
+import { DoorSandsTimeAtmosphere } from './atmosphere/DoorSandsTimeAtmosphere';
 import { DriftingPurpleAtmosphere } from './atmosphere/DriftingPurpleAtmosphere';
 import { EinsteinRosenAtmosphere } from './atmosphere/EinsteinRosenAtmosphere';
 import { ElectricSkiesAtmosphere, DEFAULT_ELECTRIC_SKIES_CONFIG } from './atmosphere/ElectricSkiesAtmosphere';
@@ -246,16 +248,20 @@ export const Depth3DShiftDemo = memo(function Depth3DShiftDemo({
         return <canvas ref={canvasRef} className="w-full h-full block" />;
       case 'aurora_forest':
         return <AuroraForestAtmosphere />;
-      case 'black_hole':
-        return <BlackHoleAtmosphere />;
+      case 'gargantua':
+        return <GargantuaAtmosphere />;
       case 'brownian_motion':
         return <BrownianMotionAtmosphere />;
       case 'chaos_split':
         return <ChaosSplitAtmosphere />;
+      case 'comet_barrage':
+        return <CometBarrageAtmosphere />;
       case 'comet_rain':
         return <CometRainAtmosphere config={DEFAULT_COMET_RAIN_CONFIG} />;
       case 'cosmic_lint':
         return <CosmicLintAtmosphere config={DEFAULT_COSMIC_LINT_CONFIG} />;
+      case 'door_sands_time':
+        return <DoorSandsTimeAtmosphere />;
       case 'drifting_purple':
         return <DriftingPurpleAtmosphere />;
       case 'einstein_rosen':
@@ -294,7 +300,18 @@ export const Depth3DShiftDemo = memo(function Depth3DShiftDemo({
   return (
     <div className="depth-3d-shift-container h-full w-full flex items-center justify-center overflow-hidden" style={{ perspective: '1000px', backgroundColor: '#020205' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css?family=Roboto:400,700');
+        @font-face {
+          font-family: 'Roboto Local';
+          src: url('/assets/vis/fonts/roboto-0.ttf') format('truetype');
+          font-display: swap;
+          font-weight: 400;
+        }
+        @font-face {
+          font-family: 'Roboto Local';
+          src: url('/assets/vis/fonts/roboto-1.ttf') format('truetype');
+          font-display: swap;
+          font-weight: 700;
+        }
         .d3s-wrap { position: relative; width: 320px; height: 480px; transform-style: preserve-3d; }
         .d3s-card {
           position: absolute; inset: 0; border-radius: 24px; background: #000; z-index: 1;
@@ -312,12 +329,12 @@ export const Depth3DShiftDemo = memo(function Depth3DShiftDemo({
         .d3s-card-title {
           position: absolute; color: #FFF; font-weight: 700; text-align: left; left: 30px; bottom: 100px;
           font-size: 32px; line-height: 1; text-shadow: 0 4px 20px rgba(0,0,0,0.9); width: 80%; margin: 0;
-          transform-style: preserve-3d; font-family: 'Roboto', sans-serif;
+          transform-style: preserve-3d; font-family: 'Roboto Local', sans-serif;
         }
         .d3s-card-subtitle {
           position: absolute; color: rgba(0,255,255,0.9); font-weight: 400; text-align: left; left: 30px;
           width: 80%; bottom: 65px; font-size: 16px; letter-spacing: 0.2em; text-transform: uppercase;
-          text-shadow: 0 2px 10px rgba(0,0,0,0.9); transform-style: preserve-3d; font-family: 'Roboto', sans-serif;
+          text-shadow: 0 2px 10px rgba(0,0,0,0.9); transform-style: preserve-3d; font-family: 'Roboto Local', sans-serif;
         }
         .d3s-card-shadow {
           position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(0,200,255,0.15) 0%, transparent 70%);

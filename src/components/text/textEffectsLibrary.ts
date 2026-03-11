@@ -9,7 +9,8 @@ export type TextEffectId =
   | 'frost'
   | 'combo_punch'
   | 'petrified'
-  | 'thanos_dismantle';
+  | 'thanos_dismantle'
+  | 'gommage';
 
 export type TextPreset = {
   id: TextEffectId;
@@ -29,4 +30,5 @@ export const TEXT_PRESETS: TextPreset[] = [
   { id: 'combo_punch', label: 'Combo Punch', category: 'text' },
   { id: 'petrified', label: 'Petrified', category: 'text' },
   { id: 'thanos_dismantle', label: 'Thanos Dismantle', category: 'text' },
+  { id: 'gommage', label: 'Gommage', category: 'text' },
 ];

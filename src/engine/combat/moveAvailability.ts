@@ -24,7 +24,6 @@ function buildTableauCanPlayForFoundations(
     const topCard = tableau[tableau.length - 1];
     return foundations.some((foundation, foundationIndex) => {
       if (!canUseFoundation(foundationIndex)) return false;
-      if (!foundation || foundation.length === 0) return false;
       const foundationTop = foundation[foundation.length - 1];
       return canPlayCardWithWild(topCard, foundationTop, activeEffects);
     });

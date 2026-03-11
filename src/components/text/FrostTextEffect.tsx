@@ -35,7 +35,7 @@ export const FrostTextEffect = memo(function FrostTextEffect({
       <style>{`
         @font-face {
           font-family: "Frozen";
-          src: url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/209981/Ice%20kingdom%20-%20Bold%20-%20Por%20Kustren.woff");
+          src: url("/assets/vis/fonts/ice-kingdom.woff");
           font-display: swap;
         }
 
@@ -65,7 +65,7 @@ export const FrostTextEffect = memo(function FrostTextEffect({
           font-size: calc(20vw + 0.5rem);
           line-height: 0.9;
           font-family: "Frozen", serif;
-          background-image: url("https://assets.codepen.io/209981/ice.jpg");
+          background-image: url("/assets/vis/textures/ice.jpg");
           background-size: contain;
           background-repeat: repeat;
           -webkit-background-clip: text;

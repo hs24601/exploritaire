@@ -27,6 +27,8 @@ type Props = {
   config?: OceanSolarCycleConfig;
 };
 
+const WATER_NORMALS_TEXTURE_URL = '/assets/vis/textures/waternormals.jpg';
+
 export const OceanSolarCycleAtmosphere = memo(function OceanSolarCycleAtmosphere({ 
   className, 
   config = DEFAULT_OCEAN_SOLAR_CYCLE_CONFIG 
@@ -70,7 +72,7 @@ export const OceanSolarCycleAtmosphere = memo(function OceanSolarCycleAtmosphere
       {
         textureWidth: 512,
         textureHeight: 512,
-        waterNormals: new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/waternormals.jpg', function (texture) {
+        waterNormals: new THREE.TextureLoader().load(WATER_NORMALS_TEXTURE_URL, function (texture) {
           texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
         }),
         sunDirection: new THREE.Vector3(),

@@ -1,5 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
-import { gsap } from 'gsap';
+import { memo, useMemo } from 'react';
 
 export type FloatAwayTextConfig = {
   text: string;
@@ -13,11 +12,11 @@ export type FloatAwayTextConfig = {
 };
 
 export const DEFAULT_FLOAT_AWAY_TEXT_CONFIG: FloatAwayTextConfig = {
-  text: "Floating!",
-  fontSize: "80px",
+  text: 'Floating!',
+  fontSize: '80px',
   entranceDuration: 2.5,
   entranceRotation: 90,
-  entranceEase: "elastic.out(1, 0.3)",
+  entranceEase: 'elastic.out(1, 0.3)',
   floatDelay: 1.5,
   minSpeed: 0.5,
   maxSpeed: 2.0,
@@ -27,106 +26,92 @@ type Props = {
   config?: FloatAwayTextConfig;
 };
 
-export const FloatAwayTextEffect = memo(function FloatAwayTextEffect({ 
-  config = DEFAULT_FLOAT_AWAY_TEXT_CONFIG 
+type FloatingChar = {
+  char: string;
+  id: string;
+  driftX: number;
+  driftY: number;
+  rotation: number;
+  delay: number;
+  duration: number;
+};
+
+export const FloatAwayTextEffect = memo(function FloatAwayTextEffect({
+  config = DEFAULT_FLOAT_AWAY_TEXT_CONFIG,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLHeadingElement>(null);
-
-  useEffect(() => {
-    if (!textRef.current || !containerRef.current) return;
-
-    const chars = textRef.current.querySelectorAll('.char');
-    if (!chars.length) return;
-    const bounds = containerRef.current.getBoundingClientRect();
-    const vw = bounds.width || window.innerWidth;
-    const vh = bounds.height || window.innerHeight;
-
-    gsap.killTweensOf(chars);
-    gsap.set(chars, { x: 0, y: 0, rotation: 0, opacity: 1, scale: 1 });
-
-    // 1. Entrance Animation (Runs Once)
-    const entranceTl = gsap.timeline();
-    entranceTl.from(chars, {
-      duration: config.entranceDuration,
-      y: 100,
-      rotation: config.entranceRotation,
-      opacity: 0,
-      scale: 0,
-      ease: config.entranceEase,
-      stagger: 0.05,
-      onComplete: () => {
-        // Optional: Do something when they all arrive
-      }
-    });
-
-    // 2. Continuous Floating Loop
-    chars.forEach((char, i) => {
-      const speed = config.minSpeed + Math.random() * (config.maxSpeed - config.minSpeed);
+  const chars = useMemo<FloatingChar[]>(() => {
+    return config.text.split('').map((char, index) => {
+      const speed = config.minSpeed + ((index % 5) / 4) * Math.max(0.01, config.maxSpeed - config.minSpeed);
       const duration = 10 + (1 / speed) * 15;
-      const delay = config.floatDelay + (i * 0.1);
-      const rotations = Math.random() * 2 + 1;
-
-      // Random direction vectors
-      const dirX = Math.random() > 0.5 ? 1 : -1;
-      const dirY = Math.random() > 0.5 ? 1 : -1;
-
-      gsap.to(char, {
-        x: (vw * 0.4 * dirX) + (Math.random() * 100 * dirX),
-        y: (vh * 0.4 * dirY) + (Math.random() * 100 * dirY),
-        rotation: 360 * rotations,
-        opacity: 0,
-        duration: duration,
-        delay: delay,
-        ease: "power1.inOut",
-        repeat: -1,
-        repeatDelay: Math.random() * 2,
-        onRepeat: function() {
-          // Reset to center before next float
-          gsap.set(char, { 
-            x: 0, 
-            y: 0, 
-            rotation: 0, 
-            opacity: 1,
-            scale: 1 
-          });
-        }
-      });
+      const directionX = index % 2 === 0 ? 1 : -1;
+      const directionY = index % 3 === 0 ? -1 : 1;
+      return {
+        char,
+        id: `float-away-${index}-${char}`,
+        driftX: directionX * (220 + index * 24),
+        driftY: directionY * (140 + (index % 4) * 32),
+        rotation: directionX * (360 + index * 55),
+        delay: config.floatDelay + (index * 0.1),
+        duration,
+      };
     });
-
-    return () => {
-      gsap.killTweensOf(chars);
-      entranceTl.kill();
-    };
   }, [config]);
 
   return (
-    <div 
-      ref={containerRef}
-      className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden"
-    >
-      <h1 
-        ref={textRef}
-        className="text-white opacity-100 whitespace-nowrap text-center select-none"
-        style={{ 
+    <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
+      <h1
+        className="m-0 whitespace-nowrap text-center text-white select-none"
+        style={{
           fontFamily: '"Rubik Scribble", "Arial Black", sans-serif',
           fontSize: config.fontSize,
-          perspective: '1000px'
+          perspective: '1000px',
         }}
       >
-        {config.text.split('').map((char, i) => (
-          <span 
-            key={i} 
-            className="char inline-block"
-            style={{ 
-              display: char === ' ' ? 'inline' : 'inline-block',
-              willChange: 'transform, opacity'
+        {chars.map((entry) => (
+          <span
+            key={entry.id}
+            className="inline-block"
+            style={{
+              display: entry.char === ' ' ? 'inline' : 'inline-block',
+              willChange: 'transform, opacity',
+              animationName: 'float-away-char',
+              animationDuration: `${Math.max(config.entranceDuration + entry.duration, 1)}s`,
+              animationDelay: `${entry.delay}s`,
+              animationIterationCount: 'infinite',
+              animationTimingFunction: 'ease-in-out',
+              animationFillMode: 'both',
+              ['--float-away-x' as string]: `${entry.driftX}px`,
+              ['--float-away-y' as string]: `${entry.driftY}px`,
+              ['--float-away-rotate' as string]: `${entry.rotation}deg`,
+              ['--float-away-entrance-rotate' as string]: `${config.entranceRotation}deg`,
             }}
           >
-            {char === ' ' ? '\u00A0' : char}
+            {entry.char === ' ' ? '\u00A0' : entry.char}
           </span>
         ))}
       </h1>
+      <style>
+        {`
+          @keyframes float-away-char {
+            0% {
+              opacity: 0;
+              transform: translate3d(0, 100px, 0) rotate(var(--float-away-entrance-rotate)) scale(0);
+            }
+            14% {
+              opacity: 1;
+              transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+            }
+            36% {
+              opacity: 1;
+              transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+            }
+            100% {
+              opacity: 0;
+              transform: translate3d(var(--float-away-x), var(--float-away-y), 0) rotate(var(--float-away-rotate)) scale(1);
+            }
+          }
+        `}
+      </style>
     </div>
   );
 });

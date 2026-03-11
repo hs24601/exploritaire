@@ -37,7 +37,11 @@ export const ComboPunchTextEffect = memo(function ComboPunchTextEffect({
   return (
     <div className="absolute inset-0 overflow-hidden">
       <style>{`
-        @import url("https://fonts.googleapis.com/css?family=Luckiest+Guy&display=swap");
+        @font-face {
+          font-family: "Luckiest Guy Local";
+          src: url('/assets/vis/fonts/luckiest-guy-0.ttf') format('truetype');
+          font-display: swap;
+        }
 
         .combo-punch-root {
           width: 100%;
@@ -46,7 +50,7 @@ export const ComboPunchTextEffect = memo(function ComboPunchTextEffect({
           align-items: center;
           justify-content: center;
           background: radial-gradient(circle, rgba(255, 252, 0, 1) 0%, rgba(240, 237, 23, 1) 100%);
-          font-family: "Luckiest Guy", cursive;
+          font-family: "Luckiest Guy Local", cursive;
         }
 
         .combo-punch-title {

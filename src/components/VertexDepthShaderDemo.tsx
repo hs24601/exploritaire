@@ -19,7 +19,7 @@ export const DEFAULT_VERTEX_DEPTH_CONFIG: VertexDepthConfig = {
   animationSpeed: 0.03,
   particleSize: 1.0,
   zRange: 400,
-  imageSrc: "https://s3-us-west-2.amazonaws.com/s.cdpn.io/175711/tree_star.jpg",
+  imageSrc: '/assets/vis/textures/tree-star.jpg',
   weightR: 0.2126,
   weightG: 0.7152,
   weightB: 0.0722,

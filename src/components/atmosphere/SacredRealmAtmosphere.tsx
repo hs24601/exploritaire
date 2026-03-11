@@ -4,6 +4,8 @@ type Props = {
   className?: string;
 };
 
+const SACRED_REALM_SKY_TEXTURE_URL = '/assets/vis/textures/sacred-realm-sky.jpg';
+
 const Piece = ({ type }: { type: 'wisdom' | 'courage' | 'power' }) => (
   <div className={`piece ${type}`}>
     <div className="front"></div>
@@ -158,7 +160,7 @@ export const SacredRealmAtmosphere = memo(function SacredRealmAtmosphere({ class
           left: -200vw;
           height: 500vh;
           top: -200vh;
-          background-image: url(https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQkBE16wtv81xuLI1vRsb5XY-IKNR-Y0LcE7yHgGKv7p7JgZtl9r4xpgA6fqSO_S2RHxkw&usqp=CAU);
+          background-image: url(${SACRED_REALM_SKY_TEXTURE_URL});
           background-repeat: repeat;
           background-size: 1100px auto;
           opacity: 0.2;

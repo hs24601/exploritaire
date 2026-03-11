@@ -1,0 +1,5176 @@
+{
+  "capturedAt": "2026-03-07T00:43:58.148Z",
+  "requestedRuns": 25,
+  "completedRuns": 25,
+  "config": {
+    "autoPlaySpeed": 4,
+    "timeScale": 1,
+    "deterministic": false,
+    "seed": 1337
+  },
+  "summary": {
+    "deadTableauRuns": 25,
+    "avgDurationMs": 16943,
+    "avgFinalLegalMoves": 0,
+    "avgPeakLegalMoves": 3.6,
+    "avgTurnsCompleted": 0,
+    "avgPlayerCardsPlayed": 29.52,
+    "avgEnemyCardsPlayed": 0,
+    "maxDurationMs": 66900,
+    "maxPeakLegalMoves": 6,
+    "completionReasons": {
+      "dead_tableau": 25
+    }
+  },
+  "results": [
+    {
+      "run": 1,
+      "startedAt": "2026-03-07T00:40:26.154Z",
+      "completedAt": "2026-03-07T00:41:32.965Z",
+      "durationMs": 66810,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 131,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 6,
+      "peakLegalEnemyMoves": 3,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        3,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        10,
+        10,
+        10,
+        7,
+        7,
+        10,
+        7
+      ],
+      "playerFoundationTopRanks": [
+        3,
+        7,
+        1
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 1,
+      "startedAt": "2026-03-07T00:40:26.154Z",
+      "completedAt": "2026-03-07T00:41:33.054Z",
+      "durationMs": 66900,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 131,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 6,
+      "peakLegalEnemyMoves": 3,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        10,
+        10,
+        10,
+        7,
+        7,
+        10,
+        7
+      ],
+      "playerFoundationTopRanks": [
+        3,
+        7,
+        1
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 3,
+      "startedAt": "2026-03-07T00:41:33.277Z",
+      "completedAt": "2026-03-07T00:41:33.337Z",
+      "durationMs": 60,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 0,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 0,
+      "peakLegalEnemyMoves": 1,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        8,
+        6,
+        8,
+        8,
+        6,
+        5,
+        8
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        3,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 3,
+      "startedAt": "2026-03-07T00:41:33.277Z",
+      "completedAt": "2026-03-07T00:41:33.347Z",
+      "durationMs": 70,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 0,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 0,
+      "peakLegalEnemyMoves": 1,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        8,
+        6,
+        8,
+        8,
+        6,
+        5,
+        8
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        3,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 5,
+      "startedAt": "2026-03-07T00:41:33.570Z",
+      "completedAt": "2026-03-07T00:41:52.352Z",
+      "durationMs": 18782,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 38,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 6,
+      "peakLegalEnemyMoves": 5,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        3,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        7,
+        5,
+        13,
+        2,
+        5,
+        13,
+        2
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        7,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 5,
+      "startedAt": "2026-03-07T00:41:33.570Z",
+      "completedAt": "2026-03-07T00:41:52.440Z",
+      "durationMs": 18870,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 38,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 6,
+      "peakLegalEnemyMoves": 5,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        7,
+        5,
+        13,
+        2,
+        5,
+        13,
+        2
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        7,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 5,
+      "startedAt": "2026-03-07T00:41:33.570Z",
+      "completedAt": "2026-03-07T00:41:52.536Z",
+      "durationMs": 18966,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 38,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 6,
+      "peakLegalEnemyMoves": 5,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        7,
+        5,
+        13,
+        2,
+        5,
+        13,
+        2
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        7,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 8,
+      "startedAt": "2026-03-07T00:41:52.762Z",
+      "completedAt": "2026-03-07T00:41:53.313Z",
+      "durationMs": 551,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 1,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 2,
+      "peakLegalEnemyMoves": 1,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        8,
+        6,
+        13,
+        2,
+        6,
+        5,
+        13
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        2,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 8,
+      "startedAt": "2026-03-07T00:41:52.761Z",
+      "completedAt": "2026-03-07T00:41:53.362Z",
+      "durationMs": 601,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 1,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 2,
+      "peakLegalEnemyMoves": 1,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        8,
+        6,
+        13,
+        2,
+        6,
+        5,
+        13
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        2,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 10,
+      "startedAt": "2026-03-07T00:41:53.588Z",
+      "completedAt": "2026-03-07T00:41:56.906Z",
+      "durationMs": 3318,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 7,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 4,
+      "peakLegalEnemyMoves": 2,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        1,
+        12,
+        1,
+        10,
+        8,
+        13,
+        8
+      ],
+      "playerFoundationTopRanks": [
+        4,
+        8,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 10,
+      "startedAt": "2026-03-07T00:41:53.588Z",
+      "completedAt": "2026-03-07T00:41:56.943Z",
+      "durationMs": 3355,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 7,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 4,
+      "peakLegalEnemyMoves": 2,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        1,
+        12,
+        1,
+        10,
+        8,
+        13,
+        8
+      ],
+      "playerFoundationTopRanks": [
+        4,
+        8,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 10,
+      "startedAt": "2026-03-07T00:41:53.589Z",
+      "completedAt": "2026-03-07T00:41:56.968Z",
+      "durationMs": 3379,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 7,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 4,
+      "peakLegalEnemyMoves": 2,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        1,
+        12,
+        1,
+        10,
+        8,
+        13,
+        8
+      ],
+      "playerFoundationTopRanks": [
+        4,
+        8,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 13,
+      "startedAt": "2026-03-07T00:41:57.208Z",
+      "completedAt": "2026-03-07T00:42:00.313Z",
+      "durationMs": 3105,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 7,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 3,
+      "peakLegalEnemyMoves": 2,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        3,
+        4
+      ],
+      "playerTableauTopRanks": [
+        12,
+        13,
+        2,
+        12,
+        7,
+        7,
+        13
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        4,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 13,
+      "startedAt": "2026-03-07T00:41:57.207Z",
+      "completedAt": "2026-03-07T00:42:00.337Z",
+      "durationMs": 3130,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 7,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 3,
+      "peakLegalEnemyMoves": 2,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        12,
+        13,
+        2,
+        12,
+        7,
+        7,
+        13
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        4,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 15,
+      "startedAt": "2026-03-07T00:42:00.559Z",
+      "completedAt": "2026-03-07T00:42:02.549Z",
+      "durationMs": 1990,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 4,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 4,
+      "peakLegalEnemyMoves": 2,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        3
+      ],
+      "playerTableauTopRanks": [
+        10,
+        7,
+        6,
+        12,
+        12,
+        12,
+        7
+      ],
+      "playerFoundationTopRanks": [
+        3,
+        2,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 15,
+      "startedAt": "2026-03-07T00:42:00.559Z",
+      "completedAt": "2026-03-07T00:42:02.600Z",
+      "durationMs": 2041,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 4,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 4,
+      "peakLegalEnemyMoves": 2,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        10,
+        7,
+        6,
+        12,
+        12,
+        12,
+        7
+      ],
+      "playerFoundationTopRanks": [
+        3,
+        2,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 17,
+      "startedAt": "2026-03-07T00:42:02.823Z",
+      "completedAt": "2026-03-07T00:42:03.786Z",
+      "durationMs": 963,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 2,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 1,
+      "peakLegalEnemyMoves": 3,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        8,
+        10,
+        5,
+        8,
+        7,
+        5,
+        13
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        3,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 17,
+      "startedAt": "2026-03-07T00:42:02.823Z",
+      "completedAt": "2026-03-07T00:42:03.837Z",
+      "durationMs": 1014,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 2,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 1,
+      "peakLegalEnemyMoves": 3,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        8,
+        10,
+        5,
+        8,
+        7,
+        5,
+        13
+      ],
+      "playerFoundationTopRanks": [
+        2,
+        3,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 19,
+      "startedAt": "2026-03-07T00:42:04.064Z",
+      "completedAt": "2026-03-07T00:43:10.269Z",
+      "durationMs": 66205,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 106,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 6,
+      "peakLegalEnemyMoves": 4,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        2,
+        4
+      ],
+      "playerTableauTopRanks": [
+        8,
+        2,
+        8,
+        3,
+        2,
+        3,
+        2
+      ],
+      "playerFoundationTopRanks": [
+        10,
+        6,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 19,
+      "startedAt": "2026-03-07T00:42:04.064Z",
+      "completedAt": "2026-03-07T00:43:10.322Z",
+      "durationMs": 66258,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 106,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 6,
+      "peakLegalEnemyMoves": 4,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        8,
+        2,
+        8,
+        3,
+        2,
+        3,
+        2
+      ],
+      "playerFoundationTopRanks": [
+        10,
+        6,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 21,
+      "startedAt": "2026-03-07T00:43:10.558Z",
+      "completedAt": "2026-03-07T00:43:12.507Z",
+      "durationMs": 1949,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 4,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 1,
+      "peakLegalEnemyMoves": 4,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        3,
+        4,
+        3,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        7,
+        5,
+        7,
+        6,
+        6,
+        5,
+        8
+      ],
+      "playerFoundationTopRanks": [
+        13,
+        3,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 21,
+      "startedAt": "2026-03-07T00:43:10.558Z",
+      "completedAt": "2026-03-07T00:43:12.531Z",
+      "durationMs": 1973,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 4,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 1,
+      "peakLegalEnemyMoves": 4,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        7,
+        5,
+        7,
+        6,
+        6,
+        5,
+        8
+      ],
+      "playerFoundationTopRanks": [
+        13,
+        3,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 23,
+      "startedAt": "2026-03-07T00:43:12.755Z",
+      "completedAt": "2026-03-07T00:43:49.078Z",
+      "durationMs": 36323,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 46,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 6,
+      "peakLegalEnemyMoves": 2,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        3,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        2,
+        13,
+        4,
+        4,
+        13,
+        11,
+        6
+      ],
+      "playerFoundationTopRanks": [
+        8,
+        4,
+        6
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 23,
+      "startedAt": "2026-03-07T00:43:12.755Z",
+      "completedAt": "2026-03-07T00:43:49.113Z",
+      "durationMs": 36358,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 46,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 6,
+      "peakLegalEnemyMoves": 2,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        2,
+        13,
+        4,
+        4,
+        13,
+        11,
+        6
+      ],
+      "playerFoundationTopRanks": [
+        8,
+        4,
+        6
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    },
+    {
+      "run": 25,
+      "startedAt": "2026-03-07T00:43:49.340Z",
+      "completedAt": "2026-03-07T00:43:49.937Z",
+      "durationMs": 597,
+      "turnsCompleted": 0,
+      "playerTurnsStarted": 0,
+      "enemyTurnsStarted": 0,
+      "playerCardsPlayed": 1,
+      "enemyCardsPlayed": 0,
+      "peakLegalPlayerMoves": 2,
+      "peakLegalEnemyMoves": 1,
+      "finalTurnNumber": 1,
+      "completionReason": "dead_tableau",
+      "deadTableauReached": true,
+      "noValidMovesPlayer": true,
+      "remainingTableauDepths": [
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "playerTableauTopRanks": [
+        12,
+        12,
+        8,
+        8,
+        5,
+        8,
+        3
+      ],
+      "playerFoundationTopRanks": [
+        3,
+        3,
+        10
+      ],
+      "legalPlayerMovesByFoundation": [
+        0,
+        0,
+        0
+      ],
+      "totalLegalPlayerMoves": 0
+    }
+  ],
+  "diagnosticSamples": [
+    {
+      "run": 1,
+      "completionReason": "dead_tableau",
+      "traceTail": [
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 22.75,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844092837
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 26.5,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844092344
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 30.75,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844091806
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 34.5,
+          "label": "t#5 -> p#0",
+          "accepted": true,
+          "at": 1772844091346
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 38.25,
+          "label": "t#4 -> p#2",
+          "accepted": true,
+          "at": 1772844090744
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 38.75,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844090312
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 43,
+          "label": "t#5 -> p#0",
+          "accepted": true,
+          "at": 1772844089766
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 38.75,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844089252
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 43.75,
+          "label": "t#4 -> p#1",
+          "accepted": true,
+          "at": 1772844088690
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 47.5,
+          "label": "t#6 -> p#1",
+          "accepted": true,
+          "at": 1772844088247
+        }
+      ],
+      "moveAuditTail": [
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 22.75,
+            "accepted": true
+          },
+          "at": 1772844092837,
+          "activeSide": "player",
+          "turn": 130,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 22.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.8
+              }
+            ]
+          },
+          "at": 1772844092470,
+          "activeSide": "player",
+          "turn": 130,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844092470,
+          "activeSide": "player",
+          "turn": 130,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 26.5,
+            "accepted": true
+          },
+          "at": 1772844092344,
+          "activeSide": "player",
+          "turn": 129,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            2,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 3,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 26.5
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.7
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#2",
+                "score": 2.7
+              }
+            ]
+          },
+          "at": 1772844091931,
+          "activeSide": "player",
+          "turn": 129,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            2,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844091931,
+          "activeSide": "player",
+          "turn": 129,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            2,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 30.75,
+            "accepted": true
+          },
+          "at": 1772844091806,
+          "activeSide": "player",
+          "turn": 128,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 30.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.8
+              }
+            ]
+          },
+          "at": 1772844091402,
+          "activeSide": "player",
+          "turn": 128,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844091402,
+          "activeSide": "player",
+          "turn": 128,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#5 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 34.5,
+            "accepted": true
+          },
+          "at": 1772844091346,
+          "activeSide": "player",
+          "turn": 127,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 3,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#5 -> p#0",
+                "score": 34.5
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#5 -> p#0",
+                "score": 2.7
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#5 -> p#2",
+                "score": 2.7
+              }
+            ]
+          },
+          "at": 1772844090870,
+          "activeSide": "player",
+          "turn": 127,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844090870,
+          "activeSide": "player",
+          "turn": 127,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#2",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 38.25,
+            "accepted": true
+          },
+          "at": 1772844090744,
+          "activeSide": "player",
+          "turn": 126,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            1,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 3,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#2",
+                "score": 38.25
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#5 -> p#0",
+                "score": 2.7
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#2",
+                "score": 2.6
+              }
+            ]
+          },
+          "at": 1772844090415,
+          "activeSide": "player",
+          "turn": 126,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            1,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844090415,
+          "activeSide": "player",
+          "turn": 126,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            1,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 38.75,
+            "accepted": true
+          },
+          "at": 1772844090312,
+          "activeSide": "player",
+          "turn": 125,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            4,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 38.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.8
+              }
+            ]
+          },
+          "at": 1772844089884,
+          "activeSide": "player",
+          "turn": 125,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            4,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844089884,
+          "activeSide": "player",
+          "turn": 125,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            4,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#5 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 43,
+            "accepted": true
+          },
+          "at": 1772844089766,
+          "activeSide": "player",
+          "turn": 124,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#5 -> p#0",
+                "score": 43
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#5 -> p#0",
+                "score": 2.9
+              }
+            ]
+          },
+          "at": 1772844089346,
+          "activeSide": "player",
+          "turn": 124,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844089345,
+          "activeSide": "player",
+          "turn": 124,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 38.75,
+            "accepted": true
+          },
+          "at": 1772844089252,
+          "activeSide": "player",
+          "turn": 123,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 38.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.8
+              }
+            ]
+          },
+          "at": 1772844088813,
+          "activeSide": "player",
+          "turn": 123,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844088813,
+          "activeSide": "player",
+          "turn": 123,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#1",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 43.75,
+            "accepted": true
+          },
+          "at": 1772844088690,
+          "activeSide": "player",
+          "turn": 122,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            6,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 4,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#1",
+                "score": 43.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#3 -> p#1",
+                "score": 3.2
+              }
+            ]
+          },
+          "at": 1772844088375,
+          "activeSide": "player",
+          "turn": 122,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            6,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844088375,
+          "activeSide": "player",
+          "turn": 122,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            6,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#6 -> p#1",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 47.5,
+            "accepted": true
+          },
+          "at": 1772844088247,
+          "activeSide": "player",
+          "turn": 121,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            6
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            1,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#6 -> p#1",
+                "score": 47.5
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#1",
+                "score": 3.1
+              }
+            ]
+          },
+          "at": 1772844087796,
+          "activeSide": "player",
+          "turn": 121,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            6
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            1,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844087796,
+          "activeSide": "player",
+          "turn": 121,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            6
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            1,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#6 -> p#1",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 51.75,
+            "accepted": true
+          },
+          "at": 1772844087676,
+          "activeSide": "player",
+          "turn": 120,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 4,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#6 -> p#1",
+                "score": 51.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#3 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#1",
+                "score": 3.2
+              }
+            ]
+          },
+          "at": 1772844087286,
+          "activeSide": "player",
+          "turn": 120,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844087285,
+          "activeSide": "player",
+          "turn": 120,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#6 -> p#2",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 57.25,
+            "accepted": true
+          },
+          "at": 1772844087162,
+          "activeSide": "player",
+          "turn": 119,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 4,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#6 -> p#2",
+                "score": 57.25
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#2",
+                "score": 3.8
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#3 -> p#1",
+                "score": 3.2
+              }
+            ]
+          },
+          "at": 1772844086744,
+          "activeSide": "player",
+          "turn": 119,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844086744,
+          "activeSide": "player",
+          "turn": 119,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#5 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 58.5,
+            "accepted": true
+          },
+          "at": 1772844086622,
+          "activeSide": "player",
+          "turn": 118,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            2,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            1,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            2,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 6,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#5 -> p#0",
+                "score": 58.5
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#2",
+                "score": 3.8
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#0",
+                "score": 3.8
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#3 -> p#1",
+                "score": 3.2
+              }
+            ]
+          },
+          "at": 1772844086198,
+          "activeSide": "player",
+          "turn": 118,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            2,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            1,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            2,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844086198,
+          "activeSide": "player",
+          "turn": 118,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            2,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            1,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            2,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#3 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 62.25,
+            "accepted": true
+          },
+          "at": 1772844086095,
+          "activeSide": "player",
+          "turn": 117,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            1,
+            7,
+            2,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            1,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            1,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "run": 1,
+      "completionReason": "dead_tableau",
+      "traceTail": [
+        {
+          "side": "system",
+          "kind": "player_tableau",
+          "score": 4,
+          "label": "phase=combat autopilot",
+          "accepted": true,
+          "at": 1772844092967
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 22.75,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844092837
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 26.5,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844092344
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 30.75,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844091806
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 34.5,
+          "label": "t#5 -> p#0",
+          "accepted": true,
+          "at": 1772844091346
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 38.25,
+          "label": "t#4 -> p#2",
+          "accepted": true,
+          "at": 1772844090744
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 38.75,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844090312
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 43,
+          "label": "t#5 -> p#0",
+          "accepted": true,
+          "at": 1772844089766
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 38.75,
+          "label": "t#4 -> p#0",
+          "accepted": true,
+          "at": 1772844089252
+        },
+        {
+          "side": "player",
+          "kind": "player_tableau",
+          "score": 43.75,
+          "label": "t#4 -> p#1",
+          "accepted": true,
+          "at": 1772844088690
+        }
+      ],
+      "moveAuditTail": [
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "phase=combat autopilot",
+            "decisionKind": "player_tableau",
+            "side": "system",
+            "score": 4,
+            "accepted": true
+          },
+          "at": 1772844092967,
+          "activeSide": "player",
+          "turn": 131,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 0,
+            "topCandidates": []
+          },
+          "at": 1772844092967,
+          "activeSide": "player",
+          "turn": 131,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844092966,
+          "activeSide": "player",
+          "turn": 131,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 22.75,
+            "accepted": true
+          },
+          "at": 1772844092837,
+          "activeSide": "player",
+          "turn": 130,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 22.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.8
+              }
+            ]
+          },
+          "at": 1772844092470,
+          "activeSide": "player",
+          "turn": 130,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844092470,
+          "activeSide": "player",
+          "turn": 130,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 26.5,
+            "accepted": true
+          },
+          "at": 1772844092344,
+          "activeSide": "player",
+          "turn": 129,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            2,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 3,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 26.5
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.7
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#2",
+                "score": 2.7
+              }
+            ]
+          },
+          "at": 1772844091931,
+          "activeSide": "player",
+          "turn": 129,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            2,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844091931,
+          "activeSide": "player",
+          "turn": 129,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            2,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 30.75,
+            "accepted": true
+          },
+          "at": 1772844091806,
+          "activeSide": "player",
+          "turn": 128,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 30.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.8
+              }
+            ]
+          },
+          "at": 1772844091402,
+          "activeSide": "player",
+          "turn": 128,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844091402,
+          "activeSide": "player",
+          "turn": 128,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            10,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#5 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 34.5,
+            "accepted": true
+          },
+          "at": 1772844091346,
+          "activeSide": "player",
+          "turn": 127,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 3,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#5 -> p#0",
+                "score": 34.5
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#5 -> p#0",
+                "score": 2.7
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#5 -> p#2",
+                "score": 2.7
+              }
+            ]
+          },
+          "at": 1772844090870,
+          "activeSide": "player",
+          "turn": 127,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844090870,
+          "activeSide": "player",
+          "turn": 127,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            1
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#2",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 38.25,
+            "accepted": true
+          },
+          "at": 1772844090744,
+          "activeSide": "player",
+          "turn": 126,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            1,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 3,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#2",
+                "score": 38.25
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#5 -> p#0",
+                "score": 2.7
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#2",
+                "score": 2.6
+              }
+            ]
+          },
+          "at": 1772844090415,
+          "activeSide": "player",
+          "turn": 126,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            1,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844090415,
+          "activeSide": "player",
+          "turn": 126,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            1,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 38.75,
+            "accepted": true
+          },
+          "at": 1772844090312,
+          "activeSide": "player",
+          "turn": 125,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            4,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 38.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.8
+              }
+            ]
+          },
+          "at": 1772844089884,
+          "activeSide": "player",
+          "turn": 125,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            4,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844089884,
+          "activeSide": "player",
+          "turn": 125,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            2,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            4,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#5 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 43,
+            "accepted": true
+          },
+          "at": 1772844089766,
+          "activeSide": "player",
+          "turn": 124,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#5 -> p#0",
+                "score": 43
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#5 -> p#0",
+                "score": 2.9
+              }
+            ]
+          },
+          "at": 1772844089346,
+          "activeSide": "player",
+          "turn": 124,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844089345,
+          "activeSide": "player",
+          "turn": 124,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            3,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 38.75,
+            "accepted": true
+          },
+          "at": 1772844089252,
+          "activeSide": "player",
+          "turn": 123,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#0",
+                "score": 38.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#0",
+                "score": 2.8
+              }
+            ]
+          },
+          "at": 1772844088813,
+          "activeSide": "player",
+          "turn": 123,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844088813,
+          "activeSide": "player",
+          "turn": 123,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            3,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            1,
+            0,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#4 -> p#1",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 43.75,
+            "accepted": true
+          },
+          "at": 1772844088690,
+          "activeSide": "player",
+          "turn": 122,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            6,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 4,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#4 -> p#1",
+                "score": 43.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#3 -> p#1",
+                "score": 3.2
+              }
+            ]
+          },
+          "at": 1772844088375,
+          "activeSide": "player",
+          "turn": 122,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            6,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844088375,
+          "activeSide": "player",
+          "turn": 122,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            6,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#6 -> p#1",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 47.5,
+            "accepted": true
+          },
+          "at": 1772844088247,
+          "activeSide": "player",
+          "turn": 121,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            6
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            1,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 2,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#6 -> p#1",
+                "score": 47.5
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#1",
+                "score": 3.1
+              }
+            ]
+          },
+          "at": 1772844087796,
+          "activeSide": "player",
+          "turn": 121,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            6
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            1,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844087796,
+          "activeSide": "player",
+          "turn": 121,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            6
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            7,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            1,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#6 -> p#1",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 51.75,
+            "accepted": true
+          },
+          "at": 1772844087676,
+          "activeSide": "player",
+          "turn": 120,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 4,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#6 -> p#1",
+                "score": 51.75
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#3 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#1",
+                "score": 3.2
+              }
+            ]
+          },
+          "at": 1772844087286,
+          "activeSide": "player",
+          "turn": 120,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844087285,
+          "activeSide": "player",
+          "turn": 120,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            7
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            13
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            3,
+            0
+          ],
+          "legalEnemyMovesByFoundation": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#6 -> p#2",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 57.25,
+            "accepted": true
+          },
+          "at": 1772844087162,
+          "activeSide": "player",
+          "turn": 119,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "candidates_built",
+            "candidateCount": 4,
+            "topCandidates": [
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "t#6 -> p#2",
+                "score": 57.25
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#6 -> p#2",
+                "score": 3.8
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#4 -> p#1",
+                "score": 3.2
+              },
+              {
+                "side": "player",
+                "kind": "player_tableau",
+                "label": "brute t#3 -> p#1",
+                "score": 3.2
+              }
+            ]
+          },
+          "at": 1772844086744,
+          "activeSide": "player",
+          "turn": 119,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "step",
+          "detail": {
+            "reason": "autoplay_step_start"
+          },
+          "at": 1772844086744,
+          "activeSide": "player",
+          "turn": 119,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            4,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            2,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            0,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "kind": "decision",
+          "detail": {
+            "label": "t#5 -> p#0",
+            "decisionKind": "player_tableau",
+            "side": "player",
+            "score": 58.5,
+            "accepted": true
+          },
+          "at": 1772844086622,
+          "activeSide": "player",
+          "turn": 118,
+          "timeScale": 1,
+          "autoPlaySpeed": 4,
+          "playerTableauTopRanks": [
+            10,
+            10,
+            10,
+            7,
+            7,
+            2,
+            13
+          ],
+          "playerFoundationTopRanks": [
+            1,
+            8,
+            12
+          ],
+          "enemyFoundationTopRanks": [
+            6,
+            null,
+            null
+          ],
+          "legalPlayerMovesByFoundation": [
+            2,
+            2,
+            1
+          ],
+          "legalEnemyMovesByFoundation": [
+            2,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "completionReason": "dead_tableau",
+      "traceTail": [],
+      "moveAuditTail": []
+    }
+  ]
+}

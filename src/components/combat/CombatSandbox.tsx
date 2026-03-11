@@ -2,7 +2,7 @@ import { Profiler, useCallback, useEffect, useMemo, useRef, useState, type Compo
 import { useGraphics } from '../../contexts/GraphicsContext';
 import { useCardScalePreset } from '../../contexts/CardScaleContext';
 import { usePerspective } from '../../contexts/PerspectiveContext';
-import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX } from '../../engine/constants';
+import { CARD_SIZE, ELEMENT_TO_SUIT, HAND_SOURCE_INDEX, WILD_SENTINEL_RANK } from '../../engine/constants';
 import { canPlayCardWithWild, getRankDisplay } from '../../engine/rules';
 import { ACTOR_DEFINITIONS, getActorDefinition } from '../../engine/actors';
 import { createActorDeckStateWithOrim } from '../../engine/actorDecks';
@@ -17,7 +17,7 @@ import {
 import { getActiveCombatPartyId, getPartyAssignments } from '../../engine/combat/stateAliases';
 import { resolveCostByRarity } from '../../engine/rarityLoadouts';
 import { Foundation } from '../Foundation';
-import { Hand } from '../Hand';
+import { DeckSprawl } from '../DeckSprawl';
 import { DragPreview } from '../DragPreview';
 import { DedicatedPlayerTableau } from './DedicatedPlayerTableau';
 import { StatusBadges } from './StatusBadges';
@@ -32,11 +32,13 @@ import type { AbilityLifecycleDef, AbilityLifecycleExhaustScope, AbilityLifecycl
 import abilitiesJson from '../../data/abilities.json';
 import { LostInStarsAtmosphere } from '../atmosphere/LostInStarsAtmosphere';
 import { AuroraForestAtmosphere } from '../atmosphere/AuroraForestAtmosphere';
-import { BlackHoleAtmosphere } from '../atmosphere/BlackHoleAtmosphere';
+import { GargantuaAtmosphere } from '../atmosphere/GargantuaAtmosphere';
 import { BrownianMotionAtmosphere } from '../atmosphere/BrownianMotionAtmosphere';
 import { ChaosSplitAtmosphere } from '../atmosphere/ChaosSplitAtmosphere';
+import { CometBarrageAtmosphere } from '../atmosphere/CometBarrageAtmosphere';
 import { CometRainAtmosphere } from '../atmosphere/CometRainAtmosphere';
 import { CosmicLintAtmosphere } from '../atmosphere/CosmicLintAtmosphere';
+import { DoorSandsTimeAtmosphere } from '../atmosphere/DoorSandsTimeAtmosphere';
 import { DriftingPurpleAtmosphere } from '../atmosphere/DriftingPurpleAtmosphere';
 import { EinsteinRosenAtmosphere } from '../atmosphere/EinsteinRosenAtmosphere';
 import { ElectricSkiesAtmosphere } from '../atmosphere/ElectricSkiesAtmosphere';
@@ -44,6 +46,7 @@ import { FallingSnowAtmosphere } from '../atmosphere/FallingSnowAtmosphere';
 import { FlorpusForestAtmosphere } from '../atmosphere/FlorpusForestAtmosphere';
 import { GravitySplitAtmosphere } from '../atmosphere/GravitySplitAtmosphere';
 import { SmokeGreenAtmosphere } from '../atmosphere/SmokeGreenAtmosphere';
+import { SpinningStarfieldAtmosphere } from '../atmosphere/SpinningStarfieldAtmosphere';
 import { InfernoMaelstromAtmosphere } from '../atmosphere/InfernoMaelstromAtmosphere';
 import { OceanSolarCycleAtmosphere } from '../atmosphere/OceanSolarCycleAtmosphere';
 import { RagingWavesAtmosphere } from '../atmosphere/RagingWavesAtmosphere';
@@ -105,6 +108,7 @@ const AUTO_PLAY_BASE_STEP_MS = 430;
 const AUTO_PLAY_DRAG_DURATION_MULTIPLIER = 2;
 const AUTO_PLAY_MAX_DRAG_DURATION_MS = 1960;
 const AUTO_PLAY_MAX_TRACE = 10;
+const AUTO_PLAY_AUDIT_MAX = 400;
 const AUTO_PLAY_STALL_LIMIT = 4;
 const AUTO_PLAY_DEFAULT_SEED = 1337;
 const AUTO_PLAY_REPLAY_VERSION = 1;
@@ -141,9 +145,6 @@ type AutoPlayActorSide = 'player' | 'enemy';
 type AutoPlayDecisionKind =
   | 'player_tableau'
   | 'enemy_tableau'
-  | 'player_hand_player_foundation'
-  | 'player_hand_enemy_foundation'
-  | 'player_rpg_attack'
   | 'enemy_rpg_attack'
   | 'advance_turn'
   | 'rest_turn'
@@ -156,6 +157,53 @@ type AutoPlayDecisionEntry = {
   label: string;
   accepted: boolean;
   at: number;
+};
+type AutoPlayMoveAuditEntry = {
+  kind: 'step' | 'decision';
+  at: number;
+  activeSide: 'player' | 'enemy';
+  turn: number;
+  timeScale: number;
+  autoPlaySpeed: number;
+  playerTableauTopRanks: Array<number | null>;
+  playerFoundationTopRanks: Array<number | null>;
+  enemyFoundationTopRanks: Array<number | null>;
+  legalPlayerMovesByFoundation: number[];
+  legalEnemyMovesByFoundation: number[];
+  detail: Record<string, unknown>;
+};
+type AutoPlayBatchRunSummary = {
+  run: number;
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  turnsCompleted: number;
+  playerTurnsStarted: number;
+  enemyTurnsStarted: number;
+  playerCardsPlayed: number;
+  enemyCardsPlayed: number;
+  peakLegalPlayerMoves: number;
+  peakLegalEnemyMoves: number;
+  finalTurnNumber: number;
+  completionReason: 'dead_tableau' | 'stall_limit' | 'manual_stop';
+  deadTableauReached: boolean;
+  noValidMovesPlayer: boolean;
+  remainingTableauDepths: number[];
+  playerTableauTopRanks: Array<number | null>;
+  playerFoundationTopRanks: Array<number | null>;
+  legalPlayerMovesByFoundation: number[];
+  totalLegalPlayerMoves: number;
+  traceTail: AutoPlayDecisionEntry[];
+  moveAuditTail: AutoPlayMoveAuditEntry[];
+};
+type AutoPlayBatchRunMetrics = {
+  peakLegalPlayerMoves: number;
+  peakLegalEnemyMoves: number;
+  playerCardsPlayed: number;
+  enemyCardsPlayed: number;
+  playerTurnsStarted: number;
+  enemyTurnsStarted: number;
+  observedTurnCounter: number;
 };
 type AutoPlayDragSource = 'tableau' | 'hand';
 type AutoPlayDragAnim = {
@@ -604,7 +652,7 @@ function createLabFoundationActorCard(definitionId: 'felis' | 'ursus' | 'lupus',
   const actorTitles = actorDefinition?.titles?.filter(Boolean) ?? [];
   return {
     id: `combatlab-foundation-${definitionId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    rank: actorDefinition?.value ?? 1,
+    rank: WILD_SENTINEL_RANK,
     suit: actorDefinition?.suit ?? ELEMENT_TO_SUIT.N,
     element: actorDefinition?.element ?? 'N',
     name: actorName,
@@ -781,6 +829,15 @@ export function CombatSandbox({
   const [autoPlayStalls, setAutoPlayStalls] = useState(0);
   const [autoPlayLastDecision, setAutoPlayLastDecision] = useState<AutoPlayDecisionEntry | null>(null);
   const [autoPlayTrace, setAutoPlayTrace] = useState<AutoPlayDecisionEntry[]>([]);
+  const [handVisible, setHandVisible] = useState(false);
+  const [testSequencePanelOpen, setTestSequencePanelOpen] = useState(false);
+  const [testSequenceInput, setTestSequenceInput] = useState('25');
+  const [testSequenceRunning, setTestSequenceRunning] = useState(false);
+  const [testSequenceCompleted, setTestSequenceCompleted] = useState(false);
+  const [testSequenceRequestedRuns, setTestSequenceRequestedRuns] = useState(0);
+  const [testSequenceCurrentRun, setTestSequenceCurrentRun] = useState(0);
+  const [testSequenceResults, setTestSequenceResults] = useState<AutoPlayBatchRunSummary[]>([]);
+  const [testSequenceCopyNotice, setTestSequenceCopyNotice] = useState('');
   const [worldEventBanner, setWorldEventBanner] = useState<{ token: string; label: string; detail?: string } | null>(null);
   const [autoPlayDragAnim, setAutoPlayDragAnim] = useState<AutoPlayDragAnim | null>(null);
   const [tappedPlayerFoundations, setTappedPlayerFoundations] = useState<Record<number, boolean>>({});
@@ -793,6 +850,8 @@ export function CombatSandbox({
   const autoPlayDragPausedTransformRef = useRef<string | null>(null);
   const autoPlayDragTargetTransformRef = useRef<string | null>(null);
   const autoPlayDragAnimIdRef = useRef<string | null>(null);
+  const autoPlayDragCompletionRef = useRef<(() => void) | null>(null);
+  const autoPlayMoveAuditRef = useRef<AutoPlayMoveAuditEntry[]>([]);
   const worldEventSeenRef = useRef<string>('');
   const labFoundationSeedTokenRef = useRef<string>('');
   const autoPlayStallRef = useRef(0);
@@ -800,6 +859,19 @@ export function CombatSandbox({
   const autoPlayRngStateRef = useRef<number>(AUTO_PLAY_DEFAULT_SEED >>> 0);
   const autoPlayReplayStartSnapshotRef = useRef<Partial<GameState> | null>(null);
   const autoPlayWasEnabledRef = useRef(false);
+  const testSequenceRunStartedAtRef = useRef<number>(0);
+  const testSequenceResetTimeoutRef = useRef<number>(0);
+  const testSequenceFinalizedRunRef = useRef<number>(0);
+  const testSequenceLastActiveSideRef = useRef<'player' | 'enemy'>('player');
+  const testSequenceRunMetricsRef = useRef<AutoPlayBatchRunMetrics>({
+    peakLegalPlayerMoves: 0,
+    peakLegalEnemyMoves: 0,
+    playerCardsPlayed: 0,
+    enemyCardsPlayed: 0,
+    playerTurnsStarted: 1,
+    enemyTurnsStarted: 0,
+    observedTurnCounter: 0,
+  });
   const resetAutoPlayDeterministicRng = useCallback((seedOverride?: number) => {
     const seedSource = seedOverride ?? autoPlaySeed;
     const normalizedSeed = Math.max(0, Math.floor(Number(seedSource) || 0)) >>> 0;
@@ -811,6 +883,7 @@ export function CombatSandbox({
   const autoPlayTableauRefsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const autoPlayFoundationRefsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const handZoneRef = useRef<HTMLDivElement | null>(null);
+  const previewHandCountRef = useRef(0);
   const [enemySpawnPickerIndex, setEnemySpawnPickerIndex] = useState<number | null>(null);
   const [enemySpawnSelectionByIndex, setEnemySpawnSelectionByIndex] = useState<Record<number, string>>({});
   const enemyActorSpawnOptions = useMemo(() => {
@@ -878,6 +951,8 @@ export function CombatSandbox({
     45,
     Math.round(AUTO_PLAY_BASE_STEP_MS / Math.max(0.2, autoPlaySpeed * Math.max(0.25, timeScale)))
   );
+  const batchFastMode = testSequenceRunning;
+  const effectiveAutoPlayStepMs = batchFastMode ? 1 : autoPlayStepMs;
   const shiftTimeScale = useCallback((direction: -1 | 1) => {
     if (normalizedTimeScaleOptions.length === 0) {
       onCycleTimeScale();
@@ -929,6 +1004,12 @@ export function CombatSandbox({
       if (key === 'p') {
         event.preventDefault();
         setAutoPlayEnabled((prev) => !prev);
+        return;
+      }
+      if (key === 'h') {
+        if (previewHandCountRef.current === 0) return;
+        event.preventDefault();
+        setHandVisible((prev) => !prev);
         return;
       }
       if (event.key === '[') {
@@ -991,21 +1072,8 @@ export function CombatSandbox({
     return enemyActors.find((actor) => actor?.id === actorId) ?? indexedEnemyActor;
   };
   const handleEnemyFoundationDestructionComplete = useCallback((foundationIndex: number) => {
-    const foundationCards = enemyFoundations[foundationIndex] ?? [];
-    const defeatedActor = resolveEnemyFoundationActor(foundationIndex, foundationCards);
-    const defeatedDefinitionId = defeatedActor?.definitionId;
-
     actions.cleanupDefeatedEnemies();
-
-    if (!defeatedDefinitionId) return;
-    const respawnFoundationIndex = enemyFoundations.findIndex((foundation, index) => (
-      index !== foundationIndex && (foundation?.length ?? 0) === 0
-    ));
-    actions.spawnEnemyActor(
-      defeatedDefinitionId,
-      respawnFoundationIndex >= 0 ? respawnFoundationIndex : foundationIndex
-    );
-  }, [actions, enemyFoundations, resolveEnemyFoundationActor]);
+  }, [actions]);
   const buildFoundationStatuses = (side: 'player' | 'enemy', foundationIndex: number) => {
     const nowMs = Date.now();
     if (side === 'player') {
@@ -1634,6 +1702,13 @@ export function CombatSandbox({
     });
     return [...deckBackedLabHandCards, ...runtimeExtras];
   }, [isLabMode, deckBackedLabHandCards, gameState.rpgHandCards, gameState.actorDecks, isDeadRunOnlyAbilityCard, noValidMovesForPlayer]);
+  useEffect(() => {
+    previewHandCountRef.current = previewHandCards.length;
+  }, [previewHandCards.length]);
+  useEffect(() => {
+    if (previewHandCards.length > 0) return;
+    setHandVisible(false);
+  }, [previewHandCards.length]);
   const actorApById = useMemo(() => {
     const ap = new Map<string, number>();
     const tileId = getActiveCombatPartyId(gameState);
@@ -1809,6 +1884,7 @@ export function CombatSandbox({
   const forceLocalTurnSide = useCallback((nextSide: 'player' | 'enemy') => {
     setLabTurnSide(nextSide);
     setActiveSide?.(nextSide);
+    setTappedPlayerFoundations({});
     setPendingTurnSide(null);
     setPendingFinalMoveResolution(false);
     setInterTurnCountdownMs(0);
@@ -1828,6 +1904,9 @@ export function CombatSandbox({
     if (useLocalTurnSide) {
       const nextSide: 'player' | 'enemy' = effectiveActiveSide === 'player' ? 'enemy' : 'player';
       forceLocalTurnSide(nextSide);
+      if (nextSide === 'player') {
+        actions.reshuffleTableaus();
+      }
       return;
     }
 
@@ -1841,6 +1920,36 @@ export function CombatSandbox({
     showTurnTimer,
     useLocalTurnSide,
     zenRelicEnabled,
+  ]);
+  const handleHudEndTurn = useCallback(() => {
+    if (interTurnCountdownActive) return;
+    setTappedPlayerFoundations({});
+    if (showTurnTimer && enforceTurnOwnership) {
+      if (useLocalTurnSide) {
+        const nextSide: 'player' | 'enemy' = effectiveActiveSide === 'player' ? 'enemy' : 'player';
+        forceLocalTurnSide(nextSide);
+        if (nextSide === 'player') {
+          actions.reshuffleTableaus();
+        }
+        return;
+      }
+      actions.advanceTurn();
+      return;
+    }
+    if (isCombatSessionActive(gameState)) {
+      actions.endTurn();
+      return;
+    }
+    actions.advanceTurn();
+  }, [
+    actions,
+    effectiveActiveSide,
+    enforceTurnOwnership,
+    forceLocalTurnSide,
+    gameState,
+    interTurnCountdownActive,
+    showTurnTimer,
+    useLocalTurnSide,
   ]);
   const getActorFoundationTimerBonusMs = useCallback((actor: Actor | null): number => {
     if (!actor) return 0;
@@ -1920,34 +2029,6 @@ export function CombatSandbox({
     (foundationIndex: number) => Boolean(tappedPlayerFoundations[foundationIndex]),
     [tappedPlayerFoundations]
   );
-  const canTapFriendlyFoundation = useCallback((foundationIndex: number): boolean => {
-    const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
-    const actor = resolvePlayerFoundationActor(foundationIndex, foundationCards);
-    if (!actor?.id) return false;
-    const deck = gameState.actorDecks[actor.id];
-    if (!deck?.cards?.length) return false;
-    return deck.cards.some((deckCard) => {
-      if (deckCard.active === false) return false;
-      return deckCard.slots.some((slot) => {
-        const definitionId = resolveOrimDefinitionIdFromSlot(
-          slot.orimId,
-          gameState.orimInstances,
-          gameState.orimDefinitions
-        );
-        if (!definitionId) return false;
-        const definition = gameState.orimDefinitions.find((entry) => entry.id === definitionId);
-        const catalogEntry = abilityCatalogById.get(definitionId);
-        return !!(definition?.canTap ?? catalogEntry?.canTap);
-      });
-    });
-  }, [
-    abilityCatalogById,
-    gameState.actorDecks,
-    gameState.orimDefinitions,
-    gameState.orimInstances,
-    previewPlayerFoundations,
-    resolvePlayerFoundationActor,
-  ]);
   const handleSandboxFoundationClick = useCallback((foundationIndex: number) => {
     if (interTurnCountdownActive) return;
     if (enforceTurnOwnership && effectiveActiveSide !== 'player') return;
@@ -1969,7 +2050,8 @@ export function CombatSandbox({
       }
       return;
     }
-    if (!canTapFriendlyFoundation(foundationIndex)) return;
+    const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
+    if (foundationCards.length === 0) return;
     setTappedPlayerFoundations((prev) => {
       const next = { ...prev };
       if (next[foundationIndex]) {
@@ -1985,8 +2067,8 @@ export function CombatSandbox({
     effectiveActiveSide,
     selectedCard,
     validFoundationsForSelected,
-    canTapFriendlyFoundation,
     isFoundationTableauLocked,
+    previewPlayerFoundations,
     applyFoundationTimerBonus,
   ]);
   const useWild = false;
@@ -2416,6 +2498,241 @@ export function CombatSandbox({
     const globalWindow = window as Window & { __combatLabAutoPlayTrace?: AutoPlayDecisionEntry[] };
     globalWindow.__combatLabAutoPlayTrace = [entry, ...(globalWindow.__combatLabAutoPlayTrace ?? [])].slice(0, AUTO_PLAY_MAX_TRACE);
   }, []);
+  const buildAutoPlayLegalMoveCounts = useCallback(() => {
+    const legalPlayerMovesByFoundation = previewPlayerFoundations.map((foundation, foundationIndex) => {
+      if (isFoundationTableauLocked(foundationIndex)) return 0;
+      const foundationTop = foundation[foundation.length - 1];
+      return previewTableaus.reduce((count, tableau) => {
+        const topCard = tableau[tableau.length - 1];
+        if (!topCard) return count;
+        return count + (canPlayCardWithWild(topCard, foundationTop, gameState.activeEffects) ? 1 : 0);
+      }, 0);
+    });
+    const legalEnemyMovesByFoundation = enemyFoundations.map((foundation) => {
+      if (!foundation?.length) return 0;
+      const foundationTop = foundation[foundation.length - 1];
+      if (!foundationTop) return 0;
+      return previewTableaus.reduce((count, tableau) => {
+        const topCard = tableau[tableau.length - 1];
+        if (!topCard) return count;
+        return count + (canPlayCardWithWild(topCard, foundationTop, gameState.activeEffects) ? 1 : 0);
+      }, 0);
+    });
+    return { legalPlayerMovesByFoundation, legalEnemyMovesByFoundation };
+  }, [enemyFoundations, gameState.activeEffects, isFoundationTableauLocked, previewPlayerFoundations, previewTableaus]);
+  useEffect(() => {
+    if (!testSequenceRunning) return;
+    const { legalPlayerMovesByFoundation, legalEnemyMovesByFoundation } = buildAutoPlayLegalMoveCounts();
+    const totalLegalPlayerMoves = legalPlayerMovesByFoundation.reduce((sum, value) => sum + value, 0);
+    const totalLegalEnemyMoves = legalEnemyMovesByFoundation.reduce((sum, value) => sum + value, 0);
+    const currentMetrics = testSequenceRunMetricsRef.current;
+    const observedTurnCounter = Math.max(
+      0,
+      Number(gameState.lifecycleTurnCounter ?? gameState.turnCount ?? 0)
+    );
+    const lastActiveSide = testSequenceLastActiveSideRef.current;
+    let playerTurnsStarted = currentMetrics.playerTurnsStarted;
+    let enemyTurnsStarted = currentMetrics.enemyTurnsStarted;
+    if (effectiveActiveSide !== lastActiveSide) {
+      if (effectiveActiveSide === 'player') {
+        playerTurnsStarted += 1;
+      } else {
+        enemyTurnsStarted += 1;
+      }
+      testSequenceLastActiveSideRef.current = effectiveActiveSide;
+    }
+    testSequenceRunMetricsRef.current = {
+      peakLegalPlayerMoves: Math.max(currentMetrics.peakLegalPlayerMoves, totalLegalPlayerMoves),
+      peakLegalEnemyMoves: Math.max(currentMetrics.peakLegalEnemyMoves, totalLegalEnemyMoves),
+      playerCardsPlayed: Math.max(currentMetrics.playerCardsPlayed, gameState.combatFlowTelemetry?.playerCardsPlayed ?? 0),
+      enemyCardsPlayed: Math.max(currentMetrics.enemyCardsPlayed, gameState.combatFlowTelemetry?.enemyCardsPlayed ?? 0),
+      playerTurnsStarted,
+      enemyTurnsStarted,
+      observedTurnCounter: Math.max(currentMetrics.observedTurnCounter, observedTurnCounter),
+    };
+  }, [buildAutoPlayLegalMoveCounts, effectiveActiveSide, gameState, testSequenceRunning]);
+  const resetTestSequenceRun = useCallback((runNumber: number) => {
+    testSequenceRunStartedAtRef.current = performance.now();
+    testSequenceFinalizedRunRef.current = Math.max(0, runNumber - 1);
+    testSequenceLastActiveSideRef.current = 'player';
+    testSequenceRunMetricsRef.current = {
+      peakLegalPlayerMoves: 0,
+      peakLegalEnemyMoves: 0,
+      playerCardsPlayed: 0,
+      enemyCardsPlayed: 0,
+      playerTurnsStarted: 1,
+      enemyTurnsStarted: 0,
+      observedTurnCounter: 0,
+    };
+    setTestSequenceCurrentRun(runNumber);
+    setAutoPlayTrace([]);
+    setAutoPlayLastDecision(null);
+    autoPlayMoveAuditRef.current = [];
+    const globalWindow = window as Window & {
+      __combatLabMoveAudit?: AutoPlayMoveAuditEntry[];
+      __combatLabLastTestSequence?: unknown;
+    };
+    globalWindow.__combatLabMoveAudit = [];
+    setTappedPlayerFoundations({});
+    setPendingTurnSide(null);
+    setPendingFinalMoveResolution(false);
+    setInterTurnCountdownMs(0);
+    setLocalTurnTimerActive(false);
+    localTurnRemainingRef.current = turnDurationMs;
+    displayTurnRemainingRef.current = turnDurationMs;
+    if (!DISABLE_TURN_BAR_ANIMATION) {
+      setLocalTurnRemainingMs(turnDurationMs);
+    }
+    forceLocalTurnSide('player');
+    setActiveSide?.('player');
+    actions.newGame(true);
+    setAutoPlayEnabled(true);
+  }, [actions, forceLocalTurnSide, setActiveSide, turnDurationMs]);
+  const buildTestSequencePayload = useCallback((results: AutoPlayBatchRunSummary[]) => {
+    const durations = results.map((entry) => entry.durationMs);
+    const finalMoveTotals = results.map((entry) => entry.totalLegalPlayerMoves);
+    const peakMoveTotals = results.map((entry) => entry.peakLegalPlayerMoves);
+    const turnsCompletedTotals = results.map((entry) => entry.turnsCompleted);
+    const playerCardsPlayedTotals = results.map((entry) => entry.playerCardsPlayed);
+    const enemyCardsPlayedTotals = results.map((entry) => entry.enemyCardsPlayed);
+    const avg = (values: number[]) => values.length > 0
+      ? values.reduce((sum, value) => sum + value, 0) / values.length
+      : 0;
+    return {
+      capturedAt: new Date().toISOString(),
+      requestedRuns: testSequenceRequestedRuns,
+      completedRuns: results.length,
+      config: {
+        autoPlaySpeed,
+        timeScale,
+        deterministic: autoPlayDeterministic,
+        seed: autoPlaySeed,
+      },
+      summary: {
+        deadTableauRuns: results.filter((entry) => entry.deadTableauReached).length,
+        avgDurationMs: Math.round(avg(durations)),
+        avgFinalLegalMoves: Number(avg(finalMoveTotals).toFixed(3)),
+        avgPeakLegalMoves: Number(avg(peakMoveTotals).toFixed(3)),
+        avgTurnsCompleted: Number(avg(turnsCompletedTotals).toFixed(3)),
+        avgPlayerCardsPlayed: Number(avg(playerCardsPlayedTotals).toFixed(3)),
+        avgEnemyCardsPlayed: Number(avg(enemyCardsPlayedTotals).toFixed(3)),
+        maxDurationMs: durations.length > 0 ? Math.max(...durations) : 0,
+        maxPeakLegalMoves: peakMoveTotals.length > 0 ? Math.max(...peakMoveTotals) : 0,
+        completionReasons: results.reduce<Record<string, number>>((acc, entry) => {
+          acc[entry.completionReason] = (acc[entry.completionReason] ?? 0) + 1;
+          return acc;
+        }, {}),
+      },
+      results: results.map((entry) => ({
+        run: entry.run,
+        startedAt: entry.startedAt,
+        completedAt: entry.completedAt,
+        durationMs: entry.durationMs,
+        turnsCompleted: entry.turnsCompleted,
+        playerTurnsStarted: entry.playerTurnsStarted,
+        enemyTurnsStarted: entry.enemyTurnsStarted,
+        playerCardsPlayed: entry.playerCardsPlayed,
+        enemyCardsPlayed: entry.enemyCardsPlayed,
+        peakLegalPlayerMoves: entry.peakLegalPlayerMoves,
+        peakLegalEnemyMoves: entry.peakLegalEnemyMoves,
+        finalTurnNumber: entry.finalTurnNumber,
+        completionReason: entry.completionReason,
+        deadTableauReached: entry.deadTableauReached,
+        noValidMovesPlayer: entry.noValidMovesPlayer,
+        remainingTableauDepths: entry.remainingTableauDepths,
+        playerTableauTopRanks: entry.playerTableauTopRanks,
+        playerFoundationTopRanks: entry.playerFoundationTopRanks,
+        legalPlayerMovesByFoundation: entry.legalPlayerMovesByFoundation,
+        totalLegalPlayerMoves: entry.totalLegalPlayerMoves,
+      })),
+      diagnosticSamples: results.slice(0, 3).map((entry) => ({
+        run: entry.run,
+        completionReason: entry.completionReason,
+        traceTail: entry.traceTail,
+        moveAuditTail: entry.moveAuditTail,
+      })),
+    };
+  }, [autoPlayDeterministic, autoPlaySeed, autoPlaySpeed, testSequenceRequestedRuns, timeScale]);
+  const handleCopyTestSequenceResults = useCallback(() => {
+    const payload = buildTestSequencePayload(testSequenceResults);
+    const json = JSON.stringify(payload, null, 2);
+    const globalWindow = window as Window & { __combatLabLastTestSequence?: unknown };
+    globalWindow.__combatLabLastTestSequence = payload;
+
+    const setNotice = (label: string) => {
+      setTestSequenceCopyNotice(label);
+      window.setTimeout(() => setTestSequenceCopyNotice(''), 2400);
+    };
+
+    const downloadResults = () => {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `combat-test-seq-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setNotice('Downloaded');
+    };
+
+    if (navigator?.clipboard?.writeText) {
+      void navigator.clipboard.writeText(json)
+        .then(() => setNotice('Copied'))
+        .catch(() => downloadResults());
+      return;
+    }
+    downloadResults();
+  }, [buildTestSequencePayload, testSequenceResults]);
+  const handleStartTestSequence = useCallback(() => {
+    const requested = Math.max(1, Math.min(1000, Math.floor(Number(testSequenceInput) || 0)));
+    setTestSequenceInput(String(requested));
+    setTestSequenceResults([]);
+    setTestSequenceCompleted(false);
+    setTestSequenceRequestedRuns(requested);
+    setTestSequenceCurrentRun(0);
+    setTestSequenceCopyNotice('');
+    setTestSequenceRunning(true);
+    resetTestSequenceRun(1);
+  }, [resetTestSequenceRun, testSequenceInput]);
+  const appendAutoPlayMoveAudit = useCallback((entry: Omit<AutoPlayMoveAuditEntry, 'at' | 'activeSide' | 'turn' | 'timeScale' | 'autoPlaySpeed' | 'playerTableauTopRanks' | 'playerFoundationTopRanks' | 'enemyFoundationTopRanks' | 'legalPlayerMovesByFoundation' | 'legalEnemyMovesByFoundation'>) => {
+    const { legalPlayerMovesByFoundation, legalEnemyMovesByFoundation } = buildAutoPlayLegalMoveCounts();
+    const stamped: AutoPlayMoveAuditEntry = {
+      ...entry,
+      at: Date.now(),
+      activeSide: effectiveActiveSide,
+      turn: Math.max(0, Number(gameState.turnCount ?? 0)),
+      timeScale,
+      autoPlaySpeed,
+      playerTableauTopRanks: previewTableaus.map((tableau) => tableau[tableau.length - 1]?.rank ?? null),
+      playerFoundationTopRanks: previewPlayerFoundations.map((foundation) => foundation[foundation.length - 1]?.rank ?? null),
+      enemyFoundationTopRanks: enemyFoundations.map((foundation) => foundation[foundation.length - 1]?.rank ?? null),
+      legalPlayerMovesByFoundation,
+      legalEnemyMovesByFoundation,
+    };
+    autoPlayMoveAuditRef.current = [stamped, ...autoPlayMoveAuditRef.current].slice(0, AUTO_PLAY_AUDIT_MAX);
+    const globalWindow = window as Window & {
+      __combatLabMoveAudit?: AutoPlayMoveAuditEntry[];
+      __combatLabExportMoveAudit?: () => string;
+      __combatLabClearMoveAudit?: () => void;
+    };
+    globalWindow.__combatLabMoveAudit = autoPlayMoveAuditRef.current;
+    globalWindow.__combatLabExportMoveAudit = () => JSON.stringify(autoPlayMoveAuditRef.current, null, 2);
+    globalWindow.__combatLabClearMoveAudit = () => {
+      autoPlayMoveAuditRef.current = [];
+      globalWindow.__combatLabMoveAudit = [];
+    };
+  }, [
+    autoPlaySpeed,
+    buildAutoPlayLegalMoveCounts,
+    effectiveActiveSide,
+    enemyFoundations,
+    gameState.turnCount,
+    previewPlayerFoundations,
+    previewTableaus,
+    timeScale,
+  ]);
   useEffect(() => {
     if (!autoPlayDragAnim) {
       autoPlayDragAnimIdRef.current = null;
@@ -2423,6 +2740,7 @@ export function CombatSandbox({
       autoPlayDragRemainingMsRef.current = 0;
       autoPlayDragPausedTransformRef.current = null;
       autoPlayDragTargetTransformRef.current = null;
+      autoPlayDragCompletionRef.current = null;
       if (autoPlayDragRafRef.current) {
         window.cancelAnimationFrame(autoPlayDragRafRef.current);
         autoPlayDragRafRef.current = 0;
@@ -2493,12 +2811,15 @@ export function CombatSandbox({
       autoPlayDragRemainingMsRef.current = remainingMs;
       autoPlayDragPausedTransformRef.current = null;
       autoPlayDragTimeoutRef.current = window.setTimeout(() => {
+        const complete = autoPlayDragCompletionRef.current;
         autoPlayDragAnimIdRef.current = null;
         autoPlayDragStartedAtRef.current = 0;
         autoPlayDragRemainingMsRef.current = 0;
         autoPlayDragPausedTransformRef.current = null;
         autoPlayDragTargetTransformRef.current = null;
+        autoPlayDragCompletionRef.current = null;
         autoPlayDragTimeoutRef.current = 0;
+        complete?.();
         setAutoPlayDragAnim(null);
       }, remainingMs);
     });
@@ -2521,8 +2842,13 @@ export function CombatSandbox({
     card: CardType,
     source: AutoPlayDragSource,
     targetDropIndex: number,
-    tableauIndex?: number
+    tableauIndex?: number,
+    onComplete?: () => void
   ) => {
+    if (batchFastMode) {
+      onComplete?.();
+      return;
+    }
     const viewportRect = fitViewportRef.current?.getBoundingClientRect();
     if (!viewportRect) return;
     const targetRect = autoPlayFoundationRefsRef.current[targetDropIndex]?.getBoundingClientRect();
@@ -2546,6 +2872,7 @@ export function CombatSandbox({
     // Multiplier slows all drag motion uniformly without changing autoplay decision cadence.
     const speedScale = Math.max(0.25, autoPlaySpeed) * Math.max(0.5, timeScale);
     const baseDurationMs = (360 + (distance * 0.9)) * AUTO_PLAY_DRAG_DURATION_MULTIPLIER;
+    autoPlayDragCompletionRef.current = onComplete ?? null;
     setAutoPlayDragAnim({
       id: `autoplay-drag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       card,
@@ -2560,7 +2887,7 @@ export function CombatSandbox({
         )
       ),
     });
-  }, [autoPlaySpeed, timeScale]);
+  }, [autoPlaySpeed, batchFastMode, timeScale]);
   const dropRefCallbacksRef = useRef<Record<number, (index: number, ref: HTMLDivElement | null) => void>>({});
   useEffect(() => {
     if (dragState.isDragging) return;
@@ -2597,7 +2924,6 @@ export function CombatSandbox({
     rect: DOMRect
   ) => {
     if (interTurnCountdownActive) return;
-    if (!isHandCardPlayable(card)) return;
     draggedHandCardRef.current = card;
     startDrag(card, HAND_SOURCE_INDEX, clientX, clientY, rect);
   };
@@ -2632,6 +2958,16 @@ export function CombatSandbox({
         at: Date.now(),
       };
       appendAutoPlayDecision(stamped);
+      appendAutoPlayMoveAudit({
+        kind: 'decision',
+        detail: {
+          label: entry.label,
+          decisionKind: entry.kind,
+          side: entry.side,
+          score: entry.score,
+          accepted,
+        },
+      });
     }
     if (accepted) {
       autoPlayStallRef.current = 0;
@@ -2642,7 +2978,7 @@ export function CombatSandbox({
       setAutoPlayStalls(autoPlayStallRef.current);
     }
     return accepted;
-  }, [appendAutoPlayDecision]);
+  }, [appendAutoPlayDecision, appendAutoPlayMoveAudit]);
   const performAutoPlayStepRef = useRef<() => void>(() => {});
   const performAutoPlayStep = useCallback(() => {
     if (!autoPlayEnabled || isGamePaused || dragState.isDragging || interTurnCountdownActive || autoPlayDragAnim) return;
@@ -2652,6 +2988,12 @@ export function CombatSandbox({
     actions.cleanupDefeatedEnemies();
     try {
       runWithDeterministicRandom(autoPlayDeterministic, autoPlayRngStateRef, () => {
+      appendAutoPlayMoveAudit({
+        kind: 'step',
+        detail: {
+          reason: 'autoplay_step_start',
+        },
+      });
       const engineActiveSide = getCombatActiveSide(gameState);
       if (enforceTurnOwnership && useLocalTurnSide && engineActiveSide !== effectiveActiveSide) {
         actions.setActiveSide?.(effectiveActiveSide);
@@ -2745,83 +3087,6 @@ export function CombatSandbox({
     const canActAsEnemy = !enforceTurnOwnership || effectiveActiveSide === 'enemy';
 
     if (canActAsPlayer) {
-      if (actions.playRpgHandCardOnActor) {
-        for (const card of previewHandCards) {
-          if (!isHandCardPlayable(card)) continue;
-          if (!isDirectRpgAttackCard(card)) continue;
-          const power = estimateRpgAttackPower(card);
-          if (card.id.startsWith('rpg-cloud-sight-')) {
-            const targetIndex = bestPlayerTarget?.actorIndex ?? 0;
-            const targetHp = bestPlayerTarget?.actor.hp ?? 0;
-            const targetHpMax = Math.max(1, bestPlayerTarget?.actor.hpMax ?? 1);
-            const missingHpPct = Math.max(0, (targetHpMax - targetHp) / targetHpMax);
-            const score = (10 + missingHpPct * 10) * policy.playerSupportBias;
-            candidates.push({
-              side: 'player',
-              kind: 'player_rpg_attack',
-              score,
-              label: `${card.name ?? card.id} -> ally#${targetIndex}`,
-              run: () => actions.playRpgHandCardOnActor?.(card.id, 'player', targetIndex) ?? false,
-            });
-            continue;
-          }
-          if (!bestEnemyTarget) continue;
-          const lowHpBonus = Math.max(0, (bestEnemyTarget.actor.hpMax ?? 1) - (bestEnemyTarget.actor.hp ?? 0));
-          const score = (14 + power * 6 + lowHpBonus * 0.35) * policy.playerAggro;
-          candidates.push({
-            side: 'player',
-            kind: 'player_rpg_attack',
-            score,
-            label: `${card.name ?? card.id} -> enemy#${bestEnemyTarget.enemyIndex}`,
-            run: () => actions.playRpgHandCardOnActor?.(card.id, 'enemy', bestEnemyTarget.enemyIndex) ?? false,
-          });
-        }
-      }
-
-      for (const card of previewHandCards) {
-        if (!isHandCardPlayable(card)) continue;
-        for (let foundationIndex = 0; foundationIndex < previewPlayerFoundations.length; foundationIndex += 1) {
-          if (!previewPlayerFoundations[foundationIndex]) continue;
-          const actor = resolvePlayerFoundationActor(foundationIndex, previewPlayerFoundations[foundationIndex] ?? []);
-          if (actor && !isActorAlive(actor)) continue;
-          const score = scoreAbilityCard(card, 'player', foundationIndex) * policy.playerSupportBias;
-          candidates.push({
-            side: 'player',
-            kind: 'player_hand_player_foundation',
-            score,
-            label: `${card.name ?? card.id} -> p#${foundationIndex}`,
-            run: () => {
-              const accepted = actions.playFromHand(card, foundationIndex, useWild);
-              if (accepted) applyFoundationTimerBonus(foundationIndex);
-              return accepted;
-            },
-            drag: {
-              card,
-              source: 'hand',
-              targetDropIndex: foundationIndex,
-            },
-          });
-        }
-        for (let enemyFoundationIndex = 0; enemyFoundationIndex < enemyFoundations.length; enemyFoundationIndex += 1) {
-          if ((enemyFoundations[enemyFoundationIndex]?.length ?? 0) === 0) continue;
-          const actor = resolveEnemyFoundationActor(enemyFoundationIndex, enemyFoundations[enemyFoundationIndex] ?? []);
-          if (actor && !isActorAlive(actor)) continue;
-          const score = (scoreAbilityCard(card, 'enemy', enemyFoundationIndex) + 3) * policy.playerAggro;
-          candidates.push({
-            side: 'player',
-            kind: 'player_hand_enemy_foundation',
-            score,
-            label: `${card.name ?? card.id} -> e#${enemyFoundationIndex}`,
-            run: () => actions.playFromHandToEnemyFoundation(card, enemyFoundationIndex),
-            drag: {
-              card,
-              source: 'hand',
-              targetDropIndex: enemyFoundationDropBase + enemyFoundationIndex,
-            },
-          });
-        }
-      }
-
       const playerFoundationForAnalysis = previewPlayerFoundations.filter((foundation) => foundation.length > 0);
       if (playerFoundationForAnalysis.length > 0) {
         const analysis = analyzeOptimalSequence({
@@ -2831,7 +3096,14 @@ export function CombatSandbox({
           mode: useWild ? 'wild' : 'standard',
         });
         const bestMove = analysis.sequence[0];
-        if (bestMove) {
+        const bestMoveIsLegal = !!bestMove
+          && !isFoundationTableauLocked(bestMove.foundationIndex)
+          && canPlayCardWithWild(
+            bestMove.card,
+            previewPlayerFoundations[bestMove.foundationIndex]?.[previewPlayerFoundations[bestMove.foundationIndex].length - 1],
+            gameState.activeEffects
+          );
+        if (bestMoveIsLegal && bestMove) {
           const rankBoost = Math.max(0, Number(bestMove.card.rank ?? 0)) * 0.25;
           candidates.push({
             side: 'player',
@@ -2856,9 +3128,12 @@ export function CombatSandbox({
         const topCard = tableauCards[tableauCards.length - 1];
         if (!topCard) continue;
         for (let foundationIndex = 0; foundationIndex < previewPlayerFoundations.length; foundationIndex += 1) {
-          if (!previewPlayerFoundations[foundationIndex]) continue;
+          const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
+          if (isFoundationTableauLocked(foundationIndex)) continue;
           const actor = resolvePlayerFoundationActor(foundationIndex, previewPlayerFoundations[foundationIndex] ?? []);
           if (actor && !isActorAlive(actor)) continue;
+          const topFoundationCard = foundationCards[foundationCards.length - 1];
+          if (!canPlayCardWithWild(topCard, topFoundationCard, gameState.activeEffects)) continue;
           candidates.push({
             side: 'player',
             kind: 'player_tableau',
@@ -2966,37 +3241,28 @@ export function CombatSandbox({
         return a.tieBreaker - b.tieBreaker;
       })
       .map((entry) => entry.candidate);
-    for (const candidate of sortedCandidates) {
-      const accepted = executeAutoPlayDecision(
-        {
+    appendAutoPlayMoveAudit({
+      kind: 'step',
+      detail: {
+        reason: 'candidates_built',
+        candidateCount: sortedCandidates.length,
+        topCandidates: sortedCandidates.slice(0, 5).map((candidate) => ({
           side: candidate.side,
           kind: candidate.kind,
-          score: candidate.score,
           label: candidate.label,
-        },
-        candidate.run,
-        {
-          recordRejected: false,
-          countRejectedAsStall: false,
-        }
-      );
-      if (!accepted) continue;
-      if (candidate.drag) {
-        startAutoPlayDragAnimation(
-          candidate.drag.card,
-          candidate.drag.source,
-          candidate.drag.targetDropIndex,
-          candidate.drag.tableauIndex
-        );
-      }
-
+          score: Number(candidate.score.toFixed(3)),
+        })),
+      },
+    });
+    for (const candidate of sortedCandidates) {
       const shouldHandoffEnemyAfterSinglePlay = (
         enforceTurnOwnership
         && effectiveActiveSide === 'enemy'
         && candidate.side === 'enemy'
         && currentDifficulty === 'normal'
       );
-      if (shouldHandoffEnemyAfterSinglePlay) {
+      const finalizeAcceptedDecision = () => {
+        if (!shouldHandoffEnemyAfterSinglePlay) return;
         appendAutoPlayDecision({
           side: 'system',
           kind: 'advance_turn',
@@ -3007,9 +3273,50 @@ export function CombatSandbox({
         });
         if (useLocalTurnSide) {
           forceLocalTurnSide('player');
+          actions.reshuffleTableaus();
         } else {
           actions.advanceTurn();
         }
+      };
+      if (candidate.drag) {
+        startAutoPlayDragAnimation(
+          candidate.drag.card,
+          candidate.drag.source,
+          candidate.drag.targetDropIndex,
+          candidate.drag.tableauIndex,
+          () => {
+            const accepted = executeAutoPlayDecision(
+              {
+                side: candidate.side,
+                kind: candidate.kind,
+                score: candidate.score,
+                label: candidate.label,
+              },
+              candidate.run,
+              {
+                recordRejected: false,
+                countRejectedAsStall: false,
+              }
+            );
+            if (accepted) finalizeAcceptedDecision();
+          }
+        );
+      } else {
+        const accepted = executeAutoPlayDecision(
+          {
+            side: candidate.side,
+            kind: candidate.kind,
+            score: candidate.score,
+            label: candidate.label,
+          },
+          candidate.run,
+          {
+            recordRejected: false,
+            countRejectedAsStall: false,
+          }
+        );
+        if (!accepted) continue;
+        finalizeAcceptedDecision();
       }
       return;
     }
@@ -3030,52 +3337,8 @@ export function CombatSandbox({
       return;
     }
 
-    // Last-chance player fallback: try direct legal plays before handing off turn.
+    // Last-chance player fallback: try direct legal tableau plays before handing off turn.
     if (enforceTurnOwnership && effectiveActiveSide === 'player') {
-      for (const card of previewHandCards) {
-        if (!isHandCardPlayable(card)) continue;
-        for (let foundationIndex = 0; foundationIndex < previewPlayerFoundations.length; foundationIndex += 1) {
-          const actor = resolvePlayerFoundationActor(foundationIndex, previewPlayerFoundations[foundationIndex] ?? []);
-          if (actor && !isActorAlive(actor)) continue;
-          const accepted = executeAutoPlayDecision(
-            {
-              side: 'player',
-              kind: 'player_hand_player_foundation',
-              score: 0.95,
-              label: `forced hand -> p#${foundationIndex}`,
-            },
-            () => {
-              const runAccepted = actions.playFromHand(card, foundationIndex, useWild);
-              if (runAccepted) applyFoundationTimerBonus(foundationIndex);
-              return runAccepted;
-            },
-            {
-              recordRejected: false,
-              countRejectedAsStall: false,
-            }
-          );
-          if (accepted) return;
-        }
-        for (let enemyFoundationIndex = 0; enemyFoundationIndex < enemyFoundations.length; enemyFoundationIndex += 1) {
-          if ((enemyFoundations[enemyFoundationIndex]?.length ?? 0) === 0) continue;
-          const actor = resolveEnemyFoundationActor(enemyFoundationIndex, enemyFoundations[enemyFoundationIndex] ?? []);
-          if (actor && !isActorAlive(actor)) continue;
-          const accepted = executeAutoPlayDecision(
-            {
-              side: 'player',
-              kind: 'player_hand_enemy_foundation',
-              score: 0.9,
-              label: `forced hand -> e#${enemyFoundationIndex}`,
-            },
-            () => actions.playFromHandToEnemyFoundation(card, enemyFoundationIndex),
-            {
-              recordRejected: false,
-              countRejectedAsStall: false,
-            }
-          );
-          if (accepted) return;
-        }
-      }
       for (let tableauIndex = 0; tableauIndex < previewTableaus.length; tableauIndex += 1) {
         const tableauCards = previewTableaus[tableauIndex] ?? [];
         if (tableauCards.length === 0) continue;
@@ -3127,7 +3390,11 @@ export function CombatSandbox({
         },
         () => {
           if (useLocalTurnSide) {
-            forceLocalTurnSide(effectiveActiveSide === 'player' ? 'enemy' : 'player');
+            const nextSide: 'player' | 'enemy' = effectiveActiveSide === 'player' ? 'enemy' : 'player';
+            forceLocalTurnSide(nextSide);
+            if (nextSide === 'player') {
+              actions.reshuffleTableaus();
+            }
             return true;
           }
           actions.advanceTurn();
@@ -3159,7 +3426,11 @@ export function CombatSandbox({
         () => {
           if (enforceTurnOwnership) {
             if (useLocalTurnSide) {
-              forceLocalTurnSide(effectiveActiveSide === 'player' ? 'enemy' : 'player');
+              const nextSide: 'player' | 'enemy' = effectiveActiveSide === 'player' ? 'enemy' : 'player';
+              forceLocalTurnSide(nextSide);
+              if (nextSide === 'player') {
+                actions.reshuffleTableaus();
+              }
             } else {
               actions.advanceTurn();
             }
@@ -3189,6 +3460,7 @@ export function CombatSandbox({
   }, [
     actions,
     appendAutoPlayDecision,
+    appendAutoPlayMoveAudit,
     applyFoundationTimerBonus,
     autoPlayEnabled,
     autoPlayDeterministic,
@@ -3231,9 +3503,102 @@ export function CombatSandbox({
     if (!open || !autoPlayEnabled || !isLabMode) return;
     const intervalId = window.setInterval(() => {
       performAutoPlayStepRef.current();
-    }, autoPlayStepMs);
+    }, effectiveAutoPlayStepMs);
     return () => window.clearInterval(intervalId);
-  }, [autoPlayEnabled, autoPlayStepMs, isLabMode, open]);
+  }, [autoPlayEnabled, effectiveAutoPlayStepMs, isLabMode, open]);
+  useEffect(() => {
+    if (!testSequenceRunning) return;
+    if (effectiveActiveSide === 'player' && !interTurnCountdownActive) return;
+    forceLocalTurnSide('player');
+    setActiveSide?.('player');
+    setPendingTurnSide(null);
+    setPendingFinalMoveResolution(false);
+    setInterTurnCountdownMs(0);
+  }, [effectiveActiveSide, forceLocalTurnSide, interTurnCountdownActive, setActiveSide, testSequenceRunning]);
+  useEffect(() => {
+    if (!testSequenceRunning) return;
+    if (testSequenceCurrentRun <= 0) return;
+    if (dragState.isDragging || autoPlayDragAnim || interTurnCountdownActive) return;
+    if (!noValidMovesForPlayer) return;
+    if (testSequenceFinalizedRunRef.current === testSequenceCurrentRun) return;
+
+    testSequenceFinalizedRunRef.current = testSequenceCurrentRun;
+
+    setAutoPlayEnabled(false);
+    const completedAt = performance.now();
+    const { legalPlayerMovesByFoundation, legalEnemyMovesByFoundation } = buildAutoPlayLegalMoveCounts();
+    const runMetrics = testSequenceRunMetricsRef.current;
+    const finalTurnCounter = Math.max(
+      runMetrics.observedTurnCounter,
+      Number(gameState.lifecycleTurnCounter ?? gameState.turnCount ?? 0)
+    );
+    const runTurnsCompleted = finalTurnCounter;
+    const result: AutoPlayBatchRunSummary = {
+      run: testSequenceCurrentRun,
+      startedAt: new Date(Date.now() - Math.max(0, Math.round(completedAt - testSequenceRunStartedAtRef.current))).toISOString(),
+      completedAt: new Date().toISOString(),
+      durationMs: Math.max(0, Math.round(completedAt - testSequenceRunStartedAtRef.current)),
+      turnsCompleted: runTurnsCompleted,
+      playerTurnsStarted: runMetrics.playerTurnsStarted,
+      enemyTurnsStarted: runMetrics.enemyTurnsStarted,
+      playerCardsPlayed: runMetrics.playerCardsPlayed,
+      enemyCardsPlayed: runMetrics.enemyCardsPlayed,
+      peakLegalPlayerMoves: Math.max(runMetrics.peakLegalPlayerMoves, legalPlayerMovesByFoundation.reduce((sum, value) => sum + value, 0)),
+      peakLegalEnemyMoves: Math.max(runMetrics.peakLegalEnemyMoves, legalEnemyMovesByFoundation.reduce((sum, value) => sum + value, 0)),
+      finalTurnNumber: Math.max(1, finalTurnCounter + 1),
+      completionReason: 'dead_tableau',
+      deadTableauReached: true,
+      noValidMovesPlayer: true,
+      remainingTableauDepths: previewTableaus.map((tableau) => tableau.length),
+      playerTableauTopRanks: previewTableaus.map((tableau) => tableau[tableau.length - 1]?.rank ?? null),
+      playerFoundationTopRanks: previewPlayerFoundations.map((foundation) => foundation[foundation.length - 1]?.rank ?? null),
+      legalPlayerMovesByFoundation,
+      totalLegalPlayerMoves: legalPlayerMovesByFoundation.reduce((sum, value) => sum + value, 0),
+      traceTail: autoPlayTrace.slice(0, 12),
+      moveAuditTail: autoPlayMoveAuditRef.current.slice(0, 40),
+    };
+    console.log('[combat-lab test sequence run]', result);
+    setTestSequenceResults((prev) => {
+      const next = [...prev, result];
+      const done = next.length >= testSequenceRequestedRuns;
+      if (done) {
+        setTestSequenceRunning(false);
+        setTestSequenceCompleted(true);
+        const globalWindow = window as Window & { __combatLabLastTestSequence?: unknown };
+        globalWindow.__combatLabLastTestSequence = buildTestSequencePayload(next);
+      } else {
+        if (testSequenceResetTimeoutRef.current) {
+          window.clearTimeout(testSequenceResetTimeoutRef.current);
+        }
+        testSequenceResetTimeoutRef.current = window.setTimeout(() => {
+          resetTestSequenceRun(next.length + 1);
+        }, batchFastMode ? 0 : 220);
+      }
+      return next;
+    });
+  }, [
+    batchFastMode,
+    autoPlayDragAnim,
+    autoPlayTrace,
+    buildAutoPlayLegalMoveCounts,
+    buildTestSequencePayload,
+    dragState.isDragging,
+    interTurnCountdownActive,
+    noValidMovesForPlayer,
+    previewPlayerFoundations,
+    previewTableaus,
+    resetTestSequenceRun,
+    testSequenceCurrentRun,
+    testSequenceRequestedRuns,
+    testSequenceRunning,
+  ]);
+  useEffect(() => {
+    return () => {
+      if (testSequenceResetTimeoutRef.current) {
+        window.clearTimeout(testSequenceResetTimeoutRef.current);
+      }
+    };
+  }, []);
   useEffect(() => {
     resetAutoPlayDeterministicRng();
   }, [autoPlaySeed, resetAutoPlayDeterministicRng]);
@@ -3293,31 +3658,13 @@ export function CombatSandbox({
   useEffect(() => {
     if (!open || !isLabMode) return;
     const foundations = gameState.foundations ?? [];
-    const needsActorSeed = (foundationIndex: number) => {
-      const topCard = foundations[foundationIndex]?.[0];
-      if (!topCard) return true;
-      const isActorLikeCard = topCard.id.startsWith('actor-')
-        || topCard.id.startsWith('combatlab-foundation-')
-        || topCard.id.startsWith('lab-foundation-');
-      if (!isActorLikeCard) return true;
-      const normalizedName = (topCard.name ?? '').trim().toLowerCase();
-      if (!normalizedName || normalizedName === 'party member') return true;
-      return false;
-    };
-    const shouldSeedLabFoundations = foundations.length < 3 || needsActorSeed(0) || needsActorSeed(1) || needsActorSeed(2);
-    if (!shouldSeedLabFoundations) {
+    const firstThree = foundations.slice(0, 3);
+    const hasVisibleSeededFoundations = firstThree.length === 3 && firstThree.every((stack) => (stack?.length ?? 0) > 0);
+    if (hasVisibleSeededFoundations) {
       labFoundationSeedTokenRef.current = '';
       return;
     }
-    const topCardSeed = [0, 1, 2]
-      .map((foundationIndex) => {
-        const topCard = foundations[foundationIndex]?.[0];
-        if (!topCard) return `${foundationIndex}:none`;
-        return `${foundationIndex}:${topCard.id}:${String(topCard.name ?? '').trim().toLowerCase()}:${topCard.sourceActorId ?? ''}`;
-      })
-      .join('|');
-    const actorSeed = `${labFoundationActors.felis?.id ?? ''}|${labFoundationActors.ursus?.id ?? ''}|${labFoundationActors.lupus?.id ?? ''}`;
-    const seedToken = `${topCardSeed}::${actorSeed}`;
+    const seedToken = `seeded-foundations:${firstThree.map((stack) => stack?.length ?? 0).join(',')}`;
     if (labFoundationSeedTokenRef.current === seedToken) return;
     labFoundationSeedTokenRef.current = seedToken;
     actions.setFoundations(buildLabSeededFoundations(foundations, labFoundationActors));
@@ -3836,7 +4183,7 @@ export function CombatSandbox({
         <div className="mb-1 uppercase tracking-[0.14em] text-game-teal/70">Auto Play</div>
         <div className="flex items-center justify-between">
           <span>Status</span>
-          <span>{autoPlayEnabled ? `active · ${autoPlayStepMs}ms` : 'off'}</span>
+          <span>{autoPlayEnabled ? (batchFastMode ? 'active · batch fast' : `active · ${autoPlayStepMs}ms`) : 'off'}</span>
         </div>
         <div className="flex items-center justify-between">
           <span>Cadence</span>
@@ -4048,7 +4395,7 @@ export function CombatSandbox({
         </select>
       </div>
       <div className="mb-3 rounded border border-game-teal/25 bg-game-bg-dark/40 px-2 py-1 text-center text-[9px] uppercase tracking-[0.18em] text-game-teal/70">
-        Space = Pause/Resume · A = Atmosphere · P = Auto · [ ] = Time
+        Space = Pause/Resume · A = Atmosphere · P = Auto · H = Hand · [ ] = Time
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -4080,11 +4427,13 @@ export function CombatSandbox({
               const atmosphereComponents: Partial<Record<AtmosphereEffectId, unknown>> = {
                 lost_in_stars: LostInStarsAtmosphere,
                 aurora_forest: AuroraForestAtmosphere,
-                black_hole: BlackHoleAtmosphere,
+                gargantua: GargantuaAtmosphere,
                 brownian_motion: BrownianMotionAtmosphere,
                 chaos_split: ChaosSplitAtmosphere,
+                comet_barrage: CometBarrageAtmosphere,
                 comet_rain: CometRainAtmosphere,
                 cosmic_lint: CosmicLintAtmosphere,
+                door_sands_time: DoorSandsTimeAtmosphere,
                 drifting_purple: DriftingPurpleAtmosphere,
                 einstein_rosen: EinsteinRosenAtmosphere,
                 electric_skies: ElectricSkiesAtmosphere,
@@ -4099,26 +4448,27 @@ export function CombatSandbox({
                 solaris_prime: SolarisPrimeAtmosphere,
                 sakura_blossoms: SakuraBlossomsAtmosphere,
                 smoke_green: SmokeGreenAtmosphere,
+                spinning_starfield: SpinningStarfieldAtmosphere,
                 stars_twinkle_performant: StarsTwinklePerformantAtmosphere,
-              };
-              if (selectedAtmosphere === 'none') return null;
-              const candidate = atmosphereComponents[selectedAtmosphere] as
+                };
+                if (selectedAtmosphere === 'none') return null;
+                const candidate = atmosphereComponents[selectedAtmosphere] as
                 | ComponentType<{ className?: string }>
                 | { default?: ComponentType<{ className?: string }> }
                 | undefined;
-              const AtmosphereComponent = (
+                const AtmosphereComponent = (
                 candidate
                 && typeof candidate === 'object'
                 && 'default' in candidate
                 && candidate.default
-              ) ? candidate.default : candidate;
-              const isRenderable = Boolean(
+                ) ? candidate.default : candidate;
+                const isRenderable = Boolean(
                 AtmosphereComponent
                 && (
                   typeof AtmosphereComponent === 'function'
                   || (typeof AtmosphereComponent === 'object' && '$$typeof' in (AtmosphereComponent as object))
                 )
-              );
+                );
               if (!isRenderable) {
                 if (import.meta.env.DEV) console.warn('[atmosphere] unresolved preset', selectedAtmosphere);
                 return null;
@@ -4209,6 +4559,15 @@ export function CombatSandbox({
                   >
                     {isGamePaused ? 'Resume' : 'Pause'}
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleHudEndTurn}
+                    className="rounded border border-game-teal/45 bg-black/70 px-2 py-1 text-[10px] text-game-teal hover:border-game-teal transition-colors"
+                    title="Advance to the next turn side"
+                    aria-label="Advance turn"
+                  >
+                    End Turn
+                  </button>
                   <div
                     className="rounded border border-game-teal/45 bg-black/70 px-2 py-1 text-[10px] text-game-teal"
                     title="Total turns completed"
@@ -4216,6 +4575,63 @@ export function CombatSandbox({
                   >
                     Turns {totalTurnsCompleted}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setTestSequencePanelOpen((prev) => !prev)}
+                    className={`rounded border px-2 py-1 text-[10px] transition-colors ${testSequencePanelOpen ? 'border-game-gold/70 bg-game-gold/10 text-game-gold' : 'border-game-teal/45 bg-black/70 text-game-teal hover:border-game-teal'}`}
+                    title="Open batch autoplay test sequence controls"
+                    aria-label="Toggle autoplay test sequence controls"
+                  >
+                    Test Seq
+                  </button>
+                  {testSequencePanelOpen && (
+                    <>
+                      <input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        step={1}
+                        value={testSequenceInput}
+                        onChange={(event) => setTestSequenceInput(event.target.value)}
+                        className="w-16 rounded border border-game-teal/45 bg-black/75 px-2 py-1 text-[10px] text-game-teal outline-none"
+                        aria-label="Autoplay test run count"
+                        title="Number of autoplay test runs"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleStartTestSequence}
+                        disabled={testSequenceRunning}
+                        className={`rounded border px-2 py-1 text-[10px] transition-colors ${testSequenceRunning ? 'cursor-not-allowed border-game-teal/20 bg-black/40 text-game-teal/35' : 'border-game-teal/45 bg-black/70 text-game-teal hover:border-game-teal'}`}
+                        title="Run autoplay test sequence"
+                        aria-label="Run autoplay test sequence"
+                      >
+                        {testSequenceRunning ? 'Running' : 'Run'}
+                      </button>
+                      <div className="rounded border border-game-teal/35 bg-black/70 px-2 py-1 text-[10px] text-game-teal/90">
+                        {testSequenceRunning
+                          ? `Test ${testSequenceCurrentRun}/${testSequenceRequestedRuns}`
+                          : testSequenceCompleted
+                            ? `Done ${testSequenceResults.length}/${testSequenceRequestedRuns}`
+                            : 'Idle'}
+                      </div>
+                      {testSequenceCompleted && testSequenceResults.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleCopyTestSequenceResults}
+                          className="rounded border border-game-gold/70 bg-game-gold/10 px-2 py-1 text-[10px] text-game-gold transition-colors hover:border-game-gold"
+                          title="Copy test sequence payload"
+                          aria-label="Copy test sequence payload"
+                        >
+                          Copy Results
+                        </button>
+                      )}
+                      {testSequenceCopyNotice && (
+                        <div className="rounded border border-game-gold/40 bg-black/70 px-2 py-1 text-[10px] text-game-gold/90">
+                          {testSequenceCopyNotice}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -4406,10 +4822,7 @@ export function CombatSandbox({
                           index={idx}
                           onFoundationClick={() => handleSandboxFoundationClick(idx)}
                           allowClickInDnd
-                          canReceive={
-                            (!!selectedCard && !!validFoundationsForSelected[idx] && !isFoundationTableauLocked(idx))
-                            || canTapFriendlyFoundation(idx)
-                          }
+                          canReceive={!!selectedCard && !!validFoundationsForSelected[idx] && !isFoundationTableauLocked(idx)}
                           interactionMode={gameState.interactionMode}
                           showGraphics={showGraphics}
                           scale={1.12}
@@ -4428,45 +4841,24 @@ export function CombatSandbox({
                   })}
                 </div>
               </div>
-                  <div className="flex w-full justify-center px-1 pb-0 pt-1">
-                {previewHandCards.length === 0 ? (
-                  <div className="flex items-center gap-2 opacity-45">
-                    <div
-                      className="rounded border border-dashed border-game-white/25 bg-black/30"
-                      style={{
-                        width: Math.round(CARD_SIZE.width * previewHandCardScale),
-                        height: Math.round(CARD_SIZE.height * previewHandCardScale),
-                      }}
-                    />
-                    <div
-                      className="rounded border border-dashed border-game-white/18 bg-black/20"
-                      style={{
-                        width: Math.round(CARD_SIZE.width * previewHandCardScale),
-                        height: Math.round(CARD_SIZE.height * previewHandCardScale),
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div ref={handZoneRef} className="flex w-full justify-center">
-                    <Hand
-                      cards={previewHandCards}
-                      cardScale={previewHandCardScale}
-                      onDragStart={handleSandboxHandDragStart}
-                      onCardClick={handleSandboxHandClick}
-                      stockCount={0}
-                      showGraphics={showGraphics}
-                      interactionMode={gameState.interactionMode}
-                      draggingCardId={dragState.isDragging ? dragState.card?.id : null}
-                      tooltipEnabled={false}
-                      upgradedCardIds={[]}
-                      disableSpringMotion={true}
-                      watercolorOnlyCards={false}
-                      isCardPlayable={isHandCardPlayable}
-                      getCardLockReason={getHandCardLockReason}
-                    />
-                  </div>
-                )}
-              </div>
+                  {previewHandCards.length > 0 && (
+                    <div className="flex w-full justify-center px-1 pb-0 pt-1">
+                      <div ref={handZoneRef} className="flex w-full justify-center">
+                        <DeckSprawl
+                          cards={previewHandCards}
+                          cardScale={previewHandCardScale}
+                          onDragStart={handleSandboxHandDragStart}
+                          onCardClick={handleSandboxHandClick}
+                          showGraphics={showGraphics}
+                          interactionMode={gameState.interactionMode}
+                          draggingCardId={dragState.isDragging ? dragState.card?.id : null}
+                          watercolorOnlyCards={false}
+                          isCardPlayable={isHandCardPlayable}
+                          getCardLockReason={getHandCardLockReason}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -4486,6 +4878,3 @@ export function CombatSandbox({
     </Profiler>
   );
 }
-
-
-

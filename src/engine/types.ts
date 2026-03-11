@@ -375,6 +375,7 @@ export interface Actor {
   accuracy?: number; // Chance to land outgoing hits
   damageTaken?: number; // Damage taken this bout
   power: number; // Current power usage
+  suit?: Suit; // Actor's primary suit (derived from definition)
   orimSlots: OrimSlot[]; // Actor-level ORIM slots
   element?: Element; // Elemental vulnerability for damage calculations
   gridPosition?: GridPosition; // Position in actor grid (available actors only)

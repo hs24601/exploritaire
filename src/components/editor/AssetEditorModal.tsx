@@ -45,9 +45,9 @@ export function AssetEditorModal({
           onClick={onClose}
         />
       )}
-      <div className="relative w-full h-full flex items-start justify-center p-3 sm:p-4">
+      <div className="relative w-full h-full flex items-start justify-center p-1 sm:p-2">
         <div
-          className={`relative w-[min(1320px,calc(100vw-1rem))] h-[min(920px,calc(100vh-1rem))] menu-text ${
+          className={`relative w-[min(96vw,1800px)] h-[min(96vh,1200px)] menu-text ${
             isGodRaysSliderDragging
               ? 'bg-transparent'
               : 'rounded-lg border border-game-teal/50 bg-game-bg-dark/95 shadow-[0_18px_60px_rgba(0,0,0,0.85)]'

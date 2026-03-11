@@ -164,6 +164,7 @@ export function createActor(definitionId: string): Actor | null {
     accuracy: baseAccuracy,
     damageTaken: 0,
     power: basePower,
+    suit: definition.suit,
     orimSlots,
   };
 }
