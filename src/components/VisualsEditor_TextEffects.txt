@@ -1,0 +1,184 @@
+import { memo, useState, useRef, useEffect } from 'react';
+import type { MouseEvent, TouchEvent, MouseEvent as ReactMouseEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { ThreeJsElementsDemo } from './ThreeJsElementCards';
+import { CardFrame } from './card/CardFrame';
+import { useHoloInteraction } from '../hooks/useHoloInteraction';
+import { NEON_COLORS } from '../utils/styles';
+
+// Atmosphere Imports (Alphabetized)
+import { AuroraForestAtmosphere } from './atmosphere/AuroraForestAtmosphere';
+import { BlackHoleAtmosphere } from './atmosphere/BlackHoleAtmosphere';
+import { ChaosSplitAtmosphere } from './atmosphere/ChaosSplitAtmosphere';
+import { CometRainAtmosphere, DEFAULT_COMET_RAIN_CONFIG, type CometRainConfig } from './atmosphere/CometRainAtmosphere';
+import { CosmicLintAtmosphere, DEFAULT_COSMIC_LINT_CONFIG, type CosmicLintConfig } from './atmosphere/CosmicLintAtmosphere';
+import { DriftingPurpleAtmosphere } from './atmosphere/DriftingPurpleAtmosphere';
+import { FallingSnowAtmosphere, DEFAULT_FALLING_SNOW_CONFIG, type FallingSnowConfig } from './atmosphere/FallingSnowAtmosphere';
+import { FlorpusForestAtmosphere } from './atmosphere/FlorpusForestAtmosphere';
+import { GravitySplitAtmosphere } from './atmosphere/GravitySplitAtmosphere';
+import { InfernoMaelstromAtmosphere } from './atmosphere/InfernoMaelstromAtmosphere';
+import { LostInStarsAtmosphere } from './atmosphere/LostInStarsAtmosphere';
+import { OceanSolarCycleAtmosphere, DEFAULT_OCEAN_SOLAR_CYCLE_CONFIG, type OceanSolarCycleConfig } from './atmosphere/OceanSolarCycleAtmosphere';
+import { RagingWavesAtmosphere, DEFAULT_RAGING_WAVES_CONFIG, type RagingWavesConfig } from './atmosphere/RagingWavesAtmosphere';
+import { RaritySquaresTunnelAtmosphere } from './atmosphere/RaritySquaresTunnelAtmosphere';
+import { SacredRealmAtmosphere } from './atmosphere/SacredRealmAtmosphere';
+import { SolarisPrimeAtmosphere } from './atmosphere/SolarisPrimeAtmosphere';
+import { SmokeGreenAtmosphere } from './atmosphere/SmokeGreenAtmosphere';
+
+// Other Demos
+import { VertexDepthShaderDemo, DEFAULT_VERTEX_DEPTH_CONFIG, type VertexDepthConfig } from './VertexDepthShaderDemo';
+import { MidairFlipDemo } from './MidairFlipDemo';
+import { DepthPerspectiveShiftDemo } from './DepthPerspectiveShiftDemo';
+import { Depth3DShiftDemo, DEFAULT_DEPTH_3D_SHIFT_CONFIG, type Depth3DShiftConfig } from './Depth3DShiftDemo';
+
+// Text Effect Imports
+import { DisassembledTextEffect, DEFAULT_DISASSEMBLED_TEXT_CONFIG, type DisassembledTextConfig } from './text/DisassembledTextEffect';
+import { FloatAwayTextEffect, DEFAULT_FLOAT_AWAY_TEXT_CONFIG, type FloatAwayTextConfig } from './text/FloatAwayTextEffect';
+import { ShimmerTextEffect, DEFAULT_SHIMMER_TEXT_CONFIG, type ShimmerTextConfig } from './text/ShimmerTextEffect';
+import { FogOutTextEffect, DEFAULT_FOG_OUT_TEXT_CONFIG, type FogOutTextConfig } from './text/FogOutTextEffect';
+
+import { ATMOSPHERE_PRESETS, type AtmosphereEffectId } from './atmosphere/atmosphereLibrary';
+import { TEXT_PRESETS, type TextEffectId } from './text/textEffectsLibrary';
+
+const TextEffectsEditor = () => {
+  const [selectedBaseId, setSelectedBaseId] = useState<TextEffectId>('disassembled');
+  const [disassembledConfig, setDisassembledConfig] = useState<DisassembledTextConfig>(DEFAULT_DISASSEMBLED_TEXT_CONFIG);
+  const [floatAwayConfig, setFloatAwayConfig] = useState<FloatAwayTextConfig>(DEFAULT_FLOAT_AWAY_TEXT_CONFIG);
+  const [shimmerConfig, setShimmerConfig] = useState<ShimmerTextConfig>(DEFAULT_SHIMMER_TEXT_CONFIG);
+  const [fogOutConfig, setFogOutConfig] = useState<FogOutTextConfig>(DEFAULT_FOG_OUT_TEXT_CONFIG);
+  
+  const [userPresets, setUserPresets] = useState<Record<string, { baseId: TextEffectId, config: any }>>({});
+  const [activePresetName, setActivePresetName] = useState<string | null>(null);
+  const [saveName, setSaveName] = useState('');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('exploritaire_text_presets');
+    if (saved) {
+      try { setUserPresets(JSON.parse(saved)); } catch (e) { console.error(e); }
+    }
+  }, []);
+
+  const savePreset = () => {
+    if (!saveName) return;
+    const currentConfig = selectedBaseId === 'disassembled' ? disassembledConfig : 
+                        selectedBaseId === 'float_away' ? floatAwayConfig : 
+                        selectedBaseId === 'shimmer' ? shimmerConfig : 
+                        selectedBaseId === 'fog_out' ? fogOutConfig : null;
+    const nextPresets = { ...userPresets, [saveName]: { baseId: selectedBaseId, config: currentConfig } };
+    setUserPresets(nextPresets);
+    localStorage.setItem('exploritaire_text_presets', JSON.stringify(nextPresets));
+    setActivePresetName(saveName);
+    setSaveName('');
+  };
+
+  const loadPreset = (name: string) => {
+    const preset = userPresets[name];
+    if (preset) {
+      setSelectedBaseId(preset.baseId);
+      if (preset.baseId === 'disassembled') setDisassembledConfig(preset.config);
+      if (preset.baseId === 'float_away') setFloatAwayConfig(preset.config);
+      if (preset.baseId === 'shimmer') setShimmerConfig(preset.config);
+      if (preset.baseId === 'fog_out') setFogOutConfig(preset.config);
+      setActivePresetName(name);
+    }
+  };
+
+  const deletePreset = (name: string) => {
+    const nextPresets = { ...userPresets };
+    delete nextPresets[name];
+    setUserPresets(nextPresets);
+    localStorage.setItem('exploritaire_text_presets', JSON.stringify(nextPresets));
+    if (activePresetName === name) setActivePresetName(null);
+  };
+
+  const resetToDefault = () => {
+    if (selectedBaseId === 'disassembled') setDisassembledConfig(DEFAULT_DISASSEMBLED_TEXT_CONFIG);
+    if (selectedBaseId === 'float_away') setFloatAwayConfig(DEFAULT_FLOAT_AWAY_TEXT_CONFIG);
+    if (selectedBaseId === 'shimmer') setShimmerConfig(DEFAULT_SHIMMER_TEXT_CONFIG);
+    if (selectedBaseId === 'fog_out') setFogOutConfig(DEFAULT_FOG_OUT_TEXT_CONFIG);
+    setActivePresetName(null);
+  };
+
+  const renderPreview = () => {
+    switch (selectedBaseId) {
+      case 'disassembled': return <DisassembledTextEffect config={disassembledConfig} />;
+      case 'float_away': return <FloatAwayTextEffect config={floatAwayConfig} />;
+      case 'shimmer': return <ShimmerTextEffect config={shimmerConfig} />;
+      case 'fog_out': return <FogOutTextEffect config={fogOutConfig} />;
+      default: return <div className="flex items-center justify-center h-full text-game-white/20">No preview available</div>;
+    }
+  };
+
+  return (
+    <div className="flex h-full gap-4 overflow-hidden animate-in fade-in duration-500">
+      <div className="w-64 flex flex-col gap-4 shrink-0 border-r border-game-teal/10 pr-4 overflow-y-auto custom-scrollbar">
+        <div className="space-y-1">
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-game-teal/60">Base Effects</h3>
+          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto custom-scrollbar pr-2">
+            {TEXT_PRESETS.map((p) => (
+              <button key={p.id} onClick={() => { setSelectedBaseId(p.id); setActivePresetName(null); }} className={`text-[10px] font-mono text-left px-2 py-1.5 rounded border transition-all ${selectedBaseId === p.id ? 'border-game-gold text-game-gold bg-game-gold/5' : 'border-game-teal/20 text-game-white/40 hover:border-game-teal/40'}`}>{p.label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col gap-2 min-h-0">
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-game-gold/60">Saved Presets</h3>
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-1">
+            {Object.keys(userPresets).length === 0 && <div className="text-[9px] text-game-white/30 italic px-2">No saved presets</div>}
+            {Object.keys(userPresets).map((name) => (
+              <div key={name} className="flex items-center gap-1 group">
+                <button onClick={() => loadPreset(name)} className={`flex-1 text-[10px] font-mono text-left px-2 py-1.5 rounded border transition-all truncate ${activePresetName === name ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/10 text-game-white/40 hover:border-game-teal/30 hover:text-game-white/60'}`}>{name}</button>
+                <button onClick={() => deletePreset(name)} className="p-1.5 text-game-pink/40 hover:text-game-pink transition-colors">×</button>
+              </div>
+            ))}
+          </div>
+          <div className="pt-2 border-t border-game-teal/10 space-y-2">
+            <input type="text" placeholder="Preset name..." value={saveName} onChange={(e) => setSaveName(e.target.value)} className="w-full bg-black/40 border border-game-teal/20 rounded px-2 py-1.5 text-[10px] text-game-white font-mono focus:border-game-gold/50 outline-none" />
+            <button onClick={savePreset} disabled={!saveName} className="w-full py-1.5 rounded border border-game-gold/40 text-game-gold text-[9px] font-black uppercase tracking-widest hover:bg-game-gold/10 disabled:opacity-30 transition-all">Save Preset</button>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 relative rounded-xl border border-game-teal/10 bg-black/40 overflow-hidden group">
+        {renderPreview()}
+        <div className="absolute top-4 left-4 pointer-events-none">
+          <div className="px-2 py-1 rounded bg-black/60 border border-game-teal/20 text-[9px] text-game-teal font-mono uppercase tracking-widest">Preview: {activePresetName || selectedBaseId}</div>
+        </div>
+      </div>
+      <div className="w-72 border-l border-game-teal/10 pl-4 overflow-y-auto custom-scrollbar">
+        <div className="flex items-center justify-between mb-4 pt-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-game-teal/60">Text Config</h3>
+          <button onClick={resetToDefault} className="text-[9px] text-game-gold/60 hover:text-game-gold uppercase font-bold tracking-tighter">Reset Defaults</button>
+        </div>
+        <div className="space-y-6 pb-8">
+          {(selectedBaseId === 'disassembled' || selectedBaseId === 'float_away' || selectedBaseId === 'shimmer' || selectedBaseId === 'fog_out') && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[9px] text-game-white/60 uppercase font-mono block">Text String</label>
+                <input type="text" value={selectedBaseId === 'disassembled' ? disassembledConfig.text : selectedBaseId === 'float_away' ? floatAwayConfig.text : selectedBaseId === 'shimmer' ? shimmerConfig.text : fogOutConfig.text} onChange={(e) => {
+                  if (selectedBaseId === 'disassembled') setDisassembledConfig({ ...disassembledConfig, text: e.target.value });
+                  if (selectedBaseId === 'float_away') setFloatAwayConfig({ ...floatAwayConfig, text: e.target.value });
+                  if (selectedBaseId === 'shimmer') setShimmerConfig({ ...shimmerConfig, text: e.target.value });
+                  if (selectedBaseId === 'fog_out') setFogOutConfig({ ...fogOutConfig, text: e.target.value });
+                }} className="w-full bg-black/40 border border-game-teal/20 rounded px-2 py-1.5 text-[10px] text-game-white outline-none focus:border-game-gold/50 font-mono" />
+              </div>
+              {selectedBaseId === 'shimmer' && (
+                <>
+                  <ConfigSlider label="Duration" value={shimmerConfig.duration} min={0.5} max={10} step={0.1} onChange={(v) => setShimmerConfig({ ...shimmerConfig, duration: v })} />
+                  <ConfigColorPicker label="Base" value={shimmerConfig.baseColor} onChange={(v) => setShimmerConfig({ ...shimmerConfig, baseColor: v })} />
+                  <ConfigColorPicker label="Glow" value={shimmerConfig.glowColor} onChange={(v) => setShimmerConfig({ ...shimmerConfig, glowColor: v })} />
+                </>
+              )}
+              {selectedBaseId === 'fog_out' && (
+                <>
+                  <ConfigSlider label="Duration" value={fogOutConfig.duration} min={0.5} max={10} step={0.1} onChange={(v) => setFogOutConfig({ ...fogOutConfig, duration: v })} />
+                  <ConfigSlider label="Font Size (px)" value={parseInt(fogOutConfig.fontSize)} min={8} max={120} step={1} onChange={(v) => setFogOutConfig({ ...fogOutConfig, fontSize: `${v}px` })} />
+                  <ConfigSlider label="Blur Size (px)" value={parseInt(fogOutConfig.blurSize)} min={0} max={100} step={1} onChange={(v) => setFogOutConfig({ ...fogOutConfig, blurSize: `${v}px` })} />
+                  <ConfigColorPicker label="Color" value={fogOutConfig.color} onChange={(v) => setFogOutConfig({ ...fogOutConfig, color: v })} />
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

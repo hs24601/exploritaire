@@ -8,6 +8,7 @@ import { NEON_COLORS } from '../utils/styles';
 import { WildcardPaintOverlay } from './WildcardPaintOverlay';
 import { DestructionParticles } from './DestructionParticles';
 import { FORCE_NEON_CARD_STYLE, SHOW_WATERCOLOR_FILTERS } from '../config/ui';
+import { useImmersiveBattle } from '../contexts/ImmersiveBattleContext';
 
 interface FoundationProps {
   cards: CardType[];
@@ -114,6 +115,7 @@ export const Foundation = memo(function Foundation({
   onDestructionComplete,
   isTapped = false,
 }: FoundationProps) {
+  const { isImmersive } = useImmersiveBattle();
   const globalScale = useCardScale();
   const cardWidth = CARD_SIZE.width * globalScale * scale;
   const cardHeight = CARD_SIZE.height * globalScale * scale;
@@ -178,6 +180,10 @@ export const Foundation = memo(function Foundation({
       setShowDestruction(true);
     }
   }, [foundationOverlay?.hp]);
+  const handleDestructionComplete = useCallback(() => {
+    setShowDestruction(false);
+    onDestructionComplete?.();
+  }, [onDestructionComplete]);
 
   return (
     <div className="flex flex-col items-center gap-2 transition-opacity duration-300">
@@ -326,10 +332,7 @@ export const Foundation = memo(function Foundation({
           <DestructionParticles 
             color={foundationOverlay?.accentColor ?? '#ff4800'} 
             scale={scale}
-            onComplete={() => {
-              setShowDestruction(false);
-              onDestructionComplete?.();
-            }} 
+            onComplete={handleDestructionComplete}
           />
         )}
         {showHighlight && (
@@ -373,7 +376,7 @@ export const Foundation = memo(function Foundation({
               : undefined;
             return (
               <div
-                key={card.id}
+                key={`${card.id}-${stackIndex}`}
                 style={{
                   position: 'absolute',
                   inset: 0,

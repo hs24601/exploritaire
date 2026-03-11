@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:elysium.thebenezer.com)",
+      "WebFetch(domain:le-voyage-azarien.art)",
+      "WebSearch",
+      "WebFetch(domain:discourse.threejs.org)",
+      "Bash(ffmpeg:*)",
+      "Bash(where ffmpeg)",
+      "Read(//c/Windows/System32/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(echo $PATH)",
+      "Bash(powershell:*)",
+      "Bash(node:*)",
+      "Bash(winget install:*)",
+      "Bash(\"/c/Users/ericm/AppData/Local/Microsoft/WinGet/Links/ffmpeg.exe\":*)",
+      "Bash(\"/c/Program Files/ShareX/ffmpeg.exe\":*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

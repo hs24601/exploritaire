@@ -1,0 +1,255 @@
+
+> exploritaire@0.1.0 dev
+> npm run dev:doctor:fix && vite
+
+
+> exploritaire@0.1.0 dev:doctor:fix
+> node tools/dev-doctor.mjs --fix
+
+[dev:doctor] No listener currently bound to port 5178.
+[dev:doctor] OK
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m174[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5178[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.50.131:[1m5178[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m6:06:18 PM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/immersive-battle/ImmersiveBattle.tsx[22m
+[2m9:07:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m9:09:00 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m6:27:50 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m7:19:33 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m7:24:11 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m7:25:55 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m7:38:38 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m7:38:55 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m8:11:09 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m8:16:14 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m8:16:23 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m8:37:33 AM[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
+[2m8:37:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mcardDesigner.html[22m
+[2m8:37:33 AM[22m [36m[1m[vite][22m[39m server restarted.
+[2m8:39:11 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/card-designer/main.ts[22m
+[2m8:40:19 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/card-designer/main.ts[22m
+[2m8:42:12 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/card-designer/main.ts[22m
+[2m8:46:35 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/card-designer/main.ts[22m
+[2m9:42:39 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m9:48:52 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m9:59:07 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m9:59:46 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m10:00:54 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m10:01:48 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m10:02:03 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m10:02:11 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m10:02:34 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m10:30:35 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:33:58 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:35:36 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:46:06 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m10:46:06 AM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m10:46:06 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m10:46:29 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:54:08 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m10:54:08 AM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m10:54:08 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m10:54:21 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:54:32 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:54:39 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:54:46 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:54:52 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:54:58 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m10:55:01 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m11:19:58 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m11:22:02 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m11:24:07 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m11:24:07 AM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:24:07 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m11:24:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m11:24:11 AM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:24:11 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m11:24:16 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m11:24:16 AM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:24:16 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m11:24:23 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m11:24:23 AM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:24:23 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m11:24:30 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m11:24:34 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m11:24:34 AM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:24:34 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m12:21:27 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m12:45:07 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m12:46:19 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m12:50:53 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m12:55:18 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m12:55:23 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m12:55:48 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m2:23:24 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:23:37 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:23:42 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:23:48 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:24:36 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:26:41 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m2:27:32 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m2:27:52 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m2:28:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m2:33:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/OsmosBubbleEffect.tsx, /src/index.css[22m
+[2m2:33:20 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/OsmosBubbleEffect.tsx[22m Could not Fast Refresh ("DEFAULT_OSMOS_BUBBLE_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m2:33:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/immersive-battle/ImmersiveBattle.tsx[22m
+[2m2:33:25 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/OsmosBubbleEffect.tsx, /src/index.css[22m
+[2m2:33:25 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/OsmosBubbleEffect.tsx[22m Could not Fast Refresh ("DEFAULT_OSMOS_BUBBLE_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m2:33:25 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/immersive-battle/ImmersiveBattle.tsx[22m
+[2m2:33:37 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m2:33:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m2:33:58 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m2:33:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m2:36:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:36:53 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m2:37:01 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m2:37:12 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m2:37:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:37:34 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:37:45 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:37:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m2:37:53 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:16:05 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/OsmosBubbleEffect.tsx, /src/index.css[22m
+[2m3:16:05 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/OsmosBubbleEffect.tsx[22m Could not Fast Refresh ("DEFAULT_OSMOS_BUBBLE_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m3:16:05 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/immersive-battle/ImmersiveBattle.tsx[22m
+[2m3:18:30 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:18:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:18:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:19:00 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:19:05 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:19:12 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:19:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:19:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:19:31 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:20:31 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:20:52 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:21:03 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:21:39 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:21:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:22:04 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:22:10 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:22:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:23:06 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:24:16 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:24:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/SolarDynamicsEffect.tsx, /src/index.css[22m
+[2m3:24:58 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/SolarDynamicsEffect.tsx[22m Could not Fast Refresh ("DEFAULT_SOLAR_DYNAMICS_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m3:24:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/immersive-battle/ImmersiveBattle.tsx[22m
+[2m3:25:14 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:30:08 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:31:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:33:11 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/SuperNovaEffect.tsx, /src/index.css[22m
+[2m3:33:11 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/SuperNovaEffect.tsx[22m Could not Fast Refresh ("DEFAULT_SUPER_NOVA_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m3:33:11 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/immersive-battle/ImmersiveBattle.tsx[22m
+[2m3:33:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:34:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:55:45 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/SuperNovaEffect.tsx, /src/index.css[22m
+[2m3:55:45 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/SuperNovaEffect.tsx[22m Could not Fast Refresh ("DEFAULT_SUPER_NOVA_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m3:55:45 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/immersive-battle/ImmersiveBattle.tsx[22m
+[2m3:58:11 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m3:58:31 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m3:58:45 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:00:02 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:00:16 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:00:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:00:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:01:06 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:01:14 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:02:14 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:02:36 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:03:21 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:04:48 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:08:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:10:47 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:11:38 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:12:25 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:13:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/SuperNovaEffect.tsx, /src/index.css[22m
+[2m4:13:55 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/SuperNovaEffect.tsx[22m Could not Fast Refresh ("DEFAULT_SUPER_NOVA_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m4:13:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/immersive-battle/ImmersiveBattle.tsx[22m
+[2m4:19:07 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/components/combat/CombatSandbox.tsx[22m
+[2m4:19:14 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/components/combat/CombatSandbox.tsx[22m
+[2m4:19:42 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:19:47 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:19:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:22:30 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/atmosphere/BlackHoleAtmosphere.tsx, /src/index.css[22m
+[2m4:22:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/combat/CombatSandbox.tsx, /src/index.css[22m
+[2m4:22:56 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/combat/CombatSandbox.tsx, /src/index.css[22m
+[2m4:23:01 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Depth3DShiftDemo.tsx, /src/index.css[22m
+[2m4:23:01 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/Depth3DShiftDemo.tsx[22m Could not Fast Refresh ("DEFAULT_DEPTH_3D_SHIFT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m4:23:01 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m4:23:10 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Depth3DShiftDemo.tsx, /src/index.css[22m
+[2m4:23:10 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/Depth3DShiftDemo.tsx[22m Could not Fast Refresh ("DEFAULT_DEPTH_3D_SHIFT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m4:23:10 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m4:24:10 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:26:52 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:29:59 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:36:23 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:37:09 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:37:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:37:43 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:38:57 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:40:34 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:41:07 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:41:30 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:41:44 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:42:09 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:42:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:43:49 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:46:41 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/MarbleShieldEffect.tsx, /src/index.css[22m
+[2m4:46:42 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/MarbleShieldEffect.tsx[22m Could not Fast Refresh (export removed)
+[2m4:46:42 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/immersive-battle/ImmersiveBattle.tsx[22m
+[2m4:49:38 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/MarbleShieldEffect.tsx, /src/index.css[22m
+[2m4:49:45 PM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/active/TopoRainbowEffect.tsx[22m
+[2m4:49:51 PM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/active/TopoRainbowEffect.tsx[22m
+[2m4:50:03 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:50:15 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m4:51:07 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:51:15 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:51:25 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:51:41 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:52:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:53:57 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m4:53:58 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m4:53:58 PM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/active/ContinualRepaintEffect.tsx[22m
+[2m4:54:28 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m4:54:44 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/ContinualRepaintEffect.tsx, /src/index.css[22m
+[2m4:54:44 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/ContinualRepaintEffect.tsx[22m Could not Fast Refresh ("DEFAULT_CONTINUAL_REPAINT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m4:54:44 PM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/active/ContinualRepaintEffect.tsx[22m
+[2m4:55:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:55:57 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m4:56:18 PM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/immersive-battle/ImmersiveBattle.tsx[22m
+[2m4:56:29 PM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/immersive-battle/ImmersiveBattle.tsx[22m
+[2m4:58:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/active/TopoRainbowEffect.tsx, /src/index.css[22m
+[2m4:58:58 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/active/TopoRainbowEffect.tsx[22m Could not Fast Refresh ("DEFAULT_TOPO_RAINBOW_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m4:58:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/immersive-battle/ImmersiveBattle.tsx[22m
+[2m4:59:05 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m5:00:15 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m5:01:13 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m5:03:23 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m5:15:09 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m5:15:48 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m5:15:52 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m5:17:26 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m7:25:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m7:28:33 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m7:30:44 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/components/combat/CombatSandbox.tsx[22m
+[2m7:31:03 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m7:31:21 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m7:32:27 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m7:32:38 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m7:33:19 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisualsEditor.tsx, /src/index.css[22m
+[2m7:33:57 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/combat/CombatSandbox.tsx, /src/index.css[22m
+[2m7:34:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/immersive-battle/ImmersiveBattle.tsx, /src/index.css[22m
+[2m7:35:00 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Depth3DShiftDemo.tsx, /src/index.css[22m
+[2m7:35:00 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/Depth3DShiftDemo.tsx[22m Could not Fast Refresh ("DEFAULT_DEPTH_3D_SHIFT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m7:35:00 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m7:35:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Depth3DShiftDemo.tsx, /src/index.css[22m
+[2m7:35:17 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/Depth3DShiftDemo.tsx[22m Could not Fast Refresh ("DEFAULT_DEPTH_3D_SHIFT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m7:35:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx[22m
+[2m7:37:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/atmosphere/DoorSandsTimeAtmosphere.tsx, /src/index.css[22m
+[2m7:37:17 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/atmosphere/DoorSandsTimeAtmosphere.tsx[22m Could not Fast Refresh ("DEFAULT_DOOR_SANDS_TIME_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m7:37:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx, /src/components/combat/CombatSandbox.tsx, /src/components/Depth3DShiftDemo.tsx[22m
+[2m7:37:18 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/Depth3DShiftDemo.tsx[22m Could not Fast Refresh ("DEFAULT_DEPTH_3D_SHIFT_CONFIG" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m7:37:18 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/VisualsEditor.tsx[22m

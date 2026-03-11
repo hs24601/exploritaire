@@ -85,7 +85,7 @@ export const EFFECT_IDS = {
   ELEMENT_MATCHING: 'element_matching',
 } as const;
 
-// Wild sentinel for randomly generated biome foundations
+// Wild sentinel for randomly generated combat foundations
 export const WILD_SENTINEL_RANK = 0;
 
 export function createWildSentinel(index: number): Card {

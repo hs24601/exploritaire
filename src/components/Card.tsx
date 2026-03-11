@@ -15,6 +15,7 @@ import { RarityAura } from './RarityAura';
 import { HorizontalRipThreeEffect } from './card/HorizontalRipThreeEffect';
 import { NEON_COLORS, getNeonElementColor } from '../utils/styles';
 import { FORCE_NEON_CARD_STYLE, SHOW_WATERCOLOR_FILTERS } from '../config/ui';
+import { useImmersiveBattle } from '../contexts/ImmersiveBattleContext';
 
 const BLUEVEE_ASSET = '/assets/Bluevee.png';
 
@@ -185,6 +186,7 @@ export const Card = memo(function Card({
   const foundationPrevComboRef = useRef<number>(0);
   const [foundationShimmerBurst, setFoundationShimmerBurst] = useState(0);
   const [foundationShimmerActive, setFoundationShimmerActive] = useState(false);
+  const { isImmersive } = useImmersiveBattle();
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!onDragStart || !card || faceDown) return;
@@ -210,11 +212,11 @@ export const Card = memo(function Card({
     boxShadow: string;
   }> = {
     W: {
-      border: '1px solid rgba(171, 215, 255, 0.7)',
-      background: 'linear-gradient(180deg, rgba(222, 241, 255, 0.9) 0%, rgba(147, 191, 255, 0.78) 100%)',
-      color: '#1a4ca8',
-      textShadow: '0 1px 0 rgba(255,255,255,0.78), 0 0 7px rgba(175, 217, 255, 0.95)',
-      boxShadow: '0 0 9px rgba(122, 185, 255, 0.4), inset 0 0 4px rgba(255,255,255,0.42)',
+      border: isImmersive ? '1px solid white' : '1px solid rgba(171, 215, 255, 0.7)',
+      background: isImmersive ? 'black' : 'linear-gradient(180deg, rgba(222, 241, 255, 0.9) 0%, rgba(147, 191, 255, 0.78) 100%)',
+      color: isImmersive ? 'white' : '#1a4ca8',
+      textShadow: isImmersive ? 'none' : '0 1px 0 rgba(255,255,255,0.78), 0 0 7px rgba(175, 217, 255, 0.95)',
+      boxShadow: isImmersive ? 'none' : '0 0 9px rgba(122, 185, 255, 0.4), inset 0 0 4px rgba(255,255,255,0.42)',
     },
     E: {
       border: '1px solid rgba(224, 188, 126, 0.68)',
@@ -532,6 +534,7 @@ export const Card = memo(function Card({
 
   const getBorderColor = () => {
     if (borderColorOverride !== undefined) return borderColorOverride;
+    if (isImmersive) return '#ffffff';
     if (isSelected) return '#e6b31e'; // gold
     if (faceDown) return 'rgba(156, 181, 198, 0.34)';
     if (isDimmed) return 'rgba(134, 146, 156, 0.65)';
@@ -541,6 +544,7 @@ export const Card = memo(function Card({
 
   const getBoxShadow = () => {
     if (boxShadowOverride !== undefined) return boxShadowOverride;
+    if (isImmersive) return '0 0 15px rgba(255, 255, 255, 0.25)';
     if (isDimmed) return 'none';
     if (isSelected) return `0 0 20px #e6b31e, inset 0 0 20px rgba(230, 179, 30, 0.13)`;
     if (isFoundation) {
@@ -839,6 +843,7 @@ const getWatercolorColorFilter = () => {
       className="relative"
       style={{
         ...(disableTilt ? {} : holoStyles),
+        transform: disableTilt ? 'none' : (holoStyles.transform),
         width: frameSize.width,
         height: frameSize.height,
         zIndex: (!disableHoverLift && isHovered) ? 50 : 1,
@@ -940,9 +945,9 @@ const getWatercolorColorFilter = () => {
             style={{
               zIndex: 1,
               borderRadius: 10,
-              background: 'radial-gradient(circle at 42% 38%, #3f87ff 0%, #1d4fd3 48%, #0b2d8f 100%)',
-              mixBlendMode: 'multiply',
-              opacity: 0.88,
+              background: isImmersive ? '#000000' : 'radial-gradient(circle at 42% 38%, #3f87ff 0%, #1d4fd3 48%, #0b2d8f 100%)',
+              mixBlendMode: isImmersive ? 'normal' : 'multiply',
+              opacity: isImmersive ? 1 : 0.88,
             }}
           />
         )}
@@ -1451,106 +1456,110 @@ const getWatercolorColorFilter = () => {
       {showWaterArtOverlay && (
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ zIndex: 1, borderRadius: 10, filter: 'url(#watercard-filter)' }}
+          style={{ zIndex: 1, borderRadius: 10, filter: isImmersive ? 'none' : 'url(#watercard-filter)' }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0ea5e9] via-[#075985] to-[#020617]" />
-          <div
-            className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[90%] h-[40%] opacity-95"
-            style={{
-              background: 'radial-gradient(circle at center, white 0%, rgba(255,255,255,0.8) 30%, transparent 70%)',
-              filter: 'blur(30px)',
-            }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none opacity-60 mix-blend-screen"
-            style={{
-              background: `
-                conic-gradient(
-                  from 150deg at 50% 0%,
-                  transparent 0deg,
-                  rgba(255, 255, 255, 0.4) 15deg,
-                  transparent 25deg,
-                  rgba(255, 255, 255, 0.6) 30deg,
-                  transparent 35deg,
-                  rgba(255, 255, 255, 0.5) 45deg,
-                  transparent 55deg,
-                  rgba(255, 255, 255, 0.4) 60deg,
-                  transparent 75deg
-                )
-              `,
-              maskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.8) 20%, transparent 90%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.8) 20%, transparent 90%)',
-              filter: 'blur(8px)',
-            }}
-          />
-          <div
-            className="absolute bottom-[-5%] left-[-10%] w-[70%] h-[50%] bg-[#020617] blur-[35px] opacity-70"
-            style={{ clipPath: 'circle(50% at 30% 80%)' }}
-          />
-          <div
-            className="absolute bottom-0 left-[-5%] w-[60%] h-[40%] opacity-80"
-            style={{
-              clipPath: 'polygon(0% 100%, 80% 100%, 70% 60%, 40% 40%, 10% 30%)',
-              background: 'linear-gradient(45deg, #1e1b4b, #4c1d95, #7c3aed)',
-              filter: 'blur(15px)',
-            }}
-          />
-          <div
-            className="absolute bottom-0 left-[-2%] w-[55%] h-[35%] opacity-90"
-            style={{
-              clipPath: 'polygon(0% 100%, 100% 100%, 90% 70%, 75% 50%, 40% 80%, 15% 40%)',
-              background: 'linear-gradient(to top, #0f172a, #2e1065, #5b21b6)',
-              filter: 'blur(5px)',
-            }}
-          />
-          <div
-            className="absolute bottom-[-5%] right-[-10%] w-[60%] h-[55%] bg-[#020617] blur-[40px] opacity-80"
-            style={{ clipPath: 'circle(50% at 70% 80%)' }}
-          />
-          <div
-            className="absolute bottom-0 right-[-5%] w-[50%] h-[50%] opacity-80"
-            style={{
-              clipPath: 'polygon(100% 100%, 0% 100%, 20% 60%, 50% 30%, 85% 50%)',
-              background: 'linear-gradient(135deg, #1e1b4b, #312e81, #701a75)',
-              filter: 'blur(18px)',
-            }}
-          />
-          <div
-            className="absolute bottom-0 right-0 w-[45%] h-[45%] opacity-90"
-            style={{
-              clipPath: 'polygon(100% 100%, 0% 100%, 30% 65%, 60% 35%, 90% 55%)',
-              background: 'linear-gradient(to top, #020617, #1e1b4b, #3730a3)',
-              filter: 'blur(4px)',
-            }}
-          />
-          <div
-            className="absolute bottom-[-5%] left-1/4 w-[50%] h-[30%] opacity-70 blur-[20px]"
-            style={{ background: 'radial-gradient(circle, #facc15 0%, #ca8a04 50%, transparent 80%)' }}
-          />
-          <div
-            className="absolute bottom-0 left-1/4 w-[55%] h-[28%] opacity-85"
-            style={{
-              clipPath: 'polygon(0% 100%, 100% 100%, 85% 40%, 50% 75%, 15% 35%)',
-              background: 'linear-gradient(to top, #082f49, #155e75, #a16207)',
-              filter: 'blur(8px)',
-            }}
-          />
-          {waterFish.map((fish) => (
-            <div
-              key={fish.id}
-              className="absolute bg-[#020617]"
-              style={{
-                top: `${fish.top}%`,
-                left: `${fish.left}%`,
-                width: `${fish.width}px`,
-                height: `${fish.height}px`,
-                borderRadius: '50%',
-                filter: 'blur(1px)',
-                opacity: fish.opacity,
-                transform: `rotate(${fish.rotate}deg)`,
-              }}
-            />
-          ))}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0ea5e9] via-[#075985] to-[#020617]" style={{ background: isImmersive ? '#000000' : undefined }} />
+          {!isImmersive && (
+            <>
+              <div
+                className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[90%] h-[40%] opacity-95"
+                style={{
+                  background: 'radial-gradient(circle at center, white 0%, rgba(255,255,255,0.8) 30%, transparent 70%)',
+                  filter: 'blur(30px)',
+                }}
+              />
+              <div
+                className="absolute inset-0 pointer-events-none opacity-60 mix-blend-screen"
+                style={{
+                  background: `
+                    conic-gradient(
+                      from 150deg at 50% 0%,
+                      transparent 0deg,
+                      rgba(255, 255, 255, 0.4) 15deg,
+                      transparent 25deg,
+                      rgba(255, 255, 255, 0.6) 30deg,
+                      transparent 35deg,
+                      rgba(255, 255, 255, 0.5) 45deg,
+                      transparent 55deg,
+                      rgba(255, 255, 255, 0.4) 60deg,
+                      transparent 75deg
+                    )
+                  `,
+                  maskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.8) 20%, transparent 90%)',
+                  WebkitMaskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.8) 20%, transparent 90%)',
+                  filter: 'blur(8px)',
+                }}
+              />
+              <div
+                className="absolute bottom-[-5%] left-[-10%] w-[70%] h-[50%] bg-[#020617] blur-[35px] opacity-70"
+                style={{ clipPath: 'circle(50% at 30% 80%)' }}
+              />
+              <div
+                className="absolute bottom-0 left-[-5%] w-[60%] h-[40%] opacity-80"
+                style={{
+                  clipPath: 'polygon(0% 100%, 80% 100%, 70% 60%, 40% 40%, 10% 30%)',
+                  background: 'linear-gradient(45deg, #1e1b4b, #4c1d95, #7c3aed)',
+                  filter: 'blur(15px)',
+                }}
+              />
+              <div
+                className="absolute bottom-0 left-[-2%] w-[55%] h-[35%] opacity-90"
+                style={{
+                  clipPath: 'polygon(0% 100%, 100% 100%, 90% 70%, 75% 50%, 40% 80%, 15% 40%)',
+                  background: 'linear-gradient(to top, #0f172a, #2e1065, #5b21b6)',
+                  filter: 'blur(5px)',
+                }}
+              />
+              <div
+                className="absolute bottom-[-5%] right-[-10%] w-[60%] h-[55%] bg-[#020617] blur-[40px] opacity-80"
+                style={{ clipPath: 'circle(50% at 70% 80%)' }}
+              />
+              <div
+                className="absolute bottom-0 right-[-5%] w-[50%] h-[50%] opacity-80"
+                style={{
+                  clipPath: 'polygon(100% 100%, 0% 100%, 20% 60%, 50% 30%, 85% 50%)',
+                  background: 'linear-gradient(135deg, #1e1b4b, #312e81, #701a75)',
+                  filter: 'blur(18px)',
+                }}
+              />
+              <div
+                className="absolute bottom-0 right-0 w-[45%] h-[45%] opacity-90"
+                style={{
+                  clipPath: 'polygon(100% 100%, 0% 100%, 30% 65%, 60% 35%, 90% 55%)',
+                  background: 'linear-gradient(to top, #020617, #1e1b4b, #3730a3)',
+                  filter: 'blur(4px)',
+                }}
+              />
+              <div
+                className="absolute bottom-[-5%] left-1/4 w-[50%] h-[30%] opacity-70 blur-[20px]"
+                style={{ background: 'radial-gradient(circle, #facc15 0%, #ca8a04 50%, transparent 80%)' }}
+              />
+              <div
+                className="absolute bottom-0 left-1/4 w-[55%] h-[28%] opacity-85"
+                style={{
+                  clipPath: 'polygon(0% 100%, 100% 100%, 85% 40%, 50% 75%, 15% 35%)',
+                  background: 'linear-gradient(to top, #082f49, #155e75, #a16207)',
+                  filter: 'blur(8px)',
+                }}
+              />
+              {waterFish.map((fish) => (
+                <div
+                  key={fish.id}
+                  className="absolute bg-[#020617]"
+                  style={{
+                    top: `${fish.top}%`,
+                    left: `${fish.left}%`,
+                    width: `${fish.width}px`,
+                    height: `${fish.height}px`,
+                    borderRadius: '50%',
+                    filter: 'blur(1px)',
+                    opacity: fish.opacity,
+                    transform: `rotate(${fish.rotate}deg)`,
+                  }}
+                />
+              ))}
+            </>
+          )}
           <div className="absolute inset-0 opacity-[0.25] pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
           <div className="absolute inset-0 opacity-[0.12] pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/rough-canvas.png')]" />
           <svg width="0" height="0" className="absolute">

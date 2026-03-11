@@ -8,147 +8,68 @@ import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
 export const THREEJS_CARD_W = 140;
 export const THREEJS_CARD_H = 196;
 
-// ─── Air element — volumetric cloud ─────────────────────────────────────────
+// ─── Air element — Sean Free 2D Canvas Clouds ───────────────────────────────
+// Based on Sean Free's "Clouds" (codepen.io/seanfree/pen/dOPGKW).
+// Uses multiple overlapping sprites with 'difference' and 'lighter' 
+// composite operations to create depth and shading.
 
-const CLOUD_VERT = /* glsl */`
-  in vec3 position;
+const CLOUD_URLS = [
+  '/assets/vis/clouds/cloud1.png',
+  '/assets/vis/clouds/cloud2.png',
+  '/assets/vis/clouds/cloud3.png',
+  '/assets/vis/clouds/cloud4.png',
+  '/assets/vis/clouds/cloud5.png'
+];
 
-  uniform mat4 modelMatrix;
-  uniform mat4 modelViewMatrix;
-  uniform mat4 projectionMatrix;
-  uniform vec3 cameraPos;
+class Cloud {
+  sprite: HTMLImageElement;
+  scale: number;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  vx: number;
+  ready: boolean = false;
+  canvasWidth: number;
+  canvasHeight: number;
 
-  out vec3 vOrigin;
-  out vec3 vDirection;
+  constructor(imgs: HTMLImageElement[], canvasWidth: number, canvasHeight: number) {
+    this.sprite = imgs[Math.floor(Math.random() * imgs.length)];
+    this.canvasWidth = canvasWidth;
+    this.canvasHeight = canvasHeight;
+    
+    this.scale = 1 + Math.random() * 4;
+    this.width = this.sprite.width / this.scale;
+    this.height = this.sprite.height / this.scale;
+    
+    this.x = -this.width;
+    this.y = (canvasHeight / 2) - (this.height / 2) + (Math.round(100 - Math.random() * 200));
+    this.vx = 0.3 + Math.random() * 0.5;
 
-  void main() {
-    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-    vOrigin    = vec3( inverse( modelMatrix ) * vec4( cameraPos, 1.0 ) ).xyz;
-    vDirection = position - vOrigin;
-    gl_Position = projectionMatrix * mvPosition;
-  }
-`;
-
-const CLOUD_FRAG = /* glsl */`
-  precision highp float;
-  precision highp sampler3D;
-
-  uniform mat4 modelViewMatrix;
-  uniform mat4 projectionMatrix;
-
-  in vec3 vOrigin;
-  in vec3 vDirection;
-
-  out vec4 color;
-
-  uniform vec3      base;
-  uniform sampler3D map;
-  uniform float     threshold;
-  uniform float     range;
-  uniform float     opacity;
-  uniform float     steps;
-  uniform float     frame;
-
-  uint wang_hash( uint seed ) {
-    seed = ( seed ^ 61u ) ^ ( seed >> 16u );
-    seed *= 9u;
-    seed  = seed ^ ( seed >> 4u );
-    seed *= 0x27d4eb2du;
-    seed  = seed ^ ( seed >> 15u );
-    return seed;
+    setTimeout(() => { this.ready = true; }, Math.random() * 5000);
   }
 
-  float randomFloat( inout uint seed ) {
-    return float( wang_hash( seed ) ) / 4294967296.;
-  }
-
-  vec2 hitBox( vec3 orig, vec3 dir ) {
-    const vec3 box_min = vec3( -0.5 );
-    const vec3 box_max = vec3(  0.5 );
-    vec3 inv_dir  = 1.0 / dir;
-    vec3 tmin_tmp = ( box_min - orig ) * inv_dir;
-    vec3 tmax_tmp = ( box_max - orig ) * inv_dir;
-    vec3 tmin = min( tmin_tmp, tmax_tmp );
-    vec3 tmax = max( tmin_tmp, tmax_tmp );
-    float t0 = max( tmin.x, max( tmin.y, tmin.z ) );
-    float t1 = min( tmax.x, min( tmax.y, tmax.z ) );
-    return vec2( t0, t1 );
-  }
-
-  float sample1( vec3 p ) { return texture( map, p ).r; }
-
-  float shading( vec3 coord ) {
-    float step = 0.01;
-    return sample1( coord + vec3( -step ) ) - sample1( coord + vec3( step ) );
-  }
-
-  vec4 linearToSRGB( in vec4 value ) {
-    return vec4(
-      mix(
-        pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ),
-        value.rgb * 12.92,
-        vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) )
-      ),
-      value.a
-    );
-  }
-
-  void main() {
-    vec3 rayDir  = normalize( vDirection );
-    vec2 bounds  = hitBox( vOrigin, rayDir );
-    if ( bounds.x > bounds.y ) discard;
-    bounds.x = max( bounds.x, 0.0 );
-
-    float stepSize = ( bounds.y - bounds.x ) / steps;
-
-    uint seed    = uint( gl_FragCoord.x ) * uint( 1973 )
-                 + uint( gl_FragCoord.y ) * uint( 9277 )
-                 + uint( frame )          * uint( 26699 );
-    vec3 size    = vec3( textureSize( map, 0 ) );
-    float randNum = randomFloat( seed ) * 2.0 - 1.0;
-    vec3 p = vOrigin + bounds.x * rayDir;
-    p += rayDir * randNum * ( 1.0 / size );
-
-    vec4 ac = vec4( base, 0.0 );
-
-    for ( float i = 0.0; i < steps; i += 1.0 ) {
-      float d = sample1( p + 0.5 );
-      d = smoothstep( threshold - range, threshold + range, d ) * opacity;
-      float col = shading( p + 0.5 ) * 3.0 + ( ( p.x + p.y ) * 0.25 ) + 0.2;
-      ac.rgb += ( 1.0 - ac.a ) * d * col;
-      ac.a   += ( 1.0 - ac.a ) * d;
-      if ( ac.a >= 0.95 ) break;
-      p += rayDir * stepSize;
-    }
-
-    color = linearToSRGB( ac );
-    if ( color.a == 0.0 ) discard;
-  }
-`;
-
-function buildCloudTexture(): THREE.Data3DTexture {
-  const size = 128;
-  const data = new Uint8Array( size * size * size );
-  const scale = 0.05;
-  const perlin = new ImprovedNoise();
-  const vector = new THREE.Vector3();
-  let i = 0;
-  for ( let z = 0; z < size; z++ ) {
-    for ( let y = 0; y < size; y++ ) {
-      for ( let x = 0; x < size; x++ ) {
-        const d = 1.0 - vector.set( x, y, z ).subScalar( size / 2 ).divideScalar( size ).length();
-        data[ i ] = ( 128 + 128 * perlin.noise( x * scale / 1.5, y * scale, z * scale / 1.5 ) ) * d * d;
-        i++;
-      }
+  update() {
+    if (!this.ready) return;
+    this.x += this.vx;
+    if (this.x > this.canvasWidth) {
+      this.x = -this.width;
+      this.y = (this.canvasHeight / 2) - (this.height / 2) + (Math.round(100 - Math.random() * 200));
     }
   }
-  const texture = new THREE.Data3DTexture( data, size, size, size );
-  texture.format = THREE.RedFormat;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.unpackAlignment = 1;
-  texture.needsUpdate = true;
-  return texture;
+
+  draw(ctx: CanvasRenderingContext2D) {
+    if (!this.ready) return;
+    
+    ctx.globalAlpha = 0.35;
+    
+    // Sean Free's double-draw trick for shading + highlights
+    ctx.globalCompositeOperation = 'difference';
+    ctx.drawImage(this.sprite, this.x, this.y, this.width, this.height);
+    
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(this.sprite, this.x, this.y, this.width, this.height);
+  }
 }
 
 export const AirCloudCard = memo(function AirCloudCard({
@@ -158,110 +79,87 @@ export const AirCloudCard = memo(function AirCloudCard({
   width?: number;
   height?: number;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    // ── Renderer ──────────────────────────────────────────────────────────
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio( Math.min( window.devicePixelRatio, 2 ) );
-    renderer.setSize( width, height );
-    container.appendChild( renderer.domElement );
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
 
-    // ── Scene & Camera ────────────────────────────────────────────────────
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera( 60, width / height, 0.1, 100 );
-    camera.position.set( 0, 0, 1.5 );
+    const offscreen = document.createElement('canvas');
+    offscreen.width = canvas.width;
+    offscreen.height = canvas.height;
+    const osCtx = offscreen.getContext('2d')!;
+    osCtx.scale(dpr, dpr);
 
-    const controls = new OrbitControls( camera, renderer.domElement );
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+    const imgs: HTMLImageElement[] = [];
+    let clouds: Cloud[] = [];
+    let loadedCount = 0;
 
-    // ── Sky gradient ──────────────────────────────────────────────────────
-    const skyCanvas = document.createElement( 'canvas' );
-    skyCanvas.width  = 1;
-    skyCanvas.height = 32;
-    const ctx = skyCanvas.getContext( '2d' )!;
-    const grad = ctx.createLinearGradient( 0, 0, 0, 32 );
-    grad.addColorStop( 0.0, '#014a84' );
-    grad.addColorStop( 0.5, '#0561a0' );
-    grad.addColorStop( 1.0, '#437ab6' );
-    ctx.fillStyle = grad;
-    ctx.fillRect( 0, 0, 1, 32 );
-    const skyMap = new THREE.CanvasTexture( skyCanvas );
-    skyMap.colorSpace = THREE.SRGBColorSpace;
-    const skyGeo = new THREE.SphereGeometry( 10 );
-    const skyMat = new THREE.MeshBasicMaterial( { map: skyMap, side: THREE.BackSide } );
-    const sky = new THREE.Mesh( skyGeo, skyMat );
-    scene.add( sky );
+    const background = ctx.createLinearGradient(width / 2, 0, width / 2, height);
+    background.addColorStop(0, '#90caf9');
+    background.addColorStop(1, '#bbdefb');
 
-    // ── Cloud volume ──────────────────────────────────────────────────────
-    const cloudTexture = buildCloudTexture();
-
-    const material = new THREE.RawShaderMaterial( {
-      glslVersion: THREE.GLSL3,
-      uniforms: {
-        base:      { value: new THREE.Color( 0x798aa0 ) },
-        map:       { value: cloudTexture },
-        cameraPos: { value: new THREE.Vector3() },
-        threshold: { value: 0.25 },
-        opacity:   { value: 0.25 },
-        range:     { value: 0.1 },
-        steps:     { value: 100 },
-        frame:     { value: 0 },
-      },
-      vertexShader:   CLOUD_VERT,
-      fragmentShader: CLOUD_FRAG,
-      side:        THREE.BackSide,
-      transparent: true,
-    } );
-
-    const cloudGeo  = new THREE.BoxGeometry( 1, 1, 1 );
-    const mesh = new THREE.Mesh( cloudGeo, material );
-    scene.add( mesh );
-
-    // ── Animation loop ────────────────────────────────────────────────────
     let rafId: number;
+    let disposed = false;
 
-    const animate = () => {
-      rafId = requestAnimationFrame( animate );
-      controls.update();
-      material.uniforms.cameraPos.value.copy( camera.position );
-      mesh.rotation.y = -performance.now() / 7500;
-      material.uniforms.frame.value++;
-      renderer.render( scene, camera );
+    const init = () => {
+      if (disposed) return;
+      clouds = Array.from({ length: 30 }, () => new Cloud(imgs, width, height));
+      const loop = () => {
+        if (disposed) return;
+        
+        osCtx.clearRect(0, 0, width, height);
+        clouds.forEach(cloud => {
+          cloud.update();
+          cloud.draw(osCtx);
+        });
+
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = background;
+        ctx.fillRect(0, 0, width, height);
+        
+        ctx.globalAlpha = 1.0;
+        ctx.drawImage(offscreen, 0, 0, width, height);
+
+        rafId = requestAnimationFrame(loop);
+      };
+      loop();
     };
-    animate();
 
-    // ── Cleanup ───────────────────────────────────────────────────────────
+    CLOUD_URLS.forEach(url => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = url;
+      img.onload = () => {
+        imgs.push(img);
+        loadedCount++;
+        if (loadedCount === CLOUD_URLS.length) init();
+      };
+    });
+
     return () => {
-      cancelAnimationFrame( rafId );
-      controls.dispose();
-      cloudTexture.dispose();
-      material.dispose();
-      cloudGeo.dispose();
-      skyGeo.dispose();
-      skyMat.map?.dispose();
-      skyMat.dispose();
-      renderer.dispose();
-      if ( container.contains( renderer.domElement ) ) {
-        container.removeChild( renderer.domElement );
-      }
+      disposed = true;
+      cancelAnimationFrame(rafId);
     };
   }, [width, height]);
 
   return (
-    <div
-      ref={containerRef}
+    <canvas
+      ref={canvasRef}
       style={{
         width,
         height,
         borderRadius: 12,
         overflow: 'hidden',
         boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 8px 28px rgba(0,0,0,0.6), 0 0 18px #87ceeb44',
-        cursor: 'grab',
+        display: 'block',
         flexShrink: 0,
       }}
     />
@@ -765,7 +663,6 @@ void main() {
 
     float outer_noise      = snoise((.3 + .1 * sin(t)) * uv + vec2(0., .2 * t));
     vec2  surface_noise_uv = 2. * uv + (outer_noise * .2);
-    // Local var renamed to avoid shadowing the function above
     float sn               = surface_noise(surface_noise_uv, t, u_scale);
     sn *= pow(uv.y, .3);
     sn  = pow(sn, 2.);
@@ -951,6 +848,362 @@ export const WaterElementCard = memo(function WaterElementCard({
   );
 });
 
+// ─── Vortex Glass element — Swirling vortex inside glass ────────────────────
+
+export const VortexGlassCard = memo(function VortexGlassCard({
+  width  = THREEJS_CARD_W,
+  height = THREEJS_CARD_H,
+}: {
+  width?:  number;
+  height?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.z = 3.5;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(width, height);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    container.appendChild(renderer.domElement);
+
+    scene.background = new THREE.Color('#060e1b');
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0xffffff, 25);
+    pointLight.position.set(5, 5, 5);
+    scene.add(pointLight);
+
+    const vortexGroup = new THREE.Group();
+    vortexGroup.renderOrder = 1;
+    const vortexGeo = new THREE.PlaneGeometry(2.2, 2.2, 16, 16);
+    const vortexMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColor1: { value: new THREE.Color('#4400ff') },
+        uColor2: { value: new THREE.Color('#00ffff') },
+        uSwirlStrength: { value: 4.0 },
+        uSpeed: { value: 0.5 },
+      },
+      vertexShader: /* glsl */`
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        void main() {
+          vUv = uv;
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */`
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        uniform float uTime;
+        uniform vec3 uColor1;
+        uniform vec3 uColor2;
+        uniform float uSwirlStrength;
+        uniform float uSpeed;
+
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+        vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+        float snoise(vec3 v) {
+          const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+          const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+          vec3 i  = floor(v + dot(v, C.yyy) );
+          vec3 x0 = v - i + dot(i, C.xxx) ;
+          vec3 g = step(x0.yzx, x0.xyz);
+          vec3 l = 1.0 - g;
+          vec3 i1 = min( g.xyz, l.zxy );
+          vec3 i2 = max( g.xyz, l.zxy );
+          vec3 x1 = x0 - i1 + C.xxx;
+          vec3 x2 = x0 - i2 + C.yyy;
+          vec3 x3 = x0 - D.yyy;
+          i = mod289(i);
+          vec4 p = permute( permute( permute(
+                     i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                   + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+                   + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+          float n_ = 0.142857142857;
+          vec3  ns = n_ * D.wyz - D.xzx;
+          vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+          vec4 x_ = floor(j * ns.z);
+          vec4 y_ = floor(j - 7.0 * x_ );
+          vec4 x = x_ *ns.x + ns.yyyy;
+          vec4 y = y_ *ns.x + ns.yyyy;
+          vec4 h = 1.0 - abs(x) - abs(y);
+          vec4 b0 = vec4( x.xy, y.xy );
+          vec4 b1 = vec4( x.zw, y.zw );
+          vec4 s0 = floor(b0)*2.0 + 1.0;
+          vec4 s1 = floor(b1)*2.0 + 1.0;
+          vec4 sh = -step(h, vec4(0.0));
+          vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+          vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+          vec3 p0 = vec3(a0.xy,h.x);
+          vec3 p1 = vec3(a0.zw,h.y);
+          vec3 p2 = vec3(a1.xy,h.z);
+          vec3 p3 = vec3(a1.zw,h.w);
+          vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+          p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+          vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+          m = m * m;
+          return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+        }
+
+        float fbm(vec3 p) {
+          float v = 0.0; float a = 0.5;
+          for (int i = 0; i < 5; i++) { v += a * snoise(p); p *= 2.0; a *= 0.5; }
+          return v;
+        }
+
+        void main() {
+          vec2 uv = vUv * 2.0 - 1.0;
+          float dist = length(uv);
+          float angle = -log2(dist + 0.05) * uSwirlStrength;
+          mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+          vec2 rotatedUV = rot * uv;
+          vec3 noiseInput = vec3(rotatedUV * 2.5, uTime * uSpeed);
+          float n = fbm(noiseInput);
+          vec3 color = mix(uColor1, uColor2, n * 0.5 + 0.5);
+          float alpha = smoothstep(0.9, 0.2, dist) * (n * 0.5 + 0.5);
+          alpha *= smoothstep(1.2, 0.0, abs(vPosition.z));
+          gl_FragColor = vec4(color * 1.5, alpha);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+
+    const layerCount = 20;
+    for (let i = 0; i < layerCount; i++) {
+      const mesh = new THREE.Mesh(vortexGeo, vortexMat);
+      const t = i / (layerCount - 1);
+      mesh.position.z = (t - 0.5) * 1.5;
+      const s = 1.0 - Math.pow(Math.abs(t - 0.5) * 2.0, 2.0) * 0.5;
+      mesh.scale.set(s, s, 1);
+      vortexGroup.add(mesh);
+    }
+    scene.add(vortexGroup);
+
+    const glassGeo = new THREE.SphereGeometry(1.2, 32, 32);
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      transmission: 1.0,
+      thickness: 0.5,
+      ior: 1.5,
+      roughness: 0.05,
+      metalness: 0.1,
+      dispersion: 5.0,
+      transparent: true,
+      side: THREE.DoubleSide,
+    });
+    const glassSphere = new THREE.Mesh(glassGeo, glassMat);
+    glassSphere.renderOrder = 2;
+    scene.add(glassSphere);
+
+    let rafId: number;
+    let disposed = false;
+    const animate = () => {
+      if (disposed) return;
+      rafId = requestAnimationFrame(animate);
+      vortexMat.uniforms.uTime.value = performance.now() * 0.001;
+      vortexGroup.rotation.y += 0.005;
+      vortexGroup.rotation.z += 0.003;
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(rafId);
+      vortexGeo.dispose();
+      vortexMat.dispose();
+      glassGeo.dispose();
+      glassMat.dispose();
+      renderer.dispose();
+      if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
+    };
+  }, [width, height]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width,
+        height,
+        borderRadius: 12,
+        overflow:  'hidden',
+        boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 8px 28px rgba(0,0,0,0.6), 0 0 24px #4400ff44',
+        flexShrink: 0,
+      }}
+    />
+  );
+});
+
+// ─── Electricity element — ThreeJS rain + lightning storm ────────────────────
+// Based on "ThreeJS Rain & Thunder" by ArvidW (codepen.io/ArvidW/pen/poKMrBR).
+// Cloud texture generated procedurally via CanvasTexture (no external assets).
+
+export const ElectricityCard = memo(function ElectricityCard({
+  width  = THREEJS_CARD_W,
+  height = THREEJS_CARD_H,
+}: {
+  width?:  number;
+  height?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(60, width / height, 1, 1000);
+    camera.position.z = 1;
+    camera.rotation.x = 1.16;
+    camera.rotation.y = -0.12;
+    camera.rotation.z = 0.27;
+
+    const ambient = new THREE.AmbientLight(0x555555);
+    scene.add(ambient);
+
+    const dirLight = new THREE.DirectionalLight(0xffeedd);
+    dirLight.position.set(0, 0, 1);
+    scene.add(dirLight);
+
+    // Using LIGHT_SCALE to match ElectricSkiesAtmosphere logic
+    const LIGHT_SCALE = 250;
+    const flash = new THREE.PointLight(0x062d89, 0, 800, 1);
+    flash.position.set(200, 300, 100);
+    scene.add(flash);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    scene.fog = new THREE.FogExp2(0x0a0a14, 0.002);
+    renderer.setClearColor((scene.fog as THREE.FogExp2).color);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(width, height);
+    container.appendChild(renderer.domElement);
+
+    // Rain — reduced count for card size
+    const rainCount = 4000;
+    const rainPositions = new Float32Array(rainCount * 3);
+    for (let i = 0; i < rainCount; i++) {
+      rainPositions[i * 3]     = Math.random() * 400 - 200;
+      rainPositions[i * 3 + 1] = Math.random() * 500 - 250;
+      rainPositions[i * 3 + 2] = Math.random() * 400 - 200;
+    }
+    const rainGeo = new THREE.BufferGeometry();
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+    const rainMat = new THREE.PointsMaterial({ color: 0xaaaaaa, size: 0.1, transparent: true, opacity: 0.5 });
+    const rain = new THREE.Points(rainGeo, rainMat);
+    scene.add(rain);
+
+    // Procedural cloud texture
+    const cloudCanvas = document.createElement('canvas');
+    cloudCanvas.width  = 256;
+    cloudCanvas.height = 256;
+    const ctx = cloudCanvas.getContext('2d')!;
+    for (let i = 0; i < 16; i++) {
+      const x = Math.random() * 256;
+      const y = Math.random() * 256;
+      const r = 40 + Math.random() * 100;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, `rgba(110, 120, 145, ${0.22 + Math.random() * 0.28})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 256, 256);
+    }
+    const cloudTex = new THREE.CanvasTexture(cloudCanvas);
+
+    const cloudParticles: THREE.Mesh[] = [];
+    const cloudGeo = new THREE.PlaneGeometry(500, 500);
+    const cloudMat = new THREE.MeshPhongMaterial({ 
+      map: cloudTex, 
+      transparent: true,
+      depthWrite: false,
+      emissive: new THREE.Color(0x050510),
+      emissiveIntensity: 0.1
+    });
+    for (let p = 0; p < 25; p++) {
+      const cloud = new THREE.Mesh(cloudGeo, cloudMat);
+      cloud.position.set(Math.random() * 800 - 400, 500, Math.random() * 500 - 450);
+      cloud.rotation.x = 1.16;
+      cloud.rotation.y = -0.12;
+      cloud.rotation.z = Math.random() * Math.PI * 2;
+      cloudParticles.push(cloud);
+      scene.add(cloud);
+    }
+
+    let rafId: number;
+    let disposed = false;
+
+    const animate = () => {
+      if (disposed) return;
+
+      cloudParticles.forEach(p => { p.rotation.z -= 0.002; });
+
+      rain.position.z -= 0.222; // matching rain speed
+      if (rain.position.z < -200) rain.position.z = 0;
+
+      const scaledThreshold = 100 * LIGHT_SCALE;
+      if (Math.random() > 0.93 || flash.power > scaledThreshold) {
+        if (flash.power < scaledThreshold) {
+          flash.position.set(
+            Math.random() * 400 - 200,
+            300 + Math.random() * 200,
+            100
+          );
+        }
+        flash.power = (50 + Math.random() * 500) * LIGHT_SCALE;
+      } else {
+        flash.power = 0;
+      }
+
+      renderer.render(scene, camera);
+      rafId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(rafId);
+      rainGeo.dispose();
+      rainMat.dispose();
+      cloudGeo.dispose();
+      cloudMat.dispose();
+      cloudTex.dispose();
+      renderer.dispose();
+      if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
+    };
+  }, [width, height]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width,
+        height,
+        borderRadius: 12,
+        overflow:  'hidden',
+        boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 8px 28px rgba(0,0,0,0.7), 0 0 24px #062d8955',
+        flexShrink: 0,
+      }}
+    />
+  );
+});
+
 // ─── Tab content ─────────────────────────────────────────────────────────────
 
 const THREEJS_CARDS = [
@@ -978,6 +1231,18 @@ const THREEJS_CARDS = [
     glow:   '#0077ff',
     render: () => <WaterElementCard />,
   },
+  {
+    id:     'electricity',
+    label:  'Electricity',
+    glow:   '#062d89',
+    render: () => <ElectricityCard />,
+  },
+  {
+    id:     'vortex_glass',
+    label:  'Vortex Glass',
+    glow:   '#4400ff',
+    render: () => <VortexGlassCard />,
+  },
 ] as const;
 
 export const ThreeJsElementsDemo = memo(function ThreeJsElementsDemo() {
@@ -1000,12 +1265,22 @@ export const ThreeJsElementsDemo = memo(function ThreeJsElementsDemo() {
         {/* Technique notes */}
         <div className="border-t border-game-teal/10 pt-6 space-y-4">
           <div className="space-y-2">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-game-teal/70">Air — Volumetric Cloud</h3>
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-game-teal/70">Vortex Glass — Volumetric Swirl</h3>
             <ul className="space-y-1 text-[9px] text-game-white/40 font-mono list-none">
-              <li>WebGL2 Data3DTexture — 128³ voxel density field</li>
-              <li>Ray-marching with Wang hash jitter — no banding artefacts</li>
-              <li>ImprovedNoise (Perlin) — spherical falloff cloud shape</li>
-              <li>GLSL3 RawShaderMaterial — direct GPU shader control</li>
+              <li>Three.js MeshPhysicalMaterial — glass sphere with IOR 1.5 + dispersion 5.0</li>
+              <li>Instanced-style layers — 12 overlapping planes to simulate volumetric depth</li>
+              <li>ShaderMaterial Vortex — 3D Simplex FBM noise with log-swirl distortion</li>
+              <li>Log-swirl logic — angle = -log2(dist) * strength creates galactic-spiral inward flow</li>
+              <li>Technique based on "Vortex in Glass" by MisterPrada</li>
+            </ul>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-game-teal/70">Air — Composite 2D Clouds</h3>
+            <ul className="space-y-1 text-[9px] text-game-white/40 font-mono list-none">
+              <li>2D Canvas — multiple overlapping cloud sprite layers</li>
+              <li>Difference composite — adds natural shading to cloud overlaps</li>
+              <li>Lighter composite — brightens highlight areas between sprites</li>
+              <li>Technique by Sean Free (codepen.io/seanfree/pen/dOPGKW)</li>
             </ul>
           </div>
           <div className="space-y-2">
@@ -1038,7 +1313,16 @@ export const ThreeJsElementsDemo = memo(function ThreeJsElementsDemo() {
               <li>Procedural ocean background — deep-blue gradient + caustic blobs</li>
             </ul>
           </div>
-          <p className="text-[9px] text-game-white/30 font-mono italic">Drag on Air to orbit.</p>
+          <div className="space-y-2">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-game-teal/70">Electricity — ThreeJS Rain & Thunder</h3>
+            <ul className="space-y-1 text-[9px] text-game-white/40 font-mono list-none">
+              <li>Three.js PointsMaterial — 4k rain particles moved along Z-axis</li>
+              <li>MeshLambertMaterial cloud planes — 25 large planes at y=500</li>
+              <li>CanvasTexture — procedural radial-gradient cloud puffs, no external assets</li>
+              <li>FogExp2 (0x11111f, 0.002) — exponential fog drives storm atmosphere</li>
+              <li>PointLight intensity decay — natural flash arc, 3% trigger rate per frame</li>
+            </ul>
+          </div>
         </div>
 
       </div>

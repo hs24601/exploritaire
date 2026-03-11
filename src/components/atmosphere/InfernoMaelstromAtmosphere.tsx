@@ -5,7 +5,7 @@ type Props = {
   className?: string;
 };
 
-const CLOUDS_TEXTURE_URL = 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/982762/Alien_Muscle_001_COLOR.jpg';
+const CLOUDS_TEXTURE_URL = '/assets/vis/textures/alien-muscle-color.jpg';
 
 const vertexShader = `
 void main() {
@@ -299,7 +299,7 @@ export const InfernoMaelstromAtmosphere = memo(function InfernoMaelstromAtmosphe
   return (
     <div
       ref={rootRef}
-      className={className}
+      className={`w-full h-full ${className}`}
       style={{
         background:
           'radial-gradient(circle at 50% 45%, #5e1608 0%, #2c0905 38%, #150503 66%, #090201 100%)',

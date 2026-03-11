@@ -9,6 +9,7 @@ import { useLongPressStateMachine } from '../hooks/useLongPressStateMachine';
 import { FORCE_NEON_CARD_STYLE } from '../config/ui';
 import { getNeonElementColor } from '../utils/styles';
 import abilitiesJson from '../data/abilities.json';
+import { useImmersiveBattle } from '../contexts/ImmersiveBattleContext';
 
 interface HandProps {
   cards: CardType[];
@@ -33,6 +34,7 @@ interface HandProps {
   getCardLockReason?: (card: CardType) => string | undefined;
   hideElements?: boolean;
   onAdjustRpgCardRarity?: (cardId: string, delta: 1 | -1) => boolean;
+  disableTilt?: boolean;
 }
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -168,7 +170,9 @@ export const Hand = memo(function Hand({
   getCardLockReason,
   hideElements: _hideElements = false,
   onAdjustRpgCardRarity: _onAdjustRpgCardRarity,
+  disableTilt,
 }: HandProps) {
+  const { isImmersive } = useImmersiveBattle();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [tappedCards, setTappedCards] = useState<Record<string, boolean>>({});
   const neonMode = FORCE_NEON_CARD_STYLE;
@@ -180,7 +184,7 @@ export const Hand = memo(function Hand({
     startY: number;
     rect: DOMRect;
   } | null>(null);
-  const handGlobalScale = useCardScalePreset('table');
+  const handGlobalScale = useCardScalePreset('board');
   const effectiveScale = cardScale * handGlobalScale;
   const cardWidth = CARD_SIZE.width * effectiveScale;
   const cardHeight = CARD_SIZE.height * effectiveScale;
@@ -461,6 +465,7 @@ export const Hand = memo(function Hand({
             const isInspecting = longPressInspect.isPressingId(card.id);
             const isTapped = card.canTap ? Boolean(tappedCards[card.id]) : false;
             const cardClickEnabled = interactionMode === 'click' && isPlayable && (onCardClick || card.canTap);
+            const effectiveDisableTilt = effectiveWatercolorOnly || isImmersive || disableTilt;
             const handlePressStart = (event: React.PointerEvent) => {
               if (!isPlayable) return;
               if (canDrag && onCardLongPress && event.pointerType === 'touch') {
@@ -573,8 +578,8 @@ export const Hand = memo(function Hand({
                       orimDefinitions={orimDefinitions}
                       borderColorOverride={handBorderColorOverride}
                       boxShadowOverride={handBoxShadowOverride}
-                      disableTilt={effectiveWatercolorOnly}
-                      disableLegacyShine={effectiveWatercolorOnly}
+                      disableTilt={effectiveDisableTilt}
+                      disableLegacyShine={effectiveDisableTilt}
                       watercolorOnly={effectiveWatercolorOnly}
                       disableTemplateArt
                       faceDown={isTapped}

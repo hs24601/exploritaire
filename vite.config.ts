@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import path from 'path';
 import fs from 'fs';
 
@@ -12,9 +13,11 @@ const DEV_HOST = process.env.VITE_DEV_HOST?.trim() || '0.0.0.0';
 const DEV_PORT = parsePort(process.env.VITE_DEV_PORT, 5178);
 const DEV_HMR_HOST = process.env.VITE_DEV_HMR_HOST?.trim();
 const DEV_HMR_PORT = parsePort(process.env.VITE_DEV_HMR_PORT, DEV_PORT);
+const DEV_HTTPS = process.env.VITE_DEV_HTTPS?.trim().toLowerCase() !== 'false';
 
 export default defineConfig({
   server: {
+    https: DEV_HTTPS,
     host: DEV_HOST,
     port: DEV_PORT,
     strictPort: true,
@@ -30,6 +33,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    ...(DEV_HTTPS ? [basicSsl()] : []),
     {
       name: 'light-blocker-save',
       configureServer(server) {
@@ -439,6 +443,17 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main:       path.resolve(__dirname, 'index.html'),
+        cardDesigner: path.resolve(__dirname, 'cardDesigner.html'),
+        immersion:  path.resolve(__dirname, 'immersion.html'),
+        world:      path.resolve(__dirname, 'world.html'),
+        auram:      path.resolve(__dirname, 'auram.html'),
+      },
     },
   },
 });
