@@ -39,6 +39,7 @@ type GolfGameState = {
   tableau: CardType[][];
   playerStock: CardType;
   playerBench: CardType[];
+  playerSupportIndex: number;
   playerHand: PlayerHandSlot[];
   playerCapturedLeft: CardType | null;
   playerCapturedRight: CardType | null;
@@ -57,6 +58,9 @@ type GolfGameState = {
   enemyFreeTagAvailable: boolean;
   playerTagLockCapturesRemaining: number;
   playerBlockedReturnStockId: string | null;
+  playerSupportActionUsed: boolean;
+  playerSupportRotateUsed: boolean;
+  playerSupportReactiveUsed: boolean;
   playerDiscardPile: string[];
   stickyPawsCooldown: number;
   panPawSperityCooldown: number;
@@ -772,6 +776,267 @@ const simulateSwapBenchCard = (prev: GolfGameState, benchIndex: number) => {
   };
 };
 
+const getSupportBenchIndex = (state: GolfGameState) =>
+  clampNumber(state.playerSupportIndex, 0, Math.max(0, state.playerBench.length - 1));
+
+const getSupportBenchCard = (state: GolfGameState) =>
+  state.playerBench[getSupportBenchIndex(state)] ?? null;
+
+const getAssistBenchIndices = (state: GolfGameState) =>
+  state.playerBench
+    .map((_, index) => index)
+    .filter((index) => index !== getSupportBenchIndex(state));
+
+const getBenchRole = (state: GolfGameState, benchIndex: number): 'support' | 'assist' =>
+  benchIndex === getSupportBenchIndex(state) ? 'support' : 'assist';
+
+const getSupportAbilityEffect = (card: CardType | null): PlayerHandSlot['effect'] => {
+  if (!card) return null;
+  if (card.name === 'Hiro') return 'ironfur';
+  if (card.name === 'Pan') return 'paw-sperity';
+  if (card.name === 'Whis') return 'slipstream';
+  return null;
+};
+
+const getSupportAbilityCost = (card: CardType | null) => {
+  if (!card) return 0;
+  if (card.name === 'Hiro') return 3;
+  if (card.name === 'Pan') return 4;
+  if (card.name === 'Whis') return 3;
+  return 0;
+};
+
+const getSupportPassiveSummary = (card: CardType | null) => {
+  if (!card) return 'No support bonus';
+  if (card.name === 'Hiro') return 'Reactive guard and sturdier prime.';
+  if (card.name === 'Pan') return 'Tableau smoothness and clear rewards.';
+  if (card.name === 'Whis') return 'Counter windows and combat foresight.';
+  return 'No support bonus';
+};
+
+const getAssistPassiveSummary = (card: CardType | null) => {
+  if (!card) return 'No assist bonus';
+  if (card.name === 'Hiro') return 'Enemy turns grant Jet a small armor brace.';
+  if (card.name === 'Pan') return 'Tableau clears grant Jet bonus AP.';
+  if (card.name === 'Whis') return 'Dodges gain stronger counter windows.';
+  return 'No assist bonus';
+};
+
+const awardBenchTempo = (prev: GolfGameState, tableCleared: boolean) => {
+  const nextBenchActionPoints = [...prev.playerBenchActionPoints];
+  const supportIndex = getSupportBenchIndex(prev);
+  nextBenchActionPoints[supportIndex] = Math.min(12, (nextBenchActionPoints[supportIndex] ?? 0) + 1);
+  if (tableCleared) {
+    getAssistBenchIndices(prev).forEach((assistIndex) => {
+      nextBenchActionPoints[assistIndex] = Math.min(12, (nextBenchActionPoints[assistIndex] ?? 0) + 1);
+    });
+  }
+  return nextBenchActionPoints;
+};
+
+const getPlayerTableClearApBonus = (prev: GolfGameState, tableCleared: boolean) => {
+  if (!tableCleared) return 0;
+  let bonus = 0;
+  const supportCard = getSupportBenchCard(prev);
+  if (supportCard?.name === 'Pan') bonus += 1;
+  getAssistBenchIndices(prev).forEach((assistIndex) => {
+    if (prev.playerBench[assistIndex]?.name === 'Pan') bonus += 1;
+  });
+  return bonus;
+};
+
+const simulateRotateSupport = (prev: GolfGameState, benchIndex: number) => {
+  if (
+    benchIndex < 0 ||
+    benchIndex >= prev.playerBench.length ||
+    benchIndex === getSupportBenchIndex(prev) ||
+    prev.playerSupportRotateUsed
+  ) return prev;
+  return {
+    ...prev,
+    playerSupportIndex: benchIndex,
+    playerSupportRotateUsed: true,
+  };
+};
+
+const simulateUseSupportAbility = (prev: GolfGameState) => {
+  const supportCard = getSupportBenchCard(prev);
+  const supportIndex = getSupportBenchIndex(prev);
+  const supportAp = prev.playerBenchActionPoints[supportIndex] ?? 0;
+  const cost = getSupportAbilityCost(supportCard);
+  if (!supportCard || prev.playerSupportActionUsed || supportAp < cost) return prev;
+
+  const nextBenchActionPoints = [...prev.playerBenchActionPoints];
+  nextBenchActionPoints[supportIndex] = Math.max(0, supportAp - cost);
+  const primeKey = actorKeyFromName(prev.playerStock.name);
+  const primeCombatant = prev.combatants[primeKey];
+  if (!primeCombatant) return prev;
+
+  if (supportCard.name === 'Hiro') {
+    return {
+      ...prev,
+      playerBenchActionPoints: nextBenchActionPoints,
+      playerSupportActionUsed: true,
+      combatants: {
+        ...prev.combatants,
+        [primeKey]: {
+          ...primeCombatant,
+          armor: primeCombatant.armor + 5,
+          defense: primeCombatant.defense + 4,
+          defenseBuffAmount: primeCombatant.defenseBuffAmount + 4,
+          defenseBuffTurns: Math.max(primeCombatant.defenseBuffTurns, 2),
+        },
+      },
+    };
+  }
+
+  if (supportCard.name === 'Pan') {
+    return {
+      ...prev,
+      tableau: rerollTableau(prev.tableau),
+      playerBenchActionPoints: nextBenchActionPoints,
+      playerSupportActionUsed: true,
+      playerStockActionPoints: prev.playerStockActionPoints + 1,
+    };
+  }
+
+  if (supportCard.name === 'Whis') {
+    return {
+      ...prev,
+      playerBenchActionPoints: nextBenchActionPoints,
+      playerSupportActionUsed: true,
+      combatants: {
+        ...prev.combatants,
+        [primeKey]: {
+          ...primeCombatant,
+          haste: primeCombatant.haste + 1,
+          evasion: primeCombatant.evasion + 16,
+          evasionBuffAmount: primeCombatant.evasionBuffAmount + 16,
+          evasionBuffTurns: Math.max(primeCombatant.evasionBuffTurns, 1),
+          counterWindow: Math.max(primeCombatant.counterWindow, 2),
+          forecastIntent: true,
+        },
+      },
+    };
+  }
+
+  return prev;
+};
+
+const applyEnemyTurnFormationPassives = (prev: GolfGameState) => {
+  const primeKey = actorKeyFromName(prev.playerStock.name);
+  const primeCombatant = prev.combatants[primeKey];
+  if (!primeCombatant) return prev;
+  let nextPrime = { ...primeCombatant };
+  let changed = false;
+
+  const supportCard = getSupportBenchCard(prev);
+  if (supportCard?.name === 'Hiro') {
+    nextPrime.armor += 1;
+    changed = true;
+  }
+  if (supportCard?.name === 'Whis') {
+    nextPrime.forecastIntent = true;
+    changed = true;
+  }
+
+  getAssistBenchIndices(prev).forEach((assistIndex) => {
+    const assistCard = prev.playerBench[assistIndex];
+    if (assistCard?.name === 'Hiro') {
+      nextPrime.armor += 1;
+      changed = true;
+    }
+    if (assistCard?.name === 'Whis') {
+      nextPrime.forecastIntent = true;
+      changed = true;
+    }
+  });
+
+  if (!changed) return prev;
+  return {
+    ...prev,
+    combatants: {
+      ...prev.combatants,
+      [primeKey]: nextPrime,
+    },
+  };
+};
+
+const applyPostPlayerDodgeFormationEffects = (
+  prev: GolfGameState,
+  resolved: { combatants: Record<string, ActorCombatState>; damageDealt: number; dodged: boolean; superArmorTriggered: SuperArmorKind | null }
+) => {
+  if (!resolved.dodged) return resolved;
+  const primeKey = actorKeyFromName(prev.playerStock.name);
+  const primeCombatant = resolved.combatants[primeKey];
+  if (!primeCombatant) return resolved;
+  let nextPrime = { ...primeCombatant };
+  let changed = false;
+
+  const supportCard = getSupportBenchCard(prev);
+  if (supportCard?.name === 'Whis') {
+    nextPrime.counterWindow = Math.max(nextPrime.counterWindow, 2);
+    nextPrime.counterDamage = Math.max(nextPrime.counterDamage, primeCombatant.counterDamage + 1);
+    changed = true;
+  }
+  getAssistBenchIndices(prev).forEach((assistIndex) => {
+    if (prev.playerBench[assistIndex]?.name === 'Whis') {
+      nextPrime.counterWindow = Math.max(nextPrime.counterWindow, 2);
+      nextPrime.counterDamage = Math.max(nextPrime.counterDamage, primeCombatant.counterDamage + 1);
+      changed = true;
+    }
+  });
+
+  if (!changed) return resolved;
+  return {
+    ...resolved,
+    combatants: {
+      ...resolved.combatants,
+      [primeKey]: nextPrime,
+    },
+  };
+};
+
+const applyPostEnemyHitFormationReactions = (
+  prev: GolfGameState,
+  resolved: { combatants: Record<string, ActorCombatState>; damageDealt: number; dodged: boolean; superArmorTriggered: SuperArmorKind | null }
+) => {
+  if (resolved.dodged || resolved.damageDealt <= 0 || prev.playerSupportReactiveUsed) return { state: prev, resolved };
+  const supportCard = getSupportBenchCard(prev);
+  if (supportCard?.name !== 'Hiro') return { state: prev, resolved };
+
+  const primeKey = actorKeyFromName(prev.playerStock.name);
+  const enemyKey = actorKeyFromName(prev.enemyStock.name);
+  const primeCombatant = resolved.combatants[primeKey];
+  const enemyCombatant = resolved.combatants[enemyKey];
+  if (!primeCombatant) return { state: prev, resolved };
+
+  const nextCombatants = {
+    ...resolved.combatants,
+    [primeKey]: {
+      ...primeCombatant,
+      armor: primeCombatant.armor + 4,
+    },
+    ...(enemyCombatant ? {
+      [enemyKey]: {
+        ...enemyCombatant,
+        hp: Math.max(0, enemyCombatant.hp - 2),
+      },
+    } : {}),
+  };
+
+  return {
+    state: {
+      ...prev,
+      playerSupportReactiveUsed: true,
+    },
+    resolved: {
+      ...resolved,
+      combatants: nextCombatants,
+    },
+  };
+};
+
 const simulateUseAbility = (prev: GolfGameState, effect: NonNullable<PlayerHandSlot['effect']>): GolfGameState => {
   if (effect === 'paw-sperity') {
     if (prev.playerStock.name !== 'Pan' || prev.panPawSperityCooldown > 0) return prev;
@@ -1284,6 +1549,7 @@ const setupGame = (): GolfGameState => {
       createBenchActorCard('Pan', 7, benchSeeds[1]),
       createBenchActorCard('Whis', 8, benchSeeds[2]),
     ],
+    playerSupportIndex: 0,
     playerHand: [
       createHandSlot('left', 'ability', 'Re-Purpose', 'repurpose', null),
       createHandSlot('right', 'ability', 'Sticky Paws', 'sticky-paws', null),
@@ -1305,6 +1571,9 @@ const setupGame = (): GolfGameState => {
     enemyFreeTagAvailable: true,
     playerTagLockCapturesRemaining: 0,
     playerBlockedReturnStockId: null,
+    playerSupportActionUsed: false,
+    playerSupportRotateUsed: false,
+    playerSupportReactiveUsed: false,
     playerDiscardPile: [],
     stickyPawsCooldown: 0,
     panPawSperityCooldown: 0,
@@ -1371,7 +1640,8 @@ const pickBestGolfMove = (tableau: CardType[][], stock: CardType, behavior: Enem
 
 type AutoAction =
   | { type: 'move'; columnIndex: number }
-  | { type: 'swap'; benchIndex: number }
+  | { type: 'rotate-support'; benchIndex: number }
+  | { type: 'support-ability'; benchIndex: number }
   | { type: 'ability'; slotId: HandSlotId; effect: NonNullable<PlayerHandSlot['effect']> };
 
 const getCombatantForCard = (state: GolfGameState, card: CardType) =>
@@ -1386,48 +1656,30 @@ const isPrimeThreatened = (state: GolfGameState) => {
 const findBenchIndexByName = (state: GolfGameState, name: string) =>
   state.playerBench.findIndex((card) => card.name === name);
 
-const chooseBestDefensiveSwap = (state: GolfGameState) => {
-  const candidates = state.playerBench
-    .map((card, benchIndex) => ({
-      benchIndex,
-      card,
-      combatant: getCombatantForCard(state, card),
-      canSwap:
-        state.playerTagLockCapturesRemaining === 0 &&
-        card.id !== state.playerBlockedReturnStockId &&
-        (state.playerFreeTagAvailable || canPlayOnStock(card, state.playerStock)),
-    }))
-    .filter((entry) => entry.canSwap);
-  if (candidates.length === 0) return null;
-  candidates.sort((a, b) => (b.combatant.hp + b.combatant.armor + b.combatant.defense * 2) - (a.combatant.hp + a.combatant.armor + a.combatant.defense * 2));
-  return candidates[0]?.benchIndex ?? null;
-};
-
 const getVisibleCards = (tableau: CardType[][]) =>
   tableau.map((column) => column[column.length - 1] ?? null);
 
-const chooseBestTempoSwap = (state: GolfGameState) => {
-  const visibleCards = getVisibleCards(state.tableau);
-  const currentRun = solveVisibleBestRun(visibleCards, state.playerStock);
-  const candidates = state.playerBench
-    .map((card, benchIndex) => ({
-      benchIndex,
-      visibleRun: solveVisibleBestRun(visibleCards, card),
-      canSwap:
-        state.playerTagLockCapturesRemaining === 0 &&
-        card.id !== state.playerBlockedReturnStockId &&
-        (state.playerFreeTagAvailable || canPlayOnStock(card, state.playerStock)),
-    }))
-    .filter((entry) => entry.canSwap);
-  if (candidates.length === 0) return null;
-  candidates.sort((a, b) => b.visibleRun - a.visibleRun);
-  const best = candidates[0];
-  if (!best || best.visibleRun <= currentRun) return null;
-  return best;
+const chooseBestSupportRotation = (state: GolfGameState) => {
+  if (state.playerSupportRotateUsed) return null;
+  const noMoves = getPlayableColumnIndices(state.tableau, state.playerStock).length === 0;
+  if (isPrimeThreatened(state)) {
+    const hiroIndex = findBenchIndexByName(state, 'Hiro');
+    if (hiroIndex >= 0 && hiroIndex !== getSupportBenchIndex(state)) return hiroIndex;
+  }
+  if (noMoves) {
+    const panIndex = findBenchIndexByName(state, 'Pan');
+    if (panIndex >= 0 && panIndex !== getSupportBenchIndex(state)) return panIndex;
+  }
+  const whisIndex = findBenchIndexByName(state, 'Whis');
+  if (whisIndex >= 0 && whisIndex !== getSupportBenchIndex(state)) {
+    const primeCombatant = getCombatantForCard(state, state.playerStock);
+    if (primeCombatant.counterWindow > 0 || primeCombatant.evasion <= 12) return whisIndex;
+  }
+  return null;
 };
 
 const isPlayerTeamDefeated = (state: GolfGameState) =>
-  [state.playerStock, ...state.playerBench].every((card) => getCombatantForCard(state, card).hp <= 0);
+  getCombatantForCard(state, state.playerStock).hp <= 0;
 
 const choosePlayerAutoAction = (state: GolfGameState, mode: AutoPlayMode): AutoAction | null => {
   if (mode === 'off') return null;
@@ -1437,59 +1689,49 @@ const choosePlayerAutoAction = (state: GolfGameState, mode: AutoPlayMode): AutoA
   }
 
   const threatened = isPrimeThreatened(state);
-  if (state.playerStock.name === 'Hiro' && threatened && state.playerStockActionPoints >= 4) {
-    return { type: 'ability', slotId: 'left', effect: 'ironfur' };
+  const supportCard = getSupportBenchCard(state);
+  const supportIndex = getSupportBenchIndex(state);
+  const supportAp = state.playerBenchActionPoints[supportIndex] ?? 0;
+  if (supportCard?.name === 'Hiro' && threatened && !state.playerSupportActionUsed && supportAp >= getSupportAbilityCost(supportCard)) {
+    return { type: 'support-ability', benchIndex: supportIndex };
   }
-  if (state.playerStock.name === 'Whis' && threatened && state.playerStockActionPoints >= 4) {
-    return { type: 'ability', slotId: 'left', effect: 'slipstream' };
+  if (supportCard?.name === 'Whis' && threatened && !state.playerSupportActionUsed && supportAp >= getSupportAbilityCost(supportCard)) {
+    return { type: 'support-ability', benchIndex: supportIndex };
   }
-  const tempoSwap = chooseBestTempoSwap(state);
-  if (tempoSwap && (state.playerFreeTagAvailable || tempoSwap.visibleRun >= 2)) {
-    return { type: 'swap', benchIndex: tempoSwap.benchIndex };
-  }
-  if (threatened) {
-    const hiroIndex = findBenchIndexByName(state, 'Hiro');
-    const defensiveSwap = chooseBestDefensiveSwap(state);
-    if (hiroIndex >= 0 && defensiveSwap === hiroIndex) {
-      return { type: 'swap', benchIndex: hiroIndex };
-    }
-    if (state.playerStockActionPoints >= 3 && defensiveSwap !== null) {
-      return { type: 'ability', slotId: 'right', effect: 'tap-out' };
-    }
-  }
-  if (state.playerStock.name === 'Pan' && state.panPawSperityCooldown === 0 && getPlayableColumnIndices(state.tableau, state.playerStock).length <= 1) {
-    return { type: 'ability', slotId: 'left', effect: 'paw-sperity' };
+  if (supportCard?.name === 'Pan' && !state.playerSupportActionUsed && supportAp >= getSupportAbilityCost(supportCard) && getPlayableColumnIndices(state.tableau, state.playerStock).length <= 1) {
+    return { type: 'support-ability', benchIndex: supportIndex };
   }
   const move = pickBestGolfMove(state.tableau, state.playerStock, 'player');
   if (move !== null) return { type: 'move', columnIndex: move };
-  const fallbackSwap = chooseBestDefensiveSwap(state);
-  return fallbackSwap === null ? null : { type: 'swap', benchIndex: fallbackSwap };
+  const rotation = chooseBestSupportRotation(state);
+  return rotation === null ? null : { type: 'rotate-support', benchIndex: rotation };
 };
 
 const applyEnemyTurnStartEffects = (state: GolfGameState): GolfGameState => {
-  const enemyProfile = getEnemyProfile(state.enemyProfileId);
-  const enemyKey = actorKeyFromName(state.enemyStock.name);
-  const enemyCombatant = state.combatants[enemyKey];
-  if (!enemyCombatant) return state;
+  const primedState = applyEnemyTurnFormationPassives(state);
+  const enemyProfile = getEnemyProfile(primedState.enemyProfileId);
+  const enemyKey = actorKeyFromName(primedState.enemyStock.name);
+  const enemyCombatant = primedState.combatants[enemyKey];
+  if (!enemyCombatant) return primedState;
   if (enemyProfile.behavior === 'armored') {
     return {
-      ...state,
+      ...primedState,
       combatants: {
-        ...state.combatants,
+        ...primedState.combatants,
         [enemyKey]: { ...enemyCombatant, armor: Math.min(enemyCombatant.armor + 1, 3) },
       },
     };
   }
   if (enemyProfile.behavior === 'evasive') {
     return {
-      ...state,
+      ...primedState,
       combatants: {
-        ...state.combatants,
+        ...primedState.combatants,
         [enemyKey]: { ...enemyCombatant, evasion: enemyCombatant.evasion + 4, evasionBuffAmount: enemyCombatant.evasionBuffAmount + 4, evasionBuffTurns: 1 },
       },
     };
   }
-  return state;
+  return primedState;
 };
 
 const applyEnemyMovePostEffects = (state: GolfGameState): GolfGameState => {
@@ -1786,7 +2028,7 @@ const KinBenchCard = ({
   vitals,
   combatant,
   actionPoints = 0,
-  canSwap,
+  canInteract,
   onClick,
   onPointerDown,
   onPointerUp,
@@ -1799,12 +2041,15 @@ const KinBenchCard = ({
   discardCount = 0,
   holdProgress = 0,
   cardRef,
+  roleLabel,
+  roleDescription,
+  activeRole = false,
 }: {
   card: CardType;
   vitals: ReturnType<typeof getCombatVitals>;
   combatant: ActorCombatState;
   actionPoints?: number;
-  canSwap: boolean;
+  canInteract: boolean;
   onClick: () => void;
   onPointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onPointerUp?: (event: React.PointerEvent<HTMLButtonElement>) => void;
@@ -1817,6 +2062,9 @@ const KinBenchCard = ({
   discardCount?: number;
   holdProgress?: number;
   cardRef?: (node: HTMLButtonElement | null) => void;
+  roleLabel?: string;
+  roleDescription?: string;
+  activeRole?: boolean;
 }) => (
   <button
     ref={cardRef}
@@ -1828,8 +2076,10 @@ const KinBenchCard = ({
     onPointerLeave={onPointerCancel}
     onClickCapture={onClickCapture}
     className={`relative rounded-[16px] border p-0 overflow-visible transition-colors ${
-      canSwap
-        ? 'border-game-teal/25 bg-black/45 hover:border-game-gold/45 hover:bg-black/65'
+      canInteract
+        ? activeRole
+          ? 'border-game-gold/35 bg-black/52 hover:border-game-gold/55 hover:bg-black/68'
+          : 'border-game-teal/25 bg-black/45 hover:border-game-teal/55 hover:bg-black/65'
         : 'cursor-not-allowed border-white/10 bg-black/25 opacity-55'
     }`}
     style={{
@@ -1840,6 +2090,17 @@ const KinBenchCard = ({
     }}
   >
     <div className="relative h-full w-full">
+      {roleLabel ? (
+        <div className="pointer-events-none absolute inset-x-0 top-1 z-20 flex justify-center">
+          <div className={`rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] ${
+            activeRole
+              ? 'border-game-gold/40 bg-black/82 text-game-gold'
+              : 'border-game-teal/30 bg-black/78 text-game-teal/85'
+          }`}>
+            {roleLabel}
+          </div>
+        </div>
+      ) : null}
       <ActorStatusRail combatant={combatant} maxVisible={2} iconSize={14} compact />
         <Card
           card={card}
@@ -1853,6 +2114,13 @@ const KinBenchCard = ({
         disableHoverLift
       />
       <StockCardNameplate card={card} heuristicLabel={heuristicLabel} highlighted={highlighted} withVitals />
+      {roleDescription ? (
+        <div className="pointer-events-none absolute inset-x-2 bottom-12 z-20 flex justify-center">
+          <div className="max-w-[82%] text-center text-[8px] font-mono uppercase tracking-[0.1em] text-white/45">
+            {roleDescription}
+          </div>
+        </div>
+      ) : null}
     </div>
     <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-8 w-8 [perspective:120px]">
       <div
@@ -2983,6 +3251,9 @@ export const GolfGame = () => {
           : [],
     [activeActorName, game.batteryMode, game.riggedConstructArmed, rightCapturedSlot, rightHandSlot]
   );
+  const supportBenchIndex = getSupportBenchIndex(game);
+  const supportBenchCard = game.playerBench[supportBenchIndex] ?? null;
+  const assistBenchIndices = getAssistBenchIndices(game);
   const inspectedKinCard = useMemo(() => {
     if (kinInspectIndex === null) return null;
     if (kinInspectIndex === -1) return game.playerStock;
@@ -3452,6 +3723,8 @@ export const GolfGame = () => {
       const refillResult = refillClearedTableau(nextTableau, columnIndex);
       const nextHand = prev.playerHand.map((slot) => ({ ...slot, armed: false }));
       const nextSequence = prev.playerStockSequence + 1;
+      const nextBenchActionPoints = awardBenchTempo(prev, refillResult.tableCleared);
+      const tableClearApBonus = getPlayerTableClearApBonus(prev, refillResult.tableCleared);
       const prepared = applyCounterWindowToPacket(
         prev,
         buildPokePacket(prev.playerStock, prev.enemyStock, nextSequence, 'player')
@@ -3481,7 +3754,8 @@ export const GolfGame = () => {
           playerCapturedRight: nextState.playerCapturedRight,
           clearedCount: prev.clearedCount + 1,
           playerStockSequence: nextSequence,
-          playerStockActionPoints: prev.playerStockActionPoints + 1,
+          playerStockActionPoints: prev.playerStockActionPoints + 1 + tableClearApBonus,
+          playerBenchActionPoints: nextBenchActionPoints,
           playerFreeTagAvailable: false,
           stickyPawsCooldown: 7,
           tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
@@ -3497,7 +3771,8 @@ export const GolfGame = () => {
           playerCapturedLeft: nextCapturedLeft,
           clearedCount: prev.clearedCount + 1,
           playerStockSequence: nextSequence,
-          playerStockActionPoints: prev.playerStockActionPoints + 1,
+          playerStockActionPoints: prev.playerStockActionPoints + 1 + tableClearApBonus,
+          playerBenchActionPoints: nextBenchActionPoints,
           playerFreeTagAvailable: false,
           tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
           ...advancePlayerTagLock(prev),
@@ -3513,7 +3788,8 @@ export const GolfGame = () => {
         playerCapturedRight: prev.playerCapturedRight,
         clearedCount: prev.clearedCount + 1,
         playerStockSequence: nextSequence,
-        playerStockActionPoints: prev.playerStockActionPoints + 1,
+        playerStockActionPoints: prev.playerStockActionPoints + 1 + tableClearApBonus,
+        playerBenchActionPoints: nextBenchActionPoints,
         playerFreeTagAvailable: false,
         tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
         ...advancePlayerTagLock(prev),
@@ -3671,6 +3947,7 @@ export const GolfGame = () => {
 
     setGame((prev) => {
       const nextSequence = prev.playerStockSequence + 1;
+      const nextBenchActionPoints = awardBenchTempo(prev, false);
       const prepared = applyCounterWindowToPacket(
         prev,
         buildPokePacket(prev.playerStock, prev.enemyStock, nextSequence, 'player')
@@ -3684,6 +3961,7 @@ export const GolfGame = () => {
         clearedCount: prev.clearedCount + 1,
         playerStockSequence: nextSequence,
         playerStockActionPoints: prev.playerStockActionPoints + 1,
+        playerBenchActionPoints: nextBenchActionPoints,
         playerFreeTagAvailable: false,
         playerDiscardPile: [...prev.playerDiscardPile, `Recovered ${rankLabel(slot.card!.rank)}`],
         ...advancePlayerTagLock(prev),
@@ -3879,6 +4157,7 @@ export const GolfGame = () => {
       const constructTop = prev.riggedConstructCards[prev.riggedConstructCards.length - 1];
       if (!constructTop || !canPlayOnStock(constructTop, prev.playerStock)) return { ...prev, riggedConstructArmed: true };
       const nextSequence = prev.playerStockSequence + 1;
+      const nextBenchActionPoints = awardBenchTempo(prev, false);
       const prepared = applyCounterWindowToPacket(
         prev,
         buildPokePacket(prev.playerStock, prev.enemyStock, nextSequence, 'player')
@@ -3890,69 +4169,92 @@ export const GolfGame = () => {
         riggedConstructCards: prev.riggedConstructCards.slice(0, -1),
         playerStockSequence: nextSequence,
         playerStockActionPoints: prev.playerStockActionPoints + 1,
+        playerBenchActionPoints: nextBenchActionPoints,
         riggedConstructArmed: false,
       }, resolved.combatants, 'Rigged Construct');
     });
     queueDialogueCallout('Jet', 'Back into the line.', 100);
   }, [currentTurn, enemyTurnSummary, game.playerStock, game.riggedConstructArmed, game.riggedConstructCards, guidePlan, queueDialogueCallout, recordUndoSnapshot]);
 
-  const swapBenchCard = (benchIndex: number) => {
+  const useSupportAbility = useCallback((benchIndex?: number) => {
+    if (currentTurn !== 'player') return;
+    const supportIndex = getSupportBenchIndex(game);
+    if (typeof benchIndex === 'number' && benchIndex !== supportIndex) return;
+    const supportCard = getSupportBenchCard(game);
+    if (!supportCard) return;
+    const cost = getSupportAbilityCost(supportCard);
+    const availableAp = game.playerBenchActionPoints[supportIndex] ?? 0;
+    if (game.playerSupportActionUsed || availableAp < cost) return;
+
+    setPinnedTooltipSlotId(null);
+    clearStickyHold();
+    clearKinInspectHold();
+    setKinInspectIndex(null);
+    recordUndoSnapshot({
+      game: latestGameRef.current,
+      enemyTurnSummary,
+      guidePlan,
+      actor: 'player',
+    });
+    setGame((prev) => simulateUseSupportAbility(prev));
+    appendCombatLog({
+      timestamp: Date.now(),
+      biomeId: game.biomeId,
+      type: 'ability',
+      actor: supportCard.name,
+      target: game.playerStock.name,
+      detail: { effect: `support-${supportCard.name.toLowerCase()}`, role: 'support' },
+    });
+
+    if (supportCard.name === 'Hiro') {
+      queueDialogueCallout('Hiro', "Hold the line.", 120);
+      queueDialogueCallout('Jet', 'Locked in.', 760);
+    } else if (supportCard.name === 'Pan') {
+      queueDialogueCallout('Pan', 'Try this route.', 120);
+    } else if (supportCard.name === 'Whis') {
+      queueDialogueCallout('Whis', 'Take the faster beat.', 120);
+    }
+  }, [appendCombatLog, currentTurn, enemyTurnSummary, game, guidePlan, queueDialogueCallout, recordUndoSnapshot]);
+
+  const handleBenchCardClick = useCallback((benchIndex: number) => {
     if (currentTurn !== 'player') return;
     if (game.batteryMode !== null) {
       handleBatteryTransfer(benchIndex);
       return;
     }
     const benchCard = game.playerBench[benchIndex];
-    const isStandardTag = !!benchCard && canPlayOnStock(benchCard, game.playerStock);
-    if (
-      !benchCard ||
-      game.playerTagLockCapturesRemaining > 0 ||
-      benchCard.id === game.playerBlockedReturnStockId ||
-      (!isStandardTag && !game.playerFreeTagAvailable)
-    ) return;
+    if (!benchCard) return;
+
+    if (getBenchRole(game, benchIndex) === 'support') {
+      useSupportAbility(benchIndex);
+      return;
+    }
+    if (game.playerSupportRotateUsed) return;
 
     setPinnedTooltipSlotId(null);
     clearStickyHold();
     clearKinInspectHold();
     setKinInspectIndex(null);
-
-    setGame((prev) => {
-      const nextBench = [...prev.playerBench];
-      const nextBenchSequences = [...prev.playerBenchSequences];
-      const nextBenchActionPoints = [...prev.playerBenchActionPoints];
-      const previousPrimeStock = prev.playerStock;
-      const nextPlayerStock = nextBench[benchIndex];
-      nextBench[benchIndex] = prev.playerStock;
-      const nextPlayerStockSequence = nextBenchSequences[benchIndex];
-      const nextPlayerStockActionPoints = nextBenchActionPoints[benchIndex];
-      nextBenchSequences[benchIndex] = prev.playerStockSequence;
-      nextBenchActionPoints[benchIndex] = prev.playerStockActionPoints;
-
-      return {
-        ...prev,
-        playerStock: nextPlayerStock,
-        playerBench: nextBench,
-        playerStockSequence: nextPlayerStockSequence,
-        playerStockActionPoints: nextPlayerStockActionPoints,
-        playerBenchSequences: nextBenchSequences,
-        playerBenchActionPoints: nextBenchActionPoints,
-        playerFreeTagAvailable: isStandardTag ? prev.playerFreeTagAvailable : false,
-        playerTagLockCapturesRemaining: 2,
-        playerBlockedReturnStockId: previousPrimeStock.id,
-      };
+    recordUndoSnapshot({
+      game: latestGameRef.current,
+      enemyTurnSummary,
+      guidePlan,
+      actor: 'player',
     });
-    setGuidePlan((prev) => {
-      if (!prev) return prev;
-      const benchCard = game.playerBench[benchIndex];
-      return benchCard && prev.starterRequiresSwap && prev.progress === 0 && prev.starterStockId === benchCard.id
-        ? { ...prev, progress: 1 }
-        : prev;
+    setGame((prev) => simulateRotateSupport(prev, benchIndex));
+    appendCombatLog({
+      timestamp: Date.now(),
+      biomeId: game.biomeId,
+      type: 'ability',
+      actor: benchCard.name,
+      detail: { effect: 'rotate-support', toIndex: benchIndex },
     });
-    if (benchCard) {
-      queueDialogueCallout(game.playerStock.name, `You got this, ${benchCard.name}!`, 120);
-      queueDialogueCallout(benchCard.name, 'I see an opening!', 760);
+    queueDialogueCallout(benchCard.name, 'I can support from here.', 140);
+    const priorSupport = getSupportBenchCard(game);
+    if (priorSupport) {
+      queueDialogueCallout(priorSupport.name, 'Your lead.', 760);
     }
-  };
+  }, [appendCombatLog, currentTurn, enemyTurnSummary, game, guidePlan, handleBatteryTransfer, queueDialogueCallout, recordUndoSnapshot, useSupportAbility]);
 
   const armStickyPaws = useCallback(() => {
     if (game.stickyPawsCooldown > 0) return;
@@ -4123,44 +4425,16 @@ export const GolfGame = () => {
       }, resolved.combatants);
     }
 
-    let nextState = prev;
-    const primeCombatant = prev.combatants[actorKeyFromName(prev.playerStock.name)];
-    const hiroBenchIndex = prev.playerBench.findIndex((card) => card.name === 'Hiro');
-    if (
-      prev.playerStock.name !== 'Hiro' &&
-      hiroBenchIndex >= 0 &&
-      primeCombatant &&
-      primeCombatant.consecutiveHitsTaken >= 1
-    ) {
-      const nextBench = [...prev.playerBench];
-      const nextBenchSequences = [...prev.playerBenchSequences];
-      const nextBenchActionPoints = [...prev.playerBenchActionPoints];
-      const priorPrime = prev.playerStock;
-      const incomingPrime = nextBench[hiroBenchIndex];
-      const incomingSequence = nextBenchSequences[hiroBenchIndex] ?? 0;
-      const incomingActionPoints = nextBenchActionPoints[hiroBenchIndex] ?? 0;
-      nextBench[hiroBenchIndex] = priorPrime;
-      nextBenchSequences[hiroBenchIndex] = prev.playerStockSequence;
-      nextBenchActionPoints[hiroBenchIndex] = prev.playerStockActionPoints;
-      nextState = {
-        ...prev,
-        playerStock: incomingPrime,
-        playerBench: nextBench,
-        playerStockSequence: incomingSequence,
-        playerStockActionPoints: incomingActionPoints,
-        playerBenchSequences: nextBenchSequences,
-        playerBenchActionPoints: nextBenchActionPoints,
-      };
-      queueDialogueCallout('Hiro', "Don't you dare!", 150);
-      queueDialogueCallout(priorPrime.name, 'Thanks, Hiro!', 780);
-    }
-
+    const nextState = prev;
     const nextEnemySequence = nextState.enemyStockSequence + 1;
     const preparedEnemy = applyCounterWindowToPacket(
       nextState,
       buildPokePacket(nextState.enemyStock, nextState.playerStock, nextEnemySequence, 'enemy')
     );
-    const enemyResolved = resolveDamagePacket(preparedEnemy.state.combatants, preparedEnemy.packet);
+    const baseEnemyResolved = resolveDamagePacket(preparedEnemy.state.combatants, preparedEnemy.packet);
+    const dodgedEnemyResolved = applyPostPlayerDodgeFormationEffects(nextState, baseEnemyResolved);
+    const reactedEnemyResult = applyPostEnemyHitFormationReactions(nextState, dodgedEnemyResolved);
+    const enemyResolved = reactedEnemyResult.resolved;
     appendCombatLog({
       timestamp: Date.now(),
       biomeId: nextState.biomeId,
@@ -4169,9 +4443,14 @@ export const GolfGame = () => {
       target: nextState.playerStock.name,
       detail: { card: candidate.id, columnIndex, damage: enemyResolved.damageDealt, dodged: enemyResolved.dodged },
     });
+    if (reactedEnemyResult.state.playerSupportReactiveUsed) {
+      queueDialogueCallout('Hiro', "Don't you dare!", 150);
+      queueDialogueCallout(nextState.playerStock.name, 'Thanks, Hiro!', 780);
+    }
 
     return {
       ...nextState,
+      playerSupportReactiveUsed: reactedEnemyResult.state.playerSupportReactiveUsed,
       tableau: refillResult.tableau,
       enemyStock: evolveIdentityCard(nextState.enemyStock, candidate),
       clearedCount: nextState.clearedCount + 1,
@@ -4323,6 +4602,9 @@ export const GolfGame = () => {
       playerFreeTagAvailable: true,
       playerTagLockCapturesRemaining: 0,
       playerBlockedReturnStockId: null,
+      playerSupportActionUsed: false,
+      playerSupportRotateUsed: false,
+      playerSupportReactiveUsed: false,
       stickyPawsCooldown: Math.max(0, prev.stickyPawsCooldown - 1),
       panPawSperityCooldown: Math.max(0, prev.panPawSperityCooldown - 1),
       riggedConstructCooldown: Math.max(0, prev.riggedConstructCooldown - 1),
@@ -4349,8 +4631,12 @@ export const GolfGame = () => {
             next = executeGolfMove(next, 'player', action.columnIndex);
             continue;
           }
-          if (action.type === 'swap') {
-            next = simulateSwapBenchCard(next, action.benchIndex);
+          if (action.type === 'rotate-support') {
+            next = simulateRotateSupport(next, action.benchIndex);
+            continue;
+          }
+          if (action.type === 'support-ability') {
+            next = simulateUseSupportAbility(next);
             continue;
           }
           next = simulateUseAbility(next, action.effect);
@@ -4702,7 +4988,7 @@ export const GolfGame = () => {
                   combatant={getCombatantForCard(game, card)}
                   actionPoints={0}
                   discardCount={0}
-                  canSwap={false}
+                  canInteract={false}
                   onClick={() => {}}
                   cardRef={(node) => {
                     enemyBenchRefs.current[benchIndex] = node;
@@ -5129,7 +5415,7 @@ export const GolfGame = () => {
                         highlighted={guidanceHighlightedStockId === inspectedKinCard.id || (highlightPanForBadLuck && inspectedKinCard.name === 'Pan')}
                         breathing={highlightPanForBadLuck && inspectedKinCard.name === 'Pan'}
                         discardCount={game.playerDiscardPile.length}
-                        canSwap={false}
+                        canInteract={false}
                         onClick={() => {}}
                       />
                     </div>
@@ -5206,42 +5492,88 @@ export const GolfGame = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-start justify-center" style={{ gap: benchKinGap }}>
-                  {game.playerBench.map((card, benchIndex) => (
-                    <KinBenchCard
-                      key={card.id}
-                      card={card}
-                      vitals={getCombatVitals(game, card)}
-                      combatant={getCombatantForCard(game, card)}
-                      cardRef={(node) => {
-                        playerBenchRefs.current[benchIndex] = node;
-                      }}
-                      actionPoints={game.playerBenchActionPoints[benchIndex] ?? 0}
-                      cardSize={boardCardSize}
-                      heuristicLabel={null}
-                      highlighted={guidanceHighlightedStockId === card.id || (highlightPanForBadLuck && card.name === 'Pan')}
-                      breathing={highlightPanForBadLuck && card.name === 'Pan'}
-                      discardCount={game.playerDiscardPile.length}
-                      canSwap={
-                        currentTurn === 'player' &&
-                        game.playerTagLockCapturesRemaining === 0 &&
-                        card.id !== game.playerBlockedReturnStockId &&
-                        (game.playerFreeTagAvailable || canPlayOnStock(card, game.playerStock))
-                      }
-                      onPointerDown={() => handleKinInspectPointerDown(benchIndex)}
-                      onPointerUp={handleKinInspectPointerEnd}
-                      onPointerCancel={handleKinInspectPointerEnd}
-                      onClickCapture={(event) => {
-                        if (suppressKinInspectClickRef.current) {
-                          suppressKinInspectClickRef.current = false;
-                          event.stopPropagation();
-                          event.preventDefault();
-                        }
-                      }}
-                      holdProgress={kinInspectHoldIndexRef.current === benchIndex ? kinInspectHoldProgress : 0}
-                      onClick={() => swapBenchCard(benchIndex)}
-                    />
-                  ))}
+                <div className="flex flex-col items-center gap-4">
+                  {supportBenchCard ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-game-gold/80">
+                        Support
+                      </div>
+                      <KinBenchCard
+                        key={supportBenchCard.id}
+                        card={supportBenchCard}
+                        vitals={getCombatVitals(game, supportBenchCard)}
+                        combatant={getCombatantForCard(game, supportBenchCard)}
+                        cardRef={(node) => {
+                          playerBenchRefs.current[supportBenchIndex] = node;
+                        }}
+                        actionPoints={game.playerBenchActionPoints[supportBenchIndex] ?? 0}
+                        cardSize={boardCardSize}
+                        heuristicLabel={null}
+                        highlighted={guidanceHighlightedStockId === supportBenchCard.id || (highlightPanForBadLuck && supportBenchCard.name === 'Pan')}
+                        breathing={highlightPanForBadLuck && supportBenchCard.name === 'Pan'}
+                        discardCount={game.playerDiscardPile.length}
+                        canInteract={currentTurn === 'player' && game.batteryMode === null}
+                        roleLabel="Support"
+                        roleDescription={getSupportPassiveSummary(supportBenchCard)}
+                        activeRole
+                        onPointerDown={() => handleKinInspectPointerDown(supportBenchIndex)}
+                        onPointerUp={handleKinInspectPointerEnd}
+                        onPointerCancel={handleKinInspectPointerEnd}
+                        onClickCapture={(event) => {
+                          if (suppressKinInspectClickRef.current) {
+                            suppressKinInspectClickRef.current = false;
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }
+                        }}
+                        holdProgress={kinInspectHoldIndexRef.current === supportBenchIndex ? kinInspectHoldProgress : 0}
+                        onClick={() => handleBenchCardClick(supportBenchIndex)}
+                      />
+                    </div>
+                  ) : null}
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-game-teal/70">
+                      Assist
+                    </div>
+                    <div className="flex items-start justify-center" style={{ gap: benchKinGap }}>
+                      {assistBenchIndices.map((benchIndex) => {
+                        const card = game.playerBench[benchIndex];
+                        if (!card) return null;
+                        return (
+                          <KinBenchCard
+                            key={card.id}
+                            card={card}
+                            vitals={getCombatVitals(game, card)}
+                            combatant={getCombatantForCard(game, card)}
+                            cardRef={(node) => {
+                              playerBenchRefs.current[benchIndex] = node;
+                            }}
+                            actionPoints={game.playerBenchActionPoints[benchIndex] ?? 0}
+                            cardSize={boardCardSize}
+                            heuristicLabel={null}
+                            highlighted={guidanceHighlightedStockId === card.id || (highlightPanForBadLuck && card.name === 'Pan')}
+                            breathing={highlightPanForBadLuck && card.name === 'Pan'}
+                            discardCount={game.playerDiscardPile.length}
+                            canInteract={currentTurn === 'player' && (game.batteryMode !== null || !game.playerSupportRotateUsed)}
+                            roleLabel="Assist"
+                            roleDescription={getAssistPassiveSummary(card)}
+                            onPointerDown={() => handleKinInspectPointerDown(benchIndex)}
+                            onPointerUp={handleKinInspectPointerEnd}
+                            onPointerCancel={handleKinInspectPointerEnd}
+                            onClickCapture={(event) => {
+                              if (suppressKinInspectClickRef.current) {
+                                suppressKinInspectClickRef.current = false;
+                                event.stopPropagation();
+                                event.preventDefault();
+                              }
+                            }}
+                            holdProgress={kinInspectHoldIndexRef.current === benchIndex ? kinInspectHoldProgress : 0}
+                            onClick={() => handleBenchCardClick(benchIndex)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
             {showHeuristicValues && currentTurn === 'player' && effectiveOracleMode !== 'ancestors' ? (
