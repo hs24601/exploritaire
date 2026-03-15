@@ -1,4 +1,4 @@
-import { memo, useRef, useCallback, useMemo, useState, useEffect, type CSSProperties } from 'react';
+import { memo, useRef, useCallback, useMemo, useState, useEffect, type CSSProperties, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import type { Card as CardType, OrimDefinition, OrimRarity, Element } from '../engine/types';
 import { getRankDisplay } from '../engine/rules';
@@ -80,6 +80,122 @@ function getElementLabel(element: Element | undefined): string {
   return 'Neutral';
 }
 
+function renderElementIndicator(element: Element | undefined, fallback: string): ReactNode {
+  if (element === 'E') {
+    return (
+      <svg viewBox="0 0 128 128" aria-hidden="true" style={{ width: '1.05em', height: '1.05em', display: 'block' }}>
+        <path d="M65.03 92.69S4.8 111.08 4.67 112.41c-.13 1.33 24.11 12.02 64.62 11.46c38.64-.53 53.57-10.39 53.83-11.46S66.36 92.42 65.03 92.69z" fill="#b9ce46" />
+        <path d="M62.26 42.15l-4.31-5.42s-6.96 7.3-8.84 9.29c-1.88 1.99-3.33 3.14-4.23 5.01c-1.29 2.67-5.38 25.72-5.38 25.72L27.67 88.9s-2.23-1.39-2.78-.94s-18.67 22.05-18.67 22.05l-1.56 2.39s3.6.8 4.71.69c.54-.05 3.2-.66 6.21-.97c3.17-.33 7.22-.06 7.67-.11c.51-.05 2.27-.57 2.27-.57l15.74-9.39l12.93-3.21l11.83 5.31l23.21 1.11l12.71-19.01l-27.63-36.59l-12.05-7.51z" fill="#9a7b63" />
+        <path d="M28.55 97.77s-.43-1.23-.75-2.14c-.32-.91-.13-6.73-.13-6.73s7.21 4.26 8.01 4.96s7.94 5.15 7.94 5.15s5.09-.64 6.86-.75c1.77-.11 4.83.05 4.83.05l-1.18 1.72s-11.53 3.75-13.57 4.4c-2.04.64-15.11 7.29-15.09 7.04c.04-.52 3.4-5.33 3.4-5.33l-.32-8.37z" fill="#603a1a" />
+        <path d="M80.73 103.46l-49.26 7.78s-2.38 2.11-2.14 2.67c.24.56 9.33 2.25 12.47 2.65c3.14.4 24.61 1.61 26.94 1.45c2.33-.16 26.14-1.37 29.44-1.77c3.3-.4 14.39-1.17 15.12-1.5c1.41-.64 7.88-4.13 7.88-4.13s-7.24-11.42-8.69-14.16c-1.45-2.73-3.86-7.64-5.55-9.33s-2.9-2.41-2.9-2.41s-2.28-5.3-4.94-8.68c-2.65-3.38-5.8-9.3-6.64-10.14c-3.19-3.18-3.77-3.03-3.77-3.03l2 24.1s-3.7 7.4-4.99 9.41c-1.27 2.03-4.97 7.09-4.97 7.09z" fill="#603a1a" />
+        <path d="M63.03 27.62l-.97 19.62l11.41 7.08s3.43 8.79 3.59 9.6c.16.8-.15 2.97.17 3.53c.32.56 6.23 4.63 6.46 4.64c1.31.07 4.02-.4 3.86-.64s1.08-5.46 1.08-5.46s-7.84-12.71-9.53-16.25c-1.69-3.54-8.04-12.71-8.77-14.24s-4.18-6.6-4.91-7.4s-1.9-1.04-2.39-.48z" fill="#603a1a" />
+        <path d="M68.02 65.05s5.39-8.88 5.55-10.24s-4.34-9.65-5.47-12.63c-1.13-2.98-4.1-9.09-4.42-9.89c-.32-.8-.64-4.66-.64-4.66s-2.25 2.41-3.06 4.34c-.8 1.93-3.83 6.68-3.83 6.68s1.9 11.02 2.63 15.76c.72 4.75 1.26 10.98 1.15 11.21c-.69 1.4-5.33 12.68-5.33 12.68s-.6 5.47-.04 6.03c.56.56 3.81 1.3 4.06.92c.49-.73.48-3.5.48-3.5s9.02-12.18 9.31-12.78c.11-.23-.39-3.92-.39-3.92z" fill="silver" />
+        <path d="M49.64 65.92c-.03-1.21-1.8-6.95-2.12-8.24c-.32-1.29-1-7.66-1.89-7.66c-.88 0-4.96 11.22-5.37 12.27c-.4 1.05-6.11 13.35-6.84 14.8c-.72 1.45-4.02 7.72-4.66 8.77s-1.49 2.83-1.49 2.83l16.34 10.33l5.9-.67s-3.45-9.27-4.26-11.36s-1.77-5.47-1.77-5.47s1.87-4.48 3.09-7.7c1.23-3.24 3.11-6.7 3.07-7.9z" fill="silver" />
+        <path d="M25.32 87.97c.04.15.25 3.92.14 6.17c-.11 2.26-.55 4.52-.55 4.52l-6.61 8.6s-11.96 4.63-12.68 4.85c-.72.22-.95.3-.95.3s-1.5-.91 2.99-5.81c5.8-6.33 13.22-15 14.16-16.09c1.67-1.94 3.39-2.99 3.5-2.54z" fill="silver" />
+        <path d="M39.8 90.59c-.68-.07-1.54 2.2-2 3.89c-.33 1.19-2.46 7.22-2.71 8.39c-.26 1.18-1.58 4.66-1.22 4.82c.36.15 3.15.35 4.64.04c1.48-.31 4.72-2.91 4.72-3.52s-1.4-6.93-1.53-7.68c-.36-2.15-.84-5.83-1.9-5.94z" fill="#367c2d" />
+        <path d="M106.71 99.82c-.6-.25-2.13 6.52-2.45 8.91c-.32 2.39-1.17 6.93-.95 7.38c.64 1.27 7.46.43 8.12-.66c.19-.31-.77-5.4-1.46-7.55c-.94-2.94-1.71-7.43-3.26-8.08z" fill="#367c2d" />
+        <path d="M118.66 91.29c-.94.04-1.94 8.25-2.56 10.04c-.7 2.03-3.04 11.64-2.07 12.74c.97 1.1 4.68.23 6.06-.17c1.33-.38 2.48-1.02 2.8-1.73s-.44-6.44-1.36-10.44c-.94-4.05-1.39-10.51-2.87-10.44z" fill="#367c2d" />
+        <path d="M31.47 111.25s2.59.98 11.46 1.53c8.87.55 13.23.5 13.23.5l20.26-2.96l4.6-7.28s-6.12-.23-9.37-.34c-3.25-.11-8.1-.13-8.32-.73c-.22-.61 5.47-4.74 7.07-5.56c1.6-.83 5.46-1.27 6.34-2.2c.88-.94 12-7.21 13.37-7.26c1.38-.06 5.68 2.59 6.5 2.31c.83-.28-2.86-10.04-3.35-11.87c-.04-.16-1.99-9.67-2.05-9.85c-.46-1.41-1.87-5.07-2.76-4.63c-.88.44-2.37 3.8-3.47 7.16s-1.76 5.13-2.31 5.95s-6.94 4.91-7.83 5.84c-.88.94-3.53 2.92-5.13 3.58c-1.6.66-3.14.66-4.3 1.71c-1.16 1.05-2.59 2.87-4.19 4.57c-1.6 1.71-4.85 5.63-5.92 6.59s-2.03 1.89-2.03 1.89s-7.73 2.19-10.33 3.45c-2.58 1.27-12.14 7.43-11.47 7.6z" fill="silver" />
+        <path d="M76.52 106.03c-.72.06-1.73 5.46-2.09 6.66c-.2.68-1.87 5.33-1.42 6.11c.9 1.6 8.3 1.17 8.63.33c.32-.84-2.11-6.46-2.56-7.5c-.46-1.02-1.5-5.69-2.56-5.6z" fill="#367c2d" />
+        <path d="M111.79 52.02c-.85.85-.88 2.2.06 2.97c.83.69 2.2.24 2.71-.38c.51-.62.45-1.97-.23-2.65s-2.03-.45-2.54.06z" fill="#603a1a" />
+        <path d="M112.07 64.67c-.91 1-.61 2.49.23 3.04c.84.55 2.1.5 2.72-.26c.55-.68.61-2.04-.23-2.88c-.73-.73-2.13-.55-2.72.1z" opacity=".5" fill="#603a1a" />
+        <path d="M86 32.06c-.26.83.26 1.77 1.05 1.91c.83.15 1.68-.09 1.91-.88c.23-.8-.06-1.8-1.2-2c-1.14-.2-1.63.52-1.76.97z" opacity=".6" fill="#603a1a" />
+        <path d="M94.54 46.11s.74-2.72 1.28-2.81c.54-.09 1.62 2.92 1.62 2.92s2.69.09 2.78.51c.09.43-1.9 2.04-1.9 2.04s.74 2.52.43 2.84c-.31.31-2.78-1.28-2.78-1.28s-2.21 1.87-2.72 1.53c-.51-.34.43-3.15.43-3.15s-2.1-1.5-2.13-2.01c-.04-.51 2.99-.59 2.99-.59z" fill="#603a1a" />
+        <path d="M33.54 38.62s.97-2.79 1.56-2.82c.58-.03 1.43 2.79 1.43 2.79s2.88.03 3.08.45c.25.54-1.85 2.37-1.85 2.37s.68 2.72.36 3.05c-.36.36-2.85-1.07-2.85-1.07s-2.56 1.78-3.11 1.3c-.48-.42.52-3.31.52-3.31s-2.4-1.75-2.27-2.24c.17-.68 3.13-.52 3.13-.52z" fill="#603a1a" />
+        <path d="M11.86 46.11c-.6-.03-1.42.57-1.42 1.6c0 .76.73 1.39 1.36 1.39c.91 0 1.54-.69 1.51-1.48c-.04-1.03-.82-1.48-1.45-1.51z" opacity=".5" fill="#603a1a" />
+        <path d="M18.47 61.03c.06 1.14.63 2.11 2.11 2.07s2.7-2.31 1.29-3.64c-1.41-1.33-3.48.04-3.4 1.57z" fill="#603a1a" />
+        <path d="M8.65 74.98c.7.78 2.38.47 2.42-.9c.04-1.25-.59-1.84-1.76-1.68c-1.16.16-1.51 1.63-.66 2.58z" fill="#603a1a" />
+        <path d="M45.91 92.85c-.59.2-1.32 2.48-2.01 4.84c-.44 1.49-1.72 5.96-1.41 6.18c.31.22 3.4.37 4.62-.38s2.11-1.4 2.27-1.84c.16-.44-1.24-4.32-1.78-5.74c-.42-1.07-1.07-3.28-1.69-3.06z" fill="#367c2d" />
+        <path d="M35.53 20.08c-.91 1-.61 2.49.23 3.04c.84.55 2.1.5 2.72-.26c.55-.68.61-2.04-.23-2.88c-.73-.72-2.14-.54-2.72.1z" opacity=".5" fill="#603a1a" />
+      </svg>
+    );
+  }
+
+  if (element === 'W') {
+    return (
+      <svg viewBox="0 0 1024 1024" aria-hidden="true" style={{ width: '1.05em', height: '1.05em', display: 'block' }}>
+        <path d="M512 512m-480 0a480 480 0 1 0 960 0a480 480 0 1 0-960 0Z" fill="#bedcfe" />
+        <path d="M512 179.2c-96 102.4-262.4 236.8-262.4 384s115.2 262.4 262.4 262.4s262.4-115.2 262.4-262.4s-160-281.6-262.4-384z" fill="#78aff7" />
+        <path d="M512 684.8c-57.6 0-102.4-44.8-102.4-108.8c0-57.6 64-102.4 102.4-147.2c38.4 44.8 102.4 89.6 102.4 147.2c0 57.6-44.8 108.8-102.4 108.8z" fill="#3d8af0" />
+      </svg>
+    );
+  }
+
+  if (element === 'A') {
+    return (
+      <svg viewBox="0 0 496.162 496.162" aria-hidden="true" style={{ width: '1.05em', height: '1.05em', display: 'block' }}>
+        <path fill="#70e5f0" d="M248.077 0C111.072 0 .002 111.062.002 248.083c0 137.002 111.07 248.079 248.075 248.079c137.013 0 248.083-111.077 248.083-248.079C496.16 111.062 385.09 0 248.077 0z" />
+        <g opacity=".5">
+          <path fill="#f9f9f9" d="M404.775 55.776c-5.99-4.885-12.195-9.502-18.629-13.82c-26.372-17.696-56.315-30.473-88.532-36.998c-.987-.203-1.997-.345-2.991-.535C279.544 1.558 263.99 0 248.077 0c-19.884 0-39.193 2.402-57.723 6.824c-6.694 1.592-13.281 3.451-19.746 5.578c-28.032 9.211-53.844 23.276-76.475 41.213c-10.917 8.652-21.115 18.17-30.426 28.506c-19.379 21.521-35.009 46.469-45.949 73.801c10.458 18.847 29.378 32.675 52.406 35.602c20.603 2.616 40.203-4.055 54.739-16.679c10.718 11.216 25.193 18.981 41.787 21.093c14.498 1.844 28.513-.896 40.616-7.069c10.979 14.49 27.534 24.75 46.997 27.221c27.511 3.496 53.248-9.51 67.462-31.252c9.548 7.375 21.084 12.439 33.915 14.069c22.867 2.906 44.495-5.608 59.33-21.031c24.237-1.951 45.528-16.472 56.506-37.698C455.635 107.36 432.737 78.586 404.775 55.776z" />
+        </g>
+        <g opacity=".5">
+          <path fill="#ffffff" d="M372.949 33.747c-5.661-3.306-11.43-6.449-17.359-9.304c-14.023-6.755-28.781-12.194-44.113-16.237c-.788-.211-1.576-.421-2.372-.62c-15.423-3.905-31.413-6.369-47.839-7.233C256.898.124 252.498 0 248.077 0c-11.805 0-23.395.88-34.756 2.472c-21.834 3.063-42.774 8.928-62.397 17.29c-.956.405-1.882.856-2.831 1.277c-8.683 3.825-17.091 8.141-25.224 12.899C95.48 49.989 71.465 71.126 52.087 96.079c-.704.906-1.438 1.794-2.135 2.712c.911.367 1.859.658 2.785.987c5.906 31.172 31.987 55.818 65.137 58.396c14.979 1.163 29.232-2.353 41.351-9.304c12.004 14.338 29.523 24.038 49.629 25.599c28.422 2.204 54.204-12.439 67.707-35.482c10.175 7.1 22.278 11.721 35.537 12.749c23.625 1.836 45.406-7.99 59.865-24.577c26.861-3.488 49.43-21.941 58.45-47.249C413.71 61.816 394.347 46.24 372.949 33.747z" />
+        </g>
+        <path fill="#f9f9f9" d="M248.077 0c-74.676 0-141.588 33.035-187.07 85.242c4.108-.383 8.117-1.078 12.011-2.081c12.554 23.021 36.967 38.643 65.037 38.643c18.736 0 35.789-7.016 48.833-18.487c13.036 11.472 30.097 18.487 48.833 18.487c32.117 0 59.375-20.491 69.627-49.085c12.271 9.031 27.373 14.433 43.784 14.433c23.877 0 45.054-11.354 58.595-28.904C364.579 21.919 308.899 0 248.077 0z" />
+        <g fill="#f5f5f5">
+          <path d="M336.204 290.501c-1.385-14.811-7.383-25.942-17.352-32.178c-8.76-5.478-19.991-6.763-33.111-3.768c-15.852 3.614-26.012 15.175-25.882 29.436c.107 13.663 9.739 24.749 23.969 27.587c3.779.75 7.375-1.438 8.24-4.758c.42-1.6.168-3.26-.719-4.683c-.964-1.538-2.609-2.646-4.499-3.015c-8.989-1.79-13.075-8.974-13.128-15.309c-.054-6.472 3.933-14.306 15.301-16.899c9.134-2.081 16.586-1.415 21.979 1.958c6.35 3.963 10.39 12.058 11.376 22.791c.704 7.528-2.027 13.45-8.576 18.621c-15.661 12.356-50.019 18.622-102.111 18.622c-80.3 0-179.19-15.21-203.978-19.241c1.17 4.59 2.494 9.119 3.917 13.603c32.515 5.194 122.14 18.308 198.094 18.308c7.123 0 14.039-.115 20.572-.345c45.49-1.591 76.612-8.76 92.51-21.299c14.809-11.691 19.315-21.591 18.237-33.258z" />
+          <path d="M300.774 390.814c-15.623-14.421-57.218-21.728-123.609-21.728c-50.623 0-105.286 4.285-141.174 7.75c2.494 4.094 5.133 8.079 7.849 12.012c40.823-3.771 90.284-6.924 134.259-6.924c61.112 0 100.122 6.189 112.822 17.91c3.458 3.19 4.659 6.641 3.779 10.841c-1.652 7.888-5.263 13.625-10.175 16.15c-4.116 2.119-9.571 2.172-16.043.16c-9.693-3.007-9.571-10.313-9.311-12.478c.551-4.399 3.948-9.181 10.321-9.961c1.92-.229 3.665-1.201 4.781-2.663c1.018-1.323 1.446-2.93 1.216-4.536c-.505-3.458-3.848-5.914-7.742-5.433c-11.973 1.462-20.955 9.992-22.347 21.23c-1.454 11.782 5.83 21.957 18.553 25.912c4.628 1.438 9.066 2.165 13.205 2.165c.413 0 .826-.007 1.232-.022c4.644-.161 8.966-1.263 12.86-3.267c8.691-4.468 14.589-13.083 17.061-24.91c2.472-11.828-.068-19.302-6.846-25.546z" />
+          <path d="M436.93 308.082c-1.561-16.869-8.354-29.523-19.646-36.584c-9.899-6.189-22.638-7.636-37.533-4.231c-17.864 4.078-29.324 17.092-29.187 33.157c.13 15.378 10.963 27.841 26.953 31.016c3.779.742 7.36-1.438 8.24-4.751c.42-1.599.168-3.252-.712-4.667c-.964-1.553-2.616-2.654-4.514-3.037c-11.032-2.188-16.035-10.986-16.104-18.736c-.062-7.903 4.781-17.466 18.598-20.618c10.895-2.486 19.868-1.675 26.402 2.41c7.643 4.789 12.509 14.444 13.687 27.205c.62 6.625-1.484 12.118-6.419 16.801c-21.261 20.151-90.697 22.867-155.818 22.867c-9.196 0-18.483-.054-27.764-.138c-82.526-.727-170.736-2.043-212.975-2.708c1.875 4.353 3.894 8.622 5.998 12.837c42.935.674 127.083 1.905 206.762 2.609c9.609.084 19.134.138 28.514.138c18.759 0 34.657-.237 48.604-.728c64.012-2.233 99.977-10.267 116.617-26.034c7.153-6.778 10.619-15.797 9.655-26.187z" />
+        </g>
+      </svg>
+    );
+  }
+
+  if (element === 'F') {
+    return (
+      <svg viewBox="0 0 128 128" aria-hidden="true" style={{ width: '1.05em', height: '1.05em', display: 'block' }}>
+        <defs>
+          <radialGradient id="card-fire-grad-outer" cx="68.884" cy="124.296" r="70.587" gradientTransform="matrix(-1 -.00434 -.00713 1.6408 131.986 -79.345)" gradientUnits="userSpaceOnUse">
+            <stop offset=".314" stopColor="#ff9800" />
+            <stop offset=".662" stopColor="#ff6d00" />
+            <stop offset=".972" stopColor="#f44336" />
+          </radialGradient>
+          <radialGradient id="card-fire-grad-inner" cx="64.921" cy="54.062" r="73.86" gradientTransform="matrix(-.0101 .9999 .7525 .0076 26.154 -11.267)" gradientUnits="userSpaceOnUse">
+            <stop offset=".214" stopColor="#fff176" />
+            <stop offset=".328" stopColor="#fff27d" />
+            <stop offset=".487" stopColor="#fff48f" />
+            <stop offset=".672" stopColor="#fff7ad" />
+            <stop offset=".793" stopColor="#fff9c4" />
+            <stop offset=".822" stopColor="#fff8bd" stopOpacity=".804" />
+            <stop offset=".863" stopColor="#fff6ab" stopOpacity=".529" />
+            <stop offset=".91" stopColor="#fff38d" stopOpacity=".209" />
+            <stop offset=".941" stopColor="#fff176" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <path d="M35.56 40.73c-.57 6.08-.97 16.84 2.62 21.42c0 0-1.69-11.82 13.46-26.65c6.1-5.97 7.51-14.09 5.38-20.18c-1.21-3.45-3.42-6.3-5.34-8.29c-1.12-1.17-.26-3.1 1.37-3.03c9.86.44 25.84 3.18 32.63 20.22c2.98 7.48 3.2 15.21 1.78 23.07c-.9 5.02-4.1 16.18 3.2 17.55c5.21.98 7.73-3.16 8.86-6.14c.47-1.24 2.1-1.55 2.98-.56c8.8 10.01 9.55 21.8 7.73 31.95c-3.52 19.62-23.39 33.9-43.13 33.9c-24.66 0-44.29-14.11-49.38-39.65c-2.05-10.31-1.01-30.71 14.89-45.11c1.18-1.08 3.11-.12 2.95 1.5z" fill="url(#card-fire-grad-outer)" />
+        <path d="M76.11 77.42c-9.09-11.7-5.02-25.05-2.79-30.37c.3-.7-.5-1.36-1.13-.93c-3.91 2.66-11.92 8.92-15.65 17.73c-5.05 11.91-4.69 17.74-1.7 24.86c1.8 4.29-.29 5.2-1.34 5.36c-1.02.16-1.96-.52-2.71-1.23a16.09 16.09 0 0 1-4.44-7.6c-.16-.62-.97-.79-1.34-.28c-2.8 3.87-4.25 10.08-4.32 14.47C40.47 113 51.68 124 65.24 124c17.09 0 29.54-18.9 19.72-34.7c-2.85-4.6-5.53-7.61-8.85-11.88z" fill="url(#card-fire-grad-inner)" />
+      </svg>
+    );
+  }
+
+  return fallback;
+}
+
+function isLightVisualColor(color: string): boolean {
+  const normalized = color.trim();
+  const hex = normalized.match(/^#([0-9a-f]{6}|[0-9a-f]{3})$/i);
+  if (hex) {
+    const raw = hex[1];
+    const expanded = raw.length === 3
+      ? raw.split('').map((ch) => `${ch}${ch}`).join('')
+      : raw;
+    const r = parseInt(expanded.slice(0, 2), 16);
+    const g = parseInt(expanded.slice(2, 4), 16);
+    const b = parseInt(expanded.slice(4, 6), 16);
+    const luminance = (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+    return luminance >= 170;
+  }
+  const rgb = normalized.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgb) {
+    const parts = rgb[1].split(',').map((part) => Number(part.trim())).filter((value) => Number.isFinite(value));
+    if (parts.length >= 3) {
+      const luminance = (0.2126 * parts[0]) + (0.7152 * parts[1]) + (0.0722 * parts[2]);
+      return luminance >= 170;
+    }
+  }
+  return false;
+}
+
 interface CardProps {
   card: CardType | null;
   faceDown?: boolean;
@@ -94,6 +210,7 @@ interface CardProps {
     hpMax?: number;
     armor?: number;
     superArmor?: number;
+    minimalVitalsOnly?: boolean;
     accentColor?: string;
     rankDisplay?: string;
     comboCount?: number;
@@ -133,6 +250,7 @@ interface CardProps {
   disableTemplateArt?: boolean;
   showFoundationActorSecretHolo?: boolean;
   canTap?: boolean;
+  disableAnimation?: boolean;
 }
 
 export const Card = memo(function Card({
@@ -170,6 +288,7 @@ export const Card = memo(function Card({
   disableTemplateArt = false,
   showFoundationActorSecretHolo = false,
   canTap = false,
+  disableAnimation = false,
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [shimmer, setShimmer] = useState(0);
@@ -266,6 +385,7 @@ export const Card = memo(function Card({
     ? (suitDisplayOverride
       ?? (isWaterElement ? 'W' : getSuitDisplay(card.suit, showGraphics)))
     : '';
+  const suitDisplayContent = renderElementIndicator(elementKey, suitDisplay);
   const globalScale = useCardScale();
   const frameSize = size ?? {
     width: CARD_SIZE.width * globalScale,
@@ -856,7 +976,7 @@ const getWatercolorColorFilter = () => {
       }}
     >
       <div className={`card-3d-container h-full w-full ${faceDown ? 'flipped' : ''}`}>
-      {showLegacyShine && (
+      {showLegacyShine && !disableAnimation && (
         <RarityAura
           rarity={effectiveRarity}
           cardWidth={frameSize.width}
@@ -872,9 +992,10 @@ const getWatercolorColorFilter = () => {
         boxShadow={getBoxShadow()}
         onClick={onClick}
         onPointerDown={onDragStart ? handlePointerDown : undefined}
-        whileHover={!disableHoverLift && !faceDown && !isAnyCardDragging && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
-        whileTap={!faceDown && !isAnyCardDragging && !onDragStart && onClick ? { scale: 0.98 } : {}}
+        whileHover={!disableAnimation && !disableHoverLift && !faceDown && !isAnyCardDragging && (canPlay || onClick || onDragStart) ? { scale: 1.05, y: -5 } : {}}
+        whileTap={!disableAnimation && !faceDown && !isAnyCardDragging && !onDragStart && onClick ? { scale: 0.98 } : {}}
         initial={false}
+        animate={false}
         className={`
           card-3d
           flex flex-col items-center ${isKeruAspectCard ? 'justify-start' : 'justify-center'} gap-0
@@ -1104,6 +1225,8 @@ const getWatercolorColorFilter = () => {
         const hpPercent = hpValue !== null && hpMaxValue !== null
           ? Math.max(0, Math.min(100, (hpValue / hpMaxValue) * 100))
           : 0;
+        const minimalVitalsOnly = !!foundationOverlay.minimalVitalsOnly;
+        const hpTextIsDark = isLightVisualColor(accent);
         const foundationRankDisplay = foundationOverlay.rankDisplay
           ?? (card ? getRankDisplay(card.rank) : '');
         const foundationRankFontPx = Math.max(30, Math.round(frameSize.width * 0.42));
@@ -1203,7 +1326,10 @@ const getWatercolorColorFilter = () => {
                         />
                         <div
                           className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold tracking-[0.2px]"
-                          style={{ color: '#e9f7ff', textShadow: `0 0 6px ${accent}55` }}
+                          style={{
+                            color: hpTextIsDark ? '#10161d' : '#e9f7ff',
+                            textShadow: hpTextIsDark ? '0 1px 1px rgba(255,255,255,0.24)' : `0 0 6px ${accent}55`,
+                          }}
                         >
                           {Math.round(hpValue)}/{Math.round(hpMaxValue)}
                         </div>
@@ -1232,153 +1358,157 @@ const getWatercolorColorFilter = () => {
                     </div>
                   )}
                 </div>
-                <div
-                  className={`mt-[4px] rounded-md border px-2 py-[2px] text-left font-black leading-tight ${autoSizeTitle ? 'whitespace-nowrap' : 'text-[16px] truncate'}`}
-                  style={{
-                    borderColor: `${accent}8a`,
-                    color: '#f5f8ff',
-                    backgroundColor: 'rgba(4, 8, 12, 0.78)',
-                    textShadow: `0 0 12px ${accent}aa`,
-                    fontSize: `${titleFontPx}px`,
-                    letterSpacing: titleLetterSpacing,
-                  }}
-                >
-                  {overlayTitle}
-                </div>
-              <div
-                className="relative mt-[4px] rounded-md border px-2 py-[3px] text-left text-[10px] leading-tight flex-1 min-h-0 overflow-hidden"
-                style={{
-                  borderColor: `${accent}66`,
-                  color: '#d8e9ff',
-                  backgroundColor: 'rgba(8, 12, 18, 0.7)',
-                }}
-              >
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background:
-                      `radial-gradient(circle at 30% 22%, ${withAlphaColor(shimmerColor, 0.22)} 0%, ${withAlphaColor(shimmerColor, 0)} 58%), linear-gradient(180deg, rgba(12,18,26,0.15) 0%, rgba(3,6,10,0.4) 100%)`,
-                  }}
-                />
-                {foundationRankDisplay && (
-                  <div className="absolute inset-0 z-[1] flex items-center justify-center">
-                    <span
+                {!minimalVitalsOnly && (
+                  <>
+                    <div
+                      className={`mt-[4px] rounded-md border px-2 py-[2px] text-left font-black leading-tight ${autoSizeTitle ? 'whitespace-nowrap' : 'text-[16px] truncate'}`}
                       style={{
-                        fontSize: `${foundationRankFontPx}px`,
-                        fontWeight: 900,
-                        letterSpacing: '-0.02em',
-                        lineHeight: 1,
+                        borderColor: `${accent}8a`,
                         color: '#f5f8ff',
-                        textShadow: `0 0 10px ${accent}cc, 0 0 22px ${withAlphaColor(accent, 0.75)}`,
+                        backgroundColor: 'rgba(4, 8, 12, 0.78)',
+                        textShadow: `0 0 12px ${accent}aa`,
+                        fontSize: `${titleFontPx}px`,
+                        letterSpacing: titleLetterSpacing,
                       }}
                     >
-                      {foundationRankDisplay}
-                    </span>
-                  </div>
-                )}
-                {foundationShimmerActive && (
-                  <>
-                    <motion.div
-                      key={`foundation-shimmer-band-${foundationShimmerBurst}`}
-                      className="absolute pointer-events-none"
+                      {overlayTitle}
+                    </div>
+                    <div
+                      className="relative mt-[4px] rounded-md border px-2 py-[3px] text-left text-[10px] leading-tight flex-1 min-h-0 overflow-hidden"
                       style={{
-                        background:
-                          `linear-gradient(110deg, rgba(255,255,255,0) 0%, ${withAlphaColor(shimmerColor, 0.08)} 22%, ${withAlphaColor(shimmerColor, 0.22)} 38%, rgba(255,255,255,0.34) 50%, ${withAlphaColor(shimmerColor, 0.25)} 63%, ${withAlphaColor(shimmerColor, 0.08)} 78%, rgba(255,255,255,0) 100%)`,
-                        mixBlendMode: 'screen',
-                        transform: `rotate(${shimmerAngle.toFixed(2)}deg)`,
-                        transformOrigin: 'center',
-                        width: `${shimmerBandWidthPct.toFixed(2)}%`,
-                        height: `${shimmerBandHeightPct.toFixed(2)}%`,
-                        left: '-36%',
-                        top: '-54%',
-                        filter: `blur(${shimmerBlurPx.toFixed(2)}px)`,
+                        borderColor: `${accent}66`,
+                        color: '#d8e9ff',
+                        backgroundColor: 'rgba(8, 12, 18, 0.7)',
                       }}
-                      initial={{
-                        x: `${shimmerStartX.toFixed(1)}%`,
-                        y: `${shimmerStartY.toFixed(1)}%`,
-                        opacity: 0,
+                    >
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          background:
+                            `radial-gradient(circle at 30% 22%, ${withAlphaColor(shimmerColor, 0.22)} 0%, ${withAlphaColor(shimmerColor, 0)} 58%), linear-gradient(180deg, rgba(12,18,26,0.15) 0%, rgba(3,6,10,0.4) 100%)`,
+                        }}
+                      />
+                      {foundationRankDisplay && (
+                        <div className="absolute inset-0 z-[1] flex items-center justify-center">
+                          <span
+                            style={{
+                              fontSize: `${foundationRankFontPx}px`,
+                              fontWeight: 900,
+                              letterSpacing: '-0.02em',
+                              lineHeight: 1,
+                              color: '#f5f8ff',
+                              textShadow: `0 0 10px ${accent}cc, 0 0 22px ${withAlphaColor(accent, 0.75)}`,
+                            }}
+                          >
+                            {foundationRankDisplay}
+                          </span>
+                        </div>
+                      )}
+                      {foundationShimmerActive && (
+                        <>
+                          <motion.div
+                            key={`foundation-shimmer-band-${foundationShimmerBurst}`}
+                            className="absolute pointer-events-none"
+                            style={{
+                              background:
+                                `linear-gradient(110deg, rgba(255,255,255,0) 0%, ${withAlphaColor(shimmerColor, 0.08)} 22%, ${withAlphaColor(shimmerColor, 0.22)} 38%, rgba(255,255,255,0.34) 50%, ${withAlphaColor(shimmerColor, 0.25)} 63%, ${withAlphaColor(shimmerColor, 0.08)} 78%, rgba(255,255,255,0) 100%)`,
+                              mixBlendMode: 'screen',
+                              transform: `rotate(${shimmerAngle.toFixed(2)}deg)`,
+                              transformOrigin: 'center',
+                              width: `${shimmerBandWidthPct.toFixed(2)}%`,
+                              height: `${shimmerBandHeightPct.toFixed(2)}%`,
+                              left: '-36%',
+                              top: '-54%',
+                              filter: `blur(${shimmerBlurPx.toFixed(2)}px)`,
+                            }}
+                            initial={{
+                              x: `${shimmerStartX.toFixed(1)}%`,
+                              y: `${shimmerStartY.toFixed(1)}%`,
+                              opacity: 0,
+                            }}
+                            animate={{
+                              x: `${shimmerEndX.toFixed(1)}%`,
+                              y: `${shimmerEndY.toFixed(1)}%`,
+                              opacity: [0, shimmerPeakOpacity, 0],
+                            }}
+                            transition={{ duration: shimmerDuration, ease: 'easeInOut' }}
+                          />
+                        </>
+                      )}
+                    </div>
+                    <div
+                      className="relative mt-[4px] rounded-md border h-[14px] flex items-center px-[2px] overflow-hidden"
+                      style={{
+                        borderColor: `${accent}55`,
+                        backgroundColor: 'rgba(6, 10, 14, 0.6)',
                       }}
-                      animate={{
-                        x: `${shimmerEndX.toFixed(1)}%`,
-                        y: `${shimmerEndY.toFixed(1)}%`,
-                        opacity: [0, shimmerPeakOpacity, 0],
-                      }}
-                      transition={{ duration: shimmerDuration, ease: 'easeInOut' }}
-                    />
+                    >
+                      <div className="relative h-full min-w-0 flex-1 overflow-hidden rounded-[2px]">
+                        {apSegments.length > 0 ? (
+                          <div className="flex h-full w-full gap-0">
+                            {apSegments.map((element, segmentIndex) => {
+                              const segmentColor = element === 'N' ? '#8a8f98' : getNeonElementColor(element);
+                              const isFirst = segmentIndex === 0;
+                              return (
+                                <div
+                                  key={`ap-segment-${segmentIndex}-${element}`}
+                                  className="h-full flex-1 rounded-[2px]"
+                                  style={{
+                                    background: `linear-gradient(180deg, ${segmentColor}dd 0%, ${segmentColor}99 100%)`,
+                                    boxShadow: `0 0 6px ${segmentColor}99`,
+                                    borderLeft: isFirst ? 'none' : '1px solid rgba(6, 10, 14, 0.82)',
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="h-full w-full rounded-[2px] bg-game-bg-dark/50" />
+                        )}
+                        {apSegments.length > 0 && (
+                          <div className="pointer-events-none absolute inset-0 z-[2]">
+                            {apSegments.map((element, segmentIndex) => {
+                              const sparkleColor = element === 'N' ? 'rgba(220, 228, 238, 0.95)' : withAlphaColor(getNeonElementColor(element), 0.95);
+                              return (
+                                <svg
+                                  key={`ap-combo-sparkle-${segmentIndex}-${element}`}
+                                  viewBox="0 0 10 10"
+                                  className="absolute"
+                                  style={{
+                                    left: `${((segmentIndex + 0.5) / apSegments.length) * 100}%`,
+                                    top: '52%',
+                                    width: 6,
+                                    height: 6,
+                                    transform: 'translate(-50%, -50%)',
+                                    filter: `drop-shadow(0 0 2px ${sparkleColor}) drop-shadow(0 0 5px ${sparkleColor})`,
+                                    animation: `foundation-superarmor-sparkle-float ${1.4 + (segmentIndex % 3) * 0.2}s ease-in-out infinite`,
+                                    animationDelay: `${segmentIndex * 0.12}s`,
+                                    opacity: 0.88,
+                                  }}
+                                >
+                                  <path d="M5,0 L5.8,4.2 L10,5 L5.8,5.8 L5,10 L4.2,5.8 L0,5 L4.2,4.2 Z" fill={sparkleColor} />
+                                  <circle cx="5" cy="5" r="1.15" fill="rgba(255,255,255,0.9)" />
+                                </svg>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className="ml-[4px] min-w-[14px] pr-[1px] text-right text-[9px] font-black leading-none"
+                        style={{
+                          color: '#f5f8ff',
+                          textShadow: `0 0 8px ${accent}aa`,
+                        }}
+                      >
+                        {apCount}
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
-              <div
-                className="relative mt-[4px] rounded-md border h-[14px] flex items-center px-[2px] overflow-hidden"
-                style={{
-                  borderColor: `${accent}55`,
-                  backgroundColor: 'rgba(6, 10, 14, 0.6)',
-                }}
-              >
-                <div className="relative h-full min-w-0 flex-1 overflow-hidden rounded-[2px]">
-                  {apSegments.length > 0 ? (
-                    <div className="flex h-full w-full gap-0">
-                      {apSegments.map((element, segmentIndex) => {
-                        const segmentColor = element === 'N' ? '#8a8f98' : getNeonElementColor(element);
-                        const isFirst = segmentIndex === 0;
-                        return (
-                          <div
-                            key={`ap-segment-${segmentIndex}-${element}`}
-                            className="h-full flex-1 rounded-[2px]"
-                            style={{
-                              background: `linear-gradient(180deg, ${segmentColor}dd 0%, ${segmentColor}99 100%)`,
-                              boxShadow: `0 0 6px ${segmentColor}99`,
-                              borderLeft: isFirst ? 'none' : '1px solid rgba(6, 10, 14, 0.82)',
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="h-full w-full rounded-[2px] bg-game-bg-dark/50" />
-                  )}
-                  {apSegments.length > 0 && (
-                    <div className="pointer-events-none absolute inset-0 z-[2]">
-                      {apSegments.map((element, segmentIndex) => {
-                        const sparkleColor = element === 'N' ? 'rgba(220, 228, 238, 0.95)' : withAlphaColor(getNeonElementColor(element), 0.95);
-                        return (
-                          <svg
-                            key={`ap-combo-sparkle-${segmentIndex}-${element}`}
-                            viewBox="0 0 10 10"
-                            className="absolute"
-                            style={{
-                              left: `${((segmentIndex + 0.5) / apSegments.length) * 100}%`,
-                              top: '52%',
-                              width: 6,
-                              height: 6,
-                              transform: 'translate(-50%, -50%)',
-                              filter: `drop-shadow(0 0 2px ${sparkleColor}) drop-shadow(0 0 5px ${sparkleColor})`,
-                              animation: `foundation-superarmor-sparkle-float ${1.4 + (segmentIndex % 3) * 0.2}s ease-in-out infinite`,
-                              animationDelay: `${segmentIndex * 0.12}s`,
-                              opacity: 0.88,
-                            }}
-                          >
-                            <path d="M5,0 L5.8,4.2 L10,5 L5.8,5.8 L5,10 L4.2,5.8 L0,5 L4.2,4.2 Z" fill={sparkleColor} />
-                            <circle cx="5" cy="5" r="1.15" fill="rgba(255,255,255,0.9)" />
-                          </svg>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                <div
-                  className="ml-[4px] min-w-[14px] pr-[1px] text-right text-[9px] font-black leading-none"
-                  style={{
-                    color: '#f5f8ff',
-                    textShadow: `0 0 8px ${accent}aa`,
-                  }}
-                >
-                  {apCount}
-                </div>
-                </div>
-              </div>
             </div>
-            {foundationOverlay.rankDisplay && (
+            {!minimalVitalsOnly && foundationOverlay.rankDisplay && (
               <div
                 className="absolute -top-[4px] -left-[4px] w-[27px] h-[27px] rounded-full flex items-center justify-center text-[13px] font-black"
                 style={{
@@ -2698,7 +2828,7 @@ const getWatercolorColorFilter = () => {
                     lineHeight: 1,
                   }}
                 >
-                  {suitDisplay}
+                  {suitDisplayContent}
                 </span>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { CSSProperties } from 'react';
 
-type CalloutTone = 'gold' | 'teal' | 'orange';
+type CalloutTone = 'gold' | 'teal' | 'orange' | 'dialogue';
 
 type SecondaryCallout = {
   text: string;
@@ -57,6 +57,14 @@ const TONE_STYLES: Record<CalloutTone, {
     bgTo: 'rgba(12, 9, 6, 0.94)',
     glow: '0 0 18px rgba(255, 140, 26, 0.5), inset 0 0 12px rgba(255, 140, 26, 0.2)',
     accent: 'rgba(255, 140, 26, 0.9)',
+  },
+  dialogue: {
+    text: '#eefaff',
+    border: 'rgba(152, 234, 255, 0.9)',
+    bgFrom: 'rgba(8, 16, 26, 0.95)',
+    bgTo: 'rgba(4, 8, 14, 0.94)',
+    glow: '0 0 18px rgba(72, 190, 232, 0.42), inset 0 0 12px rgba(152, 234, 255, 0.14)',
+    accent: 'rgba(152, 234, 255, 0.86)',
   },
 };
 
