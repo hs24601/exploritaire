@@ -17,7 +17,7 @@ const ELEMENTAL_SUITS = [
 const GOLF_ELEMENT_INDICATOR_SIZE = 22;
 const TABLEAU_COLUMNS = 7;
 const TABLEAU_ROWS = 5;
-const CARD_SIZE = { width: 158, height: 223 };
+const CARD_SIZE = { width: 146, height: 206 };
 const PLAYER_TURN_PEEK = 7;
 const ENEMY_TURN_PEEK = 6;
 const ENEMY_TURN_PLAYER_EDGE_PEEK = 14;
@@ -28,11 +28,26 @@ const ENEMY_POINTER_APPROACH_MS = 450;
 const ENEMY_POINTER_CLICK_MS = 140;
 const STICKY_PAWS_HOLD_MS = 700;
 const DEV_ABILITY_HOLD_MS = 450;
-const KIN_INSPECT_HOLD_MS = 450;
+const KIN_INSPECT_HOLD_MS = 700;
+const BATTERY_TARGET_CHARGE = 10;
+const JET_EFFICIENCY_TRIGGER = 3;
+const JET_EFFICIENCY_DISCOUNT = 3;
+const ASSIST_JET_MICRO_BATTERY_MAX = 5;
+const JET_BATTERY_EFFECTS: JetBatteryAssignableEffect[] = ['sticky-paws', 'rigged-construct', 'rewire', 'scrap-plating', 'aegis-shunt'];
 const GOLF_COMBAT_LOG_KEY = 'exploritaire.golf.combat-log.v1';
 const GOLF_COMBAT_LOG_STATS_KEY = 'exploritaire.golf.combat-log-stats.v1';
 
 const clampNumber = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const getGolfSegmentColor = (element: Element) => {
+  if (element === 'A') return '#70e5f0';
+  if (element === 'W') return '#78aff7';
+  if (element === 'E') return '#b9ce46';
+  if (element === 'F') return '#ff8a42';
+  if (element === 'L') return '#efe58a';
+  if (element === 'D') return '#9b7cff';
+  return '#8a8f98';
+};
 
 type GolfGameState = {
   biomeId: string;
@@ -51,6 +66,7 @@ type GolfGameState = {
   clearedCount: number;
   playerStockSequence: number;
   playerStockActionPoints: number;
+  playerPrimeApSegments: Element[];
   playerBenchSequences: number[];
   playerBenchActionPoints: number[];
   enemyStockSequence: number;
@@ -66,9 +82,21 @@ type GolfGameState = {
   panPawSperityCooldown: number;
   batteryStoredActionPoints: number;
   batteryMode: 'store' | 'release' | null;
+  jetBatteries: JetAbilityBattery[];
+  jetBatteryPrimeArmed: boolean;
+  jetBatteryAlternatorIndex: number;
+  jetDetonateBatteryUnlocked: boolean;
+  jetAbilityCardsPlayed: number;
+  jetEfficiencyDiscountReady: boolean;
   riggedConstructCooldown: number;
   riggedConstructCards: CardType[];
   riggedConstructArmed: boolean;
+  riggedConstructElement: Element | null;
+  riggedConstructCapacity: number;
+  jetRewireActionsRemaining: number;
+  jetRewireSourceColumnIndex: number | null;
+  assistJetMicroBatteryAp: number;
+  assistJetRewireCooldown: number;
   combatants: Record<string, ActorCombatState>;
   tableClears: number;
   enemyDefeatedCount: number;
@@ -90,16 +118,32 @@ type StockHeuristic = {
   stockId: string;
   visibleBest: number;
   hiddenBest: number;
-  hiddenPath: number[];
+  hiddenPath: GuideStep[];
+};
+
+type GuideStep = {
+  columnIndex: number;
+  stockId: string;
 };
 
 type GuidePlan = {
-  starterStockId: string;
-  starterRequiresSwap: boolean;
-  path: number[];
+  path: GuideStep[];
   progress: number;
   source: 'ancestors' | 'path-of-stars';
   visibleSteps: number | null;
+};
+
+type PlayerStockTarget = {
+  stockId: string;
+  card: CardType;
+  kind: 'prime' | 'bench';
+  role: 'prime' | 'support' | 'assist';
+  benchIndex?: number;
+};
+
+type PlayerMoveOption = GuideStep & {
+  candidate: CardType;
+  target: PlayerStockTarget;
 };
 
 type UndoSnapshot = {
@@ -109,15 +153,23 @@ type UndoSnapshot = {
   actor: 'player' | 'enemy';
 };
 
-type HandSlotId = 'left' | 'right' | 'jet-left-2' | 'jet-right-2' | 'jet-right-3';
+type HandSlotId = 'left' | 'right' | 'jet-left-2' | 'jet-left-3' | 'jet-right-2' | 'jet-right-3' | 'jet-right-4';
+type JetBatteryAssignableEffect = 'sticky-paws' | 'rigged-construct' | 'rewire' | 'scrap-plating' | 'aegis-shunt';
+
+type JetAbilityBattery = {
+  effect: JetBatteryAssignableEffect;
+  charge: number;
+};
 
 type PlayerHandSlot = {
   slotId: HandSlotId | 'pan-left';
-  kind: 'ability' | 'captured' | 'empty';
+  kind: 'ability' | 'captured' | 'generated' | 'empty';
   name: string;
   card: CardType | null;
-  effect: 'sticky-paws' | 'repurpose' | 'paw-sperity' | 'path-of-stars' | 'jikan' | 'ironfur' | 'tap-out' | 'slipstream' | 'battery' | 'siphon' | 'rigged-construct' | null;
+  effect: 'sticky-paws' | 'repurpose' | 'paw-sperity' | 'path-of-stars' | 'jikan' | 'ironfur' | 'tap-out' | 'slipstream' | 'battery' | 'siphon' | 'rigged-construct' | 'rewire' | 'scrap-plating' | 'aegis-shunt' | null;
   armed?: boolean;
+  generatedEffect?: 'free-energy' | null;
+  generatedValue?: number;
 };
 
 type AbilityTaxonomy = 'tableau-clear' | 'signature-active' | 'utility-active';
@@ -256,9 +308,24 @@ const PLAYER_STOCK_ACTOR: StockActorShell = {
 };
 
 const GOLF_DEFAULT_BIOME_ID = 'florpus_forest';
+const GOLF_DEFAULT_ENEMY_PROFILE_ID = 'thorn-matron';
 let enemyInstanceSequence = 0;
 
 const BIOME_ONE_ENEMIES: EnemyProfile[] = [
+  {
+    actor: {
+      id: 'thorn-matron',
+      name: 'Thorn Matron',
+      title: 'Enemy Stock',
+      element: 'A',
+      startingRank: 10,
+      accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(175,223,134,0.12)]',
+      moveset: ['Target Dummy'],
+    },
+    combatant: { hp: 102, hpMax: 102, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 0, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    maxActionsPerTurn: 0,
+    behavior: 'steady',
+  },
   {
     actor: {
       id: 'ember-mite',
@@ -397,31 +464,69 @@ const createHandSlot = (
   effect,
   card,
   armed,
+  generatedEffect: null,
+  generatedValue: 0,
 });
 
 const createCapturedHandSlot = (slotId: HandSlotId, card: CardType): PlayerHandSlot =>
   createHandSlot(slotId, 'captured', 'Recovered', null, { ...card, name: '' });
 
+const createGeneratedHandSlot = (
+  slotId: HandSlotId,
+  name: string,
+  card: CardType,
+  generatedEffect: 'free-energy',
+  generatedValue: number
+): PlayerHandSlot => ({
+  slotId,
+  kind: 'generated',
+  name,
+  effect: null,
+  card,
+  armed: false,
+  generatedEffect,
+  generatedValue,
+});
+
 const createEmptyHandSlot = (slotId: HandSlotId): PlayerHandSlot =>
   createHandSlot(slotId, 'empty', '', null, null);
 
 const getAbilityCostLabel = (effect: PlayerHandSlot['effect']) => {
-  if (effect === 'sticky-paws') return '5';
+  if (effect === 'sticky-paws') return 'Q';
   if (effect === 'path-of-stars') return '10+';
   if (effect === 'jikan') return '2';
   if (effect === 'ironfur') return '4';
   if (effect === 'tap-out') return '3';
   if (effect === 'slipstream') return '4';
-  if (effect === 'battery') return '0';
-  if (effect === 'siphon') return '2';
-  if (effect === 'rigged-construct') return '8';
+  if (effect === 'battery') return 'LINK';
+  if (effect === 'rigged-construct') return 'Q';
+  if (effect === 'rewire') return 'Q';
+  if (effect === 'scrap-plating') return 'Q';
+  if (effect === 'aegis-shunt') return 'Q';
   if (effect === 'repurpose' || effect === 'paw-sperity') return '∞';
   return null;
 };
 
+const getAbilityBaseCost = (effect: PlayerHandSlot['effect']) => {
+  if (effect === 'sticky-paws') return 5;
+  if (effect === 'battery') return 0;
+  if (effect === 'siphon') return 2;
+  if (effect === 'rigged-construct') return 8;
+  if (effect === 'rewire') return 5;
+  if (effect === 'scrap-plating') return 4;
+  if (effect === 'aegis-shunt') return 4;
+  const label = getAbilityCostLabel(effect);
+  if (!label || label === '∞' || label.endsWith('+')) return null;
+  const parsed = Number(label);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const isJetBatteryAssignableEffect = (effect: PlayerHandSlot['effect']): effect is JetBatteryAssignableEffect =>
+  effect === 'sticky-paws' || effect === 'rigged-construct' || effect === 'rewire' || effect === 'scrap-plating' || effect === 'aegis-shunt';
+
 const getAbilityTaxonomy = (effect: PlayerHandSlot['effect']): AbilityTaxonomy | null => {
   if (effect === 'repurpose') return 'tableau-clear';
-  if (effect === 'sticky-paws' || effect === 'path-of-stars' || effect === 'jikan' || effect === 'ironfur' || effect === 'tap-out' || effect === 'slipstream' || effect === 'battery' || effect === 'siphon' || effect === 'rigged-construct') return 'signature-active';
+  if (effect === 'sticky-paws' || effect === 'path-of-stars' || effect === 'jikan' || effect === 'ironfur' || effect === 'tap-out' || effect === 'slipstream' || effect === 'battery' || effect === 'siphon' || effect === 'rigged-construct' || effect === 'rewire') return 'signature-active';
   if (effect === 'paw-sperity') return 'utility-active';
   return null;
 };
@@ -436,7 +541,144 @@ const getAbilityCooldown = (state: GolfGameState, effect: PlayerHandSlot['effect
   if (effect === 'sticky-paws') return state.stickyPawsCooldown;
   if (effect === 'paw-sperity') return state.panPawSperityCooldown;
   if (effect === 'rigged-construct') return state.riggedConstructCooldown;
+  if (effect === 'rewire') return state.assistJetRewireCooldown;
   return 0;
+};
+
+const getPrimeJetAbilityCost = (state: GolfGameState, effect: PlayerHandSlot['effect']) => {
+  const baseCost = getAbilityBaseCost(effect);
+  if (baseCost === null) return 0;
+  if (state.playerStock.name !== 'Jet' || !state.jetEfficiencyDiscountReady) return baseCost;
+  return Math.max(0, baseCost - JET_EFFICIENCY_DISCOUNT);
+};
+
+const getJetBatteryForEffect = (state: GolfGameState, effect: JetBatteryAssignableEffect) =>
+  state.jetBatteries.find((battery) => battery.effect === effect) ?? null;
+
+const getJetBatteryCharge = (state: GolfGameState, effect: PlayerHandSlot['effect']) => (
+  isJetBatteryAssignableEffect(effect) ? (getJetBatteryForEffect(state, effect)?.charge ?? 0) : 0
+);
+
+const createJetBatteryAssignment = (state: GolfGameState, effect: JetBatteryAssignableEffect) => {
+  if (state.jetBatteries.some((battery) => battery.effect === effect)) {
+    return { ...state, jetBatteryPrimeArmed: false };
+  }
+  return {
+    ...state,
+    jetBatteries: [...state.jetBatteries, { effect, charge: 0 }],
+    jetBatteryPrimeArmed: false,
+  };
+};
+
+const routeJetChargeToBatteries = (state: GolfGameState, gain: number) => {
+  if (gain <= 0 || state.jetBatteries.length === 0) return state;
+  const nextBatteries = state.jetBatteries.map((battery) => ({ ...battery }));
+  let cursor = state.jetBatteryAlternatorIndex;
+  for (let index = 0; index < gain; index += 1) {
+    const target = nextBatteries[cursor % nextBatteries.length];
+    target.charge += 1;
+    cursor += 1;
+  }
+  return {
+    ...state,
+    jetBatteries: nextBatteries,
+    jetBatteryAlternatorIndex: cursor % nextBatteries.length,
+  };
+};
+
+const consumeJetBattery = (state: GolfGameState, effect: JetBatteryAssignableEffect) => {
+  const battery = getJetBatteryForEffect(state, effect);
+  const consumedCharge = battery?.charge ?? 0;
+  if (consumedCharge <= 0) return { state, consumedCharge: 0 };
+  return {
+    state: {
+      ...state,
+      jetBatteries: state.jetBatteries.map((entry) =>
+        entry.effect === effect ? { ...entry, charge: 0 } : entry
+      ),
+    },
+    consumedCharge,
+  };
+};
+
+const getPrimeJetEfficiencyUnderflow = (state: GolfGameState, effect: PlayerHandSlot['effect']) => {
+  const baseCost = getAbilityBaseCost(effect);
+  if (baseCost === null) return 0;
+  if (state.playerStock.name !== 'Jet' || !state.jetEfficiencyDiscountReady) return 0;
+  return Math.max(0, JET_EFFICIENCY_DISCOUNT - baseCost);
+};
+
+const createFreeEnergyCard = (value: number): CardType => ({
+  id: `free-energy-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  rank: Math.min(13, Math.max(1, value)),
+  suit: getSuitForElement('E'),
+  element: 'E',
+  name: 'FREE ENERGY',
+});
+
+const storeFreeEnergyInHand = (state: GolfGameState, value: number) => {
+  if (value <= 0) return state;
+  const freeEnergyCard = createFreeEnergyCard(value);
+  if (state.playerCapturedRight === null) {
+    return {
+      ...state,
+      playerCapturedRight: freeEnergyCard,
+    };
+  }
+  if (state.playerCapturedLeft === null) {
+    return {
+      ...state,
+      playerCapturedLeft: freeEnergyCard,
+    };
+  }
+  return {
+    ...state,
+    playerCapturedRight: freeEnergyCard,
+  };
+};
+
+const advancePrimeJetEfficiency = (state: GolfGameState, effect: PlayerHandSlot['effect']) => {
+  if (state.playerStock.name !== 'Jet' || effect === null || getAbilityBaseCost(effect) === null) return state;
+  if (state.jetEfficiencyDiscountReady) {
+    return {
+      ...state,
+      jetAbilityCardsPlayed: 1,
+      jetEfficiencyDiscountReady: false,
+    };
+  }
+  const nextCount = state.jetAbilityCardsPlayed + 1;
+  if (nextCount >= JET_EFFICIENCY_TRIGGER) {
+    return {
+      ...state,
+      jetAbilityCardsPlayed: 0,
+      jetEfficiencyDiscountReady: true,
+    };
+  }
+  return {
+    ...state,
+    jetAbilityCardsPlayed: nextCount,
+  };
+};
+
+const resolvePrimeJetAbilityAftermath = (state: GolfGameState, effect: PlayerHandSlot['effect']) => {
+  const underflow = getPrimeJetEfficiencyUnderflow(state, effect);
+  const advanced = advancePrimeJetEfficiency(state, effect);
+  return underflow > 0 ? storeFreeEnergyInHand(advanced, underflow) : advanced;
+};
+
+const advanceJetEfficiencyFromTableauPlay = (state: GolfGameState) => {
+  if (state.playerStock.name !== 'Jet') return state;
+  const nextCount = state.jetAbilityCardsPlayed + 1;
+  if (nextCount < 3) {
+    return {
+      ...state,
+      jetAbilityCardsPlayed: nextCount,
+    };
+  }
+  return {
+    ...routeJetChargeToBatteries(state, 1),
+    jetAbilityCardsPlayed: 0,
+  };
 };
 
 const actorKeyFromName = (name: string) => name.trim().toLowerCase();
@@ -457,7 +699,7 @@ const pickEnemyProfileForBiome = (biomeId: string) => {
 };
 
 const createCombatant = (name: string): ActorCombatState => {
-  if (name === 'Jet') return { hp: 18, hpMax: 18, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 6, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false };
+  if (name === 'Jet') return { hp: 18, hpMax: 18, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 7, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false };
   if (name === 'Hiro') return { hp: 20, hpMax: 20, armor: 2, defense: 1, defenseBuffAmount: 0, evasion: 4, evasionBuffAmount: 0, superArmorBulwark: 1, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false };
   if (name === 'Pan') return { hp: 16, hpMax: 16, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 10, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 1, superArmorReactive: 0, elementalShields: { F: 1 }, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false };
   if (name === 'Whis') return { hp: 14, hpMax: 14, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 22, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 1, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 1, forecastIntent: false };
@@ -480,8 +722,27 @@ const cloneEnemyCombatant = (profile: EnemyProfile): ActorCombatState => ({
 const sumSuperArmor = (combatant: ActorCombatState) =>
   combatant.superArmorBulwark + combatant.superArmorWard + combatant.superArmorReactive;
 
+const normalizeApSegments = (segments: Element[], apCount: number, fallbackElement: Element): Element[] => {
+  const targetCount = Math.max(0, Math.round(apCount));
+  const next = segments.slice(0, targetCount);
+  while (next.length < targetCount) next.push(fallbackElement);
+  return next;
+};
+
 const getCombatVitals = (state: GolfGameState, card: CardType) => {
   const combatant = state.combatants[actorKeyFromName(card.name)] ?? createCombatant(card.name);
+  const isPlayerPrime = card.id === state.playerStock.id;
+  const isEnemyPrime = card.id === state.enemyStock.id;
+  const apSegments = isPlayerPrime
+    ? normalizeApSegments(state.playerPrimeApSegments, state.playerStockActionPoints, card.element)
+    : isEnemyPrime
+      ? normalizeApSegments([], state.enemyStockActionPoints, card.element)
+      : undefined;
+  const apCount = isPlayerPrime
+    ? state.playerStockActionPoints
+    : isEnemyPrime
+      ? state.enemyStockActionPoints
+      : undefined;
   return {
     hp: combatant.hp,
     hpMax: combatant.hpMax,
@@ -489,6 +750,8 @@ const getCombatVitals = (state: GolfGameState, card: CardType) => {
     superArmor: sumSuperArmor(combatant),
     minimalVitalsOnly: true,
     name: '',
+    apSegments,
+    apCount,
   };
 };
 
@@ -567,16 +830,6 @@ const getActorStatusEntries = (combatant: ActorCombatState): ActorStatusEntry[] 
       title: `${element} Shield: negates matching elemental damage ${amount} more time${amount === 1 ? '' : 's'}.`,
     });
   });
-  if (sumSuperArmor(combatant) > 0) {
-    entries.push({
-      key: 'super-armor',
-      label: 'SA',
-      tone: 'buff',
-      priority: 70,
-      stacks: sumSuperArmor(combatant),
-      title: `Super Armor: ${sumSuperArmor(combatant)} threshold trigger${sumSuperArmor(combatant) === 1 ? '' : 's'} remaining.`,
-    });
-  }
   if (combatant.defenseBuffTurns > 0 && combatant.defenseBuffAmount > 0) {
     entries.push({
       key: 'defense-up',
@@ -619,12 +872,88 @@ const STATUS_TONE_STYLES: Record<ActorStatusEntry['tone'], { border: string; bg:
   },
 };
 
+const getActorBackdropStyle = (actorName: string) => {
+  if (actorName === 'Jet') {
+    return {
+      border: 'rgba(230,179,30,0.34)',
+      bg: 'linear-gradient(180deg, rgba(84,60,12,0.22), rgba(14,10,3,0.1))',
+      glow: '0 0 18px rgba(230,179,30,0.16)',
+    };
+  }
+  if (actorName === 'Hiro') {
+    return {
+      border: 'rgba(205,211,220,0.30)',
+      bg: 'linear-gradient(180deg, rgba(74,82,92,0.22), rgba(12,14,18,0.1))',
+      glow: '0 0 18px rgba(205,211,220,0.12)',
+    };
+  }
+  if (actorName === 'Pan') {
+    return {
+      border: 'rgba(214,84,255,0.30)',
+      bg: 'linear-gradient(180deg, rgba(96,26,98,0.22), rgba(22,6,22,0.1))',
+      glow: '0 0 18px rgba(214,84,255,0.14)',
+    };
+  }
+  if (actorName === 'Whis') {
+    return {
+      border: 'rgba(127,219,202,0.30)',
+      bg: 'linear-gradient(180deg, rgba(20,84,90,0.22), rgba(5,20,20,0.1))',
+      glow: '0 0 18px rgba(127,219,202,0.14)',
+    };
+  }
+  if (actorName === 'Ember Mite') {
+    return {
+      border: 'rgba(255,124,90,0.30)',
+      bg: 'linear-gradient(180deg, rgba(98,28,14,0.22), rgba(20,6,4,0.1))',
+      glow: '0 0 18px rgba(255,124,90,0.14)',
+    };
+  }
+  if (actorName === 'Dust Skipper') {
+    return {
+      border: 'rgba(204,173,110,0.30)',
+      bg: 'linear-gradient(180deg, rgba(92,70,26,0.22), rgba(20,14,6,0.1))',
+      glow: '0 0 18px rgba(204,173,110,0.14)',
+    };
+  }
+  if (actorName === 'Mist Wisp') {
+    return {
+      border: 'rgba(141,196,255,0.30)',
+      bg: 'linear-gradient(180deg, rgba(36,60,112,0.24), rgba(8,14,28,0.1))',
+      glow: '0 0 18px rgba(141,196,255,0.15)',
+    };
+  }
+  if (actorName === 'Thorn Drone') {
+    return {
+      border: 'rgba(175,223,134,0.30)',
+      bg: 'linear-gradient(180deg, rgba(52,88,18,0.24), rgba(10,18,4,0.1))',
+      glow: '0 0 18px rgba(175,223,134,0.14)',
+    };
+  }
+  if (actorName === 'Thorn Matron') {
+    return {
+      border: 'rgba(175,223,134,0.34)',
+      bg: 'linear-gradient(180deg, rgba(52,88,18,0.28), rgba(10,18,4,0.12))',
+      glow: '0 0 18px rgba(175,223,134,0.16)',
+    };
+  }
+  return {
+    border: 'rgba(255,255,255,0.18)',
+    bg: 'linear-gradient(180deg, rgba(36,36,36,0.18), rgba(10,10,10,0.08))',
+    glow: '0 0 14px rgba(255,255,255,0.08)',
+  };
+};
+
+const isNegativeStatusEntry = (status: ActorStatusEntry) =>
+  status.key === 'doom' || status.key === 'slow' || status.key === 'burn' || status.tone === 'debuff';
+
 const ActorStatusRail = ({
+  actorName,
   combatant,
   maxVisible,
   iconSize,
   compact = false,
 }: {
+  actorName: string;
   combatant: ActorCombatState;
   maxVisible: number;
   iconSize: number;
@@ -633,81 +962,139 @@ const ActorStatusRail = ({
   const statuses = getActorStatusEntries(combatant);
   if (statuses.length === 0) return null;
 
-  const visibleStatuses = statuses.slice(0, maxVisible);
-  const overflowCount = Math.max(0, statuses.length - visibleStatuses.length);
-  const badgeFontSize = Math.max(7, Math.round(iconSize * 0.36));
-  const labelFontSize = Math.max(7, Math.round(iconSize * 0.42));
+  const backdrop = getActorBackdropStyle(actorName);
+  const negativeStatuses = statuses.filter((status) => isNegativeStatusEntry(status));
+  const positiveStatuses = statuses.filter((status) => !isNegativeStatusEntry(status));
+  const visibleNegative = negativeStatuses.slice(0, maxVisible);
+  const visiblePositive = positiveStatuses.slice(0, maxVisible);
+  const negativeOverflow = Math.max(0, negativeStatuses.length - visibleNegative.length);
+  const positiveOverflow = Math.max(0, positiveStatuses.length - visiblePositive.length);
+  const badgeFontSize = Math.max(8, Math.round(iconSize * 0.38));
+  const labelFontSize = Math.max(8, Math.round(iconSize * 0.46));
   const chipOffset = Math.max(9, Math.round(iconSize * 0.34));
+  const drawerWidth = iconSize + 10;
+  const tileSize = drawerWidth;
+  const renderStatusTooltip = (status: ActorStatusEntry) => (
+    <div className="min-w-[180px] max-w-[240px] rounded-2xl border border-white/12 bg-black/92 px-3 py-2 text-left shadow-[0_12px_40px_rgba(0,0,0,0.42)]">
+      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-white/90">
+        {status.key.replace(/^shield-/, '').replace(/-/g, ' ')}
+      </div>
+      <div className="mt-1 text-[11px] leading-[1.4] text-white/72">
+        {status.title}
+      </div>
+      {typeof status.duration === 'number' && status.duration > 0 ? (
+        <div className="mt-2 text-[10px] font-mono uppercase tracking-[0.08em] text-white/55">
+          Duration: {status.duration}
+        </div>
+      ) : null}
+      {typeof status.stacks === 'number' && status.stacks > 0 ? (
+        <div className="text-[10px] font-mono uppercase tracking-[0.08em] text-white/55">
+          Stacks: {status.stacks}
+        </div>
+      ) : null}
+    </div>
+  );
 
-  return (
-    <div className="pointer-events-none absolute left-1/2 top-0 z-20 flex -translate-x-1/2 -translate-y-[58%] items-center justify-center gap-1">
-      {visibleStatuses.map((status) => {
-        const style = STATUS_TONE_STYLES[status.tone];
-        return (
+  const renderStatusChip = (status: ActorStatusEntry) => {
+    const style = STATUS_TONE_STYLES[status.tone];
+    const chip = (
+      <div
+        key={status.key}
+        className="relative flex items-center justify-center rounded-[6px] border font-black uppercase tracking-[0.04em]"
+        style={{
+          width: tileSize,
+          height: tileSize,
+          borderColor: style.border,
+          background: style.bg,
+          color: style.text,
+          boxShadow: style.glow,
+          fontSize: labelFontSize,
+        }}
+      >
+        <span>{status.label}</span>
+        {typeof status.duration === 'number' && status.duration > 0 ? (
           <div
-            key={status.key}
-            className="relative flex items-center justify-center rounded-[5px] border font-black uppercase tracking-[0.04em]"
-            title={status.title}
+            className="absolute flex items-center justify-center rounded-full border bg-black/92 tabular-nums"
             style={{
-              width: iconSize,
-              height: iconSize,
+              top: -chipOffset * 0.42,
+              left: -chipOffset * 0.38,
+              minWidth: chipOffset,
+              height: chipOffset,
+              paddingInline: 2,
               borderColor: style.border,
-              background: style.bg,
               color: style.text,
-              boxShadow: style.glow,
-              fontSize: labelFontSize,
+              fontSize: badgeFontSize,
             }}
           >
-            <span>{status.label}</span>
-            {typeof status.duration === 'number' && status.duration > 0 ? (
-              <div
-                className="absolute flex items-center justify-center rounded-full border bg-black/90 tabular-nums"
-                style={{
-                  top: -chipOffset * 0.42,
-                  left: -chipOffset * 0.38,
-                  minWidth: chipOffset,
-                  height: chipOffset,
-                  paddingInline: 2,
-                  borderColor: style.border,
-                  color: style.text,
-                  fontSize: badgeFontSize,
-                }}
-              >
-                {Math.min(99, status.duration)}
-              </div>
-            ) : null}
-            {typeof status.stacks === 'number' && status.stacks > 0 ? (
-              <div
-                className="absolute flex items-center justify-center rounded-full border bg-black/90 tabular-nums"
-                style={{
-                  right: -chipOffset * 0.38,
-                  bottom: -chipOffset * 0.42,
-                  minWidth: chipOffset,
-                  height: chipOffset,
-                  paddingInline: 2,
-                  borderColor: style.border,
-                  color: style.text,
-                  fontSize: badgeFontSize,
-                }}
-              >
-                {Math.min(99, status.stacks)}
-              </div>
-            ) : null}
+            {Math.min(99, status.duration)}
           </div>
-        );
-      })}
-      {overflowCount > 0 ? (
+        ) : null}
+        {typeof status.stacks === 'number' && status.stacks > 0 ? (
+          <div
+            className="absolute flex items-center justify-center rounded-full border bg-black/92 tabular-nums"
+            style={{
+              right: -chipOffset * 0.38,
+              bottom: -chipOffset * 0.42,
+              minWidth: chipOffset,
+              height: chipOffset,
+              paddingInline: 2,
+              borderColor: style.border,
+              color: style.text,
+              fontSize: badgeFontSize,
+            }}
+          >
+            {Math.min(99, status.stacks)}
+          </div>
+        ) : null}
+      </div>
+    );
+    return (
+      <Tooltip key={status.key} content={renderStatusTooltip(status)} pinnable>
+        {chip}
+      </Tooltip>
+    );
+  };
+
+  return (
+    <div className="absolute inset-y-0 left-0 right-0 z-30">
+      {(visibleNegative.length > 0 || negativeOverflow > 0) ? (
         <div
-          className="flex items-center justify-center rounded-full border border-white/20 bg-black/85 font-black text-white/85"
+          className="absolute top-1 flex flex-col items-center gap-2"
           style={{
-            width: iconSize,
-            height: iconSize,
-            fontSize: compact ? badgeFontSize : labelFontSize,
-            boxShadow: '0 0 10px rgba(255,255,255,0.08)',
+            width: drawerWidth,
+            left: `${compact ? -38 : -46}px`,
           }}
-          title={`${overflowCount} more active effect${overflowCount === 1 ? '' : 's'}.`}
         >
-          +{overflowCount}
+          {visibleNegative.map(renderStatusChip)}
+          {negativeOverflow > 0 ? (
+            <div
+              className="flex items-center justify-center rounded-full border border-white/24 bg-black/86 font-black text-white/90"
+              style={{ width: tileSize, height: tileSize, fontSize: compact ? badgeFontSize : labelFontSize }}
+              title={`${negativeOverflow} more harmful effect${negativeOverflow === 1 ? '' : 's'}.`}
+            >
+              +{negativeOverflow}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {(visiblePositive.length > 0 || positiveOverflow > 0) ? (
+        <div
+          className="absolute top-1 flex flex-col items-center gap-2"
+          style={{
+            width: drawerWidth,
+            right: `${compact ? -38 : -46}px`,
+          }}
+        >
+          {visiblePositive.map(renderStatusChip)}
+          {positiveOverflow > 0 ? (
+            <div
+              className="flex items-center justify-center rounded-full border border-white/24 bg-black/86 font-black text-white/90"
+              style={{ width: tileSize, height: tileSize, fontSize: compact ? badgeFontSize : labelFontSize }}
+              title={`${positiveOverflow} more beneficial effect${positiveOverflow === 1 ? '' : 's'}.`}
+            >
+              +{positiveOverflow}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -809,6 +1196,7 @@ const getSupportAbilityCost = (card: CardType | null) => {
 const getSupportPassiveSummary = (card: CardType | null) => {
   if (!card) return 'No support bonus';
   if (card.name === 'Hiro') return 'Reactive guard and sturdier prime.';
+  if (card.name === 'Jet') return 'AP relay specialist. Lowers combo thresholds and pushes ally poke cadence or support throughput.';
   if (card.name === 'Pan') return 'Tableau smoothness and clear rewards.';
   if (card.name === 'Whis') return 'Counter windows and combat foresight.';
   return 'No support bonus';
@@ -817,13 +1205,96 @@ const getSupportPassiveSummary = (card: CardType | null) => {
 const getAssistPassiveSummary = (card: CardType | null) => {
   if (!card) return 'No assist bonus';
   if (card.name === 'Hiro') return 'Enemy turns grant Jet a small armor brace.';
+  if (card.name === 'Jet') return 'Micro-Battery support: stock captures charge overflow AP, add +2 max AP, and overcharge Prime attacks at full charge.';
   if (card.name === 'Pan') return 'Tableau clears grant Jet bonus AP.';
   if (card.name === 'Whis') return 'Dodges gain stronger counter windows.';
   return 'No assist bonus';
 };
 
-const awardBenchTempo = (prev: GolfGameState, tableCleared: boolean) => {
+const getJetInspectorSections = () => ({
+  prime: [
+    'Full combo and salvage engineer.',
+    'Owns the most cognitively rich sequencing tools.',
+    'Higher skill ceiling than the other variants.',
+    'Free Energy turns Efficiency underflow into a zero-cost electric attack card in hand.',
+  ],
+  support: [
+    'AP relay specialist.',
+    'Lowers combo thresholds.',
+    'Boosts ally poke cadence or support throughput.',
+    'Less about stealing board cards directly, more about enabling the prime.',
+  ],
+  assist: [
+    'Quarnyix Micro-Battery: stores up to 5 overflow AP; gains 1 AP whenever a card is added to Jet stock.',
+    'Quarnyx Capacitor: Prime Kin gains +2 max AP.',
+    'Overcharge: at max Micro-Battery AP, Prime attacks gain +1 electricity damage.',
+    'Rewire: legal tableau-to-tableau movement on a 5-turn cooldown.',
+  ],
+});
+
+const getKinInspectorNarrative = (card: CardType | null) => {
+  if (!card) {
+    return { title: 'KIN DOSSIER', summary: 'Inspector unavailable.', detail: null as string | null };
+  }
+  if (card.name === 'Jet') {
+    return {
+      title: 'JET VARIANTS',
+      summary: 'Rogue, scoundrel, and engineer expression split across Prime, Support, and Assist roles.',
+      detail: `${getJetInspectorSections().prime.join(' ')} ${getJetInspectorSections().support.join(' ')} ${getJetInspectorSections().assist.join(' ')}`,
+    };
+  }
+  if (card.name === 'Hiro') {
+    return {
+      title: 'HIRO DOCTRINE',
+      summary: 'Reactive guard rails, sturdier frontline posture, and dependable mitigation sequencing.',
+      detail: `${getSupportPassiveSummary(card)} ${getAssistPassiveSummary(card)}`,
+    };
+  }
+  if (card.name === 'Pan') {
+    return {
+      title: 'PAN DOCTRINE',
+      summary: 'Tableau smoothing, fortune pivots, and explosive clear rewards.',
+      detail: `${getSupportPassiveSummary(card)} ${getAssistPassiveSummary(card)}`,
+    };
+  }
+  if (card.name === 'Whis') {
+    return {
+      title: 'WHIS DOCTRINE',
+      summary: 'Counter windows, foresight, and elegant temporal control.',
+      detail: `${getSupportPassiveSummary(card)} ${getAssistPassiveSummary(card)}`,
+    };
+  }
+  return {
+    title: `${card.name.toUpperCase()} DOSSIER`,
+    summary: 'Inspector record available.',
+    detail: null,
+  };
+};
+
+const getDiscardCountsByActor = (entries: string[]) => {
+  const counts: Record<string, number> = {};
+  entries.forEach((entry) => {
+    const separatorIndex = entry.indexOf('::');
+    const actor = separatorIndex > 0 ? entry.slice(0, separatorIndex) : 'Shared';
+    counts[actor] = (counts[actor] ?? 0) + 1;
+  });
+  return counts;
+};
+
+const getBenchAbilityCost = (card: CardType | null, role: 'support' | 'assist') => {
+  if (!card) return 0;
+  if (card.name === 'Hiro') return role === 'support' ? 3 : 2;
+  if (card.name === 'Jet') return 5;
+  if (card.name === 'Pan') return role === 'support' ? 4 : 3;
+  if (card.name === 'Whis') return 2;
+  return 0;
+};
+
+const awardBenchTempo = (prev: GolfGameState, tableCleared: boolean, targetStockId: string) => {
   const nextBenchActionPoints = [...prev.playerBenchActionPoints];
+  if (targetStockId !== prev.playerStock.id) {
+    return nextBenchActionPoints;
+  }
   const supportIndex = getSupportBenchIndex(prev);
   nextBenchActionPoints[supportIndex] = Math.min(12, (nextBenchActionPoints[supportIndex] ?? 0) + 1);
   if (tableCleared) {
@@ -832,6 +1303,48 @@ const awardBenchTempo = (prev: GolfGameState, tableCleared: boolean) => {
     });
   }
   return nextBenchActionPoints;
+};
+
+const appendPrimeApSegment = (prev: GolfGameState, element: Element) =>
+  [...prev.playerPrimeApSegments, element];
+
+const hasAssistJet = (state: GolfGameState) =>
+  getAssistBenchIndices(state).some((assistIndex) => state.playerBench[assistIndex]?.name === 'Jet');
+
+const routePrimeApWithAssistJet = (prev: GolfGameState, gain: number) => {
+  if (gain <= 0) {
+    return {
+      playerStockActionPoints: prev.playerStockActionPoints,
+      assistJetMicroBatteryAp: prev.assistJetMicroBatteryAp,
+      jetState: prev,
+    };
+  }
+  if (prev.playerStock.name === 'Jet') {
+    const charged = routeJetChargeToBatteries(prev, gain);
+    return {
+      playerStockActionPoints: 0,
+      assistJetMicroBatteryAp: charged.assistJetMicroBatteryAp,
+      jetState: { ...charged, playerStockActionPoints: 0 },
+    };
+  }
+  if (!hasAssistJet(prev)) {
+    return {
+      playerStockActionPoints: prev.playerStockActionPoints + gain,
+      assistJetMicroBatteryAp: prev.assistJetMicroBatteryAp,
+      jetState: prev,
+    };
+  }
+  const primeMaxAp = 12 + 2;
+  const stockGain = Math.min(gain, Math.max(0, primeMaxAp - prev.playerStockActionPoints));
+  const overflow = gain - stockGain;
+  return {
+    playerStockActionPoints: prev.playerStockActionPoints + stockGain,
+    assistJetMicroBatteryAp: Math.min(
+      ASSIST_JET_MICRO_BATTERY_MAX,
+      prev.assistJetMicroBatteryAp + overflow
+    ),
+    jetState: prev,
+  };
 };
 
 const getPlayerTableClearApBonus = (prev: GolfGameState, tableCleared: boolean) => {
@@ -843,6 +1356,64 @@ const getPlayerTableClearApBonus = (prev: GolfGameState, tableCleared: boolean) 
     if (prev.playerBench[assistIndex]?.name === 'Pan') bonus += 1;
   });
   return bonus;
+};
+
+const applyPlayerProgressToTarget = (
+  prev: GolfGameState,
+  targetStockId: string,
+  candidate: CardType,
+  tableClearApBonus: number,
+  nextBenchActionPoints: number[]
+) => {
+  if (targetStockId === prev.playerStock.id) {
+    const nextSequence = prev.playerStockSequence + 1;
+    const routedAp = routePrimeApWithAssistJet(prev, 1 + tableClearApBonus);
+    return {
+      nextState: {
+        ...routedAp.jetState,
+        playerStock: evolveIdentityCard(prev.playerStock, candidate),
+        playerStockSequence: nextSequence,
+        playerStockActionPoints: routedAp.playerStockActionPoints,
+        playerPrimeApSegments: appendPrimeApSegment(prev, candidate.element),
+        playerBenchActionPoints: nextBenchActionPoints,
+        assistJetMicroBatteryAp: routedAp.assistJetMicroBatteryAp,
+        playerFreeTagAvailable: false,
+        ...advancePlayerTagLock(prev),
+      },
+      sourceCard: prev.playerStock,
+      sequence: nextSequence,
+    };
+  }
+
+  const benchIndex = prev.playerBench.findIndex((card) => card.id === targetStockId);
+  if (benchIndex < 0) {
+    return {
+      nextState: prev,
+      sourceCard: prev.playerStock,
+      sequence: prev.playerStockSequence,
+    };
+  }
+
+  const nextBench = [...prev.playerBench];
+  nextBench[benchIndex] = evolveIdentityCard(prev.playerBench[benchIndex], candidate);
+  const nextBenchSequences = [...prev.playerBenchSequences];
+  const nextSequence = (nextBenchSequences[benchIndex] ?? 0) + 1;
+  nextBenchSequences[benchIndex] = nextSequence;
+  const nextBenchAp = [...nextBenchActionPoints];
+  nextBenchAp[benchIndex] = Math.min(12, (nextBenchAp[benchIndex] ?? 0) + 1 + tableClearApBonus);
+
+  return {
+    nextState: {
+      ...prev,
+      playerBench: nextBench,
+      playerBenchSequences: nextBenchSequences,
+      playerBenchActionPoints: nextBenchAp,
+      playerFreeTagAvailable: false,
+      ...advancePlayerTagLock(prev),
+    },
+    sourceCard: prev.playerBench[benchIndex],
+    sequence: nextSequence,
+  };
 };
 
 const simulateRotateSupport = (prev: GolfGameState, benchIndex: number) => {
@@ -891,12 +1462,13 @@ const simulateUseSupportAbility = (prev: GolfGameState) => {
   }
 
   if (supportCard.name === 'Pan') {
+    const routedAp = routePrimeApWithAssistJet(prev, 1);
     return {
-      ...prev,
+      ...routedAp.jetState,
       tableau: rerollTableau(prev.tableau),
       playerBenchActionPoints: nextBenchActionPoints,
       playerSupportActionUsed: true,
-      playerStockActionPoints: prev.playerStockActionPoints + 1,
+      playerStockActionPoints: routedAp.playerStockActionPoints,
     };
   }
 
@@ -921,6 +1493,66 @@ const simulateUseSupportAbility = (prev: GolfGameState) => {
   }
 
   return prev;
+};
+
+const simulateUseBenchAbility = (prev: GolfGameState, benchIndex: number) => {
+  const benchCard = prev.playerBench[benchIndex];
+  if (!benchCard) return prev;
+  const role = getBenchRole(prev, benchIndex);
+  const cost = getBenchAbilityCost(benchCard, role);
+  const availableAp = prev.playerBenchActionPoints[benchIndex] ?? 0;
+  if (availableAp < cost) return prev;
+
+  const nextBenchActionPoints = [...prev.playerBenchActionPoints];
+  nextBenchActionPoints[benchIndex] = Math.max(0, availableAp - cost);
+  const primeKey = actorKeyFromName(prev.playerStock.name);
+  const primeCombatant = prev.combatants[primeKey];
+  if (!primeCombatant) return prev;
+
+  if (benchCard.name === 'Hiro') {
+    const armorGain = role === 'support' ? 5 : 3;
+    const defenseGain = role === 'support' ? 4 : 2;
+    return {
+      ...prev,
+      playerBenchActionPoints: nextBenchActionPoints,
+      combatants: {
+        ...prev.combatants,
+        [primeKey]: {
+          ...primeCombatant,
+          armor: primeCombatant.armor + armorGain,
+          defense: primeCombatant.defense + defenseGain,
+          defenseBuffAmount: primeCombatant.defenseBuffAmount + defenseGain,
+          defenseBuffTurns: Math.max(primeCombatant.defenseBuffTurns, role === 'support' ? 2 : 1),
+        },
+      },
+    };
+  }
+
+  if (benchCard.name === 'Jet') {
+    // Assist Jet: Rewire will probably require balancing to restrict total number of rewire actions.
+    // The current hook is intentionally minimal until bench-variant Jet has a distinct actor identity.
+    return {
+      ...prev,
+      playerBenchActionPoints: nextBenchActionPoints,
+      assistJetRewireCooldown: 5,
+    };
+  }
+
+  if (benchCard.name === 'Pan') {
+    const routedAp = routePrimeApWithAssistJet(prev, 1);
+    return {
+      ...routedAp.jetState,
+      tableau: rerollTableau(prev.tableau),
+      playerBenchActionPoints: nextBenchActionPoints,
+      playerStockActionPoints: routedAp.playerStockActionPoints,
+      playerPrimeApSegments: appendPrimeApSegment(prev, benchCard.element),
+    };
+  }
+
+  return {
+    ...prev,
+    playerBenchActionPoints: nextBenchActionPoints,
+  };
 };
 
 const applyEnemyTurnFormationPassives = (prev: GolfGameState) => {
@@ -973,6 +1605,11 @@ const applyPostPlayerDodgeFormationEffects = (
   let nextPrime = { ...primeCombatant };
   let changed = false;
 
+  if (prev.playerStock.name === 'Jet') {
+    nextPrime.dodgeCounter = primeCombatant.dodgeCounter + 1;
+    changed = true;
+  }
+
   const supportCard = getSupportBenchCard(prev);
   if (supportCard?.name === 'Whis') {
     nextPrime.counterWindow = Math.max(nextPrime.counterWindow, 2);
@@ -995,6 +1632,19 @@ const applyPostPlayerDodgeFormationEffects = (
       [primeKey]: nextPrime,
     },
   };
+};
+
+const applyJetPassiveSiphon = (
+  prev: GolfGameState,
+  resolved: { combatants: Record<string, ActorCombatState>; damageDealt: number; dodged: boolean; superArmorTriggered: SuperArmorKind | null }
+) => {
+  if (prev.playerStock.name !== 'Jet' || resolved.damageDealt <= 0 || prev.enemyStockActionPoints <= 0) return prev;
+  const stealChance = Math.min(100, 15 + (prev.enemyStockActionPoints * 5));
+  if (Math.random() * 100 >= stealChance) return prev;
+  return routeJetChargeToBatteries({
+    ...prev,
+    enemyStockActionPoints: Math.max(0, prev.enemyStockActionPoints - 1),
+  }, 1);
 };
 
 const applyPostEnemyHitFormationReactions = (
@@ -1067,12 +1717,12 @@ const simulateUseAbility = (prev: GolfGameState, effect: NonNullable<PlayerHandS
   }
   if (effect === 'tap-out') {
     if (prev.playerStockActionPoints < 3) return prev;
+    const nextBenchActionPoints = prev.playerBenchActionPoints.map((value) => Math.min(12, (value ?? 0) + 2));
     return {
       ...prev,
       playerStockActionPoints: prev.playerStockActionPoints - 3,
-      playerFreeTagAvailable: true,
-      playerTagLockCapturesRemaining: 0,
-      playerBlockedReturnStockId: null,
+      playerBenchActionPoints: nextBenchActionPoints,
+      playerSupportActionUsed: false,
     };
   }
   if (effect === 'slipstream') {
@@ -1107,6 +1757,20 @@ const createAbilitySlot = (
   effect: ability.effect,
   card: null,
 });
+
+const addPrimeAttackBonuses = (state: GolfGameState, packet: DamagePacket) => {
+  if (packet.source !== 'player' || packet.sourceActor !== actorKeyFromName(state.playerStock.name)) return packet;
+  if (hasAssistJet(state) && state.assistJetMicroBatteryAp >= ASSIST_JET_MICRO_BATTERY_MAX) {
+    return {
+      ...packet,
+      elemental: {
+        ...packet.elemental,
+        E: (packet.elemental.E ?? 0) + 1,
+      },
+    };
+  }
+  return packet;
+};
 
 const buildPokePacket = (sourceCard: CardType, targetCard: CardType, sequence: number, source: 'player' | 'enemy'): DamagePacket => {
   const poke = 1 + Math.floor(sequence / 4);
@@ -1241,23 +1905,24 @@ const resolveDamagePacket = (
 
 const STARTER_ABILITIES: Record<string, StarterAbility[]> = {
   Jet: [
-    { name: 'Sticky Paws', category: 'signature', combatDescription: 'Fan out enemy cards and steal one into Jet\'s hand.', exploreDescription: 'After a legal tableau play, capture the next card down into hand.', effect: 'sticky-paws', cost: '5' },
-    { name: 'Re-Purpose', category: 'tableau-clear', combatDescription: 'Jet\'s recycler identity: salvage and reuse what would otherwise be lost.', exploreDescription: 'When Jet clears a tableau, recover the final visible card instead of losing it.', effect: 'repurpose', cost: '∞' },
-    { name: 'Battery', category: 'tool', combatDescription: 'Bank an ally AP pool into the card, then redeploy it later.', exploreDescription: 'Store tableau tempo for a later release turn.', effect: 'battery', cost: '0' },
-    { name: 'Siphon', category: 'battle', combatDescription: 'Steal 2 AP from the target and grant it to Jet.', exploreDescription: 'Drain momentum from one line to empower another.', effect: 'siphon', cost: '2' },
-    { name: 'Rigged Construct', category: 'battle', combatDescription: 'Create a temporary wild construct stock that stores and releases a sequence.', exploreDescription: 'Assemble a temporary side stock that can bank a short run.', effect: 'rigged-construct', cost: '8' },
-    { name: 'Gale Burst', category: 'battle', combatDescription: 'Spend AP to deal deliberate air damage to a target.', exploreDescription: 'Blow open a line with a sudden adjacency shift.', effect: null, cost: '4' },
-    { name: 'Slipstream Cut', category: 'battle', combatDescription: 'Deal deliberate damage and gain haste.', exploreDescription: 'Slice across a tableau line and keep momentum moving.', effect: null, cost: '6' },
-    { name: 'Tap Out!', category: 'tool', combatDescription: 'Freely swap with another ally this turn.', exploreDescription: 'Relay tag into an immediate legal tableau play.', effect: 'tap-out', cost: '3' },
-    { name: 'Combination Specialist', category: 'passive', combatDescription: 'Every 4 hits adds bonus damage and resets the combo meter.', exploreDescription: 'Long exploration chains produce stronger salvage windows.', effect: null },
-    { name: 'Air Pocket', category: 'tool', combatDescription: 'Gain a short evasion window after swapping.', exploreDescription: 'Create a safe tempo pocket before the next tag.', effect: null },
-    { name: 'Pressure Spiral', category: 'battle', combatDescription: 'Increase poke damage during long chains.', exploreDescription: 'Long tableau streaks intensify Jet\'s recycler loops.', effect: null },
+    { name: 'Sticky Paws', category: 'signature', combatDescription: 'Fan out enemy cards and steal one into Jet\'s hand while preserving his salvage sequencing windows.', exploreDescription: 'After a legal tableau play, capture the next card down into hand.', effect: 'sticky-paws', cost: '5' },
+    { name: 'Re-Purpose', category: 'tableau-clear', combatDescription: 'Jet recovers the final visible card and gains +2 AP when he clears a tableau.', exploreDescription: 'When Jet clears a tableau, recover the final visible card instead of losing it and gain +2 AP.', effect: 'repurpose', cost: '∞' },
+    { name: 'Quarnyx Battery', category: 'tool', combatDescription: 'Prime a Quarnyx battery, then click a Jet ability card to dedicate that battery to it. Future Jet AP gains alternate between all connected batteries.', exploreDescription: 'Wire a dedicated battery into one Jet tool so future gains alternate across the active network.', effect: 'battery', cost: '0' },
+    { name: 'Rigged Construct', category: 'battle', combatDescription: 'Discharge the linked battery to deploy the Elemental Construct with storage capacity equal to the battery\'s charge.', exploreDescription: 'Assemble a temporary side stock that banks an elemental sequence up to the linked battery\'s current charge.', effect: 'rigged-construct', cost: '8' },
+    { name: 'Scrap Plating', category: 'tool', combatDescription: 'Discharge the linked battery and dismantle a tableau resource into immediate armor plating.', exploreDescription: 'Strip a route node for parts, trading future battery income for fast mitigation.', effect: 'scrap-plating', cost: '4' },
+    { name: 'Aegis Shunt', category: 'tool', combatDescription: 'Discharge the linked battery to build elemental shielding around Jet.', exploreDescription: 'Convert stored charge into short-lived energy shielding instead of offense.', effect: 'aegis-shunt', cost: '4' },
+    { name: 'Tap Out!', category: 'tool', combatDescription: 'Feed the whole bench and reopen support actions.', exploreDescription: 'Trigger a full-team relay so your support line can surge again.', effect: 'tap-out', cost: '3' },
+    { name: 'Slink', category: 'passive', combatDescription: '+10% evasion and stealth bias for Prime Jet.', exploreDescription: 'Jet keeps a lighter profile, making safe sequencing lines easier to preserve.', effect: null },
+    { name: 'Siphon', category: 'passive', combatDescription: 'On direct player damage, Jet has a 15% chance to steal 1 enemy AP, plus 5% for each AP the enemy currently holds.', exploreDescription: 'Every clean hit has a chance to bleed momentum out of the enemy and into Jet\'s load-balanced rig.', effect: null },
+    { name: 'Efficiency', category: 'passive', combatDescription: 'Every 3 tableau plays, add +1 battery charge to the next connected battery in sequence.', exploreDescription: 'Jet’s sequencing cadence steadily tops off the wider battery network.', effect: null },
+    { name: 'Free Energy', category: 'passive', combatDescription: 'If Efficiency discounts an ability below 0 AP, the underflow becomes a free electrical attack card in Jet’s hand.', exploreDescription: 'Excess sequencing economy condenses into a zero-cost shock card you can route immediately.', effect: null },
+    { name: 'Rewire', category: 'tool', combatDescription: 'Discharge the linked battery to gain legal tableau-to-tableau rewires without touching the hand.', exploreDescription: 'Resort a tangled board by shifting cards directly between legal tableau tops for as many actions as the linked battery can support.', effect: 'rewire', cost: '5' },
   ],
   Hiro: [
     { name: 'Ironfur', category: 'signature', combatDescription: 'Raise defense by 5 for 2 turns.', exploreDescription: 'Fortify a tableau column so enemy meddling cannot displace or curse it.', effect: 'ironfur', cost: '4' },
     { name: 'Intervene', category: 'passive', combatDescription: 'Swap in to protect an ally after a streak of incoming hits.', exploreDescription: 'Step into a line before it collapses.', effect: 'intervene' as PlayerHandSlot['effect'] },
     { name: 'Adaptive Thorns', category: 'passive', combatDescription: 'After repeated hits, reflect damage to the attacker.', exploreDescription: 'Punish hostile tableau pressure when a column is harried repeatedly.', effect: null },
-    { name: 'Tap Out!', category: 'tool', combatDescription: 'Freely swap with another ally this turn.', exploreDescription: 'Relay tag into an immediate legal tableau play.', effect: 'tap-out', cost: '3' },
+    { name: 'Tap Out!', category: 'tool', combatDescription: 'Feed the whole bench and reopen support actions.', exploreDescription: 'Trigger a full-team relay so your support line can surge again.', effect: 'tap-out', cost: '3' },
     { name: 'Bulwark Roar', category: 'battle', combatDescription: 'Grant armor to the full party.', exploreDescription: 'Brace the whole board against disruption.', effect: null, cost: '5' },
     { name: 'Stone Guard', category: 'battle', combatDescription: 'Apply defense to a single ally.', exploreDescription: 'Lock one chosen tableau line in place.', effect: null, cost: '4' },
     { name: 'Earthen Rebuke', category: 'battle', combatDescription: 'Deal deliberate earth damage and taunt.', exploreDescription: 'Slam a tableau column into a sturdier state.', effect: null, cost: '5' },
@@ -1495,35 +2160,41 @@ const StockCardNameplate = ({
 }) => {
   const label = card.name || '';
   const compact = label.length > 7;
-  const nameTopClass = withVitals ? 'top-[26px]' : 'top-2';
-  const valueTopClass = withVitals
-    ? (compact ? 'top-[52px]' : 'top-[50px]')
-    : (compact ? 'top-[28px]' : 'top-[26px]');
+  const nameTopClass = withVitals ? 'top-[58px]' : 'top-[46px]';
+  const valueTopClass = withVitals ? 'top-[104px]' : 'top-[88px]';
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10">
       <div className={`absolute inset-x-0 ${nameTopClass} flex justify-center px-2`}>
         <div
-          className={`font-black uppercase text-white/85 ${compact ? 'text-[8px]' : 'text-[10px]'}`}
+          className={`font-black uppercase text-white/90 ${compact ? 'text-[10px]' : 'text-[12px]'}`}
           style={{
             letterSpacing: compact ? '0.08em' : '0.14em',
-            whiteSpace: 'nowrap',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
-            textOverflow: 'clip',
-            maxWidth: '100%',
-            lineHeight: 1,
+            textOverflow: 'ellipsis',
+            maxWidth: '84%',
+            lineHeight: 1.05,
+            textAlign: 'center',
+            textShadow: '0 1px 3px rgba(0,0,0,0.9)',
           }}
         >
           {label}
         </div>
       </div>
       <div className={`absolute inset-x-0 flex justify-center ${valueTopClass}`}>
-        <div className={`${heuristicLabel ? 'text-[13px]' : 'text-[20px]'} font-black leading-none ${highlighted ? 'text-game-gold' : 'text-white'}`}>
+        <div className={`rounded-full border px-3 py-1 ${heuristicLabel ? 'text-[13px]' : 'text-[22px]'} font-black leading-none shadow-[0_0_14px_rgba(0,0,0,0.24)] ${
+          highlighted
+            ? 'border-game-gold/35 bg-black/76 text-game-gold'
+            : 'border-white/12 bg-black/70 text-white'
+        }`}>
           {heuristicLabel ?? rankLabel(card.rank)}
         </div>
       </div>
       {highlighted && (
-        <div className="absolute right-2 top-2 text-[10px] font-black uppercase tracking-[0.12em] text-game-gold">
+        <div className="absolute right-2 bottom-3 text-[10px] font-black uppercase tracking-[0.12em] text-game-gold">
           Star
         </div>
       )}
@@ -1532,7 +2203,7 @@ const StockCardNameplate = ({
 };
 
 const setupGame = (): GolfGameState => {
-  const enemyProfile = pickEnemyProfile();
+  const enemyProfile = getEnemyProfile(GOLF_DEFAULT_ENEMY_PROFILE_ID);
   const enemyPrime = createEnemyStockCard(enemyProfile.actor);
   const deck = createDeck();
   const tableau = Array.from({ length: TABLEAU_COLUMNS }, () =>
@@ -1550,10 +2221,7 @@ const setupGame = (): GolfGameState => {
       createBenchActorCard('Whis', 8, benchSeeds[2]),
     ],
     playerSupportIndex: 0,
-    playerHand: [
-      createHandSlot('left', 'ability', 'Re-Purpose', 'repurpose', null),
-      createHandSlot('right', 'ability', 'Sticky Paws', 'sticky-paws', null),
-    ],
+    playerHand: [],
     playerCapturedLeft: null,
     playerCapturedRight: null,
     enemyStock: enemyPrime,
@@ -1564,6 +2232,7 @@ const setupGame = (): GolfGameState => {
     clearedCount: 0,
     playerStockSequence: 0,
     playerStockActionPoints: 0,
+    playerPrimeApSegments: [],
     playerBenchSequences: [0, 0, 0],
     playerBenchActionPoints: [0, 0, 0],
     enemyStockSequence: 0,
@@ -1579,9 +2248,21 @@ const setupGame = (): GolfGameState => {
     panPawSperityCooldown: 0,
     batteryStoredActionPoints: 0,
     batteryMode: null,
+    jetBatteries: [],
+    jetBatteryPrimeArmed: false,
+    jetBatteryAlternatorIndex: 0,
+    jetDetonateBatteryUnlocked: false,
+    jetAbilityCardsPlayed: 0,
+    jetEfficiencyDiscountReady: false,
     riggedConstructCooldown: 0,
     riggedConstructCards: [],
     riggedConstructArmed: false,
+    riggedConstructElement: null,
+    riggedConstructCapacity: 0,
+    jetRewireActionsRemaining: 0,
+    jetRewireSourceColumnIndex: null,
+    assistJetMicroBatteryAp: 0,
+    assistJetRewireCooldown: 0,
     combatants: {
       ...createInitialCombatants(enemyProfile),
       [actorKeyFromName(enemyPrime.name)]: cloneEnemyCombatant(enemyProfile),
@@ -1597,6 +2278,68 @@ const canPlayOnStock = (candidate: CardType, target: CardType) => {
   return diff === 1 || diff === 12;
 };
 
+const canPlayOnRank = (candidateRank: number, targetRank: number) => {
+  const diff = Math.abs(candidateRank - targetRank);
+  return diff === 1 || diff === 12;
+};
+
+const getOrderedPlayerTargetStocks = (state: GolfGameState): PlayerStockTarget[] => {
+  const supportIndex = getSupportBenchIndex(state);
+  const assistIndices = getAssistBenchIndices(state);
+  const orderedBenchIndices = [supportIndex, ...assistIndices];
+  return [
+    {
+      stockId: state.playerStock.id,
+      card: state.playerStock,
+      kind: 'prime',
+      role: 'prime',
+    },
+    ...orderedBenchIndices
+      .map((benchIndex) => state.playerBench[benchIndex] ? ({
+        stockId: state.playerBench[benchIndex].id,
+        card: state.playerBench[benchIndex],
+        kind: 'bench' as const,
+        role: getBenchRole(state, benchIndex),
+        benchIndex,
+      }) : null)
+      .filter((entry): entry is PlayerStockTarget => entry !== null),
+  ];
+};
+
+const getEligiblePlayerTargetsForCard = (state: GolfGameState, candidate: CardType) =>
+  getOrderedPlayerTargetStocks(state).filter((target) => canPlayOnStock(candidate, target.card));
+
+/*
+Rigged Construct reward/shop permutations:
+- On a given run, only one construct variant should be offered. Choosing one closes out the others for later rewards/shops.
+- Phase Construct: slots for set, run, or color/element group. More structured and puzzle-like. Best if Jet should feel like a combo architect.
+- Elemental Construct: choose an element, then only matching-element cards can move in/out. Cleanest fit with current elemental language and the best next prototype.
+- Sequence Construct: cards must stay in ordered adjacency and can be released from any legal end. Strong secondary mini-stock with less chaos.
+- Open Array Construct: multiple visible stored cards, any one can be pulled at will. Highest flexibility and complexity; better for a later iteration.
+*/
+const canRouteCardIntoConstruct = (state: GolfGameState, candidate: CardType) => {
+  if (!state.riggedConstructArmed) return false;
+  if (state.riggedConstructCapacity > 0 && state.riggedConstructCards.length >= state.riggedConstructCapacity) return false;
+  if (state.riggedConstructElement && candidate.element !== state.riggedConstructElement) return false;
+  const constructTop = state.riggedConstructCards[state.riggedConstructCards.length - 1] ?? null;
+  return !constructTop || canPlayOnStock(candidate, constructTop);
+};
+
+const getPlayerTargetByStockId = (state: GolfGameState, stockId: string) =>
+  getOrderedPlayerTargetStocks(state).find((target) => target.stockId === stockId) ?? null;
+
+const getEligiblePlayerMoveOptions = (state: GolfGameState): PlayerMoveOption[] =>
+  state.tableau.flatMap((column, columnIndex) => {
+    const candidate = column[column.length - 1] ?? null;
+    if (!candidate) return [];
+    return getEligiblePlayerTargetsForCard(state, candidate).map((target) => ({
+      columnIndex,
+      stockId: target.stockId,
+      candidate,
+      target,
+    }));
+  });
+
 const getPlayableColumnIndices = (tableau: CardType[][], stock: CardType) =>
   tableau
     .map((column, columnIndex) => {
@@ -1606,10 +2349,132 @@ const getPlayableColumnIndices = (tableau: CardType[][], stock: CardType) =>
     })
     .filter((value): value is number => value !== null);
 
+const canRewireMove = (tableau: CardType[][], sourceColumnIndex: number, targetColumnIndex: number) => {
+  if (sourceColumnIndex === targetColumnIndex) return false;
+  const sourceCard = tableau[sourceColumnIndex]?.[tableau[sourceColumnIndex].length - 1] ?? null;
+  const targetCard = tableau[targetColumnIndex]?.[tableau[targetColumnIndex].length - 1] ?? null;
+  if (!sourceCard || !targetCard) return false;
+  return canPlayOnStock(sourceCard, targetCard);
+};
+
 const scoreGolfMove = (candidate: CardType, stock: CardType) => {
   const diff = Math.abs(candidate.rank - stock.rank);
   const wrappedDiff = diff === 12 ? 1 : diff;
   return 10 - wrappedDiff;
+};
+
+type SolverStockState = {
+  stockId: string;
+  rank: number;
+};
+
+type SolverResult = {
+  length: number;
+  path: GuideStep[];
+};
+
+const compareGuideSteps = (
+  left: GuideStep,
+  right: GuideStep,
+  stockOrder: Map<string, number>
+) => {
+  if (left.columnIndex !== right.columnIndex) return left.columnIndex - right.columnIndex;
+  return (stockOrder.get(left.stockId) ?? 999) - (stockOrder.get(right.stockId) ?? 999);
+};
+
+const isBetterSolverResult = (
+  candidate: SolverResult,
+  current: SolverResult,
+  stockOrder: Map<string, number>
+) => {
+  if (candidate.length !== current.length) return candidate.length > current.length;
+  for (let index = 0; index < Math.min(candidate.path.length, current.path.length); index += 1) {
+    const comparison = compareGuideSteps(candidate.path[index], current.path[index], stockOrder);
+    if (comparison !== 0) return comparison < 0;
+  }
+  return candidate.path.length < current.path.length;
+};
+
+const serializeVisibleState = (visibleCards: Array<CardType | null>, stocks: SolverStockState[]) =>
+  `${visibleCards.map((card) => card?.rank ?? 'x').join(',')}|${stocks.map((stock) => `${stock.stockId}:${stock.rank}`).join(',')}`;
+
+const serializeHiddenState = (tableau: CardType[][], stocks: SolverStockState[]) =>
+  `${tableau.map((column) => column.map((card) => card.rank).join('')).join('|')}|${stocks.map((stock) => `${stock.stockId}:${stock.rank}`).join(',')}`;
+
+const solveVisibleBestPlan = (
+  visibleCards: Array<CardType | null>,
+  stocks: SolverStockState[],
+  stockOrder: Map<string, number>,
+  cache = new Map<string, SolverResult>()
+): SolverResult => {
+  const key = serializeVisibleState(visibleCards, stocks);
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  let best: SolverResult = { length: 0, path: [] };
+  for (let columnIndex = 0; columnIndex < visibleCards.length; columnIndex += 1) {
+    const candidate = visibleCards[columnIndex];
+    if (!candidate) continue;
+    for (let stockIndex = 0; stockIndex < stocks.length; stockIndex += 1) {
+      const stock = stocks[stockIndex];
+      if (!canPlayOnRank(candidate.rank, stock.rank)) continue;
+      const nextVisible = [...visibleCards];
+      nextVisible[columnIndex] = null;
+      const nextStocks = stocks.map((entry, index) =>
+        index === stockIndex ? { ...entry, rank: candidate.rank } : entry
+      );
+      const child = solveVisibleBestPlan(nextVisible, nextStocks, stockOrder, cache);
+      const next: SolverResult = {
+        length: child.length + 1,
+        path: [{ columnIndex, stockId: stock.stockId }, ...child.path],
+      };
+      if (isBetterSolverResult(next, best, stockOrder)) {
+        best = next;
+      }
+    }
+  }
+
+  cache.set(key, best);
+  return best;
+};
+
+const solveHiddenBestPlan = (
+  tableau: CardType[][],
+  stocks: SolverStockState[],
+  stockOrder: Map<string, number>,
+  cache = new Map<string, SolverResult>(),
+  maxDepth = Number.POSITIVE_INFINITY
+): SolverResult => {
+  if (maxDepth <= 0) return { length: 0, path: [] };
+  const key = serializeHiddenState(tableau, stocks);
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  let best: SolverResult = { length: 0, path: [] };
+  for (let columnIndex = 0; columnIndex < tableau.length; columnIndex += 1) {
+    const column = tableau[columnIndex];
+    const candidate = column[column.length - 1] ?? null;
+    if (!candidate) continue;
+    for (let stockIndex = 0; stockIndex < stocks.length; stockIndex += 1) {
+      const stock = stocks[stockIndex];
+      if (!canPlayOnRank(candidate.rank, stock.rank)) continue;
+      const nextTableau = tableau.map((entry, index) => (index === columnIndex ? entry.slice(0, -1) : entry));
+      const nextStocks = stocks.map((entry, index) =>
+        index === stockIndex ? { ...entry, rank: candidate.rank } : entry
+      );
+      const child = solveHiddenBestPlan(nextTableau, nextStocks, stockOrder, cache, maxDepth - 1);
+      const next: SolverResult = {
+        length: child.length + 1,
+        path: [{ columnIndex, stockId: stock.stockId }, ...child.path],
+      };
+      if (isBetterSolverResult(next, best, stockOrder)) {
+        best = next;
+      }
+    }
+  }
+
+  cache.set(key, best);
+  return best;
 };
 
 const pickBestGolfMove = (tableau: CardType[][], stock: CardType, behavior: EnemyProfile['behavior'] | 'player' = 'player') => {
@@ -1639,7 +2504,7 @@ const pickBestGolfMove = (tableau: CardType[][], stock: CardType, behavior: Enem
 };
 
 type AutoAction =
-  | { type: 'move'; columnIndex: number }
+  | { type: 'move'; columnIndex: number; stockId: string }
   | { type: 'rotate-support'; benchIndex: number }
   | { type: 'support-ability'; benchIndex: number }
   | { type: 'ability'; slotId: HandSlotId; effect: NonNullable<PlayerHandSlot['effect']> };
@@ -1683,9 +2548,37 @@ const isPlayerTeamDefeated = (state: GolfGameState) =>
 
 const choosePlayerAutoAction = (state: GolfGameState, mode: AutoPlayMode): AutoAction | null => {
   if (mode === 'off') return null;
+  const targetStocks = getOrderedPlayerTargetStocks(state);
+  const solverStocks: SolverStockState[] = targetStocks.map((target) => ({ stockId: target.stockId, rank: target.card.rank }));
+  const stockOrder = new Map(targetStocks.map((target, index) => [target.stockId, index]));
+  const visibleCards = state.tableau.map((column) => column[column.length - 1] ?? null);
+  const moveOptions = getEligiblePlayerMoveOptions(state);
+  const pickBestVisibleMove = () => {
+    if (moveOptions.length === 0) return null;
+    let bestOption = moveOptions[0];
+    let bestResult: SolverResult | null = null;
+    for (const option of moveOptions) {
+      const nextVisible = [...visibleCards];
+      nextVisible[option.columnIndex] = null;
+      const nextStocks = solverStocks.map((stock) =>
+        stock.stockId === option.stockId ? { ...stock, rank: option.candidate.rank } : stock
+      );
+      const continuation = solveVisibleBestPlan(nextVisible, nextStocks, stockOrder);
+      const total: SolverResult = {
+        length: continuation.length + 1,
+        path: [{ columnIndex: option.columnIndex, stockId: option.stockId }, ...continuation.path],
+      };
+      if (!bestResult || isBetterSolverResult(total, bestResult, stockOrder)) {
+        bestResult = total;
+        bestOption = option;
+      }
+    }
+    return bestOption;
+  };
+
   if (mode === 'tableau-pause') {
-    const move = pickBestGolfMove(state.tableau, state.playerStock, 'player');
-    return move === null ? null : { type: 'move', columnIndex: move };
+    const move = pickBestVisibleMove();
+    return move === null ? null : { type: 'move', columnIndex: move.columnIndex, stockId: move.stockId };
   }
 
   const threatened = isPrimeThreatened(state);
@@ -1698,13 +2591,12 @@ const choosePlayerAutoAction = (state: GolfGameState, mode: AutoPlayMode): AutoA
   if (supportCard?.name === 'Whis' && threatened && !state.playerSupportActionUsed && supportAp >= getSupportAbilityCost(supportCard)) {
     return { type: 'support-ability', benchIndex: supportIndex };
   }
-  if (supportCard?.name === 'Pan' && !state.playerSupportActionUsed && supportAp >= getSupportAbilityCost(supportCard) && getPlayableColumnIndices(state.tableau, state.playerStock).length <= 1) {
+  if (supportCard?.name === 'Pan' && !state.playerSupportActionUsed && supportAp >= getSupportAbilityCost(supportCard) && moveOptions.length <= 1) {
     return { type: 'support-ability', benchIndex: supportIndex };
   }
-  const move = pickBestGolfMove(state.tableau, state.playerStock, 'player');
-  if (move !== null) return { type: 'move', columnIndex: move };
-  const rotation = chooseBestSupportRotation(state);
-  return rotation === null ? null : { type: 'rotate-support', benchIndex: rotation };
+  const move = pickBestVisibleMove();
+  if (move !== null) return { type: 'move', columnIndex: move.columnIndex, stockId: move.stockId };
+  return null;
 };
 
 const applyEnemyTurnStartEffects = (state: GolfGameState): GolfGameState => {
@@ -1767,47 +2659,16 @@ const applyEnemyMovePostEffects = (state: GolfGameState): GolfGameState => {
   };
 };
 
-const solveVisibleBestRun = (visibleCards: Array<CardType | null>, stock: CardType): number => {
-  let best = 0;
-  for (let columnIndex = 0; columnIndex < visibleCards.length; columnIndex += 1) {
-    const candidate = visibleCards[columnIndex];
-    if (!candidate || !canPlayOnStock(candidate, stock)) continue;
-    const nextVisible = [...visibleCards];
-    nextVisible[columnIndex] = null;
-    best = Math.max(best, 1 + solveVisibleBestRun(nextVisible, candidate));
-  }
-  return best;
-};
-
-const solveHiddenBestRun = (
-  tableau: CardType[][],
-  stock: CardType
-): { length: number; path: number[] } => {
-  let bestLength = 0;
-  let bestPath: number[] = [];
-
-  for (let columnIndex = 0; columnIndex < tableau.length; columnIndex += 1) {
-    const column = tableau[columnIndex];
-    const candidate = column[column.length - 1];
-    if (!candidate || !canPlayOnStock(candidate, stock)) continue;
-    const nextTableau = tableau.map((entry, idx) => (idx === columnIndex ? entry.slice(0, -1) : entry));
-    const child = solveHiddenBestRun(nextTableau, candidate);
-    const nextLength = 1 + child.length;
-    if (nextLength > bestLength) {
-      bestLength = nextLength;
-      bestPath = [columnIndex, ...child.path];
-    }
-  }
-
-  return { length: bestLength, path: bestPath };
-};
-
-const buildStockHeuristic = (tableau: CardType[][], stock: CardType): StockHeuristic => {
-  const visibleCards = tableau.map((column) => column[column.length - 1] ?? null);
-  const hidden = solveHiddenBestRun(tableau, stock);
+const buildPlayerHeuristic = (state: GolfGameState): StockHeuristic => {
+  const targets = getOrderedPlayerTargetStocks(state);
+  const stocks: SolverStockState[] = targets.map((target) => ({ stockId: target.stockId, rank: target.card.rank }));
+  const stockOrder = new Map(targets.map((target, index) => [target.stockId, index]));
+  const visibleCards = state.tableau.map((column) => column[column.length - 1] ?? null);
+  const visible = solveVisibleBestPlan(visibleCards, stocks, stockOrder);
+  const hidden = solveHiddenBestPlan(state.tableau, stocks, stockOrder);
   return {
-    stockId: stock.id,
-    visibleBest: solveVisibleBestRun(visibleCards, stock),
+    stockId: hidden.path[0]?.stockId ?? state.playerStock.id,
+    visibleBest: visible.length,
     hiddenBest: hidden.length,
     hiddenPath: hidden.path,
   };
@@ -1871,7 +2732,7 @@ const HandSlotCard = ({
       <div
         className="font-black uppercase text-white/85"
         style={{
-          fontSize: '8px',
+          fontSize: '10px',
           letterSpacing: '0.08em',
           lineHeight: 1.1,
           display: '-webkit-box',
@@ -1881,12 +2742,13 @@ const HandSlotCard = ({
           textOverflow: 'ellipsis',
           maxWidth: `calc(100% - 12px)`,
           textAlign: 'center',
+          minHeight: '22px',
         }}
       >
         {slot.kind === 'captured' ? 'Recovered' : slot.name}
       </div>
     </div>
-    {slot.kind === 'captured' ? (
+    {slot.kind === 'captured' || slot.kind === 'generated' ? (
       <div className="pointer-events-none absolute inset-x-0 top-[44px] z-10 flex justify-center">
         <div className="text-[16px] font-black leading-none text-white">
           {slot.card ? rankLabel(slot.card.rank) : ''}
@@ -1897,7 +2759,7 @@ const HandSlotCard = ({
         <div className="text-[10px] font-black uppercase tracking-[0.08em] text-white/28">Empty</div>
       </div>
     ) : null}
-    {slot.kind === 'captured' ? (
+    {slot.kind === 'captured' || slot.kind === 'generated' ? (
       <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center">
         <div className="rounded-full border border-game-teal/30 bg-black/75 px-3 py-1 shadow-[0_0_18px_rgba(127,219,202,0.08)]">
           <div className="text-sm font-black leading-none text-white">
@@ -1929,9 +2791,13 @@ const HandSlotCard = ({
         </div>
       </div>
     ) : null}
-    {slot.kind === 'captured' && slot.card ? (
+    {slot.card && (slot.kind === 'captured' || slot.kind === 'generated') ? (
       <div className="pointer-events-none absolute inset-x-0 bottom-10 z-10 flex justify-center">
-        <div className="text-[10px] font-black text-white/80">{slot.card.element}</div>
+        <div className="text-[10px] font-black text-white/80">
+          {slot.kind === 'generated' && slot.generatedEffect === 'free-energy'
+            ? `Shock ${slot.generatedValue ?? slot.card.rank}`
+            : slot.card.element}
+        </div>
       </div>
     ) : null}
     {slot.armed ? (
@@ -2040,6 +2906,7 @@ const KinBenchCard = ({
   breathing = false,
   discardCount = 0,
   holdProgress = 0,
+  apSegments,
   cardRef,
   roleLabel,
   roleDescription,
@@ -2061,6 +2928,7 @@ const KinBenchCard = ({
   breathing?: boolean;
   discardCount?: number;
   holdProgress?: number;
+  apSegments?: Element[];
   cardRef?: (node: HTMLButtonElement | null) => void;
   roleLabel?: string;
   roleDescription?: string;
@@ -2080,18 +2948,32 @@ const KinBenchCard = ({
         ? activeRole
           ? 'border-game-gold/35 bg-black/52 hover:border-game-gold/55 hover:bg-black/68'
           : 'border-game-teal/25 bg-black/45 hover:border-game-teal/55 hover:bg-black/65'
-        : 'cursor-not-allowed border-white/10 bg-black/25 opacity-55'
+        : 'border-white/14 bg-black/42'
     }`}
     style={{
       width: cardSize.width,
       height: cardSize.height,
       animation: breathing ? 'golf-breathe 1.85s ease-in-out infinite' : undefined,
-      boxShadow: breathing ? '0 0 18px rgba(230,179,30,0.22)' : undefined,
+      boxShadow: highlighted
+        ? '0 0 28px rgba(230,179,30,0.28), 0 0 10px rgba(230,179,30,0.24)'
+        : breathing
+          ? '0 0 18px rgba(230,179,30,0.22)'
+          : undefined,
     }}
   >
+    <div
+      className="pointer-events-none absolute inset-y-[-8px] left-[-42px] right-[-42px] z-0 rounded-[22px] border"
+      style={{
+        borderColor: highlighted ? 'rgba(230,179,30,0.42)' : getActorBackdropStyle(card.name).border,
+        background: getActorBackdropStyle(card.name).bg,
+        boxShadow: highlighted
+          ? '0 0 34px rgba(230,179,30,0.2), 0 0 12px rgba(230,179,30,0.22)'
+          : getActorBackdropStyle(card.name).glow,
+      }}
+    />
     <div className="relative h-full w-full">
       {roleLabel ? (
-        <div className="pointer-events-none absolute inset-x-0 top-1 z-20 flex justify-center">
+        <div className="pointer-events-none absolute left-2 top-2 z-20 flex justify-start">
           <div className={`rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] ${
             activeRole
               ? 'border-game-gold/40 bg-black/82 text-game-gold'
@@ -2101,12 +2983,12 @@ const KinBenchCard = ({
           </div>
         </div>
       ) : null}
-      <ActorStatusRail combatant={combatant} maxVisible={2} iconSize={14} compact />
-        <Card
-          card={card}
-          showGraphics={false}
-          size={cardSize}
-          foundationOverlay={vitals}
+      <ActorStatusRail actorName={card.name} combatant={combatant} maxVisible={3} iconSize={18} compact />
+      <Card
+        card={card}
+        showGraphics={false}
+        size={cardSize}
+        foundationOverlay={vitals}
         suitFontSizeOverride={Math.max(14, Math.round(GOLF_ELEMENT_INDICATOR_SIZE * (cardSize.width / CARD_SIZE.width)))}
         maskValue
         disableAnimation
@@ -2114,58 +2996,52 @@ const KinBenchCard = ({
         disableHoverLift
       />
       <StockCardNameplate card={card} heuristicLabel={heuristicLabel} highlighted={highlighted} withVitals />
-      {roleDescription ? (
-        <div className="pointer-events-none absolute inset-x-2 bottom-12 z-20 flex justify-center">
-          <div className="max-w-[82%] text-center text-[8px] font-mono uppercase tracking-[0.1em] text-white/45">
-            {roleDescription}
+      {apSegments && apSegments.length > 0 ? (
+        <div className="pointer-events-none absolute inset-x-3 bottom-6 z-20 rounded-md border border-white/14 bg-black/72 px-[3px] py-[3px] shadow-[0_0_14px_rgba(0,0,0,0.28)]">
+          <div className="flex h-[10px] w-full overflow-hidden rounded-[3px]">
+            {apSegments.map((element, segmentIndex) => (
+              <div
+                key={`bench-ap-${card.id}-${segmentIndex}-${element}`}
+                className="h-full flex-1"
+                style={{
+                  background: `linear-gradient(180deg, ${getGolfSegmentColor(element)}dd 0%, ${getGolfSegmentColor(element)}99 100%)`,
+                  boxShadow: `0 0 6px ${getGolfSegmentColor(element)}88`,
+                  borderLeft: segmentIndex === 0 ? 'none' : '1px solid rgba(2,4,8,0.85)',
+                }}
+              />
+            ))}
           </div>
         </div>
       ) : null}
     </div>
-    <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-8 w-8 [perspective:120px]">
-      <div
-        className="absolute left-0 top-[2px] h-6 w-5 rounded-[4px] border border-game-gold/30 bg-[linear-gradient(180deg,rgba(255,232,148,0.96),rgba(226,170,58,0.9))] shadow-[0_3px_10px_rgba(230,179,30,0.24)]"
-        style={{ transform: 'rotate(-10deg) skewY(4deg)' }}
-      >
-        <div className="absolute inset-[2px] rounded-[3px] border border-white/30 bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.24),transparent_55%),linear-gradient(180deg,rgba(74,48,8,0.14),rgba(31,21,5,0.2))]" />
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-[#6a4302]/85">
-          ⚡
-        </div>
-        <div className="absolute bottom-[-7px] right-[-10px] flex h-5 min-w-5 items-center justify-center rounded-full border border-[#d38a34]/80 bg-transparent px-1 shadow-[0_2px_8px_rgba(211,138,52,0.2)]">
-          <div
-            className="text-[10px] font-black leading-none text-[#ffd48a] tabular-nums"
-            style={{ WebkitTextStroke: '0.8px rgba(0,0,0,0.98)', textShadow: '0 0 3px rgba(0,0,0,0.95)' }}
-          >
-            {Math.min(99, Math.max(0, actionPoints))}
-          </div>
-        </div>
-      </div>
-    </div>
-    <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-8 w-8 [perspective:120px]">
-      <div
-        className="absolute right-0 top-[2px] h-6 w-5 rounded-[4px] border border-game-teal/30 bg-[linear-gradient(180deg,rgba(166,232,244,0.95),rgba(92,184,205,0.88))] shadow-[0_3px_10px_rgba(80,200,220,0.24)]"
-        style={{ transform: 'rotate(10deg) skewY(-4deg)' }}
-      >
-        <div className="absolute inset-[2px] rounded-[3px] border border-white/30 bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.22),transparent_55%),linear-gradient(180deg,rgba(21,53,66,0.18),rgba(6,19,25,0.22))]" />
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-[#0f4f63]/80">
-          ↺
-        </div>
-        <div className="absolute bottom-[-7px] left-[-10px] flex h-5 min-w-5 items-center justify-center rounded-full border border-[#5cb8cd]/80 bg-transparent px-1 shadow-[0_2px_8px_rgba(80,200,220,0.2)]">
-          <div
-            className="text-[10px] font-black leading-none text-[#a6e8f4] tabular-nums"
-            style={{ WebkitTextStroke: '0.8px rgba(0,0,0,0.98)', textShadow: '0 0 3px rgba(0,0,0,0.95)' }}
-          >
-            {Math.min(99, Math.max(0, discardCount))}
-          </div>
-        </div>
-      </div>
-    </div>
     {holdProgress > 0 ? (
-      <div className="pointer-events-none absolute inset-x-2 bottom-10 z-10 h-1.5 overflow-hidden rounded-full border border-game-gold/35 bg-black/70">
-        <div
-          className="h-full rounded-full bg-game-gold shadow-[0_0_10px_rgba(230,179,30,0.45)]"
-          style={{ width: `${Math.min(100, Math.max(0, holdProgress * 100))}%` }}
-        />
+      <>
+        <div className="pointer-events-none absolute inset-3 z-20 rounded-[18px] border border-game-gold/25 bg-black/28 shadow-[inset_0_0_24px_rgba(230,179,30,0.12)]" />
+        <div className="pointer-events-none absolute inset-x-3 top-[42%] z-20 flex flex-col items-center gap-2">
+          <div className="relative h-8 w-8 rounded-full border border-game-gold/40 bg-black/62">
+            <div
+              className="absolute inset-0 rounded-full border-2 border-transparent border-t-game-gold border-r-game-gold/70"
+              style={{ transform: `rotate(${Math.round(holdProgress * 320)}deg)` }}
+            />
+            <div className="absolute inset-[6px] rounded-full border border-game-gold/20" />
+          </div>
+          <div className="text-[8px] font-black uppercase tracking-[0.18em] text-game-gold/90">
+            Inspecting
+          </div>
+        </div>
+        <div className="pointer-events-none absolute inset-x-3 bottom-6 z-20 h-1.5 overflow-hidden rounded-full border border-game-gold/35 bg-black/70">
+          <div
+            className="h-full rounded-full bg-game-gold shadow-[0_0_10px_rgba(230,179,30,0.45)]"
+            style={{ width: `${Math.min(100, Math.max(0, holdProgress * 100))}%` }}
+          />
+        </div>
+      </>
+    ) : null}
+    {roleDescription ? (
+      <div className="pointer-events-none absolute inset-x-1 -bottom-8 z-10 flex justify-center">
+        <div className="max-w-[94%] text-center text-[8px] font-mono uppercase tracking-[0.08em] text-white/40">
+          {roleDescription}
+        </div>
       </div>
     ) : null}
   </button>
@@ -2189,6 +3065,7 @@ const StockActorShellView = ({
   highlighted = false,
   actionPoints,
   discardCount,
+  apSegments,
 }: {
   actor: StockActorShell;
   stock: CardType;
@@ -2207,11 +3084,12 @@ const StockActorShellView = ({
   highlighted?: boolean;
   actionPoints?: number;
   discardCount?: number;
+  apSegments?: Element[];
 }) => (
   <div className={`flex flex-col items-center ${compact ? 'gap-0.5' : 'gap-1'}`}>
     <div
       ref={stockRef}
-      className={`relative rounded-[18px] border p-1.5 ${actor.accentClassName}`}
+      className={`relative rounded-[18px] border p-1.5 overflow-visible ${actor.accentClassName}`}
       onClick={onClick}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
@@ -2219,7 +3097,15 @@ const StockActorShellView = ({
       onPointerLeave={onPointerCancel}
       style={highlighted ? { boxShadow: '0 0 28px rgba(230,179,30,0.28), 0 0 10px rgba(230,179,30,0.24)' } : undefined}
     >
-      <ActorStatusRail combatant={combatant} maxVisible={3} iconSize={18} />
+      <div
+        className="pointer-events-none absolute inset-y-[-8px] left-[-50px] right-[-50px] z-0 rounded-[24px] border"
+        style={{
+          borderColor: getActorBackdropStyle(stock.name).border,
+          background: getActorBackdropStyle(stock.name).bg,
+          boxShadow: getActorBackdropStyle(stock.name).glow,
+        }}
+      />
+      <ActorStatusRail actorName={stock.name} combatant={combatant} maxVisible={4} iconSize={20} />
       <div className="relative">
         <Card
           card={stock}
@@ -2233,9 +3119,26 @@ const StockActorShellView = ({
           disableHoverLift
         />
         <StockCardNameplate card={stock} heuristicLabel={heuristicLabel} highlighted={highlighted} withVitals />
+        {apSegments && apSegments.length > 0 ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-6 z-20 rounded-md border border-white/14 bg-black/72 px-[3px] py-[3px] shadow-[0_0_14px_rgba(0,0,0,0.28)]">
+            <div className="flex h-[10px] w-full overflow-hidden rounded-[3px]">
+              {apSegments.map((element, segmentIndex) => (
+                <div
+                  key={`prime-ap-${segmentIndex}-${element}`}
+                  className="h-full flex-1"
+                  style={{
+                    background: `linear-gradient(180deg, ${getGolfSegmentColor(element)}dd 0%, ${getGolfSegmentColor(element)}99 100%)`,
+                    boxShadow: `0 0 6px ${getGolfSegmentColor(element)}88`,
+                    borderLeft: segmentIndex === 0 ? 'none' : '1px solid rgba(2,4,8,0.85)',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
       {typeof actionPoints === 'number' ? (
-        <div className="pointer-events-none absolute bottom-2 left-2 z-10 h-8 w-8 [perspective:120px]">
+        <div className="pointer-events-none absolute -bottom-3 left-1 z-10 h-8 w-8 [perspective:120px]">
           <div
             className="absolute left-0 top-[2px] h-6 w-5 rounded-[4px] border border-game-gold/30 bg-[linear-gradient(180deg,rgba(255,232,148,0.96),rgba(226,170,58,0.9))] shadow-[0_3px_10px_rgba(230,179,30,0.24)]"
             style={{ transform: 'rotate(-10deg) skewY(4deg)' }}
@@ -2256,7 +3159,7 @@ const StockActorShellView = ({
         </div>
       ) : null}
       {typeof discardCount === 'number' ? (
-        <div className="pointer-events-none absolute bottom-2 right-2 z-10 h-8 w-8 [perspective:120px]">
+        <div className="pointer-events-none absolute -bottom-3 right-1 z-10 h-8 w-8 [perspective:120px]">
           <div
             className="absolute right-0 top-[2px] h-6 w-5 rounded-[4px] border border-game-teal/30 bg-[linear-gradient(180deg,rgba(166,232,244,0.95),rgba(92,184,205,0.88))] shadow-[0_3px_10px_rgba(80,200,220,0.24)]"
             style={{ transform: 'rotate(10deg) skewY(-4deg)' }}
@@ -2276,14 +3179,29 @@ const StockActorShellView = ({
           </div>
         </div>
       ) : null}
-      {holdProgress > 0 ? (
-        <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 h-1.5 overflow-hidden rounded-full border border-game-gold/35 bg-black/70">
+    {holdProgress > 0 ? (
+      <>
+        <div className="pointer-events-none absolute inset-3 z-20 rounded-[18px] border border-game-gold/25 bg-black/28 shadow-[inset_0_0_24px_rgba(230,179,30,0.12)]" />
+        <div className="pointer-events-none absolute inset-x-3 top-[42%] z-20 flex flex-col items-center gap-2">
+          <div className="relative h-8 w-8 rounded-full border border-game-gold/40 bg-black/62">
+            <div
+              className="absolute inset-0 rounded-full border-2 border-transparent border-t-game-gold border-r-game-gold/70"
+              style={{ transform: `rotate(${Math.round(holdProgress * 320)}deg)` }}
+            />
+            <div className="absolute inset-[6px] rounded-full border border-game-gold/20" />
+          </div>
+          <div className="text-[8px] font-black uppercase tracking-[0.18em] text-game-gold/90">
+            Inspecting
+          </div>
+        </div>
+        <div className="pointer-events-none absolute inset-x-3 bottom-6 z-20 h-1.5 overflow-hidden rounded-full border border-game-gold/35 bg-black/70">
           <div
             className="h-full rounded-full bg-game-gold shadow-[0_0_10px_rgba(230,179,30,0.45)]"
             style={{ width: `${Math.min(100, Math.max(0, holdProgress * 100))}%` }}
           />
         </div>
-      ) : null}
+      </>
+    ) : null}
     </div>
   </div>
 );
@@ -2833,6 +3751,7 @@ export const GolfGame = () => {
   const [inspectMode, setInspectMode] = useState<'guidance' | 'ancestors' | null>(null);
   const [oracleMode, setOracleMode] = useState<'off' | 'guidance' | 'ancestors'>('off');
   const [paintMode, setPaintMode] = useState(false);
+  const [showDiscardTray, setShowDiscardTray] = useState(false);
   const [fps, setFps] = useState(0);
   const [guidePlan, setGuidePlan] = useState<GuidePlan | null>(null);
   const [viewport, setViewport] = useState(() => ({
@@ -2844,6 +3763,11 @@ export const GolfGame = () => {
   const [playerHandAnim, setPlayerHandAnim] = useState<PlayerHandAnim | null>(null);
   const [pinnedTooltipSlotId, setPinnedTooltipSlotId] = useState<HandSlotId | null>(null);
   const [enemyStealSelectorOpen, setEnemyStealSelectorOpen] = useState(false);
+  const [pendingPlayerPlay, setPendingPlayerPlay] = useState<{
+    source: 'tableau' | 'captured-left' | 'captured-right' | 'construct';
+    columnIndex?: number;
+    stockIds: string[];
+  } | null>(null);
   const [stickyHoldProgress, setStickyHoldProgress] = useState(0);
   const [devAbilityHoldSlotId, setDevAbilityHoldSlotId] = useState<HandSlotId | 'pan-left' | null>(null);
   const [devAbilityHoldProgress, setDevAbilityHoldProgress] = useState(0);
@@ -2905,6 +3829,12 @@ export const GolfGame = () => {
   useEffect(() => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
+
+  useEffect(() => {
+    if (currentTurn !== 'player') {
+      setPendingPlayerPlay(null);
+    }
+  }, [currentTurn]);
 
   useEffect(() => {
     if (!showAutoPlayMenu) return;
@@ -3037,6 +3967,8 @@ export const GolfGame = () => {
     }),
     [boardScale]
   );
+  const primeVisualZoneWidth = Math.round(boardCardSize.width + Math.max(132, boardCardSize.width * 1.02));
+  const benchActorZoneWidth = Math.round(boardCardSize.width + Math.max(72, boardCardSize.width * 0.5));
   const handCardSize = useMemo(
     () => ({
       width: Math.max(58, Math.round(boardCardSize.width * 0.9)),
@@ -3050,41 +3982,44 @@ export const GolfGame = () => {
   const enemyEdgePeek = Math.max(8, Math.round(ENEMY_TURN_PLAYER_EDGE_PEEK * boardScale));
   const columnGap = Math.max(4, Math.round(10 * boardScale));
   const benchGap = Math.max(4, Math.round(10 * boardScale));
-  const benchKinGap = Math.max(10, Math.round(18 * boardScale));
+  const benchKinGap = Math.max(18, Math.round(30 * boardScale));
   const boardCompact = boardScale < 0.82;
 
+  const effectiveOracleMode = inspectMode ?? oracleMode;
   const topCards = useMemo(
     () => game.tableau.map((column) => column[column.length - 1] ?? null),
     [game.tableau]
   );
-
-  const playerStockHeuristics = useMemo(() => {
-    const entries: StockHeuristic[] = [
-      buildStockHeuristic(game.tableau, game.playerStock),
-      ...game.playerBench.map((card) => buildStockHeuristic(game.tableau, card)),
-    ];
-    return new Map(entries.map((entry) => [entry.stockId, entry]));
-  }, [game.playerBench, game.playerStock, game.tableau]);
-
-  const bestStarterHeuristic = useMemo(() => {
-    const entries = [...playerStockHeuristics.values()];
-    if (entries.length === 0) return null;
-    return entries.reduce((best, entry) => {
-      if (!best) return entry;
-      if (entry.hiddenBest !== best.hiddenBest) return entry.hiddenBest > best.hiddenBest ? entry : best;
-      if (entry.visibleBest !== best.visibleBest) return entry.visibleBest > best.visibleBest ? entry : best;
-      return entry.stockId < best.stockId ? entry : best;
-    }, entries[0] ?? null);
-  }, [playerStockHeuristics]);
-
-  const effectiveOracleMode = inspectMode ?? oracleMode;
+  const playerTargetStocks = useMemo(() => getOrderedPlayerTargetStocks(game), [game.playerStock, game.playerBench]);
+  const playerStockOrder = useMemo(
+    () => new Map(playerTargetStocks.map((target, index) => [target.stockId, index])),
+    [playerTargetStocks]
+  );
+  const playerSolverStocks = useMemo(
+    () => playerTargetStocks.map((target) => ({ stockId: target.stockId, rank: target.card.rank })),
+    [playerTargetStocks]
+  );
+  const playerVisiblePlan = useMemo(
+    () => solveVisibleBestPlan(topCards, playerSolverStocks, playerStockOrder),
+    [topCards, playerSolverStocks, playerStockOrder]
+  );
+  const playerHiddenPlan = useMemo(() => {
+    if (effectiveOracleMode !== 'ancestors') return null;
+    return solveHiddenBestPlan(game.tableau, playerSolverStocks, playerStockOrder, new Map<string, SolverResult>(), 5);
+  }, [effectiveOracleMode, game.tableau, playerSolverStocks, playerStockOrder]);
+  const playerPlanHeuristic = useMemo(() => ({
+    stockId: playerHiddenPlan?.path[0]?.stockId ?? game.playerStock.id,
+    visibleBest: playerVisiblePlan.length,
+    hiddenBest: playerHiddenPlan?.length ?? 0,
+    hiddenPath: playerHiddenPlan?.path ?? [],
+  }), [game.playerStock.id, playerHiddenPlan, playerVisiblePlan.length]);
 
   useEffect(() => {
     if (currentTurn !== 'player') {
       setGuidePlan((prev) => (prev?.source === 'ancestors' ? null : prev));
       return;
     }
-    if (effectiveOracleMode !== 'ancestors' || !bestStarterHeuristic) {
+    if (effectiveOracleMode !== 'ancestors' || playerPlanHeuristic.hiddenBest <= 0) {
       setGuidePlan((prev) => (prev?.source === 'ancestors' ? null : prev));
       return;
     }
@@ -3093,96 +4028,53 @@ export const GolfGame = () => {
         return prev;
       }
       return {
-        starterStockId: bestStarterHeuristic.stockId,
-        starterRequiresSwap: bestStarterHeuristic.stockId !== game.playerStock.id,
-        path: bestStarterHeuristic.hiddenPath,
+        path: playerPlanHeuristic.hiddenPath,
         progress: 0,
         source: 'ancestors',
         visibleSteps: null,
       };
     });
-  }, [bestStarterHeuristic, currentTurn, effectiveOracleMode, game.playerStock.id]);
+  }, [currentTurn, effectiveOracleMode, playerPlanHeuristic]);
 
-  const ancestorsHighlightedColumns = useMemo(() => {
-    if (currentTurn !== 'player' || !guidePlan) return new Map<number, number>();
-    const mapping = new Map<number, number>();
-    const starterBase = guidePlan.starterRequiresSwap ? 2 : 1;
-    const visibleSteps = guidePlan.visibleSteps ?? Number.POSITIVE_INFINITY;
-    guidePlan.path.forEach((columnIndex, pathIndex) => {
-      const absoluteStep = starterBase + pathIndex;
-      if (absoluteStep <= guidePlan.progress) return;
-      const remainingOrdinal = absoluteStep - guidePlan.progress;
-      if (remainingOrdinal > visibleSteps) return;
-      if (!mapping.has(columnIndex)) {
-        mapping.set(columnIndex, absoluteStep);
-      }
-    });
-    return mapping;
-  }, [currentTurn, guidePlan]);
-  const nextGuideTarget = useMemo(() => {
+  const nextGuideStep = useMemo(() => {
     if (currentTurn !== 'player' || !guidePlan) return null;
     const visibleSteps = guidePlan.visibleSteps ?? Number.POSITIVE_INFINITY;
-    const nextAbsoluteStep = guidePlan.progress + 1;
-    if (nextAbsoluteStep > visibleSteps) return null;
-    if (guidePlan.starterRequiresSwap && guidePlan.progress === 0) {
-      const benchIndex = game.playerBench.findIndex((card) => card.id === guidePlan.starterStockId);
-      if (benchIndex >= 0) {
-        const node = playerBenchRefs.current[benchIndex];
-        const rect = node?.getBoundingClientRect();
-        if (rect) {
-          return {
-            key: `bench-${guidePlan.starterStockId}`,
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2,
-            width: rect.width,
-            height: rect.height,
-          };
-        }
-      }
-      return null;
+    const nextIndex = guidePlan.progress;
+    if (nextIndex >= guidePlan.path.length || nextIndex >= visibleSteps) return null;
+    return guidePlan.path[nextIndex] ?? null;
+  }, [currentTurn, guidePlan]);
+
+  const nextGuideTarget = useMemo(() => {
+    if (!nextGuideStep) return null;
+    if (pendingPlayerPlay?.source === 'tableau' && pendingPlayerPlay.columnIndex === nextGuideStep.columnIndex && pendingPlayerPlay.stockIds.includes(nextGuideStep.stockId)) {
+      const target = getPlayerTargetByStockId(game, nextGuideStep.stockId);
+      const node = target?.kind === 'prime'
+        ? playerStockRef.current
+        : (typeof target?.benchIndex === 'number' ? playerBenchRefs.current[target.benchIndex] : null);
+      const rect = node?.getBoundingClientRect();
+      if (!rect) return null;
+      return {
+        key: `stock-${nextGuideStep.stockId}-${guidePlan?.progress ?? 0}`,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+        width: rect.width,
+        height: rect.height,
+      };
     }
-    const pathIndex = guidePlan.progress - (guidePlan.starterRequiresSwap ? 1 : 0);
-    const nextColumnIndex = guidePlan.path[pathIndex];
-    if (typeof nextColumnIndex !== 'number') return null;
-    const node = tableauTopRefs.current[nextColumnIndex];
+    const node = tableauTopRefs.current[nextGuideStep.columnIndex];
     const rect = node?.getBoundingClientRect();
     if (!rect) return null;
     return {
-      key: `tableau-${nextColumnIndex}-${nextAbsoluteStep}`,
+      key: `tableau-${nextGuideStep.columnIndex}-${guidePlan?.progress ?? 0}`,
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
       width: rect.width,
       height: rect.height,
     };
-  }, [currentTurn, game.playerBench, guidePlan, viewport.height, viewport.width]);
+  }, [currentTurn, game, guidePlan, nextGuideStep, pendingPlayerPlay, viewport.height, viewport.width]);
 
-  const showHeuristicValues = inspectMode !== null || oracleMode !== 'off';
-  const guidanceHighlightedStockId =
-    currentTurn === 'player' && effectiveOracleMode !== 'off'
-      ? guidePlan?.starterStockId ?? bestStarterHeuristic?.stockId ?? null
-      : null;
-  const guidanceNextColumn = currentTurn === 'player' && guidePlan
-    ? guidePlan.path[Math.max(0, guidePlan.progress - (guidePlan.starterRequiresSwap ? 1 : 0))]
-    : null;
-  const ancestorStarterStepStockId =
-    currentTurn === 'player' && guidePlan && guidePlan.starterRequiresSwap && guidePlan.progress < 1
-      ? guidePlan.starterStockId
-      : null;
-  const getHeuristicLabel = useCallback((stockId: string) => {
-    if (guidePlan && effectiveOracleMode === 'ancestors' && ancestorStarterStepStockId === stockId) return '1';
-    const heuristic = playerStockHeuristics.get(stockId);
-    if (!heuristic) return null;
-    if (inspectMode === 'guidance') return String(heuristic.visibleBest);
-    if (inspectMode === 'ancestors') return String(heuristic.hiddenBest);
-    if (oracleMode === 'guidance') return String(heuristic.visibleBest);
-    if (oracleMode === 'ancestors') return String(heuristic.hiddenBest);
-    return null;
-  }, [ancestorStarterStepStockId, effectiveOracleMode, guidePlan, inspectMode, oracleMode, playerStockHeuristics]);
-  const bestOpeningVisibleRun = useMemo(() => {
-    const entries = [...playerStockHeuristics.values()];
-    if (entries.length === 0) return 0;
-    return entries.reduce((best, entry) => Math.max(best, entry.visibleBest), 0);
-  }, [playerStockHeuristics]);
+  const getHeuristicLabel = useCallback((_stockId: string) => null, []);
+  const bestOpeningVisibleRun = playerPlanHeuristic.visibleBest;
   const highlightPanForBadLuck =
     currentTurn === 'player' &&
     game.clearedCount === 0 &&
@@ -3193,11 +4085,20 @@ export const GolfGame = () => {
   const pawSperityEligible = game.playerStock.name === 'Pan' && game.panPawSperityCooldown === 0;
   const leftHandSlot = game.playerHand.find((slot) => slot.slotId === 'left') ?? createEmptyHandSlot('left');
   const rightHandSlot = game.playerHand.find((slot) => slot.slotId === 'right') ?? createEmptyHandSlot('right');
-  const leftCapturedSlot = game.playerCapturedLeft ? createCapturedHandSlot('left', game.playerCapturedLeft) : null;
-  const rightCapturedSlot = game.playerCapturedRight ? createCapturedHandSlot('right', game.playerCapturedRight) : null;
+  const leftCapturedSlot = game.playerCapturedLeft
+    ? (game.playerCapturedLeft.name === 'FREE ENERGY'
+      ? createGeneratedHandSlot('left', 'FREE ENERGY', game.playerCapturedLeft, 'free-energy', game.playerCapturedLeft.rank)
+      : createCapturedHandSlot('left', game.playerCapturedLeft))
+    : null;
+  const rightCapturedSlot = game.playerCapturedRight
+    ? (game.playerCapturedRight.name === 'FREE ENERGY'
+      ? createGeneratedHandSlot('right', 'FREE ENERGY', game.playerCapturedRight, 'free-energy', game.playerCapturedRight.rank)
+      : createCapturedHandSlot('right', game.playerCapturedRight))
+    : null;
   const stickyPawsArmed = game.playerHand.some((slot) => slot.effect === 'sticky-paws' && slot.armed) && game.stickyPawsCooldown === 0;
   const activeActorName = game.playerStock.name;
   const currentEnemyProfile = useMemo(() => getEnemyProfile(game.enemyProfileId), [game.enemyProfileId]);
+  const isTargetDummyEncounter = game.enemyProfileId === GOLF_DEFAULT_ENEMY_PROFILE_ID;
   const enemyBenchProfiles = useMemo(
     () => game.enemyBenchProfileIds.map((profileId) => getEnemyProfile(profileId)),
     [game.enemyBenchProfileIds]
@@ -3220,25 +4121,32 @@ export const GolfGame = () => {
     }));
     return [...prime, ...bench];
   }, [currentEnemyProfile.actor.name, enemyBenchProfiles, game.enemyBench, game.enemyBenchProfileIds, game.enemyProfileId, game.enemyStock]);
+  const showHeuristicValues = inspectMode !== null || oracleMode !== 'off';
+  const guidanceNextColumn = nextGuideStep?.columnIndex ?? null;
   const leftHandSlots = useMemo(() => {
+    if (isTargetDummyEncounter) return [];
     if (activeActorName === 'Jet') {
       return [
         leftCapturedSlot,
         leftHandSlot,
-        createHandSlot('jet-left-2', 'ability', 'Battery', 'battery', null, game.batteryMode !== null),
+        createHandSlot('jet-left-2', 'ability', 'Quarnyx Battery', 'battery', null, game.jetBatteryPrimeArmed),
+        createHandSlot('jet-left-3', 'ability', 'Rewire', 'rewire', null, game.jetRewireActionsRemaining > 0),
+        createHandSlot('jet-right-4', 'ability', 'Aegis Shunt', 'aegis-shunt', null),
       ].filter(Boolean) as PlayerHandSlot[];
     }
     if (activeActorName === 'Hiro') return [createHandSlot('left', 'ability', 'Ironfur', 'ironfur', null)];
     if (activeActorName === 'Pan') return [createHandSlot('pan-left', 'ability', 'Paw-Sperity', 'paw-sperity', null)];
     if (activeActorName === 'Whis') return [createHandSlot('left', 'ability', 'Slipstream', 'slipstream', null)];
     return [];
-  }, [activeActorName, leftCapturedSlot, leftHandSlot]);
+  }, [activeActorName, game.jetBatteryPrimeArmed, game.jetRewireActionsRemaining, isTargetDummyEncounter, leftCapturedSlot, leftHandSlot]);
   const rightHandSlots = useMemo(
     () =>
-      activeActorName === 'Jet'
+      isTargetDummyEncounter
+        ? []
+        : activeActorName === 'Jet'
         ? ([
             rightHandSlot,
-            createHandSlot('jet-right-2', 'ability', 'Siphon', 'siphon', null),
+            createHandSlot('jet-right-2', 'ability', 'Scrap Plating', 'scrap-plating', null),
             createHandSlot('jet-right-3', 'ability', 'Rigged Construct', 'rigged-construct', null, game.riggedConstructArmed),
             rightCapturedSlot,
           ].filter(Boolean) as PlayerHandSlot[])
@@ -3246,14 +4154,26 @@ export const GolfGame = () => {
           ? [createHandSlot('right', 'ability', 'Tap Out!', 'tap-out', null)]
         : activeActorName === 'Pan'
           ? [createHandSlot('right', 'ability', 'Path of Stars', 'path-of-stars', null)]
-          : activeActorName === 'Whis'
+        : activeActorName === 'Whis'
             ? [createHandSlot('right', 'ability', 'Jikan', 'jikan', null)]
-          : [],
-    [activeActorName, game.batteryMode, game.riggedConstructArmed, rightCapturedSlot, rightHandSlot]
+            : [],
+    [activeActorName, game.jetBatteryPrimeArmed, game.jetRewireActionsRemaining, game.riggedConstructArmed, isTargetDummyEncounter, leftCapturedSlot, leftHandSlot, rightCapturedSlot, rightHandSlot]
   );
   const supportBenchIndex = getSupportBenchIndex(game);
   const supportBenchCard = game.playerBench[supportBenchIndex] ?? null;
   const assistBenchIndices = getAssistBenchIndices(game);
+  const showKinInspector = kinInspectIndex !== null && inspectedKinCard !== null && inspectedKinTaxonomy !== null;
+  const partyDiscardCounts = useMemo(() => getDiscardCountsByActor(game.playerDiscardPile), [game.playerDiscardPile]);
+  const canUseBenchAbilityUi = useCallback((benchIndex: number) => {
+    const card = game.playerBench[benchIndex];
+    if (!card) return false;
+    const role = getBenchRole(game, benchIndex);
+    const availableAp = game.playerBenchActionPoints[benchIndex] ?? 0;
+    const cost = getBenchAbilityCost(card, role);
+    if (availableAp < cost) return false;
+    if (card.name === 'Whis') return !!lastUndoRef.current;
+    return true;
+  }, [game]);
   const inspectedKinCard = useMemo(() => {
     if (kinInspectIndex === null) return null;
     if (kinInspectIndex === -1) return game.playerStock;
@@ -3263,6 +4183,19 @@ export const GolfGame = () => {
     if (!inspectedKinCard) return null;
     return getKinInspectorSlots(inspectedKinCard.name, { left: leftHandSlot, right: rightHandSlot });
   }, [inspectedKinCard, leftHandSlot, rightHandSlot]);
+  const inspectorNarrative = useMemo(
+    () => getKinInspectorNarrative(inspectedKinCard),
+    [inspectedKinCard]
+  );
+  const inspectedKinSections = useMemo(() => {
+    if (!inspectedKinTaxonomy) return [];
+    return [
+      { key: 'signature', title: 'Signature', slots: inspectedKinTaxonomy.signature },
+      { key: 'tableau-clear', title: 'Tableau Clear', slots: inspectedKinTaxonomy.tableauClear },
+      { key: 'tool', title: 'Tool Abilities', slots: inspectedKinTaxonomy.tools },
+      { key: 'battle', title: 'Battle And Passive', slots: inspectedKinTaxonomy.battle },
+    ].filter((section) => section.slots.length > 0);
+  }, [inspectedKinTaxonomy]);
   const clearStickyHold = useCallback(() => {
     if (stickyHoldTimeoutRef.current !== null) {
       window.clearTimeout(stickyHoldTimeoutRef.current);
@@ -3314,22 +4247,29 @@ export const GolfGame = () => {
     if (slot.effect === 'slipstream') {
       return game.playerStock.name === 'Whis' && game.playerStockActionPoints >= 4;
     }
-    if (slot.effect === 'siphon') {
-      return game.playerStock.name === 'Jet' && game.playerStockActionPoints >= 2 && game.enemyStockActionPoints > 0;
-    }
     if (slot.effect === 'rigged-construct') {
-      return game.playerStock.name === 'Jet' && (game.riggedConstructCards.length > 0 || (game.playerStockActionPoints >= 8 && game.riggedConstructCooldown === 0));
+      return game.playerStock.name === 'Jet' && (game.riggedConstructCards.length > 0 || (getJetBatteryCharge(game, slot.effect) > 0 && game.riggedConstructCooldown === 0));
+    }
+    if (slot.effect === 'rewire') {
+      return game.playerStock.name === 'Jet' && (game.jetRewireActionsRemaining > 0 || getJetBatteryCharge(game, slot.effect) > 0);
+    }
+    if (slot.effect === 'scrap-plating' || slot.effect === 'aegis-shunt') {
+      return game.playerStock.name === 'Jet' && getJetBatteryCharge(game, slot.effect) > 0;
     }
     if (slot.effect === 'sticky-paws') {
-      return game.playerStock.name === 'Jet';
+      return game.playerStock.name === 'Jet' && getJetBatteryCharge(game, slot.effect) > 0;
     }
     return true;
   }, [currentTurn, game]);
   const canOpenStickyPawsSteal = currentTurn === 'player'
     && game.playerStock.name === 'Jet'
-    && game.playerStockActionPoints >= 5
+    && getJetBatteryCharge(game, 'sticky-paws') > 0
     && game.stickyPawsCooldown <= 0
     && enemyStealOptions.length > 0;
+  const stickyPawsPreviewActive = currentTurn === 'player'
+    && game.playerStock.name === 'Jet'
+    && getJetBatteryCharge(game, 'sticky-paws') > 0
+    && game.stickyPawsCooldown <= 0;
 
   const getConstructTopCard = useCallback(() => {
     const topCard = game.riggedConstructCards[game.riggedConstructCards.length - 1] ?? null;
@@ -3337,10 +4277,10 @@ export const GolfGame = () => {
       id: 'rigged-construct-wild',
       rank: 1,
       suit: '✦',
-      element: game.playerStock.element,
+      element: game.riggedConstructElement ?? game.playerStock.element,
       name: 'Construct',
     };
-  }, [game.playerStock.element, game.riggedConstructCards]);
+  }, [game.playerStock.element, game.riggedConstructCards, game.riggedConstructElement]);
 
   const getActorAnchor = useCallback((actorName: string) => {
     if (actorName === game.playerStock.name) return getCardCenterPoint(playerStockRef.current);
@@ -3433,21 +4373,31 @@ export const GolfGame = () => {
       } else {
         if (prev.batteryStoredActionPoints <= 0) return { ...prev, batteryMode: null };
         if (target === 'prime') {
+          const primeCap = hasAssistJet(prev) ? BATTERY_TARGET_CHARGE + 2 : BATTERY_TARGET_CHARGE;
+          const releaseAmount = prev.playerStockActionPoints >= primeCap
+            ? prev.batteryStoredActionPoints
+            : Math.min(prev.batteryStoredActionPoints, primeCap - prev.playerStockActionPoints);
+          const routedAp = routePrimeApWithAssistJet(prev, releaseAmount);
           next = {
             ...next,
-            playerStockActionPoints: prev.playerStockActionPoints + prev.batteryStoredActionPoints,
-            batteryStoredActionPoints: 0,
-            batteryMode: null,
+            playerStockActionPoints: routedAp.playerStockActionPoints,
+            assistJetMicroBatteryAp: routedAp.assistJetMicroBatteryAp,
+            batteryStoredActionPoints: prev.batteryStoredActionPoints - releaseAmount,
+            batteryMode: prev.batteryStoredActionPoints - releaseAmount > 0 ? 'release' : null,
           };
           changed = true;
         } else {
+          const currentAp = prev.playerBenchActionPoints[target] ?? 0;
+          const releaseAmount = currentAp >= BATTERY_TARGET_CHARGE
+            ? prev.batteryStoredActionPoints
+            : Math.min(prev.batteryStoredActionPoints, BATTERY_TARGET_CHARGE - currentAp);
           const nextBenchActionPoints = [...prev.playerBenchActionPoints];
-          nextBenchActionPoints[target] = (nextBenchActionPoints[target] ?? 0) + prev.batteryStoredActionPoints;
+          nextBenchActionPoints[target] = currentAp + releaseAmount;
           next = {
             ...next,
             playerBenchActionPoints: nextBenchActionPoints,
-            batteryStoredActionPoints: 0,
-            batteryMode: null,
+            batteryStoredActionPoints: prev.batteryStoredActionPoints - releaseAmount,
+            batteryMode: prev.batteryStoredActionPoints - releaseAmount > 0 ? 'release' : null,
           };
           changed = true;
         }
@@ -3654,6 +4604,30 @@ export const GolfGame = () => {
     []
   );
 
+  const startPlayerStockAnimation = useCallback(
+    (card: CardType, sourceElement: HTMLElement | null, targetElement: HTMLElement | null, label = '') => {
+      const from = getCardCenterPoint(sourceElement);
+      const to = getCardCenterPoint(targetElement);
+      if (!from || !to) return;
+      if (playerHandAnimTimeoutRef.current !== null) {
+        window.clearTimeout(playerHandAnimTimeoutRef.current);
+      }
+      setPlayerHandAnim({
+        id: Date.now(),
+        card,
+        from,
+        to,
+        durationMs: 240,
+        label,
+      });
+      playerHandAnimTimeoutRef.current = window.setTimeout(() => {
+        setPlayerHandAnim(null);
+        playerHandAnimTimeoutRef.current = null;
+      }, 240);
+    },
+    []
+  );
+
   const recordUndoSnapshot = useCallback((snapshot: UndoSnapshot) => {
     lastUndoRef.current = {
       game: snapshot.game,
@@ -3665,13 +4639,47 @@ export const GolfGame = () => {
     };
   }, []);
 
-  const playToPlayerStock = (columnIndex: number) => {
+  const playToPlayerStock = (columnIndex: number, targetStockId?: string) => {
     if (currentTurn !== 'player') return;
     const candidate = topCards[columnIndex];
     if (!candidate) return;
+    if (game.playerStock.name === 'Jet' && game.jetRewireActionsRemaining > 0) {
+      if (game.jetRewireSourceColumnIndex === null) {
+        setGame((prev) => ({ ...prev, jetRewireSourceColumnIndex: columnIndex }));
+        queueDialogueCallout('Jet', 'Source locked.', 60, 'Rewire');
+        return;
+      }
+      if (game.jetRewireSourceColumnIndex === columnIndex) {
+        setGame((prev) => ({ ...prev, jetRewireSourceColumnIndex: null }));
+        return;
+      }
+      if (!canRewireMove(game.tableau, game.jetRewireSourceColumnIndex, columnIndex)) return;
+      setPendingPlayerPlay(null);
+      setGame((prev) => {
+        const sourceIndex = prev.jetRewireSourceColumnIndex;
+        if (sourceIndex === null || !canRewireMove(prev.tableau, sourceIndex, columnIndex)) return prev;
+        const consumed = consumeJetBattery(prev, 'rewire');
+        if (consumed.consumedCharge <= 0) {
+          return { ...prev, jetRewireActionsRemaining: 0, jetRewireSourceColumnIndex: null };
+        }
+        const sourceCard = prev.tableau[sourceIndex][prev.tableau[sourceIndex].length - 1];
+        if (!sourceCard) return prev;
+        const nextTableau = consumed.state.tableau.map((entry) => [...entry]);
+        nextTableau[sourceIndex].pop();
+        nextTableau[columnIndex].push(sourceCard);
+        return {
+          ...consumed.state,
+          tableau: nextTableau,
+          jetRewireActionsRemaining: Math.max(0, getJetBatteryCharge(consumed.state, 'rewire')),
+          jetRewireSourceColumnIndex: null,
+        };
+      });
+      queueDialogueCallout('Jet', 'Rewired.', 60, 'Rewire');
+      return;
+    }
     if (game.riggedConstructArmed) {
-      const constructTop = game.riggedConstructCards[game.riggedConstructCards.length - 1] ?? null;
-      if (constructTop && !canPlayOnStock(candidate, constructTop)) return;
+      if (!canRouteCardIntoConstruct(game, candidate)) return;
+      setPendingPlayerPlay(null);
       recordUndoSnapshot({
         game: latestGameRef.current,
         enemyTurnSummary,
@@ -3687,18 +4695,54 @@ export const GolfGame = () => {
           riggedConstructCards: [...prev.riggedConstructCards, candidate],
           clearedCount: prev.clearedCount + 1,
           tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
+          riggedConstructElement: prev.riggedConstructElement ?? candidate.element,
+          assistJetMicroBatteryAp: hasAssistJet(prev)
+            ? Math.min(ASSIST_JET_MICRO_BATTERY_MAX, prev.assistJetMicroBatteryAp + 1)
+            : prev.assistJetMicroBatteryAp,
           riggedConstructArmed: false,
         };
       });
       queueDialogueCallout('Jet', 'Loaded in.', 100);
       return;
     }
-    if (!canPlayOnStock(candidate, game.playerStock)) return;
+
+    const eligibleTargets = getEligiblePlayerTargetsForCard(game, candidate);
+    if (eligibleTargets.length === 0) {
+      setPendingPlayerPlay(null);
+      return;
+    }
+
+    const resolvedTargetStockId = targetStockId ?? (eligibleTargets.length === 1 ? eligibleTargets[0].stockId : null);
+    if (!resolvedTargetStockId) {
+      setPendingPlayerPlay((prev) => (
+        prev?.source === 'tableau' && prev.columnIndex === columnIndex
+          ? null
+          : { source: 'tableau', columnIndex, stockIds: eligibleTargets.map((target) => target.stockId) }
+      ));
+      return;
+    }
+
+    const resolvedTarget = eligibleTargets.find((target) => target.stockId === resolvedTargetStockId);
+    if (!resolvedTarget) {
+      setPendingPlayerPlay({ source: 'tableau', columnIndex, stockIds: eligibleTargets.map((target) => target.stockId) });
+      return;
+    }
+
+    const targetElement = resolvedTarget.kind === 'prime'
+      ? playerStockRef.current
+      : (typeof resolvedTarget.benchIndex === 'number' ? playerBenchRefs.current[resolvedTarget.benchIndex] : null);
+    startPlayerStockAnimation(candidate, tableauTopRefs.current[columnIndex], targetElement);
+
+    setPendingPlayerPlay(null);
     const column = game.tableau[columnIndex];
     const stickySlot = game.playerHand.find((slot) => slot.effect === 'sticky-paws' && slot.armed) ?? null;
-    const stickyCapture = stickySlot && column.length > 1 ? column[column.length - 2] : null;
-    if (stickySlot && !stickyCapture) return;
-    const repurposeSlot = !stickyCapture && column.length === 1
+    const stickyCharge = stickySlot ? getJetBatteryCharge(game, 'sticky-paws') : 0;
+    const freeCaptureSlots = [game.playerCapturedRight, game.playerCapturedLeft].filter((entry) => entry === null).length;
+    const stickyCaptureCount = stickySlot ? Math.min(stickyCharge, freeCaptureSlots, Math.max(0, column.length - 1)) : 0;
+    const stickyCaptures = stickyCaptureCount > 0 ? column.slice(column.length - 1 - stickyCaptureCount, column.length - 1) : [];
+    const stickyCapture = stickyCaptures[stickyCaptures.length - 1] ?? null;
+    if (stickySlot && stickyCaptureCount <= 0) return;
+    const repurposeSlot = !stickyCapture && column.length === 1 && resolvedTarget.kind === 'prime'
       ? game.playerHand.find((slot) => slot.effect === 'repurpose') ?? null
       : null;
     const sourceElement = tableauTopRefs.current[columnIndex];
@@ -3718,102 +4762,129 @@ export const GolfGame = () => {
     setGame((prev) => {
       const nextTableau = prev.tableau.map((entry, idx) => {
         if (idx !== columnIndex) return entry;
-        return stickyCapture ? entry.slice(0, -2) : entry.slice(0, -1);
+        return stickyCaptureCount > 0 ? entry.slice(0, -(1 + stickyCaptureCount)) : entry.slice(0, -1);
       });
       const refillResult = refillClearedTableau(nextTableau, columnIndex);
       const nextHand = prev.playerHand.map((slot) => ({ ...slot, armed: false }));
-      const nextSequence = prev.playerStockSequence + 1;
-      const nextBenchActionPoints = awardBenchTempo(prev, refillResult.tableCleared);
+      const nextBenchActionPoints = awardBenchTempo(prev, refillResult.tableCleared, resolvedTargetStockId);
       const tableClearApBonus = getPlayerTableClearApBonus(prev, refillResult.tableCleared);
+      const progressResult = applyPlayerProgressToTarget(prev, resolvedTargetStockId, candidate, tableClearApBonus, nextBenchActionPoints);
+      const efficiencyState = advanceJetEfficiencyFromTableauPlay(progressResult.nextState);
       const prepared = applyCounterWindowToPacket(
         prev,
-        buildPokePacket(prev.playerStock, prev.enemyStock, nextSequence, 'player')
+        addPrimeAttackBonuses(prev, buildPokePacket(progressResult.sourceCard, prev.enemyStock, progressResult.sequence, 'player'))
       );
       const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
+      const siphonedState = applyJetPassiveSiphon(efficiencyState, resolved);
       const postEnemyDefeat = (draft: GolfGameState) =>
         resolveEnemyDefeat(draft, resolved.combatants, stickyCapture ? 'Sticky Paws' : null);
 
       if (stickyCapture && stickySlot) {
+        const consumed = consumeJetBattery(prev, 'sticky-paws');
         const preferredSide = stickySlot.slotId === 'right' ? 'playerCapturedRight' : 'playerCapturedLeft';
         const fallbackSide = preferredSide === 'playerCapturedRight' ? 'playerCapturedLeft' : 'playerCapturedRight';
         const nextState = {
-          [preferredSide]: prev[preferredSide],
-          [fallbackSide]: prev[fallbackSide],
+          [preferredSide]: consumed.state[preferredSide],
+          [fallbackSide]: consumed.state[fallbackSide],
         } as Pick<GolfGameState, 'playerCapturedLeft' | 'playerCapturedRight'>;
-        if (nextState[preferredSide] === null) {
-          nextState[preferredSide] = stickyCapture;
-        } else if (nextState[fallbackSide] === null) {
-          nextState[fallbackSide] = stickyCapture;
-        }
-        return postEnemyDefeat({
-          ...prev,
+        const captureQueue = [...stickyCaptures].reverse();
+        captureQueue.forEach((capturedCard) => {
+          if (nextState[preferredSide] === null) {
+            nextState[preferredSide] = capturedCard;
+          } else if (nextState[fallbackSide] === null) {
+            nextState[fallbackSide] = capturedCard;
+          }
+        });
+        return postEnemyDefeat(resolvePrimeJetAbilityAftermath({
+          ...siphonedState,
+          jetBatteries: consumed.state.jetBatteries,
+          jetBatteryAlternatorIndex: consumed.state.jetBatteryAlternatorIndex,
           tableau: refillResult.tableau,
-          playerStock: evolveIdentityCard(prev.playerStock, candidate),
           playerHand: nextHand,
           playerCapturedLeft: nextState.playerCapturedLeft,
           playerCapturedRight: nextState.playerCapturedRight,
           clearedCount: prev.clearedCount + 1,
-          playerStockSequence: nextSequence,
-          playerStockActionPoints: prev.playerStockActionPoints + 1 + tableClearApBonus,
-          playerBenchActionPoints: nextBenchActionPoints,
-          playerFreeTagAvailable: false,
           stickyPawsCooldown: 7,
           tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
-          ...advancePlayerTagLock(prev),
-        });
+        }, 'sticky-paws'));
       } else if (repurposeSlot) {
+        const repurposeAp = routePrimeApWithAssistJet(efficiencyState, 2);
         const nextCapturedLeft = prev.playerCapturedLeft ?? candidate;
         return postEnemyDefeat({
-          ...prev,
+          ...applyJetPassiveSiphon(repurposeAp.jetState, resolved),
           tableau: refillResult.tableau,
-          playerStock: evolveIdentityCard(prev.playerStock, candidate),
           playerHand: nextHand,
           playerCapturedLeft: nextCapturedLeft,
+          playerStockActionPoints: repurposeAp.playerStockActionPoints,
+          assistJetMicroBatteryAp: repurposeAp.assistJetMicroBatteryAp,
           clearedCount: prev.clearedCount + 1,
-          playerStockSequence: nextSequence,
-          playerStockActionPoints: prev.playerStockActionPoints + 1 + tableClearApBonus,
-          playerBenchActionPoints: nextBenchActionPoints,
-          playerFreeTagAvailable: false,
           tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
-          ...advancePlayerTagLock(prev),
         });
       }
 
       return postEnemyDefeat({
-        ...prev,
+        ...siphonedState,
         tableau: refillResult.tableau,
-        playerStock: evolveIdentityCard(prev.playerStock, candidate),
         playerHand: nextHand,
         playerCapturedLeft: prev.playerCapturedLeft,
         playerCapturedRight: prev.playerCapturedRight,
         clearedCount: prev.clearedCount + 1,
-        playerStockSequence: nextSequence,
-        playerStockActionPoints: prev.playerStockActionPoints + 1 + tableClearApBonus,
-        playerBenchActionPoints: nextBenchActionPoints,
-        playerFreeTagAvailable: false,
         tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
-        ...advancePlayerTagLock(prev),
       });
     });
     setGuidePlan((prev) => {
       if (!prev) return prev;
-      const nextExpectedIndex = prev.progress - (prev.starterRequiresSwap ? 1 : 0);
-      if (nextExpectedIndex < 0 || nextExpectedIndex >= prev.path.length) return prev;
-      return prev.path[nextExpectedIndex] === columnIndex
+      const nextStep = prev.path[prev.progress];
+      if (!nextStep) return prev;
+      return nextStep.columnIndex === columnIndex && nextStep.stockId === resolvedTargetStockId
         ? { ...prev, progress: prev.progress + 1 }
         : prev;
     });
   };
 
-  const useHandSlot = (slotId: HandSlotId) => {
+  const useHandSlot = (slotId: HandSlotId, targetStockId?: string) => {
     if (currentTurn !== 'player') return;
     const slot = [...leftHandSlots, ...rightHandSlots, ...game.playerHand].find((entry) => entry.slotId === slotId);
     if (!slot) return;
 
+    if (game.playerStock.name === 'Jet' && game.jetBatteryPrimeArmed && slot.kind === 'ability' && isJetBatteryAssignableEffect(slot.effect)) {
+      setPendingPlayerPlay(null);
+      setPinnedTooltipSlotId(null);
+      setGame((prev) => {
+        const existingBattery = getJetBatteryForEffect(prev, slot.effect);
+        if (!existingBattery) return createJetBatteryAssignment(prev, slot.effect);
+        const nextState: GolfGameState = {
+          ...prev,
+          jetBatteryPrimeArmed: false,
+          jetBatteries: prev.jetBatteries.filter((battery) => battery.effect !== slot.effect),
+        };
+        if (!prev.jetDetonateBatteryUnlocked || existingBattery.charge <= 0) return nextState;
+        const nextCombatants = { ...prev.combatants };
+        [prev.enemyStock.name, ...prev.enemyBench.map((card) => card.name)].forEach((enemyName) => {
+          const enemyKey = actorKeyFromName(enemyName);
+          const combatant = nextCombatants[enemyKey];
+          if (!combatant) return;
+          nextCombatants[enemyKey] = {
+            ...combatant,
+            hp: Math.max(0, combatant.hp - existingBattery.charge),
+            burn: Math.min(6, combatant.burn + existingBattery.charge),
+          };
+        });
+        return {
+          ...nextState,
+          combatants: nextCombatants,
+        };
+      });
+      queueDialogueCallout('Jet', getJetBatteryForEffect(game, slot.effect) ? `Ejected ${slot.name}.` : `Battery linked to ${slot.name}.`, 80, 'Quarnyx');
+      return;
+    }
+
     if (slot.kind === 'ability' && slot.effect === 'sticky-paws') {
+      setPendingPlayerPlay(null);
       return;
     }
     if (slot.kind === 'ability' && slot.effect === 'ironfur') {
+      setPendingPlayerPlay(null);
       setPinnedTooltipSlotId(null);
       setGame((prev) => {
         const actorKey = actorKeyFromName(prev.playerStock.name);
@@ -3838,64 +4909,46 @@ export const GolfGame = () => {
     }
     if (slot.kind === 'ability' && slot.effect === 'tap-out') {
       setPinnedTooltipSlotId(null);
+      setPendingPlayerPlay(null);
       setGame((prev) => {
         if (prev.playerStockActionPoints < 3) return prev;
+        const nextBenchActionPoints = prev.playerBenchActionPoints.map((value) => Math.min(12, (value ?? 0) + 2));
         return {
           ...prev,
           playerStockActionPoints: prev.playerStockActionPoints - 3,
-          playerFreeTagAvailable: true,
-          playerTagLockCapturesRemaining: 0,
-          playerBlockedReturnStockId: null,
+          playerBenchActionPoints: nextBenchActionPoints,
+          playerSupportActionUsed: false,
         };
       });
-      queueDialogueCallout(game.playerStock.name, 'I see an opening!', 120);
+      queueDialogueCallout(game.playerStock.name, 'Team, take the relay!', 120);
       return;
     }
     if (slot.kind === 'ability' && slot.effect === 'battery') {
+      setPendingPlayerPlay(null);
       setPinnedTooltipSlotId(null);
       setGame((prev) => ({
         ...prev,
-        batteryMode: prev.batteryStoredActionPoints > 0
-          ? (prev.batteryMode === 'release' ? null : 'release')
-          : (prev.batteryMode === 'store' ? null : 'store'),
+        jetBatteryPrimeArmed: !prev.jetBatteryPrimeArmed,
+        jetRewireSourceColumnIndex: null,
       }));
       return;
     }
-    if (slot.kind === 'ability' && slot.effect === 'siphon') {
-      setPinnedTooltipSlotId(null);
-      setGame((prev) => {
-        if (prev.playerStock.name !== 'Jet' || prev.playerStockActionPoints < 2 || prev.enemyStockActionPoints <= 0) return prev;
-        const stolen = Math.min(2, prev.enemyStockActionPoints);
-        return {
-          ...prev,
-          playerStockActionPoints: prev.playerStockActionPoints - 2 + stolen,
-          enemyStockActionPoints: prev.enemyStockActionPoints - stolen,
-        };
-      });
-      appendCombatLog({
-        timestamp: Date.now(),
-        biomeId: game.biomeId,
-        type: 'ability',
-        actor: 'Jet',
-        target: game.enemyStock.name,
-        detail: { effect: 'siphon', enemyApBefore: game.enemyStockActionPoints },
-      });
-      queueDialogueCallout('Jet', 'Mine now.', 100);
-      return;
-    }
     if (slot.kind === 'ability' && slot.effect === 'rigged-construct') {
+      setPendingPlayerPlay(null);
       setPinnedTooltipSlotId(null);
       setGame((prev) => {
         if (prev.playerStock.name !== 'Jet') return prev;
         if (prev.riggedConstructCards.length === 0) {
-          if (prev.playerStockActionPoints < 8 || prev.riggedConstructCooldown > 0) return prev;
-          return {
-            ...prev,
-            playerStockActionPoints: prev.playerStockActionPoints - 8,
+          const consumed = consumeJetBattery(prev, 'rigged-construct');
+          if (consumed.consumedCharge <= 0 || prev.riggedConstructCooldown > 0) return prev;
+          return resolvePrimeJetAbilityAftermath({
+            ...consumed.state,
             riggedConstructCooldown: 20,
             riggedConstructCards: [],
             riggedConstructArmed: true,
-          };
+            riggedConstructElement: null,
+            riggedConstructCapacity: consumed.consumedCharge,
+          }, slot.effect);
         }
         return {
           ...prev,
@@ -3912,7 +4965,87 @@ export const GolfGame = () => {
       queueDialogueCallout('Jet', 'Build the shortcut.', 100);
       return;
     }
+    if (slot.kind === 'ability' && slot.effect === 'rewire') {
+      setPendingPlayerPlay(null);
+      setPinnedTooltipSlotId(null);
+      setGame((prev) => {
+        if (prev.playerStock.name !== 'Jet') return prev;
+        if (prev.jetRewireActionsRemaining > 0) {
+          return { ...prev, jetRewireActionsRemaining: 0, jetRewireSourceColumnIndex: null };
+        }
+        const charge = getJetBatteryCharge(prev, 'rewire');
+        if (charge <= 0) return prev;
+        return {
+          ...prev,
+          jetRewireActionsRemaining: charge,
+          jetRewireSourceColumnIndex: null,
+        };
+      });
+      queueDialogueCallout('Jet', 'Open the reroute.', 100, 'Rewire');
+      return;
+    }
+    if (slot.kind === 'ability' && slot.effect === 'scrap-plating') {
+      setPendingPlayerPlay(null);
+      setPinnedTooltipSlotId(null);
+      setGame((prev) => {
+        if (prev.playerStock.name !== 'Jet') return prev;
+        const consumed = consumeJetBattery(prev, 'scrap-plating');
+        if (consumed.consumedCharge <= 0) return prev;
+        const actorKey = actorKeyFromName(prev.playerStock.name);
+        const combatant = prev.combatants[actorKey];
+        if (!combatant) return prev;
+        const sourceColumnIndex = prev.tableau.findIndex((column) => column.length > 1);
+        const nextTableau = sourceColumnIndex >= 0
+          ? prev.tableau.map((column, index) => index === sourceColumnIndex ? column.slice(0, -1) : column)
+          : prev.tableau;
+        return resolvePrimeJetAbilityAftermath({
+          ...consumed.state,
+          tableau: nextTableau,
+          combatants: {
+            ...consumed.state.combatants,
+            [actorKey]: {
+              ...combatant,
+              armor: combatant.armor + (consumed.consumedCharge * 2),
+            },
+          },
+        }, slot.effect);
+      });
+      queueDialogueCallout('Jet', 'Scrap up.', 100, 'Scrap');
+      return;
+    }
+    if (slot.kind === 'ability' && slot.effect === 'aegis-shunt') {
+      setPendingPlayerPlay(null);
+      setPinnedTooltipSlotId(null);
+      setGame((prev) => {
+        if (prev.playerStock.name !== 'Jet') return prev;
+        const consumed = consumeJetBattery(prev, 'aegis-shunt');
+        if (consumed.consumedCharge <= 0) return prev;
+        const actorKey = actorKeyFromName(prev.playerStock.name);
+        const combatant = prev.combatants[actorKey];
+        if (!combatant) return prev;
+        const shieldCount = Math.max(1, Math.ceil(consumed.consumedCharge / 2));
+        return resolvePrimeJetAbilityAftermath({
+          ...consumed.state,
+          combatants: {
+            ...consumed.state.combatants,
+            [actorKey]: {
+              ...combatant,
+              elementalShields: {
+                ...combatant.elementalShields,
+                A: (combatant.elementalShields.A ?? 0) + shieldCount,
+                E: (combatant.elementalShields.E ?? 0) + shieldCount,
+                F: (combatant.elementalShields.F ?? 0) + shieldCount,
+                W: (combatant.elementalShields.W ?? 0) + shieldCount,
+              },
+            },
+          },
+        }, slot.effect);
+      });
+      queueDialogueCallout('Jet', 'Aegis online.', 100, 'Shield');
+      return;
+    }
     if (slot.kind === 'ability' && slot.effect === 'slipstream') {
+      setPendingPlayerPlay(null);
       setPinnedTooltipSlotId(null);
       setGame((prev) => {
         const actorKey = actorKeyFromName(prev.playerStock.name);
@@ -3937,7 +5070,29 @@ export const GolfGame = () => {
       return;
     }
 
-    if (slot.kind !== 'captured' || !slot.card || !canPlayOnStock(slot.card, game.playerStock)) return;
+    if ((slot.kind !== 'captured' && slot.kind !== 'generated') || !slot.card) return;
+    const eligibleTargets = getEligiblePlayerTargetsForCard(game, slot.card);
+    if (eligibleTargets.length === 0) {
+      setPendingPlayerPlay(null);
+      return;
+    }
+    const resolvedTargetStockId = targetStockId ?? (eligibleTargets.length === 1 ? eligibleTargets[0].stockId : null);
+    if (!resolvedTargetStockId) {
+      setPendingPlayerPlay({
+        source: slotId === 'left' ? 'captured-left' : 'captured-right',
+        stockIds: eligibleTargets.map((target) => target.stockId),
+      });
+      return;
+    }
+    const resolvedTarget = eligibleTargets.find((target) => target.stockId === resolvedTargetStockId);
+    if (!resolvedTarget) {
+      setPendingPlayerPlay({
+        source: slotId === 'left' ? 'captured-left' : 'captured-right',
+        stockIds: eligibleTargets.map((target) => target.stockId),
+      });
+      return;
+    }
+    setPendingPlayerPlay(null);
     recordUndoSnapshot({
       game: latestGameRef.current,
       enemyTurnSummary,
@@ -3946,25 +5101,37 @@ export const GolfGame = () => {
     });
 
     setGame((prev) => {
-      const nextSequence = prev.playerStockSequence + 1;
-      const nextBenchActionPoints = awardBenchTempo(prev, false);
+      const nextBenchActionPoints = awardBenchTempo(prev, false, resolvedTargetStockId);
+      const progressResult = applyPlayerProgressToTarget(prev, resolvedTargetStockId, slot.card!, 0, nextBenchActionPoints);
+      const generatedPacketBonus =
+        slot.kind === 'generated' && slot.generatedEffect === 'free-energy'
+          ? { E: slot.generatedValue ?? slot.card!.rank }
+          : null;
       const prepared = applyCounterWindowToPacket(
         prev,
-        buildPokePacket(prev.playerStock, prev.enemyStock, nextSequence, 'player')
+        (() => {
+          const basePacket = addPrimeAttackBonuses(prev, buildPokePacket(progressResult.sourceCard, prev.enemyStock, progressResult.sequence, 'player'));
+          if (!generatedPacketBonus) return basePacket;
+          return {
+            ...basePacket,
+            elemental: {
+              ...basePacket.elemental,
+              E: (basePacket.elemental.E ?? 0) + (generatedPacketBonus.E ?? 0),
+            },
+          };
+        })()
       );
       const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
+      const siphonedState = applyJetPassiveSiphon(progressResult.nextState, resolved);
       return resolveEnemyDefeat({
-        ...prev,
-        playerStock: evolveIdentityCard(prev.playerStock, slot.card!),
+        ...siphonedState,
         playerCapturedLeft: slotId === 'left' ? null : prev.playerCapturedLeft,
         playerCapturedRight: slotId === 'right' ? null : prev.playerCapturedRight,
         clearedCount: prev.clearedCount + 1,
-        playerStockSequence: nextSequence,
-        playerStockActionPoints: prev.playerStockActionPoints + 1,
-        playerBenchActionPoints: nextBenchActionPoints,
-        playerFreeTagAvailable: false,
-        playerDiscardPile: [...prev.playerDiscardPile, `Recovered ${rankLabel(slot.card!.rank)}`],
-        ...advancePlayerTagLock(prev),
+        playerDiscardPile: [
+          ...prev.playerDiscardPile,
+          `${progressResult.sourceCard.name}::${slot.kind === 'generated' ? slot.name : 'Recovered'} ${rankLabel(slot.card!.rank)}`
+        ],
       }, resolved.combatants);
     });
   };
@@ -4006,61 +5173,62 @@ export const GolfGame = () => {
     setPinnedTooltipSlotId(null);
     setEnemyStealSelectorOpen(false);
     setGame((prev) => {
+      const stickyCharge = devOverride ? Math.max(1, getJetBatteryCharge(prev, 'sticky-paws')) : getJetBatteryCharge(prev, 'sticky-paws');
+      const consumed = devOverride ? { state: prev, consumedCharge: stickyCharge } : consumeJetBattery(prev, 'sticky-paws');
+      if (consumed.consumedCharge <= 0) return prev;
       const stolenCard = { ...option.card, name: '' };
       const nextCapturedLeft =
         preferredSlot === 'left'
           ? stolenCard
-          : prev.playerCapturedLeft;
+          : consumed.state.playerCapturedLeft;
       const nextCapturedRight =
         preferredSlot === 'right'
           ? stolenCard
-          : prev.playerCapturedRight;
-      return {
-        ...prev,
-        playerHand: prev.playerHand.map((entry) =>
+          : consumed.state.playerCapturedRight;
+      const stolenAp = Math.min(consumed.consumedCharge, consumed.state.enemyStockActionPoints);
+      const rerouted = routeJetChargeToBatteries({
+        ...consumed.state,
+        enemyStockActionPoints: consumed.state.enemyStockActionPoints - stolenAp,
+        playerHand: consumed.state.playerHand.map((entry) =>
           entry.effect === 'sticky-paws' ? { ...entry, armed: false } : entry
         ),
         playerCapturedLeft: nextCapturedLeft,
         playerCapturedRight: nextCapturedRight,
-        playerStockActionPoints: devOverride ? prev.playerStockActionPoints : Math.max(0, prev.playerStockActionPoints - 5),
         stickyPawsCooldown: devOverride ? prev.stickyPawsCooldown : 7,
-      };
+      }, stolenAp);
+      return resolvePrimeJetAbilityAftermath(rerouted, devOverride ? null : 'sticky-paws');
     });
     queueDialogueCallout('Jet', 'Mine now.', 80, 'Sticky Paws');
-  }, [canOpenStickyPawsSteal, enemyTurnSummary, game.playerCapturedLeft, game.playerCapturedRight, guidePlan, recordUndoSnapshot, startPlayerHandAnimation]);
+  }, [canOpenStickyPawsSteal, enemyTurnSummary, game.playerCapturedLeft, game.playerCapturedRight, guidePlan, recordUndoSnapshot, startPlayerHandAnimation, startPlayerStockAnimation]);
 
   const usePathOfStars = useCallback(() => {
     if (currentTurn !== 'player' || game.playerStock.name !== 'Pan') return;
     const stepCount = getPathOfStarsStepCount(game.playerStockActionPoints);
     if (stepCount <= 0) return;
-    const hidden = solveHiddenBestRun(game.tableau, game.playerStock);
     setPinnedTooltipSlotId(null);
+    setPendingPlayerPlay(null);
     setGame((prev) => ({
       ...prev,
       playerStockActionPoints: 0,
     }));
     setGuidePlan({
-      starterStockId: game.playerStock.id,
-      starterRequiresSwap: false,
-      path: hidden.path,
+      path: playerPlanHeuristic.hiddenPath,
       progress: 0,
       source: 'path-of-stars',
       visibleSteps: stepCount,
     });
-  }, [currentTurn, game.playerStock, game.playerStockActionPoints, game.tableau]);
+  }, [currentTurn, game.playerStock.name, game.playerStockActionPoints, playerPlanHeuristic.hiddenPath]);
 
   const usePathOfStarsDev = useCallback(() => {
-    const hidden = solveHiddenBestRun(game.tableau, game.playerStock);
     setPinnedTooltipSlotId(null);
+    setPendingPlayerPlay(null);
     setGuidePlan({
-      starterStockId: game.playerStock.id,
-      starterRequiresSwap: false,
-      path: hidden.path,
+      path: playerPlanHeuristic.hiddenPath,
       progress: 0,
       source: 'path-of-stars',
-      visibleSteps: Math.max(5, hidden.path.length),
+      visibleSteps: Math.max(5, playerPlanHeuristic.hiddenPath.length),
     });
-  }, [game.playerStock, game.tableau]);
+  }, [playerPlanHeuristic.hiddenPath]);
 
   const useJikan = useCallback(() => {
     if (currentTurn !== 'player' || game.playerStock.name !== 'Whis' || game.playerStockActionPoints < 2) return;
@@ -4136,17 +5304,37 @@ export const GolfGame = () => {
     lastUndoRef.current = null;
   }, []);
 
-  const useRiggedConstructCard = useCallback(() => {
+  const useRiggedConstructCard = useCallback((targetStockId?: string) => {
     if (currentTurn !== 'player' || game.riggedConstructCards.length === 0) return;
     if (game.riggedConstructArmed) {
+      setPendingPlayerPlay(null);
       setGame((prev) => ({ ...prev, riggedConstructArmed: false }));
       return;
     }
     const topCard = game.riggedConstructCards[game.riggedConstructCards.length - 1];
-    if (!topCard || !canPlayOnStock(topCard, game.playerStock)) {
+    if (!topCard) return;
+    const eligibleTargets = getEligiblePlayerTargetsForCard(game, topCard);
+    if (eligibleTargets.length === 0) {
+      setPendingPlayerPlay(null);
       setGame((prev) => ({ ...prev, riggedConstructArmed: true }));
       return;
     }
+    const resolvedTargetStockId = targetStockId ?? (eligibleTargets.length === 1 ? eligibleTargets[0].stockId : null);
+    if (!resolvedTargetStockId) {
+      setPendingPlayerPlay({
+        source: 'construct',
+        stockIds: eligibleTargets.map((target) => target.stockId),
+      });
+      return;
+    }
+    if (!eligibleTargets.some((target) => target.stockId === resolvedTargetStockId)) {
+      setPendingPlayerPlay({
+        source: 'construct',
+        stockIds: eligibleTargets.map((target) => target.stockId),
+      });
+      return;
+    }
+    setPendingPlayerPlay(null);
     recordUndoSnapshot({
       game: latestGameRef.current,
       enemyTurnSummary,
@@ -4155,106 +5343,137 @@ export const GolfGame = () => {
     });
     setGame((prev) => {
       const constructTop = prev.riggedConstructCards[prev.riggedConstructCards.length - 1];
-      if (!constructTop || !canPlayOnStock(constructTop, prev.playerStock)) return { ...prev, riggedConstructArmed: true };
-      const nextSequence = prev.playerStockSequence + 1;
-      const nextBenchActionPoints = awardBenchTempo(prev, false);
+      const target = getPlayerTargetByStockId(prev, resolvedTargetStockId);
+      if (!constructTop || !target || !canPlayOnStock(constructTop, target.card)) return { ...prev, riggedConstructArmed: true };
+      const nextBenchActionPoints = awardBenchTempo(prev, false, resolvedTargetStockId);
+      const progressResult = applyPlayerProgressToTarget(prev, resolvedTargetStockId, constructTop, 0, nextBenchActionPoints);
       const prepared = applyCounterWindowToPacket(
         prev,
-        buildPokePacket(prev.playerStock, prev.enemyStock, nextSequence, 'player')
+        addPrimeAttackBonuses(prev, buildPokePacket(progressResult.sourceCard, prev.enemyStock, progressResult.sequence, 'player'))
       );
       const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
+      const siphonedState = applyJetPassiveSiphon(progressResult.nextState, resolved);
       return resolveEnemyDefeat({
-        ...prev,
-        playerStock: evolveIdentityCard(prev.playerStock, constructTop),
+        ...siphonedState,
         riggedConstructCards: prev.riggedConstructCards.slice(0, -1),
-        playerStockSequence: nextSequence,
-        playerStockActionPoints: prev.playerStockActionPoints + 1,
-        playerBenchActionPoints: nextBenchActionPoints,
+        riggedConstructElement: prev.riggedConstructCards.length > 1 ? prev.riggedConstructElement : null,
+        riggedConstructCapacity: prev.riggedConstructCards.length > 1 ? prev.riggedConstructCapacity : 0,
         riggedConstructArmed: false,
       }, resolved.combatants, 'Rigged Construct');
     });
     queueDialogueCallout('Jet', 'Back into the line.', 100);
-  }, [currentTurn, enemyTurnSummary, game.playerStock, game.riggedConstructArmed, game.riggedConstructCards, guidePlan, queueDialogueCallout, recordUndoSnapshot]);
-
-  const useSupportAbility = useCallback((benchIndex?: number) => {
-    if (currentTurn !== 'player') return;
-    const supportIndex = getSupportBenchIndex(game);
-    if (typeof benchIndex === 'number' && benchIndex !== supportIndex) return;
-    const supportCard = getSupportBenchCard(game);
-    if (!supportCard) return;
-    const cost = getSupportAbilityCost(supportCard);
-    const availableAp = game.playerBenchActionPoints[supportIndex] ?? 0;
-    if (game.playerSupportActionUsed || availableAp < cost) return;
-
-    setPinnedTooltipSlotId(null);
-    clearStickyHold();
-    clearKinInspectHold();
-    setKinInspectIndex(null);
-    recordUndoSnapshot({
-      game: latestGameRef.current,
-      enemyTurnSummary,
-      guidePlan,
-      actor: 'player',
-    });
-    setGame((prev) => simulateUseSupportAbility(prev));
-    appendCombatLog({
-      timestamp: Date.now(),
-      biomeId: game.biomeId,
-      type: 'ability',
-      actor: supportCard.name,
-      target: game.playerStock.name,
-      detail: { effect: `support-${supportCard.name.toLowerCase()}`, role: 'support' },
-    });
-
-    if (supportCard.name === 'Hiro') {
-      queueDialogueCallout('Hiro', "Hold the line.", 120);
-      queueDialogueCallout('Jet', 'Locked in.', 760);
-    } else if (supportCard.name === 'Pan') {
-      queueDialogueCallout('Pan', 'Try this route.', 120);
-    } else if (supportCard.name === 'Whis') {
-      queueDialogueCallout('Whis', 'Take the faster beat.', 120);
-    }
-  }, [appendCombatLog, currentTurn, enemyTurnSummary, game, guidePlan, queueDialogueCallout, recordUndoSnapshot]);
+  }, [currentTurn, enemyTurnSummary, game, guidePlan, queueDialogueCallout, recordUndoSnapshot]);
 
   const handleBenchCardClick = useCallback((benchIndex: number) => {
     if (currentTurn !== 'player') return;
-    if (game.batteryMode !== null) {
-      handleBatteryTransfer(benchIndex);
-      return;
-    }
     const benchCard = game.playerBench[benchIndex];
     if (!benchCard) return;
 
-    if (getBenchRole(game, benchIndex) === 'support') {
-      useSupportAbility(benchIndex);
-      return;
-    }
-    if (game.playerSupportRotateUsed) return;
-
     setPinnedTooltipSlotId(null);
+    setPendingPlayerPlay(null);
     clearStickyHold();
     clearKinInspectHold();
     setKinInspectIndex(null);
+    if (benchCard.name === 'Whis') {
+      const snapshot = lastUndoRef.current;
+      const benchAp = game.playerBenchActionPoints[benchIndex] ?? 0;
+      if (!snapshot || benchAp < getBenchAbilityCost(benchCard, getBenchRole(game, benchIndex))) return;
+      if (snapshot.actor === 'enemy') {
+        const restoredBenchActionPoints = [...snapshot.game.playerBenchActionPoints];
+        restoredBenchActionPoints[benchIndex] = Math.max(0, restoredBenchActionPoints[benchIndex] - 2);
+        setGuidePlan(snapshot.guidePlan ? { ...snapshot.guidePlan, path: [...snapshot.guidePlan.path] } : null);
+        setEnemyTurnSummary([...snapshot.enemyTurnSummary]);
+        setCurrentTurn('player');
+        setGame({
+          ...snapshot.game,
+          playerBenchActionPoints: restoredBenchActionPoints,
+        });
+        lastUndoRef.current = null;
+      } else {
+        const current = latestGameRef.current;
+        const priorTableau = snapshot.game.tableau;
+        const currentTableau = current.tableau;
+        let restoredColumnIndex = -1;
+        let restoredCard: CardType | null = null;
+        for (let columnIndex = 0; columnIndex < Math.max(priorTableau.length, currentTableau.length); columnIndex += 1) {
+          const before = priorTableau[columnIndex] ?? [];
+          const after = currentTableau[columnIndex] ?? [];
+          if (before.length > after.length) {
+            restoredColumnIndex = columnIndex;
+            restoredCard = before[before.length - 1] ?? null;
+            break;
+          }
+        }
+        if (restoredColumnIndex < 0 || !restoredCard) return;
+        const restoredTableau = currentTableau.map((column, columnIndex) =>
+          columnIndex === restoredColumnIndex ? [...column, restoredCard!] : column
+        );
+        setGame((prev) => {
+          const nextBenchActionPoints = [...prev.playerBenchActionPoints];
+          nextBenchActionPoints[benchIndex] = Math.max(0, nextBenchActionPoints[benchIndex] - 2);
+          return {
+            ...prev,
+            tableau: restoredTableau,
+            playerBenchActionPoints: nextBenchActionPoints,
+          };
+        });
+        lastUndoRef.current = null;
+      }
+      appendCombatLog({
+        timestamp: Date.now(),
+        biomeId: game.biomeId,
+        type: 'ability',
+        actor: benchCard.name,
+        detail: { effect: 'bench-jikan', role: getBenchRole(game, benchIndex) },
+      });
+      queueDialogueCallout('Whis', 'Return to the earlier beat.', 120);
+      return;
+    }
+
     recordUndoSnapshot({
       game: latestGameRef.current,
       enemyTurnSummary,
       guidePlan,
       actor: 'player',
     });
-    setGame((prev) => simulateRotateSupport(prev, benchIndex));
+    setGame((prev) => simulateUseBenchAbility(prev, benchIndex));
     appendCombatLog({
       timestamp: Date.now(),
       biomeId: game.biomeId,
       type: 'ability',
       actor: benchCard.name,
-      detail: { effect: 'rotate-support', toIndex: benchIndex },
+      target: game.playerStock.name,
+      detail: { effect: `bench-${benchCard.name.toLowerCase()}`, role: getBenchRole(game, benchIndex) },
     });
-    queueDialogueCallout(benchCard.name, 'I can support from here.', 140);
-    const priorSupport = getSupportBenchCard(game);
-    if (priorSupport) {
-      queueDialogueCallout(priorSupport.name, 'Your lead.', 760);
+    if (benchCard.name === 'Hiro') {
+      queueDialogueCallout('Hiro', "I've got you.", 140);
+    } else if (benchCard.name === 'Jet') {
+      queueDialogueCallout('Jet', 'Rewire the lane.', 140);
+    } else if (benchCard.name === 'Pan') {
+      queueDialogueCallout('Pan', 'Let me reshape the route.', 140);
     }
-  }, [appendCombatLog, currentTurn, enemyTurnSummary, game, guidePlan, handleBatteryTransfer, queueDialogueCallout, recordUndoSnapshot, useSupportAbility]);
+  }, [appendCombatLog, currentTurn, enemyTurnSummary, game, guidePlan, queueDialogueCallout, recordUndoSnapshot]);
+
+  const confirmPendingPlayerPlay = useCallback((stockId: string) => {
+    if (!pendingPlayerPlay || !pendingPlayerPlay.stockIds.includes(stockId)) return false;
+    if (pendingPlayerPlay.source === 'tableau' && typeof pendingPlayerPlay.columnIndex === 'number') {
+      playToPlayerStock(pendingPlayerPlay.columnIndex, stockId);
+      return true;
+    }
+    if (pendingPlayerPlay.source === 'captured-left') {
+      useHandSlot('left', stockId);
+      return true;
+    }
+    if (pendingPlayerPlay.source === 'captured-right') {
+      useHandSlot('right', stockId);
+      return true;
+    }
+    if (pendingPlayerPlay.source === 'construct') {
+      useRiggedConstructCard(stockId);
+      return true;
+    }
+    return false;
+  }, [pendingPlayerPlay, playToPlayerStock, useRiggedConstructCard, useHandSlot]);
 
   const armStickyPaws = useCallback(() => {
     if (game.stickyPawsCooldown > 0) return;
@@ -4331,7 +5550,7 @@ export const GolfGame = () => {
     clearDevAbilityHold();
   }, [clearDevAbilityHold]);
 
-  const handleKinInspectPointerDown = useCallback((benchIndex: number) => {
+  const handleKinInspectPointerDown = useCallback((benchIndex: number, activateBenchAbility = false) => {
     clearKinInspectHold();
     suppressKinInspectClickRef.current = false;
     kinInspectHoldIndexRef.current = benchIndex;
@@ -4348,9 +5567,18 @@ export const GolfGame = () => {
     kinInspectHoldTimeoutRef.current = window.setTimeout(() => {
       clearKinInspectHold();
       suppressKinInspectClickRef.current = true;
+      if (
+        activateBenchAbility &&
+        benchIndex >= 0 &&
+        currentTurn === 'player' &&
+        canUseBenchAbilityUi(benchIndex)
+      ) {
+        handleBenchCardClick(benchIndex);
+        return;
+      }
       setKinInspectIndex(benchIndex);
     }, KIN_INSPECT_HOLD_MS);
-  }, [clearKinInspectHold]);
+  }, [canUseBenchAbilityUi, clearKinInspectHold, currentTurn, handleBenchCardClick]);
 
   const handleKinInspectPointerEnd = useCallback(() => {
     clearKinInspectHold();
@@ -4386,9 +5614,12 @@ export const GolfGame = () => {
   const executeGolfMove = (
     prev: GolfGameState,
     actor: 'player' | 'enemy',
-    columnIndex: number
+    columnIndex: number,
+    targetStockId?: string
   ): GolfGameState => {
-    const stock = actor === 'player' ? prev.playerStock : prev.enemyStock;
+    const stock = actor === 'player'
+      ? (targetStockId ? (getPlayerTargetByStockId(prev, targetStockId)?.card ?? prev.playerStock) : prev.playerStock)
+      : prev.enemyStock;
     const candidate = prev.tableau[columnIndex][prev.tableau[columnIndex].length - 1];
     if (!candidate || !canPlayOnStock(candidate, stock)) return prev;
 
@@ -4398,30 +5629,30 @@ export const GolfGame = () => {
     const refillResult = refillClearedTableau(reducedTableau, columnIndex);
 
     if (actor === 'player') {
-      const nextSequence = prev.playerStockSequence + 1;
+      const resolvedTargetStockId = targetStockId ?? prev.playerStock.id;
+      const nextBenchActionPoints = awardBenchTempo(prev, refillResult.tableCleared, resolvedTargetStockId);
+      const tableClearApBonus = getPlayerTableClearApBonus(prev, refillResult.tableCleared);
+      const progressResult = applyPlayerProgressToTarget(prev, resolvedTargetStockId, candidate, tableClearApBonus, nextBenchActionPoints);
+      const efficiencyState = advanceJetEfficiencyFromTableauPlay(progressResult.nextState);
       const prepared = applyCounterWindowToPacket(
         prev,
-        buildPokePacket(prev.playerStock, prev.enemyStock, nextSequence, 'player')
+        addPrimeAttackBonuses(prev, buildPokePacket(progressResult.sourceCard, prev.enemyStock, progressResult.sequence, 'player'))
       );
       const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
+      const siphonedState = applyJetPassiveSiphon(efficiencyState, resolved);
       appendCombatLog({
         timestamp: Date.now(),
         biomeId: prev.biomeId,
         type: 'move',
-        actor: prev.playerStock.name,
+        actor: progressResult.sourceCard.name,
         target: prev.enemyStock.name,
-        detail: { card: candidate.id, columnIndex, damage: resolved.damageDealt, dodged: resolved.dodged },
+        detail: { card: candidate.id, columnIndex, damage: resolved.damageDealt, dodged: resolved.dodged, stockId: resolvedTargetStockId },
       });
       return resolveEnemyDefeat({
-        ...prev,
+        ...siphonedState,
         tableau: refillResult.tableau,
-        playerStock: evolveIdentityCard(prev.playerStock, candidate),
         clearedCount: prev.clearedCount + 1,
-        playerStockSequence: nextSequence,
-        playerStockActionPoints: prev.playerStockActionPoints + 1,
-        playerFreeTagAvailable: false,
         tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
-        ...advancePlayerTagLock(prev),
       }, resolved.combatants);
     }
 
@@ -4448,15 +5679,33 @@ export const GolfGame = () => {
       queueDialogueCallout(nextState.playerStock.name, 'Thanks, Hiro!', 780);
     }
 
+    const dodgeStreak = enemyResolved.dodged && nextState.playerStock.name === 'Jet'
+      ? (enemyResolved.combatants[actorKeyFromName(nextState.playerStock.name)]?.dodgeCounter ?? 0)
+      : 0;
+    const postDodgeState = enemyResolved.dodged && dodgeStreak > 0
+      ? routeJetChargeToBatteries(nextState, dodgeStreak)
+      : nextState;
+    const jetCombatant = enemyResolved.combatants[actorKeyFromName(nextState.playerStock.name)];
+    const normalizedCombatants =
+      nextState.playerStock.name === 'Jet' && jetCombatant
+        ? {
+            ...enemyResolved.combatants,
+            [actorKeyFromName(nextState.playerStock.name)]: {
+              ...jetCombatant,
+              dodgeCounter: enemyResolved.dodged ? dodgeStreak : 0,
+            },
+          }
+        : enemyResolved.combatants;
+
     return {
-      ...nextState,
+      ...postDodgeState,
       playerSupportReactiveUsed: reactedEnemyResult.state.playerSupportReactiveUsed,
       tableau: refillResult.tableau,
       enemyStock: evolveIdentityCard(nextState.enemyStock, candidate),
       clearedCount: nextState.clearedCount + 1,
       enemyStockSequence: nextEnemySequence,
       enemyStockActionPoints: nextState.enemyStockActionPoints + 1,
-      combatants: enemyResolved.combatants,
+      combatants: normalizedCombatants,
       tableClears: nextState.tableClears + (refillResult.tableCleared ? 1 : 0),
     };
   };
@@ -4608,6 +5857,7 @@ export const GolfGame = () => {
       stickyPawsCooldown: Math.max(0, prev.stickyPawsCooldown - 1),
       panPawSperityCooldown: Math.max(0, prev.panPawSperityCooldown - 1),
       riggedConstructCooldown: Math.max(0, prev.riggedConstructCooldown - 1),
+      assistJetRewireCooldown: Math.max(0, prev.assistJetRewireCooldown - 1),
       combatants: ageCombatantsAtTurnBoundary(prev.combatants),
     }));
     enemyTurnTimeoutRef.current = null;
@@ -4628,7 +5878,7 @@ export const GolfGame = () => {
             actor: 'player',
           });
           if (action.type === 'move') {
-            next = executeGolfMove(next, 'player', action.columnIndex);
+            next = executeGolfMove(next, 'player', action.columnIndex, action.stockId);
             continue;
           }
           if (action.type === 'rotate-support') {
@@ -4782,7 +6032,7 @@ export const GolfGame = () => {
           topNode.contains(target) &&
           topCard &&
           column.length > 1 &&
-          canPlayOnStock(topCard, game.playerStock)
+          getEligiblePlayerTargetsForCard(game, topCard).length > 0
         );
       });
 
@@ -4798,47 +6048,94 @@ export const GolfGame = () => {
 
     document.addEventListener('pointerdown', handlePointerDown);
     return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [game.playerStock, game.tableau, stickyPawsArmed]);
+  }, [game, stickyPawsArmed]);
 
   const renderAbilityTooltip = useCallback((slot: PlayerHandSlot) => {
     if (slot.effect === 'battery') {
       return (
         <div>
-          <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Battery</div>
+          <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Quarnyx Battery</div>
           <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Tool Active • Jet Only</div>
           <div className="mt-2 text-sm text-white/80">
-            Prime the battery, tap an ally to bank their AP, then prime it again to route the stored AP into another ally.
+            Prime the card, then click a Jet ability card with a charge profile to dedicate a Quarnyx battery to it. Future Jet AP gains are load-balanced across all connected batteries instead of entering Jet directly. Priming and clicking an already-powered ability ejects that battery.
           </div>
           <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-white/45">
-            Stored AP: {game.batteryStoredActionPoints} • Mode: {game.batteryMode ?? 'idle'}
+            Network: {game.jetBatteries.length} batteries • Prime mode: {game.jetBatteryPrimeArmed ? 'armed' : 'idle'}
           </div>
         </div>
       );
     }
     if (slot.effect === 'siphon') {
+      const charge = getJetBatteryCharge(game, 'siphon');
       return (
         <div>
           <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Siphon</div>
           <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Battle Active • Jet Only</div>
           <div className="mt-2 text-sm text-white/80">
-            Spend 2 AP to steal up to 2 AP from the current enemy stock and grant it to Jet.
+            Discharge the linked battery to steal AP equal to its charge from the enemy stock, then reroute that stolen charge back into Jet's battery network.
           </div>
           <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-white/45">
-            Enemy AP: {game.enemyStockActionPoints}
+            Battery charge: {charge} • Enemy AP: {game.enemyStockActionPoints}
           </div>
         </div>
       );
     }
     if (slot.effect === 'rigged-construct') {
+      const charge = getJetBatteryCharge(game, 'rigged-construct');
       return (
         <div>
           <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Rigged Construct</div>
           <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Battle Active • Jet Only</div>
           <div className="mt-2 text-sm text-white/80">
-            Spend 8 AP to deploy a temporary wild construct. Armed construct turns compatible tableau plays into stored construct cards; tapping the construct releases the top card back into Jet in reverse order.
+            Discharge the linked battery to deploy the Elemental Construct prototype with storage capacity equal to the battery's charge. The first stored card locks the element, and only matching cards can move through it.
           </div>
           <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-white/45">
-            Depth: {game.riggedConstructCards.length} • Cooldown: {game.riggedConstructCooldown > 0 ? game.riggedConstructCooldown : 'ready'}
+            Battery charge: {charge} • Depth: {game.riggedConstructCards.length}/{game.riggedConstructCapacity || charge || 0} • Element: {game.riggedConstructElement ?? 'unset'} • Cooldown: {game.riggedConstructCooldown > 0 ? game.riggedConstructCooldown : 'ready'}
+          </div>
+        </div>
+      );
+    }
+    if (slot.effect === 'rewire') {
+      const charge = getJetBatteryCharge(game, 'rewire');
+      return (
+        <div>
+          <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Rewire</div>
+          <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Tool Active • Jet Only</div>
+          <div className="mt-2 text-sm text-white/80">
+            Discharge the linked battery to gain that many legal tableau-to-tableau rewires. Click one tableau top to mark the source, then a legal destination tableau top to move the card directly.
+          </div>
+          <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-white/45">
+            Battery charge: {charge} • Actions ready: {game.jetRewireActionsRemaining}
+          </div>
+        </div>
+      );
+    }
+    if (slot.effect === 'scrap-plating') {
+      const charge = getJetBatteryCharge(game, 'scrap-plating');
+      return (
+        <div>
+          <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Scrap Plating</div>
+          <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Tool Active • Jet Only</div>
+          <div className="mt-2 text-sm text-white/80">
+            Discharge the linked battery to dismantle a tableau resource into armor. The current prototype automatically strips one deeper tableau card when available.
+          </div>
+          <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-white/45">
+            Battery charge: {charge} • Armor gain: {charge * 2}
+          </div>
+        </div>
+      );
+    }
+    if (slot.effect === 'aegis-shunt') {
+      const charge = getJetBatteryCharge(game, 'aegis-shunt');
+      return (
+        <div>
+          <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Aegis Shunt</div>
+          <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Tool Active • Jet Only</div>
+          <div className="mt-2 text-sm text-white/80">
+            Discharge the linked battery to convert offensive charge into elemental shielding across Jet's defenses.
+          </div>
+          <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-white/45">
+            Battery charge: {charge} • Shields per element: {Math.max(1, Math.ceil(charge / 2))}
           </div>
         </div>
       );
@@ -4857,14 +6154,16 @@ export const GolfGame = () => {
       slot.effect === 'path-of-stars'
         ? `Current payout: ${pathSteps > 0 ? `${pathSteps} steps` : 'needs 10 AP'}`
         : slot.effect === 'sticky-paws'
-          ? `Click to steal from enemy cards. Long press to arm the exploration grab. Cooldown: ${cooldown > 0 ? cooldown : 'ready'}`
+          ? `Linked battery: ${getJetBatteryCharge(game, 'sticky-paws')} charge • Click to steal from enemy cards. Long press to arm the exploration grab. Cooldown: ${cooldown > 0 ? cooldown : 'ready'} • Efficiency: ${game.jetAbilityCardsPlayed}/3 tableau plays`
           : slot.effect === 'paw-sperity'
             ? `Permanent kit card. Cooldown: ${game.panPawSperityCooldown > 0 ? game.panPawSperityCooldown : 'ready'}`
             : slot.effect === 'jikan'
               ? 'Undo target: last combat play or last tableau play.'
-              : cooldown > 0
-                ? `Cooldown: ${cooldown}`
-                : null;
+              : slot.effect === 'repurpose'
+                ? 'Clearing a tableau recovers the final visible card and grants +2 AP.'
+                : cooldown > 0
+                  ? `Cooldown: ${cooldown}`
+                  : null;
 
     return (
       <div>
@@ -4887,7 +6186,7 @@ export const GolfGame = () => {
         ) : null}
       </div>
     );
-  }, [game.batteryMode, game.batteryStoredActionPoints, game.enemyStockActionPoints, game.panPawSperityCooldown, game.playerStockActionPoints, game.riggedConstructCards.length, game.riggedConstructCooldown, game.stickyPawsCooldown]);
+  }, [game.assistJetRewireCooldown, game.enemyStockActionPoints, game.jetAbilityCardsPlayed, game.jetBatteryPrimeArmed, game.jetBatteries, game.jetEfficiencyDiscountReady, game.jetRewireActionsRemaining, game.panPawSperityCooldown, game.playerStockActionPoints, game.riggedConstructCapacity, game.riggedConstructCards.length, game.riggedConstructCooldown, game.riggedConstructElement, game.stickyPawsCooldown]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#020205] text-white" onContextMenu={(event) => event.preventDefault()}>
@@ -4976,8 +6275,8 @@ export const GolfGame = () => {
         </div>
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col px-3 py-3 md:px-4 md:py-4">
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 py-3">
+      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-3 px-3 py-3 md:px-4 md:py-4">
+          <div className="flex w-full flex-col items-center gap-3">
           <div className="flex w-full justify-center">
             <div className="relative flex items-center justify-center" style={{ gap: benchGap }}>
               {game.enemyBench.map((card, benchIndex) => (
@@ -4987,6 +6286,7 @@ export const GolfGame = () => {
                   vitals={getCombatVitals(game, card)}
                   combatant={getCombatantForCard(game, card)}
                   actionPoints={0}
+                  apSegments={normalizeApSegments([], 0, card.element)}
                   discardCount={0}
                   canInteract={false}
                   onClick={() => {}}
@@ -5003,10 +6303,10 @@ export const GolfGame = () => {
                   vitals={getCombatVitals(game, game.enemyStock)}
                   combatant={getCombatantForCard(game, game.enemyStock)}
                   stockRef={enemyStockRef}
-                  actionPoints={game.enemyStockActionPoints}
                   cardSize={boardCardSize}
                   indicatorSize={indicatorSize}
                   compact={boardCompact}
+                  apSegments={normalizeApSegments([], game.enemyStockActionPoints, game.enemyStock.element)}
                 />
                 {game.enemyDefeatFx ? (
                   <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden rounded-[20px]">
@@ -5076,11 +6376,22 @@ export const GolfGame = () => {
             <div className="flex items-start" style={{ gap: columnGap }}>
               {game.tableau.map((column, columnIndex) => {
                 const topCard = column[column.length - 1] ?? null;
+                const eligibleTargets = topCard ? getEligiblePlayerTargetsForCard(game, topCard) : [];
+                const stickyPreviewRank = column.length > 1 ? rankLabel(column[column.length - 2].rank) : null;
+                const showStickyPreview =
+                  !!topCard &&
+                  !!stickyPreviewRank &&
+                  stickyPawsPreviewActive &&
+                  (eligibleTargets.length > 0 || canRouteCardIntoConstruct(game, topCard));
                 const isPlayable =
                   !!topCard &&
                   currentTurn === 'player' &&
-                  canPlayOnStock(topCard, game.playerStock) &&
+                  eligibleTargets.length > 0 &&
                   (!stickyPawsArmed || column.length > 1);
+                const tableauSourcePrimed =
+                  currentTurn === 'player' &&
+                  pendingPlayerPlay?.source === 'tableau' &&
+                  typeof pendingPlayerPlay.columnIndex === 'number';
                 const peekAmount = playerPeek;
                 const edgePeekAmount = playerPeek;
                 const columnHeight = boardCardSize.height + Math.max(0, column.length - 2) * peekAmount + (column.length > 1 ? edgePeekAmount : 0);
@@ -5113,12 +6424,17 @@ export const GolfGame = () => {
                           actualIndex === column.length - 1
                             ? Math.max(0, actualIndex - 1) * peekAmount + edgePeekAmount
                             : actualIndex * peekAmount;
-                        const ancestorStep = isTopCard ? ancestorsHighlightedColumns.get(columnIndex) ?? null : null;
                         const guidanceGlow =
                           currentTurn === 'player' &&
                           effectiveOracleMode !== 'off' &&
                           isTopCard &&
                           guidanceNextColumn === columnIndex;
+                        const isSelectedSource =
+                          currentTurn === 'player' &&
+                          pendingPlayerPlay?.source === 'tableau' &&
+                          pendingPlayerPlay.columnIndex === columnIndex &&
+                          isTopCard;
+                        const backgroundTableauCard = tableauSourcePrimed && !isSelectedSource;
 
                         return (
                           <button
@@ -5145,6 +6461,14 @@ export const GolfGame = () => {
                               width: boardCardSize.width + 4,
                               height: boardCardSize.height + 4,
                               zIndex: displayIndex + 1,
+                              transform: isSelectedSource
+                                ? 'translateY(-10px) scale(1.06)'
+                                : backgroundTableauCard
+                                  ? 'scale(0.985)'
+                                  : undefined,
+                              animation: isSelectedSource ? 'golf-selected-card-float 1.4s ease-in-out infinite' : undefined,
+                              filter: backgroundTableauCard ? 'grayscale(1) saturate(0.45) brightness(0.42)' : undefined,
+                              opacity: backgroundTableauCard ? 0.7 : 1,
                             }}
                           >
                             <div
@@ -5152,9 +6476,21 @@ export const GolfGame = () => {
                                 isTopCard ? 'border-white/15 bg-black/62' : 'border-white/10 bg-black/55'
                               }`}
                               style={
-                                guidanceGlow
-                                  ? { boxShadow: effectiveOracleMode === 'ancestors' ? '0 0 24px rgba(230,179,30,0.28)' : '0 0 20px rgba(230,179,30,0.16)' }
-                                  : undefined
+                                isSelectedSource
+                                  ? {
+                                      borderColor: 'rgba(230,179,30,0.7)',
+                                      boxShadow: '0 0 28px rgba(230,179,30,0.32), 0 0 10px rgba(230,179,30,0.2)',
+                                      background: 'rgba(14, 10, 3, 0.82)',
+                                    }
+                                  : backgroundTableauCard
+                                    ? {
+                                        borderColor: 'rgba(255,255,255,0.08)',
+                                        boxShadow: 'none',
+                                        background: 'rgba(0, 0, 0, 0.82)',
+                                      }
+                                  : guidanceGlow
+                                    ? { boxShadow: effectiveOracleMode === 'ancestors' ? '0 0 24px rgba(230,179,30,0.28)' : '0 0 20px rgba(230,179,30,0.16)' }
+                                    : undefined
                               }
                             >
                               {isEnemyDragSource ? (
@@ -5174,9 +6510,12 @@ export const GolfGame = () => {
                                     disableTilt
                                     disableHoverLift
                                   />
-                                  {ancestorStep ? (
-                                    <div className="pointer-events-none absolute right-2 top-2 z-10 rounded-full border border-game-gold/40 bg-black/75 px-1.5 py-0.5 text-[9px] font-black text-game-gold">
-                                      {ancestorStep}
+                                  {isTopCard && showStickyPreview ? (
+                                    <div className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 -translate-y-[120%]">
+                                      <div className="rounded-full border border-game-gold/45 bg-black/88 px-2 py-1 shadow-[0_0_18px_rgba(230,179,30,0.24)]">
+                                        <div className="text-[8px] font-black uppercase tracking-[0.16em] text-game-gold/70">under</div>
+                                        <div className="mt-[1px] text-center text-[12px] font-black leading-none text-white">{stickyPreviewRank}</div>
+                                      </div>
                                     </div>
                                   ) : null}
                                 </div>
@@ -5193,7 +6532,7 @@ export const GolfGame = () => {
           </div>
 
           <div className="flex w-full flex-col items-center gap-3">
-            <div className="flex items-center justify-center" style={{ gap: benchGap }}>
+            <div className="grid w-full items-center gap-3 md:grid-cols-[minmax(0,1fr)_var(--prime-zone)_minmax(0,1fr)]" style={{ ['--prime-zone' as const]: `${primeVisualZoneWidth}px` }}>
               <div className="flex items-center justify-end" style={{ gap: benchGap }}>
                 {leftHandSlots.map((slot) =>
                   slot.kind === 'ability' ? (
@@ -5217,6 +6556,10 @@ export const GolfGame = () => {
                             useHandSlot('left');
                           } else if (slot.effect === 'battery') {
                             useHandSlot('jet-left-2');
+                          } else if (slot.effect === 'rewire') {
+                            useHandSlot('jet-left-3');
+                          } else if (slot.effect === 'aegis-shunt') {
+                            useHandSlot('jet-right-4');
                           }
                         }}
                         onPointerDown={(event) => handleAbilityDevPointerDown(event, slot)}
@@ -5245,9 +6588,9 @@ export const GolfGame = () => {
                       slot={slot}
                       canUse={
                         currentTurn === 'player' &&
-                        slot.kind === 'captured' &&
+                        (slot.kind === 'captured' || slot.kind === 'generated') &&
                         !!slot.card &&
-                        canPlayOnStock(slot.card, game.playerStock)
+                        getEligiblePlayerTargetsForCard(game, slot.card).length > 0
                       }
                       interactive={currentTurn === 'player'}
                       onClick={() => useHandSlot('left')}
@@ -5259,39 +6602,44 @@ export const GolfGame = () => {
                   )
                 )}
               </div>
-              {activeActorName === 'Jet' && (game.riggedConstructCards.length > 0 || game.riggedConstructCooldown > 0) ? (
-                <RiggedConstructCard
-                  topCard={game.riggedConstructCards[game.riggedConstructCards.length - 1] ?? null}
-                  depth={game.riggedConstructCards.length}
-                  armed={game.riggedConstructArmed}
-                  cooldownRemaining={game.riggedConstructCooldown}
-                  onClick={useRiggedConstructCard}
-                  cardSize={handCardSize}
+              {kinInspectIndex === null ? (
+                <div className="relative flex items-center justify-center">
+                  {activeActorName === 'Jet' && (game.riggedConstructCards.length > 0 || game.riggedConstructCooldown > 0) ? (
+                    <div className="absolute right-[calc(100%+12px)] top-1/2 -translate-y-1/2">
+                      <RiggedConstructCard
+                        topCard={game.riggedConstructCards[game.riggedConstructCards.length - 1] ?? null}
+                        depth={game.riggedConstructCards.length}
+                        armed={game.riggedConstructArmed}
+                        cooldownRemaining={game.riggedConstructCooldown}
+                        onClick={useRiggedConstructCard}
+                        cardSize={handCardSize}
+                      />
+                    </div>
+                  ) : null}
+                  <StockActorShellView
+                    actor={PLAYER_STOCK_ACTOR}
+                    stock={game.playerStock}
+                    vitals={getCombatVitals(game, game.playerStock)}
+                    combatant={getCombatantForCard(game, game.playerStock)}
+                    stockRef={playerStockRef}
+                    onClick={() => {
+                      if (confirmPendingPlayerPlay(game.playerStock.id)) {
+                        return;
+                      }
+                    }}
+                    onPointerDown={() => handleKinInspectPointerDown(-1)}
+                    onPointerUp={handleKinInspectPointerEnd}
+                    onPointerCancel={handleKinInspectPointerEnd}
+                    holdProgress={kinInspectHoldIndexRef.current === -1 ? kinInspectHoldProgress : 0}
+                    cardSize={boardCardSize}
+                    indicatorSize={indicatorSize}
+                  compact={boardCompact}
+                  heuristicLabel={null}
+                  highlighted={false}
+                  apSegments={normalizeApSegments(game.playerPrimeApSegments, game.playerStockActionPoints, game.playerStock.element)}
                 />
+                </div>
               ) : null}
-              <StockActorShellView
-                actor={PLAYER_STOCK_ACTOR}
-                stock={game.playerStock}
-                vitals={getCombatVitals(game, game.playerStock)}
-                combatant={getCombatantForCard(game, game.playerStock)}
-                stockRef={playerStockRef}
-                onClick={() => {
-                  if (game.batteryMode !== null) {
-                    handleBatteryTransfer('prime');
-                  }
-                }}
-                onPointerDown={() => handleKinInspectPointerDown(-1)}
-                onPointerUp={handleKinInspectPointerEnd}
-                onPointerCancel={handleKinInspectPointerEnd}
-                holdProgress={kinInspectHoldIndexRef.current === -1 ? kinInspectHoldProgress : 0}
-                cardSize={boardCardSize}
-                indicatorSize={indicatorSize}
-                compact={boardCompact}
-                heuristicLabel={null}
-                highlighted={guidanceHighlightedStockId === game.playerStock.id}
-                actionPoints={game.playerStockActionPoints}
-                discardCount={game.playerDiscardPile.length}
-              />
               <div className="flex items-center justify-start" style={{ gap: benchGap }}>
                 {rightHandSlots.map((slot) =>
                   slot.kind === 'ability' ? (
@@ -5308,6 +6656,10 @@ export const GolfGame = () => {
                         interactive={currentTurn === 'player'}
                         onClick={() => {
                           if (slot.effect === 'sticky-paws') {
+                            if (game.jetBatteryPrimeArmed) {
+                              useHandSlot('right');
+                              return;
+                            }
                             if (canOpenStickyPawsSteal) {
                               setPinnedTooltipSlotId(null);
                               setEnemyStealSelectorOpen(true);
@@ -5318,7 +6670,7 @@ export const GolfGame = () => {
                             useJikan();
                           } else if (slot.effect === 'tap-out') {
                             useHandSlot('right');
-                          } else if (slot.effect === 'siphon') {
+                          } else if (slot.effect === 'scrap-plating') {
                             useHandSlot('jet-right-2');
                           } else if (slot.effect === 'rigged-construct') {
                             useHandSlot('jet-right-3');
@@ -5376,9 +6728,9 @@ export const GolfGame = () => {
                       slot={slot}
                       canUse={
                         currentTurn === 'player' &&
-                        slot.kind === 'captured' &&
+                        (slot.kind === 'captured' || slot.kind === 'generated') &&
                         !!slot.card &&
-                        canPlayOnStock(slot.card, game.playerStock)
+                        getEligiblePlayerTargetsForCard(game, slot.card).length > 0
                       }
                       interactive={currentTurn === 'player'}
                       onClick={() => useHandSlot('right')}
@@ -5392,131 +6744,34 @@ export const GolfGame = () => {
               </div>
             </div>
             <div ref={benchInspectorRef} className="flex flex-col items-center gap-3">
-              {effectiveOracleMode === 'guidance' && bestStarterHeuristic ? (
+              {effectiveOracleMode !== 'off' && nextGuideStep ? (
                 <div className="text-[9px] font-mono uppercase tracking-[0.14em] text-game-gold/80">
-                  Favor the highlighted stock
+                  Follow Navi
                 </div>
               ) : null}
-              {kinInspectIndex !== null && inspectedKinCard && inspectedKinTaxonomy ? (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="text-[9px] font-mono uppercase tracking-[0.14em] text-game-teal/70">
-                    Inspecting {inspectedKinCard.name}
-                  </div>
-                  <div className="flex items-start justify-center" style={{ gap: benchGap }}>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="text-[8px] font-mono uppercase tracking-[0.14em] text-white/45">Kin Card</div>
+              <div className="flex items-start justify-center" style={{ gap: benchKinGap }}>
+                {assistBenchIndices.slice(0, 1).map((benchIndex) => {
+                  const card = game.playerBench[benchIndex];
+                  if (!card) return null;
+                  return (
+                    <div key={card.id} className="flex justify-center" style={{ width: benchActorZoneWidth }}>
                       <KinBenchCard
-                        card={inspectedKinCard}
-                        vitals={getCombatVitals(game, inspectedKinCard)}
-                        combatant={getCombatantForCard(game, inspectedKinCard)}
-                        actionPoints={kinInspectIndex === -1 ? game.playerStockActionPoints : (game.playerBenchActionPoints[kinInspectIndex] ?? 0)}
-                        cardSize={boardCardSize}
-                        heuristicLabel={null}
-                        highlighted={guidanceHighlightedStockId === inspectedKinCard.id || (highlightPanForBadLuck && inspectedKinCard.name === 'Pan')}
-                        breathing={highlightPanForBadLuck && inspectedKinCard.name === 'Pan'}
-                        discardCount={game.playerDiscardPile.length}
-                        canInteract={false}
-                        onClick={() => {}}
-                      />
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="text-[8px] font-mono uppercase tracking-[0.14em] leading-[1.1] text-white/45 text-center">
-                        <div>Signature</div>
-                        <div>Ability</div>
-                      </div>
-                      {inspectedKinTaxonomy.signature.length > 0 ? inspectedKinTaxonomy.signature.map((slot) => (
-                        <Tooltip key={`${inspectedKinCard.id}-${slot.slotId}-signature`} content={renderAbilityTooltip(slot)} pinnable={false}>
-                          <HandSlotCard
-                            slot={slot}
-                            canUse={false}
-                            onClick={() => {}}
-                            cooldownRemaining={getAbilityCooldown(game, slot.effect)}
-                            taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
-                            cardSize={handCardSize}
-                          />
-                        </Tooltip>
-                      )) : <HandSlotCard slot={createEmptyHandSlot('left')} canUse={false} onClick={() => {}} cardSize={handCardSize} />}
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="text-[8px] font-mono uppercase tracking-[0.14em] leading-[1.1] text-white/45 text-center">
-                        <div>Tableau Clear</div>
-                        <div>Ability</div>
-                      </div>
-                      {inspectedKinTaxonomy.tableauClear.length > 0 ? inspectedKinTaxonomy.tableauClear.map((slot) => (
-                        <Tooltip key={`${inspectedKinCard.id}-${slot.slotId}-tableau`} content={renderAbilityTooltip(slot)} pinnable={false}>
-                          <HandSlotCard
-                            slot={slot}
-                            canUse={false}
-                            onClick={() => {}}
-                            cooldownRemaining={getAbilityCooldown(game, slot.effect)}
-                            taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
-                            cardSize={handCardSize}
-                          />
-                        </Tooltip>
-                      )) : <HandSlotCard slot={createEmptyHandSlot('left')} canUse={false} onClick={() => {}} cardSize={handCardSize} />}
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="text-[8px] font-mono uppercase tracking-[0.14em] text-white/45">Tool Abilities</div>
-                      <div className="flex items-start justify-center" style={{ gap: benchGap }}>
-                        {inspectedKinTaxonomy.tools.length > 0 ? inspectedKinTaxonomy.tools.map((slot) => (
-                          <Tooltip key={`${inspectedKinCard.id}-${slot.slotId}-tool`} content={renderAbilityTooltip(slot)} pinnable={false}>
-                            <HandSlotCard
-                              slot={slot}
-                              canUse={false}
-                              onClick={() => {}}
-                              cooldownRemaining={getAbilityCooldown(game, slot.effect)}
-                              taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
-                              cardSize={handCardSize}
-                            />
-                          </Tooltip>
-                        )) : <HandSlotCard slot={createEmptyHandSlot('left')} canUse={false} onClick={() => {}} cardSize={handCardSize} />}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="text-[8px] font-mono uppercase tracking-[0.14em] text-white/45">Battle Abilities</div>
-                      <div className="flex items-start justify-center" style={{ gap: benchGap }}>
-                        {inspectedKinTaxonomy.battle.length > 0 ? inspectedKinTaxonomy.battle.map((slot) => (
-                          <Tooltip key={`${inspectedKinCard.id}-${slot.slotId}-battle`} content={renderAbilityTooltip(slot)} pinnable={false}>
-                            <HandSlotCard
-                              slot={slot}
-                              canUse={false}
-                              onClick={() => {}}
-                              cooldownRemaining={getAbilityCooldown(game, slot.effect)}
-                              taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
-                              cardSize={handCardSize}
-                            />
-                          </Tooltip>
-                        )) : <HandSlotCard slot={createEmptyHandSlot('left')} canUse={false} onClick={() => {}} cardSize={handCardSize} />}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-4">
-                  {supportBenchCard ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-game-gold/80">
-                        Support
-                      </div>
-                      <KinBenchCard
-                        key={supportBenchCard.id}
-                        card={supportBenchCard}
-                        vitals={getCombatVitals(game, supportBenchCard)}
-                        combatant={getCombatantForCard(game, supportBenchCard)}
+                        card={card}
+                        vitals={getCombatVitals(game, card)}
+                        combatant={getCombatantForCard(game, card)}
                         cardRef={(node) => {
-                          playerBenchRefs.current[supportBenchIndex] = node;
+                          playerBenchRefs.current[benchIndex] = node;
                         }}
-                        actionPoints={game.playerBenchActionPoints[supportBenchIndex] ?? 0}
+                        actionPoints={game.playerBenchActionPoints[benchIndex] ?? 0}
+                        apSegments={normalizeApSegments([], game.playerBenchActionPoints[benchIndex] ?? 0, card.element)}
                         cardSize={boardCardSize}
                         heuristicLabel={null}
-                        highlighted={guidanceHighlightedStockId === supportBenchCard.id || (highlightPanForBadLuck && supportBenchCard.name === 'Pan')}
-                        breathing={highlightPanForBadLuck && supportBenchCard.name === 'Pan'}
+                        highlighted={false}
+                        breathing={highlightPanForBadLuck && card.name === 'Pan'}
                         discardCount={game.playerDiscardPile.length}
-                        canInteract={currentTurn === 'player' && game.batteryMode === null}
-                        roleLabel="Support"
-                        roleDescription={getSupportPassiveSummary(supportBenchCard)}
-                        activeRole
-                        onPointerDown={() => handleKinInspectPointerDown(supportBenchIndex)}
+                        canInteract={currentTurn === 'player' && canUseBenchAbilityUi(benchIndex)}
+                        roleDescription={getAssistPassiveSummary(card)}
+                        onPointerDown={() => handleKinInspectPointerDown(benchIndex, true)}
                         onPointerUp={handleKinInspectPointerEnd}
                         onPointerCancel={handleKinInspectPointerEnd}
                         onClickCapture={(event) => {
@@ -5526,78 +6781,141 @@ export const GolfGame = () => {
                             event.preventDefault();
                           }
                         }}
-                        holdProgress={kinInspectHoldIndexRef.current === supportBenchIndex ? kinInspectHoldProgress : 0}
-                        onClick={() => handleBenchCardClick(supportBenchIndex)}
+                        holdProgress={kinInspectHoldIndexRef.current === benchIndex ? kinInspectHoldProgress : 0}
+                        onClick={() => {
+                          if (confirmPendingPlayerPlay(card.id)) {
+                            return;
+                          }
+                        }}
                       />
                     </div>
-                  ) : null}
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-game-teal/70">
-                      Assist
-                    </div>
-                    <div className="flex items-start justify-center" style={{ gap: benchKinGap }}>
-                      {assistBenchIndices.map((benchIndex) => {
-                        const card = game.playerBench[benchIndex];
-                        if (!card) return null;
-                        return (
-                          <KinBenchCard
-                            key={card.id}
-                            card={card}
-                            vitals={getCombatVitals(game, card)}
-                            combatant={getCombatantForCard(game, card)}
-                            cardRef={(node) => {
-                              playerBenchRefs.current[benchIndex] = node;
-                            }}
-                            actionPoints={game.playerBenchActionPoints[benchIndex] ?? 0}
-                            cardSize={boardCardSize}
-                            heuristicLabel={null}
-                            highlighted={guidanceHighlightedStockId === card.id || (highlightPanForBadLuck && card.name === 'Pan')}
-                            breathing={highlightPanForBadLuck && card.name === 'Pan'}
-                            discardCount={game.playerDiscardPile.length}
-                            canInteract={currentTurn === 'player' && (game.batteryMode !== null || !game.playerSupportRotateUsed)}
-                            roleLabel="Assist"
-                            roleDescription={getAssistPassiveSummary(card)}
-                            onPointerDown={() => handleKinInspectPointerDown(benchIndex)}
-                            onPointerUp={handleKinInspectPointerEnd}
-                            onPointerCancel={handleKinInspectPointerEnd}
-                            onClickCapture={(event) => {
-                              if (suppressKinInspectClickRef.current) {
-                                suppressKinInspectClickRef.current = false;
-                                event.stopPropagation();
-                                event.preventDefault();
-                              }
-                            }}
-                            holdProgress={kinInspectHoldIndexRef.current === benchIndex ? kinInspectHoldProgress : 0}
-                            onClick={() => handleBenchCardClick(benchIndex)}
-                          />
-                        );
-                      })}
-                    </div>
+                  );
+                })}
+                {supportBenchCard ? (
+                  <div className="flex justify-center" style={{ width: benchActorZoneWidth }}>
+                    <KinBenchCard
+                      key={supportBenchCard.id}
+                      card={supportBenchCard}
+                      vitals={getCombatVitals(game, supportBenchCard)}
+                      combatant={getCombatantForCard(game, supportBenchCard)}
+                      cardRef={(node) => {
+                        playerBenchRefs.current[supportBenchIndex] = node;
+                      }}
+                      actionPoints={game.playerBenchActionPoints[supportBenchIndex] ?? 0}
+                      apSegments={normalizeApSegments([], game.playerBenchActionPoints[supportBenchIndex] ?? 0, supportBenchCard.element)}
+                      cardSize={boardCardSize}
+                      heuristicLabel={null}
+                      highlighted={false}
+                      breathing={highlightPanForBadLuck && supportBenchCard.name === 'Pan'}
+                      discardCount={game.playerDiscardPile.length}
+                      canInteract={currentTurn === 'player' && canUseBenchAbilityUi(supportBenchIndex)}
+                      roleDescription={getSupportPassiveSummary(supportBenchCard)}
+                      onPointerDown={() => handleKinInspectPointerDown(supportBenchIndex, true)}
+                      onPointerUp={handleKinInspectPointerEnd}
+                      onPointerCancel={handleKinInspectPointerEnd}
+                      onClickCapture={(event) => {
+                        if (suppressKinInspectClickRef.current) {
+                          suppressKinInspectClickRef.current = false;
+                          event.stopPropagation();
+                          event.preventDefault();
+                        }
+                      }}
+                      holdProgress={kinInspectHoldIndexRef.current === supportBenchIndex ? kinInspectHoldProgress : 0}
+                      onClick={() => {
+                        if (confirmPendingPlayerPlay(supportBenchCard.id)) {
+                          return;
+                        }
+                      }}
+                    />
                   </div>
-                </div>
-              )}
+                ) : null}
+                {assistBenchIndices.slice(1).map((benchIndex) => {
+                  const card = game.playerBench[benchIndex];
+                  if (!card) return null;
+                  return (
+                    <div key={card.id} className="flex justify-center" style={{ width: benchActorZoneWidth }}>
+                      <KinBenchCard
+                        card={card}
+                        vitals={getCombatVitals(game, card)}
+                        combatant={getCombatantForCard(game, card)}
+                        cardRef={(node) => {
+                          playerBenchRefs.current[benchIndex] = node;
+                        }}
+                        actionPoints={game.playerBenchActionPoints[benchIndex] ?? 0}
+                        apSegments={normalizeApSegments([], game.playerBenchActionPoints[benchIndex] ?? 0, card.element)}
+                        cardSize={boardCardSize}
+                        heuristicLabel={null}
+                        highlighted={false}
+                        breathing={highlightPanForBadLuck && card.name === 'Pan'}
+                        discardCount={game.playerDiscardPile.length}
+                        canInteract={currentTurn === 'player' && canUseBenchAbilityUi(benchIndex)}
+                        roleDescription={getAssistPassiveSummary(card)}
+                        onPointerDown={() => handleKinInspectPointerDown(benchIndex, true)}
+                        onPointerUp={handleKinInspectPointerEnd}
+                        onPointerCancel={handleKinInspectPointerEnd}
+                        onClickCapture={(event) => {
+                          if (suppressKinInspectClickRef.current) {
+                            suppressKinInspectClickRef.current = false;
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }
+                        }}
+                        holdProgress={kinInspectHoldIndexRef.current === benchIndex ? kinInspectHoldProgress : 0}
+                        onClick={() => {
+                          if (confirmPendingPlayerPlay(card.id)) {
+                            return;
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             {showHeuristicValues && currentTurn === 'player' && effectiveOracleMode !== 'ancestors' ? (
               <HeuristicPill label={effectiveOracleMode === 'ancestors' ? 'hidden best path' : 'visible best path'} />
             ) : null}
+            <div className="fixed bottom-4 right-4 z-40 flex items-end gap-3 md:bottom-6 md:right-6">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowDiscardTray((prev) => !prev)}
+                  className="rounded-2xl border border-game-teal/35 bg-black/78 px-4 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-game-teal shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-sm transition-colors hover:bg-game-teal/12"
+                >
+                  Discard {game.playerDiscardPile.length}
+                </button>
+                {showDiscardTray ? (
+                  <div className="absolute bottom-[calc(100%+10px)] right-0 w-52 rounded-2xl border border-game-teal/25 bg-black/90 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.42)] backdrop-blur-sm">
+                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-game-teal">Party Discards</div>
+                    <div className="mt-3 flex flex-col gap-2">
+                      {['Jet', 'Hiro', 'Pan', 'Whis'].map((actorName) => (
+                        <div key={actorName} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/5 px-3 py-2">
+                          <span className="text-[10px] font-black uppercase tracking-[0.12em] text-white/78">{actorName}</span>
+                          <span className="text-sm font-black tabular-nums text-white">{partyDiscardCounts[actorName] ?? 0}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={runEnemyTurn}
+                disabled={currentTurn !== 'player'}
+                className={`rounded-2xl border px-5 py-4 text-[10px] font-black uppercase tracking-[0.22em] shadow-[0_12px_30px_rgba(0,0,0,0.38)] backdrop-blur-sm transition-colors ${
+                  currentTurn === 'player'
+                    ? 'border-game-pink/55 bg-black/78 text-game-pink hover:bg-game-pink/14'
+                    : 'cursor-not-allowed border-white/10 bg-black/45 text-white/25'
+                }`}
+                style={{
+                  minWidth: Math.round(handCardSize.width * 1.16),
+                }}
+              >
+                End Turn
+              </button>
             </div>
           </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={runEnemyTurn}
-        disabled={currentTurn !== 'player'}
-        className={`fixed bottom-4 right-4 z-40 rounded-2xl border px-5 py-4 text-[10px] font-black uppercase tracking-[0.22em] shadow-[0_12px_30px_rgba(0,0,0,0.38)] backdrop-blur-sm transition-colors md:bottom-6 md:right-6 ${
-          currentTurn === 'player'
-            ? 'border-game-pink/55 bg-black/78 text-game-pink hover:bg-game-pink/14'
-            : 'cursor-not-allowed border-white/10 bg-black/45 text-white/25'
-        }`}
-        style={{
-          minWidth: Math.round(handCardSize.width * 1.16),
-        }}
-      >
-        End Turn
-      </button>
+        </div>
 
       {enemyDragAnim && (
         <div className="pointer-events-none absolute inset-0 z-30">
