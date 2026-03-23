@@ -13,7 +13,15 @@ const DEV_HOST = process.env.VITE_DEV_HOST?.trim() || '0.0.0.0';
 const DEV_PORT = parsePort(process.env.VITE_DEV_PORT, 5178);
 const DEV_HMR_HOST = process.env.VITE_DEV_HMR_HOST?.trim();
 const DEV_HMR_PORT = parsePort(process.env.VITE_DEV_HMR_PORT, DEV_PORT);
-const DEV_HTTPS = process.env.VITE_DEV_HTTPS?.trim().toLowerCase() !== 'false';
+const DEV_HTTPS = process.env.VITE_DEV_HTTPS?.trim().toLowerCase() === 'true';
+
+const replaceActorDefinitionsBlock = (source: string, actors: unknown[]) => {
+  const block = `// ACTOR_DEFINITIONS_START\nexport const ACTOR_DEFINITIONS: ActorDefinition[] = ${JSON.stringify(actors, null, 2)};\n// ACTOR_DEFINITIONS_END`;
+  return source.replace(
+    /\/\/ ACTOR_DEFINITIONS_START[\s\S]*?\/\/ ACTOR_DEFINITIONS_END/,
+    block
+  );
+};
 
 export default defineConfig({
   server: {
@@ -197,6 +205,108 @@ export default defineConfig({
               fs.writeFileSync(filePath, JSON.stringify(parsed, null, 2), 'utf8');
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify(parsed));
+            } catch (err) {
+              res.statusCode = 400;
+              res.end('Write failed');
+            }
+          });
+        });
+        server.middlewares.use('/__enemy-encounters/overrides', (req, res) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          try {
+            const filePath = path.resolve(__dirname, 'src/data/enemyEncounters.json');
+            if (!fs.existsSync(filePath)) {
+              res.setHeader('Content-Type', 'application/json');
+              res.end('{"biomes": []}');
+              return;
+            }
+            const contents = fs.readFileSync(filePath, 'utf8');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(contents);
+          } catch (err) {
+            res.statusCode = 500;
+            res.end('Unable to load enemy encounters');
+          }
+        });
+        server.middlewares.use('/__enemy-encounters/save', (req, res) => {
+          if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const parsed = JSON.parse(body);
+              if (!parsed || !Array.isArray(parsed.biomes)) {
+                res.statusCode = 400;
+                res.end('Invalid payload');
+                return;
+              }
+              const filePath = path.resolve(__dirname, 'src/data/enemyEncounters.json');
+              fs.writeFileSync(filePath, JSON.stringify({ biomes: parsed.biomes }, null, 2), 'utf8');
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(parsed));
+            } catch (err) {
+              res.statusCode = 400;
+              res.end('Write failed');
+            }
+          });
+        });
+        server.middlewares.use('/__actors/overrides', (req, res) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          try {
+            const filePath = path.resolve(__dirname, 'src/engine/actors.ts');
+            const contents = fs.readFileSync(filePath, 'utf8');
+            const match = contents.match(/export const ACTOR_DEFINITIONS: ActorDefinition\[] = ([\s\S]*?);\n\/\/ ACTOR_DEFINITIONS_END/);
+            if (!match) {
+              res.statusCode = 500;
+              res.end('Unable to parse actors');
+              return;
+            }
+            const actors = JSON.parse(match[1]);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ actors }));
+          } catch (err) {
+            res.statusCode = 500;
+            res.end('Unable to load actors');
+          }
+        });
+        server.middlewares.use('/__actors/save', (req, res) => {
+          if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const parsed = JSON.parse(body);
+              if (!parsed || !Array.isArray(parsed.actors)) {
+                res.statusCode = 400;
+                res.end('Invalid payload');
+                return;
+              }
+              const filePath = path.resolve(__dirname, 'src/engine/actors.ts');
+              const existing = fs.readFileSync(filePath, 'utf8');
+              const next = replaceActorDefinitionsBlock(existing, parsed.actors);
+              fs.writeFileSync(filePath, next, 'utf8');
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ actors: parsed.actors }));
             } catch (err) {
               res.statusCode = 400;
               res.end('Write failed');
@@ -449,10 +559,14 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main:       path.resolve(__dirname, 'index.html'),
+        banks:      path.resolve(__dirname, 'banks.html'),
+        city:       path.resolve(__dirname, 'city.html'),
         cardDesigner: path.resolve(__dirname, 'cardDesigner.html'),
         immersion:  path.resolve(__dirname, 'immersion.html'),
         world:      path.resolve(__dirname, 'world.html'),
         auram:      path.resolve(__dirname, 'auram.html'),
+        tooling:    path.resolve(__dirname, 'tooling.html'),
+        ux:         path.resolve(__dirname, 'ux.html'),
       },
     },
   },

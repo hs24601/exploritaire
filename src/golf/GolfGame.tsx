@@ -3,15 +3,26 @@ import type { CSSProperties } from 'react';
 import { Card } from '../components/Card';
 import { Callout } from '../components/Callout';
 import { Tooltip } from '../components/Tooltip';
+import { AbilityApBar } from '../components/combat/AbilityApBar';
 import { BurnEdgesEffect } from '../components/active/BurnEdgesEffect';
 import { useImmersiveBattle } from '../contexts/ImmersiveBattleContext';
 import type { Card as CardType, Element } from '../engine/types';
+import {
+  getKinEffectDefinition,
+  getActorApCap,
+  getKinProfile,
+  getStarterAbilityByEffect,
+  getStarterPackAbilityName,
+  STARTER_ABILITIES,
+  STARTER_KIN_METADATA,
+} from './data/starterKinData';
+import type { GolfStarterAbility as StarterAbility, GolfKinFamily as KinFamily } from './data/starterKinData';
 
 const ELEMENTAL_SUITS = [
-  { suit: '💨', element: 'A' },
-  { suit: '⛰️', element: 'E' },
-  { suit: '🔥', element: 'F' },
-  { suit: '💧', element: 'W' },
+  { suit: '♠', element: 'N' },
+  { suit: '♥', element: 'N' },
+  { suit: '♣', element: 'N' },
+  { suit: '♦', element: 'N' },
 ] as const;
 
 const GOLF_ELEMENT_INDICATOR_SIZE = 22;
@@ -29,6 +40,10 @@ const ENEMY_POINTER_CLICK_MS = 140;
 const STICKY_PAWS_HOLD_MS = 700;
 const DEV_ABILITY_HOLD_MS = 450;
 const KIN_INSPECT_HOLD_MS = 700;
+const STARTER_PACK_SIZE = 4;
+const ACTIVE_PARTY_SIZE = 4;
+const ACTIVE_BENCH_SIZE = ACTIVE_PARTY_SIZE - 1;
+const ENCOUNTER_POWER_LEVEL = 4;
 const BATTERY_TARGET_CHARGE = 10;
 const JET_EFFICIENCY_TRIGGER = 3;
 const JET_EFFICIENCY_DISCOUNT = 3;
@@ -39,19 +54,20 @@ const GOLF_COMBAT_LOG_STATS_KEY = 'exploritaire.golf.combat-log-stats.v1';
 
 const clampNumber = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-const getGolfSegmentColor = (element: Element) => {
-  if (element === 'A') return '#70e5f0';
-  if (element === 'W') return '#78aff7';
-  if (element === 'E') return '#b9ce46';
-  if (element === 'F') return '#ff8a42';
-  if (element === 'L') return '#efe58a';
-  if (element === 'D') return '#9b7cff';
-  return '#8a8f98';
-};
-
 type GolfGameState = {
   biomeId: string;
+  tutorialSliceId: 'slice-01' | 'slice-02' | 'slice-03' | 'slice-04' | null;
+  tutorialEnemyDefeated: boolean;
+  tutorialActionCount: number;
   tableau: CardType[][];
+  starterPackBase: CardType[];
+  starterPackUsed: boolean[];
+  starterPackLocked: boolean[];
+  starterPackStoredAp: number[];
+  starterPackAbilityRarities: Array<1 | 2 | 3>;
+  starterPackModes: StarterKinMode[];
+  starterPackCashoutStats: Array<{ cardsStored: number; uniqueElements: number; actionPoints: number; apSegments: Element[] } | null>;
+  activeStarterPackIndex: number;
   playerStock: CardType;
   playerBench: CardType[];
   playerSupportIndex: number;
@@ -97,6 +113,20 @@ type GolfGameState = {
   jetRewireSourceColumnIndex: number | null;
   assistJetMicroBatteryAp: number;
   assistJetRewireCooldown: number;
+  hiroHeartsHeld: number;
+  hiroEnduranceMax: number;
+  hiroSuccessfulPlays: number;
+  hiroTurnsElapsed: number;
+  hiroSecondWindCooldown: number;
+  hiroStockAddsThisTurn: number;
+  hiroLeaderTriggeredThisTurn: boolean;
+  hiroTrailSenseActive: boolean;
+  hiroGuardTauntTurns: number;
+  jetChargedCardIds: string[];
+  kinStickers: KinSticker[];
+  hiddenStarterPackIndices: number[];
+  enemyPrimeViceGripTurns: number;
+  enemySupportStunnedTurns: number;
   combatants: Record<string, ActorCombatState>;
   tableClears: number;
   enemyDefeatedCount: number;
@@ -104,10 +134,16 @@ type GolfGameState = {
     id: number;
     name: string;
     moveLabel: string | null;
+    lootRecovered: number;
   } | null;
+  bankedPoints: number;
+  enemyRetaliationBonus: number;
+  enemyLootCards: CardType[];
+  enemyBiteMarks: Record<string, number>;
 };
 
 type AutoPlayMode = 'off' | 'tableau-pause' | 'tactical-pause' | 'full';
+type TutorialSceneId = 'slice-01' | 'post-mochi' | 'slice-02' | 'slice-03' | 'slice-04';
 
 type GolfTurnAction = {
   columnIndex: number;
@@ -129,9 +165,11 @@ type GuideStep = {
 type GuidePlan = {
   path: GuideStep[];
   progress: number;
-  source: 'ancestors' | 'path-of-stars';
+  source: 'ancestors' | 'path-of-stars' | 'prophecy';
   visibleSteps: number | null;
 };
+
+type StarterKinMode = 'default' | 'banks-prowl' | 'banks-exposed';
 
 type PlayerStockTarget = {
   stockId: string;
@@ -153,7 +191,22 @@ type UndoSnapshot = {
   actor: 'player' | 'enemy';
 };
 
-type HandSlotId = 'left' | 'right' | 'jet-left-2' | 'jet-left-3' | 'jet-right-2' | 'jet-right-3' | 'jet-right-4';
+type HandSlotId =
+  | 'left'
+  | 'right'
+  | 'jet-left-2'
+  | 'jet-left-3'
+  | 'jet-right-2'
+  | 'jet-right-3'
+  | 'jet-right-4'
+  | 'hiro-heart-1'
+  | 'hiro-heart-2'
+  | 'hiro-heart-3'
+  | 'hiro-heart-4'
+  | 'hiro-heart-5'
+  | 'hiro-heart-6'
+  | 'hiro-heart-7'
+  | 'hiro-heart-8';
 type JetBatteryAssignableEffect = 'sticky-paws' | 'rigged-construct' | 'rewire' | 'scrap-plating' | 'aegis-shunt';
 
 type JetAbilityBattery = {
@@ -161,14 +214,39 @@ type JetAbilityBattery = {
   charge: number;
 };
 
+type KinSpeciesId = 'jet' | 'whis' | 'pan';
+
+type StatusEffectEvent = {
+  actorName: string;
+  statusKey: string;
+  label: string;
+  tone: 'buff' | 'debuff';
+  nextValue: number;
+  removed: boolean;
+};
+
+type KinSticker = {
+  id: string;
+  speciesId: KinSpeciesId;
+  name: string;
+  glyph: string;
+  rank: number;
+  baseElement: Element;
+  augmentElement: Element | null;
+  rarity: 1 | 2 | 3;
+  state: 'available' | 'buried';
+  buriedCardId: string | null;
+  buriedColumnIndex: number | null;
+};
+
 type PlayerHandSlot = {
   slotId: HandSlotId | 'pan-left';
   kind: 'ability' | 'captured' | 'generated' | 'empty';
   name: string;
   card: CardType | null;
-  effect: 'sticky-paws' | 'repurpose' | 'paw-sperity' | 'path-of-stars' | 'jikan' | 'ironfur' | 'tap-out' | 'slipstream' | 'battery' | 'siphon' | 'rigged-construct' | 'rewire' | 'scrap-plating' | 'aegis-shunt' | null;
+  effect: 'sticky-paws' | 'repurpose' | 'paw-sperity' | 'path-of-stars' | 'jikan' | 'ironfur' | 'tap-out' | 'slipstream' | 'battery' | 'siphon' | 'rigged-construct' | 'rewire' | 'scrap-plating' | 'aegis-shunt' | 'fetch' | 'vice-grip' | 'banks-strike' | 'hiro-guard' | null;
   armed?: boolean;
-  generatedEffect?: 'free-energy' | null;
+  generatedEffect?: 'free-energy' | 'heart-of-the-wild' | 'wildcard' | null;
   generatedValue?: number;
 };
 
@@ -202,6 +280,12 @@ type ActorCombatState = {
   dodgeCounter: number;
   slow: number;
   haste: number;
+  staggerPressure: number;
+  whiskersense?: number;
+  momentum?: number;
+  narrowEscape?: number;
+  skittish?: number;
+  wildSpirit?: number;
   forecastIntent: boolean;
 };
 
@@ -240,18 +324,6 @@ type CombatLogEntry = {
   detail: Record<string, string | number | boolean | null>;
 };
 
-type StarterAbilityCategory = 'signature' | 'tableau-clear' | 'tool' | 'battle' | 'passive';
-
-type StarterAbility = {
-  name: string;
-  fullName?: string;
-  category: StarterAbilityCategory;
-  combatDescription: string;
-  exploreDescription: string;
-  effect: PlayerHandSlot['effect'] | null;
-  cost?: string;
-};
-
 type StockActorShell = {
   id: string;
   name: string;
@@ -287,6 +359,14 @@ type PlayerHandAnim = {
   to: { x: number; y: number };
   durationMs: number;
   label: string;
+  variant?: 'default' | 'reward-flip';
+};
+
+type RescueCardFlash = {
+  id: number;
+  x: number;
+  y: number;
+  tone?: 'white' | 'red';
 };
 
 const advancePlayerTagLock = (state: GolfGameState) => {
@@ -298,18 +378,27 @@ const advancePlayerTagLock = (state: GolfGameState) => {
 };
 
 const PLAYER_STOCK_ACTOR: StockActorShell = {
-  id: 'jet',
-  name: 'Jet',
+  id: 'hiro',
+  name: 'Hiro',
   title: 'Prime Stock',
-  element: 'A',
-  startingRank: 2,
-  accentClassName: 'border-game-gold/45 bg-black/60 shadow-[0_0_24px_rgba(230,179,30,0.12)]',
-  moveset: ['Sticky Paws', 'Repurpose'],
+  element: 'E',
+  startingRank: 5,
+  accentClassName: 'border-[#cdd3dc]/40 bg-black/60 shadow-[0_0_24px_rgba(205,211,220,0.12)]',
+  moveset: ['Fetch', 'Guard Dog'],
 };
 
 const GOLF_DEFAULT_BIOME_ID = 'florpus_forest';
 const GOLF_DEFAULT_ENEMY_PROFILE_ID = 'thorn-matron';
+const GOLF_DEFAULT_SCENARIO_ID = 'tutorial';
 let enemyInstanceSequence = 0;
+
+const getGolfScenarioId = () => {
+  if (typeof window === 'undefined') return GOLF_DEFAULT_SCENARIO_ID;
+  const queryValue = new URLSearchParams(window.location.search).get('scenario')?.trim().toLowerCase();
+  if (queryValue === 'freeplay') return 'freeplay';
+  if (queryValue === 'tutorial') return 'tutorial';
+  return GOLF_DEFAULT_SCENARIO_ID;
+};
 
 const BIOME_ONE_ENEMIES: EnemyProfile[] = [
   {
@@ -320,11 +409,39 @@ const BIOME_ONE_ENEMIES: EnemyProfile[] = [
       element: 'A',
       startingRank: 10,
       accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(175,223,134,0.12)]',
-      moveset: ['Target Dummy'],
+      moveset: ['Bite', 'Chew', 'Loot Hoard'],
     },
     combatant: { hp: 102, hpMax: 102, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 0, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
     maxActionsPerTurn: 0,
     behavior: 'steady',
+  },
+  {
+    actor: {
+      id: 'mawling-raider',
+      name: 'Mawling Raider',
+      title: 'Enemy Stock',
+      element: 'F',
+      startingRank: 9,
+      accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(255,120,76,0.14)]',
+      moveset: ['Bite', 'Chew', 'Loot Hoard'],
+    },
+    combatant: { hp: 14, hpMax: 14, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 0, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    maxActionsPerTurn: 2,
+    behavior: 'steady',
+  },
+  {
+    actor: {
+      id: 'shade-wisp',
+      name: 'Shade Wisp',
+      title: 'Enemy Stock',
+      element: 'D',
+      startingRank: 5,
+      accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(155,124,255,0.16)]',
+      moveset: ['Bite', 'Maul'],
+    },
+    combatant: { hp: 8, hpMax: 8, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 6, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    maxActionsPerTurn: 1,
+    behavior: 'nagging',
   },
   {
     actor: {
@@ -427,17 +544,270 @@ const drawCard = (deck: CardType[]) => {
 };
 
 const getSuitForElement = (element: Element) => {
-  const match = ELEMENTAL_SUITS.find((entry) => entry.element === element);
-  return match?.suit ?? '💨';
+  if (element === 'A') return '♠';
+  if (element === 'F') return '♥';
+  if (element === 'E') return '♣';
+  if (element === 'W') return '♦';
+  return '♠';
 };
 
 const createActorStockCard = (actor: StockActorShell): CardType => ({
   id: `actor-stock-${actor.id}`,
   rank: actor.startingRank,
   suit: getSuitForElement(actor.element),
-  element: actor.element,
+  element: 'N',
   name: actor.name,
 });
+
+const createStarterPackStockCard = (seed: CardType, index: number): CardType => ({
+  ...seed,
+  id: `starter-pack-${index}`,
+});
+
+const createStarterPackCards = (): CardType[] => ([
+  { id: 'starter-pack-mochi', rank: 9, suit: '♦', element: 'N', name: 'Mochi' },
+  { id: 'starter-pack-banks', rank: 6, suit: '♥', element: 'N', name: 'Banks' },
+  { id: 'starter-pack-hiro', rank: 1, suit: '♣', element: 'N', name: 'Hiro' },
+  { id: 'starter-pack-jet', rank: 1, suit: '♠', element: 'N', name: 'Jet' },
+  { id: 'starter-pack-whis', rank: 8, suit: '♦', element: 'N', name: 'Whis' },
+]);
+
+const createScenarioTableauCard = (columnIndex: number, depthIndex: number, rank: number, suit: CardType['suit']): CardType => ({
+  id: `scenario-${columnIndex}-${depthIndex}-${rank}-${suit}`,
+  rank,
+  suit,
+  element: 'N',
+  name: '',
+});
+
+const createTutorialFillerCard = (columnIndex: number, depthIndex: number): CardType => ({
+  id: `tutorial-filler-${columnIndex}-${depthIndex}`,
+  rank: 0,
+  suit: '♠',
+  element: 'N',
+  name: 'Tutorial Filler',
+});
+
+const isTutorialFillerCard = (card: CardType | null | undefined) =>
+  !!card && card.id.startsWith('tutorial-filler-');
+
+const createTutorialMochiRescueCard = (): CardType => ({
+  id: 'tutorial-mochi-rescue',
+  rank: 9,
+  suit: '♦',
+  element: 'N',
+  name: 'Mochi',
+});
+
+const createThinSliceTableau = (): CardType[][] => {
+  const layout: Array<Array<{ rank: number; suit: CardType['suit'] }>> = [
+    [{ rank: 5, suit: '♠' }, { rank: 7, suit: '♦' }, { rank: 9, suit: '♥' }, { rank: 1, suit: '♣' }, { rank: 12, suit: '♠' }],
+    [{ rank: 4, suit: '♦' }, { rank: 6, suit: '♥' }, { rank: 8, suit: '♣' }, { rank: 10, suit: '♠' }, { rank: 6, suit: '♥' }],
+    [{ rank: 2, suit: '♣' }, { rank: 4, suit: '♠' }, { rank: 6, suit: '♦' }, { rank: 7, suit: '♥' }, { rank: 2, suit: '♠' }],
+    [{ rank: 3, suit: '♥' }, { rank: 5, suit: '♣' }, { rank: 7, suit: '♠' }, { rank: 8, suit: '♦' }, { rank: 9, suit: '♣' }],
+    [{ rank: 4, suit: '♠' }, { rank: 6, suit: '♦' }, { rank: 8, suit: '♥' }, { rank: 10, suit: '♣' }, { rank: 8, suit: '♠' }],
+    [{ rank: 1, suit: '♦' }, { rank: 3, suit: '♠' }, { rank: 5, suit: '♥' }, { rank: 7, suit: '♣' }, { rank: 11, suit: '♦' }],
+    [{ rank: 2, suit: '♥' }, { rank: 4, suit: '♣' }, { rank: 6, suit: '♠' }, { rank: 8, suit: '♥' }, { rank: 10, suit: '♣' }],
+  ];
+  return layout.map((column, columnIndex) =>
+    column.map((entry, depthIndex) => createScenarioTableauCard(columnIndex, depthIndex, entry.rank, entry.suit))
+  );
+};
+
+const createTutorialSlice01Tableau = (): CardType[][] => ([
+  [
+    createScenarioTableauCard(0, 0, 13, '♣'),
+    createScenarioTableauCard(0, 1, 13, '♠'),
+    createScenarioTableauCard(0, 2, 2, '♥'),
+  ],
+  [
+    createScenarioTableauCard(1, 0, 2, '♣'),
+    createScenarioTableauCard(1, 1, 8, '♦'),
+  ],
+  [
+    createScenarioTableauCard(2, 0, 3, '♦'),
+    createTutorialFillerCard(2, 1),
+    createScenarioTableauCard(2, 2, 3, '♣'),
+  ],
+  [
+    createScenarioTableauCard(3, 0, 7, '♦'),
+    createTutorialFillerCard(3, 1),
+    createScenarioTableauCard(3, 2, 7, '♠'),
+  ],
+  [
+    createScenarioTableauCard(4, 0, 4, '♣'),
+    createTutorialFillerCard(4, 1),
+    createScenarioTableauCard(4, 2, 4, '♠'),
+  ],
+  [
+    createScenarioTableauCard(5, 0, 6, '♣'),
+    createTutorialFillerCard(5, 1),
+    createScenarioTableauCard(5, 2, 6, '♥'),
+  ],
+  [
+    createScenarioTableauCard(6, 0, 5, '♥'),
+    createTutorialFillerCard(6, 1),
+    createScenarioTableauCard(6, 2, 5, '♠'),
+  ],
+]);
+
+const createTutorialSlice02Tableau = (): CardType[][] => ([
+  [
+    createScenarioTableauCard(0, 0, 11, '♣'),
+    createScenarioTableauCard(0, 1, 9, '♠'),
+    createScenarioTableauCard(0, 2, 2, '♥'),
+  ],
+  [
+    createScenarioTableauCard(1, 0, 12, '♦'),
+    createScenarioTableauCard(1, 1, 10, '♣'),
+    createScenarioTableauCard(1, 2, 8, '♦'),
+  ],
+  [
+    createScenarioTableauCard(2, 0, 13, '♣'),
+    createScenarioTableauCard(2, 1, 7, '♠'),
+    createScenarioTableauCard(2, 2, 3, '♦'),
+  ],
+  [
+    createScenarioTableauCard(3, 0, 4, '♣'),
+    createScenarioTableauCard(3, 1, 12, '♥'),
+    createScenarioTableauCard(3, 2, 9, '♣'),
+    createScenarioTableauCard(3, 3, 11, '♠'),
+  ],
+  [
+    createScenarioTableauCard(4, 0, 7, '♦'),
+    createScenarioTableauCard(4, 1, 13, '♥'),
+    createScenarioTableauCard(4, 2, 4, '♠'),
+  ],
+  [
+    createScenarioTableauCard(5, 0, 8, '♣'),
+    createScenarioTableauCard(5, 1, 1, '♦'),
+    createScenarioTableauCard(5, 2, 6, '♣'),
+  ],
+  [
+    createScenarioTableauCard(6, 0, 10, '♠'),
+    createScenarioTableauCard(6, 1, 2, '♣'),
+    createScenarioTableauCard(6, 2, 5, '♥'),
+  ],
+]);
+
+const createTutorialSlice03Tableau = (): CardType[][] => ([
+  [
+    createScenarioTableauCard(0, 0, 12, '♣'),
+    createScenarioTableauCard(0, 1, 5, '♦'),
+    createScenarioTableauCard(0, 2, 2, '♠'),
+  ],
+  [
+    createScenarioTableauCard(1, 0, 5, '♣'),
+    createScenarioTableauCard(1, 1, 13, '♥'),
+    createScenarioTableauCard(1, 2, 7, '♦'),
+  ],
+  [
+    createScenarioTableauCard(2, 0, 6, '♠'),
+    createScenarioTableauCard(2, 1, 4, '♣'),
+    createScenarioTableauCard(2, 2, 7, '♥'),
+  ],
+  [
+    createScenarioTableauCard(3, 0, 3, '♣'),
+    createScenarioTableauCard(3, 1, 9, '♠'),
+    createScenarioTableauCard(3, 2, 4, '♦'),
+  ],
+  [
+    createScenarioTableauCard(4, 0, 12, '♠'),
+    createScenarioTableauCard(4, 1, 6, '♥'),
+    createScenarioTableauCard(4, 2, 7, '♣'),
+  ],
+  [
+    createScenarioTableauCard(5, 0, 1, '♣'),
+    createScenarioTableauCard(5, 1, 5, '♦'),
+    createScenarioTableauCard(5, 2, 10, '♣'),
+  ],
+  [
+    createScenarioTableauCard(6, 0, 3, '♥'),
+    createScenarioTableauCard(6, 1, 6, '♠'),
+    createScenarioTableauCard(6, 2, 11, '♦'),
+  ],
+]);
+
+const createTutorialSlice04Tableau = (): CardType[][] => ([
+  [createScenarioTableauCard(0, 0, 6, '♠')],
+  [
+    createScenarioTableauCard(1, 0, 4, '♥'),
+    createScenarioTableauCard(1, 1, 3, '♦'),
+    createScenarioTableauCard(1, 2, 2, '♣'),
+    createScenarioTableauCard(1, 3, 5, '♠'),
+  ],
+  [createScenarioTableauCard(2, 0, 8, '♦')],
+  [createScenarioTableauCard(3, 0, 9, '♣')],
+  [createScenarioTableauCard(4, 0, 10, '♠')],
+  [createScenarioTableauCard(5, 0, 11, '♥')],
+  [createScenarioTableauCard(6, 0, 12, '♣')],
+]);
+
+const createTutorialStarterPack = (names: Array<'Hiro' | 'Mochi' | 'Banks' | 'Jet' | 'Whis'>): CardType[] =>
+  createStarterPackCards().filter((card): card is CardType & { name: 'Hiro' | 'Mochi' | 'Banks' | 'Jet' | 'Whis' } => names.includes(card.name as 'Hiro' | 'Mochi' | 'Banks' | 'Jet' | 'Whis'));
+
+const getKinFamilyLabel = (family: KinFamily) => {
+  if (family === 'felis') return 'FELIS';
+  if (family === 'canid') return 'CANID';
+  if (family === 'mustelid') return 'MUSTELID';
+  if (family === 'corvid') return 'CORVID';
+  return 'KIN';
+};
+
+const getBanksAbilityTierName = (tier: 1 | 2 | 3) => (
+  tier >= 3 ? 'Hit and Run' : 'Swipe'
+);
+
+const getBanksApCap = (tier: 1 | 2 | 3) => tier;
+
+const clampStarterPackApToCap = (
+  actorName: string,
+  actionPoints: number,
+  rarity: 1 | 2 | 3
+) => {
+  if (actorName === 'Banks') return Math.min(getBanksApCap(rarity), Math.max(0, actionPoints));
+  if (actorName === 'Jet') return Math.min(JET_MAX_AP, Math.max(0, actionPoints));
+  return Math.min(14, Math.max(0, actionPoints));
+};
+
+const evaluatePerfectStop = (actorName: string, actionPoints: number, mode: StarterKinMode = 'default', rarity: 1 | 2 | 3 = 1) => {
+  if (actorName === 'Mochi') {
+    if (actionPoints <= 2) return { label: 'Clean Pop', subtitle: 'Perfect Stop', positive: true };
+    if (actionPoints <= 5) return { label: 'Rolling Flow', subtitle: 'Good Stop', positive: true };
+    return { label: 'Oversteeped', subtitle: 'Missed Window', positive: false };
+  }
+  if (actorName === 'Banks') {
+    const cap = getBanksApCap(rarity);
+    if (actionPoints <= 0) return { label: 'Empty Clip', subtitle: 'No Strike', positive: false, nextMode: mode };
+    if (rarity === 1) {
+      return actionPoints >= 1
+        ? { label: 'Swipe', subtitle: 'Unlock Uncommon', positive: true, nextMode: mode }
+        : { label: 'Lurk', subtitle: 'Needs 1 AP', positive: false, nextMode: mode };
+    }
+    if (rarity === 2) {
+      return actionPoints >= cap
+        ? { label: 'Swipe II', subtitle: 'Unlock Rare', positive: true, nextMode: mode }
+        : { label: 'Swipe I', subtitle: 'Fallback Line', positive: true, nextMode: mode };
+    }
+    return actionPoints >= 3
+      ? { label: 'Hit and Run', subtitle: mode === 'banks-prowl' ? 'Prowl Active' : 'Rare Sweet Spot', positive: true, nextMode: 'banks-prowl' as StarterKinMode }
+      : actionPoints === 2
+        ? { label: 'Swipe II', subtitle: 'Rare Floor', positive: true, nextMode: mode }
+        : { label: 'Swipe I', subtitle: 'Rare Floor', positive: true, nextMode: mode };
+  }
+  if (actorName === 'Hiro') {
+    if (actionPoints < HIRO_GUARD_COST) return { label: 'Brace', subtitle: 'Build Guard', positive: true, nextMode: 'default' as StarterKinMode };
+    return { label: 'Guard Ready', subtitle: 'No Sweet Spot', positive: true, nextMode: 'default' as StarterKinMode };
+  }
+  if (actorName === 'Jet') {
+    if (actionPoints < JET_REWIRE_COST) return { label: 'Build Route', subtitle: 'Needs 2 AP', positive: true, nextMode: 'default' as StarterKinMode };
+    if (actionPoints < JET_MAX_AP) return { label: 'Rewire Ready', subtitle: 'Charged Tableau', positive: true, nextMode: 'default' as StarterKinMode };
+    return { label: 'Full Surge', subtitle: 'Max AP', positive: true, nextMode: 'default' as StarterKinMode };
+  }
+  return actionPoints <= 3
+    ? { label: 'Steady Close', subtitle: 'Good Stop', positive: true, nextMode: 'default' as StarterKinMode }
+    : { label: 'Overextended', subtitle: 'Missed Window', positive: false, nextMode: 'default' as StarterKinMode };
+};
 
 const createEnemyStockCard = (actor: StockActorShell, instanceLabel?: string): CardType => {
   enemyInstanceSequence += 1;
@@ -445,7 +815,7 @@ const createEnemyStockCard = (actor: StockActorShell, instanceLabel?: string): C
     id: `enemy-stock-${actor.id}-${enemyInstanceSequence}`,
     rank: actor.startingRank,
     suit: getSuitForElement(actor.element),
-    element: actor.element,
+    element: 'N',
     name: instanceLabel ? `${actor.name} ${instanceLabel}` : actor.name,
   };
 };
@@ -475,7 +845,7 @@ const createGeneratedHandSlot = (
   slotId: HandSlotId,
   name: string,
   card: CardType,
-  generatedEffect: 'free-energy',
+  generatedEffect: 'free-energy' | 'heart-of-the-wild' | 'wildcard',
   generatedValue: number
 ): PlayerHandSlot => ({
   slotId,
@@ -491,16 +861,570 @@ const createGeneratedHandSlot = (
 const createEmptyHandSlot = (slotId: HandSlotId): PlayerHandSlot =>
   createHandSlot(slotId, 'empty', '', null, null);
 
+const HIRO_HEART_TRIGGER = 4;
+const HIRO_ENDURANCE_TURN_INTERVAL = 4;
+const HIRO_SECOND_WIND_COOLDOWN_TURNS = 2;
+const HIRO_BASE_ENDURANCE_MAX = 1;
+const HIRO_MAX_HEART_SLOTS = 8;
+const HIRO_WILD_RESILIENCE_THRESHOLD = 3;
+const HIRO_GUARD_COST = 2;
+const HIRO_GUARD_ARMOR = 4;
+const HIRO_GUARD_TAUNT_TURNS = 1;
+const JET_REWIRE_COST = 2;
+const JET_MAX_AP = 8;
+const ENEMY_BITE_AP_GAIN = 1;
+const ENEMY_BITE_DESTROY_THRESHOLD = 3;
+const KIN_ZOOLOGY_SEEDS: KinSpeciesId[] = ['jet', 'jet', 'whis', 'pan', 'pan', 'pan'];
+const KIN_BURIAL_COLUMN_ORDER = [3, 2, 4, 1, 5, 0, 6];
+const KIN_SPECIES_DEFS: Record<KinSpeciesId, { name: string; glyph: string; rank: number; baseElement: Element }> = {
+  jet: { name: 'Jet', glyph: 'J', rank: 2, baseElement: 'A' },
+  whis: { name: 'Whis', glyph: 'W', rank: 8, baseElement: 'W' },
+  pan: { name: 'Pan', glyph: 'P', rank: 7, baseElement: 'F' },
+};
+
+const titleCasePronoun = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+const SLICE_01_FILLER_REVEAL_SCHEDULE: Record<number, number[]> = {
+  7: [3],
+  8: [5],
+  9: [6],
+  10: [4],
+  11: [2],
+};
+
+const applyTutorialSliceRevealRules = (state: GolfGameState): GolfGameState => {
+  if (state.tutorialSliceId !== 'slice-01') return state;
+  const columnsToReveal = SLICE_01_FILLER_REVEAL_SCHEDULE[state.tutorialActionCount] ?? [];
+  if (columnsToReveal.length === 0) return state;
+
+  const nextTableau = state.tableau.map((column, columnIndex) => {
+    if (!columnsToReveal.includes(columnIndex)) return column;
+    const topCard = column[column.length - 1] ?? null;
+    if (!isTutorialFillerCard(topCard)) return column;
+    return column.slice(0, -1);
+  });
+
+  return { ...state, tableau: nextTableau };
+};
+
+const applyPlayerActionStatusUpdate = (prev: GolfGameState): { state: GolfGameState; statusEvent: StatusEffectEvent | null } => {
+  const mochiCombatant = prev.combatants.mochi;
+  const nextActionCount = prev.tutorialActionCount + 1;
+  if (!mochiCombatant || (mochiCombatant.skittish ?? 0) <= 0) {
+    return {
+      state: applyTutorialSliceRevealRules({
+        ...prev,
+        tutorialActionCount: nextActionCount,
+      }),
+      statusEvent: null,
+    };
+  }
+  const nextSkittish = Math.max(0, (mochiCombatant.skittish ?? 0) - 1);
+  return {
+    state: applyTutorialSliceRevealRules({
+      ...prev,
+      tutorialActionCount: nextActionCount,
+      combatants: {
+        ...prev.combatants,
+        mochi: {
+          ...mochiCombatant,
+          skittish: nextSkittish,
+        },
+      },
+    }),
+    statusEvent: {
+      actorName: 'Mochi',
+      statusKey: 'skittish',
+      label: 'SK',
+      tone: 'debuff',
+      nextValue: nextSkittish,
+      removed: nextSkittish <= 0,
+    },
+  };
+};
+
+const renderEffectDefinitionTooltip = (definition: KinEffectDefinition) => (
+  <div className="min-w-[180px] max-w-[240px] rounded-2xl border border-white/12 bg-[#05070d] px-3 py-2 text-left shadow-[0_12px_40px_rgba(0,0,0,0.42)]">
+    <div className="text-[10px] font-black uppercase tracking-[0.14em] text-game-pink">
+      {definition.name}
+    </div>
+    <div className="mt-1 text-[11px] leading-[1.4] text-white/72">
+      {renderGameText(definition.flavorText)}
+    </div>
+    <div className="mt-1 text-[11px] leading-[1.4] text-white/84">
+      {renderGameText(definition.effectText)}
+    </div>
+  </div>
+);
+
+const renderGameText = (text: string, options?: { enableEffectTooltips?: boolean }) => {
+  const nodes: React.ReactNode[] = [];
+  const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
+  const enableEffectTooltips = options?.enableEffectTooltips ?? false;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+    const token = match[0];
+    if (token.startsWith('**') && token.endsWith('**')) {
+      const effectName = token.slice(2, -2);
+      const effectDefinition = enableEffectTooltips ? getKinEffectDefinition(effectName) : null;
+      if (effectDefinition) {
+        nodes.push(
+          <Tooltip key={`bold-${match.index}`} content={renderEffectDefinitionTooltip(effectDefinition)} pinnable={false} clickToPin={false} inlineTrigger>
+            <span className="inline-flex cursor-help text-game-pink">
+              <strong>{effectName}</strong>
+            </span>
+          </Tooltip>
+        );
+      } else {
+        nodes.push(<strong key={`bold-${match.index}`} className="text-game-pink">{effectName}</strong>);
+      }
+    } else if (token.startsWith('*') && token.endsWith('*')) {
+      nodes.push(<em key={`italic-${match.index}`}>{token.slice(1, -1)}</em>);
+    } else {
+      nodes.push(token);
+    }
+    lastIndex = match.index + token.length;
+  }
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+  return nodes;
+};
+
+const wrapGolfRank = (rank: number) => {
+  if (rank < 1) return 13;
+  if (rank > 13) return 1;
+  return rank;
+};
+
+const createHeartOfTheWildCard = (stock: CardType, preferredRank = wrapGolfRank(stock.rank + 1)): CardType => ({
+  id: `hiro-heart-${stock.id}-${preferredRank}`,
+  rank: preferredRank,
+  suit: stock.suit,
+  element: 'N',
+  name: '',
+});
+
+const getMostPromisingHiroHeartCard = (state: GolfGameState) => {
+  const upCard = createHeartOfTheWildCard(state.playerStock, wrapGolfRank(state.playerStock.rank + 1));
+  const downCard = createHeartOfTheWildCard(state.playerStock, wrapGolfRank(state.playerStock.rank - 1));
+  const upFollowUps = state.tableau.reduce((count, column) => {
+    const top = column[column.length - 1] ?? null;
+    return count + (top && canPlayOnStock(top, upCard) ? 1 : 0);
+  }, 0);
+  const downFollowUps = state.tableau.reduce((count, column) => {
+    const top = column[column.length - 1] ?? null;
+    return count + (top && canPlayOnStock(top, downCard) ? 1 : 0);
+  }, 0);
+  return downFollowUps > upFollowUps ? downCard : upCard;
+};
+
+const addHiroHearts = (state: GolfGameState, amount: number) => ({
+  ...state,
+  hiroHeartsHeld: clampNumber(state.hiroHeartsHeld + amount, 0, state.hiroEnduranceMax),
+});
+
+const addHiroWildcards = (state: GolfGameState, amount: number) => ({
+  ...state,
+  hiroHeartsHeld: clampNumber(state.hiroHeartsHeld + amount, 0, HIRO_MAX_HEART_SLOTS),
+});
+
+const applyHiroWildSpiritGain = (state: GolfGameState, gain = 1): GolfGameState => {
+  if (gain <= 0) return state;
+  const hiroCombatant = state.combatants.hiro;
+  const currentWildSpirit = hiroCombatant?.wildSpirit ?? 0;
+  const nextRaw = currentWildSpirit + gain;
+  const thresholdsEarned = Math.floor(nextRaw / HIRO_WILD_RESILIENCE_THRESHOLD);
+  const remainder = nextRaw % HIRO_WILD_RESILIENCE_THRESHOLD;
+  if (!hiroCombatant) {
+    return {
+      ...state,
+      combatants: state.combatants,
+    };
+  }
+  if (thresholdsEarned <= 0) {
+    return {
+      ...state,
+      combatants: {
+        ...state.combatants,
+        hiro: {
+          ...hiroCombatant,
+          wildSpirit: nextRaw,
+        },
+      },
+    };
+  }
+  return addHiroWildcards({
+    ...state,
+    combatants: {
+      ...state.combatants,
+      hiro: {
+        ...hiroCombatant,
+        armor: hiroCombatant.armor + thresholdsEarned,
+        wildSpirit: remainder,
+      },
+    },
+  }, thresholdsEarned);
+};
+
+const getHiroHeartSlotIds = (): HandSlotId[] => ([
+  'hiro-heart-1',
+  'hiro-heart-2',
+  'hiro-heart-3',
+  'hiro-heart-4',
+  'hiro-heart-5',
+  'hiro-heart-6',
+  'hiro-heart-7',
+  'hiro-heart-8',
+]);
+
+const PRIME_ABILITY_SLOT_IDS: Array<PlayerHandSlot['slotId']> = [
+  'left',
+  'right',
+  'jet-left-2',
+  'jet-left-3',
+  'jet-right-2',
+  'jet-right-3',
+  'jet-right-4',
+  'pan-left',
+];
+
+const createStarterKinStickers = (): KinSticker[] => {
+  const counts = new Map<KinSpeciesId, number>();
+  KIN_ZOOLOGY_SEEDS.forEach((speciesId) => {
+    counts.set(speciesId, (counts.get(speciesId) ?? 0) + 1);
+  });
+  return Array.from(counts.entries()).map(([speciesId, rawCount]) => {
+    const def = KIN_SPECIES_DEFS[speciesId];
+    const rarity = clampNumber(rawCount, 1, 3) as 1 | 2 | 3;
+    return {
+      id: `sticker-${speciesId}`,
+      speciesId,
+      name: def.name,
+      glyph: def.glyph,
+      rank: def.rank,
+      baseElement: def.baseElement,
+      augmentElement: null,
+      rarity,
+      state: 'available',
+      buriedCardId: null,
+      buriedColumnIndex: null,
+    };
+  });
+};
+
+const getMochiStarterPackIndex = (state: GolfGameState) =>
+  state.starterPackBase.findIndex((card) => card.name === 'Mochi');
+
+const getZoomiesClaimCap = (rarity: 1 | 2 | 3) => {
+  if (rarity >= 3) return 7;
+  if (rarity === 2) return 5;
+  return 3;
+};
+
+const getKinStickerElement = (sticker: KinSticker) => sticker.augmentElement ?? sticker.baseElement;
+
+const resetStarterPackCycle = (state: GolfGameState): GolfGameState => ({
+  ...state,
+  starterPackUsed: state.starterPackBase.map((_, index) => index === 0),
+  starterPackLocked: state.starterPackBase.map(() => false),
+  starterPackCashoutStats: state.starterPackBase.map(() => null),
+  activeStarterPackIndex: 0,
+  playerStock: createStarterPackStockCard(state.starterPackBase[0], 0),
+  playerStockSequence: 0,
+  playerStockActionPoints: clampStarterPackApToCap(
+    state.starterPackBase[0]?.name ?? '',
+    state.starterPackStoredAp[0] ?? 0,
+    state.starterPackAbilityRarities[0] ?? 1
+  ),
+  playerPrimeApSegments: [],
+  playerCapturedLeft: null,
+  playerCapturedRight: null,
+  playerSupportActionUsed: false,
+  playerSupportRotateUsed: false,
+  playerSupportReactiveUsed: false,
+  hiroStockAddsThisTurn: 0,
+  hiroLeaderTriggeredThisTurn: false,
+  hiroTrailSenseActive: false,
+  hiroGuardTauntTurns: state.hiroGuardTauntTurns,
+  jetChargedCardIds: state.jetChargedCardIds,
+});
+
+const ApBadge = ({ actionPoints }: { actionPoints: number }) => (
+  <div className="pointer-events-none absolute -bottom-2 -right-2 z-20 h-8 w-8 [perspective:120px]">
+    <div
+      className="absolute right-0 top-[2px] h-6 w-5 rounded-[4px] border border-game-gold/30 bg-[linear-gradient(180deg,rgba(255,232,148,0.96),rgba(226,170,58,0.9))] shadow-[0_3px_10px_rgba(230,179,30,0.24)]"
+      style={{ transform: 'rotate(10deg) skewY(-4deg)' }}
+    >
+      <div className="absolute inset-[2px] rounded-[3px] border border-white/30 bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.24),transparent_55%),linear-gradient(180deg,rgba(74,48,8,0.14),rgba(31,21,5,0.2))]" />
+      <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-[#6a4302]/85">
+        ⚡
+      </div>
+      <div className="absolute bottom-[-7px] left-[-10px] flex h-5 min-w-5 items-center justify-center rounded-full border border-[#d38a34]/80 bg-transparent px-1 shadow-[0_2px_8px_rgba(211,138,52,0.2)]">
+        <div
+          className="text-[10px] font-black leading-none text-[#ffd48a] tabular-nums"
+          style={{ WebkitTextStroke: '0.8px rgba(0,0,0,0.98)', textShadow: '0 0 3px rgba(0,0,0,0.95)' }}
+        >
+          {Math.min(99, Math.max(0, actionPoints))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const createKinStickerCard = (sticker: KinSticker): CardType => ({
+  id: `kin-${sticker.id}-${Date.now()}`,
+  rank: sticker.rank,
+  suit: getSuitForElement(getKinStickerElement(sticker)),
+  element: 'N',
+  name: '',
+});
+
+const pickKinBurialTarget = (tableau: CardType[][]) => {
+  for (const columnIndex of KIN_BURIAL_COLUMN_ORDER) {
+    const column = tableau[columnIndex] ?? [];
+    if (column.length > 1) {
+      const host = column[column.length - 2] ?? null;
+      if (host) {
+        return { buriedCardId: host.id, buriedColumnIndex: columnIndex };
+      }
+    }
+  }
+  return { buriedCardId: null, buriedColumnIndex: null };
+};
+
+const buryKinSticker = (state: GolfGameState, stickerId: string): GolfGameState => {
+  const target = pickKinBurialTarget(state.tableau);
+  return {
+    ...state,
+    kinStickers: state.kinStickers.map((sticker) =>
+      sticker.id !== stickerId
+        ? sticker
+        : {
+            ...sticker,
+            state: 'buried',
+            buriedCardId: target.buriedCardId,
+            buriedColumnIndex: target.buriedColumnIndex,
+          }
+    ),
+  };
+};
+
+const reclaimBuriedKinStickers = (state: GolfGameState): GolfGameState => {
+  let changed = false;
+  const kinStickers = state.kinStickers.map((sticker) => {
+    if (sticker.state !== 'buried' || !sticker.buriedCardId) return sticker;
+    const columnIndex = state.tableau.findIndex((column) => column.some((card) => card.id === sticker.buriedCardId));
+    if (columnIndex < 0) {
+      changed = true;
+      return {
+        ...sticker,
+        state: 'available',
+        buriedCardId: null,
+        buriedColumnIndex: null,
+      };
+    }
+    const column = state.tableau[columnIndex];
+    const top = column[column.length - 1] ?? null;
+    if (top?.id === sticker.buriedCardId) {
+      changed = true;
+      return {
+        ...sticker,
+        state: 'available',
+        buriedCardId: null,
+        buriedColumnIndex: null,
+      };
+    }
+    return sticker;
+  });
+  return changed ? { ...state, kinStickers } : state;
+};
+
+const getActorElementByName = (name: string): Element => {
+  return 'N';
+};
+
+const parseDiscardRank = (entry: string) => {
+  const match = entry.match(/([AJQK]|\d+)$/);
+  if (!match) return null;
+  const token = match[1];
+  if (token === 'A') return 1;
+  if (token === 'J') return 11;
+  if (token === 'Q') return 12;
+  if (token === 'K') return 13;
+  const parsed = Number(token);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getMostRecentFetchCandidate = (state: GolfGameState) => {
+  for (let index = state.playerDiscardPile.length - 1; index >= 0; index -= 1) {
+    const entry = state.playerDiscardPile[index];
+    const separator = entry.indexOf('::');
+    const actorName = separator > 0 ? entry.slice(0, separator) : '';
+    if (!actorName || actorName === 'Hiro') continue;
+    const rank = parseDiscardRank(entry);
+    if (rank === null) continue;
+    const element = getActorElementByName(actorName);
+    return {
+      actorName,
+      rank,
+      card: {
+        id: `fetch-${actorName.toLowerCase()}-${index}-${rank}`,
+        rank,
+        suit: getSuitForElement(element),
+        element: 'N',
+        name: '',
+      } satisfies CardType,
+    };
+  }
+  return null;
+};
+
+const getTopTableauFetchCandidate = (state: GolfGameState) => {
+  const candidates = state.tableau
+    .map((column, columnIndex) => {
+      const card = column[column.length - 1] ?? null;
+      if (!card) return null;
+      const followUps = state.tableau.reduce((count, otherColumn, otherColumnIndex) => {
+        if (otherColumnIndex === columnIndex) return count;
+        const top = otherColumn[otherColumn.length - 1] ?? null;
+        return count + (top && canPlayOnStock(top, card) ? 1 : 0);
+      }, 0);
+      return {
+        source: 'tableau' as const,
+        columnIndex,
+        card,
+        score: followUps + (column.length > 1 ? 1 : 0),
+      };
+    })
+    .filter((entry): entry is { source: 'tableau'; columnIndex: number; card: CardType; score: number } => !!entry);
+  return candidates.sort((a, b) => b.score - a.score)[0] ?? null;
+};
+
+const getBestFetchCandidate = (state: GolfGameState) => {
+  const tableauCandidate = getTopTableauFetchCandidate(state);
+  if (tableauCandidate) return tableauCandidate;
+  const discardCandidate = getMostRecentFetchCandidate(state);
+  return discardCandidate ? { source: 'discard' as const, card: discardCandidate.card, actorName: discardCandidate.actorName } : null;
+};
+
+type ExclusionNode = {
+  cardId: string;
+  card: CardType;
+  columnIndex: number;
+  actualIndex: number;
+};
+
+const getVisibleExclusionNodes = (tableau: CardType[][], visiblePeekCount: number): ExclusionNode[] => (
+  tableau.flatMap((column, columnIndex) => {
+    const firstVisibleIndex = Math.max(0, column.length - 1 - visiblePeekCount);
+    return column
+      .map((card, actualIndex) => ({ card, actualIndex }))
+      .filter(({ actualIndex }) => actualIndex >= firstVisibleIndex)
+      .map(({ card, actualIndex }) => ({
+        cardId: card.id,
+        card,
+        columnIndex,
+        actualIndex,
+      }));
+  })
+);
+
+const scoreExclusionPath = (path: ExclusionNode[]) => (
+  path.reduce((sum, node) => sum + node.card.rank, 0)
+);
+
+const compareExclusionPaths = (left: ExclusionNode[], right: ExclusionNode[]) => {
+  if (left.length !== right.length) return left.length - right.length;
+  const leftScore = scoreExclusionPath(left);
+  const rightScore = scoreExclusionPath(right);
+  if (leftScore !== rightScore) return leftScore - rightScore;
+  const leftStart = left[0]?.columnIndex ?? Number.MAX_SAFE_INTEGER;
+  const rightStart = right[0]?.columnIndex ?? Number.MAX_SAFE_INTEGER;
+  if (leftStart !== rightStart) return rightStart - leftStart;
+  const leftKey = left.map((node) => `${String(node.columnIndex).padStart(2, '0')}-${String(node.actualIndex).padStart(2, '0')}`).join('|');
+  const rightKey = right.map((node) => `${String(node.columnIndex).padStart(2, '0')}-${String(node.actualIndex).padStart(2, '0')}`).join('|');
+  if (leftKey === rightKey) return 0;
+  return leftKey < rightKey ? 1 : -1;
+};
+
+const findBestExclusionPath = (
+  tableau: CardType[][],
+  visiblePeekCount: number,
+  maxClaims: number
+) => {
+  if (maxClaims <= 0) return [] as ExclusionNode[];
+  const nodes = getVisibleExclusionNodes(tableau, visiblePeekCount);
+  const byColumn = new Map<number, ExclusionNode[]>();
+  nodes.forEach((node) => {
+    const bucket = byColumn.get(node.columnIndex) ?? [];
+    bucket.push(node);
+    byColumn.set(node.columnIndex, bucket);
+  });
+
+  let bestPath: ExclusionNode[] = [];
+  const visit = (current: ExclusionNode, used: Set<string>, path: ExclusionNode[]) => {
+    if (compareExclusionPaths(path, bestPath) > 0) {
+      bestPath = [...path];
+    }
+    if (path.length >= maxClaims) return;
+    for (const neighborColumn of [current.columnIndex - 1, current.columnIndex + 1]) {
+      const neighbors = byColumn.get(neighborColumn) ?? [];
+      for (const neighbor of neighbors) {
+        if (used.has(neighbor.cardId)) continue;
+        if (!canPlayOnRank(neighbor.card.rank, current.card.rank)) continue;
+        used.add(neighbor.cardId);
+        path.push(neighbor);
+        visit(neighbor, used, path);
+        path.pop();
+        used.delete(neighbor.cardId);
+      }
+    }
+  };
+
+  nodes.forEach((node) => {
+    const used = new Set<string>([node.cardId]);
+    visit(node, used, [node]);
+  });
+
+  return bestPath.slice(0, maxClaims);
+};
+
+const resolveExclusionPathTableau = (tableau: CardType[][], path: ExclusionNode[]) => {
+  const usedIds = new Set(path.map((node) => node.cardId));
+  let tableClears = 0;
+  const nextTableau = tableau.map((column, columnIndex) => {
+    const filtered = column.filter((card) => !usedIds.has(card.id));
+    if (filtered.length > 0) return filtered;
+    tableClears += 1;
+    return Array.from({ length: TABLEAU_ROWS }, () => createRandomGolfCard());
+  });
+  return { tableau: nextTableau, tableClears };
+};
+
+const getViceGripColumns = (tableau: CardType[][]) => {
+  const center = Math.floor(tableau.length / 2);
+  return [center - 1, center, center + 1].filter((index) => index >= 0 && index < tableau.length);
+};
+
 const getAbilityCostLabel = (effect: PlayerHandSlot['effect']) => {
+  if (effect === 'banks-strike') return '1-3';
+  if (effect === 'hiro-guard') return String(HIRO_GUARD_COST);
   if (effect === 'sticky-paws') return 'Q';
   if (effect === 'path-of-stars') return '10+';
   if (effect === 'jikan') return '2';
   if (effect === 'ironfur') return '4';
   if (effect === 'tap-out') return '3';
+  if (effect === 'fetch') return '2';
+  if (effect === 'vice-grip') return '3';
   if (effect === 'slipstream') return '4';
   if (effect === 'battery') return 'LINK';
   if (effect === 'rigged-construct') return 'Q';
-  if (effect === 'rewire') return 'Q';
+  if (effect === 'rewire') return String(JET_REWIRE_COST);
   if (effect === 'scrap-plating') return 'Q';
   if (effect === 'aegis-shunt') return 'Q';
   if (effect === 'repurpose' || effect === 'paw-sperity') return '∞';
@@ -512,7 +1436,7 @@ const getAbilityBaseCost = (effect: PlayerHandSlot['effect']) => {
   if (effect === 'battery') return 0;
   if (effect === 'siphon') return 2;
   if (effect === 'rigged-construct') return 8;
-  if (effect === 'rewire') return 5;
+  if (effect === 'rewire') return JET_REWIRE_COST;
   if (effect === 'scrap-plating') return 4;
   if (effect === 'aegis-shunt') return 4;
   const label = getAbilityCostLabel(effect);
@@ -526,14 +1450,16 @@ const isJetBatteryAssignableEffect = (effect: PlayerHandSlot['effect']): effect 
 
 const getAbilityTaxonomy = (effect: PlayerHandSlot['effect']): AbilityTaxonomy | null => {
   if (effect === 'repurpose') return 'tableau-clear';
-  if (effect === 'sticky-paws' || effect === 'path-of-stars' || effect === 'jikan' || effect === 'ironfur' || effect === 'tap-out' || effect === 'slipstream' || effect === 'battery' || effect === 'siphon' || effect === 'rigged-construct' || effect === 'rewire') return 'signature-active';
+  if (effect === 'sticky-paws' || effect === 'path-of-stars' || effect === 'jikan' || effect === 'ironfur' || effect === 'tap-out' || effect === 'slipstream' || effect === 'battery' || effect === 'siphon' || effect === 'rigged-construct' || effect === 'rewire' || effect === 'vice-grip' || effect === 'banks-strike' || effect === 'hiro-guard') return 'signature-active';
+  if (effect === 'fetch') return 'utility-active';
   if (effect === 'paw-sperity') return 'utility-active';
   return null;
 };
 
 const getAbilityTaxonomyBadge = (effect: PlayerHandSlot['effect']) => {
   if (effect === 'repurpose') return 'TC';
-  if (effect === 'sticky-paws' || effect === 'paw-sperity' || effect === 'path-of-stars' || effect === 'jikan') return 'SA';
+  if (effect === 'sticky-paws' || effect === 'paw-sperity' || effect === 'path-of-stars' || effect === 'jikan' || effect === 'vice-grip' || effect === 'banks-strike' || effect === 'hiro-guard') return 'SA';
+  if (effect === 'fetch') return 'UA';
   return null;
 };
 
@@ -541,7 +1467,7 @@ const getAbilityCooldown = (state: GolfGameState, effect: PlayerHandSlot['effect
   if (effect === 'sticky-paws') return state.stickyPawsCooldown;
   if (effect === 'paw-sperity') return state.panPawSperityCooldown;
   if (effect === 'rigged-construct') return state.riggedConstructCooldown;
-  if (effect === 'rewire') return state.assistJetRewireCooldown;
+  if (effect === 'rewire') return state.playerStock.name === 'Jet' ? 0 : state.assistJetRewireCooldown;
   return 0;
 };
 
@@ -611,8 +1537,8 @@ const getPrimeJetEfficiencyUnderflow = (state: GolfGameState, effect: PlayerHand
 const createFreeEnergyCard = (value: number): CardType => ({
   id: `free-energy-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   rank: Math.min(13, Math.max(1, value)),
-  suit: getSuitForElement('E'),
-  element: 'E',
+  suit: '♣',
+  element: 'N',
   name: 'FREE ENERGY',
 });
 
@@ -699,16 +1625,20 @@ const pickEnemyProfileForBiome = (biomeId: string) => {
 };
 
 const createCombatant = (name: string): ActorCombatState => {
-  if (name === 'Jet') return { hp: 18, hpMax: 18, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 7, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false };
-  if (name === 'Hiro') return { hp: 20, hpMax: 20, armor: 2, defense: 1, defenseBuffAmount: 0, evasion: 4, evasionBuffAmount: 0, superArmorBulwark: 1, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false };
-  if (name === 'Pan') return { hp: 16, hpMax: 16, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 10, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 1, superArmorReactive: 0, elementalShields: { F: 1 }, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false };
-  if (name === 'Whis') return { hp: 14, hpMax: 14, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 22, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 1, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 1, forecastIntent: false };
-  return { hp: 12, hpMax: 12, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 0, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false };
+  if (name === 'Jet') return { hp: 18, hpMax: 18, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 7, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, staggerPressure: 0, forecastIntent: false };
+  if (name === 'Banks') return { hp: 16, hpMax: 16, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 12, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, staggerPressure: 0, forecastIntent: false };
+  if (name === 'Hiro') return { hp: 20, hpMax: 20, armor: 2, defense: 1, defenseBuffAmount: 0, evasion: 4, evasionBuffAmount: 0, superArmorBulwark: 1, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, staggerPressure: 0, forecastIntent: false };
+  if (name === 'Mochi') return { hp: 10, hpMax: 10, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 14, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, staggerPressure: 0, whiskersense: 0, momentum: 0, narrowEscape: 0, skittish: 0, forecastIntent: false };
+  if (name === 'Pan') return { hp: 16, hpMax: 16, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 10, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 1, superArmorReactive: 0, elementalShields: { F: 1 }, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, staggerPressure: 0, forecastIntent: false };
+  if (name === 'Whis') return { hp: 14, hpMax: 14, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 22, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 1, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 1, staggerPressure: 0, forecastIntent: false };
+  return { hp: 12, hpMax: 12, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 0, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, staggerPressure: 0, forecastIntent: false };
 };
 
 const createInitialCombatants = (enemyProfile: EnemyProfile) => ({
   jet: createCombatant('Jet'),
+  banks: createCombatant('Banks'),
   hiro: createCombatant('Hiro'),
+  mochi: createCombatant('Mochi'),
   pan: createCombatant('Pan'),
   whis: createCombatant('Whis'),
   [actorKeyFromName(enemyProfile.actor.name)]: { ...enemyProfile.combatant, elementalShields: { ...enemyProfile.combatant.elementalShields } },
@@ -722,27 +1652,100 @@ const cloneEnemyCombatant = (profile: EnemyProfile): ActorCombatState => ({
 const sumSuperArmor = (combatant: ActorCombatState) =>
   combatant.superArmorBulwark + combatant.superArmorWard + combatant.superArmorReactive;
 
-const normalizeApSegments = (segments: Element[], apCount: number, fallbackElement: Element): Element[] => {
-  const targetCount = Math.max(0, Math.round(apCount));
-  const next = segments.slice(0, targetCount);
-  while (next.length < targetCount) next.push(fallbackElement);
-  return next;
+const applyFlatDamageToCombatant = (combatant: ActorCombatState, damage: number): ActorCombatState => {
+  if (damage <= 0) return combatant;
+  const nextArmor = Math.max(0, combatant.armor - damage);
+  const overflowDamage = Math.max(0, damage - combatant.armor);
+  return {
+    ...combatant,
+    armor: nextArmor,
+    hp: Math.max(0, combatant.hp - overflowDamage),
+    consecutiveHitsTaken: combatant.consecutiveHitsTaken + (overflowDamage > 0 ? 1 : 0),
+  };
 };
+
+const addStaggerPressure = (
+  combatants: Record<string, ActorCombatState>,
+  actorKey: string,
+  amount: number
+) => {
+  if (amount <= 0 || !combatants[actorKey]) return combatants;
+  return {
+    ...combatants,
+    [actorKey]: {
+      ...combatants[actorKey],
+      staggerPressure: Math.min(99, (combatants[actorKey].staggerPressure ?? 0) + amount),
+    },
+  };
+};
+
+const distributeArmorByNeed = (
+  state: GolfGameState,
+  totalArmor: number
+) => {
+  if (totalArmor <= 0) return state.combatants;
+  const partyNames = state.starterPackBase.map((card) => card.name);
+  const nextCombatants = { ...state.combatants };
+  const allocations = new Map<string, number>();
+  const sorted = partyNames
+    .map((name) => {
+      const key = actorKeyFromName(name);
+      const combatant = nextCombatants[key];
+      return {
+        key,
+        combatant,
+        hpRatio: combatant ? combatant.hp / Math.max(1, combatant.hpMax) : 1,
+        hpMax: combatant?.hpMax ?? 99,
+      };
+    })
+    .filter((entry) => !!entry.combatant)
+    .sort((a, b) => {
+      if (a.hpRatio !== b.hpRatio) return a.hpRatio - b.hpRatio;
+      if (a.hpMax !== b.hpMax) return a.hpMax - b.hpMax;
+      return a.key.localeCompare(b.key);
+    });
+  if (sorted.length === 0) return state.combatants;
+  const base = Math.floor(totalArmor / sorted.length);
+  let remainder = totalArmor % sorted.length;
+  sorted.forEach((entry, index) => {
+    allocations.set(entry.key, base + (index < remainder ? 1 : 0));
+  });
+  allocations.forEach((amount, key) => {
+    const combatant = nextCombatants[key];
+    if (!combatant || amount <= 0) return;
+    nextCombatants[key] = { ...combatant, armor: combatant.armor + amount };
+  });
+  return nextCombatants;
+};
+
+const getEnemyBiteCount = (state: GolfGameState, cardId: string) =>
+  state.enemyBiteMarks[cardId] ?? 0;
+
+// Open hook: future abilities may temporarily make buried tableau cards legal to grab.
+const canAccessBuriedTableauCard = (
+  _state: GolfGameState,
+  _columnIndex: number,
+  _card: CardType,
+  _depthFromTop: number
+) => false;
 
 const getCombatVitals = (state: GolfGameState, card: CardType) => {
   const combatant = state.combatants[actorKeyFromName(card.name)] ?? createCombatant(card.name);
   const isPlayerPrime = card.id === state.playerStock.id;
   const isEnemyPrime = card.id === state.enemyStock.id;
-  const apSegments = isPlayerPrime
-    ? normalizeApSegments(state.playerPrimeApSegments, state.playerStockActionPoints, card.element)
-    : isEnemyPrime
-      ? normalizeApSegments([], state.enemyStockActionPoints, card.element)
-      : undefined;
+  const lowHpAccent = combatant.hpMax > 0 && combatant.hp / combatant.hpMax <= 0.2 ? '#ff5a5a' : undefined;
+  const actorAccent =
+    card.name === 'Shade Wisp'
+      ? '#b9bcc4'
+      : lowHpAccent;
   const apCount = isPlayerPrime
     ? state.playerStockActionPoints
     : isEnemyPrime
       ? state.enemyStockActionPoints
       : undefined;
+  const apMax = isPlayerPrime || isEnemyPrime
+    ? getActorApCap(card.name)
+    : undefined;
   return {
     hp: combatant.hp,
     hpMax: combatant.hpMax,
@@ -750,10 +1753,14 @@ const getCombatVitals = (state: GolfGameState, card: CardType) => {
     superArmor: sumSuperArmor(combatant),
     minimalVitalsOnly: true,
     name: '',
-    apSegments,
+    accentColor: actorAccent,
     apCount,
+    apMax,
   };
 };
+
+const isJetChargedCard = (state: GolfGameState, cardId: string) =>
+  state.jetChargedCardIds.includes(cardId);
 
 type ActorStatusEntry = {
   key: string;
@@ -763,10 +1770,16 @@ type ActorStatusEntry = {
   stacks?: number;
   duration?: number | null;
   title: string;
+  flavorText?: string;
+  effectText?: string;
 };
 
 const getActorStatusEntries = (combatant: ActorCombatState): ActorStatusEntry[] => {
   const entries: ActorStatusEntry[] = [];
+  const narrowEscapeEffect = getKinEffectDefinition('Narrow Escape');
+  const skittishEffect = getKinEffectDefinition('Skittish');
+  const whiskersenseEffect = getKinEffectDefinition('Whiskersense');
+  const momentumEffect = getKinEffectDefinition('Momentum');
 
   if (combatant.doomCounter !== null) {
     entries.push({
@@ -775,7 +1788,7 @@ const getActorStatusEntries = (combatant: ActorCombatState): ActorStatusEntry[] 
       tone: 'special',
       priority: 100,
       duration: combatant.doomCounter,
-      title: `Doom: defeated in ${combatant.doomCounter} ticks.`,
+      title: `Defeated in ${combatant.doomCounter} ticks.`,
     });
   }
   if (combatant.counterWindow > 0) {
@@ -786,7 +1799,7 @@ const getActorStatusEntries = (combatant: ActorCombatState): ActorStatusEntry[] 
       priority: 95,
       duration: combatant.counterWindow,
       stacks: combatant.counterDamage,
-      title: `Counter Window: next outgoing hit gains +${combatant.counterDamage} damage.`,
+      title: `Next outgoing hit gains +${combatant.counterDamage} damage.`,
     });
   }
   if (combatant.slow > 0) {
@@ -796,7 +1809,54 @@ const getActorStatusEntries = (combatant: ActorCombatState): ActorStatusEntry[] 
       tone: 'tempo',
       priority: 90,
       duration: combatant.slow,
-      title: `Slow: reduced evasion and harmful effects tick faster for ${combatant.slow} more ticks.`,
+      title: `Reduced evasion and harmful effects tick faster for ${combatant.slow} more ticks.`,
+    });
+  }
+  if ((combatant.narrowEscape ?? 0) > 0 && narrowEscapeEffect) {
+    entries.push({
+      key: 'narrow-escape',
+      label: narrowEscapeEffect.label,
+      tone: narrowEscapeEffect.tone,
+      priority: 88,
+      title: 'Narrow Escape',
+      flavorText: narrowEscapeEffect.flavorText,
+      effectText: narrowEscapeEffect.effectText,
+    });
+  }
+  if ((combatant.skittish ?? 0) > 0 && skittishEffect) {
+    entries.push({
+      key: 'skittish',
+      label: skittishEffect.label,
+      tone: skittishEffect.tone,
+      priority: 87,
+      duration: combatant.skittish,
+      title: 'Skittish',
+      flavorText: skittishEffect.flavorText,
+      effectText: `Cannot swap to prime for ${combatant.skittish} more actions.`,
+    });
+  }
+  if ((combatant.whiskersense ?? 0) > 0 && whiskersenseEffect) {
+    entries.push({
+      key: 'whiskersense',
+      label: whiskersenseEffect.label,
+      tone: whiskersenseEffect.tone,
+      priority: 86,
+      stacks: combatant.whiskersense,
+      title: 'Whiskersense',
+      flavorText: whiskersenseEffect.flavorText,
+      effectText: whiskersenseEffect.effectText,
+    });
+  }
+  if ((combatant.momentum ?? 0) > 0 && momentumEffect) {
+    entries.push({
+      key: 'momentum',
+      label: momentumEffect.label,
+      tone: momentumEffect.tone,
+      priority: 85,
+      stacks: combatant.momentum,
+      title: 'Momentum',
+      flavorText: momentumEffect.flavorText,
+      effectText: `Momentum adds ${combatant.momentum} bonus poke pressure. It loses 1 stack per turn.`,
     });
   }
   if (combatant.haste > 0) {
@@ -806,7 +1866,7 @@ const getActorStatusEntries = (combatant: ActorCombatState): ActorStatusEntry[] 
       tone: 'tempo',
       priority: 85,
       duration: combatant.haste,
-      title: `Haste: increased evasion and beneficial effects tick faster for ${combatant.haste} more ticks.`,
+      title: `Increased evasion and beneficial effects tick faster for ${combatant.haste} more ticks.`,
     });
   }
   if (combatant.burn > 0) {
@@ -816,7 +1876,7 @@ const getActorStatusEntries = (combatant: ActorCombatState): ActorStatusEntry[] 
       tone: 'debuff',
       priority: 80,
       stacks: combatant.burn,
-      title: `Burn: takes ${combatant.burn} damage each harmful tick.`,
+      title: `Takes ${combatant.burn} damage each harmful tick.`,
     });
   }
   (Object.entries(combatant.elementalShields) as Array<[Element, number | undefined]>).forEach(([element, amount]) => {
@@ -827,7 +1887,7 @@ const getActorStatusEntries = (combatant: ActorCombatState): ActorStatusEntry[] 
       tone: 'buff',
       priority: 72,
       stacks: amount,
-      title: `${element} Shield: negates matching elemental damage ${amount} more time${amount === 1 ? '' : 's'}.`,
+      title: `Negates matching elemental damage ${amount} more time${amount === 1 ? '' : 's'}.`,
     });
   });
   if (combatant.defenseBuffTurns > 0 && combatant.defenseBuffAmount > 0) {
@@ -838,7 +1898,7 @@ const getActorStatusEntries = (combatant: ActorCombatState): ActorStatusEntry[] 
       priority: 60,
       stacks: combatant.defenseBuffAmount,
       duration: combatant.defenseBuffTurns,
-      title: `Defense Up: +${combatant.defenseBuffAmount} defense for ${combatant.defenseBuffTurns} more beneficial tick${combatant.defenseBuffTurns === 1 ? '' : 's'}.`,
+      title: `+${combatant.defenseBuffAmount} defense for ${combatant.defenseBuffTurns} more beneficial tick${combatant.defenseBuffTurns === 1 ? '' : 's'}.`,
     });
   }
 
@@ -936,6 +1996,13 @@ const getActorBackdropStyle = (actorName: string) => {
       glow: '0 0 18px rgba(175,223,134,0.16)',
     };
   }
+  if (actorName === 'Shade Wisp') {
+    return {
+      border: 'rgba(196,198,205,0.34)',
+      bg: 'linear-gradient(180deg, rgba(72,76,84,0.26), rgba(10,11,14,0.12))',
+      glow: '0 0 18px rgba(214,218,228,0.12)',
+    };
+  }
   return {
     border: 'rgba(255,255,255,0.18)',
     bg: 'linear-gradient(180deg, rgba(36,36,36,0.18), rgba(10,10,10,0.08))',
@@ -946,18 +2013,87 @@ const getActorBackdropStyle = (actorName: string) => {
 const isNegativeStatusEntry = (status: ActorStatusEntry) =>
   status.key === 'doom' || status.key === 'slow' || status.key === 'burn' || status.tone === 'debuff';
 
+function EnemyActionPreviewCard({
+  title,
+  detail,
+  targetLabel,
+  hostile = false,
+}: {
+  title: string;
+  detail: string;
+  targetLabel: string;
+  hostile?: boolean;
+}) {
+  return (
+    <div
+      className="flex flex-col rounded-[18px] border px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.28)]"
+      style={{
+        minHeight: 132,
+        width: 126,
+        borderColor: hostile ? 'rgba(255,82,82,0.34)' : 'rgba(255,255,255,0.14)',
+        background: hostile ? 'rgba(19,6,8,0.94)' : 'rgba(8,9,12,0.92)',
+        boxShadow: hostile
+          ? '0 0 22px rgba(255,72,72,0.14), 0 12px 30px rgba(0,0,0,0.28)'
+          : '0 12px 30px rgba(0,0,0,0.28)',
+      }}
+    >
+      <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${hostile ? 'text-[#ffc7c7]' : 'text-white/84'}`}>
+        {title}
+      </div>
+      <div className="mt-3 text-[12px] font-semibold leading-4 text-white/90">
+        {detail}
+      </div>
+      <div className="mt-auto self-start rounded-full border border-white/12 bg-black/55 px-3 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-white/78">
+        {targetLabel}
+      </div>
+    </div>
+  );
+}
+
+function LayoutPlaceholder({
+  title,
+  width,
+  height,
+  subtitle,
+}: {
+  title: string;
+  width: number;
+  height: number;
+  subtitle?: string;
+}) {
+  return (
+    <div
+      className="flex items-center justify-center rounded-[20px] border border-dashed border-white/10 bg-black/20"
+      style={{ width, height }}
+    >
+      <div className="px-4 text-center">
+        <div className="text-[10px] font-black uppercase tracking-[0.22em] text-white/34">{title}</div>
+        {subtitle ? (
+          <div className="mt-2 text-[10px] leading-4 text-white/20">{subtitle}</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 const ActorStatusRail = ({
   actorName,
   combatant,
   maxVisible,
   iconSize,
   compact = false,
+  highlightedKeys = [],
+  flashVersions = {},
+  transientStatuses = [],
 }: {
   actorName: string;
   combatant: ActorCombatState;
   maxVisible: number;
   iconSize: number;
   compact?: boolean;
+  highlightedKeys?: string[];
+  flashVersions?: Record<string, number>;
+  transientStatuses?: Array<{ key: string; label: string; tone: 'buff' | 'debuff' }>;
 }) => {
   const statuses = getActorStatusEntries(combatant);
   if (statuses.length === 0) return null;
@@ -977,11 +2113,22 @@ const ActorStatusRail = ({
   const renderStatusTooltip = (status: ActorStatusEntry) => (
     <div className="min-w-[180px] max-w-[240px] rounded-2xl border border-white/12 bg-black/92 px-3 py-2 text-left shadow-[0_12px_40px_rgba(0,0,0,0.42)]">
       <div className="text-[10px] font-black uppercase tracking-[0.14em] text-white/90">
-        {status.key.replace(/^shield-/, '').replace(/-/g, ' ')}
+        {status.title || status.key.replace(/^shield-/, '').replace(/-/g, ' ')}
       </div>
-      <div className="mt-1 text-[11px] leading-[1.4] text-white/72">
-        {status.title}
-      </div>
+      {status.flavorText ? (
+        <div className="mt-1 text-[11px] leading-[1.4] text-white/72">
+          {renderGameText(status.flavorText)}
+        </div>
+      ) : null}
+      {status.effectText ? (
+        <div className="mt-1 text-[11px] leading-[1.4] text-white/84">
+          {renderGameText(status.effectText)}
+        </div>
+      ) : !status.flavorText ? (
+        <div className="mt-1 text-[11px] leading-[1.4] text-white/72">
+          {status.title}
+        </div>
+      ) : null}
       {typeof status.duration === 'number' && status.duration > 0 ? (
         <div className="mt-2 text-[10px] font-mono uppercase tracking-[0.08em] text-white/55">
           Duration: {status.duration}
@@ -995,11 +2142,16 @@ const ActorStatusRail = ({
     </div>
   );
 
-  const renderStatusChip = (status: ActorStatusEntry) => {
+  const renderStatusChip = (
+    status: Pick<ActorStatusEntry, 'key' | 'label' | 'tone' | 'duration' | 'stacks'>,
+    options?: { transient?: boolean }
+  ) => {
     const style = STATUS_TONE_STYLES[status.tone];
+    const highlighted = highlightedKeys.includes(status.key);
+    const flashVersion = flashVersions[`${actorName}:${status.key}`] ?? 0;
     const chip = (
       <div
-        key={status.key}
+        key={`${status.key}-${options?.transient ? 'transient' : flashVersion}`}
         className="relative flex items-center justify-center rounded-[6px] border font-black uppercase tracking-[0.04em]"
         style={{
           width: tileSize,
@@ -1007,40 +2159,47 @@ const ActorStatusRail = ({
           borderColor: style.border,
           background: style.bg,
           color: style.text,
-          boxShadow: style.glow,
+          boxShadow: highlighted ? `0 0 18px ${style.border}, ${style.glow}` : style.glow,
           fontSize: labelFontSize,
+          animation: options?.transient
+            ? 'golf-status-falloff 0.72s ease-out forwards'
+            : flashVersion > 0
+              ? 'golf-status-trigger-flash 0.52s ease-out'
+              : (highlighted ? 'golf-status-blink 0.78s ease-in-out 2' : undefined),
         }}
       >
         <span>{status.label}</span>
         {typeof status.duration === 'number' && status.duration > 0 ? (
           <div
-            className="absolute flex items-center justify-center rounded-full border bg-black/92 tabular-nums"
+            className="absolute flex items-center justify-center rounded-md border bg-black tabular-nums font-black"
             style={{
-              top: -chipOffset * 0.42,
-              left: -chipOffset * 0.38,
-              minWidth: chipOffset,
-              height: chipOffset,
-              paddingInline: 2,
+              top: -chipOffset * 0.48,
+              left: -chipOffset * 0.44,
+              minWidth: chipOffset + 6,
+              height: chipOffset + 4,
+              paddingInline: 4,
               borderColor: style.border,
-              color: style.text,
-              fontSize: badgeFontSize,
+              color: '#ffffff',
+              boxShadow: `0 0 14px ${style.border}`,
+              fontSize: badgeFontSize + 1,
             }}
           >
             {Math.min(99, status.duration)}
           </div>
         ) : null}
-        {typeof status.stacks === 'number' && status.stacks > 0 ? (
-          <div
-            className="absolute flex items-center justify-center rounded-full border bg-black/92 tabular-nums"
-            style={{
-              right: -chipOffset * 0.38,
-              bottom: -chipOffset * 0.42,
-              minWidth: chipOffset,
-              height: chipOffset,
-              paddingInline: 2,
+      {typeof status.stacks === 'number' && status.stacks >= 0 ? (
+        <div
+          className="absolute flex items-center justify-center rounded-md border bg-black tabular-nums font-black"
+          style={{
+              right: -chipOffset * 0.44,
+              bottom: -chipOffset * 0.48,
+              minWidth: chipOffset + 6,
+              height: chipOffset + 4,
+              paddingInline: 4,
               borderColor: style.border,
-              color: style.text,
-              fontSize: badgeFontSize,
+              color: '#ffffff',
+              boxShadow: `0 0 14px ${style.border}`,
+              fontSize: badgeFontSize + 1,
             }}
           >
             {Math.min(99, status.stacks)}
@@ -1049,7 +2208,7 @@ const ActorStatusRail = ({
       </div>
     );
     return (
-      <Tooltip key={status.key} content={renderStatusTooltip(status)} pinnable>
+      <Tooltip key={`${status.key}-${options?.transient ? 'transient' : flashVersion}`} content={renderStatusTooltip(status)} pinnable>
         {chip}
       </Tooltip>
     );
@@ -1066,6 +2225,7 @@ const ActorStatusRail = ({
           }}
         >
           {visibleNegative.map(renderStatusChip)}
+          {transientStatuses.filter((status) => status.tone === 'debuff').map((status) => renderStatusChip(status, { transient: true }))}
           {negativeOverflow > 0 ? (
             <div
               className="flex items-center justify-center rounded-full border border-white/24 bg-black/86 font-black text-white/90"
@@ -1086,6 +2246,7 @@ const ActorStatusRail = ({
           }}
         >
           {visiblePositive.map(renderStatusChip)}
+          {transientStatuses.filter((status) => status.tone === 'buff').map((status) => renderStatusChip(status, { transient: true }))}
           {positiveOverflow > 0 ? (
             <div
               className="flex items-center justify-center rounded-full border border-white/24 bg-black/86 font-black text-white/90"
@@ -1108,10 +2269,10 @@ const createRandomGolfCard = (): CardType => {
   const rank = Math.floor(Math.random() * 13) + 1;
   golfCardSequence += 1;
   return {
-    id: `golf-live-${suitEntry.element}-${rank}-${golfCardSequence}`,
+    id: `golf-live-${rank}-${golfCardSequence}`,
     rank,
     suit: suitEntry.suit,
-    element: suitEntry.element,
+    element: 'N',
     name: '',
   };
 };
@@ -1128,6 +2289,13 @@ const refillClearedTableau = (tableau: CardType[][], columnIndex: number) => {
   };
 };
 
+const simulateTableauAfterTopPlay = (tableau: CardType[][], columnIndex: number) => {
+  const nextTableau = tableau.map((column, idx) =>
+    idx === columnIndex ? column.slice(0, -1) : column
+  );
+  return refillClearedTableau(nextTableau, columnIndex).tableau;
+};
+
 const simulateSwapBenchCard = (prev: GolfGameState, benchIndex: number) => {
   const benchCard = prev.playerBench[benchIndex];
   const isStandardTag = !!benchCard && canPlayOnStock(benchCard, prev.playerStock);
@@ -1140,23 +2308,20 @@ const simulateSwapBenchCard = (prev: GolfGameState, benchIndex: number) => {
 
   const nextBench = [...prev.playerBench];
   const nextBenchSequences = [...prev.playerBenchSequences];
-  const nextBenchActionPoints = [...prev.playerBenchActionPoints];
   const previousPrimeStock = prev.playerStock;
   const nextPlayerStock = nextBench[benchIndex];
   nextBench[benchIndex] = prev.playerStock;
   const nextPlayerStockSequence = nextBenchSequences[benchIndex];
-  const nextPlayerStockActionPoints = nextBenchActionPoints[benchIndex];
   nextBenchSequences[benchIndex] = prev.playerStockSequence;
-  nextBenchActionPoints[benchIndex] = prev.playerStockActionPoints;
 
   return {
     ...prev,
     playerStock: nextPlayerStock,
     playerBench: nextBench,
     playerStockSequence: nextPlayerStockSequence,
-    playerStockActionPoints: nextPlayerStockActionPoints,
+    // Team AP is shared across the whole active party, so swapping does not move AP.
+    playerStockActionPoints: prev.playerStockActionPoints,
     playerBenchSequences: nextBenchSequences,
-    playerBenchActionPoints: nextBenchActionPoints,
     playerFreeTagAvailable: isStandardTag ? prev.playerFreeTagAvailable : false,
     playerTagLockCapturesRemaining: 2,
     playerBlockedReturnStockId: previousPrimeStock.id,
@@ -1179,7 +2344,6 @@ const getBenchRole = (state: GolfGameState, benchIndex: number): 'support' | 'as
 
 const getSupportAbilityEffect = (card: CardType | null): PlayerHandSlot['effect'] => {
   if (!card) return null;
-  if (card.name === 'Hiro') return 'ironfur';
   if (card.name === 'Pan') return 'paw-sperity';
   if (card.name === 'Whis') return 'slipstream';
   return null;
@@ -1187,7 +2351,6 @@ const getSupportAbilityEffect = (card: CardType | null): PlayerHandSlot['effect'
 
 const getSupportAbilityCost = (card: CardType | null) => {
   if (!card) return 0;
-  if (card.name === 'Hiro') return 3;
   if (card.name === 'Pan') return 4;
   if (card.name === 'Whis') return 3;
   return 0;
@@ -1195,19 +2358,19 @@ const getSupportAbilityCost = (card: CardType | null) => {
 
 const getSupportPassiveSummary = (card: CardType | null) => {
   if (!card) return 'No support bonus';
-  if (card.name === 'Hiro') return 'Reactive guard and sturdier prime.';
+  if (card.name === 'Hiro') return 'Guard Dog: Hiro is being repositioned toward a pack-guardian role where he intercepts lethal pressure that would otherwise take down an ally.';
   if (card.name === 'Jet') return 'AP relay specialist. Lowers combo thresholds and pushes ally poke cadence or support throughput.';
   if (card.name === 'Pan') return 'Tableau smoothness and clear rewards.';
-  if (card.name === 'Whis') return 'Counter windows and combat foresight.';
+  if (card.name === 'Whis') return 'Prophecy support square: activates after Hiro collects all four elements, then reveals the best 5-step route.';
   return 'No support bonus';
 };
 
 const getAssistPassiveSummary = (card: CardType | null) => {
   if (!card) return 'No assist bonus';
-  if (card.name === 'Hiro') return 'Enemy turns grant Jet a small armor brace.';
+  if (card.name === 'Hiro') return 'Pack relay: Hiro is being reworked around Fetch as his signature and Guard Dog as his passive, so support Hiro should still feel active even before he rotates in.';
   if (card.name === 'Jet') return 'Micro-Battery support: stock captures charge overflow AP, add +2 max AP, and overcharge Prime attacks at full charge.';
   if (card.name === 'Pan') return 'Tableau clears grant Jet bonus AP.';
-  if (card.name === 'Whis') return 'Dodges gain stronger counter windows.';
+  if (card.name === 'Whis') return 'Whis no longer acts as a stock; the square sits beside Hiro and becomes a dedicated Navi trigger.';
   return 'No assist bonus';
 };
 
@@ -1228,7 +2391,7 @@ const getJetInspectorSections = () => ({
     'Quarnyix Micro-Battery: stores up to 5 overflow AP; gains 1 AP whenever a card is added to Jet stock.',
     'Quarnyx Capacitor: Prime Kin gains +2 max AP.',
     'Overcharge: at max Micro-Battery AP, Prime attacks gain +1 electricity damage.',
-    'Rewire: legal tableau-to-tableau movement on a 5-turn cooldown.',
+    'Rewire: spend AP to shift legal tableau tops; rewired cards stay Charged until an ally cashes +1 AP or an enemy gets Zapped.',
   ],
 });
 
@@ -1246,7 +2409,7 @@ const getKinInspectorNarrative = (card: CardType | null) => {
   if (card.name === 'Hiro') {
     return {
       title: 'HIRO DOCTRINE',
-      summary: 'Reactive guard rails, sturdier frontline posture, and dependable mitigation sequencing.',
+      summary: 'Starter husky prime built around endurance, loyalty, and simple sequence extension, now paired with support-square allies.',
       detail: `${getSupportPassiveSummary(card)} ${getAssistPassiveSummary(card)}`,
     };
   }
@@ -1260,7 +2423,7 @@ const getKinInspectorNarrative = (card: CardType | null) => {
   if (card.name === 'Whis') {
     return {
       title: 'WHIS DOCTRINE',
-      summary: 'Counter windows, foresight, and elegant temporal control.',
+      summary: 'Temporal support square that unlocks Prophecy once all four elements have been collected.',
       detail: `${getSupportPassiveSummary(card)} ${getAssistPassiveSummary(card)}`,
     };
   }
@@ -1284,6 +2447,7 @@ const getDiscardCountsByActor = (entries: string[]) => {
 const getBenchAbilityCost = (card: CardType | null, role: 'support' | 'assist') => {
   if (!card) return 0;
   if (card.name === 'Hiro') return role === 'support' ? 3 : 2;
+  if (card.name === 'Mochi') return 3;
   if (card.name === 'Jet') return 5;
   if (card.name === 'Pan') return role === 'support' ? 4 : 3;
   if (card.name === 'Whis') return 2;
@@ -1312,9 +2476,11 @@ const hasAssistJet = (state: GolfGameState) =>
   getAssistBenchIndices(state).some((assistIndex) => state.playerBench[assistIndex]?.name === 'Jet');
 
 const routePrimeApWithAssistJet = (prev: GolfGameState, gain: number) => {
+  const activeRarity = prev.starterPackAbilityRarities[prev.activeStarterPackIndex] ?? 1;
+  const clampPrimeAp = (value: number) => clampStarterPackApToCap(prev.playerStock.name, value, activeRarity);
   if (gain <= 0) {
     return {
-      playerStockActionPoints: prev.playerStockActionPoints,
+      playerStockActionPoints: clampPrimeAp(prev.playerStockActionPoints),
       assistJetMicroBatteryAp: prev.assistJetMicroBatteryAp,
       jetState: prev,
     };
@@ -1329,7 +2495,7 @@ const routePrimeApWithAssistJet = (prev: GolfGameState, gain: number) => {
   }
   if (!hasAssistJet(prev)) {
     return {
-      playerStockActionPoints: prev.playerStockActionPoints + gain,
+      playerStockActionPoints: clampPrimeAp(prev.playerStockActionPoints + gain),
       assistJetMicroBatteryAp: prev.assistJetMicroBatteryAp,
       jetState: prev,
     };
@@ -1338,7 +2504,7 @@ const routePrimeApWithAssistJet = (prev: GolfGameState, gain: number) => {
   const stockGain = Math.min(gain, Math.max(0, primeMaxAp - prev.playerStockActionPoints));
   const overflow = gain - stockGain;
   return {
-    playerStockActionPoints: prev.playerStockActionPoints + stockGain,
+    playerStockActionPoints: clampPrimeAp(prev.playerStockActionPoints + stockGain),
     assistJetMicroBatteryAp: Math.min(
       ASSIST_JET_MICRO_BATTERY_MAX,
       prev.assistJetMicroBatteryAp + overflow
@@ -1365,9 +2531,16 @@ const applyPlayerProgressToTarget = (
   tableClearApBonus: number,
   nextBenchActionPoints: number[]
 ) => {
+  const chargedBonus = isJetChargedCard(prev, candidate.id) ? 1 : 0;
+  const nextJetChargedCardIds = chargedBonus > 0
+    ? prev.jetChargedCardIds.filter((cardId) => cardId !== candidate.id)
+    : prev.jetChargedCardIds;
+  const nextEnemyBiteMarks = prev.enemyBiteMarks[candidate.id]
+    ? Object.fromEntries(Object.entries(prev.enemyBiteMarks).filter(([cardId]) => cardId !== candidate.id))
+    : prev.enemyBiteMarks;
   if (targetStockId === prev.playerStock.id) {
     const nextSequence = prev.playerStockSequence + 1;
-    const routedAp = routePrimeApWithAssistJet(prev, 1 + tableClearApBonus);
+    const routedAp = routePrimeApWithAssistJet(prev, 1 + tableClearApBonus + chargedBonus);
     return {
       nextState: {
         ...routedAp.jetState,
@@ -1377,6 +2550,8 @@ const applyPlayerProgressToTarget = (
         playerPrimeApSegments: appendPrimeApSegment(prev, candidate.element),
         playerBenchActionPoints: nextBenchActionPoints,
         assistJetMicroBatteryAp: routedAp.assistJetMicroBatteryAp,
+        jetChargedCardIds: nextJetChargedCardIds,
+        enemyBiteMarks: nextEnemyBiteMarks,
         playerFreeTagAvailable: false,
         ...advancePlayerTagLock(prev),
       },
@@ -1400,7 +2575,7 @@ const applyPlayerProgressToTarget = (
   const nextSequence = (nextBenchSequences[benchIndex] ?? 0) + 1;
   nextBenchSequences[benchIndex] = nextSequence;
   const nextBenchAp = [...nextBenchActionPoints];
-  nextBenchAp[benchIndex] = Math.min(12, (nextBenchAp[benchIndex] ?? 0) + 1 + tableClearApBonus);
+  nextBenchAp[benchIndex] = Math.min(12, (nextBenchAp[benchIndex] ?? 0) + 1 + tableClearApBonus + chargedBonus);
 
   return {
     nextState: {
@@ -1408,6 +2583,8 @@ const applyPlayerProgressToTarget = (
       playerBench: nextBench,
       playerBenchSequences: nextBenchSequences,
       playerBenchActionPoints: nextBenchAp,
+      jetChargedCardIds: nextJetChargedCardIds,
+      enemyBiteMarks: nextEnemyBiteMarks,
       playerFreeTagAvailable: false,
       ...advancePlayerTagLock(prev),
     },
@@ -1432,50 +2609,27 @@ const simulateRotateSupport = (prev: GolfGameState, benchIndex: number) => {
 
 const simulateUseSupportAbility = (prev: GolfGameState) => {
   const supportCard = getSupportBenchCard(prev);
-  const supportIndex = getSupportBenchIndex(prev);
-  const supportAp = prev.playerBenchActionPoints[supportIndex] ?? 0;
+  const supportAp = prev.playerStockActionPoints;
   const cost = getSupportAbilityCost(supportCard);
   if (!supportCard || prev.playerSupportActionUsed || supportAp < cost) return prev;
-
-  const nextBenchActionPoints = [...prev.playerBenchActionPoints];
-  nextBenchActionPoints[supportIndex] = Math.max(0, supportAp - cost);
   const primeKey = actorKeyFromName(prev.playerStock.name);
   const primeCombatant = prev.combatants[primeKey];
   if (!primeCombatant) return prev;
-
-  if (supportCard.name === 'Hiro') {
-    return {
-      ...prev,
-      playerBenchActionPoints: nextBenchActionPoints,
-      playerSupportActionUsed: true,
-      combatants: {
-        ...prev.combatants,
-        [primeKey]: {
-          ...primeCombatant,
-          armor: primeCombatant.armor + 5,
-          defense: primeCombatant.defense + 4,
-          defenseBuffAmount: primeCombatant.defenseBuffAmount + 4,
-          defenseBuffTurns: Math.max(primeCombatant.defenseBuffTurns, 2),
-        },
-      },
-    };
-  }
 
   if (supportCard.name === 'Pan') {
     const routedAp = routePrimeApWithAssistJet(prev, 1);
     return {
       ...routedAp.jetState,
       tableau: rerollTableau(prev.tableau),
-      playerBenchActionPoints: nextBenchActionPoints,
       playerSupportActionUsed: true,
-      playerStockActionPoints: routedAp.playerStockActionPoints,
+      playerStockActionPoints: Math.max(0, routedAp.playerStockActionPoints - cost),
     };
   }
 
   if (supportCard.name === 'Whis') {
     return {
       ...prev,
-      playerBenchActionPoints: nextBenchActionPoints,
+      playerStockActionPoints: Math.max(0, prev.playerStockActionPoints - cost),
       playerSupportActionUsed: true,
       combatants: {
         ...prev.combatants,
@@ -1500,32 +2654,14 @@ const simulateUseBenchAbility = (prev: GolfGameState, benchIndex: number) => {
   if (!benchCard) return prev;
   const role = getBenchRole(prev, benchIndex);
   const cost = getBenchAbilityCost(benchCard, role);
-  const availableAp = prev.playerBenchActionPoints[benchIndex] ?? 0;
+  const availableAp = prev.playerStockActionPoints;
   if (availableAp < cost) return prev;
-
-  const nextBenchActionPoints = [...prev.playerBenchActionPoints];
-  nextBenchActionPoints[benchIndex] = Math.max(0, availableAp - cost);
   const primeKey = actorKeyFromName(prev.playerStock.name);
   const primeCombatant = prev.combatants[primeKey];
   if (!primeCombatant) return prev;
 
   if (benchCard.name === 'Hiro') {
-    const armorGain = role === 'support' ? 5 : 3;
-    const defenseGain = role === 'support' ? 4 : 2;
-    return {
-      ...prev,
-      playerBenchActionPoints: nextBenchActionPoints,
-      combatants: {
-        ...prev.combatants,
-        [primeKey]: {
-          ...primeCombatant,
-          armor: primeCombatant.armor + armorGain,
-          defense: primeCombatant.defense + defenseGain,
-          defenseBuffAmount: primeCombatant.defenseBuffAmount + defenseGain,
-          defenseBuffTurns: Math.max(primeCombatant.defenseBuffTurns, role === 'support' ? 2 : 1),
-        },
-      },
-    };
+    return prev;
   }
 
   if (benchCard.name === 'Jet') {
@@ -1533,7 +2669,7 @@ const simulateUseBenchAbility = (prev: GolfGameState, benchIndex: number) => {
     // The current hook is intentionally minimal until bench-variant Jet has a distinct actor identity.
     return {
       ...prev,
-      playerBenchActionPoints: nextBenchActionPoints,
+      playerStockActionPoints: Math.max(0, prev.playerStockActionPoints - cost),
       assistJetRewireCooldown: 5,
     };
   }
@@ -1543,15 +2679,14 @@ const simulateUseBenchAbility = (prev: GolfGameState, benchIndex: number) => {
     return {
       ...routedAp.jetState,
       tableau: rerollTableau(prev.tableau),
-      playerBenchActionPoints: nextBenchActionPoints,
-      playerStockActionPoints: routedAp.playerStockActionPoints,
+      playerStockActionPoints: Math.max(0, routedAp.playerStockActionPoints - cost),
       playerPrimeApSegments: appendPrimeApSegment(prev, benchCard.element),
     };
   }
 
   return {
     ...prev,
-    playerBenchActionPoints: nextBenchActionPoints,
+    playerStockActionPoints: Math.max(0, prev.playerStockActionPoints - cost),
   };
 };
 
@@ -1563,10 +2698,6 @@ const applyEnemyTurnFormationPassives = (prev: GolfGameState) => {
   let changed = false;
 
   const supportCard = getSupportBenchCard(prev);
-  if (supportCard?.name === 'Hiro') {
-    nextPrime.armor += 1;
-    changed = true;
-  }
   if (supportCard?.name === 'Whis') {
     nextPrime.forecastIntent = true;
     changed = true;
@@ -1574,10 +2705,6 @@ const applyEnemyTurnFormationPassives = (prev: GolfGameState) => {
 
   getAssistBenchIndices(prev).forEach((assistIndex) => {
     const assistCard = prev.playerBench[assistIndex];
-    if (assistCard?.name === 'Hiro') {
-      nextPrime.armor += 1;
-      changed = true;
-    }
     if (assistCard?.name === 'Whis') {
       nextPrime.forecastIntent = true;
       changed = true;
@@ -1651,43 +2778,116 @@ const applyPostEnemyHitFormationReactions = (
   prev: GolfGameState,
   resolved: { combatants: Record<string, ActorCombatState>; damageDealt: number; dodged: boolean; superArmorTriggered: SuperArmorKind | null }
 ) => {
-  if (resolved.dodged || resolved.damageDealt <= 0 || prev.playerSupportReactiveUsed) return { state: prev, resolved };
+  if (resolved.dodged || resolved.damageDealt <= 0) return { state: prev, resolved, guardDogTriggered: false, whiskersenseTriggered: false };
+  if (prev.playerStock.name === 'Mochi' && (prev.combatants.mochi?.whiskersense ?? 0) > 0) {
+    return {
+      state: {
+        ...prev,
+        playerSupportReactiveUsed: false,
+      },
+      resolved: {
+        ...resolved,
+        dodged: true,
+        damageDealt: 0,
+        combatants: {
+          ...resolved.combatants,
+          mochi: {
+            ...(prev.combatants.mochi ?? createCombatant('Mochi')),
+            whiskersense: Math.max(0, (prev.combatants.mochi?.whiskersense ?? 0) - 1),
+          },
+        },
+      },
+      guardDogTriggered: false,
+      whiskersenseTriggered: true,
+    };
+  }
   const supportCard = getSupportBenchCard(prev);
-  if (supportCard?.name !== 'Hiro') return { state: prev, resolved };
+  if (supportCard?.name !== 'Hiro') return { state: prev, resolved, guardDogTriggered: false, whiskersenseTriggered: false };
 
   const primeKey = actorKeyFromName(prev.playerStock.name);
-  const enemyKey = actorKeyFromName(prev.enemyStock.name);
   const primeCombatant = resolved.combatants[primeKey];
-  const enemyCombatant = resolved.combatants[enemyKey];
-  if (!primeCombatant) return { state: prev, resolved };
+  const hiroCombatant = resolved.combatants.hiro ?? prev.combatants.hiro;
+  if (!primeCombatant || !hiroCombatant || primeCombatant.hp > 0 || hiroCombatant.hp <= 0) {
+    return { state: prev, resolved, guardDogTriggered: false, whiskersenseTriggered: false };
+  }
 
+  const redirectedDamage = Math.max(1, resolved.damageDealt);
   const nextCombatants = {
     ...resolved.combatants,
     [primeKey]: {
       ...primeCombatant,
-      armor: primeCombatant.armor + 4,
+      hp: 1,
     },
-    ...(enemyCombatant ? {
-      [enemyKey]: {
-        ...enemyCombatant,
-        hp: Math.max(0, enemyCombatant.hp - 2),
-      },
-    } : {}),
+    hiro: applyFlatDamageToCombatant(hiroCombatant, redirectedDamage),
   };
 
   return {
     state: {
       ...prev,
-      playerSupportReactiveUsed: true,
+      playerSupportReactiveUsed: false,
     },
     resolved: {
       ...resolved,
       combatants: nextCombatants,
     },
+    guardDogTriggered: true,
+    whiskersenseTriggered: false,
   };
 };
 
 const simulateUseAbility = (prev: GolfGameState, effect: NonNullable<PlayerHandSlot['effect']>): GolfGameState => {
+  if (effect === 'banks-strike') {
+    if (prev.playerStock.name !== 'Banks') return prev;
+    const tier = prev.starterPackAbilityRarities[prev.activeStarterPackIndex] ?? 1;
+    const spentAp = Math.min(getBanksApCap(tier), prev.playerStockActionPoints);
+    if (spentAp <= 0) return prev;
+    const primeKey = actorKeyFromName(prev.playerStock.name);
+    const enemyKey = actorKeyFromName(prev.enemyStock.name);
+    const primeCombatant = prev.combatants[primeKey];
+    if (!primeCombatant) return prev;
+    const packet: DamagePacket = {
+      physical: spentAp,
+      elemental: {},
+      deliberate: true,
+      threshold: 1,
+      source: 'player',
+      sourceActor: primeKey,
+      targetActor: enemyKey,
+    };
+    const prepared = applyCounterWindowToPacket(prev, packet);
+    const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
+    const resolvedPrimeCombatant = resolved.combatants[primeKey] ?? primeCombatant;
+    const nextCombatants = spentAp >= 3
+      ? {
+          ...resolved.combatants,
+          [primeKey]: {
+            ...resolvedPrimeCombatant,
+            evasion: resolvedPrimeCombatant.evasion + 100,
+            evasionBuffAmount: resolvedPrimeCombatant.evasionBuffAmount + 100,
+            evasionBuffTurns: Math.max(resolvedPrimeCombatant.evasionBuffTurns, 1),
+          },
+        }
+      : resolved.combatants;
+    const pressuredCombatants = addStaggerPressure(nextCombatants, enemyKey, resolved.damageDealt);
+    const nextTier = spentAp === tier && tier < 3 ? ((tier + 1) as 1 | 2 | 3) : tier;
+    return resolveEnemyDefeat({
+      ...prev,
+      combatants: pressuredCombatants,
+      playerStockActionPoints: 0,
+      playerPrimeApSegments: [],
+      starterPackAbilityRarities: prev.starterPackAbilityRarities.map((value, index) => (
+        index === prev.activeStarterPackIndex ? nextTier : value
+      )),
+      starterPackStoredAp: prev.starterPackStoredAp.map((value, index) => (
+        index === prev.activeStarterPackIndex ? 0 : value
+      )),
+      starterPackModes: prev.starterPackModes.map((value, index) => (
+        index === prev.activeStarterPackIndex
+          ? (spentAp >= 3 ? 'banks-prowl' as StarterKinMode : 'default' as StarterKinMode)
+          : value
+      )),
+    }, nextCombatants);
+  }
   if (effect === 'paw-sperity') {
     if (prev.playerStock.name !== 'Pan' || prev.panPawSperityCooldown > 0) return prev;
     return {
@@ -1695,6 +2895,23 @@ const simulateUseAbility = (prev: GolfGameState, effect: NonNullable<PlayerHandS
       tableau: rerollTableau(prev.tableau),
       panPawSperityCooldown: 14,
       playerFreeTagAvailable: true,
+    };
+  }
+  if (effect === 'hiro-guard') {
+    const actorKey = actorKeyFromName(prev.playerStock.name);
+    const combatant = prev.combatants[actorKey];
+    if (!combatant || prev.playerStock.name !== 'Hiro' || prev.playerStockActionPoints < HIRO_GUARD_COST) return prev;
+    return {
+      ...prev,
+      playerStockActionPoints: prev.playerStockActionPoints - HIRO_GUARD_COST,
+      hiroGuardTauntTurns: Math.max(prev.hiroGuardTauntTurns, HIRO_GUARD_TAUNT_TURNS),
+      combatants: {
+        ...prev.combatants,
+        [actorKey]: {
+          ...combatant,
+          armor: combatant.armor + HIRO_GUARD_ARMOR,
+        },
+      },
     };
   }
   if (effect === 'ironfur') {
@@ -1747,6 +2964,14 @@ const simulateUseAbility = (prev: GolfGameState, effect: NonNullable<PlayerHandS
   return prev;
 };
 
+const simulateUseAbilityWithStatus = (prev: GolfGameState, effect: NonNullable<PlayerHandSlot['effect']>) => {
+  const nextState = simulateUseAbility(prev, effect);
+  if (nextState === prev) {
+    return { state: prev, statusEvent: null as StatusEffectEvent | null };
+  }
+  return applyPlayerActionStatusUpdate(nextState);
+};
+
 const createAbilitySlot = (
   slotId: PlayerHandSlot['slotId'],
   ability: StarterAbility
@@ -1770,6 +2995,28 @@ const addPrimeAttackBonuses = (state: GolfGameState, packet: DamagePacket) => {
     };
   }
   return packet;
+};
+
+const applyPrimeCompanionTriggers = (
+  prev: GolfGameState,
+  nextState: GolfGameState,
+  sourceCard: CardType,
+  options?: { tableCleared?: boolean }
+) => {
+  if (prev.playerStock.name !== 'Hiro' || sourceCard.name !== 'Hiro') return nextState;
+  let updated: GolfGameState = {
+    ...nextState,
+    hiroSuccessfulPlays: nextState.hiroSuccessfulPlays + 1,
+    hiroStockAddsThisTurn: nextState.hiroStockAddsThisTurn + 1,
+  };
+  if (!nextState.hiroLeaderTriggeredThisTurn) {
+    updated = {
+      ...updated,
+      hiroLeaderTriggeredThisTurn: true,
+      playerBenchActionPoints: updated.playerBenchActionPoints.map((value) => Math.min(12, (value ?? 0) + 1)),
+    };
+  }
+  return updated;
 };
 
 const buildPokePacket = (sourceCard: CardType, targetCard: CardType, sequence: number, source: 'player' | 'enemy'): DamagePacket => {
@@ -1903,53 +3150,6 @@ const resolveDamagePacket = (
   return { combatants: nextCombatants, damageDealt: total, dodged: false, superArmorTriggered };
 };
 
-const STARTER_ABILITIES: Record<string, StarterAbility[]> = {
-  Jet: [
-    { name: 'Sticky Paws', category: 'signature', combatDescription: 'Fan out enemy cards and steal one into Jet\'s hand while preserving his salvage sequencing windows.', exploreDescription: 'After a legal tableau play, capture the next card down into hand.', effect: 'sticky-paws', cost: '5' },
-    { name: 'Re-Purpose', category: 'tableau-clear', combatDescription: 'Jet recovers the final visible card and gains +2 AP when he clears a tableau.', exploreDescription: 'When Jet clears a tableau, recover the final visible card instead of losing it and gain +2 AP.', effect: 'repurpose', cost: '∞' },
-    { name: 'Quarnyx Battery', category: 'tool', combatDescription: 'Prime a Quarnyx battery, then click a Jet ability card to dedicate that battery to it. Future Jet AP gains alternate between all connected batteries.', exploreDescription: 'Wire a dedicated battery into one Jet tool so future gains alternate across the active network.', effect: 'battery', cost: '0' },
-    { name: 'Rigged Construct', category: 'battle', combatDescription: 'Discharge the linked battery to deploy the Elemental Construct with storage capacity equal to the battery\'s charge.', exploreDescription: 'Assemble a temporary side stock that banks an elemental sequence up to the linked battery\'s current charge.', effect: 'rigged-construct', cost: '8' },
-    { name: 'Scrap Plating', category: 'tool', combatDescription: 'Discharge the linked battery and dismantle a tableau resource into immediate armor plating.', exploreDescription: 'Strip a route node for parts, trading future battery income for fast mitigation.', effect: 'scrap-plating', cost: '4' },
-    { name: 'Aegis Shunt', category: 'tool', combatDescription: 'Discharge the linked battery to build elemental shielding around Jet.', exploreDescription: 'Convert stored charge into short-lived energy shielding instead of offense.', effect: 'aegis-shunt', cost: '4' },
-    { name: 'Tap Out!', category: 'tool', combatDescription: 'Feed the whole bench and reopen support actions.', exploreDescription: 'Trigger a full-team relay so your support line can surge again.', effect: 'tap-out', cost: '3' },
-    { name: 'Slink', category: 'passive', combatDescription: '+10% evasion and stealth bias for Prime Jet.', exploreDescription: 'Jet keeps a lighter profile, making safe sequencing lines easier to preserve.', effect: null },
-    { name: 'Siphon', category: 'passive', combatDescription: 'On direct player damage, Jet has a 15% chance to steal 1 enemy AP, plus 5% for each AP the enemy currently holds.', exploreDescription: 'Every clean hit has a chance to bleed momentum out of the enemy and into Jet\'s load-balanced rig.', effect: null },
-    { name: 'Efficiency', category: 'passive', combatDescription: 'Every 3 tableau plays, add +1 battery charge to the next connected battery in sequence.', exploreDescription: 'Jet’s sequencing cadence steadily tops off the wider battery network.', effect: null },
-    { name: 'Free Energy', category: 'passive', combatDescription: 'If Efficiency discounts an ability below 0 AP, the underflow becomes a free electrical attack card in Jet’s hand.', exploreDescription: 'Excess sequencing economy condenses into a zero-cost shock card you can route immediately.', effect: null },
-    { name: 'Rewire', category: 'tool', combatDescription: 'Discharge the linked battery to gain legal tableau-to-tableau rewires without touching the hand.', exploreDescription: 'Resort a tangled board by shifting cards directly between legal tableau tops for as many actions as the linked battery can support.', effect: 'rewire', cost: '5' },
-  ],
-  Hiro: [
-    { name: 'Ironfur', category: 'signature', combatDescription: 'Raise defense by 5 for 2 turns.', exploreDescription: 'Fortify a tableau column so enemy meddling cannot displace or curse it.', effect: 'ironfur', cost: '4' },
-    { name: 'Intervene', category: 'passive', combatDescription: 'Swap in to protect an ally after a streak of incoming hits.', exploreDescription: 'Step into a line before it collapses.', effect: 'intervene' as PlayerHandSlot['effect'] },
-    { name: 'Adaptive Thorns', category: 'passive', combatDescription: 'After repeated hits, reflect damage to the attacker.', exploreDescription: 'Punish hostile tableau pressure when a column is harried repeatedly.', effect: null },
-    { name: 'Tap Out!', category: 'tool', combatDescription: 'Feed the whole bench and reopen support actions.', exploreDescription: 'Trigger a full-team relay so your support line can surge again.', effect: 'tap-out', cost: '3' },
-    { name: 'Bulwark Roar', category: 'battle', combatDescription: 'Grant armor to the full party.', exploreDescription: 'Brace the whole board against disruption.', effect: null, cost: '5' },
-    { name: 'Stone Guard', category: 'battle', combatDescription: 'Apply defense to a single ally.', exploreDescription: 'Lock one chosen tableau line in place.', effect: null, cost: '4' },
-    { name: 'Earthen Rebuke', category: 'battle', combatDescription: 'Deal deliberate earth damage and taunt.', exploreDescription: 'Slam a tableau column into a sturdier state.', effect: null, cost: '5' },
-    { name: 'Last Bastion', category: 'passive', combatDescription: 'Gain super armor when dropping below half HP.', exploreDescription: 'When the board gets thin, Hiro becomes the anchor.', effect: null },
-  ],
-  Pan: [
-    { name: 'Paw-Sperity', category: 'tool', combatDescription: 'Refresh fortune with a powerful long-cooldown momentum reset.', exploreDescription: 'Reroll the full tableau or dead columns to escape a bad deal.', effect: 'paw-sperity', cost: '∞' },
-    { name: 'Path of Stars', category: 'signature', combatDescription: 'Spend AP to reveal the optimal future route.', exploreDescription: 'Reveal the optimal hidden tableau route for the next several steps.', effect: 'path-of-stars', cost: '10+' },
-    { name: 'Solar Arc', category: 'battle', combatDescription: 'Deal deliberate light damage to a target.', exploreDescription: 'Illuminate a hidden line and reveal its best continuation.', effect: null, cost: '5' },
-    { name: 'Fire Shield', category: 'battle', combatDescription: 'Grant a fire shield to the party.', exploreDescription: 'Insulate one rerolled line from immediate collapse.', effect: null, cost: '4' },
-    { name: 'Wild Bloom', category: 'tool', combatDescription: 'Create armor and a fresh capture option.', exploreDescription: 'Grow a fresh opening in a stagnating tableau.', effect: null, cost: '4' },
-    { name: 'Fortune Pounce', category: 'battle', combatDescription: 'Bonus damage after a reroll or swap.', exploreDescription: 'Gain bonus tempo after a reroll or tag.', effect: null, cost: '6' },
-    { name: 'Kindle Trap', category: 'battle', combatDescription: 'Ignite a tableau top so the enemy burns on use.', exploreDescription: 'Mark a card so its line blooms when played.', effect: null, cost: '4' },
-    { name: 'Lucky Reversal', category: 'passive', combatDescription: 'On dodge, gain AP and counter damage.', exploreDescription: 'Bad variance can flip into an unexpected opening.', effect: null },
-  ],
-  Whis: [
-    { name: 'Jikan', fullName: 'Jikan Makimodoshi', category: 'signature', combatDescription: 'Spend AP to undo the last combat play.', exploreDescription: 'Perform a time heist: rewind the last tableau card back to its column while Whis keeps the gained rank.', effect: 'jikan', cost: '2' },
-    { name: 'Slipstream', category: 'battle', combatDescription: 'Gain haste and evasion for the next enemy turn.', exploreDescription: 'Crosswind a tableau line sideways or allow a brief tempo skip.', effect: 'slipstream', cost: '4' },
-    { name: 'Frozen Tableau', category: 'battle', combatDescription: 'Lock a tableau until it takes damage.', exploreDescription: 'Suspend a line in time until you choose to resume it.', effect: null, cost: '5' },
-    { name: 'Hourglass Needle', category: 'battle', combatDescription: 'Deal deliberate chrono damage that ignores armor.', exploreDescription: 'Pierce directly into the exact card you need.', effect: null, cost: '5' },
-    { name: 'Afterimage', category: 'passive', combatDescription: 'Successful dodges grant bonus counter damage.', exploreDescription: 'Past states leave echoes you can still exploit.', effect: null },
-    { name: 'Forecast', category: 'passive', combatDescription: 'Reveal enemy combat intent.', exploreDescription: 'Preview the pressure the tableau is about to apply.', effect: null },
-    { name: 'Borrowed Beat', category: 'tool', combatDescription: 'Convert haste into AP.', exploreDescription: 'Turn flow advantage into immediate tableau tempo.', effect: null, cost: '4' },
-    { name: 'Chrono Shear', category: 'battle', combatDescription: 'Slow the enemy and expose them to burst.', exploreDescription: 'Trim away a bad branch before it fully forms.', effect: null, cost: '6' },
-  ],
-};
-
 const getKinInspectorSlots = (kinName: string, baseSlots: { left: PlayerHandSlot; right: PlayerHandSlot }) => {
   const signature: PlayerHandSlot[] = [];
   const tableauClear: PlayerHandSlot[] = [];
@@ -1972,12 +3172,6 @@ const getKinInspectorSlots = (kinName: string, baseSlots: { left: PlayerHandSlot
 
   return { signature, tableauClear, tools, battle };
 };
-
-const getStarterAbilityByEffect = (effect: PlayerHandSlot['effect']) => (
-  Object.values(STARTER_ABILITIES)
-    .flat()
-    .find((ability) => ability.effect === effect) ?? null
-);
 
 const getPathOfStarsStepCount = (ap: number) => {
   if (ap < 10) return 0;
@@ -2052,6 +3246,34 @@ const resolveEnemyDefeat = (
   const nextDefeatedCount = prev.enemyDefeatedCount + 1;
   const nextCombatants = { ...combatants };
   delete nextCombatants[enemyKey];
+  const lootRecovered = prev.enemyLootCards.length;
+  const nextBankedPoints = prev.bankedPoints + lootRecovered;
+  const nextPlayerDiscardPile = lootRecovered > 0
+    ? [
+        ...prev.playerDiscardPile,
+        ...prev.enemyLootCards.map((card) => `Loot::Recovered ${rankLabel(card.rank)} from ${prev.enemyStock.name}`),
+      ]
+    : prev.playerDiscardPile;
+
+  if (prev.tutorialSliceId) {
+    return {
+      ...prev,
+      combatants: nextCombatants,
+      enemyStockActionPoints: 0,
+      enemyDefeatedCount: nextDefeatedCount,
+      playerDiscardPile: nextPlayerDiscardPile,
+      bankedPoints: nextBankedPoints,
+      enemyLootCards: [],
+      enemyBiteMarks: {},
+      tutorialEnemyDefeated: true,
+      enemyDefeatFx: {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        name: prev.enemyStock.name,
+        moveLabel,
+        lootRecovered,
+      },
+    };
+  }
 
   if (prev.enemyBench.length > 0) {
     const promoted = prev.enemyBench[0];
@@ -2075,10 +3297,15 @@ const resolveEnemyDefeat = (
       enemyStockActionPoints: 0,
       combatants: nextCombatants,
       enemyDefeatedCount: nextDefeatedCount,
+      playerDiscardPile: nextPlayerDiscardPile,
+      bankedPoints: nextBankedPoints,
+      enemyLootCards: [],
+      enemyBiteMarks: {},
       enemyDefeatFx: {
         id: Date.now() + Math.floor(Math.random() * 1000),
         name: prev.enemyStock.name,
         moveLabel,
+        lootRecovered,
       },
     };
   }
@@ -2097,10 +3324,15 @@ const resolveEnemyDefeat = (
       ...nextWave.combatants,
     },
     enemyDefeatedCount: nextDefeatedCount,
+    playerDiscardPile: nextPlayerDiscardPile,
+    bankedPoints: nextBankedPoints,
+    enemyLootCards: [],
+    enemyBiteMarks: {},
     enemyDefeatFx: {
       id: Date.now() + Math.floor(Math.random() * 1000),
       name: prev.enemyStock.name,
       moveLabel,
+      lootRecovered,
     },
   };
 };
@@ -2203,22 +3435,40 @@ const StockCardNameplate = ({
 };
 
 const setupGame = (): GolfGameState => {
-  const enemyProfile = getEnemyProfile(GOLF_DEFAULT_ENEMY_PROFILE_ID);
+  const scenarioId = getGolfScenarioId();
+  const isTutorialScenario = scenarioId === 'tutorial';
+  const starterPackBase = isTutorialScenario ? createTutorialStarterPack(['Hiro']) : createStarterPackCards();
+  const enemyProfile = getEnemyProfile(isTutorialScenario ? GOLF_DEFAULT_ENEMY_PROFILE_ID : GOLF_DEFAULT_ENEMY_PROFILE_ID);
   const enemyPrime = createEnemyStockCard(enemyProfile.actor);
   const deck = createDeck();
-  const tableau = Array.from({ length: TABLEAU_COLUMNS }, () =>
-    Array.from({ length: TABLEAU_ROWS }, () => drawCard(deck))
-  );
-  const benchSeeds = [drawCard(deck), drawCard(deck), drawCard(deck)];
+  const tableau = isTutorialScenario
+    ? createTutorialSlice01Tableau()
+    : Array.from({ length: TABLEAU_COLUMNS }, () =>
+        Array.from({ length: TABLEAU_ROWS }, () => drawCard(deck))
+      );
+  const benchSeed = drawCard(deck);
+  const activeStarterPackIndex = 0;
+  const starterPackStoredAp = isTutorialScenario ? [0] : starterPackBase.map(() => 0);
+  const starterPackUsed = starterPackBase.map((_, index) => index === activeStarterPackIndex);
+  const playerStockCard = createStarterPackStockCard(starterPackBase[activeStarterPackIndex], activeStarterPackIndex);
 
   return {
     biomeId: GOLF_DEFAULT_BIOME_ID,
+    tutorialSliceId: isTutorialScenario ? 'slice-01' : null,
+    tutorialEnemyDefeated: false,
+    tutorialActionCount: 0,
     tableau,
-    playerStock: createActorStockCard(PLAYER_STOCK_ACTOR),
+    starterPackBase,
+    starterPackUsed,
+    starterPackLocked: starterPackBase.map(() => false),
+    starterPackStoredAp,
+    starterPackAbilityRarities: starterPackBase.map(() => 1 as 1 | 2 | 3),
+    starterPackModes: starterPackBase.map(() => 'default' as StarterKinMode),
+    starterPackCashoutStats: starterPackBase.map(() => null),
+    activeStarterPackIndex,
+    playerStock: playerStockCard,
     playerBench: [
-      createBenchActorCard('Hiro', 5, benchSeeds[0]),
-      createBenchActorCard('Pan', 7, benchSeeds[1]),
-      createBenchActorCard('Whis', 8, benchSeeds[2]),
+      createBenchActorCard('Whis', 8, benchSeed),
     ],
     playerSupportIndex: 0,
     playerHand: [],
@@ -2231,10 +3481,10 @@ const setupGame = (): GolfGameState => {
     enemyStockActionPoints: 0,
     clearedCount: 0,
     playerStockSequence: 0,
-    playerStockActionPoints: 0,
+    playerStockActionPoints: starterPackStoredAp[activeStarterPackIndex] ?? 0,
     playerPrimeApSegments: [],
-    playerBenchSequences: [0, 0, 0],
-    playerBenchActionPoints: [0, 0, 0],
+    playerBenchSequences: [0],
+    playerBenchActionPoints: [0],
     enemyStockSequence: 0,
     playerFreeTagAvailable: true,
     enemyFreeTagAvailable: true,
@@ -2263,6 +3513,20 @@ const setupGame = (): GolfGameState => {
     jetRewireSourceColumnIndex: null,
     assistJetMicroBatteryAp: 0,
     assistJetRewireCooldown: 0,
+    hiroHeartsHeld: 0,
+    hiroEnduranceMax: HIRO_BASE_ENDURANCE_MAX,
+    hiroSuccessfulPlays: 0,
+    hiroTurnsElapsed: 0,
+    hiroSecondWindCooldown: 0,
+    hiroStockAddsThisTurn: 0,
+    hiroLeaderTriggeredThisTurn: false,
+    hiroTrailSenseActive: false,
+    hiroGuardTauntTurns: 0,
+    jetChargedCardIds: [],
+    kinStickers: createStarterKinStickers(),
+    hiddenStarterPackIndices: [],
+    enemyPrimeViceGripTurns: 0,
+    enemySupportStunnedTurns: 0,
     combatants: {
       ...createInitialCombatants(enemyProfile),
       [actorKeyFromName(enemyPrime.name)]: cloneEnemyCombatant(enemyProfile),
@@ -2270,46 +3534,315 @@ const setupGame = (): GolfGameState => {
     tableClears: 0,
     enemyDefeatedCount: 0,
     enemyDefeatFx: null,
+    bankedPoints: 0,
+    enemyRetaliationBonus: 0,
+    enemyLootCards: [],
+    enemyBiteMarks: {},
   };
 };
 
+const buildTutorialSliceState = (
+  sliceId: 'slice-01' | 'slice-02' | 'slice-03' | 'slice-04',
+  prev?: GolfGameState
+): GolfGameState => {
+  const baseState = setupGame();
+  const previousHiroAp = (() => {
+    if (!prev) return 0;
+    if (prev.playerStock.name === 'Hiro') return prev.playerStockActionPoints;
+    const hiroIndex = prev.starterPackBase.findIndex((card) => card.name === 'Hiro');
+    return hiroIndex >= 0 ? (prev.starterPackStoredAp[hiroIndex] ?? 0) : 0;
+  })();
+  const hiroCarryAp = prev
+    ? Math.min(2, clampStarterPackApToCap('Hiro', previousHiroAp, 1))
+    : 0;
+  const enemyProfileId =
+    sliceId === 'slice-03'
+      ? 'shade-wisp'
+      : sliceId === 'slice-04'
+        ? 'mawling-raider'
+        : GOLF_DEFAULT_ENEMY_PROFILE_ID;
+  const enemyProfile = getEnemyProfile(enemyProfileId);
+  const enemyPrime = createEnemyStockCard(enemyProfile.actor);
+
+  const starterPackBase =
+    sliceId === 'slice-01'
+      ? createTutorialStarterPack(['Hiro'])
+      : sliceId === 'slice-02'
+        ? createTutorialStarterPack(['Mochi', 'Hiro'])
+        : sliceId === 'slice-03'
+        ? createTutorialStarterPack(['Mochi', 'Hiro'])
+          : createTutorialStarterPack(['Mochi', 'Banks', 'Hiro', 'Jet', 'Whis']);
+  const activeStarterPackIndex =
+    sliceId === 'slice-01' ? 0
+      : sliceId === 'slice-02' ? 1
+        : sliceId === 'slice-03' ? 1
+          : 3;
+  const defaultHiroCarryAp = Math.max(2, hiroCarryAp);
+  const starterPackStoredAp =
+    sliceId === 'slice-01'
+      ? [0]
+      : sliceId === 'slice-02'
+        ? [2, defaultHiroCarryAp]
+        : sliceId === 'slice-03'
+          ? [2, Math.max(2, defaultHiroCarryAp)]
+          : [2, 2, Math.max(2, hiroCarryAp), 2];
+  const tableau =
+    sliceId === 'slice-01'
+      ? createTutorialSlice01Tableau()
+      : sliceId === 'slice-02'
+        ? createTutorialSlice02Tableau()
+        : sliceId === 'slice-03'
+          ? createTutorialSlice03Tableau()
+          : createTutorialSlice04Tableau();
+  const combatants = {
+    ...createInitialCombatants(enemyProfile),
+    [actorKeyFromName(enemyPrime.name)]: cloneEnemyCombatant(enemyProfile),
+  };
+  const playerStock = createStarterPackStockCard(starterPackBase[activeStarterPackIndex], activeStarterPackIndex);
+  const slice04ThreatenedCard = sliceId === 'slice-04'
+    ? tableau[0]?.[tableau[0].length - 1] ?? null
+    : null;
+  const currentMochi = combatants.mochi;
+  const currentBanks = combatants.banks;
+  const currentJet = combatants.jet;
+  const enemyKey = actorKeyFromName(enemyPrime.name);
+  const tutorialLootCards = sliceId === 'slice-04'
+    ? [createScenarioTableauCard(9, 0, 10, '♥')]
+    : [];
+
+  return {
+    ...baseState,
+    tutorialSliceId: sliceId,
+    tutorialEnemyDefeated: false,
+    tutorialActionCount: 0,
+    tableau,
+    starterPackBase,
+    starterPackUsed: starterPackBase.map((_, index) => index === activeStarterPackIndex),
+    starterPackLocked: starterPackBase.map(() => false),
+    starterPackStoredAp,
+    starterPackAbilityRarities: starterPackBase.map(() => 1 as 1 | 2 | 3),
+    starterPackModes: starterPackBase.map(() => 'default' as StarterKinMode),
+    starterPackCashoutStats: starterPackBase.map(() => null),
+    activeStarterPackIndex,
+    playerStock,
+    playerStockActionPoints: starterPackStoredAp[activeStarterPackIndex] ?? 0,
+    playerStockSequence: 0,
+    playerPrimeApSegments: [],
+    enemyStock: enemyPrime,
+    enemyProfileId,
+    enemyBench: [],
+    enemyBenchProfileIds: [],
+    enemyStockActionPoints: sliceId === 'slice-03' ? 2 : 0,
+    enemyLootCards: tutorialLootCards,
+    enemyBiteMarks: slice04ThreatenedCard ? { [slice04ThreatenedCard.id]: 2 } : {},
+    combatants: {
+      ...combatants,
+      mochi: currentMochi
+        ? {
+            ...currentMochi,
+            hp: sliceId === 'slice-01' ? currentMochi.hpMax : 1,
+            hpMax: 10,
+            haste: 0,
+            narrowEscape: (sliceId === 'slice-02' || sliceId === 'slice-03') ? 1 : 0,
+            skittish: sliceId === 'slice-02' ? 5 : 0,
+          }
+        : combatants.mochi,
+      banks: currentBanks ? { ...currentBanks, hp: currentBanks.hpMax } : combatants.banks,
+      jet: currentJet ? { ...currentJet, hp: currentJet.hpMax } : combatants.jet,
+      hiro: sliceId === 'slice-03'
+        ? { ...combatants.hiro, hp: combatants.hiro.hpMax, armor: 0 }
+        : combatants.hiro,
+      [enemyKey]: sliceId === 'slice-03'
+        ? { ...combatants[enemyKey], hp: 2, hpMax: 2, armor: 0 }
+        : sliceId === 'slice-04'
+          ? { ...combatants[enemyKey], hp: 2, hpMax: 2, armor: 0 }
+          : combatants[enemyKey],
+    },
+  };
+};
+
+const buildTutorialSceneState = (sceneId: TutorialSceneId): GolfGameState => {
+  if (sceneId === 'post-mochi') {
+    const state = buildTutorialSliceState('slice-02');
+    return {
+      ...state,
+      clearedCount: 13,
+      playerStockActionPoints: 2,
+      playerStockSequence: 5,
+      starterPackStoredAp: [2, 2],
+      hiddenStarterPackIndices: [0],
+    };
+  }
+  return buildTutorialSliceState(sceneId);
+};
+
+const getTutorialSliceLabel = (sliceId: GolfGameState['tutorialSliceId']) => {
+  if (sliceId === 'slice-01') return 'Slice 01 • Mochi Rescue';
+  if (sliceId === 'slice-02') return 'Slice 02 • Pursuit Setup';
+  if (sliceId === 'slice-03') return 'Slice 03 • First Guard';
+  if (sliceId === 'slice-04') return 'Slice 04 • Rewire And Reclaim';
+  return null;
+};
+
+const getTutorialForecastLabel = (state: GolfGameState) => {
+  if (state.tutorialSliceId !== 'slice-03' || state.tutorialEnemyDefeated) return null;
+  const mochiAvailable = state.starterPackBase.some((card) => card.name === 'Mochi');
+  const mochiCombatant = state.combatants.mochi;
+  if (!mochiAvailable || !mochiCombatant || mochiCombatant.hp > 1 || state.enemyStockActionPoints < 2) return null;
+  return state.hiroGuardTauntTurns > 0 ? 'Maul Forecast: Hiro intercepts Mochi' : 'Maul Forecast: Mochi is in danger';
+};
+
+const isTutorialSliceSolved = (state: GolfGameState) => {
+  const hasPlayableTop = state.tableau.some((column) => {
+    const topCard = column[column.length - 1] ?? null;
+    return topCard ? isTutorialMochiRescuePlayable(state, topCard) || canPlayOnStock(topCard, state.playerStock) : false;
+  });
+  if (state.tutorialSliceId === 'slice-01') {
+    return state.playerStock.name === 'Mochi';
+  }
+  if (state.tutorialSliceId === 'slice-02') {
+    return state.playerStock.name === 'Mochi' && ((state.combatants.mochi?.skittish ?? 0) <= 0);
+  }
+  if (state.tutorialSliceId === 'slice-03') {
+    return state.playerStock.name === 'Hiro'
+      && state.enemyStockActionPoints <= 0
+      && (state.combatants.mochi?.hp ?? 0) > 0;
+  }
+  if (state.tutorialSliceId === 'slice-04') {
+    const routeFinished = !hasPlayableTop && state.playerStock.name === 'Jet' && state.playerStock.rank >= 6;
+    return routeFinished && state.tutorialEnemyDefeated;
+  }
+  return false;
+};
+
+const getTutorialSelectableStarterPackIndices = (state: GolfGameState) => {
+  if (!state.tutorialSliceId) return new Set<number>();
+  if (state.tutorialSliceId === 'slice-01') return new Set<number>();
+  if (state.tutorialSliceId === 'slice-02') {
+    const swapRailUnlocked = state.playerStock.name !== 'Hiro' || state.playerStockSequence >= 5;
+    if (!swapRailUnlocked) return new Set<number>();
+    return new Set<number>(
+      state.starterPackBase.flatMap((card, index) => {
+        if (index === state.activeStarterPackIndex) return [];
+        if (state.starterPackLocked[index]) return [];
+        if (card.name === 'Mochi' && (state.combatants.mochi?.skittish ?? 0) > 0) return [];
+        return canPlayOnStock(card, state.playerStock) ? [index] : [];
+      })
+    );
+  }
+  if (state.tutorialSliceId === 'slice-03') {
+    if (state.playerStock.name === 'Hiro') {
+      const mochiIndex = state.starterPackBase.findIndex((card) => card.name === 'Mochi');
+      const mochiStats = mochiIndex >= 0 ? state.starterPackCashoutStats[mochiIndex] : null;
+      const canSwapToMochi = state.playerStockActionPoints >= 3
+        && state.playerStockSequence >= 1
+        && (mochiStats?.cardsStored ?? 0) < 2;
+      return new Set(mochiIndex >= 0 && canSwapToMochi ? [mochiIndex] : []);
+    }
+    if (state.playerStock.name === 'Mochi') {
+      const hiroIndex = state.starterPackBase.findIndex((card) => card.name === 'Hiro');
+      const canSwapBackToHiro = state.playerStockSequence >= 2;
+      return new Set(hiroIndex >= 0 && canSwapBackToHiro ? [hiroIndex] : []);
+    }
+    return new Set<number>();
+  }
+  if (state.tutorialSliceId === 'slice-04') {
+    return new Set<number>();
+  }
+  return new Set<number>();
+};
+
 const canPlayOnStock = (candidate: CardType, target: CardType) => {
+  if (isTutorialFillerCard(candidate)) return false;
   const diff = Math.abs(candidate.rank - target.rank);
   return diff === 1 || diff === 12;
 };
 
 const canPlayOnRank = (candidateRank: number, targetRank: number) => {
+  if (candidateRank <= 0 || targetRank <= 0) return false;
   const diff = Math.abs(candidateRank - targetRank);
   return diff === 1 || diff === 12;
 };
 
-const getOrderedPlayerTargetStocks = (state: GolfGameState): PlayerStockTarget[] => {
-  const supportIndex = getSupportBenchIndex(state);
-  const assistIndices = getAssistBenchIndices(state);
-  const orderedBenchIndices = [supportIndex, ...assistIndices];
-  return [
-    {
-      stockId: state.playerStock.id,
-      card: state.playerStock,
-      kind: 'prime',
-      role: 'prime',
-    },
-    ...orderedBenchIndices
-      .map((benchIndex) => state.playerBench[benchIndex] ? ({
-        stockId: state.playerBench[benchIndex].id,
-        card: state.playerBench[benchIndex],
-        kind: 'bench' as const,
-        role: getBenchRole(state, benchIndex),
-        benchIndex,
-      }) : null)
-      .filter((entry): entry is PlayerStockTarget => entry !== null),
-  ];
+const isTutorialMochiRescuePlayable = (state: GolfGameState, candidate: CardType) =>
+  state.tutorialSliceId === 'slice-01' &&
+  candidate.name === 'Mochi' &&
+  state.playerStock.rank === 1;
+
+const isTutorialMochiRescueTokenCollectible = (state: GolfGameState, columnIndex: number, candidate: CardType | null) =>
+  state.tutorialSliceId === 'slice-01' &&
+  columnIndex === 1 &&
+  candidate?.rank === 2;
+
+const isTutorialPursuitMarkerCard = (state: GolfGameState, columnIndex: number, buriedDepth: number) =>
+  state.tutorialSliceId === 'slice-02' && columnIndex === 3 && buriedDepth >= 3;
+
+const getShadeWispIntentCards = (state: GolfGameState, count: number) => (
+  state.tableau
+    .map((column, columnIndex) => ({
+      columnIndex,
+      card: column[column.length - 1] ?? null,
+      centerBias: Math.abs(columnIndex - ((state.tableau.length - 1) / 2)),
+    }))
+    .filter((entry): entry is { columnIndex: number; card: CardType; centerBias: number } => !!entry.card)
+    .sort((left, right) => {
+      if (right.card.rank !== left.card.rank) return right.card.rank - left.card.rank;
+      if (left.centerBias !== right.centerBias) return left.centerBias - right.centerBias;
+      return left.columnIndex - right.columnIndex;
+    })
+    .slice(0, Math.max(0, count))
+);
+
+const isTutorialSlice02PrimeLockActive = (state: GolfGameState) =>
+  state.tutorialSliceId === 'slice-02' &&
+  state.playerStock.name === 'Hiro' &&
+  state.playerStockSequence >= 5 &&
+  !!state.starterPackBase.find((card) => card.name === 'Mochi') &&
+  canPlayOnRank(9, state.playerStock.rank);
+
+const getTutorialRailColumns = (state: GolfGameState): Set<number> | null => {
+  if (state.tutorialSliceId === 'slice-01') {
+    const rail = [0, 2, 4, 6, 5, 3, 1, 3, 5, 6, 4, 2];
+    if (state.tutorialActionCount < rail.length) return new Set<number>([rail[state.tutorialActionCount]]);
+    if (state.tutorialActionCount === rail.length) return new Set<number>([1]);
+    return null;
+  }
+  if (state.tutorialSliceId === 'slice-02') {
+    const rail = [0, 2, 4, 6, 5];
+    if (state.playerStock.name === 'Hiro' && state.tutorialActionCount < rail.length) {
+      return new Set<number>([rail[state.tutorialActionCount]]);
+    }
+    return null;
+  }
+  if (state.tutorialSliceId === 'slice-03') {
+    if (state.playerStock.name === 'Hiro' && state.playerStockSequence === 0) return new Set<number>([0]);
+    if (state.playerStock.name === 'Mochi' && state.playerStockSequence === 0) return new Set<number>([5]);
+    if (state.playerStock.name === 'Mochi' && state.playerStockSequence === 1) return new Set<number>([6]);
+    return null;
+  }
+  return null;
 };
 
-const getEligiblePlayerTargetsForCard = (state: GolfGameState, candidate: CardType) =>
-  getOrderedPlayerTargetStocks(state).filter((target) => canPlayOnStock(candidate, target.card));
+const getOrderedPlayerTargetStocks = (state: GolfGameState): PlayerStockTarget[] => {
+  return [{
+    stockId: state.playerStock.id,
+    card: state.playerStock,
+    kind: 'prime',
+    role: 'prime',
+  }];
+};
+
+const getEligiblePlayerTargetsForCard = (state: GolfGameState, candidate: CardType) => {
+  if (isTutorialSlice02PrimeLockActive(state)) return [];
+  return getOrderedPlayerTargetStocks(state).filter((target) => isTutorialMochiRescuePlayable(state, candidate) || canPlayOnStock(candidate, target.card));
+};
 
 /*
+JET LEGACY:
+Rigged Construct is currently represented as an individual Jet ability/tool.
+For future iteration, treat this implementation as legacy. The target direction is for
+construct-building to become a core Jet gameplay layer rather than a single ability.
+
 Rigged Construct reward/shop permutations:
 - On a given run, only one construct variant should be offered. Choosing one closes out the others for later rewards/shops.
 - Phase Construct: slots for set, run, or color/element group. More structured and puzzle-like. Best if Jet should feel like a combo architect.
@@ -2524,6 +4057,29 @@ const findBenchIndexByName = (state: GolfGameState, name: string) =>
 const getVisibleCards = (tableau: CardType[][]) =>
   tableau.map((column) => column[column.length - 1] ?? null);
 
+const pickHighestVisibleBiteColumn = (state: GolfGameState) => {
+  let bestColumnIndex: number | null = null;
+  let bestRank = -Infinity;
+  let bestBites = -Infinity;
+
+  state.tableau.forEach((column, columnIndex) => {
+    const candidate = column[column.length - 1] ?? null;
+    if (!candidate) return;
+    const biteCount = getEnemyBiteCount(state, candidate.id);
+    if (
+      candidate.rank > bestRank
+      || (candidate.rank === bestRank && biteCount > bestBites)
+      || (candidate.rank === bestRank && biteCount === bestBites && (bestColumnIndex === null || columnIndex < bestColumnIndex))
+    ) {
+      bestColumnIndex = columnIndex;
+      bestRank = candidate.rank;
+      bestBites = biteCount;
+    }
+  });
+
+  return bestColumnIndex;
+};
+
 const chooseBestSupportRotation = (state: GolfGameState) => {
   if (state.playerSupportRotateUsed) return null;
   const noMoves = getPlayableColumnIndices(state.tableau, state.playerStock).length === 0;
@@ -2584,10 +4140,7 @@ const choosePlayerAutoAction = (state: GolfGameState, mode: AutoPlayMode): AutoA
   const threatened = isPrimeThreatened(state);
   const supportCard = getSupportBenchCard(state);
   const supportIndex = getSupportBenchIndex(state);
-  const supportAp = state.playerBenchActionPoints[supportIndex] ?? 0;
-  if (supportCard?.name === 'Hiro' && threatened && !state.playerSupportActionUsed && supportAp >= getSupportAbilityCost(supportCard)) {
-    return { type: 'support-ability', benchIndex: supportIndex };
-  }
+  const supportAp = state.playerStockActionPoints;
   if (supportCard?.name === 'Whis' && threatened && !state.playerSupportActionUsed && supportAp >= getSupportAbilityCost(supportCard)) {
     return { type: 'support-ability', benchIndex: supportIndex };
   }
@@ -2596,6 +4149,9 @@ const choosePlayerAutoAction = (state: GolfGameState, mode: AutoPlayMode): AutoA
   }
   const move = pickBestVisibleMove();
   if (move !== null) return { type: 'move', columnIndex: move.columnIndex, stockId: move.stockId };
+  if (state.playerStock.name === 'Banks' && state.playerStockActionPoints > 0) {
+    return { type: 'ability', slotId: 'left', effect: 'banks-strike' };
+  }
   return null;
 };
 
@@ -2715,10 +4271,10 @@ const HandSlotCard = ({
     onPointerLeave={onPointerCancel}
     onClickCapture={onClickCapture}
     disabled={!interactive}
-    className={`relative rounded-[16px] border p-0 overflow-hidden transition-colors ${
+    className={`relative rounded-[16px] border p-0 overflow-hidden transition-[transform,colors] duration-150 ease-out origin-bottom ${
       canUse
-        ? 'border-game-teal/25 bg-black/45 hover:border-game-gold/45 hover:bg-black/65'
-        : 'cursor-not-allowed border-white/10 bg-black/25 opacity-55'
+        ? 'border-game-teal/25 bg-black/45 hover:z-20 hover:scale-[1.5] hover:border-game-gold/45 hover:bg-black/65'
+        : 'cursor-not-allowed border-white/10 bg-black/45 hover:z-20 hover:scale-[1.5]'
     }`}
     style={{
       width: cardSize.width,
@@ -2796,6 +4352,8 @@ const HandSlotCard = ({
         <div className="text-[10px] font-black text-white/80">
           {slot.kind === 'generated' && slot.generatedEffect === 'free-energy'
             ? `Shock ${slot.generatedValue ?? slot.card.rank}`
+            : slot.kind === 'generated' && slot.generatedEffect === 'wildcard'
+              ? 'Wildcard'
             : slot.card.element}
         </div>
       </div>
@@ -2820,6 +4378,102 @@ const HandSlotCard = ({
     ) : null}
   </button>
 );
+
+const SupportSquare = ({
+  glyph,
+  label,
+  detail,
+  active,
+  dimmed = false,
+  onClick,
+  size,
+}: {
+  glyph: string;
+  label: string;
+  detail: string;
+  active: boolean;
+  dimmed?: boolean;
+  onClick?: () => void;
+  size: number;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={!active || !onClick}
+    className={`relative flex shrink-0 flex-col items-center justify-center rounded-[18px] border text-center transition-colors ${
+      active
+        ? 'border-game-gold/45 bg-[rgba(17,14,8,0.92)] shadow-[0_0_24px_rgba(230,179,30,0.18)] hover:border-game-gold/70'
+        : dimmed
+          ? 'border-white/10 bg-black/40 text-white/30'
+          : 'border-game-teal/20 bg-black/50 text-white/50'
+    }`}
+    style={{
+      width: size,
+      height: size,
+      minWidth: size,
+    }}
+  >
+    <div className={`text-[28px] font-black leading-none ${active ? 'text-game-gold' : 'text-white/35'}`}>[{glyph}]</div>
+    <div className="mt-2 text-[9px] font-black uppercase tracking-[0.16em] text-white/78">{label}</div>
+    <div className="mt-1 px-2 text-[8px] uppercase tracking-[0.08em] text-white/40">{detail}</div>
+  </button>
+);
+
+const KinStickerSquare = ({
+  sticker,
+  size,
+  playable,
+  onCommit,
+  prophecyReady = false,
+}: {
+  sticker: KinSticker;
+  size: number;
+  playable: boolean;
+  onCommit: () => void;
+  prophecyReady?: boolean;
+}) => {
+  const rarityClass =
+    sticker.rarity >= 3
+      ? 'border-game-gold/75 bg-[linear-gradient(160deg,rgba(18,18,24,0.95),rgba(58,43,8,0.9))] shadow-[0_0_28px_rgba(230,179,30,0.28)]'
+      : sticker.rarity === 2
+        ? 'border-game-teal/55 bg-[linear-gradient(160deg,rgba(10,16,18,0.94),rgba(9,34,42,0.88))] shadow-[0_0_20px_rgba(64,206,208,0.18)]'
+        : 'border-white/15 bg-black/55';
+  const unavailable = sticker.state !== 'available';
+  return (
+    <button
+      type="button"
+      onClick={onCommit}
+      disabled={!playable}
+      className={`relative flex shrink-0 flex-col items-center justify-center overflow-hidden rounded-[18px] border text-center transition-all ${
+        unavailable
+          ? 'border-white/10 bg-black/35 text-white/30'
+          : playable
+            ? `${rarityClass} hover:-translate-y-0.5 hover:border-white/70`
+            : `${rarityClass} text-white/75`
+      }`}
+      style={{ width: size, height: size, minWidth: size }}
+    >
+      {sticker.rarity >= 2 && !unavailable ? (
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.24),transparent_38%),linear-gradient(135deg,transparent_20%,rgba(255,255,255,0.08)_50%,transparent_80%)]" />
+      ) : null}
+      <div className={`relative text-[28px] font-black leading-none ${unavailable ? 'text-white/30' : 'text-white'}`}>[{sticker.glyph}]</div>
+      <div className="relative mt-1 text-[8px] font-black uppercase tracking-[0.16em] text-white/80">{sticker.name}</div>
+      <div className="relative mt-1 flex items-center gap-1 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">
+        <span>{rankLabel(sticker.rank)}</span>
+        <span>R{sticker.rarity}</span>
+      </div>
+      <div className="relative mt-1 px-2 text-[7px] uppercase tracking-[0.08em] text-white/45">
+        {sticker.state === 'buried'
+          ? `Buried C${(sticker.buriedColumnIndex ?? 0) + 1}`
+          : prophecyReady
+            ? 'Prophecy Ready'
+            : playable
+              ? 'Commit To Streak'
+              : 'Reserve Sticker'}
+      </div>
+    </button>
+  );
+};
 
 const RiggedConstructCard = ({
   topCard,
@@ -2889,6 +4543,85 @@ const RiggedConstructCard = ({
   );
 };
 
+type ActorFrameEmojiRigConfig = {
+  src: string;
+  emotionType: 'happy';
+  speaking?: {
+    text: string;
+    subtitle?: string;
+  };
+};
+
+const ActorFrameEmojiRig = ({
+  emojiRig,
+}: {
+  emojiRig?: ActorFrameEmojiRigConfig;
+}) => {
+  if (!emojiRig) return null;
+  const speaking = !!emojiRig.speaking;
+  return (
+    <div className="pointer-events-none absolute right-[-6px] top-[-34px] z-50 h-[64px] w-[64px] overflow-visible">
+      {speaking ? (
+        <div
+          className="absolute left-[-16px] top-[-34px] z-50 min-w-[124px] rounded-[24px] border-2 border-[#98eaff]/90 bg-[linear-gradient(180deg,rgba(8,16,26,0.96)_0%,rgba(4,8,14,0.95)_100%)] px-3 py-2 shadow-[0_12px_24px_rgba(0,0,0,0.34),0_0_18px_rgba(72,190,232,0.18)]"
+          style={{ animation: 'golf-mochi-ready-float 1.9s ease-in-out infinite' }}
+        >
+          <div
+            aria-hidden
+            className="absolute inset-[2px] rounded-[20px]"
+            style={{
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%)',
+              opacity: 0.9,
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute -bottom-[10px] left-[82%] h-[18px] w-[18px] -translate-x-1/2 rotate-45 rounded-br-[6px] border-b-2 border-r-2 border-[#98eaff]/90 bg-[linear-gradient(180deg,rgba(8,16,26,0.96)_0%,rgba(4,8,14,0.95)_100%)]"
+          />
+          <div className="relative whitespace-nowrap text-center">
+            <div className="text-[9px] font-black uppercase tracking-[0.08em] text-[#eefaff]">
+              {emojiRig.speaking?.text}
+            </div>
+            {emojiRig.speaking?.subtitle ? (
+              <div className="mt-0.5 text-[7px] font-black uppercase tracking-[0.08em] text-[#eefaff]/85">
+                {emojiRig.speaking.subtitle}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      <img
+        src={emojiRig.src}
+        alt=""
+        aria-hidden
+        className="absolute left-0 top-0 z-40 select-none"
+        style={{
+          width: speaking ? 56 : 40,
+          transform: speaking ? 'translate(4px, 0)' : 'translate(16px, 6px)',
+          filter: 'drop-shadow(0 10px 14px rgba(0,0,0,0.3))',
+          animation: speaking ? 'golf-emoji-speaker-pop 0.36s cubic-bezier(0.22,0.68,0.2,1)' : undefined,
+        }}
+      />
+    </div>
+  );
+};
+
+const StaggerPressureBadge = ({
+  pressure,
+  compact = false,
+}: {
+  pressure: number;
+  compact?: boolean;
+}) => (
+  <div className={`pointer-events-none absolute z-20 ${compact ? 'right-2 bottom-2' : 'right-2 bottom-[34px]'}`}>
+    <div className={`rounded-full border bg-black/82 text-white/88 shadow-[0_0_14px_rgba(255,96,96,0.14)] ${
+      compact ? 'border-[#ff8f8f]/35 px-2 py-1 text-[8px]' : 'border-[#ff8f8f]/40 px-2.5 py-1 text-[9px]'
+    } font-black uppercase tracking-[0.16em]`}>
+      STG {Math.max(0, Math.round(pressure))}
+    </div>
+  </div>
+);
+
 const KinBenchCard = ({
   card,
   vitals,
@@ -2906,11 +4639,13 @@ const KinBenchCard = ({
   breathing = false,
   discardCount = 0,
   holdProgress = 0,
-  apSegments,
   cardRef,
   roleLabel,
   roleDescription,
   activeRole = false,
+  constrainBackdrop = false,
+  emojiRig,
+  flashVersions,
 }: {
   card: CardType;
   vitals: ReturnType<typeof getCombatVitals>;
@@ -2928,11 +4663,13 @@ const KinBenchCard = ({
   breathing?: boolean;
   discardCount?: number;
   holdProgress?: number;
-  apSegments?: Element[];
   cardRef?: (node: HTMLButtonElement | null) => void;
   roleLabel?: string;
   roleDescription?: string;
   activeRole?: boolean;
+  constrainBackdrop?: boolean;
+  emojiRig?: ActorFrameEmojiRigConfig;
+  flashVersions?: Record<string, number>;
 }) => (
   <button
     ref={cardRef}
@@ -2962,7 +4699,7 @@ const KinBenchCard = ({
     }}
   >
     <div
-      className="pointer-events-none absolute inset-y-[-8px] left-[-42px] right-[-42px] z-0 rounded-[22px] border"
+      className={`pointer-events-none absolute z-0 rounded-[22px] border ${constrainBackdrop ? 'inset-0' : 'inset-y-[-8px] left-[-42px] right-[-42px]'}`}
       style={{
         borderColor: highlighted ? 'rgba(230,179,30,0.42)' : getActorBackdropStyle(card.name).border,
         background: getActorBackdropStyle(card.name).bg,
@@ -2972,6 +4709,7 @@ const KinBenchCard = ({
       }}
     />
     <div className="relative h-full w-full">
+      <ActorFrameEmojiRig emojiRig={emojiRig} />
       {roleLabel ? (
         <div className="pointer-events-none absolute left-2 top-2 z-20 flex justify-start">
           <div className={`rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] ${
@@ -2983,7 +4721,7 @@ const KinBenchCard = ({
           </div>
         </div>
       ) : null}
-      <ActorStatusRail actorName={card.name} combatant={combatant} maxVisible={3} iconSize={18} compact />
+      <ActorStatusRail actorName={card.name} combatant={combatant} maxVisible={3} iconSize={18} compact flashVersions={flashVersions} />
       <Card
         card={card}
         showGraphics={false}
@@ -2996,21 +4734,9 @@ const KinBenchCard = ({
         disableHoverLift
       />
       <StockCardNameplate card={card} heuristicLabel={heuristicLabel} highlighted={highlighted} withVitals />
-      {apSegments && apSegments.length > 0 ? (
-        <div className="pointer-events-none absolute inset-x-3 bottom-6 z-20 rounded-md border border-white/14 bg-black/72 px-[3px] py-[3px] shadow-[0_0_14px_rgba(0,0,0,0.28)]">
-          <div className="flex h-[10px] w-full overflow-hidden rounded-[3px]">
-            {apSegments.map((element, segmentIndex) => (
-              <div
-                key={`bench-ap-${card.id}-${segmentIndex}-${element}`}
-                className="h-full flex-1"
-                style={{
-                  background: `linear-gradient(180deg, ${getGolfSegmentColor(element)}dd 0%, ${getGolfSegmentColor(element)}99 100%)`,
-                  boxShadow: `0 0 6px ${getGolfSegmentColor(element)}88`,
-                  borderLeft: segmentIndex === 0 ? 'none' : '1px solid rgba(2,4,8,0.85)',
-                }}
-              />
-            ))}
-          </div>
+      {typeof actionPoints === 'number' ? (
+        <div className="pointer-events-none absolute inset-x-3 bottom-6 z-20">
+          <AbilityApBar ap={actionPoints} maxAp={vitals.apMax ?? getActorApCap(card.name)} barClassName="h-[10px] rounded-[3px]" />
         </div>
       ) : null}
     </div>
@@ -3065,7 +4791,6 @@ const StockActorShellView = ({
   highlighted = false,
   actionPoints,
   discardCount,
-  apSegments,
 }: {
   actor: StockActorShell;
   stock: CardType;
@@ -3084,7 +4809,6 @@ const StockActorShellView = ({
   highlighted?: boolean;
   actionPoints?: number;
   discardCount?: number;
-  apSegments?: Element[];
 }) => (
   <div className={`flex flex-col items-center ${compact ? 'gap-0.5' : 'gap-1'}`}>
     <div
@@ -3119,21 +4843,9 @@ const StockActorShellView = ({
           disableHoverLift
         />
         <StockCardNameplate card={stock} heuristicLabel={heuristicLabel} highlighted={highlighted} withVitals />
-        {apSegments && apSegments.length > 0 ? (
-          <div className="pointer-events-none absolute inset-x-3 bottom-6 z-20 rounded-md border border-white/14 bg-black/72 px-[3px] py-[3px] shadow-[0_0_14px_rgba(0,0,0,0.28)]">
-            <div className="flex h-[10px] w-full overflow-hidden rounded-[3px]">
-              {apSegments.map((element, segmentIndex) => (
-                <div
-                  key={`prime-ap-${segmentIndex}-${element}`}
-                  className="h-full flex-1"
-                  style={{
-                    background: `linear-gradient(180deg, ${getGolfSegmentColor(element)}dd 0%, ${getGolfSegmentColor(element)}99 100%)`,
-                    boxShadow: `0 0 6px ${getGolfSegmentColor(element)}88`,
-                    borderLeft: segmentIndex === 0 ? 'none' : '1px solid rgba(2,4,8,0.85)',
-                  }}
-                />
-              ))}
-            </div>
+        {typeof actionPoints === 'number' ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-6 z-20">
+            <AbilityApBar ap={actionPoints} maxAp={vitals.apMax ?? getActorApCap(stock.name)} barClassName="h-[10px] rounded-[3px]" />
           </div>
         ) : null}
       </div>
@@ -3212,6 +4924,91 @@ const HeuristicPill = ({ label }: { label: string }) => (
   </div>
 );
 
+const RewardModalShell = ({
+  title,
+  subtitle,
+  onClose,
+  reward_sticker,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  reward_sticker?: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.42)] px-4">
+    <button type="button" aria-label="Close reward modal" className="absolute inset-0 pointer-events-auto" onClick={onClose} />
+    <div className="pointer-events-auto relative w-full max-w-[780px] rounded-[28px] border border-game-gold/22 bg-[linear-gradient(180deg,rgba(9,10,14,0.97),rgba(4,5,8,0.94))] px-5 py-5 shadow-[0_30px_80px_rgba(0,0,0,0.55)] animate-[golf-reward-modal-in_620ms_cubic-bezier(0.18,0.9,0.22,1)_both]">
+      {reward_sticker ? (
+        <div className="pointer-events-none absolute right-3 top-[-20px] z-10 md:right-4 md:top-[-28px]">
+          {reward_sticker}
+        </div>
+      ) : null}
+      <div className={reward_sticker ? 'pr-[148px] md:pr-[196px]' : ''}>
+        <div className="text-[18px] font-black uppercase tracking-[0.18em] text-game-gold [text-shadow:0_0_18px_rgba(230,179,30,0.28)] md:text-[24px]">
+          {title}
+        </div>
+        {subtitle ? <div className="mt-2 text-[13px] leading-5 text-white/70">{subtitle}</div> : null}
+      </div>
+      <div className="mt-3">{children}</div>
+    </div>
+  </div>
+);
+
+const TutorialScenePicker = ({
+  scenes,
+  onSelect,
+  onClose,
+}: {
+  scenes: Array<{ id: TutorialSceneId; label: string; detail: string }>;
+  onSelect: (sceneId: TutorialSceneId) => void;
+  onClose: () => void;
+}) => (
+  <div className="pointer-events-none absolute inset-0 z-50 bg-[rgba(0,0,0,0.26)]">
+    <button type="button" aria-label="Close scene picker" className="absolute inset-0 pointer-events-auto" onClick={onClose} />
+    <div className="pointer-events-auto absolute left-4 top-[calc(env(safe-area-inset-top)+108px)] w-[min(360px,calc(100vw-32px))] rounded-[24px] border border-game-gold/20 bg-[linear-gradient(180deg,rgba(8,10,12,0.97),rgba(4,6,8,0.94))] p-3 shadow-[0_24px_60px_rgba(0,0,0,0.4)] md:left-5 md:top-[112px]">
+      <div className="px-2 pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-game-gold/78">Scene Select</div>
+      <div className="flex flex-col gap-2">
+        {scenes.map((scene) => (
+          <button
+            key={scene.id}
+            type="button"
+            onClick={() => onSelect(scene.id)}
+            className="rounded-[18px] border border-white/10 bg-black/42 px-3 py-3 text-left transition-colors hover:border-game-gold/35 hover:bg-black/62"
+          >
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/86">{scene.label}</div>
+            <div className="mt-1 text-[11px] leading-4 text-white/58">{scene.detail}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const RewardEffectTile = ({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: 'buff' | 'debuff';
+}) => {
+  const style = STATUS_TONE_STYLES[tone];
+  return (
+    <div
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border text-[11px] font-black uppercase tracking-[0.04em]"
+      style={{
+        borderColor: style.border,
+        background: style.bg,
+        color: style.text,
+        boxShadow: style.glow,
+      }}
+    >
+      {label}
+    </div>
+  );
+};
+
 const GolfHudIconButton = ({
   label,
   icon,
@@ -3231,15 +5028,15 @@ const GolfHudIconButton = ({
     title={label}
     onClick={onClick}
     disabled={disabled}
-    className={`flex h-10 w-10 items-center justify-center rounded-xl border text-[15px] leading-none backdrop-blur-sm transition-colors ${
+    className={`flex h-10 w-10 items-center justify-center rounded-full border text-[16px] leading-none backdrop-blur-md transition-all duration-200 ease-out active:scale-95 ${
       disabled
-        ? 'cursor-not-allowed border-white/10 bg-black/45 text-white/25'
+        ? 'cursor-not-allowed border-white/5 bg-white/5 text-white/20'
         : active
-          ? 'border-game-gold/55 bg-game-gold/15 text-game-gold hover:bg-game-gold/22'
-          : 'border-game-teal/40 bg-black/68 text-game-teal hover:bg-game-teal/14'
+          ? 'border-game-gold/60 bg-game-gold/20 text-game-gold shadow-[0_0_15px_rgba(230,179,30,0.25)] hover:bg-game-gold/30 hover:scale-105'
+          : 'border-white/10 bg-black/40 text-game-teal hover:border-game-teal/50 hover:bg-game-teal/10 hover:text-game-teal hover:shadow-[0_0_15px_rgba(127,219,202,0.15)] hover:scale-105'
     }`}
   >
-    <span aria-hidden="true">{icon}</span>
+    <span aria-hidden="true" className="font-display font-bold">{icon}</span>
   </button>
 );
 
@@ -3744,6 +5541,8 @@ const GolfPaintOverlay = ({
 export const GolfGame = () => {
   const { setIsImmersive } = useImmersiveBattle();
   const [game, setGame] = useState<GolfGameState>(() => setupGame());
+  const scenarioId = getGolfScenarioId();
+  const isTutorialScenario = scenarioId === 'tutorial';
   const [currentTurn, setCurrentTurn] = useState<'player' | 'enemy'>('player');
   const [autoPlayMode, setAutoPlayMode] = useState<AutoPlayMode>('off');
   const [showAutoPlayMenu, setShowAutoPlayMenu] = useState(false);
@@ -3752,11 +5551,18 @@ export const GolfGame = () => {
   const [oracleMode, setOracleMode] = useState<'off' | 'guidance' | 'ancestors'>('off');
   const [paintMode, setPaintMode] = useState(false);
   const [showDiscardTray, setShowDiscardTray] = useState(false);
+  const [showTutorialRescueDepth, setShowTutorialRescueDepth] = useState(false);
+  const [showTutorialRewardModal, setShowTutorialRewardModal] = useState(false);
+  const [showTutorialScenePicker, setShowTutorialScenePicker] = useState(false);
+  const [tutorialRewardSourcePoint, setTutorialRewardSourcePoint] = useState<{ x: number; y: number } | null>(null);
+  const [tutorialMochiMarkerAnchor, setTutorialMochiMarkerAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [rescueCardFlash, setRescueCardFlash] = useState<RescueCardFlash | null>(null);
+  const [enemyTurnQueued, setEnemyTurnQueued] = useState(false);
   const [fps, setFps] = useState(0);
   const [guidePlan, setGuidePlan] = useState<GuidePlan | null>(null);
   const [viewport, setViewport] = useState(() => ({
-    width: typeof window === 'undefined' ? 1280 : window.innerWidth,
-    height: typeof window === 'undefined' ? 900 : window.innerHeight,
+    width: typeof window === 'undefined' ? 1280 : (window.visualViewport?.width ?? window.innerWidth),
+    height: typeof window === 'undefined' ? 900 : (window.visualViewport?.height ?? window.innerHeight),
   }));
   const [enemyTurnSummary, setEnemyTurnSummary] = useState<GolfTurnAction[]>([]);
   const [enemyDragAnim, setEnemyDragAnim] = useState<GolfDragAnim | null>(null);
@@ -3769,21 +5575,38 @@ export const GolfGame = () => {
     stockIds: string[];
   } | null>(null);
   const [stickyHoldProgress, setStickyHoldProgress] = useState(0);
+  const [abilityTooltipHoldSlotId, setAbilityTooltipHoldSlotId] = useState<HandSlotId | null>(null);
+  const [abilityTooltipHoldProgress, setAbilityTooltipHoldProgress] = useState(0);
   const [devAbilityHoldSlotId, setDevAbilityHoldSlotId] = useState<HandSlotId | 'pan-left' | null>(null);
   const [devAbilityHoldProgress, setDevAbilityHoldProgress] = useState(0);
   const [kinInspectIndex, setKinInspectIndex] = useState<number | null>(null);
   const [kinInspectHoldProgress, setKinInspectHoldProgress] = useState(0);
   const [dialogueCallouts, setDialogueCallouts] = useState<DialogueCalloutEntry[]>([]);
   const [enemyBurnProgress, setEnemyBurnProgress] = useState(0);
+  const [primeTapped, setPrimeTapped] = useState(false);
+  const [starterBenchLockProgress, setStarterBenchLockProgress] = useState(0);
+  const [highlightedActorNames, setHighlightedActorNames] = useState<string[]>([]);
+  const [highlightedStatusKeys, setHighlightedStatusKeys] = useState<string[]>([]);
+  const [statusFlashVersions, setStatusFlashVersions] = useState<Record<string, number>>({});
+  const [transientStatusEvents, setTransientStatusEvents] = useState<Array<{ id: number; actorName: string; key: string; label: string; tone: 'buff' | 'debuff' }>>([]);
+  const [maulTelegraphPath, setMaulTelegraphPath] = useState<string | null>(null);
   const enemyTurnTimeoutRef = useRef<number | null>(null);
+  const gameRootRef = useRef<HTMLDivElement | null>(null);
   const playerStockRef = useRef<HTMLDivElement | null>(null);
   const enemyStockRef = useRef<HTMLDivElement | null>(null);
+  const maulReadyRef = useRef<HTMLDivElement | null>(null);
   const enemyBenchRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const benchInspectorRef = useRef<HTMLDivElement | null>(null);
   const playerHandRefs = useRef<Record<HandSlotId, HTMLButtonElement | null>>({ left: null, right: null });
   const playerCaptureRefs = useRef<Record<HandSlotId, HTMLButtonElement | null>>({ left: null, right: null });
   const tableauTopRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const tableauCardRefs = useRef<Record<string, HTMLDivElement | HTMLButtonElement | null>>({});
+  const tutorialRescueModalRef = useRef<HTMLDivElement | null>(null);
+  const tutorialRewardCardRef = useRef<HTMLButtonElement | null>(null);
   const playerBenchRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const starterPackBenchRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const tutorialAdvanceKeyRef = useRef<string | null>(null);
+  const tutorialSliceIntroRef = useRef<string | null>(null);
   const latestGameRef = useRef(game);
   const lastUndoRef = useRef<UndoSnapshot | null>(null);
   const isPausedRef = useRef(isPaused);
@@ -3798,15 +5621,21 @@ export const GolfGame = () => {
   const enemyDragCompletionRef = useRef<(() => void) | null>(null);
   const enemyDragSequenceIdRef = useRef(0);
   const playerHandAnimTimeoutRef = useRef<number | null>(null);
+  const rescueCardFlashTimeoutRef = useRef<number | null>(null);
+  const rescueRewardModalTimeoutRef = useRef<number | null>(null);
   const playerHandAnimNodeRef = useRef<HTMLDivElement | null>(null);
   const stickyHoldTimeoutRef = useRef<number | null>(null);
   const stickyHoldRafRef = useRef(0);
   const stickyHoldStartRef = useRef(0);
+  const abilityTooltipHoldTimeoutRef = useRef<number | null>(null);
+  const abilityTooltipHoldRafRef = useRef(0);
+  const abilityTooltipHoldStartRef = useRef(0);
   const devAbilityHoldTimeoutRef = useRef<number | null>(null);
   const devAbilityHoldRafRef = useRef(0);
   const devAbilityHoldStartRef = useRef(0);
   const suppressStickyClickRef = useRef(false);
   const suppressAbilityClickRef = useRef(false);
+  const abilityFeedbackTimeoutRef = useRef<number | null>(null);
   const kinInspectHoldTimeoutRef = useRef<number | null>(null);
   const kinInspectHoldRafRef = useRef(0);
   const kinInspectHoldStartRef = useRef(0);
@@ -3817,6 +5646,13 @@ export const GolfGame = () => {
   const fpsFrameCountRef = useRef(0);
   const dialogueCalloutTimeoutsRef = useRef<number[]>([]);
   const autoPlayMenuRef = useRef<HTMLDivElement | null>(null);
+  const primeTapTimeoutRef = useRef<number | null>(null);
+  const starterBenchLockTimeoutRef = useRef<number | null>(null);
+  const starterBenchLockRafRef = useRef(0);
+  const mochiTokenVisibleRef = useRef(false);
+  const starterBenchLockStartRef = useRef(0);
+  const starterBenchLockIndexRef = useRef<number | null>(null);
+  const suppressStarterBenchClickRef = useRef(false);
 
   useEffect(() => {
     setIsImmersive(false);
@@ -3829,6 +5665,24 @@ export const GolfGame = () => {
   useEffect(() => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
+
+  useEffect(() => () => {
+    if (primeTapTimeoutRef.current) {
+      window.clearTimeout(primeTapTimeoutRef.current);
+    }
+    if (rescueCardFlashTimeoutRef.current) {
+      window.clearTimeout(rescueCardFlashTimeoutRef.current);
+    }
+    if (rescueRewardModalTimeoutRef.current) {
+      window.clearTimeout(rescueRewardModalTimeoutRef.current);
+    }
+    if (starterBenchLockTimeoutRef.current) {
+      window.clearTimeout(starterBenchLockTimeoutRef.current);
+    }
+    if (starterBenchLockRafRef.current) {
+      window.cancelAnimationFrame(starterBenchLockRafRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (currentTurn !== 'player') {
@@ -3849,6 +5703,19 @@ export const GolfGame = () => {
     return () => window.removeEventListener('pointerdown', handlePointerDown, true);
   }, [showAutoPlayMenu]);
 
+  useEffect(() => {
+    if (!showTutorialRescueDepth) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const node = tutorialRescueModalRef.current;
+      if (!node || !(event.target instanceof Node)) return;
+      if (!node.contains(event.target)) {
+        setShowTutorialRescueDepth(false);
+      }
+    };
+    window.addEventListener('pointerdown', handlePointerDown, true);
+    return () => window.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [showTutorialRescueDepth]);
+
   useEffect(() => () => {
     if (enemyTurnTimeoutRef.current !== null) {
       window.clearTimeout(enemyTurnTimeoutRef.current);
@@ -3868,6 +5735,12 @@ export const GolfGame = () => {
     if (stickyHoldRafRef.current) {
       window.cancelAnimationFrame(stickyHoldRafRef.current);
     }
+    if (abilityTooltipHoldTimeoutRef.current !== null) {
+      window.clearTimeout(abilityTooltipHoldTimeoutRef.current);
+    }
+    if (abilityTooltipHoldRafRef.current) {
+      window.cancelAnimationFrame(abilityTooltipHoldRafRef.current);
+    }
     if (devAbilityHoldTimeoutRef.current !== null) {
       window.clearTimeout(devAbilityHoldTimeoutRef.current);
     }
@@ -3882,6 +5755,9 @@ export const GolfGame = () => {
     }
     if (fpsRafRef.current) {
       window.cancelAnimationFrame(fpsRafRef.current);
+    }
+    if (abilityFeedbackTimeoutRef.current !== null) {
+      window.clearTimeout(abilityFeedbackTimeoutRef.current);
     }
     dialogueCalloutTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
     enemyDragCompletionRef.current?.();
@@ -3921,11 +5797,18 @@ export const GolfGame = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      setViewport({ width: window.innerWidth, height: window.innerHeight });
+      setViewport({
+        width: window.visualViewport?.width ?? window.innerWidth,
+        height: window.visualViewport?.height ?? window.innerHeight,
+      });
     };
 
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -3954,11 +5837,25 @@ export const GolfGame = () => {
     };
   }, []);
 
+  const showThreatRail = game.tutorialSliceId === 'slice-03' || game.tutorialSliceId === 'slice-04' || !isTutorialScenario;
+  const combatLaneActive = showThreatRail && !game.tutorialEnemyDefeated;
+  const narrowViewport = viewport.width < 900;
+  const shortViewport = viewport.height < 820;
+  const ultraShortViewport = viewport.height < 720;
+
   const boardScale = useMemo(() => {
-    const widthScale = clampNumber((viewport.width - 140) / 1120, 0.68, 1);
-    const heightScale = clampNumber((viewport.height - 260) / 760, 0.66, 1);
-    return Math.min(widthScale, heightScale);
-  }, [viewport.height, viewport.width]);
+    const widthReserve = narrowViewport ? 56 : 140;
+    const threatRailReserve = combatLaneActive ? (shortViewport ? 120 : 96) : 0;
+    const baseHeightReserve = combatLaneActive
+      ? (ultraShortViewport ? 470 : shortViewport ? 420 : 310)
+      : (ultraShortViewport ? 350 : shortViewport ? 300 : 220);
+    const heightReserve = baseHeightReserve + threatRailReserve;
+    const widthScale = clampNumber((viewport.width - widthReserve) / 1120, narrowViewport ? 0.5 : 0.68, 1);
+    const heightScale = clampNumber((viewport.height - heightReserve) / 760, ultraShortViewport ? 0.32 : shortViewport ? 0.4 : 0.66, 1);
+    // Keep the full 7-column tableau inside the live viewport instead of relying on overflow scrolling.
+    const tableauWidthScale = clampNumber((viewport.width - 52) / 900, 0.34, 1);
+    return Math.min(widthScale, heightScale, tableauWidthScale);
+  }, [combatLaneActive, narrowViewport, shortViewport, ultraShortViewport, viewport.height, viewport.width]);
 
   const boardCardSize = useMemo(
     () => ({
@@ -3971,8 +5868,8 @@ export const GolfGame = () => {
   const benchActorZoneWidth = Math.round(boardCardSize.width + Math.max(72, boardCardSize.width * 0.5));
   const handCardSize = useMemo(
     () => ({
-      width: Math.max(58, Math.round(boardCardSize.width * 0.9)),
-      height: Math.max(84, Math.round(boardCardSize.height * 0.9)),
+      width: Math.max(44, Math.round(boardCardSize.width * 0.6)),
+      height: Math.max(64, Math.round(boardCardSize.height * 0.6)),
     }),
     [boardCardSize.height, boardCardSize.width]
   );
@@ -3981,15 +5878,32 @@ export const GolfGame = () => {
   const enemyPeek = Math.max(4, Math.round(ENEMY_TURN_PEEK * boardScale));
   const enemyEdgePeek = Math.max(8, Math.round(ENEMY_TURN_PLAYER_EDGE_PEEK * boardScale));
   const columnGap = Math.max(4, Math.round(10 * boardScale));
+  const nonCombatTableauPeek = Math.max(30, Math.round(boardCardSize.height * 0.2));
+  const nonCombatRankReveal = Math.max(58, Math.round(boardCardSize.height * 0.38));
   const benchGap = Math.max(4, Math.round(10 * boardScale));
   const benchKinGap = Math.max(18, Math.round(30 * boardScale));
   const boardCompact = boardScale < 0.82;
 
   const effectiveOracleMode = inspectMode ?? oracleMode;
+  const tutorialRailColumns = useMemo(() => getTutorialRailColumns(game), [game]);
   const topCards = useMemo(
     () => game.tableau.map((column) => column[column.length - 1] ?? null),
     [game.tableau]
   );
+  const nonCombatGlobalPeekCount = useMemo(() => {
+    if (combatLaneActive) return 0;
+    return Math.min(
+      3,
+      Math.max(
+        0,
+        ...game.tableau.map((column) => Math.max(0, column.length - 1))
+      )
+    );
+  }, [combatLaneActive, game.tableau]);
+  const tutorialMinimumTableauRows = game.tutorialSliceId ? 3 : 1;
+  const displayNonCombatPeekCount = combatLaneActive
+    ? 0
+    : Math.max(nonCombatGlobalPeekCount, tutorialMinimumTableauRows - 1);
   const playerTargetStocks = useMemo(() => getOrderedPlayerTargetStocks(game), [game.playerStock, game.playerBench]);
   const playerStockOrder = useMemo(
     () => new Map(playerTargetStocks.map((target, index) => [target.stockId, index])),
@@ -4013,10 +5927,30 @@ export const GolfGame = () => {
     hiddenBest: playerHiddenPlan?.length ?? 0,
     hiddenPath: playerHiddenPlan?.path ?? [],
   }), [game.playerStock.id, playerHiddenPlan, playerVisiblePlan.length]);
+  const collectedPrimeElements = useMemo(
+    () => new Set(game.playerPrimeApSegments),
+    [game.playerPrimeApSegments]
+  );
+  const whisSticker = useMemo(
+    () => game.kinStickers.find((sticker) => sticker.speciesId === 'whis') ?? null,
+    [game.kinStickers]
+  );
+  const whisProphecyReady = useMemo(
+    () =>
+      !!whisSticker
+      && whisSticker.state === 'available'
+      && ['A', 'E', 'F', 'W'].every((element) => collectedPrimeElements.has(element as Element)),
+    [collectedPrimeElements, whisSticker]
+  );
+  const whisProphecyCharged = whisProphecyReady && currentTurn === 'player' && game.playerStockSequence > 0 && game.playerStockSequence % 4 === 0;
+  const whisProphecyPath = useMemo(() => {
+    if (!whisProphecyReady) return [];
+    return solveHiddenBestPlan(game.tableau, playerSolverStocks, playerStockOrder, new Map<string, SolverResult>(), 5)?.path ?? [];
+  }, [game.tableau, playerSolverStocks, playerStockOrder, whisProphecyReady]);
 
   useEffect(() => {
     if (currentTurn !== 'player') {
-      setGuidePlan((prev) => (prev?.source === 'ancestors' ? null : prev));
+      setGuidePlan((prev) => (prev?.source === 'ancestors' || prev?.source === 'prophecy' ? null : prev));
       return;
     }
     if (effectiveOracleMode !== 'ancestors' || playerPlanHeuristic.hiddenBest <= 0) {
@@ -4035,7 +5969,6 @@ export const GolfGame = () => {
       };
     });
   }, [currentTurn, effectiveOracleMode, playerPlanHeuristic]);
-
   const nextGuideStep = useMemo(() => {
     if (currentTurn !== 'player' || !guidePlan) return null;
     const visibleSteps = guidePlan.visibleSteps ?? Number.POSITIVE_INFINITY;
@@ -4098,7 +6031,7 @@ export const GolfGame = () => {
   const stickyPawsArmed = game.playerHand.some((slot) => slot.effect === 'sticky-paws' && slot.armed) && game.stickyPawsCooldown === 0;
   const activeActorName = game.playerStock.name;
   const currentEnemyProfile = useMemo(() => getEnemyProfile(game.enemyProfileId), [game.enemyProfileId]);
-  const isTargetDummyEncounter = game.enemyProfileId === GOLF_DEFAULT_ENEMY_PROFILE_ID;
+  const isTargetDummyEncounter = false;
   const enemyBenchProfiles = useMemo(
     () => game.enemyBenchProfileIds.map((profileId) => getEnemyProfile(profileId)),
     [game.enemyBenchProfileIds]
@@ -4121,56 +6054,611 @@ export const GolfGame = () => {
     }));
     return [...prime, ...bench];
   }, [currentEnemyProfile.actor.name, enemyBenchProfiles, game.enemyBench, game.enemyBenchProfileIds, game.enemyProfileId, game.enemyStock]);
-  const showHeuristicValues = inspectMode !== null || oracleMode !== 'off';
+  const showHeuristicValues = inspectMode !== null || oracleMode !== 'off' || guidePlan?.source === 'prophecy';
   const guidanceNextColumn = nextGuideStep?.columnIndex ?? null;
-  const leftHandSlots = useMemo(() => {
+  const primeAbilitySlots = useMemo(() => {
     if (isTargetDummyEncounter) return [];
     if (activeActorName === 'Jet') {
       return [
-        leftCapturedSlot,
-        leftHandSlot,
-        createHandSlot('jet-left-2', 'ability', 'Quarnyx Battery', 'battery', null, game.jetBatteryPrimeArmed),
         createHandSlot('jet-left-3', 'ability', 'Rewire', 'rewire', null, game.jetRewireActionsRemaining > 0),
-        createHandSlot('jet-right-4', 'ability', 'Aegis Shunt', 'aegis-shunt', null),
-      ].filter(Boolean) as PlayerHandSlot[];
+      ] as PlayerHandSlot[];
     }
-    if (activeActorName === 'Hiro') return [createHandSlot('left', 'ability', 'Ironfur', 'ironfur', null)];
-    if (activeActorName === 'Pan') return [createHandSlot('pan-left', 'ability', 'Paw-Sperity', 'paw-sperity', null)];
-    if (activeActorName === 'Whis') return [createHandSlot('left', 'ability', 'Slipstream', 'slipstream', null)];
-    return [];
-  }, [activeActorName, game.jetBatteryPrimeArmed, game.jetRewireActionsRemaining, isTargetDummyEncounter, leftCapturedSlot, leftHandSlot]);
-  const rightHandSlots = useMemo(
+    const actorAbilities = (STARTER_ABILITIES[activeActorName] ?? []).filter((ability) => ability.effect !== null);
+    return actorAbilities
+      .slice(0, PRIME_ABILITY_SLOT_IDS.length)
+      .map((ability, index) => createAbilitySlot(
+        PRIME_ABILITY_SLOT_IDS[index],
+        ability.effect === 'banks-strike'
+          ? { ...ability, name: getStarterPackAbilityName('Banks', game.starterPackAbilityRarities[game.activeStarterPackIndex] ?? 1) ?? ability.name }
+          : ability
+      ));
+  }, [activeActorName, game.activeStarterPackIndex, game.jetRewireActionsRemaining, game.starterPackAbilityRarities, isTargetDummyEncounter]);
+  const primeDynamicHandSlots = useMemo(
     () =>
       isTargetDummyEncounter
         ? []
         : activeActorName === 'Jet'
-        ? ([
-            rightHandSlot,
-            createHandSlot('jet-right-2', 'ability', 'Scrap Plating', 'scrap-plating', null),
-            createHandSlot('jet-right-3', 'ability', 'Rigged Construct', 'rigged-construct', null, game.riggedConstructArmed),
-            rightCapturedSlot,
-          ].filter(Boolean) as PlayerHandSlot[])
-        : activeActorName === 'Hiro'
-          ? [createHandSlot('right', 'ability', 'Tap Out!', 'tap-out', null)]
-        : activeActorName === 'Pan'
-          ? [createHandSlot('right', 'ability', 'Path of Stars', 'path-of-stars', null)]
-        : activeActorName === 'Whis'
-            ? [createHandSlot('right', 'ability', 'Jikan', 'jikan', null)]
-            : [],
-    [activeActorName, game.jetBatteryPrimeArmed, game.jetRewireActionsRemaining, game.riggedConstructArmed, isTargetDummyEncounter, leftCapturedSlot, leftHandSlot, rightCapturedSlot, rightHandSlot]
+          ? ([
+              leftCapturedSlot,
+              leftHandSlot.kind === 'empty' ? null : leftHandSlot,
+              rightCapturedSlot,
+              rightHandSlot.kind === 'empty' ? null : rightHandSlot,
+            ].filter(Boolean) as PlayerHandSlot[])
+          : [],
+    [activeActorName, isTargetDummyEncounter, leftCapturedSlot, leftHandSlot, rightCapturedSlot, rightHandSlot]
   );
+  const hiroHandSlots = useMemo(() => {
+    return [];
+  }, []);
+  const activePrimeHandSlots = useMemo(
+    () => [...primeAbilitySlots, ...primeDynamicHandSlots, ...hiroHandSlots],
+    [hiroHandSlots, primeAbilitySlots, primeDynamicHandSlots]
+  );
+  const threatenedActorName = useMemo(
+    () => (game.hiroGuardTauntTurns > 0 ? 'Hiro' : 'Mochi'),
+    [game.hiroGuardTauntTurns]
+  );
+  const enemyActionPreview = useMemo(() => {
+    if (game.enemyProfileId === 'shade-wisp' && game.enemyStockActionPoints >= 2) {
+      return {
+        title: 'Maul',
+        detail: '2 shadow damage. The wisp lashes the exposed line.',
+        targetLabel: threatenedActorName,
+        hostile: true,
+      };
+    }
+    return {
+      title: 'Bite',
+      detail: 'Chew the highest visible tableau card to gain AP.',
+      targetLabel: 'Tableau',
+      hostile: false,
+    };
+  }, [game.enemyProfileId, game.enemyStockActionPoints, threatenedActorName]);
+
+  useEffect(() => {
+    const showMaulTelegraph =
+      showThreatRail
+      && !game.tutorialEnemyDefeated
+      && game.enemyProfileId === 'shade-wisp'
+      && game.enemyStockActionPoints >= 2;
+    if (!showMaulTelegraph) {
+      setMaulTelegraphPath(null);
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const fromRect = maulReadyRef.current?.getBoundingClientRect();
+      const threatenedIndex = game.starterPackBase.findIndex((card) => card.name === threatenedActorName);
+      const threatenedNode = threatenedActorName === game.playerStock.name
+        ? playerStockRef.current
+        : threatenedIndex >= 0
+          ? starterPackBenchRefs.current[threatenedIndex]
+          : null;
+      const toRect = threatenedNode?.getBoundingClientRect();
+      if (!fromRect || !toRect) {
+        setMaulTelegraphPath(null);
+        return;
+      }
+      const startX = fromRect.left + fromRect.width * 0.5;
+      const startY = fromRect.bottom - 1;
+      const endX = toRect.left + toRect.width * 0.3;
+      const endY = toRect.top + toRect.height * 0.28;
+      const midX = startX + ((endX - startX) * 0.46);
+      const controlOneX = startX;
+      const controlOneY = startY + 44;
+      const controlTwoX = midX;
+      const controlTwoY = endY - 14;
+      setMaulTelegraphPath(`M ${startX} ${startY} C ${controlOneX} ${controlOneY}, ${controlTwoX} ${controlTwoY}, ${endX} ${endY}`);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    game.enemyProfileId,
+    game.hiroGuardTauntTurns,
+    game.enemyStockActionPoints,
+    game.playerStock.name,
+    game.starterPackBase,
+    game.tutorialEnemyDefeated,
+    showThreatRail,
+    viewport.height,
+    viewport.width,
+  ]);
+  const starterPackSlots = useMemo(
+    () => {
+      const tutorialSelectableIndices = getTutorialSelectableStarterPackIndices(game);
+      return game.starterPackBase.map((card, index) => ({
+        card,
+        index,
+        active: index === game.activeStarterPackIndex,
+        used: game.starterPackUsed[index] ?? false,
+        locked: game.starterPackLocked[index] ?? false,
+        selectable: index !== game.activeStarterPackIndex
+          && (isTutorialScenario
+            ? tutorialSelectableIndices.has(index)
+            : true)
+          && !(game.starterPackLocked[index] ?? false),
+        cashout: game.starterPackCashoutStats[index] ?? null,
+        storedAp: index === game.activeStarterPackIndex ? game.playerStockActionPoints : (game.starterPackStoredAp[index] ?? 0),
+        mode: game.starterPackModes[index] ?? 'default',
+        meta: {
+          ...(STARTER_KIN_METADATA[card.name] ?? { benchWeight: 1, abilityName: null }),
+          abilityName: getStarterPackAbilityName(card.name, game.starterPackAbilityRarities[index] ?? 1),
+        },
+      }));
+    },
+    [game.activeStarterPackIndex, game.playerStockActionPoints, game.starterPackAbilityRarities, game.starterPackBase, game.starterPackCashoutStats, game.starterPackLocked, game.starterPackModes, game.starterPackStoredAp, isTutorialScenario]
+  );
+  const visibleBenchSlots = useMemo(
+    () => starterPackSlots.filter((slot) => !slot.active),
+    [starterPackSlots]
+  );
+  const mirroredPlayerBenchSlots = useMemo(
+    () => Array.from({ length: 4 }, (_, index) => visibleBenchSlots[index] ?? null),
+    [visibleBenchSlots]
+  );
+  const playerBenchLeftSlots = useMemo(() => mirroredPlayerBenchSlots.slice(0, 2), [mirroredPlayerBenchSlots]);
+  const playerBenchRightSlots = useMemo(() => mirroredPlayerBenchSlots.slice(2, 4), [mirroredPlayerBenchSlots]);
+  const mirroredEnemyBenchSlots = useMemo(
+    () => Array.from({ length: 4 }, (_, index) => {
+      const card = game.enemyBench[index] ?? null;
+      if (!card) return null;
+      return {
+        card,
+        benchIndex: index,
+        profile: enemyBenchProfiles[index] ?? currentEnemyProfile,
+      };
+    }),
+    [currentEnemyProfile, enemyBenchProfiles, game.enemyBench]
+  );
+  const enemyBenchLeftSlots = useMemo(() => mirroredEnemyBenchSlots.slice(0, 2), [mirroredEnemyBenchSlots]);
+  const enemyBenchRightSlots = useMemo(() => mirroredEnemyBenchSlots.slice(2, 4), [mirroredEnemyBenchSlots]);
+  const tutorialSlice01RemainingCards = useMemo(
+    () => game.tutorialSliceId === 'slice-01'
+      ? game.tableau.reduce((sum, column) => sum + column.length, 0)
+      : 0,
+    [game.tableau, game.tutorialSliceId]
+  );
+  const tutorialMochiRescueStage = useMemo(() => {
+    if (game.tutorialSliceId !== 'slice-01') return null;
+    if (tutorialSlice01RemainingCards > 14) {
+      return {
+        label: 'Top row to clear',
+        detail: 'Rise from A to 8 to expose the second layer.',
+        coverHeight: '72%',
+      };
+    }
+    if (tutorialSlice01RemainingCards > 7) {
+      return {
+        label: 'Second row to clear',
+        detail: 'Sweep back from 8 to 2 to reach the wrap line.',
+        coverHeight: '44%',
+      };
+    }
+    return {
+      label: 'Final wrap line',
+      detail: 'Wrap through K, Q, J, then back to A to free Mochi.',
+      coverHeight: '14%',
+    };
+  }, [game.tutorialSliceId, tutorialSlice01RemainingCards]);
+  const tutorialMochiRescueCard = useMemo<CardType>(
+    () => ({ id: 'tutorial-rescue-mochi', rank: 9, suit: '♦', element: 'N', name: 'Mochi' }),
+    []
+  );
+  const tutorialMochiRescueVitals = useMemo(
+    () => ({ ...getCombatVitals(game, tutorialMochiRescueCard), hp: 1, hpMax: 10 }),
+    [game, tutorialMochiRescueCard]
+  );
+  const tutorialMochiRewardCombatant = useMemo(
+    () => {
+      const base = game.combatants.mochi ?? createCombatant('Mochi');
+      return { ...base, hp: 1, hpMax: 10, haste: 0, narrowEscape: 1, skittish: 5 };
+    },
+    [game.combatants.mochi]
+  );
+  const tutorialMochiProfile = useMemo(() => getKinProfile('Mochi'), []);
+  const tutorialMochiRewardEffects = useMemo(
+    () => {
+      const nineLives = getKinEffectDefinition(tutorialMochiProfile.passiveName ?? 'Nine Lives');
+      const narrowEscape = getKinEffectDefinition('Narrow Escape');
+      const skittish = getKinEffectDefinition('Skittish');
+      return [nineLives, narrowEscape, skittish]
+        .filter((effect): effect is KinEffectDefinition => !!effect)
+        .map((effect) => ({
+          key: effect.key,
+          label: effect.label,
+          tone: effect.tone,
+          name: effect.name,
+          flavor: effect.flavorText,
+          effect: effect.name === 'SKITTISH'
+            ? 'Cannot swap to prime for 5 actions.'
+            : effect.effectText,
+        }));
+    },
+    [tutorialMochiProfile.passiveName]
+  );
+  const tutorialClearedGoal = game.tutorialSliceId === 'slice-01' ? 13 : 35;
+  const tutorialClearedDisplay = game.tutorialSliceId === 'slice-01'
+    ? Math.min(game.clearedCount, tutorialClearedGoal)
+    : game.clearedCount;
+  const tutorialMochiTargetColumn = useMemo(() => {
+    if (game.tutorialSliceId !== 'slice-01') return null;
+    return 1;
+  }, [game.tutorialSliceId]);
+  const tutorialMochiTargetCardId = useMemo(() => {
+    if (game.tutorialSliceId !== 'slice-01' || tutorialMochiTargetColumn === null) return null;
+    const column = game.tableau[tutorialMochiTargetColumn] ?? [];
+    return column.find((card) => card.rank === 2)?.id ?? null;
+  }, [game.tableau, game.tutorialSliceId, tutorialMochiTargetColumn]);
+  const tutorialSceneOptions = useMemo<Array<{ id: TutorialSceneId; label: string; detail: string }>>(
+    () => ([
+      { id: 'slice-01', label: 'Slice 01 Start', detail: 'Hiro begins the excavation route from Ace.' },
+      { id: 'post-mochi', label: 'Post-Mochi', detail: 'Reward checkpoint with Mochi hidden until claimed.' },
+      { id: 'slice-02', label: 'Slice 02 Start', detail: 'Hiro calms Mochi while something stalks the buried row.' },
+      { id: 'slice-03', label: 'Slice 03 Start', detail: 'First live threat: rotate to Mochi, poke twice, then return to Hiro for Guard.' },
+      { id: 'slice-04', label: 'Slice 04', detail: 'Jet rewire and reclaim tutorial state.' },
+    ]),
+    []
+  );
+
+  useEffect(() => {
+    if (game.tutorialSliceId !== 'slice-01' || tutorialMochiTargetColumn === null || !tutorialMochiTargetCardId || showTutorialRewardModal) {
+      setTutorialMochiMarkerAnchor(null);
+      return;
+    }
+
+    let frameId = 0;
+    const updateAnchor = () => {
+      const rootRect = gameRootRef.current?.getBoundingClientRect();
+      const targetRect = tableauCardRefs.current[tutorialMochiTargetCardId]?.getBoundingClientRect();
+      if (!rootRect || !targetRect) {
+        setTutorialMochiMarkerAnchor(null);
+        return;
+      }
+      setTutorialMochiMarkerAnchor({
+        x: targetRect.left - rootRect.left + targetRect.width * 0.5,
+        y: targetRect.top - rootRect.top,
+      });
+    };
+
+    const scheduleUpdate = () => {
+      if (frameId) window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(updateAnchor);
+    };
+
+    scheduleUpdate();
+    window.addEventListener('resize', scheduleUpdate);
+    window.addEventListener('scroll', scheduleUpdate, true);
+    return () => {
+      if (frameId) window.cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', scheduleUpdate);
+      window.removeEventListener('scroll', scheduleUpdate, true);
+    };
+  }, [boardCardSize.height, game.tableau, game.tutorialSliceId, showTutorialRewardModal, tutorialMochiTargetCardId, tutorialMochiTargetColumn, viewport.height, viewport.width]);
+  useEffect(() => {
+    if (game.tutorialSliceId !== 'slice-01' || tutorialMochiTargetColumn === null || !tutorialMochiTargetCardId) {
+      mochiTokenVisibleRef.current = false;
+      return;
+    }
+
+    const column = game.tableau[tutorialMochiTargetColumn];
+    const targetCard = column?.find((card) => card.id === tutorialMochiTargetCardId) ?? null;
+    const isTokenVisible = !!targetCard;
+
+    if (isTokenVisible && !mochiTokenVisibleRef.current) {
+      const node = tableauCardRefs.current[tutorialMochiTargetCardId];
+      const sourcePoint = getCardCenterPoint(node);
+      if (sourcePoint) {
+        const flashId = Date.now();
+        setRescueCardFlash({ id: flashId, x: sourcePoint.x, y: sourcePoint.y, tone: 'red' });
+        if (rescueCardFlashTimeoutRef.current !== null) {
+          window.clearTimeout(rescueCardFlashTimeoutRef.current);
+        }
+        rescueCardFlashTimeoutRef.current = window.setTimeout(() => {
+          setRescueCardFlash((current) => (current?.id === flashId ? null : current));
+          rescueCardFlashTimeoutRef.current = null;
+        }, 1800);
+      }
+    }
+    mochiTokenVisibleRef.current = isTokenVisible;
+  }, [game.tableau, game.tutorialSliceId, tutorialMochiTargetCardId, tutorialMochiTargetColumn]);
+
+  const remainingStarterPackChoices = useMemo(
+    () => starterPackSlots.filter((slot) => slot.selectable),
+    [starterPackSlots]
+  );
+  const sequentialTagStarterPackSlots = useMemo(
+    () => remainingStarterPackChoices.filter((slot) => canPlayOnStock(slot.card, game.playerStock)),
+    [game.playerStock, remainingStarterPackChoices]
+  );
+  const hasDirectTableauPlay = useMemo(
+    () => game.tableau.some((column) => {
+      const topCard = column[column.length - 1];
+      return !!topCard && getEligiblePlayerTargetsForCard(game, topCard).length > 0;
+    }),
+    [game.playerStock, game.tableau]
+  );
+  const warnDeadlock = useMemo(() => {
+    const playableColumns = game.tableau
+      .map((column, columnIndex) => ({
+        topCard: column[column.length - 1] ?? null,
+        columnIndex,
+      }))
+      .filter((entry) => !!entry.topCard && getEligiblePlayerTargetsForCard(game, entry.topCard!).length > 0);
+    if (playableColumns.length !== 1) return false;
+    const nextPlay = playableColumns[0];
+    const nextTableau = simulateTableauAfterTopPlay(game.tableau, nextPlay.columnIndex);
+    return !nextTableau.some((column) => {
+      const topCard = column[column.length - 1];
+      return !!topCard && canPlayOnStock(topCard, nextPlay.topCard!);
+    });
+  }, [game.playerStock, game.tableau]);
   const supportBenchIndex = getSupportBenchIndex(game);
   const supportBenchCard = game.playerBench[supportBenchIndex] ?? null;
   const assistBenchIndices = getAssistBenchIndices(game);
-  const showKinInspector = kinInspectIndex !== null && inspectedKinCard !== null && inspectedKinTaxonomy !== null;
+  const hiroSupportPrototype = activeActorName === 'Hiro';
+  const supportSquareSize = Math.max(56, Math.round(handCardSize.width * 1.02));
+  const starterPackCardSize = useMemo(() => {
+    const cardRatio = boardCardSize.width / boardCardSize.height;
+    const height = Math.round(boardCardSize.height * 0.9);
+    return {
+      width: Math.round(height * cardRatio),
+      height,
+    };
+  }, [boardCardSize.height, boardCardSize.width]);
+  const activePartyPowerLevel = useMemo(
+    () => game.starterPackBase.reduce((sum, card) => sum + (STARTER_KIN_METADATA[card.name]?.benchWeight ?? 1), 0),
+    [game.starterPackBase]
+  );
+  const renderKinMeter = useCallback((actorName: string, actionPoints: number, mode: StarterKinMode, rarity: 1 | 2 | 3, meterId: string, compact = true) => {
+    void mode;
+    void rarity;
+    void meterId;
+
+    return (
+      <div className={`pointer-events-auto absolute inset-x-2 z-20 ${compact ? 'bottom-2' : 'bottom-3'}`}>
+        <AbilityApBar
+          ap={actionPoints}
+          maxAp={getActorApCap(actorName)}
+          className="px-2 py-2"
+          barClassName="h-3.5 rounded-[5px]"
+        />
+      </div>
+    );
+  }, []);
+  const renderFormationPlaceholder = (title: string, key: string) => (
+    <div
+      key={key}
+      className="flex items-center justify-center rounded-full border border-dashed border-white/10 bg-black/18 px-3 py-2"
+      style={{ width: Math.max(44, Math.round(starterPackCardSize.width * 0.58)), minHeight: 34 }}
+    >
+      <div className="text-center">
+        <div className="text-[8px] font-black uppercase tracking-[0.16em] text-white/42">{title}</div>
+      </div>
+    </div>
+  );
+  const renderPlayerBenchSlot = (slot: (typeof visibleBenchSlots)[number] | null, key: string) => {
+    if (!slot) return null;
+    const sequentialTagActive = sequentialTagStarterPackSlots.some((entry) => entry.index === slot.index);
+    const tutorialSwapReady = isTutorialScenario && slot.selectable;
+    const showFaceDown = false;
+    const benchCombatant = game.combatants[actorKeyFromName(slot.card.name)] ?? createCombatant(slot.card.name);
+    const isHidden = game.hiddenStarterPackIndices.includes(slot.index);
+    const showMochiReadyDialog =
+      slot.card.name === 'Mochi' &&
+      game.tutorialSliceId === 'slice-02' &&
+      game.playerStock.name !== 'Mochi' &&
+      (game.combatants.mochi?.skittish ?? 0) <= 0;
+    return (
+      <div key={key} className="flex flex-col items-center gap-1">
+        <button
+          ref={(node) => {
+            starterPackBenchRefs.current[slot.index] = node;
+          }}
+          type="button"
+          onPointerDown={() => handleStarterBenchPointerDown(slot.index)}
+          onPointerUp={handleStarterBenchPointerEnd}
+          onPointerCancel={handleStarterBenchPointerEnd}
+          onClick={() => {
+            if (isHidden) return;
+            if (suppressStarterBenchClickRef.current) {
+              suppressStarterBenchClickRef.current = false;
+              return;
+            }
+            if (!slot.selectable) return;
+            if (isTutorialScenario) {
+              switchStarterPackStock(slot.index, false);
+              return;
+            }
+            if (sequentialTagActive) {
+              switchStarterPackStock(slot.index, true);
+            } else {
+              switchStarterPackStock(slot.index, false);
+            }
+          }}
+          disabled={!slot.selectable || isHidden}
+          className={`relative transition-all ${
+            (tutorialSwapReady || sequentialTagActive) && !isHidden
+              ? 'hover:-translate-y-0.5'
+              : ''
+          }`}
+          style={
+            isHidden ? { opacity: 0, pointerEvents: 'none' } : (
+            tutorialSwapReady
+              ? {
+                  filter: 'drop-shadow(0 0 20px rgba(112,229,240,0.28))',
+                  opacity: 1,
+                  zIndex: showMochiReadyDialog ? 40 : undefined,
+                  animation: highlightedActorNames.includes(slot.card.name) ? 'golf-actor-blink 0.72s ease-in-out 2' : undefined,
+                }
+              : sequentialTagActive
+                ? {
+                    filter: 'drop-shadow(0 0 16px rgba(230,179,30,0.28))',
+                    animation: highlightedActorNames.includes(slot.card.name) ? 'golf-actor-blink 0.72s ease-in-out 2' : undefined,
+                  }
+                : slot.locked
+                  ? {
+                      filter: 'saturate(0.88) brightness(0.9)',
+                      opacity: 0.94,
+                      animation: highlightedActorNames.includes(slot.card.name) ? 'golf-actor-blink 0.72s ease-in-out 2' : undefined,
+                    }
+                  : {
+                      filter: 'none',
+                      opacity: 1,
+                      animation: highlightedActorNames.includes(slot.card.name) ? 'golf-actor-blink 0.72s ease-in-out 2' : undefined,
+                    }
+            )
+          }
+        >
+          {!showFaceDown && slot.card.name === 'Mochi' ? (
+            <ActorFrameEmojiRig
+              emojiRig={{
+                src: '/assets/actors/mochikin/mochi_emoji_blush.png',
+                emotionType: 'happy',
+                speaking: showMochiReadyDialog
+                  ? {
+                      text: "I'm ready, Hiro!",
+                      subtitle: 'Swap Me In',
+                    }
+                  : undefined,
+              }}
+            />
+          ) : null}
+          {!showFaceDown ? (
+            <ActorStatusRail
+              actorName={slot.card.name}
+              combatant={benchCombatant}
+              maxVisible={3}
+              iconSize={18}
+              compact
+              highlightedKeys={highlightedStatusKeys}
+              flashVersions={statusFlashVersions}
+              transientStatuses={transientStatusEvents.filter((entry) => entry.actorName === slot.card.name)}
+            />
+          ) : null}
+          <Card
+            card={slot.card}
+            faceDown={showFaceDown}
+            showGraphics={false}
+            size={starterPackCardSize}
+            foundationOverlay={!showFaceDown ? getCombatVitals(game, slot.card) : undefined}
+            suitFontSizeOverride={0}
+            maskValue={!showFaceDown}
+            disableAnimation
+            disableTilt
+            disableHoverLift
+          />
+          {!showFaceDown ? (
+            <>
+              <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex items-center justify-between gap-2">
+                <div className="px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/88 [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_6px_rgba(255,255,255,0.12)]">
+                  {slot.card.name}
+                </div>
+                <div />
+              </div>
+              <div className="pointer-events-none absolute inset-x-0 top-[52px] z-20 flex justify-center">
+                <div
+                  className="text-[26px] font-black leading-none [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_6px_rgba(255,255,255,0.18)]"
+                  style={{
+                    color: slot.selectable ? '#ffffff' : 'rgba(255,255,255,0.42)',
+                    opacity: slot.selectable ? 1 : 0.68,
+                  }}
+                >
+                  {rankLabel(slot.card.rank)}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="pointer-events-none absolute inset-x-0 top-1.5 z-20 flex justify-center">
+              <div className="px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/78 [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_6px_rgba(255,255,255,0.1)]">
+                {slot.card.name}
+              </div>
+            </div>
+          )}
+          {!showFaceDown ? renderKinMeter(
+            slot.card.name,
+            slot.storedAp,
+            slot.mode,
+            game.starterPackAbilityRarities[slot.index] ?? 1,
+            `bench-${slot.index}`,
+            true
+          ) : null}
+          {slot.locked && !showFaceDown ? (
+            <div className="pointer-events-none absolute inset-x-2 bottom-2 z-20 rounded-full border border-game-gold/30 bg-black/72 px-2 py-1 text-center text-[8px] font-black uppercase tracking-[0.14em] text-game-gold/75">
+              Locked In
+            </div>
+          ) : null}
+          {starterBenchLockIndexRef.current === slot.index ? (
+            <div className="pointer-events-none absolute inset-x-2 bottom-2 z-20 h-1.5 overflow-hidden rounded-full border border-game-gold/30 bg-black/72">
+              <div className="h-full rounded-full bg-game-gold" style={{ width: `${Math.min(100, Math.max(0, starterBenchLockProgress * 100))}%` }} />
+            </div>
+          ) : null}
+          {showFaceDown && slot.cashout ? <ApBadge actionPoints={slot.cashout.actionPoints} /> : null}
+        </button>
+      </div>
+    );
+  };
+  const renderEnemyBenchSlot = (slot: (typeof mirroredEnemyBenchSlots)[number], key: string) => {
+    if (!slot) return renderFormationPlaceholder('Support', key);
+    return (
+      <button
+        key={key}
+        ref={(node) => {
+          enemyBenchRefs.current[slot.benchIndex] = node;
+        }}
+        type="button"
+        className="relative rounded-[18px] border border-white/10 bg-black/30 p-1"
+        style={{
+          animation: highlightedActorNames.includes(slot.card.name) ? 'golf-actor-blink 0.72s ease-in-out 2' : undefined,
+        }}
+      >
+        <Card
+          card={slot.card}
+          showGraphics={false}
+          size={starterPackCardSize}
+          foundationOverlay={getCombatVitals(game, slot.card)}
+          suitFontSizeOverride={0}
+          hideElements
+          maskValue
+          disableAnimation
+          disableTilt
+          disableHoverLift
+        />
+        <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex justify-center">
+          <div className="w-full px-1 py-0.5 text-center text-[8px] font-black uppercase tracking-[0.12em] text-white/82 [text-shadow:0_1px_0_rgba(0,0,0,0.9)]">
+            {slot.profile.actor.name}
+          </div>
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 top-[52px] z-20 flex justify-center">
+          <div className="text-[24px] font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_8px_rgba(255,255,255,0.14)]">
+            {rankLabel(slot.card.rank)}
+          </div>
+        </div>
+        <StaggerPressureBadge
+          pressure={(game.combatants[actorKeyFromName(slot.card.name)]?.staggerPressure ?? 0)}
+          compact
+        />
+      </button>
+    );
+  };
+  const starterKinStickers = useMemo(
+    () => ({
+      left: game.kinStickers.filter((sticker) => sticker.speciesId === 'jet' || sticker.speciesId === 'whis'),
+      right: game.kinStickers.filter((sticker) => sticker.speciesId === 'pan'),
+    }),
+    [game.kinStickers]
+  );
   const partyDiscardCounts = useMemo(() => getDiscardCountsByActor(game.playerDiscardPile), [game.playerDiscardPile]);
   const canUseBenchAbilityUi = useCallback((benchIndex: number) => {
     const card = game.playerBench[benchIndex];
     if (!card) return false;
     const role = getBenchRole(game, benchIndex);
-    const availableAp = game.playerBenchActionPoints[benchIndex] ?? 0;
+    const availableAp = game.playerStockActionPoints;
     const cost = getBenchAbilityCost(card, role);
     if (availableAp < cost) return false;
+    if (card.name === 'Mochi') {
+      const mochiIndex = getMochiStarterPackIndex(game);
+      return mochiIndex >= 0
+        && mochiIndex !== game.activeStarterPackIndex
+        && (game.combatants.mochi?.skittish ?? 0) <= 0;
+    }
     if (card.name === 'Whis') return !!lastUndoRef.current;
     return true;
   }, [game]);
@@ -4196,6 +6684,7 @@ export const GolfGame = () => {
       { key: 'battle', title: 'Battle And Passive', slots: inspectedKinTaxonomy.battle },
     ].filter((section) => section.slots.length > 0);
   }, [inspectedKinTaxonomy]);
+  const showKinInspector = kinInspectIndex !== null && inspectedKinCard !== null && inspectedKinTaxonomy !== null;
   const clearStickyHold = useCallback(() => {
     if (stickyHoldTimeoutRef.current !== null) {
       window.clearTimeout(stickyHoldTimeoutRef.current);
@@ -4207,6 +6696,20 @@ export const GolfGame = () => {
     }
     stickyHoldStartRef.current = 0;
     setStickyHoldProgress(0);
+  }, []);
+
+  const clearAbilityTooltipHold = useCallback(() => {
+    if (abilityTooltipHoldTimeoutRef.current !== null) {
+      window.clearTimeout(abilityTooltipHoldTimeoutRef.current);
+      abilityTooltipHoldTimeoutRef.current = null;
+    }
+    if (abilityTooltipHoldRafRef.current) {
+      window.cancelAnimationFrame(abilityTooltipHoldRafRef.current);
+      abilityTooltipHoldRafRef.current = 0;
+    }
+    abilityTooltipHoldStartRef.current = 0;
+    setAbilityTooltipHoldSlotId(null);
+    setAbilityTooltipHoldProgress(0);
   }, []);
 
   const clearDevAbilityHold = useCallback(() => {
@@ -4223,14 +6726,67 @@ export const GolfGame = () => {
     setDevAbilityHoldProgress(0);
   }, []);
 
+  const handleAbilityTooltipPointerDown = useCallback((event: React.PointerEvent<HTMLButtonElement>, slot: PlayerHandSlot) => {
+    if (event.button !== 0 || slot.kind !== 'ability') return;
+    clearAbilityTooltipHold();
+    setAbilityTooltipHoldSlotId(slot.slotId as HandSlotId);
+    abilityTooltipHoldStartRef.current = performance.now();
+    const tick = () => {
+      const elapsed = performance.now() - abilityTooltipHoldStartRef.current;
+      setAbilityTooltipHoldProgress(clampNumber(elapsed / DEV_ABILITY_HOLD_MS, 0, 1));
+      if (elapsed < DEV_ABILITY_HOLD_MS) {
+        abilityTooltipHoldRafRef.current = window.requestAnimationFrame(tick);
+      }
+    };
+    abilityTooltipHoldRafRef.current = window.requestAnimationFrame(tick);
+    abilityTooltipHoldTimeoutRef.current = window.setTimeout(() => {
+      suppressAbilityClickRef.current = true;
+      setPinnedTooltipSlotId(slot.slotId as HandSlotId);
+      clearAbilityTooltipHold();
+    }, DEV_ABILITY_HOLD_MS);
+  }, [clearAbilityTooltipHold]);
+
+  const handleAbilityTooltipPointerEnd = useCallback(() => {
+    clearAbilityTooltipHold();
+  }, [clearAbilityTooltipHold]);
+
+  const handleAbilityTooltipClickCapture = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    if (!suppressAbilityClickRef.current) return;
+    suppressAbilityClickRef.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
   const canUseAbilitySlot = useCallback((slot: PlayerHandSlot) => {
     if (currentTurn !== 'player') return false;
-    if (getAbilityCooldown(game, slot.effect) > 0) return false;
+    if (!(slot.effect === 'rewire' && game.playerStock.name === 'Jet') && getAbilityCooldown(game, slot.effect) > 0) return false;
+    if (slot.effect === 'fetch') {
+      return game.playerStock.name === 'Hiro'
+        && game.playerStockActionPoints >= 2
+        && !!getBestFetchCandidate(game)
+        && (game.playerCapturedLeft === null || game.playerCapturedRight === null);
+    }
+    if (slot.effect === 'vice-grip') return false;
+    if (slot.effect === 'hiro-guard') return false;
     if (slot.effect === 'ironfur') {
       return game.playerStock.name === 'Hiro' && game.playerStockActionPoints >= 4;
     }
     if (slot.effect === 'tap-out') {
-      return game.playerStockActionPoints >= 3;
+      const mochiIndex = getMochiStarterPackIndex(game);
+      const mochiCombatant = game.combatants.mochi;
+      if (game.playerStock.name === 'Mochi') {
+        const rarity = game.starterPackAbilityRarities[game.activeStarterPackIndex] ?? 1;
+        return game.playerStockActionPoints >= 3
+          && (mochiCombatant?.whiskersense ?? 0) > 0
+          && findBestExclusionPath(game.tableau, nonCombatGlobalPeekCount, getZoomiesClaimCap(rarity)).length > 0;
+      }
+      return game.playerStockActionPoints >= 3
+        && mochiIndex >= 0
+        && mochiIndex !== game.activeStarterPackIndex
+        && (game.combatants.mochi?.skittish ?? 0) <= 0;
+    }
+    if (slot.effect === 'banks-strike') {
+      return game.playerStock.name === 'Banks' && game.playerStockActionPoints >= 1;
     }
     if (slot.effect === 'battery') {
       return game.playerStock.name === 'Jet';
@@ -4251,7 +6807,7 @@ export const GolfGame = () => {
       return game.playerStock.name === 'Jet' && (game.riggedConstructCards.length > 0 || (getJetBatteryCharge(game, slot.effect) > 0 && game.riggedConstructCooldown === 0));
     }
     if (slot.effect === 'rewire') {
-      return game.playerStock.name === 'Jet' && (game.jetRewireActionsRemaining > 0 || getJetBatteryCharge(game, slot.effect) > 0);
+      return game.playerStock.name === 'Jet' && (game.jetRewireActionsRemaining > 0 || game.playerStockActionPoints >= JET_REWIRE_COST);
     }
     if (slot.effect === 'scrap-plating' || slot.effect === 'aegis-shunt') {
       return game.playerStock.name === 'Jet' && getJetBatteryCharge(game, slot.effect) > 0;
@@ -4276,11 +6832,11 @@ export const GolfGame = () => {
     return topCard ?? {
       id: 'rigged-construct-wild',
       rank: 1,
-      suit: '✦',
-      element: game.riggedConstructElement ?? game.playerStock.element,
+      suit: '♠',
+      element: 'N',
       name: 'Construct',
     };
-  }, [game.playerStock.element, game.riggedConstructCards, game.riggedConstructElement]);
+  }, [game.riggedConstructCards]);
 
   const getActorAnchor = useCallback((actorName: string) => {
     if (actorName === game.playerStock.name) return getCardCenterPoint(playerStockRef.current);
@@ -4304,6 +6860,24 @@ export const GolfGame = () => {
     }, delayMs);
     dialogueCalloutTimeoutsRef.current.push(timeoutId);
   }, [getActorAnchor]);
+
+  const triggerWhisProphecy = useCallback(() => {
+    if (!whisProphecyCharged || game.playerSupportActionUsed || whisProphecyPath.length === 0) return;
+    setGuidePlan({
+      path: whisProphecyPath,
+      progress: 0,
+      source: 'prophecy',
+      visibleSteps: 5,
+    });
+    setGame((prev) => ({
+      ...prev,
+      playerSupportActionUsed: true,
+    }));
+    queueDialogueCallout('Whis', 'Prophecy engaged.', 110, 'Time Peek');
+  }, [game.playerSupportActionUsed, queueDialogueCallout, whisProphecyCharged, whisProphecyPath]);
+  useEffect(() => {
+    triggerWhisProphecy();
+  }, [triggerWhisProphecy]);
 
   const queueAnchoredCallout = useCallback((anchor: { x: number; y: number } | null, text: string, subtitle = 'Combat') => {
     if (!anchor) return;
@@ -4525,6 +7099,11 @@ export const GolfGame = () => {
         : `${game.enemyDefeatFx.name} defeated!`,
       game.enemyDefeatFx.moveLabel ? 'Finisher' : 'Enemy Defeated'
     );
+    if (game.enemyDefeatFx.lootRecovered > 0) {
+      window.setTimeout(() => {
+        queueAnchoredCallout(anchor, `Recovered ${game.enemyDefeatFx.lootRecovered} loot`, 'Reclaimed');
+      }, 120);
+    }
     rafId = window.requestAnimationFrame(tick);
     const timeoutId = window.setTimeout(() => {
       setGame((prev) => (prev.enemyDefeatFx?.id === game.enemyDefeatFx?.id ? { ...prev, enemyDefeatFx: null } : prev));
@@ -4537,6 +7116,74 @@ export const GolfGame = () => {
       window.clearTimeout(timeoutId);
     };
   }, [game.enemyDefeatFx, queueAnchoredCallout]);
+
+  useEffect(() => {
+    if (!isTutorialScenario || !game.tutorialSliceId) return;
+    if (tutorialSliceIntroRef.current === game.tutorialSliceId) return;
+    tutorialSliceIntroRef.current = game.tutorialSliceId;
+
+    if (game.tutorialSliceId === 'slice-01') {
+      queueDialogueCallout('System', 'Dig down to Mochi. Clear the rising row, sweep back down, then use the buried wrap line to reach him.', 170, 'Slice 01');
+      return;
+    }
+    if (game.tutorialSliceId === 'slice-02') {
+      queueDialogueCallout('System', 'Mochi is still Skittish. Give Hiro a 5-card calming line, then rotate her in before the pursuer surfaces.', 150, 'Slice 02');
+      return;
+    }
+    if (game.tutorialSliceId === 'slice-03') {
+      queueDialogueCallout('System', 'The Shade Wisp is on top of you now. Feed Mochi two quick pokes, rotate back to Hiro, then Guard before the first Maul lands.', 160, 'Slice 03');
+      return;
+    }
+    if (game.tutorialSliceId === 'slice-04') {
+      queueDialogueCallout('System', 'Jet is live. Move the 5 onto the bitten 6, reveal the 2-line, then reclaim the charged card and finish the raider.', 170, 'Slice 04');
+    }
+  }, [game.tutorialSliceId, isTutorialScenario, queueDialogueCallout]);
+
+  useEffect(() => {
+    if (!isTutorialScenario || !game.tutorialSliceId) return;
+    const sliceSolved = isTutorialSliceSolved(game);
+    const completionKey = `${game.tutorialSliceId}:${sliceSolved}:${game.tutorialEnemyDefeated}`;
+    if (tutorialAdvanceKeyRef.current === completionKey) return;
+
+    if (game.tutorialSliceId === 'slice-01' && sliceSolved) {
+      tutorialAdvanceKeyRef.current = completionKey;
+      queueDialogueCallout('System', 'Mochi exposed. He rejoins the pack and opens the next route.', 140, 'Slice 02');
+      setCurrentTurn('player');
+      setEnemyTurnSummary([]);
+      setPendingPlayerPlay(null);
+      
+      // When moving to slice-02 automatically, start with Mochi hidden 
+      // so she doesn't "teleport" before the reward modal is even interacted with.
+      const nextState = buildTutorialSliceState('slice-02', game);
+      setGame({
+        ...nextState,
+        hiddenStarterPackIndices: [0],
+      });
+      return;
+    }
+    if (game.tutorialSliceId === 'slice-02' && sliceSolved) {
+      tutorialAdvanceKeyRef.current = completionKey;
+      queueDialogueCallout('System', 'The pursuer tears through the buried row and reaches the pack.', 120, 'Slice 03');
+      setCurrentTurn('player');
+      setEnemyTurnSummary([]);
+      setPendingPlayerPlay(null);
+      setGame(buildTutorialSliceState('slice-03', game));
+      return;
+    }
+    if (game.tutorialSliceId === 'slice-03' && sliceSolved) {
+      tutorialAdvanceKeyRef.current = completionKey;
+      queueDialogueCallout('System', 'Hiro buys the team one safe beat. Jet is up next.', 120, 'Slice 04');
+      setCurrentTurn('player');
+      setEnemyTurnSummary([]);
+      setPendingPlayerPlay(null);
+      setGame(buildTutorialSliceState('slice-04', game));
+      return;
+    }
+    if (game.tutorialSliceId === 'slice-04' && sliceSolved) {
+      tutorialAdvanceKeyRef.current = completionKey;
+      queueDialogueCallout('System', 'Tutorial ladder complete.', 120, 'All Kin Online');
+    }
+  }, [game, isTutorialScenario, queueDialogueCallout]);
 
   const resetGame = () => {
     enemyTurnRunIdRef.current += 1;
@@ -4555,6 +7202,8 @@ export const GolfGame = () => {
     enemyDragAnimIdRef.current = null;
     enemyDragStartedAtRef.current = 0;
     enemyDragRemainingMsRef.current = 0;
+    tutorialAdvanceKeyRef.current = null;
+    tutorialSliceIntroRef.current = null;
     enemyDragPausedTransformRef.current = null;
     enemyDragCompletionRef.current?.();
     enemyDragCompletionRef.current = null;
@@ -4566,6 +7215,10 @@ export const GolfGame = () => {
     clearKinInspectHold();
     setEnemyDragAnim(null);
     setPlayerHandAnim(null);
+    setShowTutorialRewardModal(false);
+    setShowTutorialScenePicker(false);
+    setShowTutorialRescueDepth(false);
+    setTutorialRewardSourcePoint(null);
     setPinnedTooltipSlotId(null);
     setEnemyStealSelectorOpen(false);
     setKinInspectIndex(null);
@@ -4628,6 +7281,192 @@ export const GolfGame = () => {
     []
   );
 
+  const startPlayerCardFlightFromPoint = useCallback(
+    (
+      card: CardType,
+      from: { x: number; y: number } | null,
+      targetElement: HTMLElement | null,
+      label = '',
+      durationMs = 620,
+      variant: PlayerHandAnim['variant'] = 'default',
+      onComplete?: () => void,
+      targetPointOverride?: { x: number; y: number } | null
+    ) => {
+      const to = targetPointOverride ?? getCardCenterPoint(targetElement);
+      if (!from || !to) {
+        onComplete?.();
+        return;
+      }
+      if (playerHandAnimTimeoutRef.current !== null) {
+        window.clearTimeout(playerHandAnimTimeoutRef.current);
+      }
+      setPlayerHandAnim({
+        id: Date.now(),
+        card,
+        from,
+        to,
+        durationMs,
+        label,
+        variant,
+      });
+      playerHandAnimTimeoutRef.current = window.setTimeout(() => {
+        setPlayerHandAnim(null);
+        playerHandAnimTimeoutRef.current = null;
+        onComplete?.();
+      }, durationMs);
+    },
+    []
+  );
+
+  const createAbilityAnimCard = useCallback((slot: PlayerHandSlot, owner: CardType): CardType => ({
+    rank: Math.max(1, Math.min(13, getAbilityBaseCost(slot.effect) ?? 1)),
+    suit: getSuitForElement(owner.element),
+    element: owner.element,
+    id: `ability-anim-${slot.effect ?? 'unknown'}-${Date.now()}`,
+    name: '',
+  }), []);
+
+  const jumpToTutorialScene = useCallback((sceneId: TutorialSceneId) => {
+    if (!isTutorialScenario) return;
+    tutorialAdvanceKeyRef.current = null;
+    tutorialSliceIntroRef.current = null;
+    if (rescueCardFlashTimeoutRef.current !== null) {
+      window.clearTimeout(rescueCardFlashTimeoutRef.current);
+      rescueCardFlashTimeoutRef.current = null;
+    }
+    if (rescueRewardModalTimeoutRef.current !== null) {
+      window.clearTimeout(rescueRewardModalTimeoutRef.current);
+      rescueRewardModalTimeoutRef.current = null;
+    }
+    setShowTutorialScenePicker(false);
+    setShowTutorialRewardModal(false);
+    setShowTutorialRescueDepth(false);
+    setTutorialRewardSourcePoint(null);
+    setRescueCardFlash(null);
+    setPendingPlayerPlay(null);
+    setCurrentTurn('player');
+    setEnemyTurnSummary([]);
+    setGame(buildTutorialSceneState(sceneId));
+    if (sceneId === 'post-mochi') {
+      setShowTutorialRewardModal(true);
+    }
+  }, [isTutorialScenario]);
+
+  const claimTutorialMochiReward = useCallback(() => {
+    const rewardSourcePoint = tutorialRewardSourcePoint ?? getCardCenterPoint(tutorialRewardCardRef.current);
+    const finalState = buildTutorialSliceState('slice-02', game);
+    
+    // Mid-flight state: Slice 02 layout, Mochi is in the pack (index 0) but hidden
+    const midFlightState: GolfGameState = {
+      ...finalState,
+      hiddenStarterPackIndices: [0], // Hide Mochi at index 0
+    };
+
+    // Capture the target point before we switch states if possible, or use a fallback
+    const currentBenchNode = starterPackBenchRefs.current[0] ?? playerBenchRefs.current[0];
+    const preCalculatedTarget = getCardCenterPoint(currentBenchNode);
+    
+    if (rescueCardFlashTimeoutRef.current !== null) {
+      window.clearTimeout(rescueCardFlashTimeoutRef.current);
+      rescueCardFlashTimeoutRef.current = null;
+    }
+    if (rescueRewardModalTimeoutRef.current !== null) {
+      window.clearTimeout(rescueRewardModalTimeoutRef.current);
+      rescueRewardModalTimeoutRef.current = null;
+    }
+    
+    setShowTutorialRescueDepth(false);
+    setTutorialRewardSourcePoint(null);
+    setRescueCardFlash(null);
+    setPendingPlayerPlay(null);
+    setCurrentTurn('player');
+    setEnemyTurnSummary([]);
+    tutorialAdvanceKeyRef.current = 'slice-01:reward-claimed';
+    tutorialSliceIntroRef.current = null;
+
+    // Switch to the layout where the bench slot for Mochi exists
+    setGame(midFlightState);
+
+    // Give the layout a moment to breathe
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        // Re-check for the node in the new state, but use pre-calculated as rock-solid fallback
+        const benchNode = starterPackBenchRefs.current[0];
+        const benchTarget = getCardCenterPoint(benchNode) ?? preCalculatedTarget;
+        
+        if (!benchTarget || !rewardSourcePoint) {
+          queueDialogueCallout('System', 'Mochi recovered. Something is already moving in behind her.', 140, 'Slice 02');
+          setShowTutorialRewardModal(false);
+          setGame(finalState);
+          return;
+        }
+
+        startPlayerCardFlightFromPoint(
+          finalState.starterPackBase[0], // The Mochi card
+          rewardSourcePoint,
+          null, // No element needed since we pass targetPointOverride
+          '', // No label
+          3000,
+          'reward-flip',
+          () => {
+            queueDialogueCallout('System', 'Mochi recovered. Something is already moving in behind her.', 140, 'Slice 02');
+            setGame(finalState); // Reveal Mochi on the bench by clearing hidden indices
+          },
+          benchTarget
+        );
+      });
+    });
+
+    window.setTimeout(() => {
+      setShowTutorialRewardModal(false);
+    }, 260);
+  }, [game, queueDialogueCallout, startPlayerCardFlightFromPoint, tutorialRewardSourcePoint]);
+
+  const triggerAbilityResolutionFeedback = useCallback((actorNames: string[], statusKeys: string[]) => {
+    if (abilityFeedbackTimeoutRef.current !== null) {
+      window.clearTimeout(abilityFeedbackTimeoutRef.current);
+    }
+    setHighlightedActorNames(actorNames);
+    setHighlightedStatusKeys(statusKeys);
+    abilityFeedbackTimeoutRef.current = window.setTimeout(() => {
+      setHighlightedActorNames([]);
+      setHighlightedStatusKeys([]);
+      abilityFeedbackTimeoutRef.current = null;
+    }, 820);
+  }, []);
+
+  useEffect(() => {
+    const handleStatusEvent = (rawEvent: Event) => {
+      const detail = (rawEvent as CustomEvent<StatusEffectEvent>).detail;
+      if (!detail) return;
+      triggerAbilityResolutionFeedback([detail.actorName], [detail.statusKey]);
+      setStatusFlashVersions((prev) => ({
+        ...prev,
+        [`${detail.actorName}:${detail.statusKey}`]: (prev[`${detail.actorName}:${detail.statusKey}`] ?? 0) + 1,
+      }));
+      const id = Date.now() + Math.floor(Math.random() * 1000);
+      setTransientStatusEvents((prev) => [...prev, {
+        id,
+        actorName: detail.actorName,
+        key: `${detail.statusKey}-${detail.removed ? 'removed' : 'triggered'}-${id}`,
+        label: detail.label,
+        tone: detail.tone,
+      }]);
+      window.setTimeout(() => {
+        setTransientStatusEvents((prev) => prev.filter((entry) => entry.id !== id));
+      }, 760);
+    };
+    window.addEventListener('golf-status-effect-event', handleStatusEvent as EventListener);
+    return () => {
+      window.removeEventListener('golf-status-effect-event', handleStatusEvent as EventListener);
+    };
+  }, [triggerAbilityResolutionFeedback]);
+
+  const emitStatusEffectEvent = useCallback((event: StatusEffectEvent | null) => {
+    if (!event) return;
+    window.dispatchEvent(new CustomEvent<StatusEffectEvent>('golf-status-effect-event', { detail: event }));
+  }, []);
+
   const recordUndoSnapshot = useCallback((snapshot: UndoSnapshot) => {
     lastUndoRef.current = {
       game: snapshot.game,
@@ -4641,8 +7480,39 @@ export const GolfGame = () => {
 
   const playToPlayerStock = (columnIndex: number, targetStockId?: string) => {
     if (currentTurn !== 'player') return;
+    if (tutorialRailColumns && !tutorialRailColumns.has(columnIndex)) return;
+    let actionStatusEvent: StatusEffectEvent | null = null;
     const candidate = topCards[columnIndex];
     if (!candidate) return;
+    if (isTutorialMochiRescueTokenCollectible(game, columnIndex, candidate)) {
+      const sourcePoint = getCardCenterPoint(tableauTopRefs.current[columnIndex]);
+      setTutorialRewardSourcePoint(sourcePoint);
+      if (rescueCardFlashTimeoutRef.current !== null) {
+        window.clearTimeout(rescueCardFlashTimeoutRef.current);
+        rescueCardFlashTimeoutRef.current = null;
+      }
+      if (rescueRewardModalTimeoutRef.current !== null) {
+        window.clearTimeout(rescueRewardModalTimeoutRef.current);
+        rescueRewardModalTimeoutRef.current = null;
+      }
+      if (sourcePoint) {
+        const flashId = Date.now();
+        setRescueCardFlash({ id: flashId, x: sourcePoint.x, y: sourcePoint.y });
+        rescueCardFlashTimeoutRef.current = window.setTimeout(() => {
+          setRescueCardFlash((current) => (current?.id === flashId ? null : current));
+          rescueCardFlashTimeoutRef.current = null;
+        }, 900);
+      } else {
+        setRescueCardFlash(null);
+      }
+      rescueRewardModalTimeoutRef.current = window.setTimeout(() => {
+        setShowTutorialRewardModal(true);
+        rescueRewardModalTimeoutRef.current = null;
+      }, 520);
+      setShowTutorialRescueDepth(false);
+      setPendingPlayerPlay(null);
+      return;
+    }
     if (game.playerStock.name === 'Jet' && game.jetRewireActionsRemaining > 0) {
       if (game.jetRewireSourceColumnIndex === null) {
         setGame((prev) => ({ ...prev, jetRewireSourceColumnIndex: columnIndex }));
@@ -4658,23 +7528,30 @@ export const GolfGame = () => {
       setGame((prev) => {
         const sourceIndex = prev.jetRewireSourceColumnIndex;
         if (sourceIndex === null || !canRewireMove(prev.tableau, sourceIndex, columnIndex)) return prev;
-        const consumed = consumeJetBattery(prev, 'rewire');
-        if (consumed.consumedCharge <= 0) {
+        if (prev.playerStockActionPoints < JET_REWIRE_COST) {
           return { ...prev, jetRewireActionsRemaining: 0, jetRewireSourceColumnIndex: null };
         }
         const sourceCard = prev.tableau[sourceIndex][prev.tableau[sourceIndex].length - 1];
         if (!sourceCard) return prev;
-        const nextTableau = consumed.state.tableau.map((entry) => [...entry]);
+        const nextTableau = prev.tableau.map((entry) => [...entry]);
         nextTableau[sourceIndex].pop();
         nextTableau[columnIndex].push(sourceCard);
-        return {
-          ...consumed.state,
+        const nextChargedCardIds = prev.jetChargedCardIds.includes(sourceCard.id)
+          ? prev.jetChargedCardIds
+          : [...prev.jetChargedCardIds, sourceCard.id];
+        const actionResult = applyPlayerActionStatusUpdate({
+          ...prev,
           tableau: nextTableau,
-          jetRewireActionsRemaining: Math.max(0, getJetBatteryCharge(consumed.state, 'rewire')),
+          playerStockActionPoints: Math.max(0, prev.playerStockActionPoints - JET_REWIRE_COST),
+          jetChargedCardIds: nextChargedCardIds,
+          jetRewireActionsRemaining: 0,
           jetRewireSourceColumnIndex: null,
-        };
+        });
+        actionStatusEvent = actionResult.statusEvent;
+        return actionResult.state;
       });
-      queueDialogueCallout('Jet', 'Rewired.', 60, 'Rewire');
+      emitStatusEffectEvent(actionStatusEvent);
+      queueDialogueCallout('Jet', 'Route electrified.', 60, 'Rewire');
       return;
     }
     if (game.riggedConstructArmed) {
@@ -4689,7 +7566,7 @@ export const GolfGame = () => {
       setGame((prev) => {
         const nextTableau = prev.tableau.map((entry, idx) => (idx !== columnIndex ? entry : entry.slice(0, -1)));
         const refillResult = refillClearedTableau(nextTableau, columnIndex);
-        return {
+        const actionResult = applyPlayerActionStatusUpdate({
           ...prev,
           tableau: refillResult.tableau,
           riggedConstructCards: [...prev.riggedConstructCards, candidate],
@@ -4700,8 +7577,11 @@ export const GolfGame = () => {
             ? Math.min(ASSIST_JET_MICRO_BATTERY_MAX, prev.assistJetMicroBatteryAp + 1)
             : prev.assistJetMicroBatteryAp,
           riggedConstructArmed: false,
-        };
+        });
+        actionStatusEvent = actionResult.statusEvent;
+        return actionResult.state;
       });
+      emitStatusEffectEvent(actionStatusEvent);
       queueDialogueCallout('Jet', 'Loaded in.', 100);
       return;
     }
@@ -4775,9 +7655,14 @@ export const GolfGame = () => {
         addPrimeAttackBonuses(prev, buildPokePacket(progressResult.sourceCard, prev.enemyStock, progressResult.sequence, 'player'))
       );
       const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
-      const siphonedState = applyJetPassiveSiphon(efficiencyState, resolved);
+      const pressuredCombatants = addStaggerPressure(resolved.combatants, actorKeyFromName(prev.enemyStock.name), resolved.damageDealt);
+      const pressuredResolved = {
+        ...resolved,
+        combatants: pressuredCombatants,
+      };
+      const siphonedState = applyJetPassiveSiphon(efficiencyState, pressuredResolved);
       const postEnemyDefeat = (draft: GolfGameState) =>
-        resolveEnemyDefeat(draft, resolved.combatants, stickyCapture ? 'Sticky Paws' : null);
+        resolveEnemyDefeat(draft, pressuredResolved.combatants, stickyCapture ? 'Sticky Paws' : null);
 
       if (stickyCapture && stickySlot) {
         const consumed = consumeJetBattery(prev, 'sticky-paws');
@@ -4795,7 +7680,7 @@ export const GolfGame = () => {
             nextState[fallbackSide] = capturedCard;
           }
         });
-        return postEnemyDefeat(resolvePrimeJetAbilityAftermath({
+        const actionResult = applyPlayerActionStatusUpdate(postEnemyDefeat(resolvePrimeJetAbilityAftermath({
           ...siphonedState,
           jetBatteries: consumed.state.jetBatteries,
           jetBatteryAlternatorIndex: consumed.state.jetBatteryAlternatorIndex,
@@ -4806,11 +7691,13 @@ export const GolfGame = () => {
           clearedCount: prev.clearedCount + 1,
           stickyPawsCooldown: 7,
           tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
-        }, 'sticky-paws'));
+        }, 'sticky-paws')));
+        actionStatusEvent = actionResult.statusEvent;
+        return actionResult.state;
       } else if (repurposeSlot) {
         const repurposeAp = routePrimeApWithAssistJet(efficiencyState, 2);
         const nextCapturedLeft = prev.playerCapturedLeft ?? candidate;
-        return postEnemyDefeat({
+        const actionResult = applyPlayerActionStatusUpdate(postEnemyDefeat({
           ...applyJetPassiveSiphon(repurposeAp.jetState, resolved),
           tableau: refillResult.tableau,
           playerHand: nextHand,
@@ -4819,10 +7706,12 @@ export const GolfGame = () => {
           assistJetMicroBatteryAp: repurposeAp.assistJetMicroBatteryAp,
           clearedCount: prev.clearedCount + 1,
           tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
-        });
+        }));
+        actionStatusEvent = actionResult.statusEvent;
+        return actionResult.state;
       }
 
-      return postEnemyDefeat({
+      const actionResult = applyPlayerActionStatusUpdate(postEnemyDefeat({
         ...siphonedState,
         tableau: refillResult.tableau,
         playerHand: nextHand,
@@ -4830,8 +7719,11 @@ export const GolfGame = () => {
         playerCapturedRight: prev.playerCapturedRight,
         clearedCount: prev.clearedCount + 1,
         tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
-      });
+      }));
+      actionStatusEvent = actionResult.statusEvent;
+      return actionResult.state;
     });
+    emitStatusEffectEvent(actionStatusEvent);
     setGuidePlan((prev) => {
       if (!prev) return prev;
       const nextStep = prev.path[prev.progress];
@@ -4842,21 +7734,347 @@ export const GolfGame = () => {
     });
   };
 
+  const useKinSticker = useCallback((stickerId: string) => {
+    if (currentTurn !== 'player' || game.playerStock.name !== 'Hiro') return;
+    const sticker = game.kinStickers.find((entry) => entry.id === stickerId);
+    if (!sticker || sticker.state !== 'available' || !canPlayOnRank(sticker.rank, game.playerStock.rank)) return;
+    recordUndoSnapshot({
+      game: latestGameRef.current,
+      enemyTurnSummary,
+      guidePlan,
+      actor: 'player',
+    });
+    setPendingPlayerPlay(null);
+    setGame((prev) => {
+      const liveSticker = prev.kinStickers.find((entry) => entry.id === stickerId);
+      if (!liveSticker || liveSticker.state !== 'available' || !canPlayOnRank(liveSticker.rank, prev.playerStock.rank)) return prev;
+      const kinCard = createKinStickerCard(liveSticker);
+      const nextBenchActionPoints = awardBenchTempo(prev, false, prev.playerStock.id);
+      const progressResult = applyPlayerProgressToTarget(prev, prev.playerStock.id, kinCard, 0, nextBenchActionPoints);
+      const prepared = applyCounterWindowToPacket(
+        prev,
+        addPrimeAttackBonuses(prev, buildPokePacket(progressResult.sourceCard, prev.enemyStock, progressResult.sequence, 'player'))
+      );
+      const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
+      const siphonedState = applyJetPassiveSiphon(progressResult.nextState, resolved);
+      const withHiroHooks = applyPrimeCompanionTriggers(prev, {
+        ...siphonedState,
+        playerDiscardPile: [
+          ...prev.playerDiscardPile,
+          `${progressResult.sourceCard.name}::${liveSticker.name} Sticker ${rankLabel(liveSticker.rank)}`,
+        ],
+        clearedCount: prev.clearedCount + 1,
+      }, progressResult.sourceCard);
+      return resolveEnemyDefeat(buryKinSticker(withHiroHooks, liveSticker.id), resolved.combatants);
+    });
+    queueDialogueCallout('Hiro', `${sticker.name} joins the line.`, 80, 'Sticker');
+  }, [currentTurn, enemyTurnSummary, game.kinStickers, game.playerStock.name, game.playerStock.rank, guidePlan, queueDialogueCallout, recordUndoSnapshot]);
+
+  const queueBenchTapoutCallout = useCallback((benchIndex: number) => {
+    window.setTimeout(() => {
+      queueAnchoredCallout(getCardCenterPoint(starterPackBenchRefs.current[benchIndex]), 'Tapping out!', 'Prime');
+    }, 0);
+  }, [queueAnchoredCallout]);
+
+  const clearStarterBenchLockHold = useCallback(() => {
+    if (starterBenchLockTimeoutRef.current) {
+      window.clearTimeout(starterBenchLockTimeoutRef.current);
+      starterBenchLockTimeoutRef.current = null;
+    }
+    if (starterBenchLockRafRef.current) {
+      window.cancelAnimationFrame(starterBenchLockRafRef.current);
+      starterBenchLockRafRef.current = 0;
+    }
+    starterBenchLockIndexRef.current = null;
+    setStarterBenchLockProgress(0);
+  }, []);
+
+  const queueStarterPackCallout = useCallback((packIndex: number, text: string, subtitle: string, delayMs = 0) => {
+    window.setTimeout(() => {
+      const anchor = packIndex === latestGameRef.current.activeStarterPackIndex
+        ? getCardCenterPoint(playerStockRef.current)
+        : getCardCenterPoint(starterPackBenchRefs.current[packIndex]);
+      window.setTimeout(() => {
+        queueAnchoredCallout(anchor, text, subtitle);
+      }, delayMs);
+    }, 0);
+  }, [queueAnchoredCallout]);
+
+  const lockStarterBenchKin = useCallback((packIndex: number) => {
+    setGame((prev) => {
+      if (packIndex < 0 || packIndex >= prev.starterPackBase.length) return prev;
+      if (packIndex === prev.activeStarterPackIndex || prev.starterPackLocked[packIndex]) return prev;
+      return {
+        ...prev,
+        starterPackLocked: prev.starterPackLocked.map((locked, index) => (index === packIndex ? true : locked)),
+      };
+    });
+    const kinName = latestGameRef.current.starterPackBase[packIndex]?.name ?? 'Kin';
+    queueStarterPackCallout(packIndex, kinName === 'Mochi' ? 'Tap Out!' : 'Locked In', kinName === 'Mochi' ? 'Ability' : 'Lock');
+  }, [isTutorialScenario, queueStarterPackCallout]);
+
+  const handleStarterBenchPointerDown = useCallback((packIndex: number) => {
+    if (currentTurn !== 'player') return;
+    const slot = latestGameRef.current.starterPackBase[packIndex];
+    if (!slot) return;
+    if (packIndex === latestGameRef.current.activeStarterPackIndex || latestGameRef.current.starterPackLocked[packIndex]) return;
+    clearStarterBenchLockHold();
+    starterBenchLockIndexRef.current = packIndex;
+    starterBenchLockStartRef.current = performance.now();
+    suppressStarterBenchClickRef.current = false;
+
+    const tick = () => {
+      const elapsed = performance.now() - starterBenchLockStartRef.current;
+      setStarterBenchLockProgress(clampNumber(elapsed / KIN_INSPECT_HOLD_MS, 0, 1));
+      if (starterBenchLockIndexRef.current !== null) {
+        starterBenchLockRafRef.current = window.requestAnimationFrame(tick);
+      }
+    };
+    starterBenchLockRafRef.current = window.requestAnimationFrame(tick);
+    starterBenchLockTimeoutRef.current = window.setTimeout(() => {
+      const targetIndex = starterBenchLockIndexRef.current;
+      if (targetIndex === null) return;
+      suppressStarterBenchClickRef.current = true;
+      clearStarterBenchLockHold();
+      lockStarterBenchKin(targetIndex);
+    }, KIN_INSPECT_HOLD_MS);
+  }, [clearStarterBenchLockHold, currentTurn, isTutorialScenario, lockStarterBenchKin]);
+
+  const handleStarterBenchPointerEnd = useCallback(() => {
+    clearStarterBenchLockHold();
+  }, [clearStarterBenchLockHold]);
+
+  const switchStarterPackStock = useCallback((nextIndex: number, legalSwap: boolean) => {
+    if (currentTurn !== 'player') return;
+    setPendingPlayerPlay(null);
+    let tappedOutBenchIndex: number | null = null;
+    setGame((prev) => {
+      if (nextIndex < 0 || nextIndex >= prev.starterPackBase.length) return prev;
+      if (nextIndex === prev.activeStarterPackIndex || prev.starterPackLocked[nextIndex]) return prev;
+      if (prev.playerStock.name === 'Hiro' && prev.hiroGuardTauntTurns > 0) return prev;
+      if (prev.starterPackBase[nextIndex]?.name === 'Mochi' && (prev.combatants.mochi?.skittish ?? 0) > 0) return prev;
+      const isLegalSwap = legalSwap && canPlayOnStock(prev.starterPackBase[nextIndex], prev.playerStock);
+      if (legalSwap && !isLegalSwap) return prev;
+      tappedOutBenchIndex = isLegalSwap ? null : prev.activeStarterPackIndex;
+      const nextStoredAp = [...prev.starterPackStoredAp];
+      nextStoredAp[prev.activeStarterPackIndex] = prev.playerStockActionPoints;
+      const currentPrimeStats = {
+        cardsStored: prev.playerStockSequence,
+        uniqueElements: new Set(prev.playerPrimeApSegments).size,
+        actionPoints: prev.playerStockActionPoints,
+        apSegments: [...prev.playerPrimeApSegments],
+      };
+      const nextPrimeStats = prev.starterPackCashoutStats[nextIndex];
+      const incomingAp = nextStoredAp[nextIndex] ?? nextPrimeStats?.actionPoints ?? 0;
+      const nextStarterPackBase = prev.starterPackBase.map((card, index) =>
+        index === prev.activeStarterPackIndex
+          ? evolveIdentityCard(card, prev.playerStock)
+          : card
+      );
+      const nextState = {
+        ...prev,
+        starterPackBase: nextStarterPackBase,
+        activeStarterPackIndex: nextIndex,
+        starterPackUsed: prev.starterPackUsed,
+        starterPackLocked: prev.starterPackLocked.map((locked, index) =>
+          index === nextIndex ? false : locked
+        ),
+        starterPackStoredAp: nextStoredAp,
+        starterPackCashoutStats: prev.starterPackCashoutStats.map((entry, index) =>
+          index === prev.activeStarterPackIndex ? currentPrimeStats : entry
+        ),
+        playerStock: createStarterPackStockCard(nextStarterPackBase[nextIndex], nextIndex),
+        playerStockSequence: nextPrimeStats?.cardsStored ?? 0,
+        playerStockActionPoints: incomingAp,
+        playerPrimeApSegments: nextPrimeStats?.apSegments ? [...nextPrimeStats.apSegments] : [],
+        playerCapturedLeft: null,
+        playerCapturedRight: null,
+        playerSupportActionUsed: false,
+        playerSupportRotateUsed: false,
+        playerSupportReactiveUsed: false,
+        hiroStockAddsThisTurn: 0,
+        hiroLeaderTriggeredThisTurn: false,
+        hiroTrailSenseActive: false,
+      };
+      return nextState;
+    });
+    if (tappedOutBenchIndex !== null) {
+      queueBenchTapoutCallout(tappedOutBenchIndex);
+    }
+  }, [currentTurn, isTutorialScenario, queueBenchTapoutCallout]);
+
+  const handleEndTurn = useCallback(() => {
+    if (currentTurn !== 'player') return;
+    const apByPackIndex = game.starterPackBase.map((card, index) => ({
+      actorName: card.name,
+      index,
+      actionPoints: index === game.activeStarterPackIndex
+        ? game.playerStockActionPoints
+        : 0,
+    }));
+    const totalActionPoints = apByPackIndex.reduce((sum, entry) => sum + entry.actionPoints, 0);
+    const bankedThisTurn = totalActionPoints;
+
+    apByPackIndex.forEach((entry, index) => {
+      const outcome = evaluatePerfectStop(
+        entry.actorName,
+        entry.actionPoints,
+        game.starterPackModes[entry.index] ?? 'default',
+        game.starterPackAbilityRarities[entry.index] ?? 1
+      );
+      queueStarterPackCallout(
+        entry.index,
+        outcome.label,
+        outcome.subtitle,
+        index * 120
+      );
+    });
+    queueAnchoredCallout(getCardCenterPoint(playerStockRef.current), `Banked +${bankedThisTurn} pts`, 'Cash Out');
+    setPendingPlayerPlay(null);
+    setGame((prev) => {
+      const nextStoredAp = prev.starterPackBase.map(() => 0);
+      const nextModes = prev.starterPackBase.map((card, index) => {
+        const result = evaluatePerfectStop(card.name, nextStoredAp[index] ?? 0, prev.starterPackModes[index] ?? 'default', prev.starterPackAbilityRarities[index] ?? 1);
+        return result.nextMode ?? 'default';
+      });
+      const nextState = resetStarterPackCycle(prev);
+      const nextCombatants = {
+        ...nextState.combatants,
+        mochi: nextState.combatants.mochi
+          ? {
+              ...nextState.combatants.mochi,
+              momentum: Math.max(0, (nextState.combatants.mochi.momentum ?? 0) - 1),
+            }
+          : nextState.combatants.mochi,
+      };
+      const finalState = {
+        ...nextState,
+        starterPackStoredAp: nextStoredAp,
+        starterPackModes: nextModes,
+        combatants: nextCombatants,
+        bankedPoints: prev.bankedPoints + bankedThisTurn,
+      };
+      latestGameRef.current = finalState;
+      return finalState;
+    });
+    setEnemyTurnQueued(true);
+  }, [currentTurn, game.activeStarterPackIndex, game.playerStockActionPoints, game.starterPackAbilityRarities, game.starterPackBase, game.starterPackCashoutStats, game.starterPackModes, queueAnchoredCallout, queueStarterPackCallout]);
+
+  const triggerPrimeTap = useCallback(() => {
+    setPrimeTapped(true);
+    queueDialogueCallout(game.playerStock.name, 'Tapping out!', 0, 'Prime');
+    if (primeTapTimeoutRef.current) {
+      window.clearTimeout(primeTapTimeoutRef.current);
+    }
+    primeTapTimeoutRef.current = window.setTimeout(() => {
+      setPrimeTapped(false);
+      primeTapTimeoutRef.current = null;
+    }, 180);
+  }, [game.playerStock.name, queueDialogueCallout]);
+
+  const triggerPrimeCollapse = useCallback(() => {
+    if (currentTurn !== 'player') return;
+    const enemyKey = actorKeyFromName(game.enemyStock.name);
+    const enemyCombatant = game.combatants[enemyKey];
+    const mochiMomentum = game.combatants.mochi?.momentum ?? 0;
+    if (!enemyCombatant) return;
+    if ((enemyCombatant.staggerPressure ?? 0) <= 0 && !(game.playerStock.name === 'Mochi' && mochiMomentum > 0)) return;
+    recordUndoSnapshot({
+      game: latestGameRef.current,
+      enemyTurnSummary,
+      guidePlan,
+      actor: 'player',
+    });
+    triggerPrimeTap();
+    setPinnedTooltipSlotId(null);
+    setPendingPlayerPlay(null);
+    setGame((prev) => {
+      const targetKey = actorKeyFromName(prev.enemyStock.name);
+      const targetCombatant = prev.combatants[targetKey];
+      if (!targetCombatant) return prev;
+      if (prev.playerStock.name === 'Hiro') {
+        const currentAp = Math.max(0, prev.playerStockActionPoints);
+        const pressure = Math.max(0, targetCombatant.staggerPressure ?? 0);
+        if (pressure <= 0) return prev;
+        return resolveEnemyDefeat({
+          ...prev,
+          playerStockActionPoints: 0,
+          combatants: {
+            ...distributeArmorByNeed(prev, currentAp),
+            [targetKey]: {
+              ...targetCombatant,
+              hp: Math.max(0, targetCombatant.hp - pressure),
+              staggerPressure: 0,
+            },
+          },
+        }, {
+          ...distributeArmorByNeed(prev, currentAp),
+          [targetKey]: {
+            ...targetCombatant,
+            hp: Math.max(0, targetCombatant.hp - pressure),
+            staggerPressure: 0,
+          },
+        });
+      }
+      if (prev.playerStock.name === 'Mochi') {
+        const mochiCombatant = prev.combatants.mochi;
+        if (!mochiCombatant) return prev;
+        const momentum = Math.max(0, mochiCombatant.momentum ?? 0);
+        const pressure = Math.max(0, targetCombatant.staggerPressure ?? 0);
+        if (pressure <= 0 && momentum <= 0) return prev;
+        const hpDamage = Math.max(1, Math.floor((pressure + momentum) / 3));
+        return resolveEnemyDefeat({
+          ...prev,
+          combatants: {
+            ...prev.combatants,
+            mochi: {
+              ...mochiCombatant,
+              momentum: 0,
+            },
+            [targetKey]: {
+              ...targetCombatant,
+              hp: Math.max(0, targetCombatant.hp - hpDamage),
+              staggerPressure: Math.min(99, pressure + momentum * 2),
+            },
+          },
+        }, {
+          ...prev.combatants,
+          mochi: {
+            ...mochiCombatant,
+            momentum: 0,
+          },
+          [targetKey]: {
+            ...targetCombatant,
+            hp: Math.max(0, targetCombatant.hp - hpDamage),
+            staggerPressure: Math.min(99, pressure + momentum * 2),
+          },
+        });
+      }
+      return prev;
+    });
+    if (game.playerStock.name === 'Hiro') {
+      queueDialogueCallout('Hiro', 'Tackle!', 80, 'Collapse');
+    } else if (game.playerStock.name === 'Mochi') {
+      queueDialogueCallout('Mochi', 'Pounce!', 80, 'Collapse');
+    }
+  }, [currentTurn, enemyTurnSummary, game.combatants, game.enemyStock.name, game.playerStock.name, guidePlan, queueDialogueCallout, recordUndoSnapshot, triggerPrimeTap]);
+
   const useHandSlot = (slotId: HandSlotId, targetStockId?: string) => {
     if (currentTurn !== 'player') return;
-    const slot = [...leftHandSlots, ...rightHandSlots, ...game.playerHand].find((entry) => entry.slotId === slotId);
+    const slot = [...activePrimeHandSlots, ...game.playerHand].find((entry) => entry.slotId === slotId);
     if (!slot) return;
 
     if (game.playerStock.name === 'Jet' && game.jetBatteryPrimeArmed && slot.kind === 'ability' && isJetBatteryAssignableEffect(slot.effect)) {
+      const linkedJetEffect = slot.effect;
       setPendingPlayerPlay(null);
       setPinnedTooltipSlotId(null);
       setGame((prev) => {
-        const existingBattery = getJetBatteryForEffect(prev, slot.effect);
-        if (!existingBattery) return createJetBatteryAssignment(prev, slot.effect);
+        const existingBattery = getJetBatteryForEffect(prev, linkedJetEffect);
+        if (!existingBattery) return createJetBatteryAssignment(prev, linkedJetEffect);
         const nextState: GolfGameState = {
           ...prev,
           jetBatteryPrimeArmed: false,
-          jetBatteries: prev.jetBatteries.filter((battery) => battery.effect !== slot.effect),
+          jetBatteries: prev.jetBatteries.filter((battery) => battery.effect !== linkedJetEffect),
         };
         if (!prev.jetDetonateBatteryUnlocked || existingBattery.charge <= 0) return nextState;
         const nextCombatants = { ...prev.combatants };
@@ -4875,7 +8093,93 @@ export const GolfGame = () => {
           combatants: nextCombatants,
         };
       });
-      queueDialogueCallout('Jet', getJetBatteryForEffect(game, slot.effect) ? `Ejected ${slot.name}.` : `Battery linked to ${slot.name}.`, 80, 'Quarnyx');
+      queueDialogueCallout('Jet', getJetBatteryForEffect(game, linkedJetEffect) ? `Ejected ${slot.name}.` : `Battery linked to ${slot.name}.`, 80, 'Quarnyx');
+      return;
+    }
+
+    if (slot.kind === 'ability' && slot.effect === 'banks-strike') {
+      setPendingPlayerPlay(null);
+      setPinnedTooltipSlotId(null);
+      recordUndoSnapshot({
+        game: latestGameRef.current,
+        enemyTurnSummary,
+        guidePlan,
+        actor: 'player',
+      });
+      let strikeSummary: { name: string; damage: number; upgraded: boolean } | null = null;
+      setGame((prev) => {
+        if (prev.playerStock.name !== 'Banks') return prev;
+        const tier = prev.starterPackAbilityRarities[prev.activeStarterPackIndex] ?? 1;
+        const apCap = getBanksApCap(tier);
+        const spentAp = Math.min(apCap, prev.playerStockActionPoints);
+        if (spentAp <= 0) return prev;
+
+        const primeKey = actorKeyFromName(prev.playerStock.name);
+        const enemyKey = actorKeyFromName(prev.enemyStock.name);
+        const primeCombatant = prev.combatants[primeKey];
+        if (!primeCombatant) return prev;
+
+        const packet: DamagePacket = {
+          physical: spentAp,
+          elemental: {},
+          deliberate: true,
+          threshold: 1,
+          source: 'player',
+          sourceActor: primeKey,
+          targetActor: enemyKey,
+        };
+        const prepared = applyCounterWindowToPacket(prev, packet);
+        const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
+        const resolvedPrimeCombatant = resolved.combatants[primeKey] ?? primeCombatant;
+        const upgraded = spentAp === tier && tier < 3;
+        const nextTier = upgraded ? ((tier + 1) as 1 | 2 | 3) : tier;
+        const nextModes = prev.starterPackModes.map((value, index) => (
+          index === prev.activeStarterPackIndex
+            ? (spentAp >= 3 ? 'banks-prowl' as StarterKinMode : 'default' as StarterKinMode)
+            : value
+        ));
+        const nextCombatants = spentAp >= 3
+          ? {
+              ...resolved.combatants,
+              [primeKey]: {
+                ...resolvedPrimeCombatant,
+                evasion: resolvedPrimeCombatant.evasion + 100,
+                evasionBuffAmount: resolvedPrimeCombatant.evasionBuffAmount + 100,
+                evasionBuffTurns: Math.max(resolvedPrimeCombatant.evasionBuffTurns, 1),
+              },
+            }
+          : resolved.combatants;
+
+        strikeSummary = {
+          name: spentAp >= 3 ? 'Hit and Run' : 'Swipe',
+          damage: spentAp,
+          upgraded,
+        };
+
+        return resolveEnemyDefeat({
+          ...prev,
+          combatants: nextCombatants,
+          playerStockActionPoints: 0,
+          playerPrimeApSegments: [],
+          starterPackAbilityRarities: prev.starterPackAbilityRarities.map((value, index) => (
+            index === prev.activeStarterPackIndex ? nextTier : value
+          )),
+          starterPackStoredAp: prev.starterPackStoredAp.map((value, index) => (
+            index === prev.activeStarterPackIndex ? 0 : value
+          )),
+          starterPackModes: nextModes,
+        }, nextCombatants);
+      });
+      if (strikeSummary) {
+        queueDialogueCallout(
+          'Banks',
+          strikeSummary.upgraded
+            ? `${strikeSummary.name} hit for ${strikeSummary.damage}. Rarity up.`
+            : `${strikeSummary.name} hit for ${strikeSummary.damage}.`,
+          100,
+          strikeSummary.name === 'Hit and Run' ? 'Prowl' : 'Strike'
+        );
+      }
       return;
     }
 
@@ -4883,44 +8187,95 @@ export const GolfGame = () => {
       setPendingPlayerPlay(null);
       return;
     }
-    if (slot.kind === 'ability' && slot.effect === 'ironfur') {
+    if (slot.kind === 'ability' && slot.effect === 'tap-out') {
       setPendingPlayerPlay(null);
       setPinnedTooltipSlotId(null);
-      setGame((prev) => {
-        const actorKey = actorKeyFromName(prev.playerStock.name);
-        const combatant = prev.combatants[actorKey];
-        if (!combatant || prev.playerStock.name !== 'Hiro' || prev.playerStockActionPoints < 4) return prev;
-        return {
+      if (game.playerStock.name === 'Mochi') {
+        setGame((prev) => {
+          const mochiCombatant = prev.combatants.mochi;
+          const rarity = prev.starterPackAbilityRarities[prev.activeStarterPackIndex] ?? 1;
+          const path = findBestExclusionPath(prev.tableau, nonCombatGlobalPeekCount, getZoomiesClaimCap(rarity));
+          if (prev.playerStockActionPoints < 3 || !mochiCombatant || (mochiCombatant.whiskersense ?? 0) <= 0 || path.length === 0) return prev;
+          const resolved = resolveExclusionPathTableau(prev.tableau, path);
+          const lastCard = path[path.length - 1]?.card ?? prev.playerStock;
+          return {
+            ...prev,
+            tableau: resolved.tableau,
+            playerStock: evolveIdentityCard(prev.playerStock, lastCard),
+            playerStockSequence: prev.playerStockSequence + path.length,
+            playerStockActionPoints: prev.playerStockActionPoints - 3,
+            clearedCount: prev.clearedCount + path.length,
+            tableClears: prev.tableClears + resolved.tableClears,
+            combatants: {
+              ...prev.combatants,
+              mochi: {
+                ...mochiCombatant,
+                whiskersense: Math.max(0, (mochiCombatant.whiskersense ?? 0) - 1),
+                momentum: Math.min(99, (mochiCombatant.momentum ?? 0) + path.length),
+              },
+              [actorKeyFromName(prev.enemyStock.name)]: {
+                ...prev.combatants[actorKeyFromName(prev.enemyStock.name)],
+                staggerPressure: Math.min(99, (prev.combatants[actorKeyFromName(prev.enemyStock.name)]?.staggerPressure ?? 0) + path.length),
+              },
+            },
+          };
+        });
+        queueDialogueCallout('Mochi', 'Zoomies!', 80, 'Whiskersense');
+        return;
+      }
+      const mochiIndex = getMochiStarterPackIndex(game);
+      if (mochiIndex >= 0) {
+        switchStarterPackStock(mochiIndex, false);
+        setGame((prev) => ({
           ...prev,
-          playerStockActionPoints: prev.playerStockActionPoints - 4,
+          playerStockActionPoints: Math.max(0, prev.playerStockActionPoints - 3),
           combatants: {
             ...prev.combatants,
-            [actorKey]: {
-              ...combatant,
-              defense: combatant.defense + 5,
-              defenseBuffAmount: combatant.defenseBuffAmount + 5,
-              defenseBuffTurns: 2,
+            mochi: {
+              ...(prev.combatants.mochi ?? createCombatant('Mochi')),
+              whiskersense: 1,
             },
           },
-        };
-      });
-      queueDialogueCallout('Hiro', 'Ironfur up.', 100);
+        }));
+        queueDialogueCallout('Mochi', 'Tap Out!', 80, 'Whiskersense');
+      }
       return;
     }
-    if (slot.kind === 'ability' && slot.effect === 'tap-out') {
-      setPinnedTooltipSlotId(null);
+    if (slot.kind === 'ability' && slot.effect === 'fetch') {
       setPendingPlayerPlay(null);
+      setPinnedTooltipSlotId(null);
       setGame((prev) => {
-        if (prev.playerStockActionPoints < 3) return prev;
-        const nextBenchActionPoints = prev.playerBenchActionPoints.map((value) => Math.min(12, (value ?? 0) + 2));
-        return {
-          ...prev,
-          playerStockActionPoints: prev.playerStockActionPoints - 3,
-          playerBenchActionPoints: nextBenchActionPoints,
-          playerSupportActionUsed: false,
-        };
+        const candidate = getBestFetchCandidate(prev);
+        if (prev.playerStock.name !== 'Hiro' || prev.playerStockActionPoints < 2 || !candidate) return prev;
+        const preferredSlot = prev.playerCapturedLeft === null ? 'left' : prev.playerCapturedRight === null ? 'right' : 'left';
+        const nextTableau = candidate.source === 'tableau'
+          ? refillClearedTableau(
+            prev.tableau.map((column, columnIndex) => (
+              columnIndex === candidate.columnIndex ? column.slice(0, -1) : column
+            )),
+            candidate.columnIndex
+          ).tableau
+          : prev.tableau;
+        const fetchedCard = candidate.card;
+        if (preferredSlot === 'left' && prev.playerCapturedLeft === null) {
+          return {
+            ...prev,
+            playerStockActionPoints: prev.playerStockActionPoints - 2,
+            tableau: nextTableau,
+            playerCapturedLeft: fetchedCard,
+          };
+        }
+        if (preferredSlot === 'right' && prev.playerCapturedRight === null) {
+          return {
+            ...prev,
+            playerStockActionPoints: prev.playerStockActionPoints - 2,
+            tableau: nextTableau,
+            playerCapturedRight: fetchedCard,
+          };
+        }
+        return prev;
       });
-      queueDialogueCallout(game.playerStock.name, 'Team, take the relay!', 120);
+      queueDialogueCallout('Hiro', 'Fetch!', 100, 'Signature');
       return;
     }
     if (slot.kind === 'ability' && slot.effect === 'battery') {
@@ -4973,11 +8328,10 @@ export const GolfGame = () => {
         if (prev.jetRewireActionsRemaining > 0) {
           return { ...prev, jetRewireActionsRemaining: 0, jetRewireSourceColumnIndex: null };
         }
-        const charge = getJetBatteryCharge(prev, 'rewire');
-        if (charge <= 0) return prev;
+        if (prev.playerStockActionPoints < JET_REWIRE_COST) return prev;
         return {
           ...prev,
-          jetRewireActionsRemaining: charge,
+          jetRewireActionsRemaining: 1,
           jetRewireSourceColumnIndex: null,
         };
       });
@@ -5070,6 +8424,50 @@ export const GolfGame = () => {
       return;
     }
 
+    if (slot.kind === 'generated' && (slot.generatedEffect === 'heart-of-the-wild' || slot.generatedEffect === 'wildcard')) {
+      setPendingPlayerPlay(null);
+      recordUndoSnapshot({
+        game: latestGameRef.current,
+        enemyTurnSummary,
+        guidePlan,
+        actor: 'player',
+      });
+    let actionStatusEvent: StatusEffectEvent | null = null;
+    setGame((prev) => {
+      if (prev.playerStock.name !== 'Hiro' || prev.hiroHeartsHeld <= 0) return prev;
+        const heartCard = getMostPromisingHiroHeartCard(prev);
+        const nextBenchActionPoints = awardBenchTempo(prev, false, prev.playerStock.id);
+        const progressResult = applyPlayerProgressToTarget(prev, prev.playerStock.id, heartCard, 0, nextBenchActionPoints);
+        const prepared = applyCounterWindowToPacket(
+          prev,
+          addPrimeAttackBonuses(prev, buildPokePacket(progressResult.sourceCard, prev.enemyStock, progressResult.sequence, 'player'))
+        );
+        const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
+        const siphonedState = applyJetPassiveSiphon(progressResult.nextState, resolved);
+        const withHiroHooks = applyPrimeCompanionTriggers(
+          prev,
+          {
+            ...siphonedState,
+            hiroHeartsHeld: Math.max(0, prev.hiroHeartsHeld - 1),
+            hiroTrailSenseActive: false,
+            playerCapturedLeft: prev.playerCapturedLeft,
+            playerCapturedRight: prev.playerCapturedRight,
+            clearedCount: prev.clearedCount + 1,
+            playerDiscardPile: [
+              ...prev.playerDiscardPile,
+              `${progressResult.sourceCard.name}::Wildcard ${rankLabel(heartCard.rank)}`,
+            ],
+          },
+          progressResult.sourceCard
+        );
+      const actionResult = applyPlayerActionStatusUpdate(resolveEnemyDefeat(withHiroHooks, resolved.combatants));
+      actionStatusEvent = actionResult.statusEvent;
+      return actionResult.state;
+    });
+    emitStatusEffectEvent(actionStatusEvent);
+    queueDialogueCallout('Hiro', 'Wildcard ready.', 100, 'Resilience');
+    return;
+    }
     if ((slot.kind !== 'captured' && slot.kind !== 'generated') || !slot.card) return;
     const eligibleTargets = getEligiblePlayerTargetsForCard(game, slot.card);
     if (eligibleTargets.length === 0) {
@@ -5100,6 +8498,7 @@ export const GolfGame = () => {
       actor: 'player',
     });
 
+    let actionStatusEvent: StatusEffectEvent | null = null;
     setGame((prev) => {
       const nextBenchActionPoints = awardBenchTempo(prev, false, resolvedTargetStockId);
       const progressResult = applyPlayerProgressToTarget(prev, resolvedTargetStockId, slot.card!, 0, nextBenchActionPoints);
@@ -5122,8 +8521,12 @@ export const GolfGame = () => {
         })()
       );
       const resolved = resolveDamagePacket(prepared.state.combatants, prepared.packet);
-      const siphonedState = applyJetPassiveSiphon(progressResult.nextState, resolved);
-      return resolveEnemyDefeat({
+      const pressuredResolved = {
+        ...resolved,
+        combatants: addStaggerPressure(resolved.combatants, actorKeyFromName(prev.enemyStock.name), resolved.damageDealt),
+      };
+      const siphonedState = applyJetPassiveSiphon(progressResult.nextState, pressuredResolved);
+      const actionResult = applyPlayerActionStatusUpdate(resolveEnemyDefeat(applyPrimeCompanionTriggers(prev, {
         ...siphonedState,
         playerCapturedLeft: slotId === 'left' ? null : prev.playerCapturedLeft,
         playerCapturedRight: slotId === 'right' ? null : prev.playerCapturedRight,
@@ -5132,8 +8535,11 @@ export const GolfGame = () => {
           ...prev.playerDiscardPile,
           `${progressResult.sourceCard.name}::${slot.kind === 'generated' ? slot.name : 'Recovered'} ${rankLabel(slot.card!.rank)}`
         ],
-      }, resolved.combatants);
+      }, progressResult.sourceCard), pressuredResolved.combatants));
+      actionStatusEvent = actionResult.statusEvent;
+      return actionResult.state;
     });
+    emitStatusEffectEvent(actionStatusEvent);
   };
 
   const usePanPawSperity = useCallback(() => {
@@ -5376,17 +8782,15 @@ export const GolfGame = () => {
     setKinInspectIndex(null);
     if (benchCard.name === 'Whis') {
       const snapshot = lastUndoRef.current;
-      const benchAp = game.playerBenchActionPoints[benchIndex] ?? 0;
+      const benchAp = game.playerStockActionPoints;
       if (!snapshot || benchAp < getBenchAbilityCost(benchCard, getBenchRole(game, benchIndex))) return;
       if (snapshot.actor === 'enemy') {
-        const restoredBenchActionPoints = [...snapshot.game.playerBenchActionPoints];
-        restoredBenchActionPoints[benchIndex] = Math.max(0, restoredBenchActionPoints[benchIndex] - 2);
         setGuidePlan(snapshot.guidePlan ? { ...snapshot.guidePlan, path: [...snapshot.guidePlan.path] } : null);
         setEnemyTurnSummary([...snapshot.enemyTurnSummary]);
         setCurrentTurn('player');
         setGame({
           ...snapshot.game,
-          playerBenchActionPoints: restoredBenchActionPoints,
+          playerStockActionPoints: Math.max(0, snapshot.game.playerStockActionPoints - 2),
         });
         lastUndoRef.current = null;
       } else {
@@ -5409,12 +8813,10 @@ export const GolfGame = () => {
           columnIndex === restoredColumnIndex ? [...column, restoredCard!] : column
         );
         setGame((prev) => {
-          const nextBenchActionPoints = [...prev.playerBenchActionPoints];
-          nextBenchActionPoints[benchIndex] = Math.max(0, nextBenchActionPoints[benchIndex] - 2);
           return {
             ...prev,
             tableau: restoredTableau,
-            playerBenchActionPoints: nextBenchActionPoints,
+            playerStockActionPoints: Math.max(0, prev.playerStockActionPoints - 2),
           };
         });
         lastUndoRef.current = null;
@@ -5427,6 +8829,47 @@ export const GolfGame = () => {
         detail: { effect: 'bench-jikan', role: getBenchRole(game, benchIndex) },
       });
       queueDialogueCallout('Whis', 'Return to the earlier beat.', 120);
+      return;
+    }
+
+    if (benchCard.name === 'Mochi') {
+      const mochiIndex = getMochiStarterPackIndex(game);
+      const cost = getBenchAbilityCost(benchCard, getBenchRole(game, benchIndex));
+      if (
+        mochiIndex < 0
+        || mochiIndex === game.activeStarterPackIndex
+        || game.playerStockActionPoints < cost
+        || (game.combatants.mochi?.skittish ?? 0) > 0
+      ) {
+        return;
+      }
+      recordUndoSnapshot({
+        game: latestGameRef.current,
+        enemyTurnSummary,
+        guidePlan,
+        actor: 'player',
+      });
+      switchStarterPackStock(mochiIndex, false);
+      setGame((prev) => ({
+        ...prev,
+        playerStockActionPoints: Math.max(0, prev.playerStockActionPoints - cost),
+        combatants: {
+          ...prev.combatants,
+          mochi: {
+            ...(prev.combatants.mochi ?? createCombatant('Mochi')),
+            whiskersense: 1,
+          },
+        },
+      }));
+      appendCombatLog({
+        timestamp: Date.now(),
+        biomeId: game.biomeId,
+        type: 'ability',
+        actor: benchCard.name,
+        target: game.playerStock.name,
+        detail: { effect: 'bench-mochi', role: getBenchRole(game, benchIndex) },
+      });
+      queueDialogueCallout('Mochi', 'Tap Out!', 120, 'Whiskersense');
       return;
     }
 
@@ -5452,7 +8895,7 @@ export const GolfGame = () => {
     } else if (benchCard.name === 'Pan') {
       queueDialogueCallout('Pan', 'Let me reshape the route.', 140);
     }
-  }, [appendCombatLog, currentTurn, enemyTurnSummary, game, guidePlan, queueDialogueCallout, recordUndoSnapshot]);
+  }, [appendCombatLog, clearKinInspectHold, clearStickyHold, currentTurn, enemyTurnSummary, game, guidePlan, queueDialogueCallout, recordUndoSnapshot, switchStarterPackStock]);
 
   const confirmPendingPlayerPlay = useCallback((stockId: string) => {
     if (!pendingPlayerPlay || !pendingPlayerPlay.stockIds.includes(stockId)) return false;
@@ -5611,17 +9054,17 @@ export const GolfGame = () => {
     clearStickyHold();
   }, [clearStickyHold]);
 
-  const executeGolfMove = (
-    prev: GolfGameState,
-    actor: 'player' | 'enemy',
-    columnIndex: number,
-    targetStockId?: string
-  ): GolfGameState => {
+const executeGolfMove = (
+  prev: GolfGameState,
+  actor: 'player' | 'enemy',
+  columnIndex: number,
+  targetStockId?: string
+  ): { state: GolfGameState; statusEvent: StatusEffectEvent | null } => {
     const stock = actor === 'player'
       ? (targetStockId ? (getPlayerTargetByStockId(prev, targetStockId)?.card ?? prev.playerStock) : prev.playerStock)
       : prev.enemyStock;
     const candidate = prev.tableau[columnIndex][prev.tableau[columnIndex].length - 1];
-    if (!candidate || !canPlayOnStock(candidate, stock)) return prev;
+    if (!candidate || !canPlayOnStock(candidate, stock)) return { state: prev, statusEvent: null };
 
     const reducedTableau = prev.tableau.map((column, idx) =>
       idx === columnIndex ? column.slice(0, -1) : column
@@ -5648,12 +9091,14 @@ export const GolfGame = () => {
         target: prev.enemyStock.name,
         detail: { card: candidate.id, columnIndex, damage: resolved.damageDealt, dodged: resolved.dodged, stockId: resolvedTargetStockId },
       });
-      return resolveEnemyDefeat({
+      const resolvedState = resolveEnemyDefeat(reclaimBuriedKinStickers(applyPrimeCompanionTriggers(prev, {
         ...siphonedState,
         tableau: refillResult.tableau,
         clearedCount: prev.clearedCount + 1,
         tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
-      }, resolved.combatants);
+        hiroTrailSenseActive: false,
+      }, progressResult.sourceCard, { tableCleared: refillResult.tableCleared })), resolved.combatants);
+      return applyPlayerActionStatusUpdate(resolvedState);
     }
 
     const nextState = prev;
@@ -5674,11 +9119,15 @@ export const GolfGame = () => {
       target: nextState.playerStock.name,
       detail: { card: candidate.id, columnIndex, damage: enemyResolved.damageDealt, dodged: enemyResolved.dodged },
     });
-    if (reactedEnemyResult.state.playerSupportReactiveUsed) {
-      queueDialogueCallout('Hiro', "Don't you dare!", 150);
-      queueDialogueCallout(nextState.playerStock.name, 'Thanks, Hiro!', 780);
+    if (reactedEnemyResult.whiskersenseTriggered) {
+      queueDialogueCallout('Mochi', 'Whiskersense!', 150, 'Dodge');
+    }
+    if (reactedEnemyResult.guardDogTriggered) {
+      queueDialogueCallout('Hiro', "I've got you!", 150, 'Guard Dog');
+      queueDialogueCallout(nextState.playerStock.name, 'Hiro took the hit!', 780);
     }
 
+    const chargedEnemyClaim = isJetChargedCard(nextState, candidate.id);
     const dodgeStreak = enemyResolved.dodged && nextState.playerStock.name === 'Jet'
       ? (enemyResolved.combatants[actorKeyFromName(nextState.playerStock.name)]?.dodgeCounter ?? 0)
       : 0;
@@ -5697,16 +9146,187 @@ export const GolfGame = () => {
           }
         : enemyResolved.combatants;
 
+    const nextEnemyCombatants = chargedEnemyClaim
+      ? {
+          ...normalizedCombatants,
+          [actorKeyFromName(nextState.enemyStock.name)]: {
+            ...normalizedCombatants[actorKeyFromName(nextState.enemyStock.name)],
+            hp: Math.max(0, (normalizedCombatants[actorKeyFromName(nextState.enemyStock.name)]?.hp ?? 0) - 1),
+          },
+        }
+      : normalizedCombatants;
+    const nextChargedCardIds = chargedEnemyClaim
+      ? nextState.jetChargedCardIds.filter((cardId) => cardId !== candidate.id)
+      : nextState.jetChargedCardIds;
+    if (chargedEnemyClaim) {
+      appendCombatLog({
+        timestamp: Date.now(),
+        biomeId: nextState.biomeId,
+        type: 'damage',
+        actor: 'Jet',
+        target: nextState.enemyStock.name,
+        detail: { source: 'zapped', card: candidate.id, damage: 1, element: 'A' },
+      });
+    }
+
     return {
+      state: resolveEnemyDefeat(reclaimBuriedKinStickers({
       ...postDodgeState,
-      playerSupportReactiveUsed: reactedEnemyResult.state.playerSupportReactiveUsed,
+      playerSupportReactiveUsed: false,
       tableau: refillResult.tableau,
       enemyStock: evolveIdentityCard(nextState.enemyStock, candidate),
       clearedCount: nextState.clearedCount + 1,
       enemyStockSequence: nextEnemySequence,
       enemyStockActionPoints: nextState.enemyStockActionPoints + 1,
-      combatants: normalizedCombatants,
+      combatants: nextEnemyCombatants,
+      jetChargedCardIds: nextChargedCardIds,
       tableClears: nextState.tableClears + (refillResult.tableCleared ? 1 : 0),
+    }), nextEnemyCombatants),
+      statusEvent: null,
+    };
+  };
+
+  const executeEnemyBite = (prev: GolfGameState, columnIndex: number): GolfGameState => {
+    const candidate = prev.tableau[columnIndex]?.[prev.tableau[columnIndex].length - 1] ?? null;
+    if (!candidate) return prev;
+
+    const nextBiteCount = getEnemyBiteCount(prev, candidate.id) + 1;
+    const destroyed = nextBiteCount >= ENEMY_BITE_DESTROY_THRESHOLD;
+    const nextBiteMarks = destroyed
+      ? Object.fromEntries(Object.entries(prev.enemyBiteMarks).filter(([cardId]) => cardId !== candidate.id))
+      : {
+          ...prev.enemyBiteMarks,
+          [candidate.id]: nextBiteCount,
+        };
+
+    const reducedTableau = destroyed
+      ? prev.tableau.map((column, idx) => (idx === columnIndex ? column.slice(0, -1) : column))
+      : prev.tableau;
+    const refillResult = destroyed
+      ? refillClearedTableau(reducedTableau, columnIndex)
+      : { tableau: reducedTableau, tableCleared: false };
+
+    const nextEnemySequence = prev.enemyStockSequence + 1;
+    const preparedEnemy = applyCounterWindowToPacket(
+      prev,
+      buildPokePacket(prev.enemyStock, prev.playerStock, nextEnemySequence, 'enemy')
+    );
+    const baseEnemyResolved = resolveDamagePacket(preparedEnemy.state.combatants, preparedEnemy.packet);
+    const dodgedEnemyResolved = applyPostPlayerDodgeFormationEffects(prev, baseEnemyResolved);
+    const reactedEnemyResult = applyPostEnemyHitFormationReactions(prev, dodgedEnemyResolved);
+    const enemyResolved = reactedEnemyResult.resolved;
+    if (reactedEnemyResult.whiskersenseTriggered) {
+      queueDialogueCallout('Mochi', 'Whiskersense!', 150, 'Dodge');
+    }
+
+    const dodgeStreak = enemyResolved.dodged && prev.playerStock.name === 'Jet'
+      ? (enemyResolved.combatants[actorKeyFromName(prev.playerStock.name)]?.dodgeCounter ?? 0)
+      : 0;
+    const postDodgeState = enemyResolved.dodged && dodgeStreak > 0
+      ? routeJetChargeToBatteries(prev, dodgeStreak)
+      : prev;
+    const jetCombatant = enemyResolved.combatants[actorKeyFromName(prev.playerStock.name)];
+    const normalizedCombatants =
+      prev.playerStock.name === 'Jet' && jetCombatant
+        ? {
+            ...enemyResolved.combatants,
+            [actorKeyFromName(prev.playerStock.name)]: {
+              ...jetCombatant,
+              dodgeCounter: enemyResolved.dodged ? dodgeStreak : 0,
+            },
+          }
+        : enemyResolved.combatants;
+    appendCombatLog({
+      timestamp: Date.now(),
+      biomeId: prev.biomeId,
+      type: 'move',
+      actor: prev.enemyStock.name,
+      target: prev.playerStock.name,
+      detail: {
+        effect: destroyed ? 'enemy-bite-destroy' : 'enemy-bite',
+        card: candidate.id,
+        columnIndex,
+        bites: nextBiteCount,
+        damage: enemyResolved.damageDealt,
+        dodged: enemyResolved.dodged,
+      },
+    });
+
+    const lootCards = destroyed ? [...prev.enemyLootCards, candidate] : prev.enemyLootCards;
+    return reclaimBuriedKinStickers({
+      ...postDodgeState,
+      playerSupportReactiveUsed: false,
+      tableau: refillResult.tableau,
+      clearedCount: destroyed ? prev.clearedCount + 1 : prev.clearedCount,
+      enemyStockSequence: nextEnemySequence,
+      enemyStockActionPoints: prev.enemyStockActionPoints + ENEMY_BITE_AP_GAIN,
+      combatants: normalizedCombatants,
+      tableClears: prev.tableClears + (refillResult.tableCleared ? 1 : 0),
+      enemyBiteMarks: nextBiteMarks,
+      enemyLootCards: lootCards,
+    });
+  };
+
+  const executeShadeMaul = (prev: GolfGameState): GolfGameState => {
+    const mochiCombatant = prev.combatants.mochi;
+    const hiroCombatant = prev.combatants.hiro;
+    if (!mochiCombatant || prev.enemyStockActionPoints < 2) return prev;
+    const supportCard = getSupportBenchCard(prev);
+    const guardDogIntercept = supportCard?.name === 'Hiro' && !!hiroCombatant && hiroCombatant.hp > 0;
+    const redirectToHiro = prev.playerStock.name === 'Hiro' && prev.hiroGuardTauntTurns > 0 && !!hiroCombatant;
+    const targetKey = redirectToHiro ? 'hiro' : 'mochi';
+    const targetCardName = redirectToHiro ? 'Hiro' : 'Mochi';
+    const damage = 3;
+    const targetCombatant = prev.combatants[targetKey];
+    if (!targetCombatant) return prev;
+
+    const nextArmor = Math.max(0, targetCombatant.armor - damage);
+    const overflowDamage = Math.max(0, damage - targetCombatant.armor);
+    const nextHp = Math.max(0, targetCombatant.hp - overflowDamage);
+    const nextCombatants = {
+      ...prev.combatants,
+      [targetKey]: {
+        ...targetCombatant,
+        armor: nextArmor,
+        hp: nextHp,
+        consecutiveHitsTaken: targetCombatant.consecutiveHitsTaken + 1,
+      },
+    };
+    const lethalForMochi = !redirectToHiro && nextHp <= 0 && guardDogIntercept;
+    const postGuardDogCombatants = lethalForMochi && hiroCombatant
+      ? {
+          ...nextCombatants,
+          mochi: {
+            ...nextCombatants.mochi,
+            hp: 1,
+          },
+          hiro: applyFlatDamageToCombatant(hiroCombatant, damage),
+        }
+      : nextCombatants;
+    const nextState = {
+      ...prev,
+      combatants: postGuardDogCombatants,
+      enemyStockActionPoints: Math.max(0, prev.enemyStockActionPoints - 2),
+    };
+
+    appendCombatLog({
+      timestamp: Date.now(),
+      biomeId: prev.biomeId,
+      type: 'ability',
+      actor: prev.enemyStock.name,
+      target: lethalForMochi ? 'Hiro' : targetCardName,
+      detail: { effect: 'maul', damage, redirected: redirectToHiro || lethalForMochi },
+    });
+    queueDialogueCallout(
+      prev.enemyStock.name,
+      lethalForMochi ? 'Guard Dog intercepts the maul.' : redirectToHiro ? 'Maul intercepted.' : 'Mochi is mauled!',
+      80,
+      lethalForMochi ? 'Guard Dog' : 'Maul'
+    );
+
+    return {
+      ...nextState,
+      playerSupportReactiveUsed: false,
     };
   };
 
@@ -5788,7 +9408,68 @@ export const GolfGame = () => {
 
     while (enemyTurnRunIdRef.current === runId) {
       if (actionCount >= enemyProfile.maxActionsPerTurn) break;
-      const move = pickBestGolfMove(nextState.tableau, nextState.enemyStock, enemyProfile.behavior);
+      if (nextState.tutorialSliceId === 'slice-03' && nextState.enemyProfileId === 'shade-wisp' && nextState.enemyStockActionPoints >= 2) {
+        const enemyPrimePoint = getCardCenterPoint(enemyStockRef.current);
+        const intentCards = getShadeWispIntentCards(nextState, 2);
+        if (enemyPrimePoint) {
+          for (const intentCard of intentCards) {
+            const sourcePoint = getCardCenterPoint(tableauTopRefs.current[intentCard.columnIndex]);
+            if (!sourcePoint) continue;
+            await playEnemyDragAnimation({
+              id: enemyDragSequenceIdRef.current + 1,
+              mode: 'drag',
+              card: intentCard.card,
+              sourceColumnIndex: intentCard.columnIndex,
+              from: sourcePoint,
+              to: enemyPrimePoint,
+              durationMs: Math.max(320, ENEMY_POINTER_APPROACH_MS - 80),
+            });
+            enemyDragSequenceIdRef.current += 1;
+            if (enemyTurnRunIdRef.current !== runId) return;
+            await waitForUnpausedMs(110, runId);
+            if (enemyTurnRunIdRef.current !== runId) return;
+          }
+        } else {
+          await waitForUnpausedMs(ENEMY_POINTER_APPROACH_MS, runId);
+          if (enemyTurnRunIdRef.current !== runId) return;
+        }
+        recordUndoSnapshot({
+          game: nextState,
+          enemyTurnSummary: actions,
+          guidePlan,
+          actor: 'enemy',
+        });
+        nextState = executeShadeMaul(nextState);
+        latestGameRef.current = nextState;
+        setGame(nextState);
+        actions.push({ columnIndex: -1, card: nextState.enemyStock });
+        setEnemyTurnSummary([...actions]);
+        actionCount += 1;
+        continue;
+      }
+      const move = (() => {
+        if (nextState.enemyPrimeViceGripTurns <= 0) return pickHighestVisibleBiteColumn(nextState);
+        const restrictedColumns = new Set(getViceGripColumns(nextState.tableau));
+        let bestColumnIndex: number | null = null;
+        let bestRank = -Infinity;
+        let bestBites = -Infinity;
+        nextState.tableau.forEach((column, columnIndex) => {
+          if (!restrictedColumns.has(columnIndex)) return;
+          const candidate = column[column.length - 1] ?? null;
+          if (!candidate) return;
+          const biteCount = getEnemyBiteCount(nextState, candidate.id);
+          if (
+            candidate.rank > bestRank
+            || (candidate.rank === bestRank && biteCount > bestBites)
+            || (candidate.rank === bestRank && biteCount === bestBites && (bestColumnIndex === null || columnIndex < bestColumnIndex))
+          ) {
+            bestColumnIndex = columnIndex;
+            bestRank = candidate.rank;
+            bestBites = biteCount;
+          }
+        });
+        return bestColumnIndex;
+      })();
       if (move === null) break;
 
       const movedCard = nextState.tableau[move][nextState.tableau[move].length - 1];
@@ -5796,9 +9477,7 @@ export const GolfGame = () => {
 
       const approachFromPoint = getPointerAnchorPoint(enemyStockRef.current);
       const approachToPoint = getPointerAnchorPoint(tableauTopRefs.current[move]);
-      const dragFromPoint = getPointerAnchorPoint(tableauTopRefs.current[move]);
-      const dragToPoint = getPointerAnchorPoint(enemyStockRef.current);
-      if (approachFromPoint && approachToPoint && dragFromPoint && dragToPoint) {
+      if (approachFromPoint && approachToPoint) {
         await playEnemyDragAnimation({
           id: enemyDragSequenceIdRef.current + 1,
           mode: 'cursor',
@@ -5811,16 +9490,7 @@ export const GolfGame = () => {
         if (enemyTurnRunIdRef.current !== runId) return;
         await waitForUnpausedMs(ENEMY_POINTER_CLICK_MS, runId);
         if (enemyTurnRunIdRef.current !== runId) return;
-        await playEnemyDragAnimation({
-          id: enemyDragSequenceIdRef.current + 1,
-          mode: 'drag',
-          card: movedCard,
-          sourceColumnIndex: move,
-          from: dragFromPoint,
-          to: dragToPoint,
-          durationMs: ENEMY_ACTION_DURATION_MS,
-        });
-        enemyDragSequenceIdRef.current += 1;
+        await waitForUnpausedMs(ENEMY_ACTION_DURATION_MS, runId);
         if (enemyTurnRunIdRef.current !== runId) return;
       } else {
         await waitForUnpausedMs(ENEMY_POINTER_APPROACH_MS + ENEMY_POINTER_CLICK_MS + ENEMY_ACTION_DURATION_MS, runId);
@@ -5833,7 +9503,7 @@ export const GolfGame = () => {
         guidePlan,
         actor: 'enemy',
       });
-      nextState = applyEnemyMovePostEffects(executeGolfMove(nextState, 'enemy', move));
+      nextState = applyEnemyMovePostEffects(executeEnemyBite(nextState, move));
       latestGameRef.current = nextState;
       setGame(nextState);
       actions.push({ columnIndex: move, card: movedCard });
@@ -5846,22 +9516,43 @@ export const GolfGame = () => {
     if (enemyTurnRunIdRef.current !== runId) return;
 
     setCurrentTurn('player');
-    setGame((prev) => ({
-      ...prev,
-      playerFreeTagAvailable: true,
-      playerTagLockCapturesRemaining: 0,
-      playerBlockedReturnStockId: null,
-      playerSupportActionUsed: false,
-      playerSupportRotateUsed: false,
-      playerSupportReactiveUsed: false,
-      stickyPawsCooldown: Math.max(0, prev.stickyPawsCooldown - 1),
-      panPawSperityCooldown: Math.max(0, prev.panPawSperityCooldown - 1),
-      riggedConstructCooldown: Math.max(0, prev.riggedConstructCooldown - 1),
-      assistJetRewireCooldown: Math.max(0, prev.assistJetRewireCooldown - 1),
-      combatants: ageCombatantsAtTurnBoundary(prev.combatants),
-    }));
+    setGame((prev) => {
+      let next: GolfGameState = {
+        ...prev,
+        playerFreeTagAvailable: true,
+        playerTagLockCapturesRemaining: 0,
+        playerBlockedReturnStockId: null,
+        playerSupportActionUsed: false,
+        playerSupportRotateUsed: false,
+        playerSupportReactiveUsed: false,
+        stickyPawsCooldown: Math.max(0, prev.stickyPawsCooldown - 1),
+        panPawSperityCooldown: Math.max(0, prev.panPawSperityCooldown - 1),
+        riggedConstructCooldown: Math.max(0, prev.riggedConstructCooldown - 1),
+        assistJetRewireCooldown: Math.max(0, prev.assistJetRewireCooldown - 1),
+        combatants: ageCombatantsAtTurnBoundary(prev.combatants),
+        enemyPrimeViceGripTurns: Math.max(0, prev.enemyPrimeViceGripTurns - 1),
+        enemySupportStunnedTurns: Math.max(0, prev.enemySupportStunnedTurns - 1),
+        hiroGuardTauntTurns: Math.max(0, prev.hiroGuardTauntTurns - 1),
+      };
+      if (prev.playerStock.name === 'Hiro') {
+        next = {
+          ...next,
+          hiroTurnsElapsed: prev.hiroTurnsElapsed + 1,
+          hiroSecondWindCooldown: Math.max(0, prev.hiroSecondWindCooldown - 1),
+          hiroLeaderTriggeredThisTurn: false,
+          hiroStockAddsThisTurn: 0,
+        };
+      }
+      return next;
+    });
     enemyTurnTimeoutRef.current = null;
   }, [ageCombatantsAtTurnBoundary, playEnemyDragAnimation, waitForUnpausedMs]);
+
+  useEffect(() => {
+    if (!enemyTurnQueued || currentTurn !== 'player') return;
+    setEnemyTurnQueued(false);
+    runEnemyTurn();
+  }, [currentTurn, enemyTurnQueued, runEnemyTurn]);
 
   useEffect(() => {
     if (autoPlayMode === 'off' || currentTurn !== 'player' || isPaused || isPlayerTeamDefeated(game)) return;
@@ -5878,7 +9569,7 @@ export const GolfGame = () => {
             actor: 'player',
           });
           if (action.type === 'move') {
-            next = executeGolfMove(next, 'player', action.columnIndex, action.stockId);
+            next = executeGolfMove(next, 'player', action.columnIndex, action.stockId).state;
             continue;
           }
           if (action.type === 'rotate-support') {
@@ -5889,7 +9580,7 @@ export const GolfGame = () => {
             next = simulateUseSupportAbility(next);
             continue;
           }
-          next = simulateUseAbility(next, action.effect);
+          next = simulateUseAbilityWithStatus(next, action.effect).state;
         }
         return next;
       });
@@ -6000,16 +9691,21 @@ export const GolfGame = () => {
     const node = playerHandAnimNodeRef.current;
     if (!node) return;
 
-    const initialTransform = `translate3d(${playerHandAnim.from.x.toFixed(2)}px, ${playerHandAnim.from.y.toFixed(2)}px, 0)`;
-    const targetTransform = `translate3d(${playerHandAnim.to.x.toFixed(2)}px, ${playerHandAnim.to.y.toFixed(2)}px, 0)`;
+    const spinStart = '';
+    const spinEnd = '';
+    const initialTransform = `translate3d(${playerHandAnim.from.x.toFixed(2)}px, ${playerHandAnim.from.y.toFixed(2)}px, 0)${spinStart}`;
+    const targetTransform = `translate3d(${playerHandAnim.to.x.toFixed(2)}px, ${playerHandAnim.to.y.toFixed(2)}px, 0)${spinEnd}`;
     node.style.transition = 'none';
     node.style.transform = initialTransform;
 
     const rafId = window.requestAnimationFrame(() => {
       const activeNode = playerHandAnimNodeRef.current;
       if (!activeNode) return;
-      activeNode.style.transition = `transform ${playerHandAnim.durationMs}ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity ${playerHandAnim.durationMs}ms ease-out`;
+      activeNode.style.transition = `transform ${playerHandAnim.durationMs}ms cubic-bezier(0.18, 0.88, 0.22, 1), opacity ${playerHandAnim.durationMs}ms ease-out, filter ${playerHandAnim.durationMs}ms ease-out`;
       activeNode.style.transform = targetTransform;
+      if (playerHandAnim.variant === 'reward-flip') {
+        activeNode.style.filter = 'brightness(1.15) drop-shadow(0 0 22px rgba(255,255,255,0.35))';
+      }
     });
 
     return () => window.cancelAnimationFrame(rafId);
@@ -6096,16 +9792,21 @@ export const GolfGame = () => {
       );
     }
     if (slot.effect === 'rewire') {
-      const charge = getJetBatteryCharge(game, 'rewire');
+      const chargedCount = game.jetChargedCardIds.length;
       return (
         <div>
           <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Rewire</div>
-          <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Tool Active • Jet Only</div>
+          <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Signature Active • Jet Only</div>
           <div className="mt-2 text-sm text-white/80">
-            Discharge the linked battery to gain that many legal tableau-to-tableau rewires. Click one tableau top to mark the source, then a legal destination tableau top to move the card directly.
+            Spend {JET_REWIRE_COST} AP to move one tableau top laterally into another tableau if the move would be stock-legal. Rewired cards become Charged.
           </div>
           <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-white/45">
-            Battery charge: {charge} • Actions ready: {game.jetRewireActionsRemaining}
+            Charged cards: {chargedCount} • AP loaded: {game.playerStockActionPoints}/{JET_MAX_AP} • Rewire mode: {game.jetRewireActionsRemaining > 0 ? 'armed' : 'idle'}
+          </div>
+          <div className="mt-3 space-y-1 text-[11px] leading-4 text-white/72">
+            <div>Allied claim: +1 AP and consume the charge.</div>
+            <div>Enemy claim: Zapped for 1 electric damage, then consume the charge.</div>
+            <div>Charges persist on tableau cards and do not stack.</div>
           </div>
         </div>
       );
@@ -6136,6 +9837,43 @@ export const GolfGame = () => {
           </div>
           <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-white/45">
             Battery charge: {charge} • Shields per element: {Math.max(1, Math.ceil(charge / 2))}
+          </div>
+        </div>
+      );
+    }
+    if (slot.effect === 'banks-strike') {
+      const tier = game.starterPackAbilityRarities[game.activeStarterPackIndex] ?? 1;
+      const apCap = getBanksApCap(tier);
+      const currentAp = Math.min(game.playerStockActionPoints, apCap);
+      return (
+        <div>
+          <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Swipe / Hit and Run</div>
+          <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Signature Active • Banks Only</div>
+          <div className="mt-3 text-sm text-white/80">
+            Spend all current Banks AP. The current AP stop determines which line fires, and exact sweet spots unlock the next rarity tier.
+          </div>
+          <div className="mt-3 text-[10px] uppercase tracking-[0.12em] text-white/45">
+            Current rarity: R{tier} • AP cap: {apCap} • Loaded AP: {currentAp}
+          </div>
+          <div className="mt-3 space-y-1 text-[11px] leading-4 text-white/72">
+            <div>1 AP: Swipe I, deal 1 physical.</div>
+            <div>2 AP: Swipe II, deal 2 physical.</div>
+            <div>3 AP: Hit and Run, deal 3 physical then Prowl for 100% evasion.</div>
+          </div>
+        </div>
+      );
+    }
+    if (slot.effect === 'fetch') {
+      const source = getBestFetchCandidate(game);
+      return (
+        <div>
+          <div className="text-sm font-black uppercase tracking-[0.14em] text-game-gold">Fetch</div>
+          <div className="mt-2 text-xs uppercase tracking-[0.12em] text-game-teal/70">Signature Active • Hiro Only</div>
+          <div className="mt-3 text-sm text-white/80">
+            Tableau: retrieve a top visible tableau card into Hiro&apos;s hand. Combat: retrieve the top card from a creature discard into Hiro&apos;s hand.
+          </div>
+          <div className="mt-3 text-[10px] uppercase tracking-[0.12em] text-white/45">
+            Best current source: {source?.source === 'tableau' ? 'top tableau' : source?.source === 'discard' ? 'discard pile' : 'none available'}
           </div>
         </div>
       );
@@ -6186,88 +9924,118 @@ export const GolfGame = () => {
         ) : null}
       </div>
     );
-  }, [game.assistJetRewireCooldown, game.enemyStockActionPoints, game.jetAbilityCardsPlayed, game.jetBatteryPrimeArmed, game.jetBatteries, game.jetEfficiencyDiscountReady, game.jetRewireActionsRemaining, game.panPawSperityCooldown, game.playerStockActionPoints, game.riggedConstructCapacity, game.riggedConstructCards.length, game.riggedConstructCooldown, game.riggedConstructElement, game.stickyPawsCooldown]);
+  }, [game.activeStarterPackIndex, game.assistJetRewireCooldown, game.enemyStockActionPoints, game.jetAbilityCardsPlayed, game.jetBatteryPrimeArmed, game.jetBatteries, game.jetChargedCardIds, game.jetEfficiencyDiscountReady, game.jetRewireActionsRemaining, game.panPawSperityCooldown, game.playerDiscardPile, game.playerStockActionPoints, game.riggedConstructCapacity, game.riggedConstructCards.length, game.riggedConstructCooldown, game.riggedConstructElement, game.starterPackAbilityRarities, game.stickyPawsCooldown, game.tableau]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#020205] text-white" onContextMenu={(event) => event.preventDefault()}>
+    <div ref={gameRootRef} className="relative min-h-[100dvh] overflow-x-hidden overflow-y-auto bg-[#020205] text-white" onContextMenu={(event) => event.preventDefault()}>
       <GolfPaintOverlay active={paintMode} />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(127,219,202,0.08),_transparent_42%),radial-gradient(circle_at_bottom,_rgba(230,179,30,0.05),_transparent_30%)]" />
-      <div className="absolute inset-0 opacity-60" style={{ backgroundImage: 'linear-gradient(rgba(127,219,202,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(127,219,202,0.08) 1px, transparent 1px)', backgroundSize: '120px 120px' }} />
-      <GuidanceNaviOverlay target={nextGuideTarget} travelKey={nextGuideTarget?.key ?? null} />
-      <div className="absolute left-3 top-3 z-40 pointer-events-auto rounded-xl border border-game-teal/25 bg-black/65 px-3 py-2 text-left backdrop-blur-sm md:left-4 md:top-4">
-        <div className="text-[8px] font-black uppercase tracking-[0.2em] text-game-teal/70">FPS</div>
-        <div className="mt-0.5 text-base font-black tabular-nums text-white">{fps}</div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="bg-nebula-layer" />
+        <div className="absolute inset-0 opacity-20 mix-blend-overlay" style={{ backgroundImage: 'linear-gradient(rgba(127,219,202,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(127,219,202,0.1) 1px, transparent 1px)', backgroundSize: '160px 160px' }} />
       </div>
-      <div className="absolute right-3 top-3 z-40 pointer-events-auto md:right-4 md:top-4">
-        <div className="flex items-center gap-2">
-          <div className="rounded-xl border border-game-teal/25 bg-black/65 px-3 py-2 text-right backdrop-blur-sm">
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-game-gold">Cleared</div>
-            <div className="mt-0.5 text-base font-black text-white">{game.clearedCount}/35</div>
+      <GuidanceNaviOverlay target={nextGuideTarget} travelKey={nextGuideTarget?.key ?? null} />
+      {tutorialMochiMarkerAnchor ? (
+        <div className="pointer-events-none absolute inset-0 z-40 overflow-visible">
+          <div
+            className="absolute"
+            style={{
+              left: tutorialMochiMarkerAnchor.x,
+              top: tutorialMochiMarkerAnchor.y,
+              transform: 'translate(-50%, calc(-100% - 18px))',
+            }}
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={(event) => {
+                event.stopPropagation();
+                setShowTutorialRescueDepth(true);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                event.stopPropagation();
+                setShowTutorialRescueDepth(true);
+              }}
+              className="pointer-events-auto flex cursor-pointer flex-col items-center px-4 pt-4"
+              aria-label="Show Mochi rescue depth"
+              style={{ animation: 'golf-mochi-target-bob 2.2s ease-in-out infinite' }}
+            >
+              <img
+                src="/assets/actors/mochikin/mochi_emoji_sad.png"
+                alt="Mochi target"
+                className="h-auto w-[72px]"
+                style={{ filter: 'drop-shadow(0 8px 18px rgba(0,0,0,0.55)) drop-shadow(0 0 10px rgba(255,72,72,0.32))' }}
+              />
+              <div
+                className="mt-1 h-0 w-0 border-l-[13px] border-r-[13px] border-t-[20px] border-l-transparent border-r-transparent"
+                style={{ borderTopColor: '#ff4d4d', filter: 'drop-shadow(0 0 10px rgba(255,72,72,0.58))', animation: 'golf-mochi-danger-breathe 1.7s ease-in-out infinite' }}
+              />
+            </div>
           </div>
-          {game.enemyDefeatedCount > 0 ? (
-            <div className="rounded-xl border border-game-pink/25 bg-black/65 px-3 py-2 text-right backdrop-blur-sm">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-game-pink">Defeated</div>
-              <div className="mt-0.5 text-base font-black text-white">{game.enemyDefeatedCount}</div>
+        </div>
+      ) : null}
+      <div className="absolute left-3 top-[calc(env(safe-area-inset-top)+12px)] z-40 pointer-events-auto glass-pill px-4 py-2 text-left md:left-5 md:top-5 flex items-center gap-3 rounded-full">
+        <div className="text-[10px] font-display font-bold uppercase tracking-[0.1em] text-game-teal/60">System</div>
+        <div className="h-3 w-[1px] bg-white/10" />
+        <div className="text-sm font-display font-bold tabular-nums text-white/90">{fps} <span className="text-[10px] text-white/40">FPS</span></div>
+      </div>
+      {isTutorialScenario ? (
+        <div className="absolute left-3 top-[calc(env(safe-area-inset-top)+64px)] z-40 flex flex-col gap-2 pointer-events-none md:left-5 md:top-[68px]">
+          <button
+            type="button"
+            onClick={() => setShowTutorialScenePicker(true)}
+            className="pointer-events-auto rounded-full border border-game-gold/25 bg-black/72 px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-game-gold/80 shadow-[0_0_18px_rgba(230,179,30,0.14)] transition-colors hover:border-game-gold/45 hover:bg-black/82"
+          >
+            {getTutorialSliceLabel(game.tutorialSliceId)}
+          </button>
+          {getTutorialForecastLabel(game) ? (
+            <div className="rounded-full border border-game-pink/30 bg-black/78 px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-game-pink shadow-[0_0_16px_rgba(217,70,239,0.18)]">
+              {getTutorialForecastLabel(game)}
             </div>
           ) : null}
-          <div ref={autoPlayMenuRef} className="relative">
-            <GolfHudIconButton
-              label={
-                autoPlayMode === 'off'
-                  ? 'Autoplay'
-                  : autoPlayMode === 'tableau-pause'
-                    ? 'Tableau-Only, Pause'
-                    : autoPlayMode === 'tactical-pause'
-                      ? 'Tableau+Combat, Pause'
-                      : 'Full Autoplay'
-              }
-              icon={autoPlayMode === 'off' ? 'A' : autoPlayMode === 'full' ? 'AF' : 'AP'}
-              active={autoPlayMode !== 'off'}
-              onClick={() => setShowAutoPlayMenu((prev) => !prev)}
-            />
-            {showAutoPlayMenu ? (
-              <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-64 rounded-2xl border border-game-teal/25 bg-black/90 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.42)] backdrop-blur-sm">
-                {[
-                  { mode: 'tableau-pause' as const, label: 'Tableau-Only, Pause', detail: 'Non-ancestral path, no auto end turn' },
-                  { mode: 'tactical-pause' as const, label: 'Tableau+Combat, Pause', detail: 'Uses abilities when valuable, no auto end turn' },
-                  { mode: 'full' as const, label: 'Full Autoplay', detail: 'AI vs AI until the player team falls' },
-                ].map((option) => (
-                  <button
-                    key={option.mode}
-                    type="button"
-                    onClick={() => {
-                      setAutoPlayMode(option.mode);
-                      setShowAutoPlayMenu(false);
-                      appendCombatLog({
-                        timestamp: Date.now(),
-                        biomeId: game.biomeId,
-                        type: 'autoplay',
-                        actor: 'system',
-                        detail: { effect: option.mode, selected: true },
-                      });
-                    }}
-                    className={`flex w-full flex-col rounded-xl border px-3 py-2 text-left transition-colors ${
-                      autoPlayMode === option.mode
-                        ? 'border-game-gold/40 bg-game-gold/10'
-                        : 'border-transparent hover:border-game-teal/20 hover:bg-white/5'
-                    }`}
-                  >
-                    <span className="text-[10px] font-black uppercase tracking-[0.14em] text-white">{option.label}</span>
-                    <span className="mt-1 text-[9px] uppercase tracking-[0.08em] text-white/55">{option.detail}</span>
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAutoPlayMode('off');
-                    setShowAutoPlayMenu(false);
-                  }}
-                  className="mt-2 flex w-full items-center justify-center rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/65 hover:bg-white/5"
-                >
-                  Autoplay Off
-                </button>
+        </div>
+      ) : null}
+      <div className="absolute left-3 right-3 top-[calc(env(safe-area-inset-top)+64px)] z-40 pointer-events-auto md:left-auto md:right-5 md:top-5">
+        <div className="flex flex-wrap items-center justify-end gap-3 glass-panel rounded-full px-2 py-2 md:pl-6 md:pr-2">
+          <div className="flex flex-col items-end justify-center mr-2 pr-2 border-r border-white/10">
+            <div className="text-[9px] font-display font-bold uppercase tracking-[0.15em] text-game-gold/80">Cleared</div>
+            <div className="text-sm font-display font-bold text-white tracking-widest leading-none mt-0.5">{tutorialClearedDisplay}<span className="text-white/30 mx-0.5">/</span>{tutorialClearedGoal}</div>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowDiscardTray((prev) => !prev)}
+              className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 px-3 py-2 min-w-[70px] hover:bg-white/10 hover:border-white/20 transition-all duration-200"
+            >
+              <div className="text-[9px] font-display font-bold uppercase tracking-[0.12em] text-game-teal/60">Discard</div>
+              <div className="text-lg font-display font-bold text-game-teal leading-none mt-0.5">{game.playerDiscardPile.length}</div>
+            </button>
+            {showDiscardTray ? (
+              <div className="absolute right-0 top-[calc(100%+12px)] w-52 glass-panel rounded-xl p-3 shadow-2xl">
+                <div className="text-[10px] font-display font-bold uppercase tracking-[0.12em] text-game-teal mb-3 px-1">Party Discards</div>
+                <div className="flex flex-col gap-1.5">
+                  {['Jet', 'Hiro', 'Pan', 'Whis'].map((actorName) => (
+                    <div key={actorName} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1.5 border border-white/5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">{actorName}</span>
+                      <span className="text-xs font-display font-bold tabular-nums text-white">{partyDiscardCounts[actorName] ?? 0}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : null}
+          </div>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-transparent px-3 py-2 min-w-[70px]">
+            <div className="text-[9px] font-display font-bold uppercase tracking-[0.12em] text-white/40">Points</div>
+            <div className="text-lg font-display font-bold text-white/80 leading-none mt-0.5">{game.bankedPoints}</div>
+          </div>
+          <div className={`flex flex-col items-center justify-center rounded-xl border px-3 py-2 min-w-[80px] transition-colors duration-300 ${
+            game.enemyLootCards.length > 0
+              ? 'border-game-gold/30 bg-game-gold/10 shadow-[0_0_15px_rgba(230,179,30,0.15)]'
+              : 'border-white/5 bg-transparent'
+          }`}>
+            <div className={`text-[9px] font-display font-bold uppercase tracking-[0.12em] ${game.enemyLootCards.length > 0 ? 'text-game-gold/80' : 'text-white/40'}`}>Enemy Loot</div>
+            <div className={`text-lg font-display font-bold leading-none mt-0.5 ${game.enemyLootCards.length > 0 ? 'text-game-gold' : 'text-white/60'}`}>{game.enemyLootCards.length}</div>
           </div>
           <GolfHudIconButton label={paintMode ? 'Paint On' : 'Paint'} icon="P" active={paintMode} onClick={() => setPaintMode((prev) => !prev)} />
           <GolfHudIconButton label={isPaused ? 'Resume' : 'Pause'} icon={isPaused ? '▶' : '⏸'} active={isPaused} onClick={() => setIsPaused((prev) => !prev)} />
@@ -6275,647 +10043,824 @@ export const GolfGame = () => {
         </div>
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-3 px-3 py-3 md:px-4 md:py-4">
-          <div className="flex w-full flex-col items-center gap-3">
-          <div className="flex w-full justify-center">
-            <div className="relative flex items-center justify-center" style={{ gap: benchGap }}>
-              {game.enemyBench.map((card, benchIndex) => (
+      <div className={`relative z-10 flex min-h-[100dvh] flex-col items-center justify-start px-3 md:px-4 ${
+        ultraShortViewport
+          ? 'gap-1.5 pb-[calc(env(safe-area-inset-bottom)+88px)] pt-[calc(env(safe-area-inset-top)+96px)] md:pb-20 md:pt-14'
+          : shortViewport
+            ? 'gap-2 pb-[calc(env(safe-area-inset-bottom)+92px)] pt-[calc(env(safe-area-inset-top)+108px)] md:pb-22 md:pt-16'
+            : 'gap-3 pb-[calc(env(safe-area-inset-bottom)+104px)] pt-[calc(env(safe-area-inset-top)+124px)] md:pb-24 md:pt-20'
+      }`}>
+        {showKinInspector ? (
+          <div ref={benchInspectorRef} className={`flex w-full max-w-[1560px] flex-1 flex-col items-center justify-start pt-4 ${shortViewport ? 'gap-4' : 'gap-6'}`}>
+            <div className={`flex w-full flex-col items-center justify-center ${shortViewport ? 'gap-4' : 'gap-6'} xl:flex-row xl:items-start`}>
+              <div className="shrink-0">
                 <KinBenchCard
-                  key={card.id}
-                  card={card}
-                  vitals={getCombatVitals(game, card)}
-                  combatant={getCombatantForCard(game, card)}
-                  actionPoints={0}
-                  apSegments={normalizeApSegments([], 0, card.element)}
-                  discardCount={0}
+                  card={inspectedKinCard}
+                  vitals={getCombatVitals(game, inspectedKinCard)}
+                  combatant={getCombatantForCard(game, inspectedKinCard)}
+                  actionPoints={game.playerStockActionPoints}
+                  cardSize={boardCardSize}
+                  heuristicLabel={null}
+                  highlighted={false}
+                  breathing={highlightPanForBadLuck && inspectedKinCard.name === 'Pan'}
+                  discardCount={game.playerDiscardPile.length}
+                  flashVersions={statusFlashVersions}
                   canInteract={false}
                   onClick={() => {}}
-                  cardRef={(node) => {
-                    enemyBenchRefs.current[benchIndex] = node;
-                  }}
-                  cardSize={handCardSize}
                 />
-              ))}
-              <div className="relative">
-                <StockActorShellView
-                  actor={currentEnemyProfile.actor}
-                  stock={game.enemyStock}
-                  vitals={getCombatVitals(game, game.enemyStock)}
-                  combatant={getCombatantForCard(game, game.enemyStock)}
-                  stockRef={enemyStockRef}
-                  cardSize={boardCardSize}
-                  indicatorSize={indicatorSize}
-                  compact={boardCompact}
-                  apSegments={normalizeApSegments([], game.enemyStockActionPoints, game.enemyStock.element)}
-                />
-                {game.enemyDefeatFx ? (
-                  <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden rounded-[20px]">
-                    <BurnEdgesEffect
-                      className="!h-full !w-full !p-0"
-                      fitContainer
-                      hideLabel
-                      config={{
-                        progress: enemyBurnProgress,
-                        burnColor: '#ff6b35',
-                        burnWidth: 0.05,
-                        noiseScale: 0.75,
-                        aspectRatio: boardCardSize.width / boardCardSize.height,
-                      }}
-                    />
+              </div>
+              <div className="w-full max-w-[760px] rounded-[28px] border border-game-gold/18 bg-[linear-gradient(180deg,rgba(8,10,16,0.92),rgba(4,6,10,0.86))] px-5 py-5 text-left shadow-[0_18px_50px_rgba(0,0,0,0.34)]">
+                <div className="text-[11px] font-black uppercase tracking-[0.22em] text-game-gold">
+                  {inspectorNarrative.title}
+                </div>
+                <div className="mt-3 text-[14px] font-semibold leading-[1.5] text-white/88">
+                  {inspectorNarrative.summary}
+                </div>
+                {inspectorNarrative.detail ? (
+                  <div className="mt-3 text-[12px] leading-[1.6] text-white/66">
+                    {inspectorNarrative.detail}
                   </div>
                 ) : null}
               </div>
             </div>
-          </div>
-
-          {enemyStealSelectorOpen ? (
-            <div className="flex w-full justify-center">
-              <div className="rounded-2xl border border-game-gold/30 bg-black/80 px-4 py-3 shadow-[0_0_24px_rgba(230,179,30,0.14)] backdrop-blur-sm">
-                <div className="text-center text-[10px] font-black uppercase tracking-[0.18em] text-game-gold">
-                  Sticky Paws: Snatch One
+            <div className="grid w-full gap-4 md:grid-cols-2 2xl:grid-cols-4">
+              {inspectedKinSections.map((section) => (
+                <div
+                  key={section.key}
+                  className="rounded-[24px] border border-white/10 bg-black/46 px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.24)]"
+                >
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-game-teal/88">
+                    {section.title}
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-start gap-3">
+                    {section.slots.map((slot, index) => (
+                      <Tooltip
+                        key={`${inspectedKinCard.id}-${section.key}-${slot.effect ?? slot.name ?? slot.slotId}-${index}`}
+                        content={renderAbilityTooltip(slot)}
+                        pinnable={false}
+                      >
+                        <HandSlotCard
+                          slot={slot}
+                          canUse={false}
+                          onClick={() => {}}
+                          cooldownRemaining={getAbilityCooldown(game, slot.effect)}
+                          taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
+                          cardSize={handCardSize}
+                        />
+                      </Tooltip>
+                    ))}
+                  </div>
                 </div>
-                <div className="mt-3 flex items-start justify-center" style={{ gap: benchGap }}>
-                  {enemyStealOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => useStickyPawsCombat(option)}
-                      className="rounded-[16px] border border-game-gold/25 bg-black/45 p-1 transition-colors hover:border-game-gold/50 hover:bg-black/65"
-                    >
-                      <div className="text-[9px] font-black uppercase tracking-[0.14em] text-white/55">
-                        {option.source === 'prime' ? 'Prime' : 'Reserve'}
-                      </div>
-                      <div className="mt-1">
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className={`flex w-full flex-col items-center ${shortViewport ? 'gap-0.5' : 'gap-1'}`}>
+            <div className={`flex w-full flex-col items-center ${shortViewport ? 'gap-0.5' : 'gap-1'}`}>
+            <div className={`flex w-full max-w-[1280px] flex-col items-center ${shortViewport ? 'gap-0.5' : 'gap-1'}`}>
+              {combatLaneActive ? (
+                <div className="relative flex w-full flex-col items-center justify-center gap-2">
+                  <div className="flex w-full items-end justify-center gap-2 md:gap-3">
+                    {enemyBenchLeftSlots.map((slot, index) => renderEnemyBenchSlot(slot, `enemy-left-${index}`))}
+                    <div className="flex flex-col items-center gap-2">
+                      <div
+                        ref={enemyStockRef}
+                        className="relative rounded-[20px] border border-white/12 bg-black/40 p-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+                        style={{
+                          animation: highlightedActorNames.includes(game.enemyStock.name) ? 'golf-actor-blink 0.72s ease-in-out 2' : undefined,
+                        }}
+                      >
+                        <ActorStatusRail
+                          actorName={game.enemyStock.name}
+                          combatant={game.combatants[actorKeyFromName(game.enemyStock.name)] ?? createCombatant(game.enemyStock.name)}
+                          maxVisible={4}
+                          iconSize={20}
+                          highlightedKeys={highlightedStatusKeys}
+                          flashVersions={statusFlashVersions}
+                          transientStatuses={transientStatusEvents.filter((entry) => entry.actorName === game.enemyStock.name)}
+                        />
                         <Card
-                          card={option.card}
+                          card={game.enemyStock}
                           showGraphics={false}
-                          size={handCardSize}
-                          suitFontSizeOverride={indicatorSize}
+                          size={boardCardSize}
+                          foundationOverlay={getCombatVitals(game, game.enemyStock)}
+                          suitFontSizeOverride={0}
+                          hideElements
+                          maskValue
                           disableAnimation
                           disableTilt
                           disableHoverLift
                         />
+                        <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex justify-center">
+                          <div className="w-full px-2 py-0.5 text-center text-[9px] font-black uppercase tracking-[0.14em] text-white/88 [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_6px_rgba(255,255,255,0.12)]">
+                            {game.enemyStock.name}
+                          </div>
+                        </div>
+                        <div className="pointer-events-none absolute inset-x-0 top-[58px] z-20 flex justify-center">
+                          <div className="text-[34px] font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_10px_rgba(255,255,255,0.16)]">
+                            {rankLabel(game.enemyStock.rank)}
+                          </div>
+                        </div>
+                        <StaggerPressureBadge
+                          pressure={(game.combatants[actorKeyFromName(game.enemyStock.name)]?.staggerPressure ?? 0)}
+                        />
+                        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 rounded-full border border-white/12 bg-black/70 px-3 py-1 text-center text-[8px] font-black uppercase tracking-[0.14em] text-white/65">
+                          {currentEnemyProfile.actor.moveset.join(' • ')}
+                        </div>
+                        <ApBadge actionPoints={game.enemyStockActionPoints} />
                       </div>
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-3 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setEnemyStealSelectorOpen(false)}
-                    className="rounded-full border border-white/15 bg-black/65 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/65 hover:border-white/25 hover:text-white"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="flex w-full justify-center">
-            <div className="flex items-start" style={{ gap: columnGap }}>
-              {game.tableau.map((column, columnIndex) => {
-                const topCard = column[column.length - 1] ?? null;
-                const eligibleTargets = topCard ? getEligiblePlayerTargetsForCard(game, topCard) : [];
-                const stickyPreviewRank = column.length > 1 ? rankLabel(column[column.length - 2].rank) : null;
-                const showStickyPreview =
-                  !!topCard &&
-                  !!stickyPreviewRank &&
-                  stickyPawsPreviewActive &&
-                  (eligibleTargets.length > 0 || canRouteCardIntoConstruct(game, topCard));
-                const isPlayable =
-                  !!topCard &&
-                  currentTurn === 'player' &&
-                  eligibleTargets.length > 0 &&
-                  (!stickyPawsArmed || column.length > 1);
-                const tableauSourcePrimed =
-                  currentTurn === 'player' &&
-                  pendingPlayerPlay?.source === 'tableau' &&
-                  typeof pendingPlayerPlay.columnIndex === 'number';
-                const peekAmount = playerPeek;
-                const edgePeekAmount = playerPeek;
-                const columnHeight = boardCardSize.height + Math.max(0, column.length - 2) * peekAmount + (column.length > 1 ? edgePeekAmount : 0);
-                const orderedCards = column;
-
-                return (
-                  <div
-                    key={`column-${columnIndex}`}
-                    className="relative"
-                    style={{ width: boardCardSize.width + 4, height: (columnHeight || boardCardSize.height) + 4 }}
-                  >
-                    {column.length === 0 ? (
-                      (() => {
-                        tableauTopRefs.current[columnIndex] = null;
-                        return (
-                      <div className="flex h-full items-center justify-center rounded-[22px] border border-dashed border-game-teal/15 bg-black/20 text-[10px] font-black uppercase tracking-[0.32em] text-game-teal/25">
-                        Cleared
+                      <div className="w-full max-w-[220px] rounded-[16px] border border-white/10 bg-black/32 px-3 py-2 text-center">
+                        <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/48">Intent</div>
+                        <div
+                          ref={maulReadyRef}
+                          className="mt-1"
+                          style={{
+                            animation: enemyActionPreview.hostile ? 'golf-maul-alert 1.25s ease-in-out infinite' : undefined,
+                          }}
+                        >
+                          <div className="text-[12px] font-black uppercase tracking-[0.12em] text-white/84">{enemyActionPreview.title}</div>
+                          <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-game-gold/72">{enemyActionPreview.targetLabel}</div>
+                          <div className="mt-1 text-[11px] leading-4 text-white/62">{enemyActionPreview.detail}</div>
+                        </div>
                       </div>
-                        );
-                      })()
-                    ) : (
-                      orderedCards.map((card, displayIndex) => {
-                        const actualIndex = displayIndex;
-                        const isTopCard = actualIndex === column.length - 1;
-                        const isEnemyDragSource =
-                          enemyDragAnim?.mode === 'drag' &&
-                          enemyDragAnim.sourceColumnIndex === columnIndex &&
-                          isTopCard;
-                        const visualTop =
-                          actualIndex === column.length - 1
-                            ? Math.max(0, actualIndex - 1) * peekAmount + edgePeekAmount
-                            : actualIndex * peekAmount;
-                        const guidanceGlow =
-                          currentTurn === 'player' &&
-                          effectiveOracleMode !== 'off' &&
-                          isTopCard &&
-                          guidanceNextColumn === columnIndex;
-                        const isSelectedSource =
-                          currentTurn === 'player' &&
-                          pendingPlayerPlay?.source === 'tableau' &&
-                          pendingPlayerPlay.columnIndex === columnIndex &&
-                          isTopCard;
-                        const backgroundTableauCard = tableauSourcePrimed && !isSelectedSource;
+                    </div>
+                    {enemyBenchRightSlots.map((slot, index) => renderEnemyBenchSlot(slot, `enemy-right-${index}`))}
+                  </div>
+                </div>
+              ) : null}
+              <div
+                className="flex w-full justify-center overflow-x-auto overflow-y-visible pb-2"
+                style={{
+                  paddingTop: !combatLaneActive ? Math.max(132, Math.round(boardCardSize.height * 0.9)) : undefined,
+                  paddingBottom: !combatLaneActive ? Math.max(16, Math.round(boardCardSize.height * 0.08)) : undefined,
+                }}
+              >
+                <div className="flex min-w-max items-start px-1" style={{ gap: columnGap }}>
+                  {game.tableau.map((column, columnIndex) => {
+                    const topCard = column[column.length - 1] ?? null;
+                    const eligibleTargets = topCard ? getEligiblePlayerTargetsForCard(game, topCard) : [];
+                    const stickyPreviewRank = column.length > 1 ? rankLabel(column[column.length - 2].rank) : null;
+                    const showStickyPreview =
+                      !!topCard &&
+                      !!stickyPreviewRank &&
+                      stickyPawsPreviewActive &&
+                      (eligibleTargets.length > 0 || canRouteCardIntoConstruct(game, topCard));
+                    const rewirePlayable =
+                      !!topCard &&
+                      currentTurn === 'player' &&
+                      game.playerStock.name === 'Jet' &&
+                      game.jetRewireActionsRemaining > 0;
+                    const isMochiTokenCollectible = isTutorialMochiRescueTokenCollectible(game, columnIndex, topCard);
+                    const isPlayable =
+                      !!topCard &&
+                      currentTurn === 'player' &&
+                      (rewirePlayable || eligibleTargets.length > 0 || isMochiTokenCollectible) &&
+                      (!tutorialRailColumns || tutorialRailColumns.has(columnIndex)) &&
+                      (!stickyPawsArmed || column.length > 1);
+                    const tableauSourcePrimed =
+                      currentTurn === 'player' &&
+                      pendingPlayerPlay?.source === 'tableau' &&
+                      typeof pendingPlayerPlay.columnIndex === 'number';
+                    const actualHiddenCount = Math.max(0, column.length - 1);
+                    const layeredTableauActive = !combatLaneActive && displayNonCombatPeekCount > 0;
+                    const columnHeight = boardCardSize.height + displayNonCombatPeekCount * nonCombatTableauPeek;
+                    const orderedCards = column;
+                    const placeholderDepths = layeredTableauActive
+                      ? Array.from(
+                          { length: Math.max(0, displayNonCombatPeekCount - actualHiddenCount) },
+                          (_, index) => displayNonCombatPeekCount - index
+                        ).filter((depth) => depth > actualHiddenCount)
+                      : [];
 
-                        return (
-                          <button
-                            key={card.id}
-                            ref={
-                              isTopCard
-                                ? (node) => {
-                                    tableauTopRefs.current[columnIndex] = node;
-                                  }
-                                : undefined
-                            }
-                            type="button"
-                            onClick={isTopCard ? () => playToPlayerStock(columnIndex) : undefined}
-                            disabled={!isTopCard || !isPlayable}
-                            className={`absolute left-0 overflow-hidden rounded-[16px] p-0.5 text-left transition-transform ${
-                              isTopCard && isPlayable
-                                ? 'cursor-pointer hover:-translate-y-1'
-                                : isTopCard
-                                  ? 'cursor-default'
-                                  : 'pointer-events-none'
-                            }`}
-                            style={{
-                              top: visualTop,
-                              width: boardCardSize.width + 4,
-                              height: boardCardSize.height + 4,
-                              zIndex: displayIndex + 1,
-                              transform: isSelectedSource
-                                ? 'translateY(-10px) scale(1.06)'
-                                : backgroundTableauCard
-                                  ? 'scale(0.985)'
-                                  : undefined,
-                              animation: isSelectedSource ? 'golf-selected-card-float 1.4s ease-in-out infinite' : undefined,
-                              filter: backgroundTableauCard ? 'grayscale(1) saturate(0.45) brightness(0.42)' : undefined,
-                              opacity: backgroundTableauCard ? 0.7 : 1,
-                            }}
-                          >
-                            <div
-                              className={`rounded-[16px] border p-0.5 shadow-[0_0_18px_rgba(255,255,255,0.08)] ${
-                                isTopCard ? 'border-white/15 bg-black/62' : 'border-white/10 bg-black/55'
-                              }`}
-                              style={
-                                isSelectedSource
-                                  ? {
-                                      borderColor: 'rgba(230,179,30,0.7)',
-                                      boxShadow: '0 0 28px rgba(230,179,30,0.32), 0 0 10px rgba(230,179,30,0.2)',
-                                      background: 'rgba(14, 10, 3, 0.82)',
-                                    }
-                                  : backgroundTableauCard
-                                    ? {
-                                        borderColor: 'rgba(255,255,255,0.08)',
-                                        boxShadow: 'none',
-                                        background: 'rgba(0, 0, 0, 0.82)',
-                                      }
-                                  : guidanceGlow
-                                    ? { boxShadow: effectiveOracleMode === 'ancestors' ? '0 0 24px rgba(230,179,30,0.28)' : '0 0 20px rgba(230,179,30,0.16)' }
-                                    : undefined
-                              }
-                            >
-                              {isEnemyDragSource ? (
+                    return (
+                      <div
+                        key={`column-${columnIndex}`}
+                        className={`relative ${layeredTableauActive ? 'overflow-visible' : 'overflow-hidden'}`}
+                        style={{ width: boardCardSize.width + 4, height: (columnHeight || boardCardSize.height) + 4 }}
+                      >
+                        {column.length === 0 ? (
+                          (() => {
+                            tableauTopRefs.current[columnIndex] = null;
+                            return (
+                              <div className="flex h-full items-center justify-center rounded-[22px] holo-slot-border text-[12px] font-display font-bold uppercase tracking-[0.35em] text-game-teal/40 holo-text-glow">
+                                Cleared
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <>
+                            {placeholderDepths.map((depth) => {
+                              const placeholderTop = displayNonCombatPeekCount * nonCombatTableauPeek - (depth * nonCombatTableauPeek);
+                              return (
                                 <div
-                                  className="rounded-[14px] border border-white/14 bg-black/94 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]"
-                                  style={{ width: boardCardSize.width, height: boardCardSize.height }}
+                                  key={`column-${columnIndex}-placeholder-${depth}`}
+                                  className="pointer-events-none absolute left-0 overflow-hidden rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(18,20,26,0.74),rgba(7,8,11,0.68))]"
+                                  style={{
+                                    top: placeholderTop,
+                                    width: boardCardSize.width + 4,
+                                    height: boardCardSize.height + 4,
+                                    zIndex: 0,
+                                    opacity: 0.55,
+                                    clipPath: `inset(0 0 calc(100% - ${nonCombatRankReveal}px) 0 round 16px)`,
+                                    boxShadow: '0 0 12px rgba(255,255,255,0.04)',
+                                  }}
                                 />
-                              ) : (
-                                <div className="relative">
-                                  <Card
-                                    card={card}
-                                    showGraphics={false}
-                                    size={boardCardSize}
-                                    canPlay={isTopCard && isPlayable}
-                                    suitFontSizeOverride={indicatorSize}
-                                    disableAnimation={!isTopCard}
-                                    disableTilt
-                                    disableHoverLift
-                                  />
-                                  {isTopCard && showStickyPreview ? (
-                                    <div className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 -translate-y-[120%]">
-                                      <div className="rounded-full border border-game-gold/45 bg-black/88 px-2 py-1 shadow-[0_0_18px_rgba(230,179,30,0.24)]">
-                                        <div className="text-[8px] font-black uppercase tracking-[0.16em] text-game-gold/70">under</div>
-                                        <div className="mt-[1px] text-center text-[12px] font-black leading-none text-white">{stickyPreviewRank}</div>
+                              );
+                            })}
+                          {orderedCards.map((card, displayIndex) => {
+                            const actualIndex = displayIndex;
+                            const isTopCard = actualIndex === column.length - 1;
+                            const buriedDepth = column.length - 1 - actualIndex;
+                            const isChargedTopCard = isTopCard && isJetChargedCard(game, card.id);
+                            const biteCount = isTopCard ? getEnemyBiteCount(game, card.id) : 0;
+                            const visiblePeekDepth = layeredTableauActive
+                              ? Math.min(displayNonCombatPeekCount, buriedDepth)
+                              : 0;
+                            const tableauFrontTop = !combatLaneActive
+                              ? displayNonCombatPeekCount * nonCombatTableauPeek
+                              : 0;
+                            const visualTop = !combatLaneActive
+                              ? Math.max(0, tableauFrontTop - (visiblePeekDepth * nonCombatTableauPeek))
+                              : 0;
+                            const guidanceGlow =
+                              currentTurn === 'player' &&
+                              effectiveOracleMode !== 'off' &&
+                              isTopCard &&
+                              guidanceNextColumn === columnIndex;
+                            const isSelectedSource =
+                              currentTurn === 'player' &&
+                              pendingPlayerPlay?.source === 'tableau' &&
+                              pendingPlayerPlay.columnIndex === columnIndex &&
+                              isTopCard;
+                            const backgroundTableauCard = tableauSourcePrimed && !isSelectedSource;
+                            const isTutorialMochiTargetCard =
+                              game.tutorialSliceId === 'slice-01' &&
+                              columnIndex === tutorialMochiTargetColumn &&
+                              card.id === tutorialMochiTargetCardId;
+                            const showMochiRescueToken = isTutorialMochiTargetCard;
+                            const buriedCardAccessible = !isTopCard && canAccessBuriedTableauCard(game, columnIndex, card, buriedDepth);
+                            const hideTutorialBuriedCardFace = !!game.tutorialSliceId && !isTopCard;
+                            const showTutorialPursuitMarker = isTutorialPursuitMarkerCard(game, columnIndex, buriedDepth);
+
+                            if (layeredTableauActive && !isTopCard) {
+                              if (isTutorialFillerCard(card) || hideTutorialBuriedCardFace) {
+                                return (
+                                  <div key={card.id} className="contents">
+                                    <div
+                                      ref={(node) => {
+                                        tableauCardRefs.current[card.id] = node;
+                                      }}
+                                      className="pointer-events-none absolute left-0 overflow-hidden rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(18,20,26,0.74),rgba(7,8,11,0.68))]"
+                                      style={{
+                                        top: visualTop,
+                                        width: boardCardSize.width + 4,
+                                        height: boardCardSize.height + 4,
+                                        zIndex: displayIndex + 1,
+                                        opacity: isTutorialFillerCard(card) ? 0.52 : 0.58,
+                                        clipPath: `inset(0 0 calc(100% - ${nonCombatRankReveal}px) 0 round 16px)`,
+                                        boxShadow: '0 0 12px rgba(255,255,255,0.04)',
+                                      }}
+                                    />
+                                    {isTutorialMochiTargetCard ? (
+                                      <div
+                                        className="pointer-events-none absolute left-0 rounded-[16px] border-2 border-[#ff5c5c]/90 shadow-[0_0_34px_rgba(255,72,72,0.28),0_0_12px_rgba(255,72,72,0.2)]"
+                                        style={{
+                                          top: visualTop,
+                                          width: boardCardSize.width + 4,
+                                          height: boardCardSize.height + 4,
+                                          zIndex: displayIndex + 1,
+                                          animation: 'golf-mochi-danger-breathe 1.7s ease-in-out infinite',
+                                        }}
+                                      >
+                                        <div
+                                          className="pointer-events-none absolute inset-x-0 flex justify-center"
+                                          style={{ top: Math.max(18, Math.round(nonCombatRankReveal * 0.46)) }}
+                                        >
+                                          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#ff7f7f]/85 bg-[rgba(20,6,6,0.92)] text-[16px] shadow-[0_0_14px_rgba(255,72,72,0.28)]">
+                                            🐾
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                    {showTutorialPursuitMarker ? (
+                                      <div
+                                        className="pointer-events-none absolute left-0 rounded-[16px]"
+                                        style={{
+                                          top: visualTop,
+                                          width: boardCardSize.width + 4,
+                                          height: boardCardSize.height + 4,
+                                          zIndex: displayIndex + 2,
+                                        }}
+                                      >
+                                        <div className="absolute inset-x-0 top-[8px] flex justify-center">
+                                          <div className="rounded-full border border-[#8fe6ff]/45 bg-[rgba(5,14,22,0.92)] px-2 py-0.5 text-[14px] font-black leading-none text-[#8fe6ff] shadow-[0_0_14px_rgba(143,230,255,0.2)]">
+                                            ?
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div key={card.id} className="contents">
+                                  <div
+                                    ref={(node) => {
+                                      tableauCardRefs.current[card.id] = node;
+                                    }}
+                                    className="pointer-events-none absolute left-0 overflow-hidden rounded-[16px] border border-white/15 bg-[linear-gradient(180deg,rgba(18,20,26,0.96),rgba(7,8,11,0.92))] shadow-[0_0_18px_rgba(255,255,255,0.08)]"
+                                    style={{
+                                      top: visualTop,
+                                      width: boardCardSize.width + 4,
+                                      height: boardCardSize.height + 4,
+                                      zIndex: displayIndex + 1,
+                                      opacity: buriedCardAccessible ? 0.98 : 0.88,
+                                      clipPath: `inset(0 0 calc(100% - ${nonCombatRankReveal}px) 0 round 16px)`,
+                                    }}
+                                  >
+                                    <div className="pointer-events-none absolute inset-x-0 top-[8px] z-20 flex justify-center">
+                                      <div
+                                        className="text-[28px] font-black leading-none [text-shadow:0_1px_0_rgba(0,0,0,0.92),0_0_8px_rgba(255,255,255,0.08)]"
+                                        style={{
+                                          color: buriedCardAccessible ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.42)',
+                                        }}
+                                      >
+                                        {rankLabel(card.rank)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {isTutorialMochiTargetCard ? (
+                                    <div
+                                      className="pointer-events-none absolute left-0 rounded-[16px] border-2 border-[#ff5c5c]/90 shadow-[0_0_34px_rgba(255,72,72,0.28),0_0_12px_rgba(255,72,72,0.2)]"
+                                      style={{
+                                        top: visualTop,
+                                        width: boardCardSize.width + 4,
+                                        height: boardCardSize.height + 4,
+                                        zIndex: displayIndex + 1,
+                                        animation: 'golf-mochi-danger-breathe 1.7s ease-in-out infinite',
+                                      }}
+                                    >
+                                      <div
+                                        className="pointer-events-none absolute inset-x-0 flex justify-center"
+                                        style={{ top: Math.max(18, Math.round(nonCombatRankReveal * 0.46)) }}
+                                      >
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#ff7f7f]/85 bg-[rgba(20,6,6,0.92)] text-[16px] shadow-[0_0_14px_rgba(255,72,72,0.28)]">
+                                          🐾
+                                        </div>
                                       </div>
                                     </div>
                                   ) : null}
                                 </div>
-                              )}
+                              );
+                            }
+
+                            return (
+                              <button
+                                key={card.id}
+                                ref={(node) => {
+                                  tableauCardRefs.current[card.id] = node;
+                                  if (isTopCard) {
+                                    tableauTopRefs.current[columnIndex] = node;
+                                  }
+                                }}
+                                type="button"
+                                onClick={isTopCard ? () => playToPlayerStock(columnIndex) : undefined}
+                                disabled={!isTopCard || !isPlayable}
+                                className={`absolute left-0 overflow-hidden rounded-[16px] p-0.5 text-left transition-transform ${
+                                  isTopCard && isPlayable
+                                    ? 'cursor-pointer hover:-translate-y-1'
+                                    : isTopCard
+                                      ? 'cursor-default'
+                                      : 'pointer-events-none'
+                                }`}
+                                style={{
+                                  top: visualTop,
+                                  width: boardCardSize.width + 4,
+                                  height: boardCardSize.height + 4,
+                                  zIndex: displayIndex + 1,
+                                  transform: isSelectedSource
+                                    ? 'translateY(-10px) scale(1.06)'
+                                    : backgroundTableauCard
+                                      ? 'scale(0.985)'
+                                      : undefined,
+                                  animation: isSelectedSource ? 'golf-selected-card-float 1.4s ease-in-out infinite' : undefined,
+                                  filter: backgroundTableauCard
+                                    ? 'grayscale(1) saturate(0.45) brightness(0.42)'
+                                    : undefined,
+                                  opacity: backgroundTableauCard ? 0.7 : 1,
+                                }}
+                              >
+                                <div
+                                  className="rounded-[16px] border border-white/15 bg-[linear-gradient(180deg,rgba(18,20,26,0.96),rgba(7,8,11,0.92))] p-0.5 shadow-[0_0_18px_rgba(255,255,255,0.08)]"
+                                  style={
+                                    isSelectedSource
+                                      ? {
+                                          borderColor: 'rgba(230,179,30,0.7)',
+                                          boxShadow: '0 0 28px rgba(230,179,30,0.32), 0 0 10px rgba(230,179,30,0.2)',
+                                          background: 'rgba(14, 10, 3, 0.82)',
+                                        }
+                                      : backgroundTableauCard
+                                        ? {
+                                            borderColor: 'rgba(255,255,255,0.08)',
+                                            boxShadow: 'none',
+                                            background: 'rgba(0, 0, 0, 0.82)',
+                                          }
+                                        : isChargedTopCard
+                                          ? {
+                                              borderColor: 'rgba(112,229,240,0.62)',
+                                              boxShadow: '0 0 26px rgba(112,229,240,0.22), inset 0 0 18px rgba(112,229,240,0.08)',
+                                              background: 'rgba(3, 12, 18, 0.82)',
+                                            }
+                                          : isTutorialMochiTargetCard
+                                            ? {
+                                                borderColor: 'rgba(255,92,92,0.78)',
+                                                boxShadow: '0 0 34px rgba(255,72,72,0.28), 0 0 12px rgba(255,72,72,0.2)',
+                                                background: 'rgba(20, 6, 6, 0.82)',
+                                                animation: 'golf-mochi-danger-breathe 1.7s ease-in-out infinite',
+                                              }
+                                          : guidanceGlow
+                                            ? { boxShadow: effectiveOracleMode === 'ancestors' ? '0 0 24px rgba(230,179,30,0.28)' : '0 0 20px rgba(230,179,30,0.16)' }
+                                            : undefined
+                                  }
+                                >
+                                  <div className="relative">
+                                    {isTutorialFillerCard(card) ? (
+                                      <div
+                                        className="rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(18,20,26,0.74),rgba(7,8,11,0.68))]"
+                                        style={{
+                                          width: boardCardSize.width,
+                                          height: boardCardSize.height,
+                                          boxShadow: 'inset 0 0 18px rgba(255,255,255,0.03)',
+                                        }}
+                                      />
+                                    ) : null}
+                                    {isTutorialMochiTargetCard ? (
+                                      <div
+                                        className="pointer-events-none absolute inset-0 z-30 rounded-[16px] border-2 border-[#ff5c5c]/90 shadow-[0_0_34px_rgba(255,72,72,0.28),0_0_12px_rgba(255,72,72,0.2)]"
+                                        style={{ animation: 'golf-mochi-danger-breathe 1.7s ease-in-out infinite' }}
+                                      />
+                                    ) : null}
+                                    {!isTutorialFillerCard(card) ? (
+                                      <Card
+                                        card={card}
+                                        showGraphics={false}
+                                        size={boardCardSize}
+                                        canPlay={isTopCard && isPlayable}
+                                        borderColorOverride="transparent"
+                                        boxShadowOverride="none"
+                                        suitDisplayOverride={card.suit}
+                                        suitFontSizeOverride={indicatorSize}
+                                        disableAnimation={!isTopCard}
+                                        disableTilt
+                                        disableHoverLift
+                                        cardTokens={
+                                          showMochiRescueToken
+                                            ? [{
+                                                id: 'mochi-rescue-paw',
+                                                label: 'Mochi Rescue',
+                                                emoji: '🐾',
+                                                tone: 'alert',
+                                                anchor: 'mid-center',
+                                                prominent: true,
+                                                revealEffect: 'rescue-flash',
+                                              }]
+                                            : []
+                                        }
+                                      />
+                                    ) : null}
+                                    {biteCount > 0 ? (
+                                      <>
+                                        <div
+                                          className="pointer-events-none absolute -right-4 top-4 z-10 h-10 w-10 rounded-full border border-[#2f0d07] bg-[#060303] shadow-[0_0_0_2px_rgba(0,0,0,0.78)]"
+                                          style={{ opacity: 0.95 }}
+                                        />
+                                        <div
+                                          className="pointer-events-none absolute -right-3 top-[calc(50%-18px)] z-10 h-9 w-9 rounded-full border border-[#2f0d07] bg-[#060303] shadow-[0_0_0_2px_rgba(0,0,0,0.78)]"
+                                          style={{ opacity: biteCount >= 2 ? 0.95 : 0 }}
+                                        />
+                                        <div
+                                          className="pointer-events-none absolute -right-4 bottom-4 z-10 h-10 w-10 rounded-full border border-[#2f0d07] bg-[#060303] shadow-[0_0_0_2px_rgba(0,0,0,0.78)]"
+                                          style={{ opacity: biteCount >= 3 ? 0.95 : 0 }}
+                                        />
+                                        <div className="pointer-events-none absolute left-2 top-2 z-10 rounded-full border border-[#ff8a62]/45 bg-[rgba(29,8,5,0.88)] px-2 py-1 shadow-[0_0_14px_rgba(255,138,98,0.2)]">
+                                          <div className="text-[8px] font-black uppercase tracking-[0.14em] text-[#ffb497]">
+                                            Bite {biteCount}/{ENEMY_BITE_DESTROY_THRESHOLD}
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : null}
+                                    {isChargedTopCard ? (
+                                      <div className="pointer-events-none absolute right-2 top-2 z-10 rounded-full border border-[#70e5f0]/60 bg-[rgba(6,16,24,0.92)] px-2 py-1 shadow-[0_0_18px_rgba(112,229,240,0.24)]">
+                                        <div className="text-[8px] font-black uppercase tracking-[0.16em] text-[#70e5f0]">Charged</div>
+                                      </div>
+                                    ) : null}
+                                {isTopCard && showStickyPreview ? (
+                                  <div className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 -translate-y-[120%]">
+                                    <div className="rounded-full border border-game-gold/45 bg-black/88 px-2 py-1 shadow-[0_0_18px_rgba(230,179,30,0.24)]">
+                                          <div className="text-[8px] font-black uppercase tracking-[0.16em] text-game-gold/70">under</div>
+                                      <div className="mt-[1px] text-center text-[12px] font-black leading-none text-white">{stickyPreviewRank}</div>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
                             </div>
                           </button>
-                        );
-                      })
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex w-full flex-col items-center gap-3">
-            <div className="grid w-full items-center gap-3 md:grid-cols-[minmax(0,1fr)_var(--prime-zone)_minmax(0,1fr)]" style={{ ['--prime-zone' as const]: `${primeVisualZoneWidth}px` }}>
-              <div className="flex items-center justify-end" style={{ gap: benchGap }}>
-                {leftHandSlots.map((slot) =>
-                  slot.kind === 'ability' ? (
-                    <Tooltip
-                      key={String(slot.slotId)}
-                      content={renderAbilityTooltip(slot)}
-                      pinnable
-                      isPinned={pinnedTooltipSlotId === (slot.slotId === 'pan-left' ? 'left' : slot.slotId)}
-                      onPinnedChange={(pinned) => setPinnedTooltipSlotId(pinned ? 'left' : null)}
-                    >
-                      <HandSlotCard
-                        slot={slot}
-                        canUse={canUseAbilitySlot(slot)}
-                        interactive={currentTurn === 'player'}
-                        onClick={() => {
-                          if (slot.effect === 'paw-sperity') {
-                            usePanPawSperity();
-                          } else if (slot.effect === 'ironfur') {
-                            useHandSlot('left');
-                          } else if (slot.effect === 'slipstream') {
-                            useHandSlot('left');
-                          } else if (slot.effect === 'battery') {
-                            useHandSlot('jet-left-2');
-                          } else if (slot.effect === 'rewire') {
-                            useHandSlot('jet-left-3');
-                          } else if (slot.effect === 'aegis-shunt') {
-                            useHandSlot('jet-right-4');
-                          }
-                        }}
-                        onPointerDown={(event) => handleAbilityDevPointerDown(event, slot)}
-                        onPointerUp={handleAbilityDevPointerEnd}
-                        onPointerCancel={handleAbilityDevPointerEnd}
-                        onClickCapture={(event) => {
-                          if (suppressAbilityClickRef.current) {
-                            suppressAbilityClickRef.current = false;
-                            event.stopPropagation();
-                            event.preventDefault();
-                          }
-                        }}
-                        breathing={slot.effect === 'paw-sperity' && pawSperityEligible}
-                        holdProgress={devAbilityHoldSlotId === slot.slotId ? devAbilityHoldProgress : 0}
-                        cooldownRemaining={getAbilityCooldown(game, slot.effect)}
-                        taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
-                        cardSize={handCardSize}
-                        slotRef={(node) => {
-                          playerHandRefs.current.left = node;
-                        }}
-                      />
-                    </Tooltip>
-                  ) : (
-                    <HandSlotCard
-                      key={slot.slotId}
-                      slot={slot}
-                      canUse={
-                        currentTurn === 'player' &&
-                        (slot.kind === 'captured' || slot.kind === 'generated') &&
-                        !!slot.card &&
-                        getEligiblePlayerTargetsForCard(game, slot.card).length > 0
-                      }
-                      interactive={currentTurn === 'player'}
-                      onClick={() => useHandSlot('left')}
-                      cardSize={handCardSize}
-                      slotRef={(node) => {
-                        playerCaptureRefs.current.left = node;
-                      }}
-                    />
-                  )
-                )}
-              </div>
-              {kinInspectIndex === null ? (
-                <div className="relative flex items-center justify-center">
-                  {activeActorName === 'Jet' && (game.riggedConstructCards.length > 0 || game.riggedConstructCooldown > 0) ? (
-                    <div className="absolute right-[calc(100%+12px)] top-1/2 -translate-y-1/2">
-                      <RiggedConstructCard
-                        topCard={game.riggedConstructCards[game.riggedConstructCards.length - 1] ?? null}
-                        depth={game.riggedConstructCards.length}
-                        armed={game.riggedConstructArmed}
-                        cooldownRemaining={game.riggedConstructCooldown}
-                        onClick={useRiggedConstructCard}
-                        cardSize={handCardSize}
-                      />
-                    </div>
-                  ) : null}
-                  <StockActorShellView
-                    actor={PLAYER_STOCK_ACTOR}
-                    stock={game.playerStock}
-                    vitals={getCombatVitals(game, game.playerStock)}
-                    combatant={getCombatantForCard(game, game.playerStock)}
-                    stockRef={playerStockRef}
-                    onClick={() => {
-                      if (confirmPendingPlayerPlay(game.playerStock.id)) {
-                        return;
-                      }
-                    }}
-                    onPointerDown={() => handleKinInspectPointerDown(-1)}
-                    onPointerUp={handleKinInspectPointerEnd}
-                    onPointerCancel={handleKinInspectPointerEnd}
-                    holdProgress={kinInspectHoldIndexRef.current === -1 ? kinInspectHoldProgress : 0}
-                    cardSize={boardCardSize}
-                    indicatorSize={indicatorSize}
-                  compact={boardCompact}
-                  heuristicLabel={null}
-                  highlighted={false}
-                  apSegments={normalizeApSegments(game.playerPrimeApSegments, game.playerStockActionPoints, game.playerStock.element)}
-                />
+                            );
+                          })}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              ) : null}
-              <div className="flex items-center justify-start" style={{ gap: benchGap }}>
-                {rightHandSlots.map((slot) =>
-                  slot.kind === 'ability' ? (
-                    <Tooltip
-                      key={slot.slotId}
-                      content={renderAbilityTooltip(slot)}
-                      pinnable
-                      isPinned={pinnedTooltipSlotId === 'right'}
-                      onPinnedChange={(pinned) => setPinnedTooltipSlotId(pinned ? 'right' : null)}
-                    >
-                      <HandSlotCard
-                        slot={slot}
-                        canUse={canUseAbilitySlot(slot)}
-                        interactive={currentTurn === 'player'}
+              </div>
+              <div className={`flex w-full flex-col items-center ${shortViewport ? 'gap-2' : 'gap-3'}`}>
+                <div className="flex w-full items-start justify-center gap-2 md:gap-3">
+                  {playerBenchLeftSlots.map((slot, index) => renderPlayerBenchSlot(slot, `player-left-${index}`))}
+                  {kinInspectIndex === null ? (
+                    <div className={`relative flex flex-col items-center justify-center ${shortViewport ? 'gap-2' : 'gap-3'}`}>
+                      <button
+                        type="button"
                         onClick={() => {
-                          if (slot.effect === 'sticky-paws') {
-                            if (game.jetBatteryPrimeArmed) {
-                              useHandSlot('right');
-                              return;
-                            }
-                            if (canOpenStickyPawsSteal) {
-                              setPinnedTooltipSlotId(null);
-                              setEnemyStealSelectorOpen(true);
-                            }
-                          } else if (slot.effect === 'path-of-stars') {
-                            usePathOfStars();
-                          } else if (slot.effect === 'jikan') {
-                            useJikan();
-                          } else if (slot.effect === 'tap-out') {
-                            useHandSlot('right');
-                          } else if (slot.effect === 'scrap-plating') {
-                            useHandSlot('jet-right-2');
-                          } else if (slot.effect === 'rigged-construct') {
-                            useHandSlot('jet-right-3');
-                          }
-                        }}
-                        onPointerDown={(event) => {
-                          handleAbilityDevPointerDown(event, slot);
-                          if (slot.effect === 'sticky-paws') {
-                            handleStickyPointerDown(event);
-                          }
-                        }}
-                        onPointerUp={(event) => {
-                          handleAbilityDevPointerEnd();
-                          if (slot.effect === 'sticky-paws') {
-                            handleStickyPointerEnd(event);
-                          }
-                        }}
-                        onPointerCancel={(event) => {
-                          handleAbilityDevPointerEnd();
-                          if (slot.effect === 'sticky-paws') {
-                            handleStickyPointerEnd(event);
-                          }
-                        }}
-                        onClickCapture={(event) => {
-                          if (suppressAbilityClickRef.current) {
-                            suppressAbilityClickRef.current = false;
-                            event.stopPropagation();
-                            event.preventDefault();
+                          if (confirmPendingPlayerPlay(game.playerStock.id)) {
                             return;
                           }
-                          if (slot.effect === 'sticky-paws' && suppressStickyClickRef.current) {
-                            suppressStickyClickRef.current = false;
-                            event.stopPropagation();
-                            event.preventDefault();
-                          }
+                          triggerPrimeCollapse();
                         }}
-                        holdProgress={
-                          devAbilityHoldSlotId === slot.slotId
-                            ? devAbilityHoldProgress
-                            : slot.effect === 'sticky-paws'
-                              ? stickyHoldProgress
-                              : 0
-                        }
-                        cooldownRemaining={getAbilityCooldown(game, slot.effect)}
-                        taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
-                        cardSize={handCardSize}
-                        slotRef={(node) => {
-                          playerHandRefs.current.right = node;
+                        onPointerDown={() => handleKinInspectPointerDown(-1)}
+                        onPointerUp={handleKinInspectPointerEnd}
+                        onPointerCancel={handleKinInspectPointerEnd}
+                        className="relative rounded-[20px] border border-white/12 bg-black/40 p-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+                        style={primeTapped ? {
+                          transform: 'rotate(7deg) translateY(3px)',
+                          transition: 'transform 120ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out',
+                          borderColor: warnDeadlock ? 'rgba(255,72,72,0.82)' : undefined,
+                          boxShadow: warnDeadlock
+                            ? '0 0 0 2px rgba(255,72,72,0.65), 0 0 28px rgba(255,72,72,0.42), 0 18px 40px rgba(0,0,0,0.22)'
+                            : undefined,
+                          animation: highlightedActorNames.includes(game.playerStock.name) ? 'golf-actor-blink 0.72s ease-in-out 2' : undefined,
+                        } : {
+                          transition: 'transform 120ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out',
+                          borderColor: warnDeadlock ? 'rgba(255,72,72,0.82)' : undefined,
+                          boxShadow: warnDeadlock
+                            ? '0 0 0 2px rgba(255,72,72,0.65), 0 0 28px rgba(255,72,72,0.42), 0 18px 40px rgba(0,0,0,0.22)'
+                            : undefined,
+                          animation: highlightedActorNames.includes(game.playerStock.name) ? 'golf-actor-blink 0.72s ease-in-out 2' : undefined,
                         }}
-                      />
-                    </Tooltip>
-                  ) : (
-                    <HandSlotCard
-                      key={slot.slotId}
-                      slot={slot}
-                      canUse={
-                        currentTurn === 'player' &&
-                        (slot.kind === 'captured' || slot.kind === 'generated') &&
-                        !!slot.card &&
-                        getEligiblePlayerTargetsForCard(game, slot.card).length > 0
-                      }
-                      interactive={currentTurn === 'player'}
-                      onClick={() => useHandSlot('right')}
-                      cardSize={handCardSize}
-                      slotRef={(node) => {
-                        playerCaptureRefs.current.right = node;
-                      }}
-                    />
-                  )
-                )}
+                      >
+                        <ActorStatusRail
+                          actorName={game.playerStock.name}
+                          combatant={game.combatants[actorKeyFromName(game.playerStock.name)] ?? createCombatant(game.playerStock.name)}
+                          maxVisible={4}
+                          iconSize={20}
+                          highlightedKeys={highlightedStatusKeys}
+                          flashVersions={statusFlashVersions}
+                          transientStatuses={transientStatusEvents.filter((entry) => entry.actorName === game.playerStock.name)}
+                        />
+                        <div ref={playerStockRef}>
+                          <Card
+                            card={game.playerStock}
+                            showGraphics={false}
+                            size={boardCardSize}
+                            foundationOverlay={getCombatVitals(game, game.playerStock)}
+                            suitFontSizeOverride={0}
+                            hideElements
+                            maskValue
+                            disableAnimation
+                            disableTilt
+                            disableHoverLift
+                          />
+                        </div>
+                        <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex items-center justify-between gap-2">
+                          <div className="px-3 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-white/88 [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_6px_rgba(255,255,255,0.12)]">
+                            {game.playerStock.name}
+                          </div>
+                          <div />
+                        </div>
+                        <div className="pointer-events-none absolute inset-x-0 top-[58px] z-20 flex justify-center">
+                          <div className="text-[34px] font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_10px_rgba(255,255,255,0.16)]">
+                            {rankLabel(game.playerStock.rank)}
+                          </div>
+                        </div>
+                        {kinInspectHoldIndexRef.current === -1 ? (
+                          <div className="pointer-events-none absolute inset-x-3 bottom-3 h-1.5 overflow-hidden rounded-full border border-game-gold/30 bg-black/70">
+                            <div className="h-full rounded-full bg-game-gold" style={{ width: `${Math.min(100, Math.max(0, kinInspectHoldProgress * 100))}%` }} />
+                          </div>
+                        ) : null}
+                        {renderKinMeter(
+                          game.playerStock.name,
+                          game.playerStockActionPoints,
+                          game.starterPackModes[game.activeStarterPackIndex] ?? 'default',
+                          game.starterPackAbilityRarities[game.activeStarterPackIndex] ?? 1,
+                          'prime',
+                          false
+                        )}
+                      </button>
+                      {activePrimeHandSlots.length > 0 ? (
+                        <div className="flex max-w-full flex-nowrap items-end justify-center gap-2 overflow-visible">
+                          {activePrimeHandSlots.map((slot) => (
+                            <Tooltip
+                              key={slot.slotId}
+                              content={renderAbilityTooltip(slot)}
+                              pinnable
+                              isPinned={pinnedTooltipSlotId === slot.slotId}
+                              onPinnedChange={(pinned) => setPinnedTooltipSlotId(pinned ? slot.slotId as HandSlotId : null)}
+                              hoverEnabled
+                              clickToPin={false}
+                            >
+                              <HandSlotCard
+                                slot={slot}
+                                canUse={canUseAbilitySlot(slot)}
+                                interactive={currentTurn === 'player'}
+                                onClick={() => useHandSlot(slot.slotId as HandSlotId)}
+                                onPointerDown={(event) => handleAbilityTooltipPointerDown(event, slot)}
+                                onPointerUp={handleAbilityTooltipPointerEnd}
+                                onPointerCancel={handleAbilityTooltipPointerEnd}
+                                onClickCapture={handleAbilityTooltipClickCapture}
+                                holdProgress={abilityTooltipHoldSlotId === slot.slotId ? abilityTooltipHoldProgress : 0}
+                                cooldownRemaining={getAbilityCooldown(game, slot.effect)}
+                                taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
+                                cardSize={handCardSize}
+                                slotRef={(node) => {
+                                  if (slot.slotId in playerHandRefs.current) {
+                                    playerHandRefs.current[slot.slotId as HandSlotId] = node;
+                                  }
+                                }}
+                              />
+                            </Tooltip>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-full border border-dashed border-white/10 bg-black/18 px-3 py-2">
+                          <div className="text-[8px] font-black uppercase tracking-[0.16em] text-white/42">Prime Hand</div>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                  {playerBenchRightSlots.map((slot, index) => renderPlayerBenchSlot(slot, `player-right-${index}`))}
+                </div>
               </div>
             </div>
             <div ref={benchInspectorRef} className="flex flex-col items-center gap-3">
-              {effectiveOracleMode !== 'off' && nextGuideStep ? (
+              {nextGuideStep ? (
                 <div className="text-[9px] font-mono uppercase tracking-[0.14em] text-game-gold/80">
-                  Follow Navi
+                  {guidePlan?.source === 'prophecy' ? 'Prophecy Navi' : 'Follow Navi'}
                 </div>
               ) : null}
-              <div className="flex items-start justify-center" style={{ gap: benchKinGap }}>
-                {assistBenchIndices.slice(0, 1).map((benchIndex) => {
-                  const card = game.playerBench[benchIndex];
-                  if (!card) return null;
-                  return (
-                    <div key={card.id} className="flex justify-center" style={{ width: benchActorZoneWidth }}>
-                      <KinBenchCard
-                        card={card}
-                        vitals={getCombatVitals(game, card)}
-                        combatant={getCombatantForCard(game, card)}
-                        cardRef={(node) => {
-                          playerBenchRefs.current[benchIndex] = node;
-                        }}
-                        actionPoints={game.playerBenchActionPoints[benchIndex] ?? 0}
-                        apSegments={normalizeApSegments([], game.playerBenchActionPoints[benchIndex] ?? 0, card.element)}
-                        cardSize={boardCardSize}
-                        heuristicLabel={null}
-                        highlighted={false}
-                        breathing={highlightPanForBadLuck && card.name === 'Pan'}
-                        discardCount={game.playerDiscardPile.length}
-                        canInteract={currentTurn === 'player' && canUseBenchAbilityUi(benchIndex)}
-                        roleDescription={getAssistPassiveSummary(card)}
-                        onPointerDown={() => handleKinInspectPointerDown(benchIndex, true)}
-                        onPointerUp={handleKinInspectPointerEnd}
-                        onPointerCancel={handleKinInspectPointerEnd}
-                        onClickCapture={(event) => {
-                          if (suppressKinInspectClickRef.current) {
-                            suppressKinInspectClickRef.current = false;
-                            event.stopPropagation();
-                            event.preventDefault();
-                          }
-                        }}
-                        holdProgress={kinInspectHoldIndexRef.current === benchIndex ? kinInspectHoldProgress : 0}
-                        onClick={() => {
-                          if (confirmPendingPlayerPlay(card.id)) {
-                            return;
-                          }
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-                {supportBenchCard ? (
-                  <div className="flex justify-center" style={{ width: benchActorZoneWidth }}>
-                    <KinBenchCard
-                      key={supportBenchCard.id}
-                      card={supportBenchCard}
-                      vitals={getCombatVitals(game, supportBenchCard)}
-                      combatant={getCombatantForCard(game, supportBenchCard)}
-                      cardRef={(node) => {
-                        playerBenchRefs.current[supportBenchIndex] = node;
-                      }}
-                      actionPoints={game.playerBenchActionPoints[supportBenchIndex] ?? 0}
-                      apSegments={normalizeApSegments([], game.playerBenchActionPoints[supportBenchIndex] ?? 0, supportBenchCard.element)}
-                      cardSize={boardCardSize}
-                      heuristicLabel={null}
-                      highlighted={false}
-                      breathing={highlightPanForBadLuck && supportBenchCard.name === 'Pan'}
-                      discardCount={game.playerDiscardPile.length}
-                      canInteract={currentTurn === 'player' && canUseBenchAbilityUi(supportBenchIndex)}
-                      roleDescription={getSupportPassiveSummary(supportBenchCard)}
-                      onPointerDown={() => handleKinInspectPointerDown(supportBenchIndex, true)}
-                      onPointerUp={handleKinInspectPointerEnd}
-                      onPointerCancel={handleKinInspectPointerEnd}
-                      onClickCapture={(event) => {
-                        if (suppressKinInspectClickRef.current) {
-                          suppressKinInspectClickRef.current = false;
-                          event.stopPropagation();
-                          event.preventDefault();
-                        }
-                      }}
-                      holdProgress={kinInspectHoldIndexRef.current === supportBenchIndex ? kinInspectHoldProgress : 0}
-                      onClick={() => {
-                        if (confirmPendingPlayerPlay(supportBenchCard.id)) {
-                          return;
-                        }
-                      }}
-                    />
-                  </div>
-                ) : null}
-                {assistBenchIndices.slice(1).map((benchIndex) => {
-                  const card = game.playerBench[benchIndex];
-                  if (!card) return null;
-                  return (
-                    <div key={card.id} className="flex justify-center" style={{ width: benchActorZoneWidth }}>
-                      <KinBenchCard
-                        card={card}
-                        vitals={getCombatVitals(game, card)}
-                        combatant={getCombatantForCard(game, card)}
-                        cardRef={(node) => {
-                          playerBenchRefs.current[benchIndex] = node;
-                        }}
-                        actionPoints={game.playerBenchActionPoints[benchIndex] ?? 0}
-                        apSegments={normalizeApSegments([], game.playerBenchActionPoints[benchIndex] ?? 0, card.element)}
-                        cardSize={boardCardSize}
-                        heuristicLabel={null}
-                        highlighted={false}
-                        breathing={highlightPanForBadLuck && card.name === 'Pan'}
-                        discardCount={game.playerDiscardPile.length}
-                        canInteract={currentTurn === 'player' && canUseBenchAbilityUi(benchIndex)}
-                        roleDescription={getAssistPassiveSummary(card)}
-                        onPointerDown={() => handleKinInspectPointerDown(benchIndex, true)}
-                        onPointerUp={handleKinInspectPointerEnd}
-                        onPointerCancel={handleKinInspectPointerEnd}
-                        onClickCapture={(event) => {
-                          if (suppressKinInspectClickRef.current) {
-                            suppressKinInspectClickRef.current = false;
-                            event.stopPropagation();
-                            event.preventDefault();
-                          }
-                        }}
-                        holdProgress={kinInspectHoldIndexRef.current === benchIndex ? kinInspectHoldProgress : 0}
-                        onClick={() => {
-                          if (confirmPendingPlayerPlay(card.id)) {
-                            return;
-                          }
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
             </div>
             {showHeuristicValues && currentTurn === 'player' && effectiveOracleMode !== 'ancestors' ? (
-              <HeuristicPill label={effectiveOracleMode === 'ancestors' ? 'hidden best path' : 'visible best path'} />
+              <HeuristicPill label={guidePlan?.source === 'prophecy' ? 'prophecy path' : effectiveOracleMode === 'ancestors' ? 'hidden best path' : 'visible best path'} />
             ) : null}
-            <div className="fixed bottom-4 right-4 z-40 flex items-end gap-3 md:bottom-6 md:right-6">
-              <div className="relative">
+            <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+12px)] left-3 right-3 z-40 flex items-end justify-end gap-3 md:bottom-6 md:left-auto md:right-6 pointer-events-none">
+              <div className="pointer-events-auto flex items-center gap-2 glass-panel rounded-2xl p-2">
                 <button
                   type="button"
-                  onClick={() => setShowDiscardTray((prev) => !prev)}
-                  className="rounded-2xl border border-game-teal/35 bg-black/78 px-4 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-game-teal shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-sm transition-colors hover:bg-game-teal/12"
+                  onClick={handleEndTurn}
+                  className="group relative flex items-center justify-center rounded-xl border border-game-pink/40 bg-game-pink/10 px-5 py-3 transition-all duration-300 hover:bg-game-pink/20 hover:border-game-pink/60 hover:shadow-[0_0_20px_rgba(217,70,239,0.25)] active:scale-95"
+                  style={{ minWidth: 100 }}
                 >
-                  Discard {game.playerDiscardPile.length}
+                  <span className="text-xs font-display font-bold uppercase tracking-[0.2em] text-game-pink group-hover:text-white transition-colors">End Turn</span>
                 </button>
-                {showDiscardTray ? (
-                  <div className="absolute bottom-[calc(100%+10px)] right-0 w-52 rounded-2xl border border-game-teal/25 bg-black/90 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.42)] backdrop-blur-sm">
-                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-game-teal">Party Discards</div>
-                    <div className="mt-3 flex flex-col gap-2">
-                      {['Jet', 'Hiro', 'Pan', 'Whis'].map((actorName) => (
-                        <div key={actorName} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/5 px-3 py-2">
-                          <span className="text-[10px] font-black uppercase tracking-[0.12em] text-white/78">{actorName}</span>
-                          <span className="text-sm font-black tabular-nums text-white">{partyDiscardCounts[actorName] ?? 0}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
               </div>
-              <button
-                type="button"
-                onClick={runEnemyTurn}
-                disabled={currentTurn !== 'player'}
-                className={`rounded-2xl border px-5 py-4 text-[10px] font-black uppercase tracking-[0.22em] shadow-[0_12px_30px_rgba(0,0,0,0.38)] backdrop-blur-sm transition-colors ${
-                  currentTurn === 'player'
-                    ? 'border-game-pink/55 bg-black/78 text-game-pink hover:bg-game-pink/14'
-                    : 'cursor-not-allowed border-white/10 bg-black/45 text-white/25'
-                }`}
-                style={{
-                  minWidth: Math.round(handCardSize.width * 1.16),
-                }}
-              >
-                End Turn
-              </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showTutorialRescueDepth && tutorialMochiRescueStage ? (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.28)]">
+          <div
+            ref={tutorialRescueModalRef}
+            className="pointer-events-auto flex items-center gap-4 rounded-[24px] border border-game-gold/20 bg-[linear-gradient(180deg,rgba(12,10,8,0.96),rgba(6,5,4,0.92))] px-4 py-3 shadow-[0_22px_60px_rgba(0,0,0,0.42)]"
+          >
+            <div className="relative">
+              <div className="rounded-[18px] border border-game-gold/24 bg-black/48 p-1">
+                <Card
+                  card={tutorialMochiRescueCard}
+                  showGraphics={false}
+                  size={starterPackCardSize}
+                  foundationOverlay={tutorialMochiRescueVitals}
+                  suitFontSizeOverride={0}
+                  hideElements
+                  maskValue
+                  disableAnimation
+                  disableTilt
+                  disableHoverLift
+                />
+                <div className="pointer-events-none absolute inset-x-0 top-2 z-20 flex justify-center">
+                  <div className="px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-white/88">Mochi</div>
+                </div>
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 z-30 rounded-b-[18px] border-t border-[#3a2a13]/70 bg-[linear-gradient(180deg,rgba(27,18,10,0.25),rgba(8,5,2,0.96))]"
+                  style={{ height: tutorialMochiRescueStage.coverHeight }}
+                />
+                <div className="pointer-events-none absolute inset-x-2 bottom-2 z-40 rounded-full border border-game-gold/28 bg-black/78 px-2 py-1 text-center text-[7px] font-black uppercase tracking-[0.14em] text-game-gold/76">
+                  buried target
+                </div>
+              </div>
+            </div>
+            <div className="max-w-[280px]">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-game-gold">Rescue Depth</div>
+              <div className="mt-1 text-[13px] font-semibold text-white/88">{tutorialMochiRescueStage.label}</div>
+              <div className="mt-1 text-[11px] leading-4 text-white/62">{tutorialMochiRescueStage.detail}</div>
             </div>
           </div>
         </div>
+      ) : null}
+
+      {showTutorialRewardModal ? (
+        <RewardModalShell
+          title="Kin Rescued!"
+          reward_sticker={(
+            <img
+              src="/assets/actors/mochikin/mochi_emoji_stars.png"
+              alt=""
+              aria-hidden="true"
+              className="h-auto w-[132px] drop-shadow-[0_10px_18px_rgba(0,0,0,0.42)] md:w-[148px]"
+              style={{
+                transform: 'rotate(8deg)',
+                transformOrigin: '50% 80%',
+                animation: 'golf-reward-sticker-float 2.8s ease-in-out infinite',
+              }}
+            />
+          )}
+          onClose={() => setShowTutorialRewardModal(false)}
+        >
+          <div className="grid gap-5 md:grid-cols-[260px_minmax(0,1fr)] md:items-start">
+            <div className="text-center md:col-span-2 md:pr-[196px] md:text-left">
+              <div className="text-[15px] font-semibold italic leading-6 text-white/88">
+                {titleCasePronoun(tutorialMochiProfile.pronouns.subject)} will need Hiro to carry the next five actions before {tutorialMochiProfile.pronouns.subject} feels safe enough to act.
+              </div>
+            </div>
+            <div className="flex flex-col items-center rounded-[22px] border border-white/8 bg-black/28 p-4">
+              <KinBenchCard
+                card={tutorialMochiRescueCard}
+                vitals={tutorialMochiRescueVitals}
+                combatant={tutorialMochiRewardCombatant}
+                actionPoints={0}
+                canInteract
+                onClick={claimTutorialMochiReward}
+                cardSize={starterPackCardSize}
+                flashVersions={statusFlashVersions}
+                discardCount={0}
+                cardRef={(node) => {
+                  tutorialRewardCardRef.current = node;
+                }}
+                constrainBackdrop
+              />
+              <div className="mt-4 flex flex-col items-center">
+                <div
+                  className="h-0 w-0 border-l-[12px] border-r-[12px] border-b-[16px] border-l-transparent border-r-transparent border-b-game-gold/85 drop-shadow-[0_0_10px_rgba(230,179,30,0.35)]"
+                  style={{ animation: 'golf-breathe 1.85s ease-in-out infinite' }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="mt-2 rounded-full border border-game-gold/40 bg-[rgba(18,12,4,0.92)] px-4 py-2 text-center shadow-[0_0_18px_rgba(230,179,30,0.16)]"
+                  style={{
+                    animation: 'golf-breathe 1.85s ease-in-out infinite',
+                    boxShadow: '0 0 24px rgba(230,179,30,0.24), 0 0 8px rgba(230,179,30,0.18)',
+                  }}
+                >
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-game-gold">
+                    Tap To Collect Mochi
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="max-w-[380px] text-center md:max-w-none md:text-left">
+              <div className="mt-3 rounded-[16px] border border-white/10 bg-black/34 px-3 py-3">
+                <div className="space-y-3 text-left">
+                  {tutorialMochiRewardEffects.map((effect) => (
+                    <div key={effect.key} className="flex items-start gap-3">
+                      <RewardEffectTile label={effect.label} tone={effect.tone} />
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-game-pink">
+                          {effect.name}
+                        </div>
+                        <div className="mt-1 text-[11px] leading-[1.3] text-white/62">
+                          {renderGameText(effect.flavor)}
+                        </div>
+                        <div className="mt-1 text-[11px] leading-[1.3] text-white/84">
+                          {renderGameText(effect.effect, { enableEffectTooltips: true })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </RewardModalShell>
+      ) : null}
+
+      {showTutorialScenePicker ? (
+        <TutorialScenePicker
+          scenes={tutorialSceneOptions}
+          onSelect={jumpToTutorialScene}
+          onClose={() => setShowTutorialScenePicker(false)}
+        />
+      ) : null}
 
       {enemyDragAnim && (
         <div className="pointer-events-none absolute inset-0 z-30">
@@ -6952,22 +10897,81 @@ export const GolfGame = () => {
                   </div>
                 </div>
               )}
-              <div
-                className="absolute select-none text-[28px] leading-none text-game-gold drop-shadow-[0_0_10px_rgba(230,179,30,0.95)]"
-                style={{
-                  left: 0,
-                  top: 0,
-                  transform: enemyDragAnim.mode === 'cursor' ? 'translate(-50%, -50%)' : 'translate(-18%, -22%)',
-                }}
-              >
-                ☝
-              </div>
+              {enemyDragAnim.mode === 'cursor' ? (
+                <div
+                  className="absolute select-none text-[28px] leading-none text-game-gold drop-shadow-[0_0_10px_rgba(230,179,30,0.95)]"
+                  style={{
+                    left: 0,
+                    top: 0,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  ☝
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
       )}
+      {maulTelegraphPath ? (
+        <div className="pointer-events-none absolute inset-0 z-20">
+          <svg width="100%" height="100%" viewBox={`0 0 ${viewport.width} ${viewport.height}`} preserveAspectRatio="none">
+            <defs>
+              <filter id="golf-maul-telegraph-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="4.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <marker id="golf-maul-telegraph-head" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto">
+                <path d="M 0 0 L 14 7 L 0 14 z" fill="rgba(255,82,82,0.92)" />
+              </marker>
+            </defs>
+            <path
+              d={maulTelegraphPath}
+              fill="none"
+              stroke="rgba(255,82,82,0.22)"
+              strokeWidth="8"
+              strokeLinecap="round"
+              filter="url(#golf-maul-telegraph-glow)"
+              style={{ animation: 'golf-maul-telegraph 1.25s ease-in-out infinite' }}
+            />
+            <path
+              d={maulTelegraphPath}
+              fill="none"
+              stroke="rgba(255,98,98,0.94)"
+              strokeWidth="3.25"
+              strokeLinecap="round"
+              markerEnd="url(#golf-maul-telegraph-head)"
+              style={{ animation: 'golf-maul-telegraph 1.25s ease-in-out infinite' }}
+            />
+          </svg>
+        </div>
+      ) : null}
+      {rescueCardFlash ? (
+        <div className="pointer-events-none absolute inset-0 z-40">
+          <div
+            key={rescueCardFlash.id}
+            className="absolute left-0 top-0 h-8 w-8"
+            style={{
+              transform: `translate3d(${rescueCardFlash.x.toFixed(2)}px, ${rescueCardFlash.y.toFixed(2)}px, 0)`,
+              marginLeft: -16,
+              marginTop: -16,
+            }}
+          >
+            <div 
+              className={`h-full w-full rounded-full ${
+                rescueCardFlash.tone === 'red' 
+                  ? 'token-reveal-flash' 
+                  : 'rescue-card-click-flash'
+              }`} 
+            />
+          </div>
+        </div>
+      ) : null}
       {playerHandAnim && (
-        <div className="pointer-events-none absolute inset-0 z-30">
+        <div className="pointer-events-none absolute inset-0 z-[70]">
           <div
             ref={playerHandAnimNodeRef}
             className="absolute left-0 top-0"
@@ -6978,24 +10982,79 @@ export const GolfGame = () => {
               marginLeft: -(CARD_SIZE.width / 2),
               marginTop: -(CARD_SIZE.height / 2),
               transition: 'none',
+              transformStyle: 'preserve-3d',
+              perspective: '1200px',
+              willChange: 'transform, opacity, filter',
             }}
           >
-            <div className="rounded-[18px] border border-game-gold/45 bg-black/80 p-1.5 shadow-[0_0_24px_rgba(230,179,30,0.22)]">
-              <Card
-                card={playerHandAnim.card}
-                showGraphics={false}
-                size={CARD_SIZE}
-                suitFontSizeOverride={GOLF_ELEMENT_INDICATOR_SIZE}
-                disableAnimation
-                disableTilt
-                disableHoverLift
-              />
-            </div>
-            <div className="absolute -right-1 -top-1 text-[28px] leading-none text-game-gold drop-shadow-[0_0_10px_rgba(230,179,30,0.95)]">
-              🐾
-            </div>
-            <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-game-gold/40 bg-black/85 px-2 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-game-gold">
-              {playerHandAnim.label}
+            <div
+              className={playerHandAnim.variant === 'reward-flip' ? 'h-full w-full animate-[golf-reward-flight-flip_var(--reward-flight-duration)_linear_both]' : 'h-full w-full'}
+              style={{
+                transformStyle: 'preserve-3d',
+                ...(playerHandAnim.variant === 'reward-flip'
+                  ? ({ ['--reward-flight-duration' as string]: `${playerHandAnim.durationMs}ms` } as CSSProperties)
+                  : {})
+              }}
+            >
+              {/* Front Face */}
+              <div 
+                className="h-full w-full absolute inset-0"
+                style={{ backfaceVisibility: 'hidden' }}
+              >
+                <ActorFrameEmojiRig
+                  emojiRig={{
+                    src: '/assets/actors/mochikin/mochi_emoji_blush.png',
+                    emotionType: 'happy',
+                  }}
+                />
+                <div className="h-full w-full rounded-[18px] border border-game-gold/45 bg-black/80 p-1.5 shadow-[0_0_24px_rgba(230,179,30,0.22)]">
+                  <Card
+                    card={playerHandAnim.card}
+                    showGraphics={false}
+                    size={CARD_SIZE}
+                    suitFontSizeOverride={GOLF_ELEMENT_INDICATOR_SIZE}
+                    disableAnimation
+                    disableTilt
+                    disableHoverLift
+                  />
+                </div>
+                <div className="absolute -right-1 -top-1 text-[28px] leading-none text-game-gold drop-shadow-[0_0_10px_rgba(230,179,30,0.95)]">
+                  🐾
+                </div>
+              </div>
+
+              {/* Back Face (Higher contrast for rotation read) */}
+              <div 
+                className="h-full w-full absolute inset-0 rounded-[18px] border-2 border-game-gold flex items-center justify-center overflow-hidden shadow-[0_0_40px_rgba(230,179,30,0.6)]"
+                style={{ 
+                  backfaceVisibility: 'hidden', 
+                  transform: 'rotateY(180deg)',
+                  background: 'linear-gradient(135deg, #1a1c2e 0%, #2a2c4e 50%, #1a1c2e 100%)'
+                }}
+              >
+                <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+                {/* Decorative pulse glow */}
+                <div className="absolute inset-0 bg-game-gold/10 animate-pulse"></div>
+                <div className="relative flex flex-col items-center h-full w-full">
+                  <ActorFrameEmojiRig
+                    emojiRig={{
+                      src: '/assets/actors/mochikin/mochi_emoji_blush.png',
+                      emotionType: 'happy',
+                    }}
+                  />
+                  <div className="flex-1 flex flex-col items-center justify-center">
+                    <div className="text-5xl drop-shadow-[0_0_20px_rgba(230,179,30,1)] scale-110 mb-2">🐾</div>
+                    <div className="text-[14px] font-black text-white tracking-[0.4em] uppercase drop-shadow-md">REWARD</div>
+                    <div className="mt-1 text-[10px] font-bold text-game-gold/80 tracking-[0.2em] uppercase">Mochi Recovered</div>
+                  </div>
+                </div>
+              </div>
+
+              {playerHandAnim.label && (
+                <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-game-gold/40 bg-black/85 px-2 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-game-gold">
+                  {playerHandAnim.label}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -7028,8 +11087,183 @@ export const GolfGame = () => {
             filter: brightness(1);
           }
         }
+        @keyframes golf-reward-modal-in {
+          0% {
+            opacity: 0;
+            transform: translateY(18px) scale(0.94);
+            filter: blur(6px) brightness(0.88);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(-4px) scale(1.015);
+            filter: blur(0) brightness(1.06);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0) brightness(1);
+          }
+        }
+        @keyframes golf-reward-flight-flip {
+          0% {
+            transform: perspective(1200px) rotateX(0deg) rotateY(0deg) rotateZ(-10deg) scale(1);
+            filter: brightness(1.1) drop-shadow(0 0 15px rgba(255,255,255,0.2));
+          }
+          25% {
+            transform: perspective(1200px) rotateX(45deg) rotateY(540deg) rotateZ(-15deg) scale(1.5);
+            filter: brightness(1.4) drop-shadow(0 0 35px rgba(255,255,255,0.5));
+          }
+          50% {
+            transform: perspective(1200px) rotateX(0deg) rotateY(1080deg) rotateZ(0deg) scale(1.3);
+            filter: brightness(1.2) drop-shadow(0 0 25px rgba(255,255,255,0.4));
+          }
+          75% {
+            transform: perspective(1200px) rotateX(-45deg) rotateY(1620deg) rotateZ(10deg) scale(1);
+            filter: brightness(1.1) drop-shadow(0 0 15px rgba(255,255,255,0.2));
+          }
+          100% {
+            transform: perspective(1200px) rotateX(0deg) rotateY(2160deg) rotateZ(0deg) scale(0.86);
+            filter: brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0));
+          }
+        }
+        @keyframes golf-maul-alert {
+          0% {
+            transform: scale(1);
+            filter: brightness(0.9);
+          }
+          50% {
+            transform: scale(1.035);
+            filter: brightness(1.18);
+          }
+          100% {
+            transform: scale(1);
+            filter: brightness(0.9);
+          }
+        }
+        @keyframes golf-actor-blink {
+          0% {
+            filter: brightness(1);
+          }
+          50% {
+            filter: brightness(1.24);
+          }
+          100% {
+            filter: brightness(1);
+          }
+        }
+        @keyframes golf-maul-telegraph {
+          0% {
+            opacity: 0.76;
+            filter: brightness(0.92);
+          }
+          50% {
+            opacity: 1;
+            filter: brightness(1.18);
+          }
+          100% {
+            opacity: 0.76;
+            filter: brightness(0.92);
+          }
+        }
+        @keyframes golf-status-blink {
+          0% {
+            transform: scale(1);
+            filter: brightness(1);
+          }
+          50% {
+            transform: scale(1.06);
+            filter: brightness(1.28);
+          }
+          100% {
+            transform: scale(1);
+            filter: brightness(1);
+          }
+        }
+        @keyframes golf-status-trigger-flash {
+          0% {
+            transform: scale(1);
+            filter: brightness(1);
+          }
+          35% {
+            transform: scale(1.16);
+            filter: brightness(1.45);
+          }
+          100% {
+            transform: scale(1);
+            filter: brightness(1);
+          }
+        }
+        @keyframes golf-status-falloff {
+          0% {
+            opacity: 1;
+            transform: scale(1);
+            filter: brightness(1.15);
+          }
+          45% {
+            opacity: 1;
+            transform: scale(1.08);
+            filter: brightness(1.35);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-12px) scale(0.92);
+            filter: brightness(0.9);
+          }
+        }
+        @keyframes golf-mochi-target-bob {
+          0% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+          100% {
+            transform: translateY(0);
+          }
+        }
+        @keyframes golf-mochi-danger-breathe {
+          0% {
+            filter: brightness(0.92);
+            box-shadow: 0 0 0 rgba(255, 72, 72, 0.14);
+          }
+          50% {
+            filter: brightness(1.18);
+            box-shadow: 0 0 24px rgba(255, 72, 72, 0.22);
+          }
+          100% {
+            filter: brightness(0.92);
+            box-shadow: 0 0 0 rgba(255, 72, 72, 0.14);
+          }
+        }
+        @keyframes golf-reward-sticker-float {
+          0% {
+            transform: rotate(8deg) translateY(0) scale(1);
+            filter: drop-shadow(0 10px 18px rgba(0,0,0,0.42)) drop-shadow(0 0 0 rgba(255,212,102,0.18));
+          }
+          50% {
+            transform: rotate(10deg) translateY(-6px) scale(1.04);
+            filter: drop-shadow(0 14px 24px rgba(0,0,0,0.46)) drop-shadow(0 0 18px rgba(255,212,102,0.26));
+          }
+          100% {
+            transform: rotate(8deg) translateY(0) scale(1);
+            filter: drop-shadow(0 10px 18px rgba(0,0,0,0.42)) drop-shadow(0 0 0 rgba(255,212,102,0.18));
+          }
+        }
+        @keyframes golf-mochi-ready-float {
+          0% {
+            transform: translate(-50%, -100%) translateY(0);
+            filter: brightness(1);
+          }
+          50% {
+            transform: translate(-50%, -100%) translateY(-6px);
+            filter: brightness(1.08);
+          }
+          100% {
+            transform: translate(-50%, -100%) translateY(0);
+            filter: brightness(1);
+          }
+        }
       `}</style>
       </div>
-    </div>
   );
 };

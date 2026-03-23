@@ -1,0 +1,95 @@
+{
+  "biomes": [
+    {
+      "id": "florpus_forest",
+      "label": "Florpus Forest",
+      "description": "Low-canopy woodland encounters with stalking shades and test dummies for scripted puzzle combats.",
+      "allowedEnemyActorIds": [
+        "shade_of_resentment",
+        "target_dummy"
+      ],
+      "encounters": [
+        {
+          "id": "forest_shade_scout",
+          "label": "Shade Scout",
+          "summary": "A single resentment shade probing the party.",
+          "enemyActorIds": [
+            "shade_of_resentment"
+          ],
+          "foundationSeeds": [
+            {
+              "id": "forest-shadow",
+              "rank": 8,
+              "suit": "🌙",
+              "element": "N"
+            }
+          ],
+          "tags": [
+            "solo",
+            "tutorial"
+          ],
+          "notes": "Good baseline for status and AI iteration."
+        },
+        {
+          "id": "forest_split_pressure",
+          "label": "Split Pressure",
+          "summary": "A mixed pressure encounter that can test multi-foundation behavior.",
+          "enemyActorIds": [
+            "shade_of_resentment",
+            "target_dummy"
+          ],
+          "foundationSeeds": [
+            {
+              "id": "forest-moon",
+              "rank": 12,
+              "suit": "🌙",
+              "element": "N"
+            },
+            {
+              "id": "forest-echo",
+              "rank": 6,
+              "suit": "☀️",
+              "element": "A"
+            }
+          ],
+          "tags": [
+            "pressure",
+            "two-lane"
+          ],
+          "notes": "Use this to tune deadlock pressure and multi-enemy card sequencing."
+        }
+      ]
+    },
+    {
+      "id": "sable_ruins",
+      "label": "Sable Ruins",
+      "description": "Higher-pressure hostile biomes with more scripted enemy pacing.",
+      "allowedEnemyActorIds": [
+        "shade_of_resentment"
+      ],
+      "encounters": [
+        {
+          "id": "ruins_boss_windup",
+          "label": "Boss Windup",
+          "summary": "A single heavy hitter encounter intended for cursed-tableau and cooldown-reset testing.",
+          "enemyActorIds": [
+            "shade_of_resentment"
+          ],
+          "foundationSeeds": [
+            {
+              "id": "ruins-boss",
+              "rank": 10,
+              "suit": "☀️",
+              "element": "F"
+            }
+          ],
+          "tags": [
+            "boss",
+            "cursed-tableau"
+          ],
+          "notes": "Anchor encounter for Pan + Hiro cooldown-synergy tests."
+        }
+      ]
+    }
+  ]
+}

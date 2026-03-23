@@ -8,6 +8,7 @@ import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass
 
 type Props = {
   className?: string;
+  legacyMode?: boolean;
 };
 
 const noiseFunctions = `
@@ -50,7 +51,7 @@ const noiseFunctions = `
   }
 `;
 
-export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ className }: Props) {
+export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ className, legacyMode = false }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
     };
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, legacyMode ? 2 : 1.35);
     renderer.setPixelRatio(dpr);
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.setClearColor(0x000000, 1);
@@ -94,7 +95,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
     const coreGroup = new THREE.Group();
     scene.add(coreGroup);
 
-    const starGeometry = new THREE.IcosahedronGeometry(4, 5);
+    const starGeometry = new THREE.IcosahedronGeometry(4, legacyMode ? 5 : 3);
     const starMaterial = new THREE.ShaderMaterial({
       uniforms: { time: { value: 0 }, uCore: { value: colors.core } },
       vertexShader: `
@@ -128,7 +129,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
     disposableMaterials.push(starMaterial);
     coreGroup.add(new THREE.Mesh(starGeometry, starMaterial));
 
-    const shellGeometry = new THREE.IcosahedronGeometry(8, 5);
+    const shellGeometry = new THREE.IcosahedronGeometry(8, legacyMode ? 5 : 3);
     const shellMaterial = new THREE.ShaderMaterial({
       uniforms: { time: { value: 0 }, uShell: { value: colors.shell } },
       vertexShader: `
@@ -167,7 +168,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
     disposableMaterials.push(shellMaterial);
     coreGroup.add(new THREE.Mesh(shellGeometry, shellMaterial));
 
-    const ringGeom = new THREE.TorusGeometry(60, 2, 4, 128);
+    const ringGeom = new THREE.TorusGeometry(60, 2, 4, legacyMode ? 128 : 64);
     const ringMat = new THREE.ShaderMaterial({
       uniforms: { time: { value: 0 }, uRing: { value: colors.ring } },
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
@@ -199,7 +200,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
     ring2.rotation.y = Math.PI * 0.1;
     scene.add(ring2);
 
-    const particleCount = 30000;
+    const particleCount = legacyMode ? 30000 : 6000;
     const diskPositions = new Float32Array(particleCount * 3);
     const diskSeeds = new Float32Array(particleCount);
     const diskBands = new Float32Array(particleCount);
@@ -260,7 +261,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
     disposableMaterials.push(diskMat);
     scene.add(new THREE.Points(diskGeom, diskMat));
 
-    const emberCount = 5000;
+    const emberCount = legacyMode ? 5000 : 1200;
     const emberPos = new Float32Array(emberCount * 3);
     const emberSeeds = new Float32Array(emberCount * 4);
     for (let i = 0; i < emberCount; i += 1) {
@@ -308,7 +309,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
     disposableMaterials.push(emberMat);
     scene.add(new THREE.Points(emberGeom, emberMat));
 
-    const prominenceCount = 1000;
+    const prominenceCount = legacyMode ? 1000 : 240;
     const prominencePos = new Float32Array(prominenceCount * 3);
     const prominenceSeeds = new Float32Array(prominenceCount * 4);
     for (let i = 0; i < prominenceCount; i += 1) {
@@ -384,7 +385,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
     disposableMaterials.push(prominenceMat);
     coreGroup.add(new THREE.Points(prominenceGeom, prominenceMat));
 
-    const starfieldCount = 2400;
+    const starfieldCount = legacyMode ? 2400 : 900;
     const starfieldPos = new Float32Array(starfieldCount * 3);
     for (let i = 0; i < starfieldCount; i += 1) {
       const r = THREE.MathUtils.randFloat(250, 1000);
@@ -408,14 +409,19 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
     disposableMaterials.push(starfieldMat);
     scene.add(new THREE.Points(starfieldGeom, starfieldMat));
 
-    const composer = new EffectComposer(renderer);
-    const renderPass = new RenderPass(scene, camera);
-    const afterimagePass = new AfterimagePass(0.92);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(mount.clientWidth, mount.clientHeight), 1.2, 0.8, 0.05);
-
-    composer.addPass(renderPass);
-    composer.addPass(afterimagePass);
-    composer.addPass(bloomPass);
+    const composer = legacyMode ? new EffectComposer(renderer) : null;
+    const bloomPass = legacyMode
+      ? new UnrealBloomPass(new THREE.Vector2(mount.clientWidth, mount.clientHeight), 1.2, 0.8, 0.05)
+      : null;
+    if (composer) {
+      const renderPass = new RenderPass(scene, camera);
+      const afterimagePass = new AfterimagePass(0.92);
+      composer.addPass(renderPass);
+      composer.addPass(afterimagePass);
+      if (bloomPass) {
+        composer.addPass(bloomPass);
+      }
+    }
 
     const handleResize = () => {
       const width = mount.clientWidth;
@@ -423,7 +429,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
-      composer.setSize(width, height);
+      composer?.setSize(width, height);
     };
 
     const clock = new THREE.Clock();
@@ -441,11 +447,17 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
       prominenceMat.uniforms.time.value = time;
 
       const pulse = 0.5 + 0.5 * Math.sin(time * 2.15);
-      bloomPass.strength = 0.8 + 0.4 * pulse;
+      if (bloomPass) {
+        bloomPass.strength = 0.8 + 0.4 * pulse;
+      }
 
       coreGroup.rotation.y += delta * 0.05;
       controls.update();
-      composer.render();
+      if (composer) {
+        composer.render();
+      } else {
+        renderer.render(scene, camera);
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -455,7 +467,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
       window.removeEventListener('resize', handleResize);
       window.cancelAnimationFrame(rafId);
       controls.dispose();
-      composer.dispose();
+      composer?.dispose();
       disposableGeometries.forEach((geometry) => geometry.dispose());
       disposableMaterials.forEach((material) => material.dispose());
       renderer.dispose();
@@ -463,7 +475,7 @@ export const SolarisPrimeAtmosphere = memo(function SolarisPrimeAtmosphere({ cla
         mount.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [legacyMode]);
 
   return <div ref={rootRef} className={`w-full h-full ${className ?? ''}`} />;
 });

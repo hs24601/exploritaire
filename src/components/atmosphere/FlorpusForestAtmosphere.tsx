@@ -369,8 +369,8 @@ export const FlorpusForestAtmosphere = memo(function FlorpusForestAtmosphere({ c
     // Very dark background purple for the fog
     scene.fog = new THREE.Fog(0x0c0016, 40, 180);
 
-    const camera = new THREE.PerspectiveCamera(70, 1, 1, 5000);
-    camera.position.set(0, -8, 40);
+    const camera = new THREE.PerspectiveCamera(76, 1, 1, 5000);
+    camera.position.set(0, -6, 64);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -439,10 +439,10 @@ export const FlorpusForestAtmosphere = memo(function FlorpusForestAtmosphere({ c
       const isPortrait = aspect < 1;
       const portraitScale = isPortrait ? 0.68 : 1;
       const sceneYOffset = isPortrait ? -2 : -10;
-      const cameraY = isPortrait ? 0 : -8;
-      const cameraZ = isPortrait ? 60 : 55; // Zoomed out
-      const lookAtY = isPortrait ? -12 : sceneYOffset;
-      camera.fov = isPortrait ? 78 : 75; // Increased FOV
+      const cameraY = isPortrait ? -1 : -6;
+      const cameraZ = isPortrait ? 74 : 68;
+      const lookAtY = isPortrait ? -10 : sceneYOffset + 1;
+      camera.fov = isPortrait ? 84 : 80;
       camera.position.set(0, cameraY, cameraZ);
       camera.lookAt(0, lookAtY, 0);
       treeMesh.position.y = sceneYOffset;

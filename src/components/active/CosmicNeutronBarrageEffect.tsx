@@ -43,7 +43,7 @@ class NeutronParticle {
       this.alpha *= 0.92;
       this.size += 2;
       this.changedFrame += 1;
-      if (this.changedFrame > this.maxChangedFrames) this.init(hue, width, height);
+      if (this.changedFrame > this.maxChangedFrames) this.init(hue, width, height); 
       return;
     }
 

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 
 type Props = {
   className?: string;
+  legacyMode?: boolean;
 };
 
 // Distribution helper consistent with provided JS
@@ -11,7 +12,7 @@ const getRandomRange = () => {
   return (1 - Math.log(randInt) / Math.log(256)) * 500;
 };
 
-export const GravitySplitAtmosphere = memo(function GravitySplitAtmosphere({ className }: Props) {
+export const GravitySplitAtmosphere = memo(function GravitySplitAtmosphere({ className, legacyMode = false }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -56,7 +57,8 @@ export const GravitySplitAtmosphere = memo(function GravitySplitAtmosphere({ cla
     hemiLight.position.set(lx, ly, lz);
     scene.add(hemiLight);
 
-    const moverCount = 50000;
+    const moverCount = legacyMode ? 50000 : 8000;
+    const activationBatchSize = legacyMode ? 80 : 18;
     const positions = new Float32Array(moverCount * 3);
     const velocities = new Float32Array(moverCount * 3); // This acts as the movement vector (velocity in standard physics)
     const accelerations = new Float32Array(moverCount * 3); // This acts as the accumulated force
@@ -144,7 +146,7 @@ export const GravitySplitAtmosphere = memo(function GravitySplitAtmosphere({ cla
           accelerations[i * 3 + 2] = 0;
           
           count++;
-          if (count >= 80) break;
+          if (count >= activationBatchSize) break;
         }
       }
     };
@@ -152,7 +154,7 @@ export const GravitySplitAtmosphere = memo(function GravitySplitAtmosphere({ cla
     let rafId: number;
     const animate = () => {
       const now = Date.now();
-      if (now - lastTimeActivate > 10) {
+      if (now - lastTimeActivate > (legacyMode ? 10 : 18)) {
         activateMovers();
         lastTimeActivate = now;
       }
@@ -240,7 +242,7 @@ export const GravitySplitAtmosphere = memo(function GravitySplitAtmosphere({ cla
       material2.dispose();
       renderer.dispose();
     };
-  }, []);
+  }, [legacyMode]);
 
   return <div ref={rootRef} className={`w-full h-full ${className}`} />;
 });

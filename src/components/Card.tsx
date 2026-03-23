@@ -5,6 +5,8 @@ import { getRankDisplay } from '../engine/rules';
 import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, WILD_SENTINEL_RANK } from '../engine/constants';
 import { useCardScale } from '../contexts/CardScaleContext';
 import { CardFrame } from './card/CardFrame';
+import { CardTokens, type CardToken } from './card/CardTokens';
+import { AbilityApBar } from './combat/AbilityApBar';
 import { Tooltip } from './Tooltip';
 import { CARD_WATERCOLOR_FILTER_ID } from '../watercolor/WatercolorSvgFilterDefs';
 import { ELEMENT_WATERCOLOR_SWATCHES } from '../watercolor/elementalSwatches';
@@ -171,8 +173,10 @@ function renderElementIndicator(element: Element | undefined, fallback: string):
   return fallback;
 }
 
-function isLightVisualColor(color: string): boolean {
+function isLightVisualColor(color: string | null | undefined): boolean {
+  if (typeof color !== 'string') return false;
   const normalized = color.trim();
+  if (!normalized) return false;
   const hex = normalized.match(/^#([0-9a-f]{6}|[0-9a-f]{3})$/i);
   if (hex) {
     const raw = hex[1];
@@ -214,8 +218,8 @@ interface CardProps {
     accentColor?: string;
     rankDisplay?: string;
     comboCount?: number;
-    apSegments?: Element[];
     apCount?: number;
+    apMax?: number;
     shimmerElement?: Element;
     autoSizeTitle?: boolean;
   };
@@ -251,6 +255,7 @@ interface CardProps {
   showFoundationActorSecretHolo?: boolean;
   canTap?: boolean;
   disableAnimation?: boolean;
+  cardTokens?: CardToken[];
 }
 
 export const Card = memo(function Card({
@@ -289,6 +294,7 @@ export const Card = memo(function Card({
   showFoundationActorSecretHolo = false,
   canTap = false,
   disableAnimation = false,
+  cardTokens = [],
 }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [shimmer, setShimmer] = useState(0);
@@ -1211,7 +1217,7 @@ const getWatercolorColorFilter = () => {
         </>
       )}
       {foundationOverlay && !faceDown && (() => {
-        const accent = foundationOverlay.accentColor ?? suitColor;
+        const accent = foundationOverlay.accentColor ?? suitColor ?? '#8ee3a5';
         const hpValue = typeof foundationOverlay.hp === 'number' ? Math.max(0, foundationOverlay.hp) : null;
         const hpMaxValue = typeof foundationOverlay.hpMax === 'number'
           ? Math.max(1, foundationOverlay.hpMax)
@@ -1225,31 +1231,31 @@ const getWatercolorColorFilter = () => {
         const hpPercent = hpValue !== null && hpMaxValue !== null
           ? Math.max(0, Math.min(100, (hpValue / hpMaxValue) * 100))
           : 0;
+        const lowHpAlert = hpValue !== null && hpMaxValue !== null && hpValue > 0 && (hpValue / hpMaxValue) <= 0.2;
+        const armorPercent = hpMaxValue !== null
+          ? Math.max(0, Math.min(100, (armorValue / hpMaxValue) * 100))
+          : 0;
         const minimalVitalsOnly = !!foundationOverlay.minimalVitalsOnly;
         const hpTextIsDark = isLightVisualColor(accent);
         const foundationRankDisplay = foundationOverlay.rankDisplay
           ?? (card ? getRankDisplay(card.rank) : '');
         const foundationRankFontPx = Math.max(30, Math.round(frameSize.width * 0.42));
-        const apSegments = Array.isArray(foundationOverlay.apSegments)
-          ? foundationOverlay.apSegments
-              .map((entry) => (typeof entry === 'string' ? entry : 'N'))
-              .filter((entry): entry is Element => ['W', 'E', 'A', 'F', 'L', 'D', 'N'].includes(entry))
-          : [];
+        const compactVitalsLayout = frameSize.width <= 110;
+        const hpLaneTopPx = compactVitalsLayout ? 22 : 18;
+        const hpLaneMinHeightPx = compactVitalsLayout ? 46 : 40;
         const apCount = Math.max(
           0,
           Math.round(
             Number.isFinite(Number(foundationOverlay.apCount))
               ? Number(foundationOverlay.apCount)
-              : apSegments.length
+              : 0
           )
         );
         const overlayTitle = foundationOverlay.name ?? '';
         const autoSizeTitle = !!foundationOverlay.autoSizeTitle;
         const titleFontPx = autoSizeTitle ? getFoundationOverlayTitleFontPx(overlayTitle) : 16;
         const titleLetterSpacing = autoSizeTitle ? (titleFontPx <= 8 ? '-0.2px' : '0px') : undefined;
-        const shimmerElement = foundationOverlay.shimmerElement
-          ?? apSegments[apSegments.length - 1]
-          ?? undefined;
+        const shimmerElement = foundationOverlay.shimmerElement ?? undefined;
         const shimmerColor = shimmerElement ? getNeonElementColor(shimmerElement) : '#8ee3a5';
         const shimmerKey = `${card?.id ?? 'foundation'}-${overlayTitle}-burst-${foundationShimmerBurst}`;
         const shimmerAngle = 26 + hashStringToUnit(shimmerKey, 11) * 30;
@@ -1264,14 +1270,10 @@ const getWatercolorColorFilter = () => {
         const shimmerBlurPx = 0;
         const superArmorSparkleColor = 'rgba(255, 220, 110, 0.98)';
         const hpBarSparkles = [
-          { left: '30%', top: '12%', size: 8, delay: 0.0, dur: 1.6 },
-          { left: '52%', top: '8%', size: 7, delay: 0.45, dur: 1.8 },
-          { left: '74%', top: '14%', size: 6, delay: 0.85, dur: 1.55 },
-        ];
-        const armorTokenSparkles = [
-          { left: '100%', top: '10px', size: 8, delay: 0.15, dur: 1.5 },
-          { left: '100%', top: '35px', size: 7, delay: 0.7, dur: 1.75 },
-          { left: '100%', top: '58px', size: 6, delay: 1.05, dur: 1.65 },
+          { left: '8%', top: '-14%', size: 8, delay: 0.0, dur: 1.6 },
+          { left: '34%', top: '112%', size: 7, delay: 0.45, dur: 1.8 },
+          { left: '63%', top: '-10%', size: 6, delay: 0.85, dur: 1.55 },
+          { left: '90%', top: '110%', size: 7, delay: 1.15, dur: 1.7 },
         ];
         return (
           <div
@@ -1283,6 +1285,22 @@ const getWatercolorColorFilter = () => {
                   0%   { transform: translate(-50%, -50%) translateY(0px) scale(1); opacity: 0.72; }
                   50%  { transform: translate(-50%, -50%) translateY(-5px) scale(1.22); opacity: 1; }
                   100% { transform: translate(-50%, -50%) translateY(0px) scale(1); opacity: 0.72; }
+                }
+              `}</style>
+            )}
+            {lowHpAlert && (
+              <style>{`
+                @keyframes foundation-lowhp-breathe {
+                  0%, 100% {
+                    box-shadow: 0 0 8px rgba(255,90,90,0.28), inset 0 0 0 1px rgba(255,90,90,0.2);
+                    border-color: rgba(255,120,120,0.5);
+                    transform: scale(1);
+                  }
+                  50% {
+                    box-shadow: 0 0 14px rgba(255,90,90,0.46), 0 0 22px rgba(255,54,54,0.18), inset 0 0 0 1px rgba(255,138,138,0.4);
+                    border-color: rgba(255,152,152,0.78);
+                    transform: scale(1.012);
+                  }
                 }
               `}</style>
             )}
@@ -1302,17 +1320,21 @@ const getWatercolorColorFilter = () => {
                 }}
               />
               <div className="absolute inset-[4px] flex flex-col">
-                <div className="relative min-h-[24px]">
+                <div className="relative" style={{ minHeight: hpLaneMinHeightPx }}>
                   {hpValue !== null && hpMaxValue !== null && (
                     <div
-                      className={`absolute inset-y-0 right-[1px] flex items-center ${foundationOverlay.rankDisplay ? 'left-[20px]' : 'left-0'}`}
+                      className={`absolute right-[1px] flex items-center ${foundationOverlay.rankDisplay ? 'left-[20px]' : 'left-0'}`}
+                      style={{ top: hpLaneTopPx }}
                     >
                       <div
-                        className="relative h-[14px] w-full rounded-full overflow-hidden border"
+                        className="relative h-[14px] w-full rounded-full overflow-visible border-[2px]"
                         style={{
-                          borderColor: 'rgba(255,255,255,0.16)',
+                          borderColor: superArmorValue > 0 ? 'rgba(255,220,110,0.94)' : 'rgba(255,255,255,0.16)',
                           backgroundColor: 'rgba(255,255,255,0.08)',
-                          boxShadow: `0 0 8px ${accent}55`,
+                          boxShadow: superArmorValue > 0
+                            ? `0 0 12px ${accent}55, 0 0 18px rgba(255,220,110,0.52), 0 0 26px rgba(255,220,110,0.24), inset 0 0 0 2px rgba(255,220,110,0.62)`
+                            : `0 0 8px ${accent}55`,
+                          animation: lowHpAlert ? 'foundation-lowhp-breathe 2.6s ease-in-out infinite' : undefined,
                         }}
                       >
                         <div
@@ -1324,6 +1346,33 @@ const getWatercolorColorFilter = () => {
                             transition: 'width 180ms ease-out',
                           }}
                         />
+                        {armorValue > 0 ? (
+                          <div
+                            className="absolute inset-y-0 left-0 rounded-full"
+                            style={{
+                              width: `${armorPercent}%`,
+                              boxShadow: '0 0 8px rgba(92,184,205,0.45), inset 0 0 0 1px rgba(210,248,255,0.28)',
+                              opacity: 0.96,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <div
+                              className="flex h-full w-full items-stretch"
+                              style={{ gap: '1px' }}
+                            >
+                              {Array.from({ length: armorValue }).map((_, index) => (
+                                <div
+                                  key={`foundation-armor-segment-${index}`}
+                                  className="h-full min-w-0 flex-1"
+                                  style={{
+                                    background: 'linear-gradient(180deg, rgba(210,248,255,0.95), rgba(92,184,205,0.92))',
+                                    boxShadow: 'inset 0 0 0 1px rgba(23,39,49,0.55)',
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                         <div
                           className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold tracking-[0.2px]"
                           style={{
@@ -1331,7 +1380,7 @@ const getWatercolorColorFilter = () => {
                             textShadow: hpTextIsDark ? '0 1px 1px rgba(255,255,255,0.24)' : `0 0 6px ${accent}55`,
                           }}
                         >
-                          {Math.round(hpValue)}/{Math.round(hpMaxValue)}
+                          {Math.round(hpValue)}/{Math.round(hpMaxValue)}{armorValue > 0 ? ` (${armorValue})` : ''}
                         </div>
                         {superArmorValue > 0 && hpBarSparkles.map((sparkle, index) => (
                           <svg
@@ -1436,73 +1485,12 @@ const getWatercolorColorFilter = () => {
                         </>
                       )}
                     </div>
-                    <div
-                      className="relative mt-[4px] rounded-md border h-[14px] flex items-center px-[2px] overflow-hidden"
-                      style={{
-                        borderColor: `${accent}55`,
-                        backgroundColor: 'rgba(6, 10, 14, 0.6)',
-                      }}
-                    >
-                      <div className="relative h-full min-w-0 flex-1 overflow-hidden rounded-[2px]">
-                        {apSegments.length > 0 ? (
-                          <div className="flex h-full w-full gap-0">
-                            {apSegments.map((element, segmentIndex) => {
-                              const segmentColor = element === 'N' ? '#8a8f98' : getNeonElementColor(element);
-                              const isFirst = segmentIndex === 0;
-                              return (
-                                <div
-                                  key={`ap-segment-${segmentIndex}-${element}`}
-                                  className="h-full flex-1 rounded-[2px]"
-                                  style={{
-                                    background: `linear-gradient(180deg, ${segmentColor}dd 0%, ${segmentColor}99 100%)`,
-                                    boxShadow: `0 0 6px ${segmentColor}99`,
-                                    borderLeft: isFirst ? 'none' : '1px solid rgba(6, 10, 14, 0.82)',
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="h-full w-full rounded-[2px] bg-game-bg-dark/50" />
-                        )}
-                        {apSegments.length > 0 && (
-                          <div className="pointer-events-none absolute inset-0 z-[2]">
-                            {apSegments.map((element, segmentIndex) => {
-                              const sparkleColor = element === 'N' ? 'rgba(220, 228, 238, 0.95)' : withAlphaColor(getNeonElementColor(element), 0.95);
-                              return (
-                                <svg
-                                  key={`ap-combo-sparkle-${segmentIndex}-${element}`}
-                                  viewBox="0 0 10 10"
-                                  className="absolute"
-                                  style={{
-                                    left: `${((segmentIndex + 0.5) / apSegments.length) * 100}%`,
-                                    top: '52%',
-                                    width: 6,
-                                    height: 6,
-                                    transform: 'translate(-50%, -50%)',
-                                    filter: `drop-shadow(0 0 2px ${sparkleColor}) drop-shadow(0 0 5px ${sparkleColor})`,
-                                    animation: `foundation-superarmor-sparkle-float ${1.4 + (segmentIndex % 3) * 0.2}s ease-in-out infinite`,
-                                    animationDelay: `${segmentIndex * 0.12}s`,
-                                    opacity: 0.88,
-                                  }}
-                                >
-                                  <path d="M5,0 L5.8,4.2 L10,5 L5.8,5.8 L5,10 L4.2,5.8 L0,5 L4.2,4.2 Z" fill={sparkleColor} />
-                                  <circle cx="5" cy="5" r="1.15" fill="rgba(255,255,255,0.9)" />
-                                </svg>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                      <div
-                        className="ml-[4px] min-w-[14px] pr-[1px] text-right text-[9px] font-black leading-none"
-                        style={{
-                          color: '#f5f8ff',
-                          textShadow: `0 0 8px ${accent}aa`,
-                        }}
-                      >
-                        {apCount}
-                      </div>
+                    <div className="relative mt-[4px]">
+                      <AbilityApBar
+                        ap={apCount}
+                        maxAp={foundationOverlay.apMax}
+                        barClassName="h-[14px] rounded-[4px]"
+                      />
                     </div>
                   </>
                 )}
@@ -1520,64 +1508,6 @@ const getWatercolorColorFilter = () => {
                 }}
               >
                 {foundationOverlay.rankDisplay}
-              </div>
-            )}
-            {(armorValue > 0 || superArmorValue > 0) && (
-              <div className="absolute right-0 top-[16px] -translate-y-1/2 translate-x-1/2 flex flex-col gap-[2px]">
-                {superArmorValue > 0 && armorTokenSparkles.map((sparkle, index) => (
-                  <svg
-                    key={`armor-superarmor-sparkle-${index}`}
-                    viewBox="0 0 10 10"
-                    className="absolute pointer-events-none"
-                    style={{
-                      left: sparkle.left,
-                      top: sparkle.top,
-                      width: sparkle.size,
-                      height: sparkle.size,
-                      transform: 'translate(-50%, -50%)',
-                      filter: `drop-shadow(0 0 2px ${superArmorSparkleColor}) drop-shadow(0 0 8px rgba(255, 202, 88, 0.72))`,
-                      animation: `foundation-superarmor-sparkle-float ${sparkle.dur}s ease-in-out infinite`,
-                      animationDelay: `${sparkle.delay}s`,
-                      opacity: 0.92,
-                      zIndex: 2,
-                    }}
-                  >
-                    <path d="M5,0 L5.8,4.2 L10,5 L5.8,5.8 L5,10 L4.2,5.8 L0,5 L4.2,4.2 Z" fill={superArmorSparkleColor} />
-                    <circle cx="5" cy="5" r="1.4" fill="rgba(255,255,255,0.92)" />
-                  </svg>
-                ))}
-                {superArmorValue > 0 && (
-                  <div
-                    className="w-[24px] h-[24px] rounded-full border flex items-center justify-center gap-[1px] font-bold leading-none"
-                    style={{
-                      color: '#ffd23c',
-                      borderColor: 'rgba(255, 210, 60, 0.55)',
-                      backgroundColor: 'rgba(32, 20, 0, 0.72)',
-                      textShadow: '0 0 8px rgba(255, 210, 60, 0.85)',
-                      fontSize: 8,
-                    }}
-                    title={`Super Armor ${superArmorValue}`}
-                  >
-                    <span className="leading-none">✦</span>
-                    <span className="leading-none">{superArmorValue}</span>
-                  </div>
-                )}
-                {armorValue > 0 && (
-                  <div
-                    className="w-[28px] h-[28px] rounded-full border flex items-center justify-center gap-[1px] font-bold leading-none"
-                    style={{
-                      color: '#00c8ff',
-                      borderColor: '#00c8ff',
-                      backgroundColor: '#001c30',
-                      textShadow: '0 0 8px rgba(0, 196, 255, 0.85)',
-                      fontSize: 9,
-                    }}
-                    title={`Armor ${armorValue}`}
-                  >
-                    <span className="leading-none">🛡</span>
-                    <span className="leading-none">{armorValue}</span>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -2841,6 +2771,9 @@ const getWatercolorColorFilter = () => {
         </div>
       )}
       </CardFrame>
+      {!faceDown && cardTokens.length > 0 ? (
+        <CardTokens tokens={cardTokens} cardWidth={frameSize.width} />
+      ) : null}
       {canTap && !faceDown && (
         <div
           className="absolute top-2 right-2 z-50 flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.35em] text-white/80"

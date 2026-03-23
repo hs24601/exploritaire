@@ -1,6 +1,9 @@
 import type { Actor, ActorDefinition } from './types';
 import { randomIdSuffix } from './constants';
 
+// Legacy note: this file is part of the older engine actor schema and is not the
+// source of truth for the golf prototype's kin buffs, passives, or starter abilities.
+
 // Actor definitions - templates for creating actor instances
 // ACTOR_DEFINITIONS_START
 export const ACTOR_DEFINITIONS: ActorDefinition[] = [

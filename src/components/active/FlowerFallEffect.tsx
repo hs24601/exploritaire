@@ -38,7 +38,6 @@ export const FlowerFallEffect = memo(function FlowerFallEffect({ className }: Pr
     <div className={`flower-fall-root w-full h-full relative overflow-hidden flex flex-col items-center justify-center ${className ?? ''}`}>
       <style>{`
         .flower-fall-root {
-          background: hsl(200, 60%, 20%);
         }
         .peddle-center {
           stop-color: hsl(320, 100%, 95%);
@@ -73,18 +72,6 @@ export const FlowerFallEffect = memo(function FlowerFallEffect({ className }: Pr
             opacity: 0;
             transform: translate(40px, 40px) rotate3d(1, 0.5, 1, 90deg);
           }
-        }
-        .title-bloom {
-          height: 10vh;
-          line-height: 10vh;
-          font-size: 8vh;
-          padding: 2.5vh;
-          margin: 0;
-          color: hsl(200, 20%, 90%);
-          border-top: 1px solid;
-          border-bottom: 1px solid;
-          font-family: 'Unica One', cursive;
-          z-index: 10;
         }
       `}</style>
 
@@ -131,8 +118,6 @@ export const FlowerFallEffect = memo(function FlowerFallEffect({ className }: Pr
           </g>
         ))}
       </svg>
-
-      <div className="title-bloom">bloom</div>
 
       <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center pointer-events-none">
         <span className="text-white font-mono text-[10px] uppercase tracking-widest opacity-20">Active Effect: flower_fall</span>

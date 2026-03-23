@@ -26,6 +26,8 @@ export default {
         },
       },
       fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        display: ['Rajdhani', 'sans-serif'],
         mono: ['"Courier New"', 'monospace'],
       },
       boxShadow: {

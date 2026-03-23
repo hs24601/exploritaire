@@ -396,9 +396,9 @@ function drawEffect(gl: WebGLRenderingContext, fx: EffectObj): void {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-type Props = { className?: string };
+type Props = { className?: string; legacyMode?: boolean };
 
-export const SakuraBlossomsAtmosphere = memo(function SakuraBlossomsAtmosphere({ className }: Props) {
+export const SakuraBlossomsAtmosphere = memo(function SakuraBlossomsAtmosphere({ className, legacyMode = false }: Props) {
   const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -456,7 +456,9 @@ export const SakuraBlossomsAtmosphere = memo(function SakuraBlossomsAtmosphere({
     }
 
     // ── Particles ───────────────────────────────────────────────────────────
-    const NUM = 1600;
+    const NUM = legacyMode ? 1600 : 480;
+    const blurPassCount = legacyMode ? 2 : 1;
+    const drawTiledCopies = legacyMode;
     const particles: BlossomParticle[] = Array.from({ length: NUM }, () => new BlossomParticle());
     const dataArray = new Float32Array(NUM * 8); // position(3) + euler(3) + misc(2)
     const posOff  = 0;
@@ -554,13 +556,15 @@ export const SakuraBlossomsAtmosphere = memo(function SakuraBlossomsAtmosphere({
       gl.vertexAttribPointer(flowerProg!.attributes.aMisc,     2, gl.FLOAT, false, 0, miscOff  * 4);
 
       // Draw tiled copies to fill the viewing volume
-      for (let i = 1; i < 2; i++) {
-        const zpos = i * -2.0;
-        const pairs: [number,number][] = [[-1,-1],[-1,1],[1,-1],[1,1]];
-        for (const [sx, sy] of pairs) {
-          offset[0]=area.x*sx; offset[1]=area.y*sy; offset[2]=area.z*zpos;
-          gl.uniform3fv(flowerProg!.uniforms.uOffset, offset);
-          gl.drawArrays(gl.POINTS, 0, NUM);
+      if (drawTiledCopies) {
+        for (let i = 1; i < 2; i++) {
+          const zpos = i * -2.0;
+          const pairs: [number,number][] = [[-1,-1],[-1,1],[1,-1],[1,1]];
+          for (const [sx, sy] of pairs) {
+            offset[0]=area.x*sx; offset[1]=area.y*sy; offset[2]=area.z*zpos;
+            gl.uniform3fv(flowerProg!.uniforms.uOffset, offset);
+            gl.drawArrays(gl.POINTS, 0, NUM);
+          }
         }
       }
       offset[0]=0; offset[1]=0; offset[2]=0;
@@ -589,7 +593,7 @@ export const SakuraBlossomsAtmosphere = memo(function SakuraBlossomsAtmosphere({
       unbindProg(gl, fxBright!.program);
 
       // Two-pass blur
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < blurPassCount; i++) {
         const p = 1.5 + i, s = 2.0 + i;
         bindRT(wHalfRT1, true);
         applyEffect(gl, fxBlur!, halfResArr, wHalfRT0);
@@ -670,7 +674,7 @@ export const SakuraBlossomsAtmosphere = memo(function SakuraBlossomsAtmosphere({
         .forEach(p => p && gl.deleteProgram(p.prog));
       if (mount.contains(canvas)) mount.removeChild(canvas);
     };
-  }, []);
+  }, [legacyMode]);
 
   return <div ref={mountRef} className={`w-full h-full ${className ?? ''}`} />;
 });

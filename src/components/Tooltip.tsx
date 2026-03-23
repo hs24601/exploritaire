@@ -19,6 +19,9 @@ interface TooltipProps {
   disabled?: boolean;
   delayMs?: number;
   progressRing?: TooltipProgressRing;
+  hoverEnabled?: boolean;
+  clickToPin?: boolean;
+  inlineTrigger?: boolean;
 }
 
 export const Tooltip = memo(function Tooltip({
@@ -30,6 +33,9 @@ export const Tooltip = memo(function Tooltip({
   disabled = false,
   delayMs = 150,
   progressRing,
+  hoverEnabled = true,
+  clickToPin = true,
+  inlineTrigger = false,
 }: TooltipProps) {
   const [localPinned, setLocalPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -39,8 +45,10 @@ export const Tooltip = memo(function Tooltip({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
   const progressStartRef = useRef(0);
+  const tooltipIdRef = useRef(`tooltip-${Math.random().toString(36).slice(2)}`);
 
   const pinned = isPinned ?? localPinned;
+  const previousPinnedRef = useRef(pinned);
   const isVisible = !disabled && (pinned || isHovered);
   const hasProgressRing = !!progressRing && progressRing.totalMs > 0 && progressRing.remainingMs > 0;
 
@@ -72,13 +80,18 @@ export const Tooltip = memo(function Tooltip({
 
   // Handle mouse enter with delay
   const handleMouseEnter = useCallback(() => {
-    if (disabled || pinned) return;
+    if (disabled || pinned || !hoverEnabled) return;
 
     hoverTimeoutRef.current = window.setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent('codex-tooltip-open', {
+          detail: { sourceId: tooltipIdRef.current },
+        })
+      );
       setIsHovered(true);
       requestAnimationFrame(updatePosition);
     }, delayMs);
-  }, [disabled, pinned, updatePosition, delayMs]);
+  }, [delayMs, disabled, hoverEnabled, pinned, updatePosition]);
 
   // Handle mouse leave
   const handleMouseLeave = useCallback(() => {
@@ -93,7 +106,7 @@ export const Tooltip = memo(function Tooltip({
 
   // Handle click to pin/unpin
   const handleClick = useCallback((e: React.MouseEvent) => {
-    if (!pinnable) return;
+    if (!pinnable || !clickToPin) return;
     e.stopPropagation();
 
     if (pinned) {
@@ -101,11 +114,50 @@ export const Tooltip = memo(function Tooltip({
       setLocalPinned(false);
       setIsHovered(false);
     } else {
+      window.dispatchEvent(
+        new CustomEvent('codex-tooltip-open', {
+          detail: { sourceId: tooltipIdRef.current },
+        })
+      );
       onPinnedChange?.(true);
       setLocalPinned(true);
       updatePosition();
     }
-  }, [pinnable, pinned, onPinnedChange, updatePosition]);
+  }, [clickToPin, pinnable, pinned, onPinnedChange, updatePosition]);
+
+  useEffect(() => {
+    const handleAnotherTooltipOpen = (event: Event) => {
+      const sourceId = (event as CustomEvent<{ sourceId?: string }>).detail?.sourceId;
+      if (!sourceId || sourceId === tooltipIdRef.current) return;
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      if (pinned) {
+        onPinnedChange?.(false);
+        setLocalPinned(false);
+      }
+      setIsHovered(false);
+    };
+
+    window.addEventListener('codex-tooltip-open', handleAnotherTooltipOpen as EventListener);
+    return () => {
+      window.removeEventListener('codex-tooltip-open', handleAnotherTooltipOpen as EventListener);
+    };
+  }, [onPinnedChange, pinned]);
+
+  useEffect(() => {
+    const wasPinned = previousPinnedRef.current;
+    previousPinnedRef.current = pinned;
+    if (!pinned || wasPinned) return;
+
+    window.dispatchEvent(
+      new CustomEvent('codex-tooltip-open', {
+        detail: { sourceId: tooltipIdRef.current },
+      })
+    );
+    requestAnimationFrame(updatePosition);
+  }, [pinned, updatePosition]);
 
   // Handle click outside to unpin
   useEffect(() => {
@@ -177,10 +229,10 @@ export const Tooltip = memo(function Tooltip({
     <>
       <div
         ref={triggerRef}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        onMouseEnter={hoverEnabled ? handleMouseEnter : undefined}
+        onMouseLeave={hoverEnabled ? handleMouseLeave : undefined}
         onClick={handleClick}
-        className="inline-block"
+        className={inlineTrigger ? 'inline-flex align-baseline' : 'inline-block h-full w-full'}
       >
         {children}
       </div>
@@ -255,18 +307,8 @@ export const Tooltip = memo(function Tooltip({
                   </div>
                 );
               })()}
-              <div
-                className="tooltip-surface relative overflow-visible bg-game-bg-dark border-2 border-game-purple rounded-lg p-5 min-w-[240px] max-w-[380px] leading-[1.5]"
-                style={{
-                  boxShadow: '0 0 20px rgba(139, 92, 246, 0.3), 0 10px 40px rgba(0, 0, 0, 0.5)',
-                }}
-              >
+              <div className="tooltip-surface relative max-w-[320px] overflow-visible leading-[1.4] text-white">
                 <div className="tooltip-content">{content}</div>
-                {pinnable && (
-                  <div className="tooltip-hint mt-2 text-[10px] text-game-white opacity-40 text-center">
-                    {pinned ? 'Click outside to close' : 'Click to keep open'}
-                  </div>
-                )}
               </div>
             </motion.div>
           )}

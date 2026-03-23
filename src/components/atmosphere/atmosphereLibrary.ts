@@ -9,6 +9,7 @@ export type AtmosphereEffectId =
   | 'cosmic_lint'
   | 'door_sands_time'
   | 'drifting_purple'
+  | 'petrova_line'
   | 'einstein_rosen'
   | 'electric_skies'
   | 'falling_snow'
@@ -43,6 +44,7 @@ export const ATMOSPHERE_PRESETS: AtmospherePreset[] = [
   { id: 'cosmic_lint', label: 'cosmic_lint', category: 'atmosphere' },
   { id: 'door_sands_time', label: 'door_sands_time', category: 'atmosphere' },
   { id: 'drifting_purple', label: 'drifting_purple', category: 'atmosphere' },
+  { id: 'petrova_line', label: 'petrova_line', category: 'atmosphere' },
   { id: 'einstein_rosen', label: 'einstein_rosen', category: 'atmosphere' },
   { id: 'electric_skies', label: 'electric_skies', category: 'atmosphere' },
   { id: 'falling_snow', label: 'falling_snow', category: 'atmosphere' },

@@ -160,6 +160,9 @@ export const ContinualRepaintEffect = memo(function ContinualRepaintEffect({
       osCtx.drawImage(img, 0, 0, scaledW, scaledH);
       const fullData = osCtx.getImageData(0, 0, scaledW, scaledH);
       imgData = fullData.data;
+      // Release offscreen canvas backing store — pixel data is now in imgData
+      osCanvas.width = 0;
+      osCanvas.height = 0;
 
       // Identify the true content bottom to prevent "floating"
       if (transparent && onOffsetComputed) {
@@ -274,6 +277,12 @@ export const ContinualRepaintEffect = memo(function ContinualRepaintEffect({
 
     return () => {
       active = false;
+      // Prevent onload/onerror from resurrecting the closure after unmount
+      img.onload = null;
+      img.onerror = null;
+      // Ensure osCanvas backing store is freed even if image never loaded
+      osCanvas.width = 0;
+      osCanvas.height = 0;
       unregister?.();
     };
   }, [config.imgUrl, config.highFidelity, transparent]);

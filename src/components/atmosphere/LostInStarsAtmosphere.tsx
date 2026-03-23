@@ -2,9 +2,8 @@ import { memo, useEffect, useRef } from 'react';
 
 type Props = {
   className?: string;
+  legacyMode?: boolean;
 };
-
-const NUM_POINTS = 100000;
 
 const identity = (out: Float32Array) => {
   out[0] = 1; out[1] = 0; out[2] = 0; out[3] = 0;
@@ -121,7 +120,7 @@ const rotateZ = (out: Float32Array, a: Float32Array, rad: number) => {
   out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
 };
 
-export const LostInStarsAtmosphere = memo(function LostInStarsAtmosphere({ className }: Props) {
+export const LostInStarsAtmosphere = memo(function LostInStarsAtmosphere({ className, legacyMode = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -189,8 +188,9 @@ void main(void) {
     const mvpUniform = gl.getUniformLocation(program, 'u_mvp');
     if (positionAttr < 0 || !mvpUniform) return;
 
-    const points = new Float32Array(NUM_POINTS * 3);
-    for (let index = 0; index < NUM_POINTS; index += 1) {
+    const pointCount = legacyMode ? 100000 : 12000;
+    const points = new Float32Array(pointCount * 3);
+    for (let index = 0; index < pointCount; index += 1) {
       const i = index * 3;
       points[i] = (Math.random() - 0.5) * 8;
       points[i + 1] = (Math.random() - 0.5) * 8;
@@ -245,7 +245,7 @@ void main(void) {
       rotateZ(vMatrix, vMatrix, angle);
       multiply(mvpMatrix, pMatrix, vMatrix);
       gl.uniformMatrix4fv(mvpUniform, false, mvpMatrix);
-      gl.drawArrays(gl.POINTS, 0, NUM_POINTS);
+      gl.drawArrays(gl.POINTS, 0, pointCount);
       rafId = window.requestAnimationFrame(render);
     };
 
@@ -258,7 +258,7 @@ void main(void) {
       gl.deleteShader(vertexShader);
       gl.deleteShader(fragmentShader);
     };
-  }, []);
+  }, [legacyMode]);
 
   return <canvas ref={canvasRef} className={`w-full h-full ${className}`} />;
 });

@@ -25,8 +25,8 @@ const tick = () => {
   if (totalWeight <= 0) totalWeight = 1;
 
   for (const p of painters.values()) {
-    const n = Math.max(1, Math.round((p.getWeight() / totalWeight) * GLOBAL_BUDGET));
-    p.paintN(n);
+    const n = Math.round((p.getWeight() / totalWeight) * GLOBAL_BUDGET);
+    if (n > 0) p.paintN(n);
   }
 
   rafId = requestAnimationFrame(tick);

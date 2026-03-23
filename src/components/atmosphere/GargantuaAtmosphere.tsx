@@ -8,6 +8,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 
 type Props = {
   className?: string;
+  legacyMode?: boolean;
 };
 
 const BLACK_HOLE_RADIUS = 1.3;
@@ -15,7 +16,7 @@ const DISK_INNER_RADIUS = BLACK_HOLE_RADIUS + 0.2;
 const DISK_OUTER_RADIUS = 8.0;
 const DISK_TILT_ANGLE = Math.PI / 3.0;
 
-export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className }: Props) {
+export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className, legacyMode = false }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -30,20 +31,25 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(mount.clientWidth, mount.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, legacyMode ? 1.5 : 1.15));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     mount.appendChild(renderer.domElement);
 
-    const composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    
-    const bloomPass = new UnrealBloomPass(
-        new THREE.Vector2(mount.clientWidth, mount.clientHeight),
-        0.8, 0.7, 0.8
-    );
-    composer.addPass(bloomPass);
+    const composer = legacyMode ? new EffectComposer(renderer) : null;
+    const bloomPass = legacyMode
+      ? new UnrealBloomPass(
+          new THREE.Vector2(mount.clientWidth, mount.clientHeight),
+          0.8, 0.7, 0.8
+        )
+      : null;
+    if (composer) {
+      composer.addPass(new RenderPass(scene, camera));
+      if (bloomPass) {
+        composer.addPass(bloomPass);
+      }
+    }
 
     const lensingShader = {
         uniforms: {
@@ -89,8 +95,10 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
                 gl_FragColor = vec4(r, g, b, 1.0);
             }`
     };
-    const lensingPass = new ShaderPass(lensingShader);
-    composer.addPass(lensingPass);
+    const lensingPass = legacyMode ? new ShaderPass(lensingShader) : null;
+    if (composer && lensingPass) {
+      composer.addPass(lensingPass);
+    }
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = 0.035;
@@ -103,7 +111,7 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
     controls.update();
 
     const starGeometry = new THREE.BufferGeometry();
-    const starCount = 150000;
+    const starCount = legacyMode ? 150000 : 18000;
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
     const starSizes = new Float32Array(starCount);
@@ -182,7 +190,7 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
     const stars = new THREE.Points(starGeometry, starMaterial);
     scene.add(stars);
 
-    const eventHorizonGeom = new THREE.SphereGeometry(BLACK_HOLE_RADIUS * 1.05, 128, 64);
+    const eventHorizonGeom = new THREE.SphereGeometry(BLACK_HOLE_RADIUS * 1.05, legacyMode ? 128 : 48, legacyMode ? 64 : 24);
     const eventHorizonMat = new THREE.ShaderMaterial({
         uniforms: {
             uTime: { value: 0 },
@@ -222,13 +230,13 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
     const eventHorizon = new THREE.Mesh(eventHorizonGeom, eventHorizonMat);
     scene.add(eventHorizon);
 
-    const blackHoleGeom = new THREE.SphereGeometry(BLACK_HOLE_RADIUS, 128, 64);
+    const blackHoleGeom = new THREE.SphereGeometry(BLACK_HOLE_RADIUS, legacyMode ? 128 : 48, legacyMode ? 64 : 24);
     const blackHoleMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const blackHoleMesh = new THREE.Mesh(blackHoleGeom, blackHoleMat);
     blackHoleMesh.renderOrder = 0;
     scene.add(blackHoleMesh);
 
-    const diskGeometry = new THREE.RingGeometry(DISK_INNER_RADIUS, DISK_OUTER_RADIUS, 256, 128);
+    const diskGeometry = new THREE.RingGeometry(DISK_INNER_RADIUS, DISK_OUTER_RADIUS, legacyMode ? 256 : 96, legacyMode ? 128 : 32);
     const diskMaterial = new THREE.ShaderMaterial({
         uniforms: {
             uTime: { value: 0.0 },
@@ -365,9 +373,11 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
-      composer.setSize(width, height);
-      bloomPass.resolution.set(width, height);
-      lensingPass.uniforms.aspectRatio.value = width / height;
+      composer?.setSize(width, height);
+      bloomPass?.resolution.set(width, height);
+      if (lensingPass) {
+        lensingPass.uniforms.aspectRatio.value = width / height;
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -387,10 +397,12 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
         eventHorizonMat.uniforms.uCameraPosition.value.copy(camera.position);
 
         blackHoleScreenPosVec3.copy(blackHoleMesh.position).project(camera);
-        lensingPass.uniforms.blackHoleScreenPos.value.set(
-            (blackHoleScreenPosVec3.x + 1) / 2,
-            (blackHoleScreenPosVec3.y + 1) / 2
-        );
+        if (lensingPass) {
+          lensingPass.uniforms.blackHoleScreenPos.value.set(
+              (blackHoleScreenPosVec3.x + 1) / 2,
+              (blackHoleScreenPosVec3.y + 1) / 2
+          );
+        }
 
         controls.update();
         
@@ -399,7 +411,11 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
 
         accretionDisk.rotation.z += deltaTime * 0.005;
 
-        composer.render(deltaTime);
+        if (composer) {
+          composer.render(deltaTime);
+        } else {
+          renderer.render(scene, camera);
+        }
     };
 
     animate();
@@ -408,7 +424,7 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
       window.removeEventListener('resize', handleResize);
       window.cancelAnimationFrame(rafId);
       controls.dispose();
-      composer.dispose();
+      composer?.dispose();
       renderer.dispose();
       starGeometry.dispose();
       starMaterial.dispose();
@@ -422,7 +438,7 @@ export const GargantuaAtmosphere = memo(function GargantuaAtmosphere({ className
         mount.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [legacyMode]);
 
   return <div ref={rootRef} className={`w-full h-full bg-black ${className ?? ''}`} />;
 });

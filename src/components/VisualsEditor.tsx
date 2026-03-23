@@ -15,6 +15,7 @@ import { CometBarrageAtmosphere } from './atmosphere/CometBarrageAtmosphere';
 import { CometRainAtmosphere, DEFAULT_COMET_RAIN_CONFIG, type CometRainConfig } from './atmosphere/CometRainAtmosphere';
 import { CosmicLintAtmosphere, DEFAULT_COSMIC_LINT_CONFIG, type CosmicLintConfig } from './atmosphere/CosmicLintAtmosphere';
 import { DriftingPurpleAtmosphere } from './atmosphere/DriftingPurpleAtmosphere';
+import { PetrovaLineAtmosphere } from './atmosphere/PetrovaLineAtmosphere';
 import { DoorSandsTimeAtmosphere, DEFAULT_DOOR_SANDS_TIME_CONFIG, type DoorSandsTimeConfig } from './atmosphere/DoorSandsTimeAtmosphere';
 import { EinsteinRosenAtmosphere } from './atmosphere/EinsteinRosenAtmosphere';
 import { FallingSnowAtmosphere, DEFAULT_FALLING_SNOW_CONFIG, type FallingSnowConfig } from './atmosphere/FallingSnowAtmosphere';
@@ -41,6 +42,7 @@ import { Depth3DShiftDemo, DEFAULT_DEPTH_3D_SHIFT_CONFIG, type Depth3DShiftConfi
 import { FlowerGeneratorEffect, DEFAULT_FLOWER_GENERATOR_CONFIG, type FlowerGeneratorConfig } from './active/FlowerGeneratorEffect';
 import { ElectronPaintingEffect } from './active/ElectronPaintingEffect';
 import { CosmicNeutronBarrageEffect } from './active/CosmicNeutronBarrageEffect';
+import { ChaosAtmosphereEffect, DEFAULT_CHAOS_ATMOSPHERE_CONFIG, type ChaosAtmosphereConfig } from './active/ChaosAtmosphereEffect';
 import { ConfettiFallEffect } from './active/ConfettiFallEffect';
 import { LocalizedBlackHoleEffect } from './active/LocalizedBlackHoleEffect';
 import { BatFlyEffect } from './active/BatFlyEffect';
@@ -64,6 +66,8 @@ import { OsmosBubbleEffect, DEFAULT_OSMOS_BUBBLE_CONFIG, type OsmosBubbleConfig 
 import { HyperWispEffect } from './active/HyperWispEffect';
 import { TopoRainbowEffect, DEFAULT_TOPO_RAINBOW_CONFIG, type TopoRainbowConfig } from './active/TopoRainbowEffect';
 import { SuperNovaEffect, DEFAULT_SUPER_NOVA_CONFIG, type SuperNovaConfig } from './active/SuperNovaEffect';
+import { BahamutBlastEffect, DEFAULT_BAHAMUT_BLAST_CONFIG, type BahamutBlastConfig } from './active/BahamutBlastEffect';
+import { QuasarBeamEffect, DEFAULT_QUASAR_BEAM_CONFIG, type QuasarBeamConfig } from './active/QuasarBeamEffect';
 
 // Text Effect Imports
 import { DisassembledTextEffect, DEFAULT_DISASSEMBLED_TEXT_CONFIG, type DisassembledTextConfig } from './text/DisassembledTextEffect';
@@ -281,6 +285,11 @@ const AtmosEditor = memo(function AtmosEditor({
   leftCollapsed, setLeftCollapsed, 
   rightCollapsed, setRightCollapsed 
 }: SubEditorProps) {
+  type LegacyAtmosId = 'gargantua' | 'drifting_purple' | 'petrova_line' | 'gravity_split' | 'lost_in_stars' | 'solaris_prime' | 'sakura_blossoms';
+  const LEGACY_ATMOS_IDS: LegacyAtmosId[] = ['gargantua', 'drifting_purple', 'petrova_line', 'gravity_split', 'lost_in_stars', 'solaris_prime', 'sakura_blossoms'];
+  const isLegacyAtmosId = (value: AtmosphereEffectId): value is LegacyAtmosId =>
+    (LEGACY_ATMOS_IDS as AtmosphereEffectId[]).includes(value);
+
   const [selectedBaseId, setSelectedBaseId] = useState<AtmosphereEffectId>('aurora_forest');
   const [ragingWavesConfig, setRagingWavesConfig] = useState<RagingWavesConfig>(DEFAULT_RAGING_WAVES_CONFIG);
   const [fallingSnowConfig, setFallingSnowConfig] = useState<FallingSnowConfig>(DEFAULT_FALLING_SNOW_CONFIG);
@@ -290,6 +299,15 @@ const AtmosEditor = memo(function AtmosEditor({
   const [electricSkiesConfig, setElectricSkiesConfig] = useState<ElectricSkiesConfig>(DEFAULT_ELECTRIC_SKIES_CONFIG);
   const [starsTwinkleConfig, setStarsTwinkleConfig] = useState<StarsTwinkleConfig>(DEFAULT_STARS_TWINKLE_CONFIG);
   const [doorSandsTimeConfig, setDoorSandsTimeConfig] = useState<DoorSandsTimeConfig>(DEFAULT_DOOR_SANDS_TIME_CONFIG);
+  const [legacyModes, setLegacyModes] = useState<Record<LegacyAtmosId, boolean>>({
+    gargantua: false,
+    drifting_purple: false,
+    petrova_line: false,
+    gravity_split: false,
+    lost_in_stars: false,
+    solaris_prime: false,
+    sakura_blossoms: false,
+  });
   
   const [userPresets, setUserPresets] = useState<Record<string, { baseId: AtmosphereEffectId, config: any }>>({});
   const [activePresetName, setActivePresetName] = useState<string | null>(null);
@@ -312,7 +330,9 @@ const AtmosEditor = memo(function AtmosEditor({
                         selectedBaseId === 'comet_rain' ? cometRainConfig : 
                         selectedBaseId === 'electric_skies' ? electricSkiesConfig : 
                         selectedBaseId === 'stars_twinkle_performant' ? starsTwinkleConfig : 
-                        selectedBaseId === 'door_sands_time' ? doorSandsTimeConfig : null;
+                        selectedBaseId === 'door_sands_time' ? doorSandsTimeConfig :
+                        isLegacyAtmosId(selectedBaseId) ? { legacyMode: legacyModes[selectedBaseId] } :
+                        null;
     const nextPresets = { ...userPresets, [saveName]: { baseId: selectedBaseId, config: currentConfig } };
     setUserPresets(nextPresets);
     localStorage.setItem('exploritaire_atmos_presets', JSON.stringify(nextPresets));
@@ -332,6 +352,9 @@ const AtmosEditor = memo(function AtmosEditor({
       if (preset.baseId === 'electric_skies') setElectricSkiesConfig(preset.config);
       if (preset.baseId === 'stars_twinkle_performant') setStarsTwinkleConfig(preset.config);
       if (preset.baseId === 'door_sands_time') setDoorSandsTimeConfig(preset.config);
+      if (isLegacyAtmosId(preset.baseId) && preset.config && typeof preset.config.legacyMode === 'boolean') {
+        setLegacyModes((prev) => ({ ...prev, [preset.baseId]: preset.config.legacyMode }));
+      }
       setActivePresetName(name);
     }
   };
@@ -353,32 +376,34 @@ const AtmosEditor = memo(function AtmosEditor({
     if (selectedBaseId === 'electric_skies') setElectricSkiesConfig(DEFAULT_ELECTRIC_SKIES_CONFIG);
     if (selectedBaseId === 'stars_twinkle_performant') setStarsTwinkleConfig(DEFAULT_STARS_TWINKLE_CONFIG);
     if (selectedBaseId === 'door_sands_time') setDoorSandsTimeConfig(DEFAULT_DOOR_SANDS_TIME_CONFIG);
+    if (isLegacyAtmosId(selectedBaseId)) setLegacyModes((prev) => ({ ...prev, [selectedBaseId]: false }));
     setActivePresetName(null);
   };
 
   const renderPreview = () => {
     switch (selectedBaseId) {
       case 'aurora_forest': return <AuroraForestAtmosphere />;
-      case 'gargantua': return <GargantuaAtmosphere />;
+      case 'gargantua': return <GargantuaAtmosphere legacyMode={legacyModes.gargantua} />;
       case 'brownian_motion': return <BrownianMotionAtmosphere />;
       case 'chaos_split': return <ChaosSplitAtmosphere />;
       case 'comet_barrage': return <CometBarrageAtmosphere />;
       case 'comet_rain': return <CometRainAtmosphere config={cometRainConfig} />;
       case 'cosmic_lint': return <CosmicLintAtmosphere config={cosmicLintConfig} />;
       case 'door_sands_time': return <DoorSandsTimeAtmosphere config={doorSandsTimeConfig} />;
-      case 'drifting_purple': return <DriftingPurpleAtmosphere />;
+      case 'drifting_purple': return <DriftingPurpleAtmosphere legacyMode={legacyModes.drifting_purple} />;
+      case 'petrova_line': return <PetrovaLineAtmosphere legacyMode={legacyModes.petrova_line} />;
       case 'einstein_rosen': return <EinsteinRosenAtmosphere />;
       case 'falling_snow': return <FallingSnowAtmosphere config={fallingSnowConfig} />;
       case 'florpus_forest': return <FlorpusForestAtmosphere />;
-      case 'gravity_split': return <GravitySplitAtmosphere />;
+      case 'gravity_split': return <GravitySplitAtmosphere legacyMode={legacyModes.gravity_split} />;
       case 'inferno_maelstrom': return <InfernoMaelstromAtmosphere />;
-      case 'lost_in_stars': return <LostInStarsAtmosphere />;
+      case 'lost_in_stars': return <LostInStarsAtmosphere legacyMode={legacyModes.lost_in_stars} />;
       case 'ocean_solar_cycle': return <OceanSolarCycleAtmosphere config={oceanSolarCycleConfig} />;
       case 'raging_waves': return <RagingWavesAtmosphere config={ragingWavesConfig} enableControls />;
       case 'rarity_squares_tunnel': return <RaritySquaresTunnelAtmosphere />;
       case 'sacred_realm': return <SacredRealmAtmosphere />;
-      case 'solaris_prime': return <SolarisPrimeAtmosphere />;
-      case 'sakura_blossoms': return <SakuraBlossomsAtmosphere />;
+      case 'solaris_prime': return <SolarisPrimeAtmosphere legacyMode={legacyModes.solaris_prime} />;
+      case 'sakura_blossoms': return <SakuraBlossomsAtmosphere legacyMode={legacyModes.sakura_blossoms} />;
       case 'smoke_green': return <SmokeGreenAtmosphere />;
       case 'spinning_starfield': return <SpinningStarfieldAtmosphere />;
       case 'electric_skies': return <ElectricSkiesAtmosphere config={electricSkiesConfig} />;
@@ -387,7 +412,7 @@ const AtmosEditor = memo(function AtmosEditor({
     }
   };
 
-  const hasConfig = ['raging_waves', 'falling_snow', 'ocean_solar_cycle', 'cosmic_lint', 'comet_rain', 'electric_skies', 'stars_twinkle_performant', 'door_sands_time'].includes(selectedBaseId);
+  const hasConfig = ['raging_waves', 'falling_snow', 'ocean_solar_cycle', 'cosmic_lint', 'comet_rain', 'electric_skies', 'stars_twinkle_performant', 'door_sands_time', ...LEGACY_ATMOS_IDS].includes(selectedBaseId);
 
   return (
     <div className="flex h-full gap-4 overflow-hidden relative">
@@ -432,6 +457,24 @@ const AtmosEditor = memo(function AtmosEditor({
             <button onClick={resetToDefault} className="text-[8px] text-game-gold/60 hover:text-game-gold uppercase font-bold tracking-tighter">Reset</button>
           </div>
           <div className="space-y-4 pb-8">
+            {isLegacyAtmosId(selectedBaseId) && (
+              <div className="space-y-2 rounded border border-game-gold/20 bg-game-gold/5 p-3">
+                <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-game-gold/80">Performance Mode</div>
+                <button
+                  onClick={() => setLegacyModes((prev) => ({ ...prev, [selectedBaseId]: !prev[selectedBaseId] }))}
+                  className={`w-full rounded border px-3 py-2 text-left text-[9px] font-mono uppercase tracking-[0.14em] transition-all ${
+                    legacyModes[selectedBaseId]
+                      ? 'border-game-pink/50 bg-game-pink/10 text-game-pink'
+                      : 'border-game-teal/30 bg-game-teal/10 text-game-teal'
+                  }`}
+                >
+                  {legacyModes[selectedBaseId] ? 'Legacy / High-Performance Mode' : 'Optimized Mode'}
+                </button>
+                <div className="text-[8px] leading-relaxed text-game-white/35">
+                  Optimized mode is the new baseline. Enable legacy mode only when you want the original heavier implementation.
+                </div>
+              </div>
+            )}
             {selectedBaseId === 'raging_waves' && (
               <>
                 <ConfigSlider label="Elevation" value={ragingWavesConfig.bigWavesElevation} min={0} max={1} step={0.001} onChange={(v) => setRagingWavesConfig({ ...ragingWavesConfig, bigWavesElevation: v })} />
@@ -1428,13 +1471,16 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
   leftCollapsed, setLeftCollapsed, 
   rightCollapsed, setRightCollapsed 
 }: SubEditorProps) {
-  const [activeSubsubtab, setActiveSubsubtab] = useState<'bat_fly' | 'burn_edges' | 'collect_stars' | 'color_swarm' | 'confetti_fall' | 'confusion_spiral' | 'continual_repaint' | 'cosmic_neutron_barrage' | 'electricity_node' | 'electron_painting' | 'flower_fall' | 'flower_generator' | 'god_rays' | 'gommage' | 'green_bloom' | 'hyper_wisp' | 'localized_black_hole' | 'osmos_bubble' | 'protego_blast' | 'rings_of_time' | 'siphon_shape' | 'sparks_periculum' | 'spawn_navi' | 'super_nova' | 'topo_rainbow' | 'trace_complete' | 'vortex_glass' | 'watercolor_stormy'>('bat_fly');
+  const [activeSubsubtab, setActiveSubsubtab] = useState<'bahamut_blast' | 'bat_fly' | 'burn_edges' | 'chaos_atmosphere' | 'collect_stars' | 'color_swarm' | 'confetti_fall' | 'confusion_spiral' | 'continual_repaint' | 'cosmic_neutron_barrage' | 'electricity_node' | 'electron_painting' | 'flower_fall' | 'flower_generator' | 'god_rays' | 'gommage' | 'green_bloom' | 'hyper_wisp' | 'localized_black_hole' | 'osmos_bubble' | 'protego_blast' | 'quasar_beam' | 'rings_of_time' | 'siphon_shape' | 'sparks_periculum' | 'spawn_navi' | 'super_nova' | 'topo_rainbow' | 'trace_complete' | 'vortex_glass' | 'watercolor_stormy'>('bat_fly');
+  const [quasarBeamConfig, setQuasarBeamConfig] = useState<QuasarBeamConfig>(DEFAULT_QUASAR_BEAM_CONFIG);
+  const [bahamutBlastConfig, setBahamutBlastConfig] = useState<BahamutBlastConfig>(DEFAULT_BAHAMUT_BLAST_CONFIG);
   const [flowerConfig, setFlowerConfig] = useState<FlowerGeneratorConfig>(DEFAULT_FLOWER_GENERATOR_CONFIG);
   const [protegoConfig, setProtegoConfig] = useState<ProtegoBlastConfig>(DEFAULT_PROTEGO_BLAST_CONFIG);
   const [gommageConfig, setGommageConfig] = useState<GommageConfig>(DEFAULT_GOMMAGE_CONFIG);
   const [osmosBubbleConfig, setOsmosBubbleConfig] = useState<OsmosBubbleConfig>(DEFAULT_OSMOS_BUBBLE_CONFIG);
   const [topoRainbowConfig, setTopoRainbowConfig] = useState<TopoRainbowConfig>(DEFAULT_TOPO_RAINBOW_CONFIG);
   const [superNovaConfig, setSuperNovaConfig] = useState<SuperNovaConfig>(DEFAULT_SUPER_NOVA_CONFIG);
+  const [chaosAtmosphereConfig, setChaosAtmosphereConfig] = useState<ChaosAtmosphereConfig>(DEFAULT_CHAOS_ATMOSPHERE_CONFIG);
   const [vortexGlassConfig, setVortexGlassConfig] = useState<VortexGlassConfig>(DEFAULT_VORTEX_GLASS_CONFIG);
   const [colorSwarmConfig, setColorSwarmConfig] = useState<ColorSwarmConfig>(DEFAULT_COLOR_SWARM_CONFIG);
   const [collectStarsConfig, setCollectStarsConfig] = useState<CollectStarsConfig>(DEFAULT_COLLECT_STARS_CONFIG);
@@ -1474,7 +1520,7 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
   }, [isAnimatingBurn]);
 
   const effectIds: Array<typeof activeSubsubtab> = [
-    'bat_fly', 'burn_edges', 'collect_stars', 'color_swarm', 'confetti_fall', 'confusion_spiral', 'continual_repaint', 'cosmic_neutron_barrage',
+    'bahamut_blast', 'bat_fly', 'burn_edges', 'chaos_atmosphere', 'collect_stars', 'color_swarm', 'confetti_fall', 'confusion_spiral', 'continual_repaint', 'cosmic_neutron_barrage',
     'electricity_node', 'electron_painting', 'flower_fall', 'flower_generator', 'god_rays', 'gommage', 'green_bloom', 'hyper_wisp',
     'localized_black_hole', 'osmos_bubble', 'protego_blast', 'rings_of_time', 'siphon_shape', 'sparks_periculum', 'spawn_navi', 'super_nova', 'topo_rainbow', 'trace_complete', 'vortex_glass', 'watercolor_stormy'
   ];
@@ -1497,8 +1543,11 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
       </CollapsibleSidebar>
 
       <div className="flex-1 relative rounded-xl border border-game-teal/10 bg-black/40 overflow-hidden">
+        {activeSubsubtab === 'bahamut_blast' && <BahamutBlastEffect config={bahamutBlastConfig} />}
+        {activeSubsubtab === 'quasar_beam' && <QuasarBeamEffect config={quasarBeamConfig} />}
         {activeSubsubtab === 'bat_fly' && <BatFlyEffect />}
         {activeSubsubtab === 'burn_edges' && <BurnEdgesEffect config={burnEdgesConfig} />}
+        {activeSubsubtab === 'chaos_atmosphere' && <ChaosAtmosphereEffect config={chaosAtmosphereConfig} />}
         {activeSubsubtab === 'collect_stars' && <CollectStarsEffect config={collectStarsConfig} />}
         {activeSubsubtab === 'color_swarm' && <ColorSwarmEffect config={colorSwarmConfig} />}
         {activeSubsubtab === 'confetti_fall' && <ConfettiFallEffect />}
@@ -1530,10 +1579,12 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
       <CollapsibleSidebar side="right" collapsed={rightCollapsed} setCollapsed={setRightCollapsed} widthClass="w-56">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-[9px] font-bold uppercase tracking-[0.2em] text-game-teal/60">Config</h3>
-          {(['flower_generator', 'protego_blast', 'gommage', 'vortex_glass', 'color_swarm', 'green_bloom', 'continual_repaint', 'trace_complete', 'god_rays', 'collect_stars', 'burn_edges', 'rings_of_time', 'confusion_spiral', 'watercolor_stormy', 'osmos_bubble', 'super_nova', 'topo_rainbow'].includes(activeSubsubtab)) && (
+          {(['bahamut_blast', 'flower_generator', 'protego_blast', 'gommage', 'vortex_glass', 'color_swarm', 'green_bloom', 'continual_repaint', 'trace_complete', 'god_rays', 'collect_stars', 'burn_edges', 'rings_of_time', 'confusion_spiral', 'watercolor_stormy', 'osmos_bubble', 'super_nova', 'topo_rainbow', 'chaos_atmosphere'].includes(activeSubsubtab)) && (
             <button 
               onClick={() => {
-                if (activeSubsubtab === 'flower_generator') setFlowerConfig(DEFAULT_FLOWER_GENERATOR_CONFIG);
+                if (activeSubsubtab === 'bahamut_blast') setBahamutBlastConfig(DEFAULT_BAHAMUT_BLAST_CONFIG);
+                else if (activeSubsubtab === 'quasar_beam') setQuasarBeamConfig(DEFAULT_QUASAR_BEAM_CONFIG);
+                else if (activeSubsubtab === 'flower_generator') setFlowerConfig(DEFAULT_FLOWER_GENERATOR_CONFIG);
                 else if (activeSubsubtab === 'protego_blast') setProtegoConfig(DEFAULT_PROTEGO_BLAST_CONFIG);
                 else if (activeSubsubtab === 'gommage') setGommageConfig(DEFAULT_GOMMAGE_CONFIG);
                 else if (activeSubsubtab === 'vortex_glass') setVortexGlassConfig(DEFAULT_VORTEX_GLASS_CONFIG);
@@ -1546,6 +1597,7 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
                 else if (activeSubsubtab === 'burn_edges') setBurnEdgesConfig(DEFAULT_BURN_EDGES_CONFIG);
                 else if (activeSubsubtab === 'rings_of_time') setRingsOfTimeConfig(DEFAULT_RINGS_OF_TIME_CONFIG);
                 else if (activeSubsubtab === 'confusion_spiral') setConfusionSpiralConfig(DEFAULT_CONFUSION_SPIRAL_CONFIG);
+                else if (activeSubsubtab === 'chaos_atmosphere') setChaosAtmosphereConfig(DEFAULT_CHAOS_ATMOSPHERE_CONFIG);
                 else if (activeSubsubtab === 'osmos_bubble') setOsmosBubbleConfig(DEFAULT_OSMOS_BUBBLE_CONFIG);
                 else if (activeSubsubtab === 'super_nova') setSuperNovaConfig(DEFAULT_SUPER_NOVA_CONFIG);
                 else if (activeSubsubtab === 'topo_rainbow') setTopoRainbowConfig(DEFAULT_TOPO_RAINBOW_CONFIG);
@@ -1557,6 +1609,47 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
             </button>
           )}
         </div>
+
+        {activeSubsubtab === 'bahamut_blast' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Speed" value={bahamutBlastConfig.speed} min={0.1} max={5.0} step={0.1} onChange={(v) => setBahamutBlastConfig({ ...bahamutBlastConfig, speed: v })} />
+            <ConfigSlider label="Complexity" value={bahamutBlastConfig.complexity} min={10} max={150} step={1} onChange={(v) => setBahamutBlastConfig({ ...bahamutBlastConfig, complexity: Math.round(v) })} />
+            <ConfigSlider label="Detail" value={bahamutBlastConfig.detail} min={1} max={20} step={1} onChange={(v) => setBahamutBlastConfig({ ...bahamutBlastConfig, detail: Math.round(v) })} />
+            <ConfigSlider label="Brightness" value={bahamutBlastConfig.brightness} min={1e5} max={1e7} step={1e5} onChange={(v) => setBahamutBlastConfig({ ...bahamutBlastConfig, brightness: v })} />
+            <ConfigSlider label="Z Scale" value={bahamutBlastConfig.zScale} min={1.0} max={20.0} step={0.5} onChange={(v) => setBahamutBlastConfig({ ...bahamutBlastConfig, zScale: v })} />
+            <ConfigColorPicker label="Tint" value={bahamutBlastConfig.colorTint} onChange={(v) => setBahamutBlastConfig({ ...bahamutBlastConfig, colorTint: v })} />
+          </div>
+        )}
+
+        {activeSubsubtab === 'quasar_beam' && (
+          <div className="space-y-4 pb-8">
+            <div className="nm-row flex items-center justify-between">
+                <p className="text-[9px] text-game-white/60 uppercase font-mono">Stars</p>
+                <button onClick={() => setQuasarBeamConfig({ ...quasarBeamConfig, enableStars: !quasarBeamConfig.enableStars })} className={`text-[8px] font-mono px-2 py-0.5 border transition-colors ${quasarBeamConfig.enableStars ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/30 text-game-white/40 hover:border-game-teal/60'}`}>{quasarBeamConfig.enableStars ? 'ON' : 'OFF'}</button>
+            </div>
+            {quasarBeamConfig.enableStars && (
+               <>
+                 <ConfigSlider label="Star Count" value={quasarBeamConfig.starCount} min={100} max={20000} step={100} onChange={(v) => setQuasarBeamConfig({ ...quasarBeamConfig, starCount: v })} />
+                 <ConfigSlider label="Star Speed" value={quasarBeamConfig.starSpeed} min={0} max={0.01} step={0.0001} onChange={(v) => setQuasarBeamConfig({ ...quasarBeamConfig, starSpeed: v })} />
+               </>
+            )}
+
+            <div className="nm-row flex items-center justify-between">
+                <p className="text-[9px] text-game-white/60 uppercase font-mono">Earth</p>
+                <button onClick={() => setQuasarBeamConfig({ ...quasarBeamConfig, enableEarth: !quasarBeamConfig.enableEarth })} className={`text-[8px] font-mono px-2 py-0.5 border transition-colors ${quasarBeamConfig.enableEarth ? 'border-game-gold text-game-gold bg-game-gold/10' : 'border-game-teal/30 text-game-white/40 hover:border-game-teal/60'}`}>{quasarBeamConfig.enableEarth ? 'ON' : 'OFF'}</button>
+            </div>
+             {quasarBeamConfig.enableEarth && (
+                 <ConfigSlider label="Earth Speed" value={quasarBeamConfig.earthSpeed} min={0} max={0.05} step={0.0001} onChange={(v) => setQuasarBeamConfig({ ...quasarBeamConfig, earthSpeed: v })} />
+            )}
+
+            <ConfigSlider label="Disk Speed" value={quasarBeamConfig.diskSpeed} min={0} max={0.05} step={0.0001} onChange={(v) => setQuasarBeamConfig({ ...quasarBeamConfig, diskSpeed: v })} />
+            <ConfigSlider label="Jet Speed" value={quasarBeamConfig.jetSpeed} min={0} max={0.5} step={0.001} onChange={(v) => setQuasarBeamConfig({ ...quasarBeamConfig, jetSpeed: v })} />
+            
+            <ConfigColorPicker label="Disk Color" value={quasarBeamConfig.diskColor} onChange={(v) => setQuasarBeamConfig({ ...quasarBeamConfig, diskColor: v })} />
+            <ConfigColorPicker label="Core Color" value={quasarBeamConfig.coreColor} onChange={(v) => setQuasarBeamConfig({ ...quasarBeamConfig, coreColor: v })} />
+            <ConfigColorPicker label="Jet Color" value={quasarBeamConfig.jetColor} onChange={(v) => setQuasarBeamConfig({ ...quasarBeamConfig, jetColor: v })} />
+          </div>
+        )}
 
         {activeSubsubtab === 'watercolor_stormy' && (
           <div className="space-y-4 pb-8">
@@ -1619,6 +1712,17 @@ const ActiveEffectsEditor = memo(function ActiveEffectsEditor({
                 className="w-full bg-black/40 border border-game-teal/20 rounded px-2 py-1 text-[8px] text-game-white outline-none focus:border-game-gold/50 font-mono" 
               />
             </div>
+          </div>
+        )}
+        {activeSubsubtab === 'chaos_atmosphere' && (
+          <div className="space-y-4 pb-8">
+            <ConfigSlider label="Scale" value={chaosAtmosphereConfig.scale} min={1} max={20} step={0.1} onChange={(v) => setChaosAtmosphereConfig({ ...chaosAtmosphereConfig, scale: v })} />
+            <ConfigSlider label="Speed" value={chaosAtmosphereConfig.timeScale} min={0.001} max={0.1} step={0.001} onChange={(v) => setChaosAtmosphereConfig({ ...chaosAtmosphereConfig, timeScale: v })} />
+            <ConfigColorPicker label="Color 1" value={chaosAtmosphereConfig.color1} onChange={(v) => setChaosAtmosphereConfig({ ...chaosAtmosphereConfig, color1: v })} />
+            <ConfigColorPicker label="Color 2" value={chaosAtmosphereConfig.color2} onChange={(v) => setChaosAtmosphereConfig({ ...chaosAtmosphereConfig, color2: v })} />
+            <ConfigColorPicker label="Color 3" value={chaosAtmosphereConfig.color3} onChange={(v) => setChaosAtmosphereConfig({ ...chaosAtmosphereConfig, color3: v })} />
+            <ConfigColorPicker label="Color 4" value={chaosAtmosphereConfig.color4} onChange={(v) => setChaosAtmosphereConfig({ ...chaosAtmosphereConfig, color4: v })} />
+            <ConfigColorPicker label="Color 5" value={chaosAtmosphereConfig.color5} onChange={(v) => setChaosAtmosphereConfig({ ...chaosAtmosphereConfig, color5: v })} />
           </div>
         )}
         {activeSubsubtab === 'collect_stars' && (
@@ -1872,7 +1976,7 @@ type TabId = typeof TAB_CONFIG[number]['id'];
 export const VisualsEditor = memo(function VisualsEditor({ 
   onHoloOverlayVisibleChange,
   onClose,
-  fps = 0,
+  fps: externalFps,
   serverAlive = true,
 }: { 
   onHoloOverlayVisibleChange?: (visible: boolean) => void,
@@ -1886,7 +1990,40 @@ export const VisualsEditor = memo(function VisualsEditor({
   const [revealType, setRevealType] = useState<'standard' | 'spin-zoom'>('standard');
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [sampledFps, setSampledFps] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fps = externalFps ?? sampledFps;
+
+  useEffect(() => {
+    if (externalFps !== undefined) {
+      return;
+    }
+
+    let rafId = 0;
+    let lastFrameAt = performance.now();
+    let sampleWindowStart = lastFrameAt;
+    let frames = 0;
+
+    const sample = (now: number) => {
+      frames += 1;
+      const elapsedSinceLastFrame = now - lastFrameAt;
+      lastFrameAt = now;
+
+      if (elapsedSinceLastFrame > 0 && now - sampleWindowStart >= 500) {
+        setSampledFps((frames * 1000) / (now - sampleWindowStart));
+        sampleWindowStart = now;
+        frames = 0;
+      }
+
+      rafId = requestAnimationFrame(sample);
+    };
+
+    rafId = requestAnimationFrame(sample);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
+  }, [externalFps]);
 
   useEffect(() => {
     if (!containerRef.current) return;

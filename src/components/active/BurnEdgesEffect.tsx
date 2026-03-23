@@ -21,11 +21,15 @@ export const DEFAULT_BURN_EDGES_CONFIG: BurnEdgesConfig = {
 type Props = {
   className?: string;
   config?: BurnEdgesConfig;
+  fitContainer?: boolean;
+  hideLabel?: boolean;
 };
 
 export const BurnEdgesEffect = memo(function BurnEdgesEffect({ 
   className,
-  config = DEFAULT_BURN_EDGES_CONFIG 
+  config = DEFAULT_BURN_EDGES_CONFIG,
+  fitContainer = false,
+  hideLabel = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -218,18 +222,24 @@ export const BurnEdgesEffect = memo(function BurnEdgesEffect({
   }, [config.progress, config.burnColor, config.noiseScale, config.cardImageUrl]);
 
   return (
-    <div ref={containerRef} className={`w-full h-full bg-black/20 flex items-center justify-center p-10 ${className ?? ''}`}>
+    <div
+      ref={containerRef}
+      className={`w-full h-full ${fitContainer ? 'bg-transparent p-0' : 'bg-black/20 flex items-center justify-center p-10'} ${className ?? ''}`}
+    >
       <div 
         className="relative shadow-2xl overflow-hidden rounded-lg bg-black/10"
         style={{ 
-          width: 'min(70%, 400px)', 
-          aspectRatio: `${config.aspectRatio}` 
+          width: fitContainer ? '100%' : 'min(70%, 400px)',
+          height: fitContainer ? '100%' : undefined,
+          aspectRatio: fitContainer ? undefined : `${config.aspectRatio}`,
         }}
       >
         <canvas ref={canvasRef} className="w-full h-full block" />
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="text-game-teal font-mono text-[10px] uppercase tracking-widest opacity-10">Active Effect: burn_edges</div>
-        </div>
+        {!hideLabel ? (
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="text-game-teal font-mono text-[10px] uppercase tracking-widest opacity-10">Active Effect: burn_edges</div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

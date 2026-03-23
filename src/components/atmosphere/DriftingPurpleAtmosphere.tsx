@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 type Props = {
   className?: string;
+  legacyMode?: boolean;
 };
 
 type LayerConfig = {
@@ -25,16 +26,16 @@ type Ripple = {
   color: THREE.Color;
 };
 
-const LAYERS: LayerConfig[] = [
+const getLayerConfigs = (legacyMode: boolean): LayerConfig[] => [
   {
-    count: 20000,
-    size: 0.3,
+    count: legacyMode ? 20000 : 2500,
+    size: legacyMode ? 0.3 : 0.34,
     colorRange: { hue: [0.75, 0.9], sat: [0.7, 1], light: [0.5, 0.7] },
     rotationSpeed: 0.001,
   },
   {
-    count: 25000,
-    size: 0.2,
+    count: legacyMode ? 25000 : 4000,
+    size: legacyMode ? 0.2 : 0.26,
     colorRange: { hue: [0.45, 0.6], sat: [0.6, 0.8], light: [0.4, 0.6] },
     rotationSpeed: 0.0005,
   },
@@ -61,7 +62,7 @@ function createParticleTexture(): THREE.Texture {
   return tex;
 }
 
-export const DriftingPurpleAtmosphere = memo(function DriftingPurpleAtmosphere({ className }: Props) {
+export const DriftingPurpleAtmosphere = memo(function DriftingPurpleAtmosphere({ className, legacyMode = false }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -74,22 +75,25 @@ export const DriftingPurpleAtmosphere = memo(function DriftingPurpleAtmosphere({
     camera.position.z = 100;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, legacyMode ? 2 : 1.5));
     renderer.setClearColor(0x020108, 0);
     mount.appendChild(renderer.domElement);
-
-    const composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.2, 0.4, 0.85);
-    bloomPass.threshold = 0;
-    bloomPass.radius = 0.5;
-    composer.addPass(bloomPass);
+    const composer = legacyMode ? new EffectComposer(renderer) : null;
+    const bloomPass = legacyMode ? new UnrealBloomPass(new THREE.Vector2(1, 1), 1.2, 0.4, 0.85) : null;
+    if (composer) {
+      composer.addPass(new RenderPass(scene, camera));
+      if (bloomPass) {
+        bloomPass.threshold = 0;
+        bloomPass.radius = 0.5;
+        composer.addPass(bloomPass);
+      }
+    }
 
     const particleTexture = createParticleTexture();
     const particleLayers: THREE.Points[] = [];
     let ripples: Ripple[] = [];
 
-    for (const config of LAYERS) {
+    for (const config of getLayerConfigs(legacyMode)) {
       const geometry = new THREE.BufferGeometry();
       const positions = new Float32Array(config.count * 3);
       const colors = new Float32Array(config.count * 3);
@@ -207,8 +211,8 @@ export const DriftingPurpleAtmosphere = memo(function DriftingPurpleAtmosphere({
       camera.updateProjectionMatrix();
       renderer.setPixelRatio(pixelRatio);
       renderer.setSize(width, height, false);
-      composer.setSize(width, height);
-      bloomPass.resolution.set(width, height);
+      composer?.setSize(width, height);
+      bloomPass?.resolution.set(width, height);
     };
 
     const updateParticles = () => {
@@ -310,7 +314,11 @@ export const DriftingPurpleAtmosphere = memo(function DriftingPurpleAtmosphere({
         camera.position.y = 0;
       }
       camera.lookAt(scene.position);
-      composer.render(delta);
+      if (composer) {
+        composer.render(delta);
+      } else {
+        renderer.render(scene, camera);
+      }
     };
 
     resize();
@@ -331,13 +339,13 @@ export const DriftingPurpleAtmosphere = memo(function DriftingPurpleAtmosphere({
         layer.geometry.dispose();
         (layer.material as THREE.Material).dispose();
       }
-      composer.dispose();
+      composer?.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === mount) {
         mount.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [legacyMode]);
 
   return (
     <div

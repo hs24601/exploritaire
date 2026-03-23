@@ -16,7 +16,8 @@
       "Bash(winget install:*)",
       "Bash(\"/c/Users/ericm/AppData/Local/Microsoft/WinGet/Links/ffmpeg.exe\":*)",
       "Bash(\"/c/Program Files/ShareX/ffmpeg.exe\":*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(cd:*)"
     ]
   }
 }

@@ -80,29 +80,6 @@ void main(void) {
 }
 `;
 
-const PIXEL_ART_BOX_SHADOW = `
-  45px 15px var(--b), 46px 15px var(--b), 47px 15px var(--a),
-  10px 16px var(--a), 11px 16px var(--a), 12px 16px var(--b),
-  13px 16px var(--b), 14px 16px var(--b), 15px 16px var(--b),
-  16px 16px var(--b), 17px 16px var(--a), 35px 16px var(--a),
-  36px 16px var(--a), 37px 16px var(--b), 38px 16px var(--b),
-  39px 16px var(--b), 40px 16px var(--b), 41px 16px var(--b),
-  42px 16px var(--b), 43px 16px var(--b), 44px 16px var(--b),
-  45px 16px var(--b), 46px 16px var(--b), 47px 16px var(--a),
-  9px 17px var(--a), 10px 17px var(--b), 11px 17px var(--b),
-  12px 17px var(--b), 13px 17px var(--b), 14px 17px var(--b),
-  15px 17px var(--b), 16px 17px var(--b), 17px 17px var(--a),
-  37px 17px var(--a), 38px 17px var(--a), 39px 17px var(--b),
-  40px 17px var(--b), 41px 17px var(--b), 42px 17px var(--b),
-  43px 17px var(--b), 44px 17px var(--b), 45px 17px var(--b),
-  46px 17px var(--b), 47px 17px var(--b), 48px 17px var(--a),
-  49px 17px var(--a), 51px 17px var(--a), 7px 18px var(--a),
-  8px 18px var(--a), 9px 18px var(--a), 10px 18px var(--b),
-  11px 18px var(--b), 12px 18px var(--b), 13px 18px var(--b),
-  14px 18px var(--b), 15px 18px var(--b), 16px 18px var(--b),
-  17px 18px var(--a), 20px 18px var(--a), 37px 18px var(--a)
-`;
-
 export const CometBarrageAtmosphere = memo(function CometBarrageAtmosphere({ className }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -168,45 +145,7 @@ export const CometBarrageAtmosphere = memo(function CometBarrageAtmosphere({ cla
   }, []);
 
   return (
-    <div ref={rootRef} className={`w-full h-full relative overflow-hidden ${className}`}>
-      <style>{`
-        @keyframes comet-drift {
-          0% { transform: translate(-100px, -100px) rotate(45deg); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { transform: translate(calc(100vw + 100px), calc(100vh + 100px)) rotate(45deg); opacity: 0; }
-        }
-        .pixel-comet {
-          position: absolute;
-          width: 2px;
-          height: 2px;
-          --a: #ffffff;
-          --b: #7fdbca;
-          box-shadow: ${PIXEL_ART_BOX_SHADOW};
-          pointer-events: none;
-          z-index: 10;
-        }
-      `}</style>
-      <div 
-        className="pixel-comet" 
-        style={{ 
-          top: '10%', 
-          left: '10%', 
-          animation: 'comet-drift 5s linear infinite',
-          filter: 'drop-shadow(0 0 10px #7fdbca)'
-        }} 
-      />
-      <div 
-        className="pixel-comet" 
-        style={{ 
-          top: '30%', 
-          left: '-5%', 
-          animation: 'comet-drift 7s linear infinite 2s',
-          filter: 'drop-shadow(0 0 10px #7fdbca)',
-          transform: 'scale(0.8)'
-        }} 
-      />
-    </div>
+    <div ref={rootRef} className={`w-full h-full relative overflow-hidden ${className}`} />
   );
 });
 

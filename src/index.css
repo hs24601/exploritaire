@@ -467,6 +467,61 @@ div, span, p, h1, h2, h3, h4, h5, h6 {
   100% { transform: translateY(120vh) rotate(360deg); opacity: 0; }
 }
 
+.token-reveal-flash {
+  border: 2px solid rgba(255, 92, 92, 0.72);
+  background: radial-gradient(circle, rgba(255, 92, 92, 0.24) 0%, rgba(255, 92, 92, 0.1) 35%, rgba(255, 92, 92, 0) 72%);
+  box-shadow: 0 0 16px rgba(255, 72, 72, 0.18);
+  animation: token-reveal-flash-expand 1.8s ease-out forwards;
+}
+
+.token-reveal-breathe {
+  animation: token-reveal-breathe 1.9s ease-in-out infinite;
+}
+
+.rescue-card-click-flash {
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.94) 10%, rgba(255,245,210,0.76) 22%, rgba(255,255,255,0.26) 40%, rgba(255,255,255,0) 68%);
+  box-shadow:
+    0 0 42px rgba(255,255,255,0.76),
+    0 0 120px rgba(255,245,220,0.34);
+  animation: rescue-card-click-flash-expand 0.88s cubic-bezier(0.18, 0.84, 0.22, 1) forwards;
+}
+
+@keyframes token-reveal-flash-expand {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  70% {
+    opacity: 0.35;
+    transform: translate(-50%, -50%) scale(18);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(34);
+  }
+}
+
+@keyframes token-reveal-breathe {
+  0%, 100% { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45)) drop-shadow(0 0 0 rgba(255,72,72,0)); transform: scale(1); }
+  50% { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45)) drop-shadow(0 0 8px rgba(255,72,72,0.3)); transform: scale(1.06); }
+}
+
+@keyframes rescue-card-click-flash-expand {
+  0% {
+    opacity: 0.98;
+    transform: scale(0.45);
+  }
+  55% {
+    opacity: 0.72;
+    transform: scale(26);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(42);
+  }
+}
+
 
 .textless-mode [data-card-face],
 .textless-mode [data-token-face] {
@@ -660,11 +715,15 @@ div, span, p, h1, h2, h3, h4, h5, h6 {
   --tooltip-line: 1.5;
   --tooltip-gap: 6px;
   font-size: var(--tooltip-font-size);
+  background: rgba(8, 10, 15, 0.98);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
 }
 
 .tooltip-content {
   font-size: inherit;
   line-height: var(--tooltip-line);
+  background: transparent;
 }
 
 .tooltip-content > * + * {
@@ -904,3 +963,81 @@ html.drag-perf-mode .target-swirl-sparkles {
     -15px 45px 90px -30px rgba(19, 26, 32, 0.3);
   background: rgba(20, 25, 35, 0.5);
 }
+
+/* --- Golf Mode Aesthetics --- */
+
+/* Nebula Background Animation */
+@keyframes nebula-drift {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 0.8; transform: scale(1.2); }
+}
+
+.bg-nebula-layer {
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: 
+    radial-gradient(circle at 30% 40%, rgba(127, 219, 202, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 70% 60%, rgba(217, 70, 239, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(230, 179, 30, 0.05) 0%, transparent 50%);
+  animation: nebula-drift 120s linear infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.bg-starfield {
+  background-image: 
+    radial-gradient(1.5px 1.5px at 15% 15%, rgba(255,255,255,0.9) 100%, transparent),
+    radial-gradient(1px 1px at 25% 75%, rgba(255,255,255,0.8) 100%, transparent),
+    radial-gradient(2px 2px at 80% 20%, rgba(255,255,255,0.9) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 50% 50%, rgba(255,255,255,0.7) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 90% 85%, rgba(255,255,255,0.8) 100%, transparent),
+    radial-gradient(1px 1px at 40% 10%, rgba(255,255,255,0.6) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 5% 90%, rgba(255,255,255,0.8) 100%, transparent),
+    radial-gradient(1px 1px at 95% 45%, rgba(255,255,255,0.7) 100%, transparent);
+  background-size: 400px 400px;
+}
+
+.animate-star-twinkle {
+  animation: star-twinkle 4s ease-in-out infinite;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(8, 10, 15, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 24px -1px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.glass-pill {
+  background: rgba(8, 10, 15, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 12px -1px rgba(0, 0, 0, 0.15);
+}
+
+/* Holographic Slot */
+.holo-slot-border {
+  border: 1px solid rgba(127, 219, 202, 0.15);
+  background: 
+    linear-gradient(180deg, rgba(127, 219, 202, 0.03) 0%, rgba(127, 219, 202, 0) 100%),
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(127, 219, 202, 0.03) 3px);
+  box-shadow: inset 0 0 20px rgba(127, 219, 202, 0.05);
+}
+
+.holo-text-glow {
+  text-shadow: 0 0 8px rgba(127, 219, 202, 0.4);
+}
+
