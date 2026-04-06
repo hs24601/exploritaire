@@ -49,23 +49,23 @@ Current prototype direction:
 - `Momentum` currently decays by `1` per turn.
 - `Pounce` is intended to consume built `Momentum` and aggressively push enemy stagger state, more in line with Tifa-style stagger specialization than with standard direct damage.
 
-### Hiro
+### Hero
 - Signature: `Fetch`
 - Passive: `Guard Dog`
 - Collapse: `Tackle`
 
 Current prototype direction:
 - `Fetch`
-  - Tableau: retrieve a top-row tableau card into Hiro's hand.
-  - Actor: retrieve the top card from a creature discard into Hiro's hand.
+  - Tableau: retrieve a top-row tableau card into Hero's hand.
+  - Actor: retrieve the top card from a creature discard into Hero's hand.
 - `Guard Dog`
-  - Hiro takes damage instead of an ally when that ally would otherwise die.
+  - Hero takes damage instead of an ally when that ally would otherwise die.
 - `Tackle`
   - cashes out enemy pressure into real HP damage,
-  - grants armor equal to Hiro's current AP,
+  - grants armor equal to Hero's current AP,
   - distributes that armor across the team,
   - uneven distribution favors lower current HP/max HP ratio first, then lower max HP.
-- Hiro's current prototype max AP is `8`.
+- Hero's current prototype max AP is `8`.
 
 ## Terminology
 
@@ -208,7 +208,7 @@ Core idea:
 - this triggers a duo action that should generally be more rewarding than simply continuing the prime's normal streak,
 - the value proposition must be high enough to compete with streak continuation without making streaking feel wrong.
 
-#### Hiro + Mochi: Raining Cats And Dogs
+#### Hero + Mochi: Raining Cats And Dogs
 - Either KIN may be prime.
 - Tentative criteria:
   - both have more than `5 AP`, and

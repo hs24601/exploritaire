@@ -5,6 +5,15 @@ type AbilityApBarProps = {
   maxAp?: number | null;
   className?: string;
   barClassName?: string;
+  orientation?: 'horizontal' | 'vertical';
+  segmentRanges?: Array<{
+    startAp: number;
+    endAp: number;
+    apSegments?: number[];
+    litColor: string;
+    unlitColor: string;
+    dividerColor?: string;
+  }>;
 };
 
 const DEFAULT_MAX_AP = 2;
@@ -15,7 +24,18 @@ export function AbilityApBar({
   maxAp,
   className = '',
   barClassName = 'h-3.5 rounded-[5px]',
+  orientation = 'horizontal',
+  segmentRanges,
 }: AbilityApBarProps) {
+  const segmentMatchesRange = (
+    segmentAp: number,
+    range: NonNullable<AbilityApBarProps['segmentRanges']>[number],
+  ) => (
+    range.apSegments && range.apSegments.length > 0
+      ? range.apSegments.includes(segmentAp)
+      : segmentAp >= range.startAp && segmentAp <= range.endAp
+  );
+
   const effectiveMaxAp = Math.max(1, Math.floor(maxAp ?? DEFAULT_MAX_AP));
   const clampedAp = Math.max(0, Math.min(effectiveMaxAp, Math.floor(ap)));
   const prevApRef = useRef(clampedAp);
@@ -46,28 +66,37 @@ export function AbilityApBar({
   return (
     <div className={className}>
       <div
-        className={`flex overflow-hidden border border-white/14 bg-[#10141d]/88 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] ${barClassName}`}
+        className={`${orientation === 'vertical' ? 'flex h-full flex-col-reverse' : 'flex w-full'} overflow-hidden border border-white/14 bg-[#10141d]/88 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] ${barClassName}`}
         data-ap-meter="shared"
         aria-label={`AP ${clampedAp} of ${effectiveMaxAp}`}
       >
         {segments.map((segment, index) => {
+          const segmentAp = index + 1;
+          const rangeStyle = segmentRanges?.find((range) => segmentMatchesRange(segmentAp, range));
           const litStyles = segment.lit
             ? {
-                background: 'linear-gradient(180deg, rgba(122,214,255,0.98) 0%, rgba(42,128,214,0.96) 100%)',
-                boxShadow: 'inset 0 0 0 1px rgba(211,244,255,0.3), 0 0 10px rgba(90,196,255,0.25)',
+                background: rangeStyle
+                  ? `linear-gradient(180deg, ${rangeStyle.litColor} 0%, ${rangeStyle.litColor} 100%)`
+                  : 'linear-gradient(180deg, rgba(122,214,255,0.98) 0%, rgba(42,128,214,0.96) 100%)',
+                boxShadow: rangeStyle
+                  ? `inset 0 0 0 1px rgba(255,255,255,0.22), 0 0 10px ${rangeStyle.litColor}`
+                  : 'inset 0 0 0 1px rgba(211,244,255,0.3), 0 0 10px rgba(90,196,255,0.25)',
               }
             : {
-                background: 'linear-gradient(180deg, rgba(74,81,92,0.56) 0%, rgba(34,40,50,0.82) 100%)',
+                background: rangeStyle
+                  ? `linear-gradient(180deg, ${rangeStyle.unlitColor} 0%, ${rangeStyle.unlitColor} 100%)`
+                  : 'linear-gradient(180deg, rgba(74,81,92,0.56) 0%, rgba(34,40,50,0.82) 100%)',
                 boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03)',
               };
           return (
             <div
               key={`ap-segment-${index}`}
               data-ap-meter-segment={index + 1}
-              className="h-full flex-1"
+              className={orientation === 'vertical' ? 'w-full flex-1' : 'h-full flex-1'}
               style={{
                 ...litStyles,
-                borderLeft: index === 0 ? 'none' : '1px solid rgba(7,10,16,0.95)',
+                borderLeft: orientation === 'vertical' || index === 0 ? 'none' : `1px solid ${rangeStyle?.dividerColor ?? 'rgba(255,255,255,0.72)'}`,
+                borderTop: orientation === 'vertical' && index !== 0 ? `1px solid ${rangeStyle?.dividerColor ?? 'rgba(255,255,255,0.72)'}` : 'none',
                 animation: segment.spending ? 'ap-bar-spend-flash 120ms linear 2' : undefined,
                 opacity: segment.spending && !segment.lit ? 0.9 : 1,
               }}

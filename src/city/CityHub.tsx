@@ -60,7 +60,7 @@ const kinProfiles: KinProfile[] = [
     glow: 'rgba(108, 232, 255, 0.32)',
   },
   {
-    name: 'Hiro',
+    name: 'Hero',
     title: 'Line Guardian',
     verb: 'Guard',
     summary: 'Absorbs pressure, taunts, and turns sacrifice into armor and wildcard stability.',

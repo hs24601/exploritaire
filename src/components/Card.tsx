@@ -287,6 +287,7 @@ export const Card = memo(function Card({
   disableTilt = false,
   disableHoverLift = false,
   disableHoverGlow = false,
+  hideElements = false,
   ripTrigger = 0,
   disableLegacyShine = false,
   watercolorOnly = false,
@@ -2729,7 +2730,7 @@ const getWatercolorColorFilter = () => {
                   );
                 })}
             </div>
-          ) : (!maskValue && !foundationOverlay && !handMinimalOverlay && !cardTitleMeta && !keruAspectProfile && !foundationActorProfile) ? (
+          ) : (!hideElements && !maskValue && !foundationOverlay && !handMinimalOverlay && !cardTitleMeta && !keruAspectProfile && !foundationActorProfile) ? (
             <div className="absolute bottom-2 left-0 right-0 flex justify-center">
               <div
                 className="text-xs force-sharp"

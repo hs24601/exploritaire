@@ -1,0 +1,11 @@
+{
+  "flavorTextLabels": 1,
+  "abilityNameLabels": 1,
+  "abilityDescriptionLabels": 1,
+  "subsectionHeadersNamedGrantedAbility": 0,
+  "abilityEffectsHeaders": 1,
+  "noEffectsStateBeforeAdd": 1,
+  "typeFieldsAfterAdd": 1,
+  "targetFieldsAfterAdd": 1,
+  "elementFieldsAfterAdd": 1
+}

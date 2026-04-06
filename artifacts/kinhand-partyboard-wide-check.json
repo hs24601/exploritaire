@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "playerAligned": true,
+  "enemyAligned": true,
+  "singleRowMeters": true,
+  "viewportOk": true,
+  "playerRect": {
+    "x": 37,
+    "y": 578,
+    "width": 599,
+    "height": 318,
+    "top": 578,
+    "right": 636,
+    "bottom": 896,
+    "left": 37
+  },
+  "enemyRect": {
+    "x": 964,
+    "y": 635.5,
+    "width": 599,
+    "height": 203,
+    "top": 635.5,
+    "right": 1563,
+    "bottom": 838.5,
+    "left": 964
+  },
+  "panelRect": {
+    "x": 24,
+    "y": 20,
+    "width": 1552,
+    "height": 426,
+    "top": 20,
+    "right": 1576,
+    "bottom": 446,
+    "left": 24
+  }
+}

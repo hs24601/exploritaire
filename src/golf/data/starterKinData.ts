@@ -18,7 +18,7 @@ export type GolfHandEffect =
   | 'fetch'
   | 'vice-grip'
   | 'banks-strike'
-  | 'hiro-guard';
+  | 'hero-guard';
 
 export type GolfKinFamily = 'canid' | 'felis' | 'mustelid' | 'corvid' | 'other';
 export type GolfAbilityFocus = 'tableau' | 'combat' | 'hybrid' | 'support';
@@ -79,7 +79,7 @@ export type GolfStarterKinKitDefinition = {
 export const STARTER_KIN_METADATA: Record<string, { benchWeight: number; abilityName: string | null; apCap?: number }> = {
   Mochi: { benchWeight: 1, abilityName: 'Tap Out!', apCap: 6 },
   Banks: { benchWeight: 1, abilityName: 'Swipe', apCap: 3 },
-  Hiro: { benchWeight: 1, abilityName: 'Fetch', apCap: 8 },
+  Hero: { benchWeight: 1, abilityName: 'Fetch', apCap: 8 },
   Jet: { benchWeight: 1, abilityName: 'Rewire', apCap: 8 },
   Whis: { benchWeight: 1, abilityName: 'Jikan', apCap: 4 },
   Pan: { benchWeight: 1, abilityName: 'Path of Stars', apCap: 10 },
@@ -116,15 +116,15 @@ export const KIN_EFFECT_DEFS: Record<string, GolfKinEffectDefinition> = {
     tone: 'buff',
     name: 'WILD SPIRIT',
     flavorText: '*Pressure turns into instinct, and instinct turns into momentum.*',
-    effectText: 'Triggered by Hiro taking pressure or rotating in to protect the line. Every 3 stacks grant +1 armor and create a **Wildcard**.',
+    effectText: 'Triggered by Hero taking pressure or rotating in to protect the line. Every 3 stacks grant +1 armor and create a **Wildcard**.',
   },
   'guard dog': {
     key: 'guard-dog',
     label: 'GD',
     tone: 'buff',
     name: 'GUARD DOG',
-    flavorText: '*No packmate falls while Hiro can still stand.*',
-    effectText: 'If an ally would die, Hiro intercepts that lethal damage instead.',
+    flavorText: '*No packmate falls while Hero can still stand.*',
+    effectText: 'If an ally would die, Hero intercepts that lethal damage instead.',
   },
   whiskersense: {
     key: 'whiskersense',
@@ -160,7 +160,7 @@ export const KIN_PROFILE_DEFS: Record<string, {
     passiveFlavor: KIN_EFFECT_DEFS['nine lives'].flavorText,
     passiveEffect: KIN_EFFECT_DEFS['nine lives'].effectText,
   },
-  Hiro: {
+  Hero: {
     pronouns: { subject: 'he', object: 'him', possessive: 'his' },
     family: 'canid',
     passiveName: 'Guard Dog',
@@ -253,12 +253,12 @@ export const STARTER_KIN_KITS: Record<string, GolfStarterKinKitDefinition> = {
     signatureMutations: [],
     compatibleOrimIds: ['efficiency', 'reach', 'echo'],
   },
-  Hiro: {
+  Hero: {
     signature: {
       name: 'Fetch',
       category: 'signature',
-      combatDescription: 'Tableau: retrieve any top-row tableau card into Hiro’s hand. Actor: retrieve the top card from any creature discard and put it into Hiro’s hand.',
-      exploreDescription: 'Hiro bridges dead tableau lanes by pulling a visible card into hand, or reuses the latest creature discard as a fresh line piece.',
+      combatDescription: 'Tableau: retrieve any top-row tableau card into Hero’s hand. Actor: retrieve the top card from any creature discard and put it into Hero’s hand.',
+      exploreDescription: 'Hero bridges dead tableau lanes by pulling a visible card into hand, or reuses the latest creature discard as a fresh line piece.',
       effect: 'fetch',
       cost: '2',
       focus: 'hybrid',
@@ -267,13 +267,13 @@ export const STARTER_KIN_KITS: Record<string, GolfStarterKinKitDefinition> = {
       name: 'Guard Dog',
       flavorText: KIN_EFFECT_DEFS['guard dog'].flavorText,
       effectText: KIN_EFFECT_DEFS['guard dog'].effectText,
-      combatDescription: 'Hiro steps in and takes lethal damage that would otherwise kill an ally.',
-      exploreDescription: 'The pack keeps moving because Hiro refuses to let a friend fall first.',
+      combatDescription: 'Hero steps in and takes lethal damage that would otherwise kill an ally.',
+      exploreDescription: 'The pack keeps moving because Hero refuses to let a friend fall first.',
     },
     collapse: {
       name: 'Tackle',
       role: 'Protective finisher',
-      combatDescription: 'Cash out built pressure into real damage, then grant 1 armor per current Hiro AP, distributed evenly across the party. Any uneven armor favors allies with lower current HP ratio first, then lower max HP.',
+      combatDescription: 'Cash out built pressure into real damage, then grant 1 armor per current Hero AP, distributed evenly across the party. Any uneven armor favors allies with lower current HP ratio first, then lower max HP.',
     },
     signatureMutations: [
       {
@@ -281,30 +281,30 @@ export const STARTER_KIN_KITS: Record<string, GolfStarterKinKitDefinition> = {
         name: 'Dig',
         tier: 'branch',
         summary: 'Fetch from any tableau depth or any depth of a creature discard pile.',
-        combatDescription: 'Instead of only the top discard, Hiro can choose any discarded card from a creature pile.',
-        exploreDescription: 'Hiro can pull from any tableau depth, including buried reward-token cards.',
+        combatDescription: 'Instead of only the top discard, Hero can choose any discarded card from a creature pile.',
+        exploreDescription: 'Hero can pull from any tableau depth, including buried reward-token cards.',
       },
       {
         id: 'old-dog-new-tricks',
         name: 'Old Dog, New Tricks',
         tier: 'branch',
-        summary: 'Fetched cards become permanent exhausted additions to Hiro’s hand.',
-        combatDescription: 'Fetched creature cards stay in Hiro’s kit for the run, but enter exhausted until long rest.',
+        summary: 'Fetched cards become permanent exhausted additions to Hero’s hand.',
+        combatDescription: 'Fetched creature cards stay in Hero’s kit for the run, but enter exhausted until long rest.',
         exploreDescription: 'Fetched tableau cards become permanent exhausted hand tools instead of one-off grabs.',
       },
       {
         id: 'underdog',
         name: 'Underdog',
         tier: 'branch',
-        summary: 'While Hiro is in support, fetched cards remain usable in the active prime hand.',
-        combatDescription: 'Fetched combat tools persist in the current prime’s hand while Hiro supports from the bench.',
-        exploreDescription: 'Support Hiro can keep feeding the active prime new puzzle pieces without taking prime himself.',
+        summary: 'While Hero is in support, fetched cards remain usable in the active prime hand.',
+        combatDescription: 'Fetched combat tools persist in the current prime’s hand while Hero supports from the bench.',
+        exploreDescription: 'Support Hero can keep feeding the active prime new puzzle pieces without taking prime himself.',
       },
     ],
     compatibleOrimIds: ['efficiency', 'cal', 'reach', 'persistence', 'echo'],
     legacyNotes: [
-      'Golf runtime still contains legacy Hiro systems such as Wild Spirit and wildcard generation.',
-      'Fetch is now the intended long-term signature chassis for Hiro kit design.',
+      'Golf runtime still contains legacy Hero systems such as Wild Spirit and wildcard generation.',
+      'Fetch is now the intended long-term signature chassis for Hero kit design.',
     ],
   },
   Pan: {

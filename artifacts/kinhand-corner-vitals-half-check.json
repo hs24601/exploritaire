@@ -1,0 +1,25 @@
+{
+  "heroRect": {
+    "x": 501,
+    "y": 557.75,
+    "width": 118,
+    "height": 182,
+    "top": 557.75,
+    "right": 619,
+    "bottom": 739.75,
+    "left": 501
+  },
+  "badgeRect": {
+    "x": 592,
+    "y": 542.75,
+    "width": 42,
+    "height": 42,
+    "top": 542.75,
+    "right": 634,
+    "bottom": 584.75,
+    "left": 592
+  },
+  "topExtrusion": 15,
+  "rightExtrusion": 15,
+  "badgeSize": 42
+}

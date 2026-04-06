@@ -40,6 +40,9 @@ Authoring rules:
 - if a card appears legally playable to the player, it must actually be playable
 - rails must be authored into the tableau, reveal timing, and tutorial state itself
 - special traversal mechanics such as streaking, exclusion, swap, fetch, rewind, or buried-card access must be included in rail validation
+- tutorial and vertical slice presentation should not show `CLEARED` tableau placeholders
+- if an authored slice needs a visually occupied empty column, use a non-playable value-safe card or a blank shell instead
+- prefer real non-legal authored cards when they preserve legibility; use blank shells only when mathematically necessary
 
 ### Tutorial Filler / Disintegration Escape Hatch
 
@@ -54,6 +57,28 @@ This is an approved escape hatch for tutorial slices, tests, and other authored 
 - a deep tableau would otherwise expose alternate legal routes
 - the slice must remain deterministic
 - the player should only ever see legal top-card options that preserve the happy path
+
+### Tableau Coordinate Shorthand
+
+Use `T#R#` or `t#r#` as the standard shorthand for authored tableau positions.
+
+Examples:
+- `T1R1` = Tableau 1, Row 1
+- `T7R4` = Tableau 7, Row 4
+- `t3r2` = Tableau 3, Row 2
+
+This shorthand should be treated as equivalent regardless of case.
+
+### Tutorial Seed Registry
+
+Tutorial slices and bookmarks should be authored as permanent seed entries, not ad hoc debug states.
+
+Rules:
+- every tutorial seed gets a stable ID, for example `tutorial.s02.deadlock.v1`
+- a seed must be loadable on demand from a central registry
+- a seed may define expected visible top ranks, expected legal actions, and route checkpoints
+- downstream variations should branch from a named parent seed or route spec instead of replacing the original seed
+- rail validation and automated tests should resolve tutorial states through these permanent seed IDs
 
 ## Jet
 
@@ -187,11 +212,11 @@ Electrified cards, if adjacent vertically or at a 45-degree angle to an adjacent
 
 This should feel like building temporary conductive routes directly across the tableau, allowing a hero to bypass normal stock-dependent sequencing rules when enough electrified structure has been established.
 
-## Hiro
+## Hero
 
 ### Role
 
-Hiro is the intended starter kin.
+Hero is the intended starter kin.
 
 He should be the simplest prime in the roster to understand and enjoy on first contact while still leaving room for more advanced play. His identity is built around:
 - leadership
@@ -200,11 +225,11 @@ He should be the simplest prime in the roster to understand and enjoy on first c
 - endurance
 - straightforward sequence extension
 
-Hiro should feel like a husky-like pack lead: steady, reliable, eager to keep moving, and rewarding without requiring intricate setup language.
+Hero should feel like a husky-like pack lead: steady, reliable, eager to keep moving, and rewarding without requiring intricate setup language.
 
 ### Migration Note
 
-Most of Hiro's older tank kit should conceptually migrate to Pan, who is now the clearer tank kin target.
+Most of Hero's older tank kit should conceptually migrate to Pan, who is now the clearer tank kin target.
 
 That migrated legacy cluster includes:
 - Ironfur
@@ -214,33 +239,33 @@ That migrated legacy cluster includes:
 - Stone Guard
 - Earthen Rebuke
 
-### Core Hiro Loop
+### Core Hero Loop
 
-Hiro should reward both:
+Hero should reward both:
 - steady successful local sequencing
 - bad local boards that would otherwise stall a turn
 
-This means Hiro can feel good for a new player without collapsing into a passive-only safety net. Good Hiro play should naturally bank stamina, and advanced Hiro play can intentionally leave rough local tableau states in order to trigger recovery tools like `Dig Deep` or `Second Wind`.
+This means Hero can feel good for a new player without collapsing into a passive-only safety net. Good Hero play should naturally bank stamina, and advanced Hero play can intentionally leave rough local tableau states in order to trigger recovery tools like `Dig Deep` or `Second Wind`.
 
 ### Current Playtest Direction
 
 #### Heart of the Wild
 
-After 4 successful Hiro stock-adds, generate a `Heart of the Wild` into hand, up to Hiro's current `Endurance` cap.
+After 4 successful Hero stock-adds, generate a `Heart of the Wild` into hand, up to Hero's current `Endurance` cap.
 
-`Heart of the Wild` is not a separate subsystem resource. It is a branded in-hand Wild card. Its primary job is to extend Hiro's local sequence when a single rank is missing.
+`Heart of the Wild` is not a separate subsystem resource. It is a branded in-hand Wild card. Its primary job is to extend Hero's local sequence when a single rank is missing.
 
-In the current first-pass implementation, `Heart of the Wild` is represented as a Hiro-only generated card that chooses the more promising adjacent rank when played.
+In the current first-pass implementation, `Heart of the Wild` is represented as a Hero-only generated card that chooses the more promising adjacent rank when played.
 
 #### Endurance
 
-Every 4 turns, Hiro gains `+1` maximum `Heart of the Wild` capacity.
+Every 4 turns, Hero gains `+1` maximum `Heart of the Wild` capacity.
 
-This should make Hiro feel better the longer a fight or run continues. It is a slow, visible stamina escalator rather than a sudden burst mechanic.
+This should make Hero feel better the longer a fight or run continues. It is a slow, visible stamina escalator rather than a sudden burst mechanic.
 
 #### Second Wind
 
-If Hiro ends a turn with fewer than 2 successful stock-adds, generate a `Heart of the Wild`.
+If Hero ends a turn with fewer than 2 successful stock-adds, generate a `Heart of the Wild`.
 
 Cooldown: 2 turns.
 
@@ -248,24 +273,24 @@ This prevents weak turns from feeling empty and helps beginners recover from rou
 
 #### Leader of the Pack
 
-If Hiro is the first party member to successfully act on a turn, all other party members gain `+1 AP`.
+If Hero is the first party member to successfully act on a turn, all other party members gain `+1 AP`.
 
-For now, this is intentionally simplified as bonus AP rather than kin-specific stat tuning. It makes Hiro feel like an opener and keeps his leadership identity easy to understand.
+For now, this is intentionally simplified as bonus AP rather than kin-specific stat tuning. It makes Hero feel like an opener and keeps his leadership identity easy to understand.
 
 #### Fetch
 
-Return the most recently discarded non-Hiro ally card back to that ally's hand. The returned card costs `0 AP`.
+Return the most recently discarded non-Hero ally card back to that ally's hand. The returned card costs `0 AP`.
 
 Scope-control note:
-In the current playtest environment, true ally hands are not yet fully modeled as a separate recovered-card surface. The first-pass implementation approximates this by recovering the freshest non-Hiro allied discard as an immediately reusable loyalty recovery card in the player hand space.
+In the current playtest environment, true ally hands are not yet fully modeled as a separate recovered-card surface. The first-pass implementation approximates this by recovering the freshest non-Hero allied discard as an immediately reusable loyalty recovery card in the player hand space.
 
 #### Momentum
 
-While holding 2 or more `Hearts of the Wild`, Hiro gains `+1 damage` per held Heart.
+While holding 2 or more `Hearts of the Wild`, Hero gains `+1 damage` per held Heart.
 
 Bonus:
-- Hiro cannot be slowed
-- Hiro cannot be stopped
+- Hero cannot be slowed
+- Hero cannot be stopped
 
 Momentum should create a clean tension between:
 - spending Hearts to keep a sequence alive
@@ -273,23 +298,23 @@ Momentum should create a clean tension between:
 
 #### Dig Deep
 
-If Hiro starts a turn with no Hiro-only legal tableau moves, generate a `Heart of the Wild`.
+If Hero starts a turn with no Hero-only legal tableau moves, generate a `Heart of the Wild`.
 
-This is an anti-brick passive and a major part of why Hiro can support both new players and advanced players. New players get relief from bad boards; advanced players may eventually learn how to exploit poor local tableau setups intentionally.
+This is an anti-brick passive and a major part of why Hero can support both new players and advanced players. New players get relief from bad boards; advanced players may eventually learn how to exploit poor local tableau setups intentionally.
 
 #### Trail Sense
 
-After Hiro consumes a `Heart of the Wild`, apply a minor temporary guidance buff.
+After Hero consumes a `Heart of the Wild`, apply a minor temporary guidance buff.
 
-This should stay intentionally small. Hiro is not a foresight specialist. The effect should feel like instinct, not prophecy.
+This should stay intentionally small. Hero is not a foresight specialist. The effect should feel like instinct, not prophecy.
 
 Current first-pass direction:
-- consuming a Heart briefly sharpens Hiro's next follow-up line
+- consuming a Heart briefly sharpens Hero's next follow-up line
 - avoid turning this into a solver-style oracle mechanic
 
 #### Vice Grip
 
-`Vice Grip` is Hiro's primary direct combat-tableau bridge ability.
+`Vice Grip` is Hero's primary direct combat-tableau bridge ability.
 
 When played on an enemy prime:
 - the enemy may only access the three tableaus directly in front of the prime on its next turn
@@ -297,11 +322,11 @@ When played on an enemy prime:
 When played on an enemy support:
 - that support is stunned on its next turn
 
-This keeps Hiro physical and hands-on. He is not just a passive endurance engine; he can also clamp the fight into a narrower, more manageable lane.
+This keeps Hero physical and hands-on. He is not just a passive endurance engine; he can also clamp the fight into a narrower, more manageable lane.
 
-### Hiro Summary Line
+### Hero Summary Line
 
-Hiro is the starter husky kin: a loyal pack leader who banks endurance as Wild-card momentum, rescues weak turns, helps the whole party move first, and turns steady effort into reliable sequence extension.
+Hero is the starter husky kin: a loyal pack leader who banks endurance as Wild-card momentum, rescues weak turns, helps the whole party move first, and turns steady effort into reliable sequence extension.
 
 ### Support Square Prototype
 
@@ -310,7 +335,7 @@ Feature-fork scenario note:
 This prototype reimagines the current Golf scenario around a much stronger distinction between the prime and supports.
 
 In this fork:
-- Hiro remains the only true stock
+- Hero remains the only true stock
 - supports are represented as square modules instead of stock cards
 - supports no longer receive tableau cards directly
 
@@ -415,20 +440,20 @@ Current prototype sticker squares:
 #### Jet `[J]`
 
 - reserve sticker with rank and element identity
-- can be committed into Hiro's stock to save or extend a streak
+- can be committed into Hero's stock to save or extend a streak
 - returns only after its buried tableau host resurfaces
 
 #### Whis `[W]`
 
 - reserve sticker with the same commit/recovery rule as the other kin
 - also remains the current prophecy proof-of-concept
-- after Hiro has collected `fire`, `earth`, `water`, and `air`, available Whis can awaken `Prophecy`
+- after Hero has collected `fire`, `earth`, `water`, and `air`, available Whis can awaken `Prophecy`
 - `Prophecy` drives the dedicated Navi guide-through for 5 optimal steps
 
 #### Pan `[P]`
 
 - reserve sticker with rank and element identity
-- can be committed into Hiro's stock to save or extend a streak
+- can be committed into Hero's stock to save or extend a streak
 - returns through buried tableau recovery instead of a flat cooldown
 
 This fork should be treated as a scenario experiment rather than a finalized systemic replacement.

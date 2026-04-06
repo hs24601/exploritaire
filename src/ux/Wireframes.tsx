@@ -99,7 +99,7 @@ const LayoutClassic = () => (
           <ActorCard name="Kin 2" hp={5} maxHp={15} size="sm" />
           <ActorCard name="Kin 3" hp={15} maxHp={15} size="sm" />
         </div>
-        <ActorCard name="Hiro Prime" hp={20} maxHp={20} size="md" />
+        <ActorCard name="Hero Prime" hp={20} maxHp={20} size="md" />
         <div className="flex -space-x-8 sm:-space-x-10 hover:space-x-1 sm:hover:space-x-2 transition-all p-1.5 sm:p-2 bg-black/20 rounded-xl">
            {['A', 'K', 'Q', 'J', '10'].map((v, i) => (
              <Card key={i} label={v} suit="♠" mini />
@@ -170,7 +170,7 @@ const LayoutWideTheater = () => (
       <div className="w-1/5 sm:w-1/4 border-l border-white/5 bg-gradient-to-l from-green-950/10 to-transparent p-2 sm:p-4 flex flex-col items-center justify-around overflow-hidden">
         <div className="flex flex-col items-center gap-1 sm:gap-2 w-full">
           <div className="text-[8px] sm:text-[10px] text-green-500 uppercase tracking-[0.4em] font-black opacity-50">Player Prime</div>
-          <ActorCard name="Hiro" hp={20} maxHp={20} size="lg" />
+          <ActorCard name="Hero" hp={20} maxHp={20} size="lg" />
         </div>
 
         <div className="flex flex-col items-center gap-1 sm:gap-2 w-full">
@@ -231,7 +231,7 @@ const LayoutCommandCockpit = () => (
 
        {/* Player Right (HUD Style) */}
        <div className="w-1/3 flex flex-col items-center justify-center p-4 sm:p-8 gap-4 sm:gap-6 border-l border-white/5 bg-blue-950/5 overflow-y-auto custom-scrollbar">
-          <ActorCard name="Hiro Prime" hp={20} maxHp={20} size="lg" />
+          <ActorCard name="Hero Prime" hp={20} maxHp={20} size="lg" />
           <div className="grid grid-cols-3 gap-2 scale-90 sm:scale-100">
              <ActorCard name="Kin 1" hp={15} maxHp={15} size="sm" />
              <ActorCard name="Kin 2" hp={15} maxHp={15} size="sm" />

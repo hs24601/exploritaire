@@ -100,8 +100,8 @@ const ActorTemplateCard = memo(({ actor, index, isFlashing, setFoundationRef, lo
     finalFrontSprite = '/assets/actors/ursokin/pop_ursokin_front.png';
     finalBackSprite = '/assets/actors/ursokin/pop_ursokin_behind.png';
   } else if (side === 'player' && index === 2) {
-    finalFrontSprite = '/assets/actors/hirokin/pop_hirokin_front.png';
-    finalBackSprite = '/assets/actors/hirokin/pop_hirokin_behind.png';
+    finalFrontSprite = '/assets/actors/herokin/pop_herokin_front.png';
+    finalBackSprite = '/assets/actors/herokin/pop_herokin_behind.png';
   }
 
   // SANDWICH LOGIC: South skin at 0.05px, North skin at -5.45px

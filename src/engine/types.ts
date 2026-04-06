@@ -37,8 +37,9 @@ export type OrimDomain = 'combat' | 'support';
  * This is the engine-level representation of authored effects.
  */
 export interface OrimEffectDef {
-  type: 'damage' | 'healing' | 'armor' | 'super_armor' | 'evasion' | 'defense' | 'burn' | 'bleed' | 'stun' | 'draw' | 'redeal_tableau' | 'upgrade_card_rarity_uncommon';
+  type: 'damage' | 'healing' | 'armor' | 'super_armor' | 'evasion' | 'defense' | 'burn' | 'bleed' | 'stun' | 'draw' | 'redeal_tableau' | 'upgrade_card_rarity_uncommon' | 'affinity';
   value?: number;
+  powerMode?: 'static' | 'ap';
   target: 'self' | 'enemy' | 'all_enemies' | 'ally' | 'all_allies' | 'anyone';
   element?: Element;
   elementalValue?: number;

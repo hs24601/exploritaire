@@ -1,0 +1,38 @@
+{
+  "heroRect": {
+    "x": 501,
+    "y": 557.75,
+    "width": 118,
+    "height": 182,
+    "top": 557.75,
+    "right": 619,
+    "bottom": 739.75,
+    "left": 501
+  },
+  "hpRect": {
+    "x": 560.859375,
+    "y": 573.75,
+    "width": 45.140625,
+    "height": 26,
+    "top": 573.75,
+    "right": 606,
+    "bottom": 599.75,
+    "left": 560.859375
+  },
+  "apBar": {
+    "x": 514,
+    "y": 720.953125,
+    "width": 92,
+    "height": 8,
+    "top": 720.953125,
+    "right": 606,
+    "bottom": 728.953125,
+    "left": 514
+  },
+  "armorText": "1",
+  "hpTopRight": {
+    "rightGap": 13,
+    "topGap": 16
+  },
+  "apNearBottom": 10.8
+}

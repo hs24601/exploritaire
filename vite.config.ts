@@ -560,6 +560,12 @@ export default defineConfig({
       input: {
         main:       path.resolve(__dirname, 'index.html'),
         banks:      path.resolve(__dirname, 'banks.html'),
+        benchclassic: path.resolve(__dirname, 'benchclassic.html'),
+        chargeup:   path.resolve(__dirname, 'chargeup.html'),
+        megahand:   path.resolve(__dirname, 'megahand.html'),
+        kinhand:    path.resolve(__dirname, 'kinhand.html'),
+        classic:    path.resolve(__dirname, 'classic.html'),
+        inverse:    path.resolve(__dirname, 'inverse.html'),
         city:       path.resolve(__dirname, 'city.html'),
         cardDesigner: path.resolve(__dirname, 'cardDesigner.html'),
         immersion:  path.resolve(__dirname, 'immersion.html'),

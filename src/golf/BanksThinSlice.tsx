@@ -224,7 +224,7 @@ function ForecastBadge({ forecast, detail }: { forecast: ForecastId; detail: str
   );
 }
 
-function CombatVitalsBar({
+export function CombatVitalsBar({
   hp,
   hpMax,
   armor = 0,
@@ -238,23 +238,30 @@ function CombatVitalsBar({
   accent?: string;
 }) {
   const clampedHpMax = Math.max(1, hpMax);
-  const hpPercent = Math.max(0, Math.min(100, (Math.max(0, hp) / clampedHpMax) * 100));
-  const armorPercent = Math.max(0, Math.min(100, (Math.max(0, armor) / clampedHpMax) * 100));
-  const armorSegmentPercent = Math.max(1, 100 / clampedHpMax);
-  const healthRatio = Math.max(0, hp) / clampedHpMax;
+  const clampedHp = Math.max(0, Math.min(clampedHpMax, hp));
+  const clampedArmor = Math.max(0, Math.min(clampedHpMax, armor));
+  const healthRatio = clampedHp / clampedHpMax;
   const isCritical = healthRatio <= 0.2;
   const isWounded = !isCritical && healthRatio <= 0.5;
-  const hpLabel = `${Math.round(hp)}/${Math.round(clampedHpMax)}${armor > 0 ? ` (${armor})` : ''}`;
-  const hpFill = isCritical
+  const isFullHealth = clampedHp >= clampedHpMax;
+  const hpLabel = `${Math.round(clampedHp)}/${Math.round(clampedHpMax)}${clampedArmor > 0 ? ` (${clampedArmor})` : ''}`;
+  const hpFill = isFullHealth
+    ? 'linear-gradient(180deg, rgba(96,255,150,0.98), rgba(30,166,78,0.94))'
+    : isCritical
     ? 'linear-gradient(90deg, rgba(255,72,72,0.98), rgba(173,24,24,0.94))'
     : isWounded
       ? 'linear-gradient(90deg, rgba(255,188,76,0.96), rgba(190,110,16,0.92))'
-      : `linear-gradient(90deg, ${accent}dd, ${accent}aa)`;
-  const hpGlow = isCritical
+      : 'linear-gradient(180deg, rgba(125,235,128,0.96), rgba(42,150,58,0.92))';
+  const hpGlow = isFullHealth
+    ? 'rgba(96,255,150,0.54)'
+    : isCritical
     ? 'rgba(255,72,72,0.72)'
     : isWounded
       ? 'rgba(255,188,76,0.58)'
       : `${accent}66`;
+  const armorWidthPercent = (clampedArmor / clampedHpMax) * 100;
+  const hpWidthPercent = (clampedHp / clampedHpMax) * 100;
+  const dividerPositions = Array.from({ length: Math.max(0, clampedHpMax - 1) }, (_, index) => ((index + 1) / clampedHpMax) * 100);
 
   return (
     <>
@@ -275,7 +282,7 @@ function CombatVitalsBar({
         `}</style>
       ) : null}
       <div
-        className="relative h-[18px] w-full rounded-full overflow-visible border-[2px]"
+        className="relative h-[18px] w-full overflow-visible rounded-full border-[2px]"
         style={{
           borderColor: superArmor > 0 ? 'rgba(255,220,110,0.94)' : isCritical ? 'rgba(255,72,72,0.78)' : 'rgba(255,255,255,0.16)',
           backgroundColor: 'rgba(255,255,255,0.08)',
@@ -287,22 +294,41 @@ function CombatVitalsBar({
           animation: isCritical ? 'banks-lowhp-breathe 2.8s ease-in-out infinite' : undefined,
         }}
       >
-        <div
-          className="absolute inset-y-0 left-0 rounded-full"
-          style={{
-            width: `${hpPercent}%`,
-            background: hpFill,
-            boxShadow: `0 0 6px ${hpGlow}`,
-          }}
-        />
-        {armor > 0 ? (
+        <div className="absolute inset-[2px] overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
           <div
             className="absolute inset-y-0 left-0 rounded-full"
             style={{
-              width: `${armorPercent}%`,
-              background: `repeating-linear-gradient(90deg, rgba(166,232,244,0.9) 0 calc(${armorSegmentPercent}% - 1px), rgba(23,39,49,0.95) calc(${armorSegmentPercent}% - 1px) ${armorSegmentPercent}%)`,
-              boxShadow: '0 0 8px rgba(92,184,205,0.45), inset 0 0 0 1px rgba(210,248,255,0.28)',
+              width: `${hpWidthPercent}%`,
+              background: hpFill,
+              boxShadow: hpWidthPercent > 0 ? `0 0 8px ${hpGlow}` : undefined,
+            }}
+          />
+          {dividerPositions.map((position, index) => (
+            <div
+              key={`hp-divider-${clampedHpMax}-${index}`}
+              className="absolute top-0 bottom-0 w-px"
+              style={{
+                left: `calc(${position}% - 0.5px)`,
+                background: 'rgba(5,8,12,0.9)',
+                boxShadow: '1px 0 0 rgba(255,255,255,0.1)',
+                zIndex: 2,
+              }}
+            />
+          ))}
+        </div>
+        {clampedArmor > 0 ? (
+          <div
+            className="absolute rounded-full"
+            style={{
+              left: '2px',
+              top: '4px',
+              bottom: '4px',
+              width: `calc(${armorWidthPercent}% - 4px)`,
+              minWidth: '10px',
+              background: 'linear-gradient(180deg, rgba(166,232,244,0.94), rgba(78,158,192,0.96))',
+              boxShadow: '0 0 8px rgba(92,184,205,0.45), inset 0 0 0 1px rgba(210,248,255,0.36)',
               opacity: 0.96,
+              zIndex: 2,
             }}
           />
         ) : null}

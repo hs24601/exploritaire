@@ -1,0 +1,11 @@
+{
+  "playerGapToCenterEdge": 17,
+  "playerGapToOuterEdge": 74,
+  "enemyGapToCenterEdge": 17,
+  "enemyGapToOuterEdge": 464,
+  "parity": {
+    "topDelta": 0,
+    "bottomDelta": 0,
+    "heightDelta": 0
+  }
+}

@@ -14,6 +14,7 @@ import { useImmersiveBattle } from '../contexts/ImmersiveBattleContext';
 interface HandProps {
   cards: CardType[];
   cardScale: number;
+  useMinimalOverlay?: boolean;
   onDragStart: (card: CardType, tableauIndex: number, clientX: number, clientY: number, rect: DOMRect) => void;
   onCardClick?: (card: CardType) => void;
   onCardLongPress?: (card: CardType) => void;
@@ -150,6 +151,7 @@ function computeFanPositions(n: number, minCenterDistance: number, maxCenterDist
 export const Hand = memo(function Hand({
   cards,
   cardScale,
+  useMinimalOverlay = true,
   onDragStart,
   onCardClick,
   onCardLongPress,
@@ -425,10 +427,12 @@ export const Hand = memo(function Hand({
             const apCost = Number.isFinite(rawApCost) ? Math.max(0, Math.round(rawApCost)) : 0;
             const effectiveRarity = resolveEffectiveRarity(card, orimDefinitions);
             const effectiveCard = effectiveRarity === card.rarity ? card : { ...card, rarity: effectiveRarity };
-            const handMinimalOverlay = {
-              title: getFoundationStyleHandName(effectiveCard),
-              cost: String(apCost),
-            };
+            const handMinimalOverlay = useMinimalOverlay
+              ? {
+                  title: getFoundationStyleHandName(effectiveCard),
+                  cost: String(apCost),
+                }
+              : undefined;
             const rarityKey = String(effectiveCard.rarity ?? 'common').toLowerCase();
             const useRarityVisuals = rarityKey !== 'common';
             const rarityGlowByKey: Record<string, string> = {
