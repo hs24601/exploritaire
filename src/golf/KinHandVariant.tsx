@@ -3,7 +3,7 @@ import { Callout } from '../components/Callout';
 import { AbilityApBar } from '../components/combat/AbilityApBar';
 import { Card } from '../components/Card';
 import { Tooltip } from '../components/Tooltip';
-import type { Card as GameCard, Element, OrimRarity } from '../engine/types';
+import type { Card as GameCard, Element, OrimEffectDef, OrimRarity } from '../engine/types';
 import { getKinProfile, getStarterKinKit } from './data/starterKinData';
 import { ActorAbilityCard } from './ActorAbilityCard';
 import { KinHandActorCard } from './KinHandActorCard';
@@ -52,6 +52,10 @@ type ChargeUpTurn = 'player' | 'enemy';
 type ChargeUpAutoPlayMode = 'off' | 'full';
 type ChargeUpActorSide = 'player' | 'enemy';
 type ChargeUpAutoAction =
+  | {
+      type: 'actor';
+      actorCardId: string;
+    }
   | {
       type: 'hand';
       cardId: string;
@@ -122,8 +126,8 @@ const TABLEAU_ROWS = 4;
 const TABLEAU_STACK_OFFSET = 52;
 const TABLEAU_CARD_ASPECT_RATIO = 144 / 102;
 const TABLEAU_BACK_HEIGHT_RATIO = 64 / 144;
-const CHARGE_UP_PLAYER_AUTO_STEP_MS = 260;
 const CHARGE_UP_ENEMY_STEP_MS = 340;
+const CHARGE_UP_PLAYER_AUTO_STEP_MS = CHARGE_UP_ENEMY_STEP_MS;
 const CHARGE_UP_ENEMY_DRAG_MIN_MS = 320;
 const CHARGE_UP_ENEMY_DRAG_MAX_MS = 760;
 const MEGAHAND_MAX_ENERGY = 5;
@@ -242,6 +246,38 @@ const getApSegmentPowerValue = (segment: number) => {
   return Math.ceil(normalizedSegment * (1 + ((normalizedSegment - 1) * 0.35)));
 };
 
+const getResolvedEffectPower = (effect: OrimEffectDef, abilityPower: number) => (
+  effect.powerMode === 'ap'
+    ? abilityPower
+    : Math.max(0, effect.value ?? 0)
+);
+
+const targetMatchesActorEffect = (
+  effectTarget: OrimEffectDef['target'],
+  sourceSide: ChargeUpActorSide,
+  targetSide: ChargeUpActorSide,
+) => {
+  if (effectTarget === 'anyone') return true;
+  if (effectTarget === 'self' || effectTarget === 'ally' || effectTarget === 'all_allies') {
+    return sourceSide === targetSide;
+  }
+  if (effectTarget === 'enemy' || effectTarget === 'all_enemies') {
+    return sourceSide !== targetSide;
+  }
+  return false;
+};
+
+const resolveBasicAbilityPower = (
+  ability: MegaHandAbilityDefinition,
+  currentAp?: number,
+): MegaHandAbilityDefinition => {
+  if (ability.kinhandKind !== 'actor-basic' || !currentAp || currentAp <= 0) return ability;
+  return {
+    ...ability,
+    power: Math.max(1, Math.floor(currentAp)),
+  };
+};
+
 const resolveAbilityPowerFromSegment = (
   ability: MegaHandAbilityDefinition,
   assignedRange: KinHandAppliedOrimDefinition,
@@ -285,7 +321,7 @@ const getActorRuntimeAbilities = (
   const actorDefinition = getKinHandActorDefinition(actorName);
   const baseAbility = actorDefinition?.basicAbility ?? fallbackAbility ?? null;
   const resolvedBasic = baseAbility ? [{
-    ...baseAbility,
+    ...resolveBasicAbilityPower(baseAbility, currentAp),
     ownerName: actorName,
     side: actorDefinition?.side ?? baseAbility.side ?? 'player',
   }] : [];
@@ -313,6 +349,77 @@ const getKinHandSpawnableAbilitiesFromCard = (card: LocalCard) => (
       (ability.abilityRanges ?? []).some((range) => kinhandAbilityRangeHelpers.rangeIncludesAp(range, card.tableauCharge))
     ))
 );
+
+const getAbilityDamageProfile = (
+  ability: MegaHandAbilityDefinition,
+  sourceSide: ChargeUpActorSide,
+  targetSide: ChargeUpActorSide,
+) => {
+  const effects = ability.effects ?? [];
+  const damageEffects = effects.filter((effect) => (
+    effect.type === 'damage'
+    && targetMatchesActorEffect(effect.target, sourceSide, targetSide)
+  ));
+
+  const profile = damageEffects.reduce<{
+    physical: number;
+    elemental: Partial<Record<Element, number>>;
+  }>((sum, effect) => {
+    const effectPower = getResolvedEffectPower(effect, ability.power);
+    const elementalValue = effect.elementalValue ?? effectPower;
+    if (effect.element && effect.element !== 'N') {
+      return {
+        physical: sum.physical,
+        elemental: {
+          ...sum.elemental,
+          [effect.element]: (sum.elemental[effect.element] ?? 0) + Math.max(0, elementalValue),
+        },
+      };
+    }
+    return {
+      physical: sum.physical + Math.max(0, effectPower),
+      elemental: sum.elemental,
+    };
+  }, {
+    physical: 0,
+    elemental: {},
+  });
+
+  if (damageEffects.length === 0 && ability.power > 0) {
+    return {
+      physical: ability.power,
+      elemental: {},
+    };
+  }
+
+  return profile;
+};
+
+const describeAbilityDamage = (ability: MegaHandAbilityDefinition) => {
+  const damageProfile = getAbilityDamageProfile(ability, ability.side ?? 'player', ability.side === 'enemy' ? 'player' : 'enemy');
+  const parts: string[] = [];
+  if (damageProfile.physical > 0) {
+    parts.push(`${damageProfile.physical} damage`);
+  }
+  (Object.entries(damageProfile.elemental) as Array<[Element, number | undefined]>).forEach(([element, value]) => {
+    if (!value || value <= 0) return;
+    const label = element === 'F'
+      ? 'fire'
+      : element === 'A'
+        ? 'air'
+        : element === 'L'
+          ? 'light'
+          : element === 'D'
+            ? 'dark'
+            : element === 'W'
+              ? 'water'
+              : element === 'E'
+                ? 'earth'
+                : 'elemental';
+    parts.push(`${value} ${label} damage`);
+  });
+  return parts.join(' + ');
+};
 
 const createKinHandActorCard = (actorDefinition: KinHandActorDefinition, prefix = 'kinhand-actor'): LocalCard => {
   const ability = actorDefinition.basicAbility;
@@ -519,12 +626,17 @@ const createMegaHandCombatants = (): Record<string, MegaHandCombatantState> => (
   'lesser-shade': createMegaHandCombatant('Lesser Shade'),
 });
 
-const createInitialState = (): ChargeUpState => {
+const createFreshTableau = (): LocalCard[][] => {
   const deck = createDeck();
   const tableauCards = deck.slice(0, TABLEAU_COLUMNS * TABLEAU_ROWS);
-  const tableau = Array.from({ length: TABLEAU_COLUMNS }, (_, columnIndex) =>
+  return Array.from({ length: TABLEAU_COLUMNS }, (_, columnIndex) =>
     tableauCards.slice(columnIndex * TABLEAU_ROWS, (columnIndex + 1) * TABLEAU_ROWS),
   );
+};
+
+const createInitialState = (): ChargeUpState => {
+  const deck = createDeck();
+  const tableau = createFreshTableau();
   const openingHand = createKinHandStartingHand();
 
   return {
@@ -557,9 +669,15 @@ const getNextMegaHandRarity = (rarity: OrimRarity | undefined): OrimRarity => {
   return MEGAHAND_RARITY_ORDER[Math.min(MEGAHAND_RARITY_ORDER.length - 1, currentIndex + 1)] ?? 'mythic';
 };
 
+const getKinHandCardApCap = (card: LocalCard) => (
+  card.kinhandActorCard
+    ? Math.max(0, card.kinhandActorMaxAp ?? 0)
+    : Math.max(0, card.megahandAbility?.maxAp ?? 0)
+);
+
 const grantPrimeApToCard = (card: LocalCard): LocalCard => {
   const normalized = normalizeMegaHandCardState(card);
-  const maxAp = normalized.megahandAbility?.maxAp ?? 0;
+  const maxAp = getKinHandCardApCap(normalized);
   if (maxAp > 0 && (normalized.tableauCharge ?? 0) >= maxAp) {
     return {
       ...normalized,
@@ -1272,9 +1390,39 @@ const findChargeUpBenchPathToTableau = (state: ChargeUpState): string[] | null =
   return null;
 };
 
+const chooseBestPlayerPrimeActor = (state: ChargeUpState): LocalCard | null => {
+  const legalActors = state.playerChargers.filter((card) => canMovePlayerChargerToPrime(state, card));
+  if (legalActors.length === 0) return null;
+
+  let bestActor = legalActors[0] ?? null;
+  let bestScore = -Infinity;
+
+  legalActors.forEach((card, index) => {
+    const nextState = movePlayerChargerToPrime(state, card.id);
+    if (nextState === state) return;
+    const nextTop = getChargeUpFoundationTop(nextState.playerFoundation);
+    const tableauOptions = getChargeUpLegalTableauMoves(nextState.tableau, nextTop).length;
+    const handOptions = getChargeUpLegalHandCards(nextState, 'player', nextTop).length;
+    const score = (tableauOptions * 100) + (handOptions * 10) + card.rank - index;
+    if (score > bestScore) {
+      bestScore = score;
+      bestActor = card;
+    }
+  });
+
+  return bestActor;
+};
+
 const chooseChargeUpPlayerAutoAction = (state: ChargeUpState): ChargeUpAutoAction | null => {
+  const primeActor = chooseBestPlayerPrimeActor(state);
+  if (primeActor && !getChargeUpFoundationTop(state.playerFoundation)) {
+    return { type: 'actor', actorCardId: primeActor.id };
+  }
   const tableauMove = chooseBestChargeUpTableauMove(state, 'player');
   if (tableauMove) return tableauMove;
+  if (primeActor) {
+    return { type: 'actor', actorCardId: primeActor.id };
+  }
   const benchCard = chooseBestChargeUpBenchSwapTowardTableau(state);
   if (!benchCard) return null;
   return { type: 'hand', cardId: benchCard.id };
@@ -1285,7 +1433,9 @@ const chooseChargeUpEnemyAutoAction = (state: ChargeUpState): ChargeUpAutoAction
 );
 
 const applyChargeUpAutoAction = (state: ChargeUpState, action: ChargeUpAutoAction): ChargeUpState => (
-  action.type === 'hand'
+  action.type === 'actor'
+    ? movePlayerChargerToPrime(state, action.actorCardId)
+    : action.type === 'hand'
     ? applyPlayHandCardAsFoundation(state, action.cardId)
     : applyPlayTableauCardToFoundation(state, action.actor, action.columnIndex, action.columnCardIndex)
 );
@@ -2139,13 +2289,11 @@ export function KinHandVariant() {
       (ability.abilityRanges ?? []).some((range) => kinhandAbilityRangeHelpers.rangeIncludesAp(range, selectedSegment))
     ));
     const baseAbility = activeAbilities.find((ability) => ability.kinhandKind === 'actor-basic') ?? activeAbilities[0] ?? null;
-    const grantedFireBonus = activeAbilities
+    const grantedDamageSummary = activeAbilities
       .filter((ability) => ability !== baseAbility)
-      .reduce((sum, ability) => sum + (ability.effects ?? []).reduce((innerSum, effect) => (
-        effect.type === 'damage' && effect.element === 'F'
-          ? innerSum + (effect.elementalValue ?? effect.value ?? 0)
-          : innerSum
-      ), 0), 0);
+      .map((ability) => describeAbilityDamage(ability))
+      .filter(Boolean)
+      .join(' + ');
 
     const mergedBaseCards = baseAbility ? [resolveMegaHandAbilityCard({
       actorName: rewardPreviewActorCard.actorName,
@@ -2155,11 +2303,11 @@ export function KinHandVariant() {
       foundationCardId: `reward-preview:${rewardPreviewActorCard.actorName}:${baseAbility.name}:merged`,
       abilityOverride: {
         ...baseAbility,
-        abilityDescription: grantedFireBonus > 0
-          ? `${baseAbility.abilityDescription ?? baseAbility.description} + ${grantedFireBonus} fire damage`
+        abilityDescription: grantedDamageSummary
+          ? `${baseAbility.abilityDescription ?? baseAbility.description} + ${grantedDamageSummary}`
           : (baseAbility.abilityDescription ?? baseAbility.description),
-        description: grantedFireBonus > 0
-          ? `${baseAbility.abilityDescription ?? baseAbility.description} + ${grantedFireBonus} fire damage`
+        description: grantedDamageSummary
+          ? `${baseAbility.abilityDescription ?? baseAbility.description} + ${grantedDamageSummary}`
           : (baseAbility.abilityDescription ?? baseAbility.description),
       },
       currentRarity: baseAbility.rarity ?? 'common',
@@ -2168,11 +2316,7 @@ export function KinHandVariant() {
     const grantedCards = activeAbilities
       .filter((ability) => ability !== baseAbility)
       .map((ability) => {
-      const fireBonus = (ability.effects ?? []).reduce((sum, effect) => (
-        effect.type === 'damage' && effect.element === 'F'
-          ? sum + (effect.elementalValue ?? effect.value ?? 0)
-          : sum
-      ), 0);
+      const damageSummary = describeAbilityDamage(ability);
       return resolveMegaHandAbilityCard({
         actorName: rewardPreviewActorCard.actorName,
         currentAp: selectedSegment,
@@ -2181,11 +2325,11 @@ export function KinHandVariant() {
         foundationCardId: `reward-preview:${rewardPreviewActorCard.actorName}:${ability.name}`,
         abilityOverride: {
           ...ability,
-          abilityDescription: fireBonus > 0 && ability.ownerName === rewardPreviewActorCard.actorName
-            ? `${ability.abilityDescription ?? ability.description} + ${fireBonus} fire damage`
+          abilityDescription: damageSummary && ability.ownerName === rewardPreviewActorCard.actorName
+            ? `${ability.abilityDescription ?? ability.description} + ${damageSummary}`
             : (ability.abilityDescription ?? ability.description),
-          description: fireBonus > 0 && ability.ownerName === rewardPreviewActorCard.actorName
-            ? `${ability.abilityDescription ?? ability.description} + ${fireBonus} fire damage`
+          description: damageSummary && ability.ownerName === rewardPreviewActorCard.actorName
+            ? `${ability.abilityDescription ?? ability.description} + ${damageSummary}`
             : (ability.abilityDescription ?? ability.description),
         },
         currentRarity: ability.rarity ?? 'common',
@@ -2418,6 +2562,12 @@ export function KinHandVariant() {
       to = getChargeUpPointerAnchorPoint(playerFoundationTargetRef.current);
       actor = 'player';
       presentation = 'actor';
+    } else if (action.type === 'actor') {
+      card = state.playerChargers.find((entry) => entry.id === action.actorCardId) ?? null;
+      from = getChargeUpPointerAnchorPoint(playerChargerRefs.current[action.actorCardId]);
+      to = getChargeUpPointerAnchorPoint(playerFoundationTargetRef.current);
+      actor = 'player';
+      presentation = 'actor';
     } else {
       card = state.tableau[action.columnIndex]?.[action.columnCardIndex] ?? null;
       from = getChargeUpPointerAnchorPoint(tableauTopRefs.current[action.columnIndex]);
@@ -2430,7 +2580,13 @@ export function KinHandVariant() {
       presentation = 'tableau';
     }
 
-    if (!card || !from || !to) return;
+    if (!card) return;
+    if (!from || !to) {
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, CHARGE_UP_ENEMY_STEP_MS);
+      });
+      return;
+    }
 
     enemyDragSequenceIdRef.current += 1;
     await playDragAnimation({
@@ -2631,7 +2787,7 @@ export function KinHandVariant() {
       const targetKey = getMegaHandCombatantKey(targetActorName);
       const sourceCombatant = sourceKey ? nextState.combatants[sourceKey] : null;
       const prowlBonus = sourceCombatant?.prowlActive && ability?.name !== 'Prowl' ? 1 : 0;
-      const effectivePower = Math.max(0, (ability?.power ?? 0) + prowlBonus);
+      const effectivePower = Math.max(0, targetingContext.abilityCard.power + prowlBonus);
       const sourceSide = ability?.side ?? 'player';
       const activationEnergyCost = getCardActivationEnergyCost(targetingContext.card);
       const chargeEnergyOnUse = targetKind === 'actor';
@@ -2696,6 +2852,12 @@ export function KinHandVariant() {
         }
       }
 
+      const targetSide: ChargeUpActorSide = targetActorName === 'Lesser Shade' ? 'enemy' : 'player';
+      const damageProfile = ability ? getAbilityDamageProfile({
+        ...ability,
+        power: effectivePower,
+      }, sourceSide, targetSide) : null;
+
       if (
         ability
         && targetKind === 'actor'
@@ -2706,11 +2868,12 @@ export function KinHandVariant() {
         && ability.name !== 'Healing Purr'
         && ability.name !== 'Cat Nap'
         && ability.name !== 'Prowl'
-        && effectivePower > 0
+        && damageProfile
+        && (damageProfile.physical > 0 || Object.values(damageProfile.elemental).some((value) => (value ?? 0) > 0))
       ) {
         const packet: DamagePacket = {
-          physical: effectivePower,
-          elemental: {},
+          physical: damageProfile.physical,
+          elemental: damageProfile.elemental,
           deliberate: true,
           threshold: 1,
           source: sourceSide,
@@ -3301,6 +3464,19 @@ export function KinHandVariant() {
     setAutoPlayMode('off');
   }, [clearAbilityCallouts, clearDragAnimation, clearEnemyAiTimeout, clearPlayerAutoTimeout]);
 
+  const revealTableau = useCallback(() => {
+    clearAbilityCallouts();
+    setTargetingState(null);
+    setRewardTargetingOrimId(null);
+    setRewardCalModalOpen(false);
+    setRewardPreviewState(null);
+    setOrimPlacementState(null);
+    applyStateUpdate((prev) => ({
+      ...prev,
+      tableau: createFreshTableau(),
+    }));
+  }, [applyStateUpdate, clearAbilityCallouts]);
+
   const startAutoplay = useCallback(() => {
     if (dragAnim !== null || currentTurnRef.current !== 'player') return;
     autoplayPassCountRef.current = 0;
@@ -3565,6 +3741,7 @@ export function KinHandVariant() {
             dimmed={targetingActive && !primeTargetHighlighted}
             mobile={foundationCompact}
             showPower={false}
+            showGolfValue={false}
             buttonRef={(node) => { playerFoundationTargetRef.current = node; }}
             onClick={
               primeTargetHighlighted
@@ -3590,6 +3767,7 @@ export function KinHandVariant() {
           enemy
           dimmed={targetingActive}
           showPower={false}
+          showGolfValue={false}
           buttonRef={(node) => { enemyFoundationTargetRef.current = node; }}
         />
       ) : (
@@ -3771,6 +3949,7 @@ export function KinHandVariant() {
                 mobile={foundationCompact}
                 width={supportCardWidth}
                 height={supportCardHeight}
+                showGolfValue={false}
                 buttonRef={(node) => {
                   supportCardRefs.current[card.id] = node;
                 }}
@@ -3889,6 +4068,17 @@ export function KinHandVariant() {
                   } hover:border-[#ffd166]/55 hover:text-white`}
                 >
                   💎
+                </button>
+                <button
+                  type="button"
+                  aria-label="Reveal fresh tableau"
+                  title="Reveal fresh tableau"
+                  onClick={revealTableau}
+                  className={`flex items-center justify-center rounded-[14px] border border-white/12 bg-black/35 text-white/72 transition ${
+                    foundationCompact ? 'h-10 w-10 text-lg' : 'h-11 w-11 text-xl'
+                  } hover:border-[#8ef2d4]/55 hover:text-white`}
+                >
+                  👁
                 </button>
               </div>
             ) : null}
@@ -4131,6 +4321,7 @@ export function KinHandVariant() {
                         width={92}
                         height={Math.round(92 * (supportCardHeight / supportCardWidth))}
                         showPower
+                        showGolfValue={false}
                         highlighted
                       />
                     ))}
@@ -4231,6 +4422,7 @@ export function KinHandVariant() {
                         mobile={foundationCompact}
                         width={foundationCardWidth}
                         height={foundationCardHeight}
+                        showGolfValue={false}
                         highlighted={dragAnim.actor === 'player'}
                         enemy={dragAnim.actor === 'enemy'}
                       />
