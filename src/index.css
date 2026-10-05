@@ -10,51 +10,51 @@
 @tailwind components;
 @tailwind utilities;
 
-.classicplus-main-layout {
+.proto-main-layout {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) minmax(11rem, 0.7fr);
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
-.classicplus-main-layout--no-tableau {
+.proto-main-layout--no-tableau {
   grid-template-columns: minmax(0, 1.7fr) minmax(11rem, 0.7fr);
 }
-.classicplus-main-layout--no-tableau .classicplus-map {
+.proto-main-layout--no-tableau .proto-map {
   grid-column: 1;
 }
-.classicplus-main-layout--no-tableau .classicplus-quest-sidebar {
+.proto-main-layout--no-tableau .proto-quest-sidebar {
   grid-column: 2;
 }
-.classicplus-main-layout--no-quest {
+.proto-main-layout--no-quest {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
 }
-.classicplus-main-layout--no-quest .classicplus-map {
+.proto-main-layout--no-quest .proto-map {
   grid-column: 2;
 }
-.classicplus-main-layout--no-tableau.classicplus-main-layout--no-quest {
+.proto-main-layout--no-tableau.proto-main-layout--no-quest {
   grid-template-columns: minmax(0, 1fr);
 }
-.classicplus-main-layout--no-tableau.classicplus-main-layout--no-quest .classicplus-map {
+.proto-main-layout--no-tableau.proto-main-layout--no-quest .proto-map {
   grid-column: 1;
 }
-.classicplus-main-header {
+.proto-main-header {
   grid-column: 1 / -1;
   grid-row: 1;
 }
-.classicplus-main-tableau {
+.proto-main-tableau {
   min-width: 0;
   min-height: 0;
 }
-.classicplus-main-foundations {
+.proto-main-foundations {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   display: grid;
   grid-template-rows: auto auto;
 }
-.classicplus-foundation-card {
+.proto-foundation-card {
   aspect-ratio: 56 / 74;
 }
-.classicplus-tableau-field {
+.proto-tableau-field {
   grid-column: 1;
   grid-row: 2;
   display: grid;
@@ -62,16 +62,16 @@
   grid-template-rows: minmax(0, 1fr) auto;
   gap: clamp(0.45rem, 1vmin, 0.7rem);
 }
-.classicplus-tableau-field.hidden {
+.proto-tableau-field.hidden {
   display: none;
 }
-.classicplus-map {
+.proto-map {
   grid-column: 2;
   grid-row: 2;
   min-width: 0;
   min-height: 0;
 }
-.classicplus-quest-sidebar {
+.proto-quest-sidebar {
   grid-column: 3;
   grid-row: 2;
   min-width: 0;
@@ -79,38 +79,38 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(217, 168, 255, 0.32) transparent;
 }
-.classicplus-map-viewport {
+.proto-map-viewport {
   user-select: none;
   overscroll-behavior: none;
   touch-action: none;
   background-color: #050807;
 }
 
-.classicplus-game-root {
+.proto-game-root {
   overscroll-behavior: none;
   touch-action: none;
 }
 
-@keyframes classicplus-resource-pop {
+@keyframes proto-resource-pop {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.22); }
   68% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
   100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-.classicplus-resource-stack {
-  animation: classicplus-resource-pop 420ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+.proto-resource-stack {
+  animation: proto-resource-pop 420ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
 }
 
-.classicplus-tableau-status {
+.proto-tableau-status {
   display: none;
 }
-.classicplus-game-rail {
+.proto-game-rail {
   min-height: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.18);
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
   padding: clamp(0.3rem, 0.7vmin, 0.5rem) 0;
 }
-.classicplus-game-action {
+.proto-game-action {
   position: relative;
   background: transparent;
 }
@@ -118,7 +118,7 @@
 /* Exploration is a navigation state, so the party cards stay quiet until a
    fight starts. Combat metrics remain mounted for the combat state and can be
    restored without changing the interaction model. */
-.classicplus-foundation-card--exploration {
+.proto-foundation-card--exploration {
   min-height: 0;
   height: 100%;
   width: auto;
@@ -128,27 +128,27 @@
   border-color: rgba(142, 242, 212, 0.18);
   background: linear-gradient(180deg, rgba(10, 15, 16, 0.96), rgba(5, 8, 10, 0.98));
 }
-.classicplus-foundation-board {
+.proto-foundation-board {
   min-height: 0;
   height: 100%;
   align-items: center;
 }
 /* Foundation cards and badges determine shelf height without a scroll region. */
-.classicplus-foundation-board--exploration {
+.proto-foundation-board--exploration {
   height: auto;
   overflow: visible;
   align-items: start;
   justify-content: start;
   scrollbar-width: thin;
 }
-.classicplus-foundation-board--exploration .classicplus-foundation-card--exploration {
+.proto-foundation-board--exploration .proto-foundation-card--exploration {
   min-height: 0;
   min-width: 0;
   height: auto;
   width: auto;
   aspect-ratio: auto;
 }
-.classicplus-foundation-assembly {
+.proto-foundation-assembly {
   display: grid;
   grid-template-columns: 2.25rem auto;
   align-items: center;
@@ -158,12 +158,12 @@
   padding: 0.25rem 0.25rem 0.5rem;
   justify-self: center;
 }
-.classicplus-foundation-count-tokens {
+.proto-foundation-count-tokens {
   display: grid;
   gap: 0.5rem;
   align-content: center;
 }
-.classicplus-foundation-count-token {
+.proto-foundation-count-token {
   display: grid;
   justify-items: center;
   align-content: center;
@@ -178,17 +178,17 @@
   font: 900 0.6875rem/1.1 monospace;
   box-shadow: var(--table-object-shadow);
 }
-.classicplus-foundation-count-token--resources {
+.proto-foundation-count-token--resources {
   border-color: #050609;
   background: radial-gradient(circle at 35% 25%, #244c34, #0b2018);
 }
-.classicplus-foundation-count-token > span:first-child {
+.proto-foundation-count-token > span:first-child {
   font-size: 0.875rem;
 }
-.classicplus-foundation-count-token > span:last-child {
+.proto-foundation-count-token > span:last-child {
   font-variant-numeric: tabular-nums;
 }
-.classicplus-exploration-actor {
+.proto-exploration-actor {
   display: grid;
   height: auto;
   width: auto;
@@ -196,7 +196,7 @@
   min-width: 0;
   padding: 0.5rem;
 }
-.classicplus-exploration-counters {
+.proto-exploration-counters {
   display: grid;
   gap: 0.25rem;
   min-width: 0;
@@ -205,7 +205,7 @@
   line-height: 1.2;
   letter-spacing: 0.02em;
 }
-.classicplus-occupied-foundation-face {
+.proto-occupied-foundation-face {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   width: clamp(3.5rem, 5vw, 5rem);
@@ -223,7 +223,7 @@
   box-shadow: inset 0 0 0 1px #94644e, var(--table-object-shadow);
   letter-spacing: normal;
 }
-.classicplus-occupied-foundation-rank {
+.proto-occupied-foundation-rank {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -233,7 +233,7 @@
   font-weight: 900;
   line-height: 1;
 }
-.classicplus-empty-foundation-face {
+.proto-empty-foundation-face {
   display: grid;
   place-items: center;
   width: clamp(3.5rem, 5vw, 5rem);
@@ -245,7 +245,7 @@
   text-align: center;
   letter-spacing: normal;
 }
-.classicplus-occupied-foundation-owner {
+.proto-occupied-foundation-owner {
   margin-top: 0.25rem;
   border-top: 2px solid #050409;
   padding-top: 0.2rem;
@@ -253,7 +253,7 @@
   font-weight: 900;
   line-height: 1.2;
 }
-.classicplus-exploration-counter {
+.proto-exploration-counter {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -265,10 +265,10 @@
   text-align: left;
   overflow-wrap: anywhere;
 }
-.classicplus-exploration-counter > span:last-child {
+.proto-exploration-counter > span:last-child {
   font-variant-numeric: tabular-nums;
 }
-.classicplus-solve-controls {
+.proto-solve-controls {
   display: grid;
   justify-items: start;
   gap: 0.375rem;
@@ -282,30 +282,30 @@
   text-transform: none;
   overflow-wrap: anywhere;
 }
-.classicplus-solve-controls button {
+.proto-solve-controls button {
   border: 1px solid rgba(142, 242, 212, 0.45);
   border-radius: 0.375rem;
   background: #0b1916;
   padding: 0.375rem 0.5rem;
 }
-.classicplus-solve-controls button:disabled {
+.proto-solve-controls button:disabled {
   opacity: 0.4;
 }
 /* A physical table: wood frame, cloth play mats, cardboard cards, and raised
    wooden counters. Shadows remain 2D and follow the shared light scaffold. */
-.classicplus-game-root {
+.proto-game-root {
   background: repeating-linear-gradient(3deg, transparent 0 5px, rgba(0,0,0,0.06) 6px 7px),
     linear-gradient(120deg, hsl(28 28% var(--table-wood-light, 26%)), #17191c);
 }
-.classicplus-game-root .classicplus-main-tableau,
-.classicplus-game-root .classicplus-main-foundations,
-.classicplus-game-root .classicplus-quest-sidebar {
+.proto-game-root .proto-main-tableau,
+.proto-game-root .proto-main-foundations,
+.proto-game-root .proto-quest-sidebar {
   border: 3px solid #030608;
   border-radius: 6px;
   background: repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 3px), #0d211f;
   box-shadow: inset 0 0 0 1px #355348, inset 0 2px 7px #020808, 0 3px 0 #020608, 0 6px 14px #0009;
 }
-.classicplus-game-root .playing-card {
+.proto-game-root .playing-card {
   border: 4px solid #050409;
   border-bottom-width: 3px;
   border-radius: 4px;
@@ -314,57 +314,57 @@
   box-shadow: var(--table-object-shadow);
   text-shadow: 0 1px 0 #fff5;
 }
-.classicplus-game-root .playing-card:disabled {
+.proto-game-root .playing-card:disabled {
   background: linear-gradient(140deg, #261722, #100c14);
   color: #baabb7;
 }
-.classicplus-game-root .playing-card:not(:disabled) {
+.proto-game-root .playing-card:not(:disabled) {
   outline: 2px solid #ffcc72;
   outline-offset: 1px;
 }
-.classicplus-game-root .classicplus-foundation-card,
-.classicplus-game-root .classicplus-foundation-card--exploration {
+.proto-game-root .proto-foundation-card,
+.proto-game-root .proto-foundation-card--exploration {
   border-color: #978364;
   border-bottom-width: 3px;
   background: linear-gradient(145deg, #19332e, #091713);
   box-shadow: var(--table-object-shadow);
 }
-.classicplus-map {
+.proto-map {
   border: 4px solid #030608;
   border-radius: 6px;
   box-shadow: inset 0 0 0 1px #395847, 0 5px 0 #020609, 0 12px 26px #0009;
 }
-.classicplus-map-viewport {
+.proto-map-viewport {
   background-color: #102823;
 }
-.classicplus-map [data-board-piece="tile"] {
+.proto-map [data-board-piece="tile"] {
   border: 3px solid #030708;
   border-bottom-width: 4px;
   border-radius: 4px;
   background: linear-gradient(145deg, #254933, #102319);
   color: #f5ebcf;
 }
-.classicplus-map [data-board-piece="resource"] {
+.proto-map [data-board-piece="resource"] {
   border: 3px solid #080507;
   border-bottom-width: 5px;
   background: radial-gradient(circle at 35% 25%, #59372b, #21151a);
   color: #fff1ca;
   text-shadow: 0 1px 2px #000;
 }
-.classicplus-map [data-board-piece="actor"] {
+.proto-map [data-board-piece="actor"] {
   border: 4px solid #080509;
   border-bottom-width: 6px;
   background: radial-gradient(circle at 35% 25%, #785431, #2f1d1e);
   color: #fff4ce;
 }
-.classicplus-table-lamp {
+.proto-table-lamp {
   cursor: grab;
   touch-action: none;
   background: #634426;
   border: 2px solid #f0c878;
   box-shadow: 0 0 14px #ffcf7390, 0 0 42px #ffc35e40, 0 4px 3px #0008;
 }
-.classicplus-lighting-rail {
+.proto-lighting-rail {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -377,29 +377,29 @@
   color: #ead9b4;
   font: 0.6875rem/1.4 monospace;
 }
-.classicplus-lighting-rail input[type="range"] {
+.proto-lighting-rail input[type="range"] {
   width: clamp(6rem, 12vw, 10rem);
   accent-color: #f0c878;
 }
-.classicplus-main-tableau--solver {
+.proto-main-tableau--solver {
   grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-header {
+.proto-foundation-card--exploration .proto-foundation-header {
   grid-template-columns: minmax(0, 1fr) auto;
   border-bottom-color: rgba(142, 242, 212, 0.16);
   padding: clamp(0.55rem, 1.2vmin, 0.8rem) clamp(0.65rem, 1.45vmin, 1rem);
 }
-.classicplus-foundation-card--exploration .classicplus-combat-metrics {
+.proto-foundation-card--exploration .proto-combat-metrics {
   display: none;
 }
-.classicplus-foundation-card--exploration .classicplus-dev-defeat-hint {
+.proto-foundation-card--exploration .proto-dev-defeat-hint {
   display: none;
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-advisor-grid {
+.proto-foundation-card--exploration .proto-foundation-advisor-grid {
   grid-template-columns: minmax(0, 1fr);
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-advisor-grid button {
+.proto-foundation-card--exploration .proto-foundation-advisor-grid button {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -407,43 +407,43 @@
   text-align: left;
   padding-inline: clamp(0.7rem, 1.4vmin, 1rem);
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-advisor-grid button > div:nth-child(2) {
+.proto-foundation-card--exploration .proto-foundation-advisor-grid button > div:nth-child(2) {
   margin-top: 0;
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-advisor-grid button br {
+.proto-foundation-card--exploration .proto-foundation-advisor-grid button br {
   display: none;
 }
 
 @media (max-width: 900px) {
-  .classicplus-main-layout {
+  .proto-main-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto auto;
   }
-  .classicplus-main-header {
+  .proto-main-header {
     grid-column: 1;
     grid-row: 1;
   }
-  .classicplus-main-tableau {
+  .proto-main-tableau {
     grid-column: 1;
     grid-row: 2;
   }
-  .classicplus-main-foundations {
+  .proto-main-foundations {
     grid-column: 1;
     grid-row: 3;
   }
-  .classicplus-quest-sidebar {
+  .proto-quest-sidebar {
     grid-column: 1;
     grid-row: 4;
   }
-  .classicplus-tableau-field,
-  .classicplus-map {
+  .proto-tableau-field,
+  .proto-map {
     grid-column: 1;
     grid-row: auto;
   }
-  .classicplus-tableau-field {
+  .proto-tableau-field {
     grid-template-rows: auto auto;
   }
-  .classicplus-main-layout {
+  .proto-main-layout {
     overflow: hidden;
   }
 }
@@ -1509,9 +1509,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 
 
 /* Definite padded content boxes keep labels contained without clipping shadows or popovers. */
-.classicplus-game-root [data-board-piece="tile"],
-.classicplus-game-root [data-board-piece="actor"],
-.classicplus-game-root [data-board-piece="resource"] {
+.proto-game-root [data-board-piece="tile"],
+.proto-game-root [data-board-piece="actor"],
+.proto-game-root [data-board-piece="resource"] {
   padding: 4px;
   box-sizing: border-box;
   grid-template-columns: minmax(0, 1fr);
@@ -1539,16 +1539,16 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 
 /* Inscribe the label box within circular tokens rather than their bounding square. */
-.classicplus-game-root [data-board-piece="actor"],
-.classicplus-game-root [data-board-piece="resource"] { padding: 7px; }
+.proto-game-root [data-board-piece="actor"],
+.proto-game-root [data-board-piece="resource"] { padding: 7px; }
 
 /* Compact quest rows on short displays instead of creating a scroll surface. */
 @media (max-height: 720px) {
-  .classicplus-quest-sidebar ol { gap: 0.25rem; margin-top: 0.5rem; }
-  .classicplus-quest-sidebar li { padding-block: 0.25rem; }
+  .proto-quest-sidebar ol { gap: 0.25rem; margin-top: 0.5rem; }
+  .proto-quest-sidebar li { padding-block: 0.25rem; }
 }
 
-.classicplus-quest-sidebar {
+.proto-quest-sidebar {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.75rem;
@@ -1669,9 +1669,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 
 .quest-field { font-family: 'Classic Pixel', monospace; }
 
-.classicplus-tableau-card-area { width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; place-items: center; }
-.classicplus-game-root .classicplus-solve-controls,
-.classicplus-game-root .classicplus-solve-controls button { font-size: 16px; }
+.proto-tableau-card-area { width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; place-items: center; }
+.proto-game-root .proto-solve-controls,
+.proto-game-root .proto-solve-controls button { font-size: 16px; }
 
 .details-card-viewer--floating { position: fixed; z-index: 50000; margin: 0; max-width: none; max-height: none; border-radius: 10px; overflow: visible; }
 .details-card-viewer--floating .details-card { gap: 6px; padding: 10px; }
@@ -1691,32 +1691,32 @@ html.drag-perf-mode .target-swirl-sparkles {
 .settlement-supply-tray button:disabled { opacity: .35; }
 .settlement-supply-flight { position: fixed; z-index: 40000; pointer-events: none; font-size: 28px; filter: drop-shadow(3px 5px 2px #0009); }
 
-.classicplus-mobile-nav { display: none; }
+.proto-mobile-nav { display: none; }
 @media (max-width: 900px) {
-  .classicplus-game-root { padding: 6px; }
-  .classicplus-game-root > div > div > section { padding: 6px; }
-  .classicplus-game-root .classicplus-main-layout { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); gap: 6px; }
-  .classicplus-mobile-nav { display: flex; gap: 6px; margin-bottom: 6px; }
-  .classicplus-mobile-nav button { flex: 1; padding: 6px; border: 2px solid #59634b; background: #12221c; font: 16px 'Classic Pixel', monospace; }
-  .classicplus-mobile-nav button[aria-pressed="true"] { border-color: #ffe19a; color: #ffe19a; }
-  .classicplus-mobile-nav button:disabled { opacity: .4; }
-  .classicplus-main-header { grid-column: 1; grid-row: 1; }
-  .classicplus-lighting-rail { display: none; }
-  .classicplus-game-rail { flex-wrap: wrap; gap: 4px; }
-  .classicplus-game-root .classicplus-game-action { padding: 5px 8px; font-size: 16px; }
-  .classicplus-game-root .classicplus-map,
-  .classicplus-game-root .classicplus-tableau-field,
-  .classicplus-game-root .classicplus-quest-sidebar { grid-column: 1; grid-row: 2; min-height: 0; }
-  .classicplus-main-layout[data-mobile-panel="map"] .classicplus-tableau-field,
-  .classicplus-main-layout[data-mobile-panel="map"] .classicplus-quest-sidebar,
-  .classicplus-main-layout[data-mobile-panel="tableau"] .classicplus-map,
-  .classicplus-main-layout[data-mobile-panel="tableau"] .classicplus-quest-sidebar,
-  .classicplus-main-layout[data-mobile-panel="quests"] .classicplus-map,
-  .classicplus-main-layout[data-mobile-panel="quests"] .classicplus-tableau-field { display: none; }
-  .classicplus-tableau-field { grid-template-rows: minmax(0,1fr) auto; }
-  .classicplus-main-tableau { grid-row: auto; grid-column: auto; }
-  .classicplus-main-foundations { grid-row: auto; grid-column: auto; }
-  .classicplus-map-viewport { min-height: 0; }
+  .proto-game-root { padding: 6px; }
+  .proto-game-root > div > div > section { padding: 6px; }
+  .proto-game-root .proto-main-layout { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); gap: 6px; }
+  .proto-mobile-nav { display: flex; gap: 6px; margin-bottom: 6px; }
+  .proto-mobile-nav button { flex: 1; padding: 6px; border: 2px solid #59634b; background: #12221c; font: 16px 'Classic Pixel', monospace; }
+  .proto-mobile-nav button[aria-pressed="true"] { border-color: #ffe19a; color: #ffe19a; }
+  .proto-mobile-nav button:disabled { opacity: .4; }
+  .proto-main-header { grid-column: 1; grid-row: 1; }
+  .proto-lighting-rail { display: none; }
+  .proto-game-rail { flex-wrap: wrap; gap: 4px; }
+  .proto-game-root .proto-game-action { padding: 5px 8px; font-size: 16px; }
+  .proto-game-root .proto-map,
+  .proto-game-root .proto-tableau-field,
+  .proto-game-root .proto-quest-sidebar { grid-column: 1; grid-row: 2; min-height: 0; }
+  .proto-main-layout[data-mobile-panel="map"] .proto-tableau-field,
+  .proto-main-layout[data-mobile-panel="map"] .proto-quest-sidebar,
+  .proto-main-layout[data-mobile-panel="tableau"] .proto-map,
+  .proto-main-layout[data-mobile-panel="tableau"] .proto-quest-sidebar,
+  .proto-main-layout[data-mobile-panel="quests"] .proto-map,
+  .proto-main-layout[data-mobile-panel="quests"] .proto-tableau-field { display: none; }
+  .proto-tableau-field { grid-template-rows: minmax(0,1fr) auto; }
+  .proto-main-tableau { grid-row: auto; grid-column: auto; }
+  .proto-main-foundations { grid-row: auto; grid-column: auto; }
+  .proto-map-viewport { min-height: 0; }
   .settlement-supply-tray { left: 6px; right: 6px; padding: 6px; }
   .settlement-supply-tray header span { display: none; }
   .settlement-supply-tray__slots { gap: 4px; }
@@ -1724,24 +1724,24 @@ html.drag-perf-mode .target-swirl-sparkles {
   .settlement-supply-tray button { padding: 4px; }
 }
 @media (max-width: 900px) and (max-height: 500px) {
-  .classicplus-tableau-field { grid-template-columns: minmax(0,1fr) 130px; grid-template-rows: minmax(0,1fr); }
-  .classicplus-main-foundations { grid-column: 2; }
-  .classicplus-main-tableau { grid-column: 1; }
-  .classicplus-table-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .classicplus-game-root .classicplus-main-foundations { padding: 4px; }
-  .classicplus-game-rail { padding: 2px 0; }
+  .proto-tableau-field { grid-template-columns: minmax(0,1fr) 130px; grid-template-rows: minmax(0,1fr); }
+  .proto-main-foundations { grid-column: 2; }
+  .proto-main-tableau { grid-column: 1; }
+  .proto-table-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .proto-game-root .proto-main-foundations { padding: 4px; }
+  .proto-game-rail { padding: 2px 0; }
 }
 
 @media (max-width: 900px) {
   .supply-draw-prefix { display: none; }
   .settlement-supply-tray button { flex: 1; min-height: 32px; }
-  .classicplus-map-help { top: 48px; left: 10px; right: 10px; font-size: 16px; line-height: 1.1; letter-spacing: normal; }
-  .classicplus-map-toolbar button { font-size: 16px; padding: 4px 8px; }
+  .proto-map-help { top: 48px; left: 10px; right: 10px; font-size: 16px; line-height: 1.1; letter-spacing: normal; }
+  .proto-map-toolbar button { font-size: 16px; padding: 4px 8px; }
 }
 
-.classicplus-main-tableau--solver { grid-template-rows: minmax(0,1fr) auto auto; }
-.classicplus-tableau-actions button { padding: 5px 12px; border: 2px solid #9c8c62; background: #17251f; color: #fff0d0; font: 16px 'Classic Pixel',monospace; }
-.classicplus-tableau-actions button:disabled { opacity: .4; }
+.proto-main-tableau--solver { grid-template-rows: minmax(0,1fr) auto auto; }
+.proto-tableau-actions button { padding: 5px 12px; border: 2px solid #9c8c62; background: #17251f; color: #fff0d0; font: 16px 'Classic Pixel',monospace; }
+.proto-tableau-actions button:disabled { opacity: .4; }
 .table-quest-card { position: absolute; width: 160px; height: calc(160px * 88 / 63); transform: translate(-50%,-50%); z-index: 15; border-radius: 8px; }
 .table-quest-card .quest-card { padding: 8px; gap: 6px; }
 .table-quest-card .quest-card__title, .table-quest-card .quest-card__text, .table-quest-card .quest-card__status, .table-quest-card .quest-card__reward { font-size: 16px; }
@@ -1754,7 +1754,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .table-quest-card .quest-card__title { padding-bottom: 4px; }
 
 /* Recessed physical quest tray; contents retain playing-card geometry. */
-.classicplus-game-root .quest-tray { border: 5px solid #37271e; background: linear-gradient(135deg,#33261e,#191513); box-shadow: inset 0 0 0 2px #8e7050, inset 0 8px 16px #000b, 4px 6px 0 #0008; padding: 14px; }
+.proto-game-root .quest-tray { border: 5px solid #37271e; background: linear-gradient(135deg,#33261e,#191513); box-shadow: inset 0 0 0 2px #8e7050, inset 0 8px 16px #000b, 4px 6px 0 #0008; padding: 14px; }
 .quest-tray .quest-field__header { flex-wrap: wrap; }
 .quest-tray .quest-field__header > span { font-size: 16px; }
 .quest-tray .quest-field__header .quest-tray__toggle { border-radius: 4px; width: auto; height: auto; min-height: 36px; padding: 6px 10px; font-size: 16px; background: #171313; color: #ffe2ae; }
@@ -1784,7 +1784,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .quest-tray .quest-card { padding: 4px; }
 .quest-tray .quest-card::after { content: '⚡'; font-size: 32px; margin: auto; }
 @media (max-width: 900px) and (max-height: 500px) {
-  .classicplus-main-layout[data-mobile-panel="quests"] .classicplus-main-header > :not(.classicplus-mobile-nav) { display: none; }
+  .proto-main-layout[data-mobile-panel="quests"] .proto-main-header > :not(.proto-mobile-nav) { display: none; }
   .quest-tray .quest-field__header p { display: none; }
   .quest-tray__well { grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); }
   .quest-tray__notice { grid-column: 1 / -1; }
@@ -1794,9 +1794,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 
 /* Stow the entire tray outside the viewport; its former grid column is released. */
-.classicplus-game-root .quest-tray { transition: transform 240ms ease, opacity 240ms ease; transform: translateX(0); }
-.classicplus-game-root .quest-tray[data-open="false"] { display: grid; position: fixed; top: 140px; bottom: 18px; right: 0; width: clamp(220px,24vw,460px); transform: translateX(110%); opacity: 0; pointer-events: none; visibility: hidden; transition: transform 240ms ease, opacity 240ms ease, visibility 0s 240ms; }
-@media (prefers-reduced-motion: reduce) { .classicplus-game-root .quest-tray { transition: none; } }
+.proto-game-root .quest-tray { transition: transform 240ms ease, opacity 240ms ease; transform: translateX(0); }
+.proto-game-root .quest-tray[data-open="false"] { display: grid; position: fixed; top: 140px; bottom: 18px; right: 0; width: clamp(220px,24vw,460px); transform: translateX(110%); opacity: 0; pointer-events: none; visibility: hidden; transition: transform 240ms ease, opacity 240ms ease, visibility 0s 240ms; }
+@media (prefers-reduced-motion: reduce) { .proto-game-root .quest-tray { transition: none; } }
 
 .quest-tray-restore { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 100; border: 3px solid #ae8d58; border-right: 0; border-radius: 8px 0 0 8px; padding: 12px; background: #241b15; color: #ffe2ae; box-shadow: -4px 5px 0 #0008; font: 16px 'Classic Pixel',monospace; }
 .quest-tray-restore:focus-visible { outline: 3px solid #ffe19a; outline-offset: 3px; }

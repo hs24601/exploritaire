@@ -42,7 +42,7 @@ export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disable
     // Allow React to commit the pause/mode changes before the first step.
     timer.current = setTimeout(tick, 0);
   };
-  return <div className="classicplus-solve-controls" onPointerDown={(event) => event.stopPropagation()}>
+  return <div className="proto-solve-controls" onPointerDown={(event) => event.stopPropagation()}>
     <div className="flex flex-wrap gap-2">
       <button type="button" disabled={disabled} onClick={() => running ? cancel() : start(stepLimit)}>{running ? 'Stop' : 'Auto-Solve'}</button>
       <button type="button" disabled={disabled || running} onClick={() => start(1)}>Best Move</button>

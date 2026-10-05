@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createQuestBiomeDeal } from './classicPlusQuestDeals';
+import { createQuestBiomeDeal } from './protoQuestDeals';
 import { assessSolverMove, preserveSolverRpgValues, simulateSolverMove, type SolverPuzzle } from './tableauSolver';
 
 describe('tableau guidance', () => {

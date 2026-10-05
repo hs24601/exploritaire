@@ -4,13 +4,13 @@ import { TableQuestCard, type PlacedQuestCard } from './TableQuestCard';
 import { SettlementSupplyTray, type SupplyBalances, type SupplyResource } from './SettlementSupplyTray';
 import { BoardObjectLabel } from './BoardObjectLabel';
 import { solverFlightDuration } from '../solverTiming';
-import { getTableLighting, tableObjectShadow, type TableLight } from '../classicPlusLighting';
-import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type WorldItemId } from '../classicPlusCrafting';
+import { getTableLighting, tableObjectShadow, type TableLight } from '../protoLighting';
+import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type WorldItemId } from '../protoCrafting';
 import React, { useEffect, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { useCameraControls } from '../../hooks/useCameraControls';
 
-export type ClassicPlusBiomeTile = {
+export type ProtoBiomeTile = {
   id: string;
   title: string;
   sizeLabel: 'Small' | 'Medium' | 'Large';
@@ -24,7 +24,7 @@ export type ClassicPlusBiomeTile = {
   threat?: 'none' | 'low';
 };
 
-export type ClassicPlusWorldActor = {
+export type ProtoWorldActor = {
   id: 'hero';
   label: string;
   location?: 'table' | 'foundation';
@@ -33,9 +33,9 @@ export type ClassicPlusWorldActor = {
   position: { x: number; y: number };
 };
 
-export type ClassicPlusWorldResourceStack = CraftStack;
+export type ProtoWorldResourceStack = CraftStack;
 
-export type ClassicPlusLightSource = TableLight;
+export type ProtoLightSource = TableLight;
 
 type ResourcePhysicsBody = {
   x: number;
@@ -60,7 +60,7 @@ export const getBiomeTileFootprint = (gridSize: { columns: number; rows: number 
   };
 };
 
-export const getBiomeWorldFootprint = (tile: Pick<ClassicPlusBiomeTile,'position'|'gridSize'>) => {
+export const getBiomeWorldFootprint = (tile: Pick<ProtoBiomeTile,'position'|'gridSize'>) => {
   const footprint=getBiomeTileFootprint(tile.gridSize);
   const anchor=TABLE_GRID.atWorld(tile.position);
   const first=TABLE_GRID.offset(anchor,-Math.floor(footprint.columns/2),-Math.floor(footprint.rows/2));
@@ -76,12 +76,12 @@ const finiteWorldPoint = (point: { x: number; y: number } | undefined, fallback 
   y: finiteCoordinate(point?.y, fallback.y),
 });
 
-type ClassicPlusMapProps = {
-  biomeTiles: ClassicPlusBiomeTile[];
-  actors: ClassicPlusWorldActor[];
-  actorOrigins: ClassicPlusWorldActor[];
-  resourceStacks: ClassicPlusWorldResourceStack[];
-  lightSources?: ClassicPlusLightSource[];
+type ProtoMapProps = {
+  biomeTiles: ProtoBiomeTile[];
+  actors: ProtoWorldActor[];
+  actorOrigins: ProtoWorldActor[];
+  resourceStacks: ProtoWorldResourceStack[];
+  lightSources?: ProtoLightSource[];
   timeOfDay?: number;
   onMoveLight?: (id: string, position: { x: number; y: number }) => void;
   onSelectBiome: (biomeId: string) => void;
@@ -108,7 +108,7 @@ type ClassicPlusMapProps = {
 
 /** The open expedition field. World tokens are intentionally lightweight DOM
  * nodes so they remain easy to replace with richer map entities later. */
-export const ClassicPlusMap = ({
+export const ProtoMap = ({
   biomeTiles,
   actors,
   actorOrigins,
@@ -136,7 +136,7 @@ export const ClassicPlusMap = ({
   onMoveQuest,
   supplies,
   onDrawSupply,
-}: ClassicPlusMapProps) => {
+}: ProtoMapProps) => {
   const camera = useCameraControls({
     minScale: 0.65,
     maxScale: 2.25,
@@ -167,7 +167,7 @@ export const ClassicPlusMap = ({
   resourceStacksRef.current = resourceStacks;
   const gridStep = CLASSICPLUS_GRID_SIZE * camera.cameraState.scale;
 
-  const resetClassicPlusCamera = () => {
+  const resetProtoCamera = () => {
     camera.setCameraState({ x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE });
   };
 
@@ -211,7 +211,7 @@ export const ClassicPlusMap = ({
       const stacks = resourceStacksRef.current;
       const bodies = stacks
         .map((stack) => ({ stack, body: resourcePhysicsRef.current.get(stack.id) }))
-        .filter((entry): entry is { stack: ClassicPlusWorldResourceStack; body: ResourcePhysicsBody } => Boolean(entry.body));
+        .filter((entry): entry is { stack: ProtoWorldResourceStack; body: ResourcePhysicsBody } => Boolean(entry.body));
 
       bodies.forEach(({ stack, body }) => {
         if (resourcePointerDragRef.current?.stackId === stack.id) return;
@@ -273,15 +273,15 @@ export const ClassicPlusMap = ({
           biomeId: tile?.id,
           foundationIndex: Number(foundationTarget.dataset.foundationIndex ?? 0),
         });
-      } else if (dropTarget?.closest('.classicplus-map-viewport')) {
+      } else if (dropTarget?.closest('.proto-map-viewport')) {
         const destination = resolveDropDestination(detail.actorId, detail.x, detail.y);
         startActorTravel(detail.actorId, destination.point, destination.arrival);
       }
       setDraggingActorId(null);
       setDragPreview(null);
     };
-    window.addEventListener('classicplus-actor-pointer-drop', handlePointerDrop);
-    return () => window.removeEventListener('classicplus-actor-pointer-drop', handlePointerDrop);
+    window.addEventListener('proto-actor-pointer-drop', handlePointerDrop);
+    return () => window.removeEventListener('proto-actor-pointer-drop', handlePointerDrop);
   }, [actorOrigins, biomeTiles, resourceStacks]);
 
   const startActorTravel = (
@@ -318,8 +318,8 @@ export const ClassicPlusMap = ({
         foundationIndex: detail.foundationIndex,
       });
     };
-    window.addEventListener('classicplus-foundation-travel-request', handleFoundationTravelRequest);
-    return () => window.removeEventListener('classicplus-foundation-travel-request', handleFoundationTravelRequest);
+    window.addEventListener('proto-foundation-travel-request', handleFoundationTravelRequest);
+    return () => window.removeEventListener('proto-foundation-travel-request', handleFoundationTravelRequest);
   }, [actorOrigins, biomeTiles, resourceStacks]);
 
   useEffect(() => {
@@ -337,13 +337,13 @@ export const ClassicPlusMap = ({
       setDraggingActorId(null);
       setDragPreview(null);
     };
-    window.addEventListener('classicplus-actor-drag-start', handleDragStart);
-    window.addEventListener('classicplus-actor-drag-move', handleDragMove);
-    window.addEventListener('classicplus-actor-drag-end', handleDragEnd);
+    window.addEventListener('proto-actor-drag-start', handleDragStart);
+    window.addEventListener('proto-actor-drag-move', handleDragMove);
+    window.addEventListener('proto-actor-drag-end', handleDragEnd);
     return () => {
-      window.removeEventListener('classicplus-actor-drag-start', handleDragStart);
-      window.removeEventListener('classicplus-actor-drag-move', handleDragMove);
-      window.removeEventListener('classicplus-actor-drag-end', handleDragEnd);
+      window.removeEventListener('proto-actor-drag-start', handleDragStart);
+      window.removeEventListener('proto-actor-drag-move', handleDragMove);
+      window.removeEventListener('proto-actor-drag-end', handleDragEnd);
     };
   }, []);
 
@@ -437,7 +437,7 @@ export const ClassicPlusMap = ({
     return TABLE_GRID.center(getBiomeWorldFootprint(tile).first);
   };
 
-  const getActorWorldPosition = (actor: ClassicPlusWorldActor) => finiteWorldPoint(
+  const getActorWorldPosition = (actor: ProtoWorldActor) => finiteWorldPoint(
     actor.location === 'foundation' && actor.biomeId
       ? resolveBiomeActorCell(actor.biomeId) ?? actor.position
       : actor.position,
@@ -524,7 +524,7 @@ export const ClassicPlusMap = ({
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const actorId = event.dataTransfer.getData('text/classicplus-actor');
+    const actorId = event.dataTransfer.getData('text/proto-actor');
     if (!actorId) return;
     const destination = resolveDropDestination(actorId, event.clientX, event.clientY);
     startActorTravel(actorId, destination.point, destination.arrival);
@@ -542,7 +542,7 @@ export const ClassicPlusMap = ({
           biomeId: tile?.id,
           foundationIndex: Number(foundationTarget.dataset.foundationIndex ?? 0),
         });
-      } else if (document.elementFromPoint(event.clientX, event.clientY)?.closest('.classicplus-map-viewport')) {
+      } else if (document.elementFromPoint(event.clientX, event.clientY)?.closest('.proto-map-viewport')) {
         const destination = resolveDropDestination(actorId, event.clientX, event.clientY);
         startActorTravel(actorId, destination.point, destination.arrival);
       }
@@ -556,8 +556,8 @@ export const ClassicPlusMap = ({
   const travelPosition = travel ? pointAlongWorldPath(travel.path, travel.progress) : null;
 
   return (
-    <section className="classicplus-map relative min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/22 bg-[#050807] font-mono">
-      <div className="classicplus-map-help pointer-events-none absolute left-3 top-2 z-50 text-[clamp(0.48rem,0.9vmin,0.62rem)] font-black uppercase tracking-[0.18em] text-[#8ef2d4]/70">
+    <section className="proto-map relative min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/22 bg-[#050807] font-mono">
+      <div className="proto-map-help pointer-events-none absolute left-3 top-2 z-50 text-[clamp(0.48rem,0.9vmin,0.62rem)] font-black uppercase tracking-[0.18em] text-[#8ef2d4]/70">
         Stack to build · 3 wood → lumber · 3 food → ration
         <div className="mt-1 text-white/60">Hut: 3 lumber + 2 wood · Drop ration on actor to eat</div>
       </div>
@@ -568,7 +568,7 @@ export const ClassicPlusMap = ({
         Zoom {Math.round((camera.cameraState.scale / CLASSICPLUS_ZOOM_REFERENCE_SCALE) * 100)}%
       </div>
       {supplies && onDrawSupply && <SettlementSupplyTray balances={supplies} onDraw={onDrawSupply} />}
-      <div className="classicplus-map-toolbar absolute right-2 top-2 z-50 flex gap-1">
+      <div className="proto-map-toolbar absolute right-2 top-2 z-50 flex gap-1">
         <button
           type="button"
           className="border border-[#d9a8ff]/42 bg-black/80 px-2 py-1 text-[clamp(0.46rem,0.85vmin,0.58rem)] font-black uppercase tracking-[0.12em] text-[#ecd8ff] hover:bg-[#d9a8ff]/12"
@@ -581,7 +581,7 @@ export const ClassicPlusMap = ({
         <button
           type="button"
           className="border border-white/35 bg-black px-2 py-1 text-[clamp(0.46rem,0.85vmin,0.58rem)] font-black uppercase tracking-[0.12em] text-white/80 hover:bg-white/10"
-          onClick={resetClassicPlusCamera}
+          onClick={resetProtoCamera}
         >
           Reset View
         </button>
@@ -590,7 +590,7 @@ export const ClassicPlusMap = ({
       <div className="table-grid-reference" data-grid-reference={TABLE_GRID.reference(hoverCell)} aria-label="Table grid coordinate">{hoverCell.column===0&&hoverCell.row===0 ? 'True Center · ' : ''}{TABLE_GRID.reference(hoverCell)}</div>
       <div
         ref={camera.containerRef}
-        className={`classicplus-map-viewport h-full min-h-[18rem] cursor-grab touch-none ${camera.isPanning ? 'cursor-grabbing' : ''}`}
+        className={`proto-map-viewport h-full min-h-[18rem] cursor-grab touch-none ${camera.isPanning ? 'cursor-grabbing' : ''}`}
         aria-label="Scrollable expedition table"
         onPointerMoveCapture={event=>{const cell=TABLE_GRID.atWorld(worldPointFromClient(event.clientX,event.clientY));setHoverCell(previous=>previous.column===cell.column&&previous.row===cell.row?previous:cell);}}
         onDragOver={(event) => event.preventDefault()}
@@ -606,7 +606,7 @@ export const ClassicPlusMap = ({
       >
         <div
           ref={camera.contentRef}
-          className="classicplus-map-world absolute"
+          className="proto-map-world absolute"
           style={{
             left: '-150%',
             top: '-150%',
@@ -621,7 +621,7 @@ export const ClassicPlusMap = ({
             onPointerDown={(event) => { event.stopPropagation(); if (light.id !== 'table-lantern' || (event.pointerType === 'mouse' && event.button !== 0)) return; event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); }}
             onPointerMove={(event) => { if (light.id !== 'table-lantern' || !event.currentTarget.hasPointerCapture(event.pointerId)) return; const point = worldPointFromClient(event.clientX, event.clientY); onMoveLight?.(light.id, point); }}
             onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
-            className="classicplus-table-lamp absolute z-10 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full"
+            className="proto-table-lamp absolute z-10 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full"
             style={{ left: 'calc(50% + ' + light.position.x + 'px)', top: 'calc(50% + ' + light.position.y + 'px)' }}>🕯️</div>)}
           {questCards.map(placement => <TableQuestCard key={placement.questIndex} placement={placement} title={questTitles[placement.questIndex]} text={questTexts[placement.questIndex]} redeemed={placement.questIndex < questClaims} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale}
             onMove={(position,tilt)=>onMoveQuest?.(placement.questIndex,position,tilt)}
@@ -733,7 +733,7 @@ export const ClassicPlusMap = ({
                     }
                     clearResourceDragState();
                   }}
-                  className={`classicplus-resource-stack absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#8ef2d4]/55 bg-[#0b1916] text-[0.6rem] font-black text-[#cafff4] shadow-[0_0_18px_rgba(142,242,212,0.16)] ${draggingResourceId === stack.id ? 'cursor-grabbing ring-2 ring-[#cafff4]/55' : 'cursor-grab'}`}
+                  className={`proto-resource-stack absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#8ef2d4]/55 bg-[#0b1916] text-[0.6rem] font-black text-[#cafff4] shadow-[0_0_18px_rgba(142,242,212,0.16)] ${draggingResourceId === stack.id ? 'cursor-grabbing ring-2 ring-[#cafff4]/55' : 'cursor-grab'}`}
                   style={{ left: `calc(50% + ${physicsPosition.x}px)`, top: `calc(50% + ${physicsPosition.y}px)`, boxShadow: tableObjectShadow(timeOfDay, physicsPosition, stack.resource === 'provisions_hut' ? 14 : 9, lightSources) }}
                   title={Object.entries(stackIngredients(stack)).map(([id, count]) => `${count} ${WORLD_ITEMS[id as WorldItemId].label}`).join(' + ')}
                   aria-label={`${stack.count} ${WORLD_ITEMS[stack.resource].label}${stack.build ? ', building' : ', draggable'}`}

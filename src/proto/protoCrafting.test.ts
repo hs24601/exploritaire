@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advanceBuild, matchRecipe, playBuildCard, reserveIngredients, splitStack, startStackBuild, type CraftStack } from './classicPlusCrafting';
+import { advanceBuild, matchRecipe, playBuildCard, reserveIngredients, splitStack, startStackBuild, type CraftStack } from './protoCrafting';
 
 const pile = (resource: CraftStack['resource'], count: number): CraftStack => ({
   id: 'pile', resource, count, biomeId: 'woods-alpha', position: { x: 0, y: 0 },

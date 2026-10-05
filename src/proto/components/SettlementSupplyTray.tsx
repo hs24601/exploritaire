@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { WORLD_ITEMS } from '../classicPlusCrafting';
+import { WORLD_ITEMS } from '../protoCrafting';
 
 export type SupplyResource = 'wood' | 'berries' | 'herbs';
 export type SupplyBalances = Record<SupplyResource, number>;

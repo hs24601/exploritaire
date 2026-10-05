@@ -22,7 +22,7 @@ export const createQuestBiomeDeal = (biome: 'small' | 'deep') => {
   for (let step = 0; step < size; step += 1) {
     const resource = resources[step % resources.length];
     tableau[step % 7].unshift({
-      id: `classicplus-${biome}-woods-quest-${step}`,
+      id: `proto-${biome}-woods-quest-${step}`,
       rank: ((step + 2) % 13) + 1,
       questStep: step,
       ...(resource ? { resource } : {}),
@@ -31,7 +31,7 @@ export const createQuestBiomeDeal = (biome: 'small' | 'deep') => {
   if (biome === 'deep') {
     // The encounter is removed by combat, not played onto the exploration
     // foundation. Keep it separate so returning from combat cannot skip rank 3.
-    tableau[0].push({ id: 'classicplus-deep-woods-encounter', rank: 3, questStep: -1, encounter: 'shadow_wolf_cub' });
+    tableau[0].push({ id: 'proto-deep-woods-encounter', rank: 3, questStep: -1, encounter: 'shadow_wolf_cub' });
   }
   return { tableau, stock: [] as QuestCard[] };
 };

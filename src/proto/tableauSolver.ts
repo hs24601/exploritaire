@@ -1,4 +1,4 @@
-import { isQuestPlacement, nextQuestCard, type QuestCard } from './classicPlusQuestDeals';
+import { isQuestPlacement, nextQuestCard, type QuestCard } from './protoQuestDeals';
 
 export type SolverMove = { column: number; foundation: number };
 export type SolverPuzzle = {

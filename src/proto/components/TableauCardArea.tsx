@@ -22,7 +22,7 @@ export function TableauCardArea({ columns, rows, children }: { columns: number; 
     return () => observer.disconnect();
   }, []);
   const layout = fitTableauCards(bounds.width, bounds.height, columns, rows);
-  return <div ref={ref} className="classicplus-tableau-card-area" style={{
+  return <div ref={ref} className="proto-tableau-card-area" style={{
     '--classic-card-w': `${layout.cardWidth}px`,
     '--classic-stack-step': `${layout.step}px`,
     '--classic-tableau-gap': `${layout.gap}px`,

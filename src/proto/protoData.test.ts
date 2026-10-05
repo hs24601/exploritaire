@@ -1,30 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CLASSIC_PLUS_ACTORS,
-  CLASSIC_PLUS_ENEMIES,
-  CLASSIC_PLUS_ENEMY_SLOT_IDS,
+  PROTO_ACTORS,
+  PROTO_ENEMIES,
+  PROTO_ENEMY_SLOT_IDS,
   DEFAULT_BIOME,
   getHolyNovaPower,
-} from './classicPlusData';
+} from './protoData';
 
 describe('classic plus data contracts', () => {
   it('uses unique actor and enemy IDs', () => {
-    expect(new Set(CLASSIC_PLUS_ACTORS.map((actor) => actor.id)).size).toBe(CLASSIC_PLUS_ACTORS.length);
-    expect(new Set(CLASSIC_PLUS_ENEMIES.map((enemy) => enemy.id)).size).toBe(CLASSIC_PLUS_ENEMIES.length);
+    expect(new Set(PROTO_ACTORS.map((actor) => actor.id)).size).toBe(PROTO_ACTORS.length);
+    expect(new Set(PROTO_ENEMIES.map((enemy) => enemy.id)).size).toBe(PROTO_ENEMIES.length);
   });
 
   it('keeps attack intents and fixed board slots connected to declared data', () => {
-    const actorIds = new Set(CLASSIC_PLUS_ACTORS.map((actor) => actor.id));
-    const enemyIds = new Set(CLASSIC_PLUS_ENEMIES.map((enemy) => enemy.id));
+    const actorIds = new Set(PROTO_ACTORS.map((actor) => actor.id));
+    const enemyIds = new Set(PROTO_ENEMIES.map((enemy) => enemy.id));
 
-    CLASSIC_PLUS_ENEMIES
+    PROTO_ENEMIES
       .filter((enemy) => enemy.intent.tone === 'attack')
       .forEach((enemy) => expect(actorIds.has(enemy.intent.targetId ?? '')).toBe(true));
-    CLASSIC_PLUS_ENEMY_SLOT_IDS.forEach((slotId) => expect(enemyIds.has(slotId)).toBe(true));
+    PROTO_ENEMY_SLOT_IDS.forEach((slotId) => expect(enemyIds.has(slotId)).toBe(true));
   });
 
   it('assigns Jarn the cleric-owned Hallowed Path mobility', () => {
-    const jarn = CLASSIC_PLUS_ACTORS.find((actor) => actor.id === 'jarnathan');
+    const jarn = PROTO_ACTORS.find((actor) => actor.id === 'jarnathan');
 
     expect(jarn?.label).toBe('Jarn');
     expect(jarn?.mobility).toEqual({ kind: 'hallowed_path', label: 'Hallowed Path' });

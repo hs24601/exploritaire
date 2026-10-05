@@ -1,22 +1,22 @@
-import type { ClassicPlusHeroClass } from './classicPlusTypes';
+import type { ProtoHeroClass } from './protoTypes';
 
-export type ClassicPlusMobilityKind = 'dig' | 'blink' | 'hallowed_path';
+export type ProtoMobilityKind = 'dig' | 'blink' | 'hallowed_path';
 
-export type ClassicPlusActorData = {
+export type ProtoActorData = {
   id: string;
   label: string;
   animalType: string;
-  heroClass: ClassicPlusHeroClass;
+  heroClass: ProtoHeroClass;
   hp: number;
   maxHp: number;
   cardTransportSpeed: number;
   mobility?: {
-    kind: ClassicPlusMobilityKind;
+    kind: ProtoMobilityKind;
     label: string;
   };
 };
 
-export type ClassicPlusEnemyData = {
+export type ProtoEnemyData = {
   id: string;
   label: string;
   valueLabel: string;
@@ -35,26 +35,26 @@ export type ClassicPlusEnemyData = {
   cardTransportSpeed: number;
 };
 
-export type ClassicPlusAbilityTrigger = {
+export type ProtoAbilityTrigger = {
   id: string;
   kind: 'spent_combo';
   threshold: number;
 };
 
-export type ClassicPlusChipAbilityData = {
+export type ProtoChipAbilityData = {
   id: string;
   label: string;
   damage: number;
 };
 
-export type ClassicPlusBiomeData = {
+export type ProtoBiomeData = {
   id: string;
   label: string;
   objectiveLabel: string;
   resources: readonly string[];
 };
 
-export const DEFAULT_BIOME: ClassicPlusBiomeData = {
+export const DEFAULT_BIOME: ProtoBiomeData = {
   id: 'forest',
   label: 'Forest',
   objectiveLabel: 'Forage',
@@ -64,7 +64,7 @@ export const DEFAULT_BIOME: ClassicPlusBiomeData = {
 // 13 authored Small Woods placements plus two energy for optional Day 1 work.
 export const DEFAULT_EXPEDITION_ENERGY = 15;
 
-export const DEFAULT_CHIP_ABILITY: ClassicPlusChipAbilityData = {
+export const DEFAULT_CHIP_ABILITY: ProtoChipAbilityData = {
   id: 'chip-strike',
   label: 'Chip',
   damage: 1,
@@ -79,7 +79,7 @@ export const HOLY_NOVA_SCALING = {
 export const getHolyNovaPower = (comboCount: number) =>
   HOLY_NOVA_SCALING.basePower + Math.max(0, Math.floor((comboCount - HOLY_NOVA_SCALING.threshold) / HOLY_NOVA_SCALING.powerStep));
 
-export const CLASSIC_PLUS_ACTORS: ClassicPlusActorData[] = [
+export const PROTO_ACTORS: ProtoActorData[] = [
   {
     id: 'hero',
     label: 'Hero',
@@ -121,7 +121,7 @@ export const CLASSIC_PLUS_ACTORS: ClassicPlusActorData[] = [
   },
 ];
 
-export const CLASSIC_PLUS_ENEMIES: ClassicPlusEnemyData[] = [
+export const PROTO_ENEMIES: ProtoEnemyData[] = [
   {
     id: 'shadow-wolf-cub-left',
     label: 'Shadow Wolf cub',
@@ -138,11 +138,11 @@ export const CLASSIC_PLUS_ENEMIES: ClassicPlusEnemyData[] = [
   },
 ];
 
-export const CLASSIC_PLUS_ENEMY_SLOT_IDS = [
+export const PROTO_ENEMY_SLOT_IDS = [
   'shadow-wolf-cub-left',
 ] as const;
 
-export const MAGE_PHASE_SHIFT_TRIGGER: ClassicPlusAbilityTrigger = {
+export const MAGE_PHASE_SHIFT_TRIGGER: ProtoAbilityTrigger = {
   id: 'mage-phase-shift',
   kind: 'spent_combo',
   threshold: 5,

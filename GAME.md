@@ -1,10 +1,10 @@
 # Exploritaire development baseline
 
-This document records agreed project preferences and behavior from the Classic Plus development conversations. It guides implementation and review; it does not replace the user's latest instructions or establish requirements for unrequested features.
+This document records agreed project preferences and behavior from the Proto development conversations. It guides implementation and review; it does not replace the user's latest instructions or establish requirements for unrequested features.
 
 ## Scope and workflow
 
-- Target Classic Plus unless the user requests another variant or broader scope.
+- Target Proto unless the user requests another variant or broader scope.
 - Build reusable components and shared behavior where multiple game objects need the same functionality. Avoid accumulating object-specific fixes for common problems.
 - Preserve unrelated changes in the shared workspace.
 - Treat obvious visual defects as implementation defects: overlapping labels, distorted cards, escaping text, clipped controls, and improperly rendered stacks should be caught during development rather than delegated to the user to discover.
@@ -26,7 +26,7 @@ This document records agreed project preferences and behavior from the Classic P
 
 ## Interaction
 
-- Suppress the browser context menu throughout the Classic Plus document. Development builds provide a custom context menu for future object inspection/actions; production builds suppress the native menu without exposing developer tools. The initial `dev` entry is a disabled placeholder. Dismiss on outside interaction or Escape and keep the menu inside the viewport.
+- Suppress the browser context menu throughout the Proto document. Development builds provide a custom context menu for future object inspection/actions; production builds suppress the native menu without exposing developer tools. The initial `dev` entry is a disabled placeholder. Dismiss on outside interaction or Escape and keep the menu inside the viewport.
 
 - Dragging table objects, including cards and tokens, must not pan, zoom, or otherwise affect the camera.
 - Distinguish clicks from drags. An actor click opens details; a completed drag must not open the viewer.
@@ -98,7 +98,7 @@ These are current implementation defaults for iteration, not permanent game-desi
 - Inspect relevant layout, sizing, overflow, layering, and interaction paths before delivery. Do not claim visual verification that was not performed.
 - Run checks appropriate to the change, including meaningful tests for reward redemption, progression, or other consequential state changes. Report pre-existing failures separately from regressions.
 - Isolated headless Playwright testing is authorized for this project. Use a separate browser/context against the local app; do not control the desktop, move the user's mouse, steal keyboard focus, or interact with personal browser sessions.
-- Ensure Vite is running for requested playtests and provide the verified local Classic Plus URL.
+- Ensure Vite is running for requested playtests and provide the verified local Proto URL.
 - Report what changed, what was actually checked, and material remaining limitations. Avoid treating a successful bundle build as proof of correct visual appearance.
 
 - Quest tracking is a physical recessed tray. Stow moves the entire tray off-screen and releases its layout space to the table; the table Quest control brings it back. Do not merely hide cards inside a still-visible tray. Stowing preserves progression and the card queue. Only an accomplished quest can leave the tray and fly to the table; never use the next queued card as a flight source. After departure, the next objective is visible in the tray but remains there until complete. Pending reward redemption remains explicit.

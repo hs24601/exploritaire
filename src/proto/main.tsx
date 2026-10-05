@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import '../index.css';
-import { ClassicPlusVariant } from './ClassicPlusVariant';
-import { ExploreGolfVariant } from './ExploreGolfVariant';
+import { ProtoVariant } from './ProtoVariant';
+import { ExploreGolfVariant } from '../golf/ExploreGolfVariant';
 import { DevContextMenu } from './DevContextMenu';
 
 const isHearthExploration = new URLSearchParams(window.location.search).get('scenario') === 'ember-explore';
@@ -10,6 +10,6 @@ const isHearthExploration = new URLSearchParams(window.location.search).get('sce
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <DevContextMenu />
-    {isHearthExploration ? <ExploreGolfVariant /> : <ClassicPlusVariant />}
+    {isHearthExploration ? <ExploreGolfVariant /> : <ProtoVariant />}
   </React.StrictMode>,
 );

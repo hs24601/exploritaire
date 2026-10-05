@@ -36,7 +36,7 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
   const remaining = quests.filter((quest) => quest.status !== 'redeemed' && quest.id !== deployedQuestId);
   const deployed = quests.find(quest => quest.id === deployedQuestId && quest.status === 'complete');
   const active = remaining[0];
-  return <aside className="classicplus-quest-sidebar quest-field quest-tray" data-open={open} aria-hidden={!open} inert={!open} aria-label={title}
+  return <aside className="proto-quest-sidebar quest-field quest-tray" data-open={open} aria-hidden={!open} inert={!open} aria-label={title}
     data-total={counts.total} data-complete={counts.complete} data-incomplete={counts.incomplete} data-redeemed={counts.redeemed} data-accomplished={counts.accomplished}>
     <header className="quest-field__header">
       <div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div>

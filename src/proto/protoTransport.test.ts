@@ -5,9 +5,9 @@ import {
   CARD_TRANSPORT_MIN_DURATION_MS,
   getCardTransportDurationMs,
   interpolateCardTransport,
-} from './classicPlusTransport';
+} from './protoTransport';
 
-describe('Classic Plus card transport', () => {
+describe('Proto card transport', () => {
   it('uses the deliberately slower shared baseline', () => {
     expect(CARD_TRANSPORT_BASE_SPEED_PX_PER_SECOND).toBe(460);
     expect(CARD_TRANSPORT_MIN_DURATION_MS).toBe(520);

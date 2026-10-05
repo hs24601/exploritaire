@@ -1,7 +1,7 @@
 import { TABLE_CARD_SCREEN_WIDTH, CARD_RATIO } from '../tableCardPlacement';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { tableObjectShadow, type TableLight } from '../classicPlusLighting';
+import { tableObjectShadow, type TableLight } from '../protoLighting';
 
 export type DetailsCardObject = {
   id: string;

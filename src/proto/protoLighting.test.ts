@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getTableLighting, tableObjectShadow } from './classicPlusLighting';
+import { getTableLighting, tableObjectShadow } from './protoLighting';
 describe('table lighting scaffold', () => {
   it('cycles continuously between noon, twilight and night with a visibility floor', () => {
     expect(getTableLighting(12).daylight).toBe(1);

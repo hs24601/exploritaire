@@ -567,7 +567,7 @@ export default defineConfig({
         megahand:   path.resolve(__dirname, 'megahand.html'),
         kinhand:    path.resolve(__dirname, 'kinhand.html'),
         classic:    path.resolve(__dirname, 'classic.html'),
-        classicplus: path.resolve(__dirname, 'classicplus.html'),
+        proto: path.resolve(__dirname, 'proto.html'),
         golfLegacy: path.resolve(__dirname, 'golf-legacy.html'),
         inverse:    path.resolve(__dirname, 'inverse.html'),
         city:       path.resolve(__dirname, 'city.html'),

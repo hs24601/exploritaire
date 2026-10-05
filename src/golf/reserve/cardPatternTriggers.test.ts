@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   matchesCardPattern,
-  RETIRED_CLASSIC_PLUS_CARD_PATTERNS,
+  RETIRED_PROTO_CARD_PATTERNS,
 } from './cardPatternTriggers';
 
 describe('retired card pattern triggers', () => {
@@ -11,7 +11,7 @@ describe('retired card pattern triggers', () => {
   });
 
   it('keeps the former Hero Taunt pattern as reusable data', () => {
-    expect(RETIRED_CLASSIC_PLUS_CARD_PATTERNS).toContainEqual({
+    expect(RETIRED_PROTO_CARD_PATTERNS).toContainEqual({
       id: 'knight-taunt-down-down-up',
       actorClass: 'Knight',
       pattern: ['down', 'down', 'up'],

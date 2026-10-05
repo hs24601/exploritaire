@@ -2,7 +2,7 @@ import { useRewardHold } from '../useRewardHold';
 import { TABLE_CARD_WIDTH, CARD_RATIO, settleTableCard, type TableSolid } from '../tableCardPlacement';
 import { useEffect, useRef, useState } from 'react';
 import { QuestCard } from './QuestCard';
-import { tableObjectShadow, type TableLight } from '../classicPlusLighting';
+import { tableObjectShadow, type TableLight } from '../protoLighting';
 
 export type PlacedQuestCard = {
   questIndex: number;
@@ -28,7 +28,7 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     const element = ref.current;
     if (!element || !placement.flightFrom) return;
     let destination = element.getBoundingClientRect();
-    const viewport = element.closest('.classicplus-map-viewport')?.getBoundingClientRect();
+    const viewport = element.closest('.proto-map-viewport')?.getBoundingClientRect();
     if (viewport && destination.width) {
       const scale = destination.width / 120;
       const dx = Math.max(viewport.left + 12, Math.min(destination.left, viewport.right - destination.width - 12)) - destination.left;

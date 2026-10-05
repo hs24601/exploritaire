@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_EXPEDITION_ENERGY } from './classicPlusData';
-import { createQuestBiomeDeal, isQuestPlacement, nextQuestCard, QUEST_ROUTE_BUDGET } from './classicPlusQuestDeals';
+import { DEFAULT_EXPEDITION_ENERGY } from './protoData';
+import { createQuestBiomeDeal, isQuestPlacement, nextQuestCard, QUEST_ROUTE_BUDGET } from './protoQuestDeals';
 
 describe('opening quest deals', () => {
   for (const biome of ['small', 'deep'] as const) {
