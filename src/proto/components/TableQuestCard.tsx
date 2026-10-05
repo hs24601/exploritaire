@@ -17,10 +17,12 @@ export type PlacedQuestCard = {
 export const TUTORIAL_QUEST_INDEX = -1;
 export const TUTORIAL_QUEST = { title: 'Clearing quests', text: 'Press and hold a finished card for 2s.' };
 
-export function TableQuestCard({ placement, title, text, redeemed, onRedeem, timeOfDay, lights, cameraScale, solids, onMove, staminaReward = 1 }: {
+export function TableQuestCard({ placement, title, text, redeemed, onRedeem, timeOfDay, lights, cameraScale, toWorld, solids, onMove, staminaReward = 1 }: {
   placement: PlacedQuestCard; title: string; text: string; redeemed: boolean; staminaReward?: number;
   onRedeem: () => void; timeOfDay: number; lights: TableLight[];
-  cameraScale: number; solids: TableSolid[]; onMove: (position: {x:number;y:number}, tilt:number) => void;
+  cameraScale: number; solids: TableSolid[];
+  /** Client point to table world point; follows a tilted camera. */
+  toWorld?: (clientX: number, clientY: number) => {x:number;y:number}; onMove: (position: {x:number;y:number}, tilt:number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [displayPosition, setDisplayPosition] = useState(placement.position);
@@ -31,6 +33,12 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
   const cardWidth = tableState && !tutorial ? TABLE_CARD_WIDTH : 120;
   const [tilt, setTilt] = useState(placement.tilt ?? 0);
   const drag = useRef<{pointerId:number;x:number;y:number;origin:{x:number;y:number};moved:boolean;angle:number} | null>(null);
+  // Where a drag that started at (x,y) has moved the card to, in world units.
+  const draggedTo = (current:{x:number;y:number;origin:{x:number;y:number}}, clientX:number, clientY:number) => {
+    if (!toWorld) return {x:current.origin.x+(clientX-current.x)/cameraScale,y:current.origin.y+(clientY-current.y)/cameraScale};
+    const from=toWorld(current.x,current.y),to=toWorld(clientX,clientY);
+    return {x:current.origin.x+to.x-from.x,y:current.origin.y+to.y-from.y};
+  };
   const [landed, setLanded] = useState(!placement.flightFrom);
   useEffect(() => {
     const element = ref.current;
@@ -77,13 +85,13 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
       const current=drag.current;if(!current||current.pointerId!==event.pointerId)return;
       const dx=event.clientX-current.x,dy=event.clientY-current.y;
       if(Math.hypot(dx,dy)>holdSlop(event.pointerType)){current.moved=true;hold.cancel();}
-      if(current.moved){setTilt(0);setDisplayPosition({x:current.origin.x+dx/cameraScale,y:current.origin.y+dy/cameraScale});}
+      if(current.moved){setTilt(0);setDisplayPosition(draggedTo(current,event.clientX,event.clientY));}
     }}
     onPointerUp={event=>{
       const current=drag.current;if(!current||current.pointerId!==event.pointerId)return;
       hold.cancel();drag.current=null;
       const angle=current.moved ? (Math.random()*8-4) : current.angle;
-      const requested=current.moved ? {x:current.origin.x+(event.clientX-current.x)/cameraScale,y:current.origin.y+(event.clientY-current.y)/cameraScale} : current.origin;
+      const requested=current.moved ? draggedTo(current,event.clientX,event.clientY) : current.origin;
       const settled=settleTableCard(requested,cardWidth,angle,solids) ?? current.origin;
       setDisplayPosition(settled);setTilt(angle);onMove(settled,angle);
     }}
