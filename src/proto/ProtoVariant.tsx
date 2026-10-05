@@ -2,6 +2,7 @@ import { flyQuestToDiscard } from './questDiscardFlight';
 import { TableauCardArea } from './components/TableauCardArea';
 import { solverFlightDuration } from './solverTiming';
 import { QuestField } from './components/QuestField';
+import { SettlementSupplyTray } from './components/SettlementSupplyTray';
 import { DetailsCardViewer, ActorCardArt } from './components/DetailsCardViewer';
 import { redeemActiveQuest } from './questProgress';
 import { getTableLighting, tableObjectShadow } from './protoLighting';
@@ -9,7 +10,7 @@ import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buil
 import { assessSolverMove, preserveSolverRpgValues, type SolverMove } from './tableauSolver';
 import { TableauSolveControls, type SolveStepResult } from './components/TableauSolveControls';
 import { nextQuestCard, isQuestPlacement } from './protoQuestDeals';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { advanceBuild, splitStack, playBuildCard, stackIngredients, ingredientCount, startStackBuild, WORLD_ITEMS, CRAFT_RECIPES, type WorldItemId } from './protoCrafting';
 import { DragPreview } from '../components/DragPreview';
 import type { Card as EngineCard } from '../engine/types';
@@ -47,6 +48,21 @@ import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauM
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
 
 
+
+/** Desktop columns, left to right: supplies, tableau, table, quests. Stowed trays
+ * and the hidden tableau drop out so no empty track keeps its gap. */
+const desktopLayoutTracks = (tableau: boolean, supplies: boolean, quests: boolean) => {
+  const tracks = [
+    supplies && ['supply', 'var(--side-tray-width)'],
+    tableau && ['tableau', 'minmax(0, 1fr)'],
+    ['map', 'minmax(0, 1.7fr)'],
+    quests && ['quest', 'var(--side-tray-width)'],
+  ].filter((track): track is string[] => Boolean(track));
+  return {
+    '--layout-columns': tracks.map(([, size]) => size).join(' '),
+    '--layout-areas': `"${tracks.map(() => 'header').join(' ')}" "${tracks.map(([area]) => area).join(' ')}"`,
+  } as CSSProperties;
+};
 
 const asDragPreviewCard = (card: Card): EngineCard => ({
   id: card.id,
@@ -93,7 +109,8 @@ export const ProtoVariant = () => {
   const [turnCount, setTurnCount] = useState(1);
   const [cardTransport, setCardTransport] = useState<CardTransport | null>(null);
   const [questOpen, setQuestOpen] = useState(true);
-  const [mobilePanel, setMobilePanel] = useState<'map' | 'tableau' | 'quests'>('map');
+  const [supplyOpen, setSupplyOpen] = useState(true);
+  const [mobilePanel, setMobilePanel] = useState<'map' | 'tableau' | 'quests' | 'supplies'>('map');
   useEffect(() => { if (state.selectedBiomeId) setMobilePanel('tableau'); }, [state.selectedBiomeId]);
   const [inspectedActorId, setInspectedActorId] = useState<string | null>(null);
   const [inspectionAnchor, setInspectionAnchor] = useState<HTMLElement | null>(null);
@@ -297,6 +314,10 @@ const selectBiome = (biomeId: string) => {
       settledHaul: { ...prev.haul },
     }));
   };
+
+  const settledHaul = state.settledHaul;
+  const supplyItems = useMemo(() => (Object.keys(settledHaul) as ForestResource[])
+    .map(id => ({ id, label: WORLD_ITEMS[id].label, glyph: WORLD_ITEMS[id].glyph, count: settledHaul[id] })), [settledHaul]);
 
   const drawSettlementSupply = (resource: ForestResource, count: number) => {
     const id = crypto.randomUUID();
@@ -1604,10 +1625,10 @@ const selectBiome = (biomeId: string) => {
       <div className="mx-auto flex h-full w-full max-w-[1680px] min-h-0 flex-col gap-[clamp(0.55rem,1.4vmin,1rem)]">
         <div className="min-h-0 flex-1">
           <section className="flex h-full min-h-0 flex-col rounded-[calc(var(--classic-radius)*1.75)] border border-white/10 bg-black/20 p-[clamp(0.6rem,1.6vmin,1.2rem)] shadow-[0_24px_90px_rgba(0,0,0,0.24)]">
-            <div data-mobile-panel={mobilePanel} className={`proto-main-layout grid h-full min-h-0 flex-1 gap-[clamp(0.55rem,1.4vmin,0.9rem)] ${state.selectedBiomeId ? '' : 'proto-main-layout--no-tableau'} ${questOpen ? '' : 'proto-main-layout--no-quest'}`}>
+            <div data-mobile-panel={mobilePanel} style={desktopLayoutTracks(Boolean(state.selectedBiomeId), supplyOpen, questOpen)} className={`proto-main-layout grid h-full min-h-0 flex-1 gap-[clamp(0.55rem,1.4vmin,0.9rem)] ${state.selectedBiomeId ? '' : 'proto-main-layout--no-tableau'} ${questOpen ? '' : 'proto-main-layout--no-quest'}`}>
               <div className="proto-main-header min-h-0">
                 <nav className="proto-mobile-nav" aria-label="Game panels">
-                  {(['map', 'tableau', 'quests'] as const).map(panel => <button key={panel} type="button" aria-pressed={mobilePanel === panel} disabled={panel === 'tableau' && !state.selectedBiomeId} onClick={() => { setMobilePanel(panel); if (panel === 'quests') setQuestOpen(true); }}>{panel === 'map' ? 'Table' : panel === 'tableau' ? 'Tableau' : 'Quests'}</button>)}
+                  {(['supplies', 'map', 'tableau', 'quests'] as const).map(panel => <button key={panel} type="button" aria-pressed={mobilePanel === panel} disabled={panel === 'tableau' && !state.selectedBiomeId} onClick={() => { setMobilePanel(panel); if (panel === 'quests') setQuestOpen(true); if (panel === 'supplies') setSupplyOpen(true); }}>{panel === 'map' ? 'Table' : panel === 'tableau' ? 'Tableau' : panel === 'supplies' ? 'Supplies' : 'Quests'}</button>)}
                 </nav>
                 <div className="proto-lighting-rail" data-camera-ignore="true">
                   <span>Day {state.day} · {lighting.phase} · {String(Math.floor(lighting.hour)).padStart(2, '0')}:{String(Math.floor((lighting.hour % 1) * 60)).padStart(2, '0')}</span>
@@ -1713,6 +1734,12 @@ const selectBiome = (biomeId: string) => {
                 </div>
               </div>
 
+              <SettlementSupplyTray
+                open={supplyOpen}
+                items={supplyItems}
+                onPlace={(id) => drawSettlementSupply(id as ForestResource, 1)}
+                onClose={() => { setSupplyOpen(false); if (mobilePanel === 'supplies') setMobilePanel('map'); }}
+              />
               <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId ? '' : 'hidden'}`}>
               <div className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">
                 <TableauCardArea columns={TABLEAU_COLUMNS} rows={Math.max(TABLEAU_ROWS, ...state.tableau.map((column) => column.length))}>
@@ -2127,8 +2154,6 @@ const selectBiome = (biomeId: string) => {
                 questClaims={state.questClaims}
                 onMoveQuest={(index, position, tilt) => setState(previous => ({ ...previous, questTableCards: previous.questTableCards.map(card => card.questIndex === index ? { ...card, position, tilt, tableState: true, flightFrom: undefined } : card) }))}
                 onRedeemQuest={(index) => { if (index === state.questClaims) redeemQuest(); }}
-                supplies={state.settledHaul}
-                onDrawSupply={drawSettlementSupply}
                 lightSources={tableLights}
                 timeOfDay={tableHours}
                 showLightReadout={lightReadoutVisible}
@@ -2163,6 +2188,7 @@ const selectBiome = (biomeId: string) => {
           </section>
         </div>
       </div>
+      {!supplyOpen && <button type="button" className="supply-tray-restore" aria-label="Show supplies tray" onClick={() => { setSupplyOpen(true); if (window.matchMedia('(max-width: 900px)').matches) setMobilePanel('supplies'); }}>Show supplies ▶</button>}
       {!questOpen && <button type="button" className="quest-tray-restore" aria-label="Show quest tray" onClick={() => { setQuestOpen(true); if (window.matchMedia('(max-width: 900px)').matches) setMobilePanel('quests'); }}>◀ Show quest tray</button>}
       {inspectedActorId && inspectionAnchor && state.worldActors.some((actor) => actor.id === inspectedActorId) ? <DetailsCardViewer
         anchor={inspectionAnchor}

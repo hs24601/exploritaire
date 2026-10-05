@@ -1704,15 +1704,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 .details-card-viewer--floating .details-card__descriptor { padding: 6px; }
 .details-card-viewer--floating .details-card__tray { padding-block: 3px; }
 
-.settlement-supply-tray { position: absolute; bottom: 36px; left: 12px; right: 12px; z-index: 55; max-width: 620px; padding: 10px; border: 3px solid #07090d; border-radius: 8px; background: #182823f5; box-shadow: inset 0 0 0 1px #6d7654, 3px 5px 0 #0008; color: #fff0d0; font: 16px/1.15 'Classic Pixel', monospace; }
-.settlement-supply-tray header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-.settlement-supply-tray header span { color: #aebfaa; }
-.settlement-supply-tray__slots { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
-.settlement-supply-tray section { padding: 8px; border: 2px solid #4b5547; border-radius: 5px; background: #0c1716; }
-.settlement-supply-tray section strong { float: right; color: #ffe19a; font-size: 22px; }
-.settlement-supply-tray section > div:last-child { display: flex; gap: 5px; margin-top: 8px; }
-.settlement-supply-tray button { border: 1px solid #8c926e; padding: 3px 7px; background: #27362b; font: inherit; }
-.settlement-supply-tray button:disabled { opacity: .35; }
 .settlement-supply-flight { position: fixed; z-index: 40000; pointer-events: none; font-size: 28px; filter: drop-shadow(3px 5px 2px #0009); }
 
 .proto-mobile-nav { display: none; }
@@ -1741,11 +1732,6 @@ html.drag-perf-mode .target-swirl-sparkles {
   .proto-main-tableau { grid-row: auto; grid-column: auto; }
   .proto-main-foundations { grid-row: auto; grid-column: auto; }
   .proto-map-viewport { min-height: 0; }
-  .settlement-supply-tray { left: 6px; right: 6px; padding: 6px; }
-  .settlement-supply-tray header span { display: none; }
-  .settlement-supply-tray__slots { gap: 4px; }
-  .settlement-supply-tray section { padding: 5px; }
-  .settlement-supply-tray button { padding: 4px; }
 }
 @media (max-width: 900px) and (max-height: 500px) {
   .proto-tableau-field { grid-template-columns: minmax(0,1fr) 130px; grid-template-rows: minmax(0,1fr); }
@@ -1757,8 +1743,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 
 @media (max-width: 900px) {
-  .supply-draw-prefix { display: none; }
-  .settlement-supply-tray button { flex: 1; min-height: 32px; }
   .proto-map-toolbar button { font-size: 16px; padding: 4px 8px; }
 }
 
@@ -1899,7 +1883,7 @@ html.drag-perf-mode .target-swirl-sparkles {
   --tray-ink: #3b2814;
 }
 .proto-game-root .quest-tray,
-.settlement-supply-tray {
+.proto-game-root .supply-tray {
   border: 0;
   border-radius: 14px;
   color: #fbe9c4;
@@ -1919,7 +1903,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 /* Engraved brass plaque for the tray titles. */
 .quest-tray .quest-field__header > div:first-child,
-.settlement-supply-tray header .settlement-supply-tray__plaque {
+.supply-tray .supply-tray__plaque {
   justify-self: start;
   padding: 6px 12px;
   border-radius: 4px;
@@ -2014,71 +1998,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 .quest-tray__notice { color: #ffe9b8; }
 .quest-chain-complete { color: var(--tray-ink); border: 0; background: var(--tray-parchment); box-shadow: inset 0 0 0 2px #c9ad78, 0 3px 0 #1d0f07; }
 
-/* ----- Settlement supplies: a wooden bin box with three compartments ----- */
-.settlement-supply-tray { padding: 12px 14px 14px; font-size: 16px; }
-.settlement-supply-tray header { align-items: center; }
-.settlement-supply-tray header > span:last-child { color: #f3dfb4; text-shadow: 0 2px 0 #0008; }
-.settlement-supply-tray__slots { gap: 10px; }
-.settlement-supply-tray section {
-  display: grid;
-  grid-template-rows: auto 44px auto;
-  gap: 6px;
-  padding: 8px;
-  border: 0;
-  border-radius: 8px;
-  background:
-    repeating-radial-gradient(circle at 30% 20%, #ffffff05 0 1px, transparent 1px 3px),
-    radial-gradient(ellipse at 50% 0%, #24543f, var(--tray-felt) 60%, var(--tray-felt-dark));
-  box-shadow: inset 0 0 0 3px #2b190c, inset 0 6px 10px #000c, 0 1px 0 #ffffff26;
-}
-.settlement-supply-tray .supply-bin__label { display: flex; align-items: center; gap: 6px; color: #fbe9c4; text-shadow: 0 2px 0 #000a; }
-.settlement-supply-tray .supply-bin__label strong {
-  float: none;
-  margin-left: auto;
-  min-width: 2ch;
-  padding: 0 6px;
-  border-radius: 3px;
-  text-align: center;
-  font-size: 18px;
-  color: #2b1a08;
-  text-shadow: 0 1px 0 #fff5;
-  background: linear-gradient(180deg, #f0d48c, var(--tray-brass) 60%, #a8812f);
-  box-shadow: inset 0 1px 0 #fff6, 0 2px 0 #1d0f07;
-}
-.supply-bin__pile { position: relative; overflow: hidden; border-radius: 6px; background: #0000002e; box-shadow: inset 0 3px 6px #000a; }
-.supply-token {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  font-size: 16px;
-  line-height: 1;
-  background: radial-gradient(circle at 35% 30%, #f6e2b8, #c49a5a 60%, #8a6230);
-  box-shadow: inset 0 -2px 0 #0005, 0 2px 0 #1d0f07, 0 3px 3px #0008;
-}
-.settlement-supply-tray .supply-bin__draws { display: flex; gap: 6px; margin-top: 0; }
-.settlement-supply-tray button {
-  flex: 1;
-  border: 0;
-  border-radius: 999px;
-  padding: 4px 8px;
-  color: #2b1a08;
-  font: inherit;
-  background: radial-gradient(circle at 35% 30%, #f3dcae, #c99d5f 60%, #8f6634);
-  box-shadow: inset 0 1px 0 #fff6, inset 0 -2px 0 #0004, 0 3px 0 #1d0f07;
-}
-.settlement-supply-tray button:not(:disabled):hover { filter: brightness(1.08); }
-.settlement-supply-tray button:not(:disabled):active { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff6, 0 1px 0 #1d0f07; }
-.settlement-supply-tray button:disabled { opacity: 0.4; filter: grayscale(0.6); }
-.settlement-supply-tray button:focus-visible { outline: 3px solid #fff3c8; outline-offset: 2px; }
-@media (max-width: 900px) {
-  .settlement-supply-tray { padding: 8px; }
-  .settlement-supply-tray section { grid-template-rows: auto 30px auto; padding: 6px; }
-  .supply-token { width: 18px; height: 18px; font-size: 16px; }
-}
-.settlement-supply-tray header .settlement-supply-tray__plaque { display: inline-block; }
 .quest-tray .quest-tray__controls { padding: 0; background: none; box-shadow: none; }
 .quest-tray .quest-tray__notice button { border: 0; border-radius: 999px; padding: 4px 12px; color: #2b1a08; background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429); box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07; }
 
@@ -2124,4 +2043,123 @@ html.drag-perf-mode .target-swirl-sparkles {
   .quest-tray .quest-card::after { font-size: 24px; }
   .quest-tray__notice { padding-bottom: 0; gap: 6px; }
   .quest-foundation__compact-description { gap: 6px; padding: 8px 10px; }
+}
+
+/* ===== Supplies tray ==================================================
+   Left-side twin of the quest tray: same width, wooden frame and stow tab,
+   holding a felt-lined resource tracker with one compartment per resource. */
+:root { --side-tray-width: clamp(13rem, 15vw, 16.5rem); }
+@media (min-width: 901px) {
+  /* Columns come from desktopLayoutTracks so stowed trays leave no empty gap. */
+  .proto-game-root .proto-main-layout[style] { grid-template-columns: var(--layout-columns); grid-template-areas: var(--layout-areas); }
+  .proto-game-root .proto-main-layout > .proto-main-header { grid-area: header; }
+  .proto-game-root .proto-main-layout > .proto-tableau-field { grid-area: tableau; }
+  .proto-game-root .proto-main-layout > .proto-map { grid-area: map; }
+  .proto-game-root .proto-main-layout > .proto-quest-sidebar[data-open="true"] { grid-area: quest; }
+  .proto-game-root .proto-main-layout > .proto-supply-sidebar[data-open="true"] { grid-area: supply; }
+}
+.proto-supply-sidebar {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  overflow: hidden;
+  padding: 12px 10px;
+  font: 16px/1.15 'Classic Pixel', monospace;
+}
+.proto-game-root .supply-tray { transition: transform 240ms ease, opacity 240ms ease; transform: translateX(0); }
+.proto-game-root .supply-tray[data-open="false"] { position: fixed; top: 140px; bottom: 18px; left: 0; width: var(--side-tray-width); transform: translateX(-110%); opacity: 0; pointer-events: none; visibility: hidden; transition: transform 240ms ease, opacity 240ms ease, visibility 0s 240ms; }
+@media (prefers-reduced-motion: reduce) { .proto-game-root .supply-tray { transition: none; } }
+.supply-tray__header { display: grid; gap: 6px; }
+.supply-tray .supply-tray__plaque { justify-self: stretch; margin: 0; padding: 4px 10px; font: inherit; font-size: 18px; letter-spacing: 0.08em; line-height: 1.2; }
+.supply-tray__controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #ffe9b8; text-shadow: 0 2px 0 #0008; }
+.supply-tray .supply-tray__toggle {
+  flex: none;
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 12px;
+  color: #2b1a08;
+  font: inherit;
+  background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429);
+  box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07;
+}
+.supply-tray .supply-tray__toggle:active { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff7, 0 1px 0 #1d0f07; }
+.supply-tray .supply-tray__toggle:focus-visible { outline: 3px solid #fff3c8; outline-offset: 3px; }
+/* Felt well; the list scrolls once there are more resources than fit. */
+.supply-tray__well {
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 6px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--tray-brass-dark) transparent;
+  border-radius: 10px;
+  background:
+    repeating-radial-gradient(circle at 30% 20%, #ffffff05 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 0%, #24543f, var(--tray-felt) 55%, var(--tray-felt-dark));
+  box-shadow: inset 0 6px 14px #000c, inset 0 -2px 0 #ffffff12, 0 1px 0 #ffffff26;
+}
+/* Each resource sits in a recessed wooden compartment with a brass count tag. */
+.supply-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 6px;
+  border: 0;
+  border-radius: 7px;
+  color: #fbe9c4;
+  font: inherit;
+  text-align: left;
+  text-shadow: 0 2px 0 #000a;
+  background: linear-gradient(180deg, #0a1d15, #133325);
+  box-shadow: inset 0 0 0 2px #2b190c, inset 0 4px 8px #000c, 0 1px 0 #ffffff1c;
+  cursor: pointer;
+}
+.supply-row:disabled { cursor: default; }
+.supply-row[data-count="0"] { color: #fbe9c48c; }
+.supply-row[data-count="0"] .supply-row__token { filter: grayscale(0.8); opacity: 0.55; }
+.supply-row:not(:disabled):hover { background: linear-gradient(180deg, #11291e, #1a4130); }
+.supply-row:not(:disabled):active { transform: translateY(1px); }
+.supply-row:focus-visible { outline: 3px solid #fff3c8; outline-offset: 2px; }
+.supply-row__token {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  background: radial-gradient(circle at 35% 30%, #f6e2b8, #c49a5a 60%, #8a6230);
+  box-shadow: inset 0 -2px 0 #0005, 0 2px 0 #1d0f07, 0 3px 3px #0008;
+}
+.supply-row__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.supply-row__count {
+  min-width: 2.2ch;
+  padding: 0 6px;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 18px;
+  color: #2b1a08;
+  text-shadow: 0 1px 0 #fff5;
+  background: linear-gradient(180deg, #f0d48c, var(--tray-brass) 60%, #a8812f);
+  box-shadow: inset 0 1px 0 #fff6, 0 2px 0 #1d0f07;
+}
+.supply-tray-restore { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 100; border: 3px solid #ae8d58; border-left: 0; border-radius: 0 8px 8px 0; padding: 12px; background: #241b15; color: #ffe2ae; box-shadow: 4px 5px 0 #0008; font: 16px 'Classic Pixel', monospace; }
+.supply-tray-restore:focus-visible { outline: 3px solid #ffe19a; outline-offset: 3px; }
+@media (max-width: 900px) {
+  .proto-game-root .proto-supply-sidebar { grid-column: 1; grid-row: 2; }
+  .proto-main-layout:not([data-mobile-panel="supplies"]) .proto-supply-sidebar,
+  .proto-main-layout[data-mobile-panel="supplies"] .proto-map,
+  .proto-main-layout[data-mobile-panel="supplies"] .proto-tableau-field,
+  .proto-main-layout[data-mobile-panel="supplies"] .proto-quest-sidebar { display: none; }
+  .proto-main-layout[data-mobile-panel="supplies"] .proto-main-header > :not(.proto-mobile-nav) { display: none; }
+  .supply-tray-restore { display: none; }
 }

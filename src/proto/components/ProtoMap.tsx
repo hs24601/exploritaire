@@ -1,7 +1,6 @@
 import { TABLE_GRID, TRUE_CENTER, screenToWorld, type GridCell } from '../gridCoordinates';
 import { findWorldPath, pointAlongWorldPath, worldPathLength, type PathObstacle } from '../worldPathfinding';
 import { TableQuestCard, type PlacedQuestCard } from './TableQuestCard';
-import { SettlementSupplyTray, type SupplyBalances, type SupplyResource } from './SettlementSupplyTray';
 import { BoardObjectLabel } from './BoardObjectLabel';
 import { solverFlightDuration } from '../solverTiming';
 import { createTableLightField, getTableLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
@@ -104,8 +103,6 @@ type ProtoMapProps = {
   questClaims?: number;
   onMoveQuest?: (index:number, position:{x:number;y:number}, tilt:number)=>void;
   onRedeemQuest?: (index: number) => void;
-  supplies?: SupplyBalances;
-  onDrawSupply?: (resource: SupplyResource, count: number) => void;
   onInspectActor?: (actorId: string, anchor: HTMLElement) => void;
 };
 
@@ -138,8 +135,6 @@ export const ProtoMap = ({
   questClaims = 0,
   onRedeemQuest,
   onMoveQuest,
-  supplies,
-  onDrawSupply,
 }: ProtoMapProps) => {
   const camera = useCameraControls({
     minScale: 0.65,
@@ -549,7 +544,6 @@ export const ProtoMap = ({
       >
         Zoom {Math.round((camera.cameraState.scale / CLASSICPLUS_ZOOM_REFERENCE_SCALE) * 100)}%
       </div>
-      {supplies && onDrawSupply && <SettlementSupplyTray balances={supplies} onDraw={onDrawSupply} />}
       <div className="proto-map-toolbar absolute right-2 top-2 z-50 flex gap-1">
         <button
           type="button"

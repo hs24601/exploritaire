@@ -1,34 +1,28 @@
 import { useEffect, useRef } from 'react';
-import { WORLD_ITEMS } from '../protoCrafting';
 
-export type SupplyResource = 'wood' | 'berries' | 'herbs';
-export type SupplyBalances = Record<SupplyResource, number>;
-const resources: SupplyResource[] = ['wood', 'berries', 'herbs'];
-const SUPPLY_PILE_MAX = 12;
+export type SupplyItem = { id: string; label: string; glyph: string; count: number };
 
-/** Loose tokens in a bin: two staggered rows with a little deterministic scatter. */
-const supplyTokenPlacement = (index: number) => {
-  const row = index % 2;
-  const column = Math.floor(index / 2);
-  const jitter = ((index * 37) % 7) - 3;
-  return { left: `calc(${6 + column * 15}% + ${jitter}px)`, top: `${row * 38 + 8 + ((index * 11) % 5)}%`, zIndex: index, rotate: `${jitter * 4}deg` };
-};
-
-/** Screen-space storage; only deliberately drawn ingredients become table tokens. */
-export function SettlementSupplyTray({ balances, onDraw }: { balances: SupplyBalances; onDraw: (resource: SupplyResource, count: number) => void }) {
-  const previous = useRef(balances);
-  const ref = useRef<HTMLDivElement>(null);
+/** Left-side resource tracker: one row per resource, mirroring the quest tray's
+ * frame and stow behavior. Tapping a stocked row places one on the table. */
+export function SettlementSupplyTray({ items, open = true, onPlace, onClose }: {
+  items: readonly SupplyItem[];
+  open?: boolean;
+  onPlace?: (id: string) => void;
+  onClose?: () => void;
+}) {
+  const previous = useRef(new Map(items.map(item => [item.id, item.count])));
+  const ref = useRef<HTMLElement>(null);
   useEffect(() => {
     const animations: Animation[] = [];
     const ghosts: HTMLElement[] = [];
     const actor = document.querySelector('[data-board-piece="actor"]')?.getBoundingClientRect();
-    for (const resource of resources) {
-      const increase = balances[resource] - previous.current[resource];
-      const destination = ref.current?.querySelector(`[data-supply="${resource}"]`)?.getBoundingClientRect();
+    for (const item of items) {
+      const increase = item.count - (previous.current.get(item.id) ?? 0);
+      const destination = open ? ref.current?.querySelector(`[data-supply="${item.id}"]`)?.getBoundingClientRect() : undefined;
       if (increase > 0 && actor && destination) {
         for (let index = 0; index < Math.min(5, increase); index++) {
           const ghost = document.createElement('span');
-          ghost.textContent = WORLD_ITEMS[resource].glyph;
+          ghost.textContent = item.glyph;
           ghost.className = 'settlement-supply-flight';
           ghost.style.left = actor.left + actor.width / 2 + 'px';
           ghost.style.top = actor.top + actor.height / 2 + 'px';
@@ -45,19 +39,29 @@ export function SettlementSupplyTray({ balances, onDraw }: { balances: SupplyBal
         }
       }
     }
-    previous.current = balances;
+    previous.current = new Map(items.map(item => [item.id, item.count]));
     return () => { animations.forEach(animation => animation.cancel()); ghosts.forEach(ghost => ghost.remove()); };
-  }, [balances]);
-  return <div ref={ref} className="settlement-supply-tray" data-camera-ignore="true" onPointerDown={event => event.stopPropagation()}>
-    <header><span className="settlement-supply-tray__plaque">Settlement supplies</span> <span>Draw ingredients onto the table to craft</span></header>
-    <div className="settlement-supply-tray__slots">
-      {resources.map(resource => <section key={resource} data-supply={resource} aria-label={WORLD_ITEMS[resource].label}>
-        <div className="supply-bin__label"><span aria-hidden="true">{WORLD_ITEMS[resource].glyph}</span> {WORLD_ITEMS[resource].label} <strong aria-live="polite">{balances[resource]}</strong></div>
-        <div className="supply-bin__pile" aria-hidden="true">
-          {Array.from({ length: Math.min(SUPPLY_PILE_MAX, balances[resource]) }, (_, index) => <span key={index} className="supply-token" style={supplyTokenPlacement(index)}>{WORLD_ITEMS[resource].glyph}</span>)}
-        </div>
-        <div className="supply-bin__draws">{[1, 3].map(count => <button key={count} type="button" disabled={balances[resource] < count} onClick={() => onDraw(resource, count)} aria-label={`Draw ${count} ${WORLD_ITEMS[resource].label}`}><span className="supply-draw-prefix">Draw </span>{count}</button>)}</div>
-      </section>)}
-    </div>
-  </div>;
+  }, [items, open]);
+  const total = items.reduce((sum, item) => sum + item.count, 0);
+  return <aside ref={ref} className="proto-supply-sidebar supply-tray" data-open={open} aria-hidden={!open} inert={!open} aria-label="Supplies"
+    data-camera-ignore="true" onPointerDown={event => event.stopPropagation()}>
+    <header className="supply-tray__header">
+      <h2 className="supply-tray__plaque">Supplies</h2>
+      <div className="supply-tray__controls">
+        <span>{total} held</span>
+        {onClose && <button type="button" className="supply-tray__toggle" aria-expanded={open} onClick={onClose}>← Stow tray</button>}
+      </div>
+    </header>
+    <ul className="supply-tray__well">
+      {items.map(item => <li key={item.id}>
+        <button type="button" className="supply-row" data-supply={item.id} data-count={item.count} disabled={!onPlace || item.count < 1}
+          onClick={() => onPlace?.(item.id)} title={item.count ? `Place one ${item.label} on the table` : undefined}
+          aria-label={`${item.label}, ${item.count}${item.count && onPlace ? '. Place one on the table' : ''}`}>
+          <span className="supply-row__token" aria-hidden="true">{item.glyph}</span>
+          <span className="supply-row__label">{item.label}</span>
+          <strong className="supply-row__count" aria-live="polite">{item.count}</strong>
+        </button>
+      </li>)}
+    </ul>
+  </aside>;
 }
