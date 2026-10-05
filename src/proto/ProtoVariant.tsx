@@ -8,6 +8,7 @@ import { TUTORIAL_QUEST_INDEX, type PlacedQuestCard } from './components/TableQu
 import { DetailsCardViewer, ActorCardArt } from './components/DetailsCardViewer';
 import { redeemActiveQuest } from './questProgress';
 import { getTableLighting, tableObjectShadow } from './protoLighting';
+import { NEUTRAL_STANDEE_LIGHTING, SpriteStandeeArt } from './components/SpriteStandee';
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
 import { assessSolverMove, preserveSolverRpgValues, type SolverMove } from './tableauSolver';
 import { TableauSolveControls, type SolveStepResult } from './components/TableauSolveControls';
@@ -100,6 +101,9 @@ const addSpentComboProgress = (progress: Record<string, number>, ability: Pendin
 };
 
 
+
+/** Size of the actor pop-up on its foundation card in the battle camera, in px. */
+const FOUNDATION_POPUP_SIZE = 64;
 
 export const ProtoVariant = () => {
   const [state, setState] = useState<ProtoState>(() =>
@@ -1982,7 +1986,7 @@ const selectBiome = (biomeId: string) => {
                   </div>
                 ) : null}
                 <div
-                  className={`proto-foundation-board mx-auto grid w-full justify-center ${state.scene === 'exploration' ? 'proto-foundation-board--exploration' : ''}`}
+                  className={`proto-foundation-board mx-auto grid w-full justify-center ${state.scene === 'exploration' ? 'proto-foundation-board--exploration' : ''}${cameraTilted ? ' proto-foundation-board--tilted' : ''}`}
                   style={{
                     gridTemplateColumns: `repeat(${state.scene === 'exploration' ? Math.max(1, state.foundations.length) : FOUNDATION_SLOTS}, minmax(${state.scene === 'exploration' ? '8rem' : '0'}, 1fr))`,
                     gap: 'var(--classic-gap)',
@@ -2081,6 +2085,14 @@ const selectBiome = (biomeId: string) => {
                               }}
                               className="proto-exploration-actor cursor-grab touch-none text-center text-[#ffe7ad] active:cursor-grabbing"
                             >
+                              {cameraTilted && WORLD_ACTOR_SPRITES[actor.id] ? (
+                                // Battle camera: the actor pops up from the top edge of its card,
+                                // clear of the energy bubble, card count and resources.
+                                <span className="proto-foundation-popup" aria-hidden="true">
+                                  <span className="proto-foundation-popup__base" />
+                                  <SpriteStandeeArt sprite={WORLD_ACTOR_SPRITES[actor.id]} lighting={NEUTRAL_STANDEE_LIGHTING} size={FOUNDATION_POPUP_SIZE} />
+                                </span>
+                              ) : null}
                               <span className="proto-occupied-foundation-face" aria-label={`Foundation top card ${rankLabel(foundation?.card.rank ?? 2)}${foundation?.card.resource ? `, ${FOREST_RESOURCE_LABELS[foundation.card.resource]}` : ''}`}>
                                 <span className="proto-occupied-foundation-rank">
                                   <span>{rankLabel(foundation?.card.rank ?? 2)}</span>

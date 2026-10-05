@@ -87,6 +87,7 @@ This document records agreed project preferences and behavior from the Proto dev
 - In the tilted camera, an actor with sprite art (`WORLD_ACTOR_SPRITES`) stands up as a pop-up cut-out instead of the cardboard token: padding trimmed so its feet meet its base, pixel-sharp, shaded by the light reaching it with a warm rim toward the strongest nearby lamp, and casting its silhouette away from the sun or moon and each lamp (never from its own carried candle). Art that fails to load falls back to the token. The same art is the portrait on the actor's details card.
 - Standees rotate about their foot before being placed, and the camera zooms in 3D, so pieces stay planted on the table at every zoom level.
 - The camera tilt also applies to the tableau field, like a battle camera seen from behind the player: the tableau leans back from its front row, back rows shrink toward the horizon and soften with a depth-of-field blur, and the front row stays sharp and playable. Flat restores the 2D tableau.
+- The camera tilt also leans each foundation card back, and an actor with sprite art pops up from the top edge of its actor card, standing above the card so it never covers the energy bubble, card count or resource summary. The foundation makes room above for it (less on short screens).
 
 ## Temporary scaffolding
 

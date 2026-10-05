@@ -2403,3 +2403,25 @@ html.drag-perf-mode .target-swirl-sparkles {
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   filter: blur(1.5px);
 }
+
+/* Battle camera on the foundation: the foundation card leans back like the
+   tableau, and the actor's sprite pops up from the top edge of its card,
+   standing upright above it so the energy bubble, card count and resources
+   stay clear. The assembly makes room above for it. */
+.proto-foundation-board .proto-foundation-card--exploration { transform-origin: 50% 100%; transition: transform 0.35s ease; }
+.proto-foundation-board--tilted .proto-foundation-card--exploration { transform: perspective(600px) rotateX(24deg); transform-style: preserve-3d; }
+.proto-foundation-board--tilted .proto-exploration-actor { position: relative; transform-style: preserve-3d; }
+.proto-foundation-board--tilted .proto-foundation-assembly { padding-top: 56px; }
+.proto-foundation-popup {
+  position: absolute; left: 50%; bottom: calc(100% - 0.75rem);
+  width: 64px; height: 64px; pointer-events: none;
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) rotateX(-24deg);
+}
+.proto-foundation-popup__base { position: absolute; left: 50%; bottom: -4px; width: 44px; height: 10px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(#0008 30%, transparent 70%); }
+@media (prefers-reduced-motion: reduce) { .proto-foundation-board .proto-foundation-card--exploration { transition: none; } }
+/* Short screens (phone landscape) have little height to spare: a smaller pop-up, less room above. */
+@media (max-height: 500px) {
+  .proto-foundation-popup { scale: 0.7; }
+  .proto-foundation-board--tilted .proto-foundation-assembly { padding-top: 34px; }
+}

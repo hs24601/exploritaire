@@ -7,12 +7,12 @@ export const SPRITE_STANDEE_SIZE = 64;
 
 /** The standee's face: trimmed pixel art, shaded by the light reaching it with
  * a warm rim on the side facing the strongest nearby light. */
-export function SpriteStandeeArt({ sprite, lighting, onError }: { sprite: string; lighting: StandeeLighting; onError: () => void }) {
+export function SpriteStandeeArt({ sprite, lighting, onError, size = SPRITE_STANDEE_SIZE }: { sprite: string; lighting: StandeeLighting; onError?: () => void; size?: number }) {
   const state = useSpriteBounds(sprite);
   const failed = state?.status === 'error';
-  useEffect(() => { if (failed) onError(); }, [failed, onError]);
+  useEffect(() => { if (failed) onError?.(); }, [failed, onError]);
   if (state?.status !== 'ready') return null;
-  const layout = spriteLayout(state.bounds, SPRITE_STANDEE_SIZE, SPRITE_STANDEE_SIZE);
+  const layout = spriteLayout(state.bounds, size, size);
   const { rim } = lighting;
   const filter = [
     `brightness(${lighting.brightness.toFixed(3)})`,
@@ -38,3 +38,6 @@ export function SpriteStandeeShadows({ sprite, position, shadows }: { sprite: st
     }} />;
   })}</>;
 }
+
+/** Even, neutral light for standees shown outside the table (the foundation). */
+export const NEUTRAL_STANDEE_LIGHTING: StandeeLighting = { brightness: 1, warmth: 0, lightColor: { r: 255, g: 255, b: 255 }, rim: null, shadows: [] };
