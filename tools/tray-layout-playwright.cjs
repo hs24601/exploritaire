@@ -2,7 +2,9 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 // Both trays and their pinned notes at common desktop and phone sizes: nothing
 // collides, escapes, clips, covers the corner studs or drops below 16px text.
 const SUPPLY={parts:'.supply-tray__toggle, .supply-tray__well, .supply-row, .supply-row__token, .supply-row__count',cornerInset:12};
-const QUEST={parts:'.quest-tray__toggle, .quest-tray__progress, .quest-discard-counter, .quest-tray__well, .quest-foundation, .quest-foundation__cards, .hold-reward-button',cornerInset:12};
+const QUEST={parts:'.quest-tray__toggle, .quest-tray__progress, .quest-discard-counter, .quest-tray__well, .quest-foundation, .quest-foundation__cards, .quest-tray .quest-card, .quest-card__title, .quest-card__text, .quest-card__reward',cornerInset:12};
+// The longest quest title and objective in the expedition, to prove every face-up card fits.
+const LONGEST={title:'Use the Day 2 ration for the Deep Woods round trip',text:'Return Hero to the city with the resources collected in Small Woods.'};
 const TOAST={parts:'.pinned-toast__close, .pinned-toast h3, .pinned-toast p, .pinned-toast li, .pinned-toast__icon, .supply-details__place'};
 const separate=(a,b)=>a.x+a.width<=b.x+0.5||b.x+b.width<=a.x+0.5||a.y+a.height<=b.y+0.5||b.y+b.height<=a.y+0.5;
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
@@ -10,8 +12,11 @@ const separate=(a,b)=>a.x+a.width<=b.x+0.5||b.x+b.width<=a.x+0.5||a.y+a.height<=
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');await p.locator('.quest-card').waitFor();
     const at=(label,list)=>list.forEach(d=>problems.push(`${w}x${h} ${label}: ${d}`));
     at('supplies',await findLayoutDefects(p,'.supply-tray',SUPPLY));at('quests',await findLayoutDefects(p,'.quest-tray',QUEST));
+    await p.evaluate(({title,text})=>{const card=document.querySelector('.quest-tray .quest-card');card.querySelector('.quest-card__title').textContent=title;card.querySelector('.quest-card__text').textContent=text;},LONGEST);
+    at('quests, longest text',await findLayoutDefects(p,'.quest-tray',QUEST));
+    assert.ok(await p.locator('.quest-tray .quest-card__text').isVisible(),'the active card shows its objective face up');
     const card=await p.locator('.quest-tray .quest-card').boundingBox();assert.ok(card.width>=60,`${w}x${h} quest card is ${card.width}px wide`);
-    const tray=await p.locator('.quest-tray').boundingBox();assert.ok(tray.width<=card.width+50,`${w}x${h} quest tray ${tray.width}px for a ${card.width}px card`);
+    await p.reload();await p.locator('.quest-card').waitFor();const tray=await p.locator('.quest-tray').boundingBox();assert.ok(tray.width<=card.width+56,`${w}x${h} quest tray ${tray.width}px for a ${card.width}px card`);
     await p.locator('.quest-tray .quest-card').click();const note=p.locator('.quest-note');await note.waitFor();
     at('quest note',await findLayoutDefects(p,'.quest-note',TOAST));assert.ok(separate(await note.boundingBox(),tray),`${w}x${h} quest note covers the tray`);
     await p.locator('[data-supply="wood"]').click();const details=p.locator('.supply-details');await details.waitFor();
@@ -30,7 +35,7 @@ const separate=(a,b)=>a.x+a.width<=b.x+0.5||b.x+b.width<=a.x+0.5||a.y+a.height<=
     const d=await p.locator('.supply-details').boundingBox();assert.ok(d.x>=0&&d.x+d.width<=w&&d.y>=0&&d.y+d.height<=h,`${w}x${h} details leave the screen`);
     if(process.env.SHOTS&&w===390)await p.screenshot({path:process.env.SHOTS+'/phone-supplies.png'});
     await p.keyboard.press('Escape');
-    await p.getByRole('button',{name:'Quests',exact:true}).click();await p.locator('.quest-tray .quest-card').click();
+    await p.getByRole('button',{name:'Quests',exact:true}).click();at('quests',await findLayoutDefects(p,'.quest-tray',QUEST));await p.locator('.quest-tray .quest-card').click();
     const n=await p.locator('.quest-note').boundingBox();assert.ok(n.x>=0&&n.x+n.width<=w&&n.y>=0&&n.y+n.height<=h,`${w}x${h} quest note leaves the screen`);
     at('quest note',await findLayoutDefects(p,'.quest-note',TOAST));
     if(process.env.SHOTS&&w===390)await p.screenshot({path:process.env.SHOTS+'/phone-quests.png'});

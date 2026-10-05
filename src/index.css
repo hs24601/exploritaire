@@ -1824,7 +1824,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 
 .reward-hold-progress { position: absolute; inset: 4px; border: 3px solid #ffe19a; border-radius: 6px; pointer-events: none; overflow: hidden; z-index: 5; }
-.reward-hold-progress > span { display: block; height: 100%; background: #ffd16640; box-shadow: 2px 0 0 #ffe19a; }
+/* The fill rises from the bottom like a meter so progress reads at a glance. */
+.reward-hold-progress { display: flex; align-items: flex-end; }
+.reward-hold-progress > span { display: block; width: 100%; height: var(--hold-progress, 0%); background: linear-gradient(0deg, #ffd166b3, #ffe19a66); box-shadow: 0 -3px 0 #fff3c8, 0 0 18px #ffd16699; }
 .table-quest-card[data-table-state="true"] .quest-card__status { font-size: 16px; line-height: 1.1; }
 .table-quest-card[data-table-state="true"] .quest-card__title { font-size: 16px; line-height: 1.1; }
 .table-quest-card .quest-card__title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
@@ -2041,7 +2043,7 @@ html.drag-perf-mode .target-swirl-sparkles {
    Slim left-side twin of the quest tray: same wooden frame and stow behavior,
    a felt column of resource tokens with brass count tags. Tapping a token
    opens a parchment details card beside it. */
-:root { --supply-tray-width: 5.5rem; --quest-card-width: 64px; --quest-tray-width: calc(var(--quest-card-width) + 48px); }
+:root { --supply-tray-width: 5.5rem; --quest-card-width: 150px; --quest-tray-width: calc(var(--quest-card-width) + 48px); }
 @media (min-width: 901px) {
   /* Columns come from desktopLayoutTracks so stowed trays leave no empty gap. */
   .proto-game-root .proto-main-layout[style] { grid-template-columns: var(--layout-columns); grid-template-areas: var(--layout-areas); }
@@ -2192,10 +2194,10 @@ html.drag-perf-mode .target-swirl-sparkles {
   .supply-tray-restore { display: none; }
 }
 
-/* ===== Card-width quest tray (desktop) ==================================
-   The tray is one quest card wide plus its recess and frame. Slots are
-   card-shaped recesses stacked vertically; the objective text lives in a
-   pinned toast opened by tapping the active card. */
+/* ===== Card-width quest tray =========================================
+   The tray is one quest card wide plus its recess and frame. The active card
+   lies face up so its objective reads at 16px; the locked slots are short
+   slat covers below it. Tapping the card still pins its text in a toast. */
 @media (min-width: 901px) {
   .proto-game-root .quest-tray { padding: 12px; }
   .proto-game-root .quest-tray[data-open="false"] { width: var(--quest-tray-width); }
@@ -2206,22 +2208,33 @@ html.drag-perf-mode .target-swirl-sparkles {
   .quest-tray .quest-field__header > .quest-tray__progress { align-self: center; }
   .quest-tray .quest-discard-counter { justify-content: center; gap: 6px; }
   .quest-tray .quest-discard-counter strong { margin-left: 0; }
-  .quest-tray__well { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px; overflow: hidden; }
-  .quest-foundations { height: auto; container-type: normal; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  /* Slots keep the 63:88 card shape. PlayingCardStack insets its cards 6px,
-     forming the recess lip; the spare height holds the queued cards' stagger. */
-  .quest-foundation { --slot-height: calc((var(--quest-card-width) + 12px) * 88 / 63); width: calc(var(--quest-card-width) + 12px); height: var(--slot-height); aspect-ratio: auto; padding: 0; display: block; overflow: hidden; }
-  .quest-foundation > header,
-  .quest-foundation--disabled > span:first-child,
-  .quest-foundation--disabled > span:last-child { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .quest-foundation__cards { width: 100%; height: var(--slot-height); aspect-ratio: auto; }
-  .quest-foundation::after { bottom: 0; }
-  .quest-foundation--disabled { display: grid; place-items: center; aspect-ratio: auto; height: var(--slot-height); }
-  .quest-foundation--disabled > span:nth-child(2) { font-size: 20px; }
-  .quest-chain-complete { font-size: 16px; padding: 4px; overflow-wrap: anywhere; }
 }
+/* Short screens (phone landscape) scroll the well rather than squash the card. */
+.quest-tray__well { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px; overflow: hidden auto; scrollbar-width: thin; }
+.quest-tray .quest-foundations, .quest-tray .quest-foundation { flex-shrink: 0; }
+.quest-foundations { grid-row: auto; height: auto; container-type: normal; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+/* The active slot keeps the 63:88 card shape. PlayingCardStack insets its cards
+   6px, forming the recess lip; the spare height holds the queued cards' stagger. */
+.quest-tray .quest-foundation { --slot-height: calc((var(--quest-card-width) + 12px) * 88 / 63); width: calc(var(--quest-card-width) + 12px); height: var(--slot-height); aspect-ratio: auto; padding: 0; display: block; overflow: hidden; }
+.quest-tray .quest-foundation > header,
+.quest-tray .quest-foundation--disabled > span:last-child { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.quest-tray .quest-foundation__cards { width: 100%; height: var(--slot-height); aspect-ratio: auto; }
+.quest-tray .quest-foundation::after { bottom: 0; }
+.quest-tray .quest-foundation--disabled { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; height: 44px; line-height: 1.2; }
+.quest-tray .quest-foundation--disabled::after { display: none; }
+.quest-tray .quest-foundation--disabled > span { font-size: 16px; }
+.quest-chain-complete { font-size: 16px; padding: 4px; overflow-wrap: anywhere; }
+/* Face-up active card. */
+.quest-tray .quest-card { padding: 8px; gap: 6px; justify-content: flex-start; }
+.quest-tray .quest-card::after { content: none; display: none; }
+.quest-tray .quest-card > .quest-card__title { display: block; font-size: 16px; line-height: 1.1; text-transform: none; padding-bottom: 4px; overflow-wrap: anywhere; }
+.quest-tray .quest-card > .quest-card__text { display: block; font-size: 16px; line-height: 1.1; overflow-wrap: anywhere; }
+.quest-tray .quest-card > .quest-card__reward { display: flex; margin-top: auto; font-size: 16px; }
+.quest-tray .quest-card > .quest-card__reward > span { font-size: 16px; }
 
 /* Teaching card: flies out with the first quest; its instructions stay visible. */
 .table-quest-card--tutorial .quest-card { border-color: #9fd3c2; background-image: linear-gradient(145deg, #234c4a, #10221f); }
 .table-quest-card--tutorial .quest-card__title { color: #d9fff3; }
 .table-quest-card--tutorial .quest-card__text { display: block; flex-shrink: 0; overflow: visible; -webkit-line-clamp: none; font-size: 16px; line-height: 1.15; color: #e8f4ee; overflow-wrap: anywhere; }
+/* No center emblem behind the face-up card's text. */
+.quest-tray .quest-card:not(.quest-card--complete) { background-image: repeating-linear-gradient(45deg, #ffffff08 0 3px, transparent 3px 9px), linear-gradient(145deg, #5a2f45, #241321); }

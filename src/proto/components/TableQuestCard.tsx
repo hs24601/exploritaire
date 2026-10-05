@@ -1,4 +1,4 @@
-import { useRewardHold } from '../useRewardHold';
+import { holdSlop, useRewardHold } from '../useRewardHold';
 import { TABLE_CARD_WIDTH, CARD_RATIO, settleTableCard, type TableSolid } from '../tableCardPlacement';
 import { useEffect, useRef, useState } from 'react';
 import { QuestCard } from './QuestCard';
@@ -76,7 +76,7 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     onPointerMove={event=>{
       const current=drag.current;if(!current||current.pointerId!==event.pointerId)return;
       const dx=event.clientX-current.x,dy=event.clientY-current.y;
-      if(Math.hypot(dx,dy)>6){current.moved=true;hold.cancel();}
+      if(Math.hypot(dx,dy)>holdSlop(event.pointerType)){current.moved=true;hold.cancel();}
       if(current.moved){setTilt(0);setDisplayPosition({x:current.origin.x+dx/cameraScale,y:current.origin.y+dy/cameraScale});}
     }}
     onPointerUp={event=>{

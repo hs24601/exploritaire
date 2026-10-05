@@ -109,7 +109,8 @@ These are current implementation defaults for iteration, not permanent game-desi
 
 - Quest rewards are redeemed only by pressing and holding the card on the table; the tray has no separate hold control. When the first quest card flies to the table, a teaching card ("Clearing quests", outside the quest deck) flies out beside it; holding it 2s clears it without a reward, and it does not return.
 
-- On desktop the quest tray is one quest card wide plus its recess and frame, with the three card-shaped slots stacked vertically. Tapping the active quest card opens its objective text in a closable pinned toast (`PinnedToast`), which stays until closed.
+- The quest tray is one quest card wide plus its recess and frame. The active card lies face up in a card-shaped slot with its title, objective and reward readable at 16px (sized for the longest quest text); the locked slots are short slat covers below it. On short screens the tray's well scrolls rather than shrinking the card. Tapping the active card also pins its text in a closable toast (`PinnedToast`).
+- Reward holds last 2 seconds. Touch allows more finger drift than a mouse before a hold cancels, and the hold fills the card from the bottom like a meter.
 
 - Settlement supplies live in a slim, stowable tray on the left that mirrors the quest tray: one token and count per resource, no labels. Tapping a resource opens its details (category, held count, recipes that use it, Place 1 on table). Phones show it as a Supplies tab.
 

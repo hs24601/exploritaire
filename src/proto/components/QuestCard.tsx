@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useRewardHold, type RewardHold } from '../useRewardHold';
+import { holdSlop, useRewardHold, type RewardHold } from '../useRewardHold';
 export type QuestCardProps = {
   title: string;
   text: string;
@@ -22,7 +22,7 @@ export function QuestCard({ title, text, staminaReward, complete, redeemed = fal
     disabled={!onSelect && (!complete || redeemed)} aria-haspopup={onSelect ? 'dialog' : undefined} aria-expanded={onSelect ? Boolean(selected) : undefined}
     onClick={event=>{event.preventDefault();onSelect?.();}}
     onPointerDown={rewardHold ? undefined : event=>{if(event.button!==0)return;event.preventDefault();origin.current={x:event.clientX,y:event.clientY};event.currentTarget.setPointerCapture(event.pointerId);hold.start();}}
-    onPointerMove={rewardHold ? undefined : event=>{if(Math.hypot(event.clientX-origin.current.x,event.clientY-origin.current.y)>6)hold.cancel();}}
+    onPointerMove={rewardHold ? undefined : event=>{if(Math.hypot(event.clientX-origin.current.x,event.clientY-origin.current.y)>holdSlop(event.pointerType))hold.cancel();}}
     onPointerUp={rewardHold ? undefined : hold.cancel} onPointerCancel={rewardHold ? undefined : hold.cancel}
     onKeyDown={event=>{if((event.key===' '||event.key==='Enter')&&!event.repeat&&complete&&!redeemed){event.preventDefault();hold.start();}}}
     onKeyUp={hold.cancel} onBlur={hold.cancel} aria-label={`${title}. ${redeemed ? 'Reward redeemed' : !complete ? text : staminaReward ? `Complete. Hold for 2 seconds to redeem ${staminaReward} stamina and reveal next quest` : `${text} Hold for 2 seconds to clear this card`}`}>
@@ -30,6 +30,6 @@ export function QuestCard({ title, text, staminaReward, complete, redeemed = fal
     <span className="quest-card__text">{text}</span>
     <span className="quest-card__status" role="status">{redeemed ? '✓ Reward redeemed' : !complete ? 'Objective in progress' : staminaReward ? '✓ Hold 2s to redeem' : '✓ Try it here'}</span>
     {staminaReward > 0 && <span className="quest-card__reward"><span aria-hidden="true">⚡</span> +{staminaReward} STA</span>}
-    {hold.progress>0 && <span className="reward-hold-progress" role="progressbar" aria-label="Redeeming reward" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(hold.progress*100)}><span style={{width:`${hold.progress*100}%`}} /></span>}
+    {hold.progress>0 && <span className="reward-hold-progress" role="progressbar" aria-label="Redeeming reward" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(hold.progress*100)}><span style={{["--hold-progress" as string]:`${hold.progress*100}%`}} /></span>}
   </button>;
 }

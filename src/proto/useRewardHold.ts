@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 export const REWARD_HOLD_MS = 2000;
+/** Movement that cancels a hold. Fingers drift while pressing, so touch gets more slack. */
+export const holdSlop = (pointerType: string) => pointerType === 'mouse' ? 6 : 16;
 export function useRewardHold(onRedeem: () => void, enabled = true) {
   const [progress, setProgress] = useState(0);
   const frame = useRef(0);

@@ -16,9 +16,12 @@ async function findLayoutDefects(page, root, { parts, cornerInset = 0, minFontSi
       const r = box(el);
       const parent = items.filter(other => other !== el && other.contains(el)).pop() ?? host;
       const p = box(parent);
-      if (r.left < p.left - 0.5 || r.top < p.top - 0.5 || r.right > p.right + 0.5 || r.bottom > p.bottom + 0.5) defects.push(`${name(el)} escapes ${name(parent)}`);
+      // Content inside a scroll container is reachable, so only its own box must fit.
+      const scrolls = (node) => /(auto|scroll)/.test(getComputedStyle(node).overflowY + getComputedStyle(node).overflowX);
+      const scrolledAway = [...items, host].some(other => other !== el && other.contains(el) && scrolls(other));
+      if (!scrolledAway && (r.left < p.left - 0.5 || r.top < p.top - 0.5 || r.right > p.right + 0.5 || r.bottom > p.bottom + 0.5)) defects.push(`${name(el)} escapes ${name(parent)}`);
       const style = getComputedStyle(el);
-      if (style.overflow !== 'visible' && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) && el.textContent.trim()) defects.push(`${name(el)} clips its content`);
+      if (style.overflow !== 'visible' && !scrolls(el) && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) && el.textContent.trim()) defects.push(`${name(el)} clips its content`);
       if (cornerInset) {
         const corners = [[hostBox.left, hostBox.top], [hostBox.right - cornerInset, hostBox.top], [hostBox.left, hostBox.bottom - cornerInset], [hostBox.right - cornerInset, hostBox.bottom - cornerInset]]
           .map(([x, y]) => ({ left: x, top: y, right: x + cornerInset, bottom: y + cornerInset }));
