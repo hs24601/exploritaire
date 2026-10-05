@@ -1,3 +1,4 @@
+import { DEFAULT_ACTOR_LUMINOSITY } from '../protoLighting';
 import { createQuestBiomeDeal, nextQuestCard, QUEST_ROUTE_BUDGET } from '../protoQuestDeals';
 import { DEFAULT_EXPEDITION_ENERGY, MAGE_PHASE_SHIFT_TRIGGER, PROTO_ENEMIES } from '../protoData';
 import { FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, ACTOR_STAMINA_MAX, type BiomeTileState, type Card, type EnemyRuntimeState, type FoundationSlot, type ForestHaul, type ForestResource, type ProtoState, type SceneKind } from '../protoState';
@@ -266,7 +267,7 @@ export const createInitialState = (): ProtoState => {
     suspendedExploration: null,
     biomeTiles,
     selectedBiomeId: null,
-    worldActors: [{ id: 'hero', label: 'Hero', location: 'table', position: { x: 0, y: 48 } }],
+    worldActors: [{ id: 'hero', label: 'Hero', location: 'table', position: { x: 0, y: 48 }, luminosity: DEFAULT_ACTOR_LUMINOSITY }],
     worldResourceStacks: [],
     trailRations: 0,
     haul: { wood: 0, berries: 0, herbs: 0 },

@@ -24,6 +24,9 @@ export const LIGHT_CELL_SIZE = 48;
 export const DEFAULT_LIGHT_RADIUS = 5;
 export const DEFAULT_LIGHT_STRENGTH = 0.85;
 export const DEFAULT_LIGHT_COLOR = '#ffb45a';
+/** Candlelight an actor carries by default: enough to find them in the dark,
+ * not enough to explore by (it never lifts its surroundings past "dim"). */
+export const DEFAULT_ACTOR_LUMINOSITY = 0.3;
 /** Moonlight floor: the darkest table is still readable. */
 export const AMBIENT_FLOOR = 0.14;
 /** Lower bounds (inclusive) of each light level, by total light 0–1. */
@@ -185,6 +188,16 @@ export const createTableLightField = (hours: number, lights: readonly TableLight
 });
 
 export type TableLightField = ReturnType<typeof createTableLightField>;
+
+export const actorLightId = (actorId: string) => `actor-light-${actorId}`;
+
+/** The light an actor carries. Luminosity (0–1) sets both its strength and its
+ * reach: 0.3 is a candle about two cells across, 1 a strong lantern. */
+export const actorLight = (actorId: string, position: { x: number; y: number }, luminosity = DEFAULT_ACTOR_LUMINOSITY): TableLight | null => {
+  const amount = clamp01(luminosity);
+  if (amount <= 0) return null;
+  return { id: actorLightId(actorId), position, strength: amount, radius: 0.8 + amount * 4, height: 40, color: '#ffc27a', flicker: 0.7 };
+};
 
 /** Visual-only flicker multiplier around 1 for a light at a moment in time. */
 export const lightFlicker = (light: TableLight, timeMs: number) => {

@@ -83,6 +83,7 @@ This document records agreed project preferences and behavior from the Proto dev
 
 - Preserve the day/night scaffold, moving global light source, local table lights, and consistent object shadows.
 - Keep lighting compatible with 2D rendering and object interaction.
+- The default table has no placed light object. Actors carry their own light through a `luminosity` property (0-1). The default is candlelight: enough to find an actor in the dark, but never enough to explore by (it lifts its surroundings only to "dim"), and it fades out in daylight.
 
 ## Temporary scaffolding
 

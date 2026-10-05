@@ -131,7 +131,6 @@ export const ProtoVariant = () => {
   const [cycleLighting, setCycleLighting] = useState(false);
   const [tableLightsEnabled, setTableLightsEnabled] = useState(true);
   const [lightReadoutVisible, setLightReadoutVisible] = useState(false);
-  const [lanternPosition, setLanternPosition] = useState({ x: -96, y: 96 });
   const lighting = getTableLighting(tableHours);
   useEffect(() => { setTableHours(8); }, [state.day]);
   useEffect(() => {
@@ -146,7 +145,6 @@ export const ProtoVariant = () => {
     return () => window.clearInterval(timer);
   }, [cycleLighting]);
   const tableLights = tableLightsEnabled ? [
-    { id: 'table-lantern', position: lanternPosition, radius: 5, height: 100, color: '#ffb45a', flicker: 0.6 },
     ...(state.city.campBuilt ? [{ id: 'camp-lamp', position: { x: 0, y: 96 }, radius: 5.5, height: 120, color: '#ff8a3d', flicker: 1 }] : []),
     ...state.worldResourceStacks.filter((stack) => stack.resource === 'provisions_hut' && !stack.build)
       .map((stack) => ({ id: 'hut-lamp-' + stack.id, position: { x: stack.position.x + 36, y: stack.position.y - 36 }, radius: 4, height: 85, color: '#ffd08a', flicker: 0.3 })),
@@ -2179,7 +2177,7 @@ const selectBiome = (biomeId: string) => {
                 biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId }))}
                 actors={state.worldActors
                   .filter((actor) => actor.location === 'table' || Boolean(actor.biomeId))
-                  .map(({ id, label, location, biomeId, position, hutId }) => ({ id, label, location, biomeId, position, hutId }))}
+                  .map(({ id, label, location, biomeId, position, hutId, luminosity }) => ({ id, label, location, biomeId, position, hutId, luminosity }))}
                 actorOrigins={state.worldActors.map(({ id, label, location, biomeId, position }) => ({ id, label, location, biomeId, position }))}
                 resourceStacks={state.worldResourceStacks}
                 questCards={state.questTableCards}
@@ -2191,7 +2189,6 @@ const selectBiome = (biomeId: string) => {
                 lightSources={tableLights}
                 timeOfDay={tableHours}
                 showLightReadout={lightReadoutVisible}
-                onMoveLight={(id, position) => { if (id === 'table-lantern') setLanternPosition(position); }}
                 onSelectBiome={selectBiome}
                 questOpen={questOpen}
                 onToggleQuest={() => setQuestOpen((open) => !open)}

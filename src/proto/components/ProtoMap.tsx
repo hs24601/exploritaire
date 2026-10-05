@@ -3,10 +3,10 @@ import { findWorldPath, pointAlongWorldPath, worldPathLength, type PathObstacle 
 import { TableQuestCard, TUTORIAL_QUEST, TUTORIAL_QUEST_INDEX, type PlacedQuestCard } from './TableQuestCard';
 import { BoardObjectLabel } from './BoardObjectLabel';
 import { solverFlightDuration } from '../solverTiming';
-import { createTableLightField, getTableLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
+import { actorLight, actorLightId, createTableLightField, getTableLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
 import { drawTableLight, tableLightNeedsAnimation } from './tableLightCanvas';
 import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type WorldItemId } from '../protoCrafting';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { useCameraControls } from '../../hooks/useCameraControls';
 
@@ -31,6 +31,8 @@ export type ProtoWorldActor = {
   biomeId?: string;
   hutId?: string;
   position: { x: number; y: number };
+  /** Light the actor carries, 0–1; defaults to candlelight. */
+  luminosity?: number;
 };
 
 export type ProtoWorldResourceStack = CraftStack;
@@ -113,7 +115,7 @@ export const ProtoMap = ({
   actors,
   actorOrigins,
   resourceStacks,
-  lightSources = [],
+  lightSources: placedLights = [],
   timeOfDay = 9,
   showLightReadout = false,
   onMoveLight,
@@ -144,8 +146,6 @@ export const ProtoMap = ({
     initialState: { x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE },
   });
   const lightCanvasRef = useRef<HTMLCanvasElement>(null);
-  // Steady light the game world can read per object; rendering adds flicker on top.
-  const lightField = createTableLightField(timeOfDay, lightSources);
   const lightReadouts: { id: string; position: { x: number; y: number }; lift: number; percent: number; level: LightLevel }[] = [];
   const [hoverCell,setHoverCell] = useState<GridCell>(TRUE_CENTER.cell);
   const [routeBlocked, setRouteBlocked] = useState(false);
@@ -445,6 +445,15 @@ export const ProtoMap = ({
       : actor.position,
   );
 
+  // Placed lights plus the light each actor carries. Keyed by content so the
+  // canvas effect only reruns when a light actually changes.
+  const actorLights = actors.flatMap(actor => actorLight(actor.id, getActorWorldPosition(actor), actor.luminosity) ?? []);
+  const lightKey = JSON.stringify([placedLights, actorLights]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const lightSources = useMemo(() => [...placedLights, ...actorLights], [lightKey]);
+  // Steady light the game world can read per object; rendering adds flicker on top.
+  const lightField = createTableLightField(timeOfDay, lightSources);
+
   useEffect(() => {
     const canvas = lightCanvasRef.current;
     const viewport = camera.containerRef.current;
@@ -592,7 +601,7 @@ export const ProtoMap = ({
           }}
         >
           <div className="table-grid-origin" data-grid-landmark="true-center" data-grid-reference={TRUE_CENTER.reference} aria-hidden="true" style={{left:'50%',top:'50%',width:CLASSICPLUS_GRID_SIZE,height:CLASSICPLUS_GRID_SIZE}}>＋</div>
-          {lightSources.map((light) => <div key={light.id} data-board-piece="lamp" data-camera-ignore="true"
+          {placedLights.map((light) => <div key={light.id} data-board-piece="lamp" data-camera-ignore="true"
             aria-label={light.id === 'table-lantern' ? 'Table lantern, drag to move light' : 'Structure light'}
             onPointerDown={(event) => { event.stopPropagation(); if (light.id !== 'table-lantern' || (event.pointerType === 'mouse' && event.button !== 0)) return; event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); }}
             onPointerMove={(event) => { if (light.id !== 'table-lantern' || !event.currentTarget.hasPointerCapture(event.pointerId)) return; const point = worldPointFromClient(event.clientX, event.clientY); onMoveLight?.(light.id, point); }}
@@ -840,7 +849,7 @@ export const ProtoMap = ({
               className={`absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-grab select-none place-items-center rounded-full border-2 bg-[#17140b] text-[0.52rem] font-black uppercase tracking-[0.1em] text-[#ffe7ad] shadow-[0_0_24px_rgba(255,209,102,0.18)] active:cursor-grabbing ${selectedActorId === actor.id ? 'border-[#fff0b5] ring-2 ring-[#ffd166]/45' : 'border-[#ffd166]/75'} ${draggingActorId === actor.id ? 'opacity-45' : ''}`}
               style={{
                 // Stored positions and grid coordinates share the same cell-center origin.
-                boxShadow: tableObjectShadow(timeOfDay, actorPosition, 12, lightSources),
+                boxShadow: tableObjectShadow(timeOfDay, actorPosition, 12, lightSources.filter(light => light.id !== actorLightId(actor.id))),
                 left: `calc(50% + ${actorPosition.x}px)`,
                 top: `calc(50% + ${actorPosition.y}px)`,
               }}

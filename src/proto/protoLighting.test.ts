@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AMBIENT_FLOOR, createTableLightField, getTableLighting, lightFlicker, sampleTableLight, sampleTableLightArea, tableObjectShadow } from './protoLighting';
+import { actorLight, AMBIENT_FLOOR, createTableLightField, DEFAULT_ACTOR_LUMINOSITY, LIGHT_CELL_SIZE, getTableLighting, lightFlicker, sampleTableLight, sampleTableLightArea, tableObjectShadow } from './protoLighting';
 describe('table lighting scaffold', () => {
   it('cycles continuously between noon, twilight and night with a visibility floor', () => {
     expect(getTableLighting(12).daylight).toBe(1);
@@ -64,5 +64,25 @@ describe('light sampling', () => {
       expect(value).toBeGreaterThan(0.9);
       expect(value).toBeLessThan(1.1);
     }
+  });
+});
+
+describe('actor candlelight', () => {
+  const midnight = 0;
+  const hero = actorLight('hero', { x: 0, y: 0 })!;
+  it('defaults to a candle: findable in the dark but never enough to explore by', () => {
+    const dark = sampleTableLight(midnight, { x: 0, y: 0 }, []);
+    const atHero = sampleTableLight(midnight, { x: 0, y: 0 }, [hero]);
+    expect(dark.level).toBe('dark');
+    expect(atHero.level).toBe('dim');
+    expect(atHero.dominantLightId).toBe('actor-light-hero');
+    expect(sampleTableLight(midnight, { x: LIGHT_CELL_SIZE * 2, y: 0 }, [hero]).level).toBe('dark');
+  });
+  it('scales with luminosity and turns off at zero', () => {
+    expect(actorLight('hero', { x: 0, y: 0 }, 0)).toBeNull();
+    const lantern = actorLight('hero', { x: 0, y: 0 }, 1)!;
+    expect(lantern.radius!).toBeGreaterThan(hero.radius!);
+    expect(sampleTableLight(midnight, { x: 0, y: 0 }, [lantern]).percent).toBeGreaterThan(sampleTableLight(midnight, { x: 0, y: 0 }, [hero]).percent);
+    expect(hero.strength).toBe(DEFAULT_ACTOR_LUMINOSITY);
   });
 });

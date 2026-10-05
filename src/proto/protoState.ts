@@ -55,6 +55,8 @@ export type WorldActorState = {
   position: { x: number; y: number };
   foundationIndex?: number;
   hutId?: string;
+  /** Light the actor carries, 0–1; defaults to candlelight (DEFAULT_ACTOR_LUMINOSITY). */
+  luminosity?: number;
 };
 
 export type WorldResourceStack = CraftStack;

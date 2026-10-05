@@ -1,6 +1,7 @@
 import {
   DEFAULT_LIGHT_COLOR,
   DEFAULT_LIGHT_RADIUS,
+  DEFAULT_LIGHT_STRENGTH,
   LIGHT_CELL_SIZE,
   hexToRgb,
   lightFlicker,
@@ -82,16 +83,19 @@ export const drawTableLight = (
       center,
       radius: Math.max(cellSize * 0.5, cellSize * (light.radius ?? DEFAULT_LIGHT_RADIUS)) * (1 + (flicker - 1) * 0.5),
       color: hexToRgb(light.color ?? DEFAULT_LIGHT_COLOR),
+      // Weaker lights (a carried candle) only thin the night rather than cut
+      // through it, and fade out entirely in daylight.
+      power: (light.strength ?? DEFAULT_LIGHT_STRENGTH) >= DEFAULT_LIGHT_STRENGTH ? 1 : (light.strength ?? DEFAULT_LIGHT_STRENGTH) / DEFAULT_LIGHT_STRENGTH * nightness,
     };
   });
 
   // Carve pools of light through the sky veil.
   context.globalCompositeOperation = 'destination-out';
-  pools.forEach(({ center, radius }) => {
+  pools.forEach(({ center, radius, power }) => {
     const hole = context.createRadialGradient(center.x, center.y, 0, center.x, center.y, radius);
-    hole.addColorStop(0, 'rgba(0, 0, 0, 1)');
-    hole.addColorStop(0.35, 'rgba(0, 0, 0, 0.95)');
-    hole.addColorStop(0.75, 'rgba(0, 0, 0, 0.5)');
+    hole.addColorStop(0, `rgba(0, 0, 0, ${power})`);
+    hole.addColorStop(0.35, `rgba(0, 0, 0, ${0.95 * power})`);
+    hole.addColorStop(0.75, `rgba(0, 0, 0, ${0.5 * power})`);
     hole.addColorStop(1, 'rgba(0, 0, 0, 0)');
     context.fillStyle = hole;
     context.beginPath();
@@ -101,17 +105,17 @@ export const drawTableLight = (
 
   // Colored glow, strongest at night, with a hot core at the flame.
   context.globalCompositeOperation = 'lighter';
-  pools.forEach(({ center, radius, color, flicker }) => {
-    const intensity = (0.06 + nightness * 0.42) * flicker;
+  pools.forEach(({ center, radius, color, flicker, power }) => {
+    const intensity = (0.06 + nightness * 0.42) * flicker * power;
     const glow = context.createRadialGradient(center.x, center.y, 0, center.x, center.y, radius);
     glow.addColorStop(0, rgba(color, intensity));
     glow.addColorStop(0.4, rgba(color, intensity * 0.45));
     glow.addColorStop(1, rgba(color, 0));
     context.fillStyle = glow;
     context.fillRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
-    const coreRadius = Math.max(8, cellSize * 0.7);
+    const coreRadius = Math.max(8, cellSize * 0.7 * Math.sqrt(power));
     const core = context.createRadialGradient(center.x, center.y, 0, center.x, center.y, coreRadius);
-    core.addColorStop(0, rgba({ r: 255, g: 240, b: 200 }, (0.12 + nightness * 0.35) * flicker));
+    core.addColorStop(0, rgba({ r: 255, g: 240, b: 200 }, (0.12 + nightness * 0.35) * flicker * power));
     core.addColorStop(1, rgba(color, 0));
     context.fillStyle = core;
     context.fillRect(center.x - coreRadius, center.y - coreRadius, coreRadius * 2, coreRadius * 2);
