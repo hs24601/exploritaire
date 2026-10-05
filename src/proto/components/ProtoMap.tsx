@@ -543,10 +543,6 @@ export const ProtoMap = ({
 
   return (
     <section className="proto-map relative min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/22 bg-[#050807] font-mono">
-      <div className="proto-map-help pointer-events-none absolute left-3 top-2 z-50 text-[clamp(0.48rem,0.9vmin,0.62rem)] font-black uppercase tracking-[0.18em] text-[#8ef2d4]/70">
-        Stack to build · 3 wood → lumber · 3 food → ration
-        <div className="mt-1 text-white/60">Hut: 3 lumber + 2 wood · Drop ration on actor to eat</div>
-      </div>
       <div
         className="pointer-events-none absolute bottom-2 left-3 z-50 font-mono text-[clamp(0.72rem,1.5vmin,1rem)] font-black uppercase tracking-[0.12em] text-white/72"
         aria-live="polite"

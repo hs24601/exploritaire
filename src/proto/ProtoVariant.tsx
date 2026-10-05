@@ -5,6 +5,7 @@ import { QuestField } from './components/QuestField';
 import { DetailsCardViewer, ActorCardArt } from './components/DetailsCardViewer';
 import { redeemActiveQuest } from './questProgress';
 import { getTableLighting, tableObjectShadow } from './protoLighting';
+import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
 import { assessSolverMove, preserveSolverRpgValues, type SolverMove } from './tableauSolver';
 import { TableauSolveControls, type SolveStepResult } from './components/TableauSolveControls';
 import { nextQuestCard, isQuestPlacement } from './protoQuestDeals';
@@ -1708,6 +1709,7 @@ const selectBiome = (biomeId: string) => {
                   <button type="button" onClick={redeal} className="proto-game-action border border-white/28 px-3 py-2 text-[clamp(0.56rem,1.05vmin,0.7rem)] font-semibold uppercase tracking-[0.14em] text-white/80">
                     Redeal
                   </button>
+                  <span className="proto-build-label" data-build-commit={PROTO_BUILD_COMMIT} title={PROTO_BUILD_TITLE}>{PROTO_BUILD_LABEL}</span>
                 </div>
               </div>
 

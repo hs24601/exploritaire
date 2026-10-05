@@ -110,6 +110,15 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
   padding: clamp(0.3rem, 0.7vmin, 0.5rem) 0;
 }
+.proto-build-label {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  color: rgba(234, 217, 180, 0.85);
+  font: 16px/1.3 monospace;
+  white-space: nowrap;
+}
 .proto-game-action {
   position: relative;
   background: transparent;
@@ -1750,7 +1759,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 @media (max-width: 900px) {
   .supply-draw-prefix { display: none; }
   .settlement-supply-tray button { flex: 1; min-height: 32px; }
-  .proto-map-help { top: 48px; left: 10px; right: 10px; font-size: 16px; line-height: 1.1; letter-spacing: normal; }
   .proto-map-toolbar button { font-size: 16px; padding: 4px 8px; }
 }
 
@@ -1873,3 +1881,203 @@ html.drag-perf-mode .target-swirl-sparkles {
   box-shadow: 4px 5px 0 #0009;
 }
 .dev-context-menu [aria-disabled="true"] { cursor: default; }
+
+/* ===== Physical board-game trays =====================================
+   Quest tray and settlement supplies read as a wooden game-box insert:
+   walnut frame with brass fittings, felt-lined recesses cut to card size,
+   a parchment rules card and loose tokens in bins. Layout, sizes and the
+   63:88 slot geometry come from the rules above; this block is skin only. */
+:root {
+  --tray-wood-dark: #3a2213;
+  --tray-wood: #5d3920;
+  --tray-wood-light: #85562f;
+  --tray-felt: #173a2c;
+  --tray-felt-dark: #0c2219;
+  --tray-brass: #d2ad62;
+  --tray-brass-dark: #7c5c24;
+  --tray-parchment: #ead9b0;
+  --tray-ink: #3b2814;
+}
+.proto-game-root .quest-tray,
+.settlement-supply-tray {
+  border: 0;
+  border-radius: 14px;
+  color: #fbe9c4;
+  background:
+    radial-gradient(circle at 14px 14px, var(--tray-brass) 0 3px, var(--tray-brass-dark) 4px 5px, transparent 6px),
+    radial-gradient(circle at calc(100% - 14px) 14px, var(--tray-brass) 0 3px, var(--tray-brass-dark) 4px 5px, transparent 6px),
+    radial-gradient(circle at 14px calc(100% - 14px), var(--tray-brass) 0 3px, var(--tray-brass-dark) 4px 5px, transparent 6px),
+    radial-gradient(circle at calc(100% - 14px) calc(100% - 14px), var(--tray-brass) 0 3px, var(--tray-brass-dark) 4px 5px, transparent 6px),
+    repeating-linear-gradient(92deg, #ffffff07 0 2px, transparent 2px 9px, #00000012 9px 11px, transparent 11px 23px),
+    linear-gradient(180deg, var(--tray-wood-light), var(--tray-wood) 40%, var(--tray-wood-dark));
+  box-shadow:
+    inset 0 2px 0 #ffffff2e,
+    inset 0 -4px 0 #0000005c,
+    inset 0 0 0 2px #1d0f07,
+    0 10px 0 #1a0d06,
+    0 16px 24px #000a;
+}
+/* Engraved brass plaque for the tray titles. */
+.quest-tray .quest-field__header > div:first-child,
+.settlement-supply-tray header .settlement-supply-tray__plaque {
+  justify-self: start;
+  padding: 6px 12px;
+  border-radius: 4px;
+  color: #2b1a08;
+  background: linear-gradient(180deg, #f0d48c, var(--tray-brass) 55%, #a8812f);
+  box-shadow: inset 0 1px 0 #fff6, inset 0 -2px 0 #0004, 0 2px 0 #1d0f07;
+  text-shadow: 0 1px 0 #fff5;
+}
+.quest-tray .quest-field__header h2 { color: inherit; letter-spacing: 0.08em; }
+.quest-tray .quest-field__header p { color: #4a3214; }
+.quest-tray .quest-field__header { border-bottom: 0; }
+.quest-tray .quest-field__header > span { color: #ffe9b8; text-shadow: 0 2px 0 #0008; }
+/* Brass pull tab for stowing. */
+.quest-tray .quest-field__header .quest-tray__toggle {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  color: #2b1a08;
+  background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429);
+  box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07;
+}
+.quest-tray .quest-tray__toggle:active { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff7, 0 1px 0 #1d0f07; }
+.quest-tray .quest-tray__toggle:focus-visible { outline: 3px solid #fff3c8; outline-offset: 3px; }
+.quest-tray .quest-discard-counter { color: #ffe9b8; text-shadow: 0 2px 0 #0008; }
+/* Felt-lined well recessed into the wood. */
+.quest-tray__well {
+  border: 0;
+  border-radius: 10px;
+  background:
+    repeating-radial-gradient(circle at 30% 20%, #ffffff05 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 0%, #24543f, var(--tray-felt) 55%, var(--tray-felt-dark));
+  box-shadow: inset 0 6px 14px #000c, inset 0 -2px 0 #ffffff12, 0 1px 0 #ffffff26;
+}
+/* Card-shaped recesses cut into a wooden insert, with a finger notch. */
+.quest-foundation {
+  position: relative;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #0a1d15, #133325);
+  box-shadow: inset 0 0 0 3px #2b190c, inset 0 6px 10px #000d, 0 1px 0 #ffffff1c;
+}
+.quest-foundation::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  width: 34%;
+  height: 12px;
+  transform: translateX(-50%);
+  border-radius: 12px 12px 0 0;
+  background: #071510;
+  box-shadow: inset 0 3px 4px #000c;
+  pointer-events: none;
+}
+.quest-foundation header { color: #ffe9b8; text-shadow: 0 2px 0 #000a; }
+/* Locked slots are covered by a wooden slat. */
+.quest-foundation--disabled {
+  color: #f0d9b0;
+  background:
+    repeating-linear-gradient(90deg, #ffffff06 0 2px, transparent 2px 10px, #0000001a 10px 12px, transparent 12px 20px),
+    linear-gradient(180deg, #6a4226, #4a2c17);
+  box-shadow: inset 0 0 0 3px #2b190c, inset 0 2px 0 #ffffff26, 0 3px 0 #1d0f07;
+  text-shadow: 0 2px 0 #000a;
+}
+.quest-foundation--disabled::after { background: #2a180b; }
+/* Quest cards: printed card stock with a gilt edge. */
+.quest-tray .quest-card,
+.quest-tray .quest-card-back {
+  border: 3px solid #f0e2bd;
+  box-shadow: inset 0 0 0 2px #8a6a2a, 0 2px 0 #0009, 0 4px 6px #0007;
+  background-color: #3a1f2e;
+  background-image:
+    radial-gradient(circle at 50% 50%, #d2ad6233 0 18%, transparent 19%),
+    repeating-linear-gradient(45deg, #ffffff08 0 3px, transparent 3px 9px),
+    linear-gradient(145deg, #5a2f45, #241321);
+}
+.quest-tray .quest-card--complete { border-color: #fff1c4; background-image: linear-gradient(145deg, #3f6a45, #16301f); box-shadow: inset 0 0 0 2px #d2ad62, 0 0 18px #ffe19a55, 0 4px 6px #0007; }
+/* The active objective is printed on a parchment rules card. */
+.quest-foundation__compact-description {
+  border: 0;
+  border-radius: 6px;
+  color: var(--tray-ink);
+  background:
+    radial-gradient(ellipse at 20% 10%, #fff8 0, transparent 45%),
+    radial-gradient(ellipse at 90% 100%, #b8925a55 0, transparent 55%),
+    var(--tray-parchment);
+  box-shadow: inset 0 0 0 2px #c9ad78, inset 0 0 18px #9c7a4455, 0 3px 0 #1d0f07, 0 6px 10px #0008;
+  transform: rotate(-0.6deg);
+}
+.quest-foundation__compact-description strong { color: #5b1f12; }
+.quest-foundation__compact-description > span { color: #6b4a12; }
+.quest-tray__notice { color: #ffe9b8; }
+.quest-chain-complete { color: var(--tray-ink); border: 0; background: var(--tray-parchment); box-shadow: inset 0 0 0 2px #c9ad78, 0 3px 0 #1d0f07; }
+
+/* ----- Settlement supplies: a wooden bin box with three compartments ----- */
+.settlement-supply-tray { padding: 12px 14px 14px; font-size: 16px; }
+.settlement-supply-tray header { align-items: center; }
+.settlement-supply-tray header > span:last-child { color: #f3dfb4; text-shadow: 0 2px 0 #0008; }
+.settlement-supply-tray__slots { gap: 10px; }
+.settlement-supply-tray section {
+  display: grid;
+  grid-template-rows: auto 44px auto;
+  gap: 6px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background:
+    repeating-radial-gradient(circle at 30% 20%, #ffffff05 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 0%, #24543f, var(--tray-felt) 60%, var(--tray-felt-dark));
+  box-shadow: inset 0 0 0 3px #2b190c, inset 0 6px 10px #000c, 0 1px 0 #ffffff26;
+}
+.settlement-supply-tray .supply-bin__label { display: flex; align-items: center; gap: 6px; color: #fbe9c4; text-shadow: 0 2px 0 #000a; }
+.settlement-supply-tray .supply-bin__label strong {
+  float: none;
+  margin-left: auto;
+  min-width: 2ch;
+  padding: 0 6px;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 18px;
+  color: #2b1a08;
+  text-shadow: 0 1px 0 #fff5;
+  background: linear-gradient(180deg, #f0d48c, var(--tray-brass) 60%, #a8812f);
+  box-shadow: inset 0 1px 0 #fff6, 0 2px 0 #1d0f07;
+}
+.supply-bin__pile { position: relative; overflow: hidden; border-radius: 6px; background: #0000002e; box-shadow: inset 0 3px 6px #000a; }
+.supply-token {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  background: radial-gradient(circle at 35% 30%, #f6e2b8, #c49a5a 60%, #8a6230);
+  box-shadow: inset 0 -2px 0 #0005, 0 2px 0 #1d0f07, 0 3px 3px #0008;
+}
+.settlement-supply-tray .supply-bin__draws { display: flex; gap: 6px; margin-top: 0; }
+.settlement-supply-tray button {
+  flex: 1;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #2b1a08;
+  font: inherit;
+  background: radial-gradient(circle at 35% 30%, #f3dcae, #c99d5f 60%, #8f6634);
+  box-shadow: inset 0 1px 0 #fff6, inset 0 -2px 0 #0004, 0 3px 0 #1d0f07;
+}
+.settlement-supply-tray button:not(:disabled):hover { filter: brightness(1.08); }
+.settlement-supply-tray button:not(:disabled):active { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff6, 0 1px 0 #1d0f07; }
+.settlement-supply-tray button:disabled { opacity: 0.4; filter: grayscale(0.6); }
+.settlement-supply-tray button:focus-visible { outline: 3px solid #fff3c8; outline-offset: 2px; }
+@media (max-width: 900px) {
+  .settlement-supply-tray { padding: 8px; }
+  .settlement-supply-tray section { grid-template-rows: auto 30px auto; padding: 6px; }
+  .supply-token { width: 18px; height: 18px; font-size: 16px; }
+}
+.settlement-supply-tray header .settlement-supply-tray__plaque { display: inline-block; }
+.quest-tray .quest-tray__controls { padding: 0; background: none; box-shadow: none; }
+.quest-tray .quest-tray__notice button { border: 0; border-radius: 999px; padding: 4px 12px; color: #2b1a08; background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429); box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07; }

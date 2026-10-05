@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
 
 const parsePort = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value);
@@ -34,7 +35,25 @@ const replaceActorDefinitionsBlock = (source: string, actors: unknown[]) => {
   );
 };
 
+// Build label shown in Proto so playtests can confirm which commit is being served.
+// In dev this is the commit checked out when Vite started; restart Vite after a pull.
+const gitValue = (command: string) => {
+  try {
+    return execSync(command, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return '';
+  }
+};
+const PROTO_BUILD = {
+  commit: (process.env.VERCEL_GIT_COMMIT_SHA || gitValue('git rev-parse HEAD')).slice(0, 7) || 'unknown',
+  committedAt: gitValue('git log -1 --format=%cI'),
+  startedAt: new Date().toISOString(),
+};
+
 export default defineConfig({
+  define: {
+    __PROTO_BUILD__: JSON.stringify(PROTO_BUILD),
+  },
   server: {
     https: DEV_HTTPS,
     host: DEV_HOST,

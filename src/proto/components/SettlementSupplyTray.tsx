@@ -4,6 +4,15 @@ import { WORLD_ITEMS } from '../protoCrafting';
 export type SupplyResource = 'wood' | 'berries' | 'herbs';
 export type SupplyBalances = Record<SupplyResource, number>;
 const resources: SupplyResource[] = ['wood', 'berries', 'herbs'];
+const SUPPLY_PILE_MAX = 12;
+
+/** Loose tokens in a bin: two staggered rows with a little deterministic scatter. */
+const supplyTokenPlacement = (index: number) => {
+  const row = index % 2;
+  const column = Math.floor(index / 2);
+  const jitter = ((index * 37) % 7) - 3;
+  return { left: `calc(${6 + column * 15}% + ${jitter}px)`, top: `${row * 38 + 8 + ((index * 11) % 5)}%`, zIndex: index, rotate: `${jitter * 4}deg` };
+};
 
 /** Screen-space storage; only deliberately drawn ingredients become table tokens. */
 export function SettlementSupplyTray({ balances, onDraw }: { balances: SupplyBalances; onDraw: (resource: SupplyResource, count: number) => void }) {
@@ -40,11 +49,14 @@ export function SettlementSupplyTray({ balances, onDraw }: { balances: SupplyBal
     return () => { animations.forEach(animation => animation.cancel()); ghosts.forEach(ghost => ghost.remove()); };
   }, [balances]);
   return <div ref={ref} className="settlement-supply-tray" data-camera-ignore="true" onPointerDown={event => event.stopPropagation()}>
-    <header>Settlement supplies <span>Draw ingredients onto the table to craft</span></header>
+    <header><span className="settlement-supply-tray__plaque">Settlement supplies</span> <span>Draw ingredients onto the table to craft</span></header>
     <div className="settlement-supply-tray__slots">
       {resources.map(resource => <section key={resource} data-supply={resource} aria-label={WORLD_ITEMS[resource].label}>
-        <div><span aria-hidden="true">{WORLD_ITEMS[resource].glyph}</span> {WORLD_ITEMS[resource].label} <strong aria-live="polite">{balances[resource]}</strong></div>
-        <div>{[1, 3].map(count => <button key={count} type="button" disabled={balances[resource] < count} onClick={() => onDraw(resource, count)} aria-label={`Draw ${count} ${WORLD_ITEMS[resource].label}`}><span className="supply-draw-prefix">Draw </span>{count}</button>)}</div>
+        <div className="supply-bin__label"><span aria-hidden="true">{WORLD_ITEMS[resource].glyph}</span> {WORLD_ITEMS[resource].label} <strong aria-live="polite">{balances[resource]}</strong></div>
+        <div className="supply-bin__pile" aria-hidden="true">
+          {Array.from({ length: Math.min(SUPPLY_PILE_MAX, balances[resource]) }, (_, index) => <span key={index} className="supply-token" style={supplyTokenPlacement(index)}>{WORLD_ITEMS[resource].glyph}</span>)}
+        </div>
+        <div className="supply-bin__draws">{[1, 3].map(count => <button key={count} type="button" disabled={balances[resource] < count} onClick={() => onDraw(resource, count)} aria-label={`Draw ${count} ${WORLD_ITEMS[resource].label}`}><span className="supply-draw-prefix">Draw </span>{count}</button>)}</div>
       </section>)}
     </div>
   </div>;
