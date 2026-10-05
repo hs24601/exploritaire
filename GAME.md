@@ -84,6 +84,7 @@ This document records agreed project preferences and behavior from the Proto dev
 - Preserve the day/night scaffold, moving global light source, local table lights, and consistent object shadows.
 - Keep lighting compatible with 2D rendering and object interaction.
 - The default table has no placed light object. Actors carry their own light through a `luminosity` property (0-1). The default is candlelight: enough to find an actor in the dark, but never enough to explore by (it lifts its surroundings only to "dim"), and it fades out in daylight.
+- In the tilted camera, an actor with sprite art (`WORLD_ACTOR_SPRITES`) stands up as a pop-up cut-out instead of the cardboard token: padding trimmed so its feet meet its base, pixel-sharp, shaded by the light reaching it with a warm rim toward the strongest nearby lamp, and casting its silhouette away from the sun or moon and each lamp (never from its own carried candle). Art that fails to load falls back to the token. The same art is the portrait on the actor's details card.
 
 ## Temporary scaffolding
 

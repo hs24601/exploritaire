@@ -242,3 +242,68 @@ export const tableObjectShadow = (hours: number, position: { x: number; y: numbe
   }
   return shadows.join(', ');
 };
+
+/** A shadow a standing cut-out casts on the table: the direction it falls
+ * (degrees clockwise from table "up"), its length as a multiple of the
+ * cut-out's height, and its darkness. */
+export type StandeeShadow = { lightId: string; angle: number; length: number; opacity: number };
+
+export type StandeeLighting = {
+  /** CSS brightness multiplier for the cut-out's face. */
+  brightness: number;
+  /** How strongly local light warms the face, 0–1. */
+  warmth: number;
+  /** Color of the strongest local light (or the sun by day). */
+  lightColor: Rgb;
+  /** Rim light on the side facing the strongest off-base light, if any. */
+  rim: { x: number; y: number; color: Rgb; amount: number } | null;
+  shadows: StandeeShadow[];
+};
+
+/** Lighting for an upright pop-up standee: lit by the sky and nearby lights,
+ * casting a silhouette away from each. A light sitting on the standee's own
+ * base (a carried candle) brightens it but casts no shadow. */
+export const standeeLighting = (
+  hours: number,
+  position: { x: number; y: number },
+  standeeHeight: number,
+  lights: readonly TableLight[] = [],
+): StandeeLighting => {
+  const frame = getTableLighting(hours);
+  const sample = sampleTableLight(hours, position, lights);
+  const cast = (lightId: string, source: { x: number; y: number }, height: number, opacity: number): StandeeShadow => {
+    const dx = position.x - source.x;
+    const dy = position.y - source.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    return {
+      lightId,
+      angle: (Math.atan2(dx, -dy) * 180) / Math.PI,
+      // Similar triangles, clamped so grazing light stays on the board.
+      length: Math.max(0.3, Math.min(2.2, distance / Math.max(standeeHeight * 0.5, height - standeeHeight))),
+      opacity: clamp01(opacity),
+    };
+  };
+  const shadows = [cast('sky', frame.source, frame.altitude, 0.2 + frame.daylight * 0.16 + frame.twilight * 0.14)];
+  let rim: StandeeLighting['rim'] = null;
+  let rimReach = 0;
+  for (const light of lights) {
+    const dx = light.position.x - position.x;
+    const dy = light.position.y - position.y;
+    const distance = Math.hypot(dx, dy);
+    const reach = lightFalloff(distance, light.radius ?? DEFAULT_LIGHT_RADIUS) * (light.strength ?? DEFAULT_LIGHT_STRENGTH);
+    if (reach <= 0.02 || distance < LIGHT_CELL_SIZE * 0.25) continue;
+    shadows.push(cast(light.id, light.position, light.height ?? 100, Math.min(0.7, reach * 0.9 * (1 - frame.daylight * 0.8))));
+    if (reach > rimReach) {
+      rimReach = reach;
+      rim = { x: dx / distance, y: dy / distance, color: hexToRgb(light.color ?? DEFAULT_LIGHT_COLOR), amount: clamp01(reach * (1 - frame.daylight * 0.85)) };
+    }
+  }
+  const dominant = lights.find((light) => light.id === sample.dominantLightId);
+  return {
+    brightness: 0.35 + 0.75 * sample.total,
+    warmth: clamp01(sample.local * (1 - frame.daylight * 0.7)),
+    lightColor: dominant ? hexToRgb(dominant.color ?? DEFAULT_LIGHT_COLOR) : frame.sunColor,
+    rim,
+    shadows: shadows.filter((shadow) => shadow.opacity > 0.02),
+  };
+};

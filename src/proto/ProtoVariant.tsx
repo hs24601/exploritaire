@@ -2189,7 +2189,7 @@ const selectBiome = (biomeId: string) => {
                 biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId }))}
                 actors={state.worldActors
                   .filter((actor) => actor.location === 'table' || Boolean(actor.biomeId))
-                  .map(({ id, label, location, biomeId, position, hutId, luminosity }) => ({ id, label, location, biomeId, position, hutId, luminosity }))}
+                  .map(({ id, label, location, biomeId, position, hutId, luminosity }) => ({ id, label, location, biomeId, position, hutId, luminosity, sprite: WORLD_ACTOR_SPRITES[id] }))}
                 actorOrigins={state.worldActors.map(({ id, label, location, biomeId, position }) => ({ id, label, location, biomeId, position }))}
                 resourceStacks={state.worldResourceStacks}
                 questCards={state.questTableCards}

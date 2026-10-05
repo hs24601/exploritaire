@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actorLight, AMBIENT_FLOOR, createTableLightField, DEFAULT_ACTOR_LUMINOSITY, LIGHT_CELL_SIZE, getTableLighting, lightFlicker, sampleTableLight, sampleTableLightArea, tableObjectShadow } from './protoLighting';
+import { actorLight, AMBIENT_FLOOR, createTableLightField, DEFAULT_ACTOR_LUMINOSITY, LIGHT_CELL_SIZE, getTableLighting, lightFlicker, sampleTableLight, sampleTableLightArea, standeeLighting, tableObjectShadow } from './protoLighting';
 describe('table lighting scaffold', () => {
   it('cycles continuously between noon, twilight and night with a visibility floor', () => {
     expect(getTableLighting(12).daylight).toBe(1);
@@ -84,5 +84,39 @@ describe('actor candlelight', () => {
     expect(lantern.radius!).toBeGreaterThan(hero.radius!);
     expect(sampleTableLight(midnight, { x: 0, y: 0 }, [lantern]).percent).toBeGreaterThan(sampleTableLight(midnight, { x: 0, y: 0 }, [hero]).percent);
     expect(hero.strength).toBe(DEFAULT_ACTOR_LUMINOSITY);
+  });
+});
+
+describe('sprite standee lighting', () => {
+  const at = { x: 0, y: 0 };
+  const lamp = { id: 'lamp', position: { x: -96, y: 0 }, radius: 5, strength: 0.85, height: 100, color: '#ffb45a' };
+
+  it('casts a shadow away from an off-base lamp and catches its rim light at night', () => {
+    const lit = standeeLighting(0, at, 64, [lamp]);
+    const shadow = lit.shadows.find((entry) => entry.lightId === 'lamp')!;
+    // The lamp is to the left, so the shadow falls to the right (90° clockwise from up).
+    expect(shadow.angle).toBeCloseTo(90, 5);
+    expect(shadow.opacity).toBeGreaterThan(0.3);
+    expect(lit.rim?.x).toBeCloseTo(-1, 5);
+    expect(lit.warmth).toBeGreaterThan(0.3);
+  });
+
+  it('is brighter by day and in lamplight than in the dark', () => {
+    expect(standeeLighting(12, at, 64).brightness).toBeGreaterThan(standeeLighting(0, at, 64).brightness);
+    expect(standeeLighting(0, at, 64, [lamp]).brightness).toBeGreaterThan(standeeLighting(0, at, 64).brightness);
+  });
+
+  it('lets a carried candle light the standee without casting a shadow from its own base', () => {
+    const candle = actorLight('hero', at)!;
+    const lit = standeeLighting(0, at, 64, [candle]);
+    expect(lit.shadows.some((entry) => entry.lightId === candle.id)).toBe(false);
+    expect(lit.rim).toBeNull();
+    expect(lit.brightness).toBeGreaterThan(standeeLighting(0, at, 64).brightness);
+  });
+
+  it('lengthens shadows as the light gets lower', () => {
+    const high = standeeLighting(0, at, 64, [{ ...lamp, height: 300 }]).shadows.find((entry) => entry.lightId === 'lamp')!;
+    const low = standeeLighting(0, at, 64, [{ ...lamp, height: 90 }]).shadows.find((entry) => entry.lightId === 'lamp')!;
+    expect(low.length).toBeGreaterThan(high.length);
   });
 });

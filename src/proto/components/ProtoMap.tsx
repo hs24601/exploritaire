@@ -3,12 +3,13 @@ import { findWorldPath, pointAlongWorldPath, worldPathLength, type PathObstacle 
 import { TableQuestCard, TUTORIAL_QUEST, TUTORIAL_QUEST_INDEX, type PlacedQuestCard } from './TableQuestCard';
 import { BoardObjectLabel } from './BoardObjectLabel';
 import { solverFlightDuration } from '../solverTiming';
-import { actorLight, actorLightId, createTableLightField, getTableLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
+import { actorLight, actorLightId, createTableLightField, getTableLighting, standeeLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
 import { drawTableLight, tableLightNeedsAnimation } from './tableLightCanvas';
 import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type WorldItemId } from '../protoCrafting';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { useCameraControls } from '../../hooks/useCameraControls';
+import { SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows } from './SpriteStandee';
 import { tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
 
 export type ProtoBiomeTile = {
@@ -34,6 +35,8 @@ export type ProtoWorldActor = {
   position: { x: number; y: number };
   /** Light the actor carries, 0–1; defaults to candlelight. */
   luminosity?: number;
+  /** Cut-out art shown when the actor stands up in the tilted camera. */
+  sprite?: string;
 };
 
 export type ProtoWorldResourceStack = CraftStack;
@@ -141,6 +144,8 @@ export const ProtoMap = ({
 }: ProtoMapProps) => {
   // Pop-up-book camera: the table tilts back and pieces stand up as cardboard standees.
   const [tilted, setTilted] = useState(false);
+  // Sprites that failed to load fall back to the cardboard token.
+  const [failedSprites, setFailedSprites] = useState<string[]>([]);
   const [viewportHeight, setViewportHeight] = useState(720);
   const tilt = tilted ? tableTiltFor(viewportHeight) : null;
   const camera = useCameraControls({
@@ -572,6 +577,17 @@ export const ProtoMap = ({
     // A die-cut cardboard edge, shaded toward its base.
     ...(size ? { width: size.width, height: size.height, borderRadius: `${size.width / 2}px ${size.width / 2}px 6px 6px`, border: '3px solid #efe4cc', boxShadow: 'inset 0 -12px 16px #0007' } : {}),
   } : null;
+  // Sprite standees: a pixel-art cut-out lit by the table's lights, casting its
+  // own silhouette across the table away from each one.
+  const spriteStandee = (actor: ProtoWorldActor, position: { x: number; y: number }) => {
+    if (!tilt || !actor.sprite || failedSprites.includes(actor.sprite)) return null;
+    const sprite = actor.sprite;
+    const lit = standeeLighting(timeOfDay, position, SPRITE_STANDEE_SIZE, lightSources);
+    return {
+      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} />,
+      art: <SpriteStandeeArt sprite={sprite} lighting={lit} onError={() => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite])} />,
+    };
+  };
   const standeeBase = (key: string, position: { x: number; y: number }, width: number) => tilt
     ? <div key={key} aria-hidden="true" className="proto-standee-base" style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width, boxShadow: tableObjectShadow(timeOfDay, position, 6, lightSources) }} />
     : null;
@@ -849,8 +865,10 @@ export const ProtoMap = ({
             const actorPosition = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
             const actorLight = lightField.at(actorPosition);
             lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: tilt ? -30 : 24, percent: actorLight.percent, level: actorLight.level });
+            const cutOut = spriteStandee(actor, actorPosition);
             return (
             <React.Fragment key={actor.id}>
+            {cutOut?.shadows}
             {standeeBase('base', actorPosition, 44)}
             <div
               role="button"
@@ -895,17 +913,19 @@ export const ProtoMap = ({
               onPointerCancel={() => {
                 clearActorDragState();
               }}
-              className={`absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-grab select-none place-items-center rounded-full border-2 bg-[#17140b] text-[0.52rem] font-black uppercase tracking-[0.1em] text-[#ffe7ad] shadow-[0_0_24px_rgba(255,209,102,0.18)] active:cursor-grabbing ${selectedActorId === actor.id ? 'border-[#fff0b5] ring-2 ring-[#ffd166]/45' : 'border-[#ffd166]/75'} ${draggingActorId === actor.id ? 'opacity-45' : ''}`}
+              className={cutOut
+                ? `proto-sprite-standee absolute cursor-grab select-none active:cursor-grabbing${selectedActorId === actor.id ? ' proto-sprite-standee--selected' : ''}${draggingActorId === actor.id ? ' opacity-45' : ''}`
+                : `absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-grab select-none place-items-center rounded-full border-2 bg-[#17140b] text-[0.52rem] font-black uppercase tracking-[0.1em] text-[#ffe7ad] shadow-[0_0_24px_rgba(255,209,102,0.18)] active:cursor-grabbing ${selectedActorId === actor.id ? 'border-[#fff0b5] ring-2 ring-[#ffd166]/45' : 'border-[#ffd166]/75'} ${draggingActorId === actor.id ? 'opacity-45' : ''}`}
               style={{
                 // Stored positions and grid coordinates share the same cell-center origin.
-                boxShadow: tableObjectShadow(timeOfDay, actorPosition, 12, lightSources.filter(light => light.id !== actorLightId(actor.id))),
+                boxShadow: cutOut ? undefined : tableObjectShadow(timeOfDay, actorPosition, 12, lightSources.filter(light => light.id !== actorLightId(actor.id))),
                 left: `calc(50% + ${actorPosition.x}px)`,
                 top: `calc(50% + ${actorPosition.y}px)`,
-                ...standee({ width: 48, height: 64 }),
+                ...(cutOut ? { ...standee(), width: SPRITE_STANDEE_SIZE, height: SPRITE_STANDEE_SIZE } : standee({ width: 48, height: 64 })),
               }}
               aria-label={`${actor.label} actor token`}
             >
-              <BoardObjectLabel text={actor.label} minFontSize={12} maxFontSize={16} />
+              {cutOut ? cutOut.art : <BoardObjectLabel text={actor.label} minFontSize={12} maxFontSize={16} />}
             </div>
             </React.Fragment>
             );

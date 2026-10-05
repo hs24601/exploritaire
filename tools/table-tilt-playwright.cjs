@@ -9,7 +9,7 @@ const TOOLBAR={parts:'.proto-map-toolbar button'};
     const toggle=p.getByRole('button',{name:'Tilt camera view'});await toggle.click();await p.waitForTimeout(300);
     const stage=p.locator('.proto-table-stage');assert.match(await stage.evaluate(el=>getComputedStyle(el).transform),/matrix3d/,`${w}x${h} table plane tilts`);
     (await findLayoutDefects(p,'.proto-map-toolbar',TOOLBAR)).forEach(d=>problems.push(`${w}x${h} toolbar: ${d}`));
-    const actor=p.locator('[data-board-piece="actor"]');const box=await actor.boundingBox();assert.ok(box.height>box.width*1.1,`${w}x${h} Hero stands up (${box.width}x${box.height})`);
+    const actor=p.locator('[data-board-piece="actor"]');const box=await actor.boundingBox();assert.match(await actor.evaluate(el=>getComputedStyle(el).rotate),/^x /,`${w}x${h} Hero stands up`);
     // Drop Hero two cells right of where it stands; it must arrive where the pointer said.
     const view=await p.locator('.proto-map-viewport').boundingBox();const from={x:box.x+box.width/2,y:box.y+box.height*0.6};
     const to={x:Math.min(view.x+view.width-40,from.x+view.width*0.22),y:Math.min(view.y+view.height-40,from.y+view.height*0.12)};
