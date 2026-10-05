@@ -365,12 +365,13 @@ export const STARTER_ABILITIES: Record<string, GolfStarterAbility[]> = Object.fr
   }),
 ) as Record<string, GolfStarterAbility[]>;
 
-export const getStarterPackAbilityName = (cardName: string, rarity: 1 | 2 | 3) => {
+export const getStarterPackAbilityName = (cardName: string | undefined, rarity: 1 | 2 | 3) => {
+  if (cardName === undefined) return null;
   if (cardName === 'Banks') return rarity >= 3 ? 'Hit and Run' : 'Swipe';
   return STARTER_KIN_KITS[cardName]?.signature.name ?? STARTER_KIN_METADATA[cardName]?.abilityName ?? null;
 };
 
-export const getActorApCap = (actorName: string) => STARTER_KIN_METADATA[actorName]?.apCap ?? 2;
+export const getActorApCap = (actorName: string | undefined) => (actorName === undefined ? undefined : STARTER_KIN_METADATA[actorName]?.apCap) ?? 2;
 export const getStarterKinKit = (kinName: string) => STARTER_KIN_KITS[kinName] ?? null;
 
 export const getStarterAbilityByEffect = (effect: string | null) => (

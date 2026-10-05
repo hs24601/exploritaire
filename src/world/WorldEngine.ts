@@ -8,6 +8,7 @@ import { TreeSystem } from './systems/TreeSystem';
 import { GeometryPoints } from './systems/GeometryPoints';
 import { FoxSystem } from './systems/FoxSystem';
 import { WaterSystem } from './systems/WaterSystem';
+import type { GrassSystem } from './systems/GrassSystem';
 import { NatureManagerUI } from './ui/NatureManagerUI';
 
 export class WorldEngine {
@@ -121,7 +122,7 @@ export class WorldEngine {
       this.character.update(dt, this.terrain, this.camCtrl.forwardYaw);
       this.camCtrl.update(this.camera, this.character.position);
       this.sky.followCamera(this.camera.position);
-      this.sky.update(lighting);
+      this.sky.update(lighting, dt);
       this.fog.update(lighting, this.scene);
       const fogColor = this.fog.getCurrentColor();
       const fogDensity = this.fog.getCurrentDensity();
@@ -157,7 +158,7 @@ export class WorldEngine {
 
   getTOD()     { return this.tod; }
   getTerrain() { return this.terrain; }
-  getGrass()   { return null; }
+  getGrass(): GrassSystem | null { return null; }
   getWater()   { return this.water; }
   getSky()     { return this.sky; }
   getFog()     { return this.fog; }
