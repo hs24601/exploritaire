@@ -100,6 +100,7 @@ export const ProtoVariant = () => {
   const [tableHours, setTableHours] = useState(9);
   const [cycleLighting, setCycleLighting] = useState(false);
   const [tableLightsEnabled, setTableLightsEnabled] = useState(true);
+  const [lightReadoutVisible, setLightReadoutVisible] = useState(false);
   const [lanternPosition, setLanternPosition] = useState({ x: -96, y: 96 });
   const lighting = getTableLighting(tableHours);
   useEffect(() => { setTableHours(8); }, [state.day]);
@@ -115,10 +116,10 @@ export const ProtoVariant = () => {
     return () => window.clearInterval(timer);
   }, [cycleLighting]);
   const tableLights = tableLightsEnabled ? [
-    { id: 'table-lantern', position: lanternPosition, radius: 5, height: 100 },
-    ...(state.city.campBuilt ? [{ id: 'camp-lamp', position: { x: 0, y: 96 }, radius: 5, height: 120 }] : []),
+    { id: 'table-lantern', position: lanternPosition, radius: 5, height: 100, color: '#ffb45a', flicker: 0.6 },
+    ...(state.city.campBuilt ? [{ id: 'camp-lamp', position: { x: 0, y: 96 }, radius: 5.5, height: 120, color: '#ff8a3d', flicker: 1 }] : []),
     ...state.worldResourceStacks.filter((stack) => stack.resource === 'provisions_hut' && !stack.build)
-      .map((stack) => ({ id: 'hut-lamp-' + stack.id, position: { x: stack.position.x + 36, y: stack.position.y - 36 }, radius: 4, height: 85 })),
+      .map((stack) => ({ id: 'hut-lamp-' + stack.id, position: { x: stack.position.x + 36, y: stack.position.y - 36 }, radius: 4, height: 85, color: '#ffd08a', flicker: 0.3 })),
   ] : [];
   const stateRef = useRef(state);
   const tableauCardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -1612,6 +1613,7 @@ const selectBiome = (biomeId: string) => {
                   <label className="flex items-center gap-2">Time <input aria-label="Table time of day" type="range" min="0" max="23.99" step="0.05" value={tableHours} onChange={(event) => setTableHours(Number(event.target.value))} /></label>
                   <label className="flex items-center gap-2"><input type="checkbox" checked={cycleLighting} onChange={(event) => setCycleLighting(event.target.checked)} />Cycle day/night</label>
                   <label className="flex items-center gap-2"><input type="checkbox" checked={tableLightsEnabled} onChange={(event) => setTableLightsEnabled(event.target.checked)} />Table lights</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={lightReadoutVisible} onChange={(event) => setLightReadoutVisible(event.target.checked)} />Light %</label>
                 </div>
                 {state.scene === 'combat' ? (
                   <EnemyTeamPanel
@@ -2127,6 +2129,7 @@ const selectBiome = (biomeId: string) => {
                 onDrawSupply={drawSettlementSupply}
                 lightSources={tableLights}
                 timeOfDay={tableHours}
+                showLightReadout={lightReadoutVisible}
                 onMoveLight={(id, position) => { if (id === 'table-lantern') setLanternPosition(position); }}
                 onSelectBiome={selectBiome}
                 questOpen={questOpen}

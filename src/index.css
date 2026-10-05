@@ -364,6 +364,21 @@
   border: 2px solid #f0c878;
   box-shadow: 0 0 14px #ffcf7390, 0 0 42px #ffc35e40, 0 4px 3px #0008;
 }
+.proto-light-readout {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 0 0.35rem;
+  border: 2px solid #030609;
+  border-radius: 0.35rem;
+  background: #0b1518e6;
+  color: #ead9b4;
+  font: 700 1rem/1.3 monospace;
+  white-space: nowrap;
+}
+.proto-light-readout[data-light-level="bright"] { color: #ffe39a; border-color: #8a6a2a; }
+.proto-light-readout[data-light-level="lit"] { color: #f0d8a8; }
+.proto-light-readout[data-light-level="dim"] { color: #9fb3c8; }
+.proto-light-readout[data-light-level="dark"] { color: #7a88a8; border-style: dashed; }
 .proto-lighting-rail {
   display: flex;
   align-items: center;
@@ -375,7 +390,7 @@
   border-radius: 0.5rem;
   background: #0b1518f0;
   color: #ead9b4;
-  font: 0.6875rem/1.4 monospace;
+  font: 1rem/1.4 monospace;
 }
 .proto-lighting-rail input[type="range"] {
   width: clamp(6rem, 12vw, 10rem);

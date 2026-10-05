@@ -4,7 +4,8 @@ import { TableQuestCard, type PlacedQuestCard } from './TableQuestCard';
 import { SettlementSupplyTray, type SupplyBalances, type SupplyResource } from './SettlementSupplyTray';
 import { BoardObjectLabel } from './BoardObjectLabel';
 import { solverFlightDuration } from '../solverTiming';
-import { getTableLighting, tableObjectShadow, type TableLight } from '../protoLighting';
+import { createTableLightField, getTableLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
+import { drawTableLight, tableLightNeedsAnimation } from './tableLightCanvas';
 import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type WorldItemId } from '../protoCrafting';
 import React, { useEffect, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
@@ -83,6 +84,8 @@ type ProtoMapProps = {
   resourceStacks: ProtoWorldResourceStack[];
   lightSources?: ProtoLightSource[];
   timeOfDay?: number;
+  /** Dev readout: show each object's light % on the table. */
+  showLightReadout?: boolean;
   onMoveLight?: (id: string, position: { x: number; y: number }) => void;
   onSelectBiome: (biomeId: string) => void;
   questOpen: boolean;
@@ -115,6 +118,7 @@ export const ProtoMap = ({
   resourceStacks,
   lightSources = [],
   timeOfDay = 9,
+  showLightReadout = false,
   onMoveLight,
   onSelectBiome,
   questOpen,
@@ -145,6 +149,9 @@ export const ProtoMap = ({
     initialState: { x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE },
   });
   const lightCanvasRef = useRef<HTMLCanvasElement>(null);
+  // Steady light the game world can read per object; rendering adds flicker on top.
+  const lightField = createTableLightField(timeOfDay, lightSources);
+  const lightReadouts: { id: string; position: { x: number; y: number }; lift: number; percent: number; level: LightLevel }[] = [];
   const [hoverCell,setHoverCell] = useState<GridCell>(TRUE_CENTER.cell);
   const [routeBlocked, setRouteBlocked] = useState(false);
   const [draggingActorId, setDraggingActorId] = useState<string | null>(null);
@@ -447,7 +454,13 @@ export const ProtoMap = ({
     const canvas = lightCanvasRef.current;
     const viewport = camera.containerRef.current;
     if (!canvas || !viewport) return undefined;
-    const draw = () => {
+    const frame = getTableLighting(timeOfDay);
+    const sources = lightSources.map((source) => ({
+      ...source,
+      position: finiteWorldPoint(source.position),
+      radius: Math.max(0.5, finiteCoordinate(source.radius, 2.7)),
+    }));
+    const draw = (timeMs: number) => {
       const rect = viewport.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
       const width = Math.max(1, Math.round(rect.width));
@@ -461,53 +474,26 @@ export const ProtoMap = ({
       const context = canvas.getContext('2d');
       if (!context) return;
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      context.globalCompositeOperation = 'source-over';
-      context.clearRect(0, 0, width, height);
-      // Night retains readable ambient light; table lamps carve pools of light
-      // through this cool overlay without intercepting any pointer input.
-      context.fillStyle = `rgba(5, 10, 25, ${getTableLighting(timeOfDay).darkness})`;
-      context.fillRect(0, 0, width, height);
-
-      const sources = [
-        ...lightSources,
-      ].map((source) => ({
-        ...source,
-        position: finiteWorldPoint(source.position),
-        radius: Math.max(0.5, finiteCoordinate(source.radius, 2.7)),
-      }));
-
-      context.globalCompositeOperation = 'destination-out';
-      const cellSize = CLASSICPLUS_GRID_SIZE * camera.cameraState.scale;
-      sources.forEach((source) => {
-        const centerX = width / 2 + camera.cameraState.x + source.position.x * camera.cameraState.scale;
-        const centerY = height / 2 + camera.cameraState.y + source.position.y * camera.cameraState.scale;
-        const radius = Math.max(cellSize * 0.5, cellSize * source.radius);
-        const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-        gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
-        gradient.addColorStop(0.42, 'rgba(0, 0, 0, 0.98)');
-        gradient.addColorStop(0.78, 'rgba(0, 0, 0, 0.62)');
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        context.fillStyle = gradient;
-        context.beginPath();
-        context.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        context.fill();
-      });
-      context.globalCompositeOperation = 'source-over';
-      sources.forEach((source) => {
-        const x = width / 2 + camera.cameraState.x + source.position.x * camera.cameraState.scale;
-        const y = height / 2 + camera.cameraState.y + source.position.y * camera.cameraState.scale;
-        const radius = cellSize * source.radius;
-        const glow = context.createRadialGradient(x, y, 0, x, y, radius);
-        glow.addColorStop(0, 'rgba(255, 185, 85, ' + (0.16 * (1 - getTableLighting(timeOfDay).daylight)) + ')');
-        glow.addColorStop(1, 'rgba(255, 185, 85, 0)');
-        context.fillStyle = glow;
-        context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-      });
+      drawTableLight(context, { width, height }, camera.cameraState, frame, sources, timeMs);
     };
-    draw();
-    const observer = new ResizeObserver(draw);
+    draw(performance.now());
+    const observer = new ResizeObserver(() => draw(performance.now()));
     observer.observe(viewport);
-    return () => observer.disconnect();
+    // Flicker redraws at ~24 fps after dark; reduced-motion users get a steady light.
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    let frameId = 0;
+    let last = 0;
+    if (!reducedMotion && tableLightNeedsAnimation(frame, sources)) {
+      const tick = (now: number) => {
+        if (now - last > 40) { last = now; draw(now); }
+        frameId = window.requestAnimationFrame(tick);
+      };
+      frameId = window.requestAnimationFrame(tick);
+    }
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frameId);
+    };
   }, [lightSources, timeOfDay, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale]);
 
   const resolveDropDestination = (actorId: string, clientX: number, clientY: number) => {
@@ -633,11 +619,16 @@ export const ProtoMap = ({
           {biomeTiles.map((tile) => (
             (() => {
               const footprint = getBiomeTileFootprint(tile.gridSize);
+              const worldFootprint = getBiomeWorldFootprint(tile);
+              const tileLight = lightField.over(worldFootprint);
+              lightReadouts.push({ id: 'tile-' + tile.id, position: worldFootprint, lift: worldFootprint.height / 2, percent: tileLight.percent, level: tileLight.level });
               return (
                 <button
                   key={tile.id}
                   data-board-piece="tile"
                   type="button"
+                  data-light-percent={tileLight.percent}
+                  data-light-level={tileLight.level}
                   data-grid-reference={TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position))}
                   data-biome-id={tile.id}
                   title={`${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
@@ -672,11 +663,15 @@ export const ProtoMap = ({
           {resourceStacks.map((stack) => (
             (() => {
               const physicsPosition = resourcePhysicsRef.current.get(stack.id) ?? stack.position;
+              const stackLight = lightField.at(physicsPosition);
+              lightReadouts.push({ id: 'stack-' + stack.id, position: physicsPosition, lift: 24, percent: stackLight.percent, level: stackLight.level });
               return (
                 <div
                   key={stack.id}
                   data-board-piece="resource"
                   data-camera-ignore="true"
+                  data-light-percent={stackLight.percent}
+                  data-light-level={stackLight.level}
                   onPointerDown={(event) => {
                     event.stopPropagation();
                     if (stack.build || WORLD_ITEMS[stack.resource].kind === 'structure') return;
@@ -801,6 +796,8 @@ export const ProtoMap = ({
           ) : null}
           {actors.map((actor) => {
             const actorPosition = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
+            const actorLight = lightField.at(actorPosition);
+            lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: 24, percent: actorLight.percent, level: actorLight.level });
             return (
             <div
               key={actor.id}
@@ -811,6 +808,8 @@ export const ProtoMap = ({
               data-grid-reference={TABLE_GRID.reference(TABLE_GRID.atWorld(actorPosition))}
               data-board-piece="actor"
               data-camera-ignore="true"
+              data-light-percent={actorLight.percent}
+              data-light-level={actorLight.level}
               onPointerDown={(event) => {
                 event.stopPropagation();
                 if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -863,6 +862,23 @@ export const ProtoMap = ({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-40"
         />
+        {showLightReadout ? (
+          <div aria-hidden="true" data-light-readout="true" className="pointer-events-none absolute inset-0 z-[45] overflow-hidden">
+            {lightReadouts.map((readout) => (
+              <span
+                key={readout.id}
+                className="proto-light-readout"
+                data-light-level={readout.level}
+                style={{
+                  left: `calc(50% + ${camera.cameraState.x + readout.position.x * camera.cameraState.scale}px)`,
+                  top: `calc(50% + ${camera.cameraState.y + (readout.position.y - readout.lift) * camera.cameraState.scale - 6}px)`,
+                }}
+              >
+                {readout.percent}%
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
       {dragPreview && !travel ? (
         <div
