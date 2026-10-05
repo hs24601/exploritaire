@@ -1983,17 +1983,17 @@ const selectBiome = (biomeId: string) => {
                         (entry) => entry.location === 'foundation' && entry.biomeId === state.selectedBiomeId && (entry.foundationIndex ?? 0) === index,
                       );
                       const collectedCardCount = foundation?.cards.length ?? 0;
-                      const collectedResourceCount = foundation?.cards.filter((card) => Boolean(card.resource)).length ?? 0;
+                      const collectedResources = FOREST_RESOURCE_ORDER.map((resource) => ({
+                        resource,
+                        count: foundation?.cards.filter((card) => card.resource === resource).length ?? 0,
+                      }));
                       return (
                         <div key={`exploration-foundation-${index}`} className="proto-foundation-assembly">
-                          <div className="proto-foundation-count-tokens">
-                            <span className="proto-foundation-count-token" aria-label={`${collectedCardCount} cards collected`} title="Cards collected">
-                              <span aria-hidden="true">▤</span><span>{collectedCardCount}</span>
+                          {actor ? (
+                            <span className="proto-actor-energy" aria-label={`${actor.label} energy ${state.energy} of ${state.energyMax}`} title={`${actor.label} energy`}>
+                              <span aria-hidden="true">⚡</span><span>{state.energy}</span>
                             </span>
-                            <span className="proto-foundation-count-token proto-foundation-count-token--resources" aria-label={`${collectedResourceCount} resources collected`} title="Resources collected">
-                              <span aria-hidden="true">🧺</span><span>{collectedResourceCount}</span>
-                            </span>
-                          </div>
+                          ) : <span aria-hidden="true" />}
                         <div
                           aria-label="Foundation"
                           data-foundation-index={index}
@@ -2089,7 +2089,17 @@ const selectBiome = (biomeId: string) => {
                           ) : (
                             <div className="proto-exploration-actor"><span className="proto-empty-foundation-face">Foundation {index + 1}</span></div>
                           )}
+                          <span className="proto-foundation-count-token" aria-label={`${collectedCardCount} cards collected`} title="Cards collected">
+                            <span aria-hidden="true">▤</span><span>{collectedCardCount}</span>
+                          </span>
                         </div>
+                          <ul className="proto-foundation-resources" aria-label="Resources collected this tableau">
+                            {collectedResources.map(({ resource, count }) => (
+                              <li key={resource} data-resource={resource} data-count={count} aria-label={`${FOREST_RESOURCE_LABELS[resource]} ${count}`} title={FOREST_RESOURCE_LABELS[resource]}>
+                                <span aria-hidden="true">{FOREST_RESOURCE_GLYPHS[resource]}</span><span aria-hidden="true">{count}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       );
                     })

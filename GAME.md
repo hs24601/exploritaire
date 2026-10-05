@@ -22,7 +22,7 @@ This document records agreed project preferences and behavior from the Proto dev
 - Tile names stay stable as the camera zooms; zoom must not replace names with initials or different copy.
 - Game layouts must not use scrollbars. Allocate space according to content needs, using available tableau space for foundation content. For genuinely constrained views, use deliberate reflow or navigation rather than hiding inaccessible content or merely concealing scrollbar chrome.
 - On mobile, use Table / Tableau / Quests panel navigation so each field receives usable space without vertical page scrolling. Preserve all seven tableau columns and check portrait and landscape layouts in isolated headless browser tests.
-- Foundation count badges belong to the foundation component and sit vertically to the left, outside its border: one for collected cards and one for collected resources.
+- Each actor's foundation assembly has an energy bubble (⚡ and the actor's current energy) to the left of the foundation. The collected-cards count sits inside the foundation component, below the actor's card. Resources collected during tableau play are listed beneath the foundation as icon and count pills (uncollected ones dimmed); there is no separate resources badge.
 
 ## Interaction
 
