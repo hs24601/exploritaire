@@ -27,7 +27,7 @@ export function clampPartyForFoundations(partyActors: Actor[], limit = PARTY_FOU
 }
 
 export function shouldEnforceSideTurns(state: GameState): boolean {
-  return (state.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure';
+  return (state.combatFlowMode ?? 'turn_based_pressure') !== 'real_time_shared';
 }
 
 export function updateCombatFlowTelemetry(

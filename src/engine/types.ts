@@ -276,7 +276,7 @@ export type InteractionMode = 'click' | 'dnd';
 
 export type EffectType = 'buff' | 'debuff';
 
-export type CombatFlowMode = 'turn_based_pressure' | 'real_time_shared';
+export type CombatFlowMode = 'turn_based_pressure' | 'rolling_initiative' | 'real_time_shared';
 
 export interface CombatFlowTelemetry {
   playerTurnsStarted: number;

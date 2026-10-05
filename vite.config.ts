@@ -28,6 +28,8 @@ export default defineConfig({
     https: DEV_HTTPS,
     host: DEV_HOST,
     port: DEV_PORT,
+    // Cloudflare Quick Tunnels receive a new, random trycloudflare.com hostname on restart.
+    allowedHosts: ['.trycloudflare.com'],
     strictPort: true,
     ...(DEV_HMR_HOST
       ? {
@@ -565,6 +567,8 @@ export default defineConfig({
         megahand:   path.resolve(__dirname, 'megahand.html'),
         kinhand:    path.resolve(__dirname, 'kinhand.html'),
         classic:    path.resolve(__dirname, 'classic.html'),
+        classicplus: path.resolve(__dirname, 'classicplus.html'),
+        golfLegacy: path.resolve(__dirname, 'golf-legacy.html'),
         inverse:    path.resolve(__dirname, 'inverse.html'),
         city:       path.resolve(__dirname, 'city.html'),
         cardDesigner: path.resolve(__dirname, 'cardDesigner.html'),
@@ -573,6 +577,8 @@ export default defineConfig({
         auram:      path.resolve(__dirname, 'auram.html'),
         tooling:    path.resolve(__dirname, 'tooling.html'),
         ux:         path.resolve(__dirname, 'ux.html'),
+        exploritaire: path.resolve(__dirname, 'exploritaire.html'),
+        hearth: path.resolve(__dirname, 'hearth.html'),
       },
     },
   },

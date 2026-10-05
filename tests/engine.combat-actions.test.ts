@@ -96,6 +96,20 @@ function createBaseState(overrides: Partial<GameState> = {}): GameState {
 }
 
 describe('engine/combat/actions', () => {
+  it('keeps rolling initiative side-owned while shared realtime accepts both sides', () => {
+    const rollingEnemyTurn = createBaseState({
+      combatFlowMode: 'rolling_initiative',
+      activeCombatSide: 'enemy',
+    });
+    expect(playTableauCard(rollingEnemyTurn, 0, 0)).toBeNull();
+
+    const sharedEnemyTurn = createBaseState({
+      combatFlowMode: 'real_time_shared',
+      activeCombatSide: 'enemy',
+    });
+    expect(playTableauCard(sharedEnemyTurn, 0, 0)).not.toBeNull();
+  });
+
   it('playTableauCard plays top tableau card and increments turn count', () => {
     const state = createBaseState();
     const next = playTableauCard(state, 0, 0);

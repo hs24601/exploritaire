@@ -113,7 +113,7 @@ type KinHandRewardPreviewState = {
 
 type ChargeUpTargetKind = 'actor' | 'prime' | 'tableau';
 
-type MegaHandCombatantKey = 'hero' | 'mochi' | 'banks' | 'jet' | 'lesser-shade';
+type MegaHandCombatantKey = string;
 
 type MegaHandCombatantState = ResolverActorCombatState & {
   asleepTurns: number;
@@ -151,6 +151,10 @@ let refillSequence = 0;
 let localSequence = 0;
 let actorSequence = 0;
 const MEGAHAND_RARITY_ORDER: OrimRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+
+const toCombatantKey = (actorName: string): MegaHandCombatantKey => (
+  actorName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+);
 
 const suitSymbol = (suit: Suit) => {
   if (suit === 'spades') return '♠';
@@ -564,24 +568,27 @@ const drawCards = (deck: LocalCard[], discard: LocalCard[], count: number) => {
   };
 };
 
-const getMegaHandCombatantKey = (actorName: string): MegaHandCombatantKey | null => {
-  if (actorName === 'Hero') return 'hero';
-  if (actorName === 'Mochi') return 'mochi';
-  if (actorName === 'Banks') return 'banks';
-  if (actorName === 'Jet') return 'jet';
-  if (actorName === 'Lesser Shade') return 'lesser-shade';
-  return null;
-};
+const getMegaHandCombatantKey = (actorName: string): MegaHandCombatantKey | null => (
+  actorName.trim().length > 0 ? toCombatantKey(actorName) : null
+);
 
 const getAbilitySourceCombatantKey = (ability: MegaHandAbilityDefinition | null | undefined): MegaHandCombatantKey | null => {
   if (!ability) return null;
   const directKey = getMegaHandCombatantKey(ability.ownerName);
   if (directKey) return directKey;
-  return (ability.side ?? 'player') === 'enemy' ? 'lesser-shade' : 'hero';
+  return getMegaHandCombatantKey((ability.side ?? 'player') === 'enemy' ? 'Lesser Shade' : 'Hero');
 };
 
-const getCombatSupportAllyKeys = (side: ChargeUpActorSide): MegaHandCombatantKey[] => (
-  side === 'enemy' ? ['lesser-shade'] : ['hero', 'mochi', 'banks', 'jet']
+const getCombatantSide = (combatantKey: MegaHandCombatantKey): ChargeUpActorSide => (
+  KINHAND_ACTOR_CATALOG.find((actor) => getMegaHandCombatantKey(actor.actorName) === combatantKey)?.side
+  ?? (combatantKey === 'lesser-shade' ? 'enemy' : 'player')
+);
+
+const getCombatSupportAllyKeys = (
+  side: ChargeUpActorSide,
+  combatants: Record<string, MegaHandCombatantState>,
+): MegaHandCombatantKey[] => (
+  Object.keys(combatants).filter((combatantKey) => getCombatantSide(combatantKey) === side)
 );
 
 const createMegaHandCombatant = (actorName: string): MegaHandCombatantState => {
@@ -618,13 +625,11 @@ const createMegaHandCombatant = (actorName: string): MegaHandCombatantState => {
   };
 };
 
-const createMegaHandCombatants = (): Record<string, MegaHandCombatantState> => ({
-  hero: createMegaHandCombatant('Hero'),
-  mochi: createMegaHandCombatant('Mochi'),
-  banks: createMegaHandCombatant('Banks'),
-  jet: createMegaHandCombatant('Jet'),
-  'lesser-shade': createMegaHandCombatant('Lesser Shade'),
-});
+const createMegaHandCombatants = (): Record<string, MegaHandCombatantState> => (
+  Object.fromEntries(
+    KINHAND_ACTOR_CATALOG.map((actor) => [toCombatantKey(actor.actorName), createMegaHandCombatant(actor.actorName)]),
+  )
+);
 
 const createFreshTableau = (): LocalCard[][] => {
   const deck = createDeck();
@@ -1525,6 +1530,13 @@ const getActorFrameBackdropStyle = (actorName: string) => {
 };
 
 const getMegaHandActorVitals = (actorName: string) => {
+  if (actorName === 'Whis') {
+    return {
+      currentHp: 14,
+      maxHp: 14,
+      armor: 0,
+    };
+  }
   const maxHp = 10;
   const armor = actorName === 'Hero' ? 1 : 0;
   return {
@@ -2096,8 +2108,13 @@ export function KinHandVariant() {
   const supportGap = Math.max(8, Math.round(foundationGap / 2));
   const playerChargerCards = useMemo(
     () => [...state.playerChargers].sort((left, right) => {
-      const actorOrder = ['Jet', 'Banks', 'Mochi', 'Hero'];
-      return actorOrder.indexOf(left.actorName) - actorOrder.indexOf(right.actorName);
+      const actorOrder = ['Jet', 'Banks', 'Mochi', 'Whis', 'Hero'];
+      const leftOrder = actorOrder.indexOf(left.actorName);
+      const rightOrder = actorOrder.indexOf(right.actorName);
+      if (leftOrder !== rightOrder) {
+        return (leftOrder < 0 ? Number.MAX_SAFE_INTEGER : leftOrder) - (rightOrder < 0 ? Number.MAX_SAFE_INTEGER : rightOrder);
+      }
+      return left.actorName.localeCompare(right.actorName);
     }),
     [state.playerChargers],
   );
@@ -2139,7 +2156,7 @@ export function KinHandVariant() {
       : 'full';
   const tableauColumnsPerRow = TABLEAU_COLUMNS;
   const tableauRowCount = Math.ceil(TABLEAU_COLUMNS / tableauColumnsPerRow);
-  const tableauVisibleRowCount = isCompactViewport ? 2 : isShortDesktop ? 3 : TABLEAU_ROWS;
+  const tableauVisibleRowCount = isShortDesktop ? 3 : TABLEAU_ROWS;
   const tableauPanelPaddingTop = isCompactViewport ? 42 : isShortDesktop ? 22 : 30;
   const tableauPanelPaddingX = isCompactViewport ? 6 : 20;
   const tableauPanelInnerWidth = Math.max(
@@ -2182,7 +2199,7 @@ export function KinHandVariant() {
     width: Math.max(24, tableauDragCardWidth - 4),
     height: Math.max(36, tableauDragCardHeight - 4),
   };
-  const tableauOffset = Math.round(tableauFrontHeight * (isCompactViewport ? 0.23 : isShortDesktop ? 0.31 : TABLEAU_STACK_OFFSET / 144));
+  const tableauOffset = Math.round(tableauFrontHeight * (isCompactViewport ? 0.36 : isShortDesktop ? 0.31 : TABLEAU_STACK_OFFSET / 144));
   const tableauColumnHeight = tableauFrontHeight + (Math.max(0, tableauVisibleRowCount - 1) * tableauOffset);
   const tableauRowGap = isCompactViewport ? 0 : 0;
   const tableauGridHeight = (tableauColumnHeight * tableauRowCount) + (Math.max(0, tableauRowCount - 1) * tableauRowGap);
@@ -2486,7 +2503,7 @@ export function KinHandVariant() {
   const placementActive = orimPlacementState !== null && placementGrantedAbility !== null;
   const getCombatantForActor = useCallback((actorName: string) => {
     const key = getMegaHandCombatantKey(actorName);
-    return key ? state.combatants[key] ?? null : null;
+    return key ? state.combatants[key] ?? createMegaHandCombatant(actorName) : null;
   }, [state.combatants]);
   const isEnemySingleTargetingPlayer = (
     !!targetingContext
@@ -2880,7 +2897,9 @@ export function KinHandVariant() {
           sourceActor: sourceKey,
           targetActor: targetKey,
         };
-        const resolved = resolveDamagePacket(nextState.combatants, packet, { supportAllyKeys: getCombatSupportAllyKeys(sourceSide) });
+        const resolved = resolveDamagePacket(nextState.combatants, packet, {
+          supportAllyKeys: getCombatSupportAllyKeys(sourceSide, nextState.combatants),
+        });
         const targetAfter = resolved.combatants[targetKey];
         nextState = {
           ...nextState,
@@ -2925,7 +2944,7 @@ export function KinHandVariant() {
         && targetActorName !== 'Lesser Shade'
       ) {
         const healAmount = effectivePower;
-        const playerPartyKeys: MegaHandCombatantKey[] = ['hero', 'mochi', 'banks', 'jet'];
+        const playerPartyKeys = getCombatSupportAllyKeys('player', nextState.combatants);
         const nextCombatants = { ...nextState.combatants };
         let totalHealed = 0;
         playerPartyKeys.forEach((key) => {

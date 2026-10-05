@@ -794,7 +794,7 @@ export function CombatSandbox({
   const noValidMovesForPlayer = noValidMovesPlayer ?? noValidMoves;
   const noValidMovesForEnemy = noValidMovesEnemy ?? false;
   const combatFlowMode = gameState.combatFlowMode ?? 'turn_based_pressure';
-  const enforceTurnOwnership = combatFlowMode === 'turn_based_pressure';
+  const enforceTurnOwnership = combatFlowMode !== 'real_time_shared';
   const turnDurationMs = getCombatTurnDurationMs(gameState, 10000);
   const [localTurnRemainingMs, setLocalTurnRemainingMs] = useState(turnDurationMs);
   const [localTurnTimerActive, setLocalTurnTimerActive] = useState(false);
@@ -1966,7 +1966,18 @@ export function CombatSandbox({
       return total + (Number.isFinite(bonusMs) ? bonusMs : 0);
     }, 0);
   }, [gameState.orimDefinitions, gameState.orimInstances]);
+  const refreshRollingInitiative = useCallback(() => {
+    if (combatFlowMode === 'rolling_initiative') {
+      localTurnRemainingRef.current = turnDurationMs;
+      displayTurnRemainingRef.current = turnDurationMs;
+      if (!DISABLE_TURN_BAR_ANIMATION) {
+        setLocalTurnRemainingMs(turnDurationMs);
+      }
+      syncTurnBarWidths(turnDurationMs);
+    }
+  }, [combatFlowMode, syncTurnBarWidths, turnDurationMs]);
   const applyFoundationTimerBonus = useCallback((foundationIndex: number) => {
+    refreshRollingInitiative();
     const foundationCards = previewPlayerFoundations[foundationIndex] ?? [];
     const actor = resolvePlayerFoundationActor(foundationIndex, foundationCards);
     const bonusMs = getActorFoundationTimerBonusMs(actor);
@@ -1978,7 +1989,7 @@ export function CombatSandbox({
       setLocalTurnRemainingMs(boostedRemaining);
     }
     syncTurnBarWidths(boostedRemaining);
-  }, [getActorFoundationTimerBonusMs, previewPlayerFoundations, resolvePlayerFoundationActor, syncTurnBarWidths]);
+  }, [getActorFoundationTimerBonusMs, previewPlayerFoundations, refreshRollingInitiative, resolvePlayerFoundationActor, syncTurnBarWidths]);
   useEffect(() => {
     const actionCount = Math.max(0, Math.floor(Number(gameState.turnCount ?? 0)));
     const prevActionCount = lastProcessedTapActionCountRef.current;
@@ -2093,7 +2104,10 @@ export function CombatSandbox({
           const actionStart = performance.now();
           const accepted = actions.playFromHandToEnemyFoundation(draggedHandCard, enemyFoundationIndex);
           actionMs = performance.now() - actionStart;
-          if (accepted) setLocalTurnTimerActive(true);
+          if (accepted) {
+            setLocalTurnTimerActive(true);
+            refreshRollingInitiative();
+          }
           if (import.meta.env.DEV) {
             console.debug('[sandbox drop] hand->enemyFoundation', {
               enemyFoundationIndex,
@@ -2109,7 +2123,10 @@ export function CombatSandbox({
       const actionStart = performance.now();
       const accepted = actions.playEnemyFromTableau(tableauIndex, enemyFoundationIndex);
       actionMs = performance.now() - actionStart;
-      if (accepted) setLocalTurnTimerActive(true);
+      if (accepted) {
+        setLocalTurnTimerActive(true);
+        refreshRollingInitiative();
+      }
       if (import.meta.env.DEV) {
         console.debug('[sandbox drop] tableau->enemyFoundation', {
           tableauIndex,
@@ -2178,7 +2195,7 @@ export function CombatSandbox({
       applyFoundationTimerBonus(foundationIndex);
     }
     recordDropMetrics(performance.now() - dropStart, actionMs);
-  }, [actions, useWild, enemyFoundationDropBase, enemyFoundations, gameState.phase, enforceTurnOwnership, effectiveActiveSide, interTurnCountdownActive, recordDropMetrics, resolveEnemyFoundationActor, resolvePlayerFoundationActor, previewPlayerFoundations, applyFoundationTimerBonus, isFoundationTableauLocked]);
+  }, [actions, useWild, enemyFoundationDropBase, enemyFoundations, gameState.phase, enforceTurnOwnership, effectiveActiveSide, interTurnCountdownActive, recordDropMetrics, resolveEnemyFoundationActor, resolvePlayerFoundationActor, previewPlayerFoundations, applyFoundationTimerBonus, isFoundationTableauLocked, refreshRollingInitiative]);
   const { dragState, startDrag, setFoundationRef, dragPositionRef, getPerfSnapshot, lastDragEndAt } = useDragDrop(handleSandboxDrop, isGamePaused);
   const buildAutoPlayReplaySnapshot = useCallback((state: GameState): Partial<GameState> => (
     deepCloneReplayValue({
@@ -2934,7 +2951,10 @@ export function CombatSandbox({
     const firstPlayableFoundation = validFoundationsForSelected.findIndex((value) => value);
     if (firstPlayableFoundation >= 0) {
       const accepted = actions.playFromHand(card, firstPlayableFoundation, useWild);
-      if (accepted) setLocalTurnTimerActive(true);
+      if (accepted) {
+        setLocalTurnTimerActive(true);
+        applyFoundationTimerBonus(firstPlayableFoundation);
+      }
     }
   };
   const handleRerollDeal = () => {
@@ -2973,12 +2993,13 @@ export function CombatSandbox({
       autoPlayStallRef.current = 0;
       setAutoPlayStalls(0);
       setLocalTurnTimerActive(true);
+      refreshRollingInitiative();
     } else if (options?.countRejectedAsStall !== false) {
       autoPlayStallRef.current += 1;
       setAutoPlayStalls(autoPlayStallRef.current);
     }
     return accepted;
-  }, [appendAutoPlayDecision, appendAutoPlayMoveAudit]);
+  }, [appendAutoPlayDecision, appendAutoPlayMoveAudit, refreshRollingInitiative]);
   const performAutoPlayStepRef = useRef<() => void>(() => {});
   const performAutoPlayStep = useCallback(() => {
     if (!autoPlayEnabled || isGamePaused || dragState.isDragging || interTurnCountdownActive || autoPlayDragAnim) return;
@@ -4166,10 +4187,16 @@ export function CombatSandbox({
       <div className="mb-3 grid grid-cols-2 gap-2">
         <button
           type="button"
-          onClick={() => actions.setCombatFlowMode(combatFlowMode === 'turn_based_pressure' ? 'real_time_shared' : 'turn_based_pressure')}
+          onClick={() => actions.setCombatFlowMode(
+            combatFlowMode === 'turn_based_pressure'
+              ? 'rolling_initiative'
+              : combatFlowMode === 'rolling_initiative'
+                ? 'real_time_shared'
+                : 'turn_based_pressure'
+          )}
           className="rounded border border-game-teal/45 px-2 py-1 text-game-teal hover:border-game-teal transition-colors"
         >
-          Flow: {combatFlowMode === 'turn_based_pressure' ? 'Turn' : 'Real-time'}
+          Flow: {combatFlowMode === 'turn_based_pressure' ? 'Turn' : combatFlowMode === 'rolling_initiative' ? 'Rolling' : 'Real-time'}
         </button>
         <div className="rounded border border-game-teal/30 px-2 py-1 text-[9px] text-game-teal/85">
           Timer: {showTurnTimer ? (zenRelicEnabled ? '∞' : `${Math.ceil(turnRemainingMs / 1000)}s`) : 'off'}

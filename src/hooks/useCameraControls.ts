@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { CameraInteractionLock } from './cameraInteractionLock';
 
 export interface CameraState {
   x: number;
@@ -25,6 +26,8 @@ interface UseCameraControlsOptions {
   transformMode?: 'zoom' | 'scale';
   /** Zoom animation smoothing factor (0–1). Higher = snappier. Default: 0.18 */
   zoomSmoothing?: number;
+  /** Content whose transform origin is the viewport center; zoom around that center. */
+  centeredZoom?: boolean;
 }
 
 interface UseCameraControlsResult {
@@ -55,6 +58,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     listenOnWindow = false,
     transformMode = 'scale',
     zoomSmoothing = 0.18,
+    centeredZoom = false,
   } = options;
 
   const initial = { ...DEFAULT_CAMERA, ...initialState };
@@ -64,6 +68,10 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
 
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const objectGestureRef = useRef(new CameraInteractionLock());
+
+  const isCameraInteractiveTarget = (target: EventTarget | null) =>
+    target instanceof Element && Boolean(target.closest('[data-camera-ignore="true"], [draggable="true"], [data-component="playing-card"]'));
 
   // Pan state
   const panStartRef = useRef({ x: 0, y: 0 });
@@ -156,11 +164,12 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   // Animation loop — lerps cameraState toward zoomTargetRef
   // ---------------------------------------------------------------------------
   const startAnimation = useCallback(() => {
+    if (objectGestureRef.current.locked) return;
     if (rafRef.current) return;
     animatingRef.current = true;
 
     const tick = () => {
-      if (!animatingRef.current) {
+      if (!animatingRef.current || objectGestureRef.current.locked) {
         rafRef.current = 0;
         return;
       }
@@ -248,6 +257,54 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     rafRef.current = requestAnimationFrame(tick);
   }, []);
 
+  // Capture before native camera listeners or React drag handlers run. Merely
+  // stopping React pointer propagation cannot stop touch listeners or queued zoom.
+  useEffect(() => {
+    if (!enabled) return;
+    const freeze = () => {
+      panButtonRef.current = null;
+      pinchRef.current.active = false;
+      touchPanRef.current.active = false;
+      setIsPanning(false);
+      animatingRef.current = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+      wheelDeltaRef.current = 0;
+      wheelAnchorRef.current = null;
+      zoomTargetRef.current = { ...cameraRef.current };
+      setCameraState(cameraRef.current);
+    };
+    const down = (event: PointerEvent) => {
+      if (!isCameraInteractiveTarget(event.target) && !objectGestureRef.current.locked) return;
+      objectGestureRef.current.beginPointer(event.pointerId);
+      freeze();
+    };
+    const up = (event: PointerEvent) => objectGestureRef.current.endPointer(event.pointerId);
+    const drag = (event: DragEvent) => {
+      if (!isCameraInteractiveTarget(event.target)) return;
+      objectGestureRef.current.beginNativeDrag();
+      freeze();
+    };
+    const clear = () => objectGestureRef.current.clear();
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('pointerup', up, true);
+    document.addEventListener('pointercancel', up, true);
+    document.addEventListener('dragstart', drag, true);
+    document.addEventListener('dragend', clear, true);
+    document.addEventListener('drop', clear, true);
+    window.addEventListener('blur', clear);
+    return () => {
+      document.removeEventListener('pointerdown', down, true);
+      document.removeEventListener('pointerup', up, true);
+      document.removeEventListener('pointercancel', up, true);
+      document.removeEventListener('dragstart', drag, true);
+      document.removeEventListener('dragend', clear, true);
+      document.removeEventListener('drop', clear, true);
+      window.removeEventListener('blur', clear);
+      clear();
+    };
+  }, [enabled]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -259,6 +316,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   // Public helpers
   // ---------------------------------------------------------------------------
   const resetCamera = useCallback(() => {
+    if (objectGestureRef.current.locked) return;
     const state = { ...DEFAULT_CAMERA };
     zoomTargetRef.current = state;
     cameraRef.current = state;
@@ -269,6 +327,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   }, [applyTransform]);
 
   const centerOn = useCallback((element: HTMLElement | null) => {
+    if (objectGestureRef.current.locked) return;
     if (!element || !containerRef.current || !contentRef.current) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
@@ -298,6 +357,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
 
   // Wrapped setter that keeps refs in sync (no animation)
   const setCamera = useCallback<React.Dispatch<React.SetStateAction<CameraState>>>((action) => {
+    if (objectGestureRef.current.locked) return;
     setCameraState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       zoomTargetRef.current = next;
@@ -320,6 +380,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     const handleWheel = (e: WheelEvent) => {
       const activeContainer = containerRef.current;
       if (!activeContainer) return;
+      if (objectGestureRef.current.locked) { e.preventDefault(); return; }
       const rect = activeContainer.getBoundingClientRect();
       // Ignore wheel events outside the camera container (e.g. overlays/side panels).
       if (
@@ -335,8 +396,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       }
       e.preventDefault();
 
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      const mouseX = centeredZoom ? 0 : e.clientX - rect.left;
+      const mouseY = centeredZoom ? 0 : e.clientY - rect.top;
 
       // Scale accumulates on the TARGET so rapid scrolls compound.
       // When already animating, anchor the next target to the current target
@@ -421,23 +482,27 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     // Listen on window so overlays don't block zoom; ignore events outside container bounds.
     window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
     return () => window.removeEventListener('wheel', handleWheel, { capture: true });
-  }, [enabled, minScale, maxScale, zoomSensitivity, baseScale, startAnimation, canStartPanAt]);
+  }, [enabled, minScale, maxScale, zoomSensitivity, baseScale, startAnimation, canStartPanAt, centeredZoom]);
 
   // ---------------------------------------------------------------------------
-  // Middle-mouse-button pan
+  // Primary/middle-mouse-button pan
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!enabled) return;
     const container = containerRef.current;
     if (!container) return;
 
-    const handleMouseDown = (e: MouseEvent) => {
-      // Middle mouse button (button 1)
-      if (e.button !== 1) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (objectGestureRef.current.locked) return;
+      if (e.pointerType !== 'mouse') return;
+      if (isCameraInteractiveTarget(e.target)) return;
+      // Left mouse button (button 0) is the normal map interaction. Keep
+      // middle-button dragging supported for callers that already use it.
+      if (e.button !== 0 && e.button !== 1) return;
       e.preventDefault();
 
       setIsPanning(true);
-      panButtonRef.current = 1;
+      panButtonRef.current = e.button;
       panStartRef.current = { x: e.clientX, y: e.clientY };
       const cur = cameraRef.current;
       cameraStartRef.current = { x: cur.x, y: cur.y };
@@ -445,7 +510,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       zoomTargetRef.current = { ...zoomTargetRef.current, x: cur.x, y: cur.y };
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (objectGestureRef.current.locked) return;
       if (!isPanning) return;
 
       const deltaX = e.clientX - panStartRef.current.x;
@@ -464,29 +530,31 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       zoomTargetRef.current = { ...zoomTargetRef.current, x: newX, y: newY };
     };
 
-    const handleMouseUp = (e: MouseEvent) => {
+    const handlePointerUp = (e: PointerEvent) => {
       if (panButtonRef.current === e.button) {
         setIsPanning(false);
         panButtonRef.current = null;
       }
     };
 
-    // Prevent context menu on middle click
+    // Prevent context menu while using the auxiliary pan button.
     const handleContextMenu = (e: MouseEvent) => {
       if (e.button === 1) {
         e.preventDefault();
       }
     };
 
-    container.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    container.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener('pointercancel', handlePointerUp);
     container.addEventListener('auxclick', handleContextMenu);
 
     return () => {
-      container.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      container.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+      document.removeEventListener('pointercancel', handlePointerUp);
       container.removeEventListener('auxclick', handleContextMenu);
     };
   }, [enabled, isPanning]);
@@ -504,6 +572,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
 
     const handleTouchStart = (e: TouchEvent) => {
+      if (objectGestureRef.current.locked) return;
+      if (isCameraInteractiveTarget(e.target)) return;
       if (e.touches.length === 1) {
         const t = e.touches[0];
         if (canStartPanAt && !canStartPanAt(t.clientX, t.clientY)) {
@@ -536,8 +606,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       ) {
         return;
       }
-      const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
-      const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
+      const midX = centeredZoom ? 0 : (t1.clientX + t2.clientX) / 2 - rect.left;
+      const midY = centeredZoom ? 0 : (t1.clientY + t2.clientY) / 2 - rect.top;
       const distance = getDistance(t1, t2);
 
       const display = cameraRef.current;
@@ -563,6 +633,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      if (objectGestureRef.current.locked) { e.preventDefault(); return; }
       if (touchPanRef.current.active && e.touches.length === 1) {
         e.preventDefault();
         const t = e.touches[0];
@@ -587,8 +658,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       const rect = container.getBoundingClientRect();
       const t1 = e.touches[0];
       const t2 = e.touches[1];
-      const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
-      const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
+      const midX = centeredZoom ? 0 : (t1.clientX + t2.clientX) / 2 - rect.left;
+      const midY = centeredZoom ? 0 : (t1.clientY + t2.clientY) / 2 - rect.top;
       const distance = getDistance(t1, t2);
       const ratio = distance / Math.max(1, pinchRef.current.startDistance);
 
@@ -639,7 +710,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       target.removeEventListener('touchend', onTouchEnd);
       target.removeEventListener('touchcancel', onTouchCancel);
     };
-  }, [enabled, zoomEnabled, applyTransform, canStartPanAt, listenOnWindow]);
+  }, [enabled, zoomEnabled, applyTransform, canStartPanAt, listenOnWindow, centeredZoom]);
 
   // Keep cameraStartRef fresh when not panning
   useEffect(() => {
@@ -658,6 +729,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     centerOn,
     setCameraState: setCamera,
     startPanAt: (clientX: number, clientY: number, button = 0) => {
+      if (objectGestureRef.current.locked) return;
       setIsPanning(true);
       panButtonRef.current = button;
       panStartRef.current = { x: clientX, y: clientY };

@@ -77,7 +77,7 @@ export function playTableauCard(
   foundationIndex: number
 ): GameState | null {
   if (!isCombatSessionActive(state)) return null;
-  if ((state.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure' && getCombatActiveSide(state) === 'enemy') return null;
+  if (shouldEnforceSideTurns(state) && getCombatActiveSide(state) === 'enemy') return null;
   const tableau = state.tableaus[tableauIndex];
   if (!tableau || tableau.length === 0) return null;
 
@@ -161,7 +161,7 @@ export function playEnemyTableauCard(
   foundationIndex: number
 ): GameState | null {
   if (!isCombatSessionActive(state)) return null;
-  if ((state.combatFlowMode ?? 'turn_based_pressure') === 'turn_based_pressure' && getCombatActiveSide(state) !== 'enemy') return null;
+  if (shouldEnforceSideTurns(state) && getCombatActiveSide(state) !== 'enemy') return null;
   const ensured = ensureEnemyFoundationsForPlay(state, createActorFoundationCard);
   const workingState = ensured.state;
   const enemyFoundations = ensured.enemyFoundations;
