@@ -7,9 +7,12 @@ export function DevContextMenu({ enabled = import.meta.env.DEV }: { enabled?: bo
   const menu = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // A touch or pen long-press also fires contextmenu; that is a game hold
+    // (e.g. redeeming a quest card), so it never opens the dev menu.
+    let pressing: string | null = null;
     const open = (event: MouseEvent) => {
       event.preventDefault();
-      if (!enabled) return;
+      if (!enabled || (pressing && pressing !== 'mouse')) return;
       const target = event.target instanceof Element ? event.target : null;
       const bounds = target?.getBoundingClientRect();
       const keyboard = event.clientX === 0 && event.clientY === 0;
@@ -18,17 +21,23 @@ export function DevContextMenu({ enabled = import.meta.env.DEV }: { enabled?: bo
     };
     const dismiss = () => setLocation(null);
     const pointer = (event: PointerEvent) => {
+      pressing = event.pointerType;
       if (!menu.current?.contains(event.target as Node)) dismiss();
     };
+    const release = () => { pressing = null; };
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') dismiss(); };
     document.addEventListener('contextmenu', open, true);
     document.addEventListener('pointerdown', pointer, true);
+    document.addEventListener('pointerup', release, true);
+    document.addEventListener('pointercancel', release, true);
     document.addEventListener('keydown', key, true);
     window.addEventListener('resize', dismiss);
     window.addEventListener('blur', dismiss);
     return () => {
       document.removeEventListener('contextmenu', open, true);
       document.removeEventListener('pointerdown', pointer, true);
+      document.removeEventListener('pointerup', release, true);
+      document.removeEventListener('pointercancel', release, true);
       document.removeEventListener('keydown', key, true);
       window.removeEventListener('resize', dismiss);
       window.removeEventListener('blur', dismiss);
