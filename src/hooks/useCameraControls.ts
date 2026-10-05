@@ -28,6 +28,8 @@ interface UseCameraControlsOptions {
   zoomSmoothing?: number;
   /** Content whose transform origin is the viewport center; zoom around that center. */
   centeredZoom?: boolean;
+  /** Content-to-screen pan ratio per axis, e.g. for a camera-tilted table plane. Default 1. */
+  panScale?: { x: number; y: number };
 }
 
 interface UseCameraControlsResult {
@@ -59,6 +61,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     transformMode = 'scale',
     zoomSmoothing = 0.18,
     centeredZoom = false,
+    panScale,
   } = options;
 
   const initial = { ...DEFAULT_CAMERA, ...initialState };
@@ -136,6 +139,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   baseScaleRef.current = baseScale;
   const transformModeRef = useRef(transformMode);
   transformModeRef.current = transformMode;
+  const panScaleRef = useRef(panScale ?? { x: 1, y: 1 });
+  panScaleRef.current = panScale ?? { x: 1, y: 1 };
 
   const applyTransform = useCallback((state: CameraState) => {
     const el = contentRef.current;
@@ -514,8 +519,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       if (objectGestureRef.current.locked) return;
       if (!isPanning) return;
 
-      const deltaX = e.clientX - panStartRef.current.x;
-      const deltaY = e.clientY - panStartRef.current.y;
+      const deltaX = (e.clientX - panStartRef.current.x) * panScaleRef.current.x;
+      const deltaY = (e.clientY - panStartRef.current.y) * panScaleRef.current.y;
       const newX = cameraStartRef.current.x + deltaX;
       const newY = cameraStartRef.current.y + deltaY;
 
@@ -637,8 +642,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       if (touchPanRef.current.active && e.touches.length === 1) {
         e.preventDefault();
         const t = e.touches[0];
-        const deltaX = t.clientX - touchPanRef.current.startX;
-        const deltaY = t.clientY - touchPanRef.current.startY;
+        const deltaX = (t.clientX - touchPanRef.current.startX) * panScaleRef.current.x;
+        const deltaY = (t.clientY - touchPanRef.current.startY) * panScaleRef.current.y;
         const next = {
           ...cameraRef.current,
           x: touchPanRef.current.camX + deltaX,

@@ -1773,9 +1773,8 @@ html.drag-perf-mode .target-swirl-sparkles {
   .proto-game-rail { padding: 2px 0; }
 }
 
-@media (max-width: 900px) {
-  .proto-map-toolbar button { font-size: 16px; padding: 4px 8px; }
-}
+.proto-map-toolbar { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 16px); }
+.proto-map-toolbar button { font-size: 16px; padding: 4px 8px; white-space: nowrap; }
 
 .proto-main-tableau--solver { grid-template-rows: minmax(0,1fr) auto auto; }
 .proto-tableau-actions button { padding: 5px 12px; border: 2px solid #9c8c62; background: #17251f; color: #fff0d0; font: 16px 'Classic Pixel',monospace; }
@@ -2347,3 +2346,23 @@ html.drag-perf-mode .target-swirl-sparkles {
 .tray-restore--supplies { left: 0; border-left: 0; border-radius: 0 10px 10px 0; }
 .tray-restore:focus-visible { outline: 3px solid #ffe19a; outline-offset: 3px; }
 .tray-restore__emblem { width: 28px; height: 32px; filter: drop-shadow(0 2px 0 #0007); }
+
+/* Tilted camera: the table plane leans back and pieces stand up on it like
+   pop-up cardboard. Flat pieces keep their 2D look; trays stay screen-flat. */
+.proto-table-stage--tilted,
+.proto-table-stage--tilted .proto-table-plane,
+.proto-table-stage--tilted .proto-map-world { transform-style: preserve-3d; }
+.proto-table-stage { transform-origin: 50% 50%; }
+/* Coplanar 3D layers draw and hit-test unpredictably, so the floor sits a
+   hair behind the pieces. Only the floor and the pieces take pointers, so
+   empty table still pans the camera. */
+.proto-table-stage--tilted { pointer-events: none; }
+.proto-table-stage--tilted .proto-table-floor { pointer-events: auto; transform: translateZ(-1px); }
+.proto-table-stage--tilted .proto-map-world > :not(.table-grid-origin) { pointer-events: auto; }
+.proto-standee-base { position: absolute; height: 16px; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(#0b0907 40%, #2a1e14); border: 2px solid #6b5236; pointer-events: none; }
+/* Standees pop up from their base instead of scaling from their center. */
+.proto-resource-stack.proto-standee { animation-name: proto-standee-pop; }
+@keyframes proto-standee-pop { 0% { opacity: 0; scale: 1 0.1; } 68% { opacity: 1; scale: 1 1.12; } 100% { opacity: 1; scale: 1 1; } }
+/* A standee's signs hang above it, facing the camera, rather than under the table. */
+.proto-table-stage--tilted .proto-standee-sign { top: auto; bottom: 100%; margin: 0 0 4px; }
+.proto-table-horizon { position: absolute; inset: 0 0 auto 0; height: 18%; z-index: 41; pointer-events: none; background: linear-gradient(#050807, #05080700); }

@@ -9,6 +9,7 @@ import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type Wor
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { useCameraControls } from '../../hooks/useCameraControls';
+import { tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
 
 export type ProtoBiomeTile = {
   id: string;
@@ -138,7 +139,12 @@ export const ProtoMap = ({
   onRedeemQuest,
   onMoveQuest,
 }: ProtoMapProps) => {
+  // Pop-up-book camera: the table tilts back and pieces stand up as cardboard standees.
+  const [tilted, setTilted] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState(720);
+  const tilt = tilted ? tableTiltFor(viewportHeight) : null;
   const camera = useCameraControls({
+    panScale: tiltPanScale(tilt),
     minScale: 0.65,
     maxScale: 2.25,
     zoomSensitivity: 0.0048,
@@ -168,6 +174,14 @@ export const ProtoMap = ({
   const [, setResourcePhysicsTick] = useState(0);
   resourceStacksRef.current = resourceStacks;
   const gridStep = CLASSICPLUS_GRID_SIZE * camera.cameraState.scale;
+
+  useEffect(() => {
+    const viewport = camera.containerRef.current;
+    if (!viewport) return undefined;
+    const observer = new ResizeObserver(() => setViewportHeight(viewport.clientHeight || 720));
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
 
   const resetProtoCamera = () => {
     camera.setCameraState({ x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE });
@@ -390,7 +404,10 @@ export const ProtoMap = ({
   const worldPointFromClient = (clientX: number, clientY: number) => {
     const rect = camera.containerRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
-    return screenToWorld({x:clientX,y:clientY},rect,camera.cameraState);
+    if (!tilt) return screenToWorld({x:clientX,y:clientY},rect,camera.cameraState);
+    const centerX = rect.left + rect.width / 2, centerY = rect.top + rect.height / 2;
+    const plane = unprojectTilt({ x: clientX - centerX, y: clientY - centerY }, tilt);
+    return screenToWorld({x:centerX+plane.x,y:centerY+plane.y},rect,camera.cameraState);
   };
 
   const resolveBiomeAdjacentCell = (actorId: string, biomeId: string) => {
@@ -464,11 +481,13 @@ export const ProtoMap = ({
       position: finiteWorldPoint(source.position),
       radius: Math.max(0.5, finiteCoordinate(source.radius, 2.7)),
     }));
+    const surface = canvas.parentElement ?? viewport;
     const draw = (timeMs: number) => {
-      const rect = viewport.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      const width = Math.max(1, Math.round(rect.width));
-      const height = Math.max(1, Math.round(rect.height));
+      // Layout size, not the projected box: a tilted table plane is oversized
+      // around the same center. Its soft light pools draw at reduced resolution.
+      const dpr = tilted ? Math.min(window.devicePixelRatio || 1, 1) : window.devicePixelRatio || 1;
+      const width = Math.max(1, surface.offsetWidth);
+      const height = Math.max(1, surface.offsetHeight);
       if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
         canvas.width = Math.round(width * dpr);
         canvas.height = Math.round(height * dpr);
@@ -498,7 +517,7 @@ export const ProtoMap = ({
       observer.disconnect();
       window.cancelAnimationFrame(frameId);
     };
-  }, [lightSources, timeOfDay, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale]);
+  }, [lightSources, timeOfDay, tilted, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale]);
 
   const resolveDropDestination = (actorId: string, clientX: number, clientY: number) => {
     const biomeTarget = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-biome-id]');
@@ -545,6 +564,18 @@ export const ProtoMap = ({
 
   const travelPosition = travel ? pointAlongWorldPath(travel.path, travel.progress) : null;
 
+  // Tilted, pieces stand upright on their table point like cardboard standees.
+  const standee = (size?: { width: number; height: number }): React.CSSProperties | null => tilt ? {
+    transform: 'translate(-50%,-100%)',
+    transformOrigin: '50% 100%',
+    rotate: 'x calc(-1 * var(--table-tilt))',
+    // A die-cut cardboard edge, shaded toward its base.
+    ...(size ? { width: size.width, height: size.height, borderRadius: `${size.width / 2}px ${size.width / 2}px 6px 6px`, border: '3px solid #efe4cc', boxShadow: 'inset 0 -12px 16px #0007' } : {}),
+  } : null;
+  const standeeBase = (key: string, position: { x: number; y: number }, width: number) => tilt
+    ? <div key={key} aria-hidden="true" className="proto-standee-base" style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width, boxShadow: tableObjectShadow(timeOfDay, position, 6, lightSources) }} />
+    : null;
+
   return (
     <section className="proto-map relative min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/22 bg-[#050807] font-mono">
       <div
@@ -562,6 +593,7 @@ export const ProtoMap = ({
         >
           {questOpen ? 'Quest −' : 'Quest +'}
         </button>
+        <button type="button" className="table-grid-center-button" aria-pressed={tilted} aria-label={tilted ? 'Flat camera view' : 'Tilt camera view'} onClick={() => setTilted(value => !value)}>{tilted ? 'Flat' : 'Tilt'}</button>
         <button type="button" className="table-grid-center-button" onClick={()=>camera.setCameraState(previous=>({...previous,x:-TRUE_CENTER.world.x*previous.scale,y:-TRUE_CENTER.world.y*previous.scale}))}>True Center</button>
         <button
           type="button"
@@ -581,14 +613,28 @@ export const ProtoMap = ({
         onDragOver={(event) => event.preventDefault()}
         onDragEnd={clearActorDragState}
         onDrop={handleDrop}
-        style={{
-          backgroundImage: `repeating-linear-gradient(0deg, rgba(142,242,212,0.28) 0 1px, transparent 1px ${48 * camera.cameraState.scale}px), repeating-linear-gradient(90deg, rgba(142,242,212,0.28) 0 1px, transparent 1px ${48 * camera.cameraState.scale}px)`,
-          // A tile image centered at the viewport places its boundaries half a
-          // cell from True Center; stored actor coordinates identify square centers.
-          backgroundPosition: `calc(50% + ${camera.cameraState.x}px) calc(50% + ${camera.cameraState.y}px)`,
-          backgroundSize: `${gridStep}px ${gridStep}px`,
-        }}
       >
+        {/* The table plane. Tilted, it is oversized around the same center so
+            its far edge stays off screen; everything on it tilts together. */}
+        <div
+          className={`proto-table-stage absolute${tilt ? ' proto-table-stage--tilted' : ''}`}
+          style={{
+            inset: tilt ? '-100%' : 0,
+            transform: tilt ? tableTiltTransform(tilt) : undefined,
+            ['--table-tilt' as string]: `${tilt?.angle ?? 0}deg`,
+          }}
+        >
+        <div
+          className="proto-table-floor absolute inset-0"
+          style={{
+            backgroundImage: `repeating-linear-gradient(0deg, rgba(142,242,212,0.28) 0 1px, transparent 1px ${48 * camera.cameraState.scale}px), repeating-linear-gradient(90deg, rgba(142,242,212,0.28) 0 1px, transparent 1px ${48 * camera.cameraState.scale}px)`,
+            // A tile image centered at the viewport places its boundaries half a
+            // cell from True Center; stored actor coordinates identify square centers.
+            backgroundPosition: `calc(50% + ${camera.cameraState.x}px) calc(50% + ${camera.cameraState.y}px)`,
+            backgroundSize: `${gridStep}px ${gridStep}px`,
+          }}
+        />
+        <div className="proto-table-plane absolute" style={{ inset: tilt ? '33.3333%' : 0 }}>
         <div
           ref={camera.contentRef}
           className="proto-map-world absolute"
@@ -607,10 +653,10 @@ export const ProtoMap = ({
             onPointerMove={(event) => { if (light.id !== 'table-lantern' || !event.currentTarget.hasPointerCapture(event.pointerId)) return; const point = worldPointFromClient(event.clientX, event.clientY); onMoveLight?.(light.id, point); }}
             onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
             className="proto-table-lamp absolute z-10 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full"
-            style={{ left: 'calc(50% + ' + light.position.x + 'px)', top: 'calc(50% + ' + light.position.y + 'px)' }}>🕯️</div>)}
+            style={{ left: 'calc(50% + ' + light.position.x + 'px)', top: 'calc(50% + ' + light.position.y + 'px)', ...standee() }}>🕯️</div>)}
           {questCards.map(placement => <TableQuestCard key={placement.questIndex} placement={placement} {...(placement.questIndex === TUTORIAL_QUEST_INDEX
             ? { title: TUTORIAL_QUEST.title, text: TUTORIAL_QUEST.text, redeemed: false, staminaReward: 0 }
-            : { title: questTitles[placement.questIndex], text: questTexts[placement.questIndex], redeemed: placement.questIndex < questClaims })} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale}
+            : { title: questTitles[placement.questIndex], text: questTexts[placement.questIndex], redeemed: placement.questIndex < questClaims })} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale} toWorld={worldPointFromClient}
             onMove={(position,tilt)=>onMoveQuest?.(placement.questIndex,position,tilt)}
             solids={[
               ...biomeTiles.map(tile=>getBiomeWorldFootprint(tile)),
@@ -667,10 +713,11 @@ export const ProtoMap = ({
             (() => {
               const physicsPosition = resourcePhysicsRef.current.get(stack.id) ?? stack.position;
               const stackLight = lightField.at(physicsPosition);
-              lightReadouts.push({ id: 'stack-' + stack.id, position: physicsPosition, lift: 24, percent: stackLight.percent, level: stackLight.level });
+              lightReadouts.push({ id: 'stack-' + stack.id, position: physicsPosition, lift: tilt ? -30 : 24, percent: stackLight.percent, level: stackLight.level });
               return (
+                <React.Fragment key={stack.id}>
+                {standeeBase('base', physicsPosition, 44)}
                 <div
-                  key={stack.id}
                   data-board-piece="resource"
                   data-camera-ignore="true"
                   data-light-percent={stackLight.percent}
@@ -731,20 +778,20 @@ export const ProtoMap = ({
                     }
                     clearResourceDragState();
                   }}
-                  className={`proto-resource-stack absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#8ef2d4]/55 bg-[#0b1916] text-[0.6rem] font-black text-[#cafff4] shadow-[0_0_18px_rgba(142,242,212,0.16)] ${draggingResourceId === stack.id ? 'cursor-grabbing ring-2 ring-[#cafff4]/55' : 'cursor-grab'}`}
-                  style={{ left: `calc(50% + ${physicsPosition.x}px)`, top: `calc(50% + ${physicsPosition.y}px)`, boxShadow: tableObjectShadow(timeOfDay, physicsPosition, stack.resource === 'provisions_hut' ? 14 : 9, lightSources) }}
+                  className={`proto-resource-stack${tilt ? ' proto-standee' : ''} absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#8ef2d4]/55 bg-[#0b1916] text-[0.6rem] font-black text-[#cafff4] shadow-[0_0_18px_rgba(142,242,212,0.16)] ${draggingResourceId === stack.id ? 'cursor-grabbing ring-2 ring-[#cafff4]/55' : 'cursor-grab'}`}
+                  style={{ left: `calc(50% + ${physicsPosition.x}px)`, top: `calc(50% + ${physicsPosition.y}px)`, boxShadow: tableObjectShadow(timeOfDay, physicsPosition, stack.resource === 'provisions_hut' ? 14 : 9, lightSources), ...standee({ width: 48, height: 60 }) }}
                   title={Object.entries(stackIngredients(stack)).map(([id, count]) => `${count} ${WORLD_ITEMS[id as WorldItemId].label}`).join(' + ')}
                   aria-label={`${stack.count} ${WORLD_ITEMS[stack.resource].label}${stack.build ? ', building' : ', draggable'}`}
                 >
                   <BoardObjectLabel minFontSize={12} maxFontSize={16} text={`${stack.count} ${stack.ingredients && Object.keys(stack.ingredients).length > 1 ? '🧺' : WORLD_ITEMS[stack.resource].glyph}`} />
-                  {!stack.build && stack.count > 1 && WORLD_ITEMS[stack.resource].kind !== 'structure' && <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onSplitResourceStack?.(stack.id)} className="absolute top-full mt-1 whitespace-nowrap rounded border border-white/30 bg-[#0b1916] px-1 text-[9px]">Split 1</button>}
-                  {stack.resource === 'provisions_hut' && !stack.build && <span className="absolute top-full mt-1 whitespace-nowrap rounded bg-black px-1">Hut foundation · {actors.some((actor) => actor.hutId === stack.id) ? 'Staffed' : 'Drop actor here'}</span>}
+                  {!stack.build && stack.count > 1 && WORLD_ITEMS[stack.resource].kind !== 'structure' && <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onSplitResourceStack?.(stack.id)} className="proto-standee-sign absolute top-full mt-1 whitespace-nowrap rounded border border-white/30 bg-[#0b1916] px-1 text-[9px]">Split 1</button>}
+                  {stack.resource === 'provisions_hut' && !stack.build && <span className="proto-standee-sign absolute top-full mt-1 whitespace-nowrap rounded bg-black px-1">Hut foundation · {actors.some((actor) => actor.hutId === stack.id) ? 'Staffed' : 'Drop actor here'}</span>}
                   {stack.build && (() => {
                     const recipe = CRAFT_RECIPES.find((entry) => entry.id === stack.build?.recipeId)!;
                     const time = Math.min(1, stack.build.elapsedMs / recipe.durationMs);
                     const progress = recipe.requiresSolitaire ? Math.min(time, stack.build.work / recipe.workRequired) : time;
                     const staffed = actors.some((actor) => actor.hutId === stack.build?.stationId);
-                    return <div data-hut-build={stack.id} className="absolute left-1/2 top-full z-30 mt-2 w-44 -translate-x-1/2 rounded border border-[#8ef2d4]/50 bg-[#0b1916] p-2 text-[10px] text-[#cafff4]" onPointerDown={(event) => event.stopPropagation()}>
+                    return <div data-hut-build={stack.id} className="proto-standee-sign absolute left-1/2 top-full z-30 mt-2 w-44 -translate-x-1/2 rounded border border-[#8ef2d4]/50 bg-[#0b1916] p-2 text-[10px] text-[#cafff4]" onPointerDown={(event) => event.stopPropagation()}>
                       <div>{recipe.label}</div>
                       <div role="progressbar" aria-label={recipe.label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} className="my-1 h-2 overflow-hidden rounded bg-white/15"><div className="h-full bg-[#8ef2d4]" style={{ width: progress * 100 + '%' }} /></div>
                       <div>{Math.round(progress * 100)}% · {Math.ceil((recipe.durationMs - stack.build.elapsedMs) / 1000)}s remaining</div>
@@ -774,6 +821,7 @@ export const ProtoMap = ({
                     </div>;
                   })()}
                 </div>
+                </React.Fragment>
               );
             })()
           ))}
@@ -800,10 +848,11 @@ export const ProtoMap = ({
           {actors.map((actor) => {
             const actorPosition = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
             const actorLight = lightField.at(actorPosition);
-            lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: 24, percent: actorLight.percent, level: actorLight.level });
+            lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: tilt ? -30 : 24, percent: actorLight.percent, level: actorLight.level });
             return (
+            <React.Fragment key={actor.id}>
+            {standeeBase('base', actorPosition, 44)}
             <div
-              key={actor.id}
               role="button"
               tabIndex={0}
               aria-haspopup="dialog"
@@ -852,18 +901,26 @@ export const ProtoMap = ({
                 boxShadow: tableObjectShadow(timeOfDay, actorPosition, 12, lightSources.filter(light => light.id !== actorLightId(actor.id))),
                 left: `calc(50% + ${actorPosition.x}px)`,
                 top: `calc(50% + ${actorPosition.y}px)`,
+                ...standee({ width: 48, height: 64 }),
               }}
               aria-label={`${actor.label} actor token`}
             >
               <BoardObjectLabel text={actor.label} minFontSize={12} maxFontSize={16} />
             </div>
+            </React.Fragment>
             );
           })}
         </div>
+        </div>
+        </div>
+        {/* Light overlay on its own copy of the table plane. Kept out of the
+            pieces' 3D scene so standees never cut through it: it lays the
+            table's light over them like a projected wash. */}
+        <div aria-hidden="true" className="proto-table-light pointer-events-none absolute z-40" style={{ inset: tilt ? '-100%' : 0, transform: tilt ? tableTiltTransform(tilt) : undefined }}>
         <canvas
           ref={lightCanvasRef}
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-40"
+          className="pointer-events-none absolute inset-0"
         />
         {showLightReadout ? (
           <div aria-hidden="true" data-light-readout="true" className="pointer-events-none absolute inset-0 z-[45] overflow-hidden">
@@ -882,6 +939,8 @@ export const ProtoMap = ({
             ))}
           </div>
         ) : null}
+        </div>
+        {tilt ? <div aria-hidden="true" className="proto-table-horizon" /> : null}
       </div>
       {dragPreview && !travel ? (
         <div
