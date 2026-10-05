@@ -106,7 +106,7 @@ These are current implementation defaults for iteration, not permanent game-desi
 
 - Quest tracking is a physical recessed tray. Stow moves the entire tray off-screen and releases its layout space to the table; the table Quest control brings it back. Do not merely hide cards inside a still-visible tray. Stowing preserves progression and the card queue. Only an accomplished quest can leave the tray and fly to the table; never use the next queued card as a flight source. After departure, the next objective is visible in the tray but remains there until complete. Pending reward redemption remains explicit.
 
-- A stowed quest tray leaves an always-visible Show quest tray handle at the right viewport edge. Restoring from mobile opens the Quests panel.
+- A stowed tray leaves a small handle on its viewport edge (quests right, supplies left): the tray's drawn emblem (a sealed quest card, a supply sack) above the same leather pull tab used to stow it, with no text label. Restoring from mobile opens that tray's panel.
 
 - Quest rewards are redeemed only by pressing and holding the card on the table; the tray has no separate hold control. When the first quest card flies to the table, a teaching card ("Clearing quests", outside the quest deck) flies out beside it; holding it 2s clears it without a reward, and it does not return.
 

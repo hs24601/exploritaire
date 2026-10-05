@@ -2,6 +2,7 @@ import { flyQuestToDiscard } from './questDiscardFlight';
 import { TableauCardArea } from './components/TableauCardArea';
 import { solverFlightDuration } from './solverTiming';
 import { QuestField } from './components/QuestField';
+import { TrayRestoreHandle } from './components/TrayRestoreHandle';
 import { SettlementSupplyTray } from './components/SettlementSupplyTray';
 import { TUTORIAL_QUEST_INDEX, type PlacedQuestCard } from './components/TableQuestCard';
 import { DetailsCardViewer, ActorCardArt } from './components/DetailsCardViewer';
@@ -2229,8 +2230,8 @@ const selectBiome = (biomeId: string) => {
           </section>
         </div>
       </div>
-      {!supplyOpen && <button type="button" className="supply-tray-restore" aria-label="Show supplies tray" onClick={() => { setSupplyOpen(true); if (window.matchMedia('(max-width: 900px)').matches) setMobilePanel('supplies'); }}>Show supplies ▶</button>}
-      {!questOpen && <button type="button" className="quest-tray-restore" aria-label="Show quest tray" onClick={() => { setQuestOpen(true); if (window.matchMedia('(max-width: 900px)').matches) setMobilePanel('quests'); }}>◀ Show quest tray</button>}
+      {!supplyOpen && <TrayRestoreHandle tray="supplies" onRestore={() => { setSupplyOpen(true); if (window.matchMedia('(max-width: 900px)').matches) setMobilePanel('supplies'); }} />}
+      {!questOpen && <TrayRestoreHandle tray="quests" onRestore={() => { setQuestOpen(true); if (window.matchMedia('(max-width: 900px)').matches) setMobilePanel('quests'); }} />}
       {inspectedActorId && inspectionAnchor && state.worldActors.some((actor) => actor.id === inspectedActorId) ? <DetailsCardViewer
         anchor={inspectionAnchor}
         timeOfDay={tableHours}
