@@ -130,6 +130,8 @@ export const ProtoVariant = () => {
   const [inspectionAnchor, setInspectionAnchor] = useState<HTMLElement | null>(null);
   const inspectActor = (id: string, anchor: HTMLElement) => { setInspectionAnchor(anchor); setInspectedActorId(id); };
   const [tableHours, setTableHours] = useState(9);
+  // Battle-camera tilt for the table and the tableau field, toggled from the map.
+  const [cameraTilted, setCameraTilted] = useState(false);
   const [cycleLighting, setCycleLighting] = useState(false);
   const [tableLightsEnabled, setTableLightsEnabled] = useState(true);
   const [lightReadoutVisible, setLightReadoutVisible] = useState(false);
@@ -1777,6 +1779,7 @@ const selectBiome = (biomeId: string) => {
               <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId ? '' : 'hidden'}`}>
               <div className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">
                 <TableauCardArea columns={TABLEAU_COLUMNS} rows={Math.max(TABLEAU_ROWS, ...state.tableau.map((column) => column.length))}>
+                <div className={`proto-tableau-stage${cameraTilted ? ' proto-tableau-stage--tilted' : ''}`}>
                 <Tableau
                   columns={state.tableau}
                   className="grid min-w-0 justify-center"
@@ -1788,7 +1791,8 @@ const selectBiome = (biomeId: string) => {
                 >
                   {Array.from({ length: TABLEAU_COLUMNS }, (_, columnIndex) => {
                     const column = state.tableau[columnIndex] ?? [];
-                    const topPadding = Math.max(TABLEAU_ROWS, ...state.tableau.map((entry) => entry.length)) - column.length;
+                    const rowCount = Math.max(TABLEAU_ROWS, ...state.tableau.map((entry) => entry.length));
+                    const topPadding = rowCount - column.length;
                     return (
                       <div
                         key={`tableau-column-${columnIndex}`}
@@ -1805,6 +1809,8 @@ const selectBiome = (biomeId: string) => {
                         ) : null}
                         {column.map((card, cardIndex) => {
                           const stackIndex = topPadding + cardIndex;
+                          // Rows behind the front row sit farther from the tilted camera.
+                          const depth = rowCount - 1 - stackIndex;
                           const isTopCard = cardIndex === column.length - 1;
                           const targetIndexes = adjacentFoundationIndexes(card, state);
                           const encounterReady = isTopCard && state.scene === 'exploration' && Boolean(card.encounter);
@@ -1863,6 +1869,8 @@ const selectBiome = (biomeId: string) => {
                                 top: 0,
                                 transform: `translateY(calc(var(--classic-stack-step) * ${stackIndex}))`,
                                 zIndex: stackIndex + 1,
+                                // Depth of field: the farther back the row, the softer and dimmer it reads.
+                                filter: cameraTilted && depth > 0 ? `blur(${Math.min(1.6, depth * 0.45).toFixed(2)}px) brightness(${(1 - Math.min(0.3, depth * 0.07)).toFixed(2)})` : undefined,
                               }}
                             />
                           );
@@ -1871,6 +1879,7 @@ const selectBiome = (biomeId: string) => {
                     );
                   })}
                 </Tableau>
+                </div>
                 </TableauCardArea>
                 <div className="proto-tableau-actions"><button type="button" disabled={Boolean(cardTransport) || state.scene !== 'exploration' || !state.worldActors.some(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} onClick={leaveTableau}>Leave Tableau</button></div>
                 <TableauSolveControls disabled={!state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} />
@@ -2197,6 +2206,8 @@ const selectBiome = (biomeId: string) => {
                 questTexts={questInstructions}
                 questClaims={state.questClaims}
                 onMoveQuest={(index, position, tilt) => setState(previous => ({ ...previous, questTableCards: previous.questTableCards.map(card => card.questIndex === index ? { ...card, position, tilt, tableState: true, flightFrom: undefined } : card) }))}
+                tilted={cameraTilted}
+                onTiltedChange={setCameraTilted}
                 onRedeemQuest={(index) => { if (index === TUTORIAL_QUEST_INDEX) clearTutorialCard(); else if (index === state.questClaims) redeemQuest(); }}
                 lightSources={tableLights}
                 timeOfDay={tableHours}

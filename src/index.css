@@ -1725,6 +1725,12 @@ html.drag-perf-mode .target-swirl-sparkles {
 .quest-field { font-family: 'Classic Pixel', monospace; }
 
 .proto-tableau-card-area { width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; place-items: center; }
+/* Battle camera: with the camera tilted, the tableau leans back from its front
+   row like a field seen from behind the player; back rows shrink toward the
+   horizon and soften (per-card blur set inline). */
+.proto-tableau-stage { transform-origin: 50% 100%; transition: transform 0.35s ease; }
+.proto-tableau-stage--tilted { transform: perspective(calc(var(--classic-stack-height) * 2.6)) rotateX(30deg); }
+@media (prefers-reduced-motion: reduce) { .proto-tableau-stage { transition: none; } }
 .proto-game-root .proto-solve-controls,
 .proto-game-root .proto-solve-controls button { font-size: 16px; }
 

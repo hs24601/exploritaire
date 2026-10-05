@@ -146,7 +146,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     const el = contentRef.current;
     if (!el) return;
     const scale = state.scale * baseScaleRef.current;
-    const transform = `translate3d(${state.x}px, ${state.y}px, 0) scale(${scale})`;
+    // scale3d so pieces standing up out of a tilted plane zoom with it instead of keeping their height.
+    const transform = `translate3d(${state.x}px, ${state.y}px, 0) scale3d(${scale}, ${scale}, ${scale})`;
     el.style.transform = transform;
     const container = containerRef.current;
     if (container) {

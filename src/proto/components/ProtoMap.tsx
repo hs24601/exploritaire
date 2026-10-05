@@ -108,6 +108,9 @@ type ProtoMapProps = {
   questTexts?: string[];
   questClaims?: number;
   onMoveQuest?: (index:number, position:{x:number;y:number}, tilt:number)=>void;
+  /** Camera tilt, shared with the tableau field; the map's Tilt button toggles it. */
+  tilted?: boolean;
+  onTiltedChange?: (tilted: boolean) => void;
   onRedeemQuest?: (index: number) => void;
   onInspectActor?: (actorId: string, anchor: HTMLElement) => void;
 };
@@ -141,9 +144,10 @@ export const ProtoMap = ({
   questClaims = 0,
   onRedeemQuest,
   onMoveQuest,
+  tilted = false,
+  onTiltedChange,
 }: ProtoMapProps) => {
   // Pop-up-book camera: the table tilts back and pieces stand up as cardboard standees.
-  const [tilted, setTilted] = useState(false);
   // Sprites that failed to load fall back to the cardboard token.
   const [failedSprites, setFailedSprites] = useState<string[]>([]);
   const [viewportHeight, setViewportHeight] = useState(720);
@@ -571,9 +575,10 @@ export const ProtoMap = ({
 
   // Tilted, pieces stand upright on their table point like cardboard standees.
   const standee = (size?: { width: number; height: number }): React.CSSProperties | null => tilt ? {
-    transform: 'translate(-50%,-100%)',
+    // Rotate about the foot first, then move the foot onto the table point, so
+    // the base stays planted at any zoom.
+    transform: 'translate(-50%,-100%) rotateX(calc(-1 * var(--table-tilt)))',
     transformOrigin: '50% 100%',
-    rotate: 'x calc(-1 * var(--table-tilt))',
     // A die-cut cardboard edge, shaded toward its base.
     ...(size ? { width: size.width, height: size.height, borderRadius: `${size.width / 2}px ${size.width / 2}px 6px 6px`, border: '3px solid #efe4cc', boxShadow: 'inset 0 -12px 16px #0007' } : {}),
   } : null;
@@ -609,7 +614,7 @@ export const ProtoMap = ({
         >
           {questOpen ? 'Quest −' : 'Quest +'}
         </button>
-        <button type="button" className="table-grid-center-button" aria-pressed={tilted} aria-label={tilted ? 'Flat camera view' : 'Tilt camera view'} onClick={() => setTilted(value => !value)}>{tilted ? 'Flat' : 'Tilt'}</button>
+        <button type="button" className="table-grid-center-button" aria-pressed={tilted} aria-label={tilted ? 'Flat camera view' : 'Tilt camera view'} onClick={() => onTiltedChange?.(!tilted)}>{tilted ? 'Flat' : 'Tilt'}</button>
         <button type="button" className="table-grid-center-button" onClick={()=>camera.setCameraState(previous=>({...previous,x:-TRUE_CENTER.world.x*previous.scale,y:-TRUE_CENTER.world.y*previous.scale}))}>True Center</button>
         <button
           type="button"

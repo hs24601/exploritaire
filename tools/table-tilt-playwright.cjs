@@ -9,7 +9,7 @@ const TOOLBAR={parts:'.proto-map-toolbar button'};
     const toggle=p.getByRole('button',{name:'Tilt camera view'});await toggle.click();await p.waitForTimeout(300);
     const stage=p.locator('.proto-table-stage');assert.match(await stage.evaluate(el=>getComputedStyle(el).transform),/matrix3d/,`${w}x${h} table plane tilts`);
     (await findLayoutDefects(p,'.proto-map-toolbar',TOOLBAR)).forEach(d=>problems.push(`${w}x${h} toolbar: ${d}`));
-    const actor=p.locator('[data-board-piece="actor"]');const box=await actor.boundingBox();assert.match(await actor.evaluate(el=>getComputedStyle(el).rotate),/^x /,`${w}x${h} Hero stands up`);
+    const actor=p.locator('[data-board-piece="actor"]');const box=await actor.boundingBox();assert.match(await actor.evaluate(el=>getComputedStyle(el).transform),/matrix3d/,`${w}x${h} Hero stands up`);
     // Drop Hero two cells right of where it stands; it must arrive where the pointer said.
     const view=await p.locator('.proto-map-viewport').boundingBox();const from={x:box.x+box.width/2,y:box.y+box.height*0.6};
     const to={x:Math.min(view.x+view.width-40,from.x+view.width*0.22),y:Math.min(view.y+view.height-40,from.y+view.height*0.12)};
@@ -20,6 +20,12 @@ const TOOLBAR={parts:'.proto-map-toolbar button'};
     // The base sits under the standee's feet.
     const base=await p.locator('.proto-standee-base').first().boundingBox(),hero=await actor.boundingBox();
     assert.ok(Math.abs(base.x+base.width/2-(hero.x+hero.width/2))<hero.width*0.15&&Math.abs(base.y+base.height/2-(hero.y+hero.height))<12,`${w}x${h} standee stands on its base`);
+    // Zooming out and back in keeps every standee planted on its base (it used to float when zoomed out).
+    const view2=await p.locator('.proto-map-viewport').boundingBox();await p.mouse.move(view2.x+view2.width/2,view2.y+view2.height/2);
+    for(const [dir,steps] of [[1,6],[-1,10]]){for(let i=0;i<steps;i++){await p.mouse.wheel(0,300*dir);await p.waitForTimeout(60);}await p.waitForTimeout(700);
+      const b2=await p.locator('.proto-standee-base').first().boundingBox(),h2=await actor.boundingBox();
+      if(Math.abs(b2.y+b2.height/2-(h2.y+h2.height))>3)problems.push(`${w}x${h} zoom ${dir>0?'out':'in'}: Hero's feet are ${(b2.y+b2.height/2-(h2.y+h2.height)).toFixed(1)}px off its base`);}
+    for(let i=0;i<4;i++){await p.mouse.wheel(0,300);await p.waitForTimeout(60);}await p.waitForTimeout(700);
     // Tapping the visible tile still selects it through the tilt.
     const tile=p.locator('[data-biome-id="woods-alpha"]');const t=await tile.boundingBox();await p.mouse.click(t.x+t.width/2,t.y+4);
     if(w>=900)await p.locator('.proto-tableau-field:not(.hidden)').first().waitFor({timeout:3000}).catch(()=>problems.push(`${w}x${h}: tapping the tilted tile did not open its tableau`));
