@@ -2238,3 +2238,56 @@ html.drag-perf-mode .target-swirl-sparkles {
 .table-quest-card--tutorial .quest-card__text { display: block; flex-shrink: 0; overflow: visible; -webkit-line-clamp: none; font-size: 16px; line-height: 1.15; color: #e8f4ee; overflow-wrap: anywhere; }
 /* No center emblem behind the face-up card's text. */
 .quest-tray .quest-card:not(.quest-card--complete) { background-image: repeating-linear-gradient(45deg, #ffffff08 0 3px, transparent 3px 9px), linear-gradient(145deg, #5a2f45, #241321); }
+
+/* ===== Header row and pull tabs ========================================
+   The stow control is a stitched leather pull strap with brass rivets, the
+   kind of tab that lifts an insert out of a game box. On the quest tray it
+   shares the top row with the completed-quest counter. */
+@media (min-width: 901px) {
+  .quest-tray .quest-tray__controls { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+  .quest-tray .quest-discard-counter { justify-content: flex-start; }
+}
+.proto-game-root .quest-tray .quest-field__header .quest-tray__toggle,
+.proto-game-root .supply-tray .supply-tray__toggle {
+  position: relative;
+  order: 0;
+  flex: none;
+  width: 52px;
+  height: 30px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px 6px 12px 12px;
+  color: transparent;
+  background:
+    radial-gradient(circle at 9px 50%, #f4dc9a 0 2px, #8a6526 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 9px) 50%, #f4dc9a 0 2px, #8a6526 2.5px 3.5px, transparent 4px),
+    repeating-linear-gradient(90deg, #ffffff06 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #a3402e, #7a2a1d 55%, #561a12);
+  box-shadow: inset 0 1px 0 #ffffff40, inset 0 -2px 0 #0005, 0 3px 0 #1d0f07, 0 5px 6px #0007;
+}
+/* Stitching around the strap. */
+.proto-game-root .quest-tray .quest-tray__toggle::before,
+.proto-game-root .supply-tray .supply-tray__toggle::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1.5px dashed #f0c79a99;
+  border-radius: 4px 4px 9px 9px;
+  pointer-events: none;
+}
+/* Finger grip: three raised ridges between the rivets. */
+.pull-tab__grip { width: 14px; height: 14px; background: repeating-linear-gradient(90deg, #2b0d08 0 2px, #c86a52 2px 3px, transparent 3px 5px); border-radius: 2px; opacity: 0.9; }
+.proto-game-root .quest-tray .quest-tray__toggle:hover,
+.proto-game-root .supply-tray .supply-tray__toggle:hover { filter: brightness(1.12); }
+.proto-game-root .quest-tray .quest-tray__toggle:active,
+.proto-game-root .supply-tray .supply-tray__toggle:active { transform: translateY(2px); box-shadow: inset 0 1px 0 #ffffff40, 0 1px 0 #1d0f07; }
+.proto-game-root .supply-tray .supply-tray__header { justify-content: flex-start; }
+/* Locked slots keep their fixed card-shaped size under the face-up card. */
+.quest-tray .quest-foundation--disabled { width: 76px; height: calc(76px * 88 / 63); display: grid; place-items: center; }
+.quest-tray .quest-foundation--disabled::after { display: block; }
+.quest-tray .quest-foundation--disabled > span:first-child { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.quest-tray .quest-foundation--disabled > span:nth-child(2) { font-size: 20px; }

@@ -58,7 +58,7 @@ export function SettlementSupplyTray({ items, open = true, onPlace, onClose }: {
     data-camera-ignore="true" onPointerDown={event => event.stopPropagation()}>
     <header className="supply-tray__header">
       <h2 className="supply-tray__title">Supplies</h2>
-      {onClose && <button type="button" className="supply-tray__toggle" aria-label="Stow tray" aria-expanded={open} title="Stow tray" onClick={() => { setSelectedId(null); onClose(); }}>◀</button>}
+      {onClose && <button type="button" className="supply-tray__toggle" aria-label="Stow tray" aria-expanded={open} title="Stow tray" onClick={() => { setSelectedId(null); onClose(); }}><span className="pull-tab__grip" aria-hidden="true" /></button>}
     </header>
     <ul className="supply-tray__well">
       {items.map(item => <li key={item.id}>

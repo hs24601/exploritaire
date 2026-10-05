@@ -45,10 +45,10 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
     data-total={counts.total} data-complete={counts.complete} data-incomplete={counts.incomplete} data-redeemed={counts.redeemed} data-accomplished={counts.accomplished}>
     <header className="quest-field__header">
       <div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div>
-      <span className="quest-tray__progress" title={`${counts.complete} ready, ${counts.incomplete} incomplete`} aria-label={`${counts.redeemed} of ${counts.total} redeemed`}>{counts.redeemed}/{counts.total}</span>
+      <span className="quest-tray__progress quest-tray__sr" title={`${counts.complete} ready, ${counts.incomplete} incomplete`} aria-label={`${counts.redeemed} of ${counts.total} redeemed`}>{counts.redeemed}/{counts.total}</span>
       <div className="quest-tray__controls">
-        <div className="quest-discard-counter" data-quest-discard="true" data-count={counts.redeemed} aria-label={`Quest discard pile, ${counts.redeemed} cards`}><span className="quest-discard-counter__icon" data-quest-discard-icon="true" aria-hidden="true">✓</span><span><span className="quest-tray__sr">Discard </span><strong>{counts.redeemed}</strong></span></div>
-        <button type="button" className="quest-tray__toggle" aria-label="Stow tray" title="Stow tray" aria-expanded={open} onClick={() => { setNoteQuestId(null); onClose?.(); }}>▶</button>
+        <div className="quest-discard-counter" data-quest-discard="true" data-count={counts.redeemed} aria-label={`Quest discard pile, ${counts.redeemed} cards`}><span className="quest-discard-counter__icon" data-quest-discard-icon="true" aria-hidden="true">✓</span><span title={`${counts.redeemed} of ${counts.total} quests completed`}><span className="quest-tray__sr">Discard </span><strong>{counts.redeemed}</strong><span aria-hidden="true">/{counts.total}</span></span></div>
+        <button type="button" className="quest-tray__toggle" aria-label="Stow tray" title="Stow tray" aria-expanded={open} onClick={() => { setNoteQuestId(null); onClose?.(); }}><span className="pull-tab__grip" aria-hidden="true" /></button>
       </div>
     </header>
     <div className="quest-tray__well">
