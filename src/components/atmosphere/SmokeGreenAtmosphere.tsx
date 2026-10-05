@@ -113,7 +113,7 @@ export const SmokeGreenAtmosphere = memo(function SmokeGreenAtmosphere({ classNa
   return (
     <div
       ref={rootRef}
-      className={className}
+      className={`w-full h-full ${className}`}
       style={{
         background:
           'radial-gradient(circle at 50% 50%, #123228 0%, #0b201a 35%, #060f0c 65%, #030807 100%)',

@@ -21,7 +21,7 @@ export const DedicatedEnemyTableau = memo(function DedicatedEnemyTableau({
   className,
   startIndex = 0,
 }: DedicatedEnemyTableauProps) {
-  const tableGlobalScale = useCardScalePreset('table');
+  const tableGlobalScale = useCardScalePreset('board');
   const cardSize = useMemo(() => ({
     width: Math.round(CARD_SIZE.width * cardScale * tableGlobalScale),
     height: Math.round(CARD_SIZE.height * cardScale * tableGlobalScale),

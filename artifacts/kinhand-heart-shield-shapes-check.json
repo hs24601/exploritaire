@@ -1,0 +1,18 @@
+{
+  "heroTexts": [
+    "101Hero60\n        @keyframes ap-bar-spend-flash {\n          0% { filter: brightness(1); opacity: 1; }\n          50% { filter: brightness(2.2); opacity: 0.35; }\n          100% { filter: brightness(1); opacity: 1; }\n        }",
+    "101",
+    "101",
+    "101",
+    "10",
+    "1",
+    "1",
+    "Hero",
+    "Hero",
+    "60",
+    "6",
+    "0"
+  ],
+  "hasHpTen": true,
+  "hasArmorOne": true
+}

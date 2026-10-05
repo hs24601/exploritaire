@@ -1,0 +1,6 @@
+{
+  "playerBoard": true,
+  "enemyBoard": true,
+  "boardVitals": 0,
+  "actorVitals": 5
+}

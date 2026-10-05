@@ -1,0 +1,23 @@
+{
+  "buildOk": false,
+  "results": [
+    {
+      "viewport": {
+        "width": 1600,
+        "height": 1200
+      },
+      "screenshotPath": "C:\\dev\\Exploritaire\\artifacts\\megahand-ux-pass.png",
+      "overlaps": [],
+      "offscreen": []
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 960
+      },
+      "screenshotPath": "C:\\dev\\Exploritaire\\artifacts\\megahand-ux-pass-1280.png",
+      "overlaps": [],
+      "offscreen": []
+    }
+  ]
+}

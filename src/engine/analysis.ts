@@ -82,7 +82,6 @@ export function analyzeOptimalSequence(request: AnalysisRequest): AnalysisResult
 
       for (let fIdx = 0; fIdx < tops.length; fIdx += 1) {
         const foundationTop = tops[fIdx];
-        if (!foundationTop) continue;
         if (!canPlay(topCard, foundationTop, activeEffects)) continue;
 
         const nextLengths = lengths.slice();

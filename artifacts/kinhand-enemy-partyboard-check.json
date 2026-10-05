@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "enemyLabel": "ENEMY",
+  "playerLabel": "PLAYER",
+  "lesserShadeInstances": 1,
+  "cardInsideEnemy": true,
+  "parity": {
+    "topDelta": 0,
+    "bottomDelta": 0,
+    "heightDelta": 0
+  }
+}

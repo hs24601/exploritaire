@@ -1,5 +1,8 @@
 import type { OrimDefinition } from './types';
 
+// Legacy note: this file belongs to the older engine ORIM schema and is not the
+// source of truth for the golf prototype's signature-ability ORIM progression.
+
 /**
  * Orim Definitions - Clean, minimal card modifications
  * Each orim has: id, name, description, elements

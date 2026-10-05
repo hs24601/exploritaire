@@ -1,0 +1,18 @@
+{
+  "endRect": {
+    "x": 744.421875,
+    "y": 454,
+    "width": 111.15625,
+    "height": 34.5,
+    "top": 454,
+    "right": 855.578125,
+    "bottom": 488.5,
+    "left": 744.421875
+  },
+  "primeCenterX": 800,
+  "fourthCenterX": 800,
+  "endCenterX": 800,
+  "abovePrimes": true,
+  "deltaToPrimeCenter": 0,
+  "deltaToFourthColumn": 0
+}

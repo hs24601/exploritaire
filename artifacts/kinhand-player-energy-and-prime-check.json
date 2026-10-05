@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "before": {
+    "playerMeterCount": 1,
+    "playerMeterRect": {
+      "x": 327.43695068359375,
+      "y": 939.9729614257812,
+      "width": 342.810791015625,
+      "height": 8.16217041015625,
+      "top": 939.9729614257812,
+      "right": 670.2477416992188,
+      "bottom": 948.1351318359375,
+      "left": 327.43695068359375
+    },
+    "primePresent": true
+  },
+  "afterMove": {
+    "jetPrimePresent": true,
+    "benchJetCount": 1
+  }
+}

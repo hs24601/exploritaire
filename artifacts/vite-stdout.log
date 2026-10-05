@@ -1,0 +1,137 @@
+
+> exploritaire@0.1.0 dev
+> npm run dev:doctor:fix && vite
+
+
+> exploritaire@0.1.0 dev:doctor:fix
+> node tools/dev-doctor.mjs --fix
+
+[dev:doctor] No listener currently bound to port 5178.
+[dev:doctor] OK
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m172[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5178[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.50.131:[1m5178[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m8:03:43 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/combat/AbilityApBar.tsx, /src/index.css[22m
+[2m8:05:38 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:06:08 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:06:22 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:06:53 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:07:39 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:08:18 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css, /src/components/combat/CombatSandbox.tsx[22m
+[2m8:08:56 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m8:09:25 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/combat/AbilityApBar.tsx, /src/index.css[22m
+[2m8:09:25 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m8:18:26 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:23:48 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:24:16 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/combat/AbilityApBar.tsx, /src/index.css[22m
+[2m8:24:31 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/golf/GolfGame.tsx[22m
+[2m8:25:51 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m8:25:59 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m8:26:11 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m8:26:20 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m8:27:06 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m8:27:21 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:27:28 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:27:43 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:28:00 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:28:57 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/golf/BanksThinSlice.tsx[22m
+[2m8:29:11 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/golf/GolfGame.tsx[22m
+[2m8:30:41 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:31:01 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m8:31:01 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:31:46 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:32:03 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:32:06 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:32:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:32:16 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:32:23 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:32:41 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:32:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/golf/BanksThinSlice.tsx[22m
+[2m8:34:47 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/golf/BanksThinSlice.tsx[22m
+[2m8:36:41 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:48:13 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:48:36 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:54:02 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:55:51 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:57:11 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m8:59:37 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:06:28 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:06:42 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:09:18 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:09:45 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:11:34 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:13:37 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:14:56 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:18:03 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:30:52 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Card.tsx, /src/index.css[22m
+[2m5:08:01 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:38:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/golf/GolfGame.tsx[22m
+[2m6:39:19 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css, /src/components/Card.tsx, /src/components/DragPreview.tsx[22m
+[2m6:40:22 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:02:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:03:19 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:03:54 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:04:18 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:06:06 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m9:07:02 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:38:08 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:38:41 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:39:05 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:39:29 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:40:01 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:40:31 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:40:58 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:41:36 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:42:07 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:42:29 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:43:13 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:43:40 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:44:05 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:44:44 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:45:15 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:46:44 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:47:11 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m6:47:34 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m10:55:12 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m10:56:15 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m10:56:35 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m10:57:00 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m10:57:24 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m10:57:51 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m10:58:20 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m10:58:47 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:27:25 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/golf/GolfGame.tsx[22m
+[2m11:44:58 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/golf/GolfGame.tsx[22m
+[2m11:45:19 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:45:47 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:46:29 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:47:04 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:47:31 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:47:54 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:48:24 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:49:01 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:49:41 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:50:03 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:50:30 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:51:04 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m11:51:30 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m12:02:05 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m12:02:19 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m12:02:41 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m2:15:53 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m2:17:47 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m2:18:04 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m2:29:25 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m2:29:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m2:29:48 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m2:30:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m2:30:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m3:14:34 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m3:14:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m3:14:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m3:59:02 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m4:02:09 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m
+[2m4:02:24 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/GolfGame.tsx, /src/index.css[22m

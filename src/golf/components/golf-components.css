@@ -1,0 +1,11 @@
+/* Shared presentation primitives for every golf-style card/tableau. */
+.playing-card {
+  box-sizing: border-box;
+  aspect-ratio: 56 / 74;
+  min-width: 0;
+}
+
+.tableau {
+  min-width: 0;
+  min-height: 0;
+}

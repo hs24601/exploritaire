@@ -1,4 +1,6 @@
 import type { Actor, Element, GameState, OrimDefinition, TriggerGroup, TriggerNode, TriggerOperand, TriggerOperator, TriggerTiming, TriggerField } from './types';
+import { getActiveCombatPartyId, getPartyAssignments } from './combat/stateAliases';
+import { getCombatTurnNumber } from './combat/sessionBridge';
 
 const OPERATORS: Record<TriggerOperator, (left: number, right: number) => boolean> = {
   eq: (l, r) => l === r,
@@ -19,7 +21,7 @@ const parseAffinityElement = (field: TriggerField): Element | null => {
 const getActorById = (state: GameState, actorId: string): Actor | null => {
   const available = state.availableActors.find((actor) => actor.id === actorId);
   if (available) return available;
-  for (const party of Object.values(state.tileParties)) {
+  for (const party of Object.values(getPartyAssignments(state))) {
     const match = party.find((actor) => actor.id === actorId);
     if (match) return match;
   }
@@ -57,18 +59,16 @@ const getActorAffinity = (state: GameState, actorId: string): Record<Element, nu
 };
 
 const getActorCombo = (state: GameState, actorId: string): number => {
-  if (!state.activeSessionTileId || !state.foundationCombos) return 0;
-  const party = state.tileParties[state.activeSessionTileId] ?? [];
+  const activePartyId = getActiveCombatPartyId(state);
+  if (!activePartyId || !state.foundationCombos) return 0;
+  const party = getPartyAssignments(state)[activePartyId] ?? [];
   const index = party.findIndex((actor) => actor.id === actorId);
   if (index === -1) return 0;
   return state.foundationCombos[index] ?? 0;
 };
 
 const getBoutTurnCount = (state: GameState): number => {
-  if (state.phase === 'biome' && state.randomBiomeTurnNumber !== undefined) {
-    return state.randomBiomeTurnNumber ?? 0;
-  }
-  return state.turnCount ?? 0;
+  return getCombatTurnNumber(state);
 };
 
 const resolveOperand = (state: GameState, actorId: string, operand: TriggerOperand): number => {

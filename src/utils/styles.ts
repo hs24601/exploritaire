@@ -81,7 +81,7 @@ export const NEON_ELEMENT_COLORS: Record<Element, string> = {
 export const getNeonElementColor = (element?: Element) => NEON_ELEMENT_COLORS[element ?? 'N'] ?? NEON_COLORS.neutral;
 
 /**
- * Universal border width for game objects (cards, tiles, tokens, slots, previews).
+ * Universal border width for game objects (cards, tokens, slots, previews).
  * Returns a pixel value of 3 so borders are prominently visible and scale
  * naturally with the camera transform.
  */

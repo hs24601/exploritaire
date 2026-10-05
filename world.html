@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exploritaire - World Engine</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
+    #world-canvas { display: block; width: 100vw; height: 100vh; }
+
+    /* HUD */
+    #hud {
+      position: fixed; top: 16px; left: 16px; z-index: 10;
+      color: #fff; font-size: 12px; opacity: 0.7;
+      pointer-events: none;
+    }
+
+    /* Nature Manager UI */
+    #natureManager {
+      position: fixed; right: 0; top: 0; bottom: 0; width: 280px;
+      background: rgba(10,10,10,0.92); color: #fff;
+      z-index: 20; overflow-y: auto; padding: 16px;
+      transform: translateX(100%); transition: transform 0.3s ease;
+      font-size: 12px;
+    }
+    #natureManager.open { transform: translateX(0); }
+    #natureManager h2 { letter-spacing: 4px; font-size: 11px; margin-bottom: 16px; color: #aaa; }
+    #natureManager h4 { font-size: 10px; letter-spacing: 2px; color: #888; margin: 12px 0 6px; }
+    .nm-section { border-top: 1px solid #222; padding-top: 10px; margin-top: 10px; }
+    .nm-row { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; }
+    .nm-row p { font-size: 11px; color: #aaa; flex: 1; }
+    .nm-row input[type=range] { flex: 1.5; margin-left: 8px; accent-color: #fff; }
+    .nm-colors { display: flex; gap: 4px; }
+    .nm-colors input[type=color] { width: 28px; height: 22px; border: none; padding: 0; cursor: pointer; }
+    .nm-buttons { display: flex; gap: 8px; margin-top: 16px; }
+    .nm-btn {
+      flex: 1; padding: 8px; background: #222; border: 1px solid #444;
+      color: #fff; cursor: pointer; font-size: 11px; letter-spacing: 1px;
+    }
+    .nm-btn:hover { background: #333; }
+
+    /* Toggle button */
+    #nmToggle {
+      position: fixed; right: 16px; top: 16px; z-index: 21;
+      background: rgba(10,10,10,0.8); border: 1px solid #444;
+      color: #fff; padding: 8px 14px; cursor: pointer;
+      font-size: 11px; letter-spacing: 2px;
+    }
+    #nmToggle:hover { background: rgba(40,40,40,0.9); }
+
+    /* Controls help */
+    #controls {
+      position: fixed; bottom: 16px; left: 16px; z-index: 10;
+      color: rgba(255,255,255,0.5); font-size: 11px; pointer-events: none;
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="world-canvas"></canvas>
+
+  <div id="hud">
+    <div id="hud-time">Time: 12:00</div>
+    <div id="hud-pos">Position: 0, 0, 0</div>
+    <div id="hud-fps">FPS: 0</div>
+  </div>
+
+  <button id="nmToggle">NATURE MGR</button>
+
+  <div id="natureManager">
+    <h2>NATURE MANAGER</h2>
+
+    <!-- TIME -->
+    <div class="nm-section">
+      <h4>TIME</h4>
+      <div class="nm-row">
+        <p>Time of Day</p>
+        <input type="range" id="nm-time" min="0" max="1" step="0.001" value="0.33">
+      </div>
+      <div class="nm-row">
+        <p>Speed</p>
+        <input type="range" id="nm-timeSpeed" min="0" max="0.1" step="0.001" value="0.01">
+      </div>
+    </div>
+
+    <!-- SKY -->
+    <div class="nm-section">
+      <h4>STYLIZED SKY</h4>
+      <div class="nm-row"><p>Dawn</p><div class="nm-colors" id="sky-dawn"></div></div>
+      <div class="nm-row"><p>Noon</p><div class="nm-colors" id="sky-noon"></div></div>
+      <div class="nm-row"><p>Dusk</p><div class="nm-colors" id="sky-dusk"></div></div>
+      <div class="nm-row"><p>Night</p><div class="nm-colors" id="sky-night"></div></div>
+      <div class="nm-row"><p>Edge 1</p><input type="range" id="nm-skyStep1" min="0" max="1" step="0.001" value="0.1"></div>
+      <div class="nm-row"><p>Edge 2</p><input type="range" id="nm-skyStep2" min="0" max="1" step="0.001" value="0.6"></div>
+      <div class="nm-row"><p>Softness 1</p><input type="range" id="nm-skySharp1" min="0" max="0.5" step="0.01" value="0.05"></div>
+      <div class="nm-row"><p>Softness 2</p><input type="range" id="nm-skySharp2" min="0" max="0.5" step="0.01" value="0.05"></div>
+    </div>
+
+    <!-- FOG -->
+    <div class="nm-section">
+      <h4>GRADIENT FOG</h4>
+      <div class="nm-row"><p>Density</p><input type="range" id="nm-fogDensity" min="0" max="0.005" step="0.0001" value="0.001"></div>
+      <div class="nm-row"><p>Height</p><input type="range" id="nm-fogHeight" min="0.005" max="2" step="0.001" value="0.05"></div>
+    </div>
+
+    <!-- TERRAIN -->
+    <div class="nm-section">
+      <h4>TERRAIN</h4>
+      <div class="nm-row"><p>Grass</p><div class="nm-colors" id="terrain-grass"></div></div>
+      <div class="nm-row"><p>Beach</p><div class="nm-colors" id="terrain-beach"></div></div>
+      <div class="nm-row"><p>Rock</p><div class="nm-colors" id="terrain-rock"></div></div>
+      <div class="nm-row"><p>Noise Scale</p><input type="range" id="nm-noiseScale" min="0" max="10" step="0.1" value="3"></div>
+    </div>
+
+    <!-- WATER -->
+    <div class="nm-section">
+      <h4>STYLIZED WATER</h4>
+      <div class="nm-row"><p>Colors</p><div class="nm-colors" id="water-colors"></div></div>
+      <div class="nm-row"><p>Depth Softness</p><input type="range" id="nm-depthSoftness" min="0" max="50" step="0.1" value="15"></div>
+      <div class="nm-row"><p>Foam Width</p><input type="range" id="nm-foamSoftness" min="0" max="20" step="0.1" value="5"></div>
+      <div class="nm-row"><p>Wave Freq</p><input type="range" id="nm-waveFreq" min="0" max="2" step="0.01" value="0.5"></div>
+      <div class="nm-row"><p>Amplitude</p><input type="range" id="nm-waveAmp" min="0" max="2" step="0.01" value="0.15"></div>
+      <div class="nm-row"><p>Wave Speed</p><input type="range" id="nm-waveSpeed" min="0" max="3" step="0.01" value="0.8"></div>
+    </div>
+
+    <!-- GRASS -->
+    <div class="nm-section">
+      <h4>GRASS</h4>
+      <div class="nm-row"><p>Wind Freq</p><input type="range" id="nm-windFreq" min="0" max="5" step="0.1" value="1.5"></div>
+      <div class="nm-row"><p>Wind Amp</p><input type="range" id="nm-windAmp" min="0" max="1" step="0.01" value="0.2"></div>
+      <div class="nm-row"><p>Wind Speed</p><input type="range" id="nm-windSpeed" min="0" max="3" step="0.01" value="0.8"></div>
+      <div class="nm-row"><p>Base</p><div class="nm-colors" id="grass-colors"></div></div>
+    </div>
+
+    <div class="nm-buttons">
+      <button class="nm-btn" id="nm-save">SAVE</button>
+      <button class="nm-btn" id="nm-reset">RESET</button>
+    </div>
+  </div>
+
+  <div id="controls">
+    WASD / Arrows — Move &nbsp;|&nbsp; Shift — Sprint &nbsp;|&nbsp; Space — Jump<br>
+    Mouse drag — Rotate camera &nbsp;|&nbsp; Scroll — Zoom
+  </div>
+
+  <script type="module" src="/src/world/main.ts"></script>
+</body>
+</html>

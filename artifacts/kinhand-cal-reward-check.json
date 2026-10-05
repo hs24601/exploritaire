@@ -1,0 +1,13 @@
+{
+  "rewardModalVisible": false,
+  "rewardHasPow0": false,
+  "rewardHasDuplicateCal": true,
+  "rewardShowsGolfA": true,
+  "heroTargetVisible": true,
+  "mochiTargetVisible": true,
+  "previewVisible": false,
+  "segment3ShowsTackle": true,
+  "segment3ShowsTouchOfFlame": true,
+  "segment3ShowsFireDamage": true,
+  "previewWithinViewport": true
+}
