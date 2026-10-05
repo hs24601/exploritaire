@@ -12,6 +12,9 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
     assert.match(info.src,/assets\/actors\/hero\.png$/);assert.equal(info.alt,'Hero portrait');assert.ok(info.natural>0,`${w}x${h} sprite loaded`);assert.equal(info.rendering,'pixelated');
     const art=await p.locator('.details-card__art').boundingBox(),box=await img.boundingBox();
     assert.ok(box.x>=art.x-.5&&box.y>=art.y-.5&&box.x+box.width<=art.x+art.width+.5&&box.y+box.height<=art.y+art.height+.5,`${w}x${h} sprite stays inside the art frame`);
+    // Overflow clips at the padding edge: a clamped descriptor must have no room below its last line for the next one to peek into.
+    const desc=await p.locator('.details-card__descriptor').evaluate(el=>({inner:el.clientHeight,lines:parseFloat(getComputedStyle(el).lineHeight)*parseInt(getComputedStyle(el).webkitLineClamp||'0',10)}));
+    if(desc.lines>0)assert.ok(desc.inner<=desc.lines+0.5,`${w}x${h} descriptor leaves ${(desc.inner-desc.lines).toFixed(1)}px for a clipped line to peek`);
     (await findLayoutDefects(p,'.details-card-viewer',{parts:'.details-card__header, .details-card__art, .details-card__descriptor, .details-card__trays, .details-card__close'})).forEach(d=>problems.push(`${w}x${h}: ${d}`));
     if(process.env.SHOTS)await viewer.screenshot({path:`${process.env.SHOTS}/hero-card-${w}x${h}.png`});
     await p.close();
