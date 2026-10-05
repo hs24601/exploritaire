@@ -49,11 +49,22 @@ import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, apply
 
 
 
+/** Details-card text for a supply: its category and the recipes that consume it. */
+const supplyDetails = (id: WorldItemId) => {
+  const item = WORLD_ITEMS[id];
+  const lowQualityFood = item.food && item.quality === 0;
+  return {
+    kind: item.kind === 'resource' ? `Gathered resource${item.food ? ' · food' : ''}` : item.kind,
+    uses: CRAFT_RECIPES.flatMap(recipe => recipe.inputs?.[id] ? [`${recipe.label}: ${recipe.inputs[id]} needed`]
+      : recipe.lowQualityFood && lowQualityFood ? [`${recipe.label}: counts toward ${recipe.lowQualityFood} food`] : []),
+  };
+};
+
 /** Desktop columns, left to right: supplies, tableau, table, quests. Stowed trays
  * and the hidden tableau drop out so no empty track keeps its gap. */
 const desktopLayoutTracks = (tableau: boolean, supplies: boolean, quests: boolean) => {
   const tracks = [
-    supplies && ['supply', 'var(--side-tray-width)'],
+    supplies && ['supply', 'var(--supply-tray-width)'],
     tableau && ['tableau', 'minmax(0, 1fr)'],
     ['map', 'minmax(0, 1.7fr)'],
     quests && ['quest', 'var(--side-tray-width)'],
@@ -317,7 +328,7 @@ const selectBiome = (biomeId: string) => {
 
   const settledHaul = state.settledHaul;
   const supplyItems = useMemo(() => (Object.keys(settledHaul) as ForestResource[])
-    .map(id => ({ id, label: WORLD_ITEMS[id].label, glyph: WORLD_ITEMS[id].glyph, count: settledHaul[id] })), [settledHaul]);
+    .map(id => ({ id, label: WORLD_ITEMS[id].label, glyph: WORLD_ITEMS[id].glyph, count: settledHaul[id], ...supplyDetails(id) })), [settledHaul]);
 
   const drawSettlementSupply = (resource: ForestResource, count: number) => {
     const id = crypto.randomUUID();

@@ -2046,9 +2046,10 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 
 /* ===== Supplies tray ==================================================
-   Left-side twin of the quest tray: same width, wooden frame and stow tab,
-   holding a felt-lined resource tracker with one compartment per resource. */
-:root { --side-tray-width: clamp(13rem, 15vw, 16.5rem); }
+   Slim left-side twin of the quest tray: same wooden frame and stow behavior,
+   a felt column of resource tokens with brass count tags. Tapping a token
+   opens a parchment details card beside it. */
+:root { --side-tray-width: clamp(13rem, 15vw, 16.5rem); --supply-tray-width: 5.25rem; }
 @media (min-width: 901px) {
   /* Columns come from desktopLayoutTracks so stowed trays leave no empty gap. */
   .proto-game-root .proto-main-layout[style] { grid-template-columns: var(--layout-columns); grid-template-areas: var(--layout-areas); }
@@ -2063,95 +2064,127 @@ html.drag-perf-mode .target-swirl-sparkles {
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   overflow: hidden;
-  padding: 12px 10px;
+  padding: 12px 8px;
   font: 16px/1.15 'Classic Pixel', monospace;
 }
 .proto-game-root .supply-tray { transition: transform 240ms ease, opacity 240ms ease; transform: translateX(0); }
-.proto-game-root .supply-tray[data-open="false"] { position: fixed; top: 140px; bottom: 18px; left: 0; width: var(--side-tray-width); transform: translateX(-110%); opacity: 0; pointer-events: none; visibility: hidden; transition: transform 240ms ease, opacity 240ms ease, visibility 0s 240ms; }
+.proto-game-root .supply-tray[data-open="false"] { position: fixed; top: 140px; bottom: 18px; left: 0; width: var(--supply-tray-width); transform: translateX(-110%); opacity: 0; pointer-events: none; visibility: hidden; transition: transform 240ms ease, opacity 240ms ease, visibility 0s 240ms; }
 @media (prefers-reduced-motion: reduce) { .proto-game-root .supply-tray { transition: none; } }
-.supply-tray__header { display: grid; gap: 6px; }
-.supply-tray .supply-tray__plaque { justify-self: stretch; margin: 0; padding: 4px 10px; font: inherit; font-size: 18px; letter-spacing: 0.08em; line-height: 1.2; }
-.supply-tray__controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #ffe9b8; text-shadow: 0 2px 0 #0008; }
+.supply-tray__header { display: flex; justify-content: center; }
+.supply-tray__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Brass pull tab for stowing. */
 .supply-tray .supply-tray__toggle {
-  flex: none;
+  width: 100%;
   min-height: 32px;
   border: 0;
   border-radius: 999px;
-  padding: 4px 12px;
   color: #2b1a08;
   font: inherit;
+  font-size: 18px;
   background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429);
   box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07;
 }
 .supply-tray .supply-tray__toggle:active { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff7, 0 1px 0 #1d0f07; }
 .supply-tray .supply-tray__toggle:focus-visible { outline: 3px solid #fff3c8; outline-offset: 3px; }
-/* Felt well; the list scrolls once there are more resources than fit. */
+/* Felt well; scrolls once there are more resources than fit. */
 .supply-tray__well {
   min-height: 0;
   margin: 0;
-  padding: 8px;
+  padding: 6px;
   list-style: none;
   display: grid;
   grid-auto-rows: min-content;
   gap: 6px;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--tray-brass-dark) transparent;
+  scrollbar-width: none;
   border-radius: 10px;
   background:
     repeating-radial-gradient(circle at 30% 20%, #ffffff05 0 1px, transparent 1px 3px),
     radial-gradient(ellipse at 50% 0%, #24543f, var(--tray-felt) 55%, var(--tray-felt-dark));
   box-shadow: inset 0 6px 14px #000c, inset 0 -2px 0 #ffffff12, 0 1px 0 #ffffff26;
 }
-/* Each resource sits in a recessed wooden compartment with a brass count tag. */
+/* Each resource is a token in a round recess with a brass count tag. */
 .supply-row {
+  position: relative;
   width: 100%;
+  aspect-ratio: 1;
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 8px 5px 6px;
+  place-items: center;
+  padding: 0;
   border: 0;
-  border-radius: 7px;
-  color: #fbe9c4;
+  border-radius: 50%;
   font: inherit;
-  text-align: left;
-  text-shadow: 0 2px 0 #000a;
-  background: linear-gradient(180deg, #0a1d15, #133325);
+  background: radial-gradient(circle, #0a1d15 55%, #133325);
   box-shadow: inset 0 0 0 2px #2b190c, inset 0 4px 8px #000c, 0 1px 0 #ffffff1c;
   cursor: pointer;
 }
-.supply-row:disabled { cursor: default; }
-.supply-row[data-count="0"] { color: #fbe9c48c; }
-.supply-row[data-count="0"] .supply-row__token { filter: grayscale(0.8); opacity: 0.55; }
-.supply-row:not(:disabled):hover { background: linear-gradient(180deg, #11291e, #1a4130); }
-.supply-row:not(:disabled):active { transform: translateY(1px); }
+.supply-row:hover, .supply-row[aria-expanded="true"] { box-shadow: inset 0 0 0 2px var(--tray-brass), inset 0 4px 8px #000c, 0 0 10px #ffe19a55; }
+.supply-row:active { transform: translateY(1px); }
 .supply-row:focus-visible { outline: 3px solid #fff3c8; outline-offset: 2px; }
+.supply-row[data-count="0"] .supply-row__token { filter: grayscale(0.8); opacity: 0.55; }
 .supply-row__token {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
   background: radial-gradient(circle at 35% 30%, #f6e2b8, #c49a5a 60%, #8a6230);
   box-shadow: inset 0 -2px 0 #0005, 0 2px 0 #1d0f07, 0 3px 3px #0008;
 }
-.supply-row__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .supply-row__count {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
   min-width: 2.2ch;
-  padding: 0 6px;
+  padding: 0 4px;
   border-radius: 3px;
   text-align: center;
-  font-size: 18px;
+  font-size: 16px;
+  line-height: 1.2;
   color: #2b1a08;
   text-shadow: 0 1px 0 #fff5;
   background: linear-gradient(180deg, #f0d48c, var(--tray-brass) 60%, #a8812f);
   box-shadow: inset 0 1px 0 #fff6, 0 2px 0 #1d0f07;
 }
+/* Details: a parchment card pinned beside the tapped token. */
+.supply-details {
+  position: fixed;
+  z-index: 1000;
+  width: min(15rem, calc(100vw - 16px));
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-radius: 6px;
+  color: var(--tray-ink);
+  font: 16px/1.2 'Classic Pixel', monospace;
+  background:
+    radial-gradient(ellipse at 20% 10%, #fff8 0, transparent 45%),
+    radial-gradient(ellipse at 90% 100%, #b8925a55 0, transparent 55%),
+    var(--tray-parchment);
+  box-shadow: inset 0 0 0 2px #c9ad78, inset 0 0 18px #9c7a4455, 0 3px 0 #1d0f07, 0 10px 18px #000a;
+}
+.supply-details header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.supply-details h3 { margin: 0; font-size: 20px; color: #5b1f12; }
+.supply-details header p { margin: 0; color: #6b4a12; }
+.supply-details__close { width: 32px; height: 32px; border: 0; border-radius: 50%; color: var(--tray-ink); font: inherit; font-size: 22px; background: #0000001a; }
+.supply-details__held { margin: 0; }
+.supply-details__held strong { font-size: 20px; }
+.supply-details__uses { margin: 0; padding-left: 18px; list-style: square; }
+.supply-details__place {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: #2b1a08;
+  font: inherit;
+  background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429);
+  box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07;
+}
+.supply-details__place:disabled { opacity: 0.45; filter: grayscale(0.6); }
+.supply-details button:focus-visible { outline: 3px solid #5b1f12; outline-offset: 2px; }
 .supply-tray-restore { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 100; border: 3px solid #ae8d58; border-left: 0; border-radius: 0 8px 8px 0; padding: 12px; background: #241b15; color: #ffe2ae; box-shadow: 4px 5px 0 #0008; font: 16px 'Classic Pixel', monospace; }
 .supply-tray-restore:focus-visible { outline: 3px solid #ffe19a; outline-offset: 3px; }
 @media (max-width: 900px) {
@@ -2161,5 +2194,9 @@ html.drag-perf-mode .target-swirl-sparkles {
   .proto-main-layout[data-mobile-panel="supplies"] .proto-tableau-field,
   .proto-main-layout[data-mobile-panel="supplies"] .proto-quest-sidebar { display: none; }
   .proto-main-layout[data-mobile-panel="supplies"] .proto-main-header > :not(.proto-mobile-nav) { display: none; }
+  /* The phone tab has the full width, so tokens wrap into a grid. */
+  .supply-tray__well { grid-template-columns: repeat(auto-fill, 64px); justify-content: space-evenly; align-content: start; gap: 10px; }
+  .supply-tray .supply-tray__toggle { width: auto; padding: 0 16px; margin-left: auto; }
+  .supply-tray__header { justify-content: flex-end; }
   .supply-tray-restore { display: none; }
 }
