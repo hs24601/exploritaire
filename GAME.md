@@ -107,6 +107,8 @@ These are current implementation defaults for iteration, not permanent game-desi
 
 - A stowed quest tray leaves an always-visible Show quest tray handle at the right viewport edge. Restoring from mobile opens the Quests panel.
 
+- Quest rewards are redeemed only by pressing and holding the card on the table; the tray has no separate hold control. When the first quest card flies to the table, a teaching card ("Clearing quests", outside the quest deck) flies out beside it; holding it 2s clears it without a reward, and it does not return.
+
 - On desktop the quest tray is one quest card wide plus its recess and frame, with the three card-shaped slots stacked vertically. Tapping the active quest card opens its objective text in a closable pinned toast (`PinnedToast`), which stays until closed.
 
 - Settlement supplies live in a slim, stowable tray on the left that mirrors the quest tray: one token and count per resource, no labels. Tapping a resource opens its details (category, held count, recipes that use it, Place 1 on table). Phones show it as a Supplies tab.

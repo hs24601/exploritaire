@@ -12,8 +12,13 @@ export type PlacedQuestCard = {
   flightFrom?: { x: number; y: number; width: number; height: number };
 };
 
-export function TableQuestCard({ placement, title, text, redeemed, onRedeem, timeOfDay, lights, cameraScale, solids, onMove }: {
-  placement: PlacedQuestCard; title: string; text: string; redeemed: boolean;
+/** A teaching card outside the quest deck. It flies out with the first quest and
+ * clears with the same press-and-hold, without a reward. */
+export const TUTORIAL_QUEST_INDEX = -1;
+export const TUTORIAL_QUEST = { title: 'Clearing quests', text: 'Press and hold a finished card for 2s.' };
+
+export function TableQuestCard({ placement, title, text, redeemed, onRedeem, timeOfDay, lights, cameraScale, solids, onMove, staminaReward = 1 }: {
+  placement: PlacedQuestCard; title: string; text: string; redeemed: boolean; staminaReward?: number;
   onRedeem: () => void; timeOfDay: number; lights: TableLight[];
   cameraScale: number; solids: TableSolid[]; onMove: (position: {x:number;y:number}, tilt:number) => void;
 }) {
@@ -21,6 +26,9 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
   const [displayPosition, setDisplayPosition] = useState(placement.position);
   const hold = useRewardHold(onRedeem, !redeemed);
   const [tableState, setTableState] = useState(Boolean(placement.tableState));
+  // The teaching card keeps its arrival size so its instructions stay readable.
+  const tutorial = placement.questIndex === TUTORIAL_QUEST_INDEX;
+  const cardWidth = tableState && !tutorial ? TABLE_CARD_WIDTH : 120;
   const [tilt, setTilt] = useState(placement.tilt ?? 0);
   const drag = useRef<{pointerId:number;x:number;y:number;origin:{x:number;y:number};moved:boolean;angle:number} | null>(null);
   const [landed, setLanded] = useState(!placement.flightFrom);
@@ -53,9 +61,9 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     animation.onfinish = () => { ghost.remove(); setLanded(true); };
     return () => { animation.cancel(); ghost.remove(); };
   }, [placement.questIndex]);
-  return <div ref={ref} className="table-quest-card" data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState}
+  return <div ref={ref} className={`table-quest-card${tutorial ? ' table-quest-card--tutorial' : ''}`} data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState}
     style={{ left: `calc(50% + ${displayPosition.x}px)`, top: `calc(50% + ${displayPosition.y}px)`,
-      width: tableState ? TABLE_CARD_WIDTH : 120, height: (tableState ? TABLE_CARD_WIDTH : 120) / CARD_RATIO,
+      width: cardWidth, height: cardWidth / CARD_RATIO,
       transform: `translate(-50%,-50%) rotate(${tilt}deg)`, touchAction: 'none', cursor: drag.current?.moved ? 'grabbing' : 'grab',
       opacity: landed ? 1 : 0, boxShadow: tableObjectShadow(timeOfDay, displayPosition, 8, lights) }}
     onFocus={()=>setTableState(true)}
@@ -76,11 +84,11 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
       hold.cancel();drag.current=null;
       const angle=current.moved ? (Math.random()*8-4) : current.angle;
       const requested=current.moved ? {x:current.origin.x+(event.clientX-current.x)/cameraScale,y:current.origin.y+(event.clientY-current.y)/cameraScale} : current.origin;
-      const settled=settleTableCard(requested,TABLE_CARD_WIDTH,angle,solids) ?? current.origin;
+      const settled=settleTableCard(requested,cardWidth,angle,solids) ?? current.origin;
       setDisplayPosition(settled);setTilt(angle);onMove(settled,angle);
     }}
     onPointerCancel={()=>{hold.cancel();if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;}}
     onLostPointerCapture={()=>{hold.cancel();drag.current=null;}}>
-    <QuestCard title={title} text={text} staminaReward={1} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} />
+    <QuestCard title={title} text={text} staminaReward={staminaReward} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} />
   </div>;
 }

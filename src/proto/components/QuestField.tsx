@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { HoldRewardButton } from './HoldRewardButton';
 import { PinnedToast } from './PinnedToast';
 import { QuestCard } from './QuestCard';
 import { PlayingCardStack } from './PlayingCardStack';
@@ -53,7 +52,6 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
       </div>
     </header>
     <div className="quest-tray__well">
-      {deployed && <div className="quest-tray__notice" role="status"><span className="quest-tray__sr">Completed card on the table </span><HoldRewardButton onRedeem={() => onRedeem(deployed.id)}>Hold 2s · ⚡ +{deployed.rewards.reduce((sum, reward) => sum + reward.amount, 0)} STA</HoldRewardButton></div>}
       <div className="quest-foundations">
       <section className="quest-foundation quest-foundation--active" data-quest-slot="1" aria-label="Active quest slot 1">
       <header>Quest 1 <span>{remaining.length} cards</span></header>

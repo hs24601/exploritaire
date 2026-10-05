@@ -1768,8 +1768,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 .quest-tray__well { min-height: 0; display: grid; grid-template-rows: auto minmax(0,1fr); padding: 8px; border: 3px solid #100d0c; box-shadow: inset 0 3px 10px #000c; background: #101a17; }
 .quest-tray__well > .playing-card-stack { grid-row: 2; }
 .quest-tray__well[hidden] { display: none; }
-.quest-tray__notice { font-size: 16px; color: #ffe2ae; display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
-.quest-tray__notice button { border: 2px solid #b59454; padding: 4px 8px; }
 .quest-tray__closed { display: grid; place-items: center; font-size: 64px; color: #a88658; background: repeating-linear-gradient(0deg,#0002 0 2px,transparent 2px 16px); box-shadow: inset 0 3px 12px #000b; border: 3px solid #17100c; }
 
 /* Slot borders themselves retain the same 63:88 ratio as playing cards. */
@@ -1794,7 +1792,6 @@ html.drag-perf-mode .target-swirl-sparkles {
   .proto-main-layout[data-mobile-panel="quests"] .proto-main-header > :not(.proto-mobile-nav) { display: none; }
   .quest-tray .quest-field__header p { display: none; }
   .quest-tray__well { grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); }
-  .quest-tray__notice { grid-column: 1 / -1; }
   .quest-foundations { grid-row: 2; }
   .quest-tray__lower { grid-row: 2; grid-template-columns: minmax(0,1fr) minmax(0,2fr); }
   .quest-foundation__compact-description { gap: 6px; padding: 8px; }
@@ -1828,7 +1825,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 
 .reward-hold-progress { position: absolute; inset: 4px; border: 3px solid #ffe19a; border-radius: 6px; pointer-events: none; overflow: hidden; z-index: 5; }
 .reward-hold-progress > span { display: block; height: 100%; background: #ffd16640; box-shadow: 2px 0 0 #ffe19a; }
-.hold-reward-button { position: relative; touch-action: none; }
 .table-quest-card[data-table-state="true"] .quest-card__status { font-size: 16px; line-height: 1.1; }
 .table-quest-card[data-table-state="true"] .quest-card__title { font-size: 16px; line-height: 1.1; }
 .table-quest-card .quest-card__title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
@@ -1995,11 +1991,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 .quest-foundation__compact-description strong { color: #5b1f12; }
 .quest-foundation__compact-description > span { color: #6b4a12; }
-.quest-tray__notice { color: #ffe9b8; }
 .quest-chain-complete { color: var(--tray-ink); border: 0; background: var(--tray-parchment); box-shadow: inset 0 0 0 2px #c9ad78, 0 3px 0 #1d0f07; }
 
 .quest-tray .quest-tray__controls { padding: 0; background: none; box-shadow: none; }
-.quest-tray .quest-tray__notice button { border: 0; border-radius: 999px; padding: 4px 12px; color: #2b1a08; background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429); box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07; }
 
 /* Desktop quest tray: a narrow column with the three slots stacked vertically.
    Slots size from the space left after the objective card, keeping 63:88. */
@@ -2023,7 +2017,6 @@ html.drag-perf-mode .target-swirl-sparkles {
   }
   .quest-foundation { width: min(100cqw, calc((100cqh - 16px) / 3 * 63 / 88)); justify-self: center; }
   .quest-tray__lower { grid-row: 3; }
-  .quest-tray__notice { flex-direction: column; align-items: stretch; }
 }
 @media (min-width: 901px) {
   /* Compact header so the stacked slots get the height. */
@@ -2041,7 +2034,6 @@ html.drag-perf-mode .target-swirl-sparkles {
   .quest-foundation--disabled { gap: 2px; }
   .quest-foundation__cards { min-height: 0; overflow: hidden; }
   .quest-tray .quest-card::after { font-size: 24px; }
-  .quest-tray__notice { padding-bottom: 0; gap: 6px; }
   .quest-foundation__compact-description { gap: 6px; padding: 8px 10px; }
 }
 
@@ -2215,8 +2207,6 @@ html.drag-perf-mode .target-swirl-sparkles {
   .quest-tray .quest-discard-counter { justify-content: center; gap: 6px; }
   .quest-tray .quest-discard-counter strong { margin-left: 0; }
   .quest-tray__well { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px; overflow: hidden; }
-  .quest-tray__notice { width: 100%; padding: 0; }
-  .quest-tray .quest-tray__notice .hold-reward-button { width: 100%; padding: 4px 6px; line-height: 1.15; }
   .quest-foundations { height: auto; container-type: normal; display: flex; flex-direction: column; align-items: center; gap: 8px; }
   /* Slots keep the 63:88 card shape. PlayingCardStack insets its cards 6px,
      forming the recess lip; the spare height holds the queued cards' stagger. */
@@ -2230,3 +2220,8 @@ html.drag-perf-mode .target-swirl-sparkles {
   .quest-foundation--disabled > span:nth-child(2) { font-size: 20px; }
   .quest-chain-complete { font-size: 16px; padding: 4px; overflow-wrap: anywhere; }
 }
+
+/* Teaching card: flies out with the first quest; its instructions stay visible. */
+.table-quest-card--tutorial .quest-card { border-color: #9fd3c2; background-image: linear-gradient(145deg, #234c4a, #10221f); }
+.table-quest-card--tutorial .quest-card__title { color: #d9fff3; }
+.table-quest-card--tutorial .quest-card__text { display: block; flex-shrink: 0; overflow: visible; -webkit-line-clamp: none; font-size: 16px; line-height: 1.15; color: #e8f4ee; overflow-wrap: anywhere; }

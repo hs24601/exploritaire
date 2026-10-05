@@ -1,6 +1,6 @@
 import { TABLE_GRID, TRUE_CENTER, screenToWorld, type GridCell } from '../gridCoordinates';
 import { findWorldPath, pointAlongWorldPath, worldPathLength, type PathObstacle } from '../worldPathfinding';
-import { TableQuestCard, type PlacedQuestCard } from './TableQuestCard';
+import { TableQuestCard, TUTORIAL_QUEST, TUTORIAL_QUEST_INDEX, type PlacedQuestCard } from './TableQuestCard';
 import { BoardObjectLabel } from './BoardObjectLabel';
 import { solverFlightDuration } from '../solverTiming';
 import { createTableLightField, getTableLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
@@ -599,12 +599,16 @@ export const ProtoMap = ({
             onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
             className="proto-table-lamp absolute z-10 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full"
             style={{ left: 'calc(50% + ' + light.position.x + 'px)', top: 'calc(50% + ' + light.position.y + 'px)' }}>🕯️</div>)}
-          {questCards.map(placement => <TableQuestCard key={placement.questIndex} placement={placement} title={questTitles[placement.questIndex]} text={questTexts[placement.questIndex]} redeemed={placement.questIndex < questClaims} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale}
+          {questCards.map(placement => <TableQuestCard key={placement.questIndex} placement={placement} {...(placement.questIndex === TUTORIAL_QUEST_INDEX
+            ? { title: TUTORIAL_QUEST.title, text: TUTORIAL_QUEST.text, redeemed: false, staminaReward: 0 }
+            : { title: questTitles[placement.questIndex], text: questTexts[placement.questIndex], redeemed: placement.questIndex < questClaims })} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale}
             onMove={(position,tilt)=>onMoveQuest?.(placement.questIndex,position,tilt)}
             solids={[
               ...biomeTiles.map(tile=>getBiomeWorldFootprint(tile)),
               ...resourceStacks.filter(stack=>stack.resource==='provisions_hut'||stack.build&&CRAFT_RECIPES.find(recipe=>recipe.id===stack.build?.recipeId)?.output==='provisions_hut').map(stack=>({x:stack.position.x,y:stack.position.y,width:48,height:48})),
               ...actors.map(actor=>{const point=getActorWorldPosition(actor);return {x:point.x,y:point.y,width:48,height:48};}),
+              // Other quest cards on the table, e.g. the teaching card, at their largest size.
+              ...questCards.filter(other=>other.questIndex!==placement.questIndex).map(other=>({x:other.position.x,y:other.position.y,width:120,height:120*88/63})),
             ]} />)}
           {biomeTiles.map((tile) => (
             (() => {
