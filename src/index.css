@@ -1885,13 +1885,13 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-game-root .quest-tray,
 .proto-game-root .supply-tray {
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   color: #fbe9c4;
   background:
-    radial-gradient(circle at 14px 14px, var(--tray-brass) 0 3px, var(--tray-brass-dark) 4px 5px, transparent 6px),
-    radial-gradient(circle at calc(100% - 14px) 14px, var(--tray-brass) 0 3px, var(--tray-brass-dark) 4px 5px, transparent 6px),
-    radial-gradient(circle at 14px calc(100% - 14px), var(--tray-brass) 0 3px, var(--tray-brass-dark) 4px 5px, transparent 6px),
-    radial-gradient(circle at calc(100% - 14px) calc(100% - 14px), var(--tray-brass) 0 3px, var(--tray-brass-dark) 4px 5px, transparent 6px),
+    radial-gradient(circle at 8px 8px, var(--tray-brass) 0 2px, var(--tray-brass-dark) 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 8px) 8px, var(--tray-brass) 0 2px, var(--tray-brass-dark) 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at 8px calc(100% - 8px), var(--tray-brass) 0 2px, var(--tray-brass-dark) 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), var(--tray-brass) 0 2px, var(--tray-brass-dark) 2.5px 3.5px, transparent 4px),
     repeating-linear-gradient(92deg, #ffffff07 0 2px, transparent 2px 9px, #00000012 9px 11px, transparent 11px 23px),
     linear-gradient(180deg, var(--tray-wood-light), var(--tray-wood) 40%, var(--tray-wood-dark));
   box-shadow:
@@ -2049,7 +2049,7 @@ html.drag-perf-mode .target-swirl-sparkles {
    Slim left-side twin of the quest tray: same wooden frame and stow behavior,
    a felt column of resource tokens with brass count tags. Tapping a token
    opens a parchment details card beside it. */
-:root { --side-tray-width: clamp(13rem, 15vw, 16.5rem); --supply-tray-width: 5.25rem; }
+:root { --supply-tray-width: 5.5rem; --quest-card-width: 64px; --quest-tray-width: calc(var(--quest-card-width) + 48px); }
 @media (min-width: 901px) {
   /* Columns come from desktopLayoutTracks so stowed trays leave no empty gap. */
   .proto-game-root .proto-main-layout[style] { grid-template-columns: var(--layout-columns); grid-template-areas: var(--layout-areas); }
@@ -2066,14 +2066,14 @@ html.drag-perf-mode .target-swirl-sparkles {
   grid-template-rows: auto minmax(0, 1fr);
   gap: 8px;
   overflow: hidden;
-  padding: 12px 8px;
+  padding: 12px;
   font: 16px/1.15 'Classic Pixel', monospace;
 }
 .proto-game-root .supply-tray { transition: transform 240ms ease, opacity 240ms ease; transform: translateX(0); }
 .proto-game-root .supply-tray[data-open="false"] { position: fixed; top: 140px; bottom: 18px; left: 0; width: var(--supply-tray-width); transform: translateX(-110%); opacity: 0; pointer-events: none; visibility: hidden; transition: transform 240ms ease, opacity 240ms ease, visibility 0s 240ms; }
 @media (prefers-reduced-motion: reduce) { .proto-game-root .supply-tray { transition: none; } }
 .supply-tray__header { display: flex; justify-content: center; }
-.supply-tray__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.quest-tray__sr, .supply-tray__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 /* Brass pull tab for stowing. */
 .supply-tray .supply-tray__toggle {
   width: 100%;
@@ -2105,30 +2105,29 @@ html.drag-perf-mode .target-swirl-sparkles {
     radial-gradient(ellipse at 50% 0%, #24543f, var(--tray-felt) 55%, var(--tray-felt-dark));
   box-shadow: inset 0 6px 14px #000c, inset 0 -2px 0 #ffffff12, 0 1px 0 #ffffff26;
 }
-/* Each resource is a token in a round recess with a brass count tag. */
+/* Each resource sits in a recess: token on top, brass count tag below. */
 .supply-row {
-  position: relative;
   width: 100%;
-  aspect-ratio: 1;
   display: grid;
-  place-items: center;
-  padding: 0;
+  justify-items: center;
+  gap: 4px;
+  padding: 6px 0 5px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 8px;
   font: inherit;
-  background: radial-gradient(circle, #0a1d15 55%, #133325);
+  background: linear-gradient(180deg, #0a1d15, #133325);
   box-shadow: inset 0 0 0 2px #2b190c, inset 0 4px 8px #000c, 0 1px 0 #ffffff1c;
   cursor: pointer;
 }
 .supply-row:hover, .supply-row[aria-expanded="true"] { box-shadow: inset 0 0 0 2px var(--tray-brass), inset 0 4px 8px #000c, 0 0 10px #ffe19a55; }
 .supply-row:active { transform: translateY(1px); }
-.supply-row:focus-visible { outline: 3px solid #fff3c8; outline-offset: 2px; }
+.supply-row:focus-visible { outline: 3px solid #fff3c8; outline-offset: -3px; }
 .supply-row[data-count="0"] .supply-row__token { filter: grayscale(0.8); opacity: 0.55; }
-.supply-row__token {
+.supply-row__token, .pinned-toast__icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   font-size: 20px;
   line-height: 1;
@@ -2136,9 +2135,6 @@ html.drag-perf-mode .target-swirl-sparkles {
   box-shadow: inset 0 -2px 0 #0005, 0 2px 0 #1d0f07, 0 3px 3px #0008;
 }
 .supply-row__count {
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
   min-width: 2.2ch;
   padding: 0 4px;
   border-radius: 3px;
@@ -2150,8 +2146,8 @@ html.drag-perf-mode .target-swirl-sparkles {
   background: linear-gradient(180deg, #f0d48c, var(--tray-brass) 60%, #a8812f);
   box-shadow: inset 0 1px 0 #fff6, 0 2px 0 #1d0f07;
 }
-/* Details: a parchment card pinned beside the tapped token. */
-.supply-details {
+/* Pinned toast: a closable parchment note beside the element it describes. */
+.pinned-toast {
   position: fixed;
   z-index: 1000;
   width: min(15rem, calc(100vw - 16px));
@@ -2167,11 +2163,13 @@ html.drag-perf-mode .target-swirl-sparkles {
     var(--tray-parchment);
   box-shadow: inset 0 0 0 2px #c9ad78, inset 0 0 18px #9c7a4455, 0 3px 0 #1d0f07, 0 10px 18px #000a;
 }
-.supply-details header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
-.supply-details h3 { margin: 0; font-size: 20px; color: #5b1f12; }
-.supply-details header p { margin: 0; color: #6b4a12; }
-.supply-details__close { width: 32px; height: 32px; border: 0; border-radius: 50%; color: var(--tray-ink); font: inherit; font-size: 22px; background: #0000001a; }
-.supply-details__held { margin: 0; }
+.pinned-toast > header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 8px; }
+.pinned-toast > header > div:only-of-type:first-child { grid-column: 1 / 3; }
+.pinned-toast h3 { margin: 0; font-size: 20px; line-height: 1.1; color: #5b1f12; overflow-wrap: anywhere; }
+.pinned-toast header p { margin: 2px 0 0; color: #6b4a12; }
+.pinned-toast p { margin: 0; }
+.pinned-toast__close { width: 32px; height: 32px; border: 0; border-radius: 50%; color: var(--tray-ink); font: inherit; font-size: 22px; line-height: 1; background: #0000001a; }
+.pinned-toast button:focus-visible { outline: 3px solid #5b1f12; outline-offset: 2px; }
 .supply-details__held strong { font-size: 20px; }
 .supply-details__uses { margin: 0; padding-left: 18px; list-style: square; }
 .supply-details__place {
@@ -2184,7 +2182,8 @@ html.drag-perf-mode .target-swirl-sparkles {
   box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07;
 }
 .supply-details__place:disabled { opacity: 0.45; filter: grayscale(0.6); }
-.supply-details button:focus-visible { outline: 3px solid #5b1f12; outline-offset: 2px; }
+.quest-note { width: min(17rem, calc(100vw - 16px)); }
+.quest-note__reward { color: #6b4a12; }
 .supply-tray-restore { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 100; border: 3px solid #ae8d58; border-left: 0; border-radius: 0 8px 8px 0; padding: 12px; background: #241b15; color: #ffe2ae; box-shadow: 4px 5px 0 #0008; font: 16px 'Classic Pixel', monospace; }
 .supply-tray-restore:focus-visible { outline: 3px solid #ffe19a; outline-offset: 3px; }
 @media (max-width: 900px) {
@@ -2199,4 +2198,35 @@ html.drag-perf-mode .target-swirl-sparkles {
   .supply-tray .supply-tray__toggle { width: auto; padding: 0 16px; margin-left: auto; }
   .supply-tray__header { justify-content: flex-end; }
   .supply-tray-restore { display: none; }
+}
+
+/* ===== Card-width quest tray (desktop) ==================================
+   The tray is one quest card wide plus its recess and frame. Slots are
+   card-shaped recesses stacked vertically; the objective text lives in a
+   pinned toast opened by tapping the active card. */
+@media (min-width: 901px) {
+  .proto-game-root .quest-tray { padding: 12px; }
+  .proto-game-root .quest-tray[data-open="false"] { width: var(--quest-tray-width); }
+  .quest-tray .quest-field__header { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding-bottom: 0; }
+  .quest-tray .quest-field__header > div:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; padding: 0; }
+  .quest-tray .quest-tray__controls { display: contents; }
+  .quest-tray .quest-field__header .quest-tray__toggle { order: -1; width: 100%; min-height: 32px; padding: 0; font-size: 18px; }
+  .quest-tray .quest-field__header > .quest-tray__progress { align-self: center; }
+  .quest-tray .quest-discard-counter { justify-content: center; gap: 6px; }
+  .quest-tray .quest-discard-counter strong { margin-left: 0; }
+  .quest-tray__well { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px; overflow: hidden; }
+  .quest-tray__notice { width: 100%; padding: 0; }
+  .quest-tray .quest-tray__notice .hold-reward-button { width: 100%; padding: 4px 6px; line-height: 1.15; }
+  .quest-foundations { height: auto; container-type: normal; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  /* Slots keep the 63:88 card shape. PlayingCardStack insets its cards 6px,
+     forming the recess lip; the spare height holds the queued cards' stagger. */
+  .quest-foundation { --slot-height: calc((var(--quest-card-width) + 12px) * 88 / 63); width: calc(var(--quest-card-width) + 12px); height: var(--slot-height); aspect-ratio: auto; padding: 0; display: block; overflow: hidden; }
+  .quest-foundation > header,
+  .quest-foundation--disabled > span:first-child,
+  .quest-foundation--disabled > span:last-child { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .quest-foundation__cards { width: 100%; height: var(--slot-height); aspect-ratio: auto; }
+  .quest-foundation::after { bottom: 0; }
+  .quest-foundation--disabled { display: grid; place-items: center; aspect-ratio: auto; height: var(--slot-height); }
+  .quest-foundation--disabled > span:nth-child(2) { font-size: 20px; }
+  .quest-chain-complete { font-size: 16px; padding: 4px; overflow-wrap: anywhere; }
 }

@@ -8,19 +8,23 @@ export type QuestCardProps = {
   redeemed?: boolean;
   onRedeem: () => void;
   rewardHold?: RewardHold;
+  /** Tap to show the quest's details; keeps the card interactive while incomplete. */
+  onSelect?: () => void;
+  selected?: boolean;
 };
 
 /** The active quest is a keyboard-accessible reward claim, never an auto-claim. */
-export function QuestCard({ title, text, staminaReward, complete, redeemed = false, onRedeem, rewardHold }: QuestCardProps) {
+export function QuestCard({ title, text, staminaReward, complete, redeemed = false, onRedeem, rewardHold, onSelect, selected }: QuestCardProps) {
   const ownHold = useRewardHold(onRedeem, complete && !redeemed);
   const hold = rewardHold ?? ownHold;
   const origin = useRef({x:0,y:0});
   return <button type="button" className={`quest-card ${complete ? 'quest-card--complete' : 'quest-card--incomplete'}`}
-    disabled={!complete || redeemed} onClick={event=>event.preventDefault()}
+    disabled={!onSelect && (!complete || redeemed)} aria-haspopup={onSelect ? 'dialog' : undefined} aria-expanded={onSelect ? Boolean(selected) : undefined}
+    onClick={event=>{event.preventDefault();onSelect?.();}}
     onPointerDown={rewardHold ? undefined : event=>{if(event.button!==0)return;event.preventDefault();origin.current={x:event.clientX,y:event.clientY};event.currentTarget.setPointerCapture(event.pointerId);hold.start();}}
     onPointerMove={rewardHold ? undefined : event=>{if(Math.hypot(event.clientX-origin.current.x,event.clientY-origin.current.y)>6)hold.cancel();}}
     onPointerUp={rewardHold ? undefined : hold.cancel} onPointerCancel={rewardHold ? undefined : hold.cancel}
-    onKeyDown={event=>{if((event.key===' '||event.key==='Enter')&&!event.repeat){event.preventDefault();hold.start();}}}
+    onKeyDown={event=>{if((event.key===' '||event.key==='Enter')&&!event.repeat&&complete&&!redeemed){event.preventDefault();hold.start();}}}
     onKeyUp={hold.cancel} onBlur={hold.cancel} aria-label={`${title}. ${redeemed ? 'Reward redeemed' : complete ? `Complete. Hold for 2 seconds to redeem ${staminaReward} stamina and reveal next quest` : text}`}>
     <span className="quest-card__title" title={title}>{title}</span>
     <span className="quest-card__text">{text}</span>

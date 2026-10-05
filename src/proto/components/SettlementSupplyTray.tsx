@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState } from 'react';
+import { PinnedToast } from './PinnedToast';
 
 export type SupplyItem = {
   id: string;
@@ -74,47 +74,12 @@ export function SettlementSupplyTray({ items, open = true, onPlace, onClose }: {
   </aside>;
 }
 
-/** Parchment details card pinned beside the tapped resource. */
+/** Details for the tapped resource, pinned beside the tray. */
 function SupplyDetails({ item, tray, onPlace, onDismiss }: { item: SupplyItem; tray: HTMLElement | null; onPlace?: (id: string) => void; onDismiss: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
-  useLayoutEffect(() => {
-    const place = () => {
-      const anchor = tray?.querySelector(`[data-supply="${item.id}"]`)?.getBoundingClientRect();
-      const card = ref.current?.getBoundingClientRect();
-      if (!anchor || !card) return;
-      const margin = 8;
-      const edge = Math.max(anchor.right, tray?.getBoundingClientRect().right ?? 0);
-      const fitsRight = edge + margin + card.width <= window.innerWidth - margin;
-      const left = fitsRight ? edge + margin : Math.max(margin, Math.min(window.innerWidth - card.width - margin, anchor.left));
-      const top = fitsRight ? anchor.top + anchor.height / 2 - card.height / 2 : anchor.bottom + margin;
-      setPosition({ left, top: Math.max(margin, Math.min(window.innerHeight - card.height - margin, top)) });
-    };
-    place();
-    window.addEventListener('resize', place);
-    return () => window.removeEventListener('resize', place);
-  }, [item.id, tray]);
-  useEffect(() => {
-    const dismissOutside = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (ref.current?.contains(target) || tray?.querySelector(`[data-supply="${item.id}"]`)?.contains(target)) return;
-      onDismiss();
-    };
-    const dismissOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onDismiss(); };
-    document.addEventListener('pointerdown', dismissOutside, true);
-    document.addEventListener('keydown', dismissOnEscape);
-    return () => { document.removeEventListener('pointerdown', dismissOutside, true); document.removeEventListener('keydown', dismissOnEscape); };
-  }, [item.id, tray, onDismiss]);
-  // Portaled: the tray's slide transform would otherwise trap fixed positioning.
-  return createPortal(<div ref={ref} className="supply-details" role="dialog" aria-label={`${item.label} details`}
-    style={position ? { left: position.left, top: position.top } : { left: -9999, top: 0 }}>
-    <header>
-      <span className="supply-row__token" aria-hidden="true">{item.glyph}</span>
-      <div><h3>{item.label}</h3>{item.kind && <p>{item.kind}</p>}</div>
-      <button type="button" className="supply-details__close" aria-label="Close details" onClick={onDismiss}>×</button>
-    </header>
+  return <PinnedToast className="supply-details" title={item.label} subtitle={item.kind} icon={item.glyph} dismissOnOutside
+    anchor={tray?.querySelector(`[data-supply="${item.id}"]`) ?? null} edge={tray} onClose={onDismiss}>
     <p className="supply-details__held">Held <strong>{item.count}</strong></p>
     {item.uses?.length ? <ul className="supply-details__uses">{item.uses.map(use => <li key={use}>{use}</li>)}</ul> : null}
     {onPlace && <button type="button" className="supply-details__place" disabled={item.count < 1} onClick={() => onPlace(item.id)}>Place 1 on table</button>}
-  </div>, document.body);
+  </PinnedToast>;
 }

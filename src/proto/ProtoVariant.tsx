@@ -67,7 +67,7 @@ const desktopLayoutTracks = (tableau: boolean, supplies: boolean, quests: boolea
     supplies && ['supply', 'var(--supply-tray-width)'],
     tableau && ['tableau', 'minmax(0, 1fr)'],
     ['map', 'minmax(0, 1.7fr)'],
-    quests && ['quest', 'var(--side-tray-width)'],
+    quests && ['quest', 'var(--quest-tray-width)'],
   ].filter((track): track is string[] => Boolean(track));
   return {
     '--layout-columns': tracks.map(([, size]) => size).join(' '),

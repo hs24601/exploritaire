@@ -7,7 +7,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.ok(s.width<100,`slim width ${s.width}`);assert.ok(Math.abs(s.height-q.height)<2,`heights ${s.height} vs ${q.height}`);
   assert.ok(s.x+s.width<=map.x,'supplies sit left of the table');
   assert.equal(await p.locator('.supply-row').count(),3);assert.equal(await p.locator('.supply-row').first().innerText().then(t=>/Wood/.test(t)),false,'rows show no label');
-  await p.locator('[data-supply="wood"]').click();const details=p.getByRole('dialog',{name:'Wood details'});await details.waitFor();
+  await p.locator('[data-supply="wood"]').click();const details=p.getByRole('dialog',{name:'Wood'});await details.waitFor();
   assert.match(await details.innerText(),/Make lumber/);const d=await details.boundingBox();assert.ok(d.x>=s.x+s.width-1,'details open beside the tray');
   if(process.env.SHOTS)await p.screenshot({path:process.env.SHOTS+'/supply-details.png'});
   await p.keyboard.press('Escape');await details.waitFor({state:'detached'});

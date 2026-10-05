@@ -96,6 +96,7 @@ These are current implementation defaults for iteration, not permanent game-desi
 ## Validation and delivery
 
 - Inspect relevant layout, sizing, overflow, layering, and interaction paths before delivery. Do not claim visual verification that was not performed.
+- Enforce that inspection with the shared layout check (`tools/lib/layout-check.cjs`, used by `tools/tray-layout-playwright.cjs`) for every UI change, at desktop sizes down to 1280x720 and at phone portrait and landscape: no element may overlap another or a frame decoration such as corner studs, escape its container, clip its content, or render text under 16px. Also review a zoomed (3x) screenshot of each changed element; a defect the check misses gets a new check, not just a fix.
 - Run checks appropriate to the change, including meaningful tests for reward redemption, progression, or other consequential state changes. Report pre-existing failures separately from regressions.
 - Isolated headless Playwright testing is authorized for this project. Use a separate browser/context against the local app; do not control the desktop, move the user's mouse, steal keyboard focus, or interact with personal browser sessions.
 - Ensure Vite is running for requested playtests and provide the verified local Proto URL.
@@ -105,6 +106,10 @@ These are current implementation defaults for iteration, not permanent game-desi
 - Quest tracking is a physical recessed tray. Stow moves the entire tray off-screen and releases its layout space to the table; the table Quest control brings it back. Do not merely hide cards inside a still-visible tray. Stowing preserves progression and the card queue. Only an accomplished quest can leave the tray and fly to the table; never use the next queued card as a flight source. After departure, the next objective is visible in the tray but remains there until complete. Pending reward redemption remains explicit.
 
 - A stowed quest tray leaves an always-visible Show quest tray handle at the right viewport edge. Restoring from mobile opens the Quests panel.
+
+- On desktop the quest tray is one quest card wide plus its recess and frame, with the three card-shaped slots stacked vertically. Tapping the active quest card opens its objective text in a closable pinned toast (`PinnedToast`), which stays until closed.
+
+- Settlement supplies live in a slim, stowable tray on the left that mirrors the quest tray: one token and count per resource, no labels. Tapping a resource opens its details (category, held count, recipes that use it, Place 1 on table). Phones show it as a Supplies tab.
 
 - Table zoom preserves the world point at the viewport center, including after panning. Wheel and pinch calculations must use the same centered coordinate origin as rendered table content.
 
