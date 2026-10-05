@@ -21,6 +21,7 @@ import {
   DEFAULT_BIOME,
   DEFAULT_EXPEDITION_ENERGY,
   MAGE_PHASE_SHIFT_TRIGGER,
+  WORLD_ACTOR_SPRITES,
 } from './protoData';
 import {
   getCardTransportDurationMs,
@@ -2242,7 +2243,7 @@ const selectBiome = (biomeId: string) => {
           name: state.worldActors.find((actor) => actor.id === inspectedActorId)!.label,
           badge: '♟',
           badgeLabel: 'Actor',
-          art: <ActorCardArt />,
+          art: <ActorCardArt sprite={WORLD_ACTOR_SPRITES[inspectedActorId]} label={state.worldActors.find((actor) => actor.id === inspectedActorId)!.label} />,
           descriptor: 'An expedition hero who explores the wilderness, gathers resources, and helps build your settlement.',
           trays: [{ id: 'stats', label: 'Stats' }, { id: 'equipment', label: 'Equipment' }, { id: 'buffs', label: 'Buffs' }],
         }}

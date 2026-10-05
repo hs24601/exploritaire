@@ -74,8 +74,12 @@ export function DetailsCardViewer({ object, anchor, timeOfDay, lights, position,
   </div>, document.body);
 }
 
-/** Temporary code-native portrait, replaceable by object art without changing DCV. */
-export function ActorCardArt() {
+/** Actor portrait: the actor's sprite when it has one (and it loads), otherwise a code-native placeholder. */
+export function ActorCardArt({ sprite, label }: { sprite?: string; label: string }) {
+  const [failedSprite, setFailedSprite] = useState<string | null>(null);
+  if (sprite && sprite !== failedSprite) {
+    return <img className="details-card__sprite" src={sprite} alt={`${label} portrait`} draggable={false} onError={() => setFailedSprite(sprite)} />;
+  }
   return <svg viewBox="0 0 240 160" role="img" aria-label="Hero portrait placeholder" shapeRendering="crispEdges">
     <path fill="#142923" d="M0 0h240v160H0z" />
     <path fill="#214334" d="M0 20h30v100H0zm40-20h24v120H40zm128 0h24v120h-24zm42 20h30v100h-30z" />
