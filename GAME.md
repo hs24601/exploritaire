@@ -34,6 +34,7 @@ This document records agreed project preferences and behavior from the Proto dev
 
 ## Crafting and actor progression
 
+- Leave Tableau steps each actor out onto the free table cell touching the biome tile, nearest the middle of its bottom edge.
 - Returning expedition actors deposit collected resources into the settlement supply tray, with visible token flights into labeled counters, instead of spilling loose resource stacks onto the table.
 - Stored supplies and table ingredients must not be spendable twice. Drawing supplies debits storage and creates a deliberate crafting stack. Camp construction consumes deposited supplies; pending expedition haul is not settlement stock.
 - Craft by stacking eligible resource tokens and advancing a build timer. Do not introduce a workbench.
@@ -84,6 +85,8 @@ This document records agreed project preferences and behavior from the Proto dev
 - Preserve the day/night scaffold, moving global light source, local table lights, and consistent object shadows.
 - Keep lighting compatible with 2D rendering and object interaction.
 - The default table has no placed light object. Actors carry their own light through a `luminosity` property (0-1). The default is candlelight: enough to find an actor in the dark, but never enough to explore by (it lifts its surroundings only to "dim"), and it fades out in daylight.
+- A carried light moves with its actor every frame of travel, never jumping to the destination when the move ends.
+- The light wash is all soft gradients, so it paints at reduced resolution (half a CSS pixel flat, a quarter tilted). Full-resolution flicker redraws of the oversized tilted plane stall input and slow reward holds on phones.
 - In the tilted camera, an actor with sprite art (`WORLD_ACTOR_SPRITES`) stands up as a pop-up cut-out instead of the cardboard token: padding trimmed so its feet meet its base, pixel-sharp, shaded by the light reaching it with a warm rim toward the strongest nearby lamp, and casting its silhouette away from the sun or moon and each lamp (never from its own carried candle). Art that fails to load falls back to the token. The same art is the portrait on the actor's details card.
 - Standees rotate about their foot before being placed, and the camera zooms in 3D, so pieces stay planted on the table at every zoom level.
 - The camera tilt also applies to the tableau field, like a battle camera seen from behind the player: the tableau leans back from its front row, back rows shrink toward the horizon and soften with a depth-of-field blur, and the front row stays sharp and playable. Flat restores the 2D tableau.
@@ -93,7 +96,7 @@ This document records agreed project preferences and behavior from the Proto dev
 
 These are current implementation defaults for iteration, not permanent game-design requirements:
 
-- Each expedition quest currently awards +1 STA, represented by a lightning/energy bolt. Quest bonuses can exceed the normal resting cap so redemption at full stamina does not waste a reward.
+- Each expedition quest currently awards +1 STA, represented by a lightning/energy bolt. Quest bonuses can exceed the normal resting cap so redemption at full stamina does not waste a reward. The reward also reaches the actors: each actor's own stamina (up to its cap) and the party's energy.
 - Actor detail art is a temporary pixel-style portrait.
 - DCV Stats, Equipment, and Buffs trays are placeholders awaiting further design.
 - Auto-Solve and Best Move initially serve developer testing.

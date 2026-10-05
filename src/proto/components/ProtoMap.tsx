@@ -73,6 +73,22 @@ export const getBiomeWorldFootprint = (tile: Pick<ProtoBiomeTile,'position'|'gri
   return {...TABLE_GRID.region(first,footprint.columns,footprint.rows),first};
 };
 
+/** The free grid cell touching a biome's footprint that sits closest to the
+ * middle of its bottom edge, where an actor steps out of the tableau. */
+export const getBiomeExitPoint = (tile: Pick<ProtoBiomeTile,'position'|'gridSize'>, occupied: readonly { x: number; y: number }[] = []) => {
+  const area=getBiomeWorldFootprint(tile);
+  const columns=Math.round(area.width/CLASSICPLUS_GRID_SIZE),rows=Math.round(area.height/CLASSICPLUS_GRID_SIZE);
+  const taken=new Set(occupied.filter(point=>Number.isFinite(point.x)&&Number.isFinite(point.y)).map(point=>TABLE_GRID.reference(TABLE_GRID.atWorld(point))));
+  const ring:{x:number;y:number}[]=[];
+  for(let column=-1;column<=columns;column+=1)for(let row=-1;row<=rows;row+=1){
+    if(column>=0&&column<columns&&row>=0&&row<rows)continue;
+    ring.push(TABLE_GRID.center(TABLE_GRID.offset(area.first,column,row)));
+  }
+  const goal={x:area.x,y:area.bottom+CLASSICPLUS_GRID_SIZE/2};
+  ring.sort((a,b)=>Math.hypot(a.x-goal.x,a.y-goal.y)-Math.hypot(b.x-goal.x,b.y-goal.y));
+  return ring.find(point=>!taken.has(TABLE_GRID.reference(TABLE_GRID.atWorld(point))))??ring[0];
+};
+
 const finiteCoordinate = (value: number | undefined, fallback = 0) => Number.isFinite(value) ? value as number : fallback;
 
 const snapToGrid = (value: number) => TABLE_GRID.snap({x:finiteCoordinate(value),y:0}).x;
@@ -473,7 +489,9 @@ export const ProtoMap = ({
 
   // Placed lights plus the light each actor carries. Keyed by content so the
   // canvas effect only reruns when a light actually changes.
-  const actorLights = actors.flatMap(actor => actorLight(actor.id, getActorWorldPosition(actor), actor.luminosity) ?? []);
+  // A travelling actor's light moves with it along its path, frame by frame.
+  const travelPosition = travel ? pointAlongWorldPath(travel.path, travel.progress) : null;
+  const actorLights = actors.flatMap(actor => actorLight(actor.id, travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor), actor.luminosity) ?? []);
   const lightKey = JSON.stringify([placedLights, actorLights]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const lightSources = useMemo(() => [...placedLights, ...actorLights], [lightKey]);
@@ -493,8 +511,10 @@ export const ProtoMap = ({
     const surface = canvas.parentElement ?? viewport;
     const draw = (timeMs: number) => {
       // Layout size, not the projected box: a tilted table plane is oversized
-      // around the same center. Its soft light pools draw at reduced resolution.
-      const dpr = tilted ? Math.min(window.devicePixelRatio || 1, 1) : window.devicePixelRatio || 1;
+      // around the same center. The wash is all soft gradients, so it paints at
+      // a fraction of a CSS pixel and the browser scales it up; full-resolution
+      // flicker redraws of the oversized tilted plane stalled input for seconds.
+      const dpr = tilted ? 0.25 : 0.5;
       const width = Math.max(1, surface.offsetWidth);
       const height = Math.max(1, surface.offsetHeight);
       if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
@@ -571,7 +591,6 @@ export const ProtoMap = ({
     clearActorDragState();
   };
 
-  const travelPosition = travel ? pointAlongWorldPath(travel.path, travel.progress) : null;
 
   // Tilted, pieces stand upright on their table point like cardboard standees.
   const standee = (size?: { width: number; height: number }): React.CSSProperties | null => tilt ? {

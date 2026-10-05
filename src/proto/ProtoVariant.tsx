@@ -32,6 +32,7 @@ import {
 import { Tableau } from '../golf/components/Tableau';
 import {
   ProtoMap,
+  getBiomeExitPoint,
   type ProtoBiomeTile,
   type ProtoWorldActor,
   type ProtoWorldResourceStack,
@@ -1617,9 +1618,16 @@ const selectBiome = (biomeId: string) => {
     setState(previous => ({ ...previous, questTableCards: previous.questTableCards.filter(placed => placed.questIndex !== TUTORIAL_QUEST_INDEX) }));
   };
   const leaveTableau = () => {
+    const occupied = [
+      ...state.worldActors.filter(actor => actor.location === 'table').map(actor => actor.position),
+      ...state.worldResourceStacks.map(stack => stack.position),
+    ];
     state.worldActors.filter(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId).forEach(actor => {
       const biome = state.biomeTiles.find(tile => tile.id === actor.biomeId);
-      dropActorToTable(actor.id, { x: (biome?.position.x ?? 0) - 96, y: (biome?.position.y ?? 0) + 144 });
+      if (!biome) return;
+      const exit = getBiomeExitPoint(biome, occupied);
+      occupied.push(exit);
+      dropActorToTable(actor.id, exit);
     });
     setMobilePanel('map');
   };
@@ -1642,7 +1650,7 @@ const selectBiome = (biomeId: string) => {
       // Prevent repeated input from redeeming a newly exposed quest.
       if (previous.questClaims !== index) return previous;
       // Quest bonuses can exceed the resting cap, so claiming at full STA never wastes a reward.
-      const redeemed = redeemActiveQuest(previous, getExpeditionQuestSteps(previous).map((step) => step.complete));
+      const redeemed = redeemActiveQuest(previous, getExpeditionQuestSteps(previous).map((step) => step.complete), 1, ACTOR_STAMINA_MAX);
       return redeemed === previous ? previous : { ...redeemed, questTableCards: redeemed.questTableCards.filter(card => card.questIndex === TUTORIAL_QUEST_INDEX || card.questIndex >= redeemed.questClaims) };
     });
   };
