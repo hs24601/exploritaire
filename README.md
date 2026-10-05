@@ -3,6 +3,11 @@
 ## Playtest Variants
 - Single foundation, four in support: one foundation actor with four benched; combo-chasing with value-based swaps; no hand/stock. See docs/variants.md.
 
+## Phone Playtesting (Tailscale)
+- Install Tailscale on the dev PC and the phone, signed in to the same account.
+- Run `npm run dev`, then open `http://<pc-tailscale-ip>:5178/proto.html` (or `http://zenduo.<tailnet>.ts.net:5178/proto.html` with MagicDNS) on the phone.
+- The `/__*` editor save routes only answer this PC and tailnet devices. Don't expose the dev server through a public tunnel (Cloudflare, Tailscale Funnel).
+
 ## Terminology
 - `LE`: Light Engine (`src/components/LightRenderer.tsx`) that handles dynamic lighting and shadow compositing.
 - `WE`: Watercolor Engine (`src/watercolor-engine/` and `src/watercolor/WatercolorOverlay.tsx`) that handles watercolor overlays, splashes, and persistent paint marks.

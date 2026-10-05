@@ -15,6 +15,17 @@ const DEV_HMR_HOST = process.env.VITE_DEV_HMR_HOST?.trim();
 const DEV_HMR_PORT = parsePort(process.env.VITE_DEV_HMR_PORT, DEV_PORT);
 const DEV_HTTPS = process.env.VITE_DEV_HTTPS?.trim().toLowerCase() === 'true';
 
+// The /__* editor routes write files into the repo, so only this PC (loopback,
+// which includes Tailscale Serve) and devices on the Tailscale tailnet may call them.
+const isTrustedDevAddress = (address: string | undefined): boolean => {
+  if (!address) return false;
+  const ip = address.replace(/^::ffff:/, '');
+  if (ip === '::1' || ip.startsWith('127.')) return true;
+  const octets = ip.split('.').map(Number);
+  if (octets.length === 4 && octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127) return true;
+  return ip.toLowerCase().startsWith('fd7a:115c:a1e0:');
+};
+
 const replaceActorDefinitionsBlock = (source: string, actors: unknown[]) => {
   const block = `// ACTOR_DEFINITIONS_START\nexport const ACTOR_DEFINITIONS: ActorDefinition[] = ${JSON.stringify(actors, null, 2)};\n// ACTOR_DEFINITIONS_END`;
   return source.replace(
@@ -28,8 +39,8 @@ export default defineConfig({
     https: DEV_HTTPS,
     host: DEV_HOST,
     port: DEV_PORT,
-    // Cloudflare Quick Tunnels receive a new, random trycloudflare.com hostname on restart.
-    allowedHosts: ['.trycloudflare.com'],
+    // Tailscale MagicDNS names (zenduo.<tailnet>.ts.net); raw IPs are always allowed.
+    allowedHosts: ['.ts.net'],
     strictPort: true,
     ...(DEV_HMR_HOST
       ? {
@@ -47,6 +58,17 @@ export default defineConfig({
     {
       name: 'light-blocker-save',
       configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const isEditorRoute = req.url?.startsWith('/__') && !req.url.startsWith('/__vite');
+          // Public tunnels (Cloudflare, Tailscale Funnel) arrive from loopback, so reject them by header.
+          const isPublicTunnel = Boolean(req.headers['cf-connecting-ip'] || req.headers['tailscale-funnel-request']);
+          if (isEditorRoute && (isPublicTunnel || !isTrustedDevAddress(req.socket.remoteAddress))) {
+            res.statusCode = 403;
+            res.end('Forbidden');
+            return;
+          }
+          next();
+        });
         server.middlewares.use('/__light-patterns/save', (req, res, next) => {
           if (req.method !== 'POST') {
             res.statusCode = 405;
@@ -535,7 +557,7 @@ export default defineConfig({
               }
               const projectRoot = path.resolve(__dirname);
               const targetPath = path.resolve(projectRoot, parsed.path);
-              if (!targetPath.startsWith(projectRoot)) {
+              if (!targetPath.startsWith(projectRoot + path.sep)) {
                 res.statusCode = 400;
                 res.end('Invalid path');
                 return;
