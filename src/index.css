@@ -2291,3 +2291,19 @@ html.drag-perf-mode .target-swirl-sparkles {
 .quest-tray .quest-foundation--disabled::after { display: block; }
 .quest-tray .quest-foundation--disabled > span:first-child { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .quest-tray .quest-foundation--disabled > span:nth-child(2) { font-size: 28px; }
+
+/* ===== Slots fit the well ==============================================
+   useFitSlotsToWell sizes --quest-card-width so the three identical slots
+   never scroll; phone landscape lays them in a row. The face-up card clamps
+   its title and objective to the lines that fit (full text in the toast). */
+.proto-game-root .quest-tray .quest-tray__well { overflow: hidden; justify-content: flex-start; }
+.quest-tray__well[data-slot-direction="row"] .quest-foundations { flex-direction: row; justify-content: center; }
+.quest-tray .quest-card > .quest-card__title { flex: none; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--fit-lines, 2); overflow: hidden; }
+.quest-tray .quest-card > .quest-card__text { flex: 1 1 0; min-height: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--fit-lines, none); overflow: hidden; }
+.quest-tray .quest-card > .quest-card__text[hidden] { display: none; }
+/* Cap each box at its clamped lines so the next line can't peek out below. */
+.quest-tray .quest-card > .quest-card__title { box-sizing: content-box; max-height: calc(var(--fit-lines, 2) * 1.1em); padding-bottom: 0; border-bottom: 0; }
+/* The divider sits on top of the objective, so no padding below a clamped line. */
+.quest-tray .quest-card > .quest-card__text { border-top: 2px solid #8e7487; padding-top: 4px; }
+.quest-tray .quest-card > .quest-card__text { box-sizing: content-box; max-height: calc(var(--fit-lines, 999) * 1.1em); }
+.quest-tray .quest-card > .quest-card__reward { flex: none; }

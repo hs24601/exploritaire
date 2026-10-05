@@ -6,6 +6,8 @@ const QUEST={parts:'.quest-tray__toggle, .quest-tray__progress, .quest-discard-c
 // The longest quest title and objective in the expedition, to prove every face-up card fits.
 const LONGEST={title:'Use the Day 2 ration for the Deep Woods round trip',text:'Return Hero to the city with the resources collected in Small Woods.'};
 const TOAST={parts:'.pinned-toast__close, .pinned-toast h3, .pinned-toast p, .pinned-toast li, .pinned-toast__icon, .supply-details__place'};
+// The well never scrolls: all three slots fit it (GAME.md).
+const noScroll=async(p,label,problems)=>{const o=await p.locator('.quest-tray__well').evaluate(el=>({sh:el.scrollHeight,ch:el.clientHeight,sw:el.scrollWidth,cw:el.clientWidth,ov:getComputedStyle(el).overflowY}));if(o.sh>o.ch+1||o.sw>o.cw+1||/auto|scroll/.test(o.ov))problems.push(`${label}: quest well scrolls ${JSON.stringify(o)}`);};
 const separate=(a,b)=>a.x+a.width<=b.x+0.5||b.x+b.width<=a.x+0.5||a.y+a.height<=b.y+0.5||b.y+b.height<=a.y+0.5;
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1912,914],[1600,900],[1366,768],[1280,720]]){
@@ -13,7 +15,7 @@ const separate=(a,b)=>a.x+a.width<=b.x+0.5||b.x+b.width<=a.x+0.5||a.y+a.height<=
     const at=(label,list)=>list.forEach(d=>problems.push(`${w}x${h} ${label}: ${d}`));
     at('supplies',await findLayoutDefects(p,'.supply-tray',SUPPLY));at('quests',await findLayoutDefects(p,'.quest-tray',QUEST));
     await p.evaluate(({title,text})=>{const card=document.querySelector('.quest-tray .quest-card');card.querySelector('.quest-card__title').textContent=title;card.querySelector('.quest-card__text').textContent=text;},LONGEST);
-    at('quests, longest text',await findLayoutDefects(p,'.quest-tray',QUEST));
+    await p.waitForTimeout(100);at('quests, longest text',await findLayoutDefects(p,'.quest-tray',QUEST));await noScroll(p,`${w}x${h}`,problems);
     assert.ok(await p.locator('.quest-tray .quest-card__text').isVisible(),'the active card shows its objective face up');
     const card=await p.locator('.quest-tray .quest-card').boundingBox();assert.ok(card.width>=60,`${w}x${h} quest card is ${card.width}px wide`);
     await p.reload();await p.locator('.quest-card').waitFor();const tray=await p.locator('.quest-tray').boundingBox();assert.ok(tray.width<=card.width+56,`${w}x${h} quest tray ${tray.width}px for a ${card.width}px card`);
@@ -35,12 +37,13 @@ const separate=(a,b)=>a.x+a.width<=b.x+0.5||b.x+b.width<=a.x+0.5||a.y+a.height<=
     const d=await p.locator('.supply-details').boundingBox();assert.ok(d.x>=0&&d.x+d.width<=w&&d.y>=0&&d.y+d.height<=h,`${w}x${h} details leave the screen`);
     if(process.env.SHOTS&&w===390)await p.screenshot({path:process.env.SHOTS+'/phone-supplies.png'});
     await p.keyboard.press('Escape');
-    await p.getByRole('button',{name:'Quests',exact:true}).click();at('quests',await findLayoutDefects(p,'.quest-tray',QUEST));await p.locator('.quest-tray .quest-card').click();
+    await p.getByRole('button',{name:'Quests',exact:true}).click();await p.waitForTimeout(150);at('quests',await findLayoutDefects(p,'.quest-tray',QUEST));await noScroll(p,`${w}x${h}`,problems);
+    await p.evaluate(({title,text})=>{const card=document.querySelector('.quest-tray .quest-card');card.querySelector('.quest-card__title').textContent=title;card.querySelector('.quest-card__text').textContent=text;},LONGEST);await p.waitForTimeout(100);at('quests, longest text',await findLayoutDefects(p,'.quest-tray',QUEST));await p.locator('.quest-tray .quest-card').click();
     const n=await p.locator('.quest-note').boundingBox();assert.ok(n.x>=0&&n.x+n.width<=w&&n.y>=0&&n.y+n.height<=h,`${w}x${h} quest note leaves the screen`);
     at('quest note',await findLayoutDefects(p,'.quest-note',TOAST));
     if(process.env.SHOTS&&w===390)await p.screenshot({path:process.env.SHOTS+'/phone-quests.png'});
     await p.close();
   }
   assert.deepEqual(problems,[],'layout defects:\n'+problems.join('\n'));
-  console.log('Trays and pinned notes: no collisions, escapes, clipping, stud overlap or sub-16px text at desktop and phone sizes.');
+  console.log('Trays and pinned notes: no collisions, escapes, clipping, scrolling quest well, stud overlap or sub-16px text at desktop and phone sizes.');
 }finally{await b.close()}})().catch(e=>{console.error(e.message);process.exitCode=1});

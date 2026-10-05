@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { PinnedToast } from './PinnedToast';
 import { QuestCard } from './QuestCard';
 import { PlayingCardStack } from './PlayingCardStack';
@@ -38,6 +38,8 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
   const deployed = quests.find(quest => quest.id === deployedQuestId && quest.status === 'complete');
   const active = remaining[0];
   const ref = useRef<HTMLElement>(null);
+  const wellRef = useRef<HTMLDivElement>(null);
+  useFitSlotsToWell(wellRef, open);
   const [noteQuestId, setNoteQuestId] = useState<string | null>(null);
   // The note follows the active card; it closes when that quest leaves the tray.
   const note = open && active && noteQuestId === active.id ? active : undefined;
@@ -51,7 +53,7 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
         <button type="button" className="quest-tray__toggle" aria-label="Stow tray" title="Stow tray" aria-expanded={open} onClick={() => { setNoteQuestId(null); onClose?.(); }}><span className="pull-tab__grip" aria-hidden="true" /></button>
       </div>
     </header>
-    <div className="quest-tray__well">
+    <div ref={wellRef} className="quest-tray__well">
       <div className="quest-foundations">
       <section className="quest-foundation quest-foundation--active" data-quest-slot="1" aria-label="Active quest slot 1">
       <header>Quest 1 <span>{remaining.length} cards</span></header>
@@ -74,4 +76,65 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
       <p className="quest-note__reward">⚡ +{note.rewards.reduce((sum, reward) => sum + reward.amount, 0)} STA</p>
     </PinnedToast>}
   </aside>;
+}
+
+const SLOT_GAP = 8;
+const WELL_PADDING = 6;
+const SLOT_LIP = 12;
+const MAX_CARD = 150;
+const MIN_CARD = 24;
+const CARD_RATIO = 63 / 88;
+
+/** Sizes the three identical slots so they always fit the well without
+ * scrolling: stacked in a column, or in a row when that gives bigger cards
+ * (phone landscape). On desktop the tray's width follows the card, so only
+ * the well's height limits it there. The face-up card then clamps its title
+ * and objective to the lines that fit; tapping it shows the full text. */
+function useFitSlotsToWell(wellRef: RefObject<HTMLDivElement | null>, open: boolean) {
+  useLayoutEffect(() => {
+    const well = wellRef.current;
+    if (!well || !open) return;
+    const root = document.documentElement;
+    const fitSlots = () => {
+      const width = well.clientWidth - WELL_PADDING * 2;
+      const height = well.clientHeight - WELL_PADDING * 2;
+      if (width <= 0 || height <= 0) return;
+      const card = (slotWidth: number, slotHeight: number) => Math.min(slotWidth, slotHeight * CARD_RATIO) - SLOT_LIP;
+      const widthFollowsCard = window.matchMedia('(min-width: 901px)').matches;
+      const column = card(widthFollowsCard ? Infinity : width, (height - SLOT_GAP * 2) / 3);
+      const row = widthFollowsCard ? 0 : card((width - SLOT_GAP * 2) / 3, height);
+      const size = Math.floor(Math.max(MIN_CARD, Math.min(MAX_CARD, Math.max(column, row) - 1)));
+      well.dataset.slotDirection = row > column ? 'row' : 'column';
+      root.style.setProperty('--quest-card-width', `${size}px`);
+    };
+    const fitText = () => {
+      const card = well.querySelector<HTMLElement>('.quest-card');
+      const title = card?.querySelector<HTMLElement>('.quest-card__title');
+      const text = card?.querySelector<HTMLElement>('.quest-card__text');
+      if (!card || !title || !text || card.clientHeight === 0) return;
+      const lineHeight = (el: HTMLElement) => parseFloat(getComputedStyle(el).lineHeight) || 18;
+      const overflowing = () => card.scrollHeight > card.clientHeight + 1;
+      for (let titleLines = 2; titleLines >= 1; titleLines--) {
+        title.style.setProperty('--fit-lines', String(titleLines));
+        text.hidden = false;
+        text.style.removeProperty('--fit-lines');
+        const style = getComputedStyle(text);
+        const room = text.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+        const lines = Math.floor(room / lineHeight(text) + 0.05);
+        if (lines < 1) text.hidden = true;
+        else text.style.setProperty('--fit-lines', String(lines));
+        if (!overflowing()) return;
+      }
+    };
+    const fit = () => { fitSlots(); fitText(); };
+    fit();
+    const resize = new ResizeObserver(fit);
+    resize.observe(well);
+    const observed = new Set<Element>();
+    const observeCard = () => { const card = well.querySelector('.quest-card'); if (card && !observed.has(card)) { observed.add(card); resize.observe(card); } };
+    observeCard();
+    const edits = new MutationObserver(() => { observeCard(); fitText(); });
+    edits.observe(well, { childList: true, characterData: true, subtree: true });
+    return () => { resize.disconnect(); edits.disconnect(); root.style.removeProperty('--quest-card-width'); };
+  }, [wellRef, open]);
 }
