@@ -1,5 +1,5 @@
-// Tableau foundation assembly: energy bubble left of the actor's foundation,
-// card count inside the foundation, resources collected listed underneath.
+// Tableau foundation assembly: inside the foundation border, the energy bubble
+// and card count stack left of the actor card; resources are listed underneath.
 const {chromium}=require('playwright');const assert=require('node:assert/strict');const {findLayoutDefects}=require('./lib/layout-check.cjs');
 const PARTS={minFontSize:0,parts:'.proto-actor-energy, .proto-foundation-card--exploration, .proto-foundation-count-token, .proto-occupied-foundation-face, .proto-foundation-resources, .proto-foundation-resources > li'};
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
@@ -11,8 +11,10 @@ const PARTS={minFontSize:0,parts:'.proto-actor-energy, .proto-foundation-card--e
     assert.equal(await p.locator('.proto-foundation-count-token--resources').count(),0,'the resources count token is gone');
     assert.equal(await p.locator('.proto-foundation-card--exploration .proto-foundation-count-token').count(),1,'the card count lives inside the foundation');
     assert.match(await p.locator('.proto-actor-energy').getAttribute('aria-label'),/energy \d+ of \d+/);
-    const e=await p.locator('.proto-actor-energy').boundingBox(),f=await p.locator('.proto-foundation-card--exploration').boundingBox(),r=await p.locator('.proto-foundation-resources').boundingBox();
-    assert.ok(e.x+e.width<=f.x+1,`${w}x${h} energy bubble sits left of the foundation`);assert.ok(r.y>=f.y+f.height-1,`${w}x${h} resources sit beneath the foundation`);
+    assert.equal(await p.locator('.proto-foundation-card--exploration .proto-actor-energy').count(),1,'the energy bubble lives inside the foundation');
+    const e=await p.locator('.proto-actor-energy').boundingBox(),c=await p.locator('.proto-foundation-count-token').boundingBox(),actor=await p.locator('.proto-foundation-card--exploration .proto-occupied-foundation-face').boundingBox(),f=await p.locator('.proto-foundation-card--exploration').boundingBox(),r=await p.locator('.proto-foundation-resources').boundingBox();
+    assert.ok(e.x+e.width<=actor.x+1&&c.x+c.width<=actor.x+1,`${w}x${h} energy and card count sit left of the actor card`);assert.ok(c.y>=e.y+e.height-1,`${w}x${h} card count sits beneath the energy bubble`);
+    assert.ok(r.y>=f.y+f.height-1,`${w}x${h} resources sit beneath the foundation`);
     // New pieces honor the 16px floor (older labels in this panel are tracked separately).
     for(const sel of ['.proto-actor-energy','.proto-foundation-count-token','.proto-foundation-resources > li']){const size=await p.locator(sel).first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize));assert.ok(size>=16,`${w}x${h} ${sel} text is ${size}px`);}
     const at=(label,list)=>list.forEach(d=>problems.push(`${w}x${h} ${label}: ${d}`));

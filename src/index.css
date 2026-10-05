@@ -157,13 +157,13 @@
   width: auto;
   aspect-ratio: auto;
 }
-/* Foundation assembly: the actor's energy bubble sits left of its foundation;
-   the card count sits inside the foundation under the actor's card and the resources collected
+/* Foundation assembly: inside the foundation border, the actor's energy
+   bubble and the card count stack to the left of the actor's card and the resources collected
    this tableau line up underneath. */
 .proto-foundation-assembly {
   display: grid;
-  grid-template-columns: 2.75rem auto;
-  grid-template-areas: "energy foundation" ". resources";
+  grid-template-columns: auto;
+  grid-template-areas: "foundation" "resources";
   align-items: center;
   justify-content: center;
   column-gap: 0.5rem;
@@ -172,7 +172,6 @@
   padding: 0.25rem 0.25rem 0.5rem;
   justify-self: center;
 }
-.proto-foundation-assembly > :first-child { grid-area: energy; }
 .proto-foundation-assembly > [data-foundation-index] { grid-area: foundation; justify-self: start; }
 .proto-foundation-assembly > .proto-foundation-resources { justify-self: start; }
 .proto-actor-energy {
@@ -2366,3 +2365,19 @@ html.drag-perf-mode .target-swirl-sparkles {
 /* A standee's signs hang above it, facing the camera, rather than under the table. */
 .proto-table-stage--tilted .proto-standee-sign { top: auto; bottom: 100%; margin: 0 0 4px; }
 .proto-table-horizon { position: absolute; inset: 0 0 auto 0; height: 18%; z-index: 41; pointer-events: none; background: linear-gradient(#050807, #05080700); }
+
+/* The foundation border widens to hold the energy bubble and card count in a
+   column left of the actor's card. */
+.proto-game-root .proto-foundation-board--exploration .proto-foundation-card--exploration {
+  max-width: none;
+  grid-template-columns: auto auto;
+  grid-template-areas: "energy actor" "count actor";
+  place-items: center;
+  align-content: center;
+  column-gap: 0.5rem;
+  row-gap: 0.5rem;
+  padding: 0.5rem;
+}
+.proto-foundation-card--exploration > .proto-actor-energy { grid-area: energy; align-self: end; }
+.proto-foundation-card--exploration > .proto-foundation-count-token { grid-area: count; align-self: start; }
+.proto-foundation-card--exploration > .proto-exploration-actor { grid-area: actor; }

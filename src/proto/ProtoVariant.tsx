@@ -1990,11 +1990,6 @@ const selectBiome = (biomeId: string) => {
                       }));
                       return (
                         <div key={`exploration-foundation-${index}`} className="proto-foundation-assembly">
-                          {actor ? (
-                            <span className="proto-actor-energy" aria-label={`${actor.label} energy ${state.energy} of ${state.energyMax}`} title={`${actor.label} energy`}>
-                              <span aria-hidden="true">⚡</span><span>{state.energy}</span>
-                            </span>
-                          ) : <span aria-hidden="true" />}
                         <div
                           aria-label="Foundation"
                           data-foundation-index={index}
@@ -2013,6 +2008,11 @@ const selectBiome = (biomeId: string) => {
                           }}
                           className="proto-foundation-card--exploration grid aspect-[56/74] w-full max-w-[clamp(8rem,18vw,14rem)] place-items-center rounded-[calc(var(--classic-radius)*1.15)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(10,15,16,0.96),rgba(5,8,10,0.98))] text-[clamp(0.58rem,1vmin,0.7rem)] font-mono uppercase tracking-[0.18em] text-white/30"
                         >
+                          {actor ? (
+                            <span className="proto-actor-energy" aria-label={`${actor.label} energy ${state.energy} of ${state.energyMax}`} title={`${actor.label} energy`}>
+                              <span aria-hidden="true">⚡</span><span>{state.energy}</span>
+                            </span>
+                          ) : null}
                           {actor ? (
                             <div
                               aria-label="Hero actor in foundation"

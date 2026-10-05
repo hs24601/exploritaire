@@ -120,7 +120,7 @@ export function PannableCanvas({ children, target, worldRef, onCameraChange }: {
   const beacon = targetPoint && shouldShowTargetBeacon(camera.scale, !!indicator) ? targetPoint : null;
   return <section ref={canvasRef} className={`pannable-canvas ${isPanning ? 'is-panning' : ''}`} aria-label="Draggable and zoomable hearth canvas" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onWheel={onWheel} onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}>
     <div ref={worldRef} className="pannable-world" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>{children}</div>
-    {indicator && <div className="canvas-target-indicator" data-testid="hearth-direction-indicator" style={{ left: indicator.x, top: indicator.y }} aria-label={`${target.label} is offscreen`}><span style={{ transform: `rotate(${indicator.angle}deg)` }}>➤</span><b>{target.label}</b></div>}
+    {indicator && <div className="canvas-target-indicator" data-testid="hearth-direction-indicator" style={{ left: indicator.x, top: indicator.y }} aria-label={`${target?.label} is offscreen`}><span style={{ transform: `rotate(${indicator.angle}deg)` }}>➤</span><b>{target?.label}</b></div>}
     {beacon && <div className="canvas-target-beacon" data-testid="hearth-zoom-beacon" style={{ left: beacon.x, top: beacon.y }} aria-label={`${target!.label} beacon`}><span>♨</span><b>{target!.label}</b></div>}
   </section>;
 }
