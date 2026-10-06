@@ -34,6 +34,7 @@ This document records agreed project preferences and behavior from the Proto dev
 
 ## Crafting and actor progression
 
+- The table is a clear 15x15-cell square around True Center. Every cell outside it is impassable terrain, drawn for now as black placeholder tiles; a world map will theme them by biome, and golf will open some of them up. Actors, quest cards and placements never land on terrain. Table-level lights (lamps, carried candles) never reach terrain or pass through it; terrain takes only sun, moon and sky light (`worldBounds.ts`, `tableLightReaches`).
 - Leave Tableau steps each actor out onto the free table cell touching the biome tile, nearest the middle of its bottom edge.
 - Returning expedition actors deposit collected resources into the settlement supply tray, with visible token flights into labeled counters, instead of spilling loose resource stacks onto the table.
 - Stored supplies and table ingredients must not be spendable twice. Drawing supplies debits storage and creates a deliberate crafting stack. Camp construction consumes deposited supplies; pending expedition haul is not settlement stock.
@@ -128,6 +129,7 @@ These are current implementation defaults for iteration, not permanent game-desi
 
 - Actor destinations snap to a table grid square. Only the destination snaps: travel follows continuous diagonal segments with distance-based speed and obstacle avoidance. Biome entry and building staffing retain their designated positions. Continuous pathfinding routes around biome and building footprints with actor clearance; only intentional destination entry and departure from an occupied structure may cross that structure boundary. An unreachable destination must never produce a route through a solid object.
 
+- Reward-hold diagnostics: opening the page with `?holdlog` shows a timeline of each hold (press, start, cancel and its cause, completion, redeem outcome, worst frame). Without the flag nothing is recorded or shown, so builds carry no dev UI.
 - Completed table quest cards support pointer/touch dragging without camera movement. First interaction switches them to the shared table-card size (96 world units wide, locked 63:88 ratio). Drops are unsnapped, avoid biome/building footprints, and may settle with a small tilt. Reward holds show progress on the card, cancel on movement/release, support keyboard holds, and require two uninterrupted seconds before rewards and discard flight.
 
 - For now, Hero details uses the shared default table-card screen size (96 world units × default 1.7 scale = 163.2 CSS px wide, 63:88 ratio). Its floating presentation remains independent of camera zoom. Compact tray icons and a contained descriptor preview preserve the text-size floor; full descriptor and tray labels remain available through accessible text and hover titles.

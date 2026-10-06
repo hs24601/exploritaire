@@ -1,4 +1,5 @@
 import { holdSlop, useRewardHold } from '../useRewardHold';
+import { logHold } from '../holdLog';
 import { TABLE_CARD_WIDTH, CARD_RATIO, settleTableCard, type TableSolid } from '../tableCardPlacement';
 import { useEffect, useRef, useState } from 'react';
 import { QuestCard } from './QuestCard';
@@ -76,27 +77,27 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
       opacity: landed ? 1 : 0, boxShadow: tableObjectShadow(timeOfDay, displayPosition, 8, lights) }}
     onFocus={()=>setTableState(true)}
     onPointerDown={event => {
-      event.stopPropagation(); if(event.button!==0||!landed||redeemed||drag.current)return;
+      event.stopPropagation(); logHold(`${event.pointerType} down on card ${placement.questIndex}${!landed?' (still landing)':redeemed?' (redeemed)':drag.current?' (already pressed)':''}`); if(event.button!==0||!landed||redeemed||drag.current)return;
       event.preventDefault(); setTableState(true);
       drag.current={pointerId:event.pointerId,x:event.clientX,y:event.clientY,origin:{...displayPosition},moved:false,angle:tilt};
-      event.currentTarget.setPointerCapture(event.pointerId); hold.start();
+      event.currentTarget.setPointerCapture(event.pointerId); hold.start(event.pointerType);
     }}
     onPointerMove={event=>{
       const current=drag.current;if(!current||current.pointerId!==event.pointerId)return;
       const dx=event.clientX-current.x,dy=event.clientY-current.y;
-      if(Math.hypot(dx,dy)>holdSlop(event.pointerType)){current.moved=true;hold.cancel();}
+      if(!current.moved&&Math.hypot(dx,dy)>holdSlop(event.pointerType)){current.moved=true;hold.cancel(`moved ${Math.round(Math.hypot(dx,dy))}px`);}
       if(current.moved){setTilt(0);setDisplayPosition(draggedTo(current,event.clientX,event.clientY));}
     }}
     onPointerUp={event=>{
       const current=drag.current;if(!current||current.pointerId!==event.pointerId)return;
-      hold.cancel();drag.current=null;
+      hold.cancel('released');drag.current=null;
       const angle=current.moved ? (Math.random()*8-4) : current.angle;
       const requested=current.moved ? draggedTo(current,event.clientX,event.clientY) : current.origin;
       const settled=settleTableCard(requested,cardWidth,angle,solids) ?? current.origin;
       setDisplayPosition(settled);setTilt(angle);onMove(settled,angle);
     }}
-    onPointerCancel={()=>{hold.cancel();if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;}}
-    onLostPointerCapture={()=>{hold.cancel();drag.current=null;}}>
+    onPointerCancel={()=>{hold.cancel('pointercancel');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;}}
+    onLostPointerCapture={()=>{hold.cancel('lost pointer capture');drag.current=null;}}>
     <QuestCard title={title} text={text} staminaReward={staminaReward} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} />
   </div>;
 }

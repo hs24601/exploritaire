@@ -7,6 +7,8 @@ import { SettlementSupplyTray } from './components/SettlementSupplyTray';
 import { TUTORIAL_QUEST_INDEX, type PlacedQuestCard } from './components/TableQuestCard';
 import { DetailsCardViewer, ActorCardArt } from './components/DetailsCardViewer';
 import { redeemActiveQuest } from './questProgress';
+import { logHold } from './holdLog';
+import { blockedSolids } from './worldBounds';
 import { getTableLighting, tableObjectShadow } from './protoLighting';
 import { NEUTRAL_STANDEE_LIGHTING, SpriteStandeeArt } from './components/SpriteStandee';
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
@@ -152,7 +154,9 @@ export const ProtoVariant = () => {
       const elapsed = (now - previous) / 1000;
       previous = now;
       setTableHours((hours) => (hours + elapsed * 0.2) % 24);
-    }, 250);
+    // Each tick re-renders the whole table; light drifts slowly, so once a second
+    // is smooth enough and keeps phones free to answer input.
+    }, 1000);
     return () => window.clearInterval(timer);
   }, [cycleLighting]);
   const tableLights = tableLightsEnabled ? [
@@ -1580,6 +1584,7 @@ const selectBiome = (biomeId: string) => {
     const tile = state.biomeTiles.find(tile => tile.id === (index <= 1 ? 'woods-alpha' : index === 7 || index === 8 ? 'woods-beta' : ''));
     const location = tile?.position ?? { x: 0, y: 48 };
     const blocked = [
+      ...blockedSolids().map(region => ({ x: region.x, y: region.y, w: region.width, h: region.height })),
       ...state.biomeTiles.map(tile => ({ x: tile.position.x, y: tile.position.y, w: tile.gridSize.columns * 48, h: tile.gridSize.rows * 48 })),
       ...state.worldActors.map(actor => ({ x: actor.position.x, y: actor.position.y, w: 64, h: 64 })),
       ...state.worldResourceStacks.map(stack => ({ x: stack.position.x, y: stack.position.y, w: 64, h: 64 })),
@@ -1636,7 +1641,7 @@ const selectBiome = (biomeId: string) => {
   const redeemQuest = () => {
     const index = state.questClaims;
     const step = getExpeditionQuestSteps(state)[index];
-    if (!step || !(step.complete || state.questAccomplished[index])) return;
+    if (!step || !(step.complete || state.questAccomplished[index])) { logHold(`redeem refused: quest ${index} not complete`); return; }
     const rewardSource = document.querySelector<HTMLElement>('[data-table-quest="' + index + '"] .quest-card');
     flyQuestToDiscard(rewardSource);
     const from = rewardSource?.getBoundingClientRect();
@@ -2230,7 +2235,7 @@ const selectBiome = (biomeId: string) => {
                 onMoveQuest={(index, position, tilt) => setState(previous => ({ ...previous, questTableCards: previous.questTableCards.map(card => card.questIndex === index ? { ...card, position, tilt, tableState: true, flightFrom: undefined } : card) }))}
                 tilted={cameraTilted}
                 onTiltedChange={setCameraTilted}
-                onRedeemQuest={(index) => { if (index === TUTORIAL_QUEST_INDEX) clearTutorialCard(); else if (index === state.questClaims) redeemQuest(); }}
+                onRedeemQuest={(index) => { logHold(index === TUTORIAL_QUEST_INDEX ? 'tutorial card cleared' : index === state.questClaims ? `redeem quest ${index}` : `redeem ignored: card ${index}, next claim is ${state.questClaims}`); if (index === TUTORIAL_QUEST_INDEX) clearTutorialCard(); else if (index === state.questClaims) redeemQuest(); }}
                 lightSources={tableLights}
                 timeOfDay={tableHours}
                 showLightReadout={lightReadoutVisible}

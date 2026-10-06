@@ -2425,3 +2425,20 @@ html.drag-perf-mode .target-swirl-sparkles {
   .proto-foundation-popup { scale: 0.7; }
   .proto-foundation-board--tilted .proto-foundation-assembly { padding-top: 34px; }
 }
+
+/* Opt-in reward-hold timing log (?holdlog) for playtests on real devices. */
+.hold-log { position: fixed; left: 8px; bottom: 8px; z-index: 70000; max-width: min(560px, calc(100vw - 16px)); max-height: 45vh; overflow: auto; padding: 6px 8px; border: 2px solid #ffe19a; border-radius: 6px; background: #000d; color: #fff3c8; font: 16px/1.25 monospace; pointer-events: auto; }
+.hold-log button { float: right; margin-left: 8px; padding: 2px 8px; border: 1px solid #ffe19a; background: #17251f; color: inherit; font: inherit; }
+
+/* Impassable terrain placeholders: black tiles on the 48px world grid. Their
+   bevels catch only sky light (--terrain-sky follows the sun and moon); the
+   light canvas keeps table lights off them. */
+.proto-blocked-terrain {
+  position: absolute;
+  background:
+    linear-gradient(180deg, rgba(196, 212, 236, var(--terrain-sky, 0.08)) 0 2px, transparent 2px 45px, rgba(0, 0, 0, 0.7) 45px) 0 0 / 48px 48px,
+    linear-gradient(90deg, rgba(196, 212, 236, calc(var(--terrain-sky, 0.08) * 0.6)) 0 2px, transparent 2px 45px, rgba(0, 0, 0, 0.7) 45px) 0 0 / 48px 48px,
+    #070708;
+}
+.proto-map-world > .proto-blocked-terrain,
+.proto-table-stage--tilted .proto-map-world > .proto-blocked-terrain { pointer-events: none; }

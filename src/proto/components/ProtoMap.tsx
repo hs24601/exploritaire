@@ -1,4 +1,5 @@
 import { TABLE_GRID, TRUE_CENTER, screenToWorld, type GridCell } from '../gridCoordinates';
+import { BLOCKED_REGIONS, blockedPathObstacles, blockedSolids } from '../worldBounds';
 import { findWorldPath, pointAlongWorldPath, worldPathLength, type PathObstacle } from '../worldPathfinding';
 import { TableQuestCard, TUTORIAL_QUEST, TUTORIAL_QUEST_INDEX, type PlacedQuestCard } from './TableQuestCard';
 import { BoardObjectLabel } from './BoardObjectLabel';
@@ -335,7 +336,7 @@ export const ProtoMap = ({
     const originPoint = origin.location === 'foundation' && origin.biomeId
       ? resolveBiomeActorCell(origin.biomeId) ?? origin.position
       : origin.position;
-    const obstacles: PathObstacle[] = biomeTiles.map(tile => ({id:tile.id,...getBiomeWorldFootprint(tile)}));
+    const obstacles: PathObstacle[] = [...blockedPathObstacles(), ...biomeTiles.map(tile => ({id:tile.id,...getBiomeWorldFootprint(tile)}))];
     const buildings = resourceStacks.filter(stack => stack.resource === 'provisions_hut' || stack.build && CRAFT_RECIPES.find(recipe => recipe.id === stack.build?.recipeId)?.output === 'provisions_hut');
     buildings.forEach(stack => obstacles.push({id: stack.id, left: stack.position.x-24, right: stack.position.x+24, top: stack.position.y-24, bottom: stack.position.y+24}));
     const destinationBuilding = buildings.find(stack => Math.hypot(stack.position.x-target.x,stack.position.y-target.y)<52);
@@ -496,7 +497,7 @@ export const ProtoMap = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const lightSources = useMemo(() => [...placedLights, ...actorLights], [lightKey]);
   // Steady light the game world can read per object; rendering adds flicker on top.
-  const lightField = createTableLightField(timeOfDay, lightSources);
+  const lightField = createTableLightField(timeOfDay, lightSources, BLOCKED_REGIONS);
 
   useEffect(() => {
     const canvas = lightCanvasRef.current;
@@ -526,7 +527,7 @@ export const ProtoMap = ({
       const context = canvas.getContext('2d');
       if (!context) return;
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawTableLight(context, { width, height }, camera.cameraState, frame, sources, timeMs);
+      drawTableLight(context, { width, height }, camera.cameraState, frame, sources, timeMs, BLOCKED_REGIONS);
     };
     draw(performance.now());
     const observer = new ResizeObserver(() => draw(performance.now()));
@@ -686,6 +687,11 @@ export const ProtoMap = ({
             transformOrigin: 'center center',
           }}
         >
+          {/* Impassable terrain around the clear area: black placeholder tiles,
+              lit only by the sun and moon (the light canvas keeps table lights off them). */}
+          {BLOCKED_REGIONS.map((region) => <div key={region.id} aria-hidden="true" data-blocked-region={region.id} className="proto-blocked-terrain"
+            style={{ left: `calc(50% + ${region.left}px)`, top: `calc(50% + ${region.top}px)`, width: region.right - region.left, height: region.bottom - region.top,
+              ['--terrain-sky' as string]: (0.05 + getTableLighting(timeOfDay).daylight * 0.11).toFixed(3) }} />)}
           <div className="table-grid-origin" data-grid-landmark="true-center" data-grid-reference={TRUE_CENTER.reference} aria-hidden="true" style={{left:'50%',top:'50%',width:CLASSICPLUS_GRID_SIZE,height:CLASSICPLUS_GRID_SIZE}}>＋</div>
           {placedLights.map((light) => <div key={light.id} data-board-piece="lamp" data-camera-ignore="true"
             aria-label={light.id === 'table-lantern' ? 'Table lantern, drag to move light' : 'Structure light'}
@@ -699,6 +705,7 @@ export const ProtoMap = ({
             : { title: questTitles[placement.questIndex], text: questTexts[placement.questIndex], redeemed: placement.questIndex < questClaims })} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale} toWorld={worldPointFromClient}
             onMove={(position,tilt)=>onMoveQuest?.(placement.questIndex,position,tilt)}
             solids={[
+              ...blockedSolids(),
               ...biomeTiles.map(tile=>getBiomeWorldFootprint(tile)),
               ...resourceStacks.filter(stack=>stack.resource==='provisions_hut'||stack.build&&CRAFT_RECIPES.find(recipe=>recipe.id===stack.build?.recipeId)?.output==='provisions_hut').map(stack=>({x:stack.position.x,y:stack.position.y,width:48,height:48})),
               ...actors.map(actor=>{const point=getActorWorldPosition(actor);return {x:point.x,y:point.y,width:48,height:48};}),

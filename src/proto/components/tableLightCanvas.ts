@@ -7,6 +7,7 @@ import {
   lightFlicker,
   rgba,
   type TableLight,
+  type LightOccluder,
   type TableLightFrame,
 } from '../protoLighting';
 
@@ -21,6 +22,7 @@ export const drawTableLight = (
   frame: TableLightFrame,
   lights: readonly TableLight[],
   timeMs: number,
+  occluders: readonly LightOccluder[] = [],
 ) => {
   const { width, height } = size;
   const nightness = 1 - frame.daylight;
@@ -32,46 +34,50 @@ export const drawTableLight = (
   context.globalCompositeOperation = 'source-over';
   context.clearRect(0, 0, width, height);
 
-  // Sky: a tinted veil that deepens toward night but keeps a readable floor.
-  context.fillStyle = rgba(frame.skyTint, frame.darkness);
-  context.fillRect(0, 0, width, height);
-
-  // Edge vignette pulls focus to the lit middle of the table after dark.
-  if (nightness > 0.05) {
-    const vignette = context.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.3, width / 2, height / 2, Math.hypot(width, height) * 0.6);
-    vignette.addColorStop(0, rgba(frame.skyTint, 0));
-    vignette.addColorStop(1, rgba({ r: 0, g: 0, b: 6 }, 0.32 * nightness));
-    context.fillStyle = vignette;
+  // Sun, moon and sky: the light every surface gets, solid terrain included.
+  const drawGlobal = () => {
+    // Sky: a tinted veil that deepens toward night but keeps a readable floor.
+    context.fillStyle = rgba(frame.skyTint, frame.darkness);
     context.fillRect(0, 0, width, height);
-  }
 
-  // Sun wash: warm light falling across the table from the sun's side.
-  if (frame.daylight > 0) {
-    const sun = toScreen(frame.source);
-    const length = Math.max(1, Math.hypot(sun.x - width / 2, sun.y - height / 2));
-    const reach = Math.hypot(width, height) * 0.75;
-    const towardX = width / 2 - ((sun.x - width / 2) / length) * reach * 0.5;
-    const towardY = height / 2 - ((sun.y - height / 2) / length) * reach * 0.5;
-    const fromX = width / 2 + ((sun.x - width / 2) / length) * reach * 0.5;
-    const fromY = height / 2 + ((sun.y - height / 2) / length) * reach * 0.5;
-    const wash = context.createLinearGradient(fromX, fromY, towardX, towardY);
-    const strength = 0.06 + frame.twilight * 0.2;
-    wash.addColorStop(0, rgba(frame.sunColor, strength));
-    wash.addColorStop(0.55, rgba(frame.sunColor, strength * 0.35));
-    wash.addColorStop(1, rgba(frame.sunColor, 0));
-    context.globalCompositeOperation = 'screen';
-    context.fillStyle = wash;
-    context.fillRect(0, 0, width, height);
-    // Long-shadow side of the table darkens a little at golden hour.
-    if (frame.twilight > 0) {
-      const shade = context.createLinearGradient(towardX, towardY, fromX, fromY);
-      shade.addColorStop(0, rgba({ r: 20, g: 6, b: 30 }, 0.22 * frame.twilight));
-      shade.addColorStop(0.6, rgba({ r: 20, g: 6, b: 30 }, 0));
-      context.globalCompositeOperation = 'source-over';
-      context.fillStyle = shade;
+    // Edge vignette pulls focus to the lit middle of the table after dark.
+    if (nightness > 0.05) {
+      const vignette = context.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.3, width / 2, height / 2, Math.hypot(width, height) * 0.6);
+      vignette.addColorStop(0, rgba(frame.skyTint, 0));
+      vignette.addColorStop(1, rgba({ r: 0, g: 0, b: 6 }, 0.32 * nightness));
+      context.fillStyle = vignette;
       context.fillRect(0, 0, width, height);
     }
-  }
+
+    // Sun wash: warm light falling across the table from the sun's side.
+    if (frame.daylight > 0) {
+      const sun = toScreen(frame.source);
+      const length = Math.max(1, Math.hypot(sun.x - width / 2, sun.y - height / 2));
+      const reach = Math.hypot(width, height) * 0.75;
+      const towardX = width / 2 - ((sun.x - width / 2) / length) * reach * 0.5;
+      const towardY = height / 2 - ((sun.y - height / 2) / length) * reach * 0.5;
+      const fromX = width / 2 + ((sun.x - width / 2) / length) * reach * 0.5;
+      const fromY = height / 2 + ((sun.y - height / 2) / length) * reach * 0.5;
+      const wash = context.createLinearGradient(fromX, fromY, towardX, towardY);
+      const strength = 0.06 + frame.twilight * 0.2;
+      wash.addColorStop(0, rgba(frame.sunColor, strength));
+      wash.addColorStop(0.55, rgba(frame.sunColor, strength * 0.35));
+      wash.addColorStop(1, rgba(frame.sunColor, 0));
+      context.globalCompositeOperation = 'screen';
+      context.fillStyle = wash;
+      context.fillRect(0, 0, width, height);
+      // Long-shadow side of the table darkens a little at golden hour.
+      if (frame.twilight > 0) {
+        const shade = context.createLinearGradient(towardX, towardY, fromX, fromY);
+        shade.addColorStop(0, rgba({ r: 20, g: 6, b: 30 }, 0.22 * frame.twilight));
+        shade.addColorStop(0.6, rgba({ r: 20, g: 6, b: 30 }, 0));
+        context.globalCompositeOperation = 'source-over';
+        context.fillStyle = shade;
+        context.fillRect(0, 0, width, height);
+      }
+    }
+  };
+  drawGlobal();
 
   const cellSize = LIGHT_CELL_SIZE * camera.scale;
   const pools = lights.map((light) => {
@@ -121,6 +127,21 @@ export const drawTableLight = (
     context.fillRect(center.x - coreRadius, center.y - coreRadius, coreRadius * 2, coreRadius * 2);
   });
   context.globalCompositeOperation = 'source-over';
+
+  // Table-level light never reaches solid terrain: there only the global light remains.
+  if (occluders.length > 0) {
+    context.save();
+    context.beginPath();
+    occluders.forEach((rect) => {
+      const start = toScreen({ x: rect.left, y: rect.top });
+      const end = toScreen({ x: rect.right, y: rect.bottom });
+      context.rect(start.x, start.y, end.x - start.x, end.y - start.y);
+    });
+    context.clip();
+    context.clearRect(0, 0, width, height);
+    drawGlobal();
+    context.restore();
+  }
 };
 
 /** Whether the overlay needs continuous redraws for flicker. */

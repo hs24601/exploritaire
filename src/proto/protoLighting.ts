@@ -1,3 +1,4 @@
+import { crossesObstacle } from './worldPathfinding';
 // Table light engine. Pure math shared by rendering (canvas overlay, object
 // shadows) and game logic (how lit is this object or tile?). Rendering may add
 // flicker and glow; gameplay must only read the steady values sampled here.
@@ -93,6 +94,15 @@ export const lightFalloff = (distance: number, radiusCells = DEFAULT_LIGHT_RADIU
   return inner * inner;
 };
 
+/** Solid terrain that table-level light cannot reach into or pass through. */
+export type LightOccluder = { id: string; left: number; top: number; right: number; bottom: number };
+const insideRect = (point: { x: number; y: number }, rect: LightOccluder) =>
+  point.x > rect.left && point.x < rect.right && point.y > rect.top && point.y < rect.bottom;
+/** Whether a table light reaches a point: never inside solid terrain, and not
+ * through it. Sun and moon light are unaffected. */
+export const tableLightReaches = (light: TableLight, point: { x: number; y: number }, occluders: readonly LightOccluder[] = []) =>
+  !occluders.some((rect) => insideRect(point, rect) || insideRect(light.position, rect) || crossesObstacle(light.position, point, rect));
+
 /** Steady contribution of one light at a point, 0–1. */
 export const lightContribution = (light: TableLight, point: { x: number; y: number }) =>
   (light.strength ?? DEFAULT_LIGHT_STRENGTH) *
@@ -124,9 +134,11 @@ export const sampleTableLight = (
   hours: number,
   point: { x: number; y: number },
   lights: readonly TableLight[] = [],
+  occluders: readonly LightOccluder[] = [],
 ): LightSample => {
   const frame = getTableLighting(hours);
   const contributions = lights
+    .filter((light) => tableLightReaches(light, point, occluders))
     .map((light) => ({ id: light.id, amount: clamp01(lightContribution(light, point)) }))
     .filter((entry) => entry.amount > 0)
     .sort((left, right) => right.amount - left.amount);
@@ -154,6 +166,7 @@ export const sampleTableLightArea = (
   area: { x: number; y: number; width: number; height: number },
   lights: readonly TableLight[] = [],
   samplesPerSide = 3,
+  occluders: readonly LightOccluder[] = [],
 ): LightAreaSample => {
   const steps = Math.max(1, Math.floor(samplesPerSide));
   const samples: LightSample[] = [];
@@ -164,12 +177,12 @@ export const sampleTableLightArea = (
       samples.push(sampleTableLight(hours, {
         x: area.x - area.width / 2 + fx * area.width,
         y: area.y - area.height / 2 + fy * area.height,
-      }, lights));
+      }, lights, occluders));
     }
   }
   const average = (pick: (sample: LightSample) => number) => samples.reduce((sum, sample) => sum + pick(sample), 0) / samples.length;
   const total = average((sample) => sample.total);
-  const center = sampleTableLight(hours, { x: area.x, y: area.y }, lights);
+  const center = sampleTableLight(hours, { x: area.x, y: area.y }, lights, occluders);
   return {
     ...center,
     local: average((sample) => sample.local),
@@ -181,10 +194,10 @@ export const sampleTableLightArea = (
 };
 
 /** One time-of-day snapshot the game world can query for any object or tile. */
-export const createTableLightField = (hours: number, lights: readonly TableLight[] = []) => ({
+export const createTableLightField = (hours: number, lights: readonly TableLight[] = [], occluders: readonly LightOccluder[] = []) => ({
   frame: getTableLighting(hours),
-  at: (point: { x: number; y: number }) => sampleTableLight(hours, point, lights),
-  over: (area: { x: number; y: number; width: number; height: number }) => sampleTableLightArea(hours, area, lights),
+  at: (point: { x: number; y: number }) => sampleTableLight(hours, point, lights, occluders),
+  over: (area: { x: number; y: number; width: number; height: number }) => sampleTableLightArea(hours, area, lights, 3, occluders),
 });
 
 export type TableLightField = ReturnType<typeof createTableLightField>;
