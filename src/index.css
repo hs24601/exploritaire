@@ -431,6 +431,9 @@
   color: #ead9b4;
   font: 1rem/1.4 monospace;
 }
+/* Fixed width, so the slider beside it never shifts under a dragging pointer
+   when the phase changes (Night, Twilight, Day). */
+.proto-lighting-rail__clock { display: inline-block; min-width: 25ch; white-space: nowrap; }
 .proto-lighting-rail input[type="range"] {
   width: clamp(6rem, 12vw, 10rem);
   accent-color: #f0c878;

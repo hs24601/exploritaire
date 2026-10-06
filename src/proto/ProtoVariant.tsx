@@ -9,7 +9,8 @@ import { DetailsCardViewer, ActorCardArt } from './components/DetailsCardViewer'
 import { redeemActiveQuest } from './questProgress';
 import { logHold } from './holdLog';
 import { blockedSolids } from './worldBounds';
-import { DARKEST_HOUR, getTableLighting, tableObjectShadow } from './protoLighting';
+import { getTableLighting, tableObjectShadow } from './protoLighting';
+import { TimeOfDaySlider } from './components/TimeOfDaySlider';
 import { NEUTRAL_STANDEE_LIGHTING, SpriteStandeeArt } from './components/SpriteStandee';
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
 import { assessSolverMove, preserveSolverRpgValues, type SolverMove } from './tableauSolver';
@@ -55,6 +56,8 @@ import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, EN
 import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauMove } from './rules/play';
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
 
+/** Hour the table opens at, on the first day and every day after. */
+const TABLE_OPENING_HOUR = 9;
 
 
 /** Details-card text for a supply: its category and the recipes that consume it. */
@@ -137,8 +140,8 @@ export const ProtoVariant = () => {
   const [inspectedActorId, setInspectedActorId] = useState<string | null>(null);
   const [inspectionAnchor, setInspectionAnchor] = useState<HTMLElement | null>(null);
   const inspectActor = (id: string, anchor: HTMLElement) => { setInspectionAnchor(anchor); setInspectedActorId(id); };
-  // The table opens at the darkest hour of the night.
-  const [tableHours, setTableHours] = useState(DARKEST_HOUR);
+  // The table opens in the morning.
+  const [tableHours, setTableHours] = useState(TABLE_OPENING_HOUR);
   // Battle-camera tilt for the table and the tableau field, toggled from the map.
   const [cameraTilted, setCameraTilted] = useState(false);
   const [cycleLighting, setCycleLighting] = useState(false);
@@ -147,9 +150,9 @@ export const ProtoVariant = () => {
   const [moveGuidance, setMoveGuidance] = useState(false);
   const [lightReadoutVisible, setLightReadoutVisible] = useState(false);
   const lighting = getTableLighting(tableHours);
-  // Each later day starts in the morning; the first keeps the darkest-hour opening.
+  // Each later day starts in the morning too.
   const startedDay = useRef(state.day);
-  useEffect(() => { if (state.day !== startedDay.current) { startedDay.current = state.day; setTableHours(8); } }, [state.day]);
+  useEffect(() => { if (state.day !== startedDay.current) { startedDay.current = state.day; setTableHours(TABLE_OPENING_HOUR); } }, [state.day]);
   useEffect(() => {
     if (!cycleLighting) return;
     let previous = performance.now();
@@ -1690,8 +1693,8 @@ const selectBiome = (biomeId: string) => {
                   {(['supplies', 'map', 'tableau', 'quests'] as const).map(panel => <button key={panel} type="button" aria-pressed={mobilePanel === panel} disabled={panel === 'tableau' && !state.selectedBiomeId} onClick={() => { setMobilePanel(panel); if (panel === 'quests') setQuestOpen(true); if (panel === 'supplies') setSupplyOpen(true); }}>{panel === 'map' ? 'Table' : panel === 'tableau' ? 'Tableau' : panel === 'supplies' ? 'Supplies' : 'Quests'}</button>)}
                 </nav>
                 <div className="proto-lighting-rail" data-camera-ignore="true">
-                  <span>Day {state.day} · {lighting.phase} · {String(Math.floor(lighting.hour)).padStart(2, '0')}:{String(Math.floor((lighting.hour % 1) * 60)).padStart(2, '0')}</span>
-                  <label className="flex items-center gap-2">Time <input aria-label="Table time of day" type="range" min="0" max="23.99" step="0.05" value={tableHours} onChange={(event) => setTableHours(Number(event.target.value))} /></label>
+                  <span className="proto-lighting-rail__clock">Day {state.day} · {lighting.phase} · {String(Math.floor(lighting.hour)).padStart(2, '0')}:{String(Math.floor((lighting.hour % 1) * 60)).padStart(2, '0')}</span>
+                  <label className="flex items-center gap-2">Time <TimeOfDaySlider hours={tableHours} onChange={setTableHours} /></label>
                   <label className="flex items-center gap-2"><input type="checkbox" checked={cycleLighting} onChange={(event) => setCycleLighting(event.target.checked)} />Cycle day/night</label>
                   <label className="flex items-center gap-2"><input type="checkbox" checked={tableLightsEnabled} onChange={(event) => setTableLightsEnabled(event.target.checked)} />Table lights</label>
                   <label className="flex items-center gap-2"><input type="checkbox" checked={lightReadoutVisible} onChange={(event) => setLightReadoutVisible(event.target.checked)} />Light %</label>
