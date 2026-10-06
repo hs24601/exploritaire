@@ -77,7 +77,7 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
       opacity: landed ? 1 : 0, boxShadow: tableObjectShadow(timeOfDay, displayPosition, 8, lights) }}
     onFocus={()=>setTableState(true)}
     onPointerDown={event => {
-      event.stopPropagation(); logHold(`${event.pointerType} down on card ${placement.questIndex}${!landed?' (still landing)':redeemed?' (redeemed)':drag.current?' (already pressed)':''}`); if(event.button!==0||!landed||redeemed||drag.current)return;
+      event.stopPropagation(); if(!landed||redeemed||drag.current||event.button!==0)logHold(`card ${placement.questIndex} ignored the press: ${!landed?'still landing':redeemed?'already redeemed':drag.current?'already pressed':'not the main button'}`); if(event.button!==0||!landed||redeemed||drag.current)return;
       event.preventDefault(); setTableState(true);
       drag.current={pointerId:event.pointerId,x:event.clientX,y:event.clientY,origin:{...displayPosition},moved:false,angle:tilt};
       event.currentTarget.setPointerCapture(event.pointerId); hold.start(event.pointerType);

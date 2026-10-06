@@ -2442,3 +2442,4 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 .proto-map-world > .proto-blocked-terrain,
 .proto-table-stage--tilted .proto-map-world > .proto-blocked-terrain { pointer-events: none; }
+.hold-log__note { color: #fff3c899; }
