@@ -4,12 +4,13 @@ import { createDeck, createSeededRandom, isAdjacentRank, shuffle } from './setup
 // Pond fishing: Go Fish for one. Pure: no React or DOM.
 //
 // The pond holds a hidden hand of fish (the water) and the angler holds bait.
-// Casting a bait card asks the pond "got any sevens?":
-// - Bite: every fish of that rank in the water is caught, as in Go Fish where the
-//   other player hands over all their sevens. Fresh fish rise from the school to
-//   refill the water.
-// - Miss ("Go fish!"): fish one rank away (golf adjacency, A and K wrap) nibble
-//   and show their rank, so a miss still teaches something.
+// Casting a bait card into the pond asks it "got any kings?":
+// - Bite: a fish of that rank takes the bait and is hooked. The fight that
+//   follows (rules/fishFight.ts) lands it or loses it. A landed fish is caught
+//   as its kind (a king is a Kingsfish) and a fresh fish rises from the school.
+// - Miss ("Go fish!"): the bait is lost and casting costs stamina, but fish one
+//   rank away (golf adjacency, A and K wrap) nibble and show their rank, so a
+//   miss still teaches something.
 // Every cast spends its bait and the angler draws a fresh one from the tin.
 // The line holds fewer casts than the tin holds bait, so each cast is a choice:
 // ripples hint each hidden fish's size band, nibbles show exact ranks.
@@ -22,12 +23,14 @@ export const POND_BAIT_PER_DAY = 16;
 export const POND_MATCHED_BAIT = 8;
 /** Casts the line holds each day; the tin has more bait than that, so choosing matters. */
 export const POND_CASTS_PER_DAY = 10;
-/** The fourth fish ever caught is always the glowfish. */
-export const GLOWFISH_CATCH = 4;
+/** Stamina a missed cast costs; casting needs at least this much. */
+export const POND_MISS_STAMINA = 1;
 
-export type PondCatch = 'fish' | 'glowfish';
+export type PondCatch = 'fish' | 'glowfish' | 'kingsfish';
+/** What a landed fish is: a king is a Kingsfish, a queen a glowfish, the rest plain fish. */
+export const catchForRank = (rank: number): PondCatch => rank === 13 ? 'kingsfish' : rank === 12 ? 'glowfish' : 'fish';
 export type PondFish = { id: string; rank: number; revealed: boolean };
-export type PondCast = { rank: number; outcome: 'bite' | 'miss'; catches: PondCatch[]; nibbles: number; drew: boolean };
+export type PondCast = { rank: number; outcome: 'bite' | 'miss' | 'landed' | 'escaped'; catch?: PondCatch; nibbles: number; drew: boolean };
 export type PondState = {
   seed: number;
   day: number;
@@ -39,8 +42,10 @@ export type PondState = {
   bait: Card[];
   hand: Card[];
   castsLeft: number;
-  /** Lifetime catches; decides the glowfish. */
+  /** Lifetime catches. */
   caught: number;
+  /** The fish on the line while a fight is on. */
+  hooked: string | null;
   /** Ranks that missed since the water last changed. A hint, not a block. */
   missedRanks: number[];
   lastCast: PondCast | null;
@@ -66,46 +71,29 @@ export const createPondDeal = (seed: number, day: number, caught = 0): PondState
   // The opening hand always holds two bites for the water and two decoys.
   const hand = shuffle([matched[0], matched[1], decoys[0], decoys[1]], random);
   const pile = shuffle([...matched.slice(2), ...decoys.slice(2)], random);
-  return { seed, day, water, school, bait: pile, hand, castsLeft: POND_CASTS_PER_DAY, caught, missedRanks: [], lastCast: null };
+  return { seed, day, water, school, bait: pile, hand, castsLeft: POND_CASTS_PER_DAY, caught, hooked: null, missedRanks: [], lastCast: null };
 };
 
 /** A new day restocks the pond; lifetime catches carry over. */
 export const restockPond = (pond: PondState, day: number) => createPondDeal(pond.seed, day, pond.caught);
 
-export const nextCatchKind = (caught: number): PondCatch => caught + 1 === GLOWFISH_CATCH ? 'glowfish' : 'fish';
+export const pondFinished = (pond: PondState) => !pond.hooked && (pond.castsLeft <= 0 || pond.hand.length === 0 || pond.water.length === 0);
 
-export const pondFinished = (pond: PondState) => pond.castsLeft <= 0 || pond.hand.length === 0 || pond.water.length === 0;
-
-export const castBait = (pond: PondState, baitId: string): { pond: PondState; catches: PondCatch[] } => {
+/** Cast a bait card. A fish of that rank bites and is hooked; otherwise the bait is lost. */
+export const castBait = (pond: PondState, baitId: string): { pond: PondState; hooked: PondFish | null } => {
   const card = pond.hand.find((entry) => entry.id === baitId);
-  if (!card || pondFinished(pond)) return { pond, catches: [] };
+  if (!card || pond.hooked || pondFinished(pond)) return { pond, hooked: null };
   const drawn = pond.bait[0];
   const hand = [...pond.hand.filter((entry) => entry.id !== baitId), ...(drawn ? [drawn] : [])];
   const bait = pond.bait.slice(1);
   const castsLeft = pond.castsLeft - 1;
-  const hooked = pond.water.filter((fish) => fish.rank === card.rank);
-  if (hooked.length) {
-    const catches = hooked.map((_, index) => nextCatchKind(pond.caught + index));
-    const remaining = pond.water.filter((fish) => fish.rank !== card.rank);
-    const rising = pond.school.slice(0, POND_WATER_SIZE - remaining.length);
-    return {
-      catches,
-      pond: {
-        ...pond,
-        hand,
-        bait,
-        castsLeft,
-        water: [...remaining, ...rising],
-        school: pond.school.slice(rising.length),
-        caught: pond.caught + catches.length,
-        missedRanks: [],
-        lastCast: { rank: card.rank, outcome: 'bite', catches, nibbles: 0, drew: Boolean(drawn) },
-      },
-    };
+  const hooked = pond.water.find((fish) => fish.rank === card.rank) ?? null;
+  if (hooked) {
+    return { hooked, pond: { ...pond, hand, bait, castsLeft, hooked: hooked.id, lastCast: { rank: card.rank, outcome: 'bite', nibbles: 0, drew: Boolean(drawn) } } };
   }
   const nibbles = pond.water.filter((fish) => isAdjacentRank(fish.rank, card.rank)).length;
   return {
-    catches: [],
+    hooked: null,
     pond: {
       ...pond,
       hand,
@@ -113,13 +101,47 @@ export const castBait = (pond: PondState, baitId: string): { pond: PondState; ca
       castsLeft,
       water: pond.water.map((fish) => isAdjacentRank(fish.rank, card.rank) ? { ...fish, revealed: true } : fish),
       missedRanks: pond.missedRanks.includes(card.rank) ? pond.missedRanks : [...pond.missedRanks, card.rank],
-      lastCast: { rank: card.rank, outcome: 'miss', catches: [], nibbles, drew: Boolean(drawn) },
+      lastCast: { rank: card.rank, outcome: 'miss', nibbles, drew: Boolean(drawn) },
     },
   };
 };
 
+/** The fight was won: the hooked fish is caught and a fresh one rises from the school. */
+export const landHooked = (pond: PondState): { pond: PondState; caught: PondCatch | null } => {
+  const fish = pond.water.find((entry) => entry.id === pond.hooked);
+  if (!fish) return { pond, caught: null };
+  const remaining = pond.water.filter((entry) => entry.id !== fish.id);
+  const rising = pond.school.slice(0, POND_WATER_SIZE - remaining.length);
+  const caught = catchForRank(fish.rank);
+  return {
+    caught,
+    pond: {
+      ...pond,
+      water: [...remaining, ...rising],
+      school: pond.school.slice(rising.length),
+      caught: pond.caught + 1,
+      hooked: null,
+      missedRanks: [],
+      lastCast: { rank: fish.rank, outcome: 'landed', catch: caught, nibbles: 0, drew: pond.lastCast?.drew ?? false },
+    },
+  };
+};
+
+/** The fight was lost: the fish slips the hook and stays in the water, face up. */
+export const loseHooked = (pond: PondState): PondState => {
+  const fish = pond.water.find((entry) => entry.id === pond.hooked);
+  if (!fish) return { ...pond, hooked: null };
+  return {
+    ...pond,
+    hooked: null,
+    water: pond.water.map((entry) => entry.id === fish.id ? { ...entry, revealed: true } : entry),
+    lastCast: { rank: fish.rank, outcome: 'escaped', nibbles: 0, drew: pond.lastCast?.drew ?? false },
+  };
+};
+
 // Eating the catch. Fish is plain food; the glowfish lends its glow to the eater
-// until the day ends: more max stamina and a brighter, cooler carried light.
+// until the day ends: more max stamina and a brighter, cooler carried light; a
+// Kingsfish is a feast that restores the party and the eater in full.
 export const FISH_STAMINA = 1;
 export const GLOWFISH_MAX_STAMINA_BONUS = 2;
 export const GLOWFISH_LUMINOSITY = 0.6;
@@ -130,6 +152,7 @@ export const GLOWFISH_TABLE_LIGHT = { radius: 1.6, height: 18, strength: 0.32, c
 type EaterState = Pick<ProtoState, 'stamina' | 'maxStamina' | 'actorStamina' | 'worldActors' | 'glowfishGlow'>;
 
 export const eatPondCatch = <T extends EaterState>(state: T, kind: PondCatch, actorId: string, actorStaminaMax: number): T => {
+  if (kind === 'kingsfish') return { ...state, stamina: state.maxStamina, actorStamina: state.actorStamina.map((value, index) => index === 0 ? actorStaminaMax : value) };
   const glow = kind === 'glowfish';
   const maxStamina = state.maxStamina + (glow && !state.glowfishGlow ? GLOWFISH_MAX_STAMINA_BONUS : 0);
   const gain = FISH_STAMINA + (glow ? GLOWFISH_MAX_STAMINA_BONUS : 0);

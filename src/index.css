@@ -2532,11 +2532,6 @@ html.drag-perf-mode .target-swirl-sparkles {
     radial-gradient(ellipse at 50% 42%, #1f6576, #0f3442 62%, #0a222b);
   box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), 0 0 0 2px #2b3b24;
 }
-.proto-pond__water--glow { animation: proto-pond-glow 2.6s ease-in-out infinite; }
-@keyframes proto-pond-glow {
-  0%, 100% { box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), inset 0 0 28px rgba(159, 243, 255, 0.25), 0 0 0 2px #2b3b24; }
-  50% { box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), inset 0 0 56px rgba(159, 243, 255, 0.55), 0 0 0 2px #2b3b24; }
-}
 /* Fish are face-down cards lying in the water, sized to fit three across and
    two deep (the water is a size container) without leaving the 56:74 card shape. */
 .proto-pond__water { container-type: size; gap: 6px; padding: 8px 12%; }
@@ -2609,16 +2604,94 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-pond__bait[data-selected] .playing-card { outline: 3px solid #ffd166; outline-offset: 2px; }
 .proto-pond__drag { position: fixed; z-index: 60002; pointer-events: none; cursor: grabbing; transform: rotate(-4deg) scale(1.06); filter: drop-shadow(0 10px 12px #000a); }
 .proto-pond__drag .playing-card::after { content: '🪱'; position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: max(16px, calc(var(--classic-card-w) * 0.38)); line-height: 1; }
-/* The fish card under a dragged bait lights up like any drop target. */
-.proto-game-root .proto-pond__fish[data-drop-target] {
+/* The pond lights up under a dragged bait, like any drop target. */
+.proto-pond__water[data-drop-target] {
   border-color: #ffe7ad;
   outline: 3px solid #ffd166;
   outline-offset: 2px;
-  box-shadow: 0 0 0 1px #2a1e0c, 0 0 22px 6px #ffd16688;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), 0 0 22px 6px #ffd16688;
   animation: proto-drop-pulse 900ms ease-in-out infinite alternate;
 }
-.proto-pond__fish:focus-visible { outline: 3px solid #8ef2d4; outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .proto-game-root .proto-pond__fish[data-drop-target] { animation: none; } }
+.proto-pond__water:focus-visible { outline: 3px solid #8ef2d4; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .proto-pond__water[data-drop-target] { animation: none; } }
+
+/* The fight (FishFight): the tethered line card, a Stardew-style meter where the
+   catch zone chases the fish, and the catch bar. It takes the water's place. */
+.proto-fight {
+  grid-area: water;
+  position: relative;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: clamp(10px, 4cqw, 28px);
+  padding: 10px 12px;
+  border: 4px solid #4d6a3f;
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 50% 42%, #1f6576, #0f3442 62%, #0a222b);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), 0 0 0 2px #2b3b24;
+}
+.proto-fight__line {
+  --classic-card-w: clamp(52px, min(24cqw, 36cqh), 104px);
+  width: var(--classic-card-w);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+.proto-fight__line-card { width: var(--classic-card-w); }
+.proto-game-root .proto-fight__line-card .playing-card:disabled { background: linear-gradient(140deg, #40202a, #180d16); color: #fff0d0; }
+.proto-fight__time { height: 8px; border: 1px solid #0a1a20; border-radius: 4px; background: #0a1a20; overflow: hidden; }
+.proto-fight__time > span { display: block; height: 100%; background: #e8f6ff; }
+.proto-fight__meter {
+  position: relative;
+  width: clamp(56px, 18cqw, 84px);
+  border: 4px solid #6b4a2a;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #123e4b, #0a222b);
+  box-shadow: inset 0 0 0 2px #2a1a0c, 0 3px 0 #1d140c;
+}
+/* Inset by half a fish so the fish never pokes out of the meter. The fish
+   scales with the meter's height so a short (phone landscape) meter keeps a
+   catch zone clearly taller than the fish. */
+.proto-fight { --fight-fish: clamp(18px, 9cqh, 36px); }
+.proto-fight__rail { position: absolute; inset: calc(var(--fight-fish) / 2 + 2px) 4px; }
+.proto-fight__zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border: 2px solid #8ef2d4;
+  border-radius: 6px;
+  background: rgba(142, 242, 212, 0.22);
+}
+.proto-fight__zone[data-in] { background: rgba(142, 242, 212, 0.42); box-shadow: 0 0 14px rgba(142, 242, 212, 0.55); }
+.proto-fight__fish {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  font-size: var(--fight-fish);
+  line-height: 1;
+  filter: drop-shadow(0 2px 2px #000a);
+}
+.proto-fight__bar {
+  position: relative;
+  width: 16px;
+  border: 2px solid #6b4a2a;
+  border-radius: 6px;
+  background: #0a1a20;
+  overflow: hidden;
+}
+.proto-fight__bar > span { position: absolute; left: 0; right: 0; bottom: 0; background: hsl(var(--catch-hue, 60) 75% 52%); }
+.proto-fight__tether { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.proto-fight__tether line { stroke: #e8f6ff; stroke-width: 1.5; stroke-linecap: round; filter: drop-shadow(0 1px 1px #0009); }
+/* Reel cards play on press: ▲ lifts the zone, ▼ drops it, the rest wait their turn. */
+.proto-fight__reel { width: var(--classic-card-w); touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: pointer; }
+.proto-fight__reel .playing-card { cursor: inherit; touch-action: none; }
+.proto-fight__reel[data-reel="none"] { opacity: 0.45; cursor: default; }
+.proto-fight__reel .playing-card::after { position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: max(16px, calc(var(--classic-card-w) * 0.38)); line-height: 1; pointer-events: none; }
+.proto-fight__reel[data-reel="up"] .playing-card::after { content: '▲'; color: #8ef2d4; }
+.proto-fight__reel[data-reel="down"] .playing-card::after { content: '▼'; color: #ffb38a; }
 .proto-pond__catch { grid-area: catch; }
 .proto-pond__catch > li { transform-origin: center; }
 /* The catch flight lives on the page, above everything, while a fish is reeled in. */
@@ -2656,5 +2729,5 @@ html.drag-perf-mode .target-swirl-sparkles {
   .proto-pond__hand { --classic-card-w: clamp(52px, min(10cqw, 26cqh), 110px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .proto-pond__ripple, .proto-pond__water--glow { animation: none; }
+  .proto-pond__ripple { animation: none; }
 }

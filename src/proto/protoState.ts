@@ -17,7 +17,7 @@ export type Card = {
 
 export type ForestResource = 'wood' | 'berries' | 'herbs';
 /** Caught at the pond rather than foraged from a tableau. */
-export type PondResource = 'fish' | 'glowfish';
+export type PondResource = 'fish' | 'glowfish' | 'kingsfish';
 export type HaulResource = ForestResource | PondResource;
 export type WorldResourceKind = WorldItemId;
 export type ForestHaul = Record<HaulResource, number>;

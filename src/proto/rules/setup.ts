@@ -33,7 +33,7 @@ export const FOREST_RESOURCE_GLYPHS: Record<ForestResource, string> = {
   berries: '🫐',
   herbs: '🌿',
 };
-export const EMPTY_HAUL: ForestHaul = { wood: 0, berries: 0, herbs: 0, fish: 0, glowfish: 0 };
+export const EMPTY_HAUL: ForestHaul = { wood: 0, berries: 0, herbs: 0, fish: 0, glowfish: 0, kingsfish: 0 };
 export const FOREST_CACHE_REWARD: ForestHaul = { ...EMPTY_HAUL, wood: 4, berries: 3, herbs: 2 };
 export const ENCOUNTER_GLYPH = '⚔';
 
@@ -380,7 +380,7 @@ export const cloneState = (state: ProtoState): ProtoState => ({
     bait: state.pond.bait.map((card) => ({ ...card })),
     hand: state.pond.hand.map((card) => ({ ...card })),
     missedRanks: [...state.pond.missedRanks],
-    lastCast: state.pond.lastCast ? { ...state.pond.lastCast, catches: [...state.pond.lastCast.catches] } : null,
+    lastCast: state.pond.lastCast ? { ...state.pond.lastCast } : null,
   },
   glowfishGlow: state.glowfishGlow,
 });

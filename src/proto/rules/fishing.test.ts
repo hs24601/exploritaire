@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GLOWFISH_CATCH, POND_BAIT_PER_DAY, POND_CASTS_PER_DAY, POND_FISH_PER_DAY, POND_HAND_SIZE, POND_WATER_SIZE, GLOWFISH_LIGHT_COLOR, GLOWFISH_LUMINOSITY, GLOWFISH_MAX_STAMINA_BONUS, castBait, createPondDeal, eatPondCatch, endGlowfishGlow, pondFinished, restockPond, rippleSize, type PondState } from './fishing';
+import { POND_BAIT_PER_DAY, POND_CASTS_PER_DAY, POND_FISH_PER_DAY, POND_HAND_SIZE, POND_WATER_SIZE, GLOWFISH_LIGHT_COLOR, GLOWFISH_LUMINOSITY, GLOWFISH_MAX_STAMINA_BONUS, castBait, catchForRank, createPondDeal, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, pondFinished, restockPond, rippleSize, type PondState } from './fishing';
 import { isAdjacentRank } from './setup';
 
 const biteFor = (pond: PondState) => pond.hand.find((card) => pond.water.some((fish) => fish.rank === card.rank));
@@ -17,25 +17,51 @@ describe('pond fishing', () => {
     expect(pond.water.every((fish) => !fish.revealed)).toBe(true);
   });
 
-  it('a bite catches every fish of that rank, spends the bait and refills the water', () => {
+  it('a bite hooks one fish of that rank and spends the bait', () => {
     const pond = createPondDeal(7, 1);
     const bait = biteFor(pond)!;
-    const hooked = pond.water.filter((fish) => fish.rank === bait.rank).length;
-    const { pond: next, catches } = castBait(pond, bait.id);
-    expect(catches).toHaveLength(hooked);
-    expect(next.caught).toBe(hooked);
+    const { pond: next, hooked } = castBait(pond, bait.id);
+    expect(hooked?.rank).toBe(bait.rank);
+    expect(next.hooked).toBe(hooked?.id);
+    expect(next.water).toEqual(pond.water);
     expect(next.hand.some((card) => card.id === bait.id)).toBe(false);
     expect(next.hand).toHaveLength(POND_HAND_SIZE);
-    expect(next.water).toHaveLength(POND_WATER_SIZE);
-    expect(next.school).toHaveLength(pond.school.length - hooked);
+    expect(next.castsLeft).toBe(POND_CASTS_PER_DAY - 1);
     expect(next.lastCast?.outcome).toBe('bite');
+    // No second cast while a fish is on the line.
+    expect(castBait(next, next.hand[0].id).pond).toBe(next);
+    expect(pondFinished({ ...next, castsLeft: 0 })).toBe(false);
+  });
+
+  it('landing the hooked fish catches it as its kind and refills the water', () => {
+    const pond = createPondDeal(7, 1);
+    const { pond: hookedPond, hooked } = castBait(pond, biteFor(pond)!.id);
+    const { pond: next, caught } = landHooked(hookedPond);
+    expect(caught).toBe(catchForRank(hooked!.rank));
+    expect(next.hooked).toBeNull();
+    expect(next.caught).toBe(1);
+    expect(next.water).toHaveLength(POND_WATER_SIZE);
+    expect(next.water.some((fish) => fish.id === hooked!.id)).toBe(false);
+    expect(next.school).toHaveLength(pond.school.length - 1);
+    expect(next.lastCast).toMatchObject({ outcome: 'landed', catch: caught });
+  });
+
+  it('a lost fight leaves the fish in the water, face up', () => {
+    const pond = createPondDeal(7, 1);
+    const { pond: hookedPond, hooked } = castBait(pond, biteFor(pond)!.id);
+    const next = loseHooked(hookedPond);
+    expect(next.hooked).toBeNull();
+    expect(next.caught).toBe(0);
+    expect(next.water.find((fish) => fish.id === hooked!.id)?.revealed).toBe(true);
+    expect(next.lastCast?.outcome).toBe('escaped');
   });
 
   it('a miss says go fish, draws fresh bait and shows fish one rank away', () => {
     const pond = createPondDeal(7, 1);
     const bait = missFor(pond)!;
-    const { pond: next, catches } = castBait(pond, bait.id);
-    expect(catches).toEqual([]);
+    const { pond: next, hooked } = castBait(pond, bait.id);
+    expect(hooked).toBeNull();
+    expect(next.hooked).toBeNull();
     expect(next.caught).toBe(0);
     expect(next.hand).toHaveLength(POND_HAND_SIZE);
     expect(next.hand[next.hand.length - 1]).toEqual(pond.bait[0]);
@@ -44,33 +70,18 @@ describe('pond fishing', () => {
     next.water.forEach((fish) => expect(fish.revealed).toBe(isAdjacentRank(fish.rank, bait.rank)));
   });
 
-  it('the fourth fish ever caught is the glowfish, and only that one', () => {
-    let pond = { ...createPondDeal(3, 1), caught: GLOWFISH_CATCH - 1 };
-    const result = castBait(pond, biteFor(pond)!.id);
-    expect(result.catches[0]).toBe('glowfish');
-    expect(result.catches.slice(1).every((kind) => kind === 'fish')).toBe(true);
-    pond = { ...createPondDeal(3, 1), caught: GLOWFISH_CATCH };
-    expect(castBait(pond, biteFor(pond)!.id).catches.every((kind) => kind === 'fish')).toBe(true);
-  });
-
-  it('several seeds reach the glowfish on the first day by casting bites first', () => {
-    for (const seed of [1, 2, 3, 99, 12345]) {
-      let pond = createPondDeal(seed, 1);
-      const caught: string[] = [];
-      while (!pondFinished(pond)) {
-        const card = biteFor(pond) ?? pond.hand[0];
-        const result = castBait(pond, card.id);
-        caught.push(...result.catches);
-        pond = result.pond;
-      }
-      expect(caught[GLOWFISH_CATCH - 1]).toBe('glowfish');
-    }
+  it('kings are Kingsfish, queens glowfish, the rest plain fish', () => {
+    expect([1, 7, 11, 12, 13].map(catchForRank)).toEqual(['fish', 'fish', 'fish', 'glowfish', 'kingsfish']);
   });
 
   it('the line holds fewer casts than the tin holds bait', () => {
     let pond = createPondDeal(11, 1);
     let casts = 0;
-    while (!pondFinished(pond)) { pond = castBait(pond, pond.hand[0].id).pond; casts += 1; }
+    while (!pondFinished(pond)) {
+      pond = castBait(pond, pond.hand[0].id).pond;
+      if (pond.hooked) pond = loseHooked(pond);
+      casts += 1;
+    }
     expect(casts).toBe(POND_CASTS_PER_DAY);
     expect(pond.castsLeft).toBe(0);
     expect(pond.hand.length + pond.bait.length).toBeGreaterThan(0);
@@ -78,7 +89,7 @@ describe('pond fishing', () => {
   });
 
   it('restocking keeps the lifetime catch count', () => {
-    const pond = castBait(createPondDeal(5, 1), biteFor(createPondDeal(5, 1))!.id).pond;
+    const pond = landHooked(castBait(createPondDeal(5, 1), biteFor(createPondDeal(5, 1))!.id).pond).pond;
     const tomorrow = restockPond(pond, 2);
     expect(tomorrow.day).toBe(2);
     expect(tomorrow.caught).toBe(pond.caught);
@@ -108,6 +119,11 @@ describe('pond fishing', () => {
       expect(night).toMatchObject({ maxStamina: 8, stamina: 8, glowfishGlow: false });
       expect(night.worldActors[0]).toMatchObject({ luminosity: 0.3, lightColor: undefined });
       expect(endGlowfishGlow(night, 0.3)).toBe(night);
+    });
+
+    it('a Kingsfish is a feast: the party and the eater are fully restored', () => {
+      const fed = eatPondCatch(eater(), 'kingsfish', 'hero', 4);
+      expect(fed).toMatchObject({ stamina: 8, maxStamina: 8, actorStamina: [4, 4, 4], glowfishGlow: false });
     });
   });
 });

@@ -10,6 +10,8 @@ const REEL_MS = 560;
 const STAGGER_MS = 140;
 export const CATCH_FLIGHT_MS = CAST_MS + HOOK_MS + REEL_MS;
 
+export const CATCH_GLYPH: Record<PondCatch, string> = { fish: '🐟', glowfish: '🐠', kingsfish: '🐡' };
+
 const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
 /**
@@ -20,7 +22,8 @@ const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
  * Positions are captured before the cast changes the pond; the tray pill is
  * measured when the reel starts, after React has committed the new layout.
  */
-export function reelInCatch(rod: DOMRect, hooked: HookedFish[], target: (kind: PondCatch) => HTMLElement | null, onLand: (kind: PondCatch) => void) {
+export function reelInCatch(rod: DOMRect, hooked: HookedFish[], target: (kind: PondCatch) => HTMLElement | null, onLand: (kind: PondCatch) => void,
+  { hooked: alreadyHooked = false }: { hooked?: boolean } = {}) {
   if (!hooked.length) return;
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'proto-pond-catch-lines');
@@ -28,7 +31,8 @@ export function reelInCatch(rod: DOMRect, hooked: HookedFish[], target: (kind: P
   document.body.append(svg);
   const tip = { x: rod.left + rod.width / 2, y: rod.top + 2 };
   let running = hooked.length;
-  const begin = performance.now();
+  // A fish already on the line (after a fight) skips the cast and comes straight up.
+  const begin = performance.now() - (alreadyHooked ? CAST_MS : 0);
 
   hooked.forEach((fish, index) => {
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -39,7 +43,7 @@ export function reelInCatch(rod: DOMRect, hooked: HookedFish[], target: (kind: P
     const ghost = document.createElement('div');
     ghost.className = `proto-pond-catch-ghost proto-pond-catch-ghost--${fish.kind}`;
     ghost.dataset.catch = fish.kind;
-    ghost.innerHTML = `<span class="proto-pond-catch-ghost__rank">${fish.rank}</span><span class="proto-pond-catch-ghost__glyph">${fish.kind === 'glowfish' ? '🐠' : '🐟'}</span>`;
+    ghost.innerHTML = `<span class="proto-pond-catch-ghost__rank">${fish.rank}</span><span class="proto-pond-catch-ghost__glyph">${CATCH_GLYPH[fish.kind]}</span>`;
     ghost.style.cssText = `left:${fish.rect.left}px;top:${fish.rect.top}px;width:${fish.rect.width}px;height:${fish.rect.height}px;opacity:0;`;
     document.body.append(ghost);
     const from = { x: fish.rect.left + fish.rect.width / 2, y: fish.rect.top + fish.rect.height / 2 };
