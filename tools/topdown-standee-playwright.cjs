@@ -13,7 +13,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
     assert.match(await board.evaluate(el=>getComputedStyle(el).backgroundImage),/repeating-linear-gradient/,`${w}x${h} the edge shows corrugated fluting`);
     assert.ok(Math.abs(edge.x+edge.width/2-(disc.x+disc.width/2))<1&&Math.abs(edge.y+edge.height/2-(disc.y+disc.height/2))<1,`${w}x${h} the board stands across the middle of its base`);
     assert.ok(Math.abs(disc.width-disc.height)<1,`${w}x${h} the base is round from above`);
-    assert.ok(await p.locator('.proto-sprite-shadow').count()>0,`${w}x${h} the pop-up still casts its shadow`);
+    assert.ok(await p.locator('.proto-sprite-shadow[data-shadow-owner="actor"]').count()>0,`${w}x${h} the pop-up still casts its shadow`);
     assert.equal(await actor.locator('.board-object-label').count(),0,`${w}x${h} no token label`);
     // The piece stays around its own cell: within one cell of the cell center.
     const cell=(await p.locator('.table-grid-origin').boundingBox()).width;
@@ -25,7 +25,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   }
   const p=await b.newPage({viewport:{width:1280,height:720}});await p.route('**/assets/actors/hero.png',r=>r.fulfill({status:404}));
   await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(800);
-  assert.equal(await p.locator('.proto-sprite-topdown').count(),0,'missing art falls back to the token');
+  assert.equal(await p.locator('.proto-sprite-topdown[data-board-piece="actor"]').count(),0,'missing art falls back to the token');
   assert.equal(await p.locator('[data-board-piece="actor"] .board-object-label').count(),1,'the token shows the label');
   console.log('Top-down Hero: straight-down view shows only the corrugated board edge on a round base, centered on its cell, shadow kept, token fallback, at desktop and phone sizes.');
 }finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});

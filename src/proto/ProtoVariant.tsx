@@ -25,6 +25,7 @@ import {
   DEFAULT_EXPEDITION_ENERGY,
   MAGE_PHASE_SHIFT_TRIGGER,
   WORLD_ACTOR_SPRITES,
+  BIOME_TILE_SPRITES,
 } from './protoData';
 import {
   getCardTransportDurationMs,
@@ -2225,7 +2226,7 @@ const selectBiome = (biomeId: string) => {
               </div>
               </div>
               <ProtoMap
-                biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId }))}
+                biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId, sprite: BIOME_TILE_SPRITES[tile.id] }))}
                 actors={state.worldActors
                   .filter((actor) => actor.location === 'table' || Boolean(actor.biomeId))
                   .map(({ id, label, location, biomeId, position, hutId, luminosity }) => ({ id, label, location, biomeId, position, hutId, luminosity, sprite: WORLD_ACTOR_SPRITES[id] }))}

@@ -25,6 +25,8 @@ export type ProtoBiomeTile = {
   unlocked?: boolean;
   travelCost?: number;
   threat?: 'none' | 'low';
+  /** Pixel-art scenery that pops up from the back of the tile (pines for Small Woods). */
+  sprite?: string;
 };
 
 export type ProtoWorldActor = {
@@ -55,6 +57,8 @@ export const CLASSICPLUS_GRID_SIZE = TABLE_GRID.cellSize;
 export const CLASSICPLUS_ZOOM_REFERENCE_SCALE = 1.7;
 /** Standees pop up from their bases once the camera has leaned halfway back. */
 const STANDEE_POP_MS = 320;
+/** Biome scenery pop-ups tower over a one-cell tile and the pieces on it. */
+const BIOME_POPUP_SIZE = 72;
 
 /** A biome claims an explicit rectangle of whole world-grid cells. Tableau
  * card capacity is intentionally independent from this visual footprint. */
@@ -577,9 +581,10 @@ export const ProtoMap = ({
   }, [lightSources, timeOfDay, staged, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale]);
 
   const resolveDropDestination = (actorId: string, clientX: number, clientY: number) => {
-    const biomeTarget = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-biome-id]');
-    if (biomeTarget?.dataset.biomeId) {
-      const biomeId = biomeTarget.dataset.biomeId;
+    // A biome's pop-up scenery counts as the biome for drops.
+    const biomeTarget = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-biome-id],[data-biome-popup]');
+    const biomeId = biomeTarget?.dataset.biomeId ?? biomeTarget?.dataset.biomePopup;
+    if (biomeId) {
       return {
         point: resolveBiomeActorCell(biomeId) ?? resolveBiomeAdjacentCell(actorId, biomeId) ?? worldPointFromClient(clientX, clientY),
         arrival: { biomeId },
@@ -629,25 +634,24 @@ export const ProtoMap = ({
     animation: standeeMotion === 'rise' ? `proto-standee-pop ${STANDEE_POP_MS}ms ease-out both`
       : standeeMotion === 'fold' ? `proto-standee-fold ${TABLE_TILT_MS / 2}ms ease-in forwards` : undefined,
     // A die-cut cardboard edge, shaded toward its base.
-    ...(size ? { width: size.width, height: size.height, borderRadius: `${size.width / 2}px ${size.width / 2}px 6px 6px`, border: '3px solid #efe4cc', boxShadow: 'inset 0 -12px 16px #0007' } : {}),
+    ...(size ? { width: size.width, height: size.height, borderRadius: `${size.width / 2}px ${size.width / 2}px 6px 6px`, border: '1.5px solid #efe4cc', boxShadow: 'inset 0 -12px 16px #0007' } : {}),
   } : null;
   // Sprite standees: a pixel-art cut-out lit by the table's lights, casting its
   // own silhouette across the table away from each one.
-  const spriteStandee = (actor: ProtoWorldActor, position: { x: number; y: number }) => {
-    if (!actor.sprite || failedSprites.includes(actor.sprite)) return null;
-    const sprite = actor.sprite;
-    const lit = standeeLighting(timeOfDay, position, SPRITE_STANDEE_SIZE, lightSources);
+  const spriteStandee = (sprite: string | undefined, position: { x: number; y: number }, { base = true, size = SPRITE_STANDEE_SIZE, topDownSize = size, owner = 'actor' }: { base?: boolean; size?: number; topDownSize?: number; owner?: string } = {}) => {
+    if (!sprite || failedSprites.includes(sprite)) return null;
+    const lit = standeeLighting(timeOfDay, position, size, lightSources);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
     // Flat camera: the same pop-up seen from straight above, casting the same shadows.
     if (!upright) return {
       topDown: true,
-      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} />,
-      art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} />,
+      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} />,
+      art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} base={base} size={topDownSize} />,
     };
     return {
       topDown: false,
-      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} />,
-      art: <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} />,
+      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} />,
+      art: <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />,
     };
   };
   const standeeBase = (key: string, position: { x: number; y: number }, width: number) => upright
@@ -756,9 +760,12 @@ export const ProtoMap = ({
               const worldFootprint = getBiomeWorldFootprint(tile);
               const tileLight = lightField.over(worldFootprint);
               lightReadouts.push({ id: 'tile-' + tile.id, position: worldFootprint, lift: worldFootprint.height / 2, percent: tileLight.percent, level: tileLight.level });
+              // Scenery pops up from the back of the tile, which is its base, so the label stays readable in front.
+              const popupPosition = { x: worldFootprint.x, y: worldFootprint.y - worldFootprint.height * (upright ? 0.34 : 0.39) };
+              const popup = tile.unlocked === false ? null : spriteStandee(tile.sprite, popupPosition, { base: false, size: BIOME_POPUP_SIZE, topDownSize: worldFootprint.width - 6, owner: 'biome' });
               return (
+                <React.Fragment key={tile.id}>
                 <button
-                  key={tile.id}
                   data-board-piece="tile"
                   type="button"
                   data-light-percent={tileLight.percent}
@@ -791,6 +798,19 @@ export const ProtoMap = ({
                 >
                   <BoardObjectLabel text={tile.unlocked === false ? 'Locked' : tile.title} minFontSize={12} maxFontSize={18} className="uppercase font-black" />
                 </button>
+                {popup ? <React.Fragment key={tile.id + '-popup'}>
+                  {popup.shadows}
+                  <div
+                    aria-hidden="true"
+                    data-board-piece="biome-popup"
+                    data-biome-popup={tile.id}
+                    className={`${popup.topDown ? 'proto-sprite-topdown' : 'proto-sprite-standee'} absolute`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() => { if (tile.unlocked !== false) onSelectBiome(tile.id); }}
+                    style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...standee(), width: popup.topDown ? worldFootprint.width : BIOME_POPUP_SIZE, height: popup.topDown ? 12 : BIOME_POPUP_SIZE }}
+                  >{popup.art}</div>
+                </React.Fragment> : null}
+                </React.Fragment>
               );
             })()
           ))}
@@ -934,7 +954,7 @@ export const ProtoMap = ({
             const actorPosition = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
             const actorLight = lightField.at(actorPosition);
             lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: upright ? -30 : 24, percent: actorLight.percent, level: actorLight.level });
-            const cutOut = spriteStandee(actor, actorPosition);
+            const cutOut = spriteStandee(actor.sprite, actorPosition);
             return (
             <React.Fragment key={actor.id}>
             {cutOut?.shadows}

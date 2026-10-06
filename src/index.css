@@ -2401,6 +2401,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 /* Sprite standees (tilted camera): the actor's pixel-art cut-out stands on its
    base, takes the table's light, and casts its silhouette away from each light. */
 .proto-map .proto-sprite-standee[data-board-piece="actor"],
+.proto-map .proto-sprite-standee[data-board-piece="biome-popup"],
 .proto-game-root .proto-sprite-standee[data-board-piece="actor"] { display: block; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
 .proto-sprite-standee__art { display: block; width: 100%; height: 100%; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
 .proto-sprite-standee--selected { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
@@ -2449,17 +2450,20 @@ html.drag-perf-mode .target-swirl-sparkles {
     #070708;
 }
 .proto-map-world > .proto-blocked-terrain,
-.proto-table-stage--tilted .proto-map-world > .proto-blocked-terrain { pointer-events: none; }
+.proto-table-stage--tilted .proto-map-world > .proto-blocked-terrain,
+.proto-table-stage--tilted .proto-map-world > .proto-sprite-shadow { pointer-events: none; }
 .hold-log__note { color: #fff3c899; }
 
 /* Flat (top-down) camera: sprite actors are cardboard pop-ups seen from
    straight above, so only the board's thick corrugated top edge shows, standing
    across its round base. */
 .proto-map .proto-sprite-topdown[data-board-piece="actor"],
+.proto-map .proto-sprite-topdown[data-board-piece="biome-popup"],
 .proto-game-root .proto-sprite-topdown[data-board-piece="actor"] { display: block; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; transform: translate(-50%, -50%); }
 .proto-sprite-topdown__piece { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
 .proto-sprite-topdown__piece > span { grid-area: 1 / 1; }
 .proto-sprite-topdown__base { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 50% 45%, #3b2a1a 0 50%, #1d140c 75%); border: 2px solid #6b5236; box-shadow: 0 2px 0 #0008; }
 /* Corrugated board edge: kraft liners on both faces, fluting between. */
-.proto-sprite-topdown__board { box-sizing: border-box; border-radius: 1px; border-block: 1.5px solid #e2c48d; background: repeating-linear-gradient(90deg, #c79d5f 0 1.5px, #7d5a2e 1.5px 3px); box-shadow: 0 1px 0 #0009; }
+.proto-sprite-topdown__board { box-sizing: border-box; border-radius: 1px; border-block: 0.75px solid #e2c48d; background: repeating-linear-gradient(90deg, #c79d5f 0 1.5px, #7d5a2e 1.5px 3px); box-shadow: 0 1px 0 #0009; }
+.proto-map [data-board-piece="biome-popup"] { cursor: pointer; }
 .proto-sprite-topdown--selected { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }

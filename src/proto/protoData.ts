@@ -69,6 +69,11 @@ export const WORLD_ACTOR_SPRITES: Record<string, string> = {
   hero: `${import.meta.env.BASE_URL}assets/actors/hero.png`,
 };
 
+/** Pop-up scenery for biome tiles, by tile id (drawn by tools/make-pine-sprite.py). */
+export const BIOME_TILE_SPRITES: Record<string, string> = {
+  'woods-alpha': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
+};
+
 export const DEFAULT_CHIP_ABILITY: ProtoChipAbilityData = {
   id: 'chip-strike',
   label: 'Chip',

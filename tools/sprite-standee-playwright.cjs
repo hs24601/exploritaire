@@ -21,11 +21,11 @@ const setHours=(p,h)=>p.evaluate(h=>{const i=document.querySelector('[aria-label
     assert.ok(Math.abs(base.x+base.width/2-(hero.x+hero.width/2))<hero.width*0.15&&Math.abs(base.y+base.height/2-(hero.y+hero.height))<12,`${w}x${h} the cut-out stands on its base`);
     // Day: one shadow from the sun, falling away from it.
     await setHours(p,9);await p.waitForTimeout(200);
-    assert.deepEqual(await p.locator('.proto-sprite-shadow').evaluateAll(list=>list.map(el=>el.dataset.shadowLight)),['sky'],`${w}x${h} daytime shadow comes from the sun`);
+    assert.deepEqual(await p.locator('.proto-sprite-shadow[data-shadow-owner="actor"]').evaluateAll(list=>list.map(el=>el.dataset.shadowLight)),['sky'],`${w}x${h} daytime shadow comes from the sun`);
     const dayBrightness=await art.evaluate(el=>parseFloat(/brightness\(([\d.]+)\)/.exec(el.style.filter)[1]));
     // Night: the carried candle lights the Hero but casts no shadow from its own base.
     await setHours(p,23);await p.waitForTimeout(200);
-    const night=await p.locator('.proto-sprite-shadow').evaluateAll(list=>list.map(el=>el.dataset.shadowLight));
+    const night=await p.locator('.proto-sprite-shadow[data-shadow-owner="actor"]').evaluateAll(list=>list.map(el=>el.dataset.shadowLight));
     assert.ok(!night.some(id=>id.startsWith('actor-light')),`${w}x${h} no shadow from the Hero's own candle`);
     const nightBrightness=await art.evaluate(el=>parseFloat(/brightness\(([\d.]+)\)/.exec(el.style.filter)[1]));
     assert.ok(nightBrightness<dayBrightness,`${w}x${h} the Hero is darker at night (${nightBrightness} vs ${dayBrightness})`);
@@ -36,7 +36,7 @@ const setHours=(p,h)=>p.evaluate(h=>{const i=document.querySelector('[aria-label
   // Missing art falls back to the cardboard token instead of a broken image.
   const p=await b.newPage({viewport:{width:1280,height:720}});await p.route('**/assets/actors/hero.png',r=>r.fulfill({status:404,body:''}));
   await p.goto('http://localhost:5179/proto.html');await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(700);await p.waitForTimeout(800);
-  assert.equal(await p.locator('.proto-sprite-standee').count(),0,'missing sprite falls back to the token');
+  assert.equal(await p.locator('.proto-sprite-standee[data-board-piece="actor"]').count(),0,'missing sprite falls back to the token');
   assert.equal(await p.locator('[data-board-piece="actor"] .board-object-label').count(),1);
   assert.deepEqual(problems,[],'sprite standee defects:\n'+problems.join('\n'));
   console.log('Hero sprite standee: trimmed cut-out on its base, sun and lamp shadows (none from its own candle), darker at night, token fallback, toolbar fits.');
