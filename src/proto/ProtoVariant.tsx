@@ -9,8 +9,10 @@ import { DetailsCardViewer, ActorCardArt } from './components/DetailsCardViewer'
 import { redeemActiveQuest } from './questProgress';
 import { logHold } from './holdLog';
 import { blockedSolids } from './worldBounds';
-import { getTableLighting, tableObjectShadow } from './protoLighting';
+import { DEFAULT_ACTOR_LUMINOSITY, getTableLighting, tableObjectShadow } from './protoLighting';
 import { TimeOfDaySlider } from './components/TimeOfDaySlider';
+import { PondField } from './components/PondField';
+import { GLOWFISH_TABLE_LIGHT, castBait, eatPondCatch, endGlowfishGlow, restockPond } from './rules/fishing';
 import { NEUTRAL_STANDEE_LIGHTING, SpriteStandeeArt } from './components/SpriteStandee';
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
 import { assessSolverMove, preserveSolverRpgValues, type SolverMove } from './tableauSolver';
@@ -49,10 +51,10 @@ import {
   ACTOR_STAMINA_MAX, AUTO_PLAY_SPEED_OPTIONS, DEV_ACTOR_DEFEAT_OVERRIDE, FOUNDATION_MOCKUPS, FOUNDATION_SLOTS,
   rankLabel, targetToneForAbility,
   type AbilityDetail, type Card, type CardTransport,
-  type ForestResource, type HeroBuff, type PendingAbilityTarget, type PendingMobility,
+  type ForestResource, type HaulResource, type HeroBuff, type PendingAbilityTarget, type PendingMobility,
   type PendingTargetSelection, type ProtoState, type TargetAnnouncement,
 } from './protoState';
-import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, SMALL_WOODS_TRAVEL_COST, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
+import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, SMALL_WOODS_TRAVEL_COST, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
 import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauMove } from './rules/play';
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
 
@@ -170,6 +172,8 @@ export const ProtoVariant = () => {
     ...(state.city.campBuilt ? [{ id: 'camp-lamp', position: { x: 0, y: 96 }, radius: 5.5, height: 120, color: '#ff8a3d', flicker: 1 }] : []),
     ...state.worldResourceStacks.filter((stack) => stack.resource === 'provisions_hut' && !stack.build)
       .map((stack) => ({ id: 'hut-lamp-' + stack.id, position: { x: stack.position.x + 36, y: stack.position.y - 36 }, radius: 4, height: 85, color: '#ffd08a', flicker: 0.3 })),
+    ...state.worldResourceStacks.filter((stack) => !stack.build && (stack.resource === 'glowfish' || (stack.ingredients?.glowfish ?? 0) > 0))
+      .map((stack) => ({ id: 'glowfish-' + stack.id, position: stack.position, ...GLOWFISH_TABLE_LIGHT })),
   ] : [];
   const stateRef = useRef(state);
   const tableauCardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -348,10 +352,12 @@ const selectBiome = (biomeId: string) => {
   };
 
   const settledHaul = state.settledHaul;
-  const supplyItems = useMemo(() => (Object.keys(settledHaul) as ForestResource[])
+  // Pond catches join the tray once there are some, so the glowfish stays a surprise.
+  const supplyItems = useMemo(() => (Object.keys(settledHaul) as HaulResource[])
+    .filter(id => FOREST_RESOURCE_ORDER.includes(id as ForestResource) || settledHaul[id] > 0)
     .map(id => ({ id, label: WORLD_ITEMS[id].label, glyph: WORLD_ITEMS[id].glyph, count: settledHaul[id], ...supplyDetails(id) })), [settledHaul]);
 
-  const drawSettlementSupply = (resource: ForestResource, count: number) => {
+  const drawSettlementSupply = (resource: HaulResource, count: number) => {
     const id = crypto.randomUUID();
     setState(prev => {
       if (count <= 0 || prev.settledHaul[resource] < count) return prev;
@@ -365,9 +371,16 @@ const selectBiome = (biomeId: string) => {
 
   const moveResourceStack = (stackId: string, position: { x: number; y: number }, targetId?: string, actorId?: string) => {
     const leftoverId = crypto.randomUUID();
+    const eaten = actorId ? state.worldResourceStacks.find((stack) => stack.id === stackId && !stack.build && Object.keys(stackIngredients(stack)).length === 1) : undefined;
+    if (eaten?.resource === 'glowfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWING', impact: '+2 max STA and a brighter light until nightfall' });
+    else if (eaten?.resource === 'fish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'FISH', impact: '+1 STA' });
     setState((prev) => {
       const source = prev.worldResourceStacks.find((stack) => stack.id === stackId);
       if (!source || source.build || WORLD_ITEMS[source.resource].kind === 'structure') return prev;
+      if (actorId && (source.resource === 'fish' || source.resource === 'glowfish') && Object.keys(stackIngredients(source)).length === 1) {
+        const fed = eatPondCatch(prev, source.resource, actorId, ACTOR_STAMINA_MAX);
+        return { ...fed, worldResourceStacks: prev.worldResourceStacks.map((stack) => stack.id === source.id ? { ...stack, count: stack.count - 1, ingredients: undefined } : stack).filter((stack) => stack.count > 0) };
+      }
       if (actorId && (source.resource === 'trail_ration' || source.resource === 'hearty_ration') && Object.keys(stackIngredients(source)).length === 1) {
         const bonus = source.resource === 'hearty_ration' ? DAY_TWO_RATION_ENERGY * 2 : DAY_TWO_RATION_ENERGY;
         return { ...prev, stamina: Math.min(prev.maxStamina + bonus, prev.stamina + bonus),
@@ -391,6 +404,19 @@ const selectBiome = (biomeId: string) => {
         return { ...prev, worldResourceStacks: [...prev.worldResourceStacks.filter((stack) => stack.id !== source.id && stack.id !== target.id), ...startStackBuild(combined, prev.worldResourceStacks.find((entry) => entry.id === target.stationId), leftoverId)] };
       }
       return { ...prev, worldResourceStacks: prev.worldResourceStacks.flatMap((stack) => stack.id === source.id ? startStackBuild({ ...stack, position, stationId: undefined }, undefined, leftoverId) : [stack]) };
+    });
+  };
+
+  const pondSelected = isPondTile(state.selectedBiomeId);
+  const pondAngler = state.worldActors.find((actor) => actor.location === 'foundation' && isPondTile(actor.biomeId)) ?? null;
+  const castPondBait = (baitId: string) => {
+    if (!pondAngler || state.scene !== 'exploration') return;
+    const preview = castBait(state.pond, baitId);
+    if (preview.catches.includes('glowfish')) setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWFISH', impact: 'It glows. Eat it for light' });
+    setState((prev) => {
+      const { pond, catches } = castBait(prev.pond, baitId);
+      if (pond === prev.pond) return prev;
+      return { ...prev, pond, haul: addForestHaul(prev.haul, { fish: catches.filter((kind) => kind === 'fish').length, glowfish: catches.filter((kind) => kind === 'glowfish').length }) };
     });
   };
 
@@ -557,7 +583,8 @@ const selectBiome = (biomeId: string) => {
     if (state.scene !== 'exploration' || state.worldActors.some((actor) => actor.location === 'foundation')) return;
     pushUndo();
     setState((prev) => ({
-      ...prev,
+      ...endGlowfishGlow(prev, DEFAULT_ACTOR_LUMINOSITY),
+      pond: restockPond(prev.pond, prev.day + 1),
       energy: DEFAULT_EXPEDITION_ENERGY,
       energyMax: DEFAULT_EXPEDITION_ENERGY,
       day: prev.day + 1,
@@ -1826,10 +1853,13 @@ const selectBiome = (biomeId: string) => {
               <SettlementSupplyTray
                 open={supplyOpen}
                 items={supplyItems}
-                onPlace={(id) => drawSettlementSupply(id as ForestResource, 1)}
+                onPlace={(id) => drawSettlementSupply(id as HaulResource, 1)}
                 onClose={() => { setSupplyOpen(false); if (mobilePanel === 'supplies') setMobilePanel('map'); }}
               />
-              <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId ? '' : 'hidden'}`}>
+              <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId ? '' : 'hidden'}${pondSelected ? ' proto-tableau-field--pond' : ''}`}>
+              {pondSelected ? (
+                <PondField pond={state.pond} angler={pondAngler?.label ?? null} landed={{ fish: state.haul.fish - state.settledHaul.fish, glowfish: state.haul.glowfish - state.settledHaul.glowfish }} onCast={castPondBait} onLeave={leaveTableau} />
+              ) : (<>
               <div className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">
                 <TableauCardArea columns={TABLEAU_COLUMNS} rows={Math.max(TABLEAU_ROWS, ...tableState.tableau.map((column) => column.length))}>
                 <div className={`proto-tableau-stage${cameraTilted ? ' proto-tableau-stage--tilted' : ''}`}>
@@ -2257,12 +2287,13 @@ const selectBiome = (biomeId: string) => {
                   ))) }
                 </div>
               </div>
+              </>)}
               </div>
               <ProtoMap
                 biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId, sprite: BIOME_TILE_SPRITES[tile.id] }))}
                 actors={state.worldActors
                   .filter((actor) => actor.location === 'table' || Boolean(actor.biomeId))
-                  .map(({ id, label, location, biomeId, position, hutId, luminosity }) => ({ id, label, location, biomeId, position, hutId, luminosity, sprite: WORLD_ACTOR_SPRITES[id] }))}
+                  .map(({ id, label, location, biomeId, position, hutId, luminosity, lightColor }) => ({ id, label, location, biomeId, position, hutId, luminosity, lightColor, sprite: WORLD_ACTOR_SPRITES[id] }))}
                 actorOrigins={state.worldActors.map(({ id, label, location, biomeId, position }) => ({ id, label, location, biomeId, position }))}
                 resourceStacks={state.worldResourceStacks}
                 questCards={state.questTableCards}

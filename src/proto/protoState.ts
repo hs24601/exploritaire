@@ -3,6 +3,7 @@ import type { CraftStack, WorldItemId } from './protoCrafting';
 import type { ProtoHeroClass } from './protoTypes';
 import { PROTO_ACTORS, PROTO_ENEMY_SLOT_IDS, type ProtoEnemyData } from './protoData';
 import type { CardTransportPoint } from './protoTransport';
+import type { PondState } from './rules/fishing';
 
 // Shared Proto state shapes and view-facing constants, moved verbatim from ProtoVariant.
 
@@ -15,8 +16,11 @@ export type Card = {
 };
 
 export type ForestResource = 'wood' | 'berries' | 'herbs';
+/** Caught at the pond rather than foraged from a tableau. */
+export type PondResource = 'fish' | 'glowfish';
+export type HaulResource = ForestResource | PondResource;
 export type WorldResourceKind = WorldItemId;
-export type ForestHaul = Record<ForestResource, number>;
+export type ForestHaul = Record<HaulResource, number>;
 export type SceneKind = 'exploration' | 'combat';
 
 export type BiomeRunState = {
@@ -39,6 +43,8 @@ export type BiomeTileState = {
   unlocked: boolean;
   travelCost: number;
   threat: 'none' | 'low';
+  /** Water tiles are fished, not dealt as a tableau. Defaults to woods. */
+  terrain?: 'woods' | 'water';
 };
 
 export type CityState = {
@@ -57,6 +63,8 @@ export type WorldActorState = {
   hutId?: string;
   /** Light the actor carries, 0–1; defaults to candlelight (DEFAULT_ACTOR_LUMINOSITY). */
   luminosity?: number;
+  /** CSS color of the actor's light; defaults to warm candlelight. */
+  lightColor?: string;
 };
 
 export type WorldResourceStack = CraftStack;
@@ -112,6 +120,9 @@ export type ProtoState = {
   questClaims: number;
   questTableCards: PlacedQuestCard[];
   questAccomplished: boolean[];
+  pond: PondState;
+  /** Eating a glowfish: extra max stamina and a brighter, cooler light until the day ends. */
+  glowfishGlow: boolean;
 };
 
 export type PendingTargetSelection = {

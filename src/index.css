@@ -2484,3 +2484,116 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 @keyframes proto-drop-pulse { from { outline-color: #ffd166; } to { outline-color: #fff3c8; } }
 @media (prefers-reduced-motion: reduce) { .proto-map .proto-drop-target { animation: none; } }
+
+/* Pond: a water tile on the table, fished with Go Fish for one (PondField). */
+.proto-map .proto-water-tile {
+  background:
+    radial-gradient(ellipse 34% 22% at 32% 38%, rgba(202, 255, 244, 0.22), transparent 70%),
+    radial-gradient(ellipse 26% 16% at 68% 66%, rgba(202, 255, 244, 0.16), transparent 70%),
+    radial-gradient(ellipse at 50% 45%, #1f6576, #0f3442 62%, #0a222b);
+  border-color: rgba(120, 170, 110, 0.75);
+  color: #dffcff;
+}
+.proto-map .proto-water-tile:hover { border-color: rgba(142, 242, 212, 0.75); }
+.proto-tableau-field.proto-tableau-field--pond { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); container: pond-field / size; }
+.proto-pond {
+  container-type: size;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "header" "water" "message" "hand" "footer";
+  gap: 8px;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(142, 242, 212, 0.18);
+  border-radius: calc(var(--classic-radius) * 1.3);
+  background: linear-gradient(180deg, rgba(14, 22, 20, 0.44), rgba(9, 12, 14, 0.28));
+  color: #cafff4;
+  font: 16px/1.25 'Classic Pixel', monospace;
+}
+.proto-pond__header { grid-area: header; }
+.proto-pond__footer { grid-area: footer; }
+.proto-pond__header, .proto-pond__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.proto-pond__header > span { white-space: nowrap; }
+.proto-pond__water {
+  grid-area: water;
+  position: relative;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  place-items: center;
+  padding: 4px 10%;
+  border: 4px solid #4d6a3f;
+  border-radius: 48% / 40%;
+  background:
+    radial-gradient(ellipse 30% 18% at 30% 30%, rgba(202, 255, 244, 0.14), transparent 70%),
+    radial-gradient(ellipse at 50% 42%, #1f6576, #0f3442 62%, #0a222b);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), 0 0 0 2px #2b3b24;
+}
+.proto-pond__water--glow { animation: proto-pond-glow 2.6s ease-in-out infinite; }
+@keyframes proto-pond-glow {
+  0%, 100% { box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), inset 0 0 28px rgba(159, 243, 255, 0.25), 0 0 0 2px #2b3b24; }
+  50% { box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), inset 0 0 56px rgba(159, 243, 255, 0.55), 0 0 0 2px #2b3b24; }
+}
+/* Ring sizes follow the panel (a size container) so they stay round and fit their cell. */
+.proto-pond__fish { position: relative; display: grid; place-items: center; width: calc(var(--ripple) * min(24cqw, 17cqh)); height: calc(var(--ripple) * min(24cqw, 17cqh)); }
+.proto-pond__fish[data-ripple="small"] { --ripple: 0.5; }
+.proto-pond__fish[data-ripple="medium"] { --ripple: 0.75; }
+.proto-pond__fish[data-ripple="large"] { --ripple: 1; }
+.proto-pond__ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(202, 255, 244, 0.6);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 5px rgba(202, 255, 244, 0.1);
+  animation: proto-pond-ripple 3s ease-out infinite;
+}
+.proto-pond__fish:nth-child(2n) .proto-pond__ring { animation-delay: -1.1s; }
+.proto-pond__fish:nth-child(3n) .proto-pond__ring { animation-delay: -2s; }
+.proto-pond__fish[data-revealed] .proto-pond__ring { border-color: #ffd166; animation: none; }
+@keyframes proto-pond-ripple {
+  0% { transform: scale(0.72); opacity: 0.95; }
+  100% { transform: scale(1.06); opacity: 0.35; }
+}
+.proto-pond__rank { position: relative; font-size: 18px; color: #ffe7ad; text-shadow: 0 1px 0 #000, 0 0 6px rgba(0, 0, 0, 0.8); }
+.proto-pond__message {
+  grid-area: message;
+  align-self: center;
+  margin: 0;
+  min-height: 2.5em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-align: center;
+  color: #e6fff8;
+}
+.proto-pond__hand {
+  grid-area: hand;
+  --classic-card-w: clamp(52px, min(19cqw, 18cqh), 110px);
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.proto-pond__bait { width: var(--classic-card-w); }
+/* Bait cards carry a worm in the lower half, clear of the rank. */
+.proto-pond__bait .playing-card::after { content: '🪱'; position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: max(16px, calc(var(--classic-card-w) * 0.38)); line-height: 1; pointer-events: none; }
+.proto-pond__bait[data-missed] { opacity: 0.55; }
+.proto-pond__legend { color: rgba(202, 255, 244, 0.7); }
+.proto-pond__leave { padding: 5px 12px; border: 2px solid #9c8c62; background: #17251f; color: #fff0d0; font: 16px 'Classic Pixel', monospace; }
+.proto-pond__leave:disabled { opacity: 0.4; }
+/* Wide, short panels (phone landscape): the water sits beside the bait. */
+@container pond-field (aspect-ratio > 1.5) {
+  .proto-pond {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "header header" "water message" "water hand" "footer footer";
+  }
+  .proto-pond__hand { --classic-card-w: clamp(52px, min(10cqw, 26cqh), 110px); }
+  .proto-pond__fish { width: calc(var(--ripple) * min(12cqw, 24cqh)); height: calc(var(--ripple) * min(12cqw, 24cqh)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .proto-pond__ring, .proto-pond__water--glow { animation: none; }
+}

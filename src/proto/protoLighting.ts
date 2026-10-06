@@ -16,6 +16,8 @@ export type TableLight = {
   color?: string;
   /** Visual flicker amount, 0–1. Never affects sampled light. */
   flicker?: number;
+  /** The light shines from a piece already on the table (a glowfish), so no lamp token is drawn. */
+  fromPiece?: boolean;
 };
 
 export type Rgb = { r: number; g: number; b: number };
@@ -209,10 +211,10 @@ export const actorLightId = (actorId: string) => `actor-light-${actorId}`;
 
 /** The light an actor carries. Luminosity (0–1) sets both its strength and its
  * reach: 0.3 is a candle about two cells across, 1 a strong lantern. */
-export const actorLight = (actorId: string, position: { x: number; y: number }, luminosity = DEFAULT_ACTOR_LUMINOSITY): TableLight | null => {
+export const actorLight = (actorId: string, position: { x: number; y: number }, luminosity = DEFAULT_ACTOR_LUMINOSITY, color = '#ffc27a'): TableLight | null => {
   const amount = clamp01(luminosity);
   if (amount <= 0) return null;
-  return { id: actorLightId(actorId), position, strength: amount, radius: 0.8 + amount * 4, height: 40, color: '#ffc27a', flicker: 0.7 };
+  return { id: actorLightId(actorId), position, strength: amount, radius: 0.8 + amount * 4, height: 40, color, flicker: 0.7 };
 };
 
 /** Visual-only flicker multiplier around 1 for a light at a moment in time. */

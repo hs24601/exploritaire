@@ -2,6 +2,8 @@ export const WORLD_ITEMS = {
   wood: { label: 'Wood', glyph: '🪵', kind: 'resource', quality: 0, food: false },
   berries: { label: 'Berries', glyph: '🫐', kind: 'resource', quality: 0, food: true },
   herbs: { label: 'Edible herbs', glyph: '🌿', kind: 'resource', quality: 0, food: true },
+  fish: { label: 'Fish', glyph: '🐟', kind: 'resource', quality: 0, food: true },
+  glowfish: { label: 'Glowfish', glyph: '🐠', kind: 'food', quality: 2, food: true },
   trail_ration: { label: 'Ration', glyph: '🥾', kind: 'food', quality: 1, food: true },
   hearty_ration: { label: 'Hearty ration', glyph: '🍱', kind: 'food', quality: 2, food: true },
   lumber: { label: 'Lumber', glyph: '🪚', kind: 'material', quality: 1, food: false },

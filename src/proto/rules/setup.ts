@@ -1,7 +1,8 @@
 import { DEFAULT_ACTOR_LUMINOSITY } from '../protoLighting';
+import { createPondDeal } from './fishing';
 import { createQuestBiomeDeal, nextQuestCard, QUEST_ROUTE_BUDGET } from '../protoQuestDeals';
 import { DEFAULT_EXPEDITION_ENERGY, MAGE_PHASE_SHIFT_TRIGGER, PROTO_ENEMIES } from '../protoData';
-import { FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, ACTOR_STAMINA_MAX, type BiomeTileState, type Card, type EnemyRuntimeState, type FoundationSlot, type ForestHaul, type ForestResource, type ProtoState, type SceneKind } from '../protoState';
+import { FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, ACTOR_STAMINA_MAX, type BiomeTileState, type Card, type EnemyRuntimeState, type FoundationSlot, type ForestHaul, type ForestResource, type HaulResource, type ProtoState, type SceneKind } from '../protoState';
 
 // Deck, deal, world setup and state helpers. Pure: no React or DOM.
 
@@ -32,7 +33,8 @@ export const FOREST_RESOURCE_GLYPHS: Record<ForestResource, string> = {
   berries: '🫐',
   herbs: '🌿',
 };
-export const FOREST_CACHE_REWARD: ForestHaul = { wood: 4, berries: 3, herbs: 2 };
+export const EMPTY_HAUL: ForestHaul = { wood: 0, berries: 0, herbs: 0, fish: 0, glowfish: 0 };
+export const FOREST_CACHE_REWARD: ForestHaul = { ...EMPTY_HAUL, wood: 4, berries: 3, herbs: 2 };
 export const ENCOUNTER_GLYPH = '⚔';
 
 export const createRandomProtoCard = (): Card => {
@@ -158,6 +160,11 @@ export const DEFAULT_WOODS_TILES = [
   { id: 'woods-alpha', title: 'Small Woods', sizeLabel: 'Small', gridSize: { columns: 1, rows: 1 }, resourceDensity: 0.45, tableauSize: 13, position: { x: 0, y: -48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'none' as const },
 ] as const;
 
+/** The pond sits in the clear starting area, one cell down and left of the Hero, in view on phones and clear of where quest cards land. It is fished
+ * (rules/fishing.ts), so it has no tableau and costs no stamina to reach. */
+export const POND_TILE = { id: 'pond', title: 'Pond', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -48, y: 96 }, unlocked: true, travelCost: 0, threat: 'none' as const, terrain: 'water' as const };
+export const isPondTile = (biomeId: string | null | undefined) => biomeId === POND_TILE.id;
+
 export const createDeepWoodsTile = (seed: number) => ({
   id: 'woods-beta',
   title: 'Deep Woods',
@@ -181,11 +188,8 @@ export const materializeDeepWoods = (seed: number): BiomeTileState => {
 export const isBiomeDealComplete = (tableau: Card[][], stock: Card[]) =>
   stock.length === 0 && tableau.every((column) => column.length === 0);
 
-export const addForestHaul = (haul: ForestHaul, reward: Partial<ForestHaul>): ForestHaul => ({
-  wood: haul.wood + (reward.wood ?? 0),
-  berries: haul.berries + (reward.berries ?? 0),
-  herbs: haul.herbs + (reward.herbs ?? 0),
-});
+export const addForestHaul = (haul: ForestHaul, reward: Partial<ForestHaul>): ForestHaul =>
+  Object.fromEntries((Object.keys(EMPTY_HAUL) as HaulResource[]).map((key) => [key, (haul[key] ?? 0) + (reward[key] ?? 0)])) as ForestHaul;
 
 export const isAdjacentRank = (left: number, right: number) => {
   if (left === right) return false;
@@ -241,10 +245,11 @@ export const createInitialState = (): ProtoState => {
     rank,
   }));
   const seed = Math.floor(Math.random() * 0xffffffff);
-  const biomeTiles = DEFAULT_WOODS_TILES.map((tile, index) => {
+  const biomeTiles = DEFAULT_WOODS_TILES.map((tile, index): BiomeTileState => {
     const deal = createSeededSmallWoodsDeal();
     return { ...tile, seed: seed + index * 7919, tableau: deal.tableau, stock: deal.stock };
   });
+  biomeTiles.push({ ...POND_TILE, position: { ...POND_TILE.position }, seed: seed + 104729, tableau: [], stock: [] });
   const firstBiome = biomeTiles[0];
   return {
     tableau: firstBiome.tableau,
@@ -270,8 +275,8 @@ export const createInitialState = (): ProtoState => {
     worldActors: [{ id: 'hero', label: 'Hero', location: 'table', position: { x: 0, y: 48 }, luminosity: DEFAULT_ACTOR_LUMINOSITY }],
     worldResourceStacks: [],
     trailRations: 0,
-    haul: { wood: 0, berries: 0, herbs: 0 },
-    settledHaul: { wood: 0, berries: 0, herbs: 0 },
+    haul: { ...EMPTY_HAUL },
+    settledHaul: { ...EMPTY_HAUL },
     enemyTeam: [],
     ambushCardsRemaining: 0,
     day: 1,
@@ -283,6 +288,8 @@ export const createInitialState = (): ProtoState => {
     questClaims: 0,
     questTableCards: [],
     questAccomplished: [],
+    pond: createPondDeal(seed + 104729, 1),
+    glowfishGlow: false,
   };
 };
 
@@ -366,4 +373,14 @@ export const cloneState = (state: ProtoState): ProtoState => ({
   questClaims: state.questClaims,
   questTableCards: state.questTableCards.map(card => ({ ...card, position: { ...card.position } })),
   questAccomplished: [...state.questAccomplished],
+  pond: {
+    ...state.pond,
+    water: state.pond.water.map((fish) => ({ ...fish })),
+    school: state.pond.school.map((fish) => ({ ...fish })),
+    bait: state.pond.bait.map((card) => ({ ...card })),
+    hand: state.pond.hand.map((card) => ({ ...card })),
+    missedRanks: [...state.pond.missedRanks],
+    lastCast: state.pond.lastCast ? { ...state.pond.lastCast, catches: [...state.pond.lastCast.catches] } : null,
+  },
+  glowfishGlow: state.glowfishGlow,
 });

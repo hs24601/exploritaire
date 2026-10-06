@@ -25,6 +25,8 @@ export type ProtoBiomeTile = {
   unlocked?: boolean;
   travelCost?: number;
   threat?: 'none' | 'low';
+  /** Water tiles are fished (the pond) rather than dealt as a tableau. */
+  terrain?: 'woods' | 'water';
   /** Pixel-art scenery that pops up from the back of the tile (pines for Small Woods). */
   sprite?: string;
 };
@@ -38,6 +40,7 @@ export type ProtoWorldActor = {
   position: { x: number; y: number };
   /** Light the actor carries, 0–1; defaults to candlelight. */
   luminosity?: number;
+  lightColor?: string;
   /** Cut-out art shown when the actor stands up in the tilted camera. */
   sprite?: string;
 };
@@ -533,7 +536,7 @@ export const ProtoMap = ({
   // canvas effect only reruns when a light actually changes.
   // A travelling actor's light moves with it along its path, frame by frame.
   const travelPosition = travel ? pointAlongWorldPath(travel.path, travel.progress) : null;
-  const actorLights = actors.flatMap(actor => actorLight(actor.id, travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor), actor.luminosity) ?? []);
+  const actorLights = actors.flatMap(actor => actorLight(actor.id, travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor), actor.luminosity, actor.lightColor) ?? []);
   const lightKey = JSON.stringify([placedLights, actorLights]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const lightSources = useMemo(() => [...placedLights, ...actorLights], [lightKey]);
@@ -745,7 +748,7 @@ export const ProtoMap = ({
             style={{ left: `calc(50% + ${region.left}px)`, top: `calc(50% + ${region.top}px)`, width: region.right - region.left, height: region.bottom - region.top,
               ['--terrain-sky' as string]: (0.05 + getTableLighting(timeOfDay).daylight * 0.11).toFixed(3) }} />)}
           <div className="table-grid-origin" data-grid-landmark="true-center" data-grid-reference={TRUE_CENTER.reference} aria-hidden="true" style={{left:'50%',top:'50%',width:CLASSICPLUS_GRID_SIZE,height:CLASSICPLUS_GRID_SIZE}}>＋</div>
-          {placedLights.map((light) => <div key={light.id} data-board-piece="lamp" data-camera-ignore="true"
+          {placedLights.filter((light) => !light.fromPiece).map((light) => <div key={light.id} data-board-piece="lamp" data-camera-ignore="true"
             aria-label={light.id === 'table-lantern' ? 'Table lantern, drag to move light' : 'Structure light'}
             onPointerDown={(event) => { event.stopPropagation(); if (light.id !== 'table-lantern' || (event.pointerType === 'mouse' && event.button !== 0)) return; event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); }}
             onPointerMove={(event) => { if (light.id !== 'table-lantern' || !event.currentTarget.hasPointerCapture(event.pointerId)) return; const point = worldPointFromClient(event.clientX, event.clientY); onMoveLight?.(light.id, point); }}
@@ -782,13 +785,14 @@ export const ProtoMap = ({
                   data-light-level={tileLight.level}
                   data-grid-reference={TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position))}
                   data-biome-id={tile.id}
-                  title={`${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
+                  title={tile.terrain === 'water' ? `${tile.title} · fishing` : `${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
+                  data-terrain={tile.terrain}
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => {
                     if (tile.unlocked !== false) onSelectBiome(tile.id);
                   }}
                   data-drop-target={dropTargetId === tile.id ? 'true' : undefined}
-                  className={`absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl border text-center transition ${dropTargetId === tile.id ? 'proto-drop-target ' : ''}${
+                  className={`absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl border text-center transition ${dropTargetId === tile.id ? 'proto-drop-target ' : ''}${tile.terrain === 'water' ? 'proto-water-tile ' : ''}${
                     tile.unlocked === false
                       ? 'cursor-not-allowed border-white/10 bg-black/40 text-white/25 opacity-65'
                       : tile.selected
@@ -805,7 +809,7 @@ export const ProtoMap = ({
                     left: `calc(50% + ${getBiomeWorldFootprint(tile).x}px)`,
                     top: `calc(50% + ${getBiomeWorldFootprint(tile).y}px)`,
                   }}
-                  aria-label={tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
+                  aria-label={tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
                 >
                   <BoardObjectLabel text={tile.unlocked === false ? 'Locked' : tile.title} minFontSize={12} maxFontSize={18} className="uppercase font-black" />
                 </button>
@@ -835,6 +839,7 @@ export const ProtoMap = ({
                 {standeeBase('base', physicsPosition, 44)}
                 <div
                   data-board-piece="resource"
+                  data-resource={stack.resource}
                   data-camera-ignore="true"
                   data-light-percent={stackLight.percent}
                   data-light-level={stackLight.level}
