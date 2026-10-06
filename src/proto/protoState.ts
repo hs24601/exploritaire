@@ -3,7 +3,7 @@ import type { CraftStack, WorldItemId } from './protoCrafting';
 import type { ProtoHeroClass } from './protoTypes';
 import { PROTO_ACTORS, PROTO_ENEMY_SLOT_IDS, type ProtoEnemyData } from './protoData';
 import type { CardTransportPoint } from './protoTransport';
-import type { PondState } from './rules/fishing';
+import type { PondCatch, PondState } from './rules/fishing';
 
 // Shared Proto state shapes and view-facing constants, moved verbatim from ProtoVariant.
 
@@ -17,7 +17,7 @@ export type Card = {
 
 export type ForestResource = 'wood' | 'berries' | 'herbs';
 /** Caught at the pond rather than foraged from a tableau. */
-export type PondResource = 'fish' | 'glowfish' | 'kingsfish';
+export type PondResource = PondCatch;
 export type HaulResource = ForestResource | PondResource;
 export type WorldResourceKind = WorldItemId;
 export type ForestHaul = Record<HaulResource, number>;

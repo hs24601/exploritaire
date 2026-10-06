@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { rankLabel, type Card } from '../protoState';
-import { FIGHT_LIMIT, FIGHT_ZONE, createFight, fishInZone, playReelCard, reelDirection, stepFight, type FightState } from '../rules/fishFight';
-import { catchForRank } from '../rules/fishing';
+import { FIGHT_LIMIT, FIGHT_NOTCHES, createFight, fishInZone, meterFraction, playReelCard, reelDirection, stepFight, type FightState } from '../rules/fishFight';
+import { catchForRank, speciesForRank } from '../rules/fishing';
 import { CATCH_GLYPH } from '../pondCatchFlight';
 import { ProtoCard } from './ProtoCard';
 
@@ -93,10 +93,14 @@ export const FishFight = ({ seed, rank, onEnd }: {
 
   const inZone = fishInZone(fight);
   const percent = (value: number) => `${(value * 100).toFixed(2)}%`;
+  // The zone's size adapts during the fight; it is drawn clipped to the meter.
+  const half = fight.zone.size / 2 / (FIGHT_NOTCHES + 1);
+  const zoneBottom = Math.max(0, meterFraction(fight.zone.pos) - half);
+  const zoneTop = Math.min(1, meterFraction(fight.zone.pos) + half);
   return (
     <>
-      <div ref={panelRef} className="proto-fight" role="group" aria-label={`Fighting a ${kind === 'fish' ? 'fish' : kind}, rank ${rankLabel(rank)}`}
-        data-fish-pos={fight.fish.pos.toFixed(3)} data-zone-pos={fight.zone.pos.toFixed(3)} data-zone-goal={fight.zone.goal.toFixed(3)}
+      <div ref={panelRef} className="proto-fight" role="group" aria-label={`Fighting a ${speciesForRank(rank).label}, rank ${rankLabel(rank)}`}
+        data-fish-pos={fight.fish.pos.toFixed(3)} data-zone-pos={fight.zone.pos.toFixed(3)} data-zone-goal={fight.zone.goal} data-fish-target={fight.fish.target} data-zone-size={fight.zone.size.toFixed(2)}
         data-progress={fight.progress.toFixed(3)} data-in-zone={inZone ? 'true' : undefined} data-result={fight.result ?? undefined}>
         <div className="proto-fight__line">
           <div ref={lineRef} className="proto-fight__line-card" title="The line card: play one rank above it to lift the zone, one below to drop it">
@@ -108,8 +112,9 @@ export const FishFight = ({ seed, rank, onEnd }: {
         </div>
         <div className="proto-fight__meter" aria-hidden="true">
           <div className="proto-fight__rail">
-            <span className="proto-fight__zone" data-in={inZone ? 'true' : undefined} style={{ height: percent(FIGHT_ZONE), bottom: percent(fight.zone.pos - FIGHT_ZONE / 2) }} />
-            <span ref={fishRef} className="proto-fight__fish" data-kind={kind} style={{ bottom: percent(fight.fish.pos) }}>{CATCH_GLYPHS[kind]}</span>
+            {Array.from({ length: FIGHT_NOTCHES + 1 }, (_, notch) => <span key={notch} className="proto-fight__notch" style={{ bottom: percent(meterFraction(notch)) }} />)}
+            <span className="proto-fight__zone" data-in={inZone ? 'true' : undefined} style={{ height: percent(zoneTop - zoneBottom), bottom: percent(zoneBottom) }} />
+            <span ref={fishRef} className="proto-fight__fish" data-kind={kind} style={{ bottom: percent(meterFraction(fight.fish.pos)) }}>{CATCH_GLYPHS(kind)}</span>
           </div>
         </div>
         <div className="proto-fight__bar" role="meter" aria-label="Catch" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(fight.progress * 100)}>

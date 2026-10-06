@@ -10,7 +10,7 @@ const REEL_MS = 560;
 const STAGGER_MS = 140;
 export const CATCH_FLIGHT_MS = CAST_MS + HOOK_MS + REEL_MS;
 
-export const CATCH_GLYPH: Record<PondCatch, string> = { fish: '🐟', glowfish: '🐠', kingsfish: '🐡' };
+export const CATCH_GLYPH = (kind: PondCatch) => kind === 'glowfish' ? '🐠' : kind === 'kingfish' ? '🐡' : '🐟';
 
 const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
@@ -43,7 +43,7 @@ export function reelInCatch(rod: DOMRect, hooked: HookedFish[], target: (kind: P
     const ghost = document.createElement('div');
     ghost.className = `proto-pond-catch-ghost proto-pond-catch-ghost--${fish.kind}`;
     ghost.dataset.catch = fish.kind;
-    ghost.innerHTML = `<span class="proto-pond-catch-ghost__rank">${fish.rank}</span><span class="proto-pond-catch-ghost__glyph">${CATCH_GLYPH[fish.kind]}</span>`;
+    ghost.innerHTML = `<span class="proto-pond-catch-ghost__rank">${fish.rank}</span><span class="proto-pond-catch-ghost__glyph">${CATCH_GLYPH(fish.kind)}</span>`;
     ghost.style.cssText = `left:${fish.rect.left}px;top:${fish.rect.top}px;width:${fish.rect.width}px;height:${fish.rect.height}px;opacity:0;`;
     document.body.append(ghost);
     const from = { x: fish.rect.left + fish.rect.width / 2, y: fish.rect.top + fish.rect.height / 2 };

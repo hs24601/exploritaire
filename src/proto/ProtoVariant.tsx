@@ -12,7 +12,7 @@ import { blockedSolids } from './worldBounds';
 import { DEFAULT_ACTOR_LUMINOSITY, getTableLighting, tableObjectShadow } from './protoLighting';
 import { TimeOfDaySlider } from './components/TimeOfDaySlider';
 import { PondField } from './components/PondField';
-import { GLOWFISH_TABLE_LIGHT, POND_MISS_STAMINA, castBait, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, restockPond } from './rules/fishing';
+import { GLOWFISH_TABLE_LIGHT, POND_CATCHES, POND_MISS_STAMINA, POND_SPECIES, isPondCatch, type PondCatch, castBait, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, restockPond } from './rules/fishing';
 import { NEUTRAL_STANDEE_LIGHTING, SpriteStandeeArt } from './components/SpriteStandee';
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
 import { assessSolverMove, preserveSolverRpgValues, type SolverMove } from './tableauSolver';
@@ -373,12 +373,12 @@ const selectBiome = (biomeId: string) => {
     const leftoverId = crypto.randomUUID();
     const eaten = actorId ? state.worldResourceStacks.find((stack) => stack.id === stackId && !stack.build && Object.keys(stackIngredients(stack)).length === 1) : undefined;
     if (eaten?.resource === 'glowfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWING', impact: '+2 max STA and a brighter light until nightfall' });
-    else if (eaten?.resource === 'kingsfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'FEAST', impact: 'Stamina fully restored' });
-    else if (eaten?.resource === 'fish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'FISH', impact: '+1 STA' });
+    else if (eaten?.resource === 'kingfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'FEAST', impact: 'Stamina fully restored' });
+    else if (eaten && isPondCatch(eaten.resource)) setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: WORLD_ITEMS[eaten.resource].label.toUpperCase(), impact: `+${POND_SPECIES.find((species) => species.id === eaten.resource)?.stamina} STA` });
     setState((prev) => {
       const source = prev.worldResourceStacks.find((stack) => stack.id === stackId);
       if (!source || source.build || WORLD_ITEMS[source.resource].kind === 'structure') return prev;
-      if (actorId && (source.resource === 'fish' || source.resource === 'glowfish' || source.resource === 'kingsfish') && Object.keys(stackIngredients(source)).length === 1) {
+      if (actorId && isPondCatch(source.resource) && Object.keys(stackIngredients(source)).length === 1) {
         const fed = eatPondCatch(prev, source.resource, actorId, ACTOR_STAMINA_MAX);
         return { ...fed, worldResourceStacks: prev.worldResourceStacks.map((stack) => stack.id === source.id ? { ...stack, count: stack.count - 1, ingredients: undefined } : stack).filter((stack) => stack.count > 0) };
       }
@@ -422,14 +422,14 @@ const selectBiome = (biomeId: string) => {
   };
   // The fight's outcome: a landed fish joins the haul at once, as its kind.
   const endPondFight = (landed: boolean) => {
-    const caught = landed ? landHooked(state.pond).caught : null;
-    if (caught === 'kingsfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'KINGSFISH', impact: 'A feast. Eat it to restore all stamina' });
-    else if (caught === 'glowfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWFISH', impact: 'It glows. Eat it for light' });
+    const preview = landed ? landHooked(state.pond) : null;
+    if (preview?.bonus === 'glowfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWFISH', impact: 'Lucky! It glows. Eat it for light' });
+    else if (preview?.caught === 'kingfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'KINGFISH', impact: 'A feast. Eat it to restore all stamina' });
     setState((prev) => {
       if (!prev.pond.hooked) return prev;
       if (!landed) return { ...prev, pond: loseHooked(prev.pond) };
-      const { pond, caught: kind } = landHooked(prev.pond);
-      return kind ? { ...prev, pond, haul: addForestHaul(prev.haul, { [kind]: 1 }) } : { ...prev, pond };
+      const { pond, caught: kind, bonus } = landHooked(prev.pond);
+      return kind ? { ...prev, pond, haul: addForestHaul(prev.haul, { [kind]: 1, ...(bonus ? { [bonus]: 1 } : {}) }) } : { ...prev, pond };
     });
   };
 
@@ -1872,7 +1872,7 @@ const selectBiome = (biomeId: string) => {
               <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId ? '' : 'hidden'}${pondSelected ? ' proto-tableau-field--pond' : ''}`}>
               {pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && state.stamina < POND_MISS_STAMINA}
-                  landed={{ fish: state.haul.fish - state.settledHaul.fish, glowfish: state.haul.glowfish - state.settledHaul.glowfish, kingsfish: state.haul.kingsfish - state.settledHaul.kingsfish }}
+                  landed={Object.fromEntries(POND_CATCHES.map((id) => [id, state.haul[id] - state.settledHaul[id]])) as Record<PondCatch, number>}
                   onCast={castPondBait} onFightEnd={endPondFight} onLeave={leaveTableau} />
               ) : (<>
               <div className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">

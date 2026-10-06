@@ -2656,7 +2656,8 @@ html.drag-perf-mode .target-swirl-sparkles {
    scales with the meter's height so a short (phone landscape) meter keeps a
    catch zone clearly taller than the fish. */
 .proto-fight { --fight-fish: clamp(18px, 9cqh, 36px); }
-.proto-fight__rail { position: absolute; inset: calc(var(--fight-fish) / 2 + 2px) 4px; }
+.proto-fight__rail { position: absolute; inset: 6px 4px; }
+.proto-fight__notch { position: absolute; left: 6px; right: 6px; height: 2px; margin-bottom: -1px; border-radius: 1px; background: rgba(202, 255, 244, 0.16); }
 .proto-fight__zone {
   position: absolute;
   left: 0;
@@ -2694,6 +2695,8 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-fight__reel[data-reel="down"] .playing-card::after { content: '▼'; color: #ffb38a; }
 .proto-pond__catch { grid-area: catch; }
 .proto-pond__catch > li { transform-origin: center; }
+/* Most species share the fish glyph, so each pill names its rank. */
+.proto-pond__catch-rank { color: #ffe7ad; }
 /* The catch flight lives on the page, above everything, while a fish is reeled in. */
 .proto-pond-catch-lines { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 60000; pointer-events: none; overflow: visible; }
 .proto-pond-catch-line { stroke: #e8f6ff; stroke-width: 1.5; stroke-linecap: round; filter: drop-shadow(0 1px 1px #0009); }

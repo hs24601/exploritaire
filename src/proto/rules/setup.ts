@@ -1,5 +1,6 @@
 import { DEFAULT_ACTOR_LUMINOSITY } from '../protoLighting';
 import { createPondDeal } from './fishing';
+import { POND_CATCHES } from './pondSpecies';
 import { createQuestBiomeDeal, nextQuestCard, QUEST_ROUTE_BUDGET } from '../protoQuestDeals';
 import { DEFAULT_EXPEDITION_ENERGY, MAGE_PHASE_SHIFT_TRIGGER, PROTO_ENEMIES } from '../protoData';
 import { FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, ACTOR_STAMINA_MAX, type BiomeTileState, type Card, type EnemyRuntimeState, type FoundationSlot, type ForestHaul, type ForestResource, type HaulResource, type ProtoState, type SceneKind } from '../protoState';
@@ -33,7 +34,7 @@ export const FOREST_RESOURCE_GLYPHS: Record<ForestResource, string> = {
   berries: '🫐',
   herbs: '🌿',
 };
-export const EMPTY_HAUL: ForestHaul = { wood: 0, berries: 0, herbs: 0, fish: 0, glowfish: 0, kingsfish: 0 };
+export const EMPTY_HAUL: ForestHaul = { wood: 0, berries: 0, herbs: 0, ...Object.fromEntries(POND_CATCHES.map((id) => [id, 0])) } as ForestHaul;
 export const FOREST_CACHE_REWARD: ForestHaul = { ...EMPTY_HAUL, wood: 4, berries: 3, herbs: 2 };
 export const ENCOUNTER_GLYPH = '⚔';
 

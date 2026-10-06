@@ -2,24 +2,27 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { createPortal } from 'react-dom';
 import { reelInCatch } from '../pondCatchFlight';
 import { rankLabel, type Card } from '../protoState';
-import { POND_CASTS_PER_DAY, RIPPLE_RANGES, catchForRank, pondFinished, rippleSize, type PondCast, type PondCatch, type PondState } from '../rules/fishing';
+import { POND_CASTS_PER_DAY, POND_CATCHES, POND_SPECIES, RIPPLE_RANGES, catchForRank, landHooked, pondFinished, rippleSize, speciesForRank, type PondCast, type PondCatch, type PondState } from '../rules/fishing';
 import { CATCH_GLYPHS, FishFight } from './FishFight';
 import { ProtoCard } from './ProtoCard';
 
 const RANK_NAMES = ['', 'aces', 'twos', 'threes', 'fours', 'fives', 'sixes', 'sevens', 'eights', 'nines', 'tens', 'jacks', 'queens', 'kings'];
-const CATCH_NAMES: Record<PondCatch, string> = { fish: 'fish', glowfish: 'glowfish', kingsfish: 'Kingsfish' };
-const CATCH_LABELS: Record<PondCatch, string> = { fish: 'Fish', glowfish: 'Glowfish', kingsfish: 'Kingsfish' };
-const CATCH_ORDER: PondCatch[] = ['fish', 'glowfish', 'kingsfish'];
+/** Whether landing the fish on the line also brings up a lucky glowfish (the rules' own roll). */
+const landHookedBonus = (pond: PondState) => landHooked(pond).bonus === 'glowfish';
+const CATCH_LABEL = (kind: PondCatch) => kind === 'glowfish' ? 'Glowfish' : POND_SPECIES.find((species) => species.id === kind)!.label;
+/** The rank a catch pill shows beside its fish, so species that share a glyph read apart. */
+const CATCH_RANK = (kind: PondCatch) => kind === 'glowfish' ? null : rankLabel(POND_SPECIES.find((species) => species.id === kind)!.rank);
+const NO_CATCH = Object.fromEntries(POND_CATCHES.map((kind) => [kind, 0])) as Record<PondCatch, number>;
 
 /** Movement before a press on a bait card becomes a drag, by input type. */
 const DRAG_THRESHOLD = { mouse: 6, touch: 10, pen: 8 } as Record<string, number>;
 type BaitDrag = { id: string; pointerId: number; type: string; startX: number; startY: number; x: number; y: number; dx: number; dy: number; width: number; moved: boolean };
 
 const castMessage = (cast: PondCast) => {
-  if (cast.outcome === 'landed') {
-    if (cast.catch === 'kingsfish') return 'A Kingsfish! Eat it for a feast that restores all stamina.';
-    if (cast.catch === 'glowfish') return 'A glowfish! It glows like a lantern. Eat it for light and stamina.';
-    return 'Landed! The fish is in your catch.';
+  if (cast.outcome === 'landed' && cast.catch) {
+    const lucky = cast.bonus === 'glowfish' ? ' Lucky: a glowfish came up with it!' : '';
+    if (cast.catch === 'kingfish') return `A Kingfish! Eat it for a feast that restores all stamina.${lucky}`;
+    return `Landed a ${CATCH_LABEL(cast.catch)}!${lucky}`;
   }
   if (cast.outcome === 'escaped') return `The ${rankLabel(cast.rank)} slipped the hook. It is still in the water.`;
   const nibbles = cast.nibbles === 1 ? 'One nibble showed a fish one rank away.' : cast.nibbles > 1 ? `${cast.nibbles} nibbles showed fish one rank away.` : 'Not even a nibble.';
@@ -47,9 +50,10 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
   const hooked = pond.water.find((fish) => fish.id === pond.hooked) ?? null;
   const trayRef = useRef<HTMLUListElement | null>(null);
   // A landed fish counts toward the tray only once its flight lands in it.
-  const [reeling, setReeling] = useState<Record<PondCatch, number>>({ fish: 0, glowfish: 0, kingsfish: 0 });
-  const shown = Object.fromEntries(CATCH_ORDER.map((kind) => [kind, landed[kind] - reeling[kind]])) as Record<PondCatch, number>;
-  const trayKinds = CATCH_ORDER.filter((kind) => kind === 'fish' || landed[kind] > 0);
+  const [reeling, setReeling] = useState<Record<PondCatch, number>>(NO_CATCH);
+  const shown = Object.fromEntries(POND_CATCHES.map((kind) => [kind, landed[kind] - reeling[kind]])) as Record<PondCatch, number>;
+  // A pill per kind caught this outing, smallest fish first; an empty tray shows one empty pill.
+  const trayKinds = POND_CATCHES.filter((kind) => landed[kind] > 0);
   const canCast = Boolean(angler) && !finished && !hooked && !tired;
   // Casting is a drag: a bait card dropped into the water asks the pond for its rank.
   const [drag, setDrag] = useState<BaitDrag | null>(null);
@@ -92,8 +96,9 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
   const endFight = (won: boolean, fish: DOMRect | null, line: DOMRect | null) => {
     if (won && hooked && fish && line && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const kind = catchForRank(hooked.rank);
-      setReeling((prev) => ({ ...prev, [kind]: prev[kind] + 1 }));
-      reelInCatch(line, [{ rect: fish, kind, rank: rankLabel(hooked.rank) }],
+      const kinds: PondCatch[] = [kind, ...(landHookedBonus(pond) ? ['glowfish' as const] : [])];
+      setReeling((prev) => ({ ...prev, ...Object.fromEntries(kinds.map((entry) => [entry, prev[entry] + 1])) }));
+      reelInCatch(line, kinds.map((entry) => ({ rect: fish, kind: entry, rank: entry === 'glowfish' ? '✦' : rankLabel(hooked.rank) })),
         (catchKind) => trayRef.current?.querySelector<HTMLElement>(`[data-pond-catch="${catchKind}"]`) ?? null,
         (catchKind) => setReeling((prev) => ({ ...prev, [catchKind]: Math.max(0, prev[catchKind] - 1) })), { hooked: true });
     }
@@ -101,7 +106,7 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
   };
 
   const hookedKind = hooked ? catchForRank(hooked.rank) : null;
-  const message = hooked && hookedKind ? `A ${rankLabel(hooked.rank)} bit! Keep the ${CATCH_NAMES[hookedKind]} in the zone: ▲ +1 cards lift it, ▼ −1 cards drop it.`
+  const message = hooked && hookedKind ? `A ${CATCH_LABEL(hookedKind)} (${rankLabel(hooked.rank)}) bit! Keep it in the zone: ▲ +1 cards lift it, ▼ −1 cards drop it.`
     : pond.castsLeft <= 0 ? 'Your line is worn out for today. The pond restocks tomorrow.'
     : finished ? 'The pond is fished out until tomorrow.'
     : !angler ? 'Bring an actor to the pond to fish.'
@@ -135,12 +140,12 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
             return (
               <div key={fish.id} role="listitem" className="playing-card proto-pond__fish" data-pond-fish={fish.id} data-ripple={band}
                 data-revealed={fish.revealed ? 'true' : undefined}
-                aria-label={fish.revealed ? `Fish card, rank ${rankLabel(fish.rank)}` : `Face-down fish card, ${band} (${RIPPLE_RANGES[band]})`}
-                title={fish.revealed ? `Rank ${rankLabel(fish.rank)}` : `${band} fish: ${RIPPLE_RANGES[band]}`}>
+                aria-label={fish.revealed ? `Fish card, rank ${rankLabel(fish.rank)}, ${speciesForRank(fish.rank).label}` : `Face-down fish card, ${band} (${RIPPLE_RANGES[band]})`}
+                title={fish.revealed ? `${speciesForRank(fish.rank).label} (${rankLabel(fish.rank)})` : `${band} fish: ${RIPPLE_RANGES[band]}`}>
                 {fish.revealed ? (
                   <>
                     <span className="proto-pond__rank" aria-hidden="true">{rankLabel(fish.rank)}</span>
-                    <span className="proto-pond__fish-glyph" aria-hidden="true">{CATCH_GLYPHS[catchForRank(fish.rank)]}</span>
+                    <span className="proto-pond__fish-glyph" aria-hidden="true">{CATCH_GLYPHS(catchForRank(fish.rank))}</span>
                   </>
                 ) : (
                   <>
@@ -184,15 +189,17 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
       ) : null}
       {/* The catch lands here, beneath the cards, like a foundation's collected resources. */}
       <ul ref={trayRef} className="proto-foundation-resources proto-pond__catch"
-        aria-label={`Caught this outing: ${trayKinds.map((kind) => `${shown[kind]} ${CATCH_NAMES[kind]}`).join(', ')}`}>
+        aria-label={trayKinds.length ? `Caught this outing: ${trayKinds.map((kind) => `${shown[kind]} ${CATCH_LABEL(kind)}`).join(', ')}` : 'Nothing caught yet'}>
         {trayKinds.map((kind) => (
-          <li key={kind} data-pond-catch={kind} data-count={shown[kind]} title={CATCH_LABELS[kind]}>
-            <span aria-hidden="true">{CATCH_GLYPHS[kind]}</span><span aria-hidden="true">{shown[kind]}</span>
+          <li key={kind} data-pond-catch={kind} data-count={shown[kind]} title={CATCH_LABEL(kind)}>
+            {CATCH_RANK(kind) ? <span className="proto-pond__catch-rank" aria-hidden="true">{CATCH_RANK(kind)}</span> : null}
+            <span aria-hidden="true">{CATCH_GLYPHS(kind)}</span><span aria-hidden="true">{shown[kind]}</span>
           </li>
         ))}
+        {trayKinds.length ? null : <li data-pond-catch="none" data-count={0} title="Nothing caught yet"><span aria-hidden="true">🐟</span><span aria-hidden="true">0</span></li>}
       </ul>
       <footer className="proto-pond__footer">
-        <span className="proto-pond__legend" title={`Each face-down fish card shows its rank band: small ${RIPPLE_RANGES.small}, medium ${RIPPLE_RANGES.medium}, large ${RIPPLE_RANGES.large}. A queen is a glowfish, a king a Kingsfish.`}>
+        <span className="proto-pond__legend" title={`Each face-down fish card shows its rank band: small ${RIPPLE_RANGES.small}, medium ${RIPPLE_RANGES.medium}, large ${RIPPLE_RANGES.large}. Each rank is its own fish, from the ace Minnow to the king Kingfish.`}>
           Fish backs show A–4 · 5–9 · 10–K
         </span>
         <button type="button" className="proto-pond__leave" disabled={!angler || Boolean(hooked)} onClick={onLeave}>Leave Pond</button>
