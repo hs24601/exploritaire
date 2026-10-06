@@ -1,10 +1,15 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { reelInCatch } from '../pondCatchFlight';
 import { rankLabel, type Card } from '../protoState';
 import { GLOWFISH_CATCH, POND_CASTS_PER_DAY, RIPPLE_RANGES, nextCatchKind, pondFinished, rippleSize, type PondCast, type PondCatch, type PondState } from '../rules/fishing';
 import { ProtoCard } from './ProtoCard';
 
 const RANK_NAMES = ['', 'aces', 'twos', 'threes', 'fours', 'fives', 'sixes', 'sevens', 'eights', 'nines', 'tens', 'jacks', 'queens', 'kings'];
+
+/** Movement before a press on a bait card becomes a drag, by input type. */
+const DRAG_THRESHOLD = { mouse: 6, touch: 10, pen: 8 } as Record<string, number>;
+type BaitDrag = { id: string; pointerId: number; type: string; startX: number; startY: number; x: number; y: number; dx: number; dy: number; width: number; moved: boolean; rod: DOMRect };
 
 const castMessage = (cast: PondCast) => {
   if (cast.outcome === 'bite') {
@@ -32,9 +37,45 @@ export const PondField = ({ pond, angler, landed, onCast, onLeave }: {
   // Fish still on the line count toward the tray only once they land in it.
   const [reeling, setReeling] = useState<Record<PondCatch, number>>({ fish: 0, glowfish: 0 });
   const shown = { fish: landed.fish - reeling.fish, glowfish: landed.glowfish - reeling.glowfish };
-  const cast = (card: Card) => {
-    const hooked = angler && !finished ? pond.water.filter((fish) => fish.rank === card.rank) : [];
-    const rod = baitRefs.current[card.id]?.getBoundingClientRect();
+  const canCast = Boolean(angler) && !finished;
+  // Casting is a drag: a bait card dropped on a fish card asks the pond for its rank.
+  const [drag, setDrag] = useState<BaitDrag | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  // Keyboard players pick a bait card, then a fish card.
+  const [keyboardBait, setKeyboardBait] = useState<string | null>(null);
+  const [hint, setHint] = useState(false);
+  useEffect(() => { if (!canCast) { setDrag(null); setKeyboardBait(null); } }, [canCast]);
+  const fishUnder = (x: number, y: number) => document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-pond-fish]')?.dataset.pondFish ?? null;
+  const startDrag = (card: Card, event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!canCast || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    event.preventDefault();
+    const rect = event.currentTarget.getBoundingClientRect();
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* capture can fail mid-gesture */ }
+    setKeyboardBait(null);
+    setDrag({ id: card.id, pointerId: event.pointerId, type: event.pointerType, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY,
+      dx: event.clientX - rect.left, dy: event.clientY - rect.top, width: rect.width, moved: false, rod: rect });
+  };
+  const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const moved = drag.moved || Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > (DRAG_THRESHOLD[drag.type] ?? 8);
+    setDrag({ ...drag, x: event.clientX, y: event.clientY, moved });
+    setDropTarget(moved ? fishUnder(event.clientX, event.clientY) : null);
+  };
+  const endDrag = (event: ReactPointerEvent<HTMLDivElement>, cancelled = false) => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const target = !cancelled && drag.moved ? fishUnder(event.clientX, event.clientY) : null;
+    const card = pond.hand.find((entry) => entry.id === drag.id);
+    setDrag(null);
+    setDropTarget(null);
+    if (card && target) cast(card, drag.rod);
+    // A tap without a drag explains how to cast.
+    else if (!cancelled && !drag.moved) setHint(true);
+  };
+  const cast = (card: Card, from?: DOMRect) => {
+    setHint(false);
+    setKeyboardBait(null);
+    const hooked = canCast ? pond.water.filter((fish) => fish.rank === card.rank) : [];
+    const rod = from ?? baitRefs.current[card.id]?.getBoundingClientRect();
     if (hooked.length && rod && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const kinds = hooked.map((_, index) => nextCatchKind(pond.caught + index));
       setReeling((prev) => ({ fish: prev.fish + kinds.filter((kind) => kind === 'fish').length, glowfish: prev.glowfish + kinds.filter((kind) => kind === 'glowfish').length }));
@@ -49,7 +90,10 @@ export const PondField = ({ pond, angler, landed, onCast, onLeave }: {
   const message = pond.castsLeft <= 0 ? 'Your line is worn out for today. The pond restocks tomorrow.'
     : finished ? 'The pond is fished out until tomorrow.'
     : !angler ? 'Bring an actor to the pond to fish.'
-    : `${pond.lastCast ? castMessage(pond.lastCast) : 'Cast a bait card to ask the pond for that rank.'}${glowNext ? ' Something glows beneath the surface.' : ''}`;
+    : hint ? 'Drag a bait card onto a fish card to cast.'
+    : keyboardBait ? 'Choose a fish card to cast at.'
+    : `${pond.lastCast ? castMessage(pond.lastCast) : 'Drag a bait card onto a fish card to ask the pond for that rank.'}${glowNext ? ' Something glows beneath the surface.' : ''}`;
+  const dragged = drag?.moved ? pond.hand.find((card) => card.id === drag.id) : undefined;
   return (
     <section className="proto-pond" aria-label="Pond" data-angler={angler ?? undefined}>
       <header className="proto-pond__header">
@@ -62,7 +106,14 @@ export const PondField = ({ pond, angler, landed, onCast, onLeave }: {
           // Fish lie face down in the water like dealt cards. The back shows the
           // fish's size band; a nibble flips the card to show its rank.
           return (
-            <div key={fish.id} ref={(node) => { fishRefs.current[fish.id] = node; }} role="listitem" className="playing-card proto-pond__fish" data-ripple={band} data-revealed={fish.revealed ? 'true' : undefined}
+            <div key={fish.id} ref={(node) => { fishRefs.current[fish.id] = node; }} role="listitem" className="playing-card proto-pond__fish" data-pond-fish={fish.id} data-ripple={band}
+              data-drop-target={dropTarget === fish.id ? 'true' : undefined}
+              tabIndex={keyboardBait ? 0 : undefined}
+              onKeyDown={(event) => {
+                const card = pond.hand.find((entry) => entry.id === keyboardBait);
+                if (card && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); cast(card); }
+                if (event.key === 'Escape') setKeyboardBait(null);
+              }} data-revealed={fish.revealed ? 'true' : undefined}
               aria-label={fish.revealed ? `Fish card, rank ${rankLabel(fish.rank)}` : `Face-down fish card, ${band} (${RIPPLE_RANGES[band]})`}
               title={fish.revealed ? `Rank ${rankLabel(fish.rank)}` : `${band} fish: ${RIPPLE_RANGES[band]}`}>
               {fish.revealed ? (
@@ -86,12 +137,27 @@ export const PondField = ({ pond, angler, landed, onCast, onLeave }: {
           const missed = pond.missedRanks.includes(card.rank);
           return (
             <div key={card.id} ref={(node) => { baitRefs.current[card.id] = node; }} className="proto-pond__bait" data-bait-rank={card.rank} data-missed={missed ? 'true' : undefined}
-              title={missed ? `No ${RANK_NAMES[card.rank]} in the water right now` : `Ask the pond for ${RANK_NAMES[card.rank]}`}>
-              <ProtoCard card={card} disabled={!angler || finished} onClick={() => cast(card)} />
+              data-dragging={drag?.id === card.id && drag.moved ? 'true' : undefined} data-selected={keyboardBait === card.id ? 'true' : undefined}
+              title={missed ? `No ${RANK_NAMES[card.rank]} in the water right now` : `Drag onto a fish card to ask the pond for ${RANK_NAMES[card.rank]}`}
+              onPointerDown={(event) => startDrag(card, event)} onPointerMove={moveDrag}
+              onPointerUp={(event) => endDrag(event)} onPointerCancel={(event) => endDrag(event, true)}>
+              {/* Keyboard: Enter picks this bait, then Enter on a fish card casts it.
+                  Mouse and touch cast by dragging, so their clicks (detail > 0) only hint. */}
+              <ProtoCard card={card} disabled={!canCast} selected={keyboardBait === card.id}
+                onClick={(event) => { if (canCast && event.detail === 0) setKeyboardBait((current) => current === card.id ? null : card.id); }} />
             </div>
           );
         })}
       </div>
+      {/* The dragged bait follows the pointer above the page. The pond panel is a
+          size container (a containing block for fixed children), so it is portalled
+          to the game root to stay pinned to the viewport. */}
+      {dragged && drag ? createPortal(
+        <div className="proto-pond__drag" aria-hidden="true" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width, ['--classic-card-w' as string]: `${drag.width}px` }}>
+          <ProtoCard card={dragged} />
+        </div>,
+        document.querySelector('.proto-game-root') ?? document.body,
+      ) : null}
       {/* The catch lands here, beneath the bait, like a foundation's collected resources. */}
       <ul ref={trayRef} className="proto-foundation-resources proto-pond__catch" aria-label={`Caught this outing: ${shown.fish} fish${landed.glowfish ? `, ${shown.glowfish} glowfish` : ''}`}>
         <li data-pond-catch="fish" data-count={shown.fish} title="Fish"><span aria-hidden="true">🐟</span><span aria-hidden="true">{shown.fish}</span></li>

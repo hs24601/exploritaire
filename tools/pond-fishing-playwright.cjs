@@ -1,4 +1,5 @@
-// Pond fishing (Go Fish for one): the Hero walks to the pond, casts bait cards,
+// Pond fishing (Go Fish for one): the Hero walks to the pond, casts bait cards by
+// dragging them onto fish cards (mouse, touch, or Enter on the keyboard),
 // the fourth fish caught is the glowfish, the catch reaches the supplies when the
 // Hero leaves, a glowfish on the table glows, and eating it raises max stamina
 // and the Hero's light until the day ends.
@@ -11,6 +12,23 @@ const pickBait=page=>page.evaluate(()=>{
   const score=c=>c.missed?-1:water.some(f=>f.rank===label(c.rank))?10:water.filter(f=>!f.rank&&f.ripple===size(c.rank)).length/(size(c.rank)==='medium'?5:4);
   return hand.map((c,i)=>({i,s:score(c)})).sort((x,y)=>y.s-x.s)[0].i;
 });
+const centre=async l=>{const r=await l.boundingBox();return {x:r.x+r.width/2,y:r.y+r.height/2};};
+const castsLeft=page=>page.locator('[data-pond-casts]').getAttribute('data-pond-casts').then(Number);
+// Cast like a player: press a bait card and drag it onto a fish card, with the
+// mouse or (given a CDP session) a finger. whileOver runs before letting go.
+const dragBait=async(page,bait,{fish=0,touch=null,whileOver=null}={})=>{
+  const a=await centre(page.locator('.proto-pond__bait').nth(bait)),t=await centre(page.locator('.proto-pond__fish').nth(fish));
+  const steps=12,at=i=>({x:a.x+(t.x-a.x)*i/steps,y:a.y+(t.y-a.y)*i/steps});
+  if(touch){await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[a]});for(let i=1;i<=steps;i++)await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[at(i)]});}
+  else{await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(t.x,t.y,{steps});}
+  const over=whileOver?await whileOver(t):null;
+  if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});else await page.mouse.up();
+  return over;
+};
+// While a bait card is carried: which fish card is lit as the drop target, and where the carried card is.
+const dragState=(page,fish=0)=>page.evaluate(i=>{const r=document.querySelector('.proto-pond__drag')?.getBoundingClientRect();
+  return {targets:[...document.querySelectorAll('.proto-pond__fish')].flatMap((el,n)=>el.dataset.dropTarget?[n]:[]),want:i,
+    clone:r?{x:r.x+r.width/2,y:r.y+r.height/2,w:r.width}:null,dimmed:document.querySelectorAll('.proto-pond__bait[data-dragging]').length};},fish);
 const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return s/2147483647;};};
 (async()=>{const b=await chromium.launch({headless:true});try{
   const p=await (await b.newContext({viewport:{width:1912,height:914}})).newPage();
@@ -29,7 +47,17 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
     return p.evaluate(()=>{const n=k=>Number(document.querySelector(`.proto-pond__catch [data-pond-catch="${k}"]`)?.dataset.count??0);return {fish:n('fish'),glow:n('glowfish')};});};
   const tray=await p.locator('.proto-pond__catch').boundingBox(),hand=await p.locator('.proto-pond__hand').boundingBox();
   assert.ok(tray.y>=hand.y+hand.height-1,'the catch tray sits beneath the bait cards');
-  let casts=0,sawGlowMessage=false,sawReel=false;
+  // A click on bait does not cast; it explains how to.
+  await p.locator('.proto-pond__bait').first().locator('button').click();await p.mouse.move(2,2);
+  assert.equal(await castsLeft(p),10,'clicking bait does not cast');
+  assert.match(await p.locator('.proto-pond__message').innerText(),/drag a bait card onto a fish card/i,'a click on bait explains dragging');
+  // Dropping bait anywhere but on a fish card casts nothing.
+  {const a=await centre(p.locator('.proto-pond__bait').first()),m=await p.locator('.proto-pond__message').boundingBox();
+    await p.mouse.move(a.x,a.y);await p.mouse.down();await p.mouse.move(m.x+m.width/2,m.y+m.height/2,{steps:10});
+    assert.equal((await dragState(p)).targets.length,0,'no fish card lights up away from the water');await p.mouse.up();
+    assert.equal(await castsLeft(p),10,'bait dropped off the water does not cast');
+    assert.equal(await p.locator('.proto-pond__drag').count(),0,'the carried card is gone after letting go');}
+  let casts=0,sawGlowMessage=false,sawReel=false,sawDrag=null;
   while((await p.locator('.proto-pond__bait button:not([disabled])').count())>0){
     const pick=await pickBait(p);
     const was=await landed();
@@ -38,7 +66,12 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
       const c=Number(document.querySelector('.proto-pond__catch [data-pond-catch="fish"]')?.dataset.count??0)+Number(document.querySelector('.proto-pond__catch [data-pond-catch="glowfish"]')?.dataset.count??0);
       if(g||l){const r=g?.getBoundingClientRect();log.frames.push({line:!!l,visible:g?getComputedStyle(g).opacity!=='0':false,x:r?r.x+r.width/2:null,y:r?r.y+r.height/2:null,count:c});}
       else if(log.frames.length){log.done=true;return;}requestAnimationFrame(tick);};requestAnimationFrame(tick);});
-    await p.locator('.proto-pond__bait').nth(pick).locator('button').click();casts++;
+    const fish=casts%3,state=await dragBait(p,pick,{fish,whileOver:t=>dragState(p,fish).then(d=>({...d,t}))});casts++;
+    if(!sawDrag){sawDrag=state;
+      assert.deepEqual(state.targets,[fish],'while dragging, the fish card under the bait lights up as the drop target');
+      assert.ok(state.clone&&Math.hypot(state.clone.x-state.t.x,state.clone.y-state.t.y)<state.clone.w,'the bait card follows the pointer');
+      assert.equal(state.dimmed,1,'the bait card left behind dims while carried');}
+    assert.equal(await castsLeft(p),10-casts,'dropping bait on a fish card casts it');
     const now=await landed();const total=now.fish+now.glow;
     const reel=await p.evaluate(()=>window.__reel);
     if(total>was.fish+was.glow&&!sawReel){
@@ -54,6 +87,7 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
     if(total>=4)break;
   }
   assert.ok(sawReel,'a catch was reeled in');
+  assert.equal(await p.locator('.proto-pond__fish[data-drop-target], .proto-pond__drag').count(),0,'no drag cue lingers after casting');
   assert.ok(sawGlowMessage,`the glowfish was caught within ${casts} casts`);
   const caught=await landed();
   await p.getByRole('button',{name:'Leave Pond'}).click();await p.waitForTimeout(600);
@@ -78,7 +112,7 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
   assert.equal(glowing.now,Math.min(glowing.max,fed.now+3),'and restores 3 stamina');
   const heroLight=Number(await p.locator('[data-board-piece="actor"]').getAttribute('data-light-percent'));
   assert.ok(heroLight>heroLightBefore+15,`the Hero glows brighter (${heroLightBefore}% → ${heroLight}%)`);
-  console.log(`Pond: a line reels each catch from its card into the tray beneath the bait; glowfish on catch 4 after ${casts} casts (${caught.fish} fish); glowfish on the table ${glowLight}% light vs fish ${fishLight}%; eating it took stamina ${fed.now}/${fed.max} → ${glowing.now}/${glowing.max} and the Hero's light ${heroLightBefore}% → ${heroLight}%.`);
+  console.log(`Pond: casting is a drag (a click only hints; the fish card under the bait lights up); a line reels each catch from its card into the tray beneath the bait; glowfish on catch 4 after ${casts} casts (${caught.fish} fish); glowfish on the table ${glowLight}% light vs fish ${fishLight}%; eating it took stamina ${fed.now}/${fed.max} → ${glowing.now}/${glowing.max} and the Hero's light ${heroLightBefore}% → ${heroLight}%.`);
   // The pond panel fits at desktop and phone sizes, wide and tall.
   const PARTS='.proto-pond__catch, .proto-pond__catch > li, .proto-pond__header, .proto-pond__header > span, .proto-pond__water, .proto-pond__fish, .proto-pond__band, .proto-pond__rank, .proto-pond__message, .proto-pond__hand, .proto-pond__bait, .proto-pond__bait button, .proto-pond__footer, .proto-pond__legend, .proto-pond__leave';
   const defects=[];
@@ -86,14 +120,33 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
     // Phone landscape shows only a sliver of the table (the Hero is cut off too), so
     // that size walks to the pond in portrait and then turns the phone.
     const landscape=w>h&&h<500,[sw,sh]=landscape?[h,w]:[w,h];
-    const q=await (await b.newContext({viewport:{width:sw,height:sh}})).newPage();await q.addInitScript(seeded);await q.goto('http://localhost:5179/proto.html');
+    // Phones fish by touch, desktops with the mouse, and 1280x720 also by keyboard.
+    const phone=sw<900,ctx=await b.newContext({viewport:{width:sw,height:sh},hasTouch:phone,isMobile:phone});
+    const q=await ctx.newPage();await q.addInitScript(seeded);await q.goto('http://localhost:5179/proto.html');
     if(sw<900)await q.getByRole('button',{name:'Table',exact:true}).click();
     const pond=await q.locator('[data-biome-id="pond"]').boundingBox(),view=await q.locator('.proto-map-viewport').boundingBox();
     if(!pond||pond.x<view.x||pond.x+pond.width>view.x+view.width||pond.y<view.y||pond.y+pond.height>view.y+view.height)defects.push(`${sw}x${sh}: the pond is not in the starting view`);
     const a=await q.locator('[data-board-piece="actor"]').boundingBox();await q.mouse.move(a.x+a.width/2,a.y+a.height/2);await q.mouse.down();await q.mouse.move(pond.x+pond.width/2,pond.y+pond.height/2,{steps:15});await q.mouse.up();
     await q.locator('.proto-pond[data-angler]').waitFor({timeout:15000});
     if(landscape){await q.setViewportSize({width:w,height:h});await q.waitForTimeout(300);}
-    await q.locator('.proto-pond__bait button').first().click();await q.mouse.move(2,2);await q.waitForTimeout(300);
+    const touch=phone?await ctx.newCDPSession(q):null;
+    if(touch){
+      // A tap on bait only hints; a touch drag onto a fish card casts.
+      const a=await centre(q.locator('.proto-pond__bait').first());
+      await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[a]});await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await q.waitForTimeout(200);
+      if(await castsLeft(q)!==10)defects.push(`${w}x${h}: a tap on bait cast it`);
+      const d=await dragBait(q,0,{fish:1,touch,whileOver:t=>dragState(q,1).then(s=>({...s,t}))});
+      if(d.targets.join()!=='1')defects.push(`${w}x${h}: a touch drag lit fish cards [${d.targets}] instead of the one under the finger`);
+      if(!d.clone||Math.hypot(d.clone.x-d.t.x,d.clone.y-d.t.y)>d.clone.w)defects.push(`${w}x${h}: the bait card does not follow the finger`);
+      await q.waitForTimeout(200);if(await castsLeft(q)!==9)defects.push(`${w}x${h}: a touch drag onto a fish card did not cast`);
+    }else if(w===1280){
+      // Keyboard: Enter on a bait card picks it, Enter on a fish card casts it.
+      await q.locator('.proto-pond__bait button').first().focus();await q.keyboard.press('Enter');
+      if(!(await q.locator('.proto-pond__bait[data-selected]').count()))defects.push(`${w}x${h}: Enter does not pick a bait card`);
+      await q.locator('.proto-pond__fish').first().focus();await q.keyboard.press('Enter');await q.waitForTimeout(200);
+      if(await castsLeft(q)!==9)defects.push(`${w}x${h}: keyboard casting did not cast`);
+    }else{await dragBait(q,0);await q.waitForTimeout(200);if(await castsLeft(q)!==9)defects.push(`${w}x${h}: a mouse drag did not cast`);}
+    await q.mouse.move(2,2);await q.waitForTimeout(300);
     for(const d of await findLayoutDefects(q,'.proto-pond',{parts:PARTS}))defects.push(`${w}x${h}: ${d}`);
     const water=await q.locator('.proto-pond__water').boundingBox();
     for(const f of await q.locator('.proto-pond__fish').all()){const r=await f.boundingBox();
@@ -103,13 +156,13 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
       const nx=(Math.max(Math.abs(r.x-water.x-water.width/2),Math.abs(r.x+r.width-water.x-water.width/2)))/(water.width/2),ny=(Math.max(Math.abs(r.y-water.y-water.height/2),Math.abs(r.y+r.height-water.y-water.height/2)))/(water.height/2);
       if(nx>1||ny>1)defects.push(`${w}x${h}: a fish card leaves the water`);}
     // Fish the day out, go home, and check the supplies tray with the catch in it.
-    while((await q.locator('.proto-pond__bait button:not([disabled])').count())>0)await q.locator('.proto-pond__bait').nth(await pickBait(q)).locator('button').click();
+    for(let n=0;(await q.locator('.proto-pond__bait button:not([disabled])').count())>0&&n<20;n++){await dragBait(q,await pickBait(q),{touch,fish:n%2});await q.waitForTimeout(80);}
     await q.getByRole('button',{name:'Leave Pond'}).click();await q.waitForTimeout(800);
     if(w<900)await q.getByRole('button',{name:'Supplies',exact:true}).click();
     if(!(await q.locator('[data-supply="glowfish"]').count()))defects.push(`${w}x${h}: no glowfish in the supplies after a day's fishing`);
     for(const d of await findLayoutDefects(q,'.supply-tray',{parts:'.supply-tray__toggle, .supply-tray__well, .supply-row, .supply-row__token, .supply-row__count',cornerInset:12}))defects.push(`${w}x${h} supplies: ${d}`);
-    await q.context().close();
+    await ctx.close();
   }
   assert.deepEqual(defects,[],'pond layout defects:\n'+defects.join('\n'));
-  console.log('Pond panel and the supplies tray holding the catch: no collisions, overflow or small text at 1912x914, 1280x720, 390x844 and 844x390; fish cards keep the card shape and stay inside the water.');
+  console.log('Casting by touch drag (phones), mouse drag and keyboard works; a tap only hints. Pond panel and the supplies tray holding the catch: no collisions, overflow or small text at 1912x914, 1280x720, 390x844 and 844x390; fish cards keep the card shape and stay inside the water.');
 }finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});

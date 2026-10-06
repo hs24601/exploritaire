@@ -2600,6 +2600,25 @@ html.drag-perf-mode .target-swirl-sparkles {
 /* Bait cards carry a worm in the lower half, clear of the rank. */
 .proto-pond__bait .playing-card::after { content: '🪱'; position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: max(16px, calc(var(--classic-card-w) * 0.38)); line-height: 1; pointer-events: none; }
 .proto-pond__bait[data-missed] { opacity: 0.55; }
+/* Casting is a drag. touch-action: none keeps a touch drag from scrolling or
+   zooming the page; the card left behind fades while its clone is carried. */
+.proto-pond__bait { touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.proto-pond__bait .playing-card { cursor: inherit; touch-action: none; }
+.proto-pond__bait:has(.playing-card:disabled) { cursor: default; }
+.proto-pond__bait[data-dragging] { opacity: 0.3; }
+.proto-pond__bait[data-selected] .playing-card { outline: 3px solid #ffd166; outline-offset: 2px; }
+.proto-pond__drag { position: fixed; z-index: 60002; pointer-events: none; cursor: grabbing; transform: rotate(-4deg) scale(1.06); filter: drop-shadow(0 10px 12px #000a); }
+.proto-pond__drag .playing-card::after { content: '🪱'; position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: max(16px, calc(var(--classic-card-w) * 0.38)); line-height: 1; }
+/* The fish card under a dragged bait lights up like any drop target. */
+.proto-game-root .proto-pond__fish[data-drop-target] {
+  border-color: #ffe7ad;
+  outline: 3px solid #ffd166;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px #2a1e0c, 0 0 22px 6px #ffd16688;
+  animation: proto-drop-pulse 900ms ease-in-out infinite alternate;
+}
+.proto-pond__fish:focus-visible { outline: 3px solid #8ef2d4; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .proto-game-root .proto-pond__fish[data-drop-target] { animation: none; } }
 .proto-pond__catch { grid-area: catch; }
 .proto-pond__catch > li { transform-origin: center; }
 /* The catch flight lives on the page, above everything, while a fish is reeled in. */

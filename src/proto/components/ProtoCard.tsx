@@ -19,7 +19,7 @@ export const ProtoCard = ({
   style,
 }: {
   card: Card;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   cardRef?: (node: HTMLButtonElement | null) => void;
   transporting?: boolean;
   disabled?: boolean;
