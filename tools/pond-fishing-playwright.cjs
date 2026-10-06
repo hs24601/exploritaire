@@ -24,17 +24,36 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
   assert.equal((await stamina()).now,before.now,'walking to the pond costs no stamina');
   assert.equal(await p.locator('.proto-pond__fish.playing-card').count(),6,'six fish lie face down in the water as cards');
   assert.equal(await p.locator('.proto-pond__bait').count(),4,'the angler holds four bait cards');
-  const landed=async()=>{const m=(await p.locator('.proto-pond__header [aria-label^="Landed"]').getAttribute('aria-label')).match(/Landed (\d+) fish and (\d+) glowfish/);return {fish:+m[1],glow:+m[2]};};
-  let casts=0,sawGlowMessage=false;
+  // The tray beneath the bait counts a fish once it has been reeled in and landed.
+  const landed=async()=>{await p.waitForFunction(()=>!document.querySelector('.proto-pond-catch-ghost'),null,{timeout:5000});
+    return p.evaluate(()=>{const n=k=>Number(document.querySelector(`.proto-pond__catch [data-pond-catch="${k}"]`)?.dataset.count??0);return {fish:n('fish'),glow:n('glowfish')};});};
+  const tray=await p.locator('.proto-pond__catch').boundingBox(),hand=await p.locator('.proto-pond__hand').boundingBox();
+  assert.ok(tray.y>=hand.y+hand.height-1,'the catch tray sits beneath the bait cards');
+  let casts=0,sawGlowMessage=false,sawReel=false;
   while((await p.locator('.proto-pond__bait button:not([disabled])').count())>0){
     const pick=await pickBait(p);
     const was=await landed();
+    // Watch every frame of the catch: the line, the fish's path and the tray count.
+    await p.evaluate(()=>{const log=window.__reel={frames:[]};const tick=()=>{const g=document.querySelector('.proto-pond-catch-ghost'),l=document.querySelector('.proto-pond-catch-line');
+      const c=Number(document.querySelector('.proto-pond__catch [data-pond-catch="fish"]')?.dataset.count??0)+Number(document.querySelector('.proto-pond__catch [data-pond-catch="glowfish"]')?.dataset.count??0);
+      if(g||l){const r=g?.getBoundingClientRect();log.frames.push({line:!!l,visible:g?getComputedStyle(g).opacity!=='0':false,x:r?r.x+r.width/2:null,y:r?r.y+r.height/2:null,count:c});}
+      else if(log.frames.length){log.done=true;return;}requestAnimationFrame(tick);};requestAnimationFrame(tick);});
     await p.locator('.proto-pond__bait').nth(pick).locator('button').click();casts++;
     const now=await landed();const total=now.fish+now.glow;
+    const reel=await p.evaluate(()=>window.__reel);
+    if(total>was.fish+was.glow&&!sawReel){
+      sawReel=true;const f=reel.frames,shown=f.filter(x=>x.visible);
+      assert.ok(f.length>10&&f[0].line&&!f[0].visible,'the line flies out before the fish shows');
+      assert.ok(shown.length>5,'the hooked fish surfaces on its card and is reeled in');
+      const pill=await p.locator('.proto-pond__catch [data-pond-catch]').first().boundingBox(),last=shown[shown.length-1];
+      assert.ok(Math.hypot(last.x-(pill.x+pill.width/2),last.y-(pill.y+pill.height/2))<40,`the fish flies into the catch tray (ended ${last.x.toFixed(0)},${last.y.toFixed(0)}; tray pill ${(pill.x+pill.width/2).toFixed(0)},${(pill.y+pill.height/2).toFixed(0)})`);
+      assert.ok(f.every(x=>x.count===was.fish+was.glow),'the tray counts the fish only after it lands');
+    }
     assert.equal(now.glow,total>=4?1:0,`after ${total} catches there is ${total>=4?'one glowfish':'no glowfish yet'}`);
     if(now.glow>was.glow){const msg=await p.locator('.proto-pond__message').innerText();assert.match(msg,/glowfish/i,'the catch says it is a glowfish');sawGlowMessage=true;}
     if(total>=4)break;
   }
+  assert.ok(sawReel,'a catch was reeled in');
   assert.ok(sawGlowMessage,`the glowfish was caught within ${casts} casts`);
   const caught=await landed();
   await p.getByRole('button',{name:'Leave Pond'}).click();await p.waitForTimeout(600);
@@ -59,9 +78,9 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
   assert.equal(glowing.now,Math.min(glowing.max,fed.now+3),'and restores 3 stamina');
   const heroLight=Number(await p.locator('[data-board-piece="actor"]').getAttribute('data-light-percent'));
   assert.ok(heroLight>heroLightBefore+15,`the Hero glows brighter (${heroLightBefore}% → ${heroLight}%)`);
-  console.log(`Pond: glowfish on catch 4 after ${casts} casts (${caught.fish} fish); glowfish on the table ${glowLight}% light vs fish ${fishLight}%; eating it took stamina ${fed.now}/${fed.max} → ${glowing.now}/${glowing.max} and the Hero's light ${heroLightBefore}% → ${heroLight}%.`);
+  console.log(`Pond: a line reels each catch from its card into the tray beneath the bait; glowfish on catch 4 after ${casts} casts (${caught.fish} fish); glowfish on the table ${glowLight}% light vs fish ${fishLight}%; eating it took stamina ${fed.now}/${fed.max} → ${glowing.now}/${glowing.max} and the Hero's light ${heroLightBefore}% → ${heroLight}%.`);
   // The pond panel fits at desktop and phone sizes, wide and tall.
-  const PARTS='.proto-pond__header, .proto-pond__header > span, .proto-pond__water, .proto-pond__fish, .proto-pond__band, .proto-pond__rank, .proto-pond__message, .proto-pond__hand, .proto-pond__bait, .proto-pond__bait button, .proto-pond__footer, .proto-pond__legend, .proto-pond__leave';
+  const PARTS='.proto-pond__catch, .proto-pond__catch > li, .proto-pond__header, .proto-pond__header > span, .proto-pond__water, .proto-pond__fish, .proto-pond__band, .proto-pond__rank, .proto-pond__message, .proto-pond__hand, .proto-pond__bait, .proto-pond__bait button, .proto-pond__footer, .proto-pond__legend, .proto-pond__leave';
   const defects=[];
   for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
     // Phone landscape shows only a sliver of the table (the Hero is cut off too), so

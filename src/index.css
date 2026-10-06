@@ -2501,8 +2501,8 @@ html.drag-perf-mode .target-swirl-sparkles {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
-  grid-template-areas: "header" "water" "message" "hand" "footer";
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
+  grid-template-areas: "header" "water" "message" "hand" "catch" "footer";
   gap: 8px;
   padding: 10px;
   overflow: hidden;
@@ -2600,6 +2600,30 @@ html.drag-perf-mode .target-swirl-sparkles {
 /* Bait cards carry a worm in the lower half, clear of the rank. */
 .proto-pond__bait .playing-card::after { content: '🪱'; position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: max(16px, calc(var(--classic-card-w) * 0.38)); line-height: 1; pointer-events: none; }
 .proto-pond__bait[data-missed] { opacity: 0.55; }
+.proto-pond__catch { grid-area: catch; }
+.proto-pond__catch > li { transform-origin: center; }
+/* The catch flight lives on the page, above everything, while a fish is reeled in. */
+.proto-pond-catch-lines { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 60000; pointer-events: none; overflow: visible; }
+.proto-pond-catch-line { stroke: #e8f6ff; stroke-width: 1.5; stroke-linecap: round; filter: drop-shadow(0 1px 1px #0009); }
+.proto-pond-catch-ghost {
+  position: fixed;
+  z-index: 60001;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4%;
+  box-sizing: border-box;
+  border: 3px solid #ffd166;
+  border-radius: 4px;
+  background: linear-gradient(140deg, #40202a, #180d16);
+  box-shadow: 0 6px 14px #0009;
+  color: #ffe7ad;
+  font-family: 'Classic Pixel', monospace;
+}
+.proto-pond-catch-ghost--glowfish { border-color: #9ff3ff; box-shadow: 0 0 18px #9ff3ffaa, 0 6px 14px #0009; }
+.proto-pond-catch-ghost__rank { font-size: 20px; line-height: 1; }
+.proto-pond-catch-ghost__glyph { font-size: 28px; line-height: 1; }
 .proto-pond__legend { color: rgba(202, 255, 244, 0.7); }
 .proto-pond__leave { padding: 5px 12px; border: 2px solid #9c8c62; background: #17251f; color: #fff0d0; font: 16px 'Classic Pixel', monospace; }
 .proto-pond__leave:disabled { opacity: 0.4; }
@@ -2607,8 +2631,8 @@ html.drag-perf-mode .target-swirl-sparkles {
 @container pond-field (aspect-ratio > 1.5) {
   .proto-pond {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
-    grid-template-areas: "header header" "water message" "water hand" "footer footer";
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+    grid-template-areas: "header header" "water message" "water hand" "water catch" "footer footer";
   }
   .proto-pond__hand { --classic-card-w: clamp(52px, min(10cqw, 26cqh), 110px); }
 }
