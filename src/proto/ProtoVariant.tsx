@@ -9,7 +9,7 @@ import { DetailsCardViewer, ActorCardArt } from './components/DetailsCardViewer'
 import { redeemActiveQuest } from './questProgress';
 import { logHold } from './holdLog';
 import { blockedSolids } from './worldBounds';
-import { getTableLighting, tableObjectShadow } from './protoLighting';
+import { DARKEST_HOUR, getTableLighting, tableObjectShadow } from './protoLighting';
 import { NEUTRAL_STANDEE_LIGHTING, SpriteStandeeArt } from './components/SpriteStandee';
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
 import { assessSolverMove, preserveSolverRpgValues, type SolverMove } from './tableauSolver';
@@ -136,7 +136,8 @@ export const ProtoVariant = () => {
   const [inspectedActorId, setInspectedActorId] = useState<string | null>(null);
   const [inspectionAnchor, setInspectionAnchor] = useState<HTMLElement | null>(null);
   const inspectActor = (id: string, anchor: HTMLElement) => { setInspectionAnchor(anchor); setInspectedActorId(id); };
-  const [tableHours, setTableHours] = useState(9);
+  // The table opens at the darkest hour of the night.
+  const [tableHours, setTableHours] = useState(DARKEST_HOUR);
   // Battle-camera tilt for the table and the tableau field, toggled from the map.
   const [cameraTilted, setCameraTilted] = useState(false);
   const [cycleLighting, setCycleLighting] = useState(false);
@@ -145,7 +146,9 @@ export const ProtoVariant = () => {
   const [moveGuidance, setMoveGuidance] = useState(false);
   const [lightReadoutVisible, setLightReadoutVisible] = useState(false);
   const lighting = getTableLighting(tableHours);
-  useEffect(() => { setTableHours(8); }, [state.day]);
+  // Each later day starts in the morning; the first keeps the darkest-hour opening.
+  const startedDay = useRef(state.day);
+  useEffect(() => { if (state.day !== startedDay.current) { startedDay.current = state.day; setTableHours(8); } }, [state.day]);
   useEffect(() => {
     if (!cycleLighting) return;
     let previous = performance.now();

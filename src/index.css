@@ -2443,3 +2443,19 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-map-world > .proto-blocked-terrain,
 .proto-table-stage--tilted .proto-map-world > .proto-blocked-terrain { pointer-events: none; }
 .hold-log__note { color: #fff3c899; }
+
+/* Flat (top-down) camera: sprite actors are cardboard pop-ups seen from above.
+   The face shortens toward its base and the corrugated edge shows along the
+   upper outline, as thick board does when you look down on a standee. */
+.proto-map .proto-sprite-topdown[data-board-piece="actor"],
+.proto-game-root .proto-sprite-topdown[data-board-piece="actor"] { display: block; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.proto-sprite-topdown__piece { position: absolute; inset: 0; pointer-events: none; }
+.proto-sprite-topdown__piece > span { position: absolute; inset: 0; transform-origin: 50% 100%; }
+.proto-sprite-topdown__base { inset: auto auto -9px 50% !important; width: 44px; height: 24px; margin-left: -22px; border-radius: 50%; background: radial-gradient(ellipse at 50% 40%, #3b2a1a 0 45%, #1d140c 70%); border: 2px solid #6b5236; box-shadow: 0 2px 0 #0008; }
+.proto-sprite-topdown__edge {
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  /* Corrugated board edge: flutes between kraft liners. */
+  background: repeating-linear-gradient(90deg, #c79d5f 0 1.5px, #7d5a2e 1.5px 3px);
+}
+.proto-sprite-topdown__edge--liner { background: #d9b67c; }
+.proto-sprite-topdown--selected { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }

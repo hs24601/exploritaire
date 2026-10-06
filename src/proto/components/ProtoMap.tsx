@@ -10,7 +10,7 @@ import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type Wor
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { useCameraControls } from '../../hooks/useCameraControls';
-import { SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows } from './SpriteStandee';
+import { SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows, SpriteTopDownArt, TOP_DOWN_FOOT_OFFSET, TOP_DOWN_FORESHORTEN } from './SpriteStandee';
 import { tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
 
 export type ProtoBiomeTile = {
@@ -605,12 +605,21 @@ export const ProtoMap = ({
   // Sprite standees: a pixel-art cut-out lit by the table's lights, casting its
   // own silhouette across the table away from each one.
   const spriteStandee = (actor: ProtoWorldActor, position: { x: number; y: number }) => {
-    if (!tilt || !actor.sprite || failedSprites.includes(actor.sprite)) return null;
+    if (!actor.sprite || failedSprites.includes(actor.sprite)) return null;
     const sprite = actor.sprite;
     const lit = standeeLighting(timeOfDay, position, SPRITE_STANDEE_SIZE, lightSources);
+    const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
+    // Flat camera: the same pop-up seen from above. Its foot sits a little below
+    // the cell center so the foreshortened piece reads as centered in its cell.
+    if (!tilt) return {
+      topDown: true,
+      shadows: <SpriteStandeeShadows sprite={sprite} position={{ x: position.x, y: position.y + TOP_DOWN_FOOT_OFFSET }} shadows={lit.shadows.map((shadow) => ({ ...shadow, length: shadow.length * TOP_DOWN_FORESHORTEN }))} />,
+      art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} />,
+    };
     return {
+      topDown: false,
       shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} />,
-      art: <SpriteStandeeArt sprite={sprite} lighting={lit} onError={() => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite])} />,
+      art: <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} />,
     };
   };
   const standeeBase = (key: string, position: { x: number; y: number }, width: number) => tilt
@@ -944,7 +953,9 @@ export const ProtoMap = ({
               onPointerCancel={() => {
                 clearActorDragState();
               }}
-              className={cutOut
+              className={cutOut?.topDown
+                ? `proto-sprite-topdown absolute cursor-grab select-none active:cursor-grabbing${selectedActorId === actor.id ? ' proto-sprite-topdown--selected' : ''}${draggingActorId === actor.id ? ' opacity-45' : ''}`
+                : cutOut
                 ? `proto-sprite-standee absolute cursor-grab select-none active:cursor-grabbing${selectedActorId === actor.id ? ' proto-sprite-standee--selected' : ''}${draggingActorId === actor.id ? ' opacity-45' : ''}`
                 : `absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-grab select-none place-items-center rounded-full border-2 bg-[#17140b] text-[0.52rem] font-black uppercase tracking-[0.1em] text-[#ffe7ad] shadow-[0_0_24px_rgba(255,209,102,0.18)] active:cursor-grabbing ${selectedActorId === actor.id ? 'border-[#fff0b5] ring-2 ring-[#ffd166]/45' : 'border-[#ffd166]/75'} ${draggingActorId === actor.id ? 'opacity-45' : ''}`}
               style={{
@@ -953,6 +964,7 @@ export const ProtoMap = ({
                 left: `calc(50% + ${actorPosition.x}px)`,
                 top: `calc(50% + ${actorPosition.y}px)`,
                 ...(cutOut ? { ...standee(), width: SPRITE_STANDEE_SIZE, height: SPRITE_STANDEE_SIZE } : standee({ width: 48, height: 64 })),
+                ...(cutOut?.topDown ? { transform: `translate(-50%, calc(-100% + ${TOP_DOWN_FOOT_OFFSET}px))` } : {}),
               }}
               aria-label={`${actor.label} actor token`}
             >

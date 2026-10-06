@@ -16,7 +16,7 @@ export type PlacedQuestCard = {
 /** A teaching card outside the quest deck. It flies out with the first quest and
  * clears with the same press-and-hold, without a reward. */
 export const TUTORIAL_QUEST_INDEX = -1;
-export const TUTORIAL_QUEST = { title: 'Clearing quests', text: 'Press and hold a finished card for 2s.' };
+export const TUTORIAL_QUEST = { title: 'Clearing quests', text: 'Press and hold a finished card for 1s.' };
 
 export function TableQuestCard({ placement, title, text, redeemed, onRedeem, timeOfDay, lights, cameraScale, toWorld, solids, onMove, staminaReward = 1 }: {
   placement: PlacedQuestCard; title: string; text: string; redeemed: boolean; staminaReward?: number;

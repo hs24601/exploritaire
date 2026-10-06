@@ -70,7 +70,7 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
       {[2, 3].map(slot => <section key={slot} className="quest-foundation quest-foundation--disabled" data-quest-slot={slot} aria-disabled="true" aria-label={`Quest slot ${slot} disabled`}><span>Quest {slot}</span><span aria-hidden="true">🔒</span><span>Disabled</span></section>)}
       </div>
     </div>
-    {note && <PinnedToast className="quest-note" title={note.title} subtitle={note.status === 'complete' ? 'Complete · hold the card 2s to redeem' : 'Objective in progress'}
+    {note && <PinnedToast className="quest-note" title={note.title} subtitle={note.status === 'complete' ? 'Complete · hold the card 1s to redeem' : 'Objective in progress'}
       icon="⚡" side="left" anchor={ref.current?.querySelector('[data-quest-slot="1"]') ?? null} edge={ref.current} onClose={() => setNoteQuestId(null)}>
       <p className="quest-note__text">{note.text}</p>
       <p className="quest-note__reward">⚡ +{note.rewards.reduce((sum, reward) => sum + reward.amount, 0)} STA</p>

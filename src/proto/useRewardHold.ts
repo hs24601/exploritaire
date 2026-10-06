@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { logHold } from './holdLog';
-export const REWARD_HOLD_MS = 2000;
+export const REWARD_HOLD_MS = 1000;
 /** Movement that turns a hold into a drag and cancels it. Hands drift while
  * pressing (trackpads and fingers most), so the slack is generous. */
 export const holdSlop = (pointerType: string) => pointerType === 'mouse' ? 12 : 24;

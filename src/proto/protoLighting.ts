@@ -61,6 +61,9 @@ const DAY_SKY: Rgb = { r: 10, g: 16, b: 24 };
 const NOON_SUN: Rgb = { r: 255, g: 244, b: 214 };
 const LOW_SUN: Rgb = { r: 255, g: 150, b: 70 };
 
+/** Midnight: the night sky is at full darkness from dusk to dawn, and the moon is highest. */
+export const DARKEST_HOUR = 0;
+
 export const getTableLighting = (hours: number) => {
   const hour = ((hours % 24) + 24) % 24;
   const daylight = Math.max(0, Math.sin((hour - 6) * Math.PI / 12));
