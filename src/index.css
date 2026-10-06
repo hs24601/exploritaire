@@ -357,7 +357,9 @@
   background: linear-gradient(140deg, #261722, #100c14);
   color: #baabb7;
 }
-.proto-game-root .playing-card:not(:disabled) {
+/* Only highlighted cards (Guidance, a pending target or mobility choice) get
+   the gold outline; merely playable cards stay plain when Guidance is off. */
+.proto-game-root .playing-card[data-highlight="true"]:not(:disabled) {
   outline: 2px solid #ffcc72;
   outline-offset: 1px;
 }

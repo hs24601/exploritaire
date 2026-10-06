@@ -35,6 +35,7 @@ export const ProtoCard = ({
     cardRef={cardRef}
     data-resource-node={card.resource}
     data-encounter={card.encounter}
+    data-highlight={active || mobilityTarget ? 'true' : undefined}
     onClick={onClick}
     disabled={disabled}
     style={style}

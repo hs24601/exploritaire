@@ -13,7 +13,8 @@ const SHOTS=process.env.SHOTS;
     const guidance=p.getByLabel('Guidance',{exact:true});await guidance.waitFor({timeout:10000});
     const divine=p.getByLabel('Divine Intervention');
     assert.equal(await guidance.isChecked(),false,`${w}x${h} Guidance starts off`);
-    const highlighted=()=>p.locator('.proto-tableau-stage button[class*="border-[#8ef2d4]/70"]').count();
+    // What the player sees: the gold outline, plus the teal class it pairs with.
+    const highlighted=()=>p.locator('.proto-tableau-stage button.playing-card').evaluateAll(list=>list.filter(el=>{const c=getComputedStyle(el);return c.outlineStyle!=='none'&&parseFloat(c.outlineWidth)>0||el.className.includes('border-[#8ef2d4]/70');}).length);
     await p.waitForTimeout(700);
     assert.equal(await highlighted(),0,`${w}x${h} no tableau card is highlighted with Guidance off`);
     await guidance.check();await p.waitForTimeout(200);
