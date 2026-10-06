@@ -2537,27 +2537,46 @@ html.drag-perf-mode .target-swirl-sparkles {
   0%, 100% { box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), inset 0 0 28px rgba(159, 243, 255, 0.25), 0 0 0 2px #2b3b24; }
   50% { box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), inset 0 0 56px rgba(159, 243, 255, 0.55), 0 0 0 2px #2b3b24; }
 }
-/* Ring sizes follow the panel (a size container) so they stay round and fit their cell. */
-.proto-pond__fish { position: relative; display: grid; place-items: center; width: calc(var(--ripple) * min(24cqw, 17cqh)); height: calc(var(--ripple) * min(24cqw, 17cqh)); }
-.proto-pond__fish[data-ripple="small"] { --ripple: 0.5; }
-.proto-pond__fish[data-ripple="medium"] { --ripple: 0.75; }
-.proto-pond__fish[data-ripple="large"] { --ripple: 1; }
-.proto-pond__ring {
-  position: absolute;
-  inset: 0;
+/* Fish are face-down cards lying in the water, sized to fit three across and
+   two deep (the water is a size container) without leaving the 56:74 card shape. */
+.proto-pond__water { container-type: size; gap: 6px; padding: 8px 12%; }
+.proto-pond__fish {
+  --fish-card-w: min(calc((100cqw - 12px) / 3 * 0.86), calc((100cqh - 6px) / 2 * 56 / 74 * 0.92));
+  position: relative;
+  width: var(--fish-card-w);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4%;
+  overflow: hidden;
+}
+.proto-pond__fish:nth-child(odd) { transform: rotate(-2deg); }
+.proto-pond__fish:nth-child(3n) { transform: rotate(2.5deg); }
+.proto-game-root .proto-pond__fish { border-color: #0a1a20; background:
+    repeating-linear-gradient(135deg, rgba(202, 255, 244, 0.07) 0 3px, transparent 3px 9px),
+    linear-gradient(160deg, #1d4f5c, #0b2630); color: #dffcff; }
+/* The back's ripple grows with the band: small A–4, medium 5–9, large 10–K. */
+.proto-pond__ripple {
+  width: calc(var(--fish-card-w) * var(--ripple));
+  aspect-ratio: 1;
   border: 2px solid rgba(202, 255, 244, 0.6);
   border-radius: 50%;
-  box-shadow: inset 0 0 0 5px rgba(202, 255, 244, 0.1);
+  box-shadow: inset 0 0 0 4px rgba(202, 255, 244, 0.1);
   animation: proto-pond-ripple 3s ease-out infinite;
 }
-.proto-pond__fish:nth-child(2n) .proto-pond__ring { animation-delay: -1.1s; }
-.proto-pond__fish:nth-child(3n) .proto-pond__ring { animation-delay: -2s; }
-.proto-pond__fish[data-revealed] .proto-pond__ring { border-color: #ffd166; animation: none; }
+.proto-pond__fish[data-ripple="small"] { --ripple: 0.32; }
+.proto-pond__fish[data-ripple="medium"] { --ripple: 0.5; }
+.proto-pond__fish[data-ripple="large"] { --ripple: 0.68; }
+.proto-pond__fish:nth-child(2n) .proto-pond__ripple { animation-delay: -1.1s; }
+.proto-pond__fish:nth-child(3n) .proto-pond__ripple { animation-delay: -2s; }
+.proto-pond__band { font-size: 16px; line-height: 1; white-space: nowrap; color: #cafff4; }
+.proto-game-root .proto-pond__fish[data-revealed] { background: linear-gradient(140deg, #40202a, #180d16); color: #fff0d0; border-color: #ffd166; }
+.proto-pond__fish-glyph { font-size: max(16px, calc(var(--fish-card-w) * 0.34)); line-height: 1; }
 @keyframes proto-pond-ripple {
   0% { transform: scale(0.72); opacity: 0.95; }
   100% { transform: scale(1.06); opacity: 0.35; }
 }
-.proto-pond__rank { position: relative; font-size: 18px; color: #ffe7ad; text-shadow: 0 1px 0 #000, 0 0 6px rgba(0, 0, 0, 0.8); }
+.proto-pond__rank { font-size: max(18px, calc(var(--fish-card-w) * 0.36)); line-height: 1; color: #ffe7ad; text-shadow: 0 1px 0 #000; }
 .proto-pond__message {
   grid-area: message;
   align-self: center;
@@ -2592,8 +2611,7 @@ html.drag-perf-mode .target-swirl-sparkles {
     grid-template-areas: "header header" "water message" "water hand" "footer footer";
   }
   .proto-pond__hand { --classic-card-w: clamp(52px, min(10cqw, 26cqh), 110px); }
-  .proto-pond__fish { width: calc(var(--ripple) * min(12cqw, 24cqh)); height: calc(var(--ripple) * min(12cqw, 24cqh)); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .proto-pond__ring, .proto-pond__water--glow { animation: none; }
+  .proto-pond__ripple, .proto-pond__water--glow { animation: none; }
 }

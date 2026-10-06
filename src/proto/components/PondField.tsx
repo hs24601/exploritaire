@@ -37,14 +37,28 @@ export const PondField = ({ pond, angler, landed, onCast, onLeave }: {
         <span aria-label={`Landed ${landed.fish} fish and ${landed.glowfish} glowfish`}><span aria-hidden="true">🐟</span>{landed.fish}{landed.glowfish ? <> <span aria-hidden="true">🐠</span>{landed.glowfish}</> : null}</span>
       </header>
       <div className={`proto-pond__water${glowNext ? ' proto-pond__water--glow' : ''}`} aria-label="Fish in the water" role="list">
-        {pond.water.map((fish) => (
-          <div key={fish.id} role="listitem" className="proto-pond__fish" data-ripple={rippleSize(fish.rank)} data-revealed={fish.revealed ? 'true' : undefined}
-            aria-label={fish.revealed ? `Fish, rank ${rankLabel(fish.rank)}` : `Hidden fish, ${rippleSize(fish.rank)} ripples (${RIPPLE_RANGES[rippleSize(fish.rank)]})`}
-            title={fish.revealed ? `Rank ${rankLabel(fish.rank)}` : `${rippleSize(fish.rank)} ripples: ${RIPPLE_RANGES[rippleSize(fish.rank)]}`}>
-            <span className="proto-pond__ring" aria-hidden="true" />
-            {fish.revealed ? <span className="proto-pond__rank" aria-hidden="true">{rankLabel(fish.rank)}</span> : null}
-          </div>
-        ))}
+        {pond.water.map((fish) => {
+          const band = rippleSize(fish.rank);
+          // Fish lie face down in the water like dealt cards. The back shows the
+          // fish's size band; a nibble flips the card to show its rank.
+          return (
+            <div key={fish.id} role="listitem" className="playing-card proto-pond__fish" data-ripple={band} data-revealed={fish.revealed ? 'true' : undefined}
+              aria-label={fish.revealed ? `Fish card, rank ${rankLabel(fish.rank)}` : `Face-down fish card, ${band} (${RIPPLE_RANGES[band]})`}
+              title={fish.revealed ? `Rank ${rankLabel(fish.rank)}` : `${band} fish: ${RIPPLE_RANGES[band]}`}>
+              {fish.revealed ? (
+                <>
+                  <span className="proto-pond__rank" aria-hidden="true">{rankLabel(fish.rank)}</span>
+                  <span className="proto-pond__fish-glyph" aria-hidden="true">🐟</span>
+                </>
+              ) : (
+                <>
+                  <span className="proto-pond__ripple" aria-hidden="true" />
+                  <span className="proto-pond__band" aria-hidden="true">{RIPPLE_RANGES[band]}</span>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
       <p className="proto-pond__message" role="status" title={message}>{message}</p>
       <div className="proto-pond__hand" aria-label="Bait">
@@ -59,8 +73,8 @@ export const PondField = ({ pond, angler, landed, onCast, onLeave }: {
         })}
       </div>
       <footer className="proto-pond__footer">
-        <span className="proto-pond__legend" title={`Ripples: small ${RIPPLE_RANGES.small}, medium ${RIPPLE_RANGES.medium}, large ${RIPPLE_RANGES.large}. Catch number ${GLOWFISH_CATCH} is a glowfish.`}>
-          Ripples A–4 · 5–9 · 10–K
+        <span className="proto-pond__legend" title={`Each face-down fish card shows its rank band: small ${RIPPLE_RANGES.small}, medium ${RIPPLE_RANGES.medium}, large ${RIPPLE_RANGES.large}. Catch number ${GLOWFISH_CATCH} is a glowfish.`}>
+          Fish backs show A–4 · 5–9 · 10–K
         </span>
         <button type="button" className="proto-pond__leave" disabled={!angler} onClick={onLeave}>Leave Pond</button>
       </footer>

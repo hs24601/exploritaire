@@ -22,7 +22,7 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
   await drag(p.locator('[data-board-piece="actor"]'),p.locator('[data-biome-id="pond"]'));
   await p.locator('.proto-pond[data-angler]').waitFor({timeout:15000});
   assert.equal((await stamina()).now,before.now,'walking to the pond costs no stamina');
-  assert.equal(await p.locator('.proto-pond__fish').count(),6,'six fish ripple in the water');
+  assert.equal(await p.locator('.proto-pond__fish.playing-card').count(),6,'six fish lie face down in the water as cards');
   assert.equal(await p.locator('.proto-pond__bait').count(),4,'the angler holds four bait cards');
   const landed=async()=>{const m=(await p.locator('.proto-pond__header [aria-label^="Landed"]').getAttribute('aria-label')).match(/Landed (\d+) fish and (\d+) glowfish/);return {fish:+m[1],glow:+m[2]};};
   let casts=0,sawGlowMessage=false;
@@ -61,7 +61,7 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
   assert.ok(heroLight>heroLightBefore+15,`the Hero glows brighter (${heroLightBefore}% → ${heroLight}%)`);
   console.log(`Pond: glowfish on catch 4 after ${casts} casts (${caught.fish} fish); glowfish on the table ${glowLight}% light vs fish ${fishLight}%; eating it took stamina ${fed.now}/${fed.max} → ${glowing.now}/${glowing.max} and the Hero's light ${heroLightBefore}% → ${heroLight}%.`);
   // The pond panel fits at desktop and phone sizes, wide and tall.
-  const PARTS='.proto-pond__header, .proto-pond__header > span, .proto-pond__water, .proto-pond__fish, .proto-pond__message, .proto-pond__hand, .proto-pond__bait, .proto-pond__bait button, .proto-pond__footer, .proto-pond__legend, .proto-pond__leave';
+  const PARTS='.proto-pond__header, .proto-pond__header > span, .proto-pond__water, .proto-pond__fish, .proto-pond__band, .proto-pond__rank, .proto-pond__message, .proto-pond__hand, .proto-pond__bait, .proto-pond__bait button, .proto-pond__footer, .proto-pond__legend, .proto-pond__leave';
   const defects=[];
   for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
     // Phone landscape shows only a sliver of the table (the Hero is cut off too), so
@@ -78,10 +78,11 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
     for(const d of await findLayoutDefects(q,'.proto-pond',{parts:PARTS}))defects.push(`${w}x${h}: ${d}`);
     const water=await q.locator('.proto-pond__water').boundingBox();
     for(const f of await q.locator('.proto-pond__fish').all()){const r=await f.boundingBox();
-      if(Math.abs(r.width-r.height)>1)defects.push(`${w}x${h}: a ripple is not round (${r.width.toFixed(0)}x${r.height.toFixed(0)})`);
+      const size=await f.evaluate(el=>({w:el.offsetWidth,h:el.offsetHeight}));
+      if(Math.abs(size.w/size.h-56/74)>0.02)defects.push(`${w}x${h}: a fish card is not card-shaped (${size.w}x${size.h})`);
       // Inside the pond's oval bank, not just its bounding box.
       const nx=(Math.max(Math.abs(r.x-water.x-water.width/2),Math.abs(r.x+r.width-water.x-water.width/2)))/(water.width/2),ny=(Math.max(Math.abs(r.y-water.y-water.height/2),Math.abs(r.y+r.height-water.y-water.height/2)))/(water.height/2);
-      if(nx>1||ny>1)defects.push(`${w}x${h}: a ripple leaves the water`);}
+      if(nx>1||ny>1)defects.push(`${w}x${h}: a fish card leaves the water`);}
     // Fish the day out, go home, and check the supplies tray with the catch in it.
     while((await q.locator('.proto-pond__bait button:not([disabled])').count())>0)await q.locator('.proto-pond__bait').nth(await pickBait(q)).locator('button').click();
     await q.getByRole('button',{name:'Leave Pond'}).click();await q.waitForTimeout(800);
@@ -91,5 +92,5 @@ const seeded=()=>{let s=20261006;Math.random=()=>{s=(s*16807)%2147483647;return 
     await q.context().close();
   }
   assert.deepEqual(defects,[],'pond layout defects:\n'+defects.join('\n'));
-  console.log('Pond panel and the supplies tray holding the catch: no collisions, overflow or small text at 1912x914, 1280x720, 390x844 and 844x390; ripples stay round and inside the water.');
+  console.log('Pond panel and the supplies tray holding the catch: no collisions, overflow or small text at 1912x914, 1280x720, 390x844 and 844x390; fish cards keep the card shape and stay inside the water.');
 }finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});
