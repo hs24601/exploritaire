@@ -1073,6 +1073,9 @@ const selectBiome = (biomeId: string) => {
     if (!result) return;
     pushUndo(base);
     setState((prev) => (prev === base ? result.state : applyFoundationPlay(prev, playOptions)?.state ?? prev));
+    // A card landed early (the next play was clicked mid-flight) must be visible
+    // to that next play in the same event.
+    if (stateRef.current === base) stateRef.current = result.state;
     if (result.workCycleCompleted && !divine) {
       const actorLabel = FOUNDATION_MOCKUPS[foundationIndex]?.label ?? `Actor ${foundationIndex + 1}`;
       setTargetAnnouncement({
@@ -1162,9 +1165,9 @@ const selectBiome = (biomeId: string) => {
   const queueCardTransport = (
     columnIndex: number,
     target: { side: 'player' | 'enemy'; index: number },
-    options: { hallowedPath?: boolean; divine?: boolean; solver?: boolean } = {},
+    options: { hallowedPath?: boolean; divine?: boolean; solver?: boolean; afterLanding?: boolean } = {},
   ) => {
-    if (cardTransport || (!options.divine && currentTurn !== target.side)) return;
+    if ((cardTransport && !options.afterLanding) || (!options.divine && currentTurn !== target.side)) return;
     const current = stateRef.current;
     const card = current.tableau[columnIndex]?.[current.tableau[columnIndex].length - 1] ?? null;
     if (!card) return;
@@ -1220,24 +1223,20 @@ const selectBiome = (biomeId: string) => {
       from,
       to,
       size: { width: sourceRect.width, height: sourceRect.height },
-      durationMs: options.solver
+      // Tableau-to-foundation flights always use the auto-solve speed; enemy
+      // plays keep the slower readable pace unless the solver drives them.
+      durationMs: options.solver || target.side === 'player'
         ? solverFlightDuration(getCardTransportDurationMs(from, to, speed))
         : getCardTransportDurationMs(from, to, speed),
     });
   };
 
-  useEffect(() => {
-    if (!cardTransport) return undefined;
-    let animationFrame = 0;
-    const startedAt = performance.now();
-    const animate = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / cardTransport.durationMs);
-      cardTransportPositionRef.current = interpolateCardTransport(cardTransport.from, cardTransport.to, progress);
-      if (progress < 1) {
-        animationFrame = window.requestAnimationFrame(animate);
-        return;
-      }
-
+  // A flight lands once: at the end of its animation, or early when the next
+  // manual play is clicked while it is still in the air.
+  const landedTransportRef = useRef<CardTransport | null>(null);
+  const landCardTransport = (cardTransport: CardTransport) => {
+      if (landedTransportRef.current === cardTransport) return;
+      landedTransportRef.current = cardTransport;
       const current = stateRef.current;
       const sourceColumn = current.tableau[cardTransport.sourceColumnIndex] ?? [];
       const topCard = sourceColumn[sourceColumn.length - 1] ?? null;
@@ -1279,26 +1278,54 @@ const selectBiome = (biomeId: string) => {
         impact: 'Card returned to tableau',
       });
       if (cardTransport.targetSide === 'enemy') finishEnemyTurn();
+  };
+
+  useEffect(() => {
+    if (!cardTransport) return undefined;
+    let animationFrame = 0;
+    const startedAt = performance.now();
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / cardTransport.durationMs);
+      cardTransportPositionRef.current = interpolateCardTransport(cardTransport.from, cardTransport.to, progress);
+      if (progress < 1) {
+        animationFrame = window.requestAnimationFrame(animate);
+        return;
+      }
+      landCardTransport(cardTransport);
     };
     animationFrame = window.requestAnimationFrame(animate);
     return () => window.cancelAnimationFrame(animationFrame);
   }, [cardTransport]);
 
+  // While a plain manual exploration play is in the air, the tableau already
+  // shows where it will land, so the next eligible card can be clicked at once
+  // (exploration refills come from the stock, so the projection is exact).
+  const flightProjection = useMemo(() => {
+    if (!cardTransport || cardTransport.targetSide !== 'player' || cardTransport.solver || cardTransport.divine || cardTransport.hallowedPath) return null;
+    if (state.scene !== 'exploration') return null;
+    return applyFoundationPlay(state, { columnIndex: cardTransport.sourceColumnIndex, foundationIndex: cardTransport.targetIndex, divine: false, hallowedPath: false, hallowedEmergency: false })?.state ?? null;
+  }, [cardTransport, state]);
+  const tableState = flightProjection ?? state;
+
   const playColumn = (columnIndex: number) => {
-    if (cardTransport) return;
+    if (cardTransport) {
+      if (!flightProjection) return;
+      landCardTransport(cardTransport);
+    }
     setPendingAbilityTarget(null);
     setPendingMobility(null);
     setTargetAnnouncement(null);
     setAbilityDetail(null);
     setSelectedAdvisorAbilities({});
-    if (!canAffordExplorationAction(state)) return;
-    const column = state.tableau[columnIndex] ?? [];
+    const current = stateRef.current;
+    if (!canAffordExplorationAction(current)) return;
+    const column = current.tableau[columnIndex] ?? [];
     const card = column[column.length - 1] ?? null;
     if (!card) return;
-    const targetIndexes = adjacentFoundationIndexes(card, state);
+    const targetIndexes = adjacentFoundationIndexes(card, current);
     if (targetIndexes.length === 0) return;
     if (targetIndexes.length === 1) {
-      queueCardTransport(columnIndex, { side: 'player', index: targetIndexes[0] });
+      queueCardTransport(columnIndex, { side: 'player', index: targetIndexes[0] }, { afterLanding: true });
       return;
     }
     setPendingTargetSelection({ columnIndex, cardId: card.id, targetIndexes });
@@ -1804,10 +1831,10 @@ const selectBiome = (biomeId: string) => {
               />
               <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId ? '' : 'hidden'}`}>
               <div className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">
-                <TableauCardArea columns={TABLEAU_COLUMNS} rows={Math.max(TABLEAU_ROWS, ...state.tableau.map((column) => column.length))}>
+                <TableauCardArea columns={TABLEAU_COLUMNS} rows={Math.max(TABLEAU_ROWS, ...tableState.tableau.map((column) => column.length))}>
                 <div className={`proto-tableau-stage${cameraTilted ? ' proto-tableau-stage--tilted' : ''}`}>
                 <Tableau
-                  columns={state.tableau}
+                  columns={tableState.tableau}
                   className="grid min-w-0 justify-center"
                   style={{
                     gridTemplateColumns: 'repeat(7, minmax(0, var(--classic-card-w)))',
@@ -1816,8 +1843,8 @@ const selectBiome = (biomeId: string) => {
                   }}
                 >
                   {Array.from({ length: TABLEAU_COLUMNS }, (_, columnIndex) => {
-                    const column = state.tableau[columnIndex] ?? [];
-                    const rowCount = Math.max(TABLEAU_ROWS, ...state.tableau.map((entry) => entry.length));
+                    const column = tableState.tableau[columnIndex] ?? [];
+                    const rowCount = Math.max(TABLEAU_ROWS, ...tableState.tableau.map((entry) => entry.length));
                     const topPadding = rowCount - column.length;
                     return (
                       <div
@@ -1838,9 +1865,9 @@ const selectBiome = (biomeId: string) => {
                           // Rows behind the front row sit farther from the tilted camera.
                           const depth = rowCount - 1 - stackIndex;
                           const isTopCard = cardIndex === column.length - 1;
-                          const targetIndexes = adjacentFoundationIndexes(card, state);
-                          const encounterReady = isTopCard && state.scene === 'exploration' && Boolean(card.encounter);
-                          const playable = isTopCard && canAffordExplorationAction(state) && targetIndexes.length > 0;
+                          const targetIndexes = adjacentFoundationIndexes(card, tableState);
+                          const encounterReady = isTopCard && tableState.scene === 'exploration' && Boolean(card.encounter);
+                          const playable = isTopCard && canAffordExplorationAction(tableState) && targetIndexes.length > 0;
                           const transporting = cardTransport?.cardId === card.id;
                           const mobilityTarget =
                             isTopCard &&
@@ -1874,7 +1901,10 @@ const selectBiome = (biomeId: string) => {
                               }
                               disabled={!playable && !encounterReady && !mobilityTarget}
                               onClick={() => {
-                                if (cardTransport) return;
+                                if (cardTransport) {
+                                  if (flightProjection && playable && !mobilityTarget && !encounterReady) playColumn(columnIndex);
+                                  return;
+                                }
                                 if (mobilityTarget) {
                                   pendingMobility?.kind === 'dig'
                                     ? digTableauColumn(columnIndex)

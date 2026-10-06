@@ -22,6 +22,19 @@ export function SpriteStandeeArt({ sprite, lighting, onError, size = SPRITE_STAN
   return <span aria-hidden="true" className="proto-sprite-standee__art" style={{ backgroundImage: `url("${sprite}")`, backgroundSize: layout.size, backgroundPosition: layout.position, filter }} />;
 }
 
+/** A standee is a flat board facing the camera, so its shadow keeps its base
+ * on the board's foot line and leans away from the light (a shear), rather
+ * than spinning the whole silhouette around the foot. Spinning made wide
+ * pieces like the Small Woods pines cast from beside their trunks. The shadow
+ * never flattens to a sliver when the light grazes along the board. */
+export const standeeShadowSkew = (angleDeg: number) => {
+  const radians = (angleDeg * Math.PI) / 180;
+  const dirX = Math.sin(radians);
+  const rawY = -Math.cos(radians);
+  const dirY = Math.sign(rawY || -1) * Math.max(0.35, Math.abs(rawY));
+  return `matrix(1, 0, ${(-dirX).toFixed(4)}, ${(-dirY).toFixed(4)}, 0, 0)`;
+};
+
 /** Silhouettes the standee casts on the table, one per light, each falling
  * away from its light and lengthening as the light gets lower. */
 export function SpriteStandeeShadows({ sprite, position, shadows, size = SPRITE_STANDEE_SIZE, owner }: { sprite: string; position: { x: number; y: number }; shadows: StandeeShadow[]; size?: number; owner?: string }) {
@@ -33,7 +46,7 @@ export function SpriteStandeeShadows({ sprite, position, shadows, size = SPRITE_
     return <div key={shadow.lightId} aria-hidden="true" className="proto-sprite-shadow" data-shadow-light={shadow.lightId} data-shadow-owner={owner} style={{
       left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`,
       width: size, height: size * shadow.length,
-      transform: `translate3d(-50%, -100%, 0.5px) rotate(${shadow.angle.toFixed(2)}deg)`, opacity: shadow.opacity,
+      transform: `translate3d(-50%, -100%, 0.5px) ${standeeShadowSkew(shadow.angle)}`, opacity: shadow.opacity,
       maskImage: mask, WebkitMaskImage: mask, maskSize: layout.size, WebkitMaskSize: layout.size, maskPosition: layout.position, WebkitMaskPosition: layout.position,
     }} />;
   })}</>;

@@ -2472,3 +2472,15 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-sprite-topdown__board { box-sizing: border-box; border-radius: 1px; border-block: 0.75px solid #e2c48d; background: repeating-linear-gradient(90deg, #c79d5f 0 1.5px, #7d5a2e 1.5px 3px); box-shadow: 0 1px 0 #0009; }
 .proto-map [data-board-piece="biome-popup"] { cursor: pointer; }
 .proto-sprite-topdown--selected { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
+
+/* Drop cue: the biome under a dragged piece glows and lifts slightly, so the
+   player sees where the piece will land before letting go. */
+.proto-map .proto-drop-target {
+  border-color: #ffe7ad;
+  outline: 3px solid #ffd166;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px #2a1e0c, 0 0 22px 6px #ffd16688 !important;
+  animation: proto-drop-pulse 900ms ease-in-out infinite alternate;
+}
+@keyframes proto-drop-pulse { from { outline-color: #ffd166; } to { outline-color: #fff3c8; } }
+@media (prefers-reduced-motion: reduce) { .proto-map .proto-drop-target { animation: none; } }

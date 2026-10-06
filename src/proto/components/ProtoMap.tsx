@@ -244,6 +244,16 @@ export const ProtoMap = ({
     camera.setCameraState({ x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE });
   };
 
+  // While a piece is dragged, the biome under the pointer that would accept it lights up.
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!dragPreview) { setDropTargetId(null); return; }
+    const target = document.elementFromPoint(dragPreview.x, dragPreview.y)?.closest<HTMLElement>('[data-biome-id],[data-biome-popup]');
+    const biomeId = target?.dataset.biomeId ?? target?.dataset.biomePopup ?? null;
+    const tile = biomeId ? biomeTiles.find((entry) => entry.id === biomeId) : null;
+    setDropTargetId(tile && tile.unlocked !== false ? tile.id : null);
+  }, [dragPreview, biomeTiles]);
+
   const clearActorDragState = () => {
     pointerDragRef.current = null;
     setDraggingActorId(null);
@@ -777,7 +787,8 @@ export const ProtoMap = ({
                   onClick={() => {
                     if (tile.unlocked !== false) onSelectBiome(tile.id);
                   }}
-                  className={`absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl border text-center transition ${
+                  data-drop-target={dropTargetId === tile.id ? 'true' : undefined}
+                  className={`absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl border text-center transition ${dropTargetId === tile.id ? 'proto-drop-target ' : ''}${
                     tile.unlocked === false
                       ? 'cursor-not-allowed border-white/10 bg-black/40 text-white/25 opacity-65'
                       : tile.selected
