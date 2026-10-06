@@ -7,7 +7,7 @@ const PARTS={minFontSize:0,parts:'.proto-actor-energy, .proto-foundation-card--e
     const w=w0,label=tilted?' tilted':'';
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(500);
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
-    if(tilted)await p.getByRole('button',{name:'Tilt camera view'}).click();
+    if(tilted)await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(700);
     const a=await p.locator('[data-board-piece="actor"]').boundingBox(),t=await p.locator('[data-biome-id="woods-alpha"]').boundingBox();await p.mouse.move(a.x+a.width/2,a.y+a.height/2);await p.mouse.down();await p.mouse.move(t.x+t.width/2,t.y+t.height/2,{steps:15});await p.mouse.up();
     await p.locator('.proto-actor-energy').waitFor({state:'attached',timeout:15000});if(w<900){await p.getByRole('button',{name:'Tableau',exact:true}).click();}await p.waitForTimeout(400);
     assert.equal(await p.locator('.proto-foundation-count-token--resources').count(),0,'the resources count token is gone');

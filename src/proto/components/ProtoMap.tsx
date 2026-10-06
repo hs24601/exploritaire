@@ -11,7 +11,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { useCameraControls } from '../../hooks/useCameraControls';
 import { SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows, SpriteTopDownArt } from './SpriteStandee';
-import { tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
+import { TABLE_TILT_DEGREES, TABLE_TILT_MS, tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
 
 export type ProtoBiomeTile = {
   id: string;
@@ -53,6 +53,8 @@ type ResourcePhysicsBody = {
 
 export const CLASSICPLUS_GRID_SIZE = TABLE_GRID.cellSize;
 export const CLASSICPLUS_ZOOM_REFERENCE_SCALE = 1.7;
+/** Standees pop up from their bases once the camera has leaned halfway back. */
+const STANDEE_POP_MS = 320;
 
 /** A biome claims an explicit rectangle of whole world-grid cells. Tableau
  * card capacity is intentionally independent from this visual footprint. */
@@ -169,6 +171,31 @@ export const ProtoMap = ({
   const [failedSprites, setFailedSprites] = useState<string[]>([]);
   const [viewportHeight, setViewportHeight] = useState(720);
   const tilt = tilted ? tableTiltFor(viewportHeight) : null;
+  // The camera eases between Flat and Tilt (CSS transitions on the table and
+  // its light). The table stays oversized ("staged") until it has settled
+  // flat, and pieces swap between standees and flat boards halfway through,
+  // popping up as the table leans back and folding down as it settles.
+  const [shownTilted, setShownTilted] = useState(tilted);
+  const [leaving, setLeaving] = useState(false);
+  const [upright, setUpright] = useState(tilted);
+  const [standeeMotion, setStandeeMotion] = useState<'rise' | 'fold' | null>(null);
+  if (shownTilted !== tilted) {
+    setShownTilted(tilted);
+    setLeaving(!tilted);
+    setStandeeMotion(tilted ? null : 'fold');
+  }
+  const staged = tilted || leaving;
+  useEffect(() => {
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const half = reducedMotion ? 0 : TABLE_TILT_MS / 2;
+    const timers = tilted
+      ? [window.setTimeout(() => { setUpright(true); setStandeeMotion(reducedMotion ? null : 'rise'); }, half),
+        window.setTimeout(() => setStandeeMotion(null), half + STANDEE_POP_MS)]
+      : [window.setTimeout(() => { setUpright(false); setStandeeMotion(null); }, half),
+        window.setTimeout(() => setLeaving(false), reducedMotion ? 0 : TABLE_TILT_MS + 40)];
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [tilted]);
+  const stageTransform = staged ? tableTiltTransform(tableTiltFor(viewportHeight, tilted ? TABLE_TILT_DEGREES : 0)) : undefined;
   const camera = useCameraControls({
     panScale: tiltPanScale(tilt),
     minScale: 0.65,
@@ -515,7 +542,7 @@ export const ProtoMap = ({
       // around the same center. The wash is all soft gradients, so it paints at
       // a fraction of a CSS pixel and the browser scales it up; full-resolution
       // flicker redraws of the oversized tilted plane stalled input for seconds.
-      const dpr = tilted ? 0.25 : 0.5;
+      const dpr = staged ? 0.25 : 0.5;
       const width = Math.max(1, surface.offsetWidth);
       const height = Math.max(1, surface.offsetHeight);
       if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
@@ -547,7 +574,7 @@ export const ProtoMap = ({
       observer.disconnect();
       window.cancelAnimationFrame(frameId);
     };
-  }, [lightSources, timeOfDay, tilted, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale]);
+  }, [lightSources, timeOfDay, staged, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale]);
 
   const resolveDropDestination = (actorId: string, clientX: number, clientY: number) => {
     const biomeTarget = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-biome-id]');
@@ -594,11 +621,13 @@ export const ProtoMap = ({
 
 
   // Tilted, pieces stand upright on their table point like cardboard standees.
-  const standee = (size?: { width: number; height: number }): React.CSSProperties | null => tilt ? {
+  const standee = (size?: { width: number; height: number }): React.CSSProperties | null => upright ? {
     // Rotate about the foot first, then move the foot onto the table point, so
     // the base stays planted at any zoom.
     transform: 'translate(-50%,-100%) rotateX(calc(-1 * var(--table-tilt)))',
     transformOrigin: '50% 100%',
+    animation: standeeMotion === 'rise' ? `proto-standee-pop ${STANDEE_POP_MS}ms ease-out both`
+      : standeeMotion === 'fold' ? `proto-standee-fold ${TABLE_TILT_MS / 2}ms ease-in forwards` : undefined,
     // A die-cut cardboard edge, shaded toward its base.
     ...(size ? { width: size.width, height: size.height, borderRadius: `${size.width / 2}px ${size.width / 2}px 6px 6px`, border: '3px solid #efe4cc', boxShadow: 'inset 0 -12px 16px #0007' } : {}),
   } : null;
@@ -610,7 +639,7 @@ export const ProtoMap = ({
     const lit = standeeLighting(timeOfDay, position, SPRITE_STANDEE_SIZE, lightSources);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
     // Flat camera: the same pop-up seen from straight above, casting the same shadows.
-    if (!tilt) return {
+    if (!upright) return {
       topDown: true,
       shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} />,
       art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} />,
@@ -621,7 +650,7 @@ export const ProtoMap = ({
       art: <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} />,
     };
   };
-  const standeeBase = (key: string, position: { x: number; y: number }, width: number) => tilt
+  const standeeBase = (key: string, position: { x: number; y: number }, width: number) => upright
     ? <div key={key} aria-hidden="true" className="proto-standee-base" style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width, boxShadow: tableObjectShadow(timeOfDay, position, 6, lightSources) }} />
     : null;
 
@@ -666,11 +695,12 @@ export const ProtoMap = ({
         {/* The table plane. Tilted, it is oversized around the same center so
             its far edge stays off screen; everything on it tilts together. */}
         <div
-          className={`proto-table-stage absolute${tilt ? ' proto-table-stage--tilted' : ''}`}
+          className={`proto-table-stage absolute${staged ? ' proto-table-stage--tilted' : ''}`}
           style={{
-            inset: tilt ? '-100%' : 0,
-            transform: tilt ? tableTiltTransform(tilt) : undefined,
-            ['--table-tilt' as string]: `${tilt?.angle ?? 0}deg`,
+            inset: staged ? '-100%' : 0,
+            transform: stageTransform,
+            transition: staged ? undefined : 'none',
+            ['--table-tilt' as string]: `${tilted ? TABLE_TILT_DEGREES : 0}deg`,
           }}
         >
         <div
@@ -683,7 +713,7 @@ export const ProtoMap = ({
             backgroundSize: `${gridStep}px ${gridStep}px`,
           }}
         />
-        <div className="proto-table-plane absolute" style={{ inset: tilt ? '33.3333%' : 0 }}>
+        <div className="proto-table-plane absolute" style={{ inset: staged ? '33.3333%' : 0 }}>
         <div
           ref={camera.contentRef}
           className="proto-map-world absolute"
@@ -768,7 +798,7 @@ export const ProtoMap = ({
             (() => {
               const physicsPosition = resourcePhysicsRef.current.get(stack.id) ?? stack.position;
               const stackLight = lightField.at(physicsPosition);
-              lightReadouts.push({ id: 'stack-' + stack.id, position: physicsPosition, lift: tilt ? -30 : 24, percent: stackLight.percent, level: stackLight.level });
+              lightReadouts.push({ id: 'stack-' + stack.id, position: physicsPosition, lift: upright ? -30 : 24, percent: stackLight.percent, level: stackLight.level });
               return (
                 <React.Fragment key={stack.id}>
                 {standeeBase('base', physicsPosition, 44)}
@@ -833,7 +863,7 @@ export const ProtoMap = ({
                     }
                     clearResourceDragState();
                   }}
-                  className={`proto-resource-stack${tilt ? ' proto-standee' : ''} absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#8ef2d4]/55 bg-[#0b1916] text-[0.6rem] font-black text-[#cafff4] shadow-[0_0_18px_rgba(142,242,212,0.16)] ${draggingResourceId === stack.id ? 'cursor-grabbing ring-2 ring-[#cafff4]/55' : 'cursor-grab'}`}
+                  className={`proto-resource-stack${upright ? ' proto-standee' : ''} absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#8ef2d4]/55 bg-[#0b1916] text-[0.6rem] font-black text-[#cafff4] shadow-[0_0_18px_rgba(142,242,212,0.16)] ${draggingResourceId === stack.id ? 'cursor-grabbing ring-2 ring-[#cafff4]/55' : 'cursor-grab'}`}
                   style={{ left: `calc(50% + ${physicsPosition.x}px)`, top: `calc(50% + ${physicsPosition.y}px)`, boxShadow: tableObjectShadow(timeOfDay, physicsPosition, stack.resource === 'provisions_hut' ? 14 : 9, lightSources), ...standee({ width: 48, height: 60 }) }}
                   title={Object.entries(stackIngredients(stack)).map(([id, count]) => `${count} ${WORLD_ITEMS[id as WorldItemId].label}`).join(' + ')}
                   aria-label={`${stack.count} ${WORLD_ITEMS[stack.resource].label}${stack.build ? ', building' : ', draggable'}`}
@@ -903,7 +933,7 @@ export const ProtoMap = ({
           {actors.map((actor) => {
             const actorPosition = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
             const actorLight = lightField.at(actorPosition);
-            lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: tilt ? -30 : 24, percent: actorLight.percent, level: actorLight.level });
+            lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: upright ? -30 : 24, percent: actorLight.percent, level: actorLight.level });
             const cutOut = spriteStandee(actor, actorPosition);
             return (
             <React.Fragment key={actor.id}>
@@ -977,7 +1007,7 @@ export const ProtoMap = ({
         {/* Light overlay on its own copy of the table plane. Kept out of the
             pieces' 3D scene so standees never cut through it: it lays the
             table's light over them like a projected wash. */}
-        <div aria-hidden="true" className="proto-table-light pointer-events-none absolute z-40" style={{ inset: tilt ? '-100%' : 0, transform: tilt ? tableTiltTransform(tilt) : undefined }}>
+        <div aria-hidden="true" className="proto-table-light pointer-events-none absolute z-40" style={{ inset: staged ? '-100%' : 0, transform: stageTransform, transition: staged ? undefined : 'none' }}>
         <canvas
           ref={lightCanvasRef}
           aria-hidden="true"
@@ -1001,7 +1031,7 @@ export const ProtoMap = ({
           </div>
         ) : null}
         </div>
-        {tilt ? <div aria-hidden="true" className="proto-table-horizon" /> : null}
+        {staged ? <div aria-hidden="true" className={`proto-table-horizon${tilted ? ' proto-table-horizon--shown' : ''}`} /> : null}
       </div>
       {dragPreview && !travel ? (
         <div

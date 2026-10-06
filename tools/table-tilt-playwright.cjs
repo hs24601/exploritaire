@@ -6,7 +6,7 @@ const TOOLBAR={parts:'.proto-map-toolbar button'};
   for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
-    const toggle=p.getByRole('button',{name:'Tilt camera view'});await toggle.click();await p.waitForTimeout(300);
+    const toggle=p.getByRole('button',{name:'Tilt camera view'});await toggle.click();await p.waitForTimeout(700);
     const stage=p.locator('.proto-table-stage');assert.match(await stage.evaluate(el=>getComputedStyle(el).transform),/matrix3d/,`${w}x${h} table plane tilts`);
     (await findLayoutDefects(p,'.proto-map-toolbar',TOOLBAR)).forEach(d=>problems.push(`${w}x${h} toolbar: ${d}`));
     const actor=p.locator('[data-board-piece="actor"]');const box=await actor.boundingBox();assert.match(await actor.evaluate(el=>getComputedStyle(el).transform),/matrix3d/,`${w}x${h} Hero stands up`);
@@ -31,7 +31,7 @@ const TOOLBAR={parts:'.proto-map-toolbar button'};
     if(w>=900)await p.locator('.proto-tableau-field:not(.hidden)').first().waitFor({timeout:3000}).catch(()=>problems.push(`${w}x${h}: tapping the tilted tile did not open its tableau`));
     if(process.env.SHOTS){await p.screenshot({path:`${process.env.SHOTS}/tilt-${w}x${h}.png`});}
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
-    await p.getByRole('button',{name:'Flat camera view'}).click();await p.waitForTimeout(200);
+    await p.getByRole('button',{name:'Flat camera view'}).click();await p.waitForTimeout(700);
     assert.equal(await stage.evaluate(el=>getComputedStyle(el).transform),'none',`${w}x${h} Flat restores the 2D table`);
     assert.equal(await p.locator('.proto-standee-base').count(),0);
     await p.close();

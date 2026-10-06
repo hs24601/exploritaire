@@ -15,7 +15,7 @@ const redeemedWithin=async(p,limit)=>{const start=Date.now();while(Date.now()-st
   const touch=await redeemedWithin(p,1600);assert.equal(await p.locator('.dev-context-menu').count(),0,'a touch long-press never opens the dev menu');
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.ok(touch!==null,'a touch hold with drift redeems within ~1s');
   await ctx.close();ctx=await b.newContext({viewport:{width:1912,height:914},hasTouch:true});p=await ctx.newPage();
-  await p.goto('http://localhost:5179/proto.html');await p.getByRole('button',{name:'Tilt camera view'}).click();c=await landQuestCard(p,true);
+  await p.goto('http://localhost:5179/proto.html');await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(700);c=await landQuestCard(p,true);
   const slow=await ctx.newCDPSession(p);await slow.send('Emulation.setCPUThrottlingRate',{rate:4});
   await p.evaluate(()=>{window.__holdStart=0;document.addEventListener('pointerdown',()=>{window.__holdStart||=performance.now();},true);new MutationObserver(()=>{if(!window.__holdDone&&document.querySelector('.quest-field')?.dataset.redeemed==='1')window.__holdDone=performance.now();}).observe(document.body,{subtree:true,attributes:true});});
   await slow.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[c]});await redeemedWithin(p,6000);

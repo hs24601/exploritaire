@@ -6,6 +6,9 @@ export type TableTilt = Readonly<{ angle: number; perspective: number }>;
 type Offset = { x: number; y: number };
 
 export const TABLE_TILT_DEGREES = 38;
+/** How long the camera takes to lean back or settle flat. Pieces pop up or
+ * fold down at the halfway point. */
+export const TABLE_TILT_MS = 520;
 
 /** Perspective scales with the viewport so phones and desktops get the same
  * look, and the oversized table plane never reaches behind the viewer. */

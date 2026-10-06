@@ -7,7 +7,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(400);
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
-    await p.getByRole('button',{name:'Tilt camera view'}).click();
+    await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(700);
     const a=await p.locator('[data-board-piece="actor"]').boundingBox(),t=await p.locator('[data-biome-id="woods-alpha"]').boundingBox();
     await p.mouse.move(a.x+a.width/2,a.y+a.height*0.8);await p.mouse.down();await p.mouse.move(t.x+t.width/2,t.y+t.height/2,{steps:15});await p.mouse.up();
     await p.locator('.proto-actor-energy').waitFor({state:'attached',timeout:15000});if(w<900)await p.getByRole('button',{name:'Tableau',exact:true}).click();await p.waitForTimeout(600);
@@ -25,7 +25,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
     if(await playable.count()){await playable.click();await p.waitForFunction(b=>document.querySelector('.proto-actor-energy')?.getAttribute('aria-label')!==b,energyBefore,{timeout:5000}).catch(()=>problems.push(`${w}x${h}: tapping the tilted front card did not play it`));}
     if(process.env.SHOTS)await p.locator('.proto-tableau-field').screenshot({path:`${process.env.SHOTS}/tableau-tilt-${w}x${h}.png`});
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
-    await p.getByRole('button',{name:'Flat camera view'}).click();await p.waitForTimeout(450);
+    await p.getByRole('button',{name:'Flat camera view'}).click();await p.waitForTimeout(700);
     assert.equal(await stage.evaluate(el=>getComputedStyle(el).transform),'none',`${w}x${h} Flat restores the 2D tableau`);
     assert.equal(await p.locator('.proto-tableau-stage [style*="blur"]').count(),0,`${w}x${h} Flat removes depth of field`);
     await p.close();
