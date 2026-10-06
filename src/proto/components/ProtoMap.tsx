@@ -10,7 +10,7 @@ import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type Wor
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { useCameraControls } from '../../hooks/useCameraControls';
-import { SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows, SpriteTopDownArt, TOP_DOWN_FOOT_OFFSET, TOP_DOWN_FORESHORTEN } from './SpriteStandee';
+import { SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows, SpriteTopDownArt } from './SpriteStandee';
 import { tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
 
 export type ProtoBiomeTile = {
@@ -609,11 +609,10 @@ export const ProtoMap = ({
     const sprite = actor.sprite;
     const lit = standeeLighting(timeOfDay, position, SPRITE_STANDEE_SIZE, lightSources);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
-    // Flat camera: the same pop-up seen from above. Its foot sits a little below
-    // the cell center so the foreshortened piece reads as centered in its cell.
+    // Flat camera: the same pop-up seen from straight above, casting the same shadows.
     if (!tilt) return {
       topDown: true,
-      shadows: <SpriteStandeeShadows sprite={sprite} position={{ x: position.x, y: position.y + TOP_DOWN_FOOT_OFFSET }} shadows={lit.shadows.map((shadow) => ({ ...shadow, length: shadow.length * TOP_DOWN_FORESHORTEN }))} />,
+      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} />,
       art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} />,
     };
     return {
@@ -964,7 +963,6 @@ export const ProtoMap = ({
                 left: `calc(50% + ${actorPosition.x}px)`,
                 top: `calc(50% + ${actorPosition.y}px)`,
                 ...(cutOut ? { ...standee(), width: SPRITE_STANDEE_SIZE, height: SPRITE_STANDEE_SIZE } : standee({ width: 48, height: 64 })),
-                ...(cutOut?.topDown ? { transform: `translate(-50%, calc(-100% + ${TOP_DOWN_FOOT_OFFSET}px))` } : {}),
               }}
               aria-label={`${actor.label} actor token`}
             >
