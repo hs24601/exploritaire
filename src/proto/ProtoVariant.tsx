@@ -139,6 +139,8 @@ export const ProtoVariant = () => {
   const [cameraTilted, setCameraTilted] = useState(false);
   const [cycleLighting, setCycleLighting] = useState(false);
   const [tableLightsEnabled, setTableLightsEnabled] = useState(true);
+  // Guidance highlights every playable tableau card; off by default.
+  const [moveGuidance, setMoveGuidance] = useState(false);
   const [lightReadoutVisible, setLightReadoutVisible] = useState(false);
   const lighting = getTableLighting(tableHours);
   useEffect(() => { setTableHours(8); }, [state.day]);
@@ -1843,7 +1845,7 @@ const selectBiome = (biomeId: string) => {
                                 tableauCardRefs.current[card.id] = node;
                               }}
                               transporting={transporting}
-                              active={playable || choosingTarget || encounterReady}
+                              active={(moveGuidance && (playable || encounterReady)) || choosingTarget}
                               mobilityTarget={mobilityTarget}
                               muted={!isTopCard}
                               standardRankSize
@@ -1894,7 +1896,7 @@ const selectBiome = (biomeId: string) => {
                 </div>
                 </TableauCardArea>
                 <div className="proto-tableau-actions"><button type="button" disabled={Boolean(cardTransport) || state.scene !== 'exploration' || !state.worldActors.some(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} onClick={leaveTableau}>Leave Tableau</button></div>
-                <TableauSolveControls disabled={!state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} />
+                <TableauSolveControls disabled={!state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} guidance={moveGuidance} onGuidanceChange={setMoveGuidance} />
                 <div className="proto-tableau-status grid gap-[clamp(0.4rem,1vmin,0.65rem)] self-stretch content-center">
                   {state.scene === 'exploration' ? (
                     <div className={`rounded-[calc(var(--classic-radius)*0.55)] border px-2 py-2 text-center font-mono ${

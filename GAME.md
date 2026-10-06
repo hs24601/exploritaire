@@ -75,6 +75,7 @@ This document records agreed project preferences and behavior from the Proto dev
 - Tableau fields expose Auto-Solve and Best Move controls in their lower-left area, with a Divine Intervention checkbox.
 - Normal mode applies the same RPG constraints and costs as human play.
 - Divine Intervention ignores RPG constraints and does not decrement actor values.
+- A Guidance checkbox sits right of Divine Intervention and is off by default. Only while it is checked do playable tableau cards (and ready encounters) get the eligible-move highlight; a card picked for targeting stays highlighted either way. Guidance works without a staffed foundation.
 - All solver controls, including Divine Intervention, require an actor stationed in the applicable foundation. Disable them when unstaffed and stop an active solver if staffing is lost.
 - Auto-Solve and Best Move use visible card-flight animations. Main tableau moves apply on landing; solver sequencing waits for the current flight.
 - Use deterministic reasoning for authored seeds and bounded Monte Carlo-style assessment for random deals.

@@ -8,9 +8,12 @@ export type TableauSolveControlsProps = {
   /** Future Astral Guidance can grant only a few optimal moves. */
   stepLimit?: number;
   disabled?: boolean;
+  /** Highlight every tableau card that can be played right now. */
+  guidance?: boolean;
+  onGuidanceChange?: (guidance: boolean) => void;
 };
 
-export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disabled = false }: TableauSolveControlsProps) => {
+export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disabled = false, guidance = false, onGuidanceChange }: TableauSolveControlsProps) => {
   const [divine, setDivine] = useState(false);
   const [running, setRunning] = useState(false);
   const [message, setMessage] = useState('Developer solver');
@@ -47,7 +50,10 @@ export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disable
       <button type="button" disabled={disabled} onClick={() => running ? cancel() : start(stepLimit)}>{running ? 'Stop' : 'Auto-Solve'}</button>
       <button type="button" disabled={disabled || running} onClick={() => start(1)}>Best Move</button>
     </div>
-    <label className="flex items-center gap-2"><input type="checkbox" checked={divine} disabled={disabled || running} onChange={(event) => setDivine(event.target.checked)} />Divine Intervention</label>
+    <div className="flex flex-wrap gap-x-4 gap-y-1">
+      <label className="flex items-center gap-2"><input type="checkbox" checked={divine} disabled={disabled || running} onChange={(event) => setDivine(event.target.checked)} />Divine Intervention</label>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={guidance} onChange={(event) => onGuidanceChange?.(event.target.checked)} />Guidance</label>
+    </div>
     <div role="status" className="text-white/60">{message}</div>
   </div>;
 };
