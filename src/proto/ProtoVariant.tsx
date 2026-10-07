@@ -12,6 +12,7 @@ import { blockedSolids } from './worldBounds';
 import { DEFAULT_ACTOR_LUMINOSITY, getTableLighting, tableObjectShadow } from './protoLighting';
 import { TimeOfDaySlider } from './components/TimeOfDaySlider';
 import { PondField } from './components/PondField';
+import { CombatField } from './components/CombatField';
 import { GLOWFISH_TABLE_LIGHT, POND_CATCHES, POND_MISS_STAMINA, POND_SPECIES, isPondCatch, type PondCatch, castBait, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, restockPond } from './rules/fishing';
 import { NEUTRAL_STANDEE_LIGHTING, SpriteStandeeArt } from './components/SpriteStandee';
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
@@ -54,7 +55,7 @@ import {
   type ForestResource, type HaulResource, type HeroBuff, type PendingAbilityTarget, type PendingMobility,
   type PendingTargetSelection, type ProtoState, type TargetAnnouncement,
 } from './protoState';
-import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, SMALL_WOODS_TRAVEL_COST, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
+import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, SMALL_WOODS_TRAVEL_COST, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, isDangerTile, DANGER_WOODS_REWARD, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
 import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauMove } from './rules/play';
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
 
@@ -364,7 +365,7 @@ const selectBiome = (biomeId: string) => {
       return { ...prev,
         settledHaul: { ...prev.settledHaul, [resource]: prev.settledHaul[resource] - count },
         haul: { ...prev.haul, [resource]: prev.haul[resource] - count },
-        worldResourceStacks: [...prev.worldResourceStacks, { id, resource, count, biomeId: 'table', position: { x: 48 + Math.random() * 96, y: 48 } }],
+        worldResourceStacks: [...prev.worldResourceStacks, { id, resource, count, biomeId: 'table', position: { x: 48 + Math.random() * 96, y: 0 } }],
       };
     });
   };
@@ -420,6 +421,34 @@ const selectBiome = (biomeId: string) => {
       return { ...prev, pond, stamina: hooked ? prev.stamina : Math.max(0, prev.stamina - POND_MISS_STAMINA) };
     });
   };
+  // The Dark Woods: an actor stationed there fights its foe (CombatField). A
+  // fresh fight starts on each arrival, until the foe is beaten for the day.
+  const dangerSelected = isDangerTile(state.selectedBiomeId);
+  const dangerTile = state.biomeTiles.find((tile) => isDangerTile(tile.id)) ?? null;
+  const dangerFighter = state.worldActors.find((actor) => actor.location === 'foundation' && isDangerTile(actor.biomeId)) ?? null;
+  const dangerCleared = dangerTile?.clearedDay === state.day;
+  const [skirmishRound, setSkirmishRound] = useState<number | null>(null);
+  const skirmishRounds = useRef(0);
+  useEffect(() => {
+    if (!dangerFighter) { setSkirmishRound(null); return; }
+    if (!dangerCleared) setSkirmishRound((round) => round ?? ++skirmishRounds.current);
+  }, [dangerFighter?.id, dangerCleared]);
+  const endSkirmish = (won: boolean, heroHp: number) => {
+    if (won) setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'VICTORY', impact: 'The wolf fled. +2 wood, +2 berries, +2 herbs' });
+    setState((prev) => ({
+      ...prev,
+      // Driven off, the hero limps away on their last HP.
+      heroHp: prev.heroHp.map((hp, index) => index === 0 ? Math.max(1, heroHp) : hp),
+      haul: won ? addForestHaul(prev.haul, DANGER_WOODS_REWARD) : prev.haul,
+      biomeTiles: won ? prev.biomeTiles.map((tile) => isDangerTile(tile.id) ? { ...tile, clearedDay: prev.day } : tile) : prev.biomeTiles,
+    }));
+  };
+  // Fleeing keeps the wounds taken so far.
+  const fleeSkirmish = (heroHp: number) => {
+    setState((prev) => ({ ...prev, heroHp: prev.heroHp.map((hp, index) => index === 0 ? Math.max(1, heroHp) : hp) }));
+    leaveTableau();
+  };
+
   // The fight's outcome: a landed fish joins the haul at once, as its kind.
   const endPondFight = (landed: boolean) => {
     const preview = landed ? landHooked(state.pond) : null;
@@ -612,7 +641,7 @@ const selectBiome = (biomeId: string) => {
               resource: 'trail_ration' as const,
               count: 1,
               biomeId: 'table',
-              position: { x: 96, y: 48 },
+              position: { x: 48, y: 0 },
             },
           ]
         : prev.worldResourceStacks,
@@ -1851,8 +1880,19 @@ const selectBiome = (biomeId: string) => {
                 onPlace={(id) => drawSettlementSupply(id as HaulResource, 1)}
                 onClose={() => { setSupplyOpen(false); if (mobilePanel === 'supplies') setMobilePanel('map'); }}
               />
-              <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId ? '' : 'hidden'}${pondSelected ? ' proto-tableau-field--pond' : ''}`}>
-              {pondSelected ? (
+              <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId ? '' : 'hidden'}${pondSelected ? ' proto-tableau-field--pond' : ''}${dangerSelected ? ' proto-tableau-field--combat' : ''}`}>
+              {dangerSelected ? (
+                dangerFighter && skirmishRound !== null ? (
+                  <CombatField key={skirmishRound} seed={(dangerTile?.seed ?? 1) + state.day * 7919 + skirmishRound * 104729}
+                    hero={{ label: dangerFighter.label, hp: state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp, maxHp: FOUNDATION_MOCKUPS[0].maxHp }}
+                    onEnd={endSkirmish} onLeave={fleeSkirmish} />
+                ) : (
+                  <section className="proto-skirmish proto-skirmish--quiet" aria-label="Dark Woods">
+                    <p className="proto-skirmish__message" role="status">{dangerCleared ? 'The woods are quiet. The Shadow Wolf returns tomorrow.' : 'A Shadow Wolf prowls these woods. Bring an actor here to fight it.'}</p>
+                    {dangerFighter ? <footer className="proto-skirmish__footer"><span /><button type="button" className="proto-skirmish__leave" onClick={leaveTableau}>Leave Woods</button></footer> : null}
+                  </section>
+                )
+              ) : pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && state.stamina < POND_MISS_STAMINA}
                   landed={Object.fromEntries(POND_CATCHES.map((id) => [id, state.haul[id] - state.settledHaul[id]])) as Record<PondCatch, number>}
                   onCast={castPondBait} onFightEnd={endPondFight} onLeave={leaveTableau} />

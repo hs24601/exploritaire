@@ -144,6 +144,17 @@ export const BIOME_AMBIANCE: Record<'water' | 'woods', readonly BiomeEmitter[]> 
   ],
 };
 
+/** Dangerous tiles give off dark red versions of the woods' effects: embers
+ * drifting where fireflies would, and a blood-red mist behind the tile. They
+ * show at every hour (DANGER_STRENGTH_FLOOR) and in both cameras, since they
+ * warn of a fight. */
+export const DANGER_AMBIANCE: readonly BiomeEmitter[] = [
+  { kind: 'firefly', count: { high: 16, low: 7 }, area: { pad: [64, 52] }, lift: [4, 44], drift: 12, size: [2.4, 4.2], duration: [4, 8] },
+  { kind: 'mist', count: { high: 9, low: 5 }, area: { scale: [1.5, 0.35], offset: -0.6 }, lift: [0, 5], drift: 10, size: [36, 62], duration: [9, 15] },
+];
+/** Danger effects never fade below these strengths, whatever the hour. */
+export const DANGER_STRENGTH_FLOOR: Partial<Record<ParticleKind, number>> = { firefly: 0.85, mist: 0.65 };
+
 /** Effects over the whole world, anchored to the table so they pan and zoom
  * with it. */
 export const WORLD_AMBIANCE: readonly WorldEmitter[] = [

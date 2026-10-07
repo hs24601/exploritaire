@@ -166,6 +166,13 @@ export const DEFAULT_WOODS_TILES = [
 export const POND_TILE = { id: 'pond', title: 'Pond', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -48, y: 96 }, unlocked: true, travelCost: 0, threat: 'none' as const, terrain: 'water' as const };
 export const isPondTile = (biomeId: string | null | undefined) => biomeId === POND_TILE.id;
 
+/** A dangerous wood two cells right of the Hero's start, marked by dark red embers and mist. Entering it starts a
+ * skirmish (rules/skirmish.ts) instead of a tableau; once its foe is beaten it stays quiet until the next day. */
+export const DANGER_WOODS_TILE = { id: 'woods-danger', title: 'Dark Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: 96, y: 48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'high' as const, terrain: 'woods' as const, danger: true };
+export const isDangerTile = (biomeId: string | null | undefined) => biomeId === DANGER_WOODS_TILE.id;
+/** What the foe in the Dark Woods was guarding. */
+export const DANGER_WOODS_REWARD: Partial<ForestHaul> = { wood: 2, berries: 2, herbs: 2 };
+
 export const createDeepWoodsTile = (seed: number) => ({
   id: 'woods-beta',
   title: 'Deep Woods',
@@ -251,6 +258,7 @@ export const createInitialState = (): ProtoState => {
     return { ...tile, seed: seed + index * 7919, tableau: deal.tableau, stock: deal.stock };
   });
   biomeTiles.push({ ...POND_TILE, position: { ...POND_TILE.position }, seed: seed + 104729, tableau: [], stock: [] });
+  biomeTiles.push({ ...DANGER_WOODS_TILE, position: { ...DANGER_WOODS_TILE.position }, seed: seed + 130363, tableau: [], stock: [] });
   const firstBiome = biomeTiles[0];
   return {
     tableau: firstBiome.tableau,

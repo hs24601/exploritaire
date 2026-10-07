@@ -30,9 +30,11 @@ export type ProtoBiomeTile = {
   selected: boolean;
   unlocked?: boolean;
   travelCost?: number;
-  threat?: 'none' | 'low';
+  threat?: 'none' | 'low' | 'high';
   /** Water tiles are fished (the pond) rather than dealt as a tableau. */
   terrain?: 'woods' | 'water';
+  /** Dangerous tiles (the Dark Woods) give off dark red embers and mist, in both cameras. */
+  danger?: boolean;
   /** Pixel-art scenery that pops up from the back of the tile (pines for Small Woods). */
   sprite?: string;
 };
@@ -224,6 +226,7 @@ export const ProtoMap = ({
         window.setTimeout(() => setLeaving(false), reducedMotion ? 0 : TABLE_TILT_MS + 40)];
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [tilted]);
+  const atmosphereAreas = biomeTiles.filter((tile) => tile.unlocked !== false).map((tile) => ({ id: tile.id, terrain: tile.terrain === 'water' ? 'water' as const : 'woods' as const, danger: tile.danger, ...getBiomeWorldFootprint(tile) }));
   const stageTransform = staged ? tableTiltTransform(tableTiltFor(viewportHeight, tilted ? TABLE_TILT_DEGREES : 0)) : undefined;
   // A press on a square an actor stands on never pans (see grabActorOnSquare).
   const actorSquareRef = useRef<(clientX: number, clientY: number) => boolean>(() => false);
@@ -952,14 +955,14 @@ export const ProtoMap = ({
                   data-light-level={tileLight.level}
                   data-grid-reference={TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position))}
                   data-biome-id={tile.id}
-                  title={tile.terrain === 'water' ? `${tile.title} · fishing` : `${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
+                  title={tile.danger ? `${tile.title} · danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title} · fishing` : `${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
                   data-terrain={tile.terrain}
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => {
                     if (tile.unlocked !== false) onSelectBiome(tile.id);
                   }}
                   data-drop-target={dropTargetId === tile.id ? 'true' : undefined}
-                  className={`absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl border text-center transition ${dropTargetId === tile.id ? 'proto-drop-target ' : ''}${tile.terrain === 'water' ? 'proto-water-tile ' : ''}${
+                  className={`absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl border text-center transition ${dropTargetId === tile.id ? 'proto-drop-target ' : ''}${tile.terrain === 'water' ? 'proto-water-tile ' : ''}${tile.danger ? 'proto-danger-tile ' : ''}${
                     tile.unlocked === false
                       ? 'cursor-not-allowed border-white/10 bg-black/40 text-white/25 opacity-65'
                       : tile.selected
@@ -976,7 +979,7 @@ export const ProtoMap = ({
                     left: `calc(50% + ${getBiomeWorldFootprint(tile).x}px)`,
                     top: `calc(50% + ${getBiomeWorldFootprint(tile).y}px)`,
                   }}
-                  aria-label={tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
+                  aria-label={tile.danger ? `${tile.title}, danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
                 >
                   <BoardObjectLabel text={tile.unlocked === false ? 'Locked' : tile.title} minFontSize={12} maxFontSize={18} className="proto-face-camera uppercase font-black" onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />
                 </button>
@@ -1250,10 +1253,21 @@ export const ProtoMap = ({
           frame={getTableLighting(timeOfDay)}
           lights={lightSources}
           camera={camera.cameraState}
-          areas={biomeTiles.filter((tile) => tile.unlocked !== false).map((tile) => ({ id: tile.id, terrain: tile.terrain === 'water' ? 'water' as const : 'woods' as const, ...getBiomeWorldFootprint(tile) }))}
+          areas={atmosphereAreas}
           quality={fxQuality}
           view={{ width: viewportWidth, height: viewportHeight }}
           tilt={tilt}
+        /></div> : null}
+        {/* Flat, only dangerous tiles keep their dark red embers and mist, lying over the board as a warning. */}
+        {!upright && atmosphereAreas.some((area) => area.danger) ? <div aria-hidden="true" className="proto-table-air proto-table-air--flat pointer-events-none absolute z-40" style={{ inset: '-100%', ['--table-tilt' as string]: '0deg' }}><AtmosphereInAir
+          frame={getTableLighting(timeOfDay)}
+          lights={[]}
+          camera={camera.cameraState}
+          areas={atmosphereAreas}
+          quality={fxQuality}
+          view={{ width: viewportWidth, height: viewportHeight }}
+          tilt={null}
+          dangerOnly
         /></div> : null}
         {upright ? <LightShafts frame={getTableLighting(timeOfDay)} quality={fxQuality} camera={camera.cameraState} view={{ width: viewportWidth, height: viewportHeight }} /> : null}
         {staged ? <div aria-hidden="true" className={`proto-table-horizon${tilted ? ' proto-table-horizon--shown' : ''}`} /> : null}
