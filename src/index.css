@@ -1868,7 +1868,12 @@ html.drag-perf-mode .target-swirl-sparkles {
 .reward-hold-progress > span { display: block; width: 100%; height: var(--hold-progress, 0%); background: linear-gradient(0deg, #ffd166b3, #ffe19a66); box-shadow: 0 -3px 0 #fff3c8, 0 0 18px #ffd16699; }
 .table-quest-card[data-table-state="true"] .quest-card__status { font-size: 16px; line-height: 1.1; }
 .table-quest-card[data-table-state="true"] .quest-card__title { font-size: 16px; line-height: 1.1; }
-.table-quest-card .quest-card__title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+/* The whole title shows; fitTableQuestCard drops the status line and then
+   tightens the title to make room, clamping only if even that isn't enough. */
+.table-quest-card .quest-card__title { overflow-wrap: anywhere; }
+.table-quest-card .quest-card__title[data-clamped] { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--fit-lines, 2); overflow: hidden; }
+.table-quest-card .quest-card__status[hidden] { display: none; }
+.table-quest-card .quest-card__title[data-tight] { line-height: 1; padding-bottom: 2px; }
 .table-quest-card .quest-card { overflow: hidden; }
 .table-quest-card .quest-card__title, .table-quest-card .quest-card__status, .table-quest-card .quest-card__reward { flex-shrink: 0; }
 .table-quest-card .quest-card__reward { gap: 4px; white-space: nowrap; }
@@ -2271,9 +2276,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 .quest-tray .quest-card > .quest-card__reward > span { font-size: 16px; }
 
 /* Teaching card: flies out with the first quest; its instructions stay visible. */
-.table-quest-card--tutorial .quest-card { border-color: #9fd3c2; background-image: linear-gradient(145deg, #234c4a, #10221f); }
-.table-quest-card--tutorial .quest-card__title { color: #d9fff3; }
-.table-quest-card--tutorial .quest-card__text { display: block; flex-shrink: 0; overflow: visible; -webkit-line-clamp: none; font-size: 16px; line-height: 1.15; color: #e8f4ee; overflow-wrap: anywhere; }
 /* No center emblem behind the face-up card's text. */
 .quest-tray .quest-card:not(.quest-card--complete) { background-image: repeating-linear-gradient(45deg, #ffffff08 0 3px, transparent 3px 9px), linear-gradient(145deg, #5a2f45, #241321); }
 
@@ -2773,3 +2775,35 @@ html.drag-perf-mode .target-swirl-sparkles {
 @media (prefers-reduced-motion: reduce) {
   .proto-pond__ripple { animation: none; }
 }
+
+/* Game tooltip: replaces the browser's title tooltip with a parchment tag (GameTooltip). */
+.game-tooltip {
+  position: fixed;
+  z-index: 70000;
+  max-width: min(18rem, calc(100vw - 16px));
+  box-sizing: border-box;
+  padding: 6px 10px 7px;
+  border-radius: 5px;
+  color: var(--tray-ink, #3b2814);
+  font: 16px/1.2 'Classic Pixel', monospace;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 20% 10%, #fff8 0, transparent 45%), var(--tray-parchment, #ead9b0);
+  box-shadow: inset 0 0 0 2px #c9ad78, inset 0 0 0 3px #fff3, 0 0 0 2px var(--tray-brass-dark, #7c5c24), 0 3px 0 2px #1d0f07, 0 8px 14px #000a;
+  animation: game-tooltip-in 120ms ease-out;
+}
+.game-tooltip::after {
+  content: '';
+  position: absolute;
+  left: var(--arrow-x, 50%);
+  top: 100%;
+  width: 10px;
+  height: 10px;
+  margin: -4px 0 0 -5px;
+  transform: rotate(45deg);
+  background: var(--tray-parchment, #ead9b0);
+  box-shadow: 2px 2px 0 0 var(--tray-brass-dark, #7c5c24);
+}
+.game-tooltip--below::after { top: auto; bottom: 100%; margin: 0 0 -4px -5px; box-shadow: -2px -2px 0 0 var(--tray-brass-dark, #7c5c24); }
+@keyframes game-tooltip-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .game-tooltip { animation: none; } }

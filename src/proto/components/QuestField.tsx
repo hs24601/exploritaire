@@ -88,8 +88,9 @@ const CARD_RATIO = 63 / 88;
 /** Sizes the three identical slots so they always fit the well without
  * scrolling: stacked in a column, or in a row when that gives bigger cards
  * (phone landscape). On desktop the tray's width follows the card, so only
- * the well's height limits it there. The face-up card then clamps its title
- * and objective to the lines that fit; tapping it shows the full text. */
+ * the well's height limits it there. The face-up card shows its whole title
+ * and clamps the objective to the lines left; only a card too small for even
+ * the title clamps it too. Tapping it shows the full text. */
 function useFitSlotsToWell(wellRef: RefObject<HTMLDivElement | null>, open: boolean) {
   useLayoutEffect(() => {
     const well = wellRef.current;
@@ -114,8 +115,12 @@ function useFitSlotsToWell(wellRef: RefObject<HTMLDivElement | null>, open: bool
       if (!card || !title || !text || card.clientHeight === 0) return;
       const lineHeight = (el: HTMLElement) => parseFloat(getComputedStyle(el).lineHeight) || 18;
       const overflowing = () => card.scrollHeight > card.clientHeight + 1;
-      for (let titleLines = 2; titleLines >= 1; titleLines--) {
+      // The whole title comes first; the objective gets the lines left over.
+      title.style.setProperty('--fit-lines', '99');
+      const fullTitle = Math.max(1, Math.round(title.scrollHeight / lineHeight(title)));
+      for (let titleLines = fullTitle; titleLines >= 1; titleLines--) {
         title.style.setProperty('--fit-lines', String(titleLines));
+        if (titleLines < fullTitle) title.title = title.textContent ?? ''; else title.removeAttribute('title');
         text.hidden = false;
         text.style.removeProperty('--fit-lines');
         const style = getComputedStyle(text);

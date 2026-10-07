@@ -1,7 +1,7 @@
 import { TABLE_GRID, TRUE_CENTER, screenToWorld, type GridCell } from '../gridCoordinates';
 import { BLOCKED_REGIONS, blockedPathObstacles, blockedSolids } from '../worldBounds';
 import { findWorldPath, pointAlongWorldPath, worldPathLength, type PathObstacle } from '../worldPathfinding';
-import { TableQuestCard, TUTORIAL_QUEST, TUTORIAL_QUEST_INDEX, type PlacedQuestCard } from './TableQuestCard';
+import { TableQuestCard, type PlacedQuestCard } from './TableQuestCard';
 import { BoardObjectLabel } from './BoardObjectLabel';
 import { solverFlightDuration } from '../solverTiming';
 import { actorLight, actorLightId, createTableLightField, getTableLighting, standeeLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
@@ -827,9 +827,7 @@ export const ProtoMap = ({
             onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
             className="proto-table-lamp absolute z-10 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full"
             style={{ left: 'calc(50% + ' + light.position.x + 'px)', top: 'calc(50% + ' + light.position.y + 'px)', ...standee() }}>🕯️</div>)}
-          {questCards.map(placement => <TableQuestCard key={placement.questIndex} placement={placement} {...(placement.questIndex === TUTORIAL_QUEST_INDEX
-            ? { title: TUTORIAL_QUEST.title, text: TUTORIAL_QUEST.text, redeemed: false, staminaReward: 0 }
-            : { title: questTitles[placement.questIndex], text: questTexts[placement.questIndex], redeemed: placement.questIndex < questClaims })} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale} toWorld={worldPointFromClient}
+          {questCards.filter(placement => placement.questIndex >= 0).map(placement => <TableQuestCard key={placement.questIndex} placement={placement} title={questTitles[placement.questIndex]} text={questTexts[placement.questIndex]} redeemed={placement.questIndex < questClaims} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale} toWorld={worldPointFromClient}
             onMove={(position,tilt)=>onMoveQuest?.(placement.questIndex,position,tilt)}
             solids={[
               ...blockedSolids(),

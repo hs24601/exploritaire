@@ -1,7 +1,7 @@
 import { holdSlop, useRewardHold } from '../useRewardHold';
 import { logHold } from '../holdLog';
 import { TABLE_CARD_WIDTH, CARD_RATIO, settleTableCard, type TableSolid } from '../tableCardPlacement';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { QuestCard } from './QuestCard';
 import { tableObjectShadow, type TableLight } from '../protoLighting';
 
@@ -13,10 +13,35 @@ export type PlacedQuestCard = {
   flightFrom?: { x: number; y: number; width: number; height: number };
 };
 
-/** A teaching card outside the quest deck. It flies out with the first quest and
- * clears with the same press-and-hold, without a reward. */
-export const TUTORIAL_QUEST_INDEX = -1;
-export const TUTORIAL_QUEST = { title: 'Clearing quests', text: 'Press and hold a finished card for 1s.' };
+
+/** Keeps a table quest card's whole title readable at its 16px floor: the
+ * status line gives way first, then the title's line spacing tightens, and it clamps (full text in its tooltip)
+ * only if the card still can't hold it. */
+export function fitTableQuestCard(card: HTMLElement) {
+  const title = card.querySelector<HTMLElement>('.quest-card__title');
+  const status = card.querySelector<HTMLElement>('.quest-card__status');
+  if (!title || card.clientHeight === 0) return;
+  const overflowing = () => card.scrollHeight > card.clientHeight + 1;
+  title.removeAttribute('data-clamped');
+  title.removeAttribute('data-tight');
+  title.style.removeProperty('--fit-lines');
+  title.removeAttribute('title');
+  if (status) status.hidden = false;
+  if (!overflowing()) return;
+  if (status) status.hidden = true;
+  if (!overflowing()) return;
+  title.setAttribute('data-tight', '');
+  if (!overflowing()) return;
+  const lineHeight = parseFloat(getComputedStyle(title).lineHeight) || 18;
+  let lines = Math.max(1, Math.round(title.clientHeight / lineHeight) - 1);
+  title.setAttribute('data-clamped', '');
+  title.title = title.textContent ?? '';
+  for (; lines > 1; lines--) {
+    title.style.setProperty('--fit-lines', String(lines));
+    if (!overflowing()) return;
+  }
+  title.style.setProperty('--fit-lines', '1');
+}
 
 export function TableQuestCard({ placement, title, text, redeemed, onRedeem, timeOfDay, lights, cameraScale, toWorld, solids, onMove, staminaReward = 1 }: {
   placement: PlacedQuestCard; title: string; text: string; redeemed: boolean; staminaReward?: number;
@@ -29,9 +54,7 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
   const [displayPosition, setDisplayPosition] = useState(placement.position);
   const hold = useRewardHold(onRedeem, !redeemed);
   const [tableState, setTableState] = useState(Boolean(placement.tableState));
-  // The teaching card keeps its arrival size so its instructions stay readable.
-  const tutorial = placement.questIndex === TUTORIAL_QUEST_INDEX;
-  const cardWidth = tableState && !tutorial ? TABLE_CARD_WIDTH : 120;
+  const cardWidth = tableState ? TABLE_CARD_WIDTH : 120;
   const [tilt, setTilt] = useState(placement.tilt ?? 0);
   const drag = useRef<{pointerId:number;x:number;y:number;origin:{x:number;y:number};moved:boolean;angle:number} | null>(null);
   // Where a drag that started at (x,y) has moved the card to, in world units.
@@ -41,6 +64,14 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     return {x:current.origin.x+to.x-from.x,y:current.origin.y+to.y-from.y};
   };
   const [landed, setLanded] = useState(!placement.flightFrom);
+  useLayoutEffect(() => {
+    const card = ref.current?.querySelector<HTMLElement>('.quest-card');
+    if (!card) return;
+    fitTableQuestCard(card);
+    let live = true;
+    document.fonts?.ready.then(() => { if (live) fitTableQuestCard(card); });
+    return () => { live = false; };
+  }, [title, text, redeemed, cardWidth, tableState]);
   useEffect(() => {
     const element = ref.current;
     if (!element || !placement.flightFrom) return;
@@ -70,7 +101,7 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     animation.onfinish = () => { ghost.remove(); setLanded(true); };
     return () => { animation.cancel(); ghost.remove(); };
   }, [placement.questIndex]);
-  return <div ref={ref} className={`table-quest-card${tutorial ? ' table-quest-card--tutorial' : ''}`} data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState}
+  return <div ref={ref} className="table-quest-card" data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState}
     style={{ left: `calc(50% + ${displayPosition.x}px)`, top: `calc(50% + ${displayPosition.y}px)`,
       width: cardWidth, height: cardWidth / CARD_RATIO,
       transform: `translate(-50%,-50%) rotate(${tilt}deg)`, touchAction: 'none', cursor: drag.current?.moved ? 'grabbing' : 'grab',

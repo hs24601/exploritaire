@@ -4,7 +4,7 @@ import { solverFlightDuration } from './solverTiming';
 import { QuestField } from './components/QuestField';
 import { TrayRestoreHandle } from './components/TrayRestoreHandle';
 import { SettlementSupplyTray } from './components/SettlementSupplyTray';
-import { TUTORIAL_QUEST_INDEX, type PlacedQuestCard } from './components/TableQuestCard';
+import { type PlacedQuestCard } from './components/TableQuestCard';
 import { DetailsCardViewer, ActorCardArt } from './components/DetailsCardViewer';
 import { redeemActiveQuest } from './questProgress';
 import { logHold } from './holdLog';
@@ -1678,26 +1678,8 @@ const selectBiome = (biomeId: string) => {
     const rect = sourceRect && sourceRect.width > 0 ? sourceRect : document.querySelector('.quest-tray__toggle')?.getBoundingClientRect();
     const flightFrom = rect && rect.width > 0 ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : undefined;
     const arrivals: PlacedQuestCard[] = [{ questIndex: index, position, flightFrom }];
-    // The first quest brings a teaching card that shows how to clear quest cards.
-    if (index === 0) {
-      blocked.push({ ...position, w: 120, h: 120 * 88 / 63 });
-      // Same row on the far side of the biome, so both cards share the view.
-      arrivals.push({ questIndex: TUTORIAL_QUEST_INDEX, position: openSpot([[1,0],[-1,0],[1,1],[-1,1],[0,1],[1,-1],[-1,-1],[0,-1]]), flightFrom });
-    }
     setState(previous => previous.questTableCards.some(card => card.questIndex === index) ? previous : { ...previous, questTableCards: [...previous.questTableCards, ...arrivals] });
   }, [state]);
-  const clearTutorialCard = () => {
-    const card = document.querySelector<HTMLElement>('[data-table-quest="' + TUTORIAL_QUEST_INDEX + '"] .quest-card');
-    const from = card?.getBoundingClientRect();
-    if (card && from?.width) {
-      const ghost = card.cloneNode(true) as HTMLElement;
-      ghost.style.cssText = 'position:fixed;left:'+from.x+'px;top:'+from.y+'px;width:'+from.width+'px;height:'+from.height+'px;z-index:60000;pointer-events:none;margin:0;';
-      document.body.append(ghost);
-      const fade = ghost.animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(.85) translateY(-24px)', opacity: 0 }], { duration: 420, easing: 'ease-in' });
-      fade.onfinish = () => ghost.remove(); fade.oncancel = () => ghost.remove();
-    }
-    setState(previous => ({ ...previous, questTableCards: previous.questTableCards.filter(placed => placed.questIndex !== TUTORIAL_QUEST_INDEX) }));
-  };
   const leaveTableau = () => {
     const occupied = [
       ...state.worldActors.filter(actor => actor.location === 'table').map(actor => actor.position),
@@ -1732,7 +1714,7 @@ const selectBiome = (biomeId: string) => {
       if (previous.questClaims !== index) return previous;
       // Quest bonuses can exceed the resting cap, so claiming at full STA never wastes a reward.
       const redeemed = redeemActiveQuest(previous, getExpeditionQuestSteps(previous).map((step) => step.complete), 1, ACTOR_STAMINA_MAX);
-      return redeemed === previous ? previous : { ...redeemed, questTableCards: redeemed.questTableCards.filter(card => card.questIndex === TUTORIAL_QUEST_INDEX || card.questIndex >= redeemed.questClaims) };
+      return redeemed === previous ? previous : { ...redeemed, questTableCards: redeemed.questTableCards.filter(card => card.questIndex >= redeemed.questClaims) };
     });
   };
 
@@ -2318,7 +2300,7 @@ const selectBiome = (biomeId: string) => {
                 onMoveQuest={(index, position, tilt) => setState(previous => ({ ...previous, questTableCards: previous.questTableCards.map(card => card.questIndex === index ? { ...card, position, tilt, tableState: true, flightFrom: undefined } : card) }))}
                 tilted={cameraTilted}
                 onTiltedChange={setCameraTilted}
-                onRedeemQuest={(index) => { logHold(index === TUTORIAL_QUEST_INDEX ? 'tutorial card cleared' : index === state.questClaims ? `redeem quest ${index}` : `redeem ignored: card ${index}, next claim is ${state.questClaims}`); if (index === TUTORIAL_QUEST_INDEX) clearTutorialCard(); else if (index === state.questClaims) redeemQuest(); }}
+                onRedeemQuest={(index) => { logHold(index === state.questClaims ? `redeem quest ${index}` : `redeem ignored: card ${index}, next claim is ${state.questClaims}`); if (index === state.questClaims) redeemQuest(); }}
                 lightSources={tableLights}
                 timeOfDay={tableHours}
                 showLightReadout={lightReadoutVisible}

@@ -26,7 +26,7 @@ export function QuestCard({ title, text, staminaReward, complete, redeemed = fal
     onPointerUp={rewardHold ? undefined : hold.cancel} onPointerCancel={rewardHold ? undefined : hold.cancel}
     onKeyDown={event=>{if((event.key===' '||event.key==='Enter')&&!event.repeat&&complete&&!redeemed){event.preventDefault();hold.start();}}}
     onKeyUp={hold.cancel} onBlur={hold.cancel} aria-label={`${title}. ${redeemed ? 'Reward redeemed' : !complete ? text : staminaReward ? `Complete. Hold for 1 second to redeem ${staminaReward} stamina and reveal next quest` : `${text} Hold for 1 second to clear this card`}`}>
-    <span className="quest-card__title" title={title}>{title}</span>
+    <span className="quest-card__title">{title}</span>
     <span className="quest-card__text">{text}</span>
     <span className="quest-card__status" role="status">{redeemed ? '✓ Reward redeemed' : !complete ? 'Objective in progress' : staminaReward ? '✓ Hold 1s to redeem' : '✓ Try it here'}</span>
     {staminaReward > 0 && <span className="quest-card__reward"><span aria-hidden="true">⚡</span> +{staminaReward} STA</span>}
