@@ -19,7 +19,44 @@ export function SpriteStandeeArt({ sprite, lighting, onError, size = SPRITE_STAN
     `sepia(${(lighting.warmth * 0.45).toFixed(3)})`,
     rim ? `drop-shadow(${(rim.x * 2).toFixed(2)}px ${(-1 - Math.abs(rim.y)).toFixed(2)}px 1px ${rgba(rim.color, rim.amount * 0.8)})` : '',
   ].filter(Boolean).join(' ');
-  return <span aria-hidden="true" className="proto-sprite-standee__art" style={{ backgroundImage: `url("${sprite}")`, backgroundSize: layout.size, backgroundPosition: layout.position, filter }} />;
+  return <>
+    <span aria-hidden="true" className="proto-sprite-standee__art" style={{ backgroundImage: `url("${sprite}")`, backgroundSize: layout.size, backgroundPosition: layout.position, filter }} />
+    <LightWash sprite={sprite} lighting={lighting} maskSize={layout.size} maskPosition={layout.position} />
+  </>;
+}
+
+const SHADE = { r: 8, g: 6, b: 22 };
+
+/** Directional light across a lit cut-out, the way HD-2D sprites catch a
+ * lamp: the side facing the strongest nearby light glows in its colour and
+ * the far side falls into shade; a light in front washes the whole face, one
+ * behind leaves a rim along the top. Two layers masked to the sprite's own
+ * pixels, so nothing spills outside the art. `flip` is for art mirrored in
+ * place, so the light still comes from the world side it's on. */
+export function LightWash({ sprite, lighting, maskSize, maskPosition, flip = false }: { sprite: string; lighting: StandeeLighting; maskSize: string; maskPosition: string; flip?: boolean }) {
+  const rim = lighting.rim;
+  if (!rim || rim.amount < 0.03) return null;
+  const side = (flip ? -rim.x : rim.x);
+  const front = Math.max(0, rim.y);
+  const alpha = Math.min(0.7, rim.amount * (0.38 + 0.3 * front));
+  const toward = side > 0 ? 90 : 270;
+  let light: string;
+  let shade: string | null = null;
+  if (Math.abs(side) >= 0.25) {
+    light = `linear-gradient(${toward}deg, ${rgba(rim.color, 0)} 25%, ${rgba(rim.color, alpha)})`;
+    shade = `linear-gradient(${toward + 180}deg, ${rgba(SHADE, 0)} 30%, ${rgba(SHADE, rim.amount * 0.55 * (1 - front))})`;
+  } else if (rim.y > 0) {
+    light = `linear-gradient(${rgba(rim.color, alpha * 0.55)}, ${rgba(rim.color, alpha * 0.4)})`;
+  } else {
+    light = `linear-gradient(180deg, ${rgba(rim.color, alpha)}, ${rgba(rim.color, 0)} 35%)`;
+    shade = `linear-gradient(${rgba(SHADE, rim.amount * 0.2)}, ${rgba(SHADE, rim.amount * 0.4)})`;
+  }
+  const mask = `url("${sprite}")`;
+  const masked = { maskImage: mask, WebkitMaskImage: mask, maskSize, WebkitMaskSize: maskSize, maskPosition, WebkitMaskPosition: maskPosition };
+  return <>
+    {shade ? <span aria-hidden="true" className="proto-light-wash proto-light-wash--shade" style={{ ...masked, backgroundImage: shade }} /> : null}
+    <span aria-hidden="true" className="proto-light-wash" data-light-wash="true" style={{ ...masked, backgroundImage: light }} />
+  </>;
 }
 
 /** A standee is a flat board facing the camera, so its shadow keeps its base

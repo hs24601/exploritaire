@@ -2408,9 +2408,37 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-map .proto-sprite-standee[data-board-piece="actor"],
 .proto-map .proto-sprite-standee[data-board-piece="biome-popup"],
 .proto-game-root .proto-sprite-standee[data-board-piece="actor"] { display: block; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+/* Tilted, biome tiles sit a hair above the cut-outs' shadows (0.5px), so no
+   shadow falls across a tile's label. */
+.proto-table-stage--tilted .proto-map-world > [data-board-piece="tile"] { transform: translate3d(-50%, -50%, 1px); }
+/* Tilted, a lamp's glow hangs in the air as its halo; the token's own wide
+   glow showed the edges of its 3D layer as a hard square. */
+.proto-table-stage--tilted .proto-table-lamp { box-shadow: 0 0 4px #ffcf7390, 0 3px 2px #0008; }
+/* Tilted camera ambiance (TableAtmosphere). Only transform and opacity animate. */
+.proto-table-air { transform-style: preserve-3d; }
+.proto-atmosphere { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.proto-atmosphere__billboard { position: absolute; width: 0; height: 0; transform: rotateX(calc(-1 * var(--table-tilt))); transform-origin: 0 0; transform-style: preserve-3d; }
+.proto-halo { position: absolute; border-radius: 50%; animation: proto-halo-flicker 2s ease-in-out infinite alternate; will-change: transform, opacity; }
+@keyframes proto-halo-flicker { 0% { transform: scale(0.94); } 40% { transform: scale(1.03); } 70% { transform: scale(0.98); } 100% { transform: scale(1.05); } }
+.proto-firefly { position: absolute; left: 0; border-radius: 50%; background: #f4ff9c; box-shadow: 0 0 3px 1px #e6ff6acc, 0 0 9px 3px #b8f04a55; animation-name: proto-firefly-drift, proto-firefly-blink; animation-timing-function: ease-in-out, ease-in-out; animation-iteration-count: infinite, infinite; animation-direction: alternate, alternate; }
+@keyframes proto-firefly-drift { 0% { translate: 0 0; } 33% { translate: var(--fx-dx) calc(var(--fx-dy) * -0.6); } 66% { translate: calc(var(--fx-dx) * -0.5) var(--fx-dy); } 100% { translate: calc(var(--fx-dx) * 0.4) calc(var(--fx-dy) * 0.3); } }
+@keyframes proto-firefly-blink { 0%, 55% { scale: 0.3; } 80%, 100% { scale: 1; } }
+.proto-fizz { position: absolute; left: 0; border-radius: 50%; border: 1px solid #e8fbffcc; background: radial-gradient(circle at 35% 35%, #ffffffcc 0 25%, #bdefff33 45%, transparent 70%); opacity: 0; animation: proto-fizz-rise 3s ease-out infinite; }
+.proto-fizz--glow { border-color: #8ff7ffaa; background: radial-gradient(circle, #d6fffff0 0 30%, #5fe6ff66 55%, transparent 75%); box-shadow: 0 0 6px 2px #49dcff55; }
+@keyframes proto-fizz-rise { 0% { opacity: 0; translate: 0 0; scale: 0.4; } 20% { opacity: 0.9; } 100% { opacity: 0; translate: 0 var(--fx-rise); scale: 1; } }
+.proto-shafts { position: absolute; inset: 0; z-index: 41; overflow: hidden; pointer-events: none; }
+.proto-shaft { position: absolute; top: -30%; height: 150%; transform-origin: 50% 0; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #0009 45%, transparent 90%); mask-image: linear-gradient(to bottom, #000 0%, #0009 45%, transparent 90%); animation: proto-shaft-sway 9s ease-in-out infinite alternate; }
+@keyframes proto-shaft-sway { 0% { opacity: 0.55; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
+.proto-mote { position: absolute; border-radius: 50%; background: #fff6dd; box-shadow: 0 0 4px 1px #ffe9b066; animation: proto-mote-drift 12s linear infinite; }
+@keyframes proto-mote-drift { 0% { translate: 0 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { translate: var(--fx-dx) var(--fx-dy); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .proto-halo, .proto-firefly, .proto-fizz, .proto-shaft, .proto-mote { animation: none; } .proto-fizz { opacity: 0.5; } }
 /* Tilted camera: scenery lining a biome tile's sides and front (BiomeEdgeScenery). */
-.proto-map .proto-map-world > .proto-biome-edge { position: absolute; pointer-events: none; }
-.proto-biome-edge__art { display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 100% 100%; image-rendering: pixelated; }
+.proto-map .proto-map-world > .proto-biome-edge,
+.proto-map .proto-map-world > .proto-sprite-shadow[data-shadow-owner="biome-edge"] { position: absolute; pointer-events: none; }
+.proto-biome-edge__art { position: relative; display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 100% 100%; image-rendering: pixelated; }
+/* HD-2D style light across a cut-out (LightWash), masked to the sprite's pixels. */
+.proto-light-wash { position: absolute; inset: 0; pointer-events: none; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mix-blend-mode: screen; }
+.proto-light-wash--shade { mix-blend-mode: multiply; }
 .proto-sprite-standee__art { display: block; width: 100%; height: 100%; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
 .proto-sprite-standee--selected { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
 .proto-sprite-shadow {

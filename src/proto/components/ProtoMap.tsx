@@ -11,6 +11,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { useCameraControls } from '../../hooks/useCameraControls';
 import { BiomeEdgeScenery } from './BiomeEdgeScenery';
+import { AtmosphereInAir, LightShafts } from './TableAtmosphere';
+import { detectFxQuality } from '../atmosphere';
 import type { LabelBox } from '../biomeEdgeScenery';
 import { BIOME_EDGE_SCENERY } from '../protoData';
 import { SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows, SpriteTopDownArt } from './SpriteStandee';
@@ -181,6 +183,8 @@ export const ProtoMap = ({
   const [failedSprites, setFailedSprites] = useState<string[]>([]);
   // Where each biome tile's label text sits, from the tile's centre, so the
   // tilted camera's edge scenery can keep clear of it.
+  // Ambiance tier for the tilted camera (atmosphere.ts): fixed for the session.
+  const [fxQuality] = useState(detectFxQuality);
   const [biomeLabelBoxes, setBiomeLabelBoxes] = useState<Record<string, LabelBox>>({});
   const reportBiomeLabel = useCallback((tileId: string, tile: { width: number; height: number }, box: { left: number; top: number; width: number; height: number }) => {
     const next = { left: box.left - tile.width / 2, top: box.top - tile.height / 2, right: box.left + box.width - tile.width / 2, bottom: box.top + box.height - tile.height / 2 };
@@ -787,8 +791,9 @@ export const ProtoMap = ({
               const worldFootprint = getBiomeWorldFootprint(tile);
               const tileLight = lightField.over(worldFootprint);
               lightReadouts.push({ id: 'tile-' + tile.id, position: worldFootprint, lift: worldFootprint.height / 2, percent: tileLight.percent, level: tileLight.level });
-              // Scenery pops up from the back of the tile, which is its base, so the label stays readable in front.
-              const popupPosition = { x: worldFootprint.x, y: worldFootprint.y - worldFootprint.height * (upright ? 0.34 : 0.39) };
+              // Scenery pops up from the back of the tile, which is its base, so the label stays readable in front
+              // (tilted, far enough back to clear the label on its tile lifted above the shadows).
+              const popupPosition = { x: worldFootprint.x, y: worldFootprint.y - worldFootprint.height * (upright ? 0.37 : 0.39) };
               const popup = tile.unlocked === false ? null : spriteStandee(tile.sprite, popupPosition, { base: false, size: BIOME_POPUP_SIZE, topDownSize: worldFootprint.width - 6, owner: 'biome' });
               return (
                 <React.Fragment key={tile.id}>
@@ -834,7 +839,9 @@ export const ProtoMap = ({
                   scenery={BIOME_EDGE_SCENERY[tile.terrain === 'water' ? 'water' : 'woods']}
                   label={biomeLabelBoxes[tile.id] ?? null}
                   tiltDeg={TABLE_TILT_DEGREES}
-                  lighting={standeeLighting(timeOfDay, worldFootprint, BIOME_POPUP_SIZE, lightSources)}
+                  hours={timeOfDay}
+                  lights={lightSources}
+                  quality={fxQuality}
                   standee={standee()}
                 /> : null}
                 {popup ? <React.Fragment key={tile.id + '-popup'}>
@@ -1091,6 +1098,17 @@ export const ProtoMap = ({
           </div>
         ) : null}
         </div>
+        {/* Immersion, on its own copy of the tilted plane so nothing in it dips
+            under the light wash: light hangs in the air around lamps, fireflies drift
+            over the woods and pond, the water fizzes. Tilted only. */}
+        {upright ? <div aria-hidden="true" className="proto-table-light proto-table-air pointer-events-none absolute z-40" style={{ inset: '-100%', transform: stageTransform, ['--table-tilt' as string]: `${TABLE_TILT_DEGREES}deg` }}><AtmosphereInAir
+          frame={getTableLighting(timeOfDay)}
+          lights={lightSources}
+          camera={camera.cameraState}
+          areas={biomeTiles.filter((tile) => tile.unlocked !== false).map((tile) => ({ id: tile.id, terrain: tile.terrain === 'water' ? 'water' as const : 'woods' as const, ...getBiomeWorldFootprint(tile) }))}
+          quality={fxQuality}
+        /></div> : null}
+        {upright ? <LightShafts frame={getTableLighting(timeOfDay)} quality={fxQuality} /> : null}
         {staged ? <div aria-hidden="true" className={`proto-table-horizon${tilted ? ' proto-table-horizon--shown' : ''}`} /> : null}
       </div>
       {dragPreview && !travel ? (
