@@ -195,6 +195,7 @@ export const ProtoMap = ({
     });
   }, []);
   const [viewportHeight, setViewportHeight] = useState(720);
+  const [viewportWidth, setViewportWidth] = useState(1280);
   const tilt = tilted ? tableTiltFor(viewportHeight) : null;
   // The camera eases between Flat and Tilt (CSS transitions on the table and
   // its light). The table stays oversized ("staged") until it has settled
@@ -256,7 +257,7 @@ export const ProtoMap = ({
   useEffect(() => {
     const viewport = camera.containerRef.current;
     if (!viewport) return undefined;
-    const observer = new ResizeObserver(() => setViewportHeight(viewport.clientHeight || 720));
+    const observer = new ResizeObserver(() => { setViewportHeight(viewport.clientHeight || 720); setViewportWidth(viewport.clientWidth || 1280); });
     observer.observe(viewport);
     return () => observer.disconnect();
   }, []);
@@ -1111,8 +1112,10 @@ export const ProtoMap = ({
           camera={camera.cameraState}
           areas={biomeTiles.filter((tile) => tile.unlocked !== false).map((tile) => ({ id: tile.id, terrain: tile.terrain === 'water' ? 'water' as const : 'woods' as const, ...getBiomeWorldFootprint(tile) }))}
           quality={fxQuality}
+          view={{ width: viewportWidth, height: viewportHeight }}
+          tilt={tilt}
         /></div> : null}
-        {upright ? <LightShafts frame={getTableLighting(timeOfDay)} quality={fxQuality} /> : null}
+        {upright ? <LightShafts frame={getTableLighting(timeOfDay)} quality={fxQuality} camera={camera.cameraState} view={{ width: viewportWidth, height: viewportHeight }} /> : null}
         {staged ? <div aria-hidden="true" className={`proto-table-horizon${tilted ? ' proto-table-horizon--shown' : ''}`} /> : null}
       </div>
       {dragPreview && !travel ? (

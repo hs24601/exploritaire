@@ -1,5 +1,6 @@
-import type { CSSProperties } from 'react';
-import { ambianceFor, haloFor, rayAngle, scatter, seeded, type FxQuality } from '../atmosphere';
+import type { CSSProperties, ReactNode } from 'react';
+import { BIOME_AMBIANCE, WORLD_AMBIANCE, ambianceFor, emitterArea, haloFor, particleStrength, rayAngle, scatter, seeded, shaftSlots, visibleCells, type FxQuality, type Particle as ParticleSpot, type ParticleKind } from '../atmosphere';
+import type { TableTilt } from '../tableTilt';
 import { DEFAULT_LIGHT_COLOR, hexToRgb, rgba, type TableLight, type TableLightFrame } from '../protoLighting';
 
 type Camera = { x: number; y: number; scale: number };
@@ -12,13 +13,36 @@ const billboard = (camera: Camera, point: { x: number; y: number }): CSSProperti
   top: `calc(50% + ${camera.y + point.y * camera.scale}px)`,
 });
 
-/** Light hanging in the air: a glow around each lamp and carried light,
- * fireflies over the woods and the pond, and the pond's effervescence. Lives
- * in the tilted light layer, above the pieces, standing up toward the camera. */
-export function AtmosphereInAir({ frame, lights, camera, areas, quality }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality }) {
+/** One particle standing up toward the camera from its spot on the table. */
+function Particle({ kind, particle, camera, strength, night }: { kind: ParticleKind; particle: ParticleSpot; camera: Camera; strength: number; night: boolean }) {
+  const s = camera.scale;
+  const timing = { animationDuration: `${particle.duration.toFixed(2)}s`, animationDelay: `${particle.delay.toFixed(2)}s` };
+  const drift = { ['--fx-dx' as string]: `${particle.dx * s}px`, ['--fx-dy' as string]: `${particle.dy * s}px` };
+  let look: ReactNode;
+  if (kind === 'firefly') look = <span className="proto-firefly" style={{
+    width: particle.size * s, height: particle.size * s, bottom: particle.lift * s, opacity: strength, ...drift,
+    animationDuration: `${particle.duration.toFixed(2)}s, ${(particle.duration * 0.37).toFixed(2)}s`, animationDelay: `${particle.delay.toFixed(2)}s, ${(particle.delay * 0.7).toFixed(2)}s`,
+  }} />;
+  // By day the water glints; after dark it breathes up cool, glowing bubbles.
+  else if (kind === 'fizz') look = <span className={night ? 'proto-fizz proto-fizz--glow' : 'proto-fizz'} style={{
+    width: particle.size * s, height: particle.size * s, bottom: particle.lift * s, ['--fx-rise' as string]: `${-(10 + particle.dy * 3) * s}px`, ...timing,
+  }} />;
+  // Mist and smoke: soft puffs that swell, drift and thin out.
+  else if (kind === 'mist') look = <span className="proto-mist" style={{
+    width: particle.size * s, height: particle.size * 0.4 * s, left: -particle.size * s / 2, bottom: particle.lift * s,
+    ['--fx-peak' as string]: (0.4 * strength).toFixed(2), ...drift, ...timing,
+  }} />;
+  else look = <span className="proto-mote" style={{ width: particle.size * s, height: particle.size * s, bottom: particle.lift * s, opacity: strength, ...drift, ['--fx-dy' as string]: `${-(14 + Math.abs(particle.dy)) * s}px`, ...timing }} />;
+  return <span className="proto-atmosphere__billboard" data-atmosphere={kind} style={billboard(camera, particle)}>{look}</span>;
+}
+
+/** Light hanging in the air: a glow around each lamp and carried light, and
+ * the particles each biome gives off (BIOME_AMBIANCE) or that fill the world
+ * (WORLD_AMBIANCE). Lives in the tilted light layer, above the pieces,
+ * standing up toward the camera, so everything pans and zooms with the table. */
+export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, tilt }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null }) {
   const mood = ambianceFor(frame);
   const s = camera.scale;
-  const high = quality === 'high';
   return <div className="proto-atmosphere" aria-hidden="true">
     {lights.map((light) => {
       const halo = haloFor(light, mood.halos);
@@ -35,56 +59,50 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality }: { fra
         }} />
       </span>;
     })}
-    {mood.fireflies > 0.02 ? areas.flatMap((area) => scatter(`firefly-${area.id}`, high ? 9 : 3, { x: area.x, y: area.y, width: area.width + 72, height: area.height + 60 }, [6, 40], 14, [2, 3.2], [5, 9])
-      .map((fly) => <span key={fly.id} className="proto-atmosphere__billboard" data-atmosphere="firefly" style={billboard(camera, fly)}>
-        <span className="proto-firefly" style={{
-          width: fly.size * s, height: fly.size * s, bottom: fly.lift * s, opacity: mood.fireflies,
-          ['--fx-dx' as string]: `${fly.dx * s}px`, ['--fx-dy' as string]: `${fly.dy * s}px`,
-          animationDuration: `${fly.duration.toFixed(2)}s, ${(fly.duration * 0.37).toFixed(2)}s`, animationDelay: `${fly.delay.toFixed(2)}s, ${(fly.delay * 0.7).toFixed(2)}s`,
-        }} />
-      </span>)) : null}
-    {high ? areas.filter((area) => area.terrain === 'water').flatMap((pond) => {
-      // By day the water glints; after dark it breathes up cool, glowing bubbles.
-      const night = frame.daylight < 0.25;
-      return scatter(`fizz-${pond.id}`, 7, { x: pond.x, y: pond.y + 4, width: pond.width * 0.7, height: pond.height * 0.55 }, [1, 4], 2, [1.6, 2.6], [2.4, 4.2])
-        .map((bubble) => <span key={bubble.id} className="proto-atmosphere__billboard" data-atmosphere="fizz" style={billboard(camera, bubble)}>
-          <span className={night ? 'proto-fizz proto-fizz--glow' : 'proto-fizz'} style={{
-            width: bubble.size * s, height: bubble.size * s, bottom: bubble.lift * s,
-            ['--fx-rise' as string]: `${-(10 + bubble.dy * 3) * s}px`,
-            animationDuration: `${bubble.duration.toFixed(2)}s`, animationDelay: `${bubble.delay.toFixed(2)}s`,
-          }} />
-        </span>);
-    }) : null}
+    {areas.flatMap((area) => BIOME_AMBIANCE[area.terrain].flatMap((emitter, index) => {
+      const count = emitter.count[quality];
+      const strength = particleStrength(emitter.kind, mood);
+      if (!count || strength < 0.02) return [];
+      return scatter(`${emitter.kind}-${index}-${area.id}`, count, emitterArea(emitter, area), emitter.lift, emitter.drift, emitter.size, emitter.duration)
+        .map((particle) => <Particle key={particle.id} kind={emitter.kind} particle={particle} camera={camera} strength={strength} night={frame.daylight < 0.25} />);
+    }))}
+    {WORLD_AMBIANCE.flatMap((emitter, index) => {
+      const count = emitter.count[quality];
+      const strength = particleStrength(emitter.kind, mood);
+      if (!count || strength < 0.02) return [];
+      return visibleCells(view, camera, tilt, emitter.cell).flatMap((cell) => scatter(`${emitter.kind}-world-${index}-${cell.key}`, count, cell, emitter.lift, emitter.drift, emitter.size, emitter.duration))
+        .map((particle) => <Particle key={particle.id} kind={emitter.kind} particle={particle} camera={camera} strength={strength} night={frame.daylight < 0.25} />);
+    })}
   </div>;
 }
 
-/** Screen-space shafts of sun (or moon) light slanting across the tilted
- * view, with dust motes drifting through them by day. */
-export function LightShafts({ frame, quality }: { frame: TableLightFrame; quality: FxQuality }) {
+/** Shafts of sun (or moon) light slanting across the tilted view. Each is
+ * pinned to a spot along the world's x axis, so they slide past as the camera
+ * pans and widen as it zooms in. Dust motes drift through them by day as
+ * part of the world's particles. */
+export function LightShafts({ frame, quality, camera, view }: { frame: TableLightFrame; quality: FxQuality; camera: Camera; view: { width: number; height: number } }) {
   const mood = ambianceFor(frame);
   const strength = Math.max(mood.sunRays, mood.moonRays * 0.45);
   if (strength < 0.02) return null;
   const color = mood.sunRays > 0 ? frame.sunColor : { r: 168, g: 190, b: 255 };
   const angle = rayAngle(frame);
   const high = quality === 'high';
-  const next = seeded('shafts');
-  const count = high ? 5 : 3;
+  // A shaft runs 1.5 view heights from above the top edge, so its foot sits
+  // up to that far sideways from its top: keep the ones whose foot is in view.
+  const reach = view.height * 1.5 * Math.abs(Math.tan((angle * Math.PI) / 180));
   return <div className="proto-shafts" aria-hidden="true" data-fx-quality={quality}>
-    {Array.from({ length: count }, (_, index) => {
-      const width = 7 + next() * 11;
-      return <span key={index} className="proto-shaft" data-atmosphere="ray" style={{
-        left: `${(index + 0.3 + next() * 0.4) * (110 / count) - 5}%`, width: `${width}%`,
+    {shaftSlots(view.width, reach, camera, SHAFT_PERIOD).map(({ slot, next, x }) => {
+      if (next() > (high ? 0.8 : 0.45)) return null;
+      const width = (45 + next() * 65) * camera.scale;
+      return <span key={slot} className="proto-shaft" data-atmosphere="ray" style={{
+        left: `calc(50% + ${(x - width / 2).toFixed(1)}px)`, width,
         transform: `rotate(${angle.toFixed(1)}deg)`,
         background: `linear-gradient(90deg, ${rgba(color, 0)}, ${rgba(color, (0.07 + 0.19 * strength) * (0.6 + next() * 0.4))} 50%, ${rgba(color, 0)})`,
         animationDuration: high ? `${(7 + next() * 6).toFixed(1)}s` : '0s', animationDelay: `${(-next() * 10).toFixed(1)}s`,
       }} />;
     })}
-    {high && mood.motes > 0.02 ? scatter('motes', 14, { x: 50, y: 45, width: 100, height: 90 }, [0, 0], 4, [1.5, 2.6], [9, 16]).map((mote) => (
-      <span key={mote.id} className="proto-mote" data-atmosphere="mote" style={{
-        left: `${mote.x}%`, top: `${mote.y}%`, width: mote.size, height: mote.size, opacity: mood.motes,
-        ['--fx-dx' as string]: `${mote.dx * 6}px`, ['--fx-dy' as string]: `${-18 - Math.abs(mote.dy) * 5}px`,
-        animationDuration: `${mote.duration.toFixed(1)}s`, animationDelay: `${mote.delay.toFixed(1)}s`,
-      }} />
-    )) : null}
   </div>;
 }
+
+/** Table px between shaft slots. */
+const SHAFT_PERIOD = 240;
