@@ -677,7 +677,7 @@ export const ProtoMap = ({
   } : null;
   // Sprite standees: a pixel-art cut-out lit by the table's lights, casting its
   // own silhouette across the table away from each one.
-  const spriteStandee = (sprite: string | undefined, position: { x: number; y: number }, { base = true, size = SPRITE_STANDEE_SIZE, topDownSize = size, owner = 'actor' }: { base?: boolean; size?: number; topDownSize?: number; owner?: string } = {}) => {
+  const spriteStandee = (sprite: string | undefined, position: { x: number; y: number }, { base = true, size = SPRITE_STANDEE_SIZE, topDownSize = size, owner = 'actor', label }: { base?: boolean; size?: number; topDownSize?: number; owner?: string; label?: string } = {}) => {
     if (!sprite || failedSprites.includes(sprite)) return null;
     const lit = standeeLighting(timeOfDay, position, size, lightSources);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
@@ -685,7 +685,7 @@ export const ProtoMap = ({
     if (!upright) return {
       topDown: true,
       shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} />,
-      art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} base={base} size={topDownSize} />,
+      art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} base={base} size={topDownSize} label={label} />,
     };
     return {
       topDown: false,
@@ -1061,7 +1061,7 @@ export const ProtoMap = ({
             const actorPosition = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
             const actorLight = lightField.at(actorPosition);
             lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: upright ? -30 : 24, percent: actorLight.percent, level: actorLight.level });
-            const cutOut = spriteStandee(actor.sprite, actorPosition);
+            const cutOut = spriteStandee(actor.sprite, actorPosition, { label: actor.label });
             // Grabbing anywhere on the actor's square drags the actor, never the camera.
             const grip = {
               onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => grabActor(actor.id, event, event.currentTarget),

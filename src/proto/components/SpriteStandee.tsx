@@ -113,8 +113,9 @@ export const TOP_DOWN_BOARD_THICKNESS = 3.5;
 
 /** A standee seen from directly overhead: only the top edge of its corrugated
  * board shows, as wide as the cut-out, standing across its round base. The art
- * itself faces the horizon and isn't visible; its shadow on the table is. */
-export function SpriteTopDownArt({ sprite, lighting, onError, size = SPRITE_STANDEE_SIZE, base = true }: { sprite: string; lighting: StandeeLighting; onError?: () => void; size?: number; base?: boolean }) {
+ * itself faces the horizon and isn't visible; its shadow on the table is. A
+ * `label` (the piece's name) sits just above the board, which underlines it. */
+export function SpriteTopDownArt({ sprite, lighting, onError, size = SPRITE_STANDEE_SIZE, base = true, label }: { sprite: string; lighting: StandeeLighting; onError?: () => void; size?: number; base?: boolean; label?: string }) {
   const state = useSpriteBounds(sprite);
   const failed = state?.status === 'error';
   useEffect(() => { if (failed) onError?.(); }, [failed, onError]);
@@ -122,7 +123,8 @@ export function SpriteTopDownArt({ sprite, lighting, onError, size = SPRITE_STAN
   const width = Math.round(state.bounds.aspect >= 1 ? size : size * state.bounds.aspect);
   const shade = `brightness(${lighting.brightness.toFixed(3)}) sepia(${(lighting.warmth * 0.45).toFixed(3)})`;
   return <span aria-hidden="true" className="proto-sprite-topdown__piece" style={{ filter: shade }}>
-    {base ? <span className="proto-sprite-topdown__base" /> : null}
+    {base ? <span className="proto-sprite-topdown__base" style={{ width: Math.round(size * 0.75), height: Math.round(size * 0.75) }} /> : null}
     <span className="proto-sprite-topdown__board" style={{ width, height: TOP_DOWN_BOARD_THICKNESS }} />
+    {label ? <span className="proto-sprite-topdown__name" style={{ bottom: `calc(50% + ${TOP_DOWN_BOARD_THICKNESS / 2}px)` }}>{label}</span> : null}
   </span>;
 }
