@@ -3,7 +3,7 @@ import { PROTO_ENEMIES } from '../protoData';
 import type { Card, EnemyRuntimeState, ProtoState } from '../protoState';
 import { resolveEnemyIntents, selectEnemyTableauMove } from './combat';
 import { applyFoundationPlay } from './play';
-import { createFoundations, createInitialState, isAdjacentRank } from './setup';
+import { createFoundations, createInitialState, isPondTile, isAdjacentRank } from './setup';
 
 const card = (rank: number, id = `c-${rank}`): Card => ({ id, rank });
 
@@ -160,4 +160,14 @@ describe('selectEnemyTableauMove', () => {
     const state = combatState([[card(4)]], { enemyTeam: [enemy({ currentRank: 3, hp: 0 })] });
     expect(selectEnemyTableauMove(state)).toBeNull();
   });
+});
+
+ it('recognizes any water biome as a pond, including the cell at -2,2', () => {
+  const state = createInitialState();
+  const pond = { ...state.biomeTiles.find((tile) => tile.terrain === 'water')!, id: 'pond-at-minus-2-2', position: { x: -96, y: 96 } };
+  const tiles = [...state.biomeTiles, pond];
+  expect(isPondTile(pond.id, tiles)).toBe(true);
+  expect(isPondTile('pond', tiles)).toBe(true);
+  expect(isPondTile('woods-alpha', tiles)).toBe(false);
+  expect(isPondTile(null, tiles)).toBe(false);
 });

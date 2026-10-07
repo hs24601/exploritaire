@@ -171,7 +171,8 @@ export const EAST_WOODS_TILE = { id: 'woods-east', title: 'Small Woods', sizeLab
  * and a wood share an edge. It is fished (rules/fishing.ts), so it has no
  * tableau and costs no stamina to reach. */
 export const POND_TILE = { id: 'pond', title: 'Pond', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -48, y: -48 }, unlocked: true, travelCost: 0, threat: 'none' as const, terrain: 'water' as const, flags: ['unexplored'] as BiomeFlag[] };
-export const isPondTile = (biomeId: string | null | undefined) => biomeId === POND_TILE.id;
+export const isPondTile = (biomeId: string | null | undefined, tiles: readonly BiomeTileState[]) =>
+  tiles.some((tile) => tile.id === biomeId && tile.terrain === 'water');
 
 export const createDeepWoodsTile = (seed: number) => ({
   id: 'woods-beta',

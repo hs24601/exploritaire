@@ -21,6 +21,7 @@ export const ProtoCard = ({
   footerLabel,
   standardRankSize = false,
   buried = false,
+  lit = false,
   style,
 }: {
   card: Card;
@@ -38,6 +39,8 @@ export const ProtoCard = ({
    * shared silhouette (rank still readable, dimmed) and take no input; when
    * it reaches the front, colour sweeps back in behind a slanted edge. */
   buried?: boolean;
+  /** Surface receives the shared scene lighting variables. */
+  lit?: boolean;
   style?: React.CSSProperties;
 }) => (
   <PlayingCard
@@ -49,7 +52,7 @@ export const ProtoCard = ({
     onClick={onClick}
     disabled={disabled}
     style={style}
-    className={`${cardBaseClassName} ${buried ? 'proto-card--buried pointer-events-none ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${
+    className={`${cardBaseClassName} ${lit ? 'proto-lit-surface ' : ''}${buried ? 'proto-card--buried pointer-events-none ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${
       disabled
         ? selected
           ? 'cursor-default border-[#8ef2d4]/25 bg-[#07100f] text-white/42'

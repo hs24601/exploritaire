@@ -41,7 +41,7 @@ export const FIRST_LOOK = 0.1;
 
 /** How explored a biome is, 0-1: nothing while unexplored, a first look on
  * arrival, then the rest as its expedition progresses (`progress`, 0-1:
- * the tableau's cleared share, or the pond's catches). */
+ * the tableau's cleared share; ponds use 1 on arrival). */
 export const biomeExploration = (flags: readonly BiomeFlag[] = [], progress = 0) =>
   flags.includes('unexplored') ? 0 : Math.min(1, FIRST_LOOK + (1 - FIRST_LOOK) * Math.max(0, Math.min(1, progress)));
 
@@ -49,9 +49,6 @@ export const biomeExploration = (flags: readonly BiomeFlag[] = [], progress = 0)
  * those dealt. */
 export const dealClearedShare = (dealt: number, remaining: number) =>
   dealt > 0 ? Math.max(0, Math.min(1, 1 - remaining / dealt)) : 0;
-
-/** Fish to land for the pond to count as fully explored. */
-export const POND_EXPLORED_CATCHES = 10;
 
 /** Flags after an actor arrives: the first look clears `unexplored`. */
 export const arriveAt = (flags: readonly BiomeFlag[] = []) => flags.filter((flag) => flag !== 'unexplored');

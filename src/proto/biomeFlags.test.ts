@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { FIRST_LOOK, arriveAt, biomeExploration, biomeOpenState, biomeTravelCost, dealClearedShare } from './biomeFlags';
 
 describe('biome flags', () => {
+  it('fully explores a pond on arrival without requiring a catch', () => {
+    expect(biomeExploration(['unexplored'], 1)).toBe(0);
+    expect(biomeExploration(arriveAt(['unexplored']), 1)).toBe(1);
+  });
+
   it('blocks crossing an unexplored biome and slows rough ground', () => {
     expect(biomeTravelCost([])).toBe(1);
     expect(biomeTravelCost(['unexplored'])).toBe(Infinity);

@@ -1,4 +1,9 @@
 import { flyQuestToDiscard } from './questDiscardFlight';
+import { TableauScene } from './components/TableauScene';
+import { FoundationExitButton } from './components/FoundationExitButton';
+import { createTableauLightRig } from './tableauLighting';
+import { tableauDepartures } from './tableauDepartures';
+import { actorLight } from './protoLighting';
 import { TableauCardArea } from './components/TableauCardArea';
 import { solverFlightDuration } from './solverTiming';
 import { QuestField } from './components/QuestField';
@@ -13,7 +18,7 @@ import { DEFAULT_ACTOR_LUMINOSITY, getTableLighting, tableObjectShadow } from '.
 import { TimeOfDaySlider } from './components/TimeOfDaySlider';
 import { PondField } from './components/PondField';
 import { GLOWFISH_TABLE_LIGHT, POND_CATCHES, POND_MISS_STAMINA, POND_SPECIES, isPondCatch, type PondCatch, castBait, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, restockPond } from './rules/fishing';
-import { NEUTRAL_STANDEE_LIGHTING, SpriteStandeeArt } from './components/SpriteStandee';
+import { SpriteStandeeArt } from './components/SpriteStandee';
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
 import { assessSolverMove, preserveSolverRpgValues, type SolverMove } from './tableauSolver';
 import { TableauSolveControls, type SolveStepResult } from './components/TableauSolveControls';
@@ -38,7 +43,6 @@ import {
 import { Tableau } from '../golf/components/Tableau';
 import {
   ProtoMap,
-  getBiomeExitPoint,
   type ProtoBiomeTile,
   type ProtoWorldActor,
   type ProtoWorldResourceStack,
@@ -57,7 +61,7 @@ import {
 import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, SMALL_WOODS_TRAVEL_COST, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
 import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauMove } from './rules/play';
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
-import { POND_EXPLORED_CATCHES, arriveAt, biomeExploration, biomeOpenState, dealClearedShare } from './biomeFlags';
+import { arriveAt, biomeExploration, biomeOpenState, dealClearedShare } from './biomeFlags';
 
 /** Hour the table opens at, on the first day and every day after. */
 const TABLE_OPENING_HOUR = 9;
@@ -412,8 +416,8 @@ const selectBiome = (biomeId: string) => {
     });
   };
 
-  const pondSelected = isPondTile(state.selectedBiomeId);
-  const pondAngler = state.worldActors.find((actor) => actor.location === 'foundation' && isPondTile(actor.biomeId)) ?? null;
+  const pondSelected = isPondTile(state.selectedBiomeId, state.biomeTiles);
+  const pondAngler = state.worldActors.find((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId && isPondTile(actor.biomeId, state.biomeTiles)) ?? null;
   // Casting needs stamina, since a miss costs some.
   const canCastPond = Boolean(pondAngler) && state.scene === 'exploration' && state.stamina >= POND_MISS_STAMINA;
   const castPondBait = (baitId: string) => {
@@ -1684,20 +1688,19 @@ const selectBiome = (biomeId: string) => {
     const arrivals: PlacedQuestCard[] = [{ questIndex: index, position, flightFrom }];
     setState(previous => previous.questTableCards.some(card => card.questIndex === index) ? previous : { ...previous, questTableCards: [...previous.questTableCards, ...arrivals] });
   }, [state]);
-  const leaveTableau = () => {
-    const occupied = [
-      ...state.worldActors.filter(actor => actor.location === 'table').map(actor => actor.position),
-      ...state.worldResourceStacks.map(stack => stack.position),
-    ];
-    state.worldActors.filter(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId).forEach(actor => {
-      const biome = state.biomeTiles.find(tile => tile.id === actor.biomeId);
-      if (!biome) return;
-      const exit = getBiomeExitPoint(biome, occupied);
-      occupied.push(exit);
-      dropActorToTable(actor.id, exit);
-    });
-    setMobilePanel('map');
+  const leaveTableau = (actorId?: string) => {
+    tableauDepartures(state, actorId).forEach(exit => dropActorToTable(exit.actorId, exit.position));
+    if (!actorId || state.worldActors.filter(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId).length === 1) setMobilePanel('map');
   };
+  const fieldBiome = state.biomeTiles.find(tile => tile.id === state.selectedBiomeId);
+  const fieldActors = state.worldActors.filter(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId);
+  const fieldRig = createTableauLightRig(tableHours, fieldBiome?.position ?? { x: 0, y: 0 }, [
+    ...tableLights,
+    ...state.worldActors.flatMap(actor => {
+      const light = actorLight(actor.id, actor.location === 'foundation' ? state.biomeTiles.find(tile => tile.id === actor.biomeId)?.position ?? actor.position : actor.position, actor.luminosity, actor.lightColor);
+      return light ? [light] : [];
+    }),
+  ], cameraTilted);
   const redeemQuest = () => {
     const index = state.questClaims;
     const step = getExpeditionQuestSteps(state)[index];
@@ -1859,10 +1862,12 @@ const selectBiome = (biomeId: string) => {
               {pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && state.stamina < POND_MISS_STAMINA}
                   landed={Object.fromEntries(POND_CATCHES.map((id) => [id, state.haul[id] - state.settledHaul[id]])) as Record<PondCatch, number>}
-                  onCast={castPondBait} onFightEnd={endPondFight} onLeave={leaveTableau} />
+                  onCast={castPondBait} onFightEnd={endPondFight} onLeave={() => leaveTableau()} />
               ) : (<>
               <div className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">
-                <TableauCardArea columns={TABLEAU_COLUMNS} rows={Math.max(TABLEAU_ROWS, ...tableState.tableau.map((column) => column.length))}>
+                <TableauSolveControls disabled={!state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} guidance={moveGuidance} onGuidanceChange={setMoveGuidance} />
+                <TableauScene immersive={cameraTilted} terrain={fieldBiome?.terrain ?? 'woods'} rig={fieldRig} hours={tableHours}>
+                <TableauCardArea columns={TABLEAU_COLUMNS} rows={Math.max(1, ...tableState.tableau.map((column) => column.length))}>
                 <div className={`proto-tableau-stage${cameraTilted ? ' proto-tableau-stage--tilted' : ''}`}>
                 <Tableau
                   columns={tableState.tableau}
@@ -1875,7 +1880,7 @@ const selectBiome = (biomeId: string) => {
                 >
                   {Array.from({ length: TABLEAU_COLUMNS }, (_, columnIndex) => {
                     const column = tableState.tableau[columnIndex] ?? [];
-                    const rowCount = Math.max(TABLEAU_ROWS, ...tableState.tableau.map((entry) => entry.length));
+                    const rowCount = Math.max(1, ...tableState.tableau.map((entry) => entry.length));
                     const topPadding = rowCount - column.length;
                     return (
                       <div
@@ -1919,6 +1924,7 @@ const selectBiome = (biomeId: string) => {
                               mobilityTarget={mobilityTarget}
                               muted={!isTopCard}
                               buried={!isTopCard}
+                              lit={cameraTilted}
                               standardRankSize
                               footerLabel={
                                 state.scene === 'exploration' && card.encounter ? (
@@ -1957,8 +1963,7 @@ const selectBiome = (biomeId: string) => {
                                 top: 0,
                                 transform: `translateY(calc(var(--classic-stack-step) * ${stackIndex}))`,
                                 zIndex: stackIndex + 1,
-                                // Depth of field: the farther back the row, the softer and dimmer it reads.
-                                filter: cameraTilted && depth > 0 ? `blur(${Math.min(1.6, depth * 0.45).toFixed(2)}px) brightness(${(1 - Math.min(0.3, depth * 0.07)).toFixed(2)})` : undefined,
+                                ...(cameraTilted ? fieldRig.surface((columnIndex - 3) * 28, 35 - depth * 18) : {}),
                               }}
                             />
                           );
@@ -1969,8 +1974,7 @@ const selectBiome = (biomeId: string) => {
                 </Tableau>
                 </div>
                 </TableauCardArea>
-                <div className="proto-tableau-actions"><button type="button" disabled={Boolean(cardTransport) || state.scene !== 'exploration' || !state.worldActors.some(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} onClick={leaveTableau}>Leave Tableau</button></div>
-                <TableauSolveControls disabled={!state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} guidance={moveGuidance} onGuidanceChange={setMoveGuidance} />
+                </TableauScene>
                 <div className="proto-tableau-status grid gap-[clamp(0.4rem,1vmin,0.65rem)] self-stretch content-center">
                   {state.scene === 'exploration' ? (
                     <div className={`rounded-[calc(var(--classic-radius)*0.55)] border px-2 py-2 text-center font-mono ${
@@ -2104,6 +2108,7 @@ const selectBiome = (biomeId: string) => {
                               }));
                             }
                           }}
+                          style={cameraTilted ? fieldRig.surface((index - (state.foundations.length - 1) / 2) * 55, 90) : undefined}
                           className="proto-foundation-card--exploration grid aspect-[56/74] w-full max-w-[clamp(8rem,18vw,14rem)] place-items-center rounded-[calc(var(--classic-radius)*1.15)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(10,15,16,0.96),rgba(5,8,10,0.98))] text-[clamp(0.58rem,1vmin,0.7rem)] font-mono uppercase tracking-[0.18em] text-white/30"
                         >
                           {actor ? (
@@ -2174,10 +2179,10 @@ const selectBiome = (biomeId: string) => {
                                 // clear of the energy bubble, card count and resources.
                                 <span className="proto-foundation-popup" aria-hidden="true">
                                   <span className="proto-foundation-popup__base" />
-                                  <SpriteStandeeArt sprite={WORLD_ACTOR_SPRITES[actor.id]} lighting={NEUTRAL_STANDEE_LIGHTING} size={FOUNDATION_POPUP_SIZE} />
+                                  <SpriteStandeeArt sprite={WORLD_ACTOR_SPRITES[actor.id]} lighting={fieldRig.standee((index - (state.foundations.length - 1) / 2) * 55, 90, FOUNDATION_POPUP_SIZE)} size={FOUNDATION_POPUP_SIZE} />
                                 </span>
                               ) : null}
-                              <span className="proto-occupied-foundation-face" aria-label={`Foundation top card ${rankLabel(foundation?.card.rank ?? 2)}${foundation?.card.resource ? `, ${FOREST_RESOURCE_LABELS[foundation.card.resource]}` : ''}`}>
+                              <span className={`proto-occupied-foundation-face${cameraTilted ? ' proto-lit-surface' : ''}`} aria-label={`Foundation top card ${rankLabel(foundation?.card.rank ?? 2)}${foundation?.card.resource ? `, ${FOREST_RESOURCE_LABELS[foundation.card.resource]}` : ''}`}>
                                 <span className="proto-occupied-foundation-rank">
                                   <span>{rankLabel(foundation?.card.rank ?? 2)}</span>
                                   {collectedCardCount > 0 && foundation?.card.resource ? <span role="img" aria-label={FOREST_RESOURCE_LABELS[foundation.card.resource]}>{FOREST_RESOURCE_GLYPHS[foundation.card.resource]}</span> : null}
@@ -2196,6 +2201,7 @@ const selectBiome = (biomeId: string) => {
                           ) : (
                             <div className="proto-exploration-actor"><span className="proto-empty-foundation-face">Foundation {index + 1}</span></div>
                           )}
+                          {actor && <FoundationExitButton label={`Exit tableau · ${actor.label}`} disabled={Boolean(cardTransport)} onExit={() => leaveTableau(actor.id)} />}
                           <span className="proto-foundation-count-token" aria-label={`${collectedCardCount} cards collected`} title="Cards collected">
                             <span aria-hidden="true">▤</span><span>{collectedCardCount}</span>
                           </span>
@@ -2288,14 +2294,15 @@ const selectBiome = (biomeId: string) => {
                     </div>
                   ))) }
                 </div>
+                {state.scene === 'exploration' && fieldActors.length > 1 && <FoundationExitButton everyone label="Everyone exit tableau" disabled={Boolean(cardTransport)} onExit={() => leaveTableau()} />}
               </div>
               </>)}
               </div>
               <ProtoMap
                 biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId, sprite: BIOME_TILE_SPRITES[tile.id],
-                  // How explored it is: the tableau's cleared share, or the pond's catches.
+                  // Ponds are fully explored on the first visit; woods progress with their deal.
                   exploration: biomeExploration(tile.flags, tile.terrain === 'water'
-                    ? state.pond.caught / POND_EXPLORED_CATCHES
+                    ? 1
                     : dealClearedShare(tile.dealt ?? 0, tile.tableau.reduce((sum, column) => sum + column.length, 0) + tile.stock.length)) }))}
                 actors={state.worldActors
                   .filter((actor) => actor.location === 'table' || Boolean(actor.biomeId))
@@ -2314,8 +2321,6 @@ const selectBiome = (biomeId: string) => {
                 timeOfDay={tableHours}
                 showLightReadout={lightReadoutVisible}
                 onSelectBiome={selectBiome}
-                questOpen={questOpen}
-                onToggleQuest={() => setQuestOpen((open) => !open)}
                 onDropActorToTable={dropActorToTable}
                 onMoveResourceStack={moveResourceStack}
                 onSplitResourceStack={splitResourceStack}

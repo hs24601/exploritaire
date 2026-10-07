@@ -136,8 +136,6 @@ type ProtoMapProps = {
   showLightReadout?: boolean;
   onMoveLight?: (id: string, position: { x: number; y: number }) => void;
   onSelectBiome: (biomeId: string) => void;
-  questOpen: boolean;
-  onToggleQuest: () => void;
   onDropActorToTable: (actorId: string, point: { x: number; y: number }, arrival?: { biomeId?: string; directBiome?: boolean; foundationIndex?: number }) => void;
   onMoveResourceStack?: (stackId: string, point: { x: number; y: number }, targetId?: string, actorId?: string) => void;
   onSplitResourceStack?: (stackId: string) => void;
@@ -172,8 +170,6 @@ export const ProtoMap = ({
   showLightReadout = false,
   onMoveLight,
   onSelectBiome,
-  questOpen,
-  onToggleQuest,
   onDropActorToTable,
   onMoveResourceStack,
   onSplitResourceStack,
@@ -347,9 +343,7 @@ export const ProtoMap = ({
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   useEffect(() => {
     if (!dragPreview) { setDropTargetId(null); return; }
-    const target = document.elementFromPoint(dragPreview.x, dragPreview.y)?.closest<HTMLElement>('[data-biome-id],[data-biome-popup]');
-    const biomeId = target?.dataset.biomeId ?? target?.dataset.biomePopup ?? null;
-    const tile = biomeId ? biomeTiles.find((entry) => entry.id === biomeId) : null;
+    const tile = biomeAtClientPoint(dragPreview.x, dragPreview.y);
     setDropTargetId(tile && tile.unlocked !== false ? tile.id : null);
   }, [dragPreview, biomeTiles]);
 
@@ -737,10 +731,19 @@ export const ProtoMap = ({
     };
   }, [lightSources, timeOfDay, staged, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale, camera.getLiveCamera, camera.onCameraFrame]);
 
+  const biomeAtClientPoint = (clientX: number, clientY: number) => {
+    const cell = TABLE_GRID.atWorld(worldPointFromClient(clientX, clientY));
+    return biomeTiles.find(tile => {
+      const area = getBiomeWorldFootprint(tile);
+      return cell.column >= area.first.column && cell.column < area.first.column + tile.gridSize.columns
+        && cell.row >= area.first.row && cell.row < area.first.row + tile.gridSize.rows;
+    });
+  };
+
   const resolveDropDestination = (actorId: string, clientX: number, clientY: number) => {
-    // A biome's pop-up scenery counts as the biome for drops.
-    const biomeTarget = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-biome-id],[data-biome-popup]');
-    const biomeId = biomeTarget?.dataset.biomeId ?? biomeTarget?.dataset.biomePopup;
+    // Raised art can cover several neighbouring cells. Actor placement is
+    // decided on the table plane, never by the scenery's screen hit box.
+    const biomeId = biomeAtClientPoint(clientX, clientY)?.id;
     if (biomeId) {
       return {
         point: resolveBiomeActorCell(biomeId) ?? resolveBiomeAdjacentCell(actorId, biomeId) ?? worldPointFromClient(clientX, clientY),
@@ -919,37 +922,30 @@ export const ProtoMap = ({
   return (
     <section className="proto-map relative min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/22 bg-[#050807] font-mono">
       <div
-        className="pointer-events-none absolute bottom-2 left-3 z-50 font-mono text-[clamp(0.72rem,1.5vmin,1rem)] font-black uppercase tracking-[0.12em] text-white/72"
-        aria-live="polite"
+        className="proto-map-footer"
       >
-        Zoom {Math.round((camera.cameraState.scale / CLASSICPLUS_ZOOM_REFERENCE_SCALE) * 100)}%
-      </div>
-      <div className="proto-map-toolbar absolute right-2 top-2 z-50 flex gap-1">
-        <button
-          type="button"
-          className="border border-[#d9a8ff]/42 bg-black/80 px-2 py-1 text-[clamp(0.46rem,0.85vmin,0.58rem)] font-black uppercase tracking-[0.12em] text-[#ecd8ff] hover:bg-[#d9a8ff]/12"
-          onClick={onToggleQuest}
-          aria-label={questOpen ? 'Close expedition quest tracker' : 'Open expedition quest tracker'}
-        >
-          {questOpen ? 'Quest −' : 'Quest +'}
-        </button>
-        <button type="button" className="table-grid-center-button" aria-pressed={tilted} aria-label={tilted ? 'Flat camera view' : 'Tilt camera view'} onClick={() => onTiltedChange?.(!tilted)}>{tilted ? 'Flat' : 'Tilt'}</button>
+        <div className="proto-map-zoom" aria-live="polite">Zoom {Math.round((camera.cameraState.scale / CLASSICPLUS_ZOOM_REFERENCE_SCALE) * 100)}%</div>
+      <div className="proto-map-toolbar" role="group" aria-label="Map camera controls">
+        <button type="button" className="proto-map-camera-button" aria-pressed={tilted} aria-label={tilted ? 'Flat camera view' : 'Tilt camera view'} title={tilted ? 'Flat camera view' : 'Tilt camera view'} onClick={() => onTiltedChange?.(!tilted)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={tilted ? 'M4 4h16v16H4z M4 12h16 M12 4v16' : 'M3 17l5-10h8l5 10z M6 12h12 M12 7v10'} /></svg></button>
         {/* Turn the table 45° (Q / E); a double-click turns it back to 0°. */}
-        <button type="button" className="table-grid-center-button" aria-label="Turn table left" title="Turn table left (Q) · double-click to straighten" onClick={() => camera.spinStep(-45)} onDoubleClick={unspin}>↺</button>
-        <button type="button" className="table-grid-center-button" aria-label="Turn table right" title="Turn table right (E) · double-click to straighten" onClick={() => camera.spinStep(45)} onDoubleClick={unspin}>↻</button>
-        <button type="button" className="table-grid-center-button" onClick={()=>camera.setCameraState(previous=>({...previous,x:-TRUE_CENTER.world.x*previous.scale,y:-TRUE_CENTER.world.y*previous.scale}))}>True Center</button>
+        <button type="button" className="proto-map-camera-button" aria-label="Turn table left" title="Turn table left (Q) · double-click to straighten" onClick={() => camera.spinStep(-45)} onDoubleClick={unspin}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 2 8 M4 4v6h6" /></svg></button>
+        <button type="button" className="proto-map-camera-button" aria-label="Turn table right" title="Turn table right (E) · double-click to straighten" onClick={() => camera.spinStep(45)} onDoubleClick={unspin}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10a8 8 0 1 0-2 8 M20 4v6h-6" /></svg></button>
+        <button type="button" className="proto-map-camera-button" aria-label="True Center" title="True Center · center on table:0,0" onClick={()=>camera.setCameraState(previous=>({...previous,x:-TRUE_CENTER.world.x*previous.scale,y:-TRUE_CENTER.world.y*previous.scale}))}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" /><path d="M12 2v6 M12 16v6 M2 12h6 M16 12h6" /></svg></button>
         <button
           type="button"
-          className="border border-white/35 bg-black px-2 py-1 text-[clamp(0.46rem,0.85vmin,0.58rem)] font-black uppercase tracking-[0.12em] text-white/80 hover:bg-white/10"
+          className="proto-map-camera-button"
+          aria-label="Reset View"
+          title="Reset View · restore the starting camera"
           onClick={resetProtoCamera}
         >
-          Reset View
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 2 8 M4 4v6h6 M9 12l3-3 3 3v5H9z" /></svg>
         </button>
+      </div>
+        <div className="table-grid-reference" data-grid-reference={TABLE_GRID.reference(hoverCell)} aria-label="Table grid coordinate" title={hoverCell.column===0&&hoverCell.row===0 ? 'True Center · table:0,0' : TABLE_GRID.reference(hoverCell)}>{TABLE_GRID.reference(hoverCell)}</div>
       </div>
       {closedNote ? <PinnedToast className="biome-closed-note" title="???" subtitle={closedNote.reason} dismissOnOutside
         anchor={document.querySelector(`[data-biome-id="${closedNote.tileId}"]`)} onClose={() => setClosedNote(null)} /> : null}
       {routeBlocked && <div className="absolute left-3 bottom-12 z-40 rounded border border-[#ffd166] bg-[#17140b] p-2 text-base" role="status">No clear route. Choose an open destination.</div>}
-      <div className="table-grid-reference" data-grid-reference={TABLE_GRID.reference(hoverCell)} aria-label="Table grid coordinate">{hoverCell.column===0&&hoverCell.row===0 ? 'True Center · ' : ''}{TABLE_GRID.reference(hoverCell)}</div>
       <div
         ref={camera.containerRef}
         className={`proto-map-viewport h-full min-h-[18rem] cursor-grab touch-none ${camera.isPanning ? 'cursor-grabbing' : ''}`}

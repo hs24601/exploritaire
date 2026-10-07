@@ -29,6 +29,7 @@ This document records agreed project preferences and behavior from the Proto dev
 - Suppress the browser context menu throughout the Proto document. Development builds provide a custom context menu for future object inspection/actions; production builds suppress the native menu without exposing developer tools. The initial `dev` entry is a disabled placeholder. Dismiss on outside interaction or Escape and keep the menu inside the viewport.
 
 - Dragging table objects, including cards and tokens, must not pan, zoom, or otherwise affect the camera.
+- Picked-up table cards face the camera directly while held or moved, cancelling the table's tilt and camera spin. Releasing or cancelling the pickup restores their alignment with the table plane and their placed angle.
 - Distinguish clicks from drags. An actor click opens details; a completed drag must not open the viewer.
 - Provide keyboard activation and visible focus for interactive objects where appropriate. Dialogs support dismissal and restore focus.
 - Every user input is built for both touch and mouse. Drags, holds, taps and clicks use pointer events (or equivalent handling for each input type), work with a finger on a phone as well as a mouse on desktop, and set `touch-action` so a touch gesture on a game object does not scroll or zoom the page. Automated checks exercise touch as well as mouse for each new interaction.
@@ -48,6 +49,8 @@ This document records agreed project preferences and behavior from the Proto dev
 
 ## Pond and fishing
 
+- Every pond biome becomes fully explored on its first visit by any actor, regardless of catches. Selecting a visited pond uses the Go Fish hook and fishing fight instead of a tableau; recognize ponds by water biome type rather than a specific tile ID.
+
 - The pond is the first water biome: a 1x1 water tile with pixel-art cattails as its pop-up scenery (`public/assets/biomes/pond_reeds.png`, drawn by `tools/make-reeds-sprite.py`), one cell down and left of the Hero's starting cell, so it is in the starting view on desktop and phone portrait and clear of where quest cards land. Reaching it costs no stamina. It has no tableau; with the pond selected, the tableau field shows the pond panel (`PondField`).
 - Fishing has two phases: a Go Fish hook (luck) and a fight (skill). Each fishing event, from cast to the catch landing in the tray, stays under ten seconds.
 - The hook (`rules/fishing.ts`): the pond hides six fish (the water) with four more in the school below; the angler holds four bait cards from a tin of sixteen. The fish keep the card motif: they lie face down in the water as cards (the established 56:74 tableau card shape), each back showing a ripple sized to its band and the band itself (A–4, 5–9, 10–K). Casting is drag and drop: drag a bait card (mouse or touch) into the pond, which lights up as the drop target; a tap or click on bait only explains how to cast; keyboard players press Enter on a bait card, then Enter on the pond. A matching fish bites and is hooked (one fish per cast) and the fight begins with the bait tethered by a fishing line. No match ("Go fish!") loses the bait and costs 1 stamina, and fish one rank away (golf adjacency, A and K wrap) nibble and flip face up. Casting needs that stamina. Every cast spends its bait and draws a fresh one; missed bait ranks dim until the water changes. The line holds ten casts a day, fewer than the tin holds bait; the opening hand always holds two bites; the pond restocks each new day. Fishing needs an actor stationed at the pond.
@@ -66,7 +69,7 @@ This document records agreed project preferences and behavior from the Proto dev
 - Completing an objective does not automatically redeem it. Holding a completed active card for one second grants its reward once and reveals the next quest card.
 - Record accomplishments so moving away or losing a temporary buff does not revert a completed objective awaiting redemption.
 - Completed active quests fly from the tracker onto free table space near their quest location. Hold the landed card for one continuous second to redeem its reward and expose the next tracker card. On redemption, flip and fly the table card to the quest tray discard pile, then remove it from the table. If the tray is stowed, fly toward the approximate off-screen discard location without opening the tray. Redeemed quest data supplies the discard count. The discard pile is a compact card icon with a count in the tray controls row, with the tray toggle aligned at the right. Discard flights target the icon after redemption layout updates, rather than capturing a stale pre-redemption position.
-- The tableau field provides a Leave Tableau button for stationed actors, using the same return/resource-deposit behavior as dragging an actor out.
+- Each occupied actor foundation provides an exit icon using the same return/resource-deposit behavior as dragging that actor out. When multiple actors occupy the selected biome's foundations, an everyone-exit icon sits at the foundation section's lower right and assigns separate free exit cells.
 - The first quest chain uses all seven tableaus and maintains a reliable, completable happy path with sufficient resources and progression opportunities.
 
 ## Established quest component contract
@@ -87,7 +90,7 @@ This document records agreed project preferences and behavior from the Proto dev
 
 ## Solver tools
 
-- Tableau fields expose Auto-Solve and Best Move controls in their lower-left area, with a Divine Intervention checkbox.
+- Tableau fields expose Auto-Solve and Best Move controls at the top of the field, with Divine Intervention and Guidance checkboxes.
 - Normal mode applies the same RPG constraints and costs as human play.
 - Divine Intervention ignores RPG constraints and does not decrement actor values.
 - Tableau-to-foundation card flights use the auto-solve speed for manual plays too. While a manual exploration play is in flight, the tableau already shows where it lands, so the next eligible card can be clicked at once; the flying card lands immediately and the next one takes off. `tools/card-flight-playwright.cjs` checks it.
@@ -123,7 +126,8 @@ This document records agreed project preferences and behavior from the Proto dev
 - Camera input (Eric, 2026-10-07): mouse left-drag grabs pieces and pans from empty table; right-drag pans from anywhere, pieces included, and never opens a context menu (a plain right-click still reaches the dev menu); middle-drag spins; the wheel zooms anywhere over the table, pieces included. Touch: one finger grabs pieces and pans from empty table; two fingers pan and pinch-zoom together; three fingers spin. Pans follow the pointer at any spin, and a press on an actor's square still takes the actor.
 - A standee's base is a true circle lying on the table, so the camera's tilt draws it as the same level ellipse at any spin.
 - The spin lives in the camera's world transform (`rotate(yaw) translate scale`, `useCameraControls`), published as `--camera-yaw`. Everything facing the camera turns against it: standees, edge scenery and ambiance billboards, flat round tokens, the top-down board and name, tile labels and table quest cards stay upright. Lighting is given in the camera's frame (rim light, LightWash and standee shadows), the light canvas redraws turned, shafts take the sun's screen side, and pointer input (drops, hover, grab-on-square, quest-card drags) undoes the spin. Scenery that sits at the back or front of a tile (pop-ups, edge scenery's front row, mist) follows the tile side nearest the camera by quarter turn, and edge props keep clear of the upright label in the camera's own frame. `tools/camera-spin-playwright.cjs` checks it.
-- The camera tilt also applies to the tableau field, like a battle camera seen from behind the player: the tableau leans back from its front row, back rows shrink toward the horizon and soften with a depth-of-field blur, and the front row stays sharp and playable. Flat restores the 2D tableau.
+- In immersive mode, tableau cards stand upright facing the player, like cards in a vertical rack. Preserve full portrait card surfaces and the existing vertical peek spacing: only each buried card's value/icon row shows above the card in front. Keep ranks sharp and readable. Flat retains the tabletop presentation.
+- Immersive tableau scenery reuses the selected biome's pixel prop theme behind the cards, with layered parallax, light shafts, mist and motes. Cards and foundation props sample the shared ambient and local-light engine; decoration never intercepts input. Reduced motion removes movement and the low FX tier drops particles.
 - The camera tilt also leans each foundation card back, and an actor with sprite art pops up from the top edge of its actor card, standing above the card so it never covers the energy bubble, card count or resource summary. The foundation makes room above for it (less on short screens).
 
 ## Temporary scaffolding
@@ -134,6 +138,7 @@ These are current implementation defaults for iteration, not permanent game-desi
 - Actor detail art is a temporary pixel-style portrait.
 - DCV Stats, Equipment, and Buffs trays are placeholders awaiting further design.
 - Auto-Solve and Best Move initially serve developer testing.
+- A generic overhead fixture temporarily lights the immersive tableau field. Its light is local to the field's presentation and does not change the world map's exploration light or gameplay.
 
 ## Validation and delivery
 
@@ -146,7 +151,7 @@ These are current implementation defaults for iteration, not permanent game-desi
 - After completing a piece of work, leave it ready to playtest immediately: get the changes onto the user's PC checkout, make sure Vite is running there with the new code, verify the Proto URL loads, and report the local URL (plus the tailnet phone URL when available).
 - Report what changed, what was actually checked, and material remaining limitations. Avoid treating a successful bundle build as proof of correct visual appearance.
 
-- Quest tracking is a physical recessed tray. Stow moves the entire tray off-screen and releases its layout space to the table; the table Quest control brings it back. Do not merely hide cards inside a still-visible tray. Stowing preserves progression and the card queue. Only an accomplished quest can leave the tray and fly to the table; never use the next queued card as a flight source. After departure, the next objective is visible in the tray but remains there until complete. Pending reward redemption remains explicit.
+- Quest tracking is a physical recessed tray. Stow moves the entire tray off-screen and releases its layout space to the table; the quest tray’s viewport-edge restore handle brings it back. Do not merely hide cards inside a still-visible tray. Stowing preserves progression and the card queue. Only an accomplished quest can leave the tray and fly to the table; never use the next queued card as a flight source. After departure, the next objective is visible in the tray but remains there until complete. Pending reward redemption remains explicit.
 
 - A stowed tray leaves a small handle on its viewport edge (quests right, supplies left): the tray's drawn emblem (a sealed quest card, a supply sack) above the same leather pull tab used to stow it, with no text label. Restoring from mobile opens that tray's panel.
 
@@ -162,6 +167,7 @@ These are current implementation defaults for iteration, not permanent game-desi
 - Table zoom preserves the world point at the viewport center, including after panning. Wheel and pinch calculations must use the same centered coordinate origin as rendered table content.
 
 - Actor destinations snap to a table grid square. Only the destination snaps: travel follows continuous diagonal segments with distance-based speed and obstacle avoidance. Biome entry and building staffing retain their designated positions. Continuous pathfinding routes around biome and building footprints with actor clearance; only intentional destination entry and departure from an occupied structure may cross that structure boundary. An unreachable destination must never produce a route through a solid object.
+- Actor drop targets and biome highlights use the table grid square under the pointer, including in immersive mode. Raised biome scenery must not capture actor drops onto neighbouring squares.
 
 - Reward-hold diagnostics: opening the page with `?holdlog` shows a timeline of each hold (press, start, cancel and its cause, completion, redeem outcome, worst frame). Without the flag nothing is recorded or shown, so builds carry no dev UI.
 - Completed table quest cards support pointer/touch dragging without camera movement. First interaction switches them to the shared table-card size (96 world units wide, locked 63:88 ratio). Drops are unsnapped, avoid biome/building footprints, and may settle with a small tilt. Reward holds show progress on the card, cancel on movement/release, support keyboard holds, and require one uninterrupted second before rewards and discard flight.
@@ -169,6 +175,8 @@ These are current implementation defaults for iteration, not permanent game-desi
 - For now, Hero details uses the shared default table-card screen size (96 world units × default 1.7 scale = 163.2 CSS px wide, 63:88 ratio). Its floating presentation remains independent of camera zoom. Compact tray icons and a contained descriptor preview preserve the text-size floor; full descriptor and tray labels remain available through accessible text and hover titles.
 
 ## Grid coordinates
+
+- Map camera controls live as styled icon buttons in the bottom row alongside zoom and the pointer grid reference. The map has no separate Quest button; use the quest tray’s stow/restore controls.
 
 - Shared `GridCoordinates` defines a stable grid ID, configurable cell size, fixed world origin, signed column/row indices, and named landmarks. Camera pan/zoom and responsive layout never alter cell identity.
 - The table uses 48 world units per cell. `True Center` is cell `(0, 0)`, absolute reference `table:0,0`, and world center `(0, 0)`. Positive columns point right/east; positive rows point down/south. Cell boundaries are half a cell from their centers; boundary ties select the cell on the right/bottom.

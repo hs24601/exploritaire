@@ -1734,7 +1734,7 @@ html.drag-perf-mode .target-swirl-sparkles {
    row like a field seen from behind the player; back rows shrink toward the
    horizon and soften (per-card blur set inline). */
 .proto-tableau-stage { transform-origin: 50% 100%; transition: transform 0.35s ease; }
-.proto-tableau-stage--tilted { transform: perspective(calc(var(--classic-stack-height) * 2.6)) rotateX(30deg); }
+.proto-tableau-stage--tilted { transform: none; }
 @media (prefers-reduced-motion: reduce) { .proto-tableau-stage { transition: none; } }
 .proto-game-root .proto-solve-controls,
 .proto-game-root .proto-solve-controls button { font-size: 16px; }
@@ -1784,10 +1784,19 @@ html.drag-perf-mode .target-swirl-sparkles {
   .proto-game-rail { padding: 2px 0; }
 }
 
-.proto-map-toolbar { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 16px); }
-.proto-map-toolbar button { font-size: 16px; padding: 4px 8px; white-space: nowrap; }
+/* Camera controls share one dock with the zoom and absolute grid reference. */
+.proto-map-footer { position: absolute; left: 12px; right: 12px; bottom: 8px; z-index: 50; display: flex; align-items: center; gap: 12px; pointer-events: none; }
+.proto-map-zoom, .proto-map-footer .table-grid-reference { flex: 1 1 0; white-space: nowrap; font: 16px 'Classic Pixel',monospace; }
+.proto-map-zoom { color: #e2eae5; }
+.proto-map-toolbar { display: flex; flex: 0 0 auto; gap: 5px; pointer-events: auto; }
+.proto-map-camera-button { display: grid; place-items: center; width: 36px; height: 36px; padding: 6px; border: 1px solid #a08a64; border-radius: 3px; color: #ffe2ae; background: #07110ef2; box-shadow: inset 0 1px #ffe2ae26, 0 3px 0 #020504; touch-action: manipulation; }
+.proto-map-camera-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: square; stroke-linejoin: miter; }
+.proto-map-camera-button:hover { background: #25352b; border-color: #ffe2ae; }
+.proto-map-camera-button[aria-pressed="true"] { background: #3d3420; border-color: #ffd166; color: #ffd166; }
+.proto-map-camera-button:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 3px; }
+.proto-map-camera-button:active { transform: translateY(2px); box-shadow: inset 0 1px #ffe2ae26, 0 1px 0 #020504; }
 
-.proto-main-tableau--solver { grid-template-rows: minmax(0,1fr) auto auto; }
+.proto-main-tableau--solver { grid-template-rows: auto minmax(0,1fr); }
 .proto-tableau-actions button { padding: 5px 12px; border: 2px solid #9c8c62; background: #17251f; color: #fff0d0; font: 16px 'Classic Pixel',monospace; }
 .proto-tableau-actions button:disabled { opacity: .4; }
 .table-quest-card { position: absolute; width: 160px; height: calc(160px * 88 / 63); transform: translate(-50%,-50%); z-index: 15; border-radius: 8px; }
@@ -1890,8 +1899,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .details-card-viewer--floating .details-card__tray { display: flex; justify-content: center; gap: 3px; padding: 2px; font-size: 16px; }
 .details-card-viewer--floating .details-card__close { font-size: 16px; padding: 2px 6px; }
 .table-grid-origin { position: absolute; transform: translate(-50%,-50%); display: grid; place-items: center; border: 1px dashed #d4b97b66; color: #d4b97b66; font: 16px 'Classic Pixel',monospace; pointer-events: none; }
-.table-grid-reference { position: absolute; right: 12px; bottom: 8px; z-index: 40; background: #07110ed9; color: #ffe2ae; padding: 3px 6px; font: 16px 'Classic Pixel',monospace; pointer-events: none; }
-.table-grid-center-button { border: 1px solid #a08a64; background: #07110e; padding: 3px 6px; font: 16px 'Classic Pixel',monospace; color: #ffe2ae; }
+.table-grid-reference { color: #ffe2ae; text-align: right; pointer-events: auto; }
 /* Developer tools live in screen space, above camera-transformed game objects. */
 .dev-context-menu {
   position: fixed;
@@ -2848,3 +2856,46 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-card-rank { position: relative; z-index: 2; }
 .proto-card--buried .proto-card-rank { color: #c6d3e4a6; }
 @media (prefers-reduced-motion: reduce) { .proto-card-veil { transition: none; } }
+/* Upright tableau rack: full portrait faces with the same rank-row peek. */
+.proto-tableau-scene { position: relative; min-width: 0; min-height: 0; height: 100%; isolation: isolate; }
+.proto-tableau-scene > .proto-tableau-card-area { position: relative; z-index: 2; }
+.proto-tableau-scene--immersive { background: radial-gradient(ellipse at 50% 15%, #ffe1a014, transparent 65%), linear-gradient(var(--scene-sky), #0c201bcc); border-radius: 4px; }
+.proto-main-tableau > .proto-solve-controls { margin: 0; padding: 0 0 8px; border-top: 0; border-bottom: 1px solid #8ef2d433; }
+.proto-tableau-scenery { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.proto-tableau-scenery__ground { position: absolute; inset: 45% 0 0; background: radial-gradient(ellipse at center, #5272452a, transparent 65%), linear-gradient(transparent, #071713); }
+.proto-tableau-scenery__layer { position: absolute; inset: 0; }
+.proto-tableau-scenery__layer--0 { opacity: .35; transform: translate(calc(var(--scene-pan-x, 0px) * .4), calc(var(--scene-pan-y, 0px) * .4)) scale(.8); }
+.proto-tableau-scenery__layer--1 { opacity: .65; transform: translate(var(--scene-pan-x, 0px), var(--scene-pan-y, 0px)); }
+.proto-tableau-scenery__layer--2 { opacity: .8; transform: translate(calc(var(--scene-pan-x, 0px) * 1.6), calc(var(--scene-pan-y, 0px) * 1.6)); }
+.proto-tableau-scenery__prop { position: absolute; display: block; image-rendering: pixelated; }
+.proto-tableau-scenery__rays { position: absolute; inset: -15% -25%; background: conic-gradient(from 140deg at 50% 0%, transparent 0deg 7deg, #ffe0a014 8deg 13deg, transparent 14deg 22deg, var(--scene-ray) 23deg 29deg, transparent 30deg 46deg, #ffe0a014 47deg 53deg, transparent 54deg); transform: translateX(calc(var(--scene-pan-x, 0px) * -.5)); }
+.proto-tableau-scenery__mist { position: absolute; inset: 45% -10% 10%; background: radial-gradient(ellipse, #b7dcd81a, transparent 65%); animation: tableau-mist 12s ease-in-out infinite alternate; }
+.proto-tableau-scenery__motes i { position: absolute; width: 2px; height: 2px; background: #ffe0a0; box-shadow: 0 0 5px #ffe0a0; opacity: .4; animation: tableau-mote 8s ease-in-out infinite; }
+.proto-tableau-fixture { position: absolute; top: 6px; left: 50%; width: 52px; height: 8px; transform: translateX(-50%); border: 2px solid #5e5040; border-radius: 2px; background: #fff3c4; box-shadow: 0 0 8px #ffe0a0b0, 0 8px 25px #ffe0a033; z-index: 1; pointer-events: none; }
+.proto-tableau-fixture::before { content: ''; position: absolute; width: 2px; height: 8px; bottom: 100%; left: 50%; background: #8a795a; }
+.proto-lit-surface { filter: brightness(var(--surface-brightness, 1)); }
+.proto-lit-surface::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(var(--surface-angle, 135deg), var(--surface-light, transparent), transparent 70%); pointer-events: none; }
+.proto-main-foundations { position: relative; }
+.proto-game-root .proto-foundation-board--exploration .proto-foundation-card--exploration { grid-template-columns: auto auto auto; grid-template-areas: 'energy actor exit' 'count actor exit'; row-gap: 5px; }
+.proto-foundation-exit { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #a08a64; border-radius: 3px; background: #0b1916; color: #ffe2ae; touch-action: manipulation; }
+.proto-foundation-card--exploration > .proto-foundation-exit { grid-area: exit; align-self: end; }
+.proto-foundation-exit svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: miter; }
+.proto-foundation-exit:hover:not(:disabled) { background: #344337; }
+.proto-foundation-exit:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 2px; }
+.proto-foundation-exit:disabled { opacity: .4; }
+.proto-foundation-exit--everyone { justify-self: end; margin-top: 6px; }
+@keyframes tableau-mist { to { transform: translateX(4%); opacity: .5; } }
+@keyframes tableau-mote { 50% { transform: translate(6px, -12px); opacity: .1; } }
+@media (prefers-reduced-motion: reduce) {
+  .proto-tableau-scenery__mist, .proto-tableau-scenery__motes i { animation: none; }
+  .proto-tableau-scenery__layer, .proto-tableau-scenery__rays { transform: none; }
+}
+.proto-tableau-stage .proto-card-rank { font-size: max(16px, calc(var(--classic-card-w) * .34)); }
+.proto-tableau-field .proto-table-summary { font-size: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); letter-spacing: normal; }
+.proto-tableau-field .proto-occupied-foundation-owner, .proto-tableau-field .proto-empty-foundation-face { font-size: 16px; letter-spacing: normal; }
+.proto-occupied-foundation-face.proto-lit-surface { position: relative; }
+/* The rank/icon row must fit the exposed edge even in the narrow desktop rack. */
+.proto-tableau-stage .playing-card { padding-inline: 1px; padding-block: 0; }
+.proto-tableau-stage .playing-card > div { gap: 0; transform: translateY(-2px); }
+.proto-tableau-stage .playing-card > div > div:last-child:not(.proto-card-rank) { margin-top: 0; font-size: max(16px, calc(var(--classic-card-w) * .3)); }
+.proto-tableau-stage .proto-card-rank { font-family: 'Classic Pixel', monospace; }

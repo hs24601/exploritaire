@@ -56,6 +56,7 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
   const [tableState, setTableState] = useState(Boolean(placement.tableState));
   const cardWidth = tableState ? TABLE_CARD_WIDTH : 120;
   const [tilt, setTilt] = useState(placement.tilt ?? 0);
+  const [pickedUp, setPickedUp] = useState(false);
   const drag = useRef<{pointerId:number;x:number;y:number;origin:{x:number;y:number};moved:boolean;angle:number} | null>(null);
   // Where a drag that started at (x,y) has moved the card to, in world units.
   const draggedTo = (current:{x:number;y:number;origin:{x:number;y:number}}, clientX:number, clientY:number) => {
@@ -101,16 +102,20 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     animation.onfinish = () => { ghost.remove(); setLanded(true); };
     return () => { animation.cancel(); ghost.remove(); };
   }, [placement.questIndex]);
-  return <div ref={ref} className="table-quest-card" data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState}
+  return <div ref={ref} className="table-quest-card" data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState} data-picked-up={pickedUp || undefined}
     style={{ left: `calc(50% + ${displayPosition.x}px)`, top: `calc(50% + ${displayPosition.y}px)`,
       width: cardWidth, height: cardWidth / CARD_RATIO,
-      // Its small settle tilt, turned against a spun camera so the card reads upright.
-      transform: `translate(-50%,-50%) rotate(calc(${tilt}deg - var(--camera-yaw, 0deg)))`, touchAction: 'none', cursor: drag.current?.moved ? 'grabbing' : 'grab',
+      // Undo spin before table tilt while held, so the whole face is parallel
+      // to the camera, lifted clear of the plane so it cannot cut through the
+      // grid. Released cards lie on the table with their settle angle.
+      transform: pickedUp
+        ? 'translate(-50%,-50%) rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt, 0deg))) translateZ(96px)'
+        : `translate(-50%,-50%) rotate(calc(${tilt}deg - var(--camera-yaw, 0deg)))`, touchAction: 'none', cursor: pickedUp ? 'grabbing' : 'grab',
       opacity: landed ? 1 : 0, boxShadow: tableObjectShadow(timeOfDay, displayPosition, 8, lights) }}
     onFocus={()=>setTableState(true)}
     onPointerDown={event => {
       event.stopPropagation(); if(!landed||redeemed||drag.current||event.button!==0)logHold(`card ${placement.questIndex} ignored the press: ${!landed?'still landing':redeemed?'already redeemed':drag.current?'already pressed':'not the main button'}`); if(event.button!==0||!landed||redeemed||drag.current)return;
-      event.preventDefault(); setTableState(true);
+      event.preventDefault(); setTableState(true); setPickedUp(true);
       drag.current={pointerId:event.pointerId,x:event.clientX,y:event.clientY,origin:{...displayPosition},moved:false,angle:tilt};
       event.currentTarget.setPointerCapture(event.pointerId); hold.start(event.pointerType);
     }}
@@ -122,14 +127,14 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     }}
     onPointerUp={event=>{
       const current=drag.current;if(!current||current.pointerId!==event.pointerId)return;
-      hold.cancel('released');drag.current=null;
+      hold.cancel('released');drag.current=null;setPickedUp(false);
       const angle=current.moved ? (Math.random()*8-4) : current.angle;
       const requested=current.moved ? draggedTo(current,event.clientX,event.clientY) : current.origin;
       const settled=settleTableCard(requested,cardWidth,angle,solids) ?? current.origin;
       setDisplayPosition(settled);setTilt(angle);onMove(settled,angle);
     }}
-    onPointerCancel={()=>{hold.cancel('pointercancel');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;}}
-    onLostPointerCapture={()=>{hold.cancel('lost pointer capture');drag.current=null;}}>
+    onPointerCancel={()=>{hold.cancel('pointercancel');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;setPickedUp(false);}}
+    onLostPointerCapture={()=>{hold.cancel('lost pointer capture');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;setPickedUp(false);}}>
     <QuestCard title={title} text={text} staminaReward={staminaReward} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} />
   </div>;
 }
