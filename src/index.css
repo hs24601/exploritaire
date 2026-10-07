@@ -2421,7 +2421,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-atmosphere { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
 /* The table's centre, moved by the same per-frame camera transform as the pieces. */
 .proto-atmosphere__world { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; transform: var(--camera-transform, none); transform-style: preserve-3d; }
-.proto-atmosphere__billboard { position: absolute; width: 0; height: 0; transform: rotateX(calc(-1 * var(--table-tilt))); transform-origin: 0 0; transform-style: preserve-3d; }
+.proto-atmosphere__billboard { position: absolute; width: 0; height: 0; transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt))); transform-origin: 0 0; transform-style: preserve-3d; }
 .proto-halo { position: absolute; border-radius: 50%; animation: proto-halo-flicker 2s ease-in-out infinite alternate; will-change: transform, opacity; }
 @keyframes proto-halo-flicker { 0% { transform: scale(0.94); } 40% { transform: scale(1.03); } 70% { transform: scale(0.98); } 100% { transform: scale(1.05); } }
 .proto-firefly { position: absolute; left: 0; border-radius: 50%; background: #f4ff9c; box-shadow: 0 0 3px 1px #e6ff6acc, 0 0 9px 3px #b8f04a55; animation-name: proto-firefly-drift, proto-firefly-blink; animation-timing-function: ease-in-out, ease-in-out; animation-iteration-count: infinite, infinite; animation-direction: alternate, alternate; }
@@ -2809,3 +2809,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .game-tooltip--below::after { top: auto; bottom: 100%; margin: 0 0 -4px -5px; box-shadow: -2px -2px 0 0 var(--tray-brass-dark, #7c5c24); }
 @keyframes game-tooltip-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .game-tooltip { animation: none; } }
+/* Spun camera: text and boards lying on the table turn against the camera's
+   spin (--camera-yaw, set by useCameraControls) so they stay upright and
+   readable from the player's seat. */
+.proto-face-camera { rotate: calc(-1 * var(--camera-yaw, 0deg)); }

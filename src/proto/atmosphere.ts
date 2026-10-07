@@ -101,7 +101,12 @@ export const scatter = (seed: string, count: number, area: { x: number; y: numbe
 
 /** Screen angle of the sun's shafts, degrees from vertical: they slant away
  * from the side of the table the sun (or moon) is on. */
-export const rayAngle = (frame: TableLightFrame) => Math.max(-38, Math.min(38, -frame.source.x / 480 * 34));
+export const rayAngle = (frame: TableLightFrame, yaw = 0) => {
+  // The sun's side of the screen turns with a spun camera.
+  const radians = (yaw * Math.PI) / 180;
+  const screenX = frame.source.x * Math.cos(radians) - frame.source.y * Math.sin(radians);
+  return Math.max(-38, Math.min(38, -screenX / 480 * 34));
+};
 
 export type ParticleKind = 'firefly' | 'fizz' | 'mist' | 'mote';
 
@@ -151,22 +156,35 @@ type Area = { x: number; y: number; width: number; height: number };
 export const particleStrength = (kind: ParticleKind, mood: ReturnType<typeof ambianceFor>) =>
   kind === 'firefly' ? mood.fireflies : kind === 'mote' ? mood.motes : kind === 'mist' ? mood.mist : 1;
 
-/** A biome emitter's patch for a tile footprint. */
-export const emitterArea = (emitter: BiomeEmitter, tile: Area): Area => {
+/** A biome emitter's patch for a tile footprint. `quarter` (0-3, see
+ * viewQuarter) is which tile side faces a spun camera: the patch's depth
+ * axis and its back-or-front offset turn with it. */
+export const emitterArea = (emitter: BiomeEmitter, tile: Area, quarter = 0): Area => {
   const [sx, sy] = emitter.area.scale ?? [1, 1];
   const [px, py] = emitter.area.pad ?? [0, 0];
-  return { x: tile.x, y: tile.y + (emitter.area.offset ?? 0) * tile.height, width: tile.width * sx + px, height: tile.height * sy + py };
+  const sideways = quarter % 2 === 1;
+  const depth = sideways ? tile.width : tile.height;
+  const shift = (emitter.area.offset ?? 0) * depth;
+  // Toward the camera is +y at quarter 0, +x at 1, -y at 2, -x at 3.
+  const toward = [{ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: -1, y: 0 }][quarter];
+  const across = sideways ? tile.height : tile.width;
+  const width = across * sx + px, height = depth * sy + py;
+  return { x: tile.x + toward.x * shift, y: tile.y + toward.y * shift, width: sideways ? height : width, height: sideways ? width : height };
 };
 
 /** The world cells, `cell` table px square, that the camera can see, plus a
  * one-cell margin so particles drifting in from the edge already exist. The
  * far part of a tilted view is capped so a low camera doesn't fill the
  * horizon with cells nobody can make out. */
-export const visibleCells = (view: { width: number; height: number }, camera: { x: number; y: number; scale: number }, tilt: TableTilt | null, cell: number): (Area & { key: string })[] => {
+export const visibleCells = (view: { width: number; height: number }, camera: { x: number; y: number; scale: number; yaw?: number }, tilt: TableTilt | null, cell: number): (Area & { key: string })[] => {
+  const radians = (-(camera.yaw ?? 0) * Math.PI) / 180;
+  const c = Math.cos(radians), s = Math.sin(radians);
   const corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([cx, cy]) => {
     const screen = { x: (cx * view.width) / 2, y: (cy * view.height) / 2 };
     const plane = tilt ? unprojectTilt(screen, tilt) : screen;
-    return { x: plane.x, y: Math.max(plane.y, -view.height * 2.5) };
+    const capped = { x: plane.x, y: Math.max(plane.y, -view.height * 2.5) };
+    // Into the spun frame the camera's x and y are measured in.
+    return { x: capped.x * c - capped.y * s, y: capped.x * s + capped.y * c };
   });
   const toWorld = (v: number, offset: number) => (v - offset) / camera.scale;
   const xs = corners.map((c) => toWorld(c.x, camera.x));
@@ -181,13 +199,16 @@ export const visibleCells = (view: { width: number; height: number }, camera: { 
 /** Sun or moon shafts anchored along the world's x axis, one slot per
  * `period` table px, for the slots in view (plus `margin` screen px either
  * side for the slant). Screen px from the viewport centre. */
-export const shaftSlots = (viewWidth: number, margin: number, camera: { x: number; scale: number }, period: number) => {
-  const from = Math.floor((-viewWidth / 2 - margin - camera.x) / (camera.scale * period));
-  const to = Math.ceil((viewWidth / 2 + margin - camera.x) / (camera.scale * period));
+export const shaftSlots = (viewWidth: number, margin: number, camera: { x: number; y?: number; scale: number; yaw?: number }, period: number) => {
+  // Spun, the slots run along the screen's x through the table's origin.
+  const radians = ((camera.yaw ?? 0) * Math.PI) / 180;
+  const sx = camera.x * Math.cos(radians) - (camera.y ?? 0) * Math.sin(radians);
+  const from = Math.floor((-viewWidth / 2 - margin - sx) / (camera.scale * period));
+  const to = Math.ceil((viewWidth / 2 + margin - sx) / (camera.scale * period));
   return Array.from({ length: Math.max(0, to - from + 1) }, (_, index) => {
     const slot = from + index;
     const next = seeded(`shaft-${slot}`);
     const worldX = (slot + 0.2 + next() * 0.6) * period;
-    return { slot, next, worldX, x: camera.x + worldX * camera.scale };
+    return { slot, next, worldX, x: sx + worldX * camera.scale };
   });
 };

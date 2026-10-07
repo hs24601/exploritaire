@@ -6,8 +6,9 @@ type BoardObjectLabelProps = {
   maxFontSize?: number;
   className?: string;
   /** Reports where the fitted text's ink sits, in untransformed layout px
-   * from the border box of the label's positioned parent (the board piece). */
-  onTextBox?: (box: { left: number; top: number; width: number; height: number }) => void;
+   * from the border box of the label's positioned parent (the board piece),
+   * and the label's centre (`pivot`), which it turns about to face a spun camera. */
+  onTextBox?: (box: { left: number; top: number; width: number; height: number; pivot: { x: number; y: number } }) => void;
 };
 
 /** Fits in local board coordinates, so camera zoom never changes the copy.
@@ -43,13 +44,19 @@ export function BoardObjectLabel({ text, minFontSize = 12, maxFontSize = 18, cla
       // Centred text: the ink is as wide as its widest line, centred in the
       // text block, and as tall as the block (clipped to the frame).
       const ink = inkRef.current;
-      const parent = content.offsetParent as HTMLElement | null;
+      // Measured in the board piece's box. A frame turned to face a spun
+      // camera becomes the text's offsetParent, so offsets go through it.
+      const piece = frame.offsetParent as HTMLElement | null;
       if (ink && onTextBoxRef.current) {
         const width = Math.min(ink.offsetWidth, content.clientWidth);
-        const top = Math.max(content.offsetTop, frame.offsetTop);
-        const bottom = Math.min(content.offsetTop + content.offsetHeight, frame.offsetTop + frame.clientHeight);
-        const border = parent ? { x: parent.clientLeft, y: parent.clientTop } : { x: 0, y: 0 };
-        onTextBoxRef.current({ left: border.x + content.offsetLeft + (content.clientWidth - width) / 2, top: border.y + top, width, height: bottom - top });
+        const viaFrame = content.offsetParent === frame;
+        const textX = viaFrame ? frame.offsetLeft + frame.clientLeft + content.offsetLeft : content.offsetLeft;
+        const textY = viaFrame ? frame.offsetTop + frame.clientTop + content.offsetTop : content.offsetTop;
+        const top = Math.max(textY, frame.offsetTop);
+        const bottom = Math.min(textY + content.offsetHeight, frame.offsetTop + frame.clientHeight);
+        const border = piece ? { x: piece.clientLeft, y: piece.clientTop } : { x: 0, y: 0 };
+        onTextBoxRef.current({ left: border.x + textX + (content.clientWidth - width) / 2, top: border.y + top, width, height: bottom - top,
+          pivot: { x: border.x + frame.offsetLeft + frame.offsetWidth / 2, y: border.y + frame.offsetTop + frame.offsetHeight / 2 } });
       }
     };
     fit();

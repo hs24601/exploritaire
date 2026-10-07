@@ -104,7 +104,8 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
   return <div ref={ref} className="table-quest-card" data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState}
     style={{ left: `calc(50% + ${displayPosition.x}px)`, top: `calc(50% + ${displayPosition.y}px)`,
       width: cardWidth, height: cardWidth / CARD_RATIO,
-      transform: `translate(-50%,-50%) rotate(${tilt}deg)`, touchAction: 'none', cursor: drag.current?.moved ? 'grabbing' : 'grab',
+      // Its small settle tilt, turned against a spun camera so the card reads upright.
+      transform: `translate(-50%,-50%) rotate(calc(${tilt}deg - var(--camera-yaw, 0deg)))`, touchAction: 'none', cursor: drag.current?.moved ? 'grabbing' : 'grab',
       opacity: landed ? 1 : 0, boxShadow: tableObjectShadow(timeOfDay, displayPosition, 8, lights) }}
     onFocus={()=>setTableState(true)}
     onPointerDown={event => {

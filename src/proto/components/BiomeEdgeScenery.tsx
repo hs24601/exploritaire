@@ -1,5 +1,5 @@
 import { Fragment, type CSSProperties } from 'react';
-import { layoutEdgeScenery, type EdgeScenery, type LabelBox } from '../biomeEdgeScenery';
+import { layoutEdgeSceneryForView, type EdgeScenery, type LabelBox } from '../biomeEdgeScenery';
 import { standeeLighting, type TableLight } from '../protoLighting';
 import type { FxQuality } from '../atmosphere';
 import { LightWash, Oversample, SpriteStandeeShadows } from './SpriteStandee';
@@ -10,7 +10,7 @@ import { LightWash, Oversample, SpriteStandeeShadows } from './SpriteStandee';
  * it stands: shaded by the light reaching it, washed in the colour of the
  * nearest lamp on the side facing it and, on the high tier, casting its own
  * shadows away from the sun or moon and each lamp. */
-export function BiomeEdgeScenery({ tileId, centre, size, scenery, label, tiltDeg, hours, lights, quality, standee, oversample = 1 }: {
+export function BiomeEdgeScenery({ tileId, centre, size, scenery, label, tiltDeg, yaw = 0, hours, lights, quality, standee, oversample = 1 }: {
   tileId: string;
   /** The tile's centre in table px. */
   centre: { x: number; y: number };
@@ -18,6 +18,8 @@ export function BiomeEdgeScenery({ tileId, centre, size, scenery, label, tiltDeg
   scenery: EdgeScenery;
   label: LabelBox | null;
   tiltDeg: number;
+  /** Camera spin: props line the tile sides nearest the camera and face it. */
+  yaw?: number;
   hours: number;
   lights: readonly TableLight[];
   quality: FxQuality;
@@ -26,12 +28,12 @@ export function BiomeEdgeScenery({ tileId, centre, size, scenery, label, tiltDeg
   /** Layout scale the standee transform shrinks back down (STANDEE_OVERSAMPLE). */
   oversample?: number;
 }) {
-  return <>{layoutEdgeScenery(size, scenery, label, tiltDeg).map((prop) => {
+  return <>{layoutEdgeSceneryForView(size, scenery, label, tiltDeg, yaw).map((prop) => {
     const foot = { x: centre.x + prop.x, y: centre.y + prop.y };
-    const lit = standeeLighting(hours, foot, prop.height, lights);
+    const lit = standeeLighting(hours, foot, prop.height, lights, yaw);
     const filter = `brightness(${lit.brightness.toFixed(3)}) sepia(${(lit.warmth * 0.45).toFixed(3)})`;
     return <Fragment key={prop.id}>
-      {quality === 'high' ? <SpriteStandeeShadows sprite={prop.src} position={foot} shadows={lit.shadows} size={prop.height} owner="biome-edge" /> : null}
+      {quality === 'high' ? <SpriteStandeeShadows sprite={prop.src} position={foot} shadows={lit.shadows} size={prop.height} owner="biome-edge" yaw={yaw} /> : null}
       <div
         aria-hidden="true"
         className="proto-biome-edge"

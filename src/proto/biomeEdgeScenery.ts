@@ -10,8 +10,9 @@
 /** Pixel size of a scenery sprite's trimmed art. */
 export type EdgeSprite = { src: string; width: number; height: number };
 export type EdgeScenery = { side: EdgeSprite; front: EdgeSprite };
-/** The label's text box on the tile, in table px from the tile's centre. */
-export type LabelBox = { left: number; top: number; right: number; bottom: number };
+/** The label's text box on the tile, in table px from the tile's centre, and
+ * the point the label turns about to stay upright for a spun camera. */
+export type LabelBox = { left: number; top: number; right: number; bottom: number; pivot?: { x: number; y: number } };
 export type EdgeProp = {
   id: string;
   edge: 'left' | 'right' | 'front';
@@ -80,13 +81,15 @@ export function layoutEdgeScenery(
   scenery: EdgeScenery,
   label: LabelBox | null,
   tiltDeg: number,
+  /** Keeps a prop clear of the label; a spun camera supplies its own. */
+  keepClear?: (prop: EdgeProp, maxStep: number) => EdgeProp | null,
 ): EdgeProp[] {
   const halfW = tile.width / 2;
   const halfH = tile.height / 2;
   const guard: LabelBox = label ?? { left: -halfW, right: halfW, top: -halfH, bottom: halfH };
   const props: EdgeProp[] = [];
   const place = (prop: EdgeProp, maxStep: number) => {
-    const placed = keepClearOfLabel(prop, guard, tiltDeg, maxStep);
+    const placed = keepClear ? keepClear(prop, maxStep) : keepClearOfLabel(prop, guard, tiltDeg, maxStep);
     if (placed) props.push(placed);
   };
 
@@ -114,4 +117,59 @@ export function layoutEdgeScenery(
     place({ id: `front-${index}`, edge: 'front', src: scenery.front.src, x, y: halfH - 1, width, height, flip: index % 2 === 1 }, corner ? width / 2 : 0);
   }
   return props;
+}
+
+/** Rotates a table point about the tile's centre by `deg`, clockwise on screen. */
+export const turnPoint = (point: { x: number; y: number }, deg: number) => {
+  const radians = (deg * Math.PI) / 180;
+  const c = Math.cos(radians), s = Math.sin(radians);
+  // Exact for quarter turns, so props land on whole table px.
+  const round = (value: number) => (Math.abs(value - Math.round(value)) < 1e-9 ? Math.round(value) : value);
+  return { x: round(point.x * c - point.y * s), y: round(point.x * s + point.y * c) };
+};
+
+/** The camera's spin to the nearest quarter turn: `quarter` (0-3) is which
+ * tile side faces the camera (0 the +y side, 1 the +x side, 2 -y, 3 -x), and
+ * `residual` (-45..45 degrees) is the rest of the spin. */
+export const viewQuarter = (yawDeg: number) => {
+  const turns = Math.round(yawDeg / 90);
+  return { quarter: ((turns % 4) + 4) % 4, residual: yawDeg - turns * 90 };
+};
+
+/** Lays out a tile's edge scenery for a camera spun by `yawDeg`: the side and
+ * front props line the tile's sides nearest the camera, by quarter turn.
+ * Props keep clear of the label in the camera's own frame, where props face
+ * the camera and the label lies turned upright (its box as measured, about
+ * the tile's centre), so the depth and sideways steps are the camera's even
+ * when the tile sits at an angle to it. Props come back in table px from the
+ * tile's centre. */
+export function layoutEdgeSceneryForView(
+  tile: { width: number; height: number },
+  scenery: EdgeScenery,
+  label: LabelBox | null,
+  tiltDeg: number,
+  yawDeg: number,
+): EdgeProp[] {
+  const { quarter, residual } = viewQuarter(yawDeg);
+  const view = quarter % 2 ? { width: tile.height, height: tile.width } : tile;
+  // Unmeasured, the whole tile (as the camera sees it) counts as label.
+  // Measured, the upright label sits where its pivot has turned to.
+  let guard: LabelBox | null = null;
+  if (label) {
+    const pivot = label.pivot ?? { x: 0, y: 0 };
+    const turned = turnPoint(pivot, yawDeg);
+    const dx = turned.x - pivot.x, dy = turned.y - pivot.y;
+    guard = { left: label.left + dx, right: label.right + dx, top: label.top + dy, bottom: label.bottom + dy };
+  } else {
+    const reach = (Math.abs(Math.cos((residual * Math.PI) / 180)) + Math.abs(Math.sin((residual * Math.PI) / 180))) / 2;
+    const halfW = view.width * reach, halfH = view.height * reach;
+    guard = { left: -halfW, right: halfW, top: -halfH, bottom: halfH };
+  }
+  const box = guard;
+  // The quarter-turned frame is the camera's frame turned back by `residual`.
+  const keepClear = (prop: EdgeProp, maxStep: number) => {
+    const placed = keepClearOfLabel({ ...prop, ...turnPoint(prop, residual) }, box, tiltDeg, maxStep);
+    return placed && { ...placed, ...turnPoint(placed, -residual) };
+  };
+  return layoutEdgeScenery(view, scenery, label, tiltDeg, keepClear).map((prop) => ({ ...prop, ...turnPoint(prop, -quarter * 90) }));
 }

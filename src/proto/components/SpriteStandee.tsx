@@ -89,8 +89,10 @@ export const standeeShadowSkew = (angleDeg: number) => {
 };
 
 /** Silhouettes the standee casts on the table, one per light, each falling
- * away from its light and lengthening as the light gets lower. */
-export function SpriteStandeeShadows({ sprite, position, shadows, size = SPRITE_STANDEE_SIZE, owner }: { sprite: string; position: { x: number; y: number }; shadows: StandeeShadow[]; size?: number; owner?: string }) {
+ * away from its light and lengthening as the light gets lower. The board
+ * faces a camera spun by `yaw`, so its shadow's foot line turns by -yaw on
+ * the table (shadow angles from standeeLighting are already in that frame). */
+export function SpriteStandeeShadows({ sprite, position, shadows, size = SPRITE_STANDEE_SIZE, owner, yaw = 0 }: { sprite: string; position: { x: number; y: number }; shadows: StandeeShadow[]; size?: number; owner?: string; yaw?: number }) {
   const state = useSpriteBounds(sprite);
   if (state?.status !== 'ready') return null;
   return <>{shadows.map((shadow) => {
@@ -99,7 +101,7 @@ export function SpriteStandeeShadows({ sprite, position, shadows, size = SPRITE_
     return <div key={shadow.lightId} aria-hidden="true" className="proto-sprite-shadow" data-shadow-light={shadow.lightId} data-shadow-owner={owner} style={{
       left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`,
       width: size, height: size * shadow.length,
-      transform: `translate3d(-50%, -100%, 0.5px) ${standeeShadowSkew(shadow.angle)}`, opacity: shadow.opacity,
+      transform: `translate3d(-50%, -100%, 0.5px)${yaw ? ` rotate(${(-yaw).toFixed(2)}deg)` : ''} ${standeeShadowSkew(shadow.angle)}`, opacity: shadow.opacity,
       maskImage: mask, WebkitMaskImage: mask, maskSize: layout.size, WebkitMaskSize: layout.size, maskPosition: layout.position, WebkitMaskPosition: layout.position,
     }} />;
   })}</>;
@@ -122,7 +124,9 @@ export function SpriteTopDownArt({ sprite, lighting, onError, size = SPRITE_STAN
   if (state?.status !== 'ready') return null;
   const width = Math.round(state.bounds.aspect >= 1 ? size : size * state.bounds.aspect);
   const shade = `brightness(${lighting.brightness.toFixed(3)}) sepia(${(lighting.warmth * 0.45).toFixed(3)})`;
-  return <span aria-hidden="true" className="proto-sprite-topdown__piece" style={{ filter: shade }}>
+  // The board faces the camera, so it turns against a spun camera; its name
+  // stays upright with it.
+  return <span aria-hidden="true" className="proto-sprite-topdown__piece proto-face-camera" style={{ filter: shade }}>
     {base ? <span className="proto-sprite-topdown__base" style={{ width: Math.round(size * 0.75), height: Math.round(size * 0.75) }} /> : null}
     <span className="proto-sprite-topdown__board" style={{ width, height: TOP_DOWN_BOARD_THICKNESS }} />
     {label ? <span className="proto-sprite-topdown__name" style={{ bottom: `calc(50% + ${TOP_DOWN_BOARD_THICKNESS / 2}px)` }}>{label}</span> : null}

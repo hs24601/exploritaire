@@ -1,9 +1,10 @@
 import { memo, type CSSProperties, type ReactNode } from 'react';
+import { viewQuarter } from '../biomeEdgeScenery';
 import { BIOME_AMBIANCE, WORLD_AMBIANCE, ambianceFor, emitterArea, haloFor, particleStrength, rayAngle, scatter, seeded, shaftSlots, visibleCells, type FxQuality, type Particle as ParticleSpot, type ParticleKind } from '../atmosphere';
 import type { TableTilt } from '../tableTilt';
 import { DEFAULT_LIGHT_COLOR, hexToRgb, rgba, type TableLight, type TableLightFrame } from '../protoLighting';
 
-type Camera = { x: number; y: number; scale: number };
+type Camera = { x: number; y: number; scale: number; yaw?: number };
 type Area = { id: string; x: number; y: number; width: number; height: number; terrain: 'woods' | 'water' };
 
 /** Places an upright billboard's foot on a table point, inside the
@@ -44,6 +45,8 @@ const Particle = memo(function Particle({ kind, particle, strength, night }: { k
 export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, tilt }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null }) {
   const mood = ambianceFor(frame);
   const night = frame.daylight < 0.25;
+  // Patches that sit behind a tile follow the side facing a spun camera.
+  const { quarter } = viewQuarter(camera.yaw ?? 0);
   return <div className="proto-atmosphere" aria-hidden="true"><div className="proto-atmosphere__world">
     {lights.map((light) => {
       const halo = haloFor(light, mood.halos);
@@ -64,7 +67,9 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
       const count = emitter.count[quality];
       const strength = particleStrength(emitter.kind, mood);
       if (!count || strength < 0.02) return [];
-      return scatter(`${emitter.kind}-${index}-${area.id}`, count, emitterArea(emitter, area), emitter.lift, emitter.drift, emitter.size, emitter.duration)
+      // Only patches set behind or in front of the tile follow the camera's side.
+      const side = emitter.area.offset ? quarter : 0;
+      return scatter(`${emitter.kind}-${index}-${area.id}${side ? `-q${side}` : ''}`, count, emitterArea(emitter, area, side), emitter.lift, emitter.drift, emitter.size, emitter.duration)
         .map((particle) => <Particle key={particle.id} kind={emitter.kind} particle={particle} strength={strength} night={night} />);
     }))}
     {WORLD_AMBIANCE.flatMap((emitter, index) => {
@@ -79,7 +84,7 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
 
 /** Shafts of sun (or moon) light slanting across the tilted view. Each is
  * pinned to a spot along the world's x axis, so they slide past as the camera
- * pans and widen as it zooms in. Placed from the live camera (--camera-x and
+ * pans and widen as it zooms in. Placed from the live camera (--camera-sx and
  * --camera-scale) so they keep pace with the table every frame; `camera` only
  * picks which slots exist, with a spare slot either side. Dust motes drift
  * through them by day as part of the world's particles. */
@@ -88,7 +93,7 @@ export function LightShafts({ frame, quality, camera, view }: { frame: TableLigh
   const strength = Math.max(mood.sunRays, mood.moonRays * 0.45);
   if (strength < 0.02) return null;
   const color = mood.sunRays > 0 ? frame.sunColor : { r: 168, g: 190, b: 255 };
-  const angle = rayAngle(frame);
+  const angle = rayAngle(frame, camera.yaw ?? 0);
   const high = quality === 'high';
   // A shaft runs 1.5 view heights from above the top edge, so its foot sits
   // up to that far sideways from its top: keep the ones whose foot is in view.
@@ -98,7 +103,7 @@ export function LightShafts({ frame, quality, camera, view }: { frame: TableLigh
       if (next() > (high ? 0.8 : 0.45)) return null;
       const width = 45 + next() * 65;
       return <span key={slot} className="proto-shaft" data-atmosphere="ray" style={{
-        left: `calc(50% + var(--camera-x, 0px) + ${(worldX - width / 2).toFixed(1)}px * var(--camera-scale, 1))`,
+        left: `calc(50% + var(--camera-sx, 0px) + ${(worldX - width / 2).toFixed(1)}px * var(--camera-scale, 1))`,
         width: `calc(${width.toFixed(1)}px * var(--camera-scale, 1))`,
         transform: `rotate(${angle.toFixed(1)}deg)`,
         background: `linear-gradient(90deg, ${rgba(color, 0)}, ${rgba(color, (0.07 + 0.19 * strength) * (0.6 + next() * 0.4))} 50%, ${rgba(color, 0)})`,

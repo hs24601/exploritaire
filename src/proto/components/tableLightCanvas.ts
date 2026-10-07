@@ -11,7 +11,8 @@ import {
   type TableLightFrame,
 } from '../protoLighting';
 
-export type TableLightCamera = { x: number; y: number; scale: number };
+/** `yaw` spins the table about the canvas centre, degrees clockwise on screen. */
+export type TableLightCamera = { x: number; y: number; scale: number; yaw?: number };
 
 /** Paints the table's sky overlay, sun wash and light pools. Visual only: the
  * overlay never intercepts input, and game logic reads protoLighting instead. */
@@ -26,10 +27,13 @@ export const drawTableLight = (
 ) => {
   const { width, height } = size;
   const nightness = 1 - frame.daylight;
-  const toScreen = (point: { x: number; y: number }) => ({
-    x: width / 2 + camera.x + point.x * camera.scale,
-    y: height / 2 + camera.y + point.y * camera.scale,
-  });
+  const radians = ((camera.yaw ?? 0) * Math.PI) / 180;
+  const cos = Math.cos(radians), sin = Math.sin(radians);
+  // Matches the world layer: rotate(yaw) translate(x, y) scale(scale) about the centre.
+  const toScreen = (point: { x: number; y: number }) => {
+    const x = camera.x + point.x * camera.scale, y = camera.y + point.y * camera.scale;
+    return { x: width / 2 + x * cos - y * sin, y: height / 2 + x * sin + y * cos };
+  };
 
   context.globalCompositeOperation = 'source-over';
   context.clearRect(0, 0, width, height);
@@ -132,10 +136,12 @@ export const drawTableLight = (
   if (occluders.length > 0) {
     context.save();
     context.beginPath();
+    // Each occluder is a table rectangle; spun, it's a turned quad on screen.
     occluders.forEach((rect) => {
-      const start = toScreen({ x: rect.left, y: rect.top });
-      const end = toScreen({ x: rect.right, y: rect.bottom });
-      context.rect(start.x, start.y, end.x - start.x, end.y - start.y);
+      const corners = [toScreen({ x: rect.left, y: rect.top }), toScreen({ x: rect.right, y: rect.top }), toScreen({ x: rect.right, y: rect.bottom }), toScreen({ x: rect.left, y: rect.bottom })];
+      context.moveTo(corners[0].x, corners[0].y);
+      corners.slice(1).forEach((corner) => context.lineTo(corner.x, corner.y));
+      context.closePath();
     });
     context.clip();
     context.clearRect(0, 0, width, height);

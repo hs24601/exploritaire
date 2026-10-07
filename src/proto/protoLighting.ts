@@ -230,12 +230,19 @@ export const lightFlicker = (light: TableLight, timeMs: number) => {
 
 /** 2.5D projection onto a 2D table: elevated pieces cast away from each light.
  * Clamp grazing-angle shadows so they remain useful within the board viewport. */
-export const tableObjectShadow = (hours: number, position: { x: number; y: number }, elevation = 8, lights: readonly TableLight[] = []) => {
+export const tableObjectShadow = (hours: number, position: { x: number; y: number }, elevation = 8, lights: readonly TableLight[] = [], frameYaw = 0) => {
   const frame = getTableLighting(hours);
+  // A piece turned to face a spun camera draws its shadow in its own frame.
+  const turn = (x: number, y: number) => {
+    if (!frameYaw) return { x, y };
+    const r = (frameYaw * Math.PI) / 180;
+    return { x: x * Math.cos(r) - y * Math.sin(r), y: x * Math.sin(r) + y * Math.cos(r) };
+  };
   const project = (source: { x: number; y: number }, height: number, opacity: number) => {
     const ratio = elevation / Math.max(20, height - elevation);
-    const x = Math.max(-55, Math.min(55, (position.x - source.x) * ratio));
-    const y = Math.max(-55, Math.min(55, (position.y - source.y) * ratio));
+    const offset = turn((position.x - source.x) * ratio, (position.y - source.y) * ratio);
+    const x = Math.max(-55, Math.min(55, offset.x));
+    const y = Math.max(-55, Math.min(55, offset.y));
     const blur = 3 + Math.hypot(x, y) * 0.18;
     return `${x.toFixed(2)}px ${y.toFixed(2)}px ${blur.toFixed(2)}px rgba(0,0,0,${opacity.toFixed(3)})`;
   };
@@ -252,8 +259,7 @@ export const tableObjectShadow = (hours: number, position: { x: number; y: numbe
       shadows.push(project(light.position, light.height ?? 100, Math.min(0.7, reach * 0.75 * (1 - frame.daylight * 0.8))));
       // Warm rim on the side facing the light.
       const color = hexToRgb(light.color ?? DEFAULT_LIGHT_COLOR);
-      const dx = light.position.x - position.x;
-      const dy = light.position.y - position.y;
+      const { x: dx, y: dy } = turn(light.position.x - position.x, light.position.y - position.y);
       const length = Math.max(1, Math.hypot(dx, dy));
       shadows.push(`inset ${(dx / length * 3).toFixed(2)}px ${(dy / length * 3).toFixed(2)}px 4px ${rgba(color, reach * 0.55 * (1 - frame.daylight * 0.85))}`);
     }
@@ -280,12 +286,31 @@ export type StandeeLighting = {
 
 /** Lighting for an upright pop-up standee: lit by the sky and nearby lights,
  * casting a silhouette away from each. A light sitting on the standee's own
- * base (a carried candle) brightens it but casts no shadow. */
+ * base (a carried candle) brightens it but casts no shadow. The standee faces
+ * a camera spun by `yaw` degrees, so its rim and shadow directions are given
+ * in that camera's frame (the shadow board is turned by -yaw to match). */
 export const standeeLighting = (
   hours: number,
   position: { x: number; y: number },
   standeeHeight: number,
   lights: readonly TableLight[] = [],
+  yaw = 0,
+): StandeeLighting => {
+  const lit = standeeLightingInWorld(hours, position, standeeHeight, lights);
+  if (!yaw) return lit;
+  const r = (yaw * Math.PI) / 180;
+  return {
+    ...lit,
+    rim: lit.rim && { ...lit.rim, x: lit.rim.x * Math.cos(r) - lit.rim.y * Math.sin(r), y: lit.rim.x * Math.sin(r) + lit.rim.y * Math.cos(r) },
+    shadows: lit.shadows.map((shadow) => ({ ...shadow, angle: shadow.angle + yaw })),
+  };
+};
+
+const standeeLightingInWorld = (
+  hours: number,
+  position: { x: number; y: number },
+  standeeHeight: number,
+  lights: readonly TableLight[],
 ): StandeeLighting => {
   const frame = getTableLighting(hours);
   const sample = sampleTableLight(hours, position, lights);

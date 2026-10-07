@@ -9,8 +9,9 @@ import { drawTableLight, tableLightNeedsAnimation } from './tableLightCanvas';
 import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type WorldItemId } from '../protoCrafting';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
-import { useCameraControls } from '../../hooks/useCameraControls';
+import { rotateVector, useCameraControls } from '../../hooks/useCameraControls';
 import { BiomeEdgeScenery } from './BiomeEdgeScenery';
+import { turnPoint, viewQuarter } from '../biomeEdgeScenery';
 import { AtmosphereInAir, LightShafts } from './TableAtmosphere';
 import { detectFxQuality } from '../atmosphere';
 import type { LabelBox } from '../biomeEdgeScenery';
@@ -186,11 +187,13 @@ export const ProtoMap = ({
   // Ambiance tier for the tilted camera (atmosphere.ts): fixed for the session.
   const [fxQuality] = useState(detectFxQuality);
   const [biomeLabelBoxes, setBiomeLabelBoxes] = useState<Record<string, LabelBox>>({});
-  const reportBiomeLabel = useCallback((tileId: string, tile: { width: number; height: number }, box: { left: number; top: number; width: number; height: number }) => {
-    const next = { left: box.left - tile.width / 2, top: box.top - tile.height / 2, right: box.left + box.width - tile.width / 2, bottom: box.top + box.height - tile.height / 2 };
+  const reportBiomeLabel = useCallback((tileId: string, tile: { width: number; height: number }, box: { left: number; top: number; width: number; height: number; pivot: { x: number; y: number } }) => {
+    const next = { left: box.left - tile.width / 2, top: box.top - tile.height / 2, right: box.left + box.width - tile.width / 2, bottom: box.top + box.height - tile.height / 2,
+      pivot: { x: box.pivot.x - tile.width / 2, y: box.pivot.y - tile.height / 2 } };
     setBiomeLabelBoxes((boxes) => {
       const known = boxes[tileId];
-      if (known && (['left', 'top', 'right', 'bottom'] as const).every((side) => Math.abs(known[side] - next[side]) < 0.25)) return boxes;
+      if (known && (['left', 'top', 'right', 'bottom'] as const).every((side) => Math.abs(known[side] - next[side]) < 0.25)
+        && Math.abs((known.pivot?.x ?? 0) - next.pivot.x) < 0.25 && Math.abs((known.pivot?.y ?? 0) - next.pivot.y) < 0.25) return boxes;
       return { ...boxes, [tileId]: next };
     });
   }, []);
@@ -234,6 +237,11 @@ export const ProtoMap = ({
     centeredZoom: true,
     initialState: { x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE },
   });
+  // Camera spin, degrees clockwise on screen (useCameraControls). React state
+  // follows it every frame while it turns; pieces facing the camera turn
+  // against it, and scenery that sits behind a tile follows the side facing it.
+  const yaw = camera.cameraState.yaw ?? 0;
+  const { quarter: viewSide } = viewQuarter(yaw);
   const lightCanvasRef = useRef<HTMLCanvasElement>(null);
   const lightReadouts: { id: string; position: { x: number; y: number }; lift: number; percent: number; level: LightLevel }[] = [];
   const [hoverCell,setHoverCell] = useState<GridCell>(TRUE_CENTER.cell);
@@ -265,9 +273,59 @@ export const ProtoMap = ({
     return () => observer.disconnect();
   }, []);
 
+  /** Eases the spin back to 0° the short way round. */
+  const unspin = () => camera.spinTo(Math.round((camera.getLiveCamera().yaw ?? 0) / 360) * 360);
   const resetProtoCamera = () => {
-    camera.setCameraState({ x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE });
+    camera.setCameraState((previous) => ({ ...previous, x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE }));
+    unspin();
   };
+
+  // Keyboard camera: Q and E turn it 45° (eased); W, A, S and D glide it
+  // relative to the view while held, so W always heads for the far side of
+  // the screen at any spin. Never while typing or inside a dialog.
+  const { spinStep, panBy, syncCamera } = camera;
+  useEffect(() => {
+    const held = new Set<string>();
+    let frame = 0;
+    let last = 0;
+    const PAN_SPEED = 560; // screen px per second
+    const typing = (target: EventTarget | null) => target instanceof Element
+      && Boolean(target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], dialog'));
+    const glide = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const x = (held.has('a') ? 1 : 0) - (held.has('d') ? 1 : 0);
+      const y = (held.has('w') ? 1 : 0) - (held.has('s') ? 1 : 0);
+      const length = Math.hypot(x, y);
+      if (length) panBy((x / length) * PAN_SPEED * dt, (y / length) * PAN_SPEED * dt);
+      frame = held.size ? requestAnimationFrame(glide) : 0;
+      if (!frame) syncCamera();
+    };
+    const down = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || typing(event.target)) return;
+      const key = event.key.toLowerCase();
+      if (key === 'q' || key === 'e') {
+        if (!event.repeat) spinStep(key === 'q' ? -45 : 45);
+        event.preventDefault();
+        return;
+      }
+      if (!['w', 'a', 's', 'd'].includes(key)) return;
+      event.preventDefault();
+      held.add(key);
+      if (!frame) { last = performance.now(); frame = requestAnimationFrame(glide); }
+    };
+    const up = (event: KeyboardEvent) => held.delete(event.key.toLowerCase());
+    const release = () => held.clear();
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    window.addEventListener('blur', release);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+      window.removeEventListener('blur', release);
+      cancelAnimationFrame(frame);
+    };
+  }, [spinStep, panBy, syncCamera]);
 
   // While a piece is dragged, the biome under the pointer that would accept it lights up.
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -496,10 +554,13 @@ export const ProtoMap = ({
   const worldPointFromClient = (clientX: number, clientY: number) => {
     const rect = camera.containerRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
-    if (!tilt) return screenToWorld({x:clientX,y:clientY},rect,camera.cameraState);
+    // The live camera, so a press lands right even mid-pan or mid-spin.
+    const live = camera.getLiveCamera();
     const centerX = rect.left + rect.width / 2, centerY = rect.top + rect.height / 2;
-    const plane = unprojectTilt({ x: clientX - centerX, y: clientY - centerY }, tilt);
-    return screenToWorld({x:centerX+plane.x,y:centerY+plane.y},rect,camera.cameraState);
+    const screen = { x: clientX - centerX, y: clientY - centerY };
+    // Back off the tilt onto the table plane, then undo the spin about the centre.
+    const plane = rotateVector(tilt ? unprojectTilt(screen, tilt) : screen, -(live.yaw ?? 0));
+    return screenToWorld({x:centerX+plane.x,y:centerY+plane.y},rect,live);
   };
 
   const resolveBiomeAdjacentCell = (actorId: string, biomeId: string) => {
@@ -579,11 +640,16 @@ export const ProtoMap = ({
     // The wash is redrawn at most ~24 fps (and on camera state syncs), but the
     // table moves every frame: between redraws, shift and scale the drawn
     // canvas about the view centre so the light stays pinned to the table.
+    // A spin can't be faked that way (the canvas corners would show), so a
+    // turned camera redraws with it (pointer moves arrive once a frame).
     let drawn = camera.getLiveCamera();
-    const follow = (live: { x: number; y: number; scale: number }) => {
+    const follow = (live: { x: number; y: number; scale: number; yaw?: number }) => {
+      if ((live.yaw ?? 0) !== (drawn.yaw ?? 0)) { draw(performance.now()); return; }
       const k = live.scale / drawn.scale;
+      // The pan since the redraw, in the spun frame, turned onto the screen.
+      const shift = rotateVector({ x: live.x - k * drawn.x, y: live.y - k * drawn.y }, drawn.yaw ?? 0);
       canvas.style.transform = k === 1 && live.x === drawn.x && live.y === drawn.y ? ''
-        : `translate(${live.x - k * drawn.x}px, ${live.y - k * drawn.y}px) scale(${k})`;
+        : `translate(${shift.x}px, ${shift.y}px) scale(${k})`;
     };
     const draw = (timeMs: number) => {
       // Layout size, not the projected box: a tilted table plane is oversized
@@ -680,28 +746,32 @@ export const ProtoMap = ({
     // Rotate about the foot first, then move the foot onto the table point, so
     // the base stays planted at any zoom. An oversampled piece is laid out
     // larger and scaled back down about its foot (see STANDEE_OVERSAMPLE).
-    transform: `translate(-50%,-100%) rotateX(calc(-1 * var(--table-tilt)))${oversample === 1 ? '' : ` scale(${1 / oversample})`}`,
+    // Turned against a spun camera first, so it faces the camera.
+    transform: `translate(-50%,-100%) rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt)))${oversample === 1 ? '' : ` scale(${1 / oversample})`}`,
     transformOrigin: '50% 100%',
     animation: standeeMotion === 'rise' ? `proto-standee-pop ${STANDEE_POP_MS}ms ease-out both`
       : standeeMotion === 'fold' ? `proto-standee-fold ${TABLE_TILT_MS / 2}ms ease-in forwards` : undefined,
     // A die-cut cardboard edge, shaded toward its base.
     ...(size ? { width: size.width, height: size.height, borderRadius: `${size.width / 2}px ${size.width / 2}px 6px 6px`, border: '1.5px solid #efe4cc', boxShadow: 'inset 0 -12px 16px #0007' } : {}),
   } : null;
+  // Flat round tokens turn against a spun camera so their faces stay upright.
+  // They're placed by Tailwind's centring transform, which takes --tw-rotate.
+  const faceCameraFlat = { ['--tw-rotate' as string]: 'calc(-1 * var(--camera-yaw, 0deg))' } as React.CSSProperties;
   // Sprite standees: a pixel-art cut-out lit by the table's lights, casting its
   // own silhouette across the table away from each one.
   const spriteStandee = (sprite: string | undefined, position: { x: number; y: number }, { base = true, size = SPRITE_STANDEE_SIZE, topDownSize = size, owner = 'actor', label }: { base?: boolean; size?: number; topDownSize?: number; owner?: string; label?: string } = {}) => {
     if (!sprite || failedSprites.includes(sprite)) return null;
-    const lit = standeeLighting(timeOfDay, position, size, lightSources);
+    const lit = standeeLighting(timeOfDay, position, size, lightSources, yaw);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
     // Flat camera: the same pop-up seen from straight above, casting the same shadows.
     if (!upright) return {
       topDown: true,
-      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} />,
+      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} yaw={yaw} />,
       art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} base={base} size={topDownSize} label={label} />,
     };
     return {
       topDown: false,
-      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} />,
+      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} yaw={yaw} />,
       art: <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />,
     };
   };
@@ -709,8 +779,9 @@ export const ProtoMap = ({
   const oversample = upright ? STANDEE_OVERSAMPLE : 1;
   /** Picks up an actor; moves and the release then go to `holder`. */
   const grabActor = (actorId: string, event: React.PointerEvent, holder: Element) => {
-    event.stopPropagation();
+    // Other mouse buttons spin the camera, even over a piece.
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.stopPropagation();
     event.preventDefault();
     try {
       holder.setPointerCapture(event.pointerId);
@@ -772,6 +843,9 @@ export const ProtoMap = ({
           {questOpen ? 'Quest −' : 'Quest +'}
         </button>
         <button type="button" className="table-grid-center-button" aria-pressed={tilted} aria-label={tilted ? 'Flat camera view' : 'Tilt camera view'} onClick={() => onTiltedChange?.(!tilted)}>{tilted ? 'Flat' : 'Tilt'}</button>
+        {/* Turn the table 45° (Q / E); a double-click turns it back to 0°. */}
+        <button type="button" className="table-grid-center-button" aria-label="Turn table left" title="Turn table left (Q) · double-click to straighten" onClick={() => camera.spinStep(-45)} onDoubleClick={unspin}>↺</button>
+        <button type="button" className="table-grid-center-button" aria-label="Turn table right" title="Turn table right (E) · double-click to straighten" onClick={() => camera.spinStep(45)} onDoubleClick={unspin}>↻</button>
         <button type="button" className="table-grid-center-button" onClick={()=>camera.setCameraState(previous=>({...previous,x:-TRUE_CENTER.world.x*previous.scale,y:-TRUE_CENTER.world.y*previous.scale}))}>True Center</button>
         <button
           type="button"
@@ -805,8 +879,12 @@ export const ProtoMap = ({
           }}
         >
         <div
-          className="proto-table-floor absolute inset-0"
+          className="proto-table-floor absolute"
           style={{
+            // Turns with a spun camera about the view centre; flat, it's
+            // oversized so its corners never show.
+            inset: staged ? 0 : '-50%',
+            rotate: 'var(--camera-yaw, 0deg)',
             // Sized and placed from the live camera (--camera-*), so the grid keeps
             // pace with the pieces every frame instead of at React's state syncs.
             backgroundImage: `repeating-linear-gradient(0deg, rgba(142,242,212,0.28) 0 1px, transparent 1px calc(48px * var(--camera-scale, ${camera.cameraState.scale}))), repeating-linear-gradient(90deg, rgba(142,242,212,0.28) 0 1px, transparent 1px calc(48px * var(--camera-scale, ${camera.cameraState.scale})))`,
@@ -840,7 +918,7 @@ export const ProtoMap = ({
             onPointerMove={(event) => { if (light.id !== 'table-lantern' || !event.currentTarget.hasPointerCapture(event.pointerId)) return; const point = worldPointFromClient(event.clientX, event.clientY); onMoveLight?.(light.id, point); }}
             onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
             className="proto-table-lamp absolute z-10 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full"
-            style={{ left: 'calc(50% + ' + light.position.x + 'px)', top: 'calc(50% + ' + light.position.y + 'px)', ...standee() }}>🕯️</div>)}
+            style={{ left: 'calc(50% + ' + light.position.x + 'px)', top: 'calc(50% + ' + light.position.y + 'px)', ...faceCameraFlat, ...standee() }}>🕯️</div>)}
           {questCards.filter(placement => placement.questIndex >= 0).map(placement => <TableQuestCard key={placement.questIndex} placement={placement} title={questTitles[placement.questIndex]} text={questTexts[placement.questIndex]} redeemed={placement.questIndex < questClaims} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale} toWorld={worldPointFromClient}
             onMove={(position,tilt)=>onMoveQuest?.(placement.questIndex,position,tilt)}
             solids={[
@@ -859,7 +937,9 @@ export const ProtoMap = ({
               lightReadouts.push({ id: 'tile-' + tile.id, position: worldFootprint, lift: worldFootprint.height / 2, percent: tileLight.percent, level: tileLight.level });
               // Scenery pops up from the back of the tile, which is its base, so the label stays readable in front
               // (tilted, far enough back to clear the label on its tile lifted above the shadows).
-              const popupPosition = { x: worldFootprint.x, y: worldFootprint.y - worldFootprint.height * (upright ? 0.37 : 0.39) };
+              // The back is the side away from a spun camera, by quarter turn.
+              const back = turnPoint({ x: 0, y: -(viewSide % 2 ? worldFootprint.width : worldFootprint.height) * (upright ? 0.37 : 0.39) }, -viewSide * 90);
+              const popupPosition = { x: worldFootprint.x + back.x, y: worldFootprint.y + back.y };
               const popup = tile.unlocked === false ? null : spriteStandee(tile.sprite, popupPosition, { base: false, size: BIOME_POPUP_SIZE, topDownSize: worldFootprint.width - 6, owner: 'biome' });
               return (
                 <React.Fragment key={tile.id}>
@@ -896,7 +976,7 @@ export const ProtoMap = ({
                   }}
                   aria-label={tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
                 >
-                  <BoardObjectLabel text={tile.unlocked === false ? 'Locked' : tile.title} minFontSize={12} maxFontSize={18} className="uppercase font-black" onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />
+                  <BoardObjectLabel text={tile.unlocked === false ? 'Locked' : tile.title} minFontSize={12} maxFontSize={18} className="proto-face-camera uppercase font-black" onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />
                 </button>
                 {upright && tile.unlocked !== false ? <BiomeEdgeScenery
                   tileId={tile.id}
@@ -905,6 +985,7 @@ export const ProtoMap = ({
                   scenery={BIOME_EDGE_SCENERY[tile.terrain === 'water' ? 'water' : 'woods']}
                   label={biomeLabelBoxes[tile.id] ?? null}
                   tiltDeg={TABLE_TILT_DEGREES}
+                  yaw={yaw}
                   hours={timeOfDay}
                   lights={lightSources}
                   quality={fxQuality}
@@ -1003,7 +1084,7 @@ export const ProtoMap = ({
                   data-light-level={stackLight.level}
                   {...grip}
                   className={`proto-resource-stack${upright ? ' proto-standee' : ''} absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#8ef2d4]/55 bg-[#0b1916] text-[0.6rem] font-black text-[#cafff4] shadow-[0_0_18px_rgba(142,242,212,0.16)] ${draggingResourceId === stack.id ? 'cursor-grabbing ring-2 ring-[#cafff4]/55' : 'cursor-grab'}`}
-                  style={{ left: `calc(50% + ${physicsPosition.x}px)`, top: `calc(50% + ${physicsPosition.y}px)`, boxShadow: tableObjectShadow(timeOfDay, physicsPosition, stack.resource === 'provisions_hut' ? 14 : 9, lightSources), ...standee({ width: 48, height: 60 }) }}
+                  style={{ left: `calc(50% + ${physicsPosition.x}px)`, top: `calc(50% + ${physicsPosition.y}px)`, boxShadow: tableObjectShadow(timeOfDay, physicsPosition, stack.resource === 'provisions_hut' ? 14 : 9, lightSources, yaw), ...faceCameraFlat, ...standee({ width: 48, height: 60 }) }}
                   title={Object.entries(stackIngredients(stack)).map(([id, count]) => `${count} ${WORLD_ITEMS[id as WorldItemId].label}`).join(' + ')}
                   aria-label={`${stack.count} ${WORLD_ITEMS[stack.resource].label}${stack.build ? ', building' : ', draggable'}`}
                 >
@@ -1116,7 +1197,8 @@ export const ProtoMap = ({
                 : `absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-grab select-none place-items-center rounded-full border-2 bg-[#17140b] text-[0.52rem] font-black uppercase tracking-[0.1em] text-[#ffe7ad] shadow-[0_0_24px_rgba(255,209,102,0.18)] active:cursor-grabbing ${selectedActorId === actor.id ? 'border-[#fff0b5] ring-2 ring-[#ffd166]/45' : 'border-[#ffd166]/75'} ${draggingActorId === actor.id ? 'opacity-45' : ''}`}
               style={{
                 // Stored positions and grid coordinates share the same cell-center origin.
-                boxShadow: cutOut ? undefined : tableObjectShadow(timeOfDay, actorPosition, 12, lightSources.filter(light => light.id !== actorLightId(actor.id))),
+                boxShadow: cutOut ? undefined : tableObjectShadow(timeOfDay, actorPosition, 12, lightSources.filter(light => light.id !== actorLightId(actor.id)), yaw),
+                ...(cutOut ? null : faceCameraFlat),
                 left: `calc(50% + ${actorPosition.x}px)`,
                 top: `calc(50% + ${actorPosition.y}px)`,
                 ...(cutOut ? cutOut.topDown ? { width: SPRITE_STANDEE_SIZE, height: SPRITE_STANDEE_SIZE } : { ...standee(undefined, oversample), width: SPRITE_STANDEE_SIZE * oversample, height: SPRITE_STANDEE_SIZE * oversample } : standee({ width: 48, height: 64 })),
@@ -1141,11 +1223,11 @@ export const ProtoMap = ({
           className="pointer-events-none absolute inset-0"
         />
         {showLightReadout ? (
-          <div aria-hidden="true" data-light-readout="true" className="pointer-events-none absolute inset-0 z-[45] overflow-hidden">
+          <div aria-hidden="true" data-light-readout="true" className="pointer-events-none absolute inset-0 z-[45] overflow-hidden" style={{ rotate: 'var(--camera-yaw, 0deg)' }}>
             {lightReadouts.map((readout) => (
               <span
                 key={readout.id}
-                className="proto-light-readout"
+                className="proto-light-readout proto-face-camera"
                 data-light-level={readout.level}
                 style={{
                   // Live camera, so the readouts keep pace with the table every frame.

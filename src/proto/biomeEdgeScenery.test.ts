@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EDGE_PROP_MIN_HEIGHT, layoutEdgeScenery, maxHeightClearOfLabel, type EdgeScenery, type LabelBox } from './biomeEdgeScenery';
+import { EDGE_PROP_MIN_HEIGHT, layoutEdgeScenery, layoutEdgeSceneryForView, maxHeightClearOfLabel, turnPoint, type EdgeScenery, type LabelBox } from './biomeEdgeScenery';
 
 const scenery: EdgeScenery = { side: { src: 'side.png', width: 14, height: 27 }, front: { src: 'front.png', width: 12, height: 9 } };
 const tile = { width: 48, height: 48 };
@@ -47,5 +47,23 @@ describe('biome edge scenery', () => {
     const props = layoutEdgeScenery(tile, scenery, null, TILT);
     expect(props.every((p) => p.edge !== 'front' || Math.abs(p.x) - p.width / 2 >= 24)).toBe(true);
     for (const p of props.filter((p) => p.edge !== 'front' && p.y > -24)) expect(Math.abs(p.x) - p.width / 2).toBeGreaterThanOrEqual(24);
+  });
+
+  it('lines the sides facing a spun camera and never covers the upright label', () => {
+    for (const yaw of [0, 20, 45, -45, 70, 90, 135, 180, 225, 300]) {
+      // As measured on the board: the label's frame sits off the tile's centre.
+      const offCentre: LabelBox = { left: -19, right: 11, top: -17, bottom: 12, pivot: { x: -3, y: -3.5 } };
+      for (const label of [short, tall, offCentre]) {
+        const props = layoutEdgeSceneryForView(tile, scenery, label, TILT, yaw);
+        // In the camera's frame (world turned by the spin) the label is upright,
+        // moved by its pivot's turn.
+        const pivot = label.pivot ?? { x: 0, y: 0 }, turned = turnPoint(pivot, yaw);
+        const seen = { left: label.left + turned.x - pivot.x, right: label.right + turned.x - pivot.x, top: label.top + turned.y - pivot.y, bottom: label.bottom + turned.y - pivot.y };
+        for (const prop of props) expect(covers({ ...prop, ...turnPoint(prop, yaw) }, seen), `${yaw}° ${prop.id}`).toBe(false);
+        // The front row sits on the tile side nearest the camera.
+        const front = props.filter((prop) => prop.edge === 'front').map((prop) => turnPoint(prop, yaw).y);
+        expect(front.reduce((sum, y) => sum + y, 0) / front.length, `${yaw}°`).toBeGreaterThan(10);
+      }
+    }
   });
 });
