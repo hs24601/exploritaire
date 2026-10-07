@@ -2379,7 +2379,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-table-stage--tilted { pointer-events: none; }
 .proto-table-stage--tilted .proto-table-floor { pointer-events: auto; transform: translateZ(-1px); }
 .proto-table-stage--tilted .proto-map-world > :not(.table-grid-origin) { pointer-events: auto; }
-.proto-standee-base { position: absolute; height: 16px; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(#0b0907 40%, #2a1e14); border: 2px solid #6b5236; pointer-events: none; }
+.proto-standee-base { position: absolute; aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(#0b0907 40%, #2a1e14); border: 2px solid #6b5236; pointer-events: none; }
 /* Standees pop up from their base instead of scaling from their center. */
 .proto-resource-stack.proto-standee { animation-name: proto-standee-pop; }
 @keyframes proto-standee-pop { 0% { opacity: 0; scale: 1 0.1; } 68% { opacity: 1; scale: 1 1.12; } 100% { opacity: 1; scale: 1 1; } }

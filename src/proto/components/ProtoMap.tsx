@@ -821,8 +821,10 @@ export const ProtoMap = ({
   const cellGrip = (id: string, position: { x: number; y: number }, handlers: Record<string, (event: React.PointerEvent<HTMLDivElement>) => void>) => (
     <div key="grip" aria-hidden="true" data-camera-ignore="true" data-cell-grip={id} className="proto-cell-grip" style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width: CLASSICPLUS_GRID_SIZE, height: CLASSICPLUS_GRID_SIZE, pointerEvents: draggingActorId || draggingResourceId ? 'none' : undefined }} {...handlers} />
   );
+  // A true circle lying on the table: the camera's tilt flattens it into a
+  // level ellipse at any spin (an oval drawn on the table would swing round).
   const standeeBase = (key: string, position: { x: number; y: number }, width: number) => upright
-    ? <div key={key} aria-hidden="true" className="proto-standee-base" style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width, boxShadow: tableObjectShadow(timeOfDay, position, 6, lightSources) }} />
+    ? <div key={key} aria-hidden="true" className="proto-standee-base" style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width, height: width, boxShadow: tableObjectShadow(timeOfDay, position, 6, lightSources) }} />
     : null;
 
   return (

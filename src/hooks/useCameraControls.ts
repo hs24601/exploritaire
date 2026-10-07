@@ -117,19 +117,19 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     startX: number;
     startY: number;
     anchorWorld: { x: number; y: number };
-    /** Angle between the fingers and the camera's spin when they landed. */
-    startAngle: number;
-    startYaw: number;
+    /** Where the fingers' midpoint started, for the pan that rides along. */
+    startMid: { x: number; y: number };
   }>({
     active: false,
-    startAngle: 0,
-    startYaw: 0,
+    startMid: { x: 0, y: 0 },
     startDistance: 0,
     startScale: 1,
     startX: 0,
     startY: 0,
     anchorWorld: { x: 0, y: 0 },
   });
+  /** Three or more fingers: the camera's spin and each finger's angle about their centre when they landed. */
+  const twistRef = useRef<{ startYaw: number; angles: Map<number, number> } | null>(null);
   const touchPanRef = useRef<{
     active: boolean;
     startX: number;
@@ -514,9 +514,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       ) {
         return;
       }
-      if (canStartPanAt && !canStartPanAt(e.clientX, e.clientY)) {
-        return;
-      }
+      // The wheel zooms over pieces too: grabbing a piece is a press, not a wheel.
       e.preventDefault();
 
       const mouseX = centeredZoom ? 0 : e.clientX - rect.left;
@@ -611,6 +609,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   // Left-mouse-button pan; right or middle button spins
   // ---------------------------------------------------------------------------
   const mouseSpinRef = useRef<{ pointerId: number; startX: number; startYaw: number; moved: boolean } | null>(null);
+  const rightPanRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const menuStateRef = useRef<{ swallowUntil: number; held: { target: EventTarget; x: number; y: number } | null }>({ swallowUntil: 0, held: null });
   useEffect(() => {
     if (!enabled) return;
     const container = containerRef.current;
@@ -619,19 +619,21 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     const handlePointerDown = (e: PointerEvent) => {
       if (objectGestureRef.current.locked) return;
       if (e.pointerType !== 'mouse') return;
-      // A sideways drag with the right or middle button spins the camera, over
-      // pieces too (they only take the left button).
-      if (e.button === 1 || e.button === 2) {
+      // A sideways drag with the middle button spins the camera, over pieces
+      // too (they only take the left button).
+      if (e.button === 1) {
         e.preventDefault();
         if (spinRafRef.current) cancelAnimationFrame(spinRafRef.current);
         spinRafRef.current = 0;
         mouseSpinRef.current = { pointerId: e.pointerId, startX: e.clientX, startYaw: cameraRef.current.yaw ?? 0, moved: false };
         return;
       }
-      if (isCameraInteractiveTarget(e.target)) return;
-      // Left mouse button (button 0) is the normal map interaction.
-      if (e.button !== 0) return;
+      // The left button pans from empty table; the right button pans from
+      // anywhere, pieces included.
+      if (e.button === 0 && isCameraInteractiveTarget(e.target)) return;
+      if (e.button !== 0 && e.button !== 2) return;
       e.preventDefault();
+      rightPanRef.current = e.button === 2 ? { x: e.clientX, y: e.clientY, moved: false } : null;
 
       setIsPanning(true);
       panButtonRef.current = e.button;
@@ -652,6 +654,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
         return;
       }
       if (!isPanning) return;
+      const right = rightPanRef.current;
+      if (right && Math.hypot(e.clientX - right.x, e.clientY - right.y) > 3) right.moved = true;
 
       // The drag in the table's (tilted) plane, turned into the spun frame.
       const delta = rotateVector({
@@ -672,22 +676,33 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       zoomTargetRef.current = { ...zoomTargetRef.current, x: newX, y: newY };
     };
 
-    // A spin drag ends the spin; its right-button release must not open a
-    // context menu (the dev menu included), which fires after the pointerup.
-    let swallowMenuUntil = 0;
+    // A right-button pan must not open a context menu (the dev menu included).
+    // Some platforms fire it on press, some after release: while the button
+    // is held it waits, and a press that ends without a drag gets it back.
+    // Refs, not locals: ending the pan re-renders and re-binds these handlers
+    // before the menu event arrives.
+    const menuState = menuStateRef.current;
     const handlePointerUp = (e: PointerEvent) => {
       const spin = mouseSpinRef.current;
-      if (spin && spin.pointerId === e.pointerId) {
-        if (spin.moved) swallowMenuUntil = performance.now() + 400;
-        mouseSpinRef.current = null;
-      }
+      if (spin && spin.pointerId === e.pointerId) mouseSpinRef.current = null;
       if (panButtonRef.current === e.button) {
+        const right = rightPanRef.current;
+        if (e.button === 2 && right?.moved) menuState.swallowUntil = performance.now() + 400;
+        rightPanRef.current = null;
         setIsPanning(false);
         panButtonRef.current = null;
+        const menu = menuState.held;
+        menuState.held = null;
+        if (menu && right && !right.moved) menu.target.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: menu.x, clientY: menu.y, button: 2 }));
       }
     };
     const handleContextMenu = (e: MouseEvent) => {
-      if (mouseSpinRef.current?.moved || performance.now() < swallowMenuUntil) {
+      if (!e.isTrusted) return;
+      if (rightPanRef.current) {
+        if (!rightPanRef.current.moved && e.target) menuState.held = { target: e.target, x: e.clientX, y: e.clientY };
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      } else if (performance.now() < menuState.swallowUntil) {
         e.preventDefault();
         e.stopImmediatePropagation();
       }
@@ -715,7 +730,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   }, [enabled, isPanning, setYawNow]);
 
   // ---------------------------------------------------------------------------
-  // Touch pinch zoom
+  // Touch: one finger pans, two pan and pinch-zoom, three or more spin
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!enabled || !zoomEnabled) return;
@@ -725,70 +740,74 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
 
     const getDistance = (t1: Touch, t2: Touch) =>
       Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-    const getAngle = (t1: Touch, t2: Touch) =>
-      (Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180) / Math.PI;
+
+    /** The fingers' centre, and each finger's angle about it, by touch id. */
+    const centroid = (touches: TouchList) => {
+      let x = 0, y = 0;
+      for (const touch of Array.from(touches)) { x += touch.clientX; y += touch.clientY; }
+      return { x: x / touches.length, y: y / touches.length };
+    };
+    const anglesAbout = (touches: TouchList, centre: { x: number; y: number }) =>
+      new Map(Array.from(touches).map((touch) => [touch.identifier, (Math.atan2(touch.clientY - centre.y, touch.clientX - centre.x) * 180) / Math.PI]));
+    const allInside = (touches: TouchList) => {
+      const rect = container.getBoundingClientRect();
+      return Array.from(touches).every((touch) => touch.clientX >= rect.left && touch.clientX <= rect.right && touch.clientY >= rect.top && touch.clientY <= rect.bottom);
+    };
+
+    /** Starts the gesture the fingers now on the glass make, from the camera
+     * as it is: one finger pans, two pan and pinch-zoom together, three or
+     * more spin. Called on every finger down or up, so changing the count
+     * never jumps the camera. */
+    const beginGesture = (touches: TouchList, event: TouchEvent | null) => {
+      touchPanRef.current.active = false;
+      pinchRef.current.active = false;
+      twistRef.current = null;
+      const display = cameraRef.current;
+      if (touches.length === 1) {
+        const t = touches[0];
+        if (canStartPanAt && !canStartPanAt(t.clientX, t.clientY)) return;
+        event?.preventDefault();
+        touchPanRef.current = { active: true, startX: t.clientX, startY: t.clientY, camX: display.x, camY: display.y };
+        return;
+      }
+      if (!allInside(touches)) return;
+      if (touches.length === 2) {
+        const rect = container.getBoundingClientRect();
+        const t1 = touches[0], t2 = touches[1];
+        const midX = centeredZoom ? 0 : (t1.clientX + t2.clientX) / 2 - rect.left;
+        const midY = centeredZoom ? 0 : (t1.clientY + t2.clientY) / 2 - rect.top;
+        const displayEffective = display.scale * baseScaleRef.current;
+        const anchorWorld = transformModeRef.current === 'zoom'
+          ? { x: midX / displayEffective - display.x, y: midY / displayEffective - display.y }
+          : { x: (midX - display.x) / displayEffective, y: (midY - display.y) / displayEffective };
+        pinchRef.current = {
+          active: true,
+          startDistance: getDistance(t1, t2),
+          startScale: display.scale,
+          startX: display.x,
+          startY: display.y,
+          anchorWorld,
+          startMid: centroid(touches),
+        };
+        setIsPanning(false);
+        return;
+      }
+      twistRef.current = { startYaw: display.yaw ?? 0, angles: anglesAbout(touches, centroid(touches)) };
+      setIsPanning(false);
+    };
 
     const handleTouchStart = (e: TouchEvent) => {
       if (objectGestureRef.current.locked) return;
-      if (isCameraInteractiveTarget(e.target)) return;
-      if (e.touches.length === 1) {
-        const t = e.touches[0];
-        if (canStartPanAt && !canStartPanAt(t.clientX, t.clientY)) {
-          touchPanRef.current.active = false;
-          return;
-        }
-        e.preventDefault();
-        touchPanRef.current = {
-          active: true,
-          startX: t.clientX,
-          startY: t.clientY,
-          camX: cameraRef.current.x,
-          camY: cameraRef.current.y,
-        };
-        return;
-      }
-      if (e.touches.length !== 2) return;
-      const rect = container.getBoundingClientRect();
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      if (
-        t1.clientX < rect.left ||
-        t1.clientX > rect.right ||
-        t1.clientY < rect.top ||
-        t1.clientY > rect.bottom ||
-        t2.clientX < rect.left ||
-        t2.clientX > rect.right ||
-        t2.clientY < rect.top ||
-        t2.clientY > rect.bottom
-      ) {
-        return;
-      }
-      const midX = centeredZoom ? 0 : (t1.clientX + t2.clientX) / 2 - rect.left;
-      const midY = centeredZoom ? 0 : (t1.clientY + t2.clientY) / 2 - rect.top;
-      const distance = getDistance(t1, t2);
+      if (e.touches.length === 1 && isCameraInteractiveTarget(e.target)) return;
+      beginGesture(e.touches, e);
+    };
 
-      const display = cameraRef.current;
-      const displayEffective = display.scale * baseScaleRef.current;
-      let worldX: number, worldY: number;
-      if (transformModeRef.current === 'zoom') {
-        worldX = midX / displayEffective - display.x;
-        worldY = midY / displayEffective - display.y;
-      } else {
-        worldX = (midX - display.x) / displayEffective;
-        worldY = (midY - display.y) / displayEffective;
-      }
-
-      pinchRef.current = {
-        active: true,
-        startDistance: distance,
-        startScale: display.scale,
-        startX: display.x,
-        startY: display.y,
-        anchorWorld: { x: worldX, y: worldY },
-        startAngle: getAngle(t1, t2),
-        startYaw: display.yaw ?? 0,
-      };
-      setIsPanning(false);
+    const commit = (next: CameraState) => {
+      cameraRef.current = next;
+      zoomTargetRef.current = next;
+      applyTransform(next);
+      lastStateSyncRef.current = performance.now();
+      setCameraState(next);
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -801,68 +820,78 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
           x: (t.clientX - touchPanRef.current.startX) * panScaleRef.current.x,
           y: (t.clientY - touchPanRef.current.startY) * panScaleRef.current.y,
         }, -(cameraRef.current.yaw ?? 0));
-        const next = {
-          ...cameraRef.current,
-          x: touchPanRef.current.camX + delta.x,
-          y: touchPanRef.current.camY + delta.y,
-        };
-        cameraRef.current = next;
-        zoomTargetRef.current = { ...zoomTargetRef.current, x: next.x, y: next.y };
-        applyTransform(next);
-        lastStateSyncRef.current = performance.now();
-        setCameraState(next);
+        commit({ ...cameraRef.current, x: touchPanRef.current.camX + delta.x, y: touchPanRef.current.camY + delta.y });
         return;
       }
-      if (!pinchRef.current.active) return;
-      if (e.touches.length !== 2) return;
+      // Three or more fingers turning about their centre spin the camera.
+      const twist = twistRef.current;
+      if (twist && e.touches.length >= 3) {
+        e.preventDefault();
+        const now = anglesAbout(e.touches, centroid(e.touches));
+        let sum = 0, count = 0;
+        now.forEach((angle, id) => {
+          const start = twist.angles.get(id);
+          if (start === undefined) return;
+          sum += ((angle - start + 540) % 360) - 180;
+          count += 1;
+        });
+        if (count) commit({ ...cameraRef.current, yaw: twist.startYaw + sum / count });
+        return;
+      }
+      if (!pinchRef.current.active || e.touches.length !== 2) return;
       e.preventDefault();
 
       const rect = container.getBoundingClientRect();
       const t1 = e.touches[0];
       const t2 = e.touches[1];
-      const midX = centeredZoom ? 0 : (t1.clientX + t2.clientX) / 2 - rect.left;
-      const midY = centeredZoom ? 0 : (t1.clientY + t2.clientY) / 2 - rect.top;
-      const distance = getDistance(t1, t2);
-      const ratio = distance / Math.max(1, pinchRef.current.startDistance);
-
+      const pinch = pinchRef.current;
+      const ratio = getDistance(t1, t2) / Math.max(1, pinch.startDistance);
       const nextEffective = Math.min(
         maxScaleRef.current * baseScaleRef.current,
-        Math.max(
-          minScaleRef.current * baseScaleRef.current,
-          pinchRef.current.startScale * baseScaleRef.current * ratio,
-        ),
+        Math.max(minScaleRef.current * baseScaleRef.current, pinch.startScale * baseScaleRef.current * ratio),
       );
       const newScale = nextEffective / baseScaleRef.current;
 
-      let newX = pinchRef.current.startX;
-      let newY = pinchRef.current.startY;
-      if (transformModeRef.current === 'zoom') {
-        newX = midX / nextEffective - pinchRef.current.anchorWorld.x;
-        newY = midY / nextEffective - pinchRef.current.anchorWorld.y;
+      let newX: number, newY: number;
+      if (centeredZoom) {
+        // Zoom about the view centre, and pan with the fingers' midpoint.
+        const k = newScale / pinch.startScale;
+        const mid = centroid(e.touches);
+        const pan = rotateVector({
+          x: (mid.x - pinch.startMid.x) * panScaleRef.current.x,
+          y: (mid.y - pinch.startMid.y) * panScaleRef.current.y,
+        }, -(cameraRef.current.yaw ?? 0));
+        newX = pinch.startX * k + pan.x;
+        newY = pinch.startY * k + pan.y;
       } else {
-        newX = midX - pinchRef.current.anchorWorld.x * nextEffective;
-        newY = midY - pinchRef.current.anchorWorld.y * nextEffective;
+        // Anchored under the moving midpoint, which pans as it zooms.
+        const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
+        const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
+        if (transformModeRef.current === 'zoom') {
+          newX = midX / nextEffective - pinch.anchorWorld.x;
+          newY = midY / nextEffective - pinch.anchorWorld.y;
+        } else {
+          newX = midX - pinch.anchorWorld.x * nextEffective;
+          newY = midY - pinch.anchorWorld.y * nextEffective;
+        }
       }
-
-      // A two-finger twist spins the camera with the fingers.
-      const turn = ((getAngle(t1, t2) - pinchRef.current.startAngle + 540) % 360) - 180;
-      const next = { ...cameraRef.current, x: newX, y: newY, scale: newScale, yaw: pinchRef.current.startYaw + turn };
-      cameraRef.current = next;
-      zoomTargetRef.current = next;
-      applyTransform(next);
-      lastStateSyncRef.current = performance.now();
-      setCameraState(next);
+      commit({ ...cameraRef.current, x: newX, y: newY, scale: newScale });
     };
 
-    const handleTouchEnd = () => {
-      pinchRef.current.active = false;
-      touchPanRef.current.active = false;
+    // A finger lifted: carry on with the fingers left, from where the camera is.
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length) beginGesture(e.touches, null);
+      else {
+        pinchRef.current.active = false;
+        touchPanRef.current.active = false;
+        twistRef.current = null;
+      }
     };
 
     const onTouchStart: EventListener = (event) => handleTouchStart(event as TouchEvent);
     const onTouchMove: EventListener = (event) => handleTouchMove(event as TouchEvent);
-    const onTouchEnd: EventListener = () => handleTouchEnd();
-    const onTouchCancel: EventListener = () => handleTouchEnd();
+    const onTouchEnd: EventListener = (event) => handleTouchEnd(event as TouchEvent);
+    const onTouchCancel: EventListener = (event) => handleTouchEnd(event as TouchEvent);
 
     target.addEventListener('touchstart', onTouchStart, { passive: false });
     target.addEventListener('touchmove', onTouchMove, { passive: false });
