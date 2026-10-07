@@ -14,9 +14,10 @@ const separate=(a,b)=>a.x+a.width<=b.x+0.5||b.x+b.width<=a.x+0.5||a.y+a.height<=
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');await p.locator('.quest-card').waitFor();
     const at=(label,list)=>list.forEach(d=>problems.push(`${w}x${h} ${label}: ${d}`));
     at('supplies',await findLayoutDefects(p,'.supply-tray',SUPPLY));at('quests',await findLayoutDefects(p,'.quest-tray',QUEST));
+    assert.ok(await p.locator('.quest-tray .quest-card__text').isVisible(),'the active card shows its objective face up');
     await p.evaluate(({title,text})=>{const card=document.querySelector('.quest-tray .quest-card');card.querySelector('.quest-card__title').textContent=title;card.querySelector('.quest-card__text').textContent=text;},LONGEST);
     await p.waitForTimeout(100);at('quests, longest text',await findLayoutDefects(p,'.quest-tray',QUEST));await noScroll(p,`${w}x${h}`,problems);
-    assert.ok(await p.locator('.quest-tray .quest-card__text').isVisible(),'the active card shows its objective face up');
+    assert.ok(await p.locator('.quest-tray .quest-card__title').evaluate(el=>!el.hasAttribute('title')&&el.scrollHeight<=el.clientHeight+1),`${w}x${h} the longest quest title shows in full`);
     const card=await p.locator('.quest-tray .quest-card').boundingBox();assert.ok(card.width>=60,`${w}x${h} quest card is ${card.width}px wide`);
     await p.reload();await p.locator('.quest-card').waitFor();const tray=await p.locator('.quest-tray').boundingBox();assert.ok(tray.width<=card.width+56,`${w}x${h} quest tray ${tray.width}px for a ${card.width}px card`);
     await p.locator('.quest-tray .quest-card').click();const note=p.locator('.quest-note');await note.waitFor();
