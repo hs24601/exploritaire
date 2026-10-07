@@ -10,7 +10,7 @@ const sampleFrames=(p,ms)=>p.evaluate(ms=>new Promise(done=>{const frames=[];con
     if(performance.now()-start<ms)requestAnimationFrame(tick);else done(frames);};requestAnimationFrame(tick);}),ms);
 (async()=>{const b=await chromium.launch({headless:true});try{
   for(const [w,h] of [[1280,720],[390,844]]){
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     await p.locator('[data-board-piece="actor"]').waitFor();
     await p.getByRole('button',{name:'Tilt camera view'}).click();

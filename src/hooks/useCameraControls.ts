@@ -43,6 +43,11 @@ interface UseCameraControlsResult {
   setCameraState: React.Dispatch<React.SetStateAction<CameraState>>;
   startPanAt: (clientX: number, clientY: number, button?: number) => void;
   endPan: () => void;
+  /** The camera as drawn this frame. `cameraState` only catches up every
+   * 50-80 ms while the camera moves, to spare React renders. */
+  getLiveCamera: () => CameraState;
+  /** Calls `listener` every frame the camera moves; returns the unsubscribe. */
+  onCameraFrame: (listener: (state: CameraState) => void) => () => void;
 }
 
 const DEFAULT_CAMERA: CameraState = { x: 0, y: 0, scale: 1 };
@@ -142,6 +147,13 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   const panScaleRef = useRef(panScale ?? { x: 1, y: 1 });
   panScaleRef.current = panScale ?? { x: 1, y: 1 };
 
+  const frameListenersRef = useRef(new Set<(state: CameraState) => void>());
+  const onCameraFrame = useCallback((listener: (state: CameraState) => void) => {
+    frameListenersRef.current.add(listener);
+    return () => { frameListenersRef.current.delete(listener); };
+  }, []);
+  const getLiveCamera = useCallback(() => cameraRef.current, []);
+
   const applyTransform = useCallback((state: CameraState) => {
     const el = contentRef.current;
     if (!el) return;
@@ -152,8 +164,13 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     const container = containerRef.current;
     if (container) {
       container.style.setProperty('--camera-transform', transform);
+      // Live camera for screen-space layers that follow the table, e.g. light shafts.
+      container.style.setProperty('--camera-x', `${state.x}px`);
+      container.style.setProperty('--camera-y', `${state.y}px`);
+      container.style.setProperty('--camera-scale', `${scale}`);
     }
     document.documentElement.style.setProperty('--camera-transform', transform);
+    frameListenersRef.current.forEach((listener) => listener(state));
   }, []);
 
   // Sync React state → cameraRef (for external setCameraState calls)
@@ -747,5 +764,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       setIsPanning(false);
       panButtonRef.current = null;
     },
+    getLiveCamera,
+    onCameraFrame,
   };
 }

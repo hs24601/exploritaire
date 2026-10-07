@@ -11,7 +11,7 @@ const noScroll=async(p,label,problems)=>{const o=await p.locator('.quest-tray__w
 const separate=(a,b)=>a.x+a.width<=b.x+0.5||b.x+b.width<=a.x+0.5||a.y+a.height<=b.y+0.5||b.y+b.height<=a.y+0.5;
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1912,914],[1600,900],[1366,768],[1280,720]]){
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');await p.locator('.quest-card').waitFor();
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');await p.locator('.quest-card').waitFor();
     const at=(label,list)=>list.forEach(d=>problems.push(`${w}x${h} ${label}: ${d}`));
     at('supplies',await findLayoutDefects(p,'.supply-tray',SUPPLY));at('quests',await findLayoutDefects(p,'.quest-tray',QUEST));
     assert.ok(await p.locator('.quest-tray .quest-card__text').isVisible(),'the active card shows its objective face up');
@@ -31,7 +31,7 @@ const separate=(a,b)=>a.x+a.width<=b.x+0.5||b.x+b.width<=a.x+0.5||a.y+a.height<=
     await p.close();
   }
   for(const [w,h] of [[390,844],[844,390]]){
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');
     const at=(label,list)=>list.forEach(d=>problems.push(`${w}x${h} ${label}: ${d}`));
     await p.getByRole('button',{name:'Supplies',exact:true}).click();at('supplies',await findLayoutDefects(p,'.supply-tray',SUPPLY));
     await p.locator('[data-supply="berries"]').click();at('supply details',await findLayoutDefects(p,'.supply-details',TOAST));

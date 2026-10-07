@@ -4,7 +4,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 // shifts sideways as the clock text changes (Night, Twilight, Day).
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1912,914],[1280,720]])for(const rate of [1,4]){
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(800);
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(800);
     const clock=p.locator('.proto-lighting-rail__clock');
     assert.match(await clock.textContent(),/09:00/,`${w}x${h} the table opens at 09:00`);
     (await findLayoutDefects(p,'.proto-lighting-rail',{parts:'.proto-lighting-rail > *'})).forEach(d=>problems.push(`${w}x${h} lighting rail: ${d}`));

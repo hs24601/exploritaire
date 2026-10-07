@@ -188,6 +188,6 @@ export const shaftSlots = (viewWidth: number, margin: number, camera: { x: numbe
     const slot = from + index;
     const next = seeded(`shaft-${slot}`);
     const worldX = (slot + 0.2 + next() * 0.6) * period;
-    return { slot, next, x: camera.x + worldX * camera.scale };
+    return { slot, next, worldX, x: camera.x + worldX * camera.scale };
   });
 };

@@ -77,7 +77,7 @@ const walkToPond=async page=>{
 (async()=>{const b=await chromium.launch({headless:true});try{
   const p=await (await b.newContext({viewport:{width:1912,height:914}})).newPage();
   await p.addInitScript(seeded,SEED);
-  await p.goto('http://localhost:5179/proto.html');
+  await p.goto('http://localhost:5178/proto.html');
   const before=await stamina(p);
   await walkToPond(p);await installOracle(p);
   assert.equal((await stamina(p)).now,before.now,'walking to the pond costs no stamina');
@@ -195,7 +195,7 @@ const walkToPond=async page=>{
     // pond in portrait and then turns the phone.
     const landscape=w>h&&h<500,[sw,sh]=landscape?[h,w]:[w,h];
     const phone=sw<900,ctx=await b.newContext({viewport:{width:sw,height:sh},hasTouch:phone,isMobile:phone});
-    const q=await ctx.newPage();await q.addInitScript(seeded,SEED);await q.goto('http://localhost:5179/proto.html');
+    const q=await ctx.newPage();await q.addInitScript(seeded,SEED);await q.goto('http://localhost:5178/proto.html');
     if(phone)await q.getByRole('button',{name:'Table',exact:true}).click();
     const pond=await q.locator('[data-biome-id="pond"]').boundingBox(),view=await q.locator('.proto-map-viewport').boundingBox();
     if(!pond||pond.x<view.x||pond.x+pond.width>view.x+view.width||pond.y<view.y||pond.y+pond.height>view.y+view.height)defects.push(`${sw}x${sh}: the pond is not in the starting view`);

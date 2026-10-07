@@ -7,7 +7,7 @@ const energy=p=>p.locator('.proto-actor-energy').first().getAttribute('aria-labe
 const highlighted=p=>p.locator('.proto-tableau-stage button.playing-card[data-highlight="true"]:not(:disabled)');
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1280,720],[390,844]]){
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(400);
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(400);
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     const a=await p.locator('[data-board-piece="actor"]').boundingBox(),t=await p.locator('button[data-biome-id="woods-alpha"]').boundingBox();
     await p.mouse.move(a.x+a.width/2,a.y+a.height/2);await p.mouse.down();await p.mouse.move(t.x+t.width/2,t.y+t.height/2,{steps:15});await p.mouse.up();

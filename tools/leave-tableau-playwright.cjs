@@ -3,7 +3,7 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({headless:true});try{
   const p=await (await b.newContext({viewport:{width:1912,height:914}})).newPage();
-  await p.goto('http://localhost:5179/proto.html');
+  await p.goto('http://localhost:5178/proto.html');
   const a=await p.locator('[data-board-piece="actor"]').boundingBox(),t=await p.locator('[data-biome-id="woods-alpha"]').boundingBox();
   await p.mouse.move(a.x+a.width/2,a.y+a.height/2);await p.mouse.down();await p.mouse.move(t.x+t.width/2,t.y+t.height/2,{steps:15});await p.mouse.up();
   const card=p.locator('[data-table-quest="0"]');await card.waitFor({timeout:20000});await p.waitForTimeout(1200);

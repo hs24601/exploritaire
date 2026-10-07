@@ -8,7 +8,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 const overlap=(a,b)=>Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y));
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]])for(const tilt of [false,true]){
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     if(tilt){await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(900);}
     const pop=p.locator('[data-biome-popup="woods-alpha"]');await pop.waitFor();

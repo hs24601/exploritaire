@@ -16,7 +16,7 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]])for(const fx of ['','low']){
     const tag=`${w}x${h}${fx?' fx='+fx:''}`;
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html'+(fx?'?fx='+fx:''));
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html'+(fx?'?fx='+fx:''));
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     await setHour(p,22);await p.waitForTimeout(300);
     const flat=await counts(p);if(Object.keys(flat).some(k=>!['edgeShadow','interactive'].includes(k)&&flat[k]))problems.push(`${tag}: ambiance in the flat camera ${JSON.stringify(flat)}`);
@@ -51,10 +51,19 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
     // World particles and light shafts are pinned to the table: a pan slides
     // them exactly as far as the lamp halos, which follow the pieces.
     await setHour(p,9);await p.waitForTimeout(300);
-    const lefts=()=>p.evaluate(()=>{const px=e=>parseFloat(getComputedStyle(e).left);return {halo:[...document.querySelectorAll('[data-atmosphere="halo"]')].map(px),mote:[...document.querySelectorAll('[data-atmosphere="mote"]')].map(px),ray:[...document.querySelectorAll('[data-atmosphere="ray"]')].map(e=>e.getBoundingClientRect().left+e.getBoundingClientRect().width/2)};});
+    // Table-plane x of each billboard's foot (table px through the live camera)
+    // and screen x of each shaft's middle; both slide by the camera's pan.
+    const lefts=()=>p.evaluate(()=>{const cam=getComputedStyle(document.querySelector('.proto-map-viewport'));const cx=parseFloat(cam.getPropertyValue('--camera-x')),cs=parseFloat(cam.getPropertyValue('--camera-scale'));
+      const px=e=>cx+parseFloat(e.style.left)*cs;return {halo:[...document.querySelectorAll('[data-atmosphere="halo"]')].map(px),mote:[...document.querySelectorAll('[data-atmosphere="mote"]')].map(px),ray:[...document.querySelectorAll('[data-atmosphere="ray"]')].map(e=>e.getBoundingClientRect().left+e.getBoundingClientRect().width/2)};});
     const was=await lefts();
     const area=await p.locator('.proto-map-viewport').boundingBox();
-    const sx=area.x+area.width*0.82,sy=area.y+area.height*0.88;await p.mouse.move(sx,sy);await p.mouse.down();await p.mouse.move(sx-120,sy,{steps:8});await p.mouse.up();await p.waitForTimeout(300);
+    // Mid-pan, on every frame, the lantern's halo keeps the lantern's pace (the
+    // ambiance used to catch up only at React's 50-80 ms camera syncs).
+    const halfway=()=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>{const halo=document.querySelector('[data-atmosphere="halo"]')?.getBoundingClientRect();const lamp=document.querySelector('[data-board-piece="lamp"]')?.getBoundingClientRect();r(halo&&lamp?halo.left-(lamp.left+lamp.width/2):null);})));
+    const sx=area.x+area.width*0.82,sy=area.y+area.height*0.88;const gap=await halfway();await p.mouse.move(sx,sy);await p.mouse.down();
+    let worstLag=0;for(let step=1;step<=8;step++){await p.mouse.move(sx-15*step,sy);const g=await halfway();if(gap!=null&&g!=null)worstLag=Math.max(worstLag,Math.abs(g-gap));}
+    await p.mouse.up();await p.waitForTimeout(300);
+    if(worstLag>1.5)problems.push(`${tag}: the lantern halo trails the lantern by up to ${worstLag.toFixed(1)}px mid-pan`);
     const now=await lefts();const shift=now.halo[0]-was.halo[0];
     if(!(Math.abs(shift)>40))problems.push(`${tag}: the pan did not move the table (${shift})`);
     else for(const kind of fx?['ray']:['mote','ray']){const before=kind==='ray'?was.ray.filter(x=>x+shift>area.x&&x+shift<area.x+area.width):was[kind];if(!before.length){if(!fx)problems.push(`${tag}: no ${kind}s in view to follow`);continue;}

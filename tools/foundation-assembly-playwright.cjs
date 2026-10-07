@@ -5,7 +5,7 @@ const PARTS={minFontSize:0,parts:'.proto-actor-energy, .proto-foundation-card--e
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const tilted of [false,true])for(const [w0,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
     const w=w0,label=tilted?' tilted':'';
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(500);
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(500);
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     if(tilted)await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(700);
     const a=await p.locator('[data-board-piece="actor"]').boundingBox(),t=await p.locator('[data-biome-id="woods-alpha"]').boundingBox();await p.mouse.move(a.x+a.width/2,a.y+a.height/2);await p.mouse.down();await p.mouse.move(t.x+t.width/2,t.y+t.height/2,{steps:15});await p.mouse.up();

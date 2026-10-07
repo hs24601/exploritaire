@@ -256,7 +256,6 @@ export const ProtoMap = ({
   const resourceStacksRef = useRef(resourceStacks);
   const [, setResourcePhysicsTick] = useState(0);
   resourceStacksRef.current = resourceStacks;
-  const gridStep = CLASSICPLUS_GRID_SIZE * camera.cameraState.scale;
 
   useEffect(() => {
     const viewport = camera.containerRef.current;
@@ -577,6 +576,15 @@ export const ProtoMap = ({
       radius: Math.max(0.5, finiteCoordinate(source.radius, 2.7)),
     }));
     const surface = canvas.parentElement ?? viewport;
+    // The wash is redrawn at most ~24 fps (and on camera state syncs), but the
+    // table moves every frame: between redraws, shift and scale the drawn
+    // canvas about the view centre so the light stays pinned to the table.
+    let drawn = camera.getLiveCamera();
+    const follow = (live: { x: number; y: number; scale: number }) => {
+      const k = live.scale / drawn.scale;
+      canvas.style.transform = k === 1 && live.x === drawn.x && live.y === drawn.y ? ''
+        : `translate(${live.x - k * drawn.x}px, ${live.y - k * drawn.y}px) scale(${k})`;
+    };
     const draw = (timeMs: number) => {
       // Layout size, not the projected box: a tilted table plane is oversized
       // around the same center. The wash is all soft gradients, so it paints at
@@ -594,9 +602,12 @@ export const ProtoMap = ({
       const context = canvas.getContext('2d');
       if (!context) return;
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawTableLight(context, { width, height }, camera.cameraState, frame, sources, timeMs, BLOCKED_REGIONS);
+      drawn = camera.getLiveCamera();
+      drawTableLight(context, { width, height }, drawn, frame, sources, timeMs, BLOCKED_REGIONS);
+      follow(drawn);
     };
     draw(performance.now());
+    const unfollow = camera.onCameraFrame(follow);
     const observer = new ResizeObserver(() => draw(performance.now()));
     observer.observe(viewport);
     // Flicker redraws at ~24 fps after dark; reduced-motion users get a steady light.
@@ -612,9 +623,10 @@ export const ProtoMap = ({
     }
     return () => {
       observer.disconnect();
+      unfollow();
       window.cancelAnimationFrame(frameId);
     };
-  }, [lightSources, timeOfDay, staged, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale]);
+  }, [lightSources, timeOfDay, staged, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale, camera.getLiveCamera, camera.onCameraFrame]);
 
   const resolveDropDestination = (actorId: string, clientX: number, clientY: number) => {
     // A biome's pop-up scenery counts as the biome for drops.
@@ -795,11 +807,13 @@ export const ProtoMap = ({
         <div
           className="proto-table-floor absolute inset-0"
           style={{
-            backgroundImage: `repeating-linear-gradient(0deg, rgba(142,242,212,0.28) 0 1px, transparent 1px ${48 * camera.cameraState.scale}px), repeating-linear-gradient(90deg, rgba(142,242,212,0.28) 0 1px, transparent 1px ${48 * camera.cameraState.scale}px)`,
+            // Sized and placed from the live camera (--camera-*), so the grid keeps
+            // pace with the pieces every frame instead of at React's state syncs.
+            backgroundImage: `repeating-linear-gradient(0deg, rgba(142,242,212,0.28) 0 1px, transparent 1px calc(48px * var(--camera-scale, ${camera.cameraState.scale}))), repeating-linear-gradient(90deg, rgba(142,242,212,0.28) 0 1px, transparent 1px calc(48px * var(--camera-scale, ${camera.cameraState.scale})))`,
             // A tile image centered at the viewport places its boundaries half a
             // cell from True Center; stored actor coordinates identify square centers.
-            backgroundPosition: `calc(50% + ${camera.cameraState.x}px) calc(50% + ${camera.cameraState.y}px)`,
-            backgroundSize: `${gridStep}px ${gridStep}px`,
+            backgroundPosition: `calc(50% + var(--camera-x, ${camera.cameraState.x}px)) calc(50% + var(--camera-y, ${camera.cameraState.y}px))`,
+            backgroundSize: `calc(${CLASSICPLUS_GRID_SIZE}px * var(--camera-scale, ${camera.cameraState.scale})) calc(${CLASSICPLUS_GRID_SIZE}px * var(--camera-scale, ${camera.cameraState.scale}))`,
           }}
         />
         <div className="proto-table-plane absolute" style={{ inset: staged ? '33.3333%' : 0 }}>
@@ -1134,8 +1148,9 @@ export const ProtoMap = ({
                 className="proto-light-readout"
                 data-light-level={readout.level}
                 style={{
-                  left: `calc(50% + ${camera.cameraState.x + readout.position.x * camera.cameraState.scale}px)`,
-                  top: `calc(50% + ${camera.cameraState.y + (readout.position.y - readout.lift) * camera.cameraState.scale - 6}px)`,
+                  // Live camera, so the readouts keep pace with the table every frame.
+                  left: `calc(50% + var(--camera-x, 0px) + ${readout.position.x}px * var(--camera-scale, 1))`,
+                  top: `calc(50% + var(--camera-y, 0px) + ${readout.position.y - readout.lift}px * var(--camera-scale, 1) - 6px)`,
                 }}
               >
                 {readout.percent}%

@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 // Supplies tray: slim left column of icon + count tokens, details on tap, stow and restore.
 (async()=>{const b=await chromium.launch({headless:true});try{
-  const p=await b.newPage({viewport:{width:1600,height:900}});await p.goto('http://localhost:5179/proto.html');
+  const p=await b.newPage({viewport:{width:1600,height:900}});await p.goto('http://localhost:5178/proto.html');
   const supply=p.locator('.supply-tray');const quest=p.locator('.quest-tray');await supply.waitFor();
   const [s,q,map]=await Promise.all([supply.boundingBox(),quest.boundingBox(),p.locator('.proto-map').boundingBox()]);
   assert.ok(s.width<100,`slim width ${s.width}`);assert.ok(Math.abs(s.height-q.height)<2,`heights ${s.height} vs ${q.height}`);

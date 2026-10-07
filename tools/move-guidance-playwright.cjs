@@ -5,7 +5,7 @@ const SHOTS=process.env.SHOTS;
 (async()=>{const b=await chromium.launch({headless:true});try{
   for(const [w,h] of [[1912,914],[1280,720],[844,390],[390,844]]){
     const p=await (await b.newContext({viewport:{width:w,height:h}})).newPage();
-    await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(400);
+    await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(400);
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     const a=await p.locator('[data-board-piece="actor"]').boundingBox(),t=await p.locator('[data-biome-id="woods-alpha"]').boundingBox();
     await p.mouse.move(a.x+a.width/2,a.y+a.height/2);await p.mouse.down();await p.mouse.move(t.x+t.width/2,t.y+t.height/2,{steps:15});await p.mouse.up();

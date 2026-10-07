@@ -2419,6 +2419,8 @@ html.drag-perf-mode .target-swirl-sparkles {
 /* Tilted camera ambiance (TableAtmosphere). Only transform and opacity animate. */
 .proto-table-air { transform-style: preserve-3d; }
 .proto-atmosphere { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+/* The table's centre, moved by the same per-frame camera transform as the pieces. */
+.proto-atmosphere__world { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; transform: var(--camera-transform, none); transform-style: preserve-3d; }
 .proto-atmosphere__billboard { position: absolute; width: 0; height: 0; transform: rotateX(calc(-1 * var(--table-tilt))); transform-origin: 0 0; transform-style: preserve-3d; }
 .proto-halo { position: absolute; border-radius: 50%; animation: proto-halo-flicker 2s ease-in-out infinite alternate; will-change: transform, opacity; }
 @keyframes proto-halo-flicker { 0% { transform: scale(0.94); } 40% { transform: scale(1.03); } 70% { transform: scale(0.98); } 100% { transform: scale(1.05); } }

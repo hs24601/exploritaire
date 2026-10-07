@@ -6,7 +6,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1912,914],[390,844]])for(const view of ['flat','tilt']){
     const tag=`${w}x${h} ${view}`;
-    const p=await b.newPage({viewport:{width:w,height:h},hasTouch:w<900});await p.goto('http://localhost:5179/proto.html');
+    const p=await b.newPage({viewport:{width:w,height:h},hasTouch:w<900});await p.goto('http://localhost:5178/proto.html');
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     if(view==='tilt'){await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(1200);}
     const hero=p.locator('[data-board-piece="actor"]').first();

@@ -3,7 +3,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 // drop; moving off it, or letting go, clears the cue. Flat and tilted cameras.
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1280,720],[390,844]])for(const tilt of [false,true]){
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(400);
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(400);
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     if(tilt){await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(800);}
     const tag=`${w}x${h} ${tilt?'tilt':'flat'}`;const tile=p.locator('button[data-biome-id="woods-alpha"]');

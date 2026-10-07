@@ -1,7 +1,7 @@
 // Game tooltip: hover, keyboard focus, touch long-press and tap all show the
 // parchment tooltip in place of the browser's, on screen and defect-free.
 const {chromium}=require('playwright');const assert=require('node:assert/strict');const {findLayoutDefects}=require('./lib/layout-check.cjs');
-const URL=process.env.PROTO_URL||'http://localhost:5179/proto.html';const OUT='artifacts/game-tooltip';
+const URL=process.env.PROTO_URL||'http://localhost:5178/proto.html';const OUT='artifacts/game-tooltip';
 const onScreen=(r,w,h)=>r&&r.x>=0&&r.y>=0&&r.x+r.width<=w&&r.y+r.height<=h;
 (async()=>{const b=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined});const problems=[];try{
   for(const [w,h] of [[1912,914],[1280,720]]){

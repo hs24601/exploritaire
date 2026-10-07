@@ -5,7 +5,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 const setHours=(p,h)=>p.evaluate(h=>{const i=document.querySelector('[aria-label="Table time of day"]');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(i,String(h));i.dispatchEvent(new Event('input',{bubbles:true}));},h);
 (async()=>{const b=await chromium.launch({headless:true});try{
   const p=await (await b.newContext({viewport:{width:1912,height:914}})).newPage();
-  await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(500);
+  await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(500);
   const origin=await p.locator('.table-grid-origin').boundingBox();const cell=origin.width;
   const at=(column,row)=>({x:origin.x+cell/2+column*cell,y:origin.y+cell/2+row*cell});
   // The open square is 15 cells across, framed on all four sides.

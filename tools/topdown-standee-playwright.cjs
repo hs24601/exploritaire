@@ -5,7 +5,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 (async()=>{const b=await chromium.launch({headless:true});try{
   for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
     const p=await b.newPage({viewport:{width:w,height:h}});
-    await p.goto('http://localhost:5179/proto.html');if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
+    await p.goto('http://localhost:5178/proto.html');if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     const actor=p.locator('[data-board-piece="actor"].proto-sprite-topdown');await actor.waitFor({timeout:5000});
     const board=actor.locator('.proto-sprite-topdown__board');await board.waitFor();
     const edge=await board.boundingBox(),disc=await actor.locator('.proto-sprite-topdown__base').boundingBox();
@@ -24,7 +24,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
     await p.close();
   }
   const p=await b.newPage({viewport:{width:1280,height:720}});await p.route('**/assets/actors/hero.png',r=>r.fulfill({status:404}));
-  await p.goto('http://localhost:5179/proto.html');await p.waitForTimeout(800);
+  await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(800);
   assert.equal(await p.locator('.proto-sprite-topdown[data-board-piece="actor"]').count(),0,'missing art falls back to the token');
   assert.equal(await p.locator('[data-board-piece="actor"] .board-object-label').count(),1,'the token shows the label');
   console.log('Top-down Hero: straight-down view shows only the corrugated board edge on a round base, centered on its cell, shadow kept, token fallback, at desktop and phone sizes.');
