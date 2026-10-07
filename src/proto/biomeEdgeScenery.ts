@@ -40,6 +40,14 @@ const SIDE_ROWS = [
   { y: 0.04, scale: 0.84 },
   { y: 0.38, scale: 0.68 },
 ];
+/** A seam between neighbours, back to front: two rows behind the labels
+ * (one from each side's set where they differ), then the side rows' front. */
+const SEAM_ROWS = [
+  { y: -0.42, scale: 1.05 },
+  { y: -0.25, scale: 0.95 },
+  { y: 0.04, scale: 0.84 },
+  { y: 0.38, scale: 0.68 },
+];
 /** How far a side prop hangs outside the tile, as a fraction of its width. */
 const SIDE_OVERHANG = 0.35;
 
@@ -173,3 +181,174 @@ export function layoutEdgeSceneryForView(
   };
   return layoutEdgeScenery(view, scenery, label, tiltDeg, keepClear).map((prop) => ({ ...prop, ...turnPoint(prop, -quarter * 90) }));
 }
+
+/** A label as the camera sees it, from its tile's centre: turned upright
+ * about its pivot, so its box moves by how far the pivot turned. */
+export const labelInCamera = (label: LabelBox, yawDeg: number): LabelBox => {
+  const pivot = label.pivot ?? { x: 0, y: 0 };
+  const turned = turnPoint(pivot, yawDeg);
+  const dx = turned.x - pivot.x, dy = turned.y - pivot.y;
+  return { left: label.left + dx, right: label.right + dx, top: label.top + dy, bottom: label.bottom + dy };
+};
+
+/** A tile on the table, for laying its scenery out with its neighbours'. */
+export type SceneryTile = {
+  id: string;
+  /** Centre in table px. */
+  centre: { x: number; y: number };
+  size: { width: number; height: number };
+  terrain: string;
+  scenery: EdgeScenery;
+  label: LabelBox | null;
+};
+
+type Side = 'N' | 'E' | 'S' | 'W';
+const SIDE_NORMALS: Record<Side, { x: number; y: number }> = { N: { x: 0, y: -1 }, E: { x: 1, y: 0 }, S: { x: 0, y: 1 }, W: { x: -1, y: 0 } };
+const sideOf = (normal: { x: number; y: number }): Side =>
+  Math.abs(normal.x) > Math.abs(normal.y) ? (normal.x > 0 ? 'E' : 'W') : (normal.y > 0 ? 'S' : 'N');
+/** Outward normal of a prop's edge in the quarter-turned frame. */
+const EDGE_NORMALS: Record<EdgeProp['edge'], { x: number; y: number }> = { left: { x: -1, y: 0 }, right: { x: 1, y: 0 }, front: { x: 0, y: 1 } };
+
+/** The stretch where tile `b` borders tile `a` on `a`'s `side`, if it does
+ * along at least half of the shorter edge: the shared line, from..to, in
+ * table px. */
+const sharedEdge = (a: SceneryTile, b: SceneryTile, side: Side) => {
+  const rect = (tile: SceneryTile) => ({ left: tile.centre.x - tile.size.width / 2, right: tile.centre.x + tile.size.width / 2, top: tile.centre.y - tile.size.height / 2, bottom: tile.centre.y + tile.size.height / 2 });
+  const ra = rect(a), rb = rect(b);
+  const touching = side === 'E' ? Math.abs(ra.right - rb.left) < 0.5 : side === 'W' ? Math.abs(ra.left - rb.right) < 0.5 : side === 'S' ? Math.abs(ra.bottom - rb.top) < 0.5 : Math.abs(ra.top - rb.bottom) < 0.5;
+  if (!touching) return null;
+  const across = side === 'E' || side === 'W';
+  const from = across ? Math.max(ra.top, rb.top) : Math.max(ra.left, rb.left);
+  const to = across ? Math.min(ra.bottom, rb.bottom) : Math.min(ra.right, rb.right);
+  const shorter = across ? Math.min(a.size.height, b.size.height) : Math.min(a.size.width, b.size.width);
+  if (to - from < shorter / 2) return null;
+  const line = side === 'E' ? ra.right : side === 'W' ? ra.left : side === 'S' ? ra.bottom : ra.top;
+  return { across, line, from, to };
+};
+
+/** Lays out every tile's edge scenery together, for a camera spun by
+ * `yawDeg`. Each tile lines its sides nearest the camera as on its own
+ * (layoutEdgeSceneryForView), except where it borders a neighbour: there
+ * neither tile keeps its own props, and one shared run follows the seam
+ * instead, so a row of woods reads as one wood rather than a double fence.
+ * A seam running away from the camera gets side-style props (shrinking
+ * toward the camera); one running across the view gets the short front
+ * fringe. Between different terrains the run alternates the two sets (reeds
+ * thinning into ferns), each prop belonging to the tile whose set it's from.
+ * Every prop keeps clear of both tiles' labels, and props from two tiles
+ * standing on the same spot (a shared corner) are kept once. Props come back
+ * by owner, in table px from the owner's centre. */
+export function layoutTableScenery(tiles: readonly SceneryTile[], tiltDeg: number, yawDeg: number): Record<string, EdgeProp[]> {
+  const { quarter } = viewQuarter(yawDeg);
+  type Placed = EdgeProp & { owner: string; wx: number; wy: number };
+  const placed: Placed[] = [];
+  const neighbours = new Map<string, { tile: SceneryTile; edge: NonNullable<ReturnType<typeof sharedEdge>> }>();
+  for (const a of tiles) for (const side of Object.keys(SIDE_NORMALS) as Side[]) {
+    for (const b of tiles) {
+      if (a === b) continue;
+      const edge = sharedEdge(a, b, side);
+      if (edge) { neighbours.set(`${a.id}:${side}`, { tile: b, edge }); break; }
+    }
+  }
+  // Clear of every label the prop could stand in front of, in the camera's frame.
+  const clearOfLabels = (prop: Placed, near: readonly SceneryTile[], maxStep: number) => {
+    let current: Placed | null = prop;
+    for (const tile of near) {
+      if (!current) break;
+      const guard = tile.label ? labelInCamera(tile.label, yawDeg)
+        : { left: -tile.size.width / 2, right: tile.size.width / 2, top: -tile.size.height / 2, bottom: tile.size.height / 2 };
+      const local = turnPoint({ x: current.wx - tile.centre.x, y: current.wy - tile.centre.y }, yawDeg);
+      const kept: EdgeProp | null = keepClearOfLabel({ ...current, ...local }, guard, tiltDeg, maxStep);
+      if (!kept) { current = null; break; }
+      const back = turnPoint({ x: kept.x, y: kept.y }, -yawDeg);
+      current = { ...current, width: kept.width, height: kept.height, wx: tile.centre.x + back.x, wy: tile.centre.y + back.y };
+    }
+    return current;
+  };
+  // Each tile's own props, less those on a shared side.
+  for (const tile of tiles) {
+    for (const prop of layoutEdgeSceneryForView(tile.size, tile.scenery, tile.label, tiltDeg, yawDeg)) {
+      const side = sideOf(turnPoint(EDGE_NORMALS[prop.edge], -quarter * 90));
+      if (neighbours.has(`${tile.id}:${side}`)) continue;
+      // Clear of its own label already; also of any other label it stands before.
+      const others = tiles.filter((other) => other !== tile && Math.hypot(other.centre.x - tile.centre.x, other.centre.y - tile.centre.y) < (tile.size.width + tile.size.height + other.size.width + other.size.height) * 0.75);
+      const kept = clearOfLabels({ ...prop, owner: tile.id, wx: tile.centre.x + prop.x, wy: tile.centre.y + prop.y }, others, 0);
+      if (kept) placed.push(kept);
+    }
+  }
+  // One run along each shared seam.
+  const done = new Set<string>();
+  for (const a of tiles) for (const side of Object.keys(SIDE_NORMALS) as Side[]) {
+    const entry = neighbours.get(`${a.id}:${side}`);
+    if (!entry) continue;
+    const b = entry.tile, { across, line, from, to } = entry.edge;
+    const key = [a.id, b.id].sort().join('|');
+    if (done.has(key)) continue;
+    done.add(key);
+    // Whether the seam runs away from the camera or across the view.
+    const cameraNormal = turnPoint(SIDE_NORMALS[side], quarter * 90);
+    const runsAway = Math.abs(cameraNormal.x) > Math.abs(cameraNormal.y);
+    const point = (t: number) => across ? { x: line, y: from + (to - from) * t } : { x: from + (to - from) * t, y: line };
+    // Alternate sides along the seam: each prop is its owner's (lit and
+    // revealed with it); between different terrains, from its owner's set.
+    const set = (index: number) => (index % 2 === 1 ? b : a);
+    const run: Placed[] = [];
+    if (runsAway) {
+      // The seam end nearer the camera is further along the quarter frame's +y.
+      const depth = (t: number) => turnPoint(point(t), quarter * 90).y;
+      const nearEnd = depth(1) > depth(0) ? 1 : 0;
+      SEAM_ROWS.forEach((row, index) => {
+        const owner = set(index);
+        const t = nearEnd ? row.y + 0.5 : 0.5 - row.y;
+        const at = point(Math.max(0.08, Math.min(0.92, t)));
+        const width = owner.scenery.side.width * EDGE_ART_SCALE * row.scale, height = owner.scenery.side.height * EDGE_ART_SCALE * row.scale;
+        run.push({ id: `seam-${key}-${index}`, edge: 'left', src: owner.scenery.side.src, x: 0, y: 0, width, height, flip: index % 2 === 1, owner: owner.id, wx: at.x, wy: at.y });
+      });
+    } else {
+      const sample = a.scenery.front;
+      const gaps = Math.max(1, Math.round((to - from) / (sample.width * EDGE_ART_SCALE)));
+      for (let index = 1; index < gaps; index += 1) {
+        const owner = set(index);
+        const at = point(index / gaps);
+        run.push({ id: `seam-${key}-${index}`, edge: 'front', src: owner.scenery.front.src, x: 0, y: 0, width: owner.scenery.front.width * EDGE_ART_SCALE, height: owner.scenery.front.height * EDGE_ART_SCALE, flip: index % 2 === 1, owner: owner.id, wx: at.x, wy: at.y });
+      }
+    }
+    for (const prop of run) {
+      const kept = clearOfLabels(prop, [a, b], 0);
+      if (kept) placed.push(kept);
+    }
+  }
+  // A shared corner keeps one prop.
+  const kept: Placed[] = [];
+  for (const prop of placed) {
+    const seam = prop.id.startsWith('seam-');
+    if (kept.some((other) => other.owner !== prop.owner && !(seam && other.id.startsWith('seam-')) && Math.hypot(other.wx - prop.wx, other.wy - prop.wy) < Math.min(other.width, prop.width) * 0.4)) continue;
+    kept.push(prop);
+  }
+  const byOwner: Record<string, EdgeProp[]> = Object.fromEntries(tiles.map((tile) => [tile.id, [] as EdgeProp[]]));
+  for (const prop of kept) {
+    const owner = tiles.find((tile) => tile.id === prop.owner)!;
+    const { owner: _owner, wx, wy, ...rest } = prop;
+    void _owner;
+    byOwner[prop.owner].push({ ...rest, x: wx - owner.centre.x, y: wy - owner.centre.y });
+  }
+  return byOwner;
+}
+
+/** The tallest a piece standing upright at `foot` (table px) and `width`
+ * wide can be without covering another tile's label as the camera sees it
+ * (Infinity when nothing is behind it). A tile's pop-up stands at its back,
+ * which can be right in front of the label of the tile behind it. */
+export const tallestClearOfLabels = (foot: { x: number; y: number }, width: number, tiles: readonly SceneryTile[], tiltDeg: number, yawDeg: number, ownId?: string) => {
+  let limit = Infinity;
+  for (const tile of tiles) {
+    if (tile.id === ownId) continue;
+    const guard = tile.label ? labelInCamera(tile.label, yawDeg)
+      : { left: -tile.size.width / 2, right: tile.size.width / 2, top: -tile.size.height / 2, bottom: tile.size.height / 2 };
+    const local = turnPoint({ x: foot.x - tile.centre.x, y: foot.y - tile.centre.y }, yawDeg);
+    if (local.y <= guard.top) continue;
+    if (local.x + width / 2 <= guard.left - LABEL_CLEARANCE || local.x - width / 2 >= guard.right + LABEL_CLEARANCE) continue;
+    limit = Math.min(limit, maxHeightClearOfLabel(local.y, guard, tiltDeg));
+  }
+  return limit;
+};

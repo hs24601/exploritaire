@@ -1,3 +1,4 @@
+import type { BiomeFlag } from '../biomeFlags';
 import { DEFAULT_ACTOR_LUMINOSITY } from '../protoLighting';
 import { createPondDeal } from './fishing';
 import { POND_CATCHES } from './pondSpecies';
@@ -158,12 +159,18 @@ export const createSeededSmallWoodsDeal = () => createQuestBiomeDeal('small');
 // biome sizes can be added to a later progression state, but must not be
 // created as part of the initial table.
 export const DEFAULT_WOODS_TILES = [
-  { id: 'woods-alpha', title: 'Small Woods', sizeLabel: 'Small', gridSize: { columns: 1, rows: 1 }, resourceDensity: 0.45, tableauSize: 13, position: { x: 0, y: -48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'none' as const },
+  // Rough going once explored, so routes only cut through when it's faster.
+  { id: 'woods-alpha', title: 'Small Woods', sizeLabel: 'Small', gridSize: { columns: 1, rows: 1 }, resourceDensity: 0.45, tableauSize: 13, position: { x: 0, y: -48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'none' as const, flags: ['unexplored', 'rough'] as BiomeFlag[] },
 ] as const;
 
-/** The pond sits in the clear starting area, one cell down and left of the Hero, in view on phones and clear of where quest cards land. It is fished
- * (rules/fishing.ts), so it has no tableau and costs no stamina to reach. */
-export const POND_TILE = { id: 'pond', title: 'Pond', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -48, y: 96 }, unlocked: true, travelCost: 0, threat: 'none' as const, terrain: 'water' as const };
+/** A second Small Woods beside the first, so neighbouring tiles of one kind
+ * share their edge scenery. The quests still point at the first. */
+export const EAST_WOODS_TILE = { id: 'woods-east', title: 'Small Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0.45, tableauSize: 13, position: { x: 48, y: -48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'none' as const, flags: ['unexplored'] as BiomeFlag[] };
+
+/** The pond sits beside Small Woods on the row above True Center, so a pond
+ * and a wood share an edge. It is fished (rules/fishing.ts), so it has no
+ * tableau and costs no stamina to reach. */
+export const POND_TILE = { id: 'pond', title: 'Pond', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -48, y: -48 }, unlocked: true, travelCost: 0, threat: 'none' as const, terrain: 'water' as const, flags: ['unexplored'] as BiomeFlag[] };
 export const isPondTile = (biomeId: string | null | undefined) => biomeId === POND_TILE.id;
 
 export const createDeepWoodsTile = (seed: number) => ({
@@ -178,12 +185,16 @@ export const createDeepWoodsTile = (seed: number) => ({
   unlocked: false,
   travelCost: DEEP_WOODS_TRAVEL_COST,
   threat: 'low' as const,
+  flags: ['unexplored'] as BiomeFlag[],
 });
+
+/** Cards a deal puts in play, for how much of a biome is explored. */
+const dealtCards = (deal: { tableau: Card[][]; stock: Card[] }) => deal.tableau.reduce((sum, column) => sum + column.length, 0) + deal.stock.length;
 
 export const materializeDeepWoods = (seed: number): BiomeTileState => {
   const tile = createDeepWoodsTile(seed);
   const deal = createQuestBiomeDeal('deep');
-  return { ...tile, tableauSize: 19, tableau: deal.tableau, stock: deal.stock };
+  return { ...tile, tableauSize: 19, tableau: deal.tableau, stock: deal.stock, dealt: dealtCards(deal) };
 };
 
 export const isBiomeDealComplete = (tableau: Card[][], stock: Card[]) =>
@@ -248,9 +259,11 @@ export const createInitialState = (): ProtoState => {
   const seed = Math.floor(Math.random() * 0xffffffff);
   const biomeTiles = DEFAULT_WOODS_TILES.map((tile, index): BiomeTileState => {
     const deal = createSeededSmallWoodsDeal();
-    return { ...tile, seed: seed + index * 7919, tableau: deal.tableau, stock: deal.stock };
+    return { ...tile, flags: [...tile.flags], seed: seed + index * 7919, tableau: deal.tableau, stock: deal.stock, dealt: dealtCards(deal) };
   });
-  biomeTiles.push({ ...POND_TILE, position: { ...POND_TILE.position }, seed: seed + 104729, tableau: [], stock: [] });
+  const eastDeal = createSeededSmallWoodsDeal();
+  biomeTiles.push({ ...EAST_WOODS_TILE, flags: [...EAST_WOODS_TILE.flags], position: { ...EAST_WOODS_TILE.position }, seed: seed + 3 * 7919, tableau: eastDeal.tableau, stock: eastDeal.stock, dealt: dealtCards(eastDeal) });
+  biomeTiles.push({ ...POND_TILE, flags: [...POND_TILE.flags], position: { ...POND_TILE.position }, seed: seed + 104729, tableau: [], stock: [] });
   const firstBiome = biomeTiles[0];
   return {
     tableau: firstBiome.tableau,
@@ -354,6 +367,7 @@ export const cloneState = (state: ProtoState): ProtoState => ({
   biomeTiles: state.biomeTiles.map((tile) => ({
     ...tile,
     position: { ...tile.position },
+    flags: tile.flags ? [...tile.flags] : undefined,
     tableau: tile.tableau.map((column) => column.map((card) => ({ ...card }))),
     stock: tile.stock.map((card) => ({ ...card })),
   })),

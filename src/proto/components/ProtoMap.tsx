@@ -1,6 +1,10 @@
 import { TABLE_GRID, TRUE_CENTER, screenToWorld, type GridCell } from '../gridCoordinates';
-import { BLOCKED_REGIONS, blockedPathObstacles, blockedSolids } from '../worldBounds';
-import { findWorldPath, pointAlongWorldPath, worldPathLength, type PathObstacle } from '../worldPathfinding';
+import { BLOCKED_REGIONS, blockedSolids, isBlockedPoint } from '../worldBounds';
+import { findGridPath, pathTime, pointAlongTimedPath, remainingPath, type TimedPoint } from '../gridPathfinding';
+import { RouteLine } from './RouteLine';
+import { Reveal } from './Reveal';
+import { PinnedToast } from './PinnedToast';
+import { biomeOpenState, biomeTravelCost, type BiomeFlag } from '../biomeFlags';
 import { TableQuestCard, type PlacedQuestCard } from './TableQuestCard';
 import { BoardObjectLabel } from './BoardObjectLabel';
 import { solverFlightDuration } from '../solverTiming';
@@ -11,7 +15,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { rotateVector, useCameraControls } from '../../hooks/useCameraControls';
 import { BiomeEdgeScenery } from './BiomeEdgeScenery';
-import { turnPoint, viewQuarter } from '../biomeEdgeScenery';
+import { layoutTableScenery, tallestClearOfLabels, turnPoint, viewQuarter } from '../biomeEdgeScenery';
 import { AtmosphereInAir, LightShafts } from './TableAtmosphere';
 import { detectFxQuality } from '../atmosphere';
 import type { LabelBox } from '../biomeEdgeScenery';
@@ -35,6 +39,11 @@ export type ProtoBiomeTile = {
   terrain?: 'woods' | 'water';
   /** Pixel-art scenery that pops up from the back of the tile (pines for Small Woods). */
   sprite?: string;
+  /** What the tile does to travel and to opening it (biomeFlags.ts). */
+  flags?: BiomeFlag[];
+  /** How explored it is, 0-1: its props are coloured in by this share and
+   * the rest is silhouette. */
+  exploration?: number;
 };
 
 export type ProtoWorldActor = {
@@ -68,6 +77,8 @@ export const CLASSICPLUS_ZOOM_REFERENCE_SCALE = 1.7;
 const STANDEE_POP_MS = 320;
 /** Biome scenery pop-ups tower over a one-cell tile and the pieces on it. */
 const BIOME_POPUP_SIZE = 72;
+/** A pop-up cut below this to clear a label behind it is left out. */
+const BIOME_POPUP_MIN_SIZE = 26;
 
 /** A biome claims an explicit rectangle of whole world-grid cells. Tableau
  * card capacity is intentionally independent from this visual footprint. */
@@ -134,6 +145,8 @@ type ProtoMapProps = {
   onSolveBuildStep?: (stackId: string, divine: boolean) => SolveStepResult;
   onStartSolver?: (divine: boolean) => void;
   actorStamina?: number;
+  /** Party stamina: travelling into a biome costs some (its travelCost). */
+  stamina?: number;
   onActorDragStart?: (actorId: string) => void;
   questCards?: PlacedQuestCard[];
   questTitles?: string[];
@@ -168,6 +181,7 @@ export const ProtoMap = ({
   onSolveBuildStep,
   onStartSolver,
   actorStamina = 0,
+  stamina = Infinity,
   onActorDragStart,
   onInspectActor,
   questCards = [],
@@ -187,6 +201,8 @@ export const ProtoMap = ({
   // Ambiance tier for the tilted camera (atmosphere.ts): fixed for the session.
   const [fxQuality] = useState(detectFxQuality);
   const [biomeLabelBoxes, setBiomeLabelBoxes] = useState<Record<string, LabelBox>>({});
+  // The note shown when a tile that won't open is tapped (e.g. unexplored).
+  const [closedNote, setClosedNote] = useState<{ tileId: string; reason: string } | null>(null);
   const reportBiomeLabel = useCallback((tileId: string, tile: { width: number; height: number }, box: { left: number; top: number; width: number; height: number; pivot: { x: number; y: number } }) => {
     const next = { left: box.left - tile.width / 2, top: box.top - tile.height / 2, right: box.left + box.width - tile.width / 2, bottom: box.top + box.height - tile.height / 2,
       pivot: { x: box.pivot.x - tile.width / 2, y: box.pivot.y - tile.height / 2 } };
@@ -252,7 +268,7 @@ export const ProtoMap = ({
   const [travel, setTravel] = useState<{
     actorId: string;
     label: string;
-    path: Array<{ x: number; y: number }>;
+    path: TimedPoint[];
     progress: number;
     arrival: { biomeId?: string; directBiome?: boolean; foundationIndex?: number };
   } | null>(null);
@@ -450,6 +466,41 @@ export const ProtoMap = ({
     return () => window.removeEventListener('proto-actor-pointer-drop', handlePointerDrop);
   }, [actorOrigins, biomeTiles, resourceStacks]);
 
+  /** The fastest legal route for an actor to `target` on the table grid
+   * (gridPathfinding.ts): open table costs 1 per cell; a biome costs what its
+   * flags say (unexplored can't be crossed, rough is slow); locked biomes,
+   * huts and the impassable terrain can't be crossed. The start and the
+   * destination are always allowed. Null when there's no route. */
+  const planRoute = (actorId: string, target: { x: number; y: number }, arrival: { biomeId?: string } = {}) => {
+    const origin = actorOrigins.find((actor) => actor.id === actorId);
+    if (!origin) return null;
+    const originPoint = finiteWorldPoint(origin.location === 'foundation' && origin.biomeId
+      ? resolveBiomeActorCell(origin.biomeId) ?? origin.position
+      : origin.position);
+    const buildings = resourceStacks.filter(stack => stack.resource === 'provisions_hut' || stack.build && CRAFT_RECIPES.find(recipe => recipe.id === stack.build?.recipeId)?.output === 'provisions_hut');
+    const destinationBuilding = buildings.find(stack => Math.hypot(stack.position.x-target.x,stack.position.y-target.y)<52);
+    // Only the destination snaps (to its cell, a biome's entry cell or a hut).
+    const snappedTarget = arrival.biomeId ? finiteWorldPoint(target) : destinationBuilding ? destinationBuilding.position : TABLE_GRID.snap(finiteWorldPoint(target));
+    const cellCosts = new Map<string, number>();
+    const mark = (column: number, row: number, cost: number) => {
+      const key = `${column},${row}`;
+      cellCosts.set(key, Math.max(cellCosts.get(key) ?? 1, cost));
+    };
+    biomeTiles.forEach((tile) => {
+      const area = getBiomeWorldFootprint(tile);
+      const cost = tile.unlocked === false ? Infinity : biomeTravelCost(tile.flags);
+      for (let column = 0; column < Math.round(area.width / CLASSICPLUS_GRID_SIZE); column += 1)
+        for (let row = 0; row < Math.round(area.height / CLASSICPLUS_GRID_SIZE); row += 1)
+          mark(area.first.column + column, area.first.row + row, cost);
+    });
+    buildings.forEach((stack) => { const cell = TABLE_GRID.atWorld(stack.position); mark(cell.column, cell.row, Infinity); });
+    const cost = (column: number, row: number) =>
+      isBlockedPoint({ x: column * CLASSICPLUS_GRID_SIZE, y: row * CLASSICPLUS_GRID_SIZE }) ? Infinity : cellCosts.get(`${column},${row}`) ?? 1;
+    const path = findGridPath(originPoint, snappedTarget, cost, CLASSICPLUS_GRID_SIZE);
+    if (!path || path.length === 0 || path.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y))) return null;
+    return { path, target: snappedTarget };
+  };
+
   const startActorTravel = (
     actorId: string,
     target: { x: number; y: number },
@@ -457,21 +508,12 @@ export const ProtoMap = ({
   ) => {
     const origin = actorOrigins.find((actor) => actor.id === actorId);
     if (!origin || travelingActorRef.current === actorId) return;
-    const originPoint = origin.location === 'foundation' && origin.biomeId
-      ? resolveBiomeActorCell(origin.biomeId) ?? origin.position
-      : origin.position;
-    const obstacles: PathObstacle[] = [...blockedPathObstacles(), ...biomeTiles.map(tile => ({id:tile.id,...getBiomeWorldFootprint(tile)}))];
-    const buildings = resourceStacks.filter(stack => stack.resource === 'provisions_hut' || stack.build && CRAFT_RECIPES.find(recipe => recipe.id === stack.build?.recipeId)?.output === 'provisions_hut');
-    buildings.forEach(stack => obstacles.push({id: stack.id, left: stack.position.x-24, right: stack.position.x+24, top: stack.position.y-24, bottom: stack.position.y+24}));
-    const destinationBuilding = buildings.find(stack => Math.hypot(stack.position.x-target.x,stack.position.y-target.y)<52);
-    // Snap only the destination; route segments remain continuous and diagonal.
-    const snappedTarget = arrival.biomeId ? finiteWorldPoint(target) : destinationBuilding ? destinationBuilding.position : TABLE_GRID.snap(target);
-    const path = findWorldPath(finiteWorldPoint(originPoint), snappedTarget, obstacles, arrival.biomeId ?? destinationBuilding?.id);
+    const route = planRoute(actorId, target, arrival);
     clearActorDragState();
-    if (!path || path.length === 0 || path.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y))) { setRouteBlocked(true); return; }
+    if (!route) { setRouteBlocked(true); return; }
     setRouteBlocked(false);
     travelingActorRef.current = actorId;
-    setTravel({ actorId, label: origin.label, path, progress: 0, arrival });
+    setTravel({ actorId, label: origin.label, path: route.path, progress: 0, arrival });
   };
 
   useEffect(() => {
@@ -515,7 +557,8 @@ export const ProtoMap = ({
 
   useEffect(() => {
     if (!travel) return undefined;
-    const duration = Math.max(300, worldPathLength(travel.path) / 320 * 1000);
+    // Slower ground takes longer: the pace of each stretch weighs its length.
+    const duration = Math.max(300, pathTime(travel.path) / 320 * 1000);
     const startedAt = performance.now();
     let frame = 0;
     const tick = (now: number) => {
@@ -618,7 +661,7 @@ export const ProtoMap = ({
   // Placed lights plus the light each actor carries. Keyed by content so the
   // canvas effect only reruns when a light actually changes.
   // A travelling actor's light moves with it along its path, frame by frame.
-  const travelPosition = travel ? pointAlongWorldPath(travel.path, travel.progress) : null;
+  const travelPosition = travel ? pointAlongTimedPath(travel.path, travel.progress) : null;
   const actorLights = actors.flatMap(actor => actorLight(actor.id, travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor), actor.luminosity, actor.lightColor) ?? []);
   const lightKey = JSON.stringify([placedLights, actorLights]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -706,6 +749,52 @@ export const ProtoMap = ({
     }
     return { point: worldPointFromClient(clientX, clientY), arrival: {} };
   };
+
+  // While an actor is dragged over the table: where it would land and the
+  // route it would take there. A biome target lights the tile itself (the
+  // drop cue); any other cell gets its own cue, red when unreachable.
+  const dragPlan = (() => {
+    if (!dragPreview || travel) return null;
+    const over = document.elementFromPoint(dragPreview.x, dragPreview.y);
+    if (!over?.closest('.proto-map-viewport') || over.closest('[aria-label="Foundation"]')) return null;
+    const destination = resolveDropDestination(dragPreview.actorId, dragPreview.x, dragPreview.y);
+    const route = planRoute(dragPreview.actorId, destination.point, destination.arrival);
+    const biome = destination.arrival.biomeId ? biomeTiles.find((tile) => tile.id === destination.arrival.biomeId) : null;
+    return { route, biome, cell: biome ? null : TABLE_GRID.atWorld(route?.target ?? destination.point) };
+  })();
+  // The route on show: the drag's preview, or what's left of the one being walked.
+  const routeShown = (() => {
+    if (travel) {
+      const path = remainingPath(travel.path, travel.progress);
+      return path.length > 1 ? { path, unaffordable: false, label: null as string | null } : null;
+    }
+    if (!dragPlan?.route) return null;
+    const cost = dragPlan.biome?.travelCost ?? 0;
+    const unaffordable = cost > stamina;
+    const cells = Math.max(1, Math.round(pathTime(dragPlan.route.path) / CLASSICPLUS_GRID_SIZE));
+    return { path: dragPlan.route.path, unaffordable,
+      label: unaffordable ? 'Not enough stamina' : `${cells} ${cells === 1 ? 'cell' : 'cells'}${cost ? ` · ${cost} STA` : ''}` };
+  })();
+  // Tile labels as they lie on the table (turned upright for the camera), so
+  // the route passes under them.
+  const labelQuads = biomeTiles.flatMap((tile) => {
+    const box = biomeLabelBoxes[tile.id];
+    if (!box) return [];
+    const centre = getBiomeWorldFootprint(tile), pivot = box.pivot ?? { x: 0, y: 0 };
+    return [[[box.left - 2, box.top - 2], [box.right + 2, box.top - 2], [box.right + 2, box.bottom + 2], [box.left - 2, box.bottom + 2]].map(([x, y]) => {
+      const turned = rotateVector({ x: x - pivot.x, y: y - pivot.y }, -yaw);
+      return { x: centre.x + pivot.x + turned.x, y: centre.y + pivot.y + turned.y };
+    })];
+  });
+
+  // Tilted, every tile's edge scenery is laid out together, so neighbouring
+  // tiles share one run along their seam (biomeEdgeScenery.ts).
+  const sceneryTiles = biomeTiles.filter((tile) => tile.unlocked !== false).map((tile) => {
+    const area = getBiomeWorldFootprint(tile);
+    return { id: tile.id, centre: { x: area.x, y: area.y }, size: { width: area.width, height: area.height }, terrain: tile.terrain ?? 'woods',
+      scenery: BIOME_EDGE_SCENERY[tile.terrain === 'water' ? 'water' : 'woods'], label: biomeLabelBoxes[tile.id] ?? null };
+  });
+  const tableScenery = upright ? layoutTableScenery(sceneryTiles, TABLE_TILT_DEGREES, yaw) : {};
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -857,6 +946,8 @@ export const ProtoMap = ({
           Reset View
         </button>
       </div>
+      {closedNote ? <PinnedToast className="biome-closed-note" title="???" subtitle={closedNote.reason} dismissOnOutside
+        anchor={document.querySelector(`[data-biome-id="${closedNote.tileId}"]`)} onClose={() => setClosedNote(null)} /> : null}
       {routeBlocked && <div className="absolute left-3 bottom-12 z-40 rounded border border-[#ffd166] bg-[#17140b] p-2 text-base" role="status">No clear route. Choose an open destination.</div>}
       <div className="table-grid-reference" data-grid-reference={TABLE_GRID.reference(hoverCell)} aria-label="Table grid coordinate">{hoverCell.column===0&&hoverCell.row===0 ? 'True Center · ' : ''}{TABLE_GRID.reference(hoverCell)}</div>
       <div
@@ -913,6 +1004,10 @@ export const ProtoMap = ({
           {BLOCKED_REGIONS.map((region) => <div key={region.id} aria-hidden="true" data-blocked-region={region.id} className="proto-blocked-terrain"
             style={{ left: `calc(50% + ${region.left}px)`, top: `calc(50% + ${region.top}px)`, width: region.right - region.left, height: region.bottom - region.top,
               ['--terrain-sky' as string]: (0.05 + getTableLighting(timeOfDay).daylight * 0.11).toFixed(3) }} />)}
+          {/* The cell a dragged actor would land on; red when there's no route. */}
+          {dragPlan?.cell ? <div aria-hidden="true" data-cell-cue={TABLE_GRID.reference(dragPlan.cell)} data-cue-blocked={dragPlan.route ? undefined : 'true'}
+            className={`proto-cell-cue${dragPlan.route ? '' : ' proto-cell-cue--blocked'}`}
+            style={{ left: `calc(50% + ${TABLE_GRID.center(dragPlan.cell).x}px)`, top: `calc(50% + ${TABLE_GRID.center(dragPlan.cell).y}px)` }} /> : null}
           <div className="table-grid-origin" data-grid-landmark="true-center" data-grid-reference={TRUE_CENTER.reference} aria-hidden="true" style={{left:'50%',top:'50%',width:CLASSICPLUS_GRID_SIZE,height:CLASSICPLUS_GRID_SIZE}}>＋</div>
           {placedLights.filter((light) => !light.fromPiece).map((light) => <div key={light.id} data-board-piece="lamp" data-camera-ignore="true"
             aria-label={light.id === 'table-lantern' ? 'Table lantern, drag to move light' : 'Structure light'}
@@ -942,7 +1037,21 @@ export const ProtoMap = ({
               // The back is the side away from a spun camera, by quarter turn.
               const back = turnPoint({ x: 0, y: -(viewSide % 2 ? worldFootprint.width : worldFootprint.height) * (upright ? 0.37 : 0.39) }, -viewSide * 90);
               const popupPosition = { x: worldFootprint.x + back.x, y: worldFootprint.y + back.y };
-              const popup = tile.unlocked === false ? null : spriteStandee(tile.sprite, popupPosition, { base: false, size: BIOME_POPUP_SIZE, topDownSize: worldFootprint.width - 6, owner: 'biome' });
+              // Standing at the back of its tile, a pop-up can be right in front
+              // of the label of the tile behind: it's cut down to clear it, or
+              // left out when that leaves too little to read.
+              const popupSize = upright ? Math.min(BIOME_POPUP_SIZE, tallestClearOfLabels(popupPosition, BIOME_POPUP_SIZE, sceneryTiles, TABLE_TILT_DEGREES, yaw, tile.id)) : BIOME_POPUP_SIZE;
+              const popup = tile.unlocked === false || popupSize < BIOME_POPUP_MIN_SIZE ? null : spriteStandee(tile.sprite, popupPosition, { base: false, size: popupSize, topDownSize: worldFootprint.width - 6, owner: 'biome' });
+              // Unexplored: the name stays hidden and its props are silhouettes;
+              // a tap says an actor has to go there first.
+              const unexplored = Boolean(tile.flags?.includes('unexplored'));
+              const explored = tile.exploration ?? 1;
+              const openState = biomeOpenState(tile.flags);
+              const tapTile = () => {
+                if (tile.unlocked === false) return;
+                if (!openState.opens) { setClosedNote({ tileId: tile.id, reason: openState.reason ?? 'Not open yet.' }); return; }
+                onSelectBiome(tile.id);
+              };
               return (
                 <React.Fragment key={tile.id}>
                 <button
@@ -952,12 +1061,12 @@ export const ProtoMap = ({
                   data-light-level={tileLight.level}
                   data-grid-reference={TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position))}
                   data-biome-id={tile.id}
-                  title={tile.terrain === 'water' ? `${tile.title} · fishing` : `${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
+                  title={unexplored ? 'Unexplored · send an actor there' : tile.terrain === 'water' ? `${tile.title} · fishing` : `${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
+                  data-explored={explored.toFixed(2)}
+                  data-unexplored={unexplored || undefined}
                   data-terrain={tile.terrain}
                   onPointerDown={(event) => event.stopPropagation()}
-                  onClick={() => {
-                    if (tile.unlocked !== false) onSelectBiome(tile.id);
-                  }}
+                  onClick={tapTile}
                   data-drop-target={dropTargetId === tile.id ? 'true' : undefined}
                   className={`absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl border text-center transition ${dropTargetId === tile.id ? 'proto-drop-target ' : ''}${tile.terrain === 'water' ? 'proto-water-tile ' : ''}${
                     tile.unlocked === false
@@ -976,18 +1085,16 @@ export const ProtoMap = ({
                     left: `calc(50% + ${getBiomeWorldFootprint(tile).x}px)`,
                     top: `calc(50% + ${getBiomeWorldFootprint(tile).y}px)`,
                   }}
-                  aria-label={tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
+                  aria-label={unexplored ? 'Unexplored biome' : tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
                 >
-                  <BoardObjectLabel text={tile.unlocked === false ? 'Locked' : tile.title} minFontSize={12} maxFontSize={18} className="proto-face-camera uppercase font-black" onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />
+                  <BoardObjectLabel text={tile.unlocked === false ? 'Locked' : unexplored ? '???' : tile.title} minFontSize={12} maxFontSize={18} className="proto-face-camera uppercase font-black" onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />
                 </button>
                 {upright && tile.unlocked !== false ? <BiomeEdgeScenery
                   tileId={tile.id}
                   centre={worldFootprint}
-                  size={footprint}
-                  scenery={BIOME_EDGE_SCENERY[tile.terrain === 'water' ? 'water' : 'woods']}
-                  label={biomeLabelBoxes[tile.id] ?? null}
-                  tiltDeg={TABLE_TILT_DEGREES}
+                  props={tableScenery[tile.id] ?? []}
                   yaw={yaw}
+                  exploration={explored}
                   hours={timeOfDay}
                   lights={lightSources}
                   quality={fxQuality}
@@ -1002,9 +1109,11 @@ export const ProtoMap = ({
                     data-biome-popup={tile.id}
                     className={`${popup.topDown ? 'proto-sprite-topdown' : 'proto-sprite-standee'} absolute`}
                     onPointerDown={(event) => event.stopPropagation()}
-                    onClick={() => { if (tile.unlocked !== false) onSelectBiome(tile.id); }}
-                    style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...standee(undefined, oversample), width: popup.topDown ? worldFootprint.width : BIOME_POPUP_SIZE * oversample, height: popup.topDown ? 12 : BIOME_POPUP_SIZE * oversample }}
-                  >{popup.topDown ? popup.art : <Oversample width={BIOME_POPUP_SIZE} height={BIOME_POPUP_SIZE} factor={oversample}>{popup.art}</Oversample>}</div>
+                    onClick={tapTile}
+                    style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...standee(undefined, oversample), width: popup.topDown ? worldFootprint.width : popupSize * oversample, height: popup.topDown ? 12 : popupSize * oversample }}
+                  >{popup.topDown
+                    ? <Reveal fraction={explored} width={worldFootprint.width} height={12}>{popup.art}</Reveal>
+                    : <Oversample width={popupSize} height={popupSize} factor={oversample}><Reveal fraction={explored} width={popupSize} height={popupSize}>{popup.art}</Reveal></Oversample>}</div>
                 </React.Fragment> : null}
                 </React.Fragment>
               );
@@ -1132,26 +1241,11 @@ export const ProtoMap = ({
               );
             })()
           ))}
-          {travel ? (
-            <>
-              {travel.path.slice(0, -1).map((point, index) => {
-                const next = travel.path[index + 1];
-                const dx = next.x - point.x;
-                const dy = next.y - point.y;
-                const arrow = dx && dy ? (dx > 0 ? (dy > 0 ? '↘' : '↗') : (dy > 0 ? '↙' : '↖')) : dx > 0 ? '→' : dx < 0 ? '←' : dy > 0 ? '↓' : '↑';
-                return (
-                  <div
-                    key={`${travel.actorId}-path-${index}`}
-                    aria-hidden="true"
-                    className="absolute z-20 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#ffd166]/45 bg-[#17140b]/75 text-[0.9rem] font-black text-[#ffe7ad] shadow-[0_0_16px_rgba(255,209,102,0.2)]"
-                    style={{ left: `calc(50% + ${point.x}px)`, top: `calc(50% + ${point.y}px)` }}
-                  >
-                    {arrow}
-                  </div>
-                );
-              })}
-            </>
-          ) : null}
+          {/* The route: previewed while an actor is dragged, then walked and
+              used up as the actor travels it. */}
+          {routeShown ? <RouteLine path={routeShown.path} unaffordable={routeShown.unaffordable} labels={labelQuads} /> : null}
+          {routeShown?.label ? <span aria-hidden="true" className="proto-route-label proto-face-camera" data-route-label="true" data-route-unaffordable={routeShown.unaffordable || undefined}
+            style={{ left: `calc(50% + ${routeShown.path[routeShown.path.length - 1].x}px)`, top: `calc(50% + ${routeShown.path[routeShown.path.length - 1].y}px)` }}>{routeShown.label}</span> : null}
           {actors.map((actor) => {
             const actorPosition = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
             const actorLight = lightField.at(actorPosition);

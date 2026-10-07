@@ -1,3 +1,4 @@
+import type { BiomeFlag } from './biomeFlags';
 import type { PlacedQuestCard } from './components/TableQuestCard';
 import type { CraftStack, WorldItemId } from './protoCrafting';
 import type { ProtoHeroClass } from './protoTypes';
@@ -45,6 +46,10 @@ export type BiomeTileState = {
   threat: 'none' | 'low';
   /** Water tiles are fished, not dealt as a tableau. Defaults to woods. */
   terrain?: 'woods' | 'water';
+  /** What the tile does to travel and to opening its tableau (biomeFlags.ts). */
+  flags?: BiomeFlag[];
+  /** Cards dealt to its tableau and stock, for how much of it is explored. */
+  dealt?: number;
 };
 
 export type CityState = {

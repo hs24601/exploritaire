@@ -1,6 +1,10 @@
 import React from 'react';
 import { PlayingCard } from '../../golf/components/PlayingCard';
 import { rankLabel, type Card } from '../protoState';
+import { revealMask } from './Reveal';
+
+/** A tableau card's height over its width (56:74). */
+const CARD_ASPECT = 74 / 56;
 
 export const cardBaseClassName = 'relative flex w-full min-w-0 flex-col justify-between overflow-hidden rounded-[calc(var(--classic-radius)*0.95)] border px-[calc(var(--classic-card-w)*0.14)] py-[calc(var(--classic-card-w)*0.12)] text-left transition';
 
@@ -16,6 +20,7 @@ export const ProtoCard = ({
   selected = false,
   footerLabel,
   standardRankSize = false,
+  buried = false,
   style,
 }: {
   card: Card;
@@ -29,6 +34,10 @@ export const ProtoCard = ({
   selected?: boolean;
   footerLabel?: React.ReactNode;
   standardRankSize?: boolean;
+  /** Under another card, out of play: the card and its resource go to the
+   * shared silhouette (rank still readable, dimmed) and take no input; when
+   * it reaches the front, colour sweeps back in behind a slanted edge. */
+  buried?: boolean;
   style?: React.CSSProperties;
 }) => (
   <PlayingCard
@@ -36,10 +45,11 @@ export const ProtoCard = ({
     data-resource-node={card.resource}
     data-encounter={card.encounter}
     data-highlight={active || mobilityTarget ? 'true' : undefined}
+    data-buried={buried || undefined}
     onClick={onClick}
     disabled={disabled}
     style={style}
-    className={`${cardBaseClassName} ${transporting ? 'pointer-events-none opacity-0' : ''} ${
+    className={`${cardBaseClassName} ${buried ? 'proto-card--buried pointer-events-none ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${
       disabled
         ? selected
           ? 'cursor-default border-[#8ef2d4]/25 bg-[#07100f] text-white/42'
@@ -53,8 +63,9 @@ export const ProtoCard = ({
             : 'border-white/12 bg-[linear-gradient(180deg,#14161b,#080a0e)] text-white/92 hover:-translate-y-0.5 hover:border-[#ffd166]/38'
     }`}
   >
+    <span aria-hidden="true" className="proto-card-veil" style={revealMask(1, CARD_ASPECT, buried ? 0 : 1, { invert: true, unit: 'var(--classic-card-w)' })} />
     <div className="flex min-w-0 items-start justify-between gap-1">
-      <div className={`font-semibold leading-none ${standardRankSize ? 'text-[calc(var(--classic-card-w)*0.34)]' : muted ? 'text-[calc(var(--classic-card-w)*0.27)]' : 'text-[calc(var(--classic-card-w)*0.4)]'}`}>
+      <div className={`proto-card-rank font-semibold leading-none ${standardRankSize ? 'text-[calc(var(--classic-card-w)*0.34)]' : muted ? 'text-[calc(var(--classic-card-w)*0.27)]' : 'text-[calc(var(--classic-card-w)*0.4)]'}`}>
         {rankLabel(card.rank)}
       </div>
       {footerLabel ? (

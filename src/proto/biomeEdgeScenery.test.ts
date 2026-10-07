@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EDGE_PROP_MIN_HEIGHT, layoutEdgeScenery, layoutEdgeSceneryForView, maxHeightClearOfLabel, turnPoint, type EdgeScenery, type LabelBox } from './biomeEdgeScenery';
+import { EDGE_PROP_MIN_HEIGHT, labelInCamera, layoutEdgeScenery, layoutEdgeSceneryForView, layoutTableScenery, maxHeightClearOfLabel, turnPoint, type EdgeScenery, type LabelBox, type SceneryTile } from './biomeEdgeScenery';
 
 const scenery: EdgeScenery = { side: { src: 'side.png', width: 14, height: 27 }, front: { src: 'front.png', width: 12, height: 9 } };
 const tile = { width: 48, height: 48 };
@@ -65,5 +65,56 @@ describe('biome edge scenery', () => {
         expect(front.reduce((sum, y) => sum + y, 0) / front.length, `${yaw}°`).toBeGreaterThan(10);
       }
     }
+  });
+});
+
+describe('scenery across neighbouring tiles', () => {
+  const pond: EdgeScenery = { side: { src: 'reeds-side', width: 14, height: 27 }, front: { src: 'reeds-front', width: 12, height: 9 } };
+  const woods: EdgeScenery = { side: { src: 'pines-side', width: 15, height: 26 }, front: { src: 'ferns', width: 12, height: 8 } };
+  const label: LabelBox = { left: -14.5, right: 14.5, top: -10, bottom: 9, pivot: { x: 0, y: -0.5 } };
+  // The starting row: pond, Small Woods, Small Woods.
+  const row: SceneryTile[] = [
+    { id: 'pond', centre: { x: -48, y: -48 }, size: tile, terrain: 'water', scenery: pond, label },
+    { id: 'woods-alpha', centre: { x: 0, y: -48 }, size: tile, terrain: 'woods', scenery: woods, label },
+    { id: 'woods-east', centre: { x: 48, y: -48 }, size: tile, terrain: 'woods', scenery: woods, label },
+  ];
+  const world = (owner: string, prop: { x: number; y: number }) => { const t = row.find((entry) => entry.id === owner)!; return { x: t.centre.x + prop.x, y: t.centre.y + prop.y }; };
+
+  it('merges a shared edge into one run and mixes different terrains', () => {
+    const props = layoutTableScenery(row, TILT, 0);
+    // No prop of either woods stands on their shared edge at x = 24 except the seam run.
+    const onSeam = (x: number) => Object.entries(props).flatMap(([owner, list]) => list.map((prop) => ({ owner, prop, at: world(owner, prop) }))).filter(({ at }) => Math.abs(at.x - x) < 6);
+    // Front-row tufts meet at the seam's corner; the rest is the seam run.
+    const woodsSeam = onSeam(24).filter(({ prop }) => prop.edge !== 'front');
+    expect(woodsSeam.length).toBeGreaterThan(0);
+    expect(woodsSeam.every(({ prop }) => prop.id.startsWith('seam-'))).toBe(true);
+    expect(new Set(woodsSeam.map(({ prop }) => prop.src))).toEqual(new Set(['pines-side']));
+    // Pond and woods share x = -24: reeds and pines alternate along it.
+    const mixedSeam = onSeam(-24).filter(({ prop }) => prop.edge !== 'front');
+    expect(new Set(mixedSeam.map(({ prop }) => prop.src))).toEqual(new Set(['reeds-side', 'pines-side']));
+    // The ends of the row keep their own outer sides.
+    expect(props.pond.some((prop) => prop.edge === 'left' && !prop.id.startsWith('seam-'))).toBe(true);
+    expect(props['woods-east'].some((prop) => prop.edge === 'right' && !prop.id.startsWith('seam-'))).toBe(true);
+  });
+
+  it('keeps every prop off every label at any spin', () => {
+    for (const yaw of [0, 30, 45, 90, 135, 180, 270]) {
+      const props = layoutTableScenery(row, TILT, yaw);
+      for (const [owner, list] of Object.entries(props)) for (const prop of list) {
+        const at = world(owner, prop);
+        for (const tile of row) {
+          const seen = labelInCamera(label, yaw);
+          const local = turnPoint({ x: at.x - tile.centre.x, y: at.y - tile.centre.y }, yaw);
+          expect(covers({ ...prop, ...local }, seen), `${yaw}° ${owner} ${prop.id} over ${tile.id}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('runs a seam across the view as a short fringe when the row faces the camera end-on', () => {
+    const props = layoutTableScenery(row, TILT, 90);
+    const seam = Object.values(props).flat().filter((prop) => prop.id.startsWith('seam-'));
+    expect(seam.length).toBeGreaterThan(0);
+    expect(seam.every((prop) => prop.edge === 'front')).toBe(true);
   });
 });

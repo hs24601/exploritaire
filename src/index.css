@@ -2813,3 +2813,38 @@ html.drag-perf-mode .target-swirl-sparkles {
    spin (--camera-yaw, set by useCameraControls) so they stay upright and
    readable from the player's seat. */
 .proto-face-camera { rotate: calc(-1 * var(--camera-yaw, 0deg)); }
+/* Travel route on the table (RouteLine): short dashes drifting toward the
+   destination, under tile labels. While an actor is dragged, the cell it
+   would land on lights up (red when there's no route). */
+.proto-map .proto-map-world > .proto-route { position: absolute; overflow: visible; pointer-events: none; }
+.proto-table-stage--tilted .proto-map-world > .proto-route { transform: translateZ(1.5px); }
+.proto-route__shade, .proto-route__dash { fill: none; stroke-linecap: round; stroke-dasharray: 7 6; animation: proto-route-drift 0.9s linear infinite; }
+.proto-route__shade { stroke: #000a; stroke-width: 4.4; }
+.proto-route__dash { stroke-width: 2.4; }
+.proto-route__slow { fill: none; stroke: #fff9; stroke-width: 1.2; stroke-dasharray: 1.5 2.5; }
+@keyframes proto-route-drift { to { stroke-dashoffset: -13; } }
+.proto-map .proto-map-world > .proto-route-label { position: absolute; translate: -50% 35%; padding: 1px 4px; border: 1px solid #ffffff40; border-radius: 3px; background: #0b1211e6; color: #fff4d6; font-family: 'Classic Pixel', monospace; font-size: 11px; line-height: 1.1; white-space: nowrap; pointer-events: none; }
+.proto-map .proto-map-world > .proto-route-label[data-route-unaffordable] { border-color: #ff5a5a; color: #ffd0d0; }
+.proto-table-stage--tilted .proto-map-world > .proto-route-label { transform: translateZ(2px); }
+.proto-map .proto-map-world > .proto-cell-cue { position: absolute; width: 48px; height: 48px; translate: -50% -50%; border: 2px solid #ffd166; border-radius: 6px; background: #ffd16624; box-shadow: inset 0 0 12px #ffd16670; pointer-events: none; animation: proto-cell-cue-pulse 1s ease-in-out infinite alternate; }
+.proto-map .proto-map-world > .proto-cell-cue--blocked { border-color: #ff5a5a; background: #ff3b3b24; box-shadow: inset 0 0 12px #ff5a5a70; }
+.proto-table-stage--tilted .proto-map-world > .proto-cell-cue { transform: translateZ(0.5px); }
+@keyframes proto-cell-cue-pulse { from { opacity: 0.7; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .proto-route__shade, .proto-route__dash, .proto-map .proto-map-world > .proto-cell-cue { animation: none; } }
+/* Silhouette and reveal (Reveal.tsx), shared by biome props and tableau
+   cards: a cool, dark silhouette that keeps the shape, with colour swept in
+   behind a slanted edge. */
+:root { --silhouette-filter: brightness(0) invert(0.12) sepia(1) hue-rotate(175deg) saturate(2.4) brightness(0.85); }
+.proto-reveal { position: relative; display: block; }
+.proto-reveal__shade, .proto-reveal__lit { position: absolute; inset: 0; display: block; }
+.proto-reveal__shade { filter: var(--silhouette-filter); }
+.proto-reveal__lit { transition: mask-position 0.9s ease-in-out, -webkit-mask-position 0.9s ease-in-out; }
+@media (prefers-reduced-motion: reduce) { .proto-reveal__lit { transition: none; } }
+/* A buried tableau card (ProtoCard): the shared silhouette veils its body and
+   resource; the rank stays above it, dimmed. The veil sweeps away behind a
+   slanted edge when the card reaches the front. */
+.proto-card-veil { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: #0a1220a8; -webkit-backdrop-filter: var(--silhouette-card-filter); backdrop-filter: var(--silhouette-card-filter); transition: mask-position 0.9s ease-in-out, -webkit-mask-position 0.9s ease-in-out; }
+:root { --silhouette-card-filter: saturate(0) brightness(0.55) sepia(0.5) hue-rotate(175deg); }
+.proto-card-rank { position: relative; z-index: 2; }
+.proto-card--buried .proto-card-rank { color: #c6d3e4a6; }
+@media (prefers-reduced-motion: reduce) { .proto-card-veil { transition: none; } }

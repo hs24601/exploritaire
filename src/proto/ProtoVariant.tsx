@@ -57,6 +57,7 @@ import {
 import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, SMALL_WOODS_TRAVEL_COST, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
 import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauMove } from './rules/play';
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
+import { POND_EXPLORED_CATCHES, arriveAt, biomeExploration, biomeOpenState, dealClearedShare } from './biomeFlags';
 
 /** Hour the table opens at, on the first day and every day after. */
 const TABLE_OPENING_HOUR = 9;
@@ -244,7 +245,8 @@ export const ProtoVariant = () => {
 const selectBiome = (biomeId: string) => {
     if (state.scene !== 'exploration' || biomeId === state.selectedBiomeId) return;
     const target = state.biomeTiles.find((tile) => tile.id === biomeId);
-    if (!target || !target.unlocked) return;
+    // An unexplored biome keeps its tableau hidden until an actor gets there.
+    if (!target || !target.unlocked || !biomeOpenState(target.flags).opens) return;
     clearPendingInteractions();
     setState((prev) => ({
       ...prev,
@@ -298,6 +300,8 @@ const selectBiome = (biomeId: string) => {
           !prev.worldActors.some((worldActor) => worldActor.location === 'foundation' && worldActor.foundationIndex === foundationIndex);
         return {
           ...prev,
+          // Arriving explores the biome: its first look opens it up.
+          biomeTiles: targetBiome ? prev.biomeTiles.map((tile) => tile.id === targetBiome.id ? { ...tile, flags: arriveAt(tile.flags) } : tile) : prev.biomeTiles,
           selectedBiomeId: arrival.biomeId ?? prev.selectedBiomeId,
           biome: targetBiome && switchedBiome
             ? {
@@ -1914,6 +1918,7 @@ const selectBiome = (biomeId: string) => {
                               active={(moveGuidance && (playable || encounterReady)) || choosingTarget}
                               mobilityTarget={mobilityTarget}
                               muted={!isTopCard}
+                              buried={!isTopCard}
                               standardRankSize
                               footerLabel={
                                 state.scene === 'exploration' && card.encounter ? (
@@ -2287,7 +2292,11 @@ const selectBiome = (biomeId: string) => {
               </>)}
               </div>
               <ProtoMap
-                biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId, sprite: BIOME_TILE_SPRITES[tile.id] }))}
+                biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId, sprite: BIOME_TILE_SPRITES[tile.id],
+                  // How explored it is: the tableau's cleared share, or the pond's catches.
+                  exploration: biomeExploration(tile.flags, tile.terrain === 'water'
+                    ? state.pond.caught / POND_EXPLORED_CATCHES
+                    : dealClearedShare(tile.dealt ?? 0, tile.tableau.reduce((sum, column) => sum + column.length, 0) + tile.stock.length)) }))}
                 actors={state.worldActors
                   .filter((actor) => actor.location === 'table' || Boolean(actor.biomeId))
                   .map(({ id, label, location, biomeId, position, hutId, luminosity, lightColor }) => ({ id, label, location, biomeId, position, hutId, luminosity, lightColor, sprite: WORLD_ACTOR_SPRITES[id] }))}
@@ -2315,6 +2324,7 @@ const selectBiome = (biomeId: string) => {
                 onStartSolver={startSolver}
                 onInspectActor={inspectActor}
                 actorStamina={state.actorStamina[0]}
+                stamina={state.stamina}
               />
               {<QuestField
                 open={questOpen}
