@@ -17,8 +17,9 @@ export function Oversample({ width, height, factor, children }: { width: number;
   return <span className="proto-oversample" style={{ width, height, transform: `scale(${factor})` }}>{children}</span>;
 }
 
-/** Box a sprite standee stands in, in table px. */
-export const SPRITE_STANDEE_SIZE = 64;
+/** Box an actor's sprite standee stands in, in table px (two thirds of a grid
+ * square, so the actor reads as a figure on its square rather than filling it). */
+export const SPRITE_STANDEE_SIZE = 32;
 
 /** The standee's face: trimmed pixel art, shaded by the light reaching it with
  * a warm rim on the side facing the strongest nearby light. */

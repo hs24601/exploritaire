@@ -32,6 +32,7 @@ This document records agreed project preferences and behavior from the Proto dev
 - Distinguish clicks from drags. An actor click opens details; a completed drag must not open the viewer.
 - Provide keyboard activation and visible focus for interactive objects where appropriate. Dialogs support dismissal and restore focus.
 - Every user input is built for both touch and mouse. Drags, holds, taps and clicks use pointer events (or equivalent handling for each input type), work with a finger on a phone as well as a mouse on desktop, and set `touch-action` so a touch gesture on a game object does not scroll or zoom the page. Automated checks exercise touch as well as mouse for each new interaction.
+- The square under the pointer decides what a press takes. A press anywhere on a square an actor stands on picks up the actor and never pans the camera, even where scenery or a piece standing in front covers that square in the tilted view. Pieces get an invisible grab area over their whole square for this; `tools/cell-grab-playwright.cjs` checks it by mouse and touch.
 
 ## Crafting and actor progression
 

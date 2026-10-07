@@ -19,12 +19,12 @@ describe('tilted-camera ambiance', () => {
     expect(night.halos).toBeGreaterThan(noon.halos);
   });
 
-  it('gives a carried candle a smaller, softer halo than a lamp, at chest height', () => {
+  it('gives a carried candle a smaller, softer halo than a lamp, raised to chest height', () => {
     const lamp = haloFor({ id: 'camp-lamp', position: { x: 0, y: 0 }, radius: 5.5, height: 120 }, 1);
     const candle = haloFor(actorLight('hero', { x: 0, y: 0 })!, 1);
     expect(candle.radius).toBeLessThan(lamp.radius);
     expect(candle.opacity).toBeLessThan(lamp.opacity);
-    expect(candle.lift).toBeGreaterThan(lamp.lift);
+    expect(candle.lift).toBeGreaterThan(4);
     expect(haloFor({ id: 'glow', position: { x: 0, y: 0 }, fromPiece: true }, 1).lift).toBeLessThan(lamp.lift);
   });
 

@@ -62,7 +62,7 @@ export const haloFor = (light: TableLight, strength: number) => {
     /** Height of the glow's centre above the table: at the flame of a lamp
      * token, about chest height on an actor carrying a light, and just above
      * a glowing piece lying on the table. */
-    lift: light.fromPiece ? 4 : light.id.startsWith('actor-light-') ? 28 : 20,
+    lift: light.fromPiece ? 4 : light.id.startsWith('actor-light-') ? 16 : 20,
     opacity: Math.min(0.85, strength * (0.35 + 0.5 * power)),
   };
 };

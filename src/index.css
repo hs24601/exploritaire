@@ -2441,6 +2441,8 @@ html.drag-perf-mode .target-swirl-sparkles {
 /* HD-2D style light across a cut-out (LightWash), masked to the sprite's pixels. */
 .proto-light-wash { position: absolute; inset: 0; pointer-events: none; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mix-blend-mode: screen; }
 .proto-light-wash--shade { mix-blend-mode: multiply; }
+.proto-cell-grip { position: absolute; transform: translate(-50%, -50%); cursor: grab; touch-action: none; }
+.proto-table-stage--tilted .proto-map-world > .proto-cell-grip { transform: translate3d(-50%, -50%, 2px); }
 .proto-oversample { position: absolute; left: 0; top: 0; display: block; transform-origin: 0 0; }
 .proto-sprite-standee--selected:has(> .proto-oversample) { filter: none; }
 .proto-sprite-standee--selected > .proto-oversample { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
