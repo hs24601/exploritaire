@@ -1,6 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { rgba, type StandeeLighting, type StandeeShadow } from '../protoLighting';
 import { spriteLayout, useSpriteBounds } from './spriteBounds';
+
+/** Tilted pieces are 3D layers, which the browser rasterizes at their layout
+ * size and then stretches with the camera's zoom and perspective, so pixel
+ * art went soft as the camera zoomed in. A standee is laid out this many
+ * times larger and scaled back down inside its own 3D transform, so its layer
+ * holds that many times the pixels and zooming only ever shrinks it. */
+export const STANDEE_OVERSAMPLE = 4;
+
+/** Inside an oversampled standee: lays its children out at their normal
+ * size, scaled up to fill the oversampled box. The scale is painted into the
+ * standee's layer, not composited, so the art rasterizes at full size. */
+export function Oversample({ width, height, factor, children }: { width: number; height: number; factor: number; children: ReactNode }) {
+  if (factor === 1) return <>{children}</>;
+  return <span className="proto-oversample" style={{ width, height, transform: `scale(${factor})` }}>{children}</span>;
+}
 
 /** Box a sprite standee stands in, in table px. */
 export const SPRITE_STANDEE_SIZE = 64;

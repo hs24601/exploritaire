@@ -15,7 +15,7 @@ import { AtmosphereInAir, LightShafts } from './TableAtmosphere';
 import { detectFxQuality } from '../atmosphere';
 import type { LabelBox } from '../biomeEdgeScenery';
 import { BIOME_EDGE_SCENERY } from '../protoData';
-import { SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows, SpriteTopDownArt } from './SpriteStandee';
+import { Oversample, STANDEE_OVERSAMPLE, SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows, SpriteTopDownArt } from './SpriteStandee';
 import { TABLE_TILT_DEGREES, TABLE_TILT_MS, tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
 
 export type ProtoBiomeTile = {
@@ -657,10 +657,11 @@ export const ProtoMap = ({
 
 
   // Tilted, pieces stand upright on their table point like cardboard standees.
-  const standee = (size?: { width: number; height: number }): React.CSSProperties | null => upright ? {
+  const standee = (size?: { width: number; height: number }, oversample = 1): React.CSSProperties | null => upright ? {
     // Rotate about the foot first, then move the foot onto the table point, so
-    // the base stays planted at any zoom.
-    transform: 'translate(-50%,-100%) rotateX(calc(-1 * var(--table-tilt)))',
+    // the base stays planted at any zoom. An oversampled piece is laid out
+    // larger and scaled back down about its foot (see STANDEE_OVERSAMPLE).
+    transform: `translate(-50%,-100%) rotateX(calc(-1 * var(--table-tilt)))${oversample === 1 ? '' : ` scale(${1 / oversample})`}`,
     transformOrigin: '50% 100%',
     animation: standeeMotion === 'rise' ? `proto-standee-pop ${STANDEE_POP_MS}ms ease-out both`
       : standeeMotion === 'fold' ? `proto-standee-fold ${TABLE_TILT_MS / 2}ms ease-in forwards` : undefined,
@@ -685,6 +686,8 @@ export const ProtoMap = ({
       art: <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />,
     };
   };
+  // Pixel-art standees stay sharp as the camera zooms; flat pieces need none.
+  const oversample = upright ? STANDEE_OVERSAMPLE : 1;
   const standeeBase = (key: string, position: { x: number; y: number }, width: number) => upright
     ? <div key={key} aria-hidden="true" className="proto-standee-base" style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width, boxShadow: tableObjectShadow(timeOfDay, position, 6, lightSources) }} />
     : null;
@@ -842,7 +845,8 @@ export const ProtoMap = ({
                   hours={timeOfDay}
                   lights={lightSources}
                   quality={fxQuality}
-                  standee={standee()}
+                  standee={standee(undefined, oversample)}
+                  oversample={oversample}
                 /> : null}
                 {popup ? <React.Fragment key={tile.id + '-popup'}>
                   {popup.shadows}
@@ -853,8 +857,8 @@ export const ProtoMap = ({
                     className={`${popup.topDown ? 'proto-sprite-topdown' : 'proto-sprite-standee'} absolute`}
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={() => { if (tile.unlocked !== false) onSelectBiome(tile.id); }}
-                    style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...standee(), width: popup.topDown ? worldFootprint.width : BIOME_POPUP_SIZE, height: popup.topDown ? 12 : BIOME_POPUP_SIZE }}
-                  >{popup.art}</div>
+                    style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...standee(undefined, oversample), width: popup.topDown ? worldFootprint.width : BIOME_POPUP_SIZE * oversample, height: popup.topDown ? 12 : BIOME_POPUP_SIZE * oversample }}
+                  >{popup.topDown ? popup.art : <Oversample width={BIOME_POPUP_SIZE} height={BIOME_POPUP_SIZE} factor={oversample}>{popup.art}</Oversample>}</div>
                 </React.Fragment> : null}
                 </React.Fragment>
               );
@@ -1059,11 +1063,11 @@ export const ProtoMap = ({
                 boxShadow: cutOut ? undefined : tableObjectShadow(timeOfDay, actorPosition, 12, lightSources.filter(light => light.id !== actorLightId(actor.id))),
                 left: `calc(50% + ${actorPosition.x}px)`,
                 top: `calc(50% + ${actorPosition.y}px)`,
-                ...(cutOut ? { ...standee(), width: SPRITE_STANDEE_SIZE, height: SPRITE_STANDEE_SIZE } : standee({ width: 48, height: 64 })),
+                ...(cutOut ? cutOut.topDown ? { width: SPRITE_STANDEE_SIZE, height: SPRITE_STANDEE_SIZE } : { ...standee(undefined, oversample), width: SPRITE_STANDEE_SIZE * oversample, height: SPRITE_STANDEE_SIZE * oversample } : standee({ width: 48, height: 64 })),
               }}
               aria-label={`${actor.label} actor token`}
             >
-              {cutOut ? cutOut.art : <BoardObjectLabel text={actor.label} minFontSize={12} maxFontSize={16} />}
+              {cutOut ? cutOut.topDown ? cutOut.art : <Oversample width={SPRITE_STANDEE_SIZE} height={SPRITE_STANDEE_SIZE} factor={oversample}>{cutOut.art}</Oversample> : <BoardObjectLabel text={actor.label} minFontSize={12} maxFontSize={16} />}
             </div>
             </React.Fragment>
             );
