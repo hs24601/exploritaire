@@ -6,6 +6,7 @@
  * opacity, so the compositor runs them without per-frame script. The low
  * tier keeps the halos and drops the particles. */
 import { DEFAULT_LIGHT_STRENGTH, type TableLight, type TableLightFrame } from './protoLighting';
+import { unprojectTilt, type TableTilt } from './tableTilt';
 
 export type FxQuality = 'high' | 'low';
 
@@ -35,6 +36,8 @@ export const ambianceFor = (frame: TableLightFrame) => {
     halos: 0.12 + 0.88 * nightness,
     /** Dust motes catch the sun by day. */
     motes: frame.daylight > 0 ? 0.35 + 0.65 * frame.twilight : 0,
+    /** Low mist and smoke: thick at dawn, dusk and night, a trace by day. */
+    mist: frame.daylight > 0 ? 0.15 + 0.6 * frame.twilight : 0.55,
   };
 };
 
@@ -59,7 +62,7 @@ export const haloFor = (light: TableLight, strength: number) => {
     /** Height of the glow's centre above the table: at the flame of a lamp
      * token, about chest height on an actor carrying a light, and just above
      * a glowing piece lying on the table. */
-    lift: light.fromPiece ? 4 : light.id.startsWith('actor-light-') ? 28 : 20,
+    lift: light.fromPiece ? 4 : light.id.startsWith('actor-light-') ? 16 : 20,
     opacity: Math.min(0.85, strength * (0.35 + 0.5 * power)),
   };
 };
@@ -99,3 +102,92 @@ export const scatter = (seed: string, count: number, area: { x: number; y: numbe
 /** Screen angle of the sun's shafts, degrees from vertical: they slant away
  * from the side of the table the sun (or moon) is on. */
 export const rayAngle = (frame: TableLightFrame) => Math.max(-38, Math.min(38, -frame.source.x / 480 * 34));
+
+export type ParticleKind = 'firefly' | 'fizz' | 'mist' | 'mote';
+
+type EmitterLook = {
+  kind: ParticleKind;
+  /** Particles per area on the high and low tiers. */
+  count: Record<FxQuality, number>;
+  lift: [number, number];
+  drift: number;
+  size: [number, number];
+  duration: [number, number];
+};
+
+/** An effect that hangs around a biome tile and moves with it. `area` sizes
+ * the patch from the tile's footprint: scaled, padded (table px) and shifted
+ * toward the back (negative) or front by `offset` tile heights. Effects that
+ * could hide a label, like mist, sit behind the tile. */
+export type BiomeEmitter = EmitterLook & { area: { scale?: [number, number]; pad?: [number, number]; offset?: number } };
+
+/** An effect spread over the whole world: one patch per `cell` table px,
+ * made only for the cells the camera can see. */
+export type WorldEmitter = EmitterLook & { cell: number };
+
+/** What each kind of biome gives off. Adding an effect to a biome is a line
+ * here; a new kind of particle also needs its look in TableAtmosphere. */
+export const BIOME_AMBIANCE: Record<'water' | 'woods', readonly BiomeEmitter[]> = {
+  woods: [
+    { kind: 'firefly', count: { high: 9, low: 3 }, area: { pad: [72, 60] }, lift: [6, 40], drift: 14, size: [2, 3.2], duration: [5, 9] },
+    { kind: 'mist', count: { high: 6, low: 3 }, area: { scale: [1.3, 0.25], offset: -0.62 }, lift: [0, 4], drift: 10, size: [30, 52], duration: [10, 16] },
+  ],
+  water: [
+    { kind: 'firefly', count: { high: 9, low: 3 }, area: { pad: [72, 60] }, lift: [6, 40], drift: 14, size: [2, 3.2], duration: [5, 9] },
+    { kind: 'fizz', count: { high: 7, low: 0 }, area: { scale: [0.7, 0.55], offset: 0.05 }, lift: [1, 4], drift: 2, size: [1.6, 2.6], duration: [2.4, 4.2] },
+    { kind: 'mist', count: { high: 4, low: 2 }, area: { scale: [1.2, 0.25], offset: -0.62 }, lift: [0, 3], drift: 12, size: [28, 44], duration: [11, 17] },
+  ],
+};
+
+/** Effects over the whole world, anchored to the table so they pan and zoom
+ * with it. */
+export const WORLD_AMBIANCE: readonly WorldEmitter[] = [
+  { kind: 'mote', cell: 260, count: { high: 2, low: 0 }, lift: [8, 70], drift: 16, size: [1.5, 2.6], duration: [9, 16] },
+];
+
+type Area = { x: number; y: number; width: number; height: number };
+
+/** How strongly a kind of particle shows at a moment of the day, 0-1. */
+export const particleStrength = (kind: ParticleKind, mood: ReturnType<typeof ambianceFor>) =>
+  kind === 'firefly' ? mood.fireflies : kind === 'mote' ? mood.motes : kind === 'mist' ? mood.mist : 1;
+
+/** A biome emitter's patch for a tile footprint. */
+export const emitterArea = (emitter: BiomeEmitter, tile: Area): Area => {
+  const [sx, sy] = emitter.area.scale ?? [1, 1];
+  const [px, py] = emitter.area.pad ?? [0, 0];
+  return { x: tile.x, y: tile.y + (emitter.area.offset ?? 0) * tile.height, width: tile.width * sx + px, height: tile.height * sy + py };
+};
+
+/** The world cells, `cell` table px square, that the camera can see, plus a
+ * one-cell margin so particles drifting in from the edge already exist. The
+ * far part of a tilted view is capped so a low camera doesn't fill the
+ * horizon with cells nobody can make out. */
+export const visibleCells = (view: { width: number; height: number }, camera: { x: number; y: number; scale: number }, tilt: TableTilt | null, cell: number): (Area & { key: string })[] => {
+  const corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([cx, cy]) => {
+    const screen = { x: (cx * view.width) / 2, y: (cy * view.height) / 2 };
+    const plane = tilt ? unprojectTilt(screen, tilt) : screen;
+    return { x: plane.x, y: Math.max(plane.y, -view.height * 2.5) };
+  });
+  const toWorld = (v: number, offset: number) => (v - offset) / camera.scale;
+  const xs = corners.map((c) => toWorld(c.x, camera.x));
+  const ys = corners.map((c) => toWorld(c.y, camera.y));
+  const cells: (Area & { key: string })[] = [];
+  for (let gx = Math.floor(Math.min(...xs) / cell) - 1; gx <= Math.ceil(Math.max(...xs) / cell); gx++)
+    for (let gy = Math.floor(Math.min(...ys) / cell) - 1; gy <= Math.ceil(Math.max(...ys) / cell); gy++)
+      cells.push({ key: `${gx},${gy}`, x: (gx + 0.5) * cell, y: (gy + 0.5) * cell, width: cell, height: cell });
+  return cells;
+};
+
+/** Sun or moon shafts anchored along the world's x axis, one slot per
+ * `period` table px, for the slots in view (plus `margin` screen px either
+ * side for the slant). Screen px from the viewport centre. */
+export const shaftSlots = (viewWidth: number, margin: number, camera: { x: number; scale: number }, period: number) => {
+  const from = Math.floor((-viewWidth / 2 - margin - camera.x) / (camera.scale * period));
+  const to = Math.ceil((viewWidth / 2 + margin - camera.x) / (camera.scale * period));
+  return Array.from({ length: Math.max(0, to - from + 1) }, (_, index) => {
+    const slot = from + index;
+    const next = seeded(`shaft-${slot}`);
+    const worldX = (slot + 0.2 + next() * 0.6) * period;
+    return { slot, next, x: camera.x + worldX * camera.scale };
+  });
+};

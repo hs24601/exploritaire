@@ -195,6 +195,7 @@ export const ProtoMap = ({
     });
   }, []);
   const [viewportHeight, setViewportHeight] = useState(720);
+  const [viewportWidth, setViewportWidth] = useState(1280);
   const tilt = tilted ? tableTiltFor(viewportHeight) : null;
   // The camera eases between Flat and Tilt (CSS transitions on the table and
   // its light). The table stays oversized ("staged") until it has settled
@@ -221,7 +222,11 @@ export const ProtoMap = ({
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [tilted]);
   const stageTransform = staged ? tableTiltTransform(tableTiltFor(viewportHeight, tilted ? TABLE_TILT_DEGREES : 0)) : undefined;
+  // A press on a square an actor stands on never pans (see grabActorOnSquare).
+  const actorSquareRef = useRef<(clientX: number, clientY: number) => boolean>(() => false);
+  const canStartPanAt = useCallback((clientX: number, clientY: number) => !actorSquareRef.current(clientX, clientY), []);
   const camera = useCameraControls({
+    canStartPanAt,
     panScale: tiltPanScale(tilt),
     minScale: 0.65,
     maxScale: 2.25,
@@ -256,7 +261,7 @@ export const ProtoMap = ({
   useEffect(() => {
     const viewport = camera.containerRef.current;
     if (!viewport) return undefined;
-    const observer = new ResizeObserver(() => setViewportHeight(viewport.clientHeight || 720));
+    const observer = new ResizeObserver(() => { setViewportHeight(viewport.clientHeight || 720); setViewportWidth(viewport.clientWidth || 1280); });
     observer.observe(viewport);
     return () => observer.disconnect();
   }, []);
@@ -650,7 +655,9 @@ export const ProtoMap = ({
       }
     } else {
       setSelectedActorId(actorId);
-      onInspectActor?.(actorId, event.currentTarget);
+      // A tap on the square's grab area opens the card from the actor itself.
+      const grip = event.currentTarget.dataset.cellGrip ? event.currentTarget.nextElementSibling : null;
+      onInspectActor?.(actorId, grip instanceof HTMLElement ? grip : event.currentTarget);
         }
     clearActorDragState();
   };
@@ -670,7 +677,7 @@ export const ProtoMap = ({
   } : null;
   // Sprite standees: a pixel-art cut-out lit by the table's lights, casting its
   // own silhouette across the table away from each one.
-  const spriteStandee = (sprite: string | undefined, position: { x: number; y: number }, { base = true, size = SPRITE_STANDEE_SIZE, topDownSize = size, owner = 'actor' }: { base?: boolean; size?: number; topDownSize?: number; owner?: string } = {}) => {
+  const spriteStandee = (sprite: string | undefined, position: { x: number; y: number }, { base = true, size = SPRITE_STANDEE_SIZE, topDownSize = size, owner = 'actor', label }: { base?: boolean; size?: number; topDownSize?: number; owner?: string; label?: string } = {}) => {
     if (!sprite || failedSprites.includes(sprite)) return null;
     const lit = standeeLighting(timeOfDay, position, size, lightSources);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
@@ -678,7 +685,7 @@ export const ProtoMap = ({
     if (!upright) return {
       topDown: true,
       shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} />,
-      art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} base={base} size={topDownSize} />,
+      art: <SpriteTopDownArt sprite={sprite} lighting={lit} onError={onError} base={base} size={topDownSize} label={label} />,
     };
     return {
       topDown: false,
@@ -688,6 +695,49 @@ export const ProtoMap = ({
   };
   // Pixel-art standees stay sharp as the camera zooms; flat pieces need none.
   const oversample = upright ? STANDEE_OVERSAMPLE : 1;
+  /** Picks up an actor; moves and the release then go to `holder`. */
+  const grabActor = (actorId: string, event: React.PointerEvent, holder: Element) => {
+    event.stopPropagation();
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    try {
+      holder.setPointerCapture(event.pointerId);
+    } catch {
+      // Some browsers cancel capture while a native drag starts.
+    }
+    pointerDragRef.current = {
+      actorId,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    };
+    setSelectedActorId(actorId);
+  };
+  /** The square under the pointer decides what a grab takes: when it holds an
+   * actor, the actor wins over scenery or another piece standing in front of
+   * it in the tilted view (pressing a piece's own controls still works). */
+  const actorOnSquare = (clientX: number, clientY: number) => {
+    const cell = TABLE_GRID.atWorld(worldPointFromClient(clientX, clientY));
+    return actors.find((entry) => {
+      const at = TABLE_GRID.atWorld(getActorWorldPosition(entry));
+      return entry.location !== 'foundation' && at.column === cell.column && at.row === cell.row;
+    });
+  };
+  actorSquareRef.current = (clientX, clientY) => Boolean(actorOnSquare(clientX, clientY));
+  const grabActorOnSquare = (event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target?.closest('.proto-map-world') || target.closest('[data-board-piece="actor"], [data-cell-grip^="actor-"], button:not([data-biome-id]), .proto-standee-sign, [data-hut-build]')) return;
+    const actor = actorOnSquare(event.clientX, event.clientY);
+    const holder = actor && event.currentTarget.querySelector(`[data-cell-grip="actor-${actor.id}"]`);
+    if (actor && holder) grabActor(actor.id, event, holder);
+  };
+  /** An invisible grab area over a piece's whole grid square, lying on the
+   * table, so a grab on an occupied square takes the piece instead of panning.
+   * Off during a drag, so drops land on whatever is under the pointer. */
+  const cellGrip = (id: string, position: { x: number; y: number }, handlers: Record<string, (event: React.PointerEvent<HTMLDivElement>) => void>) => (
+    <div key="grip" aria-hidden="true" data-camera-ignore="true" data-cell-grip={id} className="proto-cell-grip" style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width: CLASSICPLUS_GRID_SIZE, height: CLASSICPLUS_GRID_SIZE, pointerEvents: draggingActorId || draggingResourceId ? 'none' : undefined }} {...handlers} />
+  );
   const standeeBase = (key: string, position: { x: number; y: number }, width: number) => upright
     ? <div key={key} aria-hidden="true" className="proto-standee-base" style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width, boxShadow: tableObjectShadow(timeOfDay, position, 6, lightSources) }} />
     : null;
@@ -725,6 +775,7 @@ export const ProtoMap = ({
         ref={camera.containerRef}
         className={`proto-map-viewport h-full min-h-[18rem] cursor-grab touch-none ${camera.isPanning ? 'cursor-grabbing' : ''}`}
         aria-label="Scrollable expedition table"
+        onPointerDownCapture={grabActorOnSquare}
         onPointerMoveCapture={event=>{const cell=TABLE_GRID.atWorld(worldPointFromClient(event.clientX,event.clientY));setHoverCell(previous=>previous.column===cell.column&&previous.row===cell.row?previous:cell);}}
         onDragOver={(event) => event.preventDefault()}
         onDragEnd={clearActorDragState}
@@ -869,71 +920,76 @@ export const ProtoMap = ({
               const physicsPosition = resourcePhysicsRef.current.get(stack.id) ?? stack.position;
               const stackLight = lightField.at(physicsPosition);
               lightReadouts.push({ id: 'stack-' + stack.id, position: physicsPosition, lift: upright ? -30 : 24, percent: stackLight.percent, level: stackLight.level });
+              // Grabbing anywhere on the stack's square drags the stack, never the camera.
+              const grip = {
+                onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => {
+                  event.stopPropagation();
+                  if (stack.build || WORLD_ITEMS[stack.resource].kind === 'structure') return;
+                  if (event.pointerType === 'mouse' && event.button !== 0) return;
+                  event.preventDefault();
+                  try {
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                  } catch {
+                    // Pointer capture can fail when the browser changes input mode.
+                  }
+                  resourcePointerDragRef.current = { stackId: stack.id, pointerId: event.pointerId };
+                  setDraggingResourceId(stack.id);
+                  const body = resourcePhysicsRef.current.get(stack.id);
+                  if (body) {
+                    body.vx = 0;
+                    body.vy = 0;
+                  }
+                },
+                onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => {
+                  const drag = resourcePointerDragRef.current;
+                  if (!drag || drag.stackId !== stack.id || drag.pointerId !== event.pointerId) return;
+                  const point = worldPointFromClient(event.clientX, event.clientY);
+                  const body = resourcePhysicsRef.current.get(stack.id);
+                  if (body) {
+                    body.x = point.x;
+                    body.y = point.y;
+                    body.vx = 0;
+                    body.vy = 0;
+                    setResourcePhysicsTick((version) => version + 1);
+                  }
+                },
+                onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => {
+                  const drag = resourcePointerDragRef.current;
+                  if (!drag || drag.stackId !== stack.id || drag.pointerId !== event.pointerId) return;
+                  const point = worldPointFromClient(event.clientX, event.clientY);
+                  const actor = actors.find((entry) => {
+                    const actorPoint = getActorWorldPosition(entry);
+                    return entry.location !== 'foundation' && Math.hypot(actorPoint.x - point.x, actorPoint.y - point.y) < 28;
+                  });
+                  const target = resourceStacks.find((entry) => {
+                    const body = resourcePhysicsRef.current.get(entry.id) ?? entry.position;
+                    return entry.id !== stack.id && !entry.build && Math.hypot(body.x - point.x, body.y - point.y) < 38;
+                  });
+                  onMoveResourceStack?.(stack.id, point, target?.id, actor?.id);
+                  clearResourceDragState();
+                },
+                onPointerCancel: () => {
+                  const body = resourcePhysicsRef.current.get(stack.id);
+                  if (body) {
+                    body.x = stack.position.x;
+                    body.y = stack.position.y;
+                    body.vx = 0;
+                    body.vy = 0;
+                  }
+                  clearResourceDragState();
+                },
+              };
               return (
                 <React.Fragment key={stack.id}>
                 {standeeBase('base', physicsPosition, 44)}
+                {stack.build || WORLD_ITEMS[stack.resource].kind === 'structure' ? null : cellGrip(`stack-${stack.id}`, physicsPosition, grip)}
                 <div
                   data-board-piece="resource"
                   data-resource={stack.resource}
                   data-camera-ignore="true"
                   data-light-percent={stackLight.percent}
                   data-light-level={stackLight.level}
-                  onPointerDown={(event) => {
-                    event.stopPropagation();
-                    if (stack.build || WORLD_ITEMS[stack.resource].kind === 'structure') return;
-                    if (event.pointerType === 'mouse' && event.button !== 0) return;
-                    event.preventDefault();
-                    try {
-                      event.currentTarget.setPointerCapture(event.pointerId);
-                    } catch {
-                      // Pointer capture can fail when the browser changes input mode.
-                    }
-                    resourcePointerDragRef.current = { stackId: stack.id, pointerId: event.pointerId };
-                    setDraggingResourceId(stack.id);
-                    const body = resourcePhysicsRef.current.get(stack.id);
-                    if (body) {
-                      body.vx = 0;
-                      body.vy = 0;
-                    }
-                  }}
-                  onPointerMove={(event) => {
-                    const drag = resourcePointerDragRef.current;
-                    if (!drag || drag.stackId !== stack.id || drag.pointerId !== event.pointerId) return;
-                    const point = worldPointFromClient(event.clientX, event.clientY);
-                    const body = resourcePhysicsRef.current.get(stack.id);
-                    if (body) {
-                      body.x = point.x;
-                      body.y = point.y;
-                      body.vx = 0;
-                      body.vy = 0;
-                      setResourcePhysicsTick((version) => version + 1);
-                    }
-                  }}
-                  onPointerUp={(event) => {
-                    const drag = resourcePointerDragRef.current;
-                    if (!drag || drag.stackId !== stack.id || drag.pointerId !== event.pointerId) return;
-                    const point = worldPointFromClient(event.clientX, event.clientY);
-                    const actor = actors.find((entry) => {
-                      const actorPoint = getActorWorldPosition(entry);
-                      return entry.location !== 'foundation' && Math.hypot(actorPoint.x - point.x, actorPoint.y - point.y) < 28;
-                    });
-                    const target = resourceStacks.find((entry) => {
-                      const body = resourcePhysicsRef.current.get(entry.id) ?? entry.position;
-                      return entry.id !== stack.id && !entry.build && Math.hypot(body.x - point.x, body.y - point.y) < 38;
-                    });
-                    onMoveResourceStack?.(stack.id, point, target?.id, actor?.id);
-                    clearResourceDragState();
-                  }}
-                  onPointerCancel={() => {
-                    const body = resourcePhysicsRef.current.get(stack.id);
-                    if (body) {
-                      body.x = stack.position.x;
-                      body.y = stack.position.y;
-                      body.vx = 0;
-                      body.vy = 0;
-                    }
-                    clearResourceDragState();
-                  }}
+                  {...grip}
                   className={`proto-resource-stack${upright ? ' proto-standee' : ''} absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#8ef2d4]/55 bg-[#0b1916] text-[0.6rem] font-black text-[#cafff4] shadow-[0_0_18px_rgba(142,242,212,0.16)] ${draggingResourceId === stack.id ? 'cursor-grabbing ring-2 ring-[#cafff4]/55' : 'cursor-grab'}`}
                   style={{ left: `calc(50% + ${physicsPosition.x}px)`, top: `calc(50% + ${physicsPosition.y}px)`, boxShadow: tableObjectShadow(timeOfDay, physicsPosition, stack.resource === 'provisions_hut' ? 14 : 9, lightSources), ...standee({ width: 48, height: 60 }) }}
                   title={Object.entries(stackIngredients(stack)).map(([id, count]) => `${count} ${WORLD_ITEMS[id as WorldItemId].label}`).join(' + ')}
@@ -1005,11 +1061,31 @@ export const ProtoMap = ({
             const actorPosition = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
             const actorLight = lightField.at(actorPosition);
             lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: upright ? -30 : 24, percent: actorLight.percent, level: actorLight.level });
-            const cutOut = spriteStandee(actor.sprite, actorPosition);
+            const cutOut = spriteStandee(actor.sprite, actorPosition, { label: actor.label });
+            // Grabbing anywhere on the actor's square drags the actor, never the camera.
+            const grip = {
+              onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => grabActor(actor.id, event, event.currentTarget),
+              onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => {
+                const drag = pointerDragRef.current;
+                if (!drag || drag.pointerId !== event.pointerId) return;
+                if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 6) {
+                  drag.moved = true;
+                  setDraggingActorId(actor.id);
+                  setDragPreview({ actorId: actor.id, x: event.clientX, y: event.clientY });
+                  onActorDragStart?.(actor.id);
+                }
+                if (drag.moved) setDragPreview({ actorId: actor.id, x: event.clientX, y: event.clientY });
+              },
+              onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => finishPointerTableDrag(event, actor.id),
+              onPointerCancel: () => {
+                clearActorDragState();
+              },
+            };
             return (
             <React.Fragment key={actor.id}>
             {cutOut?.shadows}
-            {standeeBase('base', actorPosition, 44)}
+            {standeeBase('base', actorPosition, 24)}
+            {cellGrip(`actor-${actor.id}`, actorPosition, grip)}
             <div
               role="button"
               tabIndex={0}
@@ -1020,39 +1096,7 @@ export const ProtoMap = ({
               data-camera-ignore="true"
               data-light-percent={actorLight.percent}
               data-light-level={actorLight.level}
-              onPointerDown={(event) => {
-                event.stopPropagation();
-                if (event.pointerType === 'mouse' && event.button !== 0) return;
-                event.preventDefault();
-                try {
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                } catch {
-                  // Some browsers cancel capture while a native drag starts.
-                }
-                pointerDragRef.current = {
-                  actorId: actor.id,
-                  pointerId: event.pointerId,
-                  startX: event.clientX,
-                  startY: event.clientY,
-                  moved: false,
-                };
-                setSelectedActorId(actor.id);
-              }}
-              onPointerMove={(event) => {
-                const drag = pointerDragRef.current;
-                if (!drag || drag.pointerId !== event.pointerId) return;
-                if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 6) {
-                  drag.moved = true;
-                  setDraggingActorId(actor.id);
-                  setDragPreview({ actorId: actor.id, x: event.clientX, y: event.clientY });
-                  onActorDragStart?.(actor.id);
-                }
-                if (drag.moved) setDragPreview({ actorId: actor.id, x: event.clientX, y: event.clientY });
-              }}
-              onPointerUp={(event) => finishPointerTableDrag(event, actor.id)}
-              onPointerCancel={() => {
-                clearActorDragState();
-              }}
+              {...grip}
               className={cutOut?.topDown
                 ? `proto-sprite-topdown absolute cursor-grab select-none active:cursor-grabbing${selectedActorId === actor.id ? ' proto-sprite-topdown--selected' : ''}${draggingActorId === actor.id ? ' opacity-45' : ''}`
                 : cutOut
@@ -1111,8 +1155,10 @@ export const ProtoMap = ({
           camera={camera.cameraState}
           areas={biomeTiles.filter((tile) => tile.unlocked !== false).map((tile) => ({ id: tile.id, terrain: tile.terrain === 'water' ? 'water' as const : 'woods' as const, ...getBiomeWorldFootprint(tile) }))}
           quality={fxQuality}
+          view={{ width: viewportWidth, height: viewportHeight }}
+          tilt={tilt}
         /></div> : null}
-        {upright ? <LightShafts frame={getTableLighting(timeOfDay)} quality={fxQuality} /> : null}
+        {upright ? <LightShafts frame={getTableLighting(timeOfDay)} quality={fxQuality} camera={camera.cameraState} view={{ width: viewportWidth, height: viewportHeight }} /> : null}
         {staged ? <div aria-hidden="true" className={`proto-table-horizon${tilted ? ' proto-table-horizon--shown' : ''}`} /> : null}
       </div>
       {dragPreview && !travel ? (

@@ -3,7 +3,8 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 // at dusk and night, pond fizz and dust motes by day, and HD-2D light washes
 // across lit pixel art. None of it shows in the flat camera, none of it takes
 // pointer input, the low tier (?fx=low) drops the particles and prop shadows,
-// and edge-prop shadows never fall across a tile's label.
+// edge-prop shadows and dawn mist never fall across a tile's label, and world
+// particles and light shafts move with the table when it pans.
 const setHour=(p,h)=>p.locator('input[type=range]').first().evaluate((el,v)=>{const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(el,String(v));el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));},h);
 // Pixels in `before` at least 40 levels darker than in `after`: a shadow, not light flicker.
 const darkened=(p,before,after)=>p.evaluate(async([a,b])=>{const load=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src='data:image/png;base64,'+src;});
@@ -37,6 +38,28 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
     const hit=await p.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);if(!el)return 'nothing';if(el.closest('.proto-table-air,.proto-shafts'))return 'ambiance';if(el.closest('.proto-map-toolbar'))return 'toolbar';return el.closest('[data-biome-id]')?.getAttribute('data-biome-id')??el.closest('[data-biome-popup]')?.getAttribute('data-biome-popup')??el.className;},[tile.x+tile.width/2,tile.y+tile.height*0.7]);
     // Pieces or the toolbar may sit over the tile on small screens; the ambiance never does.
     if(hit==='ambiance')problems.push(`${tag}: the ambiance layer catches a tap on Small Woods`);
+    // Dawn mist hangs behind the tiles, never over a label.
+    await setHour(p,6.5);await p.waitForTimeout(400);
+    if(!((await counts(p)).mist>0))problems.push(`${tag}: no mist at dawn`);
+    for(let sample=0;sample<6;sample++){
+      const hits=await p.evaluate(()=>{const labels=[...document.querySelectorAll('[data-biome-id] .board-object-label__text')].map(e=>e.getBoundingClientRect());const out=[];
+        document.querySelectorAll('.proto-mist').forEach(m=>{const r=m.getBoundingClientRect();if(!r.width)return;const ix=r.width*0.15,iy=r.height*0.15;const a={l:r.left+ix,r:r.right-ix,t:r.top+iy,b:r.bottom-iy};
+          if(labels.some(l=>a.l<l.right&&a.r>l.left&&a.t<l.bottom&&a.b>l.top))out.push(Math.round(r.left)+','+Math.round(r.top));});return out;});
+      if(hits.length){problems.push(`${tag}: mist over a tile label at ${hits.join(' ')}`);break;}
+      await p.waitForTimeout(500);
+    }
+    // World particles and light shafts are pinned to the table: a pan slides
+    // them exactly as far as the lamp halos, which follow the pieces.
+    await setHour(p,9);await p.waitForTimeout(300);
+    const lefts=()=>p.evaluate(()=>{const px=e=>parseFloat(getComputedStyle(e).left);return {halo:[...document.querySelectorAll('[data-atmosphere="halo"]')].map(px),mote:[...document.querySelectorAll('[data-atmosphere="mote"]')].map(px),ray:[...document.querySelectorAll('[data-atmosphere="ray"]')].map(e=>e.getBoundingClientRect().left+e.getBoundingClientRect().width/2)};});
+    const was=await lefts();
+    const area=await p.locator('.proto-map-viewport').boundingBox();
+    const sx=area.x+area.width*0.82,sy=area.y+area.height*0.88;await p.mouse.move(sx,sy);await p.mouse.down();await p.mouse.move(sx-120,sy,{steps:8});await p.mouse.up();await p.waitForTimeout(300);
+    const now=await lefts();const shift=now.halo[0]-was.halo[0];
+    if(!(Math.abs(shift)>40))problems.push(`${tag}: the pan did not move the table (${shift})`);
+    else for(const kind of fx?['ray']:['mote','ray']){const before=kind==='ray'?was.ray.filter(x=>x+shift>area.x&&x+shift<area.x+area.width):was[kind];if(!before.length){if(!fx)problems.push(`${tag}: no ${kind}s in view to follow`);continue;}
+      const followed=before.filter(x=>now[kind].some(y=>Math.abs(y-x-shift)<2)).length;
+      if(followed<before.length*0.8)problems.push(`${tag}: only ${followed}/${before.length} ${kind}s moved with the pan`);}
     // Dusk: long shadows, none across a label.
     await setHour(p,17.5);await p.waitForTimeout(400);
     for(const id of ['pond','woods-alpha']){
@@ -53,5 +76,5 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
     await p.close();
   }
   assert.deepEqual(problems,[],'ambiance defects:\n'+problems.join('\n'));
-  console.log('Tilt ambiance: halos, moonbeams and fireflies at night, sun rays and motes by day, pond fizz and prop shadows on the high tier only, nothing in flat, nothing takes input, tiles stay tappable, no shadow across a label; at desktop and phone sizes.');
+  console.log('Tilt ambiance: halos, moonbeams and fireflies at night, sun rays and motes by day, pond fizz and prop shadows on the high tier only, nothing in flat, nothing takes input, tiles stay tappable, no shadow or mist across a label, motes and shafts pan with the table; at desktop and phone sizes.');
 }finally{await b.close()}})().catch(e=>{console.error(e.message);process.exitCode=1});
