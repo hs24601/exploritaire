@@ -1,4 +1,5 @@
 import type { ProtoHeroClass } from './protoTypes';
+import type { EdgeScenery } from './biomeEdgeScenery';
 
 export type ProtoMobilityKind = 'dig' | 'blink' | 'hallowed_path';
 
@@ -73,6 +74,20 @@ export const WORLD_ACTOR_SPRITES: Record<string, string> = {
 export const BIOME_TILE_SPRITES: Record<string, string> = {
   'woods-alpha': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
   pond: `${import.meta.env.BASE_URL}assets/biomes/pond_reeds.png`,
+};
+
+/** Tilted camera only: scenery lining the sides and front of biome tiles, by
+ * terrain (drawn by tools/make-edge-scenery-sprites.py; sizes are the trimmed
+ * art in sprite pixels). Laid out by biomeEdgeScenery.ts. */
+export const BIOME_EDGE_SCENERY: Record<'water' | 'woods', EdgeScenery> = {
+  water: {
+    side: { src: `${import.meta.env.BASE_URL}assets/biomes/pond_reeds_side.svg`, width: 14, height: 27 },
+    front: { src: `${import.meta.env.BASE_URL}assets/biomes/pond_reeds_front.svg`, width: 12, height: 9 },
+  },
+  woods: {
+    side: { src: `${import.meta.env.BASE_URL}assets/biomes/woods_side.svg`, width: 15, height: 26 },
+    front: { src: `${import.meta.env.BASE_URL}assets/biomes/woods_front.svg`, width: 12, height: 8 },
+  },
 };
 
 export const DEFAULT_CHIP_ABILITY: ProtoChipAbilityData = {

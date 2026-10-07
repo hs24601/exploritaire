@@ -7,9 +7,12 @@ import { solverFlightDuration } from '../solverTiming';
 import { actorLight, actorLightId, createTableLightField, getTableLighting, standeeLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
 import { drawTableLight, tableLightNeedsAnimation } from './tableLightCanvas';
 import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type WorldItemId } from '../protoCrafting';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 import { useCameraControls } from '../../hooks/useCameraControls';
+import { BiomeEdgeScenery } from './BiomeEdgeScenery';
+import type { LabelBox } from '../biomeEdgeScenery';
+import { BIOME_EDGE_SCENERY } from '../protoData';
 import { SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows, SpriteTopDownArt } from './SpriteStandee';
 import { TABLE_TILT_DEGREES, TABLE_TILT_MS, tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
 
@@ -176,6 +179,17 @@ export const ProtoMap = ({
   // Pop-up-book camera: the table tilts back and pieces stand up as cardboard standees.
   // Sprites that failed to load fall back to the cardboard token.
   const [failedSprites, setFailedSprites] = useState<string[]>([]);
+  // Where each biome tile's label text sits, from the tile's centre, so the
+  // tilted camera's edge scenery can keep clear of it.
+  const [biomeLabelBoxes, setBiomeLabelBoxes] = useState<Record<string, LabelBox>>({});
+  const reportBiomeLabel = useCallback((tileId: string, tile: { width: number; height: number }, box: { left: number; top: number; width: number; height: number }) => {
+    const next = { left: box.left - tile.width / 2, top: box.top - tile.height / 2, right: box.left + box.width - tile.width / 2, bottom: box.top + box.height - tile.height / 2 };
+    setBiomeLabelBoxes((boxes) => {
+      const known = boxes[tileId];
+      if (known && (['left', 'top', 'right', 'bottom'] as const).every((side) => Math.abs(known[side] - next[side]) < 0.25)) return boxes;
+      return { ...boxes, [tileId]: next };
+    });
+  }, []);
   const [viewportHeight, setViewportHeight] = useState(720);
   const tilt = tilted ? tableTiltFor(viewportHeight) : null;
   // The camera eases between Flat and Tilt (CSS transitions on the table and
@@ -811,8 +825,18 @@ export const ProtoMap = ({
                   }}
                   aria-label={tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
                 >
-                  <BoardObjectLabel text={tile.unlocked === false ? 'Locked' : tile.title} minFontSize={12} maxFontSize={18} className="uppercase font-black" />
+                  <BoardObjectLabel text={tile.unlocked === false ? 'Locked' : tile.title} minFontSize={12} maxFontSize={18} className="uppercase font-black" onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />
                 </button>
+                {upright && tile.unlocked !== false ? <BiomeEdgeScenery
+                  tileId={tile.id}
+                  centre={worldFootprint}
+                  size={footprint}
+                  scenery={BIOME_EDGE_SCENERY[tile.terrain === 'water' ? 'water' : 'woods']}
+                  label={biomeLabelBoxes[tile.id] ?? null}
+                  tiltDeg={TABLE_TILT_DEGREES}
+                  lighting={standeeLighting(timeOfDay, worldFootprint, BIOME_POPUP_SIZE, lightSources)}
+                  standee={standee()}
+                /> : null}
                 {popup ? <React.Fragment key={tile.id + '-popup'}>
                   {popup.shadows}
                   <div
