@@ -2276,9 +2276,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 .quest-tray .quest-card > .quest-card__reward > span { font-size: 16px; }
 
 /* Teaching card: flies out with the first quest; its instructions stay visible. */
-.table-quest-card--tutorial .quest-card { border-color: #9fd3c2; background-image: linear-gradient(145deg, #234c4a, #10221f); }
-.table-quest-card--tutorial .quest-card__title { color: #d9fff3; }
-.table-quest-card--tutorial .quest-card__text { display: block; flex-shrink: 0; overflow: visible; -webkit-line-clamp: none; font-size: 16px; line-height: 1.15; color: #e8f4ee; overflow-wrap: anywhere; }
 /* No center emblem behind the face-up card's text. */
 .quest-tray .quest-card:not(.quest-card--complete) { background-image: repeating-linear-gradient(45deg, #ffffff08 0 3px, transparent 3px 9px), linear-gradient(145deg, #5a2f45, #241321); }
 

@@ -13,10 +13,6 @@ export type PlacedQuestCard = {
   flightFrom?: { x: number; y: number; width: number; height: number };
 };
 
-/** A teaching card outside the quest deck. It flies out with the first quest and
- * clears with the same press-and-hold, without a reward. */
-export const TUTORIAL_QUEST_INDEX = -1;
-export const TUTORIAL_QUEST = { title: 'Clearing quests', text: 'Press and hold a finished card for 1s.' };
 
 /** Keeps a table quest card's whole title readable at its 16px floor: the
  * status line gives way first, then the title's line spacing tightens, and it clamps (full text in its tooltip)
@@ -58,9 +54,7 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
   const [displayPosition, setDisplayPosition] = useState(placement.position);
   const hold = useRewardHold(onRedeem, !redeemed);
   const [tableState, setTableState] = useState(Boolean(placement.tableState));
-  // The teaching card keeps its arrival size so its instructions stay readable.
-  const tutorial = placement.questIndex === TUTORIAL_QUEST_INDEX;
-  const cardWidth = tableState && !tutorial ? TABLE_CARD_WIDTH : 120;
+  const cardWidth = tableState ? TABLE_CARD_WIDTH : 120;
   const [tilt, setTilt] = useState(placement.tilt ?? 0);
   const drag = useRef<{pointerId:number;x:number;y:number;origin:{x:number;y:number};moved:boolean;angle:number} | null>(null);
   // Where a drag that started at (x,y) has moved the card to, in world units.
@@ -107,7 +101,7 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     animation.onfinish = () => { ghost.remove(); setLanded(true); };
     return () => { animation.cancel(); ghost.remove(); };
   }, [placement.questIndex]);
-  return <div ref={ref} className={`table-quest-card${tutorial ? ' table-quest-card--tutorial' : ''}`} data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState}
+  return <div ref={ref} className="table-quest-card" data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState}
     style={{ left: `calc(50% + ${displayPosition.x}px)`, top: `calc(50% + ${displayPosition.y}px)`,
       width: cardWidth, height: cardWidth / CARD_RATIO,
       transform: `translate(-50%,-50%) rotate(${tilt}deg)`, touchAction: 'none', cursor: drag.current?.moved ? 'grabbing' : 'grab',
