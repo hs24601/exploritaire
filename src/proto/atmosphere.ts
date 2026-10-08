@@ -132,7 +132,7 @@ export type WorldEmitter = EmitterLook & { cell: number };
 
 /** What each kind of biome gives off. Adding an effect to a biome is a line
  * here; a new kind of particle also needs its look in TableAtmosphere. */
-export const BIOME_AMBIANCE: Record<'water' | 'woods', readonly BiomeEmitter[]> = {
+export const BIOME_AMBIANCE: Record<'water' | 'woods' | 'danger', readonly BiomeEmitter[]> = {
   woods: [
     { kind: 'firefly', count: { high: 9, low: 3 }, area: { pad: [72, 60] }, lift: [6, 40], drift: 14, size: [2, 3.2], duration: [5, 9] },
     { kind: 'mist', count: { high: 6, low: 3 }, area: { scale: [1.3, 0.25], offset: -0.62 }, lift: [0, 4], drift: 10, size: [30, 52], duration: [10, 16] },
@@ -142,7 +142,18 @@ export const BIOME_AMBIANCE: Record<'water' | 'woods', readonly BiomeEmitter[]> 
     { kind: 'fizz', count: { high: 7, low: 0 }, area: { scale: [0.7, 0.55], offset: 0.05 }, lift: [1, 4], drift: 2, size: [1.6, 2.6], duration: [2.4, 4.2] },
     { kind: 'mist', count: { high: 4, low: 2 }, area: { scale: [1.2, 0.25], offset: -0.62 }, lift: [0, 3], drift: 12, size: [28, 44], duration: [11, 17] },
   ],
+  // Dangerous tiles (the Dark Woods): dark red versions of the woods' effects,
+  // embers where fireflies would drift and a blood-red mist behind the tile.
+  // They show at every hour (DANGER_STRENGTH_FLOOR) and in both cameras, since
+  // they warn of a fight.
+  danger: [
+    { kind: 'firefly', count: { high: 16, low: 7 }, area: { pad: [64, 52] }, lift: [4, 44], drift: 12, size: [2.4, 4.2], duration: [4, 8] },
+    { kind: 'mist', count: { high: 9, low: 5 }, area: { scale: [1.5, 0.35], offset: -0.6 }, lift: [0, 5], drift: 10, size: [36, 62], duration: [9, 15] },
+  ],
 };
+
+/** Danger effects never fade below these strengths, whatever the hour. */
+export const DANGER_STRENGTH_FLOOR: Partial<Record<ParticleKind, number>> = { firefly: 0.85, mist: 0.65 };
 
 /** Effects over the whole world, anchored to the table so they pan and zoom
  * with it. */

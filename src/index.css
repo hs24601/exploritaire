@@ -2445,6 +2445,14 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-mist { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, #e9eef2 0%, #dfe7ec99 45%, #dfe7ec00 100%); opacity: 0; animation: proto-mist-drift 12s ease-in-out infinite; will-change: transform, opacity; }
 @keyframes proto-mist-drift { 0% { opacity: 0; translate: 0 0; scale: 0.6; } 30% { opacity: var(--fx-peak); } 70% { opacity: calc(var(--fx-peak) * 0.8); } 100% { opacity: 0; translate: var(--fx-dx) calc(var(--fx-dy) * 0.5 - 6px); scale: 1.25; } }
 @keyframes proto-mote-drift { 0% { translate: 0 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { translate: var(--fx-dx) var(--fx-dy); opacity: 0; } }
+/* Dangerous tiles (the Dark Woods): the woods' fireflies and mist in dark red,
+   embers and a blood mist, shown in both cameras as a warning of a fight. */
+.proto-atmosphere--danger .proto-firefly { background: #ff5a3c; box-shadow: 0 0 3px 1px #d0201acc, 0 0 10px 4px #8b000088; }
+.proto-atmosphere--danger .proto-mist { background: radial-gradient(closest-side, #a3141b 0%, #7a0d1299 45%, #7a0d1200 100%); }
+.proto-table-air--flat .proto-atmosphere__billboard { transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))); }
+.proto-map .proto-danger-tile { border-color: rgba(190, 40, 36, 0.8); background: radial-gradient(ellipse at 50% 60%, #3a0d10, #1a0708 70%); color: #ffb3a6; box-shadow: inset 0 0 18px #8b000099; }
+.proto-map .proto-danger-tile:hover { border-color: rgba(255, 90, 70, 0.9); }
+.proto-map :is([data-biome-popup="woods-danger"], [data-biome-edge="woods-danger"]) { filter: brightness(0.5) sepia(1) hue-rotate(-38deg) saturate(3.2); }
 @media (prefers-reduced-motion: reduce) { .proto-halo, .proto-firefly, .proto-fizz, .proto-shaft, .proto-mote, .proto-mist { animation: none; } .proto-fizz { opacity: 0.5; } .proto-mist { opacity: calc(var(--fx-peak) * 0.7); } }
 /* Tilted camera: scenery lining a biome tile's sides and front (BiomeEdgeScenery). */
 .proto-map .proto-map-world > .proto-biome-edge,

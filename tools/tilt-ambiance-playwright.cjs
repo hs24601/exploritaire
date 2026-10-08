@@ -1,7 +1,8 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 // Tilted ("immersion") camera ambiance: lamp halos, sun or moon rays, fireflies
 // at dusk and night, pond fizz and dust motes by day, and HD-2D light washes
-// across lit pixel art. None of it shows in the flat camera, none of it takes
+// across lit pixel art. None of it shows in the flat camera (except the Dark
+// Woods' dark red danger embers and mist, shown at every hour in both cameras), none of it takes
 // pointer input, the low tier (?fx=low) drops the particles and prop shadows,
 // edge-prop shadows and dawn mist never fall across a tile's label, and world
 // particles and light shafts move with the table when it pans.
@@ -11,7 +12,7 @@ const darkened=(p,before,after)=>p.evaluate(async([a,b])=>{const load=src=>new P
   const [ia,ib]=await Promise.all([load(a),load(b)]);const c=document.createElement('canvas');c.width=ia.width;c.height=ia.height;const x=c.getContext('2d');
   x.drawImage(ia,0,0);const da=x.getImageData(0,0,c.width,c.height).data;x.clearRect(0,0,c.width,c.height);x.drawImage(ib,0,0);const db=x.getImageData(0,0,c.width,c.height).data;
   let n=0;for(let k=0;k<da.length;k+=4){const la=da[k]+da[k+1]+da[k+2],lb=db[k]+db[k+1]+db[k+2];if(lb-la>120)n++;}return n;},[before.toString('base64'),after.toString('base64')]);
-const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmosphere]').forEach(e=>{c[e.dataset.atmosphere]=(c[e.dataset.atmosphere]||0)+1;});c.edgeShadow=document.querySelectorAll('[data-shadow-owner="biome-edge"]').length;
+const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmosphere]').forEach(e=>{const k=e.dataset.danger?'danger':e.dataset.atmosphere;c[k]=(c[k]||0)+1;});c.edgeShadow=document.querySelectorAll('[data-shadow-owner="biome-edge"]').length;
   c.interactive=[...document.querySelectorAll('.proto-table-air *, .proto-shafts *, [data-board-piece="biome-edge"]')].filter(e=>getComputedStyle(e).pointerEvents!=='none').length;return c;});
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1912,914],[1280,720]])for(const fx of ['','low']){
@@ -19,7 +20,9 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html'+(fx?'?fx='+fx:''));
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     await setHour(p,22);await p.waitForTimeout(300);
-    const flat=await counts(p);if(Object.keys(flat).some(k=>!['edgeShadow','interactive'].includes(k)&&flat[k]))problems.push(`${tag}: ambiance in the flat camera ${JSON.stringify(flat)}`);
+    // Flat has no ambiance except the Dark Woods' danger embers and mist, a warning shown in both cameras.
+    const flat=await counts(p);if(Object.keys(flat).some(k=>!['edgeShadow','interactive','danger'].includes(k)&&flat[k]))problems.push(`${tag}: ambiance in the flat camera ${JSON.stringify(flat)}`);
+    if(!(flat.danger>0))problems.push(`${tag}: no danger embers over the Dark Woods in the flat camera`);
     await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(1200);
     const night=await counts(p);
     if(!(night.halo>=1))problems.push(`${tag}: no light halo at night`);
@@ -31,6 +34,7 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
     await setHour(p,9);await p.waitForTimeout(400);
     const day=await counts(p);
     if(day.firefly)problems.push(`${tag}: fireflies by day`);
+    if(!(day.danger>0))problems.push(`${tag}: no danger embers over the Dark Woods by day`);
     if(!(day.ray>0))problems.push(`${tag}: no sun rays by day`);
     if(!fx&&!(day.mote>0))problems.push(`${tag}: no dust motes by day`);
     // Taps pass through the air above a tile.

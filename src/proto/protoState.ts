@@ -43,13 +43,17 @@ export type BiomeTileState = {
   stock: Card[];
   unlocked: boolean;
   travelCost: number;
-  threat: 'none' | 'low';
+  threat: 'none' | 'low' | 'high';
   /** Water tiles are fished, not dealt as a tableau. Defaults to woods. */
   terrain?: 'woods' | 'water';
   /** What the tile does to travel and to opening its tableau (biomeFlags.ts). */
   flags?: BiomeFlag[];
   /** Cards dealt to its tableau and stock, for how much of it is explored. */
   dealt?: number;
+  /** Dangerous tiles start a skirmish instead of a tableau, and give off dark red embers and mist. */
+  danger?: boolean;
+  /** The day a dangerous tile's foe was beaten; it stays quiet until the next day. */
+  clearedDay?: number;
 };
 
 export type CityState = {

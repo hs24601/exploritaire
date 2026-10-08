@@ -75,6 +75,8 @@ export const BIOME_TILE_SPRITES: Record<string, string> = {
   'woods-alpha': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
   'woods-east': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
   pond: `${import.meta.env.BASE_URL}assets/biomes/pond_reeds.png`,
+  // The Dark Woods share the pines, darkened and reddened in CSS.
+  'woods-danger': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
 };
 
 /** Tilted camera only: scenery lining the sides and front of biome tiles, by

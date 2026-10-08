@@ -2,7 +2,7 @@
  * the one place that says what each does to travel and to opening its
  * tableau. A new flag is one entry in BIOME_FLAG_RULES. */
 
-export type BiomeFlag = 'unexplored' | 'rough';
+export type BiomeFlag = 'unexplored' | 'rough' | 'danger';
 
 type FlagRule = {
   /** Travel cost multiplier for crossing the tile, or 'blocked'. Arriving on
@@ -21,6 +21,9 @@ export const BIOME_FLAG_RULES: Record<BiomeFlag, FlagRule> = {
   // Hard going: crossing costs three times as much, so routes only cut
   // through when that's still faster.
   rough: { travel: 3, opensTableau: true },
+  // A foe prowls there (the Dark Woods): no passing through while it's about;
+  // going there starts the fight. Beaten for the day, the tile drops the flag.
+  danger: { travel: 'blocked', opensTableau: true },
 };
 
 /** Cost multiplier for crossing a tile with these flags (Infinity: can't). */

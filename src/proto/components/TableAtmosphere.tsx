@@ -1,11 +1,11 @@
 import { memo, type CSSProperties, type ReactNode } from 'react';
 import { viewQuarter } from '../biomeEdgeScenery';
-import { BIOME_AMBIANCE, WORLD_AMBIANCE, ambianceFor, emitterArea, haloFor, particleStrength, rayAngle, scatter, seeded, shaftSlots, visibleCells, type FxQuality, type Particle as ParticleSpot, type ParticleKind } from '../atmosphere';
+import { BIOME_AMBIANCE, DANGER_STRENGTH_FLOOR, WORLD_AMBIANCE, ambianceFor, emitterArea, haloFor, particleStrength, rayAngle, scatter, seeded, shaftSlots, visibleCells, type FxQuality, type Particle as ParticleSpot, type ParticleKind } from '../atmosphere';
 import type { TableTilt } from '../tableTilt';
 import { DEFAULT_LIGHT_COLOR, hexToRgb, rgba, type TableLight, type TableLightFrame } from '../protoLighting';
 
 type Camera = { x: number; y: number; scale: number; yaw?: number };
-type Area = { id: string; x: number; y: number; width: number; height: number; terrain: 'woods' | 'water' };
+type Area = { id: string; x: number; y: number; width: number; height: number; terrain: 'woods' | 'water'; danger?: boolean };
 
 /** Places an upright billboard's foot on a table point, inside the
  * camera-transformed world layer (table px from the table's centre). */
@@ -15,7 +15,7 @@ const billboard = (point: { x: number; y: number }): CSSProperties => ({ left: p
  * Sized in table px: the world layer's live camera transform pans and zooms
  * it every frame, so moving the camera never re-renders it. A particle's look
  * is fixed by its id. */
-const Particle = memo(function Particle({ kind, particle, strength, night }: { kind: ParticleKind; particle: ParticleSpot; strength: number; night: boolean }) {
+const Particle = memo(function Particle({ kind, particle, strength, night, danger = false }: { kind: ParticleKind; particle: ParticleSpot; strength: number; night: boolean; danger?: boolean }) {
   const timing = { animationDuration: `${particle.duration.toFixed(2)}s`, animationDelay: `${particle.delay.toFixed(2)}s` };
   const drift = { ['--fx-dx' as string]: `${particle.dx}px`, ['--fx-dy' as string]: `${particle.dy}px` };
   let look: ReactNode;
@@ -33,8 +33,9 @@ const Particle = memo(function Particle({ kind, particle, strength, night }: { k
     ['--fx-peak' as string]: (0.4 * strength).toFixed(2), ...drift, ...timing,
   }} />;
   else look = <span className="proto-mote" style={{ width: particle.size, height: particle.size, bottom: particle.lift, opacity: strength, ...drift, ['--fx-dy' as string]: `${-(14 + Math.abs(particle.dy))}px`, ...timing }} />;
-  return <span className="proto-atmosphere__billboard" data-atmosphere={kind} style={billboard(particle)}>{look}</span>;
-}, (prev, next) => prev.particle.id === next.particle.id && prev.kind === next.kind && prev.strength === next.strength && prev.night === next.night);
+  // Danger tiles recolour the same effects dark red (embers and blood mist).
+  return <span className={`proto-atmosphere__billboard${danger ? ' proto-atmosphere--danger' : ''}`} data-atmosphere={kind} data-danger={danger ? 'true' : undefined} style={billboard(particle)}>{look}</span>;
+}, (prev, next) => prev.particle.id === next.particle.id && prev.kind === next.kind && prev.strength === next.strength && prev.night === next.night && prev.danger === next.danger);
 
 /** Light hanging in the air: a glow around each lamp and carried light, and
  * the particles each biome gives off (BIOME_AMBIANCE) or that fill the world
@@ -42,13 +43,15 @@ const Particle = memo(function Particle({ kind, particle, strength, night }: { k
  * standing up toward the camera. Everything sits in table px on a layer that
  * takes the camera's live transform, so it pans and zooms with the table on
  * every frame; `camera` only picks which world cells hold particles. */
-export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, tilt }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null }) {
+export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, tilt, dangerOnly = false }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null;
+  /** Flat camera: only the danger warnings, lying over the board. */
+  dangerOnly?: boolean }) {
   const mood = ambianceFor(frame);
   const night = frame.daylight < 0.25;
   // Patches that sit behind a tile follow the side facing a spun camera.
   const { quarter } = viewQuarter(camera.yaw ?? 0);
   return <div className="proto-atmosphere" aria-hidden="true"><div className="proto-atmosphere__world">
-    {lights.map((light) => {
+    {(dangerOnly ? [] : lights).map((light) => {
       const halo = haloFor(light, mood.halos);
       if (halo.opacity < 0.03) return null;
       const color = hexToRgb(light.color ?? DEFAULT_LIGHT_COLOR);
@@ -63,16 +66,16 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
         }} />
       </span>;
     })}
-    {areas.flatMap((area) => BIOME_AMBIANCE[area.terrain].flatMap((emitter, index) => {
+    {areas.filter((area) => !dangerOnly || area.danger).flatMap((area) => BIOME_AMBIANCE[area.danger ? 'danger' : area.terrain].flatMap((emitter, index) => {
       const count = emitter.count[quality];
-      const strength = particleStrength(emitter.kind, mood);
+      const strength = area.danger ? Math.max(DANGER_STRENGTH_FLOOR[emitter.kind] ?? 0, particleStrength(emitter.kind, mood)) : particleStrength(emitter.kind, mood);
       if (!count || strength < 0.02) return [];
       // Only patches set behind or in front of the tile follow the camera's side.
       const side = emitter.area.offset ? quarter : 0;
       return scatter(`${emitter.kind}-${index}-${area.id}${side ? `-q${side}` : ''}`, count, emitterArea(emitter, area, side), emitter.lift, emitter.drift, emitter.size, emitter.duration)
-        .map((particle) => <Particle key={particle.id} kind={emitter.kind} particle={particle} strength={strength} night={night} />);
+        .map((particle) => <Particle key={particle.id} kind={emitter.kind} particle={particle} strength={strength} night={night} danger={area.danger} />);
     }))}
-    {WORLD_AMBIANCE.flatMap((emitter, index) => {
+    {(dangerOnly ? [] : WORLD_AMBIANCE).flatMap((emitter, index) => {
       const count = emitter.count[quality];
       const strength = particleStrength(emitter.kind, mood);
       if (!count || strength < 0.02) return [];

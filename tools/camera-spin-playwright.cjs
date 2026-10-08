@@ -88,9 +88,12 @@ const changed=(p,a,b)=>p.evaluate(async([a,b])=>{const load=s=>new Promise(r=>{c
       const H={x:square.x-origin.x,y:square.y-origin.y},P={x:pond.x-origin.x,y:pond.y-origin.y},det=hc*pr-pc*hr;
       const ex={x:(pr*H.x-hr*P.x)/det,y:(pr*H.y-hr*P.y)/det},ey={x:(hc*P.x-pc*H.x)/det,y:(hc*P.y-pc*H.y)/det};
       const at=(c,r)=>({x:origin.x+c*ex.x+r*ey.x,y:origin.y+c*ex.y+r*ey.y});
-      const free=await p.evaluate(spots=>spots.findIndex(([x,y])=>{const e=document.elementFromPoint(x,y);return e&&e.closest('.proto-map-viewport')&&!e.closest('[data-biome-id],[data-biome-popup],[data-board-piece],[data-cell-grip]');}),
-        [[hc+1,hr],[hc-1,hr],[hc+1,hr+1],[hc-1,hr+1]].map(([c,r])=>{const s=at(c,r);return [s.x,s.y];}));
-      const goal=[[hc+1,hr],[hc-1,hr],[hc+1,hr+1],[hc-1,hr+1]][free];
+      // Never a biome's own cell (the Dark Woods would start a fight).
+      const biomeCells=new Set(await p.locator('button[data-biome-id]').evaluateAll(els=>els.map(e=>e.dataset.gridReference.split(':')[1])));
+      const candidates=[[hc+1,hr],[hc-1,hr],[hc+1,hr+1],[hc-1,hr+1]];
+      const free=await p.evaluate(([spots,taken])=>spots.findIndex(([x,y,key])=>{if(taken.includes(key))return false;const e=document.elementFromPoint(x,y);return e&&e.closest('.proto-map-viewport')&&!e.closest('[data-biome-id],[data-biome-popup],[data-board-piece],[data-cell-grip]');}),
+        [candidates.map(([c,r])=>{const s=at(c,r);return [s.x,s.y,`${c},${r}`];}),[...biomeCells]]);
+      const goal=free>=0?[[hc+1,hr],[hc-1,hr],[hc+1,hr+1],[hc-1,hr+1]][free]:null;
       const drag=async(from,to)=>{await p.mouse.move(from.x,from.y);await p.mouse.down();for(let i=1;i<=12;i++){await p.mouse.move(from.x+(to.x-from.x)*i/12,from.y+(to.y-from.y)*i/12);await p.waitForTimeout(12);}await p.mouse.up();await p.waitForTimeout(1400);};
       const press={x:square.x+grip.width*0.2,y:square.y+grip.height*0.2};
       if(!goal)problems.push(`${tag}: no free cell beside the Hero to drop on`);
