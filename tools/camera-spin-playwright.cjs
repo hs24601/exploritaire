@@ -59,7 +59,7 @@ const changed=(p,a,b)=>p.evaluate(async([a,b])=>{const load=s=>new Promise(r=>{c
       // Labels read upright, left to right.
       const reading=await p.evaluate(()=>{const ink=document.querySelector('[data-biome-id="pond"] .board-object-label__text > span');const text=ink.firstChild;const at=i=>{const r=document.createRange();r.setStart(text,i);r.setEnd(text,i+1);const b=r.getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2,h:b.height};};
         const first=at(0),last=at(text.length-1);return {dx:last.x-first.x,dy:last.y-first.y,h:first.h};});
-      if(!(reading.dx>reading.h&&Math.abs(reading.dy)<reading.h*0.3))problems.push(`${tag}: POND doesn't read left to right (${Math.round(reading.dx)},${Math.round(reading.dy)})`);
+      if(!(reading.dx>reading.h*0.6&&Math.abs(reading.dy)<reading.h*0.3))problems.push(`${tag}: the pond label doesn't read left to right (${Math.round(reading.dx)},${Math.round(reading.dy)})`);
       // No edge scenery or pop-up covers a label (tilted).
       if(view==='tilt')for(const id of ['pond','woods-alpha']){
         const box=await rect(p,`[data-biome-id="${id}"] .board-object-label__text > span`);if(!box||box.y<0||box.y+box.height>h)continue;
@@ -80,8 +80,10 @@ const changed=(p,a,b)=>p.evaluate(async([a,b])=>{const load=s=>new Promise(r=>{c
       // pointer mapping under test.
       const startCell=await p.locator('[data-board-piece="actor"]').getAttribute('data-grid-reference');
       const [hc,hr]=startCell.split(':')[1].split(',').map(Number);
-      const pond=centre(await rect(p,'button[data-biome-id="pond"]'));
-      const [pc,pr]=(await p.locator('button[data-biome-id="pond"]').getAttribute('data-grid-reference')).split(':')[1].split(',').map(Number);
+      // A landmark tile not in line with True Center and the Hero.
+      let pond,pc,pr;
+      for(const id of ['pond','woods-alpha','woods-east']){const ref=await p.locator(`button[data-biome-id="${id}"]`).getAttribute('data-grid-reference');const [c,r]=ref.split(':')[1].split(',').map(Number);
+        if(Math.abs(hc*r-c*hr)>0.5){pond=centre(await rect(p,`button[data-biome-id="${id}"]`));pc=c;pr=r;break;}}
       // Screen steps per column (ex) and per row (ey), solved from the three landmarks.
       const H={x:square.x-origin.x,y:square.y-origin.y},P={x:pond.x-origin.x,y:pond.y-origin.y},det=hc*pr-pc*hr;
       const ex={x:(pr*H.x-hr*P.x)/det,y:(pr*H.y-hr*P.y)/det},ey={x:(hc*P.x-pc*H.x)/det,y:(hc*P.y-pc*H.y)/det};

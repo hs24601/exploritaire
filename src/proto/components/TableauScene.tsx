@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { BIOME_EDGE_SCENERY } from '../protoData';
 import type { TableauLightRig } from '../tableauLighting';
 import { getTableLighting, rgba } from '../protoLighting';
@@ -12,7 +12,8 @@ export function TableauScene({ children, immersive, terrain, rig, hours }: {
   const ref = useRef<HTMLDivElement>(null);
   const sky = getTableLighting(hours);
   const props = BIOME_EDGE_SCENERY[terrain];
-  const particles = detectFxQuality() === 'high';
+  // The effects tier is fixed for the session, as on the table.
+  const [particles] = useState(() => detectFxQuality() === 'high');
   const move = (x: number, y: number) => {
     const el = ref.current;
     if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;

@@ -475,6 +475,8 @@ export const ProtoMap = ({
     const destinationBuilding = buildings.find(stack => Math.hypot(stack.position.x-target.x,stack.position.y-target.y)<52);
     // Only the destination snaps (to its cell, a biome's entry cell or a hut).
     const snappedTarget = arrival.biomeId ? finiteWorldPoint(target) : destinationBuilding ? destinationBuilding.position : TABLE_GRID.snap(finiteWorldPoint(target));
+    // The destination is always allowed to be stood on, but never terrain.
+    if (isBlockedPoint(snappedTarget)) return null;
     const cellCosts = new Map<string, number>();
     const mark = (column: number, row: number, cost: number) => {
       const key = `${column},${row}`;

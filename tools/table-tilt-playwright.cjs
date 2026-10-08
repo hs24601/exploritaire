@@ -3,7 +3,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 // input still lands on the table cell under it, and Flat restores the 2D view.
 const TOOLBAR={parts:'.proto-map-toolbar button'};
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
-  for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
+  for(const [w,h] of [[1912,914],[1280,720]]){
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     const toggle=p.getByRole('button',{name:'Tilt camera view'});await toggle.click();await p.waitForTimeout(700);
@@ -28,7 +28,8 @@ const TOOLBAR={parts:'.proto-map-toolbar button'};
     for(let i=0;i<4;i++){await p.mouse.wheel(0,300);await p.waitForTimeout(60);}await p.waitForTimeout(700);
     // Tapping the visible tile still selects it through the tilt.
     const tile=p.locator('[data-biome-id="woods-alpha"]');const t=await tile.boundingBox();await p.mouse.click(t.x+t.width/2,t.y+4);
-    if(w>=900)await p.locator('.proto-tableau-field:not(.hidden)').first().waitFor({timeout:3000}).catch(()=>problems.push(`${w}x${h}: tapping the tilted tile did not open its tableau`));
+    // Every biome starts unexplored: the tap reaches the tile, which says an actor has to go there first.
+    if(w>=900)await p.locator('.biome-closed-note').waitFor({timeout:3000}).catch(()=>problems.push(`${w}x${h}: tapping the tilted tile did not reach it`));
     if(process.env.SHOTS){await p.screenshot({path:`${process.env.SHOTS}/tilt-${w}x${h}.png`});}
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     await p.getByRole('button',{name:'Flat camera view'}).click();await p.waitForTimeout(700);

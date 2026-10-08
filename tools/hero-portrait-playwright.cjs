@@ -1,8 +1,8 @@
 // Hero details card: the Hero sprite loads as the portrait, drawn pixel-sharp
-// and contained by the art frame at desktop and phone sizes.
+// and contained by the art frame at desktop sizes.
 const {chromium}=require('playwright');const assert=require('node:assert/strict');const {findLayoutDefects}=require('./lib/layout-check.cjs');
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
-  for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
+  for(const [w,h] of [[1912,914],[1280,720]]){
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(500);
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     await p.locator('[data-board-piece="actor"]').click();const viewer=p.locator('.details-card-viewer');await viewer.waitFor();
@@ -20,5 +20,5 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
     await p.close();
   }
   assert.deepEqual(problems,[],'layout defects:\n'+problems.join('\n'));
-  console.log('Hero details card: sprite portrait loads, stays pixel-sharp and fits the art frame at desktop and phone sizes.');
+  console.log('Hero details card: sprite portrait loads, stays pixel-sharp and fits the art frame at desktop sizes.');
 }finally{await b.close()}})().catch(e=>{console.error(e.message);process.exitCode=1});

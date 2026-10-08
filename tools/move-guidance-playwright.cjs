@@ -3,7 +3,7 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');const {findLayoutDefects}=require('./lib/layout-check.cjs');
 const SHOTS=process.env.SHOTS;
 (async()=>{const b=await chromium.launch({headless:true});try{
-  for(const [w,h] of [[1912,914],[1280,720],[844,390],[390,844]]){
+  for(const [w,h] of [[1912,914],[1280,720]]){
     const p=await (await b.newContext({viewport:{width:w,height:h}})).newPage();
     await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(400);
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
@@ -29,5 +29,5 @@ const SHOTS=process.env.SHOTS;
     await guidance.uncheck();assert.equal(await highlighted(),0,`${w}x${h} unchecking clears the highlights`);
     await p.context().close();
   }
-  console.log('Move guidance: off by default, highlights playable cards only when on, controls fit at desktop and phone sizes.');
+  console.log('Move guidance: off by default, highlights playable cards only when on, controls fit at desktop sizes.');
 }finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});

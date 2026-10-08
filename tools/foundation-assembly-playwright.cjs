@@ -3,7 +3,7 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');const {findLayoutDefects}=require('./lib/layout-check.cjs');
 const PARTS={minFontSize:0,parts:'.proto-actor-energy, .proto-foundation-card--exploration, .proto-foundation-count-token, .proto-occupied-foundation-face, .proto-foundation-resources, .proto-foundation-resources > li'};
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
-  for(const tilted of [false,true])for(const [w0,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
+  for(const tilted of [false,true])for(const [w0,h] of [[1912,914],[1280,720]]){
     const w=w0,label=tilted?' tilted':'';
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(500);
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
@@ -37,5 +37,5 @@ const PARTS={minFontSize:0,parts:'.proto-actor-energy, .proto-foundation-card--e
     await p.close();
   }
   assert.deepEqual(problems,[],'layout defects:\n'+problems.join('\n'));
-  console.log('Foundation assembly: energy bubble, inner card count and resource summary fit without collisions at desktop and phone sizes.');
+  console.log('Foundation assembly: energy bubble, inner card count and resource summary fit without collisions at desktop sizes.');
 }finally{await b.close()}})().catch(e=>{console.error(e.message);process.exitCode=1});

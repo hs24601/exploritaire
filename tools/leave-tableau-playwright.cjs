@@ -1,4 +1,4 @@
-// Quest rewards reach the actors (energy and actor stamina), and Leave Tableau
+// Quest rewards reach the actors (energy and actor stamina), and the foundation's exit icon
 // steps the actor out onto a table cell touching the biome tile.
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({headless:true});try{
@@ -12,7 +12,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   const c=await card.boundingBox();await p.mouse.move(c.x+c.width/2,c.y+c.height/2);await p.mouse.down();await p.waitForTimeout(2300);await p.mouse.up();
   assert.equal(await p.locator('.quest-field').getAttribute('data-redeemed'),'1','the first quest redeems');
   assert.equal(await energy(),before+1,'the quest reward adds energy the actor can spend');
-  await p.getByRole('button',{name:'Leave Tableau'}).click();await p.waitForTimeout(400);
+  await p.getByRole('button',{name:'Exit tableau · Hero'}).click();await p.waitForTimeout(2000);
   const cell=(await p.locator('.table-grid-origin').boundingBox()).width;
   const tile=await p.locator('[data-biome-id="woods-alpha"]').boundingBox();
   const base=await p.locator('[data-board-piece="actor"]').boundingBox();
@@ -21,5 +21,5 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   const gap=Math.hypot(dx,dy);
   assert.ok(gap>0,'the actor stands off the tile, not on it');
   assert.ok(gap<=cell*0.75,`the actor stands on a cell touching the tile (gap ${gap.toFixed(1)}px, cell ${cell.toFixed(1)}px)`);
-  console.log(`Leave Tableau: actor ${gap.toFixed(0)}px from the tile edge (one cell is ${cell.toFixed(0)}px); quest reward added energy ${before}→${before+1}.`);
+  console.log(`Exit tableau: actor ${gap.toFixed(0)}px from the tile edge (one cell is ${cell.toFixed(0)}px); quest reward added energy ${before}→${before+1}.`);
 }finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});

@@ -1672,7 +1672,9 @@ const selectBiome = (biomeId: string) => {
       ...state.worldResourceStacks.map(stack => ({ x: stack.position.x, y: stack.position.y, w: 64, h: 64 })),
       ...state.questTableCards.map(card => ({ ...card.position, w: 120, h: 120 * 88 / 63 })),
     ];
-    const openSpot = (directions = [[-1,0],[0,-1],[1,0],[0,1],[1,-1],[-1,-1],[1,1],[-1,1]]) => {
+    // Beside or below the quest location before above it: with neighbouring
+    // biomes on its row, straight up lands off the top of the view.
+    const openSpot = (directions = [[-1,0],[1,0],[-1,1],[1,1],[0,1],[-1,-1],[1,-1],[0,-1]]) => {
       for (let radius = 1; radius <= 12; radius++) {
         for (const [dx, dy] of directions) {
           const candidate = { x: location.x + dx * radius * 140, y: location.y + dy * radius * 200 };

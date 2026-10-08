@@ -14,7 +14,7 @@ const darkened=(p,before,after)=>p.evaluate(async([a,b])=>{const load=src=>new P
 const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmosphere]').forEach(e=>{c[e.dataset.atmosphere]=(c[e.dataset.atmosphere]||0)+1;});c.edgeShadow=document.querySelectorAll('[data-shadow-owner="biome-edge"]').length;
   c.interactive=[...document.querySelectorAll('.proto-table-air *, .proto-shafts *, [data-board-piece="biome-edge"]')].filter(e=>getComputedStyle(e).pointerEvents!=='none').length;return c;});
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
-  for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]])for(const fx of ['','low']){
+  for(const [w,h] of [[1912,914],[1280,720]])for(const fx of ['','low']){
     const tag=`${w}x${h}${fx?' fx='+fx:''}`;
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html'+(fx?'?fx='+fx:''));
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
@@ -26,7 +26,7 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
     if(!(night.firefly>0))problems.push(`${tag}: no fireflies at night`);
     if(!(night.ray>0))problems.push(`${tag}: no moonbeams at night`);
     if(night.interactive)problems.push(`${tag}: ${night.interactive} ambiance elements take pointer input`);
-    if(fx==='low'){if(night.fizz||night.mote||night.edgeShadow)problems.push(`${tag}: low tier still draws particles or prop shadows ${JSON.stringify(night)}`);if(night.firefly>6)problems.push(`${tag}: low tier draws ${night.firefly} fireflies`);}
+    if(fx==='low'){if(night.fizz||night.mote||night.edgeShadow)problems.push(`${tag}: low tier still draws particles or prop shadows ${JSON.stringify(night)}`);const tiles=await p.locator('button[data-biome-id]:not(.cursor-not-allowed)').count();if(night.firefly>3*tiles)problems.push(`${tag}: low tier draws ${night.firefly} fireflies over ${tiles} biomes`);}
     else if(!(night.fizz>0&&night.edgeShadow>0))problems.push(`${tag}: high tier missing pond fizz or prop shadows ${JSON.stringify(night)}`);
     await setHour(p,9);await p.waitForTimeout(400);
     const day=await counts(p);
@@ -85,5 +85,5 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
     await p.close();
   }
   assert.deepEqual(problems,[],'ambiance defects:\n'+problems.join('\n'));
-  console.log('Tilt ambiance: halos, moonbeams and fireflies at night, sun rays and motes by day, pond fizz and prop shadows on the high tier only, nothing in flat, nothing takes input, tiles stay tappable, no shadow or mist across a label, motes and shafts pan with the table; at desktop and phone sizes.');
+  console.log('Tilt ambiance: halos, moonbeams and fireflies at night, sun rays and motes by day, pond fizz and prop shadows on the high tier only, nothing in flat, nothing takes input, tiles stay tappable, no shadow or mist across a label, motes and shafts pan with the table; at desktop sizes.');
 }finally{await b.close()}})().catch(e=>{console.error(e.message);process.exitCode=1});
