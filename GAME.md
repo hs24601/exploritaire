@@ -26,6 +26,8 @@ This document records agreed project preferences and behavior from the Proto dev
 
 ## Interaction
 
+- Space toggles immersion on the table, ignoring held-key repeats, typing, dialogs and focused controls. During a skirmish, Space retains its draw action. Top-down danger particles hug their source tile with low lift and short drift; immersion keeps its airborne spread.
+
 - Suppress the browser context menu throughout the Proto document. Development builds provide a custom context menu for future object inspection/actions; production builds suppress the native menu without exposing developer tools. The initial `dev` entry is a disabled placeholder. Dismiss on outside interaction or Escape and keep the menu inside the viewport.
 
 - Dragging table objects, including cards and tokens, must not pan, zoom, or otherwise affect the camera.

@@ -317,7 +317,15 @@ export const ProtoMap = ({
       if (!frame) syncCamera();
     };
     const down = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || typing(event.target)) return;
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || typing(event.target)) return;
+      if (event.code === 'Space') {
+        // Preserve focused controls and the skirmish's draw shortcut.
+        if (event.target instanceof Element && event.target.closest('button, a, [role="button"]')) return;
+        if (document.querySelector('.proto-skirmish')) return;
+        event.preventDefault();
+        if (!event.repeat) onTiltedChange?.(!tilted);
+        return;
+      }
       const key = event.key.toLowerCase();
       if (key === 'q' || key === 'e') {
         if (!event.repeat) spinStep(key === 'q' ? -45 : 45);
@@ -340,7 +348,7 @@ export const ProtoMap = ({
       window.removeEventListener('blur', release);
       cancelAnimationFrame(frame);
     };
-  }, [spinStep, panBy, syncCamera]);
+  }, [spinStep, panBy, syncCamera, tilted, onTiltedChange]);
 
   // While a piece is dragged, the biome under the pointer that would accept it lights up.
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -844,7 +852,7 @@ export const ProtoMap = ({
     // the base stays planted at any zoom. An oversampled piece is laid out
     // larger and scaled back down about its foot (see STANDEE_OVERSAMPLE).
     // Turned against a spun camera first, so it faces the camera.
-    transform: `translate(-50%,-100%) rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt)))${oversample === 1 ? '' : ` scale(${1 / oversample})`}`,
+    transform: `translate(-50%,-100%) rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt)))${oversample === 1 ? '' : ` scale(${1 / oversample})`} scaleY(var(--standee-rise, 1))`,
     transformOrigin: '50% 100%',
     animation: standeeMotion === 'rise' ? `proto-standee-pop ${STANDEE_POP_MS}ms ease-out both`
       : standeeMotion === 'fold' ? `proto-standee-fold ${TABLE_TILT_MS / 2}ms ease-in forwards` : undefined,

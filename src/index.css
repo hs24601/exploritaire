@@ -2379,7 +2379,8 @@ html.drag-perf-mode .target-swirl-sparkles {
    on the same curve, and standees counter-rotate with the animated angle. */
 @property --table-tilt { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
 .proto-table-stage, .proto-table-light { transition: transform 520ms cubic-bezier(0.45, 0, 0.25, 1), --table-tilt 520ms cubic-bezier(0.45, 0, 0.25, 1); }
-@keyframes proto-standee-fold { to { opacity: 0; scale: 1 0.1; } }
+@property --standee-rise { syntax: '<number>'; inherits: false; initial-value: 1; }
+@keyframes proto-standee-fold { to { opacity: 0; --standee-rise: 0.1; } }
 @media (prefers-reduced-motion: reduce) { .proto-table-stage, .proto-table-light { transition: none; } }
 /* Coplanar 3D layers draw and hit-test unpredictably, so the floor sits a
    hair behind the pieces. Only the floor and the pieces take pointers, so
@@ -2388,9 +2389,10 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-table-stage--tilted .proto-table-floor { pointer-events: auto; transform: translateZ(-1px); }
 .proto-table-stage--tilted .proto-map-world > :not(.table-grid-origin) { pointer-events: auto; }
 .proto-standee-base { position: absolute; aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(#0b0907 40%, #2a1e14); border: 2px solid #6b5236; pointer-events: none; }
-/* Standees pop up from their base instead of scaling from their center. */
+/* Scale inside the foot-anchored transform: an individual CSS scale also
+   scales the placement translation, sliding oversized sprites off their tile. */
 .proto-resource-stack.proto-standee { animation-name: proto-standee-pop; }
-@keyframes proto-standee-pop { 0% { opacity: 0; scale: 1 0.1; } 68% { opacity: 1; scale: 1 1.12; } 100% { opacity: 1; scale: 1 1; } }
+@keyframes proto-standee-pop { 0% { opacity: 0; --standee-rise: 0.1; } 68% { opacity: 1; --standee-rise: 1.12; } 100% { opacity: 1; --standee-rise: 1; } }
 /* A standee's signs hang above it, facing the camera, rather than under the table. */
 .proto-table-stage--tilted .proto-standee-sign { top: auto; bottom: 100%; margin: 0 0 4px; }
 .proto-table-horizon { position: absolute; inset: 0 0 auto 0; height: 18%; z-index: 41; pointer-events: none; opacity: 0; transition: opacity 520ms ease; background: linear-gradient(#050807, #05080700); }

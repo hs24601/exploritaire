@@ -35,7 +35,7 @@ const Particle = memo(function Particle({ kind, particle, strength, night, dange
   else look = <span className="proto-mote" style={{ width: particle.size, height: particle.size, bottom: particle.lift, opacity: strength, ...drift, ['--fx-dy' as string]: `${-(14 + Math.abs(particle.dy))}px`, ...timing }} />;
   // Danger tiles recolour the same effects dark red (embers and blood mist).
   return <span className={`proto-atmosphere__billboard${danger ? ' proto-atmosphere--danger' : ''}`} data-atmosphere={kind} data-danger={danger ? 'true' : undefined} style={billboard(particle)}>{look}</span>;
-}, (prev, next) => prev.particle.id === next.particle.id && prev.kind === next.kind && prev.strength === next.strength && prev.night === next.night && prev.danger === next.danger);
+}, (prev, next) => prev.particle === next.particle && prev.kind === next.kind && prev.strength === next.strength && prev.night === next.night && prev.danger === next.danger);
 
 /** Light hanging in the air: a glow around each lamp and carried light, and
  * the particles each biome gives off (BIOME_AMBIANCE) or that fill the world
@@ -72,7 +72,13 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
       if (!count || strength < 0.02) return [];
       // Only patches set behind or in front of the tile follow the camera's side.
       const side = emitter.area.offset ? quarter : 0;
-      return scatter(`${emitter.kind}-${index}-${area.id}${side ? `-q${side}` : ''}`, count, emitterArea(emitter, area, side), emitter.lift, emitter.drift, emitter.size, emitter.duration)
+      // Flat warnings hug their tile; airborne spread belongs to immersion.
+      const look = dangerOnly ? { ...emitter,
+        area: emitter.kind === 'firefly' ? { scale: [0.9, 0.9] as [number, number] } : { scale: [1, 0.2] as [number, number], offset: -0.42 },
+        lift: [0, 2] as [number, number], drift: 3,
+        size: emitter.kind === 'mist' ? [18, 28] as [number, number] : emitter.size,
+      } : emitter;
+      return scatter(`${emitter.kind}-${index}-${area.id}${side ? `-q${side}` : ''}`, count, emitterArea(look, area, side), look.lift, look.drift, look.size, look.duration)
         .map((particle) => <Particle key={particle.id} kind={emitter.kind} particle={particle} strength={strength} night={night} danger={area.danger} />);
     }))}
     {(dangerOnly ? [] : WORLD_AMBIANCE).flatMap((emitter, index) => {
