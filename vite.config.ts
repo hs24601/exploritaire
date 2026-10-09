@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
+import { createHash } from 'crypto';
 
 const parsePort = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value);
@@ -15,6 +17,17 @@ const DEV_HMR_HOST = process.env.VITE_DEV_HMR_HOST?.trim();
 const DEV_HMR_PORT = parsePort(process.env.VITE_DEV_HMR_PORT, DEV_PORT);
 const DEV_HTTPS = process.env.VITE_DEV_HTTPS?.trim().toLowerCase() === 'true';
 
+// The /__* editor routes write files into the repo, so only this PC (loopback,
+// which includes Tailscale Serve) and devices on the Tailscale tailnet may call them.
+const isTrustedDevAddress = (address: string | undefined): boolean => {
+  if (!address) return false;
+  const ip = address.replace(/^::ffff:/, '');
+  if (ip === '::1' || ip.startsWith('127.')) return true;
+  const octets = ip.split('.').map(Number);
+  if (octets.length === 4 && octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127) return true;
+  return ip.toLowerCase().startsWith('fd7a:115c:a1e0:');
+};
+
 const replaceActorDefinitionsBlock = (source: string, actors: unknown[]) => {
   const block = `// ACTOR_DEFINITIONS_START\nexport const ACTOR_DEFINITIONS: ActorDefinition[] = ${JSON.stringify(actors, null, 2)};\n// ACTOR_DEFINITIONS_END`;
   return source.replace(
@@ -23,13 +36,48 @@ const replaceActorDefinitionsBlock = (source: string, actors: unknown[]) => {
   );
 };
 
+// Build label shown in Proto so playtests can confirm which commit is being served.
+// In dev this is the commit checked out when Vite started; restart Vite after a pull.
+const gitValue = (command: string) => {
+  try {
+    return execSync(command, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return '';
+  }
+};
+const PROTO_BUILD = {
+  commit: (process.env.VERCEL_GIT_COMMIT_SHA || gitValue('git rev-parse HEAD')).slice(0, 7) || 'unknown',
+  committedAt: gitValue('git log -1 --format=%cI'),
+  startedAt: new Date().toISOString(),
+};
+
+// Include local source/assets: a commit alone cannot identify an uncommitted playtest.
+const sourceRevision = () => {
+  const hash = createHash('sha256');
+  const visit = (directory: string) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (entry.isFile()) { hash.update(path.relative(__dirname, file)); hash.update(fs.readFileSync(file)); }
+    }
+  };
+  visit(path.resolve(__dirname, 'src'));
+  visit(path.resolve(__dirname, 'public'));
+  return hash.digest('hex').slice(0, 8);
+};
+const buildModule = '\0virtual:proto-build';
+let currentBuild = { ...PROTO_BUILD, revision: sourceRevision() };
+
 export default defineConfig({
+  define: {
+    __PROTO_BUILD__: JSON.stringify(PROTO_BUILD),
+  },
   server: {
     https: DEV_HTTPS,
     host: DEV_HOST,
     port: DEV_PORT,
-    // Cloudflare Quick Tunnels receive a new, random trycloudflare.com hostname on restart.
-    allowedHosts: ['.trycloudflare.com'],
+    // Tailscale MagicDNS names (zenduo.<tailnet>.ts.net); raw IPs are always allowed.
+    allowedHosts: ['.ts.net'],
     strictPort: true,
     ...(DEV_HMR_HOST
       ? {
@@ -42,11 +90,38 @@ export default defineConfig({
       : {}),
   },
   plugins: [
+    {
+      name: 'proto-build-revision',
+      resolveId(id) { if (id === 'virtual:proto-build') return buildModule; },
+      load(id) { if (id === buildModule) return `export default ${JSON.stringify(currentBuild)}`; },
+      handleHotUpdate(context) {
+        const relative = path.relative(__dirname, context.file).replaceAll('\\', '/');
+        if (!relative.startsWith('src/') && !relative.startsWith('public/')) return;
+        const revision = sourceRevision();
+        if (revision === currentBuild.revision) return;
+        currentBuild = { ...PROTO_BUILD, revision, startedAt: new Date().toISOString() };
+        const module = context.server.moduleGraph.getModuleById(buildModule);
+        if (module) context.server.moduleGraph.invalidateModule(module);
+        context.server.ws.send({ type: 'full-reload' });
+        return [];
+      },
+    },
     react(),
     ...(DEV_HTTPS ? [basicSsl()] : []),
     {
       name: 'light-blocker-save',
       configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const isEditorRoute = req.url?.startsWith('/__') && !req.url.startsWith('/__vite');
+          // Public tunnels (Cloudflare, Tailscale Funnel) arrive from loopback, so reject them by header.
+          const isPublicTunnel = Boolean(req.headers['cf-connecting-ip'] || req.headers['tailscale-funnel-request']);
+          if (isEditorRoute && (isPublicTunnel || !isTrustedDevAddress(req.socket.remoteAddress))) {
+            res.statusCode = 403;
+            res.end('Forbidden');
+            return;
+          }
+          next();
+        });
         server.middlewares.use('/__light-patterns/save', (req, res, next) => {
           if (req.method !== 'POST') {
             res.statusCode = 405;
@@ -535,7 +610,7 @@ export default defineConfig({
               }
               const projectRoot = path.resolve(__dirname);
               const targetPath = path.resolve(projectRoot, parsed.path);
-              if (!targetPath.startsWith(projectRoot)) {
+              if (!targetPath.startsWith(projectRoot + path.sep)) {
                 res.statusCode = 400;
                 res.end('Invalid path');
                 return;
@@ -567,7 +642,7 @@ export default defineConfig({
         megahand:   path.resolve(__dirname, 'megahand.html'),
         kinhand:    path.resolve(__dirname, 'kinhand.html'),
         classic:    path.resolve(__dirname, 'classic.html'),
-        classicplus: path.resolve(__dirname, 'classicplus.html'),
+        proto: path.resolve(__dirname, 'proto.html'),
         golfLegacy: path.resolve(__dirname, 'golf-legacy.html'),
         inverse:    path.resolve(__dirname, 'inverse.html'),
         city:       path.resolve(__dirname, 'city.html'),

@@ -10,51 +10,54 @@
 @tailwind components;
 @tailwind utilities;
 
-.classicplus-main-layout {
+.proto-main-layout {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) minmax(11rem, 0.7fr);
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
-.classicplus-main-layout--no-tableau {
+.proto-game-root .proto-main-layout {
+  row-gap: 5px;
+}
+.proto-main-layout--no-tableau {
   grid-template-columns: minmax(0, 1.7fr) minmax(11rem, 0.7fr);
 }
-.classicplus-main-layout--no-tableau .classicplus-map {
+.proto-main-layout--no-tableau .proto-map {
   grid-column: 1;
 }
-.classicplus-main-layout--no-tableau .classicplus-quest-sidebar {
+.proto-main-layout--no-tableau .proto-quest-sidebar {
   grid-column: 2;
 }
-.classicplus-main-layout--no-quest {
+.proto-main-layout--no-quest {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
 }
-.classicplus-main-layout--no-quest .classicplus-map {
+.proto-main-layout--no-quest .proto-map {
   grid-column: 2;
 }
-.classicplus-main-layout--no-tableau.classicplus-main-layout--no-quest {
+.proto-main-layout--no-tableau.proto-main-layout--no-quest {
   grid-template-columns: minmax(0, 1fr);
 }
-.classicplus-main-layout--no-tableau.classicplus-main-layout--no-quest .classicplus-map {
+.proto-main-layout--no-tableau.proto-main-layout--no-quest .proto-map {
   grid-column: 1;
 }
-.classicplus-main-header {
+.proto-main-header {
   grid-column: 1 / -1;
   grid-row: 1;
 }
-.classicplus-main-tableau {
+.proto-main-tableau {
   min-width: 0;
   min-height: 0;
 }
-.classicplus-main-foundations {
+.proto-main-foundations {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
 }
-.classicplus-foundation-card {
+.proto-foundation-card {
   aspect-ratio: 56 / 74;
 }
-.classicplus-tableau-field {
+.proto-tableau-field {
   grid-column: 1;
   grid-row: 2;
   display: grid;
@@ -62,16 +65,16 @@
   grid-template-rows: minmax(0, 1fr) auto;
   gap: clamp(0.45rem, 1vmin, 0.7rem);
 }
-.classicplus-tableau-field.hidden {
+.proto-tableau-field.hidden {
   display: none;
 }
-.classicplus-map {
+.proto-map {
   grid-column: 2;
   grid-row: 2;
   min-width: 0;
   min-height: 0;
 }
-.classicplus-quest-sidebar {
+.proto-quest-sidebar {
   grid-column: 3;
   grid-row: 2;
   min-width: 0;
@@ -79,38 +82,47 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(217, 168, 255, 0.32) transparent;
 }
-.classicplus-map-viewport {
+.proto-map-viewport {
   user-select: none;
   overscroll-behavior: none;
   touch-action: none;
   background-color: #050807;
 }
 
-.classicplus-game-root {
+.proto-game-root {
   overscroll-behavior: none;
   touch-action: none;
 }
 
-@keyframes classicplus-resource-pop {
+@keyframes proto-resource-pop {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.22); }
   68% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
   100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-.classicplus-resource-stack {
-  animation: classicplus-resource-pop 420ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+.proto-resource-stack {
+  animation: proto-resource-pop 420ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
 }
 
-.classicplus-tableau-status {
+.proto-tableau-status {
   display: none;
 }
-.classicplus-game-rail {
+.proto-game-rail {
   min-height: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.18);
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
   padding: clamp(0.3rem, 0.7vmin, 0.5rem) 0;
 }
-.classicplus-game-action {
+.proto-build-label {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  color: rgba(234, 217, 180, 0.85);
+  font: 16px/1.3 monospace;
+  white-space: nowrap;
+}
+.proto-game-action {
   position: relative;
   background: transparent;
 }
@@ -118,7 +130,7 @@
 /* Exploration is a navigation state, so the party cards stay quiet until a
    fight starts. Combat metrics remain mounted for the combat state and can be
    restored without changing the interaction model. */
-.classicplus-foundation-card--exploration {
+.proto-foundation-card--exploration {
   min-height: 0;
   height: 100%;
   width: auto;
@@ -128,67 +140,97 @@
   border-color: rgba(142, 242, 212, 0.18);
   background: linear-gradient(180deg, rgba(10, 15, 16, 0.96), rgba(5, 8, 10, 0.98));
 }
-.classicplus-foundation-board {
+.proto-foundation-board {
   min-height: 0;
   height: 100%;
   align-items: center;
 }
 /* Foundation cards and badges determine shelf height without a scroll region. */
-.classicplus-foundation-board--exploration {
+.proto-foundation-board--exploration {
   height: auto;
   overflow: visible;
   align-items: start;
   justify-content: start;
   scrollbar-width: thin;
 }
-.classicplus-foundation-board--exploration .classicplus-foundation-card--exploration {
+.proto-foundation-board--exploration .proto-foundation-card--exploration {
   min-height: 0;
   min-width: 0;
   height: auto;
   width: auto;
   aspect-ratio: auto;
 }
-.classicplus-foundation-assembly {
+/* Foundation assembly: inside the foundation border, the actor's energy
+   bubble and the card count stack to the left of the actor's card and the resources collected
+   this tableau line up underneath. */
+.proto-foundation-assembly {
   display: grid;
-  grid-template-columns: 2.25rem auto;
+  grid-template-columns: auto;
+  grid-template-areas: "foundation" "resources";
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  column-gap: 0.5rem;
+  row-gap: 0.375rem;
   min-width: 0;
   padding: 0.25rem 0.25rem 0.5rem;
   justify-self: center;
 }
-.classicplus-foundation-count-tokens {
-  display: grid;
-  gap: 0.5rem;
-  align-content: center;
-}
-.classicplus-foundation-count-token {
+.proto-foundation-assembly > [data-foundation-index] { grid-area: foundation; justify-self: start; }
+.proto-foundation-assembly > .proto-foundation-resources { justify-self: start; }
+.proto-actor-energy {
   display: grid;
   justify-items: center;
   align-content: center;
-  min-width: 2.25rem;
-  min-height: 2.25rem;
-  padding: 0.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border: 3px solid #050609;
   border-bottom-width: 4px;
   border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%, #3d5f8f, #12203a);
+  color: #e8f4ff;
+  font: 900 16px/1 monospace;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 10px #6fb8ff55, var(--table-object-shadow);
+}
+.proto-actor-energy > span:first-child { color: #ffe066; }
+.proto-foundation-count-token {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.4rem;
+  border: 2px solid #050609;
+  border-radius: 999px;
   background: radial-gradient(circle at 35% 25%, #49382e, #17121a);
   color: #fff1ce;
-  font: 900 0.6875rem/1.1 monospace;
+  font: 900 16px/1.1 monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
   box-shadow: var(--table-object-shadow);
 }
-.classicplus-foundation-count-token--resources {
-  border-color: #050609;
-  background: radial-gradient(circle at 35% 25%, #244c34, #0b2018);
+.proto-foundation-resources {
+  grid-area: resources;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.classicplus-foundation-count-token > span:first-child {
-  font-size: 0.875rem;
-}
-.classicplus-foundation-count-token > span:last-child {
+.proto-foundation-resources > li {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.375rem;
+  border-radius: 999px;
+  background: #0006;
+  box-shadow: inset 0 1px 2px #000a;
+  color: #fff1ce;
+  font: 900 16px/1.1 monospace;
   font-variant-numeric: tabular-nums;
 }
-.classicplus-exploration-actor {
+.proto-foundation-resources > li[data-count="0"] { opacity: 0.45; }
+.proto-exploration-actor {
   display: grid;
   height: auto;
   width: auto;
@@ -196,7 +238,7 @@
   min-width: 0;
   padding: 0.5rem;
 }
-.classicplus-exploration-counters {
+.proto-exploration-counters {
   display: grid;
   gap: 0.25rem;
   min-width: 0;
@@ -205,7 +247,7 @@
   line-height: 1.2;
   letter-spacing: 0.02em;
 }
-.classicplus-occupied-foundation-face {
+.proto-occupied-foundation-face {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   width: clamp(3.5rem, 5vw, 5rem);
@@ -223,7 +265,7 @@
   box-shadow: inset 0 0 0 1px #94644e, var(--table-object-shadow);
   letter-spacing: normal;
 }
-.classicplus-occupied-foundation-rank {
+.proto-occupied-foundation-rank {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -233,7 +275,7 @@
   font-weight: 900;
   line-height: 1;
 }
-.classicplus-empty-foundation-face {
+.proto-empty-foundation-face {
   display: grid;
   place-items: center;
   width: clamp(3.5rem, 5vw, 5rem);
@@ -245,7 +287,7 @@
   text-align: center;
   letter-spacing: normal;
 }
-.classicplus-occupied-foundation-owner {
+.proto-occupied-foundation-owner {
   margin-top: 0.25rem;
   border-top: 2px solid #050409;
   padding-top: 0.2rem;
@@ -253,7 +295,7 @@
   font-weight: 900;
   line-height: 1.2;
 }
-.classicplus-exploration-counter {
+.proto-exploration-counter {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -265,10 +307,10 @@
   text-align: left;
   overflow-wrap: anywhere;
 }
-.classicplus-exploration-counter > span:last-child {
+.proto-exploration-counter > span:last-child {
   font-variant-numeric: tabular-nums;
 }
-.classicplus-solve-controls {
+.proto-solve-controls {
   display: grid;
   justify-items: start;
   gap: 0.375rem;
@@ -282,30 +324,30 @@
   text-transform: none;
   overflow-wrap: anywhere;
 }
-.classicplus-solve-controls button {
+.proto-solve-controls button {
   border: 1px solid rgba(142, 242, 212, 0.45);
   border-radius: 0.375rem;
   background: #0b1916;
   padding: 0.375rem 0.5rem;
 }
-.classicplus-solve-controls button:disabled {
+.proto-solve-controls button:disabled {
   opacity: 0.4;
 }
 /* A physical table: wood frame, cloth play mats, cardboard cards, and raised
    wooden counters. Shadows remain 2D and follow the shared light scaffold. */
-.classicplus-game-root {
+.proto-game-root {
   background: repeating-linear-gradient(3deg, transparent 0 5px, rgba(0,0,0,0.06) 6px 7px),
     linear-gradient(120deg, hsl(28 28% var(--table-wood-light, 26%)), #17191c);
 }
-.classicplus-game-root .classicplus-main-tableau,
-.classicplus-game-root .classicplus-main-foundations,
-.classicplus-game-root .classicplus-quest-sidebar {
+.proto-game-root .proto-main-tableau,
+.proto-game-root .proto-main-foundations,
+.proto-game-root .proto-quest-sidebar {
   border: 3px solid #030608;
   border-radius: 6px;
   background: repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 3px), #0d211f;
   box-shadow: inset 0 0 0 1px #355348, inset 0 2px 7px #020808, 0 3px 0 #020608, 0 6px 14px #0009;
 }
-.classicplus-game-root .playing-card {
+.proto-game-root .playing-card {
   border: 4px solid #050409;
   border-bottom-width: 3px;
   border-radius: 4px;
@@ -314,92 +356,134 @@
   box-shadow: var(--table-object-shadow);
   text-shadow: 0 1px 0 #fff5;
 }
-.classicplus-game-root .playing-card:disabled {
+.proto-game-root .playing-card:disabled {
   background: linear-gradient(140deg, #261722, #100c14);
   color: #baabb7;
 }
-.classicplus-game-root .playing-card:not(:disabled) {
+/* Only highlighted cards (Guidance, a pending target or mobility choice) get
+   the gold outline; merely playable cards stay plain when Guidance is off. */
+.proto-game-root .playing-card[data-highlight="true"]:not(:disabled) {
   outline: 2px solid #ffcc72;
   outline-offset: 1px;
 }
-.classicplus-game-root .classicplus-foundation-card,
-.classicplus-game-root .classicplus-foundation-card--exploration {
+.proto-game-root .proto-foundation-card,
+.proto-game-root .proto-foundation-card--exploration {
   border-color: #978364;
   border-bottom-width: 3px;
   background: linear-gradient(145deg, #19332e, #091713);
   box-shadow: var(--table-object-shadow);
 }
-.classicplus-map {
+.proto-map {
   border: 4px solid #030608;
   border-radius: 6px;
   box-shadow: inset 0 0 0 1px #395847, 0 5px 0 #020609, 0 12px 26px #0009;
 }
-.classicplus-map-viewport {
+.proto-map-viewport {
   background-color: #102823;
 }
-.classicplus-map [data-board-piece="tile"] {
-  border: 3px solid #030708;
-  border-bottom-width: 4px;
-  border-radius: 4px;
+.proto-map [data-board-piece="tile"] {
+  border: 0;
+  border-radius: 0;
   background: linear-gradient(145deg, #254933, #102319);
   color: #f5ebcf;
+  /* Ground is flush with the table; depth belongs to scenery and terrain. */
+  box-shadow: none;
 }
-.classicplus-map [data-board-piece="resource"] {
+.proto-map [data-board-piece="tile"][data-selected] { outline: 1px solid #8ef2d4; outline-offset: -1px; }
+/* Top-down is printed tabletop art. Props and live illumination belong to
+   immersion; the fixed tile warning replaces the old airborne danger effect. */
+.proto-biome-topdown { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.proto-biome-topdown__art { display: block; width: 100%; height: 100%; image-rendering: pixelated; object-fit: fill; }
+.proto-biome-topdown__art--unexplored { filter: grayscale(1) brightness(0.7) sepia(0.3) hue-rotate(145deg); }
+.proto-map [data-tabletop] > .board-object-label { z-index: 1; }
+.proto-map [data-board-piece="tile"] .board-object-label__text,
+.proto-map [data-board-piece="tile"] .board-object-label__text > span {
+  /* Paint the fill last so the dark outline stays outside the pixel lettering. */
+  -webkit-text-stroke: 4px #10171a;
+  paint-order: stroke fill;
+  text-shadow: none;
+  padding: 1px 2px;
+}
+.proto-biome-topdown__danger { position: absolute; top: 1px; right: 1px; display: grid; place-items: center; width: 16px; height: 18px; background: #8e322a; color: #fff1cc; font: bold 16px/1 'Classic Pixel', monospace; }
+.proto-map[data-camera-view="tabletop"] .proto-map-world,
+.proto-map[data-camera-view="tabletop"] .proto-map-world * { box-shadow: none !important; text-shadow: none !important; }
+.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"] { width: 36px; height: 36px; padding: 0; border-width: 2px; border-color: #d8b776; outline-offset: 2px; background: #3f3430; }
+.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"]:focus-visible { outline: 2px solid #fff0b5; }
+.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"][data-selected] { outline: 2px solid #fff0b5; }
+.proto-map [data-board-piece="resource"] {
   border: 3px solid #080507;
   border-bottom-width: 5px;
   background: radial-gradient(circle at 35% 25%, #59372b, #21151a);
   color: #fff1ca;
   text-shadow: 0 1px 2px #000;
 }
-.classicplus-map [data-board-piece="actor"] {
+.proto-map [data-board-piece="actor"] {
   border: 4px solid #080509;
   border-bottom-width: 6px;
   background: radial-gradient(circle at 35% 25%, #785431, #2f1d1e);
   color: #fff4ce;
 }
-.classicplus-table-lamp {
+.proto-table-lamp {
   cursor: grab;
   touch-action: none;
   background: #634426;
   border: 2px solid #f0c878;
   box-shadow: 0 0 14px #ffcf7390, 0 0 42px #ffc35e40, 0 4px 3px #0008;
 }
-.classicplus-lighting-rail {
+.proto-light-readout {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 0 0.35rem;
+  border: 2px solid #030609;
+  border-radius: 0.35rem;
+  background: #0b1518e6;
+  color: #ead9b4;
+  font: 700 1rem/1.3 monospace;
+  white-space: nowrap;
+}
+.proto-light-readout[data-light-level="bright"] { color: #ffe39a; border-color: #8a6a2a; }
+.proto-light-readout[data-light-level="lit"] { color: #f0d8a8; }
+.proto-light-readout[data-light-level="dim"] { color: #9fb3c8; }
+.proto-light-readout[data-light-level="dark"] { color: #7a88a8; border-style: dashed; }
+.proto-lighting-rail {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem 1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
   padding: 0.5rem 0.75rem;
   border: 2px solid #030609;
   border-radius: 0.5rem;
   background: #0b1518f0;
   color: #ead9b4;
-  font: 0.6875rem/1.4 monospace;
+  font: 1rem/1.4 monospace;
 }
-.classicplus-lighting-rail input[type="range"] {
+/* Fixed width, so the slider beside it never shifts under a dragging pointer
+   when the phase changes (Night, Twilight, Day). */
+.proto-lighting-rail__clock { display: inline-block; min-width: 25ch; white-space: nowrap; }
+.proto-lighting-rail input[type="range"] {
   width: clamp(6rem, 12vw, 10rem);
   accent-color: #f0c878;
 }
-.classicplus-main-tableau--solver {
+.proto-main-tableau--solver {
   grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-header {
+.proto-foundation-card--exploration .proto-foundation-header {
   grid-template-columns: minmax(0, 1fr) auto;
   border-bottom-color: rgba(142, 242, 212, 0.16);
   padding: clamp(0.55rem, 1.2vmin, 0.8rem) clamp(0.65rem, 1.45vmin, 1rem);
 }
-.classicplus-foundation-card--exploration .classicplus-combat-metrics {
+.proto-foundation-card--exploration .proto-combat-metrics {
   display: none;
 }
-.classicplus-foundation-card--exploration .classicplus-dev-defeat-hint {
+.proto-foundation-card--exploration .proto-dev-defeat-hint {
   display: none;
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-advisor-grid {
+.proto-foundation-card--exploration .proto-foundation-advisor-grid {
   grid-template-columns: minmax(0, 1fr);
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-advisor-grid button {
+.proto-foundation-card--exploration .proto-foundation-advisor-grid button {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -407,43 +491,43 @@
   text-align: left;
   padding-inline: clamp(0.7rem, 1.4vmin, 1rem);
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-advisor-grid button > div:nth-child(2) {
+.proto-foundation-card--exploration .proto-foundation-advisor-grid button > div:nth-child(2) {
   margin-top: 0;
 }
-.classicplus-foundation-card--exploration .classicplus-foundation-advisor-grid button br {
+.proto-foundation-card--exploration .proto-foundation-advisor-grid button br {
   display: none;
 }
 
 @media (max-width: 900px) {
-  .classicplus-main-layout {
+  .proto-main-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto auto;
   }
-  .classicplus-main-header {
+  .proto-main-header {
     grid-column: 1;
     grid-row: 1;
   }
-  .classicplus-main-tableau {
+  .proto-main-tableau {
     grid-column: 1;
     grid-row: 2;
   }
-  .classicplus-main-foundations {
+  .proto-main-foundations {
     grid-column: 1;
     grid-row: 3;
   }
-  .classicplus-quest-sidebar {
+  .proto-quest-sidebar {
     grid-column: 1;
     grid-row: 4;
   }
-  .classicplus-tableau-field,
-  .classicplus-map {
+  .proto-tableau-field,
+  .proto-map {
     grid-column: 1;
     grid-row: auto;
   }
-  .classicplus-tableau-field {
+  .proto-tableau-field {
     grid-template-rows: auto auto;
   }
-  .classicplus-main-layout {
+  .proto-main-layout {
     overflow: hidden;
   }
 }
@@ -1509,9 +1593,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 
 
 /* Definite padded content boxes keep labels contained without clipping shadows or popovers. */
-.classicplus-game-root [data-board-piece="tile"],
-.classicplus-game-root [data-board-piece="actor"],
-.classicplus-game-root [data-board-piece="resource"] {
+.proto-game-root [data-board-piece="tile"],
+.proto-game-root [data-board-piece="actor"],
+.proto-game-root [data-board-piece="resource"] {
   padding: 4px;
   box-sizing: border-box;
   grid-template-columns: minmax(0, 1fr);
@@ -1539,16 +1623,16 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 
 /* Inscribe the label box within circular tokens rather than their bounding square. */
-.classicplus-game-root [data-board-piece="actor"],
-.classicplus-game-root [data-board-piece="resource"] { padding: 7px; }
+.proto-game-root [data-board-piece="actor"],
+.proto-game-root [data-board-piece="resource"] { padding: 7px; }
 
 /* Compact quest rows on short displays instead of creating a scroll surface. */
 @media (max-height: 720px) {
-  .classicplus-quest-sidebar ol { gap: 0.25rem; margin-top: 0.5rem; }
-  .classicplus-quest-sidebar li { padding-block: 0.25rem; }
+  .proto-quest-sidebar ol { gap: 0.25rem; margin-top: 0.5rem; }
+  .proto-quest-sidebar li { padding-block: 0.25rem; }
 }
 
-.classicplus-quest-sidebar {
+.proto-quest-sidebar {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.75rem;
@@ -1631,15 +1715,14 @@ html.drag-perf-mode .target-swirl-sparkles {
 .details-card__header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .details-card__header h2 { margin: 0; font-size: 28px; line-height: 1; text-transform: uppercase; }
 .details-card__badge { width: 48px; height: 48px; display: grid; place-items: center; border: 3px solid #b19057; border-radius: 50%; background: #141824; font-size: 30px; }
-.details-card__art { min-height: 0; border: 3px solid #08070d; background: #10211e; overflow: hidden; }
+.details-card__art { min-height: 0; border: 2px solid #b19057; background: radial-gradient(ellipse at 50% 65%, #355044, #10211e 75%); box-shadow: inset 0 0 0 2px #08070d; overflow: hidden; }
 .details-card__art svg, .details-card__art img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.details-card__sprite { image-rendering: pixelated; box-sizing: border-box; padding: 4px; }
 .details-card__descriptor { margin: 0; padding: 10px; border: 2px solid #8c7452; background: #0c1016; font-size: 18px; line-height: 1.15; }
 .details-card__trays { display: grid; gap: 6px; }
 .details-card__tray { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 10px; padding: 6px 10px; border: 2px solid #8c7452; background: #14171c; font-size: 18px; }
 .details-card__tray h3 { margin: 0; font-size: inherit; font-weight: normal; color: #dbc091; }
 .details-card__tray > div { text-align: right; }
-.details-card__close { justify-self: end; padding: 4px 12px; border: 2px solid #b19057; border-radius: 3px; background: #0c1016; font: inherit; font-size: 18px; }
-.details-card__close:focus-visible { outline: 3px solid #ffe19a; outline-offset: 2px; }
 @media (max-height: 600px) {
   .details-card { padding: 10px; gap: 6px; }
   .details-card__descriptor { padding: 6px; font-size: 14px; }
@@ -1669,9 +1752,15 @@ html.drag-perf-mode .target-swirl-sparkles {
 
 .quest-field { font-family: 'Classic Pixel', monospace; }
 
-.classicplus-tableau-card-area { width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; place-items: center; }
-.classicplus-game-root .classicplus-solve-controls,
-.classicplus-game-root .classicplus-solve-controls button { font-size: 16px; }
+.proto-tableau-card-area { width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; place-items: center; }
+/* Battle camera: with the camera tilted, the tableau leans back from its front
+   row like a field seen from behind the player; back rows shrink toward the
+   horizon and soften (per-card blur set inline). */
+.proto-tableau-stage { transform-origin: 50% 100%; transition: transform 0.35s ease; }
+.proto-tableau-stage--tilted { transform: none; }
+@media (prefers-reduced-motion: reduce) { .proto-tableau-stage { transition: none; } }
+.proto-game-root .proto-solve-controls,
+.proto-game-root .proto-solve-controls button { font-size: 16px; }
 
 .details-card-viewer--floating { position: fixed; z-index: 50000; margin: 0; max-width: none; max-height: none; border-radius: 10px; overflow: visible; }
 .details-card-viewer--floating .details-card { gap: 6px; padding: 10px; }
@@ -1680,68 +1769,64 @@ html.drag-perf-mode .target-swirl-sparkles {
 .details-card-viewer--floating .details-card__descriptor { padding: 6px; }
 .details-card-viewer--floating .details-card__tray { padding-block: 3px; }
 
-.settlement-supply-tray { position: absolute; bottom: 36px; left: 12px; right: 12px; z-index: 55; max-width: 620px; padding: 10px; border: 3px solid #07090d; border-radius: 8px; background: #182823f5; box-shadow: inset 0 0 0 1px #6d7654, 3px 5px 0 #0008; color: #fff0d0; font: 16px/1.15 'Classic Pixel', monospace; }
-.settlement-supply-tray header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-.settlement-supply-tray header span { color: #aebfaa; }
-.settlement-supply-tray__slots { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
-.settlement-supply-tray section { padding: 8px; border: 2px solid #4b5547; border-radius: 5px; background: #0c1716; }
-.settlement-supply-tray section strong { float: right; color: #ffe19a; font-size: 22px; }
-.settlement-supply-tray section > div:last-child { display: flex; gap: 5px; margin-top: 8px; }
-.settlement-supply-tray button { border: 1px solid #8c926e; padding: 3px 7px; background: #27362b; font: inherit; }
-.settlement-supply-tray button:disabled { opacity: .35; }
 .settlement-supply-flight { position: fixed; z-index: 40000; pointer-events: none; font-size: 28px; filter: drop-shadow(3px 5px 2px #0009); }
 
-.classicplus-mobile-nav { display: none; }
+.proto-mobile-nav { display: none; }
 @media (max-width: 900px) {
-  .classicplus-game-root { padding: 6px; }
-  .classicplus-game-root > div > div > section { padding: 6px; }
-  .classicplus-game-root .classicplus-main-layout { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); gap: 6px; }
-  .classicplus-mobile-nav { display: flex; gap: 6px; margin-bottom: 6px; }
-  .classicplus-mobile-nav button { flex: 1; padding: 6px; border: 2px solid #59634b; background: #12221c; font: 16px 'Classic Pixel', monospace; }
-  .classicplus-mobile-nav button[aria-pressed="true"] { border-color: #ffe19a; color: #ffe19a; }
-  .classicplus-mobile-nav button:disabled { opacity: .4; }
-  .classicplus-main-header { grid-column: 1; grid-row: 1; }
-  .classicplus-lighting-rail { display: none; }
-  .classicplus-game-rail { flex-wrap: wrap; gap: 4px; }
-  .classicplus-game-root .classicplus-game-action { padding: 5px 8px; font-size: 16px; }
-  .classicplus-game-root .classicplus-map,
-  .classicplus-game-root .classicplus-tableau-field,
-  .classicplus-game-root .classicplus-quest-sidebar { grid-column: 1; grid-row: 2; min-height: 0; }
-  .classicplus-main-layout[data-mobile-panel="map"] .classicplus-tableau-field,
-  .classicplus-main-layout[data-mobile-panel="map"] .classicplus-quest-sidebar,
-  .classicplus-main-layout[data-mobile-panel="tableau"] .classicplus-map,
-  .classicplus-main-layout[data-mobile-panel="tableau"] .classicplus-quest-sidebar,
-  .classicplus-main-layout[data-mobile-panel="quests"] .classicplus-map,
-  .classicplus-main-layout[data-mobile-panel="quests"] .classicplus-tableau-field { display: none; }
-  .classicplus-tableau-field { grid-template-rows: minmax(0,1fr) auto; }
-  .classicplus-main-tableau { grid-row: auto; grid-column: auto; }
-  .classicplus-main-foundations { grid-row: auto; grid-column: auto; }
-  .classicplus-map-viewport { min-height: 0; }
-  .settlement-supply-tray { left: 6px; right: 6px; padding: 6px; }
-  .settlement-supply-tray header span { display: none; }
-  .settlement-supply-tray__slots { gap: 4px; }
-  .settlement-supply-tray section { padding: 5px; }
-  .settlement-supply-tray button { padding: 4px; }
+  .proto-game-root { padding: 6px; }
+  .proto-game-root > div > div > section { padding: 6px; }
+  .proto-game-root .proto-main-layout { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); gap: 6px; }
+  .proto-mobile-nav { display: flex; gap: 6px; margin-bottom: 6px; }
+  .proto-mobile-nav button { flex: 1; padding: 6px; border: 2px solid #59634b; background: #12221c; font: 16px 'Classic Pixel', monospace; }
+  .proto-mobile-nav button[aria-pressed="true"] { border-color: #ffe19a; color: #ffe19a; }
+  .proto-mobile-nav button:disabled { opacity: .4; }
+  .proto-main-header { grid-column: 1; grid-row: 1; }
+  .proto-lighting-rail { display: none; }
+  .proto-game-rail { flex-wrap: wrap; gap: 4px; }
+  .proto-game-root .proto-game-action { padding: 5px 8px; font-size: 16px; }
+  .proto-game-root .proto-map,
+  .proto-game-root .proto-tableau-field,
+  .proto-game-root .proto-quest-sidebar { grid-column: 1; grid-row: 2; min-height: 0; }
+  .proto-main-layout[data-mobile-panel="map"] .proto-tableau-field,
+  .proto-main-layout[data-mobile-panel="map"] .proto-quest-sidebar,
+  .proto-main-layout[data-mobile-panel="tableau"] .proto-map,
+  .proto-main-layout[data-mobile-panel="tableau"] .proto-quest-sidebar,
+  .proto-main-layout[data-mobile-panel="quests"] .proto-map,
+  .proto-main-layout[data-mobile-panel="quests"] .proto-tableau-field { display: none; }
+  .proto-tableau-field { grid-template-rows: minmax(0,1fr) auto; }
+  .proto-main-tableau { grid-row: auto; grid-column: auto; }
+  .proto-main-foundations { grid-row: auto; grid-column: auto; }
+  .proto-map-viewport { min-height: 0; }
 }
 @media (max-width: 900px) and (max-height: 500px) {
-  .classicplus-tableau-field { grid-template-columns: minmax(0,1fr) 130px; grid-template-rows: minmax(0,1fr); }
-  .classicplus-main-foundations { grid-column: 2; }
-  .classicplus-main-tableau { grid-column: 1; }
-  .classicplus-table-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .classicplus-game-root .classicplus-main-foundations { padding: 4px; }
-  .classicplus-game-rail { padding: 2px 0; }
+  .proto-tableau-field { grid-template-columns: minmax(0,1fr) 196px; grid-template-rows: minmax(0,1fr); }
+  .proto-main-foundations { grid-column: 2; }
+  .proto-main-tableau { grid-column: 1; }
+  .proto-game-root .proto-main-foundations { padding: 4px; }
+  .proto-game-rail { padding: 2px 0; }
 }
 
-@media (max-width: 900px) {
-  .supply-draw-prefix { display: none; }
-  .settlement-supply-tray button { flex: 1; min-height: 32px; }
-  .classicplus-map-help { top: 48px; left: 10px; right: 10px; font-size: 16px; line-height: 1.1; letter-spacing: normal; }
-  .classicplus-map-toolbar button { font-size: 16px; padding: 4px 8px; }
+/* Camera controls share one dock with the zoom and absolute grid reference. */
+.proto-map-footer { position: absolute; left: 12px; right: 12px; bottom: 8px; z-index: 50; display: flex; align-items: center; gap: 12px; pointer-events: none; }
+.proto-map-readouts, .proto-map-footer .table-grid-reference { flex: 1 1 0; white-space: nowrap; font: 16px 'Classic Pixel',monospace; }
+.proto-map-readouts { display: flex; flex-direction: column; gap: 4px; }
+.proto-map-fps { color: #e2eae5; font-variant-numeric: tabular-nums; }
+.proto-map-zoom { color: #e2eae5; }
+.proto-map-toolbar { display: flex; flex: 0 0 auto; gap: 5px; pointer-events: auto; }
+@media (max-width: 600px) {
+  .proto-map-footer { flex-wrap: wrap; gap: 8px; }
+  .proto-map-toolbar { order: 3; flex-basis: 100%; justify-content: center; }
 }
+.proto-map-camera-button { display: grid; place-items: center; width: 36px; height: 36px; padding: 6px; border: 1px solid #a08a64; border-radius: 3px; color: #ffe2ae; background: #07110ef2; box-shadow: inset 0 1px #ffe2ae26, 0 3px 0 #020504; touch-action: manipulation; }
+.proto-map-camera-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: square; stroke-linejoin: miter; }
+.proto-map-camera-button:hover { background: #25352b; border-color: #ffe2ae; }
+.proto-map-camera-button[aria-pressed="true"] { background: #3d3420; border-color: #ffd166; color: #ffd166; }
+.proto-map-camera-button:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 3px; }
+.proto-map-camera-button:active { transform: translateY(2px); box-shadow: inset 0 1px #ffe2ae26, 0 1px 0 #020504; }
 
-.classicplus-main-tableau--solver { grid-template-rows: minmax(0,1fr) auto auto; }
-.classicplus-tableau-actions button { padding: 5px 12px; border: 2px solid #9c8c62; background: #17251f; color: #fff0d0; font: 16px 'Classic Pixel',monospace; }
-.classicplus-tableau-actions button:disabled { opacity: .4; }
+.proto-main-tableau--solver { grid-template-rows: auto minmax(0,1fr); }
+.proto-tableau-actions button { padding: 5px 12px; border: 2px solid #9c8c62; background: #17251f; color: #fff0d0; font: 16px 'Classic Pixel',monospace; }
+.proto-tableau-actions button:disabled { opacity: .4; }
 .table-quest-card { position: absolute; width: 160px; height: calc(160px * 88 / 63); transform: translate(-50%,-50%); z-index: 15; border-radius: 8px; }
 .table-quest-card .quest-card { padding: 8px; gap: 6px; }
 .table-quest-card .quest-card__title, .table-quest-card .quest-card__text, .table-quest-card .quest-card__status, .table-quest-card .quest-card__reward { font-size: 16px; }
@@ -1754,15 +1839,13 @@ html.drag-perf-mode .target-swirl-sparkles {
 .table-quest-card .quest-card__title { padding-bottom: 4px; }
 
 /* Recessed physical quest tray; contents retain playing-card geometry. */
-.classicplus-game-root .quest-tray { border: 5px solid #37271e; background: linear-gradient(135deg,#33261e,#191513); box-shadow: inset 0 0 0 2px #8e7050, inset 0 8px 16px #000b, 4px 6px 0 #0008; padding: 14px; }
+.proto-game-root .quest-tray { border: 5px solid #37271e; background: linear-gradient(135deg,#33261e,#191513); box-shadow: inset 0 0 0 2px #8e7050, inset 0 8px 16px #000b, 4px 6px 0 #0008; padding: 14px; }
 .quest-tray .quest-field__header { flex-wrap: wrap; }
 .quest-tray .quest-field__header > span { font-size: 16px; }
 .quest-tray .quest-field__header .quest-tray__toggle { border-radius: 4px; width: auto; height: auto; min-height: 36px; padding: 6px 10px; font-size: 16px; background: #171313; color: #ffe2ae; }
 .quest-tray__well { min-height: 0; display: grid; grid-template-rows: auto minmax(0,1fr); padding: 8px; border: 3px solid #100d0c; box-shadow: inset 0 3px 10px #000c; background: #101a17; }
 .quest-tray__well > .playing-card-stack { grid-row: 2; }
 .quest-tray__well[hidden] { display: none; }
-.quest-tray__notice { font-size: 16px; color: #ffe2ae; display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
-.quest-tray__notice button { border: 2px solid #b59454; padding: 4px 8px; }
 .quest-tray__closed { display: grid; place-items: center; font-size: 64px; color: #a88658; background: repeating-linear-gradient(0deg,#0002 0 2px,transparent 2px 16px); box-shadow: inset 0 3px 12px #000b; border: 3px solid #17100c; }
 
 /* Slot borders themselves retain the same 63:88 ratio as playing cards. */
@@ -1784,22 +1867,19 @@ html.drag-perf-mode .target-swirl-sparkles {
 .quest-tray .quest-card { padding: 4px; }
 .quest-tray .quest-card::after { content: '⚡'; font-size: 32px; margin: auto; }
 @media (max-width: 900px) and (max-height: 500px) {
-  .classicplus-main-layout[data-mobile-panel="quests"] .classicplus-main-header > :not(.classicplus-mobile-nav) { display: none; }
+  .proto-main-layout[data-mobile-panel="quests"] .proto-main-header > :not(.proto-mobile-nav) { display: none; }
   .quest-tray .quest-field__header p { display: none; }
   .quest-tray__well { grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); }
-  .quest-tray__notice { grid-column: 1 / -1; }
   .quest-foundations { grid-row: 2; }
   .quest-tray__lower { grid-row: 2; grid-template-columns: minmax(0,1fr) minmax(0,2fr); }
   .quest-foundation__compact-description { gap: 6px; padding: 8px; }
 }
 
 /* Stow the entire tray outside the viewport; its former grid column is released. */
-.classicplus-game-root .quest-tray { transition: transform 240ms ease, opacity 240ms ease; transform: translateX(0); }
-.classicplus-game-root .quest-tray[data-open="false"] { display: grid; position: fixed; top: 140px; bottom: 18px; right: 0; width: clamp(220px,24vw,460px); transform: translateX(110%); opacity: 0; pointer-events: none; visibility: hidden; transition: transform 240ms ease, opacity 240ms ease, visibility 0s 240ms; }
-@media (prefers-reduced-motion: reduce) { .classicplus-game-root .quest-tray { transition: none; } }
+.proto-game-root .quest-tray { transition: transform 240ms ease, opacity 240ms ease; transform: translateX(0); }
+.proto-game-root .quest-tray[data-open="false"] { display: grid; position: fixed; top: 140px; bottom: 18px; right: 0; width: clamp(220px,24vw,460px); transform: translateX(110%); opacity: 0; pointer-events: none; visibility: hidden; transition: transform 240ms ease, opacity 240ms ease, visibility 0s 240ms; }
+@media (prefers-reduced-motion: reduce) { .proto-game-root .quest-tray { transition: none; } }
 
-.quest-tray-restore { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 100; border: 3px solid #ae8d58; border-right: 0; border-radius: 8px 0 0 8px; padding: 12px; background: #241b15; color: #ffe2ae; box-shadow: -4px 5px 0 #0008; font: 16px 'Classic Pixel',monospace; }
-.quest-tray-restore:focus-visible { outline: 3px solid #ffe19a; outline-offset: 3px; }
 
 .quest-discard-flight__flipper { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
 .quest-discard-flight__front, .quest-discard-flight__back { position: absolute; inset: 0; width: 100%; height: 100%; backface-visibility: hidden; }
@@ -1820,28 +1900,33 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 
 .reward-hold-progress { position: absolute; inset: 4px; border: 3px solid #ffe19a; border-radius: 6px; pointer-events: none; overflow: hidden; z-index: 5; }
-.reward-hold-progress > span { display: block; height: 100%; background: #ffd16640; box-shadow: 2px 0 0 #ffe19a; }
-.hold-reward-button { position: relative; touch-action: none; }
+/* The fill rises from the bottom like a meter so progress reads at a glance. */
+.reward-hold-progress { display: flex; align-items: flex-end; }
+.reward-hold-progress > span { display: block; width: 100%; height: var(--hold-progress, 0%); background: linear-gradient(0deg, #ffd166b3, #ffe19a66); box-shadow: 0 -3px 0 #fff3c8, 0 0 18px #ffd16699; }
 .table-quest-card[data-table-state="true"] .quest-card__status { font-size: 16px; line-height: 1.1; }
 .table-quest-card[data-table-state="true"] .quest-card__title { font-size: 16px; line-height: 1.1; }
-.table-quest-card .quest-card__title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+/* The whole title shows; fitTableQuestCard drops the status line and then
+   tightens the title to make room, clamping only if even that isn't enough. */
+.table-quest-card .quest-card__title { overflow-wrap: anywhere; }
+.table-quest-card .quest-card__title[data-clamped] { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--fit-lines, 2); overflow: hidden; }
+.table-quest-card .quest-card__status[hidden] { display: none; }
+.table-quest-card .quest-card__title[data-tight] { line-height: 1; padding-bottom: 2px; }
 .table-quest-card .quest-card { overflow: hidden; }
 .table-quest-card .quest-card__title, .table-quest-card .quest-card__status, .table-quest-card .quest-card__reward { flex-shrink: 0; }
 .table-quest-card .quest-card__reward { gap: 4px; white-space: nowrap; }
 .table-quest-card .quest-card__reward > span { font-size: 16px; }
 
 /* Compact details use the shared default table-card presentation size. */
-.details-card-viewer--floating .details-card { padding: 6px; gap: 4px; grid-template-rows: auto minmax(0,1fr) auto auto auto; overflow: hidden; }
+.details-card-viewer--floating .details-card { padding: 5px; border-width: 3px; gap: 3px; grid-template-rows: auto minmax(0,1fr) auto auto auto; overflow: hidden; }
 .details-card-viewer--floating .details-card__header { gap: 4px; }
 .details-card-viewer--floating .details-card__header h2 { font-size: 16px; }
 .details-card-viewer--floating .details-card__badge { width: 24px; height: 24px; font-size: 16px; border-width: 2px; }
-.details-card-viewer--floating .details-card__descriptor { font-size: 16px; line-height: 1.1; padding: 4px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+/* Overflow clips at the padding edge, so the inner spacing is drawn as border (with the frame as an outline) to keep a clamped third line from peeking out. */
+.details-card-viewer--floating .details-card__descriptor { font-size: 16px; line-height: 1.1; padding: 0; border: 6px solid #0c1016; outline: 2px solid #8c7452; outline-offset: -2px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; box-sizing: content-box; max-height: 2.2em; }
 .details-card-viewer--floating .details-card__trays { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 3px; }
 .details-card-viewer--floating .details-card__tray { display: flex; justify-content: center; gap: 3px; padding: 2px; font-size: 16px; }
-.details-card-viewer--floating .details-card__close { font-size: 16px; padding: 2px 6px; }
 .table-grid-origin { position: absolute; transform: translate(-50%,-50%); display: grid; place-items: center; border: 1px dashed #d4b97b66; color: #d4b97b66; font: 16px 'Classic Pixel',monospace; pointer-events: none; }
-.table-grid-reference { position: absolute; right: 12px; bottom: 8px; z-index: 40; background: #07110ed9; color: #ffe2ae; padding: 3px 6px; font: 16px 'Classic Pixel',monospace; pointer-events: none; }
-.table-grid-center-button { border: 1px solid #a08a64; background: #07110e; padding: 3px 6px; font: 16px 'Classic Pixel',monospace; color: #ffe2ae; }
+.table-grid-reference { color: #ffe2ae; text-align: right; pointer-events: auto; }
 /* Developer tools live in screen space, above camera-transformed game objects. */
 .dev-context-menu {
   position: fixed;
@@ -1858,3 +1943,1072 @@ html.drag-perf-mode .target-swirl-sparkles {
   box-shadow: 4px 5px 0 #0009;
 }
 .dev-context-menu [aria-disabled="true"] { cursor: default; }
+
+/* ===== Physical board-game trays =====================================
+   Quest tray and settlement supplies read as a wooden game-box insert:
+   walnut frame with brass fittings, felt-lined recesses cut to card size,
+   a parchment rules card and loose tokens in bins. Layout, sizes and the
+   63:88 slot geometry come from the rules above; this block is skin only. */
+:root {
+  --tray-wood-dark: #3a2213;
+  --tray-wood: #5d3920;
+  --tray-wood-light: #85562f;
+  --tray-felt: #173a2c;
+  --tray-felt-dark: #0c2219;
+  --tray-brass: #d2ad62;
+  --tray-brass-dark: #7c5c24;
+  --tray-parchment: #ead9b0;
+  --tray-ink: #3b2814;
+}
+.proto-game-root .quest-tray,
+.proto-game-root .supply-tray {
+  border: 0;
+  border-radius: 12px;
+  color: #fbe9c4;
+  background:
+    radial-gradient(circle at 8px 8px, var(--tray-brass) 0 2px, var(--tray-brass-dark) 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 8px) 8px, var(--tray-brass) 0 2px, var(--tray-brass-dark) 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at 8px calc(100% - 8px), var(--tray-brass) 0 2px, var(--tray-brass-dark) 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), var(--tray-brass) 0 2px, var(--tray-brass-dark) 2.5px 3.5px, transparent 4px),
+    repeating-linear-gradient(92deg, #ffffff07 0 2px, transparent 2px 9px, #00000012 9px 11px, transparent 11px 23px),
+    linear-gradient(180deg, var(--tray-wood-light), var(--tray-wood) 40%, var(--tray-wood-dark));
+  box-shadow:
+    inset 0 2px 0 #ffffff2e,
+    inset 0 -4px 0 #0000005c,
+    inset 0 0 0 2px #1d0f07,
+    0 10px 0 #1a0d06,
+    0 16px 24px #000a;
+}
+/* Engraved brass plaque for the tray titles. */
+.quest-tray .quest-field__header > div:first-child,
+.supply-tray .supply-tray__plaque {
+  justify-self: start;
+  padding: 6px 12px;
+  border-radius: 4px;
+  color: #2b1a08;
+  background: linear-gradient(180deg, #f0d48c, var(--tray-brass) 55%, #a8812f);
+  box-shadow: inset 0 1px 0 #fff6, inset 0 -2px 0 #0004, 0 2px 0 #1d0f07;
+  text-shadow: 0 1px 0 #fff5;
+}
+.quest-tray .quest-field__header h2 { color: inherit; letter-spacing: 0.08em; }
+.quest-tray .quest-field__header p { color: #4a3214; }
+.quest-tray .quest-field__header { border-bottom: 0; }
+.quest-tray .quest-field__header > span { color: #ffe9b8; text-shadow: 0 2px 0 #0008; }
+/* Brass pull tab for stowing. */
+.quest-tray .quest-field__header .quest-tray__toggle {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  color: #2b1a08;
+  background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429);
+  box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07;
+}
+.quest-tray .quest-tray__toggle:active { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff7, 0 1px 0 #1d0f07; }
+.quest-tray .quest-tray__toggle:focus-visible { outline: 3px solid #fff3c8; outline-offset: 3px; }
+.quest-tray .quest-discard-counter { color: #ffe9b8; text-shadow: 0 2px 0 #0008; }
+/* Felt-lined well recessed into the wood. */
+.quest-tray__well {
+  border: 0;
+  border-radius: 10px;
+  background:
+    repeating-radial-gradient(circle at 30% 20%, #ffffff05 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 0%, #24543f, var(--tray-felt) 55%, var(--tray-felt-dark));
+  box-shadow: inset 0 6px 14px #000c, inset 0 -2px 0 #ffffff12, 0 1px 0 #ffffff26;
+}
+/* Card-shaped recesses cut into a wooden insert, with a finger notch. */
+.quest-foundation {
+  position: relative;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #0a1d15, #133325);
+  box-shadow: inset 0 0 0 3px #2b190c, inset 0 6px 10px #000d, 0 1px 0 #ffffff1c;
+}
+.quest-foundation::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  width: 34%;
+  height: 12px;
+  transform: translateX(-50%);
+  border-radius: 12px 12px 0 0;
+  background: #071510;
+  box-shadow: inset 0 3px 4px #000c;
+  pointer-events: none;
+}
+.quest-foundation header { color: #ffe9b8; text-shadow: 0 2px 0 #000a; }
+/* Locked slots are covered by a wooden slat. */
+.quest-foundation--disabled {
+  color: #f0d9b0;
+  background:
+    repeating-linear-gradient(90deg, #ffffff06 0 2px, transparent 2px 10px, #0000001a 10px 12px, transparent 12px 20px),
+    linear-gradient(180deg, #6a4226, #4a2c17);
+  box-shadow: inset 0 0 0 3px #2b190c, inset 0 2px 0 #ffffff26, 0 3px 0 #1d0f07;
+  text-shadow: 0 2px 0 #000a;
+}
+.quest-foundation--disabled::after { background: #2a180b; }
+/* Quest cards: printed card stock with a gilt edge. */
+.quest-tray .quest-card,
+.quest-tray .quest-card-back {
+  border: 3px solid #f0e2bd;
+  box-shadow: inset 0 0 0 2px #8a6a2a, 0 2px 0 #0009, 0 4px 6px #0007;
+  background-color: #3a1f2e;
+  background-image:
+    radial-gradient(circle at 50% 50%, #d2ad6233 0 18%, transparent 19%),
+    repeating-linear-gradient(45deg, #ffffff08 0 3px, transparent 3px 9px),
+    linear-gradient(145deg, #5a2f45, #241321);
+}
+.quest-tray .quest-card--complete { border-color: #fff1c4; background-image: linear-gradient(145deg, #3f6a45, #16301f); box-shadow: inset 0 0 0 2px #d2ad62, 0 0 18px #ffe19a55, 0 4px 6px #0007; }
+/* The active objective is printed on a parchment rules card. */
+.quest-foundation__compact-description {
+  border: 0;
+  border-radius: 6px;
+  color: var(--tray-ink);
+  background:
+    radial-gradient(ellipse at 20% 10%, #fff8 0, transparent 45%),
+    radial-gradient(ellipse at 90% 100%, #b8925a55 0, transparent 55%),
+    var(--tray-parchment);
+  box-shadow: inset 0 0 0 2px #c9ad78, inset 0 0 18px #9c7a4455, 0 3px 0 #1d0f07, 0 6px 10px #0008;
+  transform: rotate(-0.6deg);
+}
+.quest-foundation__compact-description strong { color: #5b1f12; }
+.quest-foundation__compact-description > span { color: #6b4a12; }
+.quest-chain-complete { color: var(--tray-ink); border: 0; background: var(--tray-parchment); box-shadow: inset 0 0 0 2px #c9ad78, 0 3px 0 #1d0f07; }
+
+.quest-tray .quest-tray__controls { padding: 0; background: none; box-shadow: none; }
+
+/* Desktop quest tray: a narrow column with the three slots stacked vertically.
+   Slots size from the space left after the objective card, keeping 63:88. */
+@media (min-width: 901px) {
+  .proto-main-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) clamp(13rem, 15vw, 16.5rem); }
+  .proto-main-layout--no-tableau { grid-template-columns: minmax(0, 1.7fr) clamp(13rem, 15vw, 16.5rem); }
+  .proto-main-layout--no-quest { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); }
+  .proto-main-layout--no-tableau.proto-main-layout--no-quest { grid-template-columns: minmax(0, 1fr); }
+  .proto-game-root .quest-tray[data-open="false"] { width: clamp(13rem, 15vw, 16.5rem); }
+  .proto-game-root .quest-tray { padding: 12px 10px; }
+  .quest-tray__well { grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; padding: 8px; }
+  .quest-foundations {
+    grid-row: 2;
+    height: 100%;
+    container-type: size;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    align-content: center;
+    justify-items: center;
+    gap: 8px;
+  }
+  .quest-foundation { width: min(100cqw, calc((100cqh - 16px) / 3 * 63 / 88)); justify-self: center; }
+  .quest-tray__lower { grid-row: 3; }
+}
+@media (min-width: 901px) {
+  /* Compact header so the stacked slots get the height. */
+  .quest-tray .quest-field__header { grid-template-columns: minmax(0, 1fr); gap: 6px; padding-bottom: 6px; }
+  .quest-tray .quest-field__header > div:first-child { justify-self: stretch; padding: 4px 10px; }
+  .quest-tray .quest-field__header h2 { line-height: 1.2; }
+  .quest-tray .quest-field__header p { margin-top: 0; }
+  .quest-tray .quest-field__header > span { justify-self: start; }
+  .quest-tray__controls { gap: 8px; }
+  .quest-tray .quest-field__header .quest-tray__toggle { padding: 4px 12px; min-height: 32px; }
+  /* Slots keep only their name; the count and "Disabled" stay in the accessible label. */
+  .quest-foundation { overflow: hidden; padding: 4px; }
+  .quest-foundation header span,
+  .quest-foundation--disabled > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .quest-foundation--disabled { gap: 2px; }
+  .quest-foundation__cards { min-height: 0; overflow: hidden; }
+  .quest-tray .quest-card::after { font-size: 24px; }
+  .quest-foundation__compact-description { gap: 6px; padding: 8px 10px; }
+}
+
+/* ===== Supplies tray ==================================================
+   Slim left-side twin of the quest tray: same wooden frame and stow behavior,
+   a felt column of resource tokens with brass count tags. Tapping a token
+   opens a parchment details card beside it. */
+:root { --supply-tray-width: 5.5rem; --quest-card-width: 150px; --quest-tray-width: calc(var(--quest-card-width) + 48px); }
+@media (min-width: 901px) {
+  /* Columns come from desktopLayoutTracks so stowed trays leave no empty gap. */
+  .proto-game-root .proto-main-layout[style] { grid-template-columns: var(--layout-columns); grid-template-areas: var(--layout-areas); }
+  .proto-game-root .proto-main-layout > .proto-main-header { grid-area: header; }
+  .proto-game-root .proto-main-layout > .proto-tableau-field { grid-area: tableau; }
+  .proto-game-root .proto-main-layout > .proto-map { grid-area: map; }
+  .proto-game-root .proto-main-layout > .proto-quest-sidebar[data-open="true"] { grid-area: quest; }
+  .proto-game-root .proto-main-layout > .proto-supply-sidebar[data-open="true"] { grid-area: supply; }
+}
+.proto-supply-sidebar {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  overflow: hidden;
+  padding: 12px;
+  font: 16px/1.15 'Classic Pixel', monospace;
+}
+.proto-game-root .supply-tray { transition: transform 240ms ease, opacity 240ms ease; transform: translateX(0); }
+.proto-game-root .supply-tray[data-open="false"] { position: fixed; top: 140px; bottom: 18px; left: 0; width: var(--supply-tray-width); transform: translateX(-110%); opacity: 0; pointer-events: none; visibility: hidden; transition: transform 240ms ease, opacity 240ms ease, visibility 0s 240ms; }
+@media (prefers-reduced-motion: reduce) { .proto-game-root .supply-tray { transition: none; } }
+.supply-tray__header { display: flex; justify-content: center; }
+.quest-tray__sr, .supply-tray__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Brass pull tab for stowing. */
+.supply-tray .supply-tray__toggle {
+  width: 100%;
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  color: #2b1a08;
+  font: inherit;
+  font-size: 18px;
+  background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429);
+  box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07;
+}
+.supply-tray .supply-tray__toggle:active { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff7, 0 1px 0 #1d0f07; }
+.supply-tray .supply-tray__toggle:focus-visible { outline: 3px solid #fff3c8; outline-offset: 3px; }
+/* Felt well; scrolls once there are more resources than fit. */
+.supply-tray__well {
+  min-height: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 6px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  border-radius: 10px;
+  background:
+    repeating-radial-gradient(circle at 30% 20%, #ffffff05 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 0%, #24543f, var(--tray-felt) 55%, var(--tray-felt-dark));
+  box-shadow: inset 0 6px 14px #000c, inset 0 -2px 0 #ffffff12, 0 1px 0 #ffffff26;
+}
+/* Each resource sits in a recess: token on top, brass count tag below. */
+.supply-row {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 6px 0 5px;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  background: linear-gradient(180deg, #0a1d15, #133325);
+  box-shadow: inset 0 0 0 2px #2b190c, inset 0 4px 8px #000c, 0 1px 0 #ffffff1c;
+  cursor: pointer;
+}
+.supply-row:hover, .supply-row[aria-expanded="true"] { box-shadow: inset 0 0 0 2px var(--tray-brass), inset 0 4px 8px #000c, 0 0 10px #ffe19a55; }
+.supply-row:active { transform: translateY(1px); }
+.supply-row:focus-visible { outline: 3px solid #fff3c8; outline-offset: -3px; }
+.supply-row[data-count="0"] .supply-row__token { filter: grayscale(0.8); opacity: 0.55; }
+.supply-row__token, .pinned-toast__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  background: radial-gradient(circle at 35% 30%, #f6e2b8, #c49a5a 60%, #8a6230);
+  box-shadow: inset 0 -2px 0 #0005, 0 2px 0 #1d0f07, 0 3px 3px #0008;
+}
+.supply-row__count {
+  min-width: 2.2ch;
+  padding: 0 4px;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.2;
+  color: #2b1a08;
+  text-shadow: 0 1px 0 #fff5;
+  background: linear-gradient(180deg, #f0d48c, var(--tray-brass) 60%, #a8812f);
+  box-shadow: inset 0 1px 0 #fff6, 0 2px 0 #1d0f07;
+}
+/* Pinned toast: a closable parchment note beside the element it describes. */
+.pinned-toast {
+  position: fixed;
+  z-index: 1000;
+  width: min(15rem, calc(100vw - 16px));
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-radius: 6px;
+  color: var(--tray-ink);
+  font: 16px/1.2 'Classic Pixel', monospace;
+  background:
+    radial-gradient(ellipse at 20% 10%, #fff8 0, transparent 45%),
+    radial-gradient(ellipse at 90% 100%, #b8925a55 0, transparent 55%),
+    var(--tray-parchment);
+  box-shadow: inset 0 0 0 2px #c9ad78, inset 0 0 18px #9c7a4455, 0 3px 0 #1d0f07, 0 10px 18px #000a;
+}
+.pinned-toast > header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 8px; }
+.pinned-toast > header > div:only-of-type:first-child { grid-column: 1 / 3; }
+.pinned-toast h3 { margin: 0; font-size: 20px; line-height: 1.1; color: #5b1f12; overflow-wrap: anywhere; }
+.pinned-toast header p { margin: 2px 0 0; color: #6b4a12; }
+.pinned-toast p { margin: 0; }
+.pinned-toast__close { width: 32px; height: 32px; border: 0; border-radius: 50%; color: var(--tray-ink); font: inherit; font-size: 22px; line-height: 1; background: #0000001a; }
+.pinned-toast button:focus-visible { outline: 3px solid #5b1f12; outline-offset: 2px; }
+.supply-details__held strong { font-size: 20px; }
+.supply-details__uses { margin: 0; padding-left: 18px; list-style: square; }
+.supply-details__place {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: #2b1a08;
+  font: inherit;
+  background: linear-gradient(180deg, #f3d995, var(--tray-brass) 60%, #9a7429);
+  box-shadow: inset 0 1px 0 #fff7, 0 3px 0 #1d0f07;
+}
+.supply-details__place:disabled { opacity: 0.45; filter: grayscale(0.6); }
+.quest-note { width: min(17rem, calc(100vw - 16px)); }
+.quest-note__reward { color: #6b4a12; }
+@media (max-width: 900px) {
+  .proto-game-root .proto-supply-sidebar { grid-column: 1; grid-row: 2; }
+  .proto-main-layout:not([data-mobile-panel="supplies"]) .proto-supply-sidebar,
+  .proto-main-layout[data-mobile-panel="supplies"] .proto-map,
+  .proto-main-layout[data-mobile-panel="supplies"] .proto-tableau-field,
+  .proto-main-layout[data-mobile-panel="supplies"] .proto-quest-sidebar { display: none; }
+  .proto-main-layout[data-mobile-panel="supplies"] .proto-main-header > :not(.proto-mobile-nav) { display: none; }
+  /* The phone tab has the full width, so tokens wrap into a grid. */
+  .supply-tray__well { grid-template-columns: repeat(auto-fill, 64px); justify-content: space-evenly; align-content: start; gap: 10px; }
+  .supply-tray .supply-tray__toggle { width: auto; padding: 0 16px; margin-left: auto; }
+  .supply-tray__header { justify-content: flex-end; }
+  .tray-restore--supplies { display: none; }
+}
+
+/* ===== Card-width quest tray =========================================
+   The tray is one quest card wide plus its recess and frame. The active card
+   lies face up so its objective reads at 16px; the locked slots are short
+   slat covers below it. Tapping the card still pins its text in a toast. */
+@media (min-width: 901px) {
+  .proto-game-root .quest-tray { padding: 12px; }
+  .proto-game-root .quest-tray[data-open="false"] { width: var(--quest-tray-width); }
+  .quest-tray .quest-field__header { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding-bottom: 0; }
+  .quest-tray .quest-field__header > div:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; padding: 0; }
+  .quest-tray .quest-tray__controls { display: contents; }
+  .quest-tray .quest-field__header .quest-tray__toggle { order: -1; width: 100%; min-height: 32px; padding: 0; font-size: 18px; }
+  .quest-tray .quest-field__header > .quest-tray__progress { align-self: center; }
+  .quest-tray .quest-discard-counter { justify-content: center; gap: 6px; }
+  .quest-tray .quest-discard-counter strong { margin-left: 0; }
+}
+/* Short screens (phone landscape) scroll the well rather than squash the card. */
+.quest-tray__well { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px; overflow: hidden auto; scrollbar-width: thin; }
+.quest-tray .quest-foundations, .quest-tray .quest-foundation { flex-shrink: 0; }
+.quest-foundations { grid-row: auto; height: auto; container-type: normal; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+/* The active slot keeps the 63:88 card shape. PlayingCardStack insets its cards
+   6px, forming the recess lip; the spare height holds the queued cards' stagger. */
+.quest-tray .quest-foundation { --slot-height: calc((var(--quest-card-width) + 12px) * 88 / 63); width: calc(var(--quest-card-width) + 12px); height: var(--slot-height); aspect-ratio: auto; padding: 0; display: block; overflow: hidden; }
+.quest-tray .quest-foundation > header,
+.quest-tray .quest-foundation--disabled > span:last-child { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.quest-tray .quest-foundation__cards { width: 100%; height: var(--slot-height); aspect-ratio: auto; }
+.quest-tray .quest-foundation::after { bottom: 0; }
+.quest-tray .quest-foundation--disabled { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; height: 44px; line-height: 1.2; }
+.quest-tray .quest-foundation--disabled::after { display: none; }
+.quest-tray .quest-foundation--disabled > span { font-size: 16px; }
+.quest-chain-complete { font-size: 16px; padding: 4px; overflow-wrap: anywhere; }
+/* Face-up active card. */
+.quest-tray .quest-card { padding: 8px; gap: 6px; justify-content: flex-start; }
+.quest-tray .quest-card::after { content: none; display: none; }
+.quest-tray .quest-card > .quest-card__title { display: block; font-size: 16px; line-height: 1.1; text-transform: none; padding-bottom: 4px; overflow-wrap: anywhere; }
+.quest-tray .quest-card > .quest-card__text { display: block; font-size: 16px; line-height: 1.1; overflow-wrap: anywhere; }
+.quest-tray .quest-card > .quest-card__reward { display: flex; margin-top: auto; font-size: 16px; }
+.quest-tray .quest-card > .quest-card__reward > span { font-size: 16px; }
+
+/* Teaching card: flies out with the first quest; its instructions stay visible. */
+/* No center emblem behind the face-up card's text. */
+.quest-tray .quest-card:not(.quest-card--complete) { background-image: repeating-linear-gradient(45deg, #ffffff08 0 3px, transparent 3px 9px), linear-gradient(145deg, #5a2f45, #241321); }
+
+/* ===== Header row and pull tabs ========================================
+   The stow control is a stitched leather pull strap with brass rivets, the
+   kind of tab that lifts an insert out of a game box. On the quest tray it
+   shares the top row with the completed-quest counter. */
+@media (min-width: 901px) {
+  .quest-tray .quest-tray__controls { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+  .quest-tray .quest-discard-counter { justify-content: flex-start; }
+}
+.proto-game-root .tray-restore .tray-restore__tab,
+.proto-game-root .quest-tray .quest-field__header .quest-tray__toggle,
+.proto-game-root .supply-tray .supply-tray__toggle {
+  position: relative;
+  order: 0;
+  flex: none;
+  width: 52px;
+  height: 30px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px 6px 12px 12px;
+  color: transparent;
+  background:
+    radial-gradient(circle at 9px 50%, #f4dc9a 0 2px, #8a6526 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 9px) 50%, #f4dc9a 0 2px, #8a6526 2.5px 3.5px, transparent 4px),
+    repeating-linear-gradient(90deg, #ffffff06 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #a3402e, #7a2a1d 55%, #561a12);
+  box-shadow: inset 0 1px 0 #ffffff40, inset 0 -2px 0 #0005, 0 3px 0 #1d0f07, 0 5px 6px #0007;
+}
+/* Stitching around the strap. */
+.proto-game-root .tray-restore .tray-restore__tab::before,
+.proto-game-root .quest-tray .quest-tray__toggle::before,
+.proto-game-root .supply-tray .supply-tray__toggle::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1.5px dashed #f0c79a99;
+  border-radius: 4px 4px 9px 9px;
+  pointer-events: none;
+}
+/* Finger grip: three raised ridges between the rivets. */
+.pull-tab__grip { width: 14px; height: 14px; background: repeating-linear-gradient(90deg, #2b0d08 0 2px, #c86a52 2px 3px, transparent 3px 5px); border-radius: 2px; opacity: 0.9; }
+.proto-game-root .tray-restore:hover .tray-restore__tab,
+.proto-game-root .quest-tray .quest-tray__toggle:hover,
+.proto-game-root .supply-tray .supply-tray__toggle:hover { filter: brightness(1.12); }
+.proto-game-root .tray-restore:active .tray-restore__tab,
+.proto-game-root .quest-tray .quest-tray__toggle:active,
+.proto-game-root .supply-tray .supply-tray__toggle:active { transform: translateY(2px); box-shadow: inset 0 1px 0 #ffffff40, 0 1px 0 #1d0f07; }
+.proto-game-root .supply-tray .supply-tray__header { justify-content: flex-start; }
+/* Locked slots are identical in size to the active slot. */
+.quest-tray .quest-foundation--disabled { width: calc(var(--quest-card-width) + 12px); height: var(--slot-height); display: grid; place-items: center; }
+.quest-tray .quest-foundation--disabled::after { display: block; }
+.quest-tray .quest-foundation--disabled > span:first-child { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.quest-tray .quest-foundation--disabled > span:nth-child(2) { font-size: 28px; }
+
+/* ===== Slots fit the well ==============================================
+   useFitSlotsToWell sizes --quest-card-width so the three identical slots
+   never scroll; phone landscape lays them in a row. The face-up card clamps
+   its title and objective to the lines that fit (full text in the toast). */
+.proto-game-root .quest-tray .quest-tray__well { overflow: hidden; justify-content: flex-start; }
+.quest-tray__well[data-slot-direction="row"] .quest-foundations { flex-direction: row; justify-content: center; }
+.quest-tray .quest-card > .quest-card__title { flex: none; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--fit-lines, 2); overflow: hidden; }
+.quest-tray .quest-card > .quest-card__text { flex: 1 1 0; min-height: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--fit-lines, none); overflow: hidden; }
+.quest-tray .quest-card > .quest-card__text[hidden] { display: none; }
+/* Cap each box at its clamped lines so the next line can't peek out below. */
+.quest-tray .quest-card > .quest-card__title { box-sizing: content-box; max-height: calc(var(--fit-lines, 2) * 1.1em); padding-bottom: 0; border-bottom: 0; }
+/* The divider sits on top of the objective, so no padding below a clamped line. */
+.quest-tray .quest-card > .quest-card__text { border-top: 2px solid #8e7487; padding-top: 4px; }
+.quest-tray .quest-card > .quest-card__text { box-sizing: content-box; max-height: calc(var(--fit-lines, 999) * 1.1em); }
+.quest-tray .quest-card > .quest-card__reward { flex: none; }
+
+/* ===== Tray restore handles ============================================
+   A stowed tray leaves a small wooden mount on its edge: the tray's emblem
+   above the same leather pull tab that stowed it. */
+.tray-restore { position: fixed; top: 50%; transform: translateY(-50%); z-index: 100; display: grid; justify-items: center; gap: 6px; padding: 10px 8px; border: 3px solid #ae8d58; background: linear-gradient(180deg, #5a3a1f, #3a2412); box-shadow: 0 5px 0 #0008; cursor: pointer; }
+.tray-restore--quests { right: 0; border-right: 0; border-radius: 10px 0 0 10px; }
+.tray-restore--supplies { left: 0; border-left: 0; border-radius: 0 10px 10px 0; }
+.tray-restore:focus-visible { outline: 3px solid #ffe19a; outline-offset: 3px; }
+.tray-restore__emblem { width: 28px; height: 32px; filter: drop-shadow(0 2px 0 #0007); }
+
+/* Tilted camera: the table plane leans back and pieces stand up on it like
+   pop-up cardboard. Flat pieces keep their 2D look; trays stay screen-flat. */
+.proto-table-stage--tilted,
+.proto-table-stage--tilted .proto-table-plane,
+.proto-table-stage--tilted .proto-map-world { transform-style: preserve-3d; }
+.proto-table-stage { transform-origin: 50% 50%; }
+/* Switching camera eases the lean (TABLE_TILT_MS); the light wash rides along
+   on the same curve, and standees counter-rotate with the animated angle. */
+@property --table-tilt { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
+.proto-table-stage, .proto-table-light { transition: transform 520ms cubic-bezier(0.45, 0, 0.25, 1), --table-tilt 520ms cubic-bezier(0.45, 0, 0.25, 1); }
+@property --standee-rise { syntax: '<number>'; inherits: false; initial-value: 1; }
+@keyframes proto-standee-fold { to { opacity: 0; --standee-rise: 0.1; } }
+@media (prefers-reduced-motion: reduce) { .proto-table-stage, .proto-table-light { transition: none; } }
+/* Coplanar 3D layers draw and hit-test unpredictably, so the floor sits a
+   hair behind the pieces. Only the floor and the pieces take pointers, so
+   empty table still pans the camera. */
+.proto-table-stage--tilted { pointer-events: none; }
+.proto-table-stage--tilted .proto-table-floor { pointer-events: auto; transform: translateZ(-1px); }
+.proto-table-stage--tilted .proto-map-world > :not(.table-grid-origin) { pointer-events: auto; }
+.proto-standee-base { position: absolute; aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(#0b0907 40%, #2a1e14); border: 2px solid #6b5236; pointer-events: none; }
+.proto-actor-base-name { position: absolute; width: 0; height: 0; transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))); transform-style: preserve-3d; pointer-events: none; }
+.proto-actor-base-name--screen { transform: none; }
+/* Sixfold raster resolution keeps the upright curved lettering crisp at zoom. */
+.proto-actor-base-name__letter { position: absolute; left: 0; top: 0; font-size: 96px; line-height: 1; font-weight: 900; color: #ffe7ad; text-shadow: 0 6px 0 #090705, 6px 0 0 #090705, -6px 0 0 #090705; transform-origin: 0 0; backface-visibility: hidden; white-space: pre; }
+/* Scale inside the foot-anchored transform: an individual CSS scale also
+   scales the placement translation, sliding oversized sprites off their tile. */
+.proto-resource-stack.proto-standee { animation-name: proto-standee-pop; }
+@keyframes proto-standee-pop { 0% { opacity: 0; --standee-rise: 0.1; } 68% { opacity: 1; --standee-rise: 1.12; } 100% { opacity: 1; --standee-rise: 1; } }
+/* A standee's signs hang above it, facing the camera, rather than under the table. */
+.proto-table-stage--tilted .proto-standee-sign { top: auto; bottom: 100%; margin: 0 0 4px; }
+.proto-table-horizon { position: absolute; inset: 0 0 auto 0; height: 18%; z-index: 41; pointer-events: none; opacity: 0; transition: opacity 520ms ease; background: linear-gradient(#050807, #05080700); }
+.proto-table-horizon--shown { opacity: 1; animation: proto-horizon-in 520ms ease; }
+@keyframes proto-horizon-in { from { opacity: 0; } }
+
+/* The foundation border widens to hold the energy bubble and card count in a
+   column left of the actor's card. */
+.proto-game-root .proto-foundation-board--exploration .proto-foundation-card--exploration {
+  max-width: none;
+  grid-template-columns: auto auto;
+  grid-template-areas: "energy actor" "count actor";
+  place-items: center;
+  align-content: center;
+  column-gap: 0.5rem;
+  row-gap: 0.5rem;
+  padding: 0.5rem;
+}
+.proto-foundation-card--exploration > .proto-actor-energy { grid-area: energy; align-self: end; }
+.proto-foundation-card--exploration > .proto-foundation-count-token { grid-area: count; align-self: start; }
+.proto-foundation-card--exploration > .proto-exploration-actor { grid-area: actor; }
+
+/* Sprite standees (tilted camera): the actor's pixel-art cut-out stands on its
+   base, takes the table's light, and casts its silhouette away from each light. */
+.proto-map .proto-sprite-standee[data-board-piece="actor"],
+.proto-map .proto-sprite-standee[data-board-piece="biome-popup"],
+.proto-game-root .proto-sprite-standee[data-board-piece="actor"] { display: block; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+/* Biome ground stays at sea level. Only label ink clears the cut-out shadows;
+   this small rendering offset is not terrain elevation. */
+.proto-table-stage--tilted .proto-map-world > [data-board-piece="tile"] { transform: translate3d(-50%, -50%, 0); transform-style: preserve-3d; }
+.proto-table-stage--tilted [data-board-piece="tile"] > .board-object-label { transform: translateZ(1px); }
+/* Tilted, a lamp's glow hangs in the air as its halo; the token's own wide
+   glow showed the edges of its 3D layer as a hard square. */
+.proto-table-stage--tilted .proto-table-lamp { box-shadow: 0 0 4px #ffcf7390, 0 3px 2px #0008; }
+/* Tilted camera ambiance (TableAtmosphere). Only transform and opacity animate. */
+.proto-table-air { transform-style: preserve-3d; }
+.proto-atmosphere { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+/* The table's centre, moved by the same per-frame camera transform as the pieces. */
+.proto-atmosphere__world { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; transform: var(--camera-transform, none); transform-style: preserve-3d; }
+.proto-atmosphere__billboard { position: absolute; width: 0; height: 0; transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt))); transform-origin: 0 0; transform-style: preserve-3d; }
+.proto-dust { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; }
+.proto-halo { position: absolute; border-radius: 50%; transform: scale(var(--light-flicker, 1)); opacity: calc(var(--halo-opacity, 1) * var(--light-flicker, 1)); }
+.proto-firefly { position: absolute; left: 0; border-radius: 50%; background: #f4ff9c; box-shadow: 0 0 3px 1px #e6ff6acc, 0 0 9px 3px #b8f04a55; animation-name: proto-firefly-drift, proto-firefly-blink; animation-timing-function: ease-in-out, ease-in-out; animation-iteration-count: infinite, infinite; animation-direction: alternate, alternate; }
+@keyframes proto-firefly-drift { 0% { translate: 0 0; } 33% { translate: var(--fx-dx) calc(var(--fx-dy) * -0.6); } 66% { translate: calc(var(--fx-dx) * -0.5) var(--fx-dy); } 100% { translate: calc(var(--fx-dx) * 0.4) calc(var(--fx-dy) * 0.3); } }
+@keyframes proto-firefly-blink { 0%, 55% { scale: 0.3; } 80%, 100% { scale: 1; } }
+.proto-fizz { position: absolute; left: 0; border-radius: 50%; border: 1px solid #e8fbffcc; background: radial-gradient(circle at 35% 35%, #ffffffcc 0 25%, #bdefff33 45%, transparent 70%); opacity: 0; animation: proto-fizz-rise 3s ease-out infinite; }
+.proto-fizz--glow { border-color: #8ff7ffaa; background: radial-gradient(circle, #d6fffff0 0 30%, #5fe6ff66 55%, transparent 75%); box-shadow: 0 0 6px 2px #49dcff55; }
+@keyframes proto-fizz-rise { 0% { opacity: 0; translate: 0 0; scale: 0.4; } 20% { opacity: 0.9; } 100% { opacity: 0; translate: 0 var(--fx-rise); scale: 1; } }
+.proto-shafts { position: absolute; inset: 0; z-index: 41; overflow: hidden; pointer-events: none; }
+.proto-shaft { position: absolute; top: -30%; height: 150%; transform-origin: 50% 0; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #0009 45%, transparent 90%); mask-image: linear-gradient(to bottom, #000 0%, #0009 45%, transparent 90%); animation: proto-shaft-sway 9s ease-in-out infinite alternate; }
+@keyframes proto-shaft-sway { 0% { opacity: 0.55; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
+.proto-mote { position: absolute; left: 0; border-radius: 50%; opacity: var(--fx-illumination, 1); background: #fff6dd; box-shadow: 0 0 4px 1px #ffe9b066; animation: proto-mote-drift 12s linear infinite; }
+.proto-mist { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, #e9eef2 0%, #dfe7ec99 45%, #dfe7ec00 100%); opacity: 0; animation: proto-mist-drift 12s ease-in-out infinite; will-change: transform, opacity; }
+@keyframes proto-mist-drift { 0% { opacity: 0; translate: 0 0; scale: 0.6; } 30% { opacity: var(--fx-peak); } 70% { opacity: calc(var(--fx-peak) * 0.8); } 100% { opacity: 0; translate: var(--fx-dx) calc(var(--fx-dy) * 0.5 - 6px); scale: 1.25; } }
+@keyframes proto-mote-drift { 0% { translate: 0 0; opacity: 0; } 15% { opacity: var(--fx-illumination, 1); } 85% { opacity: var(--fx-illumination, 1); } 100% { translate: var(--fx-dx) var(--fx-dy); opacity: 0; } }
+.proto-volumetrics { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 41; pointer-events: none; opacity: 0; }
+.proto-volumetrics[data-active="true"] { animation: proto-volume-enter 350ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .proto-volumetrics[data-active="true"] { animation: none; opacity: 1; } }
+@keyframes proto-volume-enter { from { opacity: 0; } to { opacity: 1; } }
+/* Dangerous tiles (the Dark Woods): the woods' fireflies and mist in dark red,
+   embers and a blood mist, shown in both cameras as a warning of a fight. */
+.proto-atmosphere--danger .proto-firefly { background: #ff5a3c; box-shadow: 0 0 3px 1px #d0201acc, 0 0 10px 4px #8b000088; }
+.proto-atmosphere--danger .proto-mist { background: radial-gradient(closest-side, #a3141b 0%, #7a0d1299 45%, #7a0d1200 100%); }
+.proto-table-air--flat .proto-atmosphere__billboard { transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))); }
+.proto-map .proto-danger-tile { border-color: rgba(190, 40, 36, 0.8); background: radial-gradient(ellipse at 50% 60%, #3a0d10, #1a0708 70%); color: #ffb3a6; }
+.proto-map .proto-danger-tile:hover { border-color: rgba(255, 90, 70, 0.9); }
+.proto-map :is([data-biome-popup="woods-danger"], [data-biome-edge="woods-danger"]) { filter: brightness(0.5) sepia(1) hue-rotate(-38deg) saturate(3.2); }
+@media (prefers-reduced-motion: reduce) { .proto-halo, .proto-firefly, .proto-fizz, .proto-shaft, .proto-mote, .proto-mist { animation: none; } .proto-fizz { opacity: 0.5; } .proto-mist { opacity: calc(var(--fx-peak) * 0.7); } }
+/* Tilted camera: scenery lining a biome tile's sides and front (BiomeEdgeScenery). */
+.proto-map .proto-map-world > .proto-biome-edge,
+.proto-map .proto-map-world > .proto-sprite-shadow[data-shadow-owner="biome-edge"] { position: absolute; pointer-events: none; }
+.proto-biome-edge__art { position: relative; display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 100% 100%; image-rendering: pixelated; }
+/* HD-2D style light across a cut-out (LightWash), masked to the sprite's pixels. */
+.proto-light-wash { position: absolute; inset: 0; pointer-events: none; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mix-blend-mode: screen; }
+.proto-light-wash--shade { mix-blend-mode: multiply; }
+.proto-cell-grip { position: absolute; transform: translate(-50%, -50%); cursor: grab; touch-action: none; }
+.proto-table-stage--tilted .proto-map-world > .proto-cell-grip { transform: translate3d(-50%, -50%, 2px); }
+.proto-oversample { position: absolute; left: 0; top: 0; display: block; transform-origin: 0 0; }
+.proto-sprite-standee--selected:has(> .proto-oversample) { filter: none; }
+.proto-sprite-standee--selected > .proto-oversample { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
+.proto-sprite-standee__art { display: block; width: 100%; height: 100%; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
+.proto-sprite-standee--selected { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
+.proto-sprite-shadow {
+  position: absolute; pointer-events: none;
+  transform-origin: 50% 100%;
+  background: #000;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  filter: blur(1.5px);
+}
+
+/* Exploration and combat trays share their tilt; actors counter-tilt upright
+   at the front edge, with their names between their feet and the camera. */
+.proto-foundation-board .proto-foundation-card--exploration,
+.battle-field__foundation { --foundation-tilt: 24deg; transform-origin: 50% 100%; transition: transform 0.35s ease; }
+.proto-foundation-board--tilted .proto-foundation-card--exploration,
+.battle-field__foundation { transform: perspective(600px) rotateX(var(--foundation-tilt)); transform-style: preserve-3d; }
+.proto-foundation-board--tilted .proto-exploration-actor { position: relative; transform-style: preserve-3d; }
+.proto-foundation-board--tilted .proto-foundation-card--exploration { padding-bottom: 16px; }
+.proto-foundation-board--tilted .proto-foundation-assembly { padding-top: 0; padding-bottom: 16px; }
+.proto-foundation-popup {
+  position: absolute; z-index: 2; left: 50%; bottom: -20px;
+  width: 64px; height: 64px; pointer-events: none;
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) rotateX(calc(-1 * var(--foundation-tilt)));
+}
+.proto-foundation-popup > .proto-sprite-standee__art,
+.proto-foundation-popup > .proto-light-wash { position: absolute; bottom: 16px; width: 64px; height: 64px; }
+.proto-foundation-popup__base { position: absolute; left: 50%; bottom: 10px; width: 44px; height: 10px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(#0008 30%, transparent 70%); }
+.proto-foundation-popup .proto-actor-base-name { top: auto !important; bottom: 0; }
+.proto-exploration-actor:has(.proto-foundation-popup) .proto-occupied-foundation-owner { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .proto-foundation-board .proto-foundation-card--exploration { transition: none; } }
+/* Short screens (phone landscape) have little height to spare: a smaller pop-up, less room above. */
+@media (max-height: 500px) {
+  .proto-foundation-popup { scale: 0.7; }
+  .proto-foundation-board--tilted .proto-foundation-assembly { padding-top: 0; }
+}
+
+/* Opt-in reward-hold timing log (?holdlog) for playtests on real devices. */
+.hold-log { position: fixed; left: 8px; bottom: 8px; z-index: 70000; max-width: min(560px, calc(100vw - 16px)); max-height: 45vh; overflow: auto; padding: 6px 8px; border: 2px solid #ffe19a; border-radius: 6px; background: #000d; color: #fff3c8; font: 16px/1.25 monospace; pointer-events: auto; }
+.hold-log button { float: right; margin-left: 8px; padding: 2px 8px; border: 1px solid #ffe19a; background: #17251f; color: inherit; font: inherit; }
+
+/* Impassable terrain placeholders: black tiles on the 48px world grid. Their
+   bevels catch only sky light (--terrain-sky follows the sun and moon); the
+   light canvas keeps table lights off them. */
+.proto-blocked-terrain {
+  position: absolute;
+  background:
+    linear-gradient(180deg, rgba(196, 212, 236, var(--terrain-sky, 0.08)) 0 2px, transparent 2px 45px, rgba(0, 0, 0, 0.7) 45px) 0 0 / 48px 48px,
+    linear-gradient(90deg, rgba(196, 212, 236, calc(var(--terrain-sky, 0.08) * 0.6)) 0 2px, transparent 2px 45px, rgba(0, 0, 0, 0.7) 45px) 0 0 / 48px 48px,
+    #070708;
+}
+.proto-map-world > .proto-blocked-terrain,
+.proto-table-stage--tilted .proto-map-world > .proto-blocked-terrain,
+.proto-table-stage--tilted .proto-map-world > .proto-sprite-shadow { pointer-events: none; }
+.hold-log__note { color: #fff3c899; }
+
+/* Flat (top-down) camera: sprite actors are cardboard pop-ups seen from
+   straight above, so only the board's thick corrugated top edge shows, standing
+   across its round base. */
+.proto-map .proto-sprite-topdown[data-board-piece="actor"],
+.proto-map .proto-sprite-topdown[data-board-piece="biome-popup"],
+.proto-game-root .proto-sprite-topdown[data-board-piece="actor"] { display: block; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; transform: translate(-50%, -50%); }
+.proto-sprite-topdown__piece { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.proto-sprite-topdown__piece > span { grid-area: 1 / 1; }
+.proto-sprite-topdown__base { border-radius: 50%; background: radial-gradient(circle at 50% 45%, #3b2a1a 0 50%, #1d140c 75%); border: 2px solid #6b5236; box-shadow: 0 2px 0 #0008; }
+/* Corrugated board edge: kraft liners on both faces, fluting between. */
+.proto-sprite-topdown__board { box-sizing: border-box; border-radius: 1px; border-block: 0.75px solid #e2c48d; background: repeating-linear-gradient(90deg, #c79d5f 0 1.5px, #7d5a2e 1.5px 3px); box-shadow: 0 1px 0 #0009; }
+.proto-map [data-board-piece="biome-popup"] { cursor: pointer; }
+.proto-sprite-topdown__piece > .proto-sprite-topdown__name { position: absolute; left: 50%; transform: translateX(-50%); padding-bottom: 1px; font-family: 'Classic Pixel', monospace; font-size: 10px; line-height: 1; white-space: nowrap; color: #fff1cf; text-shadow: 0 1px 0 #000, 0 0 3px #000c; }
+.proto-sprite-topdown--selected { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
+
+/* Drop cue: the biome under a dragged piece glows at table level, so the
+   player sees where the piece will land before letting go. */
+.proto-map .proto-drop-target {
+  border-color: #ffe7ad;
+  outline: 3px solid #ffd166;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px #2a1e0c, 0 0 22px 6px #ffd16688 !important;
+  animation: proto-drop-pulse 900ms ease-in-out infinite alternate;
+}
+@keyframes proto-drop-pulse { from { outline-color: #ffd166; } to { outline-color: #fff3c8; } }
+@media (prefers-reduced-motion: reduce) { .proto-map .proto-drop-target { animation: none; } }
+
+/* Pond: a water tile on the table, fished with Go Fish for one (PondField). */
+.proto-map .proto-water-tile {
+  background:
+    radial-gradient(ellipse 34% 22% at 32% 38%, rgba(202, 255, 244, 0.22), transparent 70%),
+    radial-gradient(ellipse 26% 16% at 68% 66%, rgba(202, 255, 244, 0.16), transparent 70%),
+    radial-gradient(ellipse at 50% 45%, #1f6576, #0f3442 62%, #0a222b);
+  border-color: rgba(120, 170, 110, 0.75);
+  color: #dffcff;
+}
+.proto-map .proto-water-tile:hover { border-color: rgba(142, 242, 212, 0.75); }
+.proto-tableau-field.proto-tableau-field--pond { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); container: pond-field / size; }
+.proto-pond {
+  container-type: size;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
+  grid-template-areas: "header" "water" "message" "hand" "catch" "footer";
+  gap: 8px;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(142, 242, 212, 0.18);
+  border-radius: calc(var(--classic-radius) * 1.3);
+  background: linear-gradient(180deg, rgba(14, 22, 20, 0.44), rgba(9, 12, 14, 0.28));
+  color: #cafff4;
+  font: 16px/1.25 'Classic Pixel', monospace;
+}
+.proto-pond__header { grid-area: header; }
+.proto-pond__footer { grid-area: footer; }
+.proto-pond__header, .proto-pond__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.proto-pond__header > span { white-space: nowrap; }
+.proto-pond__water {
+  grid-area: water;
+  position: relative;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  place-items: center;
+  padding: 4px 10%;
+  border: 4px solid #4d6a3f;
+  border-radius: 48% / 40%;
+  background:
+    radial-gradient(ellipse 30% 18% at 30% 30%, rgba(202, 255, 244, 0.14), transparent 70%),
+    radial-gradient(ellipse at 50% 42%, #1f6576, #0f3442 62%, #0a222b);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), 0 0 0 2px #2b3b24;
+}
+/* Fish are face-down cards lying in the water, sized to fit three across and
+   two deep (the water is a size container) without leaving the 56:74 card shape. */
+.proto-pond__water { container-type: size; gap: 6px; padding: 8px 12%; }
+.proto-pond__fish {
+  --fish-card-w: min(calc((100cqw - 12px) / 3 * 0.86), calc((100cqh - 6px) / 2 * 56 / 74 * 0.92));
+  position: relative;
+  width: var(--fish-card-w);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4%;
+  overflow: hidden;
+}
+.proto-pond__fish:nth-child(odd) { transform: rotate(-2deg); }
+.proto-pond__fish:nth-child(3n) { transform: rotate(2.5deg); }
+.proto-game-root .proto-pond__fish { border-color: #0a1a20; background:
+    repeating-linear-gradient(135deg, rgba(202, 255, 244, 0.07) 0 3px, transparent 3px 9px),
+    linear-gradient(160deg, #1d4f5c, #0b2630); color: #dffcff; }
+/* The back's ripple grows with the band: small A–4, medium 5–9, large 10–K. */
+.proto-pond__ripple {
+  width: calc(var(--fish-card-w) * var(--ripple));
+  aspect-ratio: 1;
+  border: 2px solid rgba(202, 255, 244, 0.6);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4px rgba(202, 255, 244, 0.1);
+  animation: proto-pond-ripple 3s ease-out infinite;
+}
+.proto-pond__fish[data-ripple="small"] { --ripple: 0.32; }
+.proto-pond__fish[data-ripple="medium"] { --ripple: 0.5; }
+.proto-pond__fish[data-ripple="large"] { --ripple: 0.68; }
+.proto-pond__fish:nth-child(2n) .proto-pond__ripple { animation-delay: -1.1s; }
+.proto-pond__fish:nth-child(3n) .proto-pond__ripple { animation-delay: -2s; }
+.proto-pond__band { font-size: 16px; line-height: 1; white-space: nowrap; color: #cafff4; }
+.proto-game-root .proto-pond__fish[data-revealed] { background: linear-gradient(140deg, #40202a, #180d16); color: #fff0d0; border-color: #ffd166; }
+.proto-pond__fish-glyph { font-size: max(16px, calc(var(--fish-card-w) * 0.34)); line-height: 1; }
+@keyframes proto-pond-ripple {
+  0% { transform: scale(0.72); opacity: 0.95; }
+  100% { transform: scale(1.06); opacity: 0.35; }
+}
+.proto-pond__rank { font-size: max(18px, calc(var(--fish-card-w) * 0.36)); line-height: 1; color: #ffe7ad; text-shadow: 0 1px 0 #000; }
+.proto-pond__message {
+  grid-area: message;
+  align-self: center;
+  margin: 0;
+  min-height: 2.5em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-align: center;
+  color: #e6fff8;
+}
+.proto-pond__hand {
+  grid-area: hand;
+  --classic-card-w: clamp(52px, min(19cqw, 18cqh), 110px);
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.proto-pond__bait { width: var(--classic-card-w); }
+/* Bait cards carry a worm in the lower half, clear of the rank. */
+.proto-pond__bait .playing-card::after { content: '🪱'; position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: max(16px, calc(var(--classic-card-w) * 0.38)); line-height: 1; pointer-events: none; }
+.proto-pond__bait[data-missed] { opacity: 0.55; }
+/* Casting is a drag. touch-action: none keeps a touch drag from scrolling or
+   zooming the page; the card left behind fades while its clone is carried. */
+.proto-pond__bait { touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.proto-pond__bait .playing-card { cursor: inherit; touch-action: none; }
+.proto-pond__bait:has(.playing-card:disabled) { cursor: default; }
+.proto-pond__bait[data-dragging] { opacity: 0.3; }
+.proto-pond__bait[data-selected] .playing-card { outline: 3px solid #ffd166; outline-offset: 2px; }
+.proto-pond__drag { position: fixed; z-index: 60002; pointer-events: none; cursor: grabbing; transform: rotate(-4deg) scale(1.06); filter: drop-shadow(0 10px 12px #000a); }
+.proto-pond__drag .playing-card::after { content: '🪱'; position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: max(16px, calc(var(--classic-card-w) * 0.38)); line-height: 1; }
+/* The pond lights up under a dragged bait, like any drop target. */
+.proto-pond__water[data-drop-target] {
+  border-color: #ffe7ad;
+  outline: 3px solid #ffd166;
+  outline-offset: 2px;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), 0 0 22px 6px #ffd16688;
+  animation: proto-drop-pulse 900ms ease-in-out infinite alternate;
+}
+.proto-pond__water:focus-visible { outline: 3px solid #8ef2d4; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .proto-pond__water[data-drop-target] { animation: none; } }
+
+/* The fight (FishFight): the tethered line card, a Stardew-style meter where the
+   catch zone chases the fish, and the catch bar. It takes the water's place. */
+.proto-fight {
+  grid-area: water;
+  position: relative;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: clamp(10px, 4cqw, 28px);
+  padding: 10px 12px;
+  border: 4px solid #4d6a3f;
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 50% 42%, #1f6576, #0f3442 62%, #0a222b);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), 0 0 0 2px #2b3b24;
+}
+.proto-fight__line {
+  --classic-card-w: clamp(52px, min(24cqw, 36cqh), 104px);
+  width: var(--classic-card-w);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+.proto-fight__line-card { width: var(--classic-card-w); }
+.proto-game-root .proto-fight__line-card .playing-card:disabled { background: linear-gradient(140deg, #40202a, #180d16); color: #fff0d0; }
+.proto-fight__time { height: 8px; border: 1px solid #0a1a20; border-radius: 4px; background: #0a1a20; overflow: hidden; }
+.proto-fight__time > span { display: block; height: 100%; background: #e8f6ff; }
+.proto-fight__meter {
+  position: relative;
+  width: clamp(56px, 18cqw, 84px);
+  border: 4px solid #6b4a2a;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #123e4b, #0a222b);
+  box-shadow: inset 0 0 0 2px #2a1a0c, 0 3px 0 #1d140c;
+}
+/* Inset by half a fish so the fish never pokes out of the meter. The fish
+   scales with the meter's height so a short (phone landscape) meter keeps a
+   catch zone clearly taller than the fish. */
+.proto-fight { --fight-fish: clamp(18px, 9cqh, 36px); }
+.proto-fight__rail { position: absolute; inset: 6px 4px; }
+.proto-fight__notch { position: absolute; left: 6px; right: 6px; height: 2px; margin-bottom: -1px; border-radius: 1px; background: rgba(202, 255, 244, 0.16); }
+.proto-fight__zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border: 2px solid #8ef2d4;
+  border-radius: 6px;
+  background: rgba(142, 242, 212, 0.22);
+}
+.proto-fight__zone[data-in] { background: rgba(142, 242, 212, 0.42); box-shadow: 0 0 14px rgba(142, 242, 212, 0.55); }
+.proto-fight__fish {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  font-size: var(--fight-fish);
+  line-height: 1;
+  filter: drop-shadow(0 2px 2px #000a);
+}
+.proto-fight__bar {
+  position: relative;
+  width: 16px;
+  border: 2px solid #6b4a2a;
+  border-radius: 6px;
+  background: #0a1a20;
+  overflow: hidden;
+}
+.proto-fight__bar > span { position: absolute; left: 0; right: 0; bottom: 0; background: hsl(var(--catch-hue, 60) 75% 52%); }
+.proto-fight__tether { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.proto-fight__tether line { stroke: #e8f6ff; stroke-width: 1.5; stroke-linecap: round; filter: drop-shadow(0 1px 1px #0009); }
+/* Reel cards play on press: ▲ lifts the zone, ▼ drops it, the rest wait their turn. */
+.proto-fight__reel { width: var(--classic-card-w); touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: pointer; }
+.proto-fight__reel .playing-card { cursor: inherit; touch-action: none; }
+.proto-fight__reel[data-reel="none"] { opacity: 0.45; cursor: default; }
+.proto-fight__reel .playing-card::after { position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: max(16px, calc(var(--classic-card-w) * 0.38)); line-height: 1; pointer-events: none; }
+.proto-fight__reel[data-reel="up"] .playing-card::after { content: '▲'; color: #8ef2d4; }
+.proto-fight__reel[data-reel="down"] .playing-card::after { content: '▼'; color: #ffb38a; }
+.proto-pond__catch { grid-area: catch; }
+.proto-pond__catch > li { transform-origin: center; }
+/* Most species share the fish glyph, so each pill names its rank. */
+.proto-pond__catch-rank { color: #ffe7ad; }
+/* The catch flight lives on the page, above everything, while a fish is reeled in. */
+.proto-pond-catch-lines { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 60000; pointer-events: none; overflow: visible; }
+.proto-pond-catch-line { stroke: #e8f6ff; stroke-width: 1.5; stroke-linecap: round; filter: drop-shadow(0 1px 1px #0009); }
+.proto-pond-catch-ghost {
+  position: fixed;
+  z-index: 60001;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4%;
+  box-sizing: border-box;
+  border: 3px solid #ffd166;
+  border-radius: 4px;
+  background: linear-gradient(140deg, #40202a, #180d16);
+  box-shadow: 0 6px 14px #0009;
+  color: #ffe7ad;
+  font-family: 'Classic Pixel', monospace;
+}
+.proto-pond-catch-ghost--glowfish { border-color: #9ff3ff; box-shadow: 0 0 18px #9ff3ffaa, 0 6px 14px #0009; }
+.proto-pond-catch-ghost__rank { font-size: 20px; line-height: 1; }
+.proto-pond-catch-ghost__glyph { font-size: 28px; line-height: 1; }
+.proto-pond__legend { color: rgba(202, 255, 244, 0.7); }
+.proto-pond__leave { padding: 5px 12px; border: 2px solid #9c8c62; background: #17251f; color: #fff0d0; font: 16px 'Classic Pixel', monospace; }
+.proto-pond__leave:disabled { opacity: 0.4; }
+/* Wide, short panels (phone landscape): the water sits beside the bait. */
+@container pond-field (aspect-ratio > 1.5) {
+  .proto-pond {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+    grid-template-areas: "header header" "water message" "water hand" "water catch" "footer footer";
+  }
+  .proto-pond__hand { --classic-card-w: clamp(52px, min(10cqw, 26cqh), 110px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .proto-pond__ripple { animation: none; }
+}
+
+/* Game tooltip: replaces the browser's title tooltip with a parchment tag (GameTooltip). */
+.game-tooltip {
+  position: fixed;
+  z-index: 70000;
+  max-width: min(18rem, calc(100vw - 16px));
+  box-sizing: border-box;
+  padding: 6px 10px 7px;
+  border-radius: 5px;
+  color: var(--tray-ink, #3b2814);
+  font: 16px/1.2 'Classic Pixel', monospace;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 20% 10%, #fff8 0, transparent 45%), var(--tray-parchment, #ead9b0);
+  box-shadow: inset 0 0 0 2px #c9ad78, inset 0 0 0 3px #fff3, 0 0 0 2px var(--tray-brass-dark, #7c5c24), 0 3px 0 2px #1d0f07, 0 8px 14px #000a;
+  animation: game-tooltip-in 120ms ease-out;
+}
+.game-tooltip::after {
+  content: '';
+  position: absolute;
+  left: var(--arrow-x, 50%);
+  top: 100%;
+  width: 10px;
+  height: 10px;
+  margin: -4px 0 0 -5px;
+  transform: rotate(45deg);
+  background: var(--tray-parchment, #ead9b0);
+  box-shadow: 2px 2px 0 0 var(--tray-brass-dark, #7c5c24);
+}
+.game-tooltip--below::after { top: auto; bottom: 100%; margin: 0 0 -4px -5px; box-shadow: -2px -2px 0 0 var(--tray-brass-dark, #7c5c24); }
+@keyframes game-tooltip-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .game-tooltip { animation: none; } }
+/* Spun camera: text and boards lying on the table turn against the camera's
+   spin (--camera-yaw, set by useCameraControls) so they stay upright and
+   readable from the player's seat. */
+.proto-face-camera { rotate: calc(-1 * var(--camera-yaw, 0deg)); }
+/* Travel route on the table (RouteLine): short dashes drifting toward the
+   destination, under tile labels. While an actor is dragged, the cell it
+   would land on lights up (red when there's no route). */
+.proto-map .proto-map-world > .proto-route { position: absolute; overflow: visible; pointer-events: none; }
+.proto-table-stage--tilted .proto-map-world > .proto-route { transform: translateZ(1.5px); }
+.proto-route__shade, .proto-route__dash { fill: none; stroke-linecap: round; stroke-dasharray: 7 6; animation: proto-route-drift 0.9s linear infinite; }
+.proto-route__shade { stroke: #000a; stroke-width: 4.4; }
+.proto-route__dash { stroke-width: 2.4; }
+.proto-route__slow { fill: none; stroke: #fff9; stroke-width: 1.2; stroke-dasharray: 1.5 2.5; }
+@keyframes proto-route-drift { to { stroke-dashoffset: -13; } }
+.proto-map .proto-map-world > .proto-route-label { position: absolute; translate: -50% 35%; padding: 1px 4px; border: 1px solid #ffffff40; border-radius: 3px; background: #0b1211e6; color: #fff4d6; font-family: 'Classic Pixel', monospace; font-size: 11px; line-height: 1.1; white-space: nowrap; pointer-events: none; }
+.proto-map .proto-map-world > .proto-route-label[data-route-unaffordable] { border-color: #ff5a5a; color: #ffd0d0; }
+.proto-table-stage--tilted .proto-map-world > .proto-route-label { transform: translateZ(2px); }
+.proto-map .proto-map-world > .proto-cell-cue { position: absolute; width: 48px; height: 48px; translate: -50% -50%; border: 2px solid #ffd166; border-radius: 6px; background: #ffd16624; box-shadow: inset 0 0 12px #ffd16670; pointer-events: none; animation: proto-cell-cue-pulse 1s ease-in-out infinite alternate; }
+.proto-map .proto-map-world > .proto-cell-cue--blocked { border-color: #ff5a5a; background: #ff3b3b24; box-shadow: inset 0 0 12px #ff5a5a70; }
+.proto-table-stage--tilted .proto-map-world > .proto-cell-cue { transform: translateZ(0.5px); }
+@keyframes proto-cell-cue-pulse { from { opacity: 0.7; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .proto-route__shade, .proto-route__dash, .proto-map .proto-map-world > .proto-cell-cue { animation: none; } }
+/* Silhouette and reveal (Reveal.tsx), shared by biome props and tableau
+   cards: a cool, dark silhouette that keeps the shape, with colour swept in
+   behind a slanted edge. */
+:root { --silhouette-filter: brightness(0) invert(0.12) sepia(1) hue-rotate(175deg) saturate(2.4) brightness(0.85); }
+.proto-reveal { position: relative; display: block; }
+.proto-reveal__shade, .proto-reveal__lit { position: absolute; inset: 0; display: block; }
+.proto-reveal__shade { filter: var(--silhouette-filter); }
+.proto-reveal__lit { transition: mask-position 0.9s ease-in-out, -webkit-mask-position 0.9s ease-in-out; }
+@media (prefers-reduced-motion: reduce) { .proto-reveal__lit { transition: none; } }
+/* A buried tableau card (ProtoCard): the shared silhouette veils its body and
+   resource; the rank stays above it, dimmed. The veil sweeps away behind a
+   slanted edge when the card reaches the front. */
+.proto-card-veil { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: #0a1220a8; -webkit-backdrop-filter: var(--silhouette-card-filter); backdrop-filter: var(--silhouette-card-filter); transition: mask-position 0.9s ease-in-out, -webkit-mask-position 0.9s ease-in-out; }
+:root { --silhouette-card-filter: saturate(0) brightness(0.55) sepia(0.5) hue-rotate(175deg); }
+.proto-card-rank { position: relative; z-index: 2; }
+.proto-card--buried .proto-card-rank { color: #c6d3e4a6; }
+@media (prefers-reduced-motion: reduce) { .proto-card-veil { transition: none; } }
+/* Upright tableau rack: full portrait faces with the same rank-row peek. */
+.proto-tableau-scene { position: relative; min-width: 0; min-height: 0; height: 100%; isolation: isolate; }
+.proto-tableau-scene > .proto-tableau-card-area { position: relative; z-index: 2; }
+.proto-tableau-scene--immersive { background: radial-gradient(ellipse at 50% 15%, #ffe1a014, transparent 65%), linear-gradient(var(--scene-sky), #0c201bcc); border-radius: 4px; }
+.proto-main-tableau > .proto-solve-controls { margin: 0; padding: 0 0 8px; border-top: 0; border-bottom: 1px solid #8ef2d433; }
+.proto-tableau-scenery { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.proto-tableau-scenery__ground { position: absolute; inset: 45% 0 0; background: radial-gradient(ellipse at center, #5272452a, transparent 65%), linear-gradient(transparent, #071713); }
+.proto-tableau-scenery__layer { position: absolute; inset: 0; }
+.proto-tableau-scenery__layer--0 { opacity: .35; transform: translate(calc(var(--scene-pan-x, 0px) * .4), calc(var(--scene-pan-y, 0px) * .4)) scale(.8); }
+.proto-tableau-scenery__layer--1 { opacity: .65; transform: translate(var(--scene-pan-x, 0px), var(--scene-pan-y, 0px)); }
+.proto-tableau-scenery__layer--2 { opacity: .8; transform: translate(calc(var(--scene-pan-x, 0px) * 1.6), calc(var(--scene-pan-y, 0px) * 1.6)); }
+.proto-tableau-scenery__prop { position: absolute; display: block; image-rendering: pixelated; }
+.proto-tableau-scenery__rays { filter: blur(3px); position: absolute; inset: -15% -25%; background: conic-gradient(from 140deg at 50% 0%, transparent 0deg 7deg, #ffe0a014 8deg 13deg, transparent 14deg 22deg, var(--scene-ray) 23deg 29deg, transparent 30deg 46deg, #ffe0a014 47deg 53deg, transparent 54deg); transform: translateX(calc(var(--scene-pan-x, 0px) * -.5)); }
+.proto-tableau-scenery__mist { position: absolute; inset: 45% -10% 10%; background: radial-gradient(ellipse, #b7dcd81a, transparent 65%); animation: tableau-mist 12s ease-in-out infinite alternate; }
+.proto-tableau-scenery__motes i { position: absolute; width: 2px; height: 2px; background: #ffe0a0; box-shadow: 0 0 5px #ffe0a0; opacity: .4; animation: tableau-mote 8s ease-in-out infinite; }
+ .proto-tableau-fixture { position: absolute; top: -24px; left: 50%; width: 170px; height: 110px; transform: translateX(-50%); border: 0; border-radius: 50%; background: radial-gradient(ellipse, #fff4d9aa 0%, #ffe8aa55 18%, #e3dca321 42%, transparent 72%); filter: blur(9px); pointer-events: none; }
+.proto-tableau-scenery__layer { background: transparent; }
+.proto-lit-surface { filter: brightness(var(--surface-brightness, 1)); }
+.proto-lit-surface::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(var(--surface-angle, 135deg), var(--surface-light, transparent), transparent 70%); pointer-events: none; }
+.proto-main-foundations { position: relative; }
+.proto-game-root .proto-foundation-board--exploration .proto-foundation-card--exploration { grid-template-columns: auto auto auto; grid-template-areas: 'energy actor exit' 'count actor exit'; row-gap: 5px; }
+.proto-foundation-exit { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #a08a64; border-radius: 3px; background: #0b1916; color: #ffe2ae; touch-action: manipulation; }
+.proto-foundation-card--exploration > .proto-foundation-exit { grid-area: exit; align-self: end; }
+.proto-foundation-exit svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: miter; }
+.proto-foundation-exit:hover:not(:disabled) { background: #344337; }
+.proto-foundation-exit:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 2px; }
+.proto-foundation-exit:disabled { opacity: .4; }
+.proto-foundation-exit--everyone { justify-self: end; margin-top: 6px; }
+@keyframes tableau-mist { to { transform: translateX(4%); opacity: .5; } }
+@keyframes tableau-mote { 50% { transform: translate(6px, -12px); opacity: .1; } }
+@media (prefers-reduced-motion: reduce) {
+  .proto-tableau-scenery__mist, .proto-tableau-scenery__motes i { animation: none; }
+  .proto-tableau-scenery__layer, .proto-tableau-scenery__rays { transform: none; }
+}
+.proto-tableau-stage .proto-card-rank { font-size: max(16px, calc(var(--classic-card-w) * .34)); }
+.proto-tableau-field .proto-occupied-foundation-owner, .proto-tableau-field .proto-empty-foundation-face { font-size: 16px; letter-spacing: normal; }
+.proto-occupied-foundation-face.proto-lit-surface { position: relative; }
+/* The rank/icon row must fit the exposed edge even in the narrow desktop rack. */
+.proto-tableau-stage .playing-card { padding-inline: 1px; padding-block: 0; }
+.proto-tableau-stage .playing-card > div { gap: 0; transform: translateY(-2px); }
+.proto-tableau-stage .playing-card > div > div:last-child:not(.proto-card-rank) { margin-top: 0; font-size: max(16px, calc(var(--classic-card-w) * .3)); }
+.proto-tableau-stage .proto-card-rank { font-family: 'Classic Pixel', monospace; }
+
+/* The CSS map camera renders once. Its clipping window extends into the
+   exploration shelf while its dimensions, perspective pivot and input stay put. */
+.proto-main-layout:has(.proto-map[data-tableau-extension='true']) { isolation: isolate; }
+.proto-map[data-tableau-extension='true'] { overflow: visible; }
+.proto-map[data-tableau-extension='true'] .proto-map-viewport { position: relative; z-index: 0; overflow: visible; }
+.proto-tableau-field[data-css-camera-background='true'] { position: relative; z-index: 1; }
+.proto-game-root .proto-tableau-field[data-css-camera-background='true'] > .proto-main-tableau,
+.proto-game-root .proto-tableau-field[data-css-camera-background='true'] > .proto-main-foundations {
+  background: repeating-linear-gradient(90deg,#ffffff03 0 1px,transparent 1px 3px), linear-gradient(90deg,#07121ae0,#07121ac7);
+}
+
+.proto-solve-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.proto-solve-toggle { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; cursor: pointer; }
+.proto-solve-toggle input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+.proto-solve-toggle span { display: grid; place-items: center; width: 100%; height: 100%; border: 1px solid #8ef2d473; border-radius: 6px; background: #0b1916; font-size: 22px; pointer-events: none; }
+.proto-solve-toggle input:checked + span { background: #26594b; border-color: #8ef2d4; box-shadow: inset 0 0 0 2px #8ef2d4; color: #fff; }
+.proto-solve-toggle input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+.proto-solve-toggle:has(input:disabled) { opacity: .4; cursor: default; }
+
+/* Full tile titles use measured lines inside the rotated footprint, with no
+   cropped text or opaque label plaque. Immutable regions share this component. */
+.proto-tile-title-anchor { position: absolute; inset: 0; pointer-events: none; }
+.proto-tile-title {
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+  pointer-events: none; font-family: 'Classic Pixel', monospace;
+  font-weight: 900; color: #eee9d5; z-index: 1;
+  transform: translateZ(1px); transform-origin: 0 0;
+}
+.proto-tile-title__line {
+  display: block; position: absolute; transform: translateX(-50%);
+  text-align: center; white-space: pre; letter-spacing: 0;
+  -webkit-text-stroke: 2px #10171a; paint-order: stroke fill;
+}
+.proto-immutable-region-label {
+  position: absolute; transform: translate(-50%, -50%);
+  pointer-events: none; transform-style: preserve-3d;
+}
+
+.proto-table-title-layer { z-index: 42; transform-origin: 50% 50%; transition: transform 520ms ease; }
+@media (prefers-reduced-motion: reduce) { .proto-table-title-layer { transition: none; } }
+
+/* Shared x-ray pass. Physical actors remain in the world's depth scene. */
+.proto-table-actor-layer { z-index: 43; pointer-events: none; transform-origin: 50% 50%; transition: transform 520ms ease; }
+.proto-map .proto-map-world > .proto-neutral-ground { pointer-events: none; transform-style: flat; }
+.proto-neutral-ground > button { pointer-events: auto; }
+.proto-table-actor-layer .proto-map-world > [data-board-piece="actor"],
+.proto-table-actor-layer .proto-map-world > [data-cell-grip] { pointer-events: auto; }
+.proto-table-actor-layer .proto-standee-base, .proto-table-actor-layer .proto-actor-base-name { pointer-events: none !important; }
+.proto-map [data-tabletop][data-tile-type="impassable-mountain"] { background: transparent; }
+.proto-map [data-board-piece="tile"][data-tile-type="hero-den"] { background: transparent; }
+@media (prefers-reduced-motion: reduce) { .proto-table-actor-layer { transition: none; } }
+
+.proto-map [data-environment-prop] { transition: opacity 180ms ease; }
+.proto-map [data-actor-occluder="true"] { opacity: .48; }
+.proto-actor-ghost { pointer-events: auto !important; }
+.proto-actor-ghost > .proto-oversample { filter: url(#proto-actor-xray); }
+.proto-actor-ghost:not(:has(> .proto-oversample)) { filter: url(#proto-actor-xray); }
+.proto-map [data-board-piece="actor"][data-actor-occluded="true"] > .proto-oversample { opacity: .28; }
+.proto-map [data-board-piece="actor"][data-actor-occluded="true"]:not(:has(> .proto-oversample)) { opacity: .28; }
+.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"].proto-sleeping-overhead { padding: 0; border: 0; background: none; box-shadow: none; }
+.proto-sleeping-overhead img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .proto-map [data-environment-prop] { transition: none; } }

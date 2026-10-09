@@ -1,15 +1,15 @@
-import type { ClassicPlusHeroClass } from '../classicPlusTypes';
+import type { ProtoHeroClass } from '../../proto/protoTypes';
 
 export type CardPatternDirection = 'up' | 'down';
 
 export type CardPatternTrigger = {
   id: string;
-  actorClass: ClassicPlusHeroClass;
+  actorClass: ProtoHeroClass;
   pattern: readonly CardPatternDirection[];
   effectLabel: string;
 };
 
-export const RETIRED_CLASSIC_PLUS_CARD_PATTERNS: readonly CardPatternTrigger[] = [
+export const RETIRED_PROTO_CARD_PATTERNS: readonly CardPatternTrigger[] = [
   {
     id: 'knight-taunt-down-down-up',
     actorClass: 'Knight',

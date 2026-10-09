@@ -9,7 +9,7 @@ const fs = require('node:fs');
     const page = await browser.newPage();
     for (const viewport of [{ width: 1912, height: 914 }, { width: 1280, height: 720 }]) {
       await page.setViewportSize(viewport);
-      await page.goto('http://localhost:5178/classicplus.html');
+      await page.goto('http://localhost:5178/proto.html');
       await page.locator('.quest-card').waitFor();
       await page.waitForTimeout(300);
       const geometry = await page.locator('.quest-card,.quest-card-back').evaluateAll((cards) => cards.map((card) => {
@@ -38,7 +38,7 @@ const fs = require('node:fs');
       await page.screenshot({ path: `artifacts/quest-field/${viewport.width}.png` });
     }
     await page.setViewportSize({ width: 1912, height: 914 });
-    await page.goto('http://localhost:5178/classicplus.html');
+    await page.goto('http://localhost:5178/proto.html');
     const actor = await page.locator('[data-board-piece="actor"]').boundingBox();
     const tile = await page.locator('[data-biome-id="woods-alpha"]').boundingBox();
     await page.mouse.move(actor.x + actor.width / 2, actor.y + actor.height / 2);
@@ -55,7 +55,7 @@ const fs = require('node:fs');
     for (const viewport of [{ width: 1912, height: 914 }, { width: 1280, height: 720 }]) {
       await page.setViewportSize(viewport);
       await page.waitForTimeout(300);
-      const fits = await page.locator('.classicplus-tableau-card-area').evaluate((area) => {
+      const fits = await page.locator('.proto-tableau-card-area').evaluate((area) => {
         const bounds = area.getBoundingClientRect();
         const tableau = area.querySelector('[data-component="tableau"]');
         return tableau.children.length === 7 && [...area.querySelectorAll('button')].every((card) => {

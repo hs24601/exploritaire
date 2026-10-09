@@ -3,6 +3,13 @@
 ## Playtest Variants
 - Single foundation, four in support: one foundation actor with four benched; combo-chasing with value-based swaps; no hand/stock. See docs/variants.md.
 
+## Phone Playtesting (Tailscale)
+- Install Tailscale on the dev PC and the phone, signed in to the same account.
+- Run `npm run dev`, then open `https://zenduo.tail867eff.ts.net/proto.html` on the phone. The private Tailscale Serve HTTPS route proxies to Vite on port 5178; HTTPS permits holo-card motion sensors. Allow motion access when the browser asks as you open an inspection card.
+- To restore the secure route after removing it, run `tailscale serve --bg --https=443 http://127.0.0.1:5178`. Direct `http://<pc-tailscale-ip>:5178/proto.html` access remains available for playtesting without motion sensors.
+- Temporary gyro troubleshooting: open `https://zenduo.tail867eff.ts.net/proto.html?gyrolog` to show secure context, reduced motion, sensor permissions, incoming orientation readings and the inspection card’s tilt. Trace 2 also shows the card hook’s events and calibration count, sensor and spring targets, input ownership and painted frames. The overlay is absent without the flag; readings stay on the device. If it reports denied sensors, allow Motion sensors in Edge’s site permissions. If Reduce Motion is on, the game intentionally keeps cards static. Permission marked unknown means the browser cannot report it; zero readings alone does not prove access was denied.
+- The `/__*` editor save routes only answer this PC and tailnet devices. Don't expose the dev server through a public tunnel (Cloudflare, Tailscale Funnel).
+
 ## Terminology
 - `LE`: Light Engine (`src/components/LightRenderer.tsx`) that handles dynamic lighting and shadow compositing.
 - `WE`: Watercolor Engine (`src/watercolor-engine/` and `src/watercolor/WatercolorOverlay.tsx`) that handles watercolor overlays, splashes, and persistent paint marks.
