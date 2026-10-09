@@ -8,7 +8,7 @@ export type QuestDefinition = {
   title: string;
   text: string;
   status: 'incomplete' | 'complete' | 'redeemed';
-  rewards: Array<{ kind: 'stamina'; amount: number }>;
+  rewards: Array<{ kind: 'stamina'; amount: number } | { kind: 'energy' }>;
 };
 
 export function summarizeQuests(quests: QuestDefinition[]) {
@@ -60,7 +60,8 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
       <div className="quest-foundation__cards">
       {active ? <PlayingCardStack overlapStep={0.008} cards={remaining.map((quest, index) => index === 0 ?
         <div key={quest.id} data-quest-id={quest.id} style={{width: '100%', height: '100%'}}><QuestCard title={quest.title} text={quest.text}
-          staminaReward={quest.rewards.reduce((sum, reward) => sum + reward.amount, 0)}
+          staminaReward={quest.rewards.reduce((sum, reward) => sum + (reward.kind === 'stamina' ? reward.amount : 0), 0)}
+          rewardLabel={quest.rewards.some(reward => reward.kind === 'energy') ? 'Energy' : undefined}
           complete={!deployed && quest.status === 'complete'} onRedeem={() => onRedeem(quest.id)}
           selected={note?.id === quest.id} onSelect={() => setNoteQuestId(current => current === quest.id ? null : quest.id)} /></div> :
         <div key={quest.id} className="quest-card-back" data-quest-id={quest.id} aria-hidden="true"></div>
@@ -73,7 +74,7 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
     {note && <PinnedToast className="quest-note" title={note.title} subtitle={note.status === 'complete' ? 'Complete · hold the card 1s to redeem' : 'Objective in progress'}
       icon="⚡" side="left" anchor={ref.current?.querySelector('[data-quest-slot="1"]') ?? null} edge={ref.current} onClose={() => setNoteQuestId(null)}>
       <p className="quest-note__text">{note.text}</p>
-      <p className="quest-note__reward">⚡ +{note.rewards.reduce((sum, reward) => sum + reward.amount, 0)} STA</p>
+      <p className="quest-note__reward">⚡ {note.rewards.some(reward => reward.kind === 'energy') ? 'Energy' : `+${note.rewards.reduce((sum, reward) => sum + (reward.kind === 'stamina' ? reward.amount : 0), 0)} STA`}</p>
     </PinnedToast>}
   </aside>;
 }

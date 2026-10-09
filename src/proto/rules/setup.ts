@@ -1,3 +1,5 @@
+import { createRoadTile, fillUnexploredSquares } from '../roadTiles';
+import { discoverTiles } from '../tileDiscovery';
 import type { BiomeFlag } from '../biomeFlags';
 import { DEFAULT_ACTOR_LUMINOSITY } from '../protoLighting';
 import { createPondDeal } from './fishing';
@@ -273,6 +275,13 @@ export const createInitialState = (): ProtoState => {
   biomeTiles.push({ ...EAST_WOODS_TILE, flags: [...EAST_WOODS_TILE.flags], position: { ...EAST_WOODS_TILE.position }, seed: seed + 3 * 7919, tableau: eastDeal.tableau, stock: eastDeal.stock, dealt: dealtCards(eastDeal) });
   biomeTiles.push({ ...POND_TILE, flags: [...POND_TILE.flags], position: { ...POND_TILE.position }, seed: seed + 104729, tableau: [], stock: [] });
   biomeTiles.push({ ...DANGER_WOODS_TILE, flags: [...DANGER_WOODS_TILE.flags], position: { ...DANGER_WOODS_TILE.position }, seed: seed + 130363, tableau: [], stock: [] });
+  const den = { ...createRoadTile('hero-den', 0, 2), title: "Hero's Den", tileType: 'hero-den' as const, flags: [] };
+  biomeTiles.push(createRoadTile('road-center', 0, 0, { shape: 'straight', rotation: 0 }), createRoadTile('road-east', 1, 1, { shape: 'straight', rotation: 90 }), den);
+  for (let row = 2; row <= 7; row++) for (let column = -7; column <= 7; column++) {
+    if (row === 2 && column === 0) continue;
+    biomeTiles.push({ ...createRoadTile(`mountain-${column}-${row}`, column, row), title: 'Impassable Mountains', tileType: 'impassable-mountain', flags: ['unexplored', 'impassable'], tableau: [], stock: [], dealt: 0, tableauSize: 0 });
+  }
+  const initialTiles = discoverTiles(fillUnexploredSquares(biomeTiles), den.position);
   const firstBiome = biomeTiles[0];
   return {
     tableau: firstBiome.tableau,
@@ -293,9 +302,9 @@ export const createInitialState = (): ProtoState => {
     scene: 'exploration',
     biome: { seed, cacheClaimed: false, cacheReward: FOREST_CACHE_REWARD },
     suspendedExploration: null,
-    biomeTiles,
+    biomeTiles: initialTiles,
     selectedBiomeId: null,
-    worldActors: [{ id: 'hero', label: 'Hero', location: 'table', position: { x: 0, y: 48 }, luminosity: DEFAULT_ACTOR_LUMINOSITY }],
+    worldActors: [{ id: 'hero', label: 'Hero', location: 'table', position: { ...den.position }, luminosity: DEFAULT_ACTOR_LUMINOSITY }],
     worldResourceStacks: [],
     trailRations: 0,
     haul: { ...EMPTY_HAUL },
@@ -316,21 +325,11 @@ export const createInitialState = (): ProtoState => {
   };
 };
 
-export const getExpeditionQuestSteps = (state: ProtoState) => {
-  const smallWoods = state.biomeTiles.find((tile) => tile.id === 'woods-alpha');
-  const smallWoodsComplete = Boolean(smallWoods && isBiomeDealComplete(smallWoods.tableau, smallWoods.stock));
-  const heroActor = state.worldActors.find((actor) => actor.id === 'hero');
+export const getExpeditionQuestSteps = (_state: ProtoState) => {
   return [
-    { label: 'Move Hero to Small Woods', complete: heroActor?.biomeId === 'woods-alpha' || smallWoodsComplete },
-    { label: 'Solve the safe Small Woods tableau', complete: smallWoodsComplete },
-    { label: 'Return resources to the city', complete: smallWoodsComplete && state.worldActors.every((actor) => actor.location !== 'foundation') && Object.values(state.haul).some((count) => count > 0) },
-    { label: 'Build the first Camp', complete: state.city.campBuilt },
-    { label: 'Rest and recover', complete: state.city.restedOnce },
-    { label: 'End Day 1', complete: state.day >= 2 },
-    { label: 'Use the Day 2 ration for the Deep Woods round trip', complete: state.deepEncounterResolved || (state.day >= 2 && state.heroBuffs[0]?.some((buff) => buff.id === 'well_fed')) },
-    { label: 'Enter the newly revealed Deep Woods', complete: heroActor?.biomeId === 'woods-beta' || state.deepEncounterResolved },
-    { label: 'Resolve the first wilderness battle', complete: state.deepEncounterResolved },
-    { label: 'Recover from battle', complete: state.battleRecovered },
+    // Completion will come from energy rewards attached to the den's tableau cards.
+    // Do not substitute the retired Camp/rest objective or an invented solve count.
+    { label: 'Rest', text: 'solve enough tableaus for Hero to recover energy for the day', biomeId: 'hero-den', complete: false },
   ];
 };
 

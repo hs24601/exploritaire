@@ -1,8 +1,10 @@
-import { memo, type CSSProperties, type ReactNode } from 'react';
+import { memo, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { viewQuarter } from '../biomeEdgeScenery';
-import { BIOME_AMBIANCE, DANGER_STRENGTH_FLOOR, WORLD_AMBIANCE, ambianceFor, emitterArea, haloFor, particleStrength, rayAngle, scatter, seeded, shaftSlots, visibleCells, type FxQuality, type Particle as ParticleSpot, type ParticleKind } from '../atmosphere';
+import { BIOME_AMBIANCE, DANGER_STRENGTH_FLOOR, WORLD_AMBIANCE, ambianceFor, emitterArea, haloFor, particleStrength, scatter, shaftSlots, visibleCells, type FxQuality, type Particle as ParticleSpot, type ParticleKind } from '../atmosphere';
 import type { TableTilt } from '../tableTilt';
-import { DEFAULT_LIGHT_COLOR, hexToRgb, rgba, type TableLight, type TableLightFrame } from '../protoLighting';
+import { DEFAULT_LIGHT_COLOR, hexToRgb, lightFlicker, rgba, type TableLight, type TableLightFrame } from '../protoLighting';
+import { atmosphereSky } from '../volumetricAtmosphere';
+import { subscribeVisualLight } from '../visualLightClock';
 
 type Camera = { x: number; y: number; scale: number; yaw?: number };
 type Area = { id: string; x: number; y: number; width: number; height: number; terrain: 'woods' | 'water'; danger?: boolean };
@@ -32,7 +34,7 @@ const Particle = memo(function Particle({ kind, particle, strength, night, dange
     width: particle.size, height: particle.size * 0.4, left: -particle.size / 2, bottom: particle.lift,
     ['--fx-peak' as string]: (0.4 * strength).toFixed(2), ...drift, ...timing,
   }} />;
-  else look = <span className="proto-mote" style={{ width: particle.size, height: particle.size, bottom: particle.lift, opacity: strength, ...drift, ['--fx-dy' as string]: `${-(14 + Math.abs(particle.dy))}px`, ...timing }} />;
+  else look = <span className="proto-mote" data-dust-position={`${particle.x},${particle.y},${particle.lift},${particle.dx},${-(14+Math.abs(particle.dy))}`} style={{ width: particle.size, height: particle.size, bottom: particle.lift, ['--fx-illumination' as string]:strength, ...drift, ['--fx-dy' as string]: `${-(14 + Math.abs(particle.dy))}px`, ...timing }} />;
   // Danger tiles recolour the same effects dark red (embers and blood mist).
   return <span className={`proto-atmosphere__billboard${danger ? ' proto-atmosphere--danger' : ''}`} data-atmosphere={kind} data-danger={danger ? 'true' : undefined} style={billboard(particle)}>{look}</span>;
 }, (prev, next) => prev.particle === next.particle && prev.kind === next.kind && prev.strength === next.strength && prev.night === next.night && prev.danger === next.danger);
@@ -46,23 +48,35 @@ const Particle = memo(function Particle({ kind, particle, strength, night, dange
 export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, tilt, dangerOnly = false }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null;
   /** Flat camera: only the danger warnings, lying over the board. */
   dangerOnly?: boolean }) {
+  const root = useRef<HTMLDivElement>(null);
+  const visual = useRef({frame,lights,yaw:camera.yaw??0}); visual.current = {frame,lights,yaw:camera.yaw??0};
+  useEffect(() => {
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const draw = (time:number) => {
+      if (!root.current || document.hidden) return;
+      root.current.querySelectorAll<HTMLElement>('[data-halo-light]').forEach(el => {
+        const light = visual.current.lights.find(l => l.id === el.dataset.haloLight);
+        el.style.setProperty('--light-flicker',String(light ? lightFlicker(light,motion.matches?0:time) : 1));
+      });
+    };
+    draw(performance.now());
+    if (dangerOnly || motion.matches) return;
+    return subscribeVisualLight(draw);
+  },[dangerOnly]);
   const mood = ambianceFor(frame);
   const night = frame.daylight < 0.25;
   // Patches that sit behind a tile follow the side facing a spun camera.
   const { quarter } = viewQuarter(camera.yaw ?? 0);
-  return <div className="proto-atmosphere" aria-hidden="true"><div className="proto-atmosphere__world">
+  return <div ref={root} className="proto-atmosphere" aria-hidden="true"><div className="proto-atmosphere__world">
     {(dangerOnly ? [] : lights).map((light) => {
       const halo = haloFor(light, mood.halos);
       if (halo.opacity < 0.03) return null;
       const color = hexToRgb(light.color ?? DEFAULT_LIGHT_COLOR);
-      const next = seeded(light.id);
       return <span key={light.id} className="proto-atmosphere__billboard" data-atmosphere="halo" style={billboard(light.position)}>
-        <span className="proto-halo" style={{
+        <span className="proto-halo" data-halo-light={light.id} style={{
           width: halo.radius * 2, height: halo.radius * 2, bottom: halo.lift - halo.radius, left: -halo.radius,
-          opacity: halo.opacity,
+          ['--halo-opacity' as string]:halo.opacity,
           background: `radial-gradient(circle, ${rgba({ r: 255, g: 236, b: 200 }, 0.6)} 0 3%, ${rgba(color, 0.5)} 12%, ${rgba(color, 0.16)} 42%, ${rgba(color, 0)} 70%)`,
-          animationDuration: (light.flicker ?? 0) > 0 ? `${(1.6 + next() * 1.4).toFixed(2)}s` : '0s',
-          animationDelay: `${(-next() * 3).toFixed(2)}s`,
         }} />
       </span>;
     })}
@@ -81,7 +95,9 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
       return scatter(`${emitter.kind}-${index}-${area.id}${side ? `-q${side}` : ''}`, count, emitterArea(look, area, side), look.lift, look.drift, look.size, look.duration)
         .map((particle) => <Particle key={particle.id} kind={emitter.kind} particle={particle} strength={strength} night={night} danger={area.danger} />);
     }))}
+    {/* World dust is batched in the viewport canvas, outside this 3D scene. */}
     {(dangerOnly ? [] : WORLD_AMBIANCE).flatMap((emitter, index) => {
+      if (emitter.kind === 'mote') return [];
       const count = emitter.count[quality];
       const strength = particleStrength(emitter.kind, mood);
       if (!count || strength < 0.02) return [];
@@ -98,11 +114,13 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
  * picks which slots exist, with a spare slot either side. Dust motes drift
  * through them by day as part of the world's particles. */
 export function LightShafts({ frame, quality, camera, view }: { frame: TableLightFrame; quality: FxQuality; camera: Camera; view: { width: number; height: number } }) {
-  const mood = ambianceFor(frame);
-  const strength = Math.max(mood.sunRays, mood.moonRays * 0.45);
+  const sky = atmosphereSky(frame);
+  const strength = sky.strength;
   if (strength < 0.02) return null;
-  const color = mood.sunRays > 0 ? frame.sunColor : { r: 168, g: 190, b: 255 };
-  const angle = rayAngle(frame, camera.yaw ?? 0);
+  const color = sky.color;
+  const yaw=(camera.yaw??0)*Math.PI/180;
+  const screenSlope=sky.slope.x*Math.cos(yaw)-sky.slope.y*Math.sin(yaw);
+  const angle = Math.max(-38,Math.min(38,-Math.atan(screenSlope)*180/Math.PI));
   const high = quality === 'high';
   // A shaft runs 1.5 view heights from above the top edge, so its foot sits
   // up to that far sideways from its top: keep the ones whose foot is in view.

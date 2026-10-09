@@ -32,6 +32,8 @@ describe('tilted-camera ambiance', () => {
     const area = { x: 10, y: -20, width: 40, height: 30 };
     const first = scatter('fireflies', 12, area, [5, 30], 8, [2, 3], [4, 8]);
     expect(scatter('fireflies', 12, area, [5, 30], 8, [2, 3], [4, 8])).toEqual(first);
+    expect(scatter('fireflies', 12, area, [5, 30], 8, [2, 3], [4, 8])).toBe(first);
+    expect(scatter('fireflies', 12, {...area,x:11}, [5, 30], 8, [2, 3], [4, 8])).not.toBe(first);
     for (const p of first) {
       expect(Math.abs(p.x - area.x)).toBeLessThanOrEqual(area.width / 2);
       expect(Math.abs(p.y - area.y)).toBeLessThanOrEqual(area.height / 2);

@@ -6,6 +6,8 @@
  * Every prop stands upright facing the camera, so on screen it rises from its
  * foot. The tile's label lies flat on the tile, so a prop standing in front of
  * the label can cover it. Props are placed or cut down so none ever does. */
+import { projectTilt, type TableTilt } from './tableTilt';
+import type { GridCamera } from './gridCoordinates';
 
 /** Pixel size of a scenery sprite's trimmed art. */
 export type EdgeSprite = { src: string; width: number; height: number };
@@ -335,20 +337,49 @@ export function layoutTableScenery(tiles: readonly SceneryTile[], tiltDeg: numbe
   return byOwner;
 }
 
-/** The tallest a piece standing upright at `foot` (table px) and `width`
- * wide can be without covering another tile's label as the camera sees it
- * (Infinity when nothing is behind it). A tile's pop-up stands at its back,
- * which can be right in front of the label of the tile behind it. */
-export const tallestClearOfLabels = (foot: { x: number; y: number }, width: number, tiles: readonly SceneryTile[], tiltDeg: number, yawDeg: number, ownId?: string) => {
-  let limit = Infinity;
+/** Largest square pop-up box clear of neighbouring labels. Both dimensions
+ * scale together: narrowing the art can clear a label's columns even when
+ * lowering it would leave no readable height at a grazing camera angle. */
+export const popupSizeClearOfLabels = (foot: { x: number; y: number }, maxSize: number, tiles: readonly SceneryTile[], tiltDeg: number, yawDeg: number, ownId?: string,
+  projection?: { camera: GridCamera; tilt: TableTilt }) => {
+  let size = maxSize;
+  const inCamera = (point: { x: number; y: number }) => {
+    const camera = projection!.camera;
+    return turnPoint({ x: point.x * camera.scale + camera.x, y: point.y * camera.scale + camera.y }, yawDeg);
+  };
+  const cameraFoot = projection ? inCamera(foot) : null;
+  const screenFoot = cameraFoot && projection ? projectTilt(cameraFoot, projection.tilt) : null;
+  const screenScale = cameraFoot && projection ? projection.camera.scale * projection.tilt.perspective
+    / Math.max(1, projection.tilt.perspective - cameraFoot.y * Math.sin(projection.tilt.angle * Math.PI / 180)) : 1;
   for (const tile of tiles) {
     if (tile.id === ownId) continue;
     const guard = tile.label ? labelInCamera(tile.label, yawDeg)
       : { left: -tile.size.width / 2, right: tile.size.width / 2, top: -tile.size.height / 2, bottom: tile.size.height / 2 };
+    if (projection && screenFoot) {
+      // Perspective magnifies the near pop-up more than a label behind it.
+      // Compare their actual screen columns, rather than world-space widths.
+      const centre = inCamera(tile.centre), scale = projection.camera.scale;
+      const corners = [
+        [guard.left - LABEL_CLEARANCE, guard.top - LABEL_CLEARANCE],
+        [guard.right + LABEL_CLEARANCE, guard.top - LABEL_CLEARANCE],
+        [guard.right + LABEL_CLEARANCE, guard.bottom + LABEL_CLEARANCE],
+        [guard.left - LABEL_CLEARANCE, guard.bottom + LABEL_CLEARANCE],
+      ].map(([x, y]) => projectTilt({ x: centre.x + x * scale, y: centre.y + y * scale }, projection.tilt));
+      const left = Math.min(...corners.map(point => point.x)), right = Math.max(...corners.map(point => point.x));
+      const top = Math.min(...corners.map(point => point.y)), bottom = Math.max(...corners.map(point => point.y));
+      if (screenFoot.y <= top) continue;
+      const horizontal = 2 * Math.max(0, left - screenFoot.x, screenFoot.x - right) / screenScale;
+      const vertical = Math.max(0, screenFoot.y - bottom) / screenScale;
+      size = Math.min(size, Math.max(horizontal, vertical));
+      continue;
+    }
     const local = turnPoint({ x: foot.x - tile.centre.x, y: foot.y - tile.centre.y }, yawDeg);
     if (local.y <= guard.top) continue;
-    if (local.x + width / 2 <= guard.left - LABEL_CLEARANCE || local.x - width / 2 >= guard.right + LABEL_CLEARANCE) continue;
-    limit = Math.min(limit, maxHeightClearOfLabel(local.y, guard, tiltDeg));
+    const horizontal = 2 * Math.max(0, guard.left - LABEL_CLEARANCE - local.x, local.x - guard.right - LABEL_CLEARANCE);
+    const vertical = Math.max(0, maxHeightClearOfLabel(local.y, guard, tiltDeg));
+    // Either a gap beside the text or a gap below it suffices. The larger
+    // safe box preserves as much of the uniformly scaled artwork as possible.
+    size = Math.min(size, Math.max(horizontal, vertical));
   }
-  return limit;
+  return size;
 };

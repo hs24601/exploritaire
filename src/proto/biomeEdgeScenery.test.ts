@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { EDGE_PROP_MIN_HEIGHT, labelInCamera, layoutEdgeScenery, layoutEdgeSceneryForView, layoutTableScenery, maxHeightClearOfLabel, turnPoint, type EdgeScenery, type LabelBox, type SceneryTile } from './biomeEdgeScenery';
+import { EDGE_PROP_MIN_HEIGHT, LABEL_CLEARANCE, labelInCamera, layoutEdgeScenery, layoutEdgeSceneryForView, layoutTableScenery, maxHeightClearOfLabel, popupSizeClearOfLabels, turnPoint, type EdgeScenery, type LabelBox, type SceneryTile } from './biomeEdgeScenery';
+import { projectTilt, tableCameraTilt } from './tableTilt';
+import { projectAtmospherePoint } from './volumetricAtmosphere';
 
 const scenery: EdgeScenery = { side: { src: 'side.png', width: 14, height: 27 }, front: { src: 'front.png', width: 12, height: 9 } };
 const tile = { width: 48, height: 48 };
@@ -64,6 +66,71 @@ describe('biome edge scenery', () => {
         const front = props.filter((prop) => prop.edge === 'front').map((prop) => turnPoint(prop, yaw).y);
         expect(front.reduce((sum, y) => sum + y, 0) / front.length, `${yaw}°`).toBeGreaterThan(10);
       }
+    }
+  });
+});
+
+describe('uniform pop-up fitting', () => {
+  const label: LabelBox = { left: -14, right: 14, top: -10, bottom: 9 };
+  const tiles: SceneryTile[] = [
+    { id: 'woods-east', centre: { x: 48, y: -48 }, size: tile, terrain: 'woods', scenery, label },
+    { id: 'woods-danger', centre: { x: 96, y: 48 }, size: tile, terrain: 'woods', scenery, label },
+  ];
+  const foot = { x: 96, y: 48 - 48 * 0.37 };
+
+  it('keeps the Dark Woods centre pop-up readable through camera descent', () => {
+    for (const angle of [60, 62.1, 71, 78, 82]) {
+      const size = popupSizeClearOfLabels(foot, 72, tiles, angle, 0, 'woods-danger');
+      expect(size).toBe(62);
+      expect(foot.x - size / 2).toBeGreaterThanOrEqual(48 + label.right + LABEL_CLEARANCE);
+    }
+  });
+
+  it('fits the largest safe square beside or below every label, at any spin', () => {
+    for (const angle of [38, 60, 71, 82]) for (const yaw of [0, 20, 45, 90, 135, 180, 270]) {
+      const size = popupSizeClearOfLabels(foot, 72, tiles, angle, yaw, 'woods-danger');
+      expect(size).toBeGreaterThanOrEqual(0);
+      expect(size).toBeLessThanOrEqual(72);
+      for (const other of tiles.filter(item => item.id !== 'woods-danger')) {
+        const seen = labelInCamera(label, yaw);
+        const local = turnPoint({ x: foot.x - other.centre.x, y: foot.y - other.centre.y }, yaw);
+        const behind = local.y <= seen.top;
+        const beside = local.x + size / 2 <= seen.left - LABEL_CLEARANCE + 1e-9
+          || local.x - size / 2 >= seen.right + LABEL_CLEARANCE - 1e-9;
+        const below = size <= maxHeightClearOfLabel(local.y, seen, angle) + 1e-9;
+        expect(behind || beside || below || size === 0, `${angle}° ${yaw}°`).toBe(true);
+      }
+    }
+  });
+
+  it('retains full size behind a label and when there is no neighbouring label', () => {
+    expect(popupSizeClearOfLabels({ x: 48, y: -70 }, 72, tiles.slice(0, 1), 82, 0)).toBe(72);
+    expect(popupSizeClearOfLabels(foot, 72, tiles.slice(1), 82, 0, 'woods-danger')).toBe(72);
+  });
+
+  it('uses vertical clearance when a pop-up is directly in front of the text', () => {
+    const directlyAhead = { x: 48, y: 0 };
+    expect(popupSizeClearOfLabels(directlyAhead, 72, tiles.slice(0, 1), 60, 0))
+      .toBeCloseTo(maxHeightClearOfLabel(48, label, 60));
+  });
+
+  it('keeps the centre pop-up readable and clear of projected labels after panning and zooming', () => {
+    for (const viewportHeight of [500, 700]) for (const scale of [4.5, 4.981, 5.644, 6.8]) {
+      const camera = { x: -96 * scale, y: -48 * scale, scale, yaw: 0 };
+      const tilt = tableCameraTilt(viewportHeight, scale);
+      const size = popupSizeClearOfLabels(foot, 72, tiles, tilt.angle, 0, 'woods-danger', { camera, tilt });
+      expect(size).toBeGreaterThan(26);
+      // Verify against the independent billboard projection used by atmosphere,
+      // rather than just asserting the dimensions returned by the fitter.
+      const bottom = projectAtmospherePoint(foot, 0, camera, tilt);
+      const top = projectAtmospherePoint(foot, size, camera, tilt);
+      const halfWidth = (bottom.y - top.y) / 2;
+      const other = tiles[0];
+      const corners = [[label.left, label.top], [label.right, label.top], [label.right, label.bottom], [label.left, label.bottom]]
+        .map(([x, y]) => projectTilt({ x: (other.centre.x + x) * scale + camera.x, y: (other.centre.y + y) * scale + camera.y }, tilt));
+      const left = Math.min(...corners.map(point => point.x)), right = Math.max(...corners.map(point => point.x));
+      const labelTop = Math.min(...corners.map(point => point.y)), labelBottom = Math.max(...corners.map(point => point.y));
+      expect(bottom.x + halfWidth <= left || bottom.x - halfWidth >= right || bottom.y <= labelTop || top.y >= labelBottom).toBe(true);
     }
   });
 });

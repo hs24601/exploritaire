@@ -1,3 +1,4 @@
+import { TradingCard } from './TradingCard';
 import { TABLE_CARD_SCREEN_WIDTH, CARD_RATIO } from '../tableCardPlacement';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -10,68 +11,124 @@ export type DetailsCardObject = {
   badgeLabel: string;
   art: ReactNode;
   descriptor: string;
-  trays: Array<{ id: string; label: string; content?: ReactNode }>;
+  descriptorPreview?: string;
+  trays: Array<{ id: string; label: string; icon?: ReactNode; content?: ReactNode; details?: ReactNode }>;
+  footer?: ReactNode;
 };
 
 /** Object-agnostic card presentation; callers supply art and future tray content. */
-export function DetailsCardViewer({ object, anchor, timeOfDay, lights, position, onClose }: {
-  object: DetailsCardObject; anchor: HTMLElement; timeOfDay: number; lights: TableLight[];
-  position: { x: number; y: number }; onClose: () => void;
+export function DetailsCardViewer({ objects, anchor, timeOfDay, lights, position, onClose, onCloseObject }: {
+  objects: DetailsCardObject[]; anchor: HTMLElement; timeOfDay: number; lights: TableLight[];
+  position: { x: number; y: number }; onClose: () => void; onCloseObject: (id: string) => void;
 }) {
-  const viewerRef = useRef<HTMLDivElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const titleId = useId();
   const descriptorId = useId();
+  const [jumboId, setJumboId] = useState<string | null>(null);
+  const jumboRef = useRef(jumboId);
+  jumboRef.current = jumboId;
+  const lastJumboId = useRef<string | null>(null);
+  const count = objects.length;
+  const objectIds = objects.map(object => object.id).join('|');
+  useEffect(() => {
+    if (!jumboId) {
+      const returning = lastJumboId.current && groupRef.current?.querySelector<HTMLElement>(`[data-inspection-id="${lastJumboId.current}"]`);
+      (returning || groupRef.current?.querySelector<HTMLElement>('.details-card-viewer'))?.focus({ preventScroll: true });
+      return;
+    }
+    lastJumboId.current = jumboId;
+    const root = document.getElementById('root');
+    const wasInert = root?.inert ?? false;
+    const wasBlurred = root?.classList.contains('details-card-game-blurred') ?? false;
+    if (root) { root.inert = true; root.classList.add('details-card-game-blurred'); }
+    groupRef.current?.querySelector<HTMLButtonElement>('.details-card-jumbo__close')?.focus({ preventScroll: true });
+    return () => { if (root) { root.inert = wasInert; if (!wasBlurred) root.classList.remove('details-card-game-blurred'); } };
+  }, [jumboId, objectIds]);
   const [placement, setPlacement] = useState({ left: 0, top: 0, width: TABLE_CARD_SCREEN_WIDTH });
   useEffect(() => {
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousFocus = previousFocusRef.current;
     let frame = 0;
     const update = () => {
       if (!anchor.isConnected) { closeRef.current(); return; }
       const rect = anchor.getBoundingClientRect();
-      const width = Math.min(TABLE_CARD_SCREEN_WIDTH, window.innerWidth - 24, (window.innerHeight - 24) * CARD_RATIO);
+      // Reserve space for the stronger card's perspective sweep near screen edges.
+      const margin = 32;
+      const gap = 32;
+      const width = jumboRef.current
+        ? Math.min(window.innerHeight * .82 * CARD_RATIO, window.innerWidth * .82)
+        : Math.min(TABLE_CARD_SCREEN_WIDTH, (window.innerWidth - margin * 2 - gap * (count - 1)) / count, (window.innerHeight - margin * 2) * CARD_RATIO);
       const height = width / CARD_RATIO;
+      const groupWidth = jumboRef.current ? width : count * width + gap * (count - 1);
       const right = rect.right + 16;
-      const left = Math.max(12, Math.min(window.innerWidth - width - 12, right + width <= window.innerWidth - 12 ? right : rect.left - width - 16));
-      const top = Math.max(12, Math.min(rect.top, window.innerHeight - height - 12));
+      // Move the entire row together near edges, preserving actor → tile order.
+      const left = jumboRef.current ? (window.innerWidth - width) / 2
+        : Math.max(margin, Math.min(window.innerWidth - groupWidth - margin, right));
+      const top = jumboRef.current ? (window.innerHeight - height) / 2 : Math.max(margin, Math.min(rect.top, window.innerHeight - height - margin));
       setPlacement(old => old.left === left && old.top === top && old.width === width ? old : { left, top, width });
       frame = requestAnimationFrame(update);
     };
     update();
     const dismiss = (event: PointerEvent) => {
-      if (event.target instanceof Node && !viewerRef.current?.contains(event.target) && !anchor.contains(event.target)) closeRef.current();
+      if (!jumboRef.current && event.target instanceof Node && !groupRef.current?.contains(event.target) && !anchor.contains(event.target)) closeRef.current();
     };
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') closeRef.current(); };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (jumboRef.current) setJumboId(null); else closeRef.current();
+      }
+      if (jumboRef.current && event.key === 'Tab') {
+        const controls = Array.from(groupRef.current?.querySelectorAll<HTMLElement>('.details-card-viewer--jumbo button, .details-card-viewer--jumbo [tabindex="0"]') ?? []);
+        const first = controls[0], last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
     document.addEventListener('pointerdown', dismiss);
     document.addEventListener('keydown', escape);
-    viewerRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener('pointerdown', dismiss);
       document.removeEventListener('keydown', escape);
-      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+      (previousFocus?.isConnected ? previousFocus : anchor).focus({ preventScroll: true });
     };
-  }, [anchor]);
-  return createPortal(<div ref={viewerRef} className="details-card-viewer details-card-viewer--floating" role="dialog"
-    aria-modal="false" aria-labelledby={titleId} aria-describedby={descriptorId} data-camera-ignore="true"
-    style={{ left: placement.left, top: placement.top, width: placement.width, height: placement.width * 88 / 63,
-      boxShadow: tableObjectShadow(timeOfDay, { x: position.x + placement.width / 2, y: position.y }, 24, lights) }}>
-    <article className="details-card" data-object-id={object.id}>
-      <header className="details-card__header">
-        <h2 id={titleId}>{object.name}</h2>
-        <span className="details-card__badge" role="img" aria-label={object.badgeLabel}>{object.badge}</span>
-      </header>
-      <div className="details-card__art">{object.art}</div>
-      <p id={descriptorId} className="details-card__descriptor" title={object.descriptor}>{object.descriptor}</p>
-      <div className="details-card__trays">
-        {object.trays.map((tray) => <section key={tray.id} className="details-card__tray" aria-label={tray.label}>
-          <h3 title={tray.label}>{tray.id === 'stats' ? '▤' : tray.id === 'equipment' ? '⚔' : tray.id === 'buffs' ? '✦' : tray.label}</h3><div>{tray.content ?? <span aria-label="Not yet configured">—</span>}</div>
-        </section>)}
-      </div>
-      <button type="button" className="details-card__close" onClick={onClose} autoFocus aria-label="Close Details Card Viewer">Close ×</button>
-    </article>
-  </div>, document.body);
+  }, [anchor, count]);
+  return createPortal(<>
+    {jumboId && <div className="details-card-jumbo__backdrop" data-camera-ignore="true" onClick={() => setJumboId(null)} />}
+    <div ref={groupRef} className="details-card-group" role="group" aria-label="Inspected game cards" data-camera-ignore="true">
+      {objects.map((object, index) => {
+        const jumbo = jumboId === object.id;
+        if (jumboId && !jumbo) return null;
+        return <div key={object.id}
+          className={`details-card-viewer details-card-viewer--floating${jumbo ? ' details-card-viewer--jumbo' : ''}`}
+          role="dialog" tabIndex={-1} aria-modal={jumbo}
+          aria-labelledby={`${titleId}-${object.id}`} aria-describedby={`${descriptorId}-${object.id}`}
+          data-inspection-id={object.id} data-camera-ignore="true"
+          onClick={() => { if (!jumbo) setJumboId(object.id); }}
+          onKeyDown={event => { if (!jumbo && event.key === 'Enter') { event.preventDefault(); setJumboId(object.id); } }}
+          style={{
+            left: placement.left + (jumbo ? 0 : index * (placement.width + 32)), top: placement.top,
+            width: placement.width, height: placement.width / CARD_RATIO,
+            boxShadow: tableObjectShadow(timeOfDay, { x: position.x + placement.width / 2, y: position.y }, 24, lights),
+          }}>
+          <TradingCard id={object.id} title={object.name} titleId={`${titleId}-${object.id}`} state={jumbo ? 'jumbo' : 'compact'}
+            headerAction={<button type="button"
+              className={`trading-card__badge trading-card__close${jumbo ? ' details-card-jumbo__close' : ''}`}
+              aria-label={jumbo ? 'Close jumbo card' : 'Close details card'}
+              onKeyDown={event => { if (event.key === 'Enter') event.stopPropagation(); }}
+              onClick={event => { event.stopPropagation(); if (jumbo) setJumboId(null); else onCloseObject(object.id); }}>
+              <span aria-hidden="true">×</span>
+            </button>} art={object.art}
+            description={object.descriptor} descriptionPreview={object.descriptorPreview}
+            descriptionId={`${descriptorId}-${object.id}`} footer={object.footer}
+            sections={object.trays.map(tray => ({ ...tray,
+              icon: tray.icon ?? (tray.id === 'stats' ? '▤' : tray.id === 'equipment' ? '⚔' : tray.id === 'buffs' ? '✦' : undefined),
+            }))} />
+        </div>;
+      })}
+    </div></>, document.body);
 }
 
 /** Actor portrait: the actor's sprite when it has one (and it loads), otherwise a code-native placeholder. */

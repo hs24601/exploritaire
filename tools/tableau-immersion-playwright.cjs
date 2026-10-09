@@ -55,6 +55,17 @@ async function enter(page,touch){
         if(mode==='immersive'){
           assert.equal(dimensions.transform,'none');
           assert.ok(await page.locator('.proto-tableau-fixture').isVisible());
+          const lightLayers = await page.locator('.proto-tableau-scenery').evaluate(el => {
+            const glow = el.querySelector('.proto-tableau-fixture');
+            const rays = el.querySelector('.proto-tableau-scenery__rays');
+            const layer = el.querySelector('.proto-tableau-scenery__layer');
+            return { glowBehind: !!(glow.compareDocumentPosition(layer) & Node.DOCUMENT_POSITION_FOLLOWING), raysBehind: !!(rays.compareDocumentPosition(layer) & Node.DOCUMENT_POSITION_FOLLOWING), transparent: getComputedStyle(layer).backgroundColor, border: getComputedStyle(glow).borderTopWidth, blur: getComputedStyle(glow).filter };
+          });
+          assert.ok(lightLayers.glowBehind && lightLayers.raysBehind, 'Glow and shafts paint behind sprite cut-outs');
+          assert.equal(lightLayers.transparent, 'rgba(0, 0, 0, 0)');
+          assert.equal(lightLayers.border, '0px');
+          assert.equal(lightLayers.blur, 'blur(9px)');
+          assert.equal(await page.locator('.proto-tableau-stage .border-dashed').count(), 0, 'Tableau columns have no dashed placeholders');
           assert.equal(await page.locator('.proto-tableau-scenery__layer').count(),3);
           const scene=page.locator('.proto-tableau-scene'),r=await scene.boundingBox();
           await page.mouse.move(r.x+10,r.y+25);

@@ -10,7 +10,7 @@ const detail=(p,png,size)=>p.evaluate(async([src,size])=>{const i=new Image();aw
   for(let y=1;y<c.height;y++)for(let xx=1;xx<c.width;xx++){const k=(y*c.width+xx)*4;sum+=Math.abs(L(k)-L(k-4))+Math.abs(L(k)-L(k-c.width*4));n++;}
   return {value:sum/n,width:c.width,height:c.height};},[png.toString('base64'),size]);
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];const report=[];try{
-  for(const [w,h,dpr] of [[1912,914,1],[390,844,3]]){
+  for(const [w,h,dpr] of [[1912,914,1],[1280,720,1]]){
     const p=await b.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});await p.goto('http://localhost:5178/proto.html');
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(1000);

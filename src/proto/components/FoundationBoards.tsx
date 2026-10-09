@@ -95,7 +95,7 @@ export const FoundationBoard = ({
         onKeyDown={
           canChoose
             ? (event) => {
-                if (event.key !== 'Enter' && event.key !== ' ') return;
+                if (event.key !== 'Enter') return;
                 event.preventDefault();
                 onClick();
               }

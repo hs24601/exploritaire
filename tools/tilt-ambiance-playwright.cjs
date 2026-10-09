@@ -1,8 +1,8 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 // Tilted ("immersion") camera ambiance: lamp halos, sun or moon rays, fireflies
 // at dusk and night, pond fizz and dust motes by day, and HD-2D light washes
-// across lit pixel art. None of it shows in the flat camera (except the Dark
-// Woods' dark red danger embers and mist, shown at every hour in both cameras), none of it takes
+// across lit pixel art. None of it shows in the flat camera, including the
+// Dark Woods' danger embers and mist; none of it takes
 // pointer input, the low tier (?fx=low) drops the particles and prop shadows,
 // edge-prop shadows and dawn mist never fall across a tile's label, and world
 // particles and light shafts move with the table when it pans.
@@ -12,17 +12,18 @@ const darkened=(p,before,after)=>p.evaluate(async([a,b])=>{const load=src=>new P
   const [ia,ib]=await Promise.all([load(a),load(b)]);const c=document.createElement('canvas');c.width=ia.width;c.height=ia.height;const x=c.getContext('2d');
   x.drawImage(ia,0,0);const da=x.getImageData(0,0,c.width,c.height).data;x.clearRect(0,0,c.width,c.height);x.drawImage(ib,0,0);const db=x.getImageData(0,0,c.width,c.height).data;
   let n=0;for(let k=0;k<da.length;k+=4){const la=da[k]+da[k+1]+da[k+2],lb=db[k]+db[k+1]+db[k+2];if(lb-la>120)n++;}return n;},[before.toString('base64'),after.toString('base64')]);
-const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmosphere]').forEach(e=>{const k=e.dataset.danger?'danger':e.dataset.atmosphere;c[k]=(c[k]||0)+1;});c.edgeShadow=document.querySelectorAll('[data-shadow-owner="biome-edge"]').length;
-  c.interactive=[...document.querySelectorAll('.proto-table-air *, .proto-shafts *, [data-board-piece="biome-edge"]')].filter(e=>getComputedStyle(e).pointerEvents!=='none').length;return c;});
+const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmosphere]').forEach(e=>{if(e.dataset.atmosphere==='volume'&&e.dataset.active!=='true')return;const k=e.dataset.danger?'danger':e.dataset.atmosphere;c[k]=(c[k]||0)+1;});c.edgeShadow=document.querySelectorAll('[data-shadow-owner="biome-edge"]').length;
+  const dust=document.querySelector('.proto-dust');if(dust)c.mote=Number(dust.dataset.dustMotes);
+  if(c.volume)c.ray=(c.ray||0)+c.volume;
+  c.interactive=[...document.querySelectorAll('.proto-table-air *, .proto-shafts *, .proto-volumetrics, .proto-dust, [data-board-piece="biome-edge"]')].filter(e=>getComputedStyle(e).pointerEvents!=='none').length;return c;});
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1912,914],[1280,720]])for(const fx of ['','low']){
     const tag=`${w}x${h}${fx?' fx='+fx:''}`;
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html'+(fx?'?fx='+fx:''));
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     await setHour(p,22);await p.waitForTimeout(300);
-    // Flat has no ambiance except the Dark Woods' danger embers and mist, a warning shown in both cameras.
-    const flat=await counts(p);if(Object.keys(flat).some(k=>!['edgeShadow','interactive','danger'].includes(k)&&flat[k]))problems.push(`${tag}: ambiance in the flat camera ${JSON.stringify(flat)}`);
-    if(!(flat.danger>0))problems.push(`${tag}: no danger embers over the Dark Woods in the flat camera`);
+    // Flat uses a printed danger marker and has no ambiance.
+    const flat=await counts(p);if(Object.values(flat).some(Boolean))problems.push(`${tag}: ambiance in the flat camera ${JSON.stringify(flat)}`);
     await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(1200);
     const night=await counts(p);
     if(!(night.halo>=1))problems.push(`${tag}: no light halo at night`);
@@ -70,7 +71,10 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
     if(worstLag>1.5)problems.push(`${tag}: the lantern halo trails the lantern by up to ${worstLag.toFixed(1)}px mid-pan`);
     const now=await lefts();const shift=now.halo[0]-was.halo[0];
     if(!(Math.abs(shift)>40))problems.push(`${tag}: the pan did not move the table (${shift})`);
-    else for(const kind of fx?['ray']:['mote','ray']){const before=kind==='ray'?was.ray.filter(x=>x+shift>area.x&&x+shift<area.x+area.width):was[kind];if(!before.length){if(!fx)problems.push(`${tag}: no ${kind}s in view to follow`);continue;}
+    // GPU rays use the inverse camera projection (volumetricAtmosphere.test),
+    // rather than moving DOM strips. Low-tier strips retain this pan check.
+    // Batched dust projection and camera input are checked by dust-motes-playwright.cjs.
+    else for(const kind of fx?['ray']:[]){const before=kind==='ray'?was.ray.filter(x=>x+shift>area.x&&x+shift<area.x+area.width):was[kind];if(!before.length){if(!fx)problems.push(`${tag}: no ${kind}s in view to follow`);continue;}
       const followed=before.filter(x=>now[kind].some(y=>Math.abs(y-x-shift)<2)).length;
       if(followed<before.length*0.8)problems.push(`${tag}: only ${followed}/${before.length} ${kind}s moved with the pan`);}
     // Dusk: long shadows, none across a label.
@@ -78,7 +82,7 @@ const counts=p=>p.evaluate(()=>{const c={};document.querySelectorAll('[data-atmo
     for(const id of ['pond','woods-alpha']){
       const label=p.locator(`button[data-biome-id="${id}"] .board-object-label__text`);
       const box=await label.boundingBox();if(!box||box.y<0||box.y+box.height>h)continue;
-      const hideAir=await p.addStyleTag({content:'.proto-table-air,.proto-shafts{visibility:hidden!important}'});await p.waitForTimeout(100);
+      const hideAir=await p.addStyleTag({content:'.proto-table-air,.proto-shafts,.proto-volumetrics{visibility:hidden!important}'});await p.waitForTimeout(100);
       const before=await p.screenshot({clip:box});
       const hide=await p.addStyleTag({content:'.proto-sprite-shadow{visibility:hidden!important}'});await p.waitForTimeout(150);
       const after=await p.screenshot({clip:box});

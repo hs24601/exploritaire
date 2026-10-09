@@ -130,7 +130,7 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
         <div className="proto-pond__water" aria-label="Fish in the water" role="list" data-pond-water
           data-drop-target={overWater ? 'true' : undefined} tabIndex={keyboardBait ? 0 : undefined}
           onKeyDown={(event) => {
-            if (keyboardBait && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); castBait(keyboardBait); }
+            if (keyboardBait && (event.key === 'Enter')) { event.preventDefault(); castBait(keyboardBait); }
             if (event.key === 'Escape') setKeyboardBait(null);
           }}>
           {pond.water.map((fish) => {

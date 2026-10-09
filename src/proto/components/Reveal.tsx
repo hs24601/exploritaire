@@ -64,8 +64,9 @@ export const revealMask = (width: number, height: number, fraction: number, { in
 
 /** `children` in colour over their own silhouette, revealed by `fraction`
  * (0: all silhouette, 1: all colour). `width` and `height` are the box the
- * fraction is measured over. */
-export function Reveal({ fraction, width, height, children, className = '' }: { fraction: number; width: number; height: number; children: ReactNode; className?: string }) {
+ * fraction is measured over. Scenery can supply a lit monochrome `shade`
+ * material, which bypasses the uniform silhouette filter. */
+export function Reveal({ fraction, width, height, children, shade, className = '' }: { fraction: number; width: number; height: number; children: ReactNode; shade?: ReactNode; className?: string }) {
   const target = Math.max(0, Math.min(1, fraction));
   // The edge sweeps from where it was: the new fraction lands a frame after
   // the old one is drawn, and full colour drops the layers once swept.
@@ -81,7 +82,7 @@ export function Reveal({ fraction, width, height, children, className = '' }: { 
   }, [target]);
   if (settled && target >= 1) return <>{children}</>;
   return <span className={`proto-reveal ${className}`} data-reveal={target.toFixed(2)} style={{ width, height }}>
-    <span className="proto-reveal__shade">{children}</span>
+    <span className="proto-reveal__shade" style={shade ? { filter: 'none' } : undefined}>{shade ?? children}</span>
     <span className="proto-reveal__lit" style={revealMask(width, height, shown)}>{children}</span>
   </span>;
 }

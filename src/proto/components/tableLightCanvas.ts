@@ -13,18 +13,21 @@ import {
 
 /** `yaw` spins the table about the canvas centre, degrees clockwise on screen. */
 export type TableLightCamera = { x: number; y: number; scale: number; yaw?: number };
+export type GlobalLightCache = { canvas: HTMLCanvasElement; key: string };
 
 /** Paints the table's sky overlay, sun wash and light pools. Visual only: the
  * overlay never intercepts input, and game logic reads protoLighting instead. */
 export const drawTableLight = (
-  context: CanvasRenderingContext2D,
+  outputContext: CanvasRenderingContext2D,
   size: { width: number; height: number },
   camera: TableLightCamera,
   frame: TableLightFrame,
   lights: readonly TableLight[],
   timeMs: number,
   occluders: readonly LightOccluder[] = [],
+  cache?: GlobalLightCache,
 ) => {
+  let context = outputContext;
   const { width, height } = size;
   const nightness = 1 - frame.daylight;
   const radians = ((camera.yaw ?? 0) * Math.PI) / 180;
@@ -81,7 +84,18 @@ export const drawTableLight = (
       }
     }
   };
-  drawGlobal();
+  const paintGlobal = () => {
+    if (!cache) { drawGlobal(); return; }
+    const key=JSON.stringify([size,camera,frame.hour,outputContext.canvas.width,outputContext.canvas.height]);
+    if(cache.key!==key){
+      cache.key=key;cache.canvas.width=outputContext.canvas.width;cache.canvas.height=outputContext.canvas.height;
+      const cached=cache.canvas.getContext('2d')!;
+      cached.setTransform(outputContext.getTransform());
+      context=cached;drawGlobal();context=outputContext;
+    }
+    context.save();context.setTransform(1,0,0,1,0,0);context.drawImage(cache.canvas,0,0);context.restore();
+  };
+  paintGlobal();
 
   const cellSize = LIGHT_CELL_SIZE * camera.scale;
   const pools = lights.map((light) => {
@@ -145,7 +159,7 @@ export const drawTableLight = (
     });
     context.clip();
     context.clearRect(0, 0, width, height);
-    drawGlobal();
+    paintGlobal();
     context.restore();
   }
 };

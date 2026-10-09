@@ -2,11 +2,11 @@
  * fireflies, pond effervescence and drifting motes. Visual only: nothing here
  * feeds game rules, which read the steady values in protoLighting.
  *
- * Every effect is a handful of small elements animated by CSS transform and
- * opacity, so the compositor runs them without per-frame script. The low
- * tier keeps the halos and drops the particles. */
+ * Particles use CSS motion; their light response and halos share the visual
+ * clock. The high tier adds a bounded GPU volume; low retains simple shafts. */
 import { DEFAULT_LIGHT_STRENGTH, type TableLight, type TableLightFrame } from './protoLighting';
 import { unprojectTilt, type TableTilt } from './tableTilt';
+import { atmosphereSky } from './volumetricAtmosphere';
 
 export type FxQuality = 'high' | 'low';
 
@@ -25,11 +25,12 @@ export const detectFxQuality = (): FxQuality => {
 /** How strongly each effect shows at a moment of the day, 0–1. */
 export const ambianceFor = (frame: TableLightFrame) => {
   const nightness = 1 - frame.daylight;
+  const sky = atmosphereSky(frame);
   return {
     /** Sun shafts: faint at noon, strong at golden hour, gone at night. */
-    sunRays: frame.daylight > 0 ? 0.25 + 0.75 * frame.twilight : 0,
+    sunRays: sky.sun * (0.25 + 0.75 * frame.twilight),
     /** Cool moonbeams after dark. */
-    moonRays: frame.daylight > 0 ? 0 : 1,
+    moonRays: 1 - sky.sun,
     /** Fireflies come out as the light goes. */
     fireflies: Math.max(0, Math.min(1, (0.55 - frame.daylight) / 0.45)),
     /** Lamp halos glow in the air mostly at night. */
@@ -84,9 +85,13 @@ export type Particle = {
 };
 
 /** Particles scattered over an area of the table around a point. */
+const particleCache = new Map<string, Particle[]>();
 export const scatter = (seed: string, count: number, area: { x: number; y: number; width: number; height: number }, lift: [number, number], drift: number, size: [number, number], duration: [number, number]): Particle[] => {
+  const key = JSON.stringify([seed,count,area.x,area.y,area.width,area.height,lift,drift,size,duration]);
+  const cached = particleCache.get(key);
+  if (cached) return cached;
   const next = seeded(seed);
-  return Array.from({ length: count }, (_, index) => ({
+  const particles = Array.from({ length: count }, (_, index) => ({
     id: `${seed}-${index}`,
     x: area.x + (next() - 0.5) * area.width,
     y: area.y + (next() - 0.5) * area.height,
@@ -97,6 +102,11 @@ export const scatter = (seed: string, count: number, area: { x: number; y: numbe
     dy: (next() - 0.5) * 2 * drift,
     size: size[0] + next() * (size[1] - size[0]),
   }));
+  // Bound memory as the camera visits new world cells. Stable cells retain
+  // particle identity so React.memo can skip travel/time renders.
+  if (particleCache.size >= 256) particleCache.delete(particleCache.keys().next().value!);
+  particleCache.set(key,particles);
+  return particles;
 };
 
 /** Screen angle of the sun's shafts, degrees from vertical: they slant away

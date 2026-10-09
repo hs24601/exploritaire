@@ -4,6 +4,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 import path from 'path';
 import fs from 'fs';
 import { execSync } from 'child_process';
+import { createHash } from 'crypto';
 
 const parsePort = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value);
@@ -50,6 +51,23 @@ const PROTO_BUILD = {
   startedAt: new Date().toISOString(),
 };
 
+// Include local source/assets: a commit alone cannot identify an uncommitted playtest.
+const sourceRevision = () => {
+  const hash = createHash('sha256');
+  const visit = (directory: string) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (entry.isFile()) { hash.update(path.relative(__dirname, file)); hash.update(fs.readFileSync(file)); }
+    }
+  };
+  visit(path.resolve(__dirname, 'src'));
+  visit(path.resolve(__dirname, 'public'));
+  return hash.digest('hex').slice(0, 8);
+};
+const buildModule = '\0virtual:proto-build';
+let currentBuild = { ...PROTO_BUILD, revision: sourceRevision() };
+
 export default defineConfig({
   define: {
     __PROTO_BUILD__: JSON.stringify(PROTO_BUILD),
@@ -72,6 +90,22 @@ export default defineConfig({
       : {}),
   },
   plugins: [
+    {
+      name: 'proto-build-revision',
+      resolveId(id) { if (id === 'virtual:proto-build') return buildModule; },
+      load(id) { if (id === buildModule) return `export default ${JSON.stringify(currentBuild)}`; },
+      handleHotUpdate(context) {
+        const relative = path.relative(__dirname, context.file).replaceAll('\\', '/');
+        if (!relative.startsWith('src/') && !relative.startsWith('public/')) return;
+        const revision = sourceRevision();
+        if (revision === currentBuild.revision) return;
+        currentBuild = { ...PROTO_BUILD, revision, startedAt: new Date().toISOString() };
+        const module = context.server.moduleGraph.getModuleById(buildModule);
+        if (module) context.server.moduleGraph.invalidateModule(module);
+        context.server.ws.send({ type: 'full-reload' });
+        return [];
+      },
+    },
     react(),
     ...(DEV_HTTPS ? [basicSsl()] : []),
     {

@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PROTO_ENEMIES } from '../protoData';
 import type { Card, EnemyRuntimeState, ProtoState } from '../protoState';
 import { resolveEnemyIntents, selectEnemyTableauMove } from './combat';
 import { applyFoundationPlay } from './play';
 import { createFoundations, createInitialState, isPondTile, isAdjacentRank } from './setup';
+
+// Validate normal rules independently of the temporary playtest override.
+vi.mock('../staminaTesting', () => ({ DISABLE_STAMINA_CONSUMPTION: false, spendStamina: (value: number, cost: number) => Math.max(0, value - cost) }));
 
 const card = (rank: number, id = `c-${rank}`): Card => ({ id, rank });
 

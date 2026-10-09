@@ -1,3 +1,4 @@
+import { DISABLE_STAMINA_CONSUMPTION, spendStamina } from '../staminaTesting';
 import { isQuestPlacement } from '../protoQuestDeals';
 import { DEFAULT_CHIP_ABILITY } from '../protoData';
 import { preserveSolverRpgValues } from '../tableauSolver';
@@ -101,12 +102,15 @@ export const applyFoundationPlay = (prev: ProtoState, options: FoundationPlayOpt
     ? { ...prev.haul, [card.resource]: prev.haul[card.resource] + 1 }
     : prev.haul;
   const actorResource = ACTOR_WORK_RESOURCES[foundationIndex] ?? 'wood';
-  const staminaRemaining = Math.max(0, (prev.actorStamina[foundationIndex] ?? ACTOR_STAMINA_MAX) - 1);
-  const tableauCompleted = staminaRemaining === 0;
+  const staminaRemaining = spendStamina(prev.actorStamina[foundationIndex] ?? ACTOR_STAMINA_MAX, 1);
+  // Preserve work-cycle rewards while testing with frozen stamina.
+  const tableauCompleted = DISABLE_STAMINA_CONSUMPTION
+    ? !hallowedPath && ((prev.foundations[foundationIndex]?.count ?? 0) + 1) % ACTOR_STAMINA_MAX === 0
+    : staminaRemaining === 0;
   const workReward = tableauCompleted ? 3 : 1;
   const rewardedHaul = divine ? collectedHaul : addForestHaul(collectedHaul, { [actorResource]: workReward });
   const nextActorStamina = prev.actorStamina.map((stamina, index) =>
-    index === foundationIndex ? (tableauCompleted ? ACTOR_STAMINA_MAX : staminaRemaining) : stamina,
+    index === foundationIndex ? (!DISABLE_STAMINA_CONSUMPTION && tableauCompleted ? ACTOR_STAMINA_MAX : staminaRemaining) : stamina,
   );
   const nextActorWorkCompleted = prev.actorWorkCompleted.map((completed, index) =>
     index === foundationIndex ? completed + (tableauCompleted ? 1 : 0) : completed,
@@ -117,7 +121,7 @@ export const applyFoundationPlay = (prev: ProtoState, options: FoundationPlayOpt
     isBiomeDealComplete(nextTableau, replacement.stock);
   const completedSmallWoods = cacheAwarded && prev.selectedBiomeId === 'woods-alpha';
   const nextBiomeTiles = completedSmallWoods && !prev.biomeTiles.some((tile) => tile.id === 'woods-beta')
-    ? [...prev.biomeTiles, materializeDeepWoods(prev.biome.seed + 7919)]
+    ? [...prev.biomeTiles.filter(tile => !(tile.tileType && tile.position.y === -48 && (tile.position.x === 96 || tile.position.x === 144))), materializeDeepWoods(prev.biome.seed + 7919)]
     : prev.biomeTiles;
   const nextState: ProtoState = {
     ...prev,

@@ -1,6 +1,6 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 // Small Woods shows pixel-art pines as a cardboard pop-up: standing at the back
-// of the tile when tilted, a thin board edge seen from above when flat. Neither
+// of the tile when tilted, printed overhead tile art when flat. Neither
 // covers the tile's label, and tapping the trees counts as the tile (still
 // unexplored at the start, so it shows the unexplored note).
 // Tilted, both biome tiles (pond reeds, woods pines and ferns) are also lined
@@ -13,14 +13,15 @@ const overlap=(a,b)=>Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b
     const p=await b.newPage({viewport:{width:w,height:h}});await p.goto('http://localhost:5178/proto.html');
     if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     if(tilt){await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(900);}
-    const pop=p.locator('[data-biome-popup="woods-alpha"]');await pop.waitFor();
-    const art=pop.locator(tilt?'.proto-sprite-standee__art':'.proto-sprite-topdown__board').first();await art.waitFor({timeout:5000});
+    const pop=p.locator('[data-biome-popup="woods-alpha"]');
+    if(tilt)await pop.waitFor();else assert.equal(await pop.count(),0,'no pop-up in top-down');
+    const art=tilt?pop.locator('.proto-sprite-standee__art').first():p.locator('button[data-biome-id="woods-alpha"] .proto-biome-topdown');await art.waitFor({timeout:5000});
     const a=await art.boundingBox();const tile=await p.locator('button[data-biome-id="woods-alpha"]').boundingBox();
-    const text=await p.locator('button[data-biome-id="woods-alpha"] > *').first().evaluate(el=>{const r=document.createRange();r.selectNodeContents(el);const b=r.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height};});
+    const text=await p.locator('button[data-biome-id="woods-alpha"] > .board-object-label').evaluate(el=>{const r=document.createRange();r.selectNodeContents(el);const b=r.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height};});
     const tag=`${w}x${h} ${tilt?'tilt':'flat'}`;
     if(tilt){if(a.height<tile.height*0.8)problems.push(`${tag}: pines too small (${a.height}px)`);if(a.y+a.height<tile.y||a.y+a.height>tile.y+tile.height*0.5)problems.push(`${tag}: pines don't stand on the back of the tile`);}
-    else{if(a.height>tile.height*0.09)problems.push(`${tag}: board edge ${a.height}px thick`);if(a.x<tile.x-1||a.x+a.width>tile.x+tile.width+1)problems.push(`${tag}: board edge leaves the tile`);}
-    if(overlap(a,text)>0)problems.push(`${tag}: pop-up covers the Small Woods label (art bottom ${(a.y+a.height).toFixed(1)}, text top ${text.y.toFixed(1)})`);
+    else{if(Math.abs(a.height-tile.height)>1)problems.push(`${tag}: overhead art doesn't fill the tile`);if(a.x<tile.x-1||a.x+a.width>tile.x+tile.width+1)problems.push(`${tag}: overhead art leaves the tile`);}
+    if(tilt&&overlap(a,text)>0)problems.push(`${tag}: pop-up covers the Small Woods label (art bottom ${(a.y+a.height).toFixed(1)}, text top ${text.y.toFixed(1)})`);
     for(const id of ['pond','woods-alpha']){
       const edges=p.locator(`[data-biome-edge="${id}"]`);const counts=await edges.evaluateAll(els=>els.reduce((c,e)=>(c[e.dataset.edge]=(c[e.dataset.edge]||0)+1,c),{}));
       if(!tilt){if(Object.keys(counts).length)problems.push(`${tag}: ${id} has edge scenery in the flat camera`);continue;}
@@ -35,5 +36,5 @@ const overlap=(a,b)=>Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b
     await p.close();
   }
   assert.deepEqual(problems,[],'biome pop-up defects:\n'+problems.join('\n'));
-  console.log('Small Woods pines: stand at the back of the tile tilted, a thin board edge flat, label clear, tapping them counts as the tile; pond and woods edge scenery only when tilted and never over a label; at desktop sizes.');
+  console.log('Small Woods pines stand at the back in immersion; overhead art fills the tile flat; labels stay clear and art taps count as tile taps; edge scenery is immersive only at desktop sizes.');
 }finally{await b.close()}})().catch(e=>{console.error(e.message);process.exitCode=1});

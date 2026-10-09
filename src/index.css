@@ -15,6 +15,9 @@
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
+.proto-game-root .proto-main-layout {
+  row-gap: 5px;
+}
 .proto-main-layout--no-tableau {
   grid-template-columns: minmax(0, 1.7fr) minmax(11rem, 0.7fr);
 }
@@ -49,7 +52,7 @@
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
 }
 .proto-foundation-card {
   aspect-ratio: 56 / 74;
@@ -379,12 +382,34 @@
   background-color: #102823;
 }
 .proto-map [data-board-piece="tile"] {
-  border: 3px solid #030708;
-  border-bottom-width: 4px;
-  border-radius: 4px;
+  border: 0;
+  border-radius: 0;
   background: linear-gradient(145deg, #254933, #102319);
   color: #f5ebcf;
+  /* Ground is flush with the table; depth belongs to scenery and terrain. */
+  box-shadow: none;
 }
+.proto-map [data-board-piece="tile"][data-selected] { outline: 1px solid #8ef2d4; outline-offset: -1px; }
+/* Top-down is printed tabletop art. Props and live illumination belong to
+   immersion; the fixed tile warning replaces the old airborne danger effect. */
+.proto-biome-topdown { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.proto-biome-topdown__art { display: block; width: 100%; height: 100%; image-rendering: pixelated; object-fit: fill; }
+.proto-biome-topdown__art--unexplored { filter: grayscale(1) brightness(0.7) sepia(0.3) hue-rotate(145deg); }
+.proto-map [data-tabletop] > .board-object-label { z-index: 1; }
+.proto-map [data-board-piece="tile"] .board-object-label__text,
+.proto-map [data-board-piece="tile"] .board-object-label__text > span {
+  /* Paint the fill last so the dark outline stays outside the pixel lettering. */
+  -webkit-text-stroke: 4px #10171a;
+  paint-order: stroke fill;
+  text-shadow: none;
+  padding: 1px 2px;
+}
+.proto-biome-topdown__danger { position: absolute; top: 1px; right: 1px; display: grid; place-items: center; width: 16px; height: 18px; background: #8e322a; color: #fff1cc; font: bold 16px/1 'Classic Pixel', monospace; }
+.proto-map[data-camera-view="tabletop"] .proto-map-world,
+.proto-map[data-camera-view="tabletop"] .proto-map-world * { box-shadow: none !important; text-shadow: none !important; }
+.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"] { width: 36px; height: 36px; padding: 0; border-width: 2px; border-color: #d8b776; outline-offset: 2px; background: #3f3430; }
+.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"]:focus-visible { outline: 2px solid #fff0b5; }
+.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"][data-selected] { outline: 2px solid #fff0b5; }
 .proto-map [data-board-piece="resource"] {
   border: 3px solid #080507;
   border-bottom-width: 5px;
@@ -425,7 +450,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem 1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
   padding: 0.5rem 0.75rem;
   border: 2px solid #030609;
   border-radius: 0.5rem;
@@ -1690,16 +1715,14 @@ html.drag-perf-mode .target-swirl-sparkles {
 .details-card__header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .details-card__header h2 { margin: 0; font-size: 28px; line-height: 1; text-transform: uppercase; }
 .details-card__badge { width: 48px; height: 48px; display: grid; place-items: center; border: 3px solid #b19057; border-radius: 50%; background: #141824; font-size: 30px; }
-.details-card__art { min-height: 0; border: 3px solid #08070d; background: #10211e; overflow: hidden; }
+.details-card__art { min-height: 0; border: 2px solid #b19057; background: radial-gradient(ellipse at 50% 65%, #355044, #10211e 75%); box-shadow: inset 0 0 0 2px #08070d; overflow: hidden; }
 .details-card__art svg, .details-card__art img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.details-card__sprite { image-rendering: pixelated; }
+.details-card__sprite { image-rendering: pixelated; box-sizing: border-box; padding: 4px; }
 .details-card__descriptor { margin: 0; padding: 10px; border: 2px solid #8c7452; background: #0c1016; font-size: 18px; line-height: 1.15; }
 .details-card__trays { display: grid; gap: 6px; }
 .details-card__tray { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 10px; padding: 6px 10px; border: 2px solid #8c7452; background: #14171c; font-size: 18px; }
 .details-card__tray h3 { margin: 0; font-size: inherit; font-weight: normal; color: #dbc091; }
 .details-card__tray > div { text-align: right; }
-.details-card__close { justify-self: end; padding: 4px 12px; border: 2px solid #b19057; border-radius: 3px; background: #0c1016; font: inherit; font-size: 18px; }
-.details-card__close:focus-visible { outline: 3px solid #ffe19a; outline-offset: 2px; }
 @media (max-height: 600px) {
   .details-card { padding: 10px; gap: 6px; }
   .details-card__descriptor { padding: 6px; font-size: 14px; }
@@ -1779,16 +1802,21 @@ html.drag-perf-mode .target-swirl-sparkles {
   .proto-tableau-field { grid-template-columns: minmax(0,1fr) 196px; grid-template-rows: minmax(0,1fr); }
   .proto-main-foundations { grid-column: 2; }
   .proto-main-tableau { grid-column: 1; }
-  .proto-table-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .proto-game-root .proto-main-foundations { padding: 4px; }
   .proto-game-rail { padding: 2px 0; }
 }
 
 /* Camera controls share one dock with the zoom and absolute grid reference. */
 .proto-map-footer { position: absolute; left: 12px; right: 12px; bottom: 8px; z-index: 50; display: flex; align-items: center; gap: 12px; pointer-events: none; }
-.proto-map-zoom, .proto-map-footer .table-grid-reference { flex: 1 1 0; white-space: nowrap; font: 16px 'Classic Pixel',monospace; }
+.proto-map-readouts, .proto-map-footer .table-grid-reference { flex: 1 1 0; white-space: nowrap; font: 16px 'Classic Pixel',monospace; }
+.proto-map-readouts { display: flex; flex-direction: column; gap: 4px; }
+.proto-map-fps { color: #e2eae5; font-variant-numeric: tabular-nums; }
 .proto-map-zoom { color: #e2eae5; }
 .proto-map-toolbar { display: flex; flex: 0 0 auto; gap: 5px; pointer-events: auto; }
+@media (max-width: 600px) {
+  .proto-map-footer { flex-wrap: wrap; gap: 8px; }
+  .proto-map-toolbar { order: 3; flex-basis: 100%; justify-content: center; }
+}
 .proto-map-camera-button { display: grid; place-items: center; width: 36px; height: 36px; padding: 6px; border: 1px solid #a08a64; border-radius: 3px; color: #ffe2ae; background: #07110ef2; box-shadow: inset 0 1px #ffe2ae26, 0 3px 0 #020504; touch-action: manipulation; }
 .proto-map-camera-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: square; stroke-linejoin: miter; }
 .proto-map-camera-button:hover { background: #25352b; border-color: #ffe2ae; }
@@ -1889,7 +1917,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .table-quest-card .quest-card__reward > span { font-size: 16px; }
 
 /* Compact details use the shared default table-card presentation size. */
-.details-card-viewer--floating .details-card { padding: 6px; gap: 4px; grid-template-rows: auto minmax(0,1fr) auto auto auto; overflow: hidden; }
+.details-card-viewer--floating .details-card { padding: 5px; border-width: 3px; gap: 3px; grid-template-rows: auto minmax(0,1fr) auto auto auto; overflow: hidden; }
 .details-card-viewer--floating .details-card__header { gap: 4px; }
 .details-card-viewer--floating .details-card__header h2 { font-size: 16px; }
 .details-card-viewer--floating .details-card__badge { width: 24px; height: 24px; font-size: 16px; border-width: 2px; }
@@ -1897,7 +1925,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 .details-card-viewer--floating .details-card__descriptor { font-size: 16px; line-height: 1.1; padding: 0; border: 6px solid #0c1016; outline: 2px solid #8c7452; outline-offset: -2px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; box-sizing: content-box; max-height: 2.2em; }
 .details-card-viewer--floating .details-card__trays { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 3px; }
 .details-card-viewer--floating .details-card__tray { display: flex; justify-content: center; gap: 3px; padding: 2px; font-size: 16px; }
-.details-card-viewer--floating .details-card__close { font-size: 16px; padding: 2px 6px; }
 .table-grid-origin { position: absolute; transform: translate(-50%,-50%); display: grid; place-items: center; border: 1px dashed #d4b97b66; color: #d4b97b66; font: 16px 'Classic Pixel',monospace; pointer-events: none; }
 .table-grid-reference { color: #ffe2ae; text-align: right; pointer-events: auto; }
 /* Developer tools live in screen space, above camera-transformed game objects. */
@@ -2389,6 +2416,10 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-table-stage--tilted .proto-table-floor { pointer-events: auto; transform: translateZ(-1px); }
 .proto-table-stage--tilted .proto-map-world > :not(.table-grid-origin) { pointer-events: auto; }
 .proto-standee-base { position: absolute; aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(#0b0907 40%, #2a1e14); border: 2px solid #6b5236; pointer-events: none; }
+.proto-actor-base-name { position: absolute; width: 0; height: 0; transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))); transform-style: preserve-3d; pointer-events: none; }
+.proto-actor-base-name--screen { transform: none; }
+/* Sixfold raster resolution keeps the upright curved lettering crisp at zoom. */
+.proto-actor-base-name__letter { position: absolute; left: 0; top: 0; font-size: 96px; line-height: 1; font-weight: 900; color: #ffe7ad; text-shadow: 0 6px 0 #090705, 6px 0 0 #090705, -6px 0 0 #090705; transform-origin: 0 0; backface-visibility: hidden; white-space: pre; }
 /* Scale inside the foot-anchored transform: an individual CSS scale also
    scales the placement translation, sliding oversized sprites off their tile. */
 .proto-resource-stack.proto-standee { animation-name: proto-standee-pop; }
@@ -2420,9 +2451,10 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-map .proto-sprite-standee[data-board-piece="actor"],
 .proto-map .proto-sprite-standee[data-board-piece="biome-popup"],
 .proto-game-root .proto-sprite-standee[data-board-piece="actor"] { display: block; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
-/* Tilted, biome tiles sit a hair above the cut-outs' shadows (0.5px), so no
-   shadow falls across a tile's label. */
-.proto-table-stage--tilted .proto-map-world > [data-board-piece="tile"] { transform: translate3d(-50%, -50%, 1px); }
+/* Biome ground stays at sea level. Only label ink clears the cut-out shadows;
+   this small rendering offset is not terrain elevation. */
+.proto-table-stage--tilted .proto-map-world > [data-board-piece="tile"] { transform: translate3d(-50%, -50%, 0); transform-style: preserve-3d; }
+.proto-table-stage--tilted [data-board-piece="tile"] > .board-object-label { transform: translateZ(1px); }
 /* Tilted, a lamp's glow hangs in the air as its halo; the token's own wide
    glow showed the edges of its 3D layer as a hard square. */
 .proto-table-stage--tilted .proto-table-lamp { box-shadow: 0 0 4px #ffcf7390, 0 3px 2px #0008; }
@@ -2432,8 +2464,8 @@ html.drag-perf-mode .target-swirl-sparkles {
 /* The table's centre, moved by the same per-frame camera transform as the pieces. */
 .proto-atmosphere__world { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; transform: var(--camera-transform, none); transform-style: preserve-3d; }
 .proto-atmosphere__billboard { position: absolute; width: 0; height: 0; transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt))); transform-origin: 0 0; transform-style: preserve-3d; }
-.proto-halo { position: absolute; border-radius: 50%; animation: proto-halo-flicker 2s ease-in-out infinite alternate; will-change: transform, opacity; }
-@keyframes proto-halo-flicker { 0% { transform: scale(0.94); } 40% { transform: scale(1.03); } 70% { transform: scale(0.98); } 100% { transform: scale(1.05); } }
+.proto-dust { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; }
+.proto-halo { position: absolute; border-radius: 50%; transform: scale(var(--light-flicker, 1)); opacity: calc(var(--halo-opacity, 1) * var(--light-flicker, 1)); }
 .proto-firefly { position: absolute; left: 0; border-radius: 50%; background: #f4ff9c; box-shadow: 0 0 3px 1px #e6ff6acc, 0 0 9px 3px #b8f04a55; animation-name: proto-firefly-drift, proto-firefly-blink; animation-timing-function: ease-in-out, ease-in-out; animation-iteration-count: infinite, infinite; animation-direction: alternate, alternate; }
 @keyframes proto-firefly-drift { 0% { translate: 0 0; } 33% { translate: var(--fx-dx) calc(var(--fx-dy) * -0.6); } 66% { translate: calc(var(--fx-dx) * -0.5) var(--fx-dy); } 100% { translate: calc(var(--fx-dx) * 0.4) calc(var(--fx-dy) * 0.3); } }
 @keyframes proto-firefly-blink { 0%, 55% { scale: 0.3; } 80%, 100% { scale: 1; } }
@@ -2443,16 +2475,20 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-shafts { position: absolute; inset: 0; z-index: 41; overflow: hidden; pointer-events: none; }
 .proto-shaft { position: absolute; top: -30%; height: 150%; transform-origin: 50% 0; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #0009 45%, transparent 90%); mask-image: linear-gradient(to bottom, #000 0%, #0009 45%, transparent 90%); animation: proto-shaft-sway 9s ease-in-out infinite alternate; }
 @keyframes proto-shaft-sway { 0% { opacity: 0.55; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
-.proto-mote { position: absolute; left: 0; border-radius: 50%; background: #fff6dd; box-shadow: 0 0 4px 1px #ffe9b066; animation: proto-mote-drift 12s linear infinite; }
+.proto-mote { position: absolute; left: 0; border-radius: 50%; opacity: var(--fx-illumination, 1); background: #fff6dd; box-shadow: 0 0 4px 1px #ffe9b066; animation: proto-mote-drift 12s linear infinite; }
 .proto-mist { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, #e9eef2 0%, #dfe7ec99 45%, #dfe7ec00 100%); opacity: 0; animation: proto-mist-drift 12s ease-in-out infinite; will-change: transform, opacity; }
 @keyframes proto-mist-drift { 0% { opacity: 0; translate: 0 0; scale: 0.6; } 30% { opacity: var(--fx-peak); } 70% { opacity: calc(var(--fx-peak) * 0.8); } 100% { opacity: 0; translate: var(--fx-dx) calc(var(--fx-dy) * 0.5 - 6px); scale: 1.25; } }
-@keyframes proto-mote-drift { 0% { translate: 0 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { translate: var(--fx-dx) var(--fx-dy); opacity: 0; } }
+@keyframes proto-mote-drift { 0% { translate: 0 0; opacity: 0; } 15% { opacity: var(--fx-illumination, 1); } 85% { opacity: var(--fx-illumination, 1); } 100% { translate: var(--fx-dx) var(--fx-dy); opacity: 0; } }
+.proto-volumetrics { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 41; pointer-events: none; opacity: 0; }
+.proto-volumetrics[data-active="true"] { animation: proto-volume-enter 350ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .proto-volumetrics[data-active="true"] { animation: none; opacity: 1; } }
+@keyframes proto-volume-enter { from { opacity: 0; } to { opacity: 1; } }
 /* Dangerous tiles (the Dark Woods): the woods' fireflies and mist in dark red,
    embers and a blood mist, shown in both cameras as a warning of a fight. */
 .proto-atmosphere--danger .proto-firefly { background: #ff5a3c; box-shadow: 0 0 3px 1px #d0201acc, 0 0 10px 4px #8b000088; }
 .proto-atmosphere--danger .proto-mist { background: radial-gradient(closest-side, #a3141b 0%, #7a0d1299 45%, #7a0d1200 100%); }
 .proto-table-air--flat .proto-atmosphere__billboard { transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))); }
-.proto-map .proto-danger-tile { border-color: rgba(190, 40, 36, 0.8); background: radial-gradient(ellipse at 50% 60%, #3a0d10, #1a0708 70%); color: #ffb3a6; box-shadow: inset 0 0 18px #8b000099; }
+.proto-map .proto-danger-tile { border-color: rgba(190, 40, 36, 0.8); background: radial-gradient(ellipse at 50% 60%, #3a0d10, #1a0708 70%); color: #ffb3a6; }
 .proto-map .proto-danger-tile:hover { border-color: rgba(255, 90, 70, 0.9); }
 .proto-map :is([data-biome-popup="woods-danger"], [data-biome-edge="woods-danger"]) { filter: brightness(0.5) sepia(1) hue-rotate(-38deg) saturate(3.2); }
 @media (prefers-reduced-motion: reduce) { .proto-halo, .proto-firefly, .proto-fizz, .proto-shaft, .proto-mote, .proto-mist { animation: none; } .proto-fizz { opacity: 0.5; } .proto-mist { opacity: calc(var(--fx-peak) * 0.7); } }
@@ -2478,26 +2514,31 @@ html.drag-perf-mode .target-swirl-sparkles {
   filter: blur(1.5px);
 }
 
-/* Battle camera on the foundation: the foundation card leans back like the
-   tableau, and the actor's sprite pops up from the top edge of its card,
-   standing upright above it so the energy bubble, card count and resources
-   stay clear. The assembly makes room above for it. */
-.proto-foundation-board .proto-foundation-card--exploration { transform-origin: 50% 100%; transition: transform 0.35s ease; }
-.proto-foundation-board--tilted .proto-foundation-card--exploration { transform: perspective(600px) rotateX(24deg); transform-style: preserve-3d; }
+/* Exploration and combat trays share their tilt; actors counter-tilt upright
+   at the front edge, with their names between their feet and the camera. */
+.proto-foundation-board .proto-foundation-card--exploration,
+.battle-field__foundation { --foundation-tilt: 24deg; transform-origin: 50% 100%; transition: transform 0.35s ease; }
+.proto-foundation-board--tilted .proto-foundation-card--exploration,
+.battle-field__foundation { transform: perspective(600px) rotateX(var(--foundation-tilt)); transform-style: preserve-3d; }
 .proto-foundation-board--tilted .proto-exploration-actor { position: relative; transform-style: preserve-3d; }
-.proto-foundation-board--tilted .proto-foundation-assembly { padding-top: 56px; }
+.proto-foundation-board--tilted .proto-foundation-card--exploration { padding-bottom: 16px; }
+.proto-foundation-board--tilted .proto-foundation-assembly { padding-top: 0; padding-bottom: 16px; }
 .proto-foundation-popup {
-  position: absolute; left: 50%; bottom: calc(100% - 0.75rem);
+  position: absolute; z-index: 2; left: 50%; bottom: -20px;
   width: 64px; height: 64px; pointer-events: none;
   transform-origin: 50% 100%;
-  transform: translateX(-50%) rotateX(-24deg);
+  transform: translateX(-50%) rotateX(calc(-1 * var(--foundation-tilt)));
 }
-.proto-foundation-popup__base { position: absolute; left: 50%; bottom: -4px; width: 44px; height: 10px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(#0008 30%, transparent 70%); }
+.proto-foundation-popup > .proto-sprite-standee__art,
+.proto-foundation-popup > .proto-light-wash { position: absolute; bottom: 16px; width: 64px; height: 64px; }
+.proto-foundation-popup__base { position: absolute; left: 50%; bottom: 10px; width: 44px; height: 10px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(#0008 30%, transparent 70%); }
+.proto-foundation-popup .proto-actor-base-name { top: auto !important; bottom: 0; }
+.proto-exploration-actor:has(.proto-foundation-popup) .proto-occupied-foundation-owner { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .proto-foundation-board .proto-foundation-card--exploration { transition: none; } }
 /* Short screens (phone landscape) have little height to spare: a smaller pop-up, less room above. */
 @media (max-height: 500px) {
   .proto-foundation-popup { scale: 0.7; }
-  .proto-foundation-board--tilted .proto-foundation-assembly { padding-top: 34px; }
+  .proto-foundation-board--tilted .proto-foundation-assembly { padding-top: 0; }
 }
 
 /* Opt-in reward-hold timing log (?holdlog) for playtests on real devices. */
@@ -2534,7 +2575,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-sprite-topdown__piece > .proto-sprite-topdown__name { position: absolute; left: 50%; transform: translateX(-50%); padding-bottom: 1px; font-family: 'Classic Pixel', monospace; font-size: 10px; line-height: 1; white-space: nowrap; color: #fff1cf; text-shadow: 0 1px 0 #000, 0 0 3px #000c; }
 .proto-sprite-topdown--selected { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
 
-/* Drop cue: the biome under a dragged piece glows and lifts slightly, so the
+/* Drop cue: the biome under a dragged piece glows at table level, so the
    player sees where the piece will land before letting go. */
 .proto-map .proto-drop-target {
   border-color: #ffe7ad;
@@ -2878,11 +2919,11 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-tableau-scenery__layer--1 { opacity: .65; transform: translate(var(--scene-pan-x, 0px), var(--scene-pan-y, 0px)); }
 .proto-tableau-scenery__layer--2 { opacity: .8; transform: translate(calc(var(--scene-pan-x, 0px) * 1.6), calc(var(--scene-pan-y, 0px) * 1.6)); }
 .proto-tableau-scenery__prop { position: absolute; display: block; image-rendering: pixelated; }
-.proto-tableau-scenery__rays { position: absolute; inset: -15% -25%; background: conic-gradient(from 140deg at 50% 0%, transparent 0deg 7deg, #ffe0a014 8deg 13deg, transparent 14deg 22deg, var(--scene-ray) 23deg 29deg, transparent 30deg 46deg, #ffe0a014 47deg 53deg, transparent 54deg); transform: translateX(calc(var(--scene-pan-x, 0px) * -.5)); }
+.proto-tableau-scenery__rays { filter: blur(3px); position: absolute; inset: -15% -25%; background: conic-gradient(from 140deg at 50% 0%, transparent 0deg 7deg, #ffe0a014 8deg 13deg, transparent 14deg 22deg, var(--scene-ray) 23deg 29deg, transparent 30deg 46deg, #ffe0a014 47deg 53deg, transparent 54deg); transform: translateX(calc(var(--scene-pan-x, 0px) * -.5)); }
 .proto-tableau-scenery__mist { position: absolute; inset: 45% -10% 10%; background: radial-gradient(ellipse, #b7dcd81a, transparent 65%); animation: tableau-mist 12s ease-in-out infinite alternate; }
 .proto-tableau-scenery__motes i { position: absolute; width: 2px; height: 2px; background: #ffe0a0; box-shadow: 0 0 5px #ffe0a0; opacity: .4; animation: tableau-mote 8s ease-in-out infinite; }
-.proto-tableau-fixture { position: absolute; top: 6px; left: 50%; width: 52px; height: 8px; transform: translateX(-50%); border: 2px solid #5e5040; border-radius: 2px; background: #fff3c4; box-shadow: 0 0 8px #ffe0a0b0, 0 8px 25px #ffe0a033; z-index: 1; pointer-events: none; }
-.proto-tableau-fixture::before { content: ''; position: absolute; width: 2px; height: 8px; bottom: 100%; left: 50%; background: #8a795a; }
+ .proto-tableau-fixture { position: absolute; top: -24px; left: 50%; width: 170px; height: 110px; transform: translateX(-50%); border: 0; border-radius: 50%; background: radial-gradient(ellipse, #fff4d9aa 0%, #ffe8aa55 18%, #e3dca321 42%, transparent 72%); filter: blur(9px); pointer-events: none; }
+.proto-tableau-scenery__layer { background: transparent; }
 .proto-lit-surface { filter: brightness(var(--surface-brightness, 1)); }
 .proto-lit-surface::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(var(--surface-angle, 135deg), var(--surface-light, transparent), transparent 70%); pointer-events: none; }
 .proto-main-foundations { position: relative; }
@@ -2901,7 +2942,6 @@ html.drag-perf-mode .target-swirl-sparkles {
   .proto-tableau-scenery__layer, .proto-tableau-scenery__rays { transform: none; }
 }
 .proto-tableau-stage .proto-card-rank { font-size: max(16px, calc(var(--classic-card-w) * .34)); }
-.proto-tableau-field .proto-table-summary { font-size: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); letter-spacing: normal; }
 .proto-tableau-field .proto-occupied-foundation-owner, .proto-tableau-field .proto-empty-foundation-face { font-size: 16px; letter-spacing: normal; }
 .proto-occupied-foundation-face.proto-lit-surface { position: relative; }
 /* The rank/icon row must fit the exposed edge even in the narrow desktop rack. */
@@ -2909,3 +2949,66 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-tableau-stage .playing-card > div { gap: 0; transform: translateY(-2px); }
 .proto-tableau-stage .playing-card > div > div:last-child:not(.proto-card-rank) { margin-top: 0; font-size: max(16px, calc(var(--classic-card-w) * .3)); }
 .proto-tableau-stage .proto-card-rank { font-family: 'Classic Pixel', monospace; }
+
+/* The CSS map camera renders once. Its clipping window extends into the
+   exploration shelf while its dimensions, perspective pivot and input stay put. */
+.proto-main-layout:has(.proto-map[data-tableau-extension='true']) { isolation: isolate; }
+.proto-map[data-tableau-extension='true'] { overflow: visible; }
+.proto-map[data-tableau-extension='true'] .proto-map-viewport { position: relative; z-index: 0; overflow: visible; }
+.proto-tableau-field[data-css-camera-background='true'] { position: relative; z-index: 1; }
+.proto-game-root .proto-tableau-field[data-css-camera-background='true'] > .proto-main-tableau,
+.proto-game-root .proto-tableau-field[data-css-camera-background='true'] > .proto-main-foundations {
+  background: repeating-linear-gradient(90deg,#ffffff03 0 1px,transparent 1px 3px), linear-gradient(90deg,#07121ae0,#07121ac7);
+}
+
+.proto-solve-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.proto-solve-toggle { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; cursor: pointer; }
+.proto-solve-toggle input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+.proto-solve-toggle span { display: grid; place-items: center; width: 100%; height: 100%; border: 1px solid #8ef2d473; border-radius: 6px; background: #0b1916; font-size: 22px; pointer-events: none; }
+.proto-solve-toggle input:checked + span { background: #26594b; border-color: #8ef2d4; box-shadow: inset 0 0 0 2px #8ef2d4; color: #fff; }
+.proto-solve-toggle input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+.proto-solve-toggle:has(input:disabled) { opacity: .4; cursor: default; }
+
+/* Full tile titles use measured lines inside the rotated footprint, with no
+   cropped text or opaque label plaque. Immutable regions share this component. */
+.proto-tile-title-anchor { position: absolute; inset: 0; pointer-events: none; }
+.proto-tile-title {
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+  pointer-events: none; font-family: 'Classic Pixel', monospace;
+  font-weight: 900; color: #eee9d5; z-index: 1;
+  transform: translateZ(1px); transform-origin: 0 0;
+}
+.proto-tile-title__line {
+  display: block; position: absolute; transform: translateX(-50%);
+  text-align: center; white-space: pre; letter-spacing: 0;
+  -webkit-text-stroke: 2px #10171a; paint-order: stroke fill;
+}
+.proto-immutable-region-label {
+  position: absolute; transform: translate(-50%, -50%);
+  pointer-events: none; transform-style: preserve-3d;
+}
+
+.proto-table-title-layer { z-index: 42; transform-origin: 50% 50%; transition: transform 520ms ease; }
+@media (prefers-reduced-motion: reduce) { .proto-table-title-layer { transition: none; } }
+
+/* Shared x-ray pass. Physical actors remain in the world's depth scene. */
+.proto-table-actor-layer { z-index: 43; pointer-events: none; transform-origin: 50% 50%; transition: transform 520ms ease; }
+.proto-map .proto-map-world > .proto-neutral-ground { pointer-events: none; transform-style: flat; }
+.proto-neutral-ground > button { pointer-events: auto; }
+.proto-table-actor-layer .proto-map-world > [data-board-piece="actor"],
+.proto-table-actor-layer .proto-map-world > [data-cell-grip] { pointer-events: auto; }
+.proto-table-actor-layer .proto-standee-base, .proto-table-actor-layer .proto-actor-base-name { pointer-events: none !important; }
+.proto-map [data-tabletop][data-tile-type="impassable-mountain"] { background: transparent; }
+.proto-map [data-board-piece="tile"][data-tile-type="hero-den"] { background: transparent; }
+@media (prefers-reduced-motion: reduce) { .proto-table-actor-layer { transition: none; } }
+
+.proto-map [data-environment-prop] { transition: opacity 180ms ease; }
+.proto-map [data-actor-occluder="true"] { opacity: .48; }
+.proto-actor-ghost { pointer-events: auto !important; }
+.proto-actor-ghost > .proto-oversample { filter: url(#proto-actor-xray); }
+.proto-actor-ghost:not(:has(> .proto-oversample)) { filter: url(#proto-actor-xray); }
+.proto-map [data-board-piece="actor"][data-actor-occluded="true"] > .proto-oversample { opacity: .28; }
+.proto-map [data-board-piece="actor"][data-actor-occluded="true"]:not(:has(> .proto-oversample)) { opacity: .28; }
+.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"].proto-sleeping-overhead { padding: 0; border: 0; background: none; box-shadow: none; }
+.proto-sleeping-overhead img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .proto-map [data-environment-prop] { transition: none; } }

@@ -1,3 +1,4 @@
+import type { RoadTile } from './roadTiles';
 import type { BiomeFlag } from './biomeFlags';
 import type { PlacedQuestCard } from './components/TableQuestCard';
 import type { CraftStack, WorldItemId } from './protoCrafting';
@@ -46,6 +47,8 @@ export type BiomeTileState = {
   threat: 'none' | 'low' | 'high';
   /** Water tiles are fished, not dealt as a tableau. Defaults to woods. */
   terrain?: 'woods' | 'water';
+  tileType?: 'unexplored' | 'path' | 'hero-den' | 'impassable-mountain';
+  road?: RoadTile;
   /** What the tile does to travel and to opening its tableau (biomeFlags.ts). */
   flags?: BiomeFlag[];
   /** Cards dealt to its tableau and stock, for how much of it is explored. */

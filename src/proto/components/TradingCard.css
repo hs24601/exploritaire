@@ -1,0 +1,75 @@
+/* Independently authored foil, informed by Simey’s V-card layered-gradient method.
+   https://poke-holo.simey.me/ — no demo textures, artwork or source copied. */
+.trading-card-stage { width: 100%; height: 100%; perspective: 650px; touch-action: none; }
+.details-card-viewer--floating:focus { outline: none; }
+.details-card-viewer--floating:focus-visible .trading-card { outline: 2px solid #ffe39c; outline-offset: 2px; }
+.trading-card-stage > .details-card.trading-card {
+  --foil-x: 50%; --foil-y: 50%; --foil-active: 0;
+  --tilt-x: 0deg; --tilt-y: 0deg; --card-lift: 0; --shadow-x: 0px;
+  position: relative; isolation: isolate; display: flex; flex-direction: column;
+  justify-content: space-between; padding: 7px; gap: 0; border: 4px solid #101219;
+  border-radius: 10px; background: #102b28; touch-action: none;
+  transform: translate3d(0, calc(var(--card-lift) * -3px), calc(var(--card-lift) * 18px)) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transform-origin: center; will-change: transform;
+  box-shadow: inset 0 0 0 1px #c4d4d8, inset 0 0 0 3px #3c535a,
+    var(--shadow-x) calc(5px + var(--card-lift) * 13px) calc(10px + var(--card-lift) * 16px) #0009;
+}
+.trading-card__art { position: absolute; inset: 3px; z-index: -3; overflow: hidden; border-radius: 5px; }
+.trading-card__art img, .trading-card__art svg { width: 100%; height: 100%; display: block; object-fit: cover; }
+.trading-card__art .details-card__sprite { padding: 0; image-rendering: auto; }
+.trading-card__art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(#06161785, transparent 24%, transparent 54%, #041015d9 83%); }
+.trading-card__foil, .trading-card__glare { position: absolute; inset: 3px; border-radius: 5px; pointer-events: none; z-index: -2; }
+.trading-card--diagonal-holo .trading-card__foil {
+  background-image: repeating-linear-gradient(132deg, #091b35 0%, #b5dce0 3%, #f3f5dd 4%, #7b98ad 5%, #0c1a35 10%, #0c1a35 13%),
+    repeating-linear-gradient(0deg, #ff91b9 0%, #ffe99b 15%, #acffbf 30%, #91ebfa 45%, #a5a4ff 60%, #eda2ff 75%, #ff91b9 90%);
+  background-size: 270% 180%, 180% 500%; background-position: var(--foil-x) var(--foil-y), 50% var(--foil-y);
+  background-blend-mode: luminosity; mix-blend-mode: color-dodge;
+  filter: contrast(1.4) saturate(.8); opacity: calc(.18 + var(--foil-active) * .2);
+  transition: opacity 200ms ease;
+}
+.trading-card--diagonal-holo .trading-card__foil::after {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(132deg, transparent 0 3px, #ffffff26 4px, transparent 5px 8px);
+  mix-blend-mode: soft-light;
+}
+.trading-card--diagonal-holo .trading-card__glare {
+  background: radial-gradient(ellipse at var(--foil-x) var(--foil-y), #fffceca6, #cceff21a 35%, transparent 65%);
+  mix-blend-mode: screen; opacity: calc(.08 + var(--foil-active) * .26); transition: opacity 200ms ease;
+}
+.trading-card__header { display: flex; align-items: center; justify-content: space-between; gap: 4px; position: relative; }
+.trading-card__header h2 { margin: 0; font-size: 18px; line-height: 1; color: #f6f2df; text-transform: uppercase; text-shadow: 1px 2px #000, 0 0 5px #000; overflow-wrap: anywhere; }
+.trading-card__badge { display: grid; place-items: center; width: 24px; height: 24px; flex: none; font-size: 18px; color: #f0eacc; border: 1px solid #ccdadd; border-radius: 50%; background: linear-gradient(135deg,#79959c,#17212c 48%,#435c63); }
+.trading-card__close { padding: 0; font-family: inherit; line-height: 1; cursor: pointer; touch-action: manipulation; }
+.trading-card__close:hover { color: #fff; border-color: #ffe39c; }
+.trading-card__close:focus-visible { outline: 2px solid #ffe39c; outline-offset: 2px; }
+.trading-card__body { display: grid; gap: 5px; position: relative; }
+.trading-card__description { margin: 0; color: #edf3e2; font-size: 16px; line-height: 1.1; padding: 4px 3px; background: #07191be8; border-top: 1px solid #c0d0bf; border-bottom: 1px solid #677f79; text-align: center; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.trading-card__sections { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 3px; }
+.trading-card__section { display: flex; align-items: center; justify-content: center; gap: 3px; padding: 3px 1px; min-width: 0; font-size: 16px; line-height: 1; border: 1px solid #8eafb1; border-radius: 3px; color: #f3efd6; background: linear-gradient(135deg,#36535beF,#101c29f5 55%,#29434bf0); }
+.trading-card__section h3 { margin: 0; font: inherit; }
+.trading-card__footer { font-size: 16px; }
+.trading-card__description:focus-visible, .trading-card__section:focus-visible { outline: 2px solid #ffe39c; outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) {
+  .trading-card-stage > .details-card.trading-card { transform: none; will-change: auto; box-shadow: inset 0 0 0 1px #c4d4d8, inset 0 0 0 3px #3c535a; }
+  .trading-card--diagonal-holo .trading-card__foil, .trading-card--diagonal-holo .trading-card__glare { background-position: 50% 50%; transition: none; opacity: .16; }
+  .trading-card--diagonal-holo .trading-card__glare { opacity: .08; background: linear-gradient(132deg, transparent, #ffffff20, transparent); }
+}
+.details-card-jumbo__backdrop { position: fixed; inset: 0; z-index: 49999; background: #02080d99; backdrop-filter: blur(9px); touch-action: none; }
+.details-card-viewer--jumbo .trading-card-stage { perspective: 1800px; }
+.details-card-viewer--jumbo .details-card.trading-card { padding: 16px; border-width: 6px; border-radius: 18px; }
+.details-card-viewer--jumbo .trading-card__header h2 { font-size: 32px; }
+.details-card-viewer--jumbo .trading-card__badge { width: 42px; height: 42px; font-size: 28px; }
+.details-card-viewer--jumbo .trading-card__body { gap: 10px; }
+.trading-card__full-description { padding: 10px 12px; border: 1px solid #a8c0bd; background: #07191bf2; border-radius: 5px; }
+.trading-card__full-description h3 { margin: 0 0 6px; color: #d5dfbb; font-size: 16px; line-height: 1.1; }
+.trading-card__full-description p { margin: 0; font-size: 18px; line-height: 1.25; }
+.details-card-viewer--jumbo .trading-card__sections { grid-template-columns: minmax(0,1fr); gap: 5px; }
+.details-card-viewer--jumbo .trading-card__section { display: grid; grid-template-columns: 105px minmax(0,1fr); justify-content: stretch; padding: 7px 10px; gap: 10px; line-height: 1.15; }
+.details-card-viewer--jumbo .trading-card__section h3 { color: #d5dfbb; }
+.hero-card__stats { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.details-card-game-blurred { filter: blur(7px); }
+.tile-card-art { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 55%, #526958, #152824 75%); }
+.trading-card__art .tile-card-art > img { width: 100%; height: 62%; object-fit: contain; image-rendering: pixelated; }
+.tile-card-art--danger { filter: sepia(.4) saturate(1.5) hue-rotate(320deg) brightness(.75); }
+.tile-card-action { display: block; width: 100%; padding: 5px 3px; border: 1px solid #b6c9b1; border-radius: 3px; background: #163531; color: #f6f2df; font: inherit; font-size: 16px; line-height: 1.1; cursor: pointer; touch-action: manipulation; }
+.tile-card-action:hover, .tile-card-action:focus-visible { border-color: #ffe39c; background: #294d42; outline: 2px solid #ffe39c; outline-offset: 1px; }

@@ -67,6 +67,7 @@ export const ProtoCard = ({
     data-resource-node={card.resource}
     data-encounter={card.encounter}
     data-highlight={active || mobilityTarget ? 'true' : undefined}
+    aria-pressed={selected || undefined}
     data-buried={buried || undefined}
     onClick={onClick}
     disabled={disabled}

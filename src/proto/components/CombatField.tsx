@@ -31,7 +31,7 @@ const eventMessage = (state: SkirmishState) => {
  *
  * Cards play by dragging them onto the hero's foundation, or by a tap or click
  * (press and release without moving) for speed. Keyboard: Enter on a card,
- * keys 1–7 play a column, Space draws.
+ * keys 1–7 play a column; Enter activates Draw.
  */
 export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
   seed: number;
@@ -78,7 +78,6 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable], [role="dialog"]')) return;
       if (event.key >= '1' && event.key <= '7') { event.preventDefault(); play(Number(event.key) - 1); }
-      else if (event.key === ' ' && !(event.target instanceof HTMLButtonElement)) { event.preventDefault(); draw(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -159,7 +158,7 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
                   onPointerMove={top ? moveDrag : undefined}
                   onPointerUp={top ? (event) => endDrag(event) : undefined}
                   onPointerCancel={top ? (event) => endDrag(event, true) : undefined}>
-                  {/* Mouse and touch play through the pointer handlers; Enter or Space (detail 0) plays from the keyboard. */}
+                  {/* Mouse and touch play through the pointer handlers; Enter (detail 0) plays from the keyboard. */}
                   <ProtoCard card={card} disabled={!top || Boolean(fight.result)} muted={!top}
                     onClick={top ? (event) => { if (event.detail === 0 && playable) play(columnIndex); } : undefined} />
                   {eyed ? (
@@ -193,13 +192,13 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
           </div>
         </div>
         <button type="button" className="proto-skirmish__stock" disabled={Boolean(fight.result)} onClick={draw}
-          title="Draw: turn up a new card for your foundation when nothing plays (Space)">
+          title="Draw: turn up a new card for your foundation when nothing plays (Enter)">
           <span aria-hidden="true">▤</span><span>Draw</span>
         </button>
       </div>
 
       <footer className="proto-skirmish__footer">
-        <span className="proto-skirmish__legend" title="Keys 1–7 play a column; Space draws">Drag or tap a card · 1–7 · Space draws</span>
+        <span className="proto-skirmish__legend" title="Keys 1–7 play a column; focus Draw and press Enter">Drag or tap a card · 1–7 · Enter on Draw</span>
         <button type="button" className="proto-skirmish__leave" onClick={() => onLeave(fightRef.current.hero.hp)}>{fight.result ? 'Leave Woods' : 'Flee'}</button>
       </footer>
 

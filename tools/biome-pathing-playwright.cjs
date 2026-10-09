@@ -1,6 +1,6 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 // Biome flags and pathing. Every biome starts unexplored: a tap on one opens
-// no tableau, only a note that an actor has to go there first. Routes are the
+// no tableau or popup. Routes are the
 // fastest legal ones on the grid: never through an unexplored biome (or the
 // terrain), diagonal where open, never cutting a blocked corner. Dragging the
 // Hero previews the route as a line on the table that follows those cells;
@@ -36,14 +36,14 @@ const routeOf=p=>p.evaluate(()=>{const svg=document.querySelector('[data-route-l
     const p=await b.newPage({viewport:{width:w,height:h}});const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(URL);await p.waitForTimeout(500);
     if(view==='tilt'){await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(1200);}
     if(yaw){await p.keyboard.press('e');await p.waitForTimeout(450);await p.keyboard.press('e');await p.waitForTimeout(600);}
-    // A tap on an unexplored biome opens no tableau, just the note.
+    // A tap on an unexplored biome opens no tableau or popup.
     if(yaw===0){
       for(const id of ['pond','woods-alpha']){
         const tile=p.locator(`button[data-biome-id="${id}"]`);
-        if((await tile.locator('.board-object-label__text').textContent())!=='???')problems.push(`${tag}: unexplored ${id} shows its name`);
+        if(await tile.locator('.proto-tile-title').count())problems.push(`${tag}: unexplored ${id} shows its name`);
         await tile.click({position:{x:6,y:6},force:true});await p.waitForTimeout(200);
         if(await p.locator('.proto-tableau-field:not(.hidden)').count())problems.push(`${tag}: tapping unexplored ${id} opened its tableau`);
-        const note=p.locator('.biome-closed-note');if(!(await note.count())||!/Unexplored/.test(await note.textContent()))problems.push(`${tag}: no unexplored note for ${id}`);
+        if(await p.locator('.biome-closed-note').count())problems.push(`${tag}: unexplored popup for ${id}`);
         await p.keyboard.press('Escape');await p.waitForTimeout(100);
       }
     }
@@ -95,5 +95,5 @@ const routeOf=p=>p.evaluate(()=>{const svg=document.querySelector('[data-route-l
     await p.close();
   }
   assert.deepEqual(problems,[],'pathing defects:\n'+problems.join('\n'));
-  console.log('Biome pathing: unexplored biomes stay closed with a note, routes are the fastest legal ones and never cross unexplored ground, the line follows the route, shrinks as the Hero walks and is gone on arrival, and the Hero walks back to its start; flat and tilted, 0 and 90 degrees, 1912x914 and 1280x720.');
+  console.log('Biome pathing: unexplored biomes stay closed without a popup, routes are the fastest legal ones and never cross unexplored ground, the line follows the route, shrinks as the Hero walks and is gone on arrival, and the Hero walks back to its start; flat and tilted, 0 and 90 degrees, 1912x914 and 1280x720.');
 }finally{await b.close()}})().catch(e=>{console.error(e.message);process.exitCode=1});

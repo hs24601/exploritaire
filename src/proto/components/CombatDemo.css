@@ -1,0 +1,36 @@
+.combat-demo { position: relative; display: grid; grid-template-rows: auto minmax(0,1fr); height: 100%; min-height: 0; min-width: 0; overflow: hidden; border: 2px solid #49645d; border-radius: 8px; background: transparent; color: #e1efea; font: 16px 'Classic Pixel',monospace; outline: none; overscroll-behavior: none; container: battle-camera / inline-size; }
+.combat-demo__header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border-bottom: 2px solid #49645d; background: #101b22; }
+.combat-demo h1 { margin: 0; font: inherit; font-size: 20px; color: #b9f4df; }
+.combat-demo button { border: 1px solid #7b9583; border-radius: 4px; background: #142720e6; color: #f7edd3; padding: 5px 8px; font: inherit; cursor: pointer; touch-action: manipulation; box-shadow: 0 2px 3px #050c1080; }
+.combat-demo button:hover:not(:disabled) { background: #324a3e; border-color: #c9dec9; }
+.combat-demo button:disabled { opacity: .5; cursor: wait; }
+.combat-demo button:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 2px; }
+.combat-demo__arena { min-width: 0; min-height: 0; overflow: hidden; }
+.combat-demo[data-camera-view='freecam'] .combat-demo__arena { cursor: grab; touch-action: none; }
+.combat-demo__arena[data-dragging='true'] { cursor: grabbing; }
+.combat-demo__footer { position: absolute; bottom: 10px; left: 10px; max-width: calc(100% - 20px); z-index: 3; pointer-events: none; }
+.combat-demo__footer button, .combat-demo__diagnostics { pointer-events: auto; }
+.combat-demo__readout { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 6px; color: #c9ded4; text-shadow: 0 1px 3px #000, 0 0 5px #000; }
+.combat-demo__readout > span:last-child { font-variant-numeric: tabular-nums; }
+.combat-demo__camera-panel, .combat-demo__views { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.combat-demo__scene-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.combat-demo .combat-demo__view { display: flex; align-items: center; gap: 4px; padding: 4px 6px; min-height: 32px; }
+.combat-demo .combat-demo__view[aria-pressed='true'] { color: #fff3cc; border-color: #f3c974; background: #514333e6; }
+.combat-demo__angle-icon { width: 24px; height: 16px; fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: square; }
+.combat-demo__icon-ground { fill: #10221e; stroke: #6c887c; }
+.combat-demo__icon-party { stroke: #9bded2; }
+.combat-demo__icon-enemy { stroke: #caa7db; }
+.combat-demo__icon-camera { stroke: #f3c974; fill: #3b3426; }
+.combat-demo__icon-ray { stroke: #f3c974; stroke-width: 1; stroke-dasharray: 2 3; opacity: .7; }
+.combat-demo__diagnostics { margin-top: 6px; color: #b9e0d4; width: fit-content; }
+.combat-demo__diagnostics summary { cursor: pointer; touch-action: manipulation; padding: 4px 6px; border: 1px solid #49645d; border-radius: 4px; background: #101b22d9; }
+.combat-demo__diagnostics:not([open]) .combat-demo__diagnostic-body { display: none; }
+.combat-demo__diagnostic-body { position: absolute; bottom: calc(100% + 8px); left: 0; width: min(580px,calc(100cqw - 24px)); z-index: 4; display: grid; gap: 8px; padding: 10px; border: 2px solid #49645d; border-radius: 4px; background: #101b22f5; }
+.combat-demo__properties { min-width: 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; font: 16px/1.15 monospace; font-variant-numeric: tabular-nums; }
+.combat-demo__properties span { overflow-wrap: anywhere; }
+@container battle-camera (max-width: 420px) { .combat-demo__properties { grid-template-columns: minmax(0,1fr); } }
+/* One world render occupies the union of the camera arena and tableau panel. */
+.proto-main-layout:has(> .combat-demo) { position: relative; isolation: isolate; }
+.combat-shared-view { position: absolute; z-index: -1; pointer-events: none; overflow: hidden; border-radius: 6px; background: #0b1520; }
+.combat-shared-view[hidden] { display: none; }
+.combat-shared-view canvas { display: block; image-rendering: pixelated; }

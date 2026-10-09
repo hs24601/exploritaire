@@ -72,12 +72,19 @@ export const WORLD_ACTOR_SPRITES: Record<string, string> = {
 
 /** Pop-up scenery for biome tiles, by tile id (drawn by tools/make-pine-sprite.py). */
 export const BIOME_TILE_SPRITES: Record<string, string> = {
+  'hero-den': `${import.meta.env.BASE_URL}assets/biomes/hero-den-standee-v2.png`,
   'woods-alpha': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
   'woods-east': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
   pond: `${import.meta.env.BASE_URL}assets/biomes/pond_reeds.png`,
   // The Dark Woods share the pines, darkened and reddened in CSS.
   'woods-danger': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
 };
+
+/** Terrain artwork follows its type, including newly authored cells. */
+export const biomeTileSprite = (tile: { id: string; tileType?: string }) =>
+  tile.tileType === 'impassable-mountain'
+    ? `${import.meta.env.BASE_URL}assets/biomes/mountain_standee.svg`
+    : BIOME_TILE_SPRITES[tile.id];
 
 /** Tilted camera only: scenery lining the sides and front of biome tiles, by
  * terrain (drawn by tools/make-edge-scenery-sprites.py; sizes are the trimmed

@@ -14,7 +14,7 @@ const DIRECTIONS = { 1: 'up', [-1]: 'down', 0: 'none' } as Record<number, 'up' |
  * water's place, and the reel hand, in the bait hand's place.
  *
  * Reel cards play on press (pointer down, so touch and mouse both feel instant),
- * on Enter or Space, and from anywhere with the arrow keys (up plays a +1 card,
+ * on Enter, and from anywhere with the arrow keys (up plays a +1 card,
  * down a -1 card).
  */
 export const FishFight = ({ seed, rank, onEnd }: {
