@@ -76,3 +76,16 @@
 .battle-ability-ghost { position: fixed; z-index: 60001; display: grid; justify-items: center; gap: 2px; padding: 6px 8px; border: 3px solid #050409; border-radius: 8px; background: linear-gradient(160deg,#6a4a1c,#2a1a08); box-shadow: inset 0 0 0 2px #ffd166, 0 8px 18px #000a; color: #fff6e6; font: 16px/1.15 'Classic Pixel',monospace; white-space: nowrap; pointer-events: none; transform: translate(14px,14px) rotate(-4deg); }
 .battle-ability-ghost[data-element='fire'] { background: linear-gradient(160deg,#a8401a,#3b0f06); }
 .battle-ability-ghost__result { color: #ffe08a; }
+
+.battle-foe__eye { color: #ffb4f0; }
+.battle-chip[data-chip='fed'] { background: #5a2a14; color: #ffd8a8; }
+.battle-floater[data-kind='take'] { color: #e7b6ff; font-size: 18px; }
+.battle-floater[data-kind='snatch'] { color: #9ef0c4; font-size: 18px; }
+.battle-floater[data-kind='trap'] { color: #ffb347; }
+
+/* Marks over a table card: eyes (with a draining bar) and traps. */
+.battle-card-mark { position: absolute; left: 0; width: var(--classic-card-w); height: calc(var(--classic-card-w) * 74 / 56); z-index: 40; pointer-events: none; }
+.battle-card-mark__eye { position: absolute; left: 3px; right: 3px; bottom: 3px; height: 6px; border-radius: 3px; background: #1a0b22; box-shadow: 0 0 0 1px #000; }
+.battle-card-mark__eye-fill { position: absolute; inset: 0 auto 0 0; background: #d77bff; transition: width 120ms linear; }
+.battle-card-mark__glyph { position: absolute; top: -10px; right: -6px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #2b1236; box-shadow: 0 0 0 2px #d77bff, 0 2px 0 #000; font-size: 16px; line-height: 1; }
+.battle-card-mark__glyph[data-mark='trap'] { left: -6px; right: auto; background: #4a2a06; box-shadow: 0 0 0 2px #ffb347, 0 2px 0 #000; }

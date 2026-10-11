@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ABILITIES, MAX_CHARGE, SPIRITS, nextBreakpoint, type Attack } from '../rules/battleAbilities';
-import type { AttackPreview, BattleActor, BattleEvent, BattleFoe } from '../rules/battle';
+import type { AttackPreview, BattleActor, BattleEvent, BattleFoe, Trap } from '../rules/battle';
+import { rankLabel } from '../protoState';
 import './BattleUnits.css';
 
 const pct = (value: number, max: number) => `${Math.max(0, Math.min(100, (value / max) * 100))}%`;
@@ -32,7 +33,7 @@ function useFloaters(events: readonly BattleEvent[], unitId: string) {
     const fresh = events.filter((event) => event.id > seen.current);
     if (!fresh.length) return;
     seen.current = fresh[fresh.length - 1]!.id;
-    const mine = fresh.filter((event) => event.targetId === unitId && (event.amount || event.kind === 'stagger' || event.kind === 'ko' || event.kind === 'down'));
+    const mine = fresh.filter((event) => event.targetId === unitId && (event.amount || ['stagger', 'ko', 'down', 'take', 'snatch'].includes(event.kind)));
     if (!mine.length) return;
     setFloaters((current) => [...current, ...mine].slice(-6));
     const timer = window.setTimeout(() => setFloaters((current) => current.filter((event) => !mine.includes(event))), 1100);
@@ -45,7 +46,8 @@ function Floaters({ events, unitId }: { events: readonly BattleEvent[]; unitId: 
   const floaters = useFloaters(events, unitId);
   return <span className="battle-floaters" aria-hidden="true">
     {floaters.map((event, i) => <span key={event.id} className="battle-floater" data-kind={event.kind} style={{ '--i': i % 3 } as CSSProperties}>
-      {event.kind === 'stagger' ? 'BREAK!' : event.kind === 'ko' ? 'KO' : event.kind === 'down' ? 'DOWN' : `-${event.amount}`}
+      {event.kind === 'stagger' ? 'BREAK!' : event.kind === 'ko' ? 'KO' : event.kind === 'down' ? 'DOWN' : event.kind === 'take' ? `ate ${rankLabel(Number(event.label))}`
+        : event.kind === 'snatch' ? 'Snatch +1' : event.kind === 'trap' ? `Trap -${event.amount}` : `-${event.amount}`}
     </span>)}
   </span>;
 }
@@ -71,7 +73,7 @@ export function FoeCard({ foe, target, preview, focus, events, sprite, aiming, i
     aria-label={`${foe.name}: ${foe.hp} of ${foe.profile.maxHp} HP${staggered ? ', staggered' : ''}${preview ? `. ${preview.attack.name} would deal ${preview.damage}${preview.ko ? ' and defeat it' : ''}${preview.staggers ? ' and stagger it' : ''}` : ''}`}
     {...interaction}>
     <span className="battle-foe__figure">{sprite}<Floaters events={events} unitId={foe.id} /></span>
-    <span className="battle-foe__name">{foe.name}</span>
+    <span className="battle-foe__name">{foe.name}{foe.eye && foe.hp > 0 ? <span className="battle-foe__eye"> · eyes {rankLabel(foe.rank)}±1</span> : null}</span>
     {alive ? <span className="battle-foe__bars">
       <Bar kind="hp" value={foe.hp} max={foe.profile.maxHp} preview={show?.hp.after} label={`${foe.name} HP`}>
         {show ? `${foe.hp}→${show.hp.after}` : `${foe.hp}/${foe.profile.maxHp}`}
@@ -83,6 +85,7 @@ export function FoeCard({ foe, target, preview, focus, events, sprite, aiming, i
     </span> : <span className="battle-foe__defeated">Defeated</span>}
     {alive && <span className="battle-foe__chips">
       {staggered && <span className="battle-chip" data-chip="staggered">STAGGERED</span>}
+      {foe.fed > 0 && <span className="battle-chip" data-chip="fed" title={`Fed: its next hit deals ${foe.fed} more`}>🍖+{foe.fed}</span>}
       {foe.effects.map((effect) => <span key={effect.kind} className="battle-chip" data-effect={effect.kind}>{EFFECT_ICON[effect.kind]}{Math.ceil(effect.left)}s</span>)}
       {preview?.ko && <span className="battle-chip" data-preview-chip="ko">KO</span>}
       {preview?.staggers && <span className="battle-chip" data-preview-chip="break">BREAK</span>}
@@ -122,18 +125,34 @@ export function AbilityCard({ actor, attack, armed, dragging, interaction, disab
   </button>;
 }
 
-export function PartyVitals({ actor, events, targeted }: { actor: BattleActor; events: readonly BattleEvent[]; targeted: boolean }) {
+export function PartyVitals({ actor, count, events, targeted }: { actor: BattleActor; count: number; events: readonly BattleEvent[]; targeted: boolean }) {
   return <span className="battle-vitals" data-targeted={targeted || undefined}>
+    <span className="proto-foundation-count-token" aria-label={`Collected cards ${count}`}>▤{count}</span>
     <Bar kind="hp" value={actor.hp} max={actor.maxHp} label={`${actor.name} HP`}>{actor.hp > 0 ? `${actor.hp}/${actor.maxHp}` : 'Down'}</Bar>
-    {actor.spirits.map((id) => SPIRITS[id] && <span key={id} className="battle-chip" data-spirit={id} title={`${SPIRITS[id].name}: ${SPIRITS[id].prefix} above combo ${SPIRITS[id].from - 1}`}>🔥{SPIRITS[id].name}</span>)}
+    {actor.spirits.map((id) => SPIRITS[id] && <span key={id} className="battle-chip" data-spirit={id} title={`${SPIRITS[id].name}: ${SPIRITS[id].blurb}`}>{SPIRITS[id].glyph}{SPIRITS[id].name}</span>)}
     <Floaters events={events} unitId={actor.id} />
   </span>;
 }
 
 /** The held card follows the pointer while dragging. */
-export function AbilityGhost({ attack, x, y, preview }: { attack: Attack; x: number; y: number; preview: AttackPreview | null }) {
+export function AbilityGhost({ attack, x, y, preview, trap }: { attack: Attack; x: number; y: number; preview: AttackPreview | null; trap: number | null }) {
   return <span className="battle-ability-ghost" data-element={attack.element ?? undefined} style={{ left: x, top: y }} aria-hidden="true">
     <span>{attack.name} {attack.charge}</span>
     {preview && <span className="battle-ability-ghost__result">{preview.ko ? 'KO' : `-${preview.damage}`}{preview.staggers ? ' · BREAK' : ''}</span>}
+    {trap !== null && <span className="battle-ability-ghost__result">Trap · -{trap}</span>}
+  </span>;
+}
+
+/** Marks on a table card: a trap waiting inside, and slimes eyeing it with their draining eye bar. */
+export function TableMark({ depth, trap, eyes, party }: { depth: number; trap?: Trap; eyes: readonly BattleFoe[]; party: readonly BattleActor[] }) {
+  if (!trap && !eyes.length) return null;
+  const setter = trap && party.find((actor) => actor.id === trap.actorId)?.name;
+  return <span className="battle-card-mark" style={{ top: `calc(var(--battle-peek) * ${depth})` } as CSSProperties}
+    role="img" aria-label={[trap ? `Trapped by ${setter}: ${trap.name}` : '', ...eyes.map((foe) => `${foe.name} is eyeing this card`)].filter(Boolean).join('. ')}>
+    {eyes.map((foe) => <span key={foe.id} className="battle-card-mark__eye" title={`${foe.name} eats this card when its eye runs out`}>
+      <span className="battle-card-mark__eye-fill" style={{ width: pct(foe.eye!.left, foe.eye!.total) }} />
+    </span>)}
+    {eyes.length > 0 && <span className="battle-card-mark__glyph" data-mark="eye">👁</span>}
+    {trap && <span className="battle-card-mark__glyph" data-mark="trap" title={`Trap: ${trap.name}`}>⚠</span>}
   </span>;
 }

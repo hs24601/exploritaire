@@ -63,6 +63,11 @@ export type BattleFoe = {
   /** Seconds of stagger left; 0 when not staggered. */
   staggered: number;
   effects: ActiveEffect[];
+  /** Hungry slimes (rules.hungry): own foundation rank, cards eaten since the last attack (+1 damage each), the card being eyed and seconds before eyeing the next. */
+  rank: number;
+  fed: number;
+  eye: { cardId: string; column: number; left: number; total: number } | null;
+  rest: number;
 };
 
 export type BattleActor = {
@@ -81,7 +86,7 @@ export type BattleActor = {
 
 export type BattleEvent = {
   id: number;
-  kind: 'hit' | 'dot' | 'stagger' | 'ko' | 'enemy-hit' | 'down';
+  kind: 'hit' | 'dot' | 'stagger' | 'ko' | 'enemy-hit' | 'down' | 'take' | 'trap' | 'snatch';
   targetId: string;
   amount?: number;
   label?: string;
@@ -101,13 +106,40 @@ export type BattleState = {
   result: 'won' | 'lost' | null;
   events: BattleEvent[];
   nextEventId: number;
+  rules: BattleRules;
+  /** Booby-trapped tableau cards, by card id: the attack waiting inside. */
+  traps: Record<string, Trap>;
 };
+
+/**
+ * Advanced rules a scenario can switch on.
+ * hungry: slimes also eat from the shared table, golf-style from their own
+ *   foundation. Each eyes a card (telegraphed), eats it when the eye runs out,
+ *   and every card eaten adds 1 to its next attack. Playing the eyed card
+ *   first snatches it: +1 bonus charge and the slime has to look again.
+ * traps: an ability can be dropped on a tableau top card instead of a slime.
+ *   The slime that eats that card takes the attack at TRAP_BONUS, which also
+ *   opens the card beneath for the party. The party can't play a trapped
+ *   card; it waits for a slime.
+ */
+export type BattleRules = { hungry: boolean; traps: boolean };
+export const BASIC_RULES: BattleRules = { hungry: false, traps: false };
+export type Trap = { actorId: string; name: string; damage: number; stagger: number; effects: AbilityEffect[] };
+
+export const TRAP_BONUS = 1.5;
+/** Seconds a hungry slime eyes a card before eating it, and rests after eating. */
+export const EYE_SECONDS = 2.2;
+export const FORAGE_REST = 2.5;
+export const FED_MAX = 3;
+/** Opening foundation ranks for hungry slimes. */
+const FOE_RANKS = [9, 6, 12];
 
 export type BattleSetup = {
   mochi?: boolean; slimes?: number; spirits?: Partial<Record<PartyId, string[]>>;
   /** Each actor's stamina coming in; defaults to full. */
   stamina?: Partial<Record<PartyId, number>>;
   seed?: number;
+  rules?: Partial<BattleRules>;
 };
 
 const newActor = (id: PartyId, spirits: string[] = [], stamina = ACTOR_STAMINA_MAX): BattleActor => {
@@ -120,6 +152,7 @@ export const FOE_TIMER_OFFSET = 0.35;
 
 const newFoe = (index: number): BattleFoe => ({
   ...SLIME_ROSTER[index], profile: SLIME, hp: SLIME.maxHp, timer: -index * FOE_TIMER_OFFSET, stagger: 0, staggered: 0, effects: [],
+  rank: FOE_RANKS[index], fed: 0, eye: null, rest: 1 + index * 0.9,
 });
 
 export const createBattle = (deal: { tableau: Card[][]; stock?: Card[] }, setup: BattleSetup = {}): BattleState => {
@@ -139,6 +172,8 @@ export const createBattle = (deal: { tableau: Card[][]; stock?: Card[] }, setup:
     result: null,
     events: [],
     nextEventId: 1,
+    rules: { ...BASIC_RULES, ...setup.rules },
+    traps: {},
   };
 };
 
@@ -168,7 +203,7 @@ export const legalPlay = (actor: BattleActor, card: Card) =>
 
 export const canPlay = (state: BattleState, actorId: string, card: Card | undefined | null) => {
   const actor = state.party.find((a) => a.id === actorId);
-  return Boolean(card && actor && actorAlive(actor) && !state.result && legalPlay(actor, card));
+  return Boolean(card && actor && actorAlive(actor) && !state.result && !state.traps[card.id] && legalPlay(actor, card));
 };
 
 /** Living actors that can take this card, in party order. */
@@ -199,10 +234,15 @@ export const playCard = (state: BattleState, column: number, actorId: string): B
   const cards = state.columns[column];
   if (!canPlay(state, actorId, cards?.[cards.length - 1])) return state;
   const { card, columns, stock, dealt } = takeTop(state, column)!;
+  // Snatching a card a hungry slime is eyeing earns a bonus charge and sends it looking again.
+  const snatchedFrom = state.foes.find((foe) => foe.eye?.cardId === card.id);
+  const gain = snatchedFrom ? 2 : 1;
   return {
     ...state, columns, stock, dealt, started: true,
     party: state.party.map((actor) => actor.id === actorId
-      ? { ...actor, rank: card.rank, count: actor.count + 1, charge: Math.min(MAX_CHARGE, actor.charge + 1) } : actor),
+      ? { ...actor, rank: card.rank, count: actor.count + 1, charge: Math.min(MAX_CHARGE, actor.charge + gain) } : actor),
+    foes: snatchedFrom ? state.foes.map((foe) => (foe === snatchedFrom ? { ...foe, eye: null, rest: 1 } : foe)) : state.foes,
+    ...(snatchedFrom ? withEvents(state, [{ kind: 'snatch', targetId: actorId, label: snatchedFrom.name }]) : {}),
   };
 };
 
@@ -346,15 +386,97 @@ export const tickBattle = (state: BattleState, dt: number): BattleState => {
       timer = 0;
       const target = enemyTarget({ ...state, party });
       if (target) {
-        const hpLeft = Math.max(0, target.hp - foe.profile.damage);
+        const damage = foe.profile.damage + foe.fed;
+        const hpLeft = Math.max(0, target.hp - damage);
         party = party.map((actor) => (actor.id === target.id ? { ...actor, hp: hpLeft, charge: 0 } : actor));
-        events.push({ kind: 'enemy-hit', targetId: target.id, amount: foe.profile.damage, label: foe.name });
+        events.push({ kind: 'enemy-hit', targetId: target.id, amount: damage, label: foe.name });
         if (hpLeft <= 0) events.push({ kind: 'down', targetId: target.id });
+        return { ...foe, hp, timer, stagger, staggered, effects, fed: 0 };
       }
     }
     return { ...foe, hp, timer, stagger, staggered, effects };
   });
-  return { ...state, time: state.time + dt, party, foes, result: resultOf(party, foes), ...(events.length ? withEvents(state, events) : {}) };
+  let next: BattleState = { ...state, time: state.time + dt, party, foes, result: resultOf(party, foes), ...(events.length ? withEvents(state, events) : {}) };
+  if (next.rules.hungry && !next.result) next.foes.forEach((foe) => { next = forage(next, foe.id, dt); });
+  return next;
+};
+
+/** One hungry slime's turn at the shared table. */
+const forage = (state: BattleState, foeId: string, dt: number): BattleState => {
+  const foe = state.foes.find((f) => f.id === foeId)!;
+  const update = (patch: Partial<BattleFoe>, base: BattleState = state) => ({ ...base, foes: base.foes.map((f) => (f.id === foeId ? { ...f, ...patch } : f)) });
+  if (!foeAlive(foe) || foe.staggered > 0) return foe.eye ? update({ eye: null, rest: FORAGE_REST }) : state;
+  const top = (column: number) => { const cards = state.columns[column]; return cards[cards.length - 1]; };
+  if (foe.eye) {
+    // The eyed card went (the party took it): look again soon.
+    if (top(foe.eye.column)?.id !== foe.eye.cardId) return update({ eye: null, rest: 0.6 });
+    const left = foe.eye.left - dt;
+    if (left > 0) return update({ eye: { ...foe.eye, left } });
+    return eat(state, foeId, foe.eye.column);
+  }
+  const rest = foe.rest - dt;
+  if (rest > 0) return update({ rest });
+  const eyed = new Set(state.foes.map((f) => f.eye?.cardId).filter(Boolean));
+  const options = state.columns.flatMap((_, column) => {
+    const card = top(column);
+    return card && !eyed.has(card.id) && isAdjacentRank(card.rank, foe.rank) ? [column] : [];
+  });
+  if (!options.length) {
+    // Nothing to eat: the slime turns up the next stock card as its own.
+    const next = draw(state);
+    return update({ rank: next.card.rank, rest: FORAGE_REST }, { ...state, stock: next.stock, dealt: next.dealt });
+  }
+  const column = options[(state.dealt + state.foes.indexOf(foe) + Math.floor(state.time)) % options.length];
+  return update({ eye: { cardId: top(column).id, column, left: EYE_SECONDS, total: EYE_SECONDS } });
+};
+
+/** A slime eats a column's top card; a trap inside goes off. */
+const eat = (state: BattleState, foeId: string, column: number): BattleState => {
+  const taken = takeTop(state, column)!;
+  const trap = state.traps[taken.card.id];
+  const { [taken.card.id]: _sprung, ...traps } = state.traps;
+  const events: Omit<BattleEvent, 'id'>[] = [{ kind: 'take', targetId: foeId, label: String(taken.card.rank) }];
+  const foes = state.foes.map((foe) => {
+    if (foe.id !== foeId) return foe;
+    let next: BattleFoe = { ...foe, rank: taken.card.rank, fed: Math.min(FED_MAX, foe.fed + 1), eye: null, rest: FORAGE_REST };
+    if (trap) {
+      const damage = Math.round(scaled(foe, trap.damage) * TRAP_BONUS);
+      const hp = Math.max(0, foe.hp - damage);
+      events.push({ kind: 'trap', targetId: foeId, amount: damage, label: trap.name });
+      let { stagger, staggered } = foe;
+      if (staggered <= 0) {
+        stagger = Math.min(foe.profile.staggerMax, stagger + trap.stagger);
+        if (stagger >= foe.profile.staggerMax && hp > 0) { staggered = foe.profile.staggerSeconds; events.push({ kind: 'stagger', targetId: foeId }); }
+      }
+      // A trap spoils the meal: the card doesn't feed the slime.
+      next = { ...next, hp, stagger, staggered, fed: foe.fed, effects: hp > 0 ? [...foe.effects.filter((e) => !trap.effects.some((t) => t.kind === e.kind)), ...trap.effects.map((e) => ({ ...e, left: e.seconds, tickIn: 1 }))] : [] };
+      if (hp <= 0) { events.push({ kind: 'ko', targetId: foeId }); next = { ...next, stagger: 0, staggered: 0, timer: 0, eye: null }; }
+    }
+    return next;
+  });
+  return { ...state, columns: taken.columns, stock: taken.stock, dealt: taken.dealt, traps, foes, result: resultOf(state.party, foes), ...withEvents(state, events) };
+};
+
+/** Spends an actor's charge arming a trap in a column's top card (rules.traps). */
+export const applyTrap = (state: BattleState, actorId: string, column: number): BattleState => {
+  const attack = actorAttack(state, actorId);
+  const cards = state.columns[column];
+  const card = cards?.[cards.length - 1];
+  if (!state.rules.traps || !attack || !card || state.traps[card.id] || state.result) return state;
+  return {
+    ...state, started: true,
+    traps: { ...state.traps, [card.id]: { actorId, name: attack.name, damage: attack.damage, stagger: attack.stagger, effects: attack.effects } },
+    party: state.party.map((actor) => (actor.id === actorId ? { ...actor, charge: 0 } : actor)),
+  };
+};
+
+/** What a trap set now would deal to an unstaggered slime that eats it. */
+export const previewTrap = (state: BattleState, actorId: string, column: number) => {
+  const attack = actorAttack(state, actorId);
+  const cards = state.columns[column];
+  const card = cards?.[cards.length - 1];
+  if (!state.rules.traps || !attack || !card || state.traps[card.id] || state.result) return null;
+  return { attack, cardId: card.id, damage: Math.round(attack.damage * TRAP_BONUS), eyedBy: state.foes.find((foe) => foe.eye?.cardId === card.id)?.name ?? null };
 };
 
 // Roster controls for the battle panel.

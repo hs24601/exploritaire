@@ -79,12 +79,21 @@
 .battle-field__team[data-team='party'] .battle-field__foundation { padding: 6px; }
 .battle-field__middle { min-height: 0; height: 100%; display: grid; grid-template-rows: minmax(0,1fr) auto; gap: 4px; }
 .battle-field__status { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
-.battle-field__status-text { min-width: 0; color: #cfe3d8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.battle-field__status-text { flex: 1; min-width: 0; color: #cfe3d8; }
+
 .battle-field__status-text[data-result='won'] { color: #ffe08a; }
 .battle-field__status-text[data-result='lost'] { color: #ff8f8f; }
 .battle-field[data-aiming] .battle-field__column button { filter: brightness(.7); }
-.battle-field__team[data-team='party'] .battle-field__pile { grid-template-columns: auto; justify-items: center; gap: 4px; }
-.battle-field__team[data-team='party'] .battle-field__counters { order: 2; }
+.battle-field__team[data-team='party'] .battle-field__pile { grid-template-columns: auto; justify-items: center; }
+
+.battle-controls__scenario { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.battle-controls__scenario select { font: inherit; border: 2px solid #658576; padding: 1px 4px; background: #1b3028; color: #f1e7cb; }
+.battle-controls__scenario select:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 2px; }
+.battle-field__column[data-preview='faint'] { outline: 2px dashed #ffb34788; outline-offset: 3px; border-radius: 5px; }
+.battle-field__column[data-preview='focus'] { outline: 3px solid #ffb347; outline-offset: 3px; border-radius: 5px; }
+
+/* Short desktop windows: the team headings give their height to the tableau. */
+@media (max-height: 800px) { .battle-field__team h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
 
 /* Redraw: costs 1 stamina; sits under the ability card, beside the foundation, with the stamina left. */
 .battle-field__side { min-width: 0; display: grid; justify-items: center; gap: 6px; }

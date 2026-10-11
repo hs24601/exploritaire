@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Card } from '../protoState';
-import { SPIRITS, attackFor, comboPower, nextBreakpoint } from './battleAbilities';
+import { attackFor, comboPower, nextBreakpoint } from './battleAbilities';
 import {
   MAX_COLUMN, SLIME, addSlime, applyAttack, canDeal, canPlay, createBattle, dealRow, eligibleActors, enemyTarget, playCard,
   previewAttack, removeSlime, setMochi, setSpirit, tickBattle, type BattleState,
@@ -93,8 +93,10 @@ describe('battle table', () => {
     const state = createBattle(runDeal(1), { mochi: false });
     const gap = card(4);
     expect(canPlay(state, 'hero', gap)).toBe(false);
-    SPIRITS.test = { id: 'test', name: 'Test', element: 'fire', from: 99, prefix: '', damageMul: 1, playRule: (a, b) => Math.abs(a - b) === 2 };
-    try { expect(canPlay(setSpirit(state, 'hero', 'test', true), 'hero', gap)).toBe(true); } finally { delete SPIRITS.test; }
+    expect(canPlay(setSpirit(state, 'hero', 'wisp', true), 'hero', gap)).toBe(true);
+    expect(canPlay(setSpirit(state, 'hero', 'moss', true), 'hero', card(2))).toBe(true);
+    // Rule spirits never change the attack itself.
+    expect(attackFor('hero', 5, ['wisp', 'moss'])).toEqual(attackFor('hero', 5));
   });
 });
 

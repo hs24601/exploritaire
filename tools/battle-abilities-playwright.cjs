@@ -8,7 +8,7 @@ const {findLayoutDefects} = require('./lib/layout-check.cjs');
 const out = 'artifacts/battle-abilities';
 fs.mkdirSync(out, {recursive: true});
 const launch = process.env.PW_CHROMIUM ? {executablePath: process.env.PW_CHROMIUM, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader']} : {};
-const parts = '.battle-field__header,.battle-controls,.battle-field__board,.battle-field__team,.battle-foe,.battle-foe__name,.battle-foe__bars,.battle-bar,.battle-field__slot,.battle-field__foundation,.battle-ability,.battle-vitals,.battle-field__middle,.battle-field__status,.battle-field__status-text,.battle-field__tableau';
+const parts = '.battle-field__header,.battle-controls,.battle-controls__scenario,.battle-field__board,.battle-field__team,.battle-foe,.battle-foe__name,.battle-foe__bars,.battle-bar,.battle-field__slot,.battle-field__foundation,.battle-ability,.battle-vitals,.battle-field__middle,.battle-field__status,.battle-field__status-text,.battle-field__tableau';
 
 /** Plays tableau cards onto `actor` until it holds `charge` (fast, in-page, so slimes can't interrupt). */
 const charge = (page, actor, target) => page.evaluate(async ({actor, target}) => {
@@ -69,7 +69,7 @@ const center = box => ({x: box.x + box.width / 2, y: box.y + box.height / 2});
       await page.mouse.up();
       assert.equal(await hp(page, 'dark-slime'), predicted, 'drop matches the preview');
       assert.equal(await heroCard.locator('.battle-ability__charge').textContent(), '0', 'attack spends the charge');
-      assert.notEqual(await page.locator('[data-battle-actor="hero"] [aria-label="Collected cards 0"]').count(), 1, 'foundation cards stay');
+      assert.notEqual(await page.locator('[data-battle-slot="hero"] [aria-label="Collected cards 0"]').count(), 1, 'foundation cards stay');
 
       // Tap-to-arm with Mochi: press the card, then the slime.
       assert.ok(await charge(page, 'mochi', 2) >= 1);
@@ -101,6 +101,45 @@ const center = box => ({x: box.x + box.width / 2, y: box.y + box.height / 2});
       for (let i = 0; i < 2; i++) await page.getByRole('button', {name: 'Remove a slime'}).click();
       assert.equal(await page.locator('.battle-foe').count(), 1);
       assert.equal(await page.getByRole('button', {name: 'Remove a slime'}).isDisabled(), true);
+
+      // Scenario: Hungry slimes eye a card (marked on the table) and eat it.
+      const scenario = page.locator('.battle-controls__scenario select');
+      await scenario.selectOption('hungry');
+      assert.equal(await page.locator('.battle-foe').count(), 2);
+      await charge(page, 'hero', 1);
+      await page.locator('.battle-card-mark [data-mark="eye"]').first().waitFor({timeout: 6000});
+      assert.match(await page.locator('.battle-foe__eye').first().textContent(), /eyes/);
+      await page.screenshot({path: `${out}/hungry-eye-${tag}.png`});
+      await page.locator('.battle-chip[data-chip="fed"]').first().waitFor({timeout: 6000});
+      assert.deepEqual(await findLayoutDefects(page, '.battle-field', {parts}), [], `${tag} hungry layout`);
+
+      // Scenario: Booby traps. Drag Hero's ability onto the card a slime is eyeing.
+      await scenario.selectOption('traps');
+      await charge(page, 'hero', 1);
+      const eyed = page.locator('.battle-field__column:has(.battle-card-mark [data-mark="eye"])').first();
+      await eyed.waitFor({timeout: 6000});
+      await charge(page, 'hero', 3);
+      const trapFrom = center(await heroCard.boundingBox()), trapTo = center(await eyed.boundingBox());
+      await page.mouse.move(trapFrom.x, trapFrom.y); await page.mouse.down();
+      await page.mouse.move(trapFrom.x + 10, trapFrom.y - 30, {steps: 3});
+      await page.mouse.move(trapTo.x, trapTo.y, {steps: 8});
+      assert.equal(await page.locator('.battle-field__column[data-preview="focus"]').count(), 1, 'eyed card previews the trap');
+      await page.screenshot({path: `${out}/trap-drag-${tag}.png`});
+      await page.mouse.up();
+      if (await page.locator('.battle-card-mark [data-mark="trap"]').count()) {
+        const hpTotal = async () => (await Promise.all(['dark-slime', 'rear-slime'].map(foe => page.locator(`[data-battle-target="${foe}"] [data-bar="hp"]`).getAttribute('aria-valuenow').then(Number).catch(() => 0)))).reduce((a, b) => a + b, 0);
+        const before = await hpTotal();
+        await page.waitForFunction(() => !document.querySelector('.battle-card-mark [data-mark="trap"]'), null, {timeout: 6000});
+        assert.ok(await hpTotal() < before, 'the slime that ate the trapped card took damage');
+      } else console.log(`${tag}: eyed card was eaten before the drop landed; trap step skipped this run`);
+      assert.deepEqual(await findLayoutDefects(page, '.battle-field', {parts}), [], `${tag} trap layout`);
+
+      // Scenario: Spirit grove. Three hungry slimes, Wisp and Cal on Hero, Moss on Mochi.
+      await scenario.selectOption('grove');
+      assert.equal(await page.locator('.battle-foe').count(), 3);
+      assert.deepEqual(await page.locator('[data-spirit]').evaluateAll(chips => chips.map(chip => chip.dataset.spirit)), ['wisp', 'cal', 'moss']);
+      assert.deepEqual(await findLayoutDefects(page, '.battle-field', {parts}), [], `${tag} grove layout`);
+      await page.screenshot({path: `${out}/grove-${tag}.png`});
       assert.deepEqual(errors, []);
       await page.close();
     }

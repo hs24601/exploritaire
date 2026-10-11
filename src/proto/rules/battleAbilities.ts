@@ -60,7 +60,12 @@ export const ABILITIES: Record<string, AbilityDef> = {
 export type SpiritDef = {
   id: string;
   name: string;
-  element: 'fire';
+  /** Icon for chips. */
+  glyph: string;
+  /** What the spirit does, for tooltips. */
+  blurb: string;
+  /** Element spirits join the attack; rule spirits (no element) only bend play. */
+  element?: 'fire';
   /** Lowest charge the spirit joins in at ("combo > 3" is 4). */
   from: number;
   /** Prefix it gives the ability's name. */
@@ -77,8 +82,14 @@ export type SpiritDef = {
 export type PlayRule = (cardRank: number, foundationRank: number) => boolean;
 
 export const SPIRITS: Record<string, SpiritDef> = {
-  cal: { id: 'cal', name: 'Cal', element: 'fire', from: 4, prefix: 'Inferno', damageMul: 1.5, effect: { kind: 'burn', dps: 1, seconds: 3 } },
+  cal: { id: 'cal', name: 'Cal', glyph: '🔥', blurb: 'Fire spirit: above combo 3 the ability gains fire (Inferno), ×1.5 damage and a burn', element: 'fire', from: 4, prefix: 'Inferno', damageMul: 1.5, effect: { kind: 'burn', dps: 1, seconds: 3 } },
+  // Rule spirits bend golf adjacency so the party can climb out of bad deals.
+  wisp: { id: 'wisp', name: 'Wisp', glyph: '✧', blurb: 'Leaping spirit: cards two ranks away also play (A and K wrap)', from: 0, prefix: '', damageMul: 1, playRule: (card, foundation) => rankGap(card, foundation) === 2 },
+  moss: { id: 'moss', name: 'Moss', glyph: '❦', blurb: 'Patient spirit: a card of the same rank also plays', from: 0, prefix: '', damageMul: 1, playRule: (card, foundation) => card === foundation },
 };
+
+/** Distance between ranks around the A-K loop. */
+export const rankGap = (a: number, b: number) => { const d = Math.abs(a - b) % 13; return Math.min(d, 13 - d); };
 
 /** Damage before scaling: grows faster than the card count so long combos pay. 1, 2, 3, 5, 7, 9, 11, 14, 17, 20. */
 export const comboPower = (charge: number) => {
@@ -120,7 +131,7 @@ export const attackFor = (actorId: string, charge: number, spiritIds: readonly s
   if (!def || n < 1) return null;
   const tierIndex = tierFor(def, n);
   const tier = def.tiers[tierIndex];
-  const spirits = spiritIds.map((id) => SPIRITS[id]).filter((spirit): spirit is SpiritDef => Boolean(spirit) && n >= spirit.from);
+  const spirits = spiritIds.map((id) => SPIRITS[id]).filter((spirit): spirit is SpiritDef => Boolean(spirit?.element) && n >= spirit.from);
   const damageMul = spirits.reduce((mul, spirit) => mul * spirit.damageMul, 1);
   const stagger = n * def.staggerScale + tier.staggerBonus;
   const effects = [tier.effect, ...spirits.map((spirit) => spirit.effect)].filter((effect): effect is AbilityEffect => Boolean(effect));
@@ -135,7 +146,7 @@ export const attackFor = (actorId: string, charge: number, spiritIds: readonly s
     knockback: Math.min(1, stagger * KNOCKBACK_PER_STAGGER + tier.knockback),
     element: spirits[0]?.element ?? null,
     effects,
-    tags: [...(tier.note ? [tier.note] : []), ...spirits.map((spirit) => spirit.element === 'fire' ? 'Fire' : spirit.element)],
+    tags: [...(tier.note ? [tier.note] : []), ...spirits.map(() => 'Fire')],
   };
 };
 
@@ -145,7 +156,7 @@ export const nextBreakpoint = (actorId: string, charge: number, spiritIds: reado
   if (!def) return null;
   const points = [
     ...def.tiers.map((tier) => ({ at: tier.from, label: tier.name })),
-    ...spiritIds.flatMap((id) => SPIRITS[id] ? [{ at: SPIRITS[id].from, label: SPIRITS[id].name }] : []),
+    ...spiritIds.flatMap((id) => SPIRITS[id]?.element ? [{ at: SPIRITS[id].from, label: SPIRITS[id].name }] : []),
   ].filter((point) => point.at > charge).sort((a, b) => a.at - b.at);
   return points[0] ?? null;
 };
