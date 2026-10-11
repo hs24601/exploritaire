@@ -28,6 +28,7 @@ import { DEFAULT_ACTOR_LUMINOSITY, getTableLighting, tableObjectShadow } from '.
 import { TimeOfDaySlider } from './components/TimeOfDaySlider';
 import { PondField } from './components/PondField';
 import { CombatDemo } from './components/CombatDemo';
+import type { BattleScene } from './rules/battleCues';
 import { BattleTableauField } from './components/BattleTableauField';
 import './components/CombatField.css';
 import { GLOWFISH_TABLE_LIGHT, POND_CATCHES, POND_MISS_STAMINA, POND_SPECIES, isPondCatch, type PondCatch, castBait, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, restockPond } from './rules/fishing';
@@ -419,7 +420,7 @@ const selectBiome = (biomeId: string) => {
   const dangerFighter = state.worldActors.find((actor) => actor.location === 'foundation' && isDangerTile(actor.biomeId)) ?? null;
   const [combatDemoOpen, setCombatDemoOpen] = useState(() => new URLSearchParams(window.location.search).has('combatdemo'));
   const [combatDemoReplay, setCombatDemoReplay] = useState(0);
-  const [battleRoster, setBattleRoster] = useState<string[] | undefined>(undefined);
+  const [battleScene, setBattleScene] = useState<BattleScene | undefined>(undefined);
   const watchBattleScene = () => { setCombatDemoReplay(replay => replay + 1); setCombatDemoOpen(true); setMobilePanel('map'); };
   const demoArrival = useRef<string | null>(null);
   useEffect(() => {
@@ -1776,7 +1777,7 @@ const selectBiome = (biomeId: string) => {
                 <div className="proto-main-tableau min-h-0 rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))]" aria-label="Empty tableau" />
                 <div className="proto-main-foundations min-h-0 h-[clamp(6rem,24dvh,14rem)] rounded-[calc(var(--classic-radius)*1.3)] border border-[#f4c86c]/18 bg-[linear-gradient(180deg,rgba(22,18,12,0.44),rgba(9,10,12,0.28))]" aria-label="Empty foundations" />
               </>) : dangerSelected || combatDemoOpen ? (
-                <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} onRosterChange={setBattleRoster}
+                <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} onSceneChange={setBattleScene}
                   heroStamina={state.actorStamina[0]} onRedraw={(actorId) => { if (actorId === 'hero') setState((prev) => ({ ...prev, actorStamina: prev.actorStamina.map((value, index) => index === 0 ? Math.max(0, value - REDRAW_STAMINA_COST) : value) })); }} />
               ) : pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && !canSpendStamina(state.stamina, POND_MISS_STAMINA)}
@@ -2214,7 +2215,7 @@ const selectBiome = (biomeId: string) => {
               </div>
               </>)}
               </div>
-              {combatDemoOpen ? <CombatDemo key={combatDemoReplay} roster={battleRoster} onClose={() => setCombatDemoOpen(false)} onRestart={watchBattleScene}
+              {combatDemoOpen ? <CombatDemo key={combatDemoReplay} battle={battleScene} onClose={() => setCombatDemoOpen(false)} onRestart={watchBattleScene}
                 onEscape={dangerFighter ? () => { setCombatDemoOpen(false); leaveTableau(); } : undefined} /> : <ProtoMap
                 extendTableau={Boolean(state.selectedBiomeId) && !dangerSelected && !pondSelected}
                 storyCard={state.ordinaryDay && <div className="proto-ordinary-day" aria-label="An ordinary day" data-resting={state.ordinaryDay.bedtime || state.ordinaryDay.complete || undefined}>

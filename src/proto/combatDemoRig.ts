@@ -5,6 +5,9 @@ import { MOCHI_DIRECTIONAL_SPRITE } from './mochiSprite';
 import { HERO_SITTING_DIRECTIONAL_SPRITE } from './heroSittingSprite';
 import { createDirectionalSpriteLibrary, type BattleSpriteTextures } from './directionalSpriteRig';
 import { BATTLE_TURN_PRIORITY, type BattleTeam } from './battleTurnPriority';
+import { createCombatCueFx } from './combatCueFx';
+import type { FxQuality } from './atmosphere';
+import type { BattleCue, BattleScene } from './rules/battleCues';
 
 export const COMBAT_DEMO_SECONDS = 10;
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
@@ -147,10 +150,12 @@ export function sampleDemoCamera(t: number) {
 
 /** Ground spots for hero, Mochi and up to three slimes. */
 const ACTOR_SPOTS: readonly (readonly [number, number])[] = [[-3, 0], [-4, 2.6], [3, 0], [4, -2.8], [4.6, 2.6]];
-const DEFAULT_ROSTER = ['hero', 'mochi', 'dark-slime', 'rear-slime'];
+const ACTOR_IDS = ['hero', 'mochi', 'dark-slime', 'rear-slime', 'small-slime'];
+const ACTOR_HEIGHTS = [2.55, 1.85, 1.7, 1.4, 1.2];
+const DEFAULT_UNITS: BattleScene['units'] = ['hero', 'mochi', 'dark-slime', 'rear-slime'].map((id, i) => ({ id, team: i < 2 ? 'party' : 'enemy', down: false }));
 
 /** A small arena with upright pixel art and pooled, deterministic effects. */
-export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.PerspectiveCamera, assets: BattleSpriteTextures & {trees: THREE.Texture}) {
+export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.PerspectiveCamera, assets: BattleSpriteTextures & {trees: THREE.Texture}, quality: FxQuality = 'high') {
   const resources: (THREE.BufferGeometry | THREE.Material)[] = [];
   const geometry = <T extends THREE.BufferGeometry>(g: T) => { resources.push(g); return g; };
   const material = <T extends THREE.Material>(m: T) => { resources.push(m); return m; };
@@ -184,18 +189,20 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
   const heroLibrary = createDirectionalSpriteLibrary(assets, HERO_DIRECTIONAL_SPRITE, { sitting: HERO_SITTING_DIRECTIONAL_SPRITE });
   const mochiLibrary = createDirectionalSpriteLibrary(assets, MOCHI_DIRECTIONAL_SPRITE);
   const slimeLibrary = createDirectionalSpriteLibrary(assets, DARK_SLIME_DIRECTIONAL_SPRITE);
-  const hero = heroLibrary.create(2.55), mochi = mochiLibrary.create(1.85);
-  const slimes = [slimeLibrary.create(1.7), slimeLibrary.create(1.4, 0xb9a6ef), slimeLibrary.create(1.2, 0x9fd6c8)];
+  const hero = heroLibrary.create(ACTOR_HEIGHTS[0]), mochi = mochiLibrary.create(ACTOR_HEIGHTS[1]);
+  const slimes = [slimeLibrary.create(ACTOR_HEIGHTS[2]), slimeLibrary.create(ACTOR_HEIGHTS[3], 0xb9a6ef), slimeLibrary.create(ACTOR_HEIGHTS[4], 0x9fd6c8)];
   const instances = [hero, mochi, ...slimes];
   const actors: OrientedActor[] = instances.map((rig, i) => {
     rig.root.position.set(ACTOR_SPOTS[i][0], 0, ACTOR_SPOTS[i][1]); scene.add(rig.root);
-    return { id: ['hero','mochi','dark-slime','rear-slime','small-slime'][i], team: i < 2 ? 'party' : 'enemy', position: rig.root.position };
+    return { id: ACTOR_IDS[i], team: i < 2 ? 'party' : 'enemy', position: rig.root.position };
   });
   const shadows = ACTOR_SPOTS.map(([x, z]) => {
     const s = new THREE.Mesh(geometry(new THREE.CircleGeometry(1, 24)), material(new THREE.MeshBasicMaterial({color: 0x030b10, transparent: true, opacity: .5, depthWrite: false})));
     s.rotation.x = -Math.PI / 2; s.position.set(x, .02, z); s.scale.set(1.1, .6, 1); scene.add(s); return s;
   });
-  actors.forEach((actor, i) => { const present = DEFAULT_ROSTER.includes(actor.id); instances[i].root.visible = present; shadows[i].visible = present; });
+  // Battle cues (bites, flinches, falls) layer over whatever the scripted scene is doing.
+  const cues = createCombatCueFx(scene, camera, actors.map((actor, i) => ({ id: actor.id, team: i < 2 ? 'party' as const : 'enemy' as const, rig: instances[i], shadow: shadows[i], height: ACTOR_HEIGHTS[i], slime: i >= 2 })), quality);
+  cues.setUnits(DEFAULT_UNITS, 0);
   const echoes = Array.from({length: 5}, () => { const rig = heroLibrary.create(2.55, 0x77fff3); scene.add(rig.root); return rig; });
   const pixels = Array.from({length: 100}, (_, i) => {
     const m = new THREE.Mesh(geometry(new THREE.BoxGeometry(.09, .09, .09)), material(new THREE.MeshBasicMaterial({color: i % 3 ? 0x80fff2 : 0xffdc83, transparent: true, depthWrite: false}))); scene.add(m); return m;
@@ -209,19 +216,26 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
   return {
     // Scene authors may use target/point/fixed policies for an ambush or scripted cue.
     actors,
-    /** Shows only the units still in the battle; others leave the arena. */
-    setRoster(ids: readonly string[]) { actors.forEach((actor, i) => { const present = ids.includes(actor.id); instances[i].root.visible = present; shadows[i].visible = present; }); },
-    snapshot() { return actors.map((actor, i) => ({ id: actor.id, team: actor.team, position: [actor.position.x, actor.position.z], heading: headings[i], frame: instances[i].frame, pose: instances[i].pose, view: instances[i].view, billboardYaw: instances[i].billboard.rotation.y, flip: instances[i].facing.scale.x, parts: instances[i].parts.map(({part, pivot}) => ({ id: part.id, position: pivot.position.toArray(), angle: pivot.rotation.z, scaleY: pivot.scale.y })) })); },
-    update(t: number, reduced: boolean) {
-      hero.setPose(activity(t) || (t >= 5.2 && t < 5.85) ? 'standing' : 'sitting');
-      hero.root.position.x = heroX(t); shadows[0].position.x = hero.root.position.x;
+    /** Who is in the battle and who has fallen (`now` in seconds, the cue clock). Units not listed leave the arena. */
+    setUnits(units: BattleScene['units'], now: number) { cues.setUnits(units, now); },
+    /** Plays a battle cue from `now` (seconds). */
+    cue(cue: BattleCue, now: number) { cues.cue(cue, now); },
+    /** Cue effects still moving, so the arena keeps drawing. */
+    busy(now: number) { return cues.busy(now); },
+    snapshot() { return actors.map((actor, i) => ({ id: actor.id, team: actor.team, visible: instances[i].root.visible, tip: instances[i].facing.rotation.z, position: [actor.position.x, actor.position.z], heading: headings[i], frame: instances[i].frame, pose: instances[i].pose, view: instances[i].view, billboardYaw: instances[i].billboard.rotation.y, flip: instances[i].facing.scale.x, parts: instances[i].parts.map(({part, pivot}) => ({ id: part.id, position: pivot.position.toArray(), angle: pivot.rotation.z, scaleY: pivot.scale.y })) })); },
+    update(t: number, reduced: boolean, now = performance.now() / 1000) {
+      instances.forEach((rig, i) => { rig.root.position.set(ACTOR_SPOTS[i][0], 0, ACTOR_SPOTS[i][1]); shadows[i].position.set(ACTOR_SPOTS[i][0], .02, ACTOR_SPOTS[i][1]); });
+      hero.root.position.x = heroX(t);
       const impact = clamp(1 - (t - 5.7) / .65) * Number(t >= 5.7);
       slimes[0].setColor(new THREE.Color(1, 1 - impact * .8, 1 - impact * .7));
       slimes[0].root.position.x = 3 + Math.sin((t - 5.7) * 36) * impact * .15;
-      shadows[2].position.x = slimes[0].root.position.x;
-      // Units that left the battle no longer draw anyone's gaze.
+      const acting = cues.place(now, reduced);
+      // Hero sits at rest and stands to act, and to fall.
+      hero.setPose(activity(t) || (t >= 5.2 && t < 5.85) || acting.has('hero') || hero.facing.rotation.z ? 'standing' : 'sitting');
+      // Units that left the battle no longer draw anyone's gaze; fallen ones keep theirs.
       const present = actors.filter((_, i) => instances[i].root.visible);
-      instances.forEach((rig, i) => { headings[i] = actorHeading(actors[i], present, headings[i]); rig.update(camera, headings[i], t, reduced, i * 1.7, i === 0 ? activity(t) : 0); });
+      instances.forEach((rig, i) => { headings[i] = actorHeading(actors[i], present, headings[i]); rig.update(camera, headings[i], t, reduced, i * 1.7, Math.max(i === 0 ? activity(t) : 0, acting.get(actors[i].id) ?? 0)); });
+      cues.particles(now);
       for (const m of trees) m.rotation.y = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z);
       echoes.forEach((rig, i) => {
         const past = t - (i + 1) * .09;
@@ -240,6 +254,6 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
       const burst = clamp((t - 7) / 1.6); ring.visible = !reduced && t > 7 && t < 8.6; ring.scale.setScalar(.4 + burst * 4); ring.material.opacity = 1 - burst;
       glow.intensity = reduced ? 0 : impact * 16 + (t > 7 && t < 8.6 ? (1 - burst) * 20 : 0);
     },
-    dispose() { [...instances, ...echoes].forEach(rig => rig.dispose()); heroLibrary.dispose(); mochiLibrary.dispose(); slimeLibrary.dispose(); resources.forEach(r => r.dispose()); },
+    dispose() { cues.dispose(); [...instances, ...echoes].forEach(rig => rig.dispose()); heroLibrary.dispose(); mochiLibrary.dispose(); slimeLibrary.dispose(); resources.forEach(r => r.dispose()); },
   };
 }

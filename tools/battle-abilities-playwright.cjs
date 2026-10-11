@@ -13,17 +13,23 @@ const parts = '.battle-field__header,.battle-controls,.battle-controls__scenario
 /** Plays tableau cards onto `actor` until it holds `charge` (fast, in-page, so slimes can't interrupt). */
 const charge = (page, actor, target) => page.evaluate(async ({actor, target}) => {
   const frame = () => new Promise(r => requestAnimationFrame(() => r()));
+  // Cards play from their jumbo view's action (GAME.md: all cards have jumbo views).
+  const press = async (card) => {
+    card.click();
+    for (let i = 0; i < 20 && !document.querySelector('.card-jumbo__action'); i++) await frame();
+    (document.querySelector('.card-jumbo__action') ?? document.querySelector('.card-jumbo__close'))?.click(); await frame(); await frame();
+  };
   const level = () => Number(document.querySelector(`[data-ability-actor="${actor}"] .battle-ability__charge`).textContent);
   for (let guard = 0; level() < target && guard < 80; guard++) {
     const columns = [...document.querySelectorAll('.battle-field__column')];
     let played = false;
     for (const column of columns) {
       const top = [...column.querySelectorAll('button')].pop();
-      if (!top || top.disabled) continue;
-      top.click(); await frame();
+      if (!top || top.disabled || top.dataset.gameplayDisabled) continue;
+      await press(top);
       const choice = document.querySelector(`[data-battle-actor="${actor}"][data-targetable="true"]`);
       if (choice) { choice.click(); await frame(); }
-      else if (document.querySelector('.battle-field__foundation[data-targetable="true"]')) { top.click(); await frame(); continue; }
+      else if (document.querySelector('.battle-field__foundation[data-targetable="true"]')) { await press(top); continue; }
       played = true; break;
     }
     if (!played) { [...document.querySelectorAll('.battle-field__status button')].find(b => b.textContent === 'Deal a row')?.click(); await frame(); }

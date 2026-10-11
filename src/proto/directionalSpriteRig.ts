@@ -32,11 +32,18 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
     create(height: number, tint = 0xffffff) {
       const root = new THREE.Group(), billboard = new THREE.Group(), facing = new THREE.Group();
       root.add(billboard); billboard.add(facing);
+      // A hit flash blends every joint toward one colour (white on a defeat, red on a flinch).
+      const flash = { amount: { value: 0 }, color: { value: new THREE.Color(1, 1, 1) } };
       const parts = definition.low[0].parts.map((part,i) => {
         const pivot = new THREE.Group(); pivot.name = part.id;
         // Opaque cutouts avoid double-blending semi-transparent fur where joint
         // regions underlap. Alpha testing still preserves the sprite silhouette.
         const material = new THREE.MeshBasicMaterial({map: textures[definition.low[0].source], color: tint, transparent: false, alphaTest: .45, side: THREE.DoubleSide, forceSinglePass: true});
+        material.onBeforeCompile = shader => {
+          shader.uniforms.flashAmount = flash.amount; shader.uniforms.flashColor = flash.color;
+          shader.fragmentShader = `uniform float flashAmount;\nuniform vec3 flashColor;\n${shader.fragmentShader}`
+            .replace('#include <dithering_fragment>', '#include <dithering_fragment>\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, flashColor, flashAmount);');
+        };
         const mesh = new THREE.Mesh(geometries.get(definition.low[0])![i], material);
         pivot.add(mesh); facing.add(pivot);
         return { part, pivot, mesh, material, x: 0, y: 0, width: 0, height: 0 };
@@ -100,9 +107,12 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
           material.opacity=opacity;material.alphaTest=.45*opacity;material.depthWrite=!translucent;
         }); },
         setColor(color: THREE.ColorRepresentation) { parts.forEach(({material}) => material.color.set(color)); },
+        setFlash(amount: number, color: THREE.ColorRepresentation = 0xffffff) { flash.amount.value = Math.max(0, Math.min(1, amount)); flash.color.value.set(color); },
         dispose() { parts.forEach(({material}) => material.dispose()); },
       };
     },
     dispose() { geometries.forEach(group => group.forEach(geometry => geometry.dispose())); },
   };
 }
+
+export type DirectionalSpriteInstance = ReturnType<ReturnType<typeof createDirectionalSpriteLibrary>['create']>;

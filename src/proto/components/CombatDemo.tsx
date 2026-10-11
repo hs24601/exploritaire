@@ -5,8 +5,10 @@ import { COMBAT_CAMERA_VIEWS, COMBAT_DEMO_SECONDS, createCombatCameraControls, c
 import './CombatDemo.css';
 import { SceneButton as CameraButton } from './SceneButton';
 import { BATTLE_TURN_PRIORITY, type BattleTeam } from '../battleTurnPriority';
+import { detectFxQuality } from '../atmosphere';
+import { cuesFor, freshEvents, type BattleScene } from '../rules/battleCues';
 
-export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TURN_PRIORITY[0], roster}: {onClose: () => void; onRestart: () => void; onEscape?: () => void; firstTeam?: BattleTeam; roster?: readonly string[]}) {
+export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TURN_PRIORITY[0], battle}: {onClose: () => void; onRestart: () => void; onEscape?: () => void; firstTeam?: BattleTeam; battle?: BattleScene}) {
   const host = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLElement>(null);
   const close = useRef(onClose); close.current = onClose;
@@ -17,10 +19,17 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
   const [cameraInfo, setCameraInfo] = useState<CombatCameraSnapshot | null>(null);
   const [copyStatus, setCopyStatus] = useState('Copy camera cue');
   const controls = useRef<{select: (view: CombatCameraView) => void; replay: () => void; move: (key: string, held: boolean) => void; cue: () => object; refresh: () => void} | null>(null);
-  // The battle panel's roster: who is still in the fight.
-  const rosterRef = useRef(roster); rosterRef.current = roster;
-  const rosterKey = roster?.join(',');
-  useEffect(() => { controls.current?.refresh(); }, [rosterKey]);
+  // The battle panel's units and events: who stands, who fell, and what just happened.
+  const battleRef = useRef(battle); battleRef.current = battle;
+  // Events from before the arena opened are history, not cues to replay.
+  const seenEvent = useRef(battle?.events[battle.events.length - 1]?.id ?? 0);
+  const pendingCues = useRef<ReturnType<typeof cuesFor>>([]);
+  useEffect(() => {
+    if (!battle) return;
+    const fresh = freshEvents(battle.events, seenEvent.current);
+    if (fresh.length) { seenEvent.current = fresh[fresh.length - 1]!.id; pendingCues.current.push(...cuesFor(fresh)); }
+    controls.current?.refresh();
+  }, [battle]);
   useEffect(() => {
     const heldKeys = new Set<string>();
     let selected: CombatCameraView = firstTeam;
@@ -60,6 +69,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
     let sharedSurface: HTMLDivElement | undefined;
     const textures: THREE.Texture[] = [];
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const quality = detectFxQuality();
     async function start() {
       try {
         renderer = new THREE.WebGLRenderer({antialias: false, alpha: false});
@@ -77,7 +87,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         sharedSurface.setAttribute('aria-hidden','true');
         layout.append(sharedSurface);
         sharedSurface.append(renderer.domElement);
-        rig = createCombatDemoRig(scene, camera, assets);
+        rig = createCombatDemoRig(scene, camera, assets, quality);
         const cameraControls = createCombatCameraControls(camera, firstTeam);
         let displayedTime = 0;
         const entered = performance.now();
@@ -87,8 +97,10 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           // Entry overview and scripted battle action have independent clocks.
           const cameraTime = selected === 'cinematic' ? displayedTime : (now - entered) / 1000;
           const shot = cameraControls.update(cameraTime, now, reduced);
-          if (rosterRef.current) rig!.setRoster(rosterRef.current);
-          rig!.update(displayedTime, reduced); renderer!.render(scene, camera);
+          const seconds = now / 1000;
+          pendingCues.current.splice(0).forEach(cue => rig!.cue(cue, seconds));
+          if (battleRef.current) rig!.setUnits(battleRef.current.units, seconds);
+          rig!.update(displayedTime, reduced, seconds); renderer!.render(scene, camera);
           if (host.current) {
             host.current.dataset.cameraView = selected;
             host.current.dataset.cameraPosition = camera.position.toArray().map(n => n.toFixed(3)).join(',');
@@ -123,7 +135,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
             ? moving ? 'Battlefield overview' : `${firstTeam === 'party' ? 'Player' : 'Enemy'} goes first`
             : reduced ? 'Reduced motion · scene effects off' : demoPhase(t));
           // Freecam can wake the final hold; idle cameras do not run a render loop.
-          if ((actionStarted !== null && t < COMBAT_DEMO_SECONDS) || moving || heldKeys.size) schedule();
+          if ((actionStarted !== null && t < COMBAT_DEMO_SECONDS) || moving || heldKeys.size || rig!.busy(now / 1000)) schedule();
         };
         const resize = () => {
           if (!host.current || !renderer || !sharedSurface) return;
@@ -155,7 +167,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           },
           replay() { actionStarted = performance.now(); lastTick = -1; displayedTime = 0; setElapsed(0); schedule(); },
           move(key, held) { if (selected !== 'freecam') return; if (held) { if (!heldKeys.size) lastFrame = performance.now(); heldKeys.add(key); schedule(); } else { heldKeys.delete(key); lastReadout = -Infinity; paint(performance.now()); } },
-          refresh() { paint(performance.now()); },
+          refresh() { const now = performance.now(); if (paint(now) || rig!.busy(now / 1000)) schedule(); },
           cue() { const info = cameraControls.snapshot(); return { t: Number(displayedTime.toFixed(3)), p: info.position, target: info.target, fov: info.fov }; },
         };
         const arena = host.current;

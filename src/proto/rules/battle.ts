@@ -88,6 +88,8 @@ export type BattleEvent = {
   id: number;
   kind: 'hit' | 'dot' | 'stagger' | 'ko' | 'enemy-hit' | 'down' | 'take' | 'trap' | 'snatch';
   targetId: string;
+  /** Who acted: the attacker for hits, the slime for enemy hits, the trap's setter for traps. */
+  sourceId?: string;
   amount?: number;
   label?: string;
 };
@@ -293,7 +295,7 @@ export const applyAttack = (state: BattleState, actorId: string, foeId: string):
   const events: Omit<BattleEvent, 'id'>[] = [];
   const damage = scaled(target, attack.damage);
   const hp = Math.max(0, target.hp - damage);
-  events.push({ kind: 'hit', targetId: foeId, amount: damage, label: attack.name });
+  events.push({ kind: 'hit', targetId: foeId, sourceId: actorId, amount: damage, label: attack.name });
   let { stagger, staggered, timer } = target;
   if (staggered <= 0) {
     stagger = Math.min(target.profile.staggerMax, stagger + attack.stagger);
@@ -389,8 +391,8 @@ export const tickBattle = (state: BattleState, dt: number): BattleState => {
         const damage = foe.profile.damage + foe.fed;
         const hpLeft = Math.max(0, target.hp - damage);
         party = party.map((actor) => (actor.id === target.id ? { ...actor, hp: hpLeft, charge: 0 } : actor));
-        events.push({ kind: 'enemy-hit', targetId: target.id, amount: damage, label: foe.name });
-        if (hpLeft <= 0) events.push({ kind: 'down', targetId: target.id });
+        events.push({ kind: 'enemy-hit', targetId: target.id, sourceId: foe.id, amount: damage, label: foe.name });
+        if (hpLeft <= 0) events.push({ kind: 'down', targetId: target.id, sourceId: foe.id });
         return { ...foe, hp, timer, stagger, staggered, effects, fed: 0 };
       }
     }
@@ -442,7 +444,7 @@ const eat = (state: BattleState, foeId: string, column: number): BattleState => 
     if (trap) {
       const damage = Math.round(scaled(foe, trap.damage) * TRAP_BONUS);
       const hp = Math.max(0, foe.hp - damage);
-      events.push({ kind: 'trap', targetId: foeId, amount: damage, label: trap.name });
+      events.push({ kind: 'trap', targetId: foeId, sourceId: trap.actorId, amount: damage, label: trap.name });
       let { stagger, staggered } = foe;
       if (staggered <= 0) {
         stagger = Math.min(foe.profile.staggerMax, stagger + trap.stagger);
