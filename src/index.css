@@ -2949,6 +2949,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-tableau-stage .playing-card > div { gap: 0; transform: translateY(-2px); }
 .proto-tableau-stage .playing-card > div > div:last-child:not(.proto-card-rank) { margin-top: 0; font-size: max(16px, calc(var(--classic-card-w) * .3)); }
 .proto-tableau-stage .proto-card-rank { font-family: 'Classic Pixel', monospace; }
+/* Front tableau card: the value, large in the middle of the face. */
+.proto-card-center-rank { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; padding-top: 12%; font-size: max(24px, calc(var(--classic-card-w) * .62)); font-weight: 700; line-height: 1; pointer-events: none; text-shadow: 0 1px 0 #000a, 0 0 10px #0008; }
+.proto-tableau-stage .proto-card-center-rank { font-family: 'Classic Pixel', monospace; }
 
 /* The CSS map camera renders once. Its clipping window extends into the
    exploration shelf while its dimensions, perspective pivot and input stay put. */

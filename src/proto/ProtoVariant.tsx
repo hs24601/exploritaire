@@ -1818,6 +1818,7 @@ const selectBiome = (biomeId: string) => {
                               mobilityTarget={mobilityTarget}
                               muted={!isTopCard}
                               buried={!isTopCard}
+                              centerRank={isTopCard}
                               lit={cameraTilted}
                               standardRankSize
                               footerLabel={

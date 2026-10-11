@@ -139,7 +139,7 @@ export function BattleTableauField({ hours, lights, onWatch, active }: {
         <div className="battle-field__tableau" role="group" aria-label="Shared tableau · Small Woods at 0,-1">
           <div className="battle-field__rack">
           {tableau.map((column: Card[], index) => <div className="battle-field__column" key={index} style={{ '--cards': Math.max(1,column.length) } as CSSProperties}>
-            {column.map((card, depth) => <ProtoCard key={card.id} card={card} disabled={depth < column.length - 1 || !eligibleActors(card).length} buried={depth < column.length - 1} lit
+            {column.map((card, depth) => <ProtoCard key={card.id} card={card} disabled={depth < column.length - 1 || !eligibleActors(card).length} buried={depth < column.length - 1} centerRank={depth === column.length - 1} lit
               active={selection?.cardId === card.id} selected={selection?.cardId === card.id}
               cardRef={node => { if (node) cardRefs.current.set(card.id,node); else cardRefs.current.delete(card.id); }}
               onClick={event => activate(index,event.currentTarget)}

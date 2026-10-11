@@ -159,7 +159,7 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
                   onPointerUp={top ? (event) => endDrag(event) : undefined}
                   onPointerCancel={top ? (event) => endDrag(event, true) : undefined}>
                   {/* Mouse and touch play through the pointer handlers; Enter (detail 0) plays from the keyboard. */}
-                  <ProtoCard card={card} disabled={!top || Boolean(fight.result)} muted={!top}
+                  <ProtoCard card={card} disabled={!top || Boolean(fight.result)} muted={!top} centerRank={top}
                     onClick={top ? (event) => { if (event.detail === 0 && playable) play(columnIndex); } : undefined} />
                   {eyed ? (
                     <span className="proto-skirmish__eye" aria-label={fight.eye!.pounce ? `The ${fight.foe.label} will pounce on this card` : `The ${fight.foe.label} eyes this card`}

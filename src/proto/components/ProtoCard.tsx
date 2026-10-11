@@ -41,6 +41,7 @@ export const ProtoCard = ({
   standardRankSize = false,
   buried = false,
   lit = false,
+  centerRank = false,
   style,
 }: {
   card: Card;
@@ -60,6 +61,9 @@ export const ProtoCard = ({
   buried?: boolean;
   /** Surface receives the shared scene lighting variables. */
   lit?: boolean;
+  /** Front tableau card: the value sits large in the middle of the face and
+   * the corner index steps aside (buried cards keep it for the peek row). */
+  centerRank?: boolean;
   style?: React.CSSProperties;
 }) => (
   <PlayingCard
@@ -88,7 +92,7 @@ export const ProtoCard = ({
   >
     <CardVeil buried={buried} />
     <div className="flex min-w-0 items-start justify-between gap-1">
-      <div className={`proto-card-rank font-semibold leading-none ${standardRankSize ? 'text-[calc(var(--classic-card-w)*0.34)]' : muted ? 'text-[calc(var(--classic-card-w)*0.27)]' : 'text-[calc(var(--classic-card-w)*0.4)]'}`}>
+      <div aria-hidden={centerRank || undefined} className={`proto-card-rank ${centerRank ? 'invisible ' : ''}font-semibold leading-none ${standardRankSize ? 'text-[calc(var(--classic-card-w)*0.34)]' : muted ? 'text-[calc(var(--classic-card-w)*0.27)]' : 'text-[calc(var(--classic-card-w)*0.4)]'}`}>
         {rankLabel(card.rank)}
       </div>
       {footerLabel ? (
@@ -97,6 +101,7 @@ export const ProtoCard = ({
         </div>
       ) : null}
     </div>
+    {centerRank ? <span className="proto-card-center-rank">{rankLabel(card.rank)}</span> : null}
   </PlayingCard>
 );
 
