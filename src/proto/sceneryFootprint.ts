@@ -11,3 +11,13 @@ export function fitSceneryFootprint(foot: { x: number; y: number }, width: numbe
   return { position: { x: clamp(foot.x, owner.x, Math.max(0, halfX - fittedWidth * c / 2)),
     y: clamp(foot.y, owner.y, Math.max(0, halfY - fittedWidth * s / 2)) }, width: fittedWidth, height: height * scale };
 }
+
+/** A solid has a two-axis footprint. Fit it once in world space, leaving
+ * enough depth behind/in front of its anchor at every camera heading. */
+export function fitSceneryVolumeFootprint(foot: { x: number; y: number }, width: number, height: number,
+  owner: { x: number; y: number; width: number; height: number }, padding = 1) {
+  const halfX=Math.max(0,owner.width/2-padding),halfY=Math.max(0,owner.height/2-padding);
+  const scale=Math.min(1,halfX*2/Math.max(width,1e-6),halfY*2/Math.max(width,1e-6)),fittedWidth=width*scale;
+  const clamp=(value:number,centre:number,half:number)=>centre+Math.max(-half,Math.min(half,value-centre));
+  return {position:{x:clamp(foot.x,owner.x,Math.max(0,halfX-fittedWidth/2)),y:clamp(foot.y,owner.y,Math.max(0,halfY-fittedWidth/2))},width:fittedWidth,height:height*scale};
+}

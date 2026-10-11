@@ -7,10 +7,10 @@ describe('immutable region labels', () => {
     const tiles = createInitialState().biomeTiles.map(tile => ({ ...tile, flags: tile.flags?.filter(flag => flag !== 'unexplored') }));
     const terrain = immutableTerrainRegions(tiles);
     expect(terrain).toHaveLength(1);
-    expect(terrain[0].tiles).toHaveLength(89);
+    expect(terrain[0].tiles).toHaveLength(5);
     const regions = immutableTileRegions(tiles);
     expect(regions).toHaveLength(3);
-    expect(regions.map(region => region.tiles.length)).toEqual([7, 7, 75]);
+    expect(regions.map(region => region.tiles.length)).toEqual([1, 1, 3]);
     for (const region of regions) {
       expect(region.width * region.height / (48 * 48)).toBe(region.tiles.length);
       expect(Math.abs(region.x) < region.width / 2 && Math.abs(region.y - 96) < region.height / 2).toBe(false);
@@ -51,7 +51,7 @@ describe('one label per connected named tile type', () => {
     const tiles = createInitialState().biomeTiles.filter(tile => tile.tileType === 'impassable-mountain')
       .map(tile => ({ ...tile, flags: ['impassable'] }));
     expect(connectedTileLabelRegions(tiles)).toHaveLength(1);
-    expect(connectedTileLabelRegions(tiles)[0]).toMatchObject({ width: 720, height: 240, x: 0, y: 240 });
+    expect(connectedTileLabelRegions(tiles)[0]).toMatchObject({ width: 144, height: 48, x: 0, y: 144 });
   });
   it('groups mutable biomes and finds a rectangle spanning uneven row widths', () => {
     const tiles = [tile('a', 0, 0), tile('b', 1, 0), tile('c', 0, 1), tile('d', 1, 1),

@@ -16,9 +16,13 @@ export function directionalPartGeometry(part: DirectionalPart, image: {width: nu
 }
 
 /** Reuse atlas textures and tiny UV geometries. Each actor owns only joints/materials. */
-export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, definition: DirectionalSpriteDefinition) {
+export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, definition: DirectionalSpriteDefinition,
+  poses: Readonly<Record<string, DirectionalSpriteDefinition>> = {}) {
   const geometries = new Map<DirectionalFrame, THREE.BufferGeometry[]>();
-  const frames = [...definition.low, ...definition.high, ...(definition.lowOpposite??[]), ...(definition.highOpposite??[]), definition.top];
+  const definitions: Readonly<Record<string, DirectionalSpriteDefinition>> = { standing: definition, ...poses };
+  const signature = (frame: DirectionalFrame) => frame.parts.map(part => `${part.id}:${part.parent ?? ''}`).join(',');
+  const frames = Object.values(definitions).flatMap(pose => [...pose.low, ...pose.high, ...(pose.lowOpposite??[]), ...(pose.highOpposite??[]), pose.top]);
+  if (frames.some(frame => signature(frame) !== signature(definition.low[0]))) throw new Error('Sprite poses must share joint IDs, order and parents');
   for (const frame of frames) {
     if (geometries.has(frame)) continue;
     const image = textures[frame.source].image as {width: number; height: number};
@@ -40,18 +44,26 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
       const byId = new Map(parts.map(joint => [joint.part.id,joint]));
       for(const joint of parts) if(joint.part.parent) byId.get(joint.part.parent)!.pivot.add(joint.pivot);
       let view: SpriteView | undefined, active: DirectionalFrame | undefined;
+      let poseName = 'standing', currentDefinition = definition;
       return {
         root, billboard, facing, parts,
         get frame() { return active?.id ?? ''; },
         get view() { return view; },
+        get pose() { return poseName; },
+        setPose(name: string) {
+          const next = definitions[name];
+          if (!next) throw new Error(`Unknown sprite pose: ${name}`);
+          if (poseName === name) return;
+          poseName = name; currentDefinition = next; active = undefined;
+        },
         update(camera: THREE.Camera, heading: number, time: number, reduced: boolean, phase = 0, action = 0) {
           const dx = camera.position.x-root.position.x, dz = camera.position.z-root.position.z;
           const elevation = Math.atan2(camera.position.y-root.position.y, Math.hypot(dx,dz));
           const yaw = Math.atan2(dx,dz);
           view = selectSpriteView(heading,yaw,elevation,view);
-          const opposite = view.elevation === 'low' ? definition.lowOpposite : definition.highOpposite;
+          const opposite = view.elevation === 'low' ? currentDefinition.lowOpposite : currentDefinition.highOpposite;
           const authoredOpposite = view.elevation !== 'top' && view.flip<0 && opposite;
-          const frame = view.elevation === 'top' ? definition.top : (authoredOpposite || definition[view.elevation])[view.direction];
+          const frame = view.elevation === 'top' ? currentDefinition.top : (authoredOpposite || currentDefinition[view.elevation])[view.direction];
           if (frame !== active) {
             active = frame;
             parts.forEach((joint,i) => {
@@ -72,14 +84,14 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
           facing.position.y = view.elevation === 'top' ? -height*.5 : 0;
           facing.scale.x = authoredOpposite ? 1 : view.flip;
           parts.forEach(joint => {
-            const pose = definition.motion==='quadruped'?sampleQuadrupedPose(joint.part.id,time,phase,action,reduced,definition.motionProfile):sampleSpritePose(joint.part.id,time,phase,action,reduced);
-            const squash = definition.motion === 'slime' && !reduced ? 1+Math.sin(time*3.8+phase)*.065 : pose.scaleY;
+            const pose = currentDefinition.motion==='quadruped'?sampleQuadrupedPose(joint.part.id,time,phase,action,reduced,currentDefinition.motionProfile):sampleSpritePose(joint.part.id,time,phase,action,reduced);
+            const squash = currentDefinition.motion === 'slime' && !reduced ? 1+Math.sin(time*3.8+phase)*.065 : pose.scaleY;
             const parent = joint.part.parent ? byId.get(joint.part.parent) : undefined;
             joint.pivot.position.set(joint.x-(parent?.x ?? 0)+pose.x*height,joint.y-(parent?.y ?? 0)+pose.y*height,joint.part.depth-(parent?.part.depth ?? 0));
             joint.pivot.rotation.z = pose.angle;
             // A quadruped breathes as one uniformly scaled hierarchy, rather
             // than stretching its torso independently of the attached parts.
-            joint.pivot.scale.set(definition.motion === 'slime' ? 1/Math.sqrt(squash) : squash,squash,1);
+            joint.pivot.scale.set(currentDefinition.motion === 'slime' ? 1/Math.sqrt(squash) : squash,squash,1);
           });
         },
         setOpacity(opacity: number) { parts.forEach(({material}) => {

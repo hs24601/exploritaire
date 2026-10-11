@@ -101,7 +101,7 @@ export function SpriteStandeeShadows({ sprite, position, shadows, size = SPRITE_
     return <div key={shadow.lightId} aria-hidden="true" className="proto-sprite-shadow" data-shadow-light={shadow.lightId} data-shadow-owner={owner} style={{
       left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`,
       width: size, height: size * shadow.length,
-      transform: `translate3d(-50%, -100%, 0.5px)${yaw ? ` rotate(${(-yaw).toFixed(2)}deg)` : ''} ${standeeShadowSkew(shadow.angle)}`, opacity: shadow.opacity,
+      transform: `translate3d(-50%, -100%, 0.5px)${yaw ? ` rotate(${(-yaw).toFixed(2)}deg)` : ''} ${standeeShadowSkew(shadow.angle)}${owner === 'actor' ? ' scale(var(--actor-world-scale, 1))' : ''}`, transformOrigin: '50% 100%', opacity: shadow.opacity,
       maskImage: mask, WebkitMaskImage: mask, maskSize: layout.size, WebkitMaskSize: layout.size, maskPosition: layout.position, WebkitMaskPosition: layout.position,
     }} />;
   })}</>;

@@ -1,13 +1,20 @@
 import { UnexploredTile } from './UnexploredTile';
+import { TableStoryCard } from './TableStoryCard';
+import { useHeldVisual } from './useHeldVisual';
+import { createPortal } from 'react-dom';
 import { UnexploredGround } from './UnexploredGround';
 import { useEnvironmentFootprints } from './useEnvironmentFootprints';
 import { useActorOcclusion } from './useActorOcclusion';
-import { fitSceneryFootprint } from '../sceneryFootprint';
+import { useImmersiveLabels } from './useImmersiveLabels';
+import { fitSceneryFootprint, fitSceneryVolumeFootprint } from '../sceneryFootprint';
+import { propVolumeHeading, propVolumeRecipe } from '../propVolume';
+import { PropVolumeArt, PropVolumeShadows } from './PropVolume';
 import { TileTitle } from './TileTitle';
 import { connectedTileLabelRegions, immutableTerrainRegions, immutableTileRegions } from '../tileLabels';
 import { ConnectedTerrainArt } from './ConnectedTerrainArt';
 import { TableActorSprite } from './TableActorSprite';
 import { movementHeading, worldActorTransform } from '../actorOrientation';
+import { ACTOR_SCALE_REFERENCE, immersionActorScale } from '../actorScale';
 import { RoadTileArt } from './RoadTileArt';
 import { HeroDenRoof } from './HeroDenRoof';
 import type { RoadTile } from '../roadTiles';
@@ -58,7 +65,7 @@ export type ProtoBiomeTile = {
   threat?: 'none' | 'low' | 'high';
   /** Water tiles are fished (the pond) rather than dealt as a tableau. */
   terrain?: 'woods' | 'water';
-  tileType?: 'unexplored' | 'path' | 'hero-den' | 'impassable-mountain';
+  tileType?: 'unexplored' | 'path' | 'hero-den' | 'impassable-mountain' | 'berry-patch';
   road?: RoadTile;
   /** Dangerous tiles have a printed warning flat, embers and mist in immersion. */
   danger?: boolean;
@@ -72,6 +79,7 @@ export type ProtoBiomeTile = {
 };
 
 export type ProtoWorldActor = {
+  awakeAtHome?: boolean;
   id: 'hero';
   label: string;
   location?: 'table' | 'foundation';
@@ -99,7 +107,7 @@ type ResourcePhysicsBody = {
 };
 
 export const CLASSICPLUS_GRID_SIZE = TABLE_GRID.cellSize;
-export const CLASSICPLUS_ZOOM_REFERENCE_SCALE = 1.7;
+export const CLASSICPLUS_ZOOM_REFERENCE_SCALE = ACTOR_SCALE_REFERENCE;
 const TOP_DOWN_MAX_SCALE = CLASSICPLUS_ZOOM_REFERENCE_SCALE * 3.5;
 /** Standees pop up from their bases once the camera has leaned halfway back. */
 const STANDEE_POP_MS = 320;
@@ -154,6 +162,7 @@ const finiteWorldPoint = (point: { x: number; y: number } | undefined, fallback 
 });
 
 type ProtoMapProps = {
+  storyCard?: React.ReactNode;
   biomeTiles: ProtoBiomeTile[];
   actors: ProtoWorldActor[];
   actorOrigins: ProtoWorldActor[];
@@ -218,6 +227,7 @@ export const ProtoMap = ({
   onInspectActor,
   onInspectTile,
   questCards = [],
+  storyCard,
   questTitles = [],
   questTexts = [],
   questRewardLabels = [],
@@ -292,6 +302,8 @@ export const ProtoMap = ({
     initialState: { x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE },
   });
   const getCameraTilt = useCallback((live: { scale: number }) => tableCameraTilt(viewportHeight, live.scale), [viewportHeight]);
+  const volumeCamera = useMemo(() => ({ getCamera: camera.getLiveCamera, onCameraFrame: camera.onCameraFrame,
+    getElevation: (live: { scale: number }) => 90 - getCameraTilt(live).angle }), [camera.getLiveCamera, camera.onCameraFrame, getCameraTilt]);
   useEffect(() => {
     const viewport = camera.containerRef.current;
     const map = viewport?.closest<HTMLElement>('.proto-map');
@@ -361,6 +373,18 @@ export const ProtoMap = ({
   const tilt = tilted ? getCameraTilt(camera.cameraState) : null;
   const tiltAngle = tilt?.angle ?? 0;
   const stageTransform = staged ? tableTiltTransform(tilt ?? tableTiltFor(viewportHeight, 0)) : undefined;
+  // Publish body scaling with each live camera frame, including wheel, pinch
+  // and automatic encounter framing, rather than waiting for React to settle.
+  useEffect(() => {
+    const viewport = camera.containerRef.current;
+    if (!viewport) return;
+    const drawActorScale = (live: { scale: number }) => {
+      viewport.style.setProperty('--actor-world-scale', String(upright ? immersionActorScale(live.scale) : 1));
+    };
+    drawActorScale(camera.getLiveCamera());
+    const unsubscribe = camera.onCameraFrame(drawActorScale);
+    return () => { unsubscribe(); viewport.style.removeProperty('--actor-world-scale'); };
+  }, [upright, camera.getLiveCamera, camera.onCameraFrame]);
   // Zoom drives the whole rig on the same frame as the world transform. Keep
   // CSS easing for mode switches only; it must not lag wheel or pinch input.
   useEffect(() => {
@@ -389,6 +413,7 @@ export const ProtoMap = ({
   const actorGhostWorld = useRef<HTMLDivElement>(null);
   const actorHeadings = useRef(new Map<string, { x: number; y: number; heading: number }>());
   useActorOcclusion(camera.containerRef, actorGhostWorld, upright, camera.getLiveCamera, getCameraTilt);
+  useImmersiveLabels(camera.containerRef, upright, camera.getLiveCamera);
   const yaw = camera.cameraState.yaw ?? 0;
   const immutableRegions = useMemo(() => immutableTileRegions(biomeTiles), [biomeTiles]);
   const terrainRegions = useMemo(() => immutableTerrainRegions(biomeTiles), [biomeTiles]);
@@ -413,6 +438,7 @@ export const ProtoMap = ({
   const pointerDragRef = useRef<{ actorId: string; pointerId: number; startX: number; startY: number; moved: boolean } | null>(null);
   const resourcePointerDragRef = useRef<{ stackId: string; pointerId: number } | null>(null);
   const [draggingResourceId, setDraggingResourceId] = useState<string | null>(null);
+  useHeldVisual(() => document.querySelector<HTMLElement>('.proto-resource-stack.cursor-grabbing'), Boolean(draggingResourceId));
   const travelingActorRef = useRef<string | null>(null);
   const resourcePhysicsRef = useRef<Map<string, ResourcePhysicsBody>>(new Map());
   const resourceStacksRef = useRef(resourceStacks);
@@ -626,7 +652,7 @@ export const ProtoMap = ({
     };
     biomeTiles.forEach((tile) => {
       const area = getBiomeWorldFootprint(tile);
-      const cost = tile.unlocked === false || tile.tileType === 'impassable-mountain' ? Infinity : tile.road || tile.tileType ? 1 : biomeTravelCost(tile.flags);
+      const cost = tile.unlocked === false || tile.tileType === 'impassable-mountain' ? Infinity : tile.road || (tile.tileType && tile.tileType !== 'berry-patch') ? 1 : biomeTravelCost(tile.flags);
       for (let column = 0; column < Math.round(area.width / CLASSICPLUS_GRID_SIZE); column += 1)
         for (let row = 0; row < Math.round(area.height / CLASSICPLUS_GRID_SIZE); row += 1)
           mark(area.first.column + column, area.first.row + row, cost);
@@ -816,11 +842,16 @@ export const ProtoMap = ({
   // canvas effect only reruns when a light actually changes.
   // A travelling actor's light moves with it along its path, frame by frame.
   const travelPosition = travel ? pointAlongTimedPath(travel.path, travel.progress) : null;
-  const actorIsSleeping = (actor: ProtoWorldActor, position: { x: number; y: number }) => actor.id === 'hero'
-    && travel?.actorId !== actor.id && biomeTiles.some(tile => tile.tileType === 'hero-den'
+  const actorIsInDen = (actor: ProtoWorldActor, position: { x: number; y: number }) => actor.id === 'hero'
+    && biomeTiles.some(tile => tile.tileType === 'hero-den'
       && TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position)) === TABLE_GRID.reference(TABLE_GRID.atWorld(position)));
+  const actorIsSleeping = (actor: ProtoWorldActor, position: { x: number; y: number }) => actorIsInDen(actor, position)
+    && !actor.awakeAtHome
+    && travel?.actorId !== actor.id;
   const actorArt = (actor: ProtoWorldActor, position: { x: number; y: number }) => actorIsSleeping(actor, position)
-    ? `${import.meta.env.BASE_URL}assets/actors/hero-sleeping.png` : actor.sprite;
+    ? `${import.meta.env.BASE_URL}assets/actors/hero-sleeping.png`
+    : actor.id === 'hero' && travel?.actorId !== actor.id
+      ? `${import.meta.env.BASE_URL}assets/actors/hero-sitting.png` : actor.sprite;
   const actorLights = actors.flatMap(actor => actorLight(actor.id, travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor), actor.luminosity, actor.lightColor) ?? []);
   const lightKey = JSON.stringify([placedLights, actorLights]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -980,21 +1011,21 @@ export const ProtoMap = ({
       const position = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
       return TABLE_GRID.reference(TABLE_GRID.atWorld(position)) === TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position));
     });
-    // The empty cave meets the front tile edge beside the mountain range.
+    // The empty cave meets the north tile edge beside the mountain props.
     // Retain the sleeping hollow's depth while an actor occupies it. The shared
     // footprint fitter keeps the complete foot line just inside the tile.
-    const back = { x: 0, y: area.height * (tile.tileType === 'hero-den' ? occupied ? .24 : .5 : -.37) };
+    const back = { x: 0, y: propVolumeRecipe(tile.sprite) ? 0 : area.height * (tile.tileType === 'hero-den' && occupied ? .24 : -.37) };
     const position = { x:area.x+back.x, y:area.y+back.y };
     const size = tile.tileType === 'hero-den' ? 46 : BIOME_POPUP_SIZE;
     const owner = terrainOwners.get(tile.id) ?? area;
-    const fitted = fitSceneryFootprint(position, size, size, owner, 0);
+    const fitted = propVolumeRecipe(tile.sprite) ? fitSceneryVolumeFootprint(position, size, size, owner) : fitSceneryFootprint(position, size, size, owner, 0);
     return [tile.id,{ position: fitted.position, size: fitted.width, requestedSize: size, requestedPosition: position, owner }] as const;
   }));
   const atmosphereCanopies: AtmosphereCanopy[] = biomeTiles.filter(tile => tile.unlocked !== false && !tile.flags?.includes('unexplored')).flatMap(tile => {
     const popup = biomePopups.get(tile.id)!;
     const area = getBiomeWorldFootprint(tile);
     const canopies: AtmosphereCanopy[] = (tableScenery[tile.id] ?? []).map(prop => {
-      const fitted = fitSceneryFootprint({x:area.x+prop.x,y:area.y+prop.y},prop.width,prop.height,area,0);
+      const fitted = propVolumeRecipe(prop.src) ? fitSceneryVolumeFootprint({x:area.x+prop.x,y:area.y+prop.y},prop.width,prop.height,area) : fitSceneryFootprint({x:area.x+prop.x,y:area.y+prop.y},prop.width,prop.height,area,0);
       return {id:`${tile.id}-${prop.id}`,...fitted.position,width:fitted.width,height:fitted.height,sprite:prop.src,flip:prop.flip,worldHeading:0};
     });
     if (tile.sprite && !failedSprites.includes(tile.sprite) && popup.size >= BIOME_POPUP_MIN_SIZE) canopies.push({
@@ -1066,14 +1097,15 @@ export const ProtoMap = ({
   // own silhouette across the table away from each one.
   const spriteStandee = (sprite: string | undefined, position: { x: number; y: number }, { size = SPRITE_STANDEE_SIZE, owner = 'actor' }: { size?: number; owner?: string } = {}) => {
     if (!upright || !sprite || failedSprites.includes(sprite)) return null;
+    const volume = owner === 'biome' && Boolean(propVolumeRecipe(sprite));
     const facingYaw = owner === 'biome' ? 0 : yaw;
     const lit = standeeLighting(timeOfDay, position, size, lightSources, facingYaw);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
     return {
-      shadows: <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} yaw={facingYaw} />,
-      silhouette: <SilhouetteRelief sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} yaw={facingYaw}
+      shadows: volume ? <PropVolumeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} /> : <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} yaw={facingYaw} />,
+      silhouette: volume ? <PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} monochrome fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} size={size} />} /> : <SilhouetteRelief sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} yaw={facingYaw}
         fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} size={size} />} />,
-      art: <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />,
+      art: volume ? <PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />} /> : <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />,
     };
   };
   // Pixel-art standees stay sharp as the camera zooms; flat pieces need none.
@@ -1226,16 +1258,14 @@ export const ProtoMap = ({
             transformOrigin: 'center center',
           }}
         >
-          {/* Impassable terrain around the clear area: black placeholder tiles,
-              lit only by the sun and moon (the light canvas keeps table lights off them). */}
-          {BLOCKED_REGIONS.map((region) => <div key={region.id} aria-hidden="true" data-blocked-region={region.id} className="proto-blocked-terrain"
-            style={{ left: `calc(50% + ${region.left}px)`, top: `calc(50% + ${region.top}px)`, width: region.right - region.left, height: region.bottom - region.top,
-              ['--terrain-sky' as string]: (0.05 + getTableLighting(timeOfDay).daylight * 0.11).toFixed(3) }} />)}
           {/* The cell a dragged actor would land on; red when there's no route. */}
           {dragPlan?.cell ? <div aria-hidden="true" data-cell-cue={TABLE_GRID.reference(dragPlan.cell)} data-cue-blocked={dragPlan.route ? undefined : 'true'}
             className={`proto-cell-cue${dragPlan.route ? '' : ' proto-cell-cue--blocked'}`}
             style={{ left: `calc(50% + ${TABLE_GRID.center(dragPlan.cell).x}px)`, top: `calc(50% + ${TABLE_GRID.center(dragPlan.cell).y}px)` }} /> : null}
           <div className="table-grid-origin" data-grid-landmark="true-center" data-grid-reference={TRUE_CENTER.reference} aria-hidden="true" style={{left:'50%',top:'50%',width:CLASSICPLUS_GRID_SIZE,height:CLASSICPLUS_GRID_SIZE}}>＋</div>
+          {storyCard && <TableStoryCard toWorld={worldPointFromClient} scale={camera.effectiveScale} solids={[
+            ...blockedSolids(), ...biomeTiles.map(tile => { const area = getBiomeWorldFootprint(tile); return { x: area.x, y: area.y, width: area.width, height: area.height }; }),
+          ]}>{storyCard}</TableStoryCard>}
           {placedLights.filter((light) => !light.fromPiece).map((light) => <div key={light.id} data-board-piece="lamp" data-camera-ignore="true"
             aria-label={light.id === 'table-lantern' ? 'Table lantern, drag to move light' : 'Structure light'}
             onPointerDown={(event) => { event.stopPropagation(); if (light.id !== 'table-lantern' || (event.pointerType === 'mouse' && event.button !== 0)) return; event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); }}
@@ -1247,7 +1277,7 @@ export const ProtoMap = ({
             onMove={(position,tilt)=>onMoveQuest?.(placement.questIndex,position,tilt)}
             solids={[
               ...blockedSolids(),
-              ...biomeTiles.filter(tile => !tile.tileType && !tile.road).map(tile=>getBiomeWorldFootprint(tile)),
+              ...biomeTiles.filter(tile => (!tile.tileType || tile.tileType === 'berry-patch') && !tile.road).map(tile=>getBiomeWorldFootprint(tile)),
               ...resourceStacks.filter(stack=>stack.resource==='provisions_hut'||stack.build&&CRAFT_RECIPES.find(recipe=>recipe.id===stack.build?.recipeId)?.output==='provisions_hut').map(stack=>({x:stack.position.x,y:stack.position.y,width:48,height:48})),
               ...actors.map(actor=>{const point=getActorWorldPosition(actor);return {x:point.x,y:point.y,width:48,height:48};}),
               // Other quest cards on the table, e.g. the teaching card, at their largest size.
@@ -1302,7 +1332,9 @@ export const ProtoMap = ({
                   data-light-level={tileLight.level}
                   data-grid-reference={TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position))}
                   data-biome-id={tile.id}
-                  title={unexplored ? undefined : tile.road ? `${tile.title} · explore the path` : tile.tileType === 'impassable-mountain' ? 'Impassable mountain · find a route around it' : tile.tileType ? `${tile.title} · explore the path` : tile.danger ? `${tile.title} · danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title} · fishing` : `${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
+                  data-scenery-symmetry={upright && !unexplored ? propVolumeRecipe(tile.sprite)?.symmetry : undefined}
+                  data-scenery-facing={upright && !unexplored ? propVolumeRecipe(tile.sprite)?.facing : undefined}
+                  title={unexplored ? undefined : tile.tileType === 'berry-patch' ? `${tile.title} · forage ripe berries · ${tile.tableauSize} cards` : tile.road ? `${tile.title} · explore the path` : tile.tileType === 'impassable-mountain' ? 'Impassable mountain · find a route around it' : tile.tileType ? `${tile.title} · explore the path` : tile.danger ? `${tile.title} · danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title} · fishing` : `${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
                   data-explored={explored.toFixed(2)}
                   data-unexplored={unexplored || undefined}
                   data-tile-type={unexplored ? 'unexplored' : tile.tileType ?? tile.terrain ?? 'woods'}
@@ -1328,7 +1360,11 @@ export const ProtoMap = ({
                   }}
                   aria-label={unexplored ? 'Unexplored biome' : tile.danger ? `${tile.title}, danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
                 >
-                  {unexplored ? <span aria-hidden="true" className="absolute inset-0" style={{ background: '#182221', filter: 'var(--silhouette-filter) grayscale(1) brightness(0.45)' }} /> : tile.road ? <RoadTileArt road={tile.road} exploration={explored} brightness={upright ? standeeLighting(timeOfDay, tile.position, 0, lightSources).brightness : 1} /> : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v2.png`} alt="" draggable={false} /> : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <BiomeTopDownArt terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /> : null}
+                  {unexplored ? <span aria-hidden="true" className="absolute inset-0" style={{ background: '#182221', filter: 'var(--silhouette-filter) grayscale(1) brightness(0.45)' }} />
+                    : tile.road ? <RoadTileArt road={tile.road} exploration={explored} brightness={upright ? standeeLighting(timeOfDay, tile.position, 0, lightSources).brightness : 1} />
+                    : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v2.png`} alt="" draggable={false} />
+                    : tile.tileType === 'berry-patch' ? !upright && <img data-berry-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/berry-patch-topdown.svg`} alt="" draggable={false} />
+                    : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <BiomeTopDownArt terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /> : null}
                   <span className="proto-tile-title-anchor">{!compositeTileTitle(tile) && !unexplored && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={footprint.width} height={footprint.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />}</span>
                 </button>
                 {upright && !unexplored && !tile.tileType && !tile.road && tile.unlocked !== false ? <BiomeEdgeScenery
@@ -1342,6 +1378,8 @@ export const ProtoMap = ({
                   lights={lightSources}
                   quality={fxQuality}
                   standee={sceneryStandee}
+                  volumeStandee={standee(undefined, oversample)}
+                  volumeCamera={volumeCamera}
                   oversample={oversample}
                 /> : null}
                 {popup ? <React.Fragment key={tile.id + '-popup'}>
@@ -1351,7 +1389,10 @@ export const ProtoMap = ({
                     data-board-piece="biome-popup"
                     data-biome-popup={tile.id}
                     data-environment-prop="true"
-                    data-scenery-heading="0"
+                    data-scenery-heading={propVolumeHeading(propVolumeRecipe(tile.sprite))}
+                    data-scenery-symmetry={propVolumeRecipe(tile.sprite)?.symmetry}
+                    data-scenery-facing={propVolumeRecipe(tile.sprite)?.facing}
+                    data-scenery-volume={propVolumeRecipe(tile.sprite) ? 'true' : undefined}
                     data-scenery-x={requestedPosition.x} data-scenery-y={requestedPosition.y}
                     data-scenery-desired-width={requestedSize} data-scenery-desired-height={requestedSize}
                     data-scenery-width={popupSize} data-scenery-height={popupSize}
@@ -1359,8 +1400,8 @@ export const ProtoMap = ({
                     data-owner-width={popupOwner.width} data-owner-height={popupOwner.height}
                     className="proto-sprite-standee absolute"
                     onClick={tapTile}
-                    style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...sceneryStandee, width: popupSize * oversample, height: popupSize * oversample }}
-                  ><Oversample width={popupSize} height={popupSize} factor={oversample}><Reveal fraction={tile.tileType === 'hero-den' ? 1 : explored} width={popupSize} height={popupSize} shade={popup.silhouette}>{popup.art}</Reveal></Oversample></div>
+                    style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...(propVolumeRecipe(tile.sprite) ? standee(undefined, oversample) : sceneryStandee), width: popupSize * oversample, height: popupSize * oversample }}
+                  ><Oversample width={popupSize} height={popupSize} factor={oversample}><Reveal fraction={tile.tileType === 'hero-den' || tile.tileType === 'berry-patch' ? 1 : explored} width={popupSize} height={popupSize} shade={popup.silhouette}>{popup.art}</Reveal></Oversample></div>
                 </React.Fragment> : null}
                 </React.Fragment>
               );
@@ -1428,6 +1469,9 @@ export const ProtoMap = ({
                     body.vy = 0;
                   }
                   clearResourceDragState();
+                },
+                onLostPointerCapture: () => {
+                  if (resourcePointerDragRef.current?.stackId === stack.id) clearResourceDragState();
                 },
               };
               return (
@@ -1499,11 +1543,13 @@ export const ProtoMap = ({
             const actorLight = lightField.at(actorPosition);
             lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: upright ? -30 : 24, percent: actorLight.percent, level: actorLight.level });
             const sleeping = actorIsSleeping(actor, actorPosition);
+            const sitting = actor.id === 'hero' && !sleeping && travel?.actorId !== actor.id;
+            const overheadHero = actor.id === 'hero' && !upright;
             const heading = movementHeading(actorPosition, actorHeadings.current.get(actor.id), actor.heading);
             actorHeadings.current.set(actor.id, { ...actorPosition, heading });
-            // The den authors a resting direction. Keep movement facing for
-            // the standing pose, but never rotate a resting body with the camera.
-            const poseHeading = sleeping ? actor.heading ?? 0 : heading;
+            // Within the immersive den, every pose faces out through its north
+            // entrance. Keep travel heading history for movement outside it.
+            const poseHeading = upright && actorIsInDen(actor, actorPosition) ? Math.PI : sleeping ? actor.heading ?? 0 : heading;
             const directional = actor.id === 'hero' && !sleeping;
             const cutOut = spriteStandee(actorArt(actor, actorPosition), actorPosition);
             // Grabbing anywhere on the actor's square drags the actor, never the camera.
@@ -1529,7 +1575,7 @@ export const ProtoMap = ({
             <React.Fragment key={actor.id}>
 
             {!sleeping && standeeBase('base', actorPosition, Math.max(40, Array.from(actor.label).length * 9))}
-            {upright && !sleeping && <ActorBaseName name={actor.label} position={actorPosition} diameter={Math.max(40, Array.from(actor.label).length * 9)} />}
+            {upright && !sleeping && <ActorBaseName actorId={actor.id} name={actor.label} position={actorPosition} diameter={Math.max(40, Array.from(actor.label).length * 9)} />}
             {cellGrip(`actor-${actor.id}`, actorPosition, grip)}
             <div
               role="button"
@@ -1539,9 +1585,10 @@ export const ProtoMap = ({
               data-grid-reference={TABLE_GRID.reference(TABLE_GRID.atWorld(actorPosition))}
               data-board-piece="actor"
               data-actor-id={actor.id}
-              data-actor-pose={sleeping ? 'sleeping' : 'standing'}
+              data-actor-pose={sleeping ? 'sleeping' : sitting ? 'sitting' : 'standing'}
               data-actor-heading={poseHeading}
               data-actor-orientation={directional ? 'directional' : 'world-plane'}
+              data-actor-shrink={cutOut ? 'true' : undefined}
               data-actor-x={actorPosition.x} data-actor-y={actorPosition.y}
               data-actor-width={cutOut ? 32 : 48} data-actor-height={sleeping ? 20 : cutOut ? 32 : 64}
               data-selected={selectedActorId === actor.id || undefined}
@@ -1549,7 +1596,7 @@ export const ProtoMap = ({
               data-light-percent={actorLight.percent}
               data-light-level={actorLight.level}
               {...grip}
-              className={sleeping && !upright ? `proto-sleeping-overhead absolute cursor-grab select-none${draggingActorId === actor.id ? ' opacity-45' : ''}` : cutOut
+              className={overheadHero ? `proto-actor-overhead absolute cursor-grab select-none${draggingActorId === actor.id ? ' opacity-45' : ''}` : cutOut
                 ? `proto-sprite-standee absolute cursor-grab select-none active:cursor-grabbing${selectedActorId === actor.id ? ' proto-sprite-standee--selected' : ''}${draggingActorId === actor.id ? ' opacity-45' : ''}`
                 : `absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-grab select-none place-items-center rounded-full border-2 bg-[#17140b] text-[0.52rem] font-black uppercase tracking-[0.1em] text-[#ffe7ad] shadow-[0_0_24px_rgba(255,209,102,0.18)] active:cursor-grabbing ${selectedActorId === actor.id ? 'border-[#fff0b5] ring-2 ring-[#ffd166]/45' : 'border-[#ffd166]/75'} ${draggingActorId === actor.id ? 'opacity-45' : ''}`}
               style={{
@@ -1558,13 +1605,15 @@ export const ProtoMap = ({
                 ...(cutOut || sleeping ? null : faceCameraFlat),
                 left: `calc(50% + ${actorPosition.x}px)`,
                 top: `calc(50% + ${actorPosition.y}px)`,
-                ...(cutOut ? { ...standee(undefined, oversample), width: SPRITE_STANDEE_SIZE * oversample, height: SPRITE_STANDEE_SIZE * oversample } : standee({ width: 48, height: 64 })),
-                ...(cutOut && !directional ? { transform: worldActorTransform(poseHeading, true, oversample), animation: undefined } : {}),
-                ...(sleeping && !upright ? { width: 26, height: 26, transform: worldActorTransform(poseHeading, false), transformOrigin: '50% 50%' } : {}),
+                ...(cutOut ? { ...standee(undefined, oversample), transform: `${standee(undefined, oversample)?.transform} scale(var(--actor-world-scale, 1))`, width: SPRITE_STANDEE_SIZE * oversample, height: SPRITE_STANDEE_SIZE * oversample } : standee({ width: 48, height: 64 })),
+                ...(cutOut && !directional ? { transform: `${worldActorTransform(poseHeading, true, oversample)} scale(var(--actor-world-scale, 1))`, animation: undefined } : {}),
+                // Standing/sitting overhead sources point nose-up; sleeping
+                // art is authored nose-down. Both follow the same world heading.
+                ...(overheadHero ? { width: 26, height: 26, transform: worldActorTransform(poseHeading + (sleeping ? 0 : Math.PI), false), transformOrigin: '50% 50%' } : {}),
               }}
               aria-label={`${actor.label} actor token${sleeping ? ', sleeping in her den' : ''}`}
             >
-              {sleeping && !upright ? <img src={`${import.meta.env.BASE_URL}assets/actors/hero-sleeping-topdown.png`} alt="" draggable={false} /> : cutOut ? <Oversample width={SPRITE_STANDEE_SIZE} height={SPRITE_STANDEE_SIZE} factor={oversample}>{directional ? <TableActorSprite position={actorPosition} heading={poseHeading} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} brightness={standeeLighting(timeOfDay, actorPosition, SPRITE_STANDEE_SIZE, lightSources, yaw).brightness} fallback={cutOut.art} /> : cutOut.art}</Oversample> : <BoardObjectLabel text={actor.label} minFontSize={16} maxFontSize={16} />}
+              {overheadHero ? <img src={`${import.meta.env.BASE_URL}assets/actors/hero-${sleeping ? 'sleeping' : sitting ? 'sitting' : 'standing'}-topdown.png`} alt="" draggable={false} /> : cutOut ? <Oversample width={SPRITE_STANDEE_SIZE} height={SPRITE_STANDEE_SIZE} factor={oversample}>{directional ? <TableActorSprite position={actorPosition} pose={sitting ? 'sitting' : 'standing'} heading={poseHeading} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} brightness={standeeLighting(timeOfDay, actorPosition, SPRITE_STANDEE_SIZE, lightSources, yaw).brightness} fallback={cutOut.art} /> : cutOut.art}</Oversample> : <BoardObjectLabel text={actor.label} minFontSize={16} maxFontSize={16} />}
             </div>
             </React.Fragment>
             );
@@ -1579,7 +1628,7 @@ export const ProtoMap = ({
         <div className="proto-table-title-layer absolute pointer-events-none" style={{ inset: staged ? '-100%' : 0, transform: stageTransform, transition: tilted && airReady || !staged ? 'none' : undefined }}>
           <div className="absolute" style={{ inset: staged ? '33.3333%' : 0 }}>
             <div className="absolute" style={{ left: '-150%', top: '-150%', width: '400%', height: '400%', transformOrigin: 'center center', transform: 'var(--camera-transform)' }}>
-          {!upright && biomeTiles.filter(tile => tile.tileType === 'hero-den' && !tile.flags?.includes('unexplored')).map(tile => <HeroDenRoof key={`${tile.id}-roof`} position={tile.position} size={CLASSICPLUS_GRID_SIZE} />)}
+          {!upright && biomeTiles.filter(tile => tile.tileType === 'hero-den' && !tile.flags?.includes('unexplored') && !actors.some(actor => actor.awakeAtHome && TABLE_GRID.reference(TABLE_GRID.atWorld(actor.position)) === TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position)))).map(tile => <HeroDenRoof key={`${tile.id}-roof`} position={tile.position} size={CLASSICPLUS_GRID_SIZE} />)}
           {biomeTiles.filter(tile => compositeTileTitle(tile) && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && !tile.flags?.includes('unexplored')).map(tile => {
             const area = getBiomeWorldFootprint(tile);
             return <div key={`${tile.id}-title`} data-biome-title={tile.id} className="proto-tile-title-anchor" style={{ inset: 'auto', left: `calc(50% + ${area.x}px)`, top: `calc(50% + ${area.y}px)`, width: area.width, height: area.height, transform: 'translate(-50%, -50%)' }}>
@@ -1589,7 +1638,7 @@ export const ProtoMap = ({
           {biomeTiles.filter(tile => tile.tileType === 'hero-den' && !sharedLabelTiles.has(tile.id) && !tile.flags?.includes('unexplored')).map(tile => <div key={tile.id} className="proto-den-title" data-den-title="true" style={{ position: 'absolute', left: `calc(50% + ${tile.position.x}px)`, top: `calc(50% + ${tile.position.y + (upright ? 12 : 0)}px)`, width: 48, height: upright ? 24 : 48, transform: 'translate(-50%, -50%)' }}>
             <TileTitle align={upright ? 'center' : 'bottom'} maxLines={upright ? undefined : 1} text={tile.title} width={48} height={upright ? 24 : 48} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} />
           </div>)}
-          {labelRegions.map(region => <div key={region.id} data-connected-label={region.id}
+          {labelRegions.map(region => <div key={region.id} data-connected-label={region.id} data-label-tiles={region.tiles.map(tile => tile.id).join(' ')}
             data-immutable-region={region.tiles[0].tileType === 'impassable-mountain' ? region.id : undefined} data-region-tile-count={region.tiles.length}
             className="proto-immutable-region-label" style={{ left: `calc(50% + ${region.x}px)`, top: `calc(50% + ${region.y}px)`, width: region.width, height: region.height }}>
             <TileTitle align={upright ? 'center' : 'top'} text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
@@ -1663,16 +1712,16 @@ export const ProtoMap = ({
         /> : airReady ? <LightShafts frame={getTableLighting(timeOfDay)} quality={fxQuality} camera={camera.cameraState} view={{ width: viewportWidth, height: viewportHeight }} /> : null}
         {staged ? <div aria-hidden="true" className={`proto-table-horizon${tilted ? ' proto-table-horizon--shown' : ''}`} /> : null}
       </div>
-      {dragPreview && !travel ? (
+      {dragPreview && !travel ? createPortal(
         <div
           aria-hidden="true"
           data-actor-drag-preview="true"
           className={`pointer-events-none fixed z-[100] grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-dashed border-[#ffe7ad]/80 bg-[#17140b]/55 text-base font-black uppercase tracking-[0.1em] text-[#ffe7ad]/80${upright ? ' shadow-[0_0_24px_rgba(255,209,102,0.22)]' : ''}`}
           data-actor-drag-ghost="true"
-          style={{ left: dragPreview.x, top: dragPreview.y }}
+          style={{ left: dragPreview.x, top: dragPreview.y, zIndex: 100000 }}
         >
           {actors.find((actor) => actor.id === dragPreview.actorId)?.label ?? 'Hero'}
-        </div>
+        </div>, document.body
       ) : null}
     </section>
   );

@@ -1,13 +1,13 @@
 import React from 'react';
 
 /** Upright lettering on the camera-facing arc of a circular token base. */
-export function ActorBaseName({ name, position, diameter, screenFacing = false }: { name: string; position: { x: number; y: number }; diameter: number; screenFacing?: boolean }) {
+export function ActorBaseName({ name, position, diameter, screenFacing = false, actorId }: { name: string; position: { x: number; y: number }; diameter: number; screenFacing?: boolean; actorId?: string }) {
   const letters = Array.from(name);
   const radius = diameter / 2 + 2;
   // Keep a compact word with a small gap between glyphs, independent of
   // the visible front rim's width. Angles stay symmetric about the camera.
   const spacing = 9.2 / radius;
-  return <div aria-hidden="true" data-actor-base-name={name} className={`proto-actor-base-name${screenFacing ? ' proto-actor-base-name--screen' : ''}`}
+  return <div aria-hidden="true" data-actor-base-name={name} data-actor-name-owner={actorId} className={`proto-actor-base-name${screenFacing ? ' proto-actor-base-name--screen' : ''}`}
     style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)` }}>
     {letters.map((letter, index) => {
       const angle = (index - (letters.length - 1) / 2) * spacing;

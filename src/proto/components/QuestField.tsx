@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { PinnedToast } from './PinnedToast';
 import { QuestCard } from './QuestCard';
 import { PlayingCardStack } from './PlayingCardStack';
+import { JumboActionCard } from './CardJumbo';
 
 export type QuestDefinition = {
   id: string;
@@ -64,7 +65,7 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
           rewardLabel={quest.rewards.some(reward => reward.kind === 'energy') ? 'Energy' : undefined}
           complete={!deployed && quest.status === 'complete'} onRedeem={() => onRedeem(quest.id)}
           selected={note?.id === quest.id} onSelect={() => setNoteQuestId(current => current === quest.id ? null : quest.id)} /></div> :
-        <div key={quest.id} className="quest-card-back" data-quest-id={quest.id} aria-hidden="true"></div>
+        <JumboActionCard key={quest.id} className="quest-card-back" data-quest-id={quest.id} aria-label="Hidden quest card back" />
       )} /> : <div className="quest-chain-complete" role="status">{deployed ? 'Collect the final reward on the table' : counts.total ? '✓ Expedition complete · All rewards redeemed' : 'No quests available'}</div>}
       </div>
       </section>

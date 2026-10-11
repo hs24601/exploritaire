@@ -8,6 +8,7 @@ import { HOLD_LOG_ENABLED } from './holdLog';
 import { HoldLogOverlay } from './components/HoldLogOverlay';
 import { GameTooltip } from './components/GameTooltip';
 import { GYRO_LOG_ENABLED, GyroDiagnostics } from './components/GyroDiagnostics';
+import { CardJumboProvider } from './components/CardJumbo';
 
 const isHearthExploration = new URLSearchParams(window.location.search).get('scenario') === 'ember-explore';
 
@@ -17,6 +18,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <GameTooltip />
     {HOLD_LOG_ENABLED ? <HoldLogOverlay /> : null}
     {GYRO_LOG_ENABLED ? <GyroDiagnostics /> : null}
-    {isHearthExploration ? <ExploreGolfVariant /> : <ProtoVariant />}
+    {isHearthExploration ? <ExploreGolfVariant /> : <CardJumboProvider><ProtoVariant /></CardJumboProvider>}
   </React.StrictMode>,
 );

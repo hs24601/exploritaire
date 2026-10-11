@@ -4,6 +4,8 @@ import { actorHeading, type OrientedActor } from './actorOrientation';
 import { selectSpriteView, HERO_DIRECTIONAL_SPRITE, DARK_SLIME_DIRECTIONAL_SPRITE } from './directionalSprites';
 import { createDirectionalSpriteLibrary, directionalPartGeometry } from './directionalSpriteRig';
 import { MOCHI_DIRECTIONAL_SPRITE } from './mochiSprite';
+import { HERO_SITTING_DIRECTIONAL_SPRITE } from './heroSittingSprite';
+import sittingMeasurements from './art/heroSittingLayout.json';
 
 it('uses authored front, side and rear views relative to world heading throughout an orbit', () => {
   for (const heading of [0,.7,Math.PI,-2]) {
@@ -89,8 +91,12 @@ it('reassembles source pixels at their original proportions and attaches head/hi
   for(const [key,width,height] of [['heroLow',1122,1402],['heroHigh',1024,1536],['mochiLow',1774,887],['mochiHigh',1536,1024],['slime',1254,1254]] as const){
     const texture=new Texture();texture.image={width,height};textures[key]=texture;
   }
+  for (const tier of ['low','high'] as const) {
+    const texture = new Texture(); texture.image = sittingMeasurements[tier];
+    textures[tier === 'low' ? 'heroSittingLow' : 'heroSittingHigh'] = texture;
+  }
   const camera = new PerspectiveCamera(), point = new Vector3(), inverse = new Matrix4();
-  for(const definition of [HERO_DIRECTIONAL_SPRITE,MOCHI_DIRECTIONAL_SPRITE]){
+  for(const definition of [HERO_DIRECTIONAL_SPRITE,MOCHI_DIRECTIONAL_SPRITE,HERO_SITTING_DIRECTIONAL_SPRITE]){
   const library=createDirectionalSpriteLibrary(textures,definition),height=definition.id==='hero'?2.55:1.85;
   const frames=[...definition.low,...definition.high,...(definition.lowOpposite??[]),...(definition.highOpposite??[]),definition.top];
   for(const frame of frames)for(const part of frame.parts){

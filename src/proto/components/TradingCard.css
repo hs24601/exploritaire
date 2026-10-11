@@ -73,3 +73,12 @@
 .tile-card-art--danger { filter: sepia(.4) saturate(1.5) hue-rotate(320deg) brightness(.75); }
 .tile-card-action { display: block; width: 100%; padding: 5px 3px; border: 1px solid #b6c9b1; border-radius: 3px; background: #163531; color: #f6f2df; font: inherit; font-size: 16px; line-height: 1.1; cursor: pointer; touch-action: manipulation; }
 .tile-card-action:hover, .tile-card-action:focus-visible { border-color: #ffe39c; background: #294d42; outline: 2px solid #ffe39c; outline-offset: 1px; }
+.actor-playtest-panel { height: 100%; box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; color: #f3efd6; background: #102b28; border: 4px solid #8eafb1; border-radius: 12px; font-size: 16px; }
+.actor-playtest-panel h2 { margin: 0; font-size: 24px; }
+.actor-playtest-editor { display: grid; gap: 12px; }
+.actor-playtest-editor p { margin: 0; line-height: 1.25; }
+.actor-playtest-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; }
+.actor-playtest-row { display: contents; }
+.actor-playtest-grid input { min-width: 0; width: 100%; box-sizing: border-box; padding: 8px 4px; border: 1px solid #8eafb1; background: #07191b; color: #fff; font: inherit; font-size: 16px; touch-action: manipulation; }
+.actor-playtest-actions { display: flex; gap: 8px; }
+.actor-playtest-grid input:focus-visible { outline: 2px solid #ffe39c; }

@@ -15,6 +15,7 @@ export type Card = {
   questStep?: number;
   resource?: ForestResource;
   encounter?: 'shadow_wolf_cub';
+  sleep?: 'rest' | 'noise' | 'itch';
 };
 
 export type ForestResource = 'wood' | 'berries' | 'herbs';
@@ -47,7 +48,7 @@ export type BiomeTileState = {
   threat: 'none' | 'low' | 'high';
   /** Water tiles are fished, not dealt as a tableau. Defaults to woods. */
   terrain?: 'woods' | 'water';
-  tileType?: 'unexplored' | 'path' | 'hero-den' | 'impassable-mountain';
+  tileType?: 'unexplored' | 'path' | 'hero-den' | 'impassable-mountain' | 'berry-patch';
   road?: RoadTile;
   /** What the tile does to travel and to opening its tableau (biomeFlags.ts). */
   flags?: BiomeFlag[];
@@ -96,6 +97,9 @@ export type FoundationPile = {
 export type FoundationSlot = FoundationPile | null;
 
 export type ProtoState = {
+  /** Finite sleep round; stock draws establish a rank without earning stamina. */
+  denRest?: { restfulCards: number; disruptions: number; started?: boolean; receivingCard?: Card };
+  ordinaryDay?: { supper: boolean; bedtime: boolean; complete: boolean; visitedTree: boolean };
   tableau: Card[][];
   stock: Card[];
   foundations: FoundationSlot[];
@@ -105,6 +109,8 @@ export type ProtoState = {
   actorWorkCompleted: number[];
   totalWorkCompleted: number;
   heroHp: number[];
+  heroMaxHp?: number[];
+  actorMaxStamina?: number[];
   heroBuffs: HeroBuff[][];
   abilityProgress: Record<string, number>;
   mobilityUsed: boolean;

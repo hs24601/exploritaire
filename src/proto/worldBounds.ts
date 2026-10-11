@@ -1,7 +1,7 @@
 import { TABLE_GRID } from './gridCoordinates';
 
 /** The explorable table: a square of open cells around True Center. Every cell
- * outside it is impassable terrain (black placeholders for now; a world map
+ * outside it is impassable terrain (currently invisible; a world map
  * will theme them, and golf will open some of them up later). */
 export const CLEAR_AREA_CELLS = 15;
 const HALF_CELLS = Math.floor(CLEAR_AREA_CELLS / 2);

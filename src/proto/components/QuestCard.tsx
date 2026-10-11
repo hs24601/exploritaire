@@ -1,5 +1,7 @@
 import { useRef } from 'react';
 import { holdSlop, useRewardHold, type RewardHold } from '../useRewardHold';
+import { QuestArtwork, QuestEmblem } from './QuestArtwork';
+import { useCardJumbo } from './CardJumbo';
 export type QuestCardProps = {
   title: string;
   text: string;
@@ -13,22 +15,27 @@ export type QuestCardProps = {
   /** Tap to show the quest's details; keeps the card interactive while incomplete. */
   onSelect?: () => void;
   selected?: boolean;
+  jumbo?: boolean;
 };
 
 /** The active quest is a keyboard-accessible reward claim, never an auto-claim. */
-export function QuestCard({ title, text, staminaReward, rewardLabel, complete, redeemed = false, onRedeem, rewardHold, onSelect, selected }: QuestCardProps) {
+export function QuestCard({ title, text, staminaReward, rewardLabel, complete, redeemed = false, onRedeem, rewardHold, onSelect, selected, jumbo = false }: QuestCardProps) {
+  const viewer = useCardJumbo();
+  const pressed=useRef({started:0,moved:false});
   const ownHold = useRewardHold(onRedeem, complete && !redeemed);
   const hold = rewardHold ?? ownHold;
   const origin = useRef({x:0,y:0});
   return <button type="button" className={`quest-card ${complete ? 'quest-card--complete' : 'quest-card--incomplete'}`}
-    disabled={!onSelect && (!complete || redeemed)} aria-haspopup={onSelect ? 'dialog' : undefined} aria-expanded={onSelect ? Boolean(selected) : undefined}
-    onClick={event=>{event.preventDefault();onSelect?.();}}
-    onPointerDown={rewardHold ? undefined : event=>{if(event.button!==0)return;event.preventDefault();origin.current={x:event.clientX,y:event.clientY};event.currentTarget.setPointerCapture(event.pointerId);hold.start();}}
-    onPointerMove={rewardHold ? undefined : event=>{if(Math.hypot(event.clientX-origin.current.x,event.clientY-origin.current.y)>holdSlop(event.pointerType))hold.cancel();}}
+    aria-haspopup={!jumbo ? 'dialog' : undefined} aria-expanded={onSelect ? Boolean(selected) : undefined}
+    onClick={event=>{event.preventDefault();if(jumbo)return;if(pressed.current.moved||(pressed.current.started&&performance.now()-pressed.current.started>500))return;
+      if(viewer){event.currentTarget.focus({preventScroll:true});viewer.open({title,content:<QuestCard title={title} text={text} staminaReward={staminaReward} rewardLabel={rewardLabel} complete={complete} redeemed={redeemed} onRedeem={()=>{viewer.close();onRedeem();}} jumbo />});}else onSelect?.();}}
+    onPointerDown={event=>{pressed.current={started:performance.now(),moved:false};origin.current={x:event.clientX,y:event.clientY};if(rewardHold||event.button!==0)return;event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);hold.start();}}
+    onPointerMove={event=>{if(Math.hypot(event.clientX-origin.current.x,event.clientY-origin.current.y)>holdSlop(event.pointerType)){pressed.current.moved=true;hold.cancel();}}}
     onPointerUp={rewardHold ? undefined : hold.cancel} onPointerCancel={rewardHold ? undefined : hold.cancel}
-    onKeyDown={event=>{if((event.key===' '||event.key==='Enter')&&!event.repeat&&complete&&!redeemed){event.preventDefault();hold.start();}}}
+    onKeyDown={event=>{pressed.current.started=0;pressed.current.moved=false;if(jumbo&&event.key==='Enter'&&!event.repeat&&complete&&!redeemed){event.preventDefault();hold.start();}}}
     onKeyUp={hold.cancel} onBlur={hold.cancel} aria-label={`${title}. ${redeemed ? 'Reward redeemed' : !complete ? `${text}${rewardLabel ? `. Reward: ${rewardLabel}` : ''}` : rewardLabel ? `Complete. Hold for 1 second to redeem ${rewardLabel} and reveal next quest` : staminaReward ? `Complete. Hold for 1 second to redeem ${staminaReward} stamina and reveal next quest` : `${text} Hold for 1 second to clear this card`}`}>
-    <span className="quest-card__title">{title}</span>
+    <span className="quest-card__title"><QuestEmblem />{title}</span>
+    <QuestArtwork resting={title === 'Rest'} />
     <span className="quest-card__text">{text}</span>
     <span className="quest-card__status" role="status">{redeemed ? '✓ Reward redeemed' : !complete ? 'Objective in progress' : staminaReward || rewardLabel ? '✓ Hold 1s to redeem' : '✓ Try it here'}</span>
     {(rewardLabel || staminaReward > 0) && <span className="quest-card__reward"><span aria-hidden="true">⚡</span> {rewardLabel ?? `+${staminaReward} STA`}</span>}

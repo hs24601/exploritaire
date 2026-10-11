@@ -3,6 +3,7 @@ import './TradingCard.css';
 import { requestHoloDeviceTilt, useHoloDeviceTilt, type HoloTilt } from '../useHoloDeviceTilt';
 import { GYRO_LOG_ENABLED, traceHoloCard, type HoloCardTrace } from '../holoDiagnostics';
 import { holoTiltAngles } from '../holoTilt';
+import { useCardJumbo } from './CardJumbo';
 
 export type TradingCardSection = { id: string; label: string; icon?: ReactNode; content?: ReactNode; details?: ReactNode };
 export type TradingCardProps = {
@@ -16,6 +17,12 @@ export type TradingCardProps = {
  * Foil sits above the art but below the copy; pointer input never reaches the camera. */
 export function TradingCard({ id, title, titleId, badge, badgeLabel, headerAction, art, description, descriptionPreview,
   descriptionId, sections = [], footer, finish = 'diagonal-holo', state = 'compact' }: TradingCardProps) {
+  const jumboViewer = useCardJumbo();
+  const openJumbo = (source:HTMLElement) => {
+    const foundation=source.closest<HTMLButtonElement>('button[data-targetable="true"]');
+    jumboViewer?.open({title:typeof title==='string'?title:'Card',content:<TradingCard id={id} title={title} badge={badge} badgeLabel={badgeLabel} art={art} description={description} sections={sections} footer={footer} finish={finish} state="jumbo" />,
+      action:foundation?()=>foundation.click():undefined,actionLabel:'Choose foundation'});
+  };
   const face = useRef<HTMLElement>(null);
   const frame = useRef(0);
   const target = useRef({ x: 50, y: 50, lift: 0 });
@@ -81,6 +88,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     trace();
   };
   const interact = (event: PointerEvent<HTMLDivElement>) => {
+    if (state === 'foundation') return;
     // Measure the stationary stage, never the rotating face: avoids hover feedback.
     const rect = event.currentTarget.getBoundingClientRect();
     if (reducedMotion.current) return;
@@ -92,6 +100,15 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
   };
   const reset = () => {
     pointerActive.current = false;
+    if (state === 'foundation') {
+      cancelAnimationFrame(frame.current); frame.current = 0;
+      deviceTilt.current = null;
+      target.current = motion.current = { x: 50, y: 50, lift: 0 };
+      velocity.current = { x: 0, y: 0, lift: 0 };
+      face.current?.style.setProperty('--foil-active', '0');
+      paint(motion.current);
+      return;
+    }
     target.current = deviceTilt.current ?? { x: 50, y: 50, lift: 0 };
     face.current?.style.setProperty('--foil-active', target.current.lift > 0 ? '1' : '0');
     animate();
@@ -112,6 +129,9 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     if (!pointerActive.current) reset();
   }, GYRO_LOG_ENABLED ? sensor => { debug.current.sensor = sensor; trace(); } : undefined);
   return <div className="trading-card-stage"
+    tabIndex={state === 'foundation' ? 0 : undefined} role={state === 'foundation' ? 'button' : undefined} aria-haspopup={state === 'foundation' ? 'dialog' : undefined}
+    onClick={event=>{if(state==='foundation'&&!event.currentTarget.closest('.proto-exploration-actor')){event.stopPropagation();openJumbo(event.currentTarget);}}}
+    onKeyDown={event=>{if(state==='foundation'&&event.key==='Enter'&&!event.currentTarget.closest('.proto-exploration-actor')){event.preventDefault();event.stopPropagation();openJumbo(event.currentTarget);}}}
     onPointerMove={interact} onPointerDown={event => { if (state !== 'foundation') requestHoloDeviceTilt(); interact(event); }} onPointerLeave={reset} onPointerCancel={reset}
     onPointerUp={event => { if (event.pointerType === 'touch') reset(); }}>
     <article ref={face} className={`details-card trading-card trading-card--${finish} trading-card--${state}`} data-object-id={id} data-card-state={state}>

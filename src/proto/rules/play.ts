@@ -1,4 +1,6 @@
 import { DISABLE_STAMINA_CONSUMPTION, spendStamina } from '../staminaTesting';
+import { isOrdinaryForage } from './ordinaryDay';
+import { applySleepPlay, isDenRest } from './rest';
 import { isQuestPlacement } from '../protoQuestDeals';
 import { DEFAULT_CHIP_ABILITY } from '../protoData';
 import { preserveSolverRpgValues } from '../tableauSolver';
@@ -31,7 +33,7 @@ export const adjacentFoundationIndexes = (card: Card, sourceState: ProtoState) =
         : sourceState.heroHp[index] > 0;
     if (!usable) return indexes;
     const valid = sourceState.scene === 'exploration'
-      ? isOpenExplorationFoundation(sourceState.scene, index, foundation) || canPlayOnFoundation(card, foundation, false)
+      ? (isOpenExplorationFoundation(sourceState.scene, index, foundation) && (!isDenRest(sourceState) || !sourceState.denRest?.started)) || canPlayOnFoundation(card, foundation, false)
       : canPlayOnFoundation(
           card,
           foundation,
@@ -78,8 +80,12 @@ export const applyFoundationPlay = (prev: ProtoState, options: FoundationPlayOpt
   if (!divine && !canAffordExplorationAction(prev, energyCost)) return null;
   const foundation = prev.foundations[foundationIndex] ?? null;
   const phaseShiftActive = prev.heroBuffs[foundationIndex]?.some((buff) => buff.id === 'phase_shift') ?? false;
-  const openExplorationFoundation = isOpenExplorationFoundation(prev.scene, foundationIndex, foundation);
+  const openExplorationFoundation = isOpenExplorationFoundation(prev.scene, foundationIndex, foundation) && (!isDenRest(prev) || !prev.denRest?.started);
   if (!openExplorationFoundation && !canPlayOnFoundation(card, foundation, phaseShiftActive) && !hallowedPath) return null;
+  if (isDenRest(prev)) {
+    if (foundationIndex !== 0 || !prev.worldActors.some(actor => actor.id === 'hero' && actor.location === 'foundation' && actor.biomeId === 'hero-den') || hallowedPath) return null;
+    return { state: applySleepPlay(prev, columnIndex, foundationIndex, divine), card, workCycleCompleted: false, chip: null };
+  }
   const chipTarget = !divine && prev.scene === 'combat'
     ? prev.enemyTeam
         .map((enemy, index) => ({ enemy, enemyIndex: index }))
@@ -104,13 +110,13 @@ export const applyFoundationPlay = (prev: ProtoState, options: FoundationPlayOpt
   const actorResource = ACTOR_WORK_RESOURCES[foundationIndex] ?? 'wood';
   const staminaRemaining = spendStamina(prev.actorStamina[foundationIndex] ?? ACTOR_STAMINA_MAX, 1);
   // Preserve work-cycle rewards while testing with frozen stamina.
-  const tableauCompleted = DISABLE_STAMINA_CONSUMPTION
+  const tableauCompleted = !isOrdinaryForage(prev.selectedBiomeId) && (DISABLE_STAMINA_CONSUMPTION
     ? !hallowedPath && ((prev.foundations[foundationIndex]?.count ?? 0) + 1) % ACTOR_STAMINA_MAX === 0
-    : staminaRemaining === 0;
+    : staminaRemaining === 0);
   const workReward = tableauCompleted ? 3 : 1;
-  const rewardedHaul = divine ? collectedHaul : addForestHaul(collectedHaul, { [actorResource]: workReward });
+  const rewardedHaul = divine || isOrdinaryForage(prev.selectedBiomeId) ? collectedHaul : addForestHaul(collectedHaul, { [actorResource]: workReward });
   const nextActorStamina = prev.actorStamina.map((stamina, index) =>
-    index === foundationIndex ? (!DISABLE_STAMINA_CONSUMPTION && tableauCompleted ? ACTOR_STAMINA_MAX : staminaRemaining) : stamina,
+    index === foundationIndex ? (!DISABLE_STAMINA_CONSUMPTION && tableauCompleted ? (prev.actorMaxStamina?.[foundationIndex] ?? ACTOR_STAMINA_MAX) : staminaRemaining) : stamina,
   );
   const nextActorWorkCompleted = prev.actorWorkCompleted.map((completed, index) =>
     index === foundationIndex ? completed + (tableauCompleted ? 1 : 0) : completed,
@@ -162,7 +168,7 @@ export const applyFoundationPlay = (prev: ProtoState, options: FoundationPlayOpt
       ? Math.max(0, prev.ambushCardsRemaining - 1)
       : prev.ambushCardsRemaining,
     biome: cacheAwarded ? { ...prev.biome, cacheClaimed: true } : prev.biome,
-    haul: cacheAwarded ? addForestHaul(rewardedHaul, prev.biome.cacheReward) : rewardedHaul,
+    haul: cacheAwarded && !isOrdinaryForage(prev.selectedBiomeId) ? addForestHaul(rewardedHaul, prev.biome.cacheReward) : rewardedHaul,
     biomeTiles: nextBiomeTiles,
   };
   const result = { card, workCycleCompleted: tableauCompleted, chip: chipTarget };

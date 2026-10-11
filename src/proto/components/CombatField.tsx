@@ -29,8 +29,8 @@ const eventMessage = (state: SkirmishState) => {
  * A skirmish (rules/skirmish.ts) in the tableau field: the enemy at the top,
  * the shared tableau in the middle, the hero's foundation and the stock below.
  *
- * Cards play by dragging them onto the hero's foundation, or by a tap or click
- * (press and release without moving) for speed. Keyboard: Enter on a card,
+ * Cards play by dragging onto the hero's foundation or from their jumbo view.
+ * Click/tap or Enter on a card inspects it. Keyboard shortcuts:
  * keys 1–7 play a column; Enter activates Draw.
  */
 export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
@@ -83,7 +83,7 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Drag a top card onto the foundation to play it; a press and release in place plays it too.
+  // Drag a top card onto the foundation to play; a stationary press inspects it.
   const [drag, setDrag] = useState<CardDrag | null>(null);
   const [overFoundation, setOverFoundation] = useState(false);
   const onFoundation = (x: number, y: number) => Boolean(document.elementFromPoint(x, y)?.closest('[data-skirmish-foundation]'));
@@ -105,7 +105,8 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
     if (!drag || drag.pointerId !== event.pointerId) return;
     setDrag(null);
     setOverFoundation(false);
-    if (!cancelled && (!drag.moved || onFoundation(event.clientX, event.clientY))) play(drag.column);
+    if (!cancelled && drag.moved && onFoundation(event.clientX, event.clientY)) play(drag.column);
+    if (!cancelled && !drag.moved) event.currentTarget.querySelector<HTMLButtonElement>('.playing-card')?.click();
   };
   useEffect(() => { if (fight.result) { setDrag(null); setOverFoundation(false); } }, [fight.result]);
 
@@ -159,7 +160,7 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
                   onPointerUp={top ? (event) => endDrag(event) : undefined}
                   onPointerCancel={top ? (event) => endDrag(event, true) : undefined}>
                   {/* Mouse and touch play through the pointer handlers; Enter (detail 0) plays from the keyboard. */}
-                  <ProtoCard card={card} disabled={!top || Boolean(fight.result)} muted={!top}
+                  <ProtoCard card={card} disabled={!playable} muted={!top}
                     onClick={top ? (event) => { if (event.detail === 0 && playable) play(columnIndex); } : undefined} />
                   {eyed ? (
                     <span className="proto-skirmish__eye" aria-label={fight.eye!.pounce ? `The ${fight.foe.label} will pounce on this card` : `The ${fight.foe.label} eyes this card`}
@@ -207,7 +208,7 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
         <div className="proto-skirmish__drag" aria-hidden="true" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width, ['--classic-card-w' as string]: `${drag.width}px` }}>
           <ProtoCard card={dragged} />
         </div>,
-        document.querySelector('.proto-game-root') ?? document.body,
+        document.body,
       ) : null}
       {/* Rank shorthand for screen readers: the hero's and enemy's cards. */}
       <span className="sr-only">{`Your card ${rankLabel(fight.hero.rank)}. ${fight.foe.label}'s card ${rankLabel(fight.enemy.rank)}.`}</span>

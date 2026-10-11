@@ -104,7 +104,7 @@ async function verifyFades(page) {
       await drag(page, await center(grip), await center(page.locator('[data-biome-id="unexplored--1-1"]')), touch);
       await page.waitForTimeout(1800);
       assert.equal(await actor.getAttribute('data-grid-reference'), 'table:-1,1');
-      assert.equal(await actor.getAttribute('data-actor-pose'), 'standing');
+      assert.equal(await actor.getAttribute('data-actor-pose'), 'sitting');
       const travelHeading = Number(await actor.getAttribute('data-actor-heading'));
       assert.ok(Math.abs(travelHeading + Math.PI / 2) < .01, 'Standing Hero faces her westward travel');
       if (await page.getByRole('button', { name: 'Tilt camera view' }).count()) await page.getByRole('button', { name: 'Tilt camera view' }).click();
@@ -119,8 +119,8 @@ async function verifyFades(page) {
       assert.equal(await page.locator('[data-biome-popup="hero-den"]').getAttribute('data-actor-occluder'), 'false', 'Empty den returns to opaque');
       const emptyY = Number(await den.getAttribute('data-scenery-y'));
       const ownerY = Number(await den.getAttribute('data-owner-y'));
-      assert.equal(emptyY, ownerY + 24, 'Empty den requests the front edge of its tile');
-      assert.ok(emptyY > occupiedY, 'Empty cave front advances from its sleeping placement');
+      assert.equal(emptyY, ownerY - 48 * .37, 'Empty den aligns with mountain props at the north end');
+      assert.ok(emptyY < occupiedY, 'Empty cave moves to the opposite end from its sleeping placement');
       assert.ok((await den.evaluate(el => parseFloat(el.style.top.match(/([\d.]+)px/)[1]))) <= ownerY + 24, 'Fitted cave foot stays within its tile');
       await page.screenshot({ path: `artifacts/heros-den/${width}-${touch ? 'touch' : 'mouse'}-empty-immersion-3x.png` });
       await page.getByRole('button', { name: 'Turn table right' }).click(); await page.waitForTimeout(500);

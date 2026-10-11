@@ -1,4 +1,6 @@
-import { ActorHoloCard } from './ActorHoloCard';
+import { ActorHoloCard, ACTOR_HOLO_ART } from './ActorHoloCard';
+import { DetailsCardViewer, ActorCardArt } from './DetailsCardViewer';
+import { requestHoloDeviceTilt } from '../useHoloDeviceTilt';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { BATTLE_SPRITE_ASSETS } from '../battleSpriteAssets';
 import { DARK_SLIME_DIRECTIONAL_SPRITE, type DirectionalSpriteDefinition } from '../directionalSprites';
@@ -54,6 +56,7 @@ export function BattleTableauField({ hours, lights, onWatch, active }: {
   const [selection, setSelection] = useState<{columnIndex: number; cardId: string; actorIds: string[]} | null>(null);
   const pending = useRef<{land: () => void; cancel: () => void} | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [inspection, setInspection] = useState<{ id: string; name: string; anchor: HTMLElement } | null>(null);
   useEffect(() => () => { pending.current?.cancel(); }, []);
   const eligibleActors = (card: Card) => teams.find(team => team.id === BATTLE_TURN_PRIORITY[0])?.actors
     .filter(actor => isAdjacentRank(card.rank, foundations[actor.id].rank)) ?? [];
@@ -117,8 +120,12 @@ export function BattleTableauField({ hours, lights, onWatch, active }: {
   const teamField = (team: typeof teams[number]) => <div className="battle-field__team" data-team={team.id}>
     <h3>{team.label}</h3>
     {team.actors.map(actor => <button type="button" key={actor.id} className="battle-field__foundation" data-battle-actor={actor.id}
-      data-targetable={selection?.actorIds.includes(actor.id) || undefined} disabled={!selection?.actorIds.includes(actor.id)}
-      onClick={() => choose(actor.id)} aria-label={`${actor.name} foundation${selection?.actorIds.includes(actor.id) ? ' · choose for selected card' : ''}`} style={rig.surface(team.id === 'enemy' ? -55 : 55, 60)}>
+      data-targetable={selection?.actorIds.includes(actor.id) || undefined} disabled={team.id === 'enemy' || (!!selection && !selection.actorIds.includes(actor.id))}
+      onClick={event => {
+        if (selection) { choose(actor.id); return; }
+        requestHoloDeviceTilt();
+        setInspection({ id: actor.id, name: actor.name, anchor: event.currentTarget });
+      }} aria-haspopup={team.id === 'party' ? 'dialog' : undefined} aria-label={`${actor.name} foundation${selection?.actorIds.includes(actor.id) ? ' · choose for selected card' : ''}`} style={rig.surface(team.id === 'enemy' ? -55 : 55, 60)}>
       <div className="battle-field__pile">
         <div className="battle-field__counters"><span className="proto-actor-energy" aria-label="Energy 0"><span>⚡</span><span>0</span></span><span className="proto-foundation-count-token" aria-label={`Collected cards ${foundations[actor.id].count}`}>▤{foundations[actor.id].count}</span></div>
         <div className="battle-field__actor-card proto-lit-surface" ref={node => { if (node) foundationRefs.current.set(actor.id,node); else foundationRefs.current.delete(actor.id); }}>
@@ -133,6 +140,13 @@ export function BattleTableauField({ hours, lights, onWatch, active }: {
   return <section className="battle-field" data-camera-background={active || undefined} data-first-team={BATTLE_TURN_PRIORITY[0]} aria-label="Battle foundations and shared woods tableau">
     <header className="battle-field__header"><h2>Dark Woods</h2><p>Scene tableau · no combat costs or rewards</p></header>
     <span className="sr-only" role="status">{announcement}</span>
+    {inspection && <DetailsCardViewer key={inspection.id} initialJumboId={inspection.id}
+      anchor={inspection.anchor} timeOfDay={hours} lights={[...lights]} position={{ x: 0, y: -48 }}
+      objects={[{ id: inspection.id, name: inspection.name, badge: '♟', badgeLabel: 'Actor',
+        art: <ActorCardArt sprite={ACTOR_HOLO_ART[inspection.id]} label={inspection.name} />,
+        descriptor: `${inspection.name} · battle scene actor`,
+        trays: [{ id: 'stats', label: 'Foundation', details: `Rank ${rankLabel(foundations[inspection.id].rank)} · Collected ${foundations[inspection.id].count}` }] }]}
+      onClose={() => setInspection(null)} onCloseObject={() => setInspection(null)} />}
     <TableauScene immersive={!active} fillScenery={!active} terrain="woods" rig={rig} hours={hours}>
       <div className="battle-field__board">
         {teamField(teams[0])}

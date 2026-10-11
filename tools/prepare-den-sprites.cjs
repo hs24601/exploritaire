@@ -8,7 +8,7 @@ const fs = require('node:fs');
     for (const [source, outputs] of [
       ['public/assets/actors/sources/hero-sleeping-atlas-v1.png', ['public/assets/actors/hero-sleeping.png', 'public/assets/actors/hero-sleeping-topdown.png']],
       ['public/assets/biomes/sources/hero-den-atlas-v2.png', ['public/assets/biomes/hero-den-topdown-v2.png', 'public/assets/biomes/hero-den-standee-v2.png']],
-    ]) {
+    ].filter(([source]) => !process.argv.includes('--sleeping-only') || source.includes('hero-sleeping'))) {
       const cells = await page.evaluate(async data => {
         const image = new Image(); image.src = data; await image.decode();
         const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;

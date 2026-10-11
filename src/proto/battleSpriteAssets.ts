@@ -2,6 +2,8 @@
 export const BATTLE_SPRITE_ASSETS: Readonly<Record<string,string>> = {
   heroLow:'actors/battle/hero-directions-low-v1.png',
   heroHigh:'actors/battle/hero-directions-high-v1.png',
+  heroSittingLow:'actors/battle/hero-sitting-low-v1.png',
+  heroSittingHigh:'actors/battle/hero-sitting-high-v1.png',
   mochiLow:'actors/battle/mochi-directions-low-v1.png',
   mochiHigh:'actors/battle/mochi-directions-high-v1.png',
   slime:'actors/battle/dark-slime-directions-v1.png',

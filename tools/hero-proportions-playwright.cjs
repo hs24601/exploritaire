@@ -4,12 +4,13 @@ const fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({headless:true});
  try{
-  const page=await browser.newPage();await page.goto('http://localhost:5178/proto.html');
+  const page=await browser.newPage();await page.goto(process.env.PROTO_URL || 'http://localhost:5178/proto.html');
   const results=await page.evaluate(async()=>{
    const THREE=await import('/node_modules/.vite/deps/three.js');
    const {createDirectionalSpriteLibrary,directionalPartGeometry}=await import('/src/proto/directionalSpriteRig.ts');
    const {HERO_DIRECTIONAL_SPRITE}=await import('/src/proto/directionalSprites.ts');
    const {MOCHI_DIRECTIONAL_SPRITE}=await import('/src/proto/mochiSprite.ts');
+   const {HERO_SITTING_DIRECTIONAL_SPRITE}=await import('/src/proto/heroSittingSprite.ts');
    const {BATTLE_SPRITE_ASSETS}=await import('/src/proto/battleSpriteAssets.ts');
    const loader=new THREE.TextureLoader(),textures={};
    for(const[key,file]of Object.entries(BATTLE_SPRITE_ASSETS)){
@@ -40,7 +41,7 @@ const fs=require('node:fs');
     }return largest/total;
    };
    const measurements=[];
-   for(const definition of [HERO_DIRECTIONAL_SPRITE,MOCHI_DIRECTIONAL_SPRITE]){
+   for(const definition of [HERO_DIRECTIONAL_SPRITE,MOCHI_DIRECTIONAL_SPRITE,HERO_SITTING_DIRECTIONAL_SPRITE]){
    const library=createDirectionalSpriteLibrary(textures,definition),height=definition.id==='mochi'?1.85:2.55;
    for(const tier of ['low','high','top'])for(let direction=0;direction<(tier==='top'?1:8);direction++){
     const actor=library.create(height),scene=new THREE.Scene();scene.background=new THREE.Color(0x223038);scene.add(actor.root);

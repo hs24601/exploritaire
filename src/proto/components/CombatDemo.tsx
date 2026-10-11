@@ -24,6 +24,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
     const previous = document.activeElement as HTMLElement | null;
     dialog.current?.focus();
     const key = (event: KeyboardEvent) => {
+      if (document.querySelector('.details-card-viewer')) { clearInput(); return; }
       if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close.current(); }
       else {
         const buttonMove = (event.target as HTMLElement)?.closest<HTMLButtonElement>('[data-move]')?.dataset.move;

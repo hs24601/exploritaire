@@ -1,5 +1,7 @@
 # Directional battle sprites, v1
 
+2026-10-10: Added `hero-sitting-low-v1.png` and `hero-sitting-high-v1.png`, with eight independently authored directions per tier and an overhead view. Hero sits at idle and stands during movement/action using shared instance pose switching. Current Hero artwork has gentle curious tan brows. `hero-sitting-generation.json` records exact built-in prompts/output selection; `hero-sitting-layout.json` records measured source/runtime crops. Raw approved sheets are retained in `../sources/hero-sitting-*-source-v1.png`; `tools/prepare-hero-sitting.cjs` deterministically packs complete silhouettes without resampling. See `src/proto/heroSittingSprite.ts` for sitting anatomy. Standing sheets and all single-image/card/quest Hero references also received the requested expression correction.
+
 Created 2026-10-08 with Codex's built-in ImageGen tool, using Hero's existing
 `../hero.png` as the character/style reference. No CLI/API generation was used.
 The built-in tool does not expose a model selector, so this pack is not labelled

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { obscuresActor, type OcclusionCamera, type SceneBillboard } from '../actorOcclusion';
 import type { TableTilt } from '../tableTilt';
+import { immersionActorScale } from '../actorScale';
 
 /** Physical actors stay in the world depth scene. This shared pass fades
  * foreground props and mirrors only obscured live artwork through them. The
@@ -51,21 +52,22 @@ export function useActorOcclusion(root: RefObject<HTMLDivElement | null>, overla
     const observer = new MutationObserver(update);
     // Only the physical scene: our overlay writes cannot retrigger this observer.
     observer.observe(world, { childList: true, subtree: true });
-    const point = (el: HTMLElement): SceneBillboard => ({ x: Number(el.dataset.actorX), y: Number(el.dataset.actorY),
-      width: Number(el.dataset.actorWidth), height: Number(el.dataset.actorHeight),
+    const point = (el: HTMLElement, scale: number): SceneBillboard => ({ x: Number(el.dataset.actorX), y: Number(el.dataset.actorY),
+      width: Number(el.dataset.actorWidth) * scale, height: Number(el.dataset.actorHeight) * scale,
       worldHeading: el.dataset.actorOrientation === 'world-plane' ? Number(el.dataset.actorHeading) : undefined });
     const propFace = (el: HTMLElement): SceneBillboard => {
       const coordinate = (value: string) => { const match = value.match(/50%\s*([+-])\s*([-\d.]+)px/);
         return match ? Number(match[2]) * (match[1] === '-' ? -1 : 1) : 0; };
       const fit = Number(el.style.getPropertyValue('--scenery-fit-scale') || 1);
       return { x: coordinate(el.style.left), y: coordinate(el.style.top), width: Number(el.dataset.sceneryWidth) * fit, height: Number(el.dataset.sceneryHeight) * fit,
-        worldHeading: el.dataset.sceneryHeading !== undefined ? Number(el.dataset.sceneryHeading) : undefined };
+        worldHeading: !el.dataset.sceneryVolume && el.dataset.sceneryHeading !== undefined ? Number(el.dataset.sceneryHeading) : undefined };
     };
     const paint = () => {
       const live = current.current, camera = live.getCamera(), tilt = live.getTilt(camera);
       const obscured = new Set<HTMLElement>(), faded = new Set<HTMLElement>();
       if (live.active) for (const { source } of actors) for (const prop of props) {
-        if (obscuresActor(point(source), propFace(prop), camera, tilt)) { obscured.add(source); faded.add(prop); }
+        const scale = source.dataset.actorShrink ? immersionActorScale(camera.scale) : 1;
+        if (obscuresActor(point(source, scale), propFace(prop), camera, tilt)) { obscured.add(source); faded.add(prop); }
       }
       for (const prop of props) {
         const value = faded.has(prop) ? 'true' : 'false';

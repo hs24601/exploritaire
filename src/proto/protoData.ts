@@ -82,7 +82,9 @@ export const BIOME_TILE_SPRITES: Record<string, string> = {
 
 /** Terrain artwork follows its type, including newly authored cells. */
 export const biomeTileSprite = (tile: { id: string; tileType?: string }) =>
-  tile.tileType === 'impassable-mountain'
+  tile.tileType === 'berry-patch'
+    ? `${import.meta.env.BASE_URL}assets/biomes/berry-bush.svg`
+    : tile.tileType === 'impassable-mountain'
     ? `${import.meta.env.BASE_URL}assets/biomes/mountain_standee.svg`
     : BIOME_TILE_SPRITES[tile.id];
 

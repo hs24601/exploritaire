@@ -21,6 +21,7 @@ const combatState = (tableau: Card[][], overrides: Partial<ProtoState> = {}): Pr
   return {
     ...base,
     scene: 'combat',
+    actorStamina: [4, 4, 4, 4],
     worldActors: base.worldActors.map((actor) => ({ ...actor, hutId: undefined })),
     tableau,
     stock: [card(9, 'stock-9')],
@@ -88,6 +89,7 @@ describe('applyFoundationPlay', () => {
       ...state,
       scene: 'exploration',
       selectedBiomeId: 'woods-alpha',
+      actorStamina: [4, 4, 4, 4],
       worldActors: [{ ...hero, location: 'foundation', biomeId: 'woods-alpha', foundationIndex: 0, hutId: undefined }],
       tableau: [[card(6)]],
       stock: [],
@@ -107,6 +109,7 @@ describe('applyFoundationPlay', () => {
     const base = createInitialState();
     const clearing: ProtoState = {
       ...base,
+      actorStamina: [4, 4, 4, 4],
       scene: 'exploration',
       selectedBiomeId: 'woods-alpha',
       worldActors: [{ ...base.worldActors[0], location: 'foundation', biomeId: 'woods-alpha', foundationIndex: 0, hutId: undefined }],

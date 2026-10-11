@@ -126,8 +126,7 @@ export const FishFight = ({ seed, rank, onEnd }: {
         {fight.hand.map((card) => {
           const direction = DIRECTIONS[reelDirection(fight.line, card.rank)];
           return (
-            <div key={card.id} className="proto-fight__reel" data-reel={direction}
-              onPointerDown={(event) => { if (event.pointerType !== 'mouse' || event.button === 0) { event.preventDefault(); play(card); } }}>
+            <div key={card.id} className="proto-fight__reel" data-reel={direction}>
               <ProtoCard card={card} disabled={Boolean(fight.result)}
                 onClick={(event) => { if (event.detail === 0) play(card); }} />
             </div>

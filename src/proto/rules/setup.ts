@@ -1,4 +1,6 @@
-import { createRoadTile, fillUnexploredSquares } from '../roadTiles';
+import { createRoadTile } from '../roadTiles';
+import { createOrdinaryPlaces } from './ordinaryDay';
+import { createSleepDeal, isDenRest } from './rest';
 import { discoverTiles } from '../tileDiscovery';
 import type { BiomeFlag } from '../biomeFlags';
 import { DEFAULT_ACTOR_LUMINOSITY } from '../protoLighting';
@@ -275,18 +277,19 @@ export const createInitialState = (): ProtoState => {
   biomeTiles.push({ ...EAST_WOODS_TILE, flags: [...EAST_WOODS_TILE.flags], position: { ...EAST_WOODS_TILE.position }, seed: seed + 3 * 7919, tableau: eastDeal.tableau, stock: eastDeal.stock, dealt: dealtCards(eastDeal) });
   biomeTiles.push({ ...POND_TILE, flags: [...POND_TILE.flags], position: { ...POND_TILE.position }, seed: seed + 104729, tableau: [], stock: [] });
   biomeTiles.push({ ...DANGER_WOODS_TILE, flags: [...DANGER_WOODS_TILE.flags], position: { ...DANGER_WOODS_TILE.position }, seed: seed + 130363, tableau: [], stock: [] });
-  const den = { ...createRoadTile('hero-den', 0, 2), title: "Hero's Den", tileType: 'hero-den' as const, flags: [] };
+  const denDeal = createSleepDeal();
+  const { sleep: _sleep, ...receivingCard } = denDeal.stock[0];
+  const den = { ...createRoadTile('hero-den', 0, 2), title: "Hero's Den", tileType: 'hero-den' as const, flags: [], tableau: denDeal.tableau, stock: denDeal.stock.slice(1), tableauSize: 30, dealt: 52 };
   biomeTiles.push(createRoadTile('road-center', 0, 0, { shape: 'straight', rotation: 0 }), createRoadTile('road-east', 1, 1, { shape: 'straight', rotation: 90 }), den);
-  for (let row = 2; row <= 7; row++) for (let column = -7; column <= 7; column++) {
+  for (let row = 2; row <= 3; row++) for (let column = -1; column <= 1; column++) {
     if (row === 2 && column === 0) continue;
     biomeTiles.push({ ...createRoadTile(`mountain-${column}-${row}`, column, row), title: 'Impassable Mountains', tileType: 'impassable-mountain', flags: ['unexplored', 'impassable'], tableau: [], stock: [], dealt: 0, tableauSize: 0 });
   }
-  const initialTiles = discoverTiles(fillUnexploredSquares(biomeTiles), den.position);
-  const firstBiome = biomeTiles[0];
+  const initialTiles = discoverTiles([...biomeTiles.filter(tile => tile.id === den.id || tile.tileType === 'impassable-mountain'), ...createOrdinaryPlaces(seed)], den.position);
   return {
-    tableau: firstBiome.tableau,
-    stock: firstBiome.stock,
-    foundations: createQuestExplorationFoundations(party, DEFAULT_WOODS_TILES[0].gridSize.columns * DEFAULT_WOODS_TILES[0].gridSize.rows, firstBiome.tableau),
+    tableau: [],
+    stock: [],
+    foundations: [],
     party,
     wildCards: STARTING_WILD_CARDS,
     actorStamina: Array.from({ length: FOUNDATION_SLOTS }, () => ACTOR_STAMINA_MAX),
@@ -312,7 +315,9 @@ export const createInitialState = (): ProtoState => {
     enemyTeam: [],
     ambushCardsRemaining: 0,
     day: 1,
-    stamina: QUEST_ROUTE_BUDGET.startingStamina,
+    stamina: HERO_STAMINA_MAX,
+    ordinaryDay: { supper: false, bedtime: false, complete: false, visitedTree: false },
+    denRest: { restfulCards: 0, disruptions: 0, started: true, receivingCard },
     maxStamina: HERO_STAMINA_MAX,
     city: { campBuilt: false, campUsedToday: false, restedOnce: false },
     deepEncounterResolved: false,
@@ -326,6 +331,8 @@ export const createInitialState = (): ProtoState => {
 };
 
 export const getExpeditionQuestSteps = (_state: ProtoState) => {
+  // Day 1 uses its quest on the table; the retired tray queue stays detached.
+  if (_state.ordinaryDay) return [];
   return [
     // Completion will come from energy rewards attached to the den's tableau cards.
     // Do not substitute the retired Camp/rest objective or an invented solve count.
@@ -334,13 +341,15 @@ export const getExpeditionQuestSteps = (_state: ProtoState) => {
 };
 
 export const canAffordExplorationAction = (state: ProtoState, cost = 1) =>
-  state.scene !== 'exploration' || state.energy >= cost;
+  isDenRest(state) || state.scene !== 'exploration' || state.energy >= cost;
 
 export const spendExplorationEnergy = (state: ProtoState, cost: number) =>
   state.scene === 'exploration' ? Math.max(0, state.energy - cost) : state.energy;
 
 
 export const cloneState = (state: ProtoState): ProtoState => ({
+  ordinaryDay: state.ordinaryDay ? { ...state.ordinaryDay } : undefined,
+  denRest: state.denRest ? { ...state.denRest, receivingCard: state.denRest.receivingCard ? { ...state.denRest.receivingCard } : undefined } : undefined,
   tableau: state.tableau.map((column) => column.map((card) => ({ ...card }))),
   stock: state.stock.map((card) => ({ ...card })),
   foundations: state.foundations.map((foundation) =>

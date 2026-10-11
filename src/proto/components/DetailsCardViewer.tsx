@@ -14,12 +14,14 @@ export type DetailsCardObject = {
   descriptorPreview?: string;
   trays: Array<{ id: string; label: string; icon?: ReactNode; content?: ReactNode; details?: ReactNode }>;
   footer?: ReactNode;
+  jumboEditor?: ReactNode;
 };
 
 /** Object-agnostic card presentation; callers supply art and future tray content. */
-export function DetailsCardViewer({ objects, anchor, timeOfDay, lights, position, onClose, onCloseObject }: {
+export function DetailsCardViewer({ objects, anchor, timeOfDay, lights, position, onClose, onCloseObject, initialJumboId = null }: {
   objects: DetailsCardObject[]; anchor: HTMLElement; timeOfDay: number; lights: TableLight[];
   position: { x: number; y: number }; onClose: () => void; onCloseObject: (id: string) => void;
+  initialJumboId?: string | null;
 }) {
   const groupRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null);
@@ -27,14 +29,20 @@ export function DetailsCardViewer({ objects, anchor, timeOfDay, lights, position
   closeRef.current = onClose;
   const titleId = useId();
   const descriptorId = useId();
-  const [jumboId, setJumboId] = useState<string | null>(null);
+  const [jumboId, setJumboId] = useState<string | null>(initialJumboId);
+  const [editing, setEditing] = useState(false);
   const jumboRef = useRef(jumboId);
   jumboRef.current = jumboId;
+  const dismissJumbo = () => {
+    if (initialJumboId) closeRef.current();
+    else setJumboId(null);
+  };
   const lastJumboId = useRef<string | null>(null);
   const count = objects.length;
   const objectIds = objects.map(object => object.id).join('|');
   useEffect(() => {
     if (!jumboId) {
+      setEditing(false);
       const returning = lastJumboId.current && groupRef.current?.querySelector<HTMLElement>(`[data-inspection-id="${lastJumboId.current}"]`);
       (returning || groupRef.current?.querySelector<HTMLElement>('.details-card-viewer'))?.focus({ preventScroll: true });
       return;
@@ -77,26 +85,27 @@ export function DetailsCardViewer({ objects, anchor, timeOfDay, lights, position
     const escape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        if (jumboRef.current) setJumboId(null); else closeRef.current();
+        event.stopImmediatePropagation();
+        if (jumboRef.current) dismissJumbo(); else closeRef.current();
       }
       if (jumboRef.current && event.key === 'Tab') {
-        const controls = Array.from(groupRef.current?.querySelectorAll<HTMLElement>('.details-card-viewer--jumbo button, .details-card-viewer--jumbo [tabindex="0"]') ?? []);
+        const controls = Array.from(groupRef.current?.querySelectorAll<HTMLElement>('.details-card-viewer--jumbo button, .details-card-viewer--jumbo input, .details-card-viewer--jumbo [tabindex="0"]') ?? []);
         const first = controls[0], last = controls[controls.length - 1];
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }
     };
     document.addEventListener('pointerdown', dismiss);
-    document.addEventListener('keydown', escape);
+    document.addEventListener('keydown', escape, true);
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener('pointerdown', dismiss);
-      document.removeEventListener('keydown', escape);
+      document.removeEventListener('keydown', escape, true);
       (previousFocus?.isConnected ? previousFocus : anchor).focus({ preventScroll: true });
     };
-  }, [anchor, count]);
+  }, [anchor, count, initialJumboId]);
   return createPortal(<>
-    {jumboId && <div className="details-card-jumbo__backdrop" data-camera-ignore="true" onClick={() => setJumboId(null)} />}
+    {jumboId && <div className="details-card-jumbo__backdrop" data-camera-ignore="true" onClick={dismissJumbo} />}
     <div ref={groupRef} className="details-card-group" role="group" aria-label="Inspected game cards" data-camera-ignore="true">
       {objects.map((object, index) => {
         const jumbo = jumboId === object.id;
@@ -113,19 +122,22 @@ export function DetailsCardViewer({ objects, anchor, timeOfDay, lights, position
             width: placement.width, height: placement.width / CARD_RATIO,
             boxShadow: tableObjectShadow(timeOfDay, { x: position.x + placement.width / 2, y: position.y }, 24, lights),
           }}>
-          <TradingCard id={object.id} title={object.name} titleId={`${titleId}-${object.id}`} state={jumbo ? 'jumbo' : 'compact'}
+          {jumbo && editing && object.jumboEditor ? <div className="actor-playtest-panel">
+            <h2>{object.name} · Playtest</h2>{object.jumboEditor}
+            <button type="button" className="tile-card-action details-card-jumbo__close" onClick={() => setEditing(false)}>Back to card</button>
+          </div> : <TradingCard id={object.id} title={object.name} titleId={`${titleId}-${object.id}`} state={jumbo ? 'jumbo' : 'compact'}
             headerAction={<button type="button"
               className={`trading-card__badge trading-card__close${jumbo ? ' details-card-jumbo__close' : ''}`}
               aria-label={jumbo ? 'Close jumbo card' : 'Close details card'}
               onKeyDown={event => { if (event.key === 'Enter') event.stopPropagation(); }}
-              onClick={event => { event.stopPropagation(); if (jumbo) setJumboId(null); else onCloseObject(object.id); }}>
+              onClick={event => { event.stopPropagation(); if (jumbo) dismissJumbo(); else onCloseObject(object.id); }}>
               <span aria-hidden="true">×</span>
             </button>} art={object.art}
             description={object.descriptor} descriptionPreview={object.descriptorPreview}
-            descriptionId={`${descriptorId}-${object.id}`} footer={object.footer}
+            descriptionId={`${descriptorId}-${object.id}`} footer={jumbo && object.jumboEditor ? <><button type="button" className="tile-card-action" onClick={() => setEditing(true)}>Playtest values</button>{object.footer}</> : object.footer}
             sections={object.trays.map(tray => ({ ...tray,
               icon: tray.icon ?? (tray.id === 'stats' ? '▤' : tray.id === 'equipment' ? '⚔' : tray.id === 'buffs' ? '✦' : undefined),
-            }))} />
+            }))} />}
         </div>;
       })}
     </div></>, document.body);

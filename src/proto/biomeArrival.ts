@@ -8,11 +8,14 @@ import { canSpendStamina, spendStamina } from './staminaTesting';
 export const activateBiome = (state: ProtoState, biomeId: string): ProtoState => {
   const target = state.biomeTiles.find(tile => tile.id === biomeId);
   if (!target || target.tileType === 'impassable-mountain' || state.selectedBiomeId === biomeId) return state;
+  if (biomeId === 'hero-den' && state.ordinaryDay && !state.ordinaryDay.bedtime) return state;
   return { ...state, selectedBiomeId: biomeId,
     biomeTiles: state.biomeTiles.map(tile => tile.id === state.selectedBiomeId
       ? { ...tile, tableau: state.tableau, stock: state.stock } : tile),
     biome: { ...state.biome, seed: target.seed, cacheReward: target.road || target.tileType ? { ...EMPTY_HAUL } : { ...FOREST_CACHE_REWARD }, cacheClaimed: target.tableau.length === 0 && target.stock.length === 0 },
-    foundations: createQuestExplorationFoundations(state.party, target.gridSize.columns * target.gridSize.rows, target.tableau),
+    foundations: target.id === 'hero-den' && state.denRest?.receivingCard
+      ? [{card:state.denRest.receivingCard,count:0,cards:[]}]
+      : createQuestExplorationFoundations(state.party, target.gridSize.columns * target.gridSize.rows, target.tableau),
     tableau: target.tableau.map(column => column.map(card => ({ ...card }))),
     stock: target.stock.map(card => ({ ...card })),
   };
@@ -23,6 +26,16 @@ export const arriveActorAtBiome = (state: ProtoState, actorId: string, biomeId: 
   const target = state.biomeTiles.find(tile => tile.id === biomeId);
   const actor = state.worldActors.find(entry => entry.id === actorId);
   if (!actor || target?.tileType === 'impassable-mountain' || !target?.unlocked || !canSpendStamina(state.stamina, target.travelCost)) return state;
+  // Coming home is a quiet return, not an automatic sleep game.
+  if (biomeId === 'hero-den' && state.ordinaryDay && !state.ordinaryDay.bedtime) {
+    return discoverActorTiles({ ...state,
+      biomeTiles: state.biomeTiles.map(tile => tile.id === state.selectedBiomeId ? { ...tile, tableau: state.tableau, stock: state.stock } : tile),
+      selectedBiomeId: null, tableau: [], stock: [], foundations: [],
+      settledHaul: { ...state.haul },
+      worldActors: state.worldActors.map(entry => entry.id === actorId
+        ? { ...entry, position: destination, location: 'table', biomeId: undefined, foundationIndex: undefined } : entry),
+    });
+  }
   const departing = actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId
     ? { ...state, foundations: state.foundations.map((slot, index) => index === (actor.foundationIndex ?? 0) && slot
       ? { ...slot, count: 0, cards: [], wildcardBridgeFromRank: undefined } : slot) }
@@ -33,6 +46,7 @@ export const arriveActorAtBiome = (state: ProtoState, actorId: string, biomeId: 
     !active.worldActors.some(entry => entry.id !== actorId && entry.location === 'foundation' && entry.biomeId === biomeId && (entry.foundationIndex ?? 0) === index);
   const index = requestedFoundationIndex ?? active.foundations.findIndex((_, i) => available(i));
   return discoverActorTiles({ ...active,
+    ordinaryDay: active.ordinaryDay && biomeId === 'day-one-tree' ? { ...active.ordinaryDay, visitedTree: true } : active.ordinaryDay,
     biomeTiles: active.biomeTiles.map(tile => tile.id === biomeId ? { ...tile, tileType: tile.tileType === 'unexplored' ? 'path' as const : tile.tileType, flags: arriveAt(tile.flags) } : tile),
     worldActors: active.worldActors.map(entry => entry.id === actorId
       ? { ...entry, position: destination, biomeId, hutId: undefined,

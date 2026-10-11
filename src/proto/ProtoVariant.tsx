@@ -1,6 +1,10 @@
+import { ActorPlaytestEditor } from './components/ActorPlaytestEditor';
 import { ACTOR_HOLO_ART } from './art/actorCardArt';
+import { JumboActionCard } from './components/CardJumbo';
+import { drawSleepStock, isDenRest, REST_COLUMNS, REST_ROWS, SLEEP_ICONS, SLEEP_LABELS } from './rules/rest';
 import { ActorHoloCard } from './components/ActorHoloCard';
 import { activateBiome, arriveActorAtBiome } from './biomeArrival';
+import { eatSupper, isHome, ordinaryHour, ordinaryThought, SUPPER_BERRIES } from './rules/ordinaryDay';
 import { discoverActorTiles, discoverTiles } from './tileDiscovery';
 import { TABLE_GRID } from './gridCoordinates';
 import { DISABLE_STAMINA_CONSUMPTION, canSpendStamina, spendStamina } from './staminaTesting';
@@ -13,6 +17,7 @@ import { actorLight } from './protoLighting';
 import { TableauCardArea } from './components/TableauCardArea';
 import { solverFlightDuration } from './solverTiming';
 import { type PlacedQuestCard } from './components/TableQuestCard';
+import { QuestArtwork, QuestEmblem } from './components/QuestArtwork';
 import { DetailsCardViewer, ActorCardArt, type DetailsCardObject } from './components/DetailsCardViewer';
 import { tileDetailsCard } from './components/TileDetailsCard';
 import { requestHoloDeviceTilt } from './useHoloDeviceTilt';
@@ -77,11 +82,10 @@ import { biomeOpenState } from './biomeFlags';
 const TABLE_OPENING_HOUR = 9;
 
 
-/** Proto currently mounts only the tableau and table. Tray components remain
- * available separately; an absent tableau leaves no empty track or gap. */
-const desktopLayoutTracks = (tableau: boolean) => {
+/** The tableau is a permanent table surface, even without a selected deal. */
+const desktopLayoutTracks = () => {
   const tracks = [
-    tableau && ['tableau', 'minmax(0, 1fr)'],
+    ['tableau', 'minmax(0, 1fr)'],
     ['map', 'minmax(0, 1.7fr)'],
   ].filter((track): track is string[] => Boolean(track));
   return {
@@ -146,11 +150,13 @@ export const ProtoVariant = () => {
   const [inspectedTileId, setInspectedTileId] = useState<string | null>(null);
   const [inspectionAnchor, setInspectionAnchor] = useState<HTMLElement | null>(null);
   const [inspectionId, setInspectionId] = useState(0);
+  const [inspectionJumboId, setInspectionJumboId] = useState<string | null>(null);
   const tileAt = (point: { x: number; y: number }) => state.biomeTiles.find(tile => {
     const area = getBiomeWorldFootprint(tile);
     return point.x >= area.left && point.x < area.right && point.y >= area.top && point.y < area.bottom;
   });
-  const inspectActor = (id: string, anchor: HTMLElement) => {
+  const inspectActor = (id: string, anchor: HTMLElement, jumbo = false) => {
+    setInspectionJumboId(jumbo ? id : null);
     requestHoloDeviceTilt();
     setInspectionId(value => value + 1);
     const actor = state.worldActors.find(entry => entry.id === id);
@@ -163,6 +169,7 @@ export const ProtoVariant = () => {
     setInspectedTileId(visibleTile?.id ?? null);
   };
   const inspectTile = (id: string, anchor: HTMLElement) => {
+    setInspectionJumboId(null);
     const tile = state.biomeTiles.find(entry => entry.id === id);
     if (!tile || tile.flags?.includes('unexplored')) return;
     requestHoloDeviceTilt();
@@ -175,6 +182,8 @@ export const ProtoVariant = () => {
   const closeInspection = () => { setInspectedActorId(null); setInspectedTileId(null); };
   // The table opens in the morning.
   const [tableHours, setTableHours] = useState(TABLE_OPENING_HOUR);
+  const dayHour = ordinaryHour(state);
+  useEffect(() => { if (state.ordinaryDay) setTableHours(dayHour); }, [dayHour]);
   // Battle-camera tilt for the table and the tableau field, toggled from the map.
   const [cameraTilted, setCameraTilted] = useState(false);
   // Reserve both phases of Space globally so focused controls cannot activate.
@@ -192,8 +201,8 @@ export const ProtoVariant = () => {
       window.removeEventListener('keyup', space, true);
     };
   }, []);
-  // Movement is tabletop play; a newly staffed encounter enters the world.
-  // Manual camera choices hold until the encounter changes or everyone exits.
+  // A newly staffed encounter enters immersion. Exiting never changes the
+  // mode: only the player's camera toggle can return to tabletop.
   const engagementKey = state.worldActors
     .filter(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)
     .map(actor => `${actor.biomeId}:${actor.id}`).sort().join('|');
@@ -201,7 +210,7 @@ export const ProtoVariant = () => {
   useEffect(() => {
     if (previousEngagement.current === engagementKey) return;
     previousEngagement.current = engagementKey;
-    setCameraTilted(Boolean(engagementKey));
+    if (engagementKey) setCameraTilted(true);
   }, [engagementKey]);
   const [cycleLighting, setCycleLighting] = useState(false);
   const [tableLightsEnabled, setTableLightsEnabled] = useState(true);
@@ -234,7 +243,7 @@ export const ProtoVariant = () => {
   ] : [];
   const stateRef = useRef(state);
   const tableauCardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const foundationTransportRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const foundationTransportRefs = useRef<Array<HTMLElement | null>>([]);
   const foundationActorPointerRef = useRef<{ actorId: string; pointerId: number; startX: number; startY: number; moved: boolean } | null>(null);
   const enemyTransportRefs = useRef<Array<HTMLDivElement | null>>([]);
   const enemyMovesMadeRef = useRef(0);
@@ -364,13 +373,13 @@ const selectBiome = (biomeId: string) => {
       const source = prev.worldResourceStacks.find((stack) => stack.id === stackId);
       if (!source || source.build || WORLD_ITEMS[source.resource].kind === 'structure') return prev;
       if (actorId && isPondCatch(source.resource) && Object.keys(stackIngredients(source)).length === 1) {
-        const fed = eatPondCatch(prev, source.resource, actorId, ACTOR_STAMINA_MAX);
+        const fed = eatPondCatch(prev, source.resource, actorId, prev.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX);
         return { ...fed, worldResourceStacks: prev.worldResourceStacks.map((stack) => stack.id === source.id ? { ...stack, count: stack.count - 1, ingredients: undefined } : stack).filter((stack) => stack.count > 0) };
       }
       if (actorId && (source.resource === 'trail_ration' || source.resource === 'hearty_ration') && Object.keys(stackIngredients(source)).length === 1) {
         const bonus = source.resource === 'hearty_ration' ? DAY_TWO_RATION_ENERGY * 2 : DAY_TWO_RATION_ENERGY;
         return { ...prev, stamina: Math.min(prev.maxStamina + bonus, prev.stamina + bonus),
-          actorStamina: prev.actorStamina.map((value, index) => index === 0 ? Math.min(ACTOR_STAMINA_MAX, value + bonus) : value),
+          actorStamina: prev.actorStamina.map((value, index) => index === 0 ? Math.min(prev.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX, value + bonus) : value),
           energy: prev.energy + bonus, energyMax: prev.energyMax + bonus,
           heroBuffs: prev.heroBuffs.map((buffs, index) => index === 0 ? [...buffs.filter((buff) => buff.id !== 'well_fed'), { id: 'well_fed' as const, value: bonus, turnsRemaining: bonus }] : buffs),
           trailRations: source.resource === 'trail_ration' ? Math.max(0, prev.trailRations - 1) : prev.trailRations,
@@ -582,7 +591,7 @@ const selectBiome = (biomeId: string) => {
     setState((prev) => ({
       ...prev,
       stamina: prev.maxStamina,
-      heroHp: prev.heroHp.map((hp, index) => index === 0 ? Math.min(FOUNDATION_MOCKUPS[0]?.maxHp ?? hp, hp + 3) : hp),
+      heroHp: prev.heroHp.map((hp, index) => index === 0 ? Math.min(prev.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0]?.maxHp ?? hp, hp + 3) : hp),
       city: { ...prev.city, campUsedToday: true, restedOnce: true },
       battleRecovered: prev.deepEncounterResolved ? true : prev.battleRecovered,
     }));
@@ -812,7 +821,7 @@ const selectBiome = (biomeId: string) => {
       const targetIndex = state.heroHp
         .map((hp, index) => ({
           index,
-          missing: Math.max(0, (FOUNDATION_MOCKUPS[index]?.maxHp ?? hp) - hp),
+          missing: Math.max(0, (state.heroMaxHp?.[index] ?? FOUNDATION_MOCKUPS[index]?.maxHp ?? hp) - hp),
         }))
         .sort((left, right) => right.missing - left.missing)[0]?.index;
       if (targetIndex !== undefined) {
@@ -1155,6 +1164,11 @@ const selectBiome = (biomeId: string) => {
     if (cardTransport || burningEnemyIds.length) return { status: 'waiting', message: 'Waiting for current action' };
     if (!divine && currentTurn !== 'player') return { status: 'waiting', message: 'Waiting for player turn' };
     if (!current.tableau.some((column) => column.length)) return { status: 'complete', message: 'Tableau cleared' };
+    if (isDenRest(current) && !hasNormalPlayerTableauMove(current)) {
+      if (!current.stock.length) return { status: 'complete', message: 'Rest finished · stock exhausted' };
+      setState(prev => drawSleepStock(prev));
+      return { status: 'played', message: 'Draw stock' };
+    }
     const encounterColumn = current.tableau.findIndex((column) => column[column.length - 1]?.encounter);
     if (encounterColumn >= 0) {
       if (divine) {
@@ -1171,15 +1185,16 @@ const selectBiome = (biomeId: string) => {
     const rootMoves: SolverMove[] = current.tableau.flatMap((column, columnIndex) => {
       const card = column[column.length - 1];
       if (!card) return [];
-      const indexes = divine
+      const indexes = divine && !isDenRest(current)
         ? current.foundations.flatMap((foundation, index) => foundation && isQuestPlacement(current.tableau, card) && (isOpenExplorationFoundation(current.scene, index, foundation) || canPlayOnFoundation(card, foundation)) ? [index] : [])
         : adjacentFoundationIndexes(card, current);
       return indexes.map((foundation) => ({ column: columnIndex, foundation }));
     });
     const assessment = assessSolverMove({ columns: current.tableau, stock: current.stock,
+      stockMode: isDenRest(current) ? 'draw' : 'backfill',
       foundations: current.foundations.map((foundation) => foundation?.card.rank ?? null),
-      openFoundations: current.foundations.map((foundation, index) => isOpenExplorationFoundation(current.scene, index, foundation)),
-      moveBudget: divine || current.scene === 'combat' ? undefined : current.energy,
+      openFoundations: current.foundations.map((foundation, index) => isOpenExplorationFoundation(current.scene, index, foundation) && (!isDenRest(current) || !current.denRest?.started)),
+      moveBudget: divine || current.scene === 'combat' || isDenRest(current) ? undefined : current.energy,
     }, { rootMoves });
     if (!assessment) return { status: 'blocked', message: 'No legal move; check actor posture or puzzle state' };
     queueCardTransport(assessment.move.column, { side: 'player', index: assessment.move.foundation }, { divine, solver: true });
@@ -1475,7 +1490,7 @@ const selectBiome = (biomeId: string) => {
       heroHp: isHolyNova
         ? prev.heroHp.map((hp, index) =>
             hp > 0
-              ? Math.min(FOUNDATION_MOCKUPS[index]?.maxHp ?? hp, hp + pendingAbilityTarget.power)
+              ? Math.min(prev.heroMaxHp?.[index] ?? FOUNDATION_MOCKUPS[index]?.maxHp ?? hp, hp + pendingAbilityTarget.power)
               : hp,
           )
         : prev.heroHp,
@@ -1510,7 +1525,7 @@ const selectBiome = (biomeId: string) => {
   const applyAbilityToHero = (heroIndex: number) => {
     if (!pendingAbilityTarget || pendingAbilityTarget.targetKind !== 'hero') return;
     if ((state.heroHp[heroIndex] ?? 0) <= 0) return;
-    const maxHp = FOUNDATION_MOCKUPS[heroIndex]?.maxHp ?? 20;
+    const maxHp = state.heroMaxHp?.[heroIndex] ?? FOUNDATION_MOCKUPS[heroIndex]?.maxHp ?? 20;
     const impact = `+${pendingAbilityTarget.power} HP`;
     pushUndo();
     setState((prev) => ({
@@ -1643,7 +1658,7 @@ const selectBiome = (biomeId: string) => {
     const location = tile?.position ?? { x: 0, y: 48 };
     const blocked = [
       ...blockedSolids().map(region => ({ x: region.x, y: region.y, w: region.width, h: region.height })),
-      ...state.biomeTiles.filter(tile => !tile.tileType && !tile.road).map(tile => ({ x: tile.position.x, y: tile.position.y, w: tile.gridSize.columns * 48, h: tile.gridSize.rows * 48 })),
+      ...state.biomeTiles.filter(tile => (!tile.tileType || tile.tileType === 'berry-patch') && !tile.road).map(tile => ({ x: tile.position.x, y: tile.position.y, w: tile.gridSize.columns * 48, h: tile.gridSize.rows * 48 })),
       ...state.worldActors.map(actor => ({ x: actor.position.x, y: actor.position.y, w: 64, h: 64 })),
       ...state.worldResourceStacks.map(stack => ({ x: stack.position.x, y: stack.position.y, w: 64, h: 64 })),
       ...state.questTableCards.map(card => ({ ...card.position, w: 120, h: 120 * 88 / 63 })),
@@ -1721,10 +1736,10 @@ const selectBiome = (biomeId: string) => {
       <div className="mx-auto flex h-full w-full max-w-[1680px] min-h-0 flex-col gap-[clamp(0.55rem,1.4vmin,1rem)]">
         <div className="min-h-0 flex-1">
           <section className="flex h-full min-h-0 flex-col rounded-[calc(var(--classic-radius)*1.75)] border border-white/10 bg-black/20 p-[clamp(0.6rem,1.6vmin,1.2rem)] shadow-[0_24px_90px_rgba(0,0,0,0.24)]">
-            <div data-mobile-panel={mobilePanel} style={desktopLayoutTracks(Boolean(state.selectedBiomeId) || combatDemoOpen)} className={`proto-main-layout grid h-full min-h-0 flex-1 gap-[clamp(0.55rem,1.4vmin,0.9rem)] ${state.selectedBiomeId || combatDemoOpen ? '' : 'proto-main-layout--no-tableau'}`}>
+            <div data-mobile-panel={mobilePanel} style={desktopLayoutTracks()} className="proto-main-layout grid h-full min-h-0 flex-1 gap-[clamp(0.55rem,1.4vmin,0.9rem)]">
               <div className="proto-main-header min-h-0">
                 <nav className="proto-mobile-nav" aria-label="Game panels">
-                  {(['map', 'tableau'] as const).map(panel => <button key={panel} type="button" aria-pressed={mobilePanel === panel} disabled={panel === 'tableau' && !state.selectedBiomeId && !combatDemoOpen} onClick={() => setMobilePanel(panel)}>{panel === 'map' ? 'Table' : 'Tableau'}</button>)}
+                  {(['map', 'tableau'] as const).map(panel => <button key={panel} type="button" aria-pressed={mobilePanel === panel} onClick={() => setMobilePanel(panel)}>{panel === 'map' ? 'Table' : 'Tableau'}</button>)}
                 </nav>
                 <div className="proto-lighting-rail" data-camera-ignore="true">
                   <span className="proto-lighting-rail__clock">Day {state.day} · {lighting.phase} · {String(Math.floor(lighting.hour)).padStart(2, '0')}:{String(Math.floor((lighting.hour % 1) * 60)).padStart(2, '0')}</span>
@@ -1755,8 +1770,11 @@ const selectBiome = (biomeId: string) => {
 
               </div>
 
-              <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId || combatDemoOpen ? '' : 'hidden'}${pondSelected && !combatDemoOpen ? ' proto-tableau-field--pond' : ''}${dangerSelected || combatDemoOpen ? ' proto-tableau-field--combat' : ''}`}>
-              {dangerSelected || combatDemoOpen ? (
+              <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden${pondSelected && !combatDemoOpen ? ' proto-tableau-field--pond' : ''}${dangerSelected || combatDemoOpen ? ' proto-tableau-field--combat' : ''}`}>
+              {!state.selectedBiomeId && !combatDemoOpen ? (<>
+                <div className="proto-main-tableau min-h-0 rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))]" aria-label="Empty tableau" />
+                <div className="proto-main-foundations min-h-0 h-[clamp(6rem,24dvh,14rem)] rounded-[calc(var(--classic-radius)*1.3)] border border-[#f4c86c]/18 bg-[linear-gradient(180deg,rgba(22,18,12,0.44),rgba(9,10,12,0.28))]" aria-label="Empty foundations" />
+              </>) : dangerSelected || combatDemoOpen ? (
                 <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} />
               ) : pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && !canSpendStamina(state.stamina, POND_MISS_STAMINA)}
@@ -1764,23 +1782,26 @@ const selectBiome = (biomeId: string) => {
                   onCast={castPondBait} onFightEnd={endPondFight} onLeave={() => leaveTableau()} />
               ) : (<>
               <div className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">
-                <TableauSolveControls disabled={!state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} guidance={moveGuidance} onGuidanceChange={setMoveGuidance} />
+                <div>
+                  {isDenRest(state) && <div className="proto-rest-status" role="status" aria-label="Den rest status"><span>Hero’s Den · Rest</span><span>STA {state.stamina}/{state.maxStamina}</span><span>{state.tableau.every(column => !column.length) ? 'Perfect rest' : !state.stock.length && !hasNormalPlayerTableauMove(state) ? 'Rest finished' : `${state.tableau.reduce((sum, column) => sum + column.length, 0)} left`}</span></div>}
+                  <TableauSolveControls disabled={!state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} guidance={moveGuidance} onGuidanceChange={setMoveGuidance} />
+                </div>
                 <TableauScene immersive={false} terrain={fieldBiome?.terrain ?? 'woods'} rig={fieldRig} hours={tableHours}>
-                <TableauCardArea columns={TABLEAU_COLUMNS} rows={Math.max(1, ...tableState.tableau.map((column) => column.length))}>
+                <TableauCardArea columns={isDenRest(state) ? REST_COLUMNS : TABLEAU_COLUMNS} rows={isDenRest(state) ? REST_ROWS : Math.max(1, ...tableState.tableau.map((column) => column.length))}>
                 <div className={`proto-tableau-stage${cameraTilted ? ' proto-tableau-stage--tilted' : ''}`}>
                 <Tableau
                   columns={tableState.tableau}
                   className="grid min-w-0 justify-center"
                   style={{
-                    gridTemplateColumns: 'repeat(7, minmax(0, var(--classic-card-w)))',
+                    gridTemplateColumns: `repeat(${isDenRest(state) ? REST_COLUMNS : TABLEAU_COLUMNS}, minmax(0, var(--classic-card-w)))`,
                     gap: 'var(--classic-tableau-gap)',
                     justifyContent: 'center',
                   }}
                 >
-                  {Array.from({ length: TABLEAU_COLUMNS }, (_, columnIndex) => {
+                  {Array.from({ length: isDenRest(state) ? REST_COLUMNS : TABLEAU_COLUMNS }, (_, columnIndex) => {
                     const column = tableState.tableau[columnIndex] ?? [];
-                    const rowCount = Math.max(1, ...tableState.tableau.map((entry) => entry.length));
-                    const topPadding = rowCount - column.length;
+                    const rowCount = isDenRest(state) ? REST_ROWS : Math.max(1, ...tableState.tableau.map((entry) => entry.length));
+                    const topPadding = isDenRest(state) ? 0 : rowCount - column.length;
                     return (
                       <div
                         key={`tableau-column-${columnIndex}`}
@@ -1821,7 +1842,9 @@ const selectBiome = (biomeId: string) => {
                               lit={cameraTilted}
                               standardRankSize
                               footerLabel={
-                                state.scene === 'exploration' && card.encounter ? (
+                                isDenRest(state) && card.sleep ? (
+                                  <span role="img" aria-label={SLEEP_LABELS[card.sleep]}>{SLEEP_ICONS[card.sleep]}</span>
+                                ) : state.scene === 'exploration' && card.encounter ? (
                                   <span role="img" aria-label="Shadow Wolf encounter">
                                     {ENCOUNTER_GLYPH}
                                   </span>
@@ -1958,7 +1981,7 @@ const selectBiome = (biomeId: string) => {
                 </div>
               </div>
 
-              <div className="proto-main-foundations min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#f4c86c]/18 bg-[linear-gradient(180deg,rgba(22,18,12,0.44),rgba(9,10,12,0.28))] p-[clamp(0.5rem,1.25vmin,0.8rem)]">
+              <div className={`proto-main-foundations ${isDenRest(state) ? 'proto-rest-foundations ' : ''}min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#f4c86c]/18 bg-[linear-gradient(180deg,rgba(22,18,12,0.44),rgba(9,10,12,0.28))] p-[clamp(0.5rem,1.25vmin,0.8rem)]`}>
                 <div
                   className={`proto-foundation-board mx-auto grid w-full justify-center ${state.scene === 'exploration' ? 'proto-foundation-board--exploration' : ''}${cameraTilted ? ' proto-foundation-board--tilted' : ''}`}
                   style={{
@@ -1972,8 +1995,12 @@ const selectBiome = (biomeId: string) => {
                         (entry) => entry.location === 'foundation' && entry.biomeId === state.selectedBiomeId && (entry.foundationIndex ?? 0) === index,
                       );
                       const collectedCardCount = foundation?.cards.length ?? 0;
-                      const collectedResources = FOREST_RESOURCE_ORDER.map((resource) => ({
+                      const collectedResources = isDenRest(state) ? (['rest'] as const).map(sleep => ({
+                        resource: sleep, label: SLEEP_LABELS[sleep], glyph: SLEEP_ICONS[sleep],
+                        count: foundation?.cards.filter(card => card.sleep === sleep).length ?? 0,
+                      })) : FOREST_RESOURCE_ORDER.map((resource) => ({
                         resource,
+                        label: FOREST_RESOURCE_LABELS[resource], glyph: FOREST_RESOURCE_GLYPHS[resource],
                         count: foundation?.cards.filter((card) => card.resource === resource).length ?? 0,
                       }));
                       return (
@@ -1982,7 +2009,7 @@ const selectBiome = (biomeId: string) => {
                           aria-label="Foundation"
                           data-foundation-index={index}
                           ref={(node) => {
-                            foundationTransportRefs.current[index] = node;
+                            if (!isDenRest(state)) foundationTransportRefs.current[index] = node;
                           }}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => {
@@ -1998,8 +2025,8 @@ const selectBiome = (biomeId: string) => {
                           className="proto-foundation-card--exploration grid aspect-[56/74] w-full max-w-[clamp(8rem,18vw,14rem)] place-items-center rounded-[calc(var(--classic-radius)*1.15)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(10,15,16,0.96),rgba(5,8,10,0.98))] text-[clamp(0.58rem,1vmin,0.7rem)] font-mono uppercase tracking-[0.18em] text-white/30"
                         >
                           {actor ? (
-                            <span className="proto-actor-energy" aria-label={`${actor.label} energy ${state.energy} of ${state.energyMax}`} title={`${actor.label} energy`}>
-                              <span aria-hidden="true">⚡</span><span>{state.energy}</span>
+                            <span className="proto-actor-energy" aria-label={isDenRest(state) ? `${actor.label} stamina ${state.stamina} of ${state.maxStamina}` : `${actor.label} energy ${state.energy} of ${state.energyMax}`} title={isDenRest(state) ? `${actor.label} stamina` : `${actor.label} energy`}>
+                              <span aria-hidden="true">{isDenRest(state) ? 'Zzz' : '⚡'}</span><span>{isDenRest(state) ? state.stamina : state.energy}</span>
                             </span>
                           ) : null}
                           {actor ? (
@@ -2008,7 +2035,7 @@ const selectBiome = (biomeId: string) => {
                               role="button"
                               tabIndex={0}
                               aria-haspopup="dialog"
-                              onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); inspectActor(actor.id, event.currentTarget); } }}
+                              onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); inspectActor(actor.id, event.currentTarget, true); } }}
                               data-camera-ignore="true"
                               onPointerDown={(event) => {
                                 event.stopPropagation();
@@ -2051,7 +2078,13 @@ const selectBiome = (biomeId: string) => {
                                   }));
                                   window.dispatchEvent(new CustomEvent('proto-actor-drag-end'));
                                 }
-                                if (!drag.moved) setInspectedActorId(actor.id);
+                                if (!drag.moved) {
+                                  const anchor = event.currentTarget;
+                                  requestHoloDeviceTilt();
+                                  // Let the release's synthesized click finish before mounting
+                                  // the jumbo backdrop, so a tap cannot immediately dismiss it.
+                                  requestAnimationFrame(() => inspectActor(actor.id, anchor, true));
+                                }
                                 foundationActorPointerRef.current = null;
                               }}
                               onPointerCancel={() => {
@@ -2060,8 +2093,8 @@ const selectBiome = (biomeId: string) => {
                               }}
                               className="proto-exploration-actor cursor-grab touch-none text-center text-[#ffe7ad] active:cursor-grabbing"
                             >
-                              <span className={`proto-occupied-foundation-face${cameraTilted ? ' proto-lit-surface' : ''}`} aria-label={`Foundation top card ${rankLabel(foundation?.card.rank ?? 2)}${foundation?.card.resource ? `, ${FOREST_RESOURCE_LABELS[foundation.card.resource]}` : ''}`}>
-                                <ActorHoloCard actorId={actor.id} name={actor.label} rank={rankLabel(foundation?.card.rank ?? 2)} resource={collectedCardCount > 0 && foundation?.card.resource ? FOREST_RESOURCE_GLYPHS[foundation.card.resource] : undefined} />
+                              <span className={`proto-occupied-foundation-face${cameraTilted ? ' proto-lit-surface' : ''}`} aria-label={isDenRest(state) ? 'Hero resting in her den' : `Foundation top card ${rankLabel(foundation?.card.rank ?? 2)}${foundation?.card.resource ? `, ${FOREST_RESOURCE_LABELS[foundation.card.resource]}` : ''}`}>
+                                <ActorHoloCard actorId={actor.id} name={actor.label} rank={isDenRest(state) ? '' : rankLabel(foundation?.card.rank ?? 2)} resource={collectedCardCount > 0 && foundation?.card.resource ? FOREST_RESOURCE_GLYPHS[foundation.card.resource] : undefined} />
                               </span>
 
                             </div>
@@ -2081,9 +2114,9 @@ const selectBiome = (biomeId: string) => {
                           </span>
                         </div>
                           <ul className="proto-foundation-resources" aria-label="Resources collected this tableau">
-                            {collectedResources.map(({ resource, count }) => (
-                              <li key={resource} data-resource={resource} data-count={count} aria-label={`${FOREST_RESOURCE_LABELS[resource]} ${count}`} title={FOREST_RESOURCE_LABELS[resource]}>
-                                <span aria-hidden="true">{FOREST_RESOURCE_GLYPHS[resource]}</span><span aria-hidden="true">{count}</span>
+                            {collectedResources.map(({ resource, count, label, glyph }) => (
+                              <li key={resource} data-resource={resource} data-count={count} aria-label={`${label} ${count}`} title={label}>
+                                <span aria-hidden="true">{glyph}</span><span aria-hidden="true">{count}</span>
                               </li>
                             ))}
                           </ul>
@@ -2168,6 +2201,11 @@ const selectBiome = (biomeId: string) => {
                     </div>
                   ))) }
                 </div>
+                {isDenRest(state) && <div className="proto-rest-stock">
+                  <span aria-live="polite">Stock {state.stock.length}</span>
+                  <JumboActionCard type="button" className="proto-rest-receiver" cardRef={node=>{foundationTransportRefs.current[0]=node;}} aria-label={`Receiving card ${rankLabel(state.foundations[0]?.card.rank ?? 1)} · Draw stock · ${state.stock.length} cards remaining`} disabled={Boolean(cardTransport) || !state.stock.length || state.tableau.every(column => !column.length) || !fieldActors.length}
+                    onClick={() => { pushUndo(); setState(prev => drawSleepStock(prev)); }}><span aria-hidden="true">{rankLabel(state.foundations[0]?.card.rank ?? 1)}</span><span>{state.stock.length ? 'Draw' : 'Last'}</span></JumboActionCard>
+                </div>}
                 {state.scene === 'exploration' && fieldActors.length > 1 && <FoundationExitButton everyone label="Everyone exit tableau" disabled={Boolean(cardTransport)} onExit={() => leaveTableau()} />}
               </div>
               </>)}
@@ -2175,6 +2213,33 @@ const selectBiome = (biomeId: string) => {
               {combatDemoOpen ? <CombatDemo key={combatDemoReplay} onClose={() => setCombatDemoOpen(false)} onRestart={watchBattleScene}
                 onEscape={dangerFighter ? () => { setCombatDemoOpen(false); leaveTableau(); } : undefined} /> : <ProtoMap
                 extendTableau={Boolean(state.selectedBiomeId) && !dangerSelected && !pondSelected}
+                storyCard={state.ordinaryDay && <div className="proto-ordinary-day" aria-label="An ordinary day" data-resting={state.ordinaryDay.bedtime || state.ordinaryDay.complete || undefined}>
+                  <div className="proto-ordinary-day__heading"><QuestEmblem /><div><strong>An ordinary day</strong><span>Day 1 · {state.ordinaryDay.complete ? 'Home, at last' : state.ordinaryDay.bedtime ? 'Good night' : state.ordinaryDay.supper ? 'A quiet evening' : 'A little foraging'}</span></div></div>
+                  <QuestArtwork sprite={`${import.meta.env.BASE_URL}assets/art/quests/hero-snuffling-berries-v1.png`} />
+                  <div className="proto-ordinary-day__thought" role="status" title={ordinaryThought(state)}>
+                    <span>{ordinaryThought(state)}</span>
+                  </div>
+                  <div className="proto-ordinary-day__actions" title={state.ordinaryDay.visitedTree ? 'Hero stopped beneath the old tree today.' : undefined}>
+                    <span aria-label="Food carried">Berries {state.haul.berries} · STA {state.stamina}/{state.maxStamina}</span>
+                    {state.ordinaryDay.visitedTree && <span title="Hero stopped beneath the old tree today.">A familiar old tree ✓</span>}
+                    {!state.ordinaryDay.supper && <button type="button" disabled={!isHome(state) || state.haul.berries < SUPPER_BERRIES || Boolean(cardTransport)} onClick={() => { clearPendingInteractions(); setUndoStack([]); setState(eatSupper); }}>Eat supper · 2 berries</button>}
+                    {state.ordinaryDay.supper && !state.ordinaryDay.bedtime && <button type="button" disabled={!isHome(state) || Boolean(cardTransport)} onClick={() => {
+                      clearPendingInteractions(); setUndoStack([]);
+                      setState(previous => {
+                        if (!previous.ordinaryDay?.supper || !isHome(previous)) return previous;
+                        const ready = { ...previous, ordinaryDay: { ...previous.ordinaryDay, bedtime: true } };
+                        return arriveActorAtBiome(ready, 'hero', 'hero-den', { x: 0, y: 96 });
+                      });
+                    }}>Curl up · Zzz</button>}
+                    {state.ordinaryDay.bedtime && !state.ordinaryDay.complete && <button type="button" disabled={Boolean(cardTransport) || !isHome(state)} onClick={() => {
+                      clearPendingInteractions(); setUndoStack([]);
+                      setState(previous => previous.ordinaryDay?.bedtime && isHome(previous) ? { ...previous,
+                        biomeTiles: previous.biomeTiles.map(tile => tile.id === previous.selectedBiomeId ? { ...tile, tableau: previous.tableau, stock: previous.stock } : tile),
+                        selectedBiomeId: null, tableau: [], stock: [], foundations: [],
+                        ordinaryDay: { ...previous.ordinaryDay, complete: true } } : previous);
+                    }}>Finish resting</button>}
+                  </div>
+                </div>}
                 biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId, sprite: biomeTileSprite(tile),
                   // A foe beaten today leaves its woods quiet: no danger, so passable.
                   flags: tile.clearedDay === state.day ? tile.flags?.filter((flag) => flag !== 'danger') : tile.flags,
@@ -2182,7 +2247,7 @@ const selectBiome = (biomeId: string) => {
                   exploration: tile.flags?.includes('unexplored') ? 0 : 1 }))}
                 actors={state.worldActors
                   .filter((actor) => actor.location === 'table' || Boolean(actor.biomeId))
-                  .map(({ id, label, location, biomeId, position, hutId, luminosity, lightColor }) => ({ id, label, location, biomeId, position, hutId, luminosity, lightColor, sprite: WORLD_ACTOR_SPRITES[id] }))}
+                  .map(({ id, label, location, biomeId, position, hutId, luminosity, lightColor }) => ({ id, label, location, biomeId, position, hutId, luminosity, lightColor, awakeAtHome: Boolean(state.ordinaryDay && !state.ordinaryDay.bedtime), sprite: WORLD_ACTOR_SPRITES[id] }))}
                 actorOrigins={state.worldActors.map(({ id, label, location, biomeId, position }) => ({ id, label, location, biomeId, position }))}
                 resourceStacks={state.worldResourceStacks}
                 questCards={state.questTableCards}
@@ -2227,6 +2292,7 @@ const selectBiome = (biomeId: string) => {
       </div>
       {inspectionAnchor && (inspectedActorId || inspectedTileId) ? <DetailsCardViewer
         key={inspectionId}
+        initialJumboId={inspectionJumboId}
         anchor={inspectionAnchor}
         timeOfDay={tableHours}
         lights={tableLights}
@@ -2238,12 +2304,19 @@ const selectBiome = (biomeId: string) => {
           badge: '♟',
           badgeLabel: 'Actor',
           art: <ActorCardArt sprite={inspectedActorId === 'hero' ? ACTOR_HOLO_ART.hero : WORLD_ACTOR_SPRITES[inspectedActorId]} label={state.worldActors.find((actor) => actor.id === inspectedActorId)!.label} />,
+          jumboEditor: <ActorPlaytestEditor state={state} onApply={values => setState(prev => ({ ...prev,
+            heroHp: prev.heroHp.map((hp, index) => index === 0 ? values.hp : hp),
+            heroMaxHp: FOUNDATION_MOCKUPS.map((actor, index) => index === 0 ? values.maxHp : prev.heroMaxHp?.[index] ?? actor.maxHp),
+            actorStamina: prev.actorStamina.map((value, index) => index === 0 ? values.work : value),
+            actorMaxStamina: prev.actorStamina.map((_, index) => index === 0 ? values.maxWork : prev.actorMaxStamina?.[index] ?? ACTOR_STAMINA_MAX),
+            stamina: values.stamina, maxStamina: values.maxStamina, energy: values.energy, energyMax: values.maxEnergy,
+          }))} />,
           descriptorPreview: 'Expedition hero',
           descriptor: 'An expedition hero who explores the wilderness, gathers resources, and helps build your settlement.',
           trays: [
             { id: 'stats', label: 'Stats', details: <div className="hero-card__stats">
-              <span>HP {state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp}/{FOUNDATION_MOCKUPS[0].maxHp}</span>
-              <span>STA {state.actorStamina[0] ?? ACTOR_STAMINA_MAX}/{ACTOR_STAMINA_MAX}</span>
+              <span>HP {state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp}/{state.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0].maxHp}</span>
+              <span>STA {state.actorStamina[0] ?? ACTOR_STAMINA_MAX}/{state.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX}</span>
             </div> },
             { id: 'equipment', label: 'Equipment', details: 'Not yet configured' },
             { id: 'buffs', label: 'Effects', details: state.heroBuffs[0]?.length
@@ -2273,11 +2346,12 @@ const selectBiome = (biomeId: string) => {
           offset={{ x: 0, y: 0 }}
           size={cardTransport.size}
           showText
-          zIndex={30000}
+          zIndex={100000}
         />
       ) : null}
     </div>
   );
 };
+
 
 

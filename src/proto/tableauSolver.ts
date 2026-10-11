@@ -7,6 +7,8 @@ export type SolverPuzzle = {
   foundations: Array<number | null>;
   openFoundations?: boolean[];
   moveBudget?: number;
+  /** Finite golf stock changes the foundation rank instead of backfilling columns. */
+  stockMode?: 'backfill' | 'draw';
 };
 export type SolverOptions = { samples?: number; horizon?: number; random?: () => number; rootMoves?: SolverMove[] };
 export const solverMoves = (puzzle: SolverPuzzle): SolverMove[] => {
@@ -23,7 +25,7 @@ export const solverMoves = (puzzle: SolverPuzzle): SolverMove[] => {
 export const simulateSolverMove = (puzzle: SolverPuzzle, move: SolverMove): SolverPuzzle => {
   const column = puzzle.columns[move.column];
   const card = column[column.length - 1];
-  const replacement = puzzle.stock[0];
+  const replacement = puzzle.stockMode === 'draw' ? undefined : puzzle.stock[0];
   return {
     ...puzzle,
     columns: puzzle.columns.map((column, index) => index !== move.column ? column : replacement
@@ -53,11 +55,15 @@ export const assessSolverMove = (puzzle: SolverPuzzle, options: SolverOptions = 
       let state = simulateSolverMove(puzzle, candidate);
       let played = 1;
       for (; played < horizon; played += 1) {
-        const legal = solverMoves(state);
+        let legal = solverMoves(state);
+        while (!legal.length && state.stockMode === 'draw' && state.stock.length && state.columns.some(column => column.length)) {
+          state = { ...state, foundations: [state.stock[0].rank], stock: state.stock.slice(1), openFoundations: [false] };
+          legal = solverMoves(state);
+        }
         if (!legal.length) break;
         state = simulateSolverMove(state, legal[Math.floor(random() * legal.length)]);
       }
-      const complete = state.columns.every((column) => !column.length) && !state.stock.length;
+      const complete = state.columns.every((column) => !column.length) && (state.stockMode === 'draw' || !state.stock.length);
       value += played + (complete ? horizon * 2 : 0);
     }
     if (value > bestValue) { bestValue = value; best = candidate; }

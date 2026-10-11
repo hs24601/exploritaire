@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { actorHeading, type OrientedActor } from './actorOrientation';
 import { HERO_DIRECTIONAL_SPRITE, DARK_SLIME_DIRECTIONAL_SPRITE } from './directionalSprites';
 import { MOCHI_DIRECTIONAL_SPRITE } from './mochiSprite';
+import { HERO_SITTING_DIRECTIONAL_SPRITE } from './heroSittingSprite';
 import { createDirectionalSpriteLibrary, type BattleSpriteTextures } from './directionalSpriteRig';
 import { BATTLE_TURN_PRIORITY, type BattleTeam } from './battleTurnPriority';
 
@@ -176,7 +177,7 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
     mesh.scale.set(height * image.width / image.height, height, 1); mesh.position.set(x, height / 2 - height * (image.height - bottom - 1) / image.height, z); scene.add(mesh); return mesh;
   };
   const trees = Array.from({length: 16}, (_, i) => { const angle = i / 16 * Math.PI * 2; return billboard(assets.trees, Math.cos(angle) * 20, Math.sin(angle) * 20, 5 + i % 3, 0x77958a); });
-  const heroLibrary = createDirectionalSpriteLibrary(assets, HERO_DIRECTIONAL_SPRITE);
+  const heroLibrary = createDirectionalSpriteLibrary(assets, HERO_DIRECTIONAL_SPRITE, { sitting: HERO_SITTING_DIRECTIONAL_SPRITE });
   const mochiLibrary = createDirectionalSpriteLibrary(assets, MOCHI_DIRECTIONAL_SPRITE);
   const slimeLibrary = createDirectionalSpriteLibrary(assets, DARK_SLIME_DIRECTIONAL_SPRITE);
   const hero = heroLibrary.create(2.55), mochi = mochiLibrary.create(1.85);
@@ -203,8 +204,9 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
   return {
     // Scene authors may use target/point/fixed policies for an ambush or scripted cue.
     actors,
-    snapshot() { return actors.map((actor, i) => ({ id: actor.id, team: actor.team, position: [actor.position.x, actor.position.z], heading: headings[i], frame: instances[i].frame, view: instances[i].view, billboardYaw: instances[i].billboard.rotation.y, flip: instances[i].facing.scale.x, parts: instances[i].parts.map(({part, pivot}) => ({ id: part.id, position: pivot.position.toArray(), angle: pivot.rotation.z, scaleY: pivot.scale.y })) })); },
+    snapshot() { return actors.map((actor, i) => ({ id: actor.id, team: actor.team, position: [actor.position.x, actor.position.z], heading: headings[i], frame: instances[i].frame, pose: instances[i].pose, view: instances[i].view, billboardYaw: instances[i].billboard.rotation.y, flip: instances[i].facing.scale.x, parts: instances[i].parts.map(({part, pivot}) => ({ id: part.id, position: pivot.position.toArray(), angle: pivot.rotation.z, scaleY: pivot.scale.y })) })); },
     update(t: number, reduced: boolean) {
+      hero.setPose(activity(t) || (t >= 5.2 && t < 5.85) ? 'standing' : 'sitting');
       hero.root.position.x = heroX(t); shadows[0].position.x = hero.root.position.x;
       const impact = clamp(1 - (t - 5.7) / .65) * Number(t >= 5.7);
       slimes[0].setColor(new THREE.Color(1, 1 - impact * .8, 1 - impact * .7));

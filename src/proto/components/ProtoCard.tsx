@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PlayingCard } from '../../golf/components/PlayingCard';
 import { rankLabel, type Card } from '../protoState';
 import { REVEAL_SWEEP_MS, revealMask } from './Reveal';
+import { useCardJumbo } from './CardJumbo';
 
 /** A tableau card's height over its width (56:74). */
 const CARD_ASPECT = 74 / 56;
@@ -42,6 +43,8 @@ export const ProtoCard = ({
   buried = false,
   lit = false,
   style,
+  jumbo = false,
+  actionLabel = 'Play card',
 }: {
   card: Card;
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -61,7 +64,11 @@ export const ProtoCard = ({
   /** Surface receives the shared scene lighting variables. */
   lit?: boolean;
   style?: React.CSSProperties;
-}) => (
+  jumbo?: boolean;
+  actionLabel?: string;
+}) => {
+  const viewer = useCardJumbo();
+  return (
   <PlayingCard
     cardRef={cardRef}
     data-resource-node={card.resource}
@@ -69,10 +76,20 @@ export const ProtoCard = ({
     data-highlight={active || mobilityTarget ? 'true' : undefined}
     aria-pressed={selected || undefined}
     data-buried={buried || undefined}
-    onClick={onClick}
-    disabled={disabled}
+    onClick={event=>{
+      if(jumbo)return;
+      if(!viewer){if(!disabled)onClick?.(event);return;}
+      const source=event.currentTarget;
+      viewer.open({title: `${rankLabel(card.rank)}${card.resource ? ` · ${card.resource}` : ''}`,
+        ratio:56/74,content:<ProtoCard card={card} footerLabel={footerLabel} buried={buried} jumbo />,
+        action: !disabled&&onClick ? ()=>onClick({...event,currentTarget:source,detail:0}) : undefined,actionLabel});
+    }}
+    disabled={!viewer && disabled}
+    data-gameplay-disabled={disabled || undefined}
+    aria-haspopup={!jumbo ? 'dialog' : undefined}
+    data-card-jumbo={jumbo || undefined}
     style={style}
-    className={`${cardBaseClassName} ${lit ? 'proto-lit-surface ' : ''}${buried ? 'proto-card--buried pointer-events-none ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${
+    className={`${cardBaseClassName} ${lit ? 'proto-lit-surface ' : ''}${buried ? 'proto-card--buried ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${
       disabled
         ? selected
           ? 'cursor-default border-[#8ef2d4]/25 bg-[#07100f] text-white/42'
@@ -87,18 +104,19 @@ export const ProtoCard = ({
     }`}
   >
     <CardVeil buried={buried} />
-    <div className="flex min-w-0 items-start justify-between gap-1">
+    <div className="proto-card-header flex min-w-0 items-start justify-between gap-1">
       <div className={`proto-card-rank font-semibold leading-none ${standardRankSize ? 'text-[calc(var(--classic-card-w)*0.34)]' : muted ? 'text-[calc(var(--classic-card-w)*0.27)]' : 'text-[calc(var(--classic-card-w)*0.4)]'}`}>
         {rankLabel(card.rank)}
       </div>
       {footerLabel ? (
-        <div className="-mt-0.5 shrink-0 font-sans text-[clamp(1rem,calc(var(--classic-card-w)*0.42),1.8rem)] leading-none drop-shadow-[0_0_5px_rgba(255,255,255,0.24)]">
+        <div className="proto-card-icon -mt-0.5 shrink-0 font-sans text-[clamp(1rem,calc(var(--classic-card-w)*0.42),1.8rem)] leading-none drop-shadow-[0_0_5px_rgba(255,255,255,0.24)]">
           {footerLabel}
         </div>
       ) : null}
     </div>
   </PlayingCard>
 );
+};
 
 export const EmptySlot = ({ emphasis = 'soft' }: { emphasis?: 'soft' | 'strong' }) => (
   <div

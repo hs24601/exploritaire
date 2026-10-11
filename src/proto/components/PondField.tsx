@@ -5,6 +5,7 @@ import { rankLabel, type Card } from '../protoState';
 import { POND_CASTS_PER_DAY, POND_CATCHES, POND_SPECIES, RIPPLE_RANGES, catchForRank, landHooked, pondFinished, rippleSize, speciesForRank, type PondCast, type PondCatch, type PondState } from '../rules/fishing';
 import { CATCH_GLYPHS, FishFight } from './FishFight';
 import { ProtoCard } from './ProtoCard';
+import { JumboActionCard } from './CardJumbo';
 
 const RANK_NAMES = ['', 'aces', 'twos', 'threes', 'fours', 'fives', 'sixes', 'sevens', 'eights', 'nines', 'tens', 'jacks', 'queens', 'kings'];
 /** Whether landing the fish on the line also brings up a lucky glowfish (the rules' own roll). */
@@ -84,8 +85,7 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
     setDrag(null);
     setOverWater(false);
     if (cast) castBait(drag.id);
-    // A tap without a drag explains how to cast.
-    else if (!cancelled && !drag.moved) setHint(true);
+    else if (!cancelled && !drag.moved) event.currentTarget.querySelector<HTMLButtonElement>('.playing-card')?.click();
   };
   const castBait = (baitId: string) => {
     setHint(false);
@@ -138,7 +138,7 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
             // Fish lie face down in the water like dealt cards. The back shows the
             // fish's size band; a nibble flips the card to show its rank.
             return (
-              <div key={fish.id} role="listitem" className="playing-card proto-pond__fish" data-pond-fish={fish.id} data-ripple={band}
+              <JumboActionCard key={fish.id} role="listitem" className="playing-card proto-pond__fish" data-pond-fish={fish.id} data-ripple={band}
                 data-revealed={fish.revealed ? 'true' : undefined}
                 aria-label={fish.revealed ? `Fish card, rank ${rankLabel(fish.rank)}, ${speciesForRank(fish.rank).label}` : `Face-down fish card, ${band} (${RIPPLE_RANGES[band]})`}
                 title={fish.revealed ? `${speciesForRank(fish.rank).label} (${rankLabel(fish.rank)})` : `${band} fish: ${RIPPLE_RANGES[band]}`}>
@@ -153,7 +153,7 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
                     <span className="proto-pond__band" aria-hidden="true">{RIPPLE_RANGES[band]}</span>
                   </>
                 )}
-              </div>
+              </JumboActionCard>
             );
           })}
         </div>
@@ -172,7 +172,7 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
                 {/* Keyboard: Enter picks this bait, then Enter on the pond casts it.
                     Mouse and touch cast by dragging, so their clicks (detail > 0) only hint. */}
                 <ProtoCard card={card} disabled={!canCast} selected={keyboardBait === card.id}
-                  onClick={(event) => { if (canCast && event.detail === 0) setKeyboardBait((current) => current === card.id ? null : card.id); }} />
+                  actionLabel="Cast bait" onClick={() => { if (canCast) castBait(card.id); }} />
               </div>
             );
           })}
@@ -185,7 +185,7 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
         <div className="proto-pond__drag" aria-hidden="true" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width, ['--classic-card-w' as string]: `${drag.width}px` }}>
           <ProtoCard card={dragged} />
         </div>,
-        document.querySelector('.proto-game-root') ?? document.body,
+        document.body,
       ) : null}
       {/* The catch lands here, beneath the cards, like a foundation's collected resources. */}
       <ul ref={trayRef} className="proto-foundation-resources proto-pond__catch"
