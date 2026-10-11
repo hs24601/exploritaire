@@ -8,7 +8,7 @@ import { rankLabel, type Card } from '../protoState';
 import { createSeededSmallWoodsDeal } from '../rules/setup';
 import {
   MAX_FOES, actorAttack, addSlime, applyAttack, canDeal, createBattle, dealRow, eligibleActors, enemyTarget, playCard,
-  previewAttack, removeSlime, setMochi, setSpirit, tickBattle, type BattleState,
+  previewAttack, redrawActor, removeSlime, setMochi, setSpirit, tickBattle, type BattleState,
 } from '../rules/battle';
 import { getCardTransportDurationMs } from '../protoTransport';
 import { solverFlightDuration } from '../solverTiming';
@@ -50,12 +50,16 @@ const statusLine = (battle: BattleState, paused: boolean) =>
       : !battle.started ? 'Slimes stir on your first play'
         : paused ? 'Paused' : 'Build charge, then drag an ability onto a slime';
 
-export function BattleTableauField({ hours, lights, onWatch, active, onRosterChange }: {
+export function BattleTableauField({ hours, lights, onWatch, active, onRosterChange, heroStamina, onRedraw }: {
   hours: number; lights: readonly TableLight[]; onWatch: () => void; active: boolean;
   /** Ids of the units still standing, for the 3D arena. */
   onRosterChange?: (ids: string[]) => void;
+  /** The Hero's world stamina coming into the fight. */
+  heroStamina?: number;
+  /** An actor spent 1 stamina on a foundation redraw. */
+  onRedraw?: (actorId: string) => void;
 }) {
-  const [battle, setBattle] = useState(() => createBattle(previewDeal));
+  const [battle, setBattle] = useState(() => createBattle(previewDeal, { stamina: { hero: heroStamina } }));
   const [paused, setPaused] = useState(false);
   const foundationRefs = useRef(new Map<string, HTMLDivElement>());
   const cardRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -151,11 +155,21 @@ export function BattleTableauField({ hours, lights, onWatch, active, onRosterCha
     const source = cardRefs.current.get(selection.cardId);
     if (source && column[column.length - 1]?.id === selection.cardId) play(selection.columnIndex,source,actorId);
   };
+  const redraw = (actorId: string) => {
+    const next = redrawActor(battle, actorId);
+    if (next === battle) return;
+    const actor = next.party.find((a) => a.id === actorId)!;
+    setSelection(null);
+    setBattle(next);
+    onRedraw?.(actorId);
+    setAnnouncement(`${actor.name} redraws: foundation is now ${rankLabel(actor.rank)} · ${actor.stamina} stamina left`);
+  };
   const restart = () => {
     cancel(); setSelection(null); setPaused(false);
     setBattle((current) => createBattle(previewDeal, {
       mochi: current.party.some((a) => a.id === 'mochi'), slimes: current.foes.length,
       spirits: Object.fromEntries(current.party.map((a) => [a.id, a.spirits])),
+      stamina: Object.fromEntries(current.party.map((a) => [a.id, a.stamina])),
     }));
   };
 
@@ -181,6 +195,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onRosterCha
     {battle.party.map((actor) => {
       const attack = actorAttack(battle, actor.id);
       const usable = Boolean(attack) && !battle.result && !paused;
+      const canRedraw = actor.stamina > 0 && actor.hp > 0 && !battle.result && !paused;
       return <div key={actor.id} className="battle-field__slot" data-down={actor.hp <= 0 || undefined}>
         <button type="button" className="battle-field__foundation" data-battle-actor={actor.id}
           data-targetable={selection?.actorIds.includes(actor.id) || undefined} disabled={!selection?.actorIds.includes(actor.id)}
@@ -192,8 +207,15 @@ export function BattleTableauField({ hours, lights, onWatch, active, onRosterCha
             </div>
           </div>
         </button>
-        <AbilityCard actor={actor} attack={attack} disabled={!usable} armed={aim?.mode === 'armed' && aim.actorId === actor.id}
-          dragging={aim?.mode === 'drag' && aim.actorId === actor.id} interaction={cardProps(actor.id, usable)} />
+        <div className="battle-field__side">
+          <AbilityCard actor={actor} attack={attack} disabled={!usable} armed={aim?.mode === 'armed' && aim.actorId === actor.id}
+            dragging={aim?.mode === 'drag' && aim.actorId === actor.id} interaction={cardProps(actor.id, usable)} />
+          <button type="button" className="battle-field__redraw" data-redraw-actor={actor.id} disabled={!canRedraw} onClick={() => redraw(actor.id)}
+            aria-label={`Redraw ${actor.name}'s foundation for 1 stamina · ${actor.stamina} stamina left`}
+            title={actor.stamina > 0 ? `Redraw: stuck? Swap ${actor.name}'s foundation value for a new one. Costs 1 stamina (${actor.stamina} left).` : `${actor.name} has no stamina left to redraw`}>
+            <span aria-hidden="true">↻ Redraw</span><span className="battle-field__redraw-left" aria-hidden="true">{actor.stamina}</span>
+          </button>
+        </div>
         <PartyVitals actor={actor} events={battle.events} targeted={battle.started && !battle.result && target?.id === actor.id} />
       </div>;
     })}

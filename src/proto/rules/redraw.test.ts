@@ -27,7 +27,7 @@ describe('foundation redraw', () => {
   });
 
   it("takes a spirit companion's fixed value instead of a random one, at the same cost", () => {
-    const spirits = [{ id: 'ember', label: 'Ember', redrawRank: 9 }];
+    const spirits = [{ id: 'ember', redrawRank: 9 }, { id: 'cal' }];
     const options = redrawOptions(spirits);
     expect(options).toEqual([{ kind: 'draw' }, { kind: 'spirit', spiritId: 'ember', rank: 9 }]);
     expect(redrawFoundation({ rank: 4, stamina: 1 }, options[1])).toEqual({ rank: 9, stamina: 0 });

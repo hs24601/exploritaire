@@ -1,4 +1,5 @@
-import type { Card } from '../protoState';
+import { ACTOR_STAMINA_MAX, type Card } from '../protoState';
+import { redrawFoundation, redrawOptions, type RedrawSource } from './redraw';
 import { isAdjacentRank } from './setup';
 import { stockCard } from './skirmish';
 import { MAX_CHARGE, SPIRITS, attackFor, type AbilityEffect, type Attack, type PlayRule } from './battleAbilities';
@@ -73,6 +74,8 @@ export type BattleActor = {
   rank: number;
   count: number;
   charge: number;
+  /** Foundation redraws left: each costs 1 (rules/redraw.ts). */
+  stamina: number;
   spirits: string[];
 };
 
@@ -100,11 +103,16 @@ export type BattleState = {
   nextEventId: number;
 };
 
-export type BattleSetup = { mochi?: boolean; slimes?: number; spirits?: Partial<Record<PartyId, string[]>>; seed?: number };
+export type BattleSetup = {
+  mochi?: boolean; slimes?: number; spirits?: Partial<Record<PartyId, string[]>>;
+  /** Each actor's stamina coming in; defaults to full. */
+  stamina?: Partial<Record<PartyId, number>>;
+  seed?: number;
+};
 
-const newActor = (id: PartyId, spirits: string[] = []): BattleActor => {
+const newActor = (id: PartyId, spirits: string[] = [], stamina = ACTOR_STAMINA_MAX): BattleActor => {
   const base = PARTY_ROSTER[id];
-  return { id, name: base.name, hp: base.maxHp, maxHp: base.maxHp, rank: base.rank, count: 0, charge: 0, spirits: [...spirits] };
+  return { id, name: base.name, hp: base.maxHp, maxHp: base.maxHp, rank: base.rank, count: 0, charge: 0, stamina, spirits: [...spirits] };
 };
 
 /** Each later slime's timer starts this far behind (a negative timer is a delay), so they don't strike in unison. */
@@ -121,7 +129,10 @@ export const createBattle = (deal: { tableau: Card[][]; stock?: Card[] }, setup:
     columns: deal.tableau.map((column) => [...column]),
     stock: [...(deal.stock ?? [])],
     dealt: 0,
-    party: [newActor('hero', setup.spirits?.hero), ...(setup.mochi === false ? [] : [newActor('mochi', setup.spirits?.mochi)])],
+    party: [
+      newActor('hero', setup.spirits?.hero, setup.stamina?.hero),
+      ...(setup.mochi === false ? [] : [newActor('mochi', setup.spirits?.mochi, setup.stamina?.mochi)]),
+    ],
     foes: Array.from({ length: slimes }, (_, i) => newFoe(i)),
     started: false,
     time: 0,
@@ -193,6 +204,22 @@ export const playCard = (state: BattleState, column: number, actorId: string): B
     party: state.party.map((actor) => actor.id === actorId
       ? { ...actor, rank: card.rank, count: actor.count + 1, charge: Math.min(MAX_CHARGE, actor.charge + 1) } : actor),
   };
+};
+
+/** The redraws an actor can choose from: a random draw, plus a fixed value from each spirit that offers one. */
+export const actorRedrawOptions = (actor: BattleActor) => redrawOptions(actor.spirits.flatMap((id) => (SPIRITS[id] ? [SPIRITS[id]] : [])));
+
+/**
+ * Stuck: the actor abandons their foundation value for a new one at 1
+ * stamina. Charge and collected cards are untouched. Refused at 0 stamina.
+ */
+export const redrawActor = (state: BattleState, actorId: string, source: RedrawSource = { kind: 'draw' }, random?: number): BattleState => {
+  const actor = state.party.find((a) => a.id === actorId);
+  if (!actor || !actorAlive(actor) || state.result) return state;
+  if (source.kind === 'spirit' && !actor.spirits.includes(source.spiritId)) return state;
+  const next = redrawFoundation(actor, source, random);
+  if (!next) return state;
+  return { ...state, party: state.party.map((a) => (a.id === actorId ? { ...a, rank: next.rank, stamina: next.stamina } : a)) };
 };
 
 /** Golf's draw for a shared table: one card onto every column with room. Foundations and charge are untouched. */

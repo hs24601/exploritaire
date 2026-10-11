@@ -85,3 +85,12 @@
 .battle-field[data-aiming] .battle-field__column button { filter: brightness(.7); }
 .battle-field__team[data-team='party'] .battle-field__pile { grid-template-columns: auto; justify-items: center; gap: 4px; }
 .battle-field__team[data-team='party'] .battle-field__counters { order: 2; }
+
+/* Redraw: costs 1 stamina; sits under the ability card, beside the foundation, with the stamina left. */
+.battle-field__side { min-width: 0; display: grid; justify-items: center; gap: 6px; }
+.battle-field__redraw { justify-self: center; display: flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 8px; border: 2px solid #c9a35a; border-radius: 999px; background: #1b2a22; color: #ffe1a0; font: 16px/1 'Classic Pixel', monospace; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 0 #020708; }
+.battle-field__redraw-left { color: #fff4d6; }
+.battle-field__redraw:hover:not(:disabled) { border-color: #ffd166; background: #26392d; }
+.battle-field__redraw:focus-visible { outline: 2px solid #ffe19a; outline-offset: 2px; }
+.battle-field__redraw:disabled { border-color: #5d5648; color: #8d8574; cursor: default; }
+.battle-field__redraw:disabled .battle-field__redraw-left { color: #8d8574; }

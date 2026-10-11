@@ -5,17 +5,14 @@
 
 export const REDRAW_STAMINA_COST = 1;
 
-/** A spirit companion offers this fixed foundation value as a redraw choice. No spirits are in play yet. */
-export type SpiritCompanion = { id: string; label: string; redrawRank: number };
-
 export type RedrawSource =
   | { kind: 'draw' }
   | { kind: 'spirit'; spiritId: string; rank: number };
 
-/** The choices a redraw offers: a random draw, then each spirit's fixed value. */
-export const redrawOptions = (spirits: readonly SpiritCompanion[] = []): RedrawSource[] => [
+/** The choices a redraw offers: a random draw, then the fixed value of each spirit companion that has one. */
+export const redrawOptions = (spirits: readonly { id: string; redrawRank?: number }[] = []): RedrawSource[] => [
   { kind: 'draw' },
-  ...spirits.map((spirit): RedrawSource => ({ kind: 'spirit', spiritId: spirit.id, rank: spirit.redrawRank })),
+  ...spirits.flatMap((spirit): RedrawSource[] => spirit.redrawRank ? [{ kind: 'spirit', spiritId: spirit.id, rank: spirit.redrawRank }] : []),
 ];
 
 export const canRedraw = (stamina: number) => stamina >= REDRAW_STAMINA_COST;

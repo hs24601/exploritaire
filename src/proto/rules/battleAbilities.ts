@@ -69,6 +69,8 @@ export type SpiritDef = {
   effect?: AbilityEffect;
   /** Hook for spirits that loosen legal play (e.g. allow a gap of 2). Checked alongside golf adjacency. */
   playRule?: PlayRule;
+  /** A fixed foundation value the spirit offers when its actor redraws (rules/redraw.ts), instead of a random one. */
+  redrawRank?: number;
 };
 
 /** Whether a card can go onto a foundation showing `foundationRank`. */

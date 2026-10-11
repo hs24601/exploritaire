@@ -70,6 +70,7 @@ import {
 } from './protoState';
 import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, isDangerTile, DANGER_WOODS_REWARD, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
 import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauMove } from './rules/play';
+import { REDRAW_STAMINA_COST } from './rules/redraw';
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
 import { biomeOpenState } from './biomeFlags';
 
@@ -1757,7 +1758,8 @@ const selectBiome = (biomeId: string) => {
 
               <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId || combatDemoOpen ? '' : 'hidden'}${pondSelected && !combatDemoOpen ? ' proto-tableau-field--pond' : ''}${dangerSelected || combatDemoOpen ? ' proto-tableau-field--combat' : ''}`}>
               {dangerSelected || combatDemoOpen ? (
-                <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} onRosterChange={setBattleRoster} />
+                <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} onRosterChange={setBattleRoster}
+                  heroStamina={state.actorStamina[0]} onRedraw={(actorId) => { if (actorId === 'hero') setState((prev) => ({ ...prev, actorStamina: prev.actorStamina.map((value, index) => index === 0 ? Math.max(0, value - REDRAW_STAMINA_COST) : value) })); }} />
               ) : pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && !canSpendStamina(state.stamina, POND_MISS_STAMINA)}
                   landed={Object.fromEntries(POND_CATCHES.map((id) => [id, state.haul[id] - state.settledHaul[id]])) as Record<PondCatch, number>}
