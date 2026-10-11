@@ -19,16 +19,16 @@ describe('tile spill', () => {
     const stones = decals.filter(d => d.from === 'hero-den');
     for (const stone of stones) {
       expect(stone.y).toBeLessThan(72 + 48 * .08 + 1); // den's north edge is y = 72
-      expect(stone.y).toBeGreaterThan(72 - 48 * .42 - 1);
-      expect(Math.abs(stone.x)).toBeLessThan(24);
+      expect(stone.y).toBeGreaterThan(72 - 48 * TILE_SPILLS[0].reach - 1);
+      expect(Math.abs(stone.x)).toBeLessThan(24 * (TILE_SPILLS[0].spread ?? 1));
     }
     expect(stones.filter(s => s.y < 72).length).toBeGreaterThan(stones.length / 2);
   });
 
   it('straddles the shared edge both ways between berries and dirt', () => {
     const sprigs = decals.filter(d => d.from === 'berry-patch'), clods = decals.filter(d => d.from === 'dirt');
-    expect(sprigs.every(d => d.x > -24 - 48 * .14 - 1 && d.x < -24 + 48 * .3 + 1)).toBe(true);
-    expect(clods.every(d => d.x < -24 + 48 * .14 + 1 && d.x > -24 - 48 * .3 - 1)).toBe(true);
+    expect(sprigs.every(d => d.x > -24 - 48 * TILE_SPILLS[1].overlap - 1 && d.x < -24 + 48 * TILE_SPILLS[1].reach + 1)).toBe(true);
+    expect(clods.every(d => d.x < -24 + 48 * TILE_SPILLS[2].overlap + 1 && d.x > -24 - 48 * TILE_SPILLS[2].reach - 1)).toBe(true);
   });
 
   it('is stable and keeps clear of labels', () => {

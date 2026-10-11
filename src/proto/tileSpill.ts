@@ -24,6 +24,8 @@ export type SpillRule = {
   overlap: number;
   /** Decal size range, in world px (the longer side). */
   size: readonly [number, number];
+  /** Share of the edge's length decals spread along, centred (default 1). */
+  spread?: number;
 };
 export type SpillDecal = {
   id: string; art: string; x: number; y: number; size: number;
@@ -40,9 +42,9 @@ const PEBBLES = ['pebble-a.svg', 'pebble-b.svg', 'pebble-c.svg', 'pebble-d.svg']
 /** The project's spill rules: the den's cave mouth sheds stones onto the
  * dirt in front of it; the berry patch and dirt trade sprigs and clods. */
 export const TILE_SPILLS: readonly SpillRule[] = [
-  { from: 'hero-den', onto: ['dirt'], sides: ['north'], art: PEBBLES, count: 9, reach: .42, overlap: .08, size: [4, 9] },
-  { from: 'berry-patch', onto: ['dirt'], art: ['sprig-a.svg', 'sprig-b.svg', 'sprig-c.svg'], count: 4, reach: .3, overlap: .14, size: [8, 13] },
-  { from: 'dirt', onto: ['berry-patch'], art: ['clod-a.svg', 'clod-b.svg', 'clod-c.svg'], count: 4, reach: .3, overlap: .14, size: [7, 12] },
+  { from: 'hero-den', onto: ['dirt'], sides: ['north'], art: PEBBLES, count: 12, reach: .45, overlap: .08, size: [4, 10], spread: .62 },
+  { from: 'berry-patch', onto: ['dirt'], art: ['sprig-a.svg', 'sprig-b.svg', 'sprig-c.svg'], count: 6, reach: .32, overlap: .16, size: [9, 15] },
+  { from: 'dirt', onto: ['berry-patch'], art: ['clod-a.svg', 'clod-b.svg', 'clod-c.svg'], count: 6, reach: .3, overlap: .16, size: [8, 13] },
 ];
 
 const overlaps = (a: Rect, b: Rect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
@@ -70,8 +72,9 @@ export function tileSpills(tiles: readonly SpillTile[], cellOf: (position: { x: 
           // Spread along the edge, denser near it; never past the edge's ends.
           const t = (index + .2 + roll(1) * .6) / rule.count - .5;
           const depth = roll(2) ** 1.7 * (rule.reach + rule.overlap) - rule.overlap;
-          const x = edge.x + along.x * t * (cellSize - size) + step.x * depth * cellSize;
-          const y = edge.y + along.y * t * (cellSize - size) + step.y * depth * cellSize;
+          const span = (cellSize - size) * (rule.spread ?? 1);
+          const x = edge.x + along.x * t * span + step.x * depth * cellSize;
+          const y = edge.y + along.y * t * span + step.y * depth * cellSize;
           const box = { left: x - size / 2, top: y - size / 2, right: x + size / 2, bottom: y + size / 2 };
           if (avoid.some(rect => overlaps(rect, box))) continue;
           decals.push({ id: `${source.id}>${target.id}:${index}`, art: rule.art[Math.floor(roll(3) * rule.art.length)], x, y, size,

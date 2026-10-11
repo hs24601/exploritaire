@@ -12,6 +12,8 @@ import { PropVolumeArt, PropVolumeShadows } from './PropVolume';
 import { TileTitle } from './TileTitle';
 import { connectedTileLabelRegions, immutableTerrainRegions, immutableTileRegions } from '../tileLabels';
 import { ConnectedTerrainArt } from './ConnectedTerrainArt';
+import { TileSpillArt } from './TileSpillArt';
+import { tileSpills } from '../tileSpill';
 import { TableActorSprite } from './TableActorSprite';
 import { movementHeading, worldActorTransform } from '../actorOrientation';
 import { ACTOR_SCALE_REFERENCE, immersionActorScale } from '../actorScale';
@@ -1430,6 +1432,13 @@ export const ProtoMap = ({
               );
             })()
           ))}
+          {/* Unlike neighbours spill decals across their shared edge (tileSpill.ts).
+              Flat, they keep clear of the printed labels; tilted, labels stand above them
+              and the layer lies just above the ground so standing pieces still cover it. */}
+          <TileSpillArt raised={upright} decals={tileSpills(
+            biomeTiles.filter(tile => tile.unlocked !== false && !tile.flags?.includes('unexplored')).map(tile => ({ id: tile.id, kind: tile.tileType ?? tile.terrain, position: tile.position })),
+            position => TABLE_GRID.atWorld(position), TABLE_GRID.cellSize,
+            { avoid: upright ? [] : labelQuads.map(quad => ({ left: Math.min(...quad.map(p => p.x)), top: Math.min(...quad.map(p => p.y)), right: Math.max(...quad.map(p => p.x)), bottom: Math.max(...quad.map(p => p.y)) })) })} />
           {upright && terrainSeams.map(seam => <BiomeEdgeScenery key={seam.id}
             tileId={seam.id}
             centre={seam.position}
