@@ -1,4 +1,4 @@
-// Dark Woods skirmish: the Hero walks into the Dark Woods at (2,1) and a fight
+// Dark Woods skirmish: the Hero walks into the Dark Woods at (-2,1) and a fight
 // with the Shadow Wolf starts in the tableau field. Checks the danger embers in
 // both cameras, playing a card by tap and by drag (mouse and touch), drawing,
 // the wolf eyeing and taking cards, a full fight won by a quick bot, the reward
@@ -23,8 +23,8 @@ const adjacent=(a,b)=>a!==b&&(Math.abs(a-b)===1||Math.abs(a-b)===12);
     const page=await (await b.newContext({viewport:{width:w,height:h}})).newPage();
     await page.goto('http://localhost:5178/proto.html');
     await page.locator('[data-biome-id="woods-danger"]').waitFor();
-    // The Dark Woods sit at (2,1) and give off dark red embers even by day, flat.
-    assert.equal(await page.locator('[data-biome-id="woods-danger"]').getAttribute('data-grid-reference'),'table:2,1');
+    // The Dark Woods sit at (-2,1) and give off dark red embers even by day, flat.
+    assert.equal(await page.locator('[data-biome-id="woods-danger"]').getAttribute('data-grid-reference'),'table:-2,1');
     await page.waitForTimeout(400);
     const flatEmbers=await page.locator('.proto-table-air--flat [data-danger="true"]').count();
     assert.ok(flatEmbers>0,'flat camera shows the danger embers');

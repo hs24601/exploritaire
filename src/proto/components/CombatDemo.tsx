@@ -6,7 +6,7 @@ import './CombatDemo.css';
 import { SceneButton as CameraButton } from './SceneButton';
 import { BATTLE_TURN_PRIORITY, type BattleTeam } from '../battleTurnPriority';
 
-export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TURN_PRIORITY[0]}: {onClose: () => void; onRestart: () => void; onEscape?: () => void; firstTeam?: BattleTeam}) {
+export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TURN_PRIORITY[0], roster}: {onClose: () => void; onRestart: () => void; onEscape?: () => void; firstTeam?: BattleTeam; roster?: readonly string[]}) {
   const host = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLElement>(null);
   const close = useRef(onClose); close.current = onClose;
@@ -16,7 +16,11 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
   const [ready, setReady] = useState(false);
   const [cameraInfo, setCameraInfo] = useState<CombatCameraSnapshot | null>(null);
   const [copyStatus, setCopyStatus] = useState('Copy camera cue');
-  const controls = useRef<{select: (view: CombatCameraView) => void; replay: () => void; move: (key: string, held: boolean) => void; cue: () => object} | null>(null);
+  const controls = useRef<{select: (view: CombatCameraView) => void; replay: () => void; move: (key: string, held: boolean) => void; cue: () => object; refresh: () => void} | null>(null);
+  // The battle panel's roster: who is still in the fight.
+  const rosterRef = useRef(roster); rosterRef.current = roster;
+  const rosterKey = roster?.join(',');
+  useEffect(() => { controls.current?.refresh(); }, [rosterKey]);
   useEffect(() => {
     const heldKeys = new Set<string>();
     let selected: CombatCameraView = firstTeam;
@@ -25,6 +29,8 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
     dialog.current?.focus();
     const key = (event: KeyboardEvent) => {
       if (document.querySelector('.details-card-viewer')) { clearInput(); return; }
+      // Escape first cancels a held or armed battle ability (useAbilityDrag).
+      if (event.key === 'Escape' && document.querySelector('.battle-field[data-aiming]')) return;
       if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close.current(); }
       else {
         const buttonMove = (event.target as HTMLElement)?.closest<HTMLButtonElement>('[data-move]')?.dataset.move;
@@ -81,6 +87,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           // Entry overview and scripted battle action have independent clocks.
           const cameraTime = selected === 'cinematic' ? displayedTime : (now - entered) / 1000;
           const shot = cameraControls.update(cameraTime, now, reduced);
+          if (rosterRef.current) rig!.setRoster(rosterRef.current);
           rig!.update(displayedTime, reduced); renderer!.render(scene, camera);
           if (host.current) {
             host.current.dataset.cameraView = selected;
@@ -148,6 +155,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           },
           replay() { actionStarted = performance.now(); lastTick = -1; displayedTime = 0; setElapsed(0); schedule(); },
           move(key, held) { if (selected !== 'freecam') return; if (held) { if (!heldKeys.size) lastFrame = performance.now(); heldKeys.add(key); schedule(); } else { heldKeys.delete(key); lastReadout = -Infinity; paint(performance.now()); } },
+          refresh() { paint(performance.now()); },
           cue() { const info = cameraControls.snapshot(); return { t: Number(displayedTime.toFixed(3)), p: info.position, target: info.target, fov: info.fov }; },
         };
         const arena = host.current;

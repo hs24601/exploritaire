@@ -63,10 +63,13 @@
 .trading-card__full-description { padding: 10px 12px; border: 1px solid #a8c0bd; background: #07191bf2; border-radius: 5px; }
 .trading-card__full-description h3 { margin: 0 0 6px; color: #d5dfbb; font-size: 16px; line-height: 1.1; }
 .trading-card__full-description p { margin: 0; font-size: 18px; line-height: 1.25; }
-.details-card-viewer--jumbo .trading-card__sections { grid-template-columns: minmax(0,1fr); gap: 5px; }
-.details-card-viewer--jumbo .trading-card__section { display: grid; grid-template-columns: 105px minmax(0,1fr); justify-content: stretch; padding: 7px 10px; gap: 10px; line-height: 1.15; }
-.details-card-viewer--jumbo .trading-card__section h3 { color: #d5dfbb; }
-.hero-card__stats { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+/* Jumbo: stats, equipment and effects collapse to one strip of icons; hover,
+   focus or tap explains each (GameTooltip), leaving the face to art and copy. */
+.trading-card__chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.trading-card__chip { display: inline-flex; align-items: center; gap: 6px; min-width: 52px; justify-content: center; padding: 5px 10px; font-size: 18px; line-height: 1; border: 1px solid #8eafb1; border-radius: 999px; color: #f3efd6; background: linear-gradient(135deg,#36535beF,#101c29f5 55%,#29434bf0); cursor: help; touch-action: manipulation; }
+.trading-card__chip-icon { font-size: 20px; color: #ffe39c; }
+.trading-card__chip:hover { border-color: #ffe39c; }
+.trading-card__chip:focus-visible { outline: 2px solid #ffe39c; outline-offset: 1px; }
 .details-card-game-blurred { filter: blur(7px); }
 .tile-card-art { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 55%, #526958, #152824 75%); }
 .trading-card__art .tile-card-art > img { width: 100%; height: 62%; object-fit: contain; image-rendering: pixelated; }

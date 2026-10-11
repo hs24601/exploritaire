@@ -73,8 +73,9 @@ import {
   type HeroBuff, type PendingAbilityTarget, type PendingMobility,
   type PendingTargetSelection, type ProtoState, type TargetAnnouncement,
 } from './protoState';
-import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, SMALL_WOODS_TRAVEL_COST, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, isDangerTile, DANGER_WOODS_REWARD, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
+import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, isDangerTile, DANGER_WOODS_REWARD, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
 import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauMove } from './rules/play';
+import { REDRAW_STAMINA_COST } from './rules/redraw';
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
 import { biomeOpenState } from './biomeFlags';
 
@@ -350,7 +351,6 @@ const selectBiome = (biomeId: string) => {
     clearPendingInteractions();
     setState((prev) => ({
       ...prev,
-      stamina: spendStamina(prev.stamina, biome.travelCost ?? SMALL_WOODS_TRAVEL_COST),
       foundations: prev.foundations.map((slot, index) =>
         actor.biomeId === prev.selectedBiomeId && index === foundationIndex && slot ? { ...slot, count: 0, cards: [], wildcardBridgeFromRank: undefined } : slot,
       ),
@@ -419,6 +419,7 @@ const selectBiome = (biomeId: string) => {
   const dangerFighter = state.worldActors.find((actor) => actor.location === 'foundation' && isDangerTile(actor.biomeId)) ?? null;
   const [combatDemoOpen, setCombatDemoOpen] = useState(() => new URLSearchParams(window.location.search).has('combatdemo'));
   const [combatDemoReplay, setCombatDemoReplay] = useState(0);
+  const [battleRoster, setBattleRoster] = useState<string[] | undefined>(undefined);
   const watchBattleScene = () => { setCombatDemoReplay(replay => replay + 1); setCombatDemoOpen(true); setMobilePanel('map'); };
   const demoArrival = useRef<string | null>(null);
   useEffect(() => {
@@ -1775,7 +1776,8 @@ const selectBiome = (biomeId: string) => {
                 <div className="proto-main-tableau min-h-0 rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))]" aria-label="Empty tableau" />
                 <div className="proto-main-foundations min-h-0 h-[clamp(6rem,24dvh,14rem)] rounded-[calc(var(--classic-radius)*1.3)] border border-[#f4c86c]/18 bg-[linear-gradient(180deg,rgba(22,18,12,0.44),rgba(9,10,12,0.28))]" aria-label="Empty foundations" />
               </>) : dangerSelected || combatDemoOpen ? (
-                <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} />
+                <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} onRosterChange={setBattleRoster}
+                  heroStamina={state.actorStamina[0]} onRedraw={(actorId) => { if (actorId === 'hero') setState((prev) => ({ ...prev, actorStamina: prev.actorStamina.map((value, index) => index === 0 ? Math.max(0, value - REDRAW_STAMINA_COST) : value) })); }} />
               ) : pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && !canSpendStamina(state.stamina, POND_MISS_STAMINA)}
                   landed={Object.fromEntries(POND_CATCHES.map((id) => [id, state.haul[id] - state.settledHaul[id]])) as Record<PondCatch, number>}
@@ -1839,6 +1841,7 @@ const selectBiome = (biomeId: string) => {
                               mobilityTarget={mobilityTarget}
                               muted={!isTopCard}
                               buried={!isTopCard}
+                              centerRank={isTopCard}
                               lit={cameraTilted}
                               standardRankSize
                               footerLabel={
@@ -2210,7 +2213,7 @@ const selectBiome = (biomeId: string) => {
               </div>
               </>)}
               </div>
-              {combatDemoOpen ? <CombatDemo key={combatDemoReplay} onClose={() => setCombatDemoOpen(false)} onRestart={watchBattleScene}
+              {combatDemoOpen ? <CombatDemo key={combatDemoReplay} roster={battleRoster} onClose={() => setCombatDemoOpen(false)} onRestart={watchBattleScene}
                 onEscape={dangerFighter ? () => { setCombatDemoOpen(false); leaveTableau(); } : undefined} /> : <ProtoMap
                 extendTableau={Boolean(state.selectedBiomeId) && !dangerSelected && !pondSelected}
                 storyCard={state.ordinaryDay && <div className="proto-ordinary-day" aria-label="An ordinary day" data-resting={state.ordinaryDay.bedtime || state.ordinaryDay.complete || undefined}>
@@ -2284,7 +2287,6 @@ const selectBiome = (biomeId: string) => {
                 onInspectActor={inspectActor}
                 onInspectTile={inspectTile}
                 actorStamina={state.actorStamina[0]}
-                stamina={state.stamina}
               />}
             </div>
           </section>
@@ -2314,12 +2316,14 @@ const selectBiome = (biomeId: string) => {
           descriptorPreview: 'Expedition hero',
           descriptor: 'An expedition hero who explores the wilderness, gathers resources, and helps build your settlement.',
           trays: [
-            { id: 'stats', label: 'Stats', details: <div className="hero-card__stats">
-              <span>HP {state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp}/{state.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0].maxHp}</span>
-              <span>STA {state.actorStamina[0] ?? ACTOR_STAMINA_MAX}/{state.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX}</span>
-            </div> },
+            { id: 'stats', label: 'Stats', chips: [
+              { id: 'hp', icon: '♥', value: `${state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp}/${state.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0].maxHp}`,
+                label: `Health: ${state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp} of ${state.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0].maxHp}` },
+              { id: 'stamina', icon: '⚡', value: `${state.actorStamina[0] ?? ACTOR_STAMINA_MAX}/${state.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX}`,
+                label: `Stamina: ${state.actorStamina[0] ?? ACTOR_STAMINA_MAX} of ${state.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX}` },
+            ] },
             { id: 'equipment', label: 'Equipment', details: 'Not yet configured' },
-            { id: 'buffs', label: 'Effects', details: state.heroBuffs[0]?.length
+            { id: 'buffs', label: 'Effects', content: state.heroBuffs[0]?.length || '—', details: state.heroBuffs[0]?.length
               ? state.heroBuffs[0].map(buff => `${buff.id.replace(/_/g, ' ')} (${buff.value}, ${buff.turnsRemaining} turns)`).join(' · ')
               : 'No active buffs or debuffs' },
           ],

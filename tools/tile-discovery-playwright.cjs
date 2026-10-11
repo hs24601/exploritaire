@@ -78,7 +78,7 @@ async function fog(page) {
       for (let row = 4; row <= 7; row++) for (let column = -7; column <= 7; column++)
         assert.equal(await tile(page, `mountain-${column}-${row}`).getAttribute('data-unexplored'), 'true');
       // Unknown tiles stay silent for keyboard, mouse and touch activation.
-      const unknown = tile(page, 'mountain--3-2');
+      const unknown = tile(page, 'mountain--2-2');
       await unknown.focus(); await page.keyboard.press('Enter');
       assert.equal(await page.locator('.biome-closed-note').count(), 0);
       if (touch) await unknown.tap(); else await unknown.click();
@@ -89,11 +89,15 @@ async function fog(page) {
       assert.equal(await page.locator('[data-biome-popup^="mountain-"]').count(), 5);
       await page.screenshot({ path: `artifacts/tile-discovery/${width}-immersive.png` });
       // A path visit reveals a diagonal mountain without touching that cell.
-      await move(page, 'unexplored--2-1', 'table:-2,1', touch);
+      await move(page, 'unexplored--1-1', 'table:-1,1', touch);
       assert.equal(await unknown.getAttribute('data-unexplored'), null);
       assert.equal(await unknown.getAttribute('data-explored'), '1.00');
       assert.equal(await unknown.getAttribute('data-tile-type'), 'impassable-mountain');
       assert.equal(await tile(page, 'mountain--3-3').getAttribute('data-unexplored'), 'true');
+      // The neighbouring Dark Woods at (-2,1) are seen, not entered.
+      assert.equal(await tile(page, 'woods-danger').getAttribute('data-explored'), '1.00');
+      assert.equal(await tile(page, 'woods-danger').getAttribute('data-selected'), null);
+      assert.equal(await page.locator('.proto-combat-demo').count(), 0, 'Seeing danger does not start battle');
       // Going north identifies woods and water without any solitaire play.
       await move(page, 'road-center', 'table:0,0', touch);
       assert.equal(await tile(page, 'road-center').getAttribute('data-unexplored'), null);
@@ -108,9 +112,6 @@ async function fog(page) {
       await move(page, 'road-east', 'table:1,1', touch);
       assert.equal(await tile(page, 'road-east').getAttribute('data-unexplored'), null);
       assert.equal(await tile(page, 'road-east').locator('[data-road-shape]').count(), 1);
-      assert.equal(await tile(page, 'woods-danger').getAttribute('data-explored'), '1.00');
-      assert.equal(await tile(page, 'woods-danger').getAttribute('data-selected'), null);
-      assert.equal(await page.locator('.proto-combat-demo').count(), 0, 'Seeing danger does not start battle');
       await flat(page);
       await page.screenshot({ path: `artifacts/tile-discovery/${width}-discovered.png` });
       assert.deepEqual(errors, []);

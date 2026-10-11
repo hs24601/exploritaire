@@ -2902,7 +2902,6 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-route__slow { fill: none; stroke: #fff9; stroke-width: 1.2; stroke-dasharray: 1.5 2.5; }
 @keyframes proto-route-drift { to { stroke-dashoffset: -13; } }
 .proto-map .proto-map-world > .proto-route-label { position: absolute; translate: -50% 35%; padding: 1px 4px; border: 1px solid #ffffff40; border-radius: 3px; background: #0b1211e6; color: #fff4d6; font-family: 'Classic Pixel', monospace; font-size: 11px; line-height: 1.1; white-space: nowrap; pointer-events: none; }
-.proto-map .proto-map-world > .proto-route-label[data-route-unaffordable] { border-color: #ff5a5a; color: #ffd0d0; }
 .proto-table-stage--tilted .proto-map-world > .proto-route-label { transform: translateZ(2px); }
 .proto-map .proto-map-world > .proto-cell-cue { position: absolute; width: 48px; height: 48px; translate: -50% -50%; border: 2px solid #ffd166; border-radius: 6px; background: #ffd16624; box-shadow: inset 0 0 12px #ffd16670; pointer-events: none; animation: proto-cell-cue-pulse 1s ease-in-out infinite alternate; }
 .proto-map .proto-map-world > .proto-cell-cue--blocked { border-color: #ff5a5a; background: #ff3b3b24; box-shadow: inset 0 0 12px #ff5a5a70; }
@@ -2972,6 +2971,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-tableau-stage .proto-card-header { gap: 3px; align-items: center; transform: none; }
 .proto-tableau-stage .proto-card-icon { margin-top: 0; font-size: max(16px, calc(var(--classic-card-w) * .25)); filter: drop-shadow(0 1px 0 #0008); }
 .proto-tableau-stage .proto-card-rank { font-family: 'Classic Pixel', monospace; }
+/* Front tableau card: the value, large in the middle of the face. */
+.proto-card-center-rank { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; padding-top: 12%; font-size: max(24px, calc(var(--classic-card-w) * .62)); font-weight: 700; line-height: 1; pointer-events: none; text-shadow: 0 1px 0 #000a, 0 0 10px #0008; }
+.proto-tableau-stage .proto-card-center-rank { font-family: 'Classic Pixel', monospace; }
 
 /* The CSS map camera renders once. Its clipping window extends into the
    exploration shelf while its dimensions, perspective pivot and input stay put. */

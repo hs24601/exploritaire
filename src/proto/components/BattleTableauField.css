@@ -4,7 +4,7 @@
 .battle-field h2 { color: #d7efba; font-size: 22px; margin-bottom: 4px; }
 .battle-field p { color: #aec6bb; }
 .battle-field__board { position: relative; z-index: 2; height: 100%; min-height: 0; display: grid; grid-template-rows: auto minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 8px 4px; }
-.battle-field__team { display: grid; grid-template-columns: repeat(2,minmax(0,164px)); justify-content: center; justify-items: center; align-content: center; gap: 6px 14px; min-width: 0; }
+.battle-field__team { display: grid; grid-template-columns: repeat(var(--slots,2),minmax(0,var(--slot-w,164px))); justify-content: center; justify-items: center; align-content: center; gap: 6px 14px; min-width: 0; }
 .battle-field__team h3 { grid-column: 1 / -1; color: #b9e7d8; }
 .battle-field__team[data-team='enemy'] h3 { color: #ddbaee; }
 .battle-field__foundation { position: relative; width: 100%; min-width: 0; padding: 8px 8px 36px; display: grid; justify-content: center; border: 2px solid #978364; border-bottom-width: 3px; border-radius: 18px; background: linear-gradient(145deg,#19332eed,#091713fa); box-shadow: 0 4px 0 #020708; }
@@ -61,3 +61,45 @@
 
 .battle-field__column button:focus-visible { outline: 2px solid #ffe19a; outline-offset: 2px; }
 
+
+/* Live battle: foes with bars, party slots with an ability card and HP. */
+.battle-field__header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
+.battle-field__header h2 { margin-bottom: 0; }
+.battle-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.battle-controls button, .battle-field__status button { border: 2px solid #658576; padding: 2px 8px; background: #1b3028; color: #f1e7cb; box-shadow: 0 2px 0 #030909; white-space: nowrap; }
+.battle-controls button[aria-pressed='true'] { border-color: #ffd166; background: #3a3218; }
+.battle-controls button:disabled, .battle-field__status button:disabled { opacity: .5; }
+.battle-controls button:focus-visible, .battle-field__status button:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 2px; }
+.battle-controls__stepper { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.battle-controls__stepper button { min-width: 30px; padding: 2px 6px; }
+.battle-field__team[data-team='enemy'] { --slot-w: 176px; align-items: end; row-gap: 14px; }
+.battle-field__team[data-team='party'] { --slot-w: 212px; }
+.battle-field__slot { position: relative; width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 4px 6px; }
+.battle-field__slot[data-down='true'] > :not(.battle-vitals) { filter: grayscale(.9) brightness(.6); }
+.battle-field__team[data-team='party'] .battle-field__foundation { padding: 6px; }
+.battle-field__middle { min-height: 0; height: 100%; display: grid; grid-template-rows: minmax(0,1fr) auto; gap: 4px; }
+.battle-field__status { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.battle-field__status-text { flex: 1; min-width: 0; color: #cfe3d8; }
+
+.battle-field__status-text[data-result='won'] { color: #ffe08a; }
+.battle-field__status-text[data-result='lost'] { color: #ff8f8f; }
+.battle-field[data-aiming] .battle-field__column button { filter: brightness(.7); }
+.battle-field__team[data-team='party'] .battle-field__pile { grid-template-columns: auto; justify-items: center; }
+
+.battle-controls__scenario { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.battle-controls__scenario select { font: inherit; border: 2px solid #658576; padding: 1px 4px; background: #1b3028; color: #f1e7cb; }
+.battle-controls__scenario select:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 2px; }
+.battle-field__column[data-preview='faint'] { outline: 2px dashed #ffb34788; outline-offset: 3px; border-radius: 5px; }
+.battle-field__column[data-preview='focus'] { outline: 3px solid #ffb347; outline-offset: 3px; border-radius: 5px; }
+
+/* Short desktop windows: the team headings give their height to the tableau. */
+@media (max-height: 800px) { .battle-field__team h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
+
+/* Redraw: costs 1 stamina; sits under the ability card, beside the foundation, with the stamina left. */
+.battle-field__side { min-width: 0; display: grid; justify-items: center; gap: 6px; }
+.battle-field__redraw { justify-self: center; display: flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 8px; border: 2px solid #c9a35a; border-radius: 999px; background: #1b2a22; color: #ffe1a0; font: 16px/1 'Classic Pixel', monospace; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 0 #020708; }
+.battle-field__redraw-left { color: #fff4d6; }
+.battle-field__redraw:hover:not(:disabled) { border-color: #ffd166; background: #26392d; }
+.battle-field__redraw:focus-visible { outline: 2px solid #ffe19a; outline-offset: 2px; }
+.battle-field__redraw:disabled { border-color: #5d5648; color: #8d8574; cursor: default; }
+.battle-field__redraw:disabled .battle-field__redraw-left { color: #8d8574; }

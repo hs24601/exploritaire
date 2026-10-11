@@ -44,7 +44,6 @@ export type BiomeTileState = {
   tableau: Card[][];
   stock: Card[];
   unlocked: boolean;
-  travelCost: number;
   threat: 'none' | 'low' | 'high';
   /** Water tiles are fished, not dealt as a tableau. Defaults to woods. */
   terrain?: 'woods' | 'water';
@@ -226,6 +225,8 @@ export const DEV_ACTOR_DEFEAT_OVERRIDE = (import.meta as ImportMeta & { env?: { 
 export const FOUNDATION_MOCKUPS = PROTO_ACTORS;
 export const ENEMY_TEAM_SLOT_IDS = PROTO_ENEMY_SLOT_IDS;
 export const ACTOR_STAMINA_MAX = 4;
+/** Cards an actor plays onto their foundation per work cycle (the "TABLEAU COMPLETE" reward). */
+export const WORK_CYCLE_CARDS = 4;
 
 export const targetToneForAbility = (ability: PendingAbilityTarget | null): TargetHighlightTone =>
   ability?.targetKind === 'enemy'

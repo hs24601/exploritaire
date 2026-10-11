@@ -29,7 +29,9 @@ async function enter(page,touch){
       const scene=await page.locator('.proto-tableau-scene').boundingBox();
       assert.ok(controls.y+controls.height<=scene.y,'Solver is above the play area');
       for(const mode of ['flat','immersive']){
-        if(mode==='immersive')await page.getByRole('button',{name:'Tilt camera view',exact:true}).click();
+        // The map may open in either camera; switch to the one under test.
+        const toggle=page.getByRole('button',{name:mode==='flat'?'Flat camera view':'Tilt camera view',exact:true});
+        if(await toggle.count())await toggle.click();
         await page.waitForTimeout(800);
         assert.deepEqual(await findLayoutDefects(page,'.proto-main-tableau',{parts:'.proto-solve-controls, .proto-solve-controls button, .proto-solve-controls label, .proto-tableau-scene'}),[]);
         assert.deepEqual(await findLayoutDefects(page,'.proto-main-foundations',{parts:'.proto-table-summary, .proto-foundation-board, .proto-foundation-exit--everyone'}),[]);
@@ -52,6 +54,19 @@ async function enter(page,touch){
           ]);
         }));
         assert.deepEqual(headers,[],'Rank and icon must remain fully exposed and separate');
+        const centered=await page.locator('.proto-tableau-stage').evaluate(stage=>[...stage.querySelectorAll('button.playing-card')].flatMap(card=>{
+          const value=card.querySelector('.proto-card-center-rank'),front=card.nextElementSibling?.classList.contains('playing-card');
+          if(front)return value?[`${card.textContent}: buried card shows a centered value`]:[];
+          if(!value)return [`${card.textContent}: front card lacks a centered value`];
+          const box=card.getBoundingClientRect(),r=value.getBoundingClientRect(),size=parseFloat(getComputedStyle(value).fontSize);
+          const icon=card.querySelector(':scope > div > div:last-child:not(.proto-card-rank)')?.getBoundingClientRect();
+          return [
+            ...(Math.abs(r.left+r.width/2-(box.left+box.width/2))>1?[`${value.textContent}: value is off centre`]:[]),
+            ...(size<24?[`${value.textContent}: value is only ${size}px`]:[]),
+            ...(icon&&value.querySelector?(()=>{const range=document.createRange();range.selectNodeContents(value);const g=range.getBoundingClientRect();return g.top<icon.bottom-.5&&g.right>icon.left&&g.left<icon.right?[`${value.textContent}: value overlaps icon`]:[];})():[]),
+          ];
+        }));
+        assert.deepEqual(centered,[],'Front cards show their value large in the middle');
         if(mode==='immersive'){
           assert.equal(dimensions.transform,'none');
           assert.ok(await page.locator('.proto-tableau-fixture').isVisible());
