@@ -24,12 +24,10 @@ async function center(el){const b=await el.boundingBox();return{x:b.x+b.width/2,
     const foundation=page.locator('[data-actor-holocard="hero"]').first();
     if(await foundation.count()){await press(foundation,touch);const actorModal=page.locator('.card-jumbo,.details-card-viewer--jumbo');await actorModal.waitFor();await actorModal.screenshot({path:`artifacts/cards-jumbo-${width}-${touch?'touch':'mouse'}-foundation-3x.png`});await page.keyboard.press('Escape');}
     const cards=page.locator('.proto-main-tableau .playing-card');const before=await cards.count();
-    await press(cards.filter({has:page.locator('[aria-label="BERRY"]')}).first().or(cards.first()).first(),touch);await modal.waitFor();
-    assert.equal(await cards.count(),before,'Inspection does not spend card');
-    assert.ok(await modal.getByRole('button',{name:'Play card',exact:true}).count());
-    await modal.screenshot({path:`artifacts/cards-jumbo-${width}-${touch?'touch':'mouse'}-playing-3x.png`});
-    await press(modal.getByRole('button',{name:'Play card',exact:true}),touch);await page.waitForTimeout(600);
+    await press(cards.filter({has:page.locator('[aria-label="BERRY"]')}).first().or(cards.first()).first(),touch);
+    assert.equal(await modal.count(),0,'Tableau activation bypasses jumbo');
+    await page.waitForTimeout(600);
     assert.equal(await cards.count(),before-1);assert.match(await page.locator('.proto-ordinary-day').innerText(),/Berries 1/);
-    assert.deepEqual(errors,[]);console.log('PASS card jumbo mouse/touch, portrait, full copy, drag separation, foundation, explicit play',width,touch);await context.close();
+    assert.deepEqual(errors,[]);console.log('PASS card jumbo mouse/touch, portrait, full copy, drag separation, foundation, direct tableau play',width,touch);await context.close();
   }
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1);});

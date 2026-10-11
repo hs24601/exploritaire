@@ -83,7 +83,7 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Drag a top card onto the foundation to play; a stationary press inspects it.
+  // Drag a top card onto the foundation or play it with a stationary press.
   const [drag, setDrag] = useState<CardDrag | null>(null);
   const [overFoundation, setOverFoundation] = useState(false);
   const onFoundation = (x: number, y: number) => Boolean(document.elementFromPoint(x, y)?.closest('[data-skirmish-foundation]'));
@@ -160,7 +160,7 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
                   onPointerUp={top ? (event) => endDrag(event) : undefined}
                   onPointerCancel={top ? (event) => endDrag(event, true) : undefined}>
                   {/* Mouse and touch play through the pointer handlers; Enter (detail 0) plays from the keyboard. */}
-                  <ProtoCard card={card} disabled={!playable} muted={!top} centerRank={top}
+                  <ProtoCard card={card} allowJumbo={false} disabled={!playable} muted={!top} centerRank={top}
                     onClick={top ? (event) => { if (event.detail === 0 && playable) play(columnIndex); } : undefined} />
                   {eyed ? (
                     <span className="proto-skirmish__eye" aria-label={fight.eye!.pounce ? `The ${fight.foe.label} will pounce on this card` : `The ${fight.foe.label} eyes this card`}

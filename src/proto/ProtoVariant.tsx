@@ -1833,6 +1833,7 @@ const selectBiome = (biomeId: string) => {
                             <ProtoCard
                               key={card.id}
                               card={card}
+                              allowJumbo={false}
                               cardRef={(node) => {
                                 tableauCardRefs.current[card.id] = node;
                               }}

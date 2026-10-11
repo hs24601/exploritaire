@@ -145,8 +145,16 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
   }, GYRO_LOG_ENABLED ? sensor => { debug.current.sensor = sensor; trace(); } : undefined);
   return <div className="trading-card-stage"
     tabIndex={state === 'foundation' ? 0 : undefined} role={state === 'foundation' ? 'button' : undefined} aria-haspopup={state === 'foundation' ? 'dialog' : undefined}
-    onClick={event=>{if(state==='foundation'&&!event.currentTarget.closest('.proto-exploration-actor')){event.stopPropagation();openJumbo(event.currentTarget);}}}
-    onKeyDown={event=>{if(state==='foundation'&&event.key==='Enter'&&!event.currentTarget.closest('.proto-exploration-actor')){event.preventDefault();event.stopPropagation();openJumbo(event.currentTarget);}}}
+    onClick={event=>{if(state==='foundation'&&!event.currentTarget.closest('.proto-exploration-actor')){
+      // Let an armed tableau choice reach its foundation's gameplay handler.
+      if(event.currentTarget.closest('button[data-targetable="true"]'))return;
+      event.stopPropagation();openJumbo(event.currentTarget);
+    }}}
+    onKeyDown={event=>{if(state==='foundation'&&event.key==='Enter'&&!event.currentTarget.closest('.proto-exploration-actor')){
+      event.preventDefault();event.stopPropagation();
+      const target=event.currentTarget.closest<HTMLButtonElement>('button[data-targetable="true"]');
+      if(target)target.click();else openJumbo(event.currentTarget);
+    }}}
     onPointerMove={interact} onPointerDown={event => { if (state !== 'foundation') requestHoloDeviceTilt(); interact(event); }} onPointerLeave={reset} onPointerCancel={reset}
     onPointerUp={event => { if (event.pointerType === 'touch') reset(); }}>
     <article ref={face} className={`details-card trading-card trading-card--${finish} trading-card--${state}`} data-object-id={id} data-card-state={state}>

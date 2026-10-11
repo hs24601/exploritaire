@@ -45,6 +45,7 @@ export const ProtoCard = ({
   centerRank = false,
   style,
   jumbo = false,
+  allowJumbo = true,
   actionLabel = 'Play card',
 }: {
   card: Card;
@@ -69,6 +70,8 @@ export const ProtoCard = ({
   centerRank?: boolean;
   style?: React.CSSProperties;
   jumbo?: boolean;
+  /** Tableau cards activate gameplay directly instead of opening inspection. */
+  allowJumbo?: boolean;
   actionLabel?: string;
 }) => {
   const viewer = useCardJumbo();
@@ -82,15 +85,15 @@ export const ProtoCard = ({
     data-buried={buried || undefined}
     onClick={event=>{
       if(jumbo)return;
-      if(!viewer){if(!disabled)onClick?.(event);return;}
+      if(!viewer || !allowJumbo){if(!disabled)onClick?.(event);return;}
       const source=event.currentTarget;
       viewer.open({title: `${rankLabel(card.rank)}${card.resource ? ` · ${card.resource}` : ''}`,
         ratio:56/74,content:<ProtoCard card={card} footerLabel={footerLabel} buried={buried} jumbo />,
         action: !disabled&&onClick ? ()=>onClick({...event,currentTarget:source,detail:0}) : undefined,actionLabel});
     }}
-    disabled={!viewer && disabled}
+    disabled={(!viewer || !allowJumbo) && disabled}
     data-gameplay-disabled={disabled || undefined}
-    aria-haspopup={!jumbo ? 'dialog' : undefined}
+    aria-haspopup={!jumbo && allowJumbo ? 'dialog' : undefined}
     data-card-jumbo={jumbo || undefined}
     style={style}
     className={`${cardBaseClassName} ${lit ? 'proto-lit-surface ' : ''}${buried ? 'proto-card--buried ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${

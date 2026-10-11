@@ -34,9 +34,9 @@ for(const width of [1280,1912])for(const touch of [false,true]){
   await page.evaluate(()=>window.renderScenario('combat'));await page.locator('.proto-skirmish__card').first().waitFor();
   const eligible=page.locator('.proto-skirmish__card[data-top="true"] .playing-card:not([data-gameplay-disabled="true"])');
   for(let n=0;n<10&&!await eligible.count();n++)await press(page.locator('.proto-skirmish__stock'));
-  const count=await page.locator('.proto-skirmish__card').count();await press(eligible.first());await modal.waitFor();
-  assert.equal(await page.locator('.proto-skirmish__card').count(),count,'Combat tap only inspects');
-  await press(modal.getByRole('button',{name:'Play card',exact:true}));assert.equal(await page.locator('.proto-skirmish__card').count(),count-1);
+  const count=await page.locator('.proto-skirmish__card').count();await press(eligible.first());
+  assert.equal(await modal.count(),0,'Combat tableau tap bypasses jumbo');
+  assert.equal(await page.locator('.proto-skirmish__card').count(),count-1);
   await page.evaluate(()=>window.renderScenario('reel'));await page.locator('.proto-fight__reel').first().waitFor();
   await press(page.locator('.proto-fight__reel .playing-card').first());await modal.waitFor();
   assert.ok(await modal.getByRole('button',{name:'Play card',exact:true}).count());await page.keyboard.press('Escape');
