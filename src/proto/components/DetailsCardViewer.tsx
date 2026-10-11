@@ -1,4 +1,4 @@
-import { TradingCard } from './TradingCard';
+import { TradingCard, type TradingCardSection } from './TradingCard';
 import { TABLE_CARD_SCREEN_WIDTH, CARD_RATIO } from '../tableCardPlacement';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -12,7 +12,7 @@ export type DetailsCardObject = {
   art: ReactNode;
   descriptor: string;
   descriptorPreview?: string;
-  trays: Array<{ id: string; label: string; icon?: ReactNode; content?: ReactNode; details?: ReactNode }>;
+  trays: TradingCardSection[];
   footer?: ReactNode;
 };
 

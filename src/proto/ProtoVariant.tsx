@@ -2242,12 +2242,14 @@ const selectBiome = (biomeId: string) => {
           descriptorPreview: 'Expedition hero',
           descriptor: 'An expedition hero who explores the wilderness, gathers resources, and helps build your settlement.',
           trays: [
-            { id: 'stats', label: 'Stats', details: <div className="hero-card__stats">
-              <span>HP {state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp}/{FOUNDATION_MOCKUPS[0].maxHp}</span>
-              <span>STA {state.actorStamina[0] ?? ACTOR_STAMINA_MAX}/{ACTOR_STAMINA_MAX}</span>
-            </div> },
+            { id: 'stats', label: 'Stats', chips: [
+              { id: 'hp', icon: '♥', value: `${state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp}/${FOUNDATION_MOCKUPS[0].maxHp}`,
+                label: `Health: ${state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp} of ${FOUNDATION_MOCKUPS[0].maxHp}` },
+              { id: 'stamina', icon: '⚡', value: `${state.actorStamina[0] ?? ACTOR_STAMINA_MAX}/${ACTOR_STAMINA_MAX}`,
+                label: `Stamina: ${state.actorStamina[0] ?? ACTOR_STAMINA_MAX} of ${ACTOR_STAMINA_MAX}` },
+            ] },
             { id: 'equipment', label: 'Equipment', details: 'Not yet configured' },
-            { id: 'buffs', label: 'Effects', details: state.heroBuffs[0]?.length
+            { id: 'buffs', label: 'Effects', content: state.heroBuffs[0]?.length || '—', details: state.heroBuffs[0]?.length
               ? state.heroBuffs[0].map(buff => `${buff.id.replace(/_/g, ' ')} (${buff.value}, ${buff.turnsRemaining} turns)`).join(' · ')
               : 'No active buffs or debuffs' },
           ],

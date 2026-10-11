@@ -4,7 +4,19 @@ import { requestHoloDeviceTilt, useHoloDeviceTilt, type HoloTilt } from '../useH
 import { GYRO_LOG_ENABLED, traceHoloCard, type HoloCardTrace } from '../holoDiagnostics';
 import { holoTiltAngles } from '../holoTilt';
 
-export type TradingCardSection = { id: string; label: string; icon?: ReactNode; content?: ReactNode; details?: ReactNode };
+/** One icon on the jumbo card's strip; its label is the hover/tap explanation. */
+export type TradingCardChip = { id: string; icon: ReactNode; value?: ReactNode; label: string };
+export type TradingCardSection = { id: string; label: string; icon?: ReactNode; content?: ReactNode;
+  /** Plain-text details, shown on hover/tap of the jumbo icon. */
+  details?: string;
+  /** Splits the section into several jumbo icons (e.g. HP and STA). */
+  chips?: TradingCardChip[] };
+
+/** Jumbo icons for a section: its own chips, or one icon carrying the section. */
+const jumboChips = (section: TradingCardSection): TradingCardChip[] => section.chips ?? [{
+  id: section.id, icon: section.icon ?? section.label, value: section.content ?? '—',
+  label: `${section.label}: ${section.details ?? 'Not yet configured'}`,
+}];
 export type TradingCardProps = {
   id: string; title: ReactNode; titleId?: string; badge?: ReactNode; badgeLabel?: string; headerAction?: ReactNode;
   art: ReactNode; description?: string; descriptionPreview?: ReactNode; descriptionId?: string;
@@ -84,6 +96,9 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     // Measure the stationary stage, never the rotating face: avoids hover feedback.
     const rect = event.currentTarget.getBoundingClientRect();
     if (reducedMotion.current) return;
+    // Hold the pose over the icon strip so an icon never slides out from under
+    // the pointer before its explanation appears.
+    if (event.pointerType !== 'touch' && event.target instanceof Element && event.target.closest('.trading-card__chips')) return;
     pointerActive.current = true;
     target.current = { x: Math.max(0, Math.min(100, (event.clientX - rect.left) / rect.width * 100)),
       y: Math.max(0, Math.min(100, (event.clientY - rect.top) / rect.height * 100)), lift: 1 };
@@ -127,11 +142,18 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
         <h3>Description</h3><p id={descriptionId}>{description}</p>
       </section> : <p id={descriptionId} className="trading-card__description" title={description}
         tabIndex={0} aria-label={description}>{descriptionPreview ?? description}</p>)}
-      {!!sections.length && <div className="trading-card__sections">
+      {!!sections.length && state === 'jumbo' && <div className="trading-card__chips" role="list" aria-label="Stats, equipment and effects">
+        {sections.flatMap(section => jumboChips(section).map(chip => <span className="trading-card__chip" role="listitem" key={chip.id}
+          data-section={section.id} data-chip={chip.id} title={chip.label} aria-label={chip.label} tabIndex={0}>
+          <span className="trading-card__chip-icon" aria-hidden="true">{chip.icon}</span>
+          {chip.value !== undefined && <span aria-hidden="true">{chip.value}</span>}
+        </span>))}
+      </div>}
+      {!!sections.length && state !== 'jumbo' && <div className="trading-card__sections">
         {sections.map(section => <section className="trading-card__section" key={section.id} data-section={section.id}
           aria-label={section.label} title={state === 'compact' ? section.label : undefined} tabIndex={0}>
-          <h3>{state === 'jumbo' ? section.label : section.icon ?? section.label}</h3>
-          <div>{state === 'jumbo' ? section.details ?? section.content ?? 'Not yet configured' : section.content ?? <span aria-label="Not yet configured">—</span>}</div>
+          <h3>{section.icon ?? section.label}</h3>
+          <div>{section.content ?? <span aria-label="Not yet configured">—</span>}</div>
         </section>)}
       </div>}
       {footer && <footer className="trading-card__footer">{footer}</footer>}
