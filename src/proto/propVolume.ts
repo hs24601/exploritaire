@@ -8,6 +8,9 @@ export const PROP_VOLUME_RECIPES: Readonly<Record<string, PropVolumeRecipe>> = {
   'woods_side.svg': { bands: [0, 1], depth: .9, trim: false },
   'woods_front.svg': { bands: [0, .55, 1], depth: .85, trim: false },
   'mountain_standee.svg': { bands: [0, .4, .76, 1], depth: .9, trim: true },
+  // Neighbour-aware single-peak pieces of the same range (terrainAutotile.ts).
+  'mountain_standee_peak.svg': { bands: [0, 1], depth: .9, trim: true },
+  'mountain_standee_spur.svg': { bands: [0, 1], depth: .9, trim: true },
   'hero-den-standee-v2.png': { bands: [0, 1], depth: .95, trim: true, shape: 'cave', symmetry: 'asymmetric', facing: 'north' },
   'berry-bush.svg': { bands: [0, 1], depth: 1, trim: true, shape: 'berry-bush' },
 };

@@ -49,6 +49,7 @@ import { detectFxQuality } from '../atmosphere';
 import type { LabelBox } from '../biomeEdgeScenery';
 import { BIOME_EDGE_SCENERY } from '../protoData';
 import { Oversample, STANDEE_OVERSAMPLE, SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows } from './SpriteStandee';
+import { terrainAutotilePlacements } from '../terrainAutotile';
 import { TABLE_MAX_SCALE, TABLE_TILT_MS, tableCameraTilt, tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
 
 export type ProtoBiomeTile = {
@@ -414,6 +415,9 @@ export const ProtoMap = ({
   const immutableRegions = useMemo(() => immutableTileRegions(biomeTiles), [biomeTiles]);
   const terrainRegions = useMemo(() => immutableTerrainRegions(biomeTiles), [biomeTiles]);
   const labelRegions = useMemo(() => connectedTileLabelRegions(biomeTiles), [biomeTiles]);
+  // Neighbour-aware variants: each connected terrain cell leans, scales and
+  // flips its art from its joined sides, so ranges don't read as copies.
+  const terrainPieces = useMemo(() => terrainAutotilePlacements(terrainRegions, position => TABLE_GRID.atWorld(position), TABLE_GRID.cellSize), [terrainRegions]);
   const terrainOwners = new Map(immutableRegions.flatMap(region => region.tiles.map(tile => [tile.id, region] as const)));
   const sharedLabelTiles = new Set(labelRegions.flatMap(region => region.tiles.map(tile => tile.id)));
   const lightCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1008,11 +1012,14 @@ export const ProtoMap = ({
     // Retain the sleeping hollow's depth while an actor occupies it. The shared
     // footprint fitter keeps the complete foot line just inside the tile.
     const back = { x: 0, y: propVolumeRecipe(tile.sprite) ? 0 : area.height * (tile.tileType === 'hero-den' && occupied ? .24 : -.37) };
-    const position = { x:area.x+back.x, y:area.y+back.y };
-    const size = tile.tileType === 'hero-den' ? 46 : BIOME_POPUP_SIZE;
+    const piece = terrainPieces.get(tile.id);
+    const position = { x:area.x+back.x+(piece?.dx ?? 0), y:area.y+back.y+(piece?.dy ?? 0) };
+    const size = tile.tileType === 'hero-den' ? 46 : BIOME_POPUP_SIZE * (piece?.scale ?? 1);
     const owner = terrainOwners.get(tile.id) ?? area;
     const fitted = propVolumeRecipe(tile.sprite) ? fitSceneryVolumeFootprint(position, size, size, owner) : fitSceneryFootprint(position, size, size, owner, 0);
-    return [tile.id,{ position: fitted.position, size: fitted.width, requestedSize: size, requestedPosition: position, owner }] as const;
+    return [tile.id,{ position: fitted.position, size: fitted.width, requestedSize: size, requestedPosition: position, owner, flip: piece?.flip ?? false,
+      // A neighbour-aware piece may swap in its own art beside the tile's sprite.
+      sprite: piece?.art && tile.sprite ? tile.sprite.replace(/[^/]+$/, piece.art) : tile.sprite }] as const;
   }));
   const atmosphereCanopies: AtmosphereCanopy[] = biomeTiles.filter(tile => tile.unlocked !== false && !tile.flags?.includes('unexplored')).flatMap(tile => {
     const popup = biomePopups.get(tile.id)!;
@@ -1021,8 +1028,8 @@ export const ProtoMap = ({
       const fitted = propVolumeRecipe(prop.src) ? fitSceneryVolumeFootprint({x:area.x+prop.x,y:area.y+prop.y},prop.width,prop.height,area) : fitSceneryFootprint({x:area.x+prop.x,y:area.y+prop.y},prop.width,prop.height,area,0);
       return {id:`${tile.id}-${prop.id}`,...fitted.position,width:fitted.width,height:fitted.height,sprite:prop.src,flip:prop.flip,worldHeading:0};
     });
-    if (tile.sprite && !failedSprites.includes(tile.sprite) && popup.size >= BIOME_POPUP_MIN_SIZE) canopies.push({
-      id:tile.id,...popup.position,width:popup.size,height:popup.size,sprite:tile.sprite,trimmed:true,worldHeading:0,
+    if (popup.sprite && !failedSprites.includes(popup.sprite) && popup.size >= BIOME_POPUP_MIN_SIZE) canopies.push({
+      id:tile.id,...popup.position,width:popup.size,height:popup.size,sprite:popup.sprite,flip:popup.flip,trimmed:true,worldHeading:0,
     });
     return canopies;
   });
@@ -1088,17 +1095,17 @@ export const ProtoMap = ({
   const faceCameraFlat = { ['--tw-rotate' as string]: 'calc(-1 * var(--camera-yaw, 0deg))' } as React.CSSProperties;
   // Sprite standees: a pixel-art cut-out lit by the table's lights, casting its
   // own silhouette across the table away from each one.
-  const spriteStandee = (sprite: string | undefined, position: { x: number; y: number }, { size = SPRITE_STANDEE_SIZE, owner = 'actor' }: { size?: number; owner?: string } = {}) => {
+  const spriteStandee = (sprite: string | undefined, position: { x: number; y: number }, { size = SPRITE_STANDEE_SIZE, owner = 'actor', flip = false }: { size?: number; owner?: string; flip?: boolean } = {}) => {
     if (!upright || !sprite || failedSprites.includes(sprite)) return null;
     const volume = owner === 'biome' && Boolean(propVolumeRecipe(sprite));
     const facingYaw = owner === 'biome' ? 0 : yaw;
     const lit = standeeLighting(timeOfDay, position, size, lightSources, facingYaw);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
     return {
-      shadows: volume ? <PropVolumeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} /> : <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} yaw={facingYaw} />,
-      silhouette: volume ? <PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} monochrome fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} size={size} />} /> : <SilhouetteRelief sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} yaw={facingYaw}
+      shadows: volume ? <PropVolumeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} flip={flip} /> : <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} yaw={facingYaw} />,
+      silhouette: volume ? <PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} monochrome flip={flip} fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} size={size} />} /> : <SilhouetteRelief sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} yaw={facingYaw}
         fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} size={size} />} />,
-      art: volume ? <PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />} /> : <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />,
+      art: volume ? <PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} flip={flip} fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />} /> : <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />,
     };
   };
   // Pixel-art standees stay sharp as the camera zooms; flat pieces need none.
@@ -1285,7 +1292,7 @@ export const ProtoMap = ({
           }}>
             <UnexploredGround cells={neutralGroundCells} />
             {[...unexploredGround.values()]}
-            {!upright && terrainRegions.map(region => <ConnectedTerrainArt key={region.id} region={region}
+            {!upright && terrainRegions.map(region => <ConnectedTerrainArt key={region.id} region={region} pieces={terrainPieces}
               sprite={`${import.meta.env.BASE_URL}assets/biomes/impassable-mountain_topdown.svg`} rockColor="#354154" />)}
           </div>
           {biomeTiles.map((tile) => (
@@ -1298,11 +1305,11 @@ export const ProtoMap = ({
               // Scenery pops up from the back of the tile, which is its base, so the label stays readable in front
               // (tilted, far enough back to clear the label's ink above the shadows).
               // The back is authored in world space and stays there during orbit.
-              const { position:popupPosition,size:popupSize, requestedSize, requestedPosition, owner: popupOwner } = biomePopups.get(tile.id)!;
+              const { position:popupPosition,size:popupSize, requestedSize, requestedPosition, owner: popupOwner, flip: popupFlip, sprite: popupSprite } = biomePopups.get(tile.id)!;
               // Standing at the back of its tile, a pop-up can be in front of
               // another tile's label. Fit both dimensions together, so narrowing
               // the art can retain a readable pop-up at a low camera angle.
-              const popup = tile.flags?.includes('unexplored') || tile.unlocked === false || popupSize < BIOME_POPUP_MIN_SIZE ? null : spriteStandee(tile.sprite, popupPosition, { size: popupSize, owner: 'biome' });
+              const popup = tile.flags?.includes('unexplored') || tile.unlocked === false || popupSize < BIOME_POPUP_MIN_SIZE ? null : spriteStandee(popupSprite, popupPosition, { size: popupSize, owner: 'biome', flip: popupFlip });
               // Unexplored tiles stay anonymous and silent until discovery.
               const unexplored = Boolean(tile.flags?.includes('unexplored'));
               const explored = tile.exploration ?? 1;
@@ -1389,6 +1396,7 @@ export const ProtoMap = ({
                     data-scenery-x={requestedPosition.x} data-scenery-y={requestedPosition.y}
                     data-scenery-desired-width={requestedSize} data-scenery-desired-height={requestedSize}
                     data-scenery-width={popupSize} data-scenery-height={popupSize}
+                    data-terrain-piece={terrainPieces.get(tile.id)?.shape} data-scenery-flip={popupFlip || undefined}
                     data-owner-x={popupOwner.x} data-owner-y={popupOwner.y}
                     data-owner-width={popupOwner.width} data-owner-height={popupOwner.height}
                     className="proto-sprite-standee absolute"
