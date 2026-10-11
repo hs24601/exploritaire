@@ -4,6 +4,9 @@ import { redeemActiveQuest } from './questProgress';
 
 it('replaces the old route with Rest and does not complete from retired milestones', () => {
   const state = createInitialState();
+  // Day 1 is the ordinary day, whose quest lives on the table; Rest returns once it is over.
+  expect(getExpeditionQuestSteps(state)).toEqual([]);
+  state.ordinaryDay = undefined;
   state.day = 2;
   state.city = { campBuilt: true, campUsedToday: true, restedOnce: true };
   state.deepEncounterResolved = true;

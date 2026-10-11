@@ -3,7 +3,7 @@ import { PROTO_ENEMIES } from '../protoData';
 import { WORK_CYCLE_CARDS, type Card, type EnemyRuntimeState, type ProtoState } from '../protoState';
 import { resolveEnemyIntents, selectEnemyTableauMove } from './combat';
 import { applyFoundationPlay } from './play';
-import { createFoundations, createInitialState, isPondTile, isAdjacentRank } from './setup';
+import { createFoundations, createInitialState, isPondTile, isAdjacentRank, POND_TILE } from './setup';
 
 // Validate normal rules independently of the temporary playtest override.
 vi.mock('../staminaTesting', () => ({ DISABLE_STAMINA_CONSUMPTION: false, canSpendStamina: (value: number, cost: number) => value >= cost, spendStamina: (value: number, cost: number) => Math.max(0, value - cost) }));
@@ -171,10 +171,12 @@ describe('selectEnemyTableauMove', () => {
 
  it('recognizes any water biome as a pond, including the cell at -2,2', () => {
   const state = createInitialState();
-  const pond = { ...state.biomeTiles.find((tile) => tile.terrain === 'water')!, id: 'pond-at-minus-2-2', position: { x: -96, y: 96 } };
-  const tiles = [...state.biomeTiles, pond];
+  // The starting world has no water yet; add the authored pond and a copy at -2,2.
+  const authored = { ...state.biomeTiles.find((tile) => tile.id === 'day-one-berries')!, ...POND_TILE, tileType: undefined, flags: [...POND_TILE.flags], tableau: [], stock: [] };
+  const pond = { ...authored, id: 'pond-at-minus-2-2', position: { x: -96, y: 96 } };
+  const tiles = [...state.biomeTiles, authored, pond];
   expect(isPondTile(pond.id, tiles)).toBe(true);
   expect(isPondTile('pond', tiles)).toBe(true);
-  expect(isPondTile('woods-alpha', tiles)).toBe(false);
+  expect(isPondTile('day-one-berries', tiles)).toBe(false);
   expect(isPondTile(null, tiles)).toBe(false);
 });

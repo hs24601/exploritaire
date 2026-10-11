@@ -3,7 +3,8 @@ import { activateBiome, arriveActorAtBiome } from './biomeArrival';
 import { createInitialState, materializeDeepWoods } from './rules/setup';
 
 describe('biome arrival wiring', () => {
-  const ids = ['pond', 'woods-alpha', 'woods-east', 'woods-danger', 'woods-beta'];
+  // The day-one forage places and a materialized Deep Woods: the starting world's enterable deals.
+  const ids = ['day-one-berries', 'day-one-tree', materializeDeepWoods(42).id];
   for (const from of ids) for (const to of ids) {
     it(`${from} to ${to} loads the destination for table and foundation actors`, () => {
       for (const location of ['table', 'foundation'] as const) {
@@ -22,23 +23,23 @@ describe('biome arrival wiring', () => {
     });
   }
   it('persists current progress before switching and restores it on return', () => {
-    let state = activateBiome(createInitialState(), 'woods-alpha');
+    let state = activateBiome(createInitialState(), 'day-one-berries');
     state = { ...state, tableau: state.tableau.map(column => column.slice(1)), stock: state.stock.slice(1) };
-    const returned = activateBiome(activateBiome(state, 'pond'), 'woods-alpha');
+    const returned = activateBiome(activateBiome(state, 'day-one-tree'), 'day-one-berries');
     expect(returned.tableau).toEqual(state.tableau);
     expect(returned.stock).toEqual(state.stock);
   });
   it('ignores occupants of the same slot in other biomes', () => {
-    let state = activateBiome(createInitialState(), 'pond');
-    state.worldActors.push({ ...state.worldActors[0], id: 'other' as 'hero', location: 'foundation', biomeId: 'pond', foundationIndex: 0 });
-    const next = arriveActorAtBiome(state, state.worldActors[0].id, 'woods-east', { x: 48, y: -48 });
+    let state = activateBiome(createInitialState(), 'day-one-berries');
+    state.worldActors.push({ ...state.worldActors[0], id: 'other' as 'hero', location: 'foundation', biomeId: 'day-one-berries', foundationIndex: 0 });
+    const next = arriveActorAtBiome(state, state.worldActors[0].id, 'day-one-tree', { x: 48, y: 0 });
     expect(next.worldActors[0]).toMatchObject({ location: 'foundation', foundationIndex: 0 });
   });
   it('does not clear a different selected biome foundation when an actor leaves', () => {
-    let state = activateBiome(createInitialState(), 'woods-east');
-    state.worldActors[0] = { ...state.worldActors[0], location: 'foundation', biomeId: 'pond', foundationIndex: 0 };
+    let state = activateBiome(createInitialState(), 'day-one-tree');
+    state.worldActors[0] = { ...state.worldActors[0], location: 'foundation', biomeId: 'day-one-berries', foundationIndex: 0 };
     state.foundations[0]!.count = 3;
-    const next = arriveActorAtBiome(state, state.worldActors[0].id, 'woods-east', { x: 48, y: -48 });
+    const next = arriveActorAtBiome(state, state.worldActors[0].id, 'day-one-tree', { x: 48, y: 0 });
     expect(next.foundations[0]!.count).toBe(3);
     expect(next.worldActors[0].location).toBe('table');
   });

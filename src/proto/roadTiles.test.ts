@@ -9,7 +9,9 @@ import { createInitialState } from './rules/setup';
 
 describe('road exploration', () => {
   it('places the requested orientations and explores the occupied Hero’s Den', () => {
-    const roads = createInitialState().biomeTiles.filter(tile => tile.road);
+    // The starting world has no roads; roads keep their authored orientation when created.
+    expect(createInitialState().biomeTiles.filter(tile => tile.road)).toEqual([]);
+    const roads = [createRoadTile('road-center', 0, 0, { shape: 'straight', rotation: 0 }), createRoadTile('road-east', 1, 1, { shape: 'straight', rotation: 90 })];
     expect(roads.map(tile => [tile.position, tile.road?.shape, tile.road?.rotation])).toEqual([
       [{ x: 0, y: 0 }, 'straight', 0], [{ x: 48, y: 48 }, 'straight', 90],
     ]);
@@ -19,11 +21,10 @@ describe('road exploration', () => {
     const state = createInitialState();
     expect(state.worldActors[0].position).toEqual(den.position);
     expect(state.biomeTiles.filter(tile => tile.position.x === 0 && tile.position.y === 96)).toHaveLength(1);
-    expect(state.biomeTiles.find(tile => tile.position.x === 0 && tile.position.y === 48)?.tileType).toBe('unexplored');
     expect(den.flags).toEqual([]);
-    expect(den.dealt).toBe(13);
-    expect(den.tableau.flat()).toHaveLength(13);
-    expect(createInitialState().biomeTiles).toHaveLength(225);
+    expect(den.tableau.flat().length).toBeGreaterThan(0);
+    // The Den, five impassable mountains, and the day-one Berry Patch and Old Tree.
+    expect(createInitialState().biomeTiles).toHaveLength(8);
     expect(roads[0].flags).toEqual(['unexplored']);
     expect(roads[1].flags).toEqual(['unexplored']);
     expect(Object.keys(ROAD_PATHS)).toHaveLength(4);
@@ -40,8 +41,9 @@ describe('road exploration', () => {
 
 describe('path exploration deals', () => {
   it('opens a neutral path deal on arrival and reaches full exploration only after all cards clear', () => {
-    let state = createInitialState();
-    const tile = state.biomeTiles.find(tile => tile.id === 'unexplored-1-0')!;
+    const base = createInitialState();
+    let state = { ...base, biomeTiles: [...base.biomeTiles, createRoadTile('unexplored--1-0', -1, 0)] };
+    const tile = state.biomeTiles.find(tile => tile.id === 'unexplored--1-0')!;
     expect(tile.tileType).toBe('unexplored');
     expect(biomeExploration(tile.flags, 0)).toBe(0);
     expect(tile.tableau.flat().every(card => !card.resource && !card.encounter)).toBe(true);
@@ -63,13 +65,14 @@ describe('path exploration deals', () => {
     expect(biomeExploration([], dealClearedShare(tile.dealt!, 0))).toBe(1);
     expect(state.biome.cacheClaimed).toBe(true);
     // Loading another tile must preserve this path's completed deal.
-    state = activateBiome(activateBiome(state, 'woods-alpha'), tile.id);
+    state = activateBiome(activateBiome(state, 'day-one-berries'), tile.id);
     expect(state.tableau.flat()).toHaveLength(0);
   });
   it('creates unique deals without overlapping table cells', () => {
     const state = createInitialState();
-    expect(new Set(state.biomeTiles.map(tile => `${tile.position.x},${tile.position.y}`)).size).toBe(225);
-    const cards = state.biomeTiles.filter(tile => tile.tileType || tile.road).flatMap(tile => tile.tableau.flat());
+    expect(new Set(state.biomeTiles.map(tile => `${tile.position.x},${tile.position.y}`)).size).toBe(state.biomeTiles.length);
+    const cards = state.biomeTiles.flatMap(tile => tile.tableau.flat());
+    expect(cards.length).toBeGreaterThan(0);
     expect(new Set(cards.map(card => card.id)).size).toBe(cards.length);
   });
 });

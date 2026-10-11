@@ -16,10 +16,11 @@ describe('actor tile discovery', () => {
     });
   });
 
-  it('keeps woods, ponds and mountains discoverable by proximity while roads require entry', () => {
+  it('keeps woods, berry patches and mountains discoverable by proximity while roads require entry', () => {
     const state = createInitialState();
-    const tiles = state.biomeTiles.map(tile => ({ ...tile, flags: [...new Set([...(tile.flags ?? []), 'unexplored' as const])] }));
-    for (const id of ['woods-alpha', 'pond', 'road-east', 'mountain-1-2']) {
+    const road = { ...createRoadTile('road-east', 1, 1, { shape: 'straight', rotation: 90 }), flags: [] };
+    const tiles = [...state.biomeTiles, road].map(tile => ({ ...tile, flags: [...new Set([...(tile.flags ?? []), 'unexplored' as const])] }));
+    for (const id of ['day-one-tree', 'day-one-berries', 'road-east', 'mountain-1-2']) {
       const tile = tiles.find(tile => tile.id === id)!;
       const nearby = discoverTiles(tiles, { x: tile.position.x - 48, y: tile.position.y - 48 }).find(t => t.id === id)!;
       if (tile.road) expect(nearby).toBe(tile);
@@ -30,19 +31,17 @@ describe('actor tile discovery', () => {
     }
   });
 
-  it('keeps distant southern rows hidden and retains initial nearby discoveries', () => {
+  it('keeps the distant Old Tree hidden and retains initial discoveries around the Den', () => {
     const state = createInitialState();
-    const southern = state.biomeTiles.filter(tile => tile.position.y >= 4 * 48);
-    expect(southern).toHaveLength(60);
-    expect(southern.every(tile => tile.flags?.includes('unexplored'))).toBe(true);
-    for (const id of ['unexplored--1-1', 'unexplored-0-1', 'road-east']) {
-      expect(state.biomeTiles.find(tile => tile.id === id)!.flags).toContain('unexplored');
-    }
-    const next = discoverTiles(state.biomeTiles, { x: 0, y: -48 });
-    expect(next.find(tile => tile.id === 'mountain-1-2')!.flags).toEqual(['impassable']);
-    expect(next.find(tile => tile.id === 'woods-alpha')!.flags).toEqual(['rough']);
-    expect(next.find(tile => tile.id === 'mountain-0-7')!.flags).toContain('unexplored');
-    expect(discoverTiles(next, { x: 0, y: -48 })).toBe(next);
+    expect(state.biomeTiles.find(tile => tile.id === 'day-one-tree')!.flags).toContain('unexplored');
+    expect(state.biomeTiles.find(tile => tile.id === 'day-one-berries')!.flags).toEqual([]);
+    expect(state.biomeTiles.find(tile => tile.id === 'mountain-1-2')!.flags).toEqual(['impassable']);
+    expect(state.biomeTiles.find(tile => tile.id === 'mountain-0-3')!.flags).toEqual(['impassable']);
+    expect(discoverTiles(state.biomeTiles, { x: 0, y: 96 })).toBe(state.biomeTiles);
+    const next = discoverTiles(state.biomeTiles, { x: 0, y: 48 });
+    expect(next.find(tile => tile.id === 'day-one-tree')!.flags).toEqual([]);
+    expect(next.find(tile => tile.id === 'day-one-berries')).toBe(state.biomeTiles.find(tile => tile.id === 'day-one-berries'));
+    expect(discoverTiles(next, { x: 0, y: 48 })).toBe(next);
   });
 
   it('discovers along actual travel segments, including skipped cells', () => {
@@ -67,16 +66,16 @@ describe('actor tile discovery', () => {
 
   it('handles arrivals and multiple actors without activating neighbouring deals', () => {
     let state = createInitialState();
-    const target = state.biomeTiles.find(tile => tile.id === 'woods-alpha')!;
+    const target = state.biomeTiles.find(tile => tile.id === 'day-one-berries')!;
     state = arriveActorAtBiome(state, 'hero', target.id, target.position);
     expect(state.selectedBiomeId).toBe(target.id);
-    expect(state.biomeTiles.find(tile => tile.id === 'pond')!.flags).toEqual([]);
-    expect(state.biomeTiles.find(tile => tile.id === 'woods-east')!.flags).toEqual([]);
+    expect(state.biomeTiles.find(tile => tile.id === 'day-one-tree')!.flags).toContain('unexplored');
+    expect(state.biomeTiles.find(tile => tile.id === 'mountain--1-2')!.flags).toEqual(['impassable']);
     expect(state.worldActors[0].location).toBe('foundation');
-    state = { ...state, worldActors: [...state.worldActors, { ...state.worldActors[0], position: { x: -6 * 48, y: 48 }, location: 'table' }] };
+    state = { ...state, worldActors: [...state.worldActors, { ...state.worldActors[0], position: { x: 2 * 48, y: 48 }, location: 'table' }] };
     const next = discoverActorTiles(state);
-    expect(next.biomeTiles.find(tile => tile.id === 'mountain--6-2')!.flags).toEqual(['impassable']);
-    expect(next.biomeTiles.find(tile => tile.id === 'mountain--6-3')!.flags).toContain('unexplored');
+    expect(next.biomeTiles.find(tile => tile.id === 'day-one-tree')!.flags).toEqual([]);
+    expect(next.biomeTiles.find(tile => tile.id === 'day-one-tree')!.tableau).toBe(state.biomeTiles.find(tile => tile.id === 'day-one-tree')!.tableau);
     expect(next.selectedBiomeId).toBe(target.id);
     expect(discoverActorTiles(next)).toBe(next);
   });
