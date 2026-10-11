@@ -51,16 +51,14 @@ describe('opening quest deals', () => {
     });
   }
 
-  it('keeps Camp, food, energy and round-trip travel achievable without random rewards', () => {
+  it('keeps Camp, food and energy achievable without random rewards', () => {
     const small = createQuestBiomeDeal('small').tableau.flat();
     expect(small.filter((card) => card.resource === 'wood').length).toBeGreaterThanOrEqual(3);
     expect(small.filter((card) => card.resource === 'berries').length).toBeGreaterThanOrEqual(1);
     expect(small.filter((card) => ['berries', 'herbs'].includes(card.resource ?? '')).length).toBeGreaterThanOrEqual(3);
     expect(DEFAULT_EXPEDITION_ENERGY).toBeGreaterThanOrEqual(small.length);
-    expect(QUEST_ROUTE_BUDGET.startingStamina).toBeGreaterThanOrEqual(2 * QUEST_ROUTE_BUDGET.smallTravelCost);
     const deep = createQuestBiomeDeal('deep').tableau.flat();
     expect(deep.filter((card) => card.encounter).length).toBe(1);
     expect(DEFAULT_EXPEDITION_ENERGY + QUEST_ROUTE_BUDGET.rationEnergy).toBeGreaterThanOrEqual(deep.filter((card) => !card.encounter).length);
-    expect(QUEST_ROUTE_BUDGET.maxStamina + QUEST_ROUTE_BUDGET.rationStamina).toBeGreaterThanOrEqual(2 * QUEST_ROUTE_BUDGET.deepTravelCost);
   });
 });

@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { PROTO_ENEMIES } from '../protoData';
-import type { Card, EnemyRuntimeState, ProtoState } from '../protoState';
+import { WORK_CYCLE_CARDS, type Card, type EnemyRuntimeState, type ProtoState } from '../protoState';
 import { resolveEnemyIntents, selectEnemyTableauMove } from './combat';
 import { applyFoundationPlay } from './play';
 import { createFoundations, createInitialState, isPondTile, isAdjacentRank } from './setup';
 
 // Validate normal rules independently of the temporary playtest override.
-vi.mock('../staminaTesting', () => ({ DISABLE_STAMINA_CONSUMPTION: false, spendStamina: (value: number, cost: number) => Math.max(0, value - cost) }));
+vi.mock('../staminaTesting', () => ({ DISABLE_STAMINA_CONSUMPTION: false, canSpendStamina: (value: number, cost: number) => value >= cost, spendStamina: (value: number, cost: number) => Math.max(0, value - cost) }));
 
 const card = (rank: number, id = `c-${rank}`): Card => ({ id, rank });
 
@@ -50,7 +50,7 @@ describe('applyFoundationPlay', () => {
     expect(applyFoundationPlay(state, { columnIndex: 3, foundationIndex: 0 })).toBeNull();
   });
 
-  it('moves the card, draws a replacement and spends actor stamina', () => {
+  it('moves the card, draws a replacement and costs no stamina', () => {
     const state = combatState([[card(2), card(6)], [card(11)]]);
     const result = applyFoundationPlay(state, { columnIndex: 0, foundationIndex: 0 });
     expect(result).not.toBeNull();
@@ -60,7 +60,7 @@ describe('applyFoundationPlay', () => {
     expect(next.foundations[0]?.count).toBe(1);
     expect(next.tableau[0].map((entry) => entry.rank)).toEqual([9, 2]);
     expect(next.stock).toHaveLength(0);
-    expect(next.actorStamina[0]).toBe(state.actorStamina[0] - 1);
+    expect(next.actorStamina).toEqual(state.actorStamina);
     expect(next.totalWorkCompleted).toBe(state.totalWorkCompleted + 1);
   });
 
@@ -74,11 +74,12 @@ describe('applyFoundationPlay', () => {
     expect(result?.state.enemyTeam[1].hp).toBe(0);
   });
 
-  it('reports the work cycle when actor stamina wraps', () => {
-    const state = combatState([[card(6)]], { actorStamina: [1, 4, 4, 4] });
+  it('reports the work cycle every WORK_CYCLE_CARDS plays, whatever the stamina', () => {
+    const base = combatState([[card(6)]], { actorStamina: [0, 4, 4, 4] });
+    const state = { ...base, foundations: base.foundations.map((slot, index) => index === 0 && slot ? { ...slot, count: WORK_CYCLE_CARDS - 1 } : slot) };
     const result = applyFoundationPlay(state, { columnIndex: 0, foundationIndex: 0 });
     expect(result?.workCycleCompleted).toBe(true);
-    expect(result?.state.actorStamina[0]).toBe(4);
+    expect(result?.state.actorStamina[0]).toBe(0);
   });
 
   it('spends exploration energy and refuses plays it cannot afford', () => {

@@ -21,7 +21,7 @@ export const createRoadTile = (id: string, column: number, row: number, road?: R
   id, title: road?.shape === 'crossroads' ? 'Crossroads' : road ? 'Road' : 'Path', road, tileType: 'unexplored',
   sizeLabel: 'Small', gridSize: { columns: 1, rows: 1 }, position: { x: column * 48, y: row * 48 },
   resourceDensity: 0, tableauSize: 13, seed: 0, tableau, stock: [], dealt: 13, unlocked: true,
-  travelCost: 0, threat: 'none', flags: ['unexplored'],
+  threat: 'none', flags: ['unexplored'],
 });
 };
 

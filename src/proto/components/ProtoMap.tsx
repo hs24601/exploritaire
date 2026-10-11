@@ -54,7 +54,6 @@ export type ProtoBiomeTile = {
   position: { x: number; y: number };
   selected: boolean;
   unlocked?: boolean;
-  travelCost?: number;
   threat?: 'none' | 'low' | 'high';
   /** Water tiles are fished (the pond) rather than dealt as a tableau. */
   terrain?: 'woods' | 'water';
@@ -172,8 +171,6 @@ type ProtoMapProps = {
   onSolveBuildStep?: (stackId: string, divine: boolean) => SolveStepResult;
   onStartSolver?: (divine: boolean) => void;
   actorStamina?: number;
-  /** Party stamina: travelling into a biome costs some (its travelCost). */
-  stamina?: number;
   onActorDragStart?: (actorId: string) => void;
   questCards?: PlacedQuestCard[];
   questTitles?: string[];
@@ -213,7 +210,6 @@ export const ProtoMap = ({
   onSolveBuildStep,
   onStartSolver,
   actorStamina = 0,
-  stamina = Infinity,
   onActorDragStart,
   onInspectActor,
   onInspectTile,
@@ -940,14 +936,11 @@ export const ProtoMap = ({
   const routeShown = (() => {
     if (travel) {
       const path = remainingPath(travel.path, travel.progress);
-      return path.length > 1 ? { path, unaffordable: false, label: null as string | null } : null;
+      return path.length > 1 ? { path, label: null as string | null } : null;
     }
     if (!dragPlan?.route) return null;
-    const cost = dragPlan.biome?.travelCost ?? 0;
-    const unaffordable = !canSpendStamina(stamina, cost);
     const cells = Math.max(1, Math.round(pathTime(dragPlan.route.path) / CLASSICPLUS_GRID_SIZE));
-    return { path: dragPlan.route.path, unaffordable,
-      label: unaffordable ? 'Not enough stamina' : `${cells} ${cells === 1 ? 'cell' : 'cells'}${cost ? ` · ${cost} STA` : ''}` };
+    return { path: dragPlan.route.path, label: `${cells} ${cells === 1 ? 'cell' : 'cells'}` };
   })();
   const compositeTileTitle = (tile: ProtoBiomeTile) => upright && Boolean(tile.sprite || (!tile.road && !tile.tileType));
   // Tile labels as they lie on the table (turned upright for the camera), so
@@ -1490,8 +1483,8 @@ export const ProtoMap = ({
           ))}
           {/* The route: previewed while an actor is dragged, then walked and
               used up as the actor travels it. */}
-          {routeShown ? <RouteLine path={routeShown.path} unaffordable={routeShown.unaffordable} labels={labelQuads} /> : null}
-          {routeShown?.label ? <span aria-hidden="true" className="proto-route-label proto-face-camera" data-route-label="true" data-route-unaffordable={routeShown.unaffordable || undefined}
+          {routeShown ? <RouteLine path={routeShown.path} labels={labelQuads} /> : null}
+          {routeShown?.label ? <span aria-hidden="true" className="proto-route-label proto-face-camera" data-route-label="true"
             style={{ left: `calc(50% + ${routeShown.path[routeShown.path.length - 1].x}px)`, top: `calc(50% + ${routeShown.path[routeShown.path.length - 1].y}px)` }}>{routeShown.label}</span> : null}
           {actors.map(actor => { const position = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor); return <React.Fragment key={actor.id}>{spriteStandee(actorArt(actor, position), position)?.shadows}</React.Fragment>; })}
           {actors.map((actor) => {

@@ -18,11 +18,9 @@ export const MOBILITY_COOLDOWN_TURNS = 2;
 export const PARTY_LOADOUT = [2, 5, 6, 13];
 export const ENEMY_TEAM_MOCKUPS: EnemyRuntimeState[] = PROTO_ENEMIES;
 export const HERO_STAMINA_MAX = QUEST_ROUTE_BUDGET.maxStamina;
-export const SMALL_WOODS_TRAVEL_COST = QUEST_ROUTE_BUDGET.smallTravelCost;
 // Energy plan: Day 1 spends 13 tableau actions and keeps two energy for city work.
-// Day 2 spends 18 Deep Woods placements plus an 8-stamina round trip; the ration
-// bridges the 15-energy default pool while leaving three energy after the route.
-export const DEEP_WOODS_TRAVEL_COST = QUEST_ROUTE_BUDGET.deepTravelCost;
+// Day 2 spends 18 Deep Woods placements; the ration bridges the 15-energy
+// default pool while leaving three energy after the route.
 export const DAY_TWO_RATION_ENERGY = QUEST_ROUTE_BUDGET.rationEnergy;
 export const DAY_TWO_RATION_STAMINA = QUEST_ROUTE_BUDGET.rationStamina;
 export const ACTOR_WORK_RESOURCES: ForestResource[] = ['wood', 'berries', 'herbs', 'wood'];
@@ -162,23 +160,23 @@ export const createSeededSmallWoodsDeal = () => createQuestBiomeDeal('small');
 // created as part of the initial table.
 export const DEFAULT_WOODS_TILES = [
   // Rough going once explored, so routes only cut through when it's faster.
-  { id: 'woods-alpha', title: 'Small Woods', sizeLabel: 'Small', gridSize: { columns: 1, rows: 1 }, resourceDensity: 0.45, tableauSize: 13, position: { x: 0, y: -48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'none' as const, flags: ['unexplored', 'rough'] as BiomeFlag[] },
+  { id: 'woods-alpha', title: 'Small Woods', sizeLabel: 'Small', gridSize: { columns: 1, rows: 1 }, resourceDensity: 0.45, tableauSize: 13, position: { x: 0, y: -48 }, unlocked: true, threat: 'none' as const, flags: ['unexplored', 'rough'] as BiomeFlag[] },
 ] as const;
 
 /** A second Small Woods beside the first, so neighbouring tiles of one kind
  * share their edge scenery. The quests still point at the first. */
-export const EAST_WOODS_TILE = { id: 'woods-east', title: 'Small Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0.45, tableauSize: 13, position: { x: 48, y: -48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'none' as const, flags: ['unexplored'] as BiomeFlag[] };
+export const EAST_WOODS_TILE = { id: 'woods-east', title: 'Small Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0.45, tableauSize: 13, position: { x: 48, y: -48 }, unlocked: true, threat: 'none' as const, flags: ['unexplored'] as BiomeFlag[] };
 
 /** The pond sits beside Small Woods on the row above True Center, so a pond
  * and a wood share an edge. It is fished (rules/fishing.ts), so it has no
- * tableau and costs no stamina to reach. */
-export const POND_TILE = { id: 'pond', title: 'Pond', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -48, y: -48 }, unlocked: true, travelCost: 0, threat: 'none' as const, terrain: 'water' as const, flags: ['unexplored'] as BiomeFlag[] };
+ * tableau. */
+export const POND_TILE = { id: 'pond', title: 'Pond', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -48, y: -48 }, unlocked: true, threat: 'none' as const, terrain: 'water' as const, flags: ['unexplored'] as BiomeFlag[] };
 export const isPondTile = (biomeId: string | null | undefined, tiles: readonly BiomeTileState[]) =>
   tiles.some((tile) => tile.id === biomeId && tile.terrain === 'water');
 
 /** A dangerous wood two cells right of the Hero's start, marked by dark red embers and mist. Entering it starts a
  * skirmish (rules/skirmish.ts) instead of a tableau; once its foe is beaten it stays quiet until the next day. */
-export const DANGER_WOODS_TILE = { id: 'woods-danger', title: 'Dark Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -96, y: 48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'high' as const, terrain: 'woods' as const, danger: true, flags: ['unexplored', 'danger'] as BiomeFlag[] };
+export const DANGER_WOODS_TILE = { id: 'woods-danger', title: 'Dark Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -96, y: 48 }, unlocked: true, threat: 'high' as const, terrain: 'woods' as const, danger: true, flags: ['unexplored', 'danger'] as BiomeFlag[] };
 export const isDangerTile = (biomeId: string | null | undefined) => biomeId === DANGER_WOODS_TILE.id;
 /** What the foe in the Dark Woods was guarding. */
 export const DANGER_WOODS_REWARD: Partial<ForestHaul> = { wood: 2, berries: 2, herbs: 2 };
@@ -193,7 +191,6 @@ export const createDeepWoodsTile = (seed: number) => ({
   position: { x: 144, y: -48 },
   seed,
   unlocked: false,
-  travelCost: DEEP_WOODS_TRAVEL_COST,
   threat: 'low' as const,
   flags: ['unexplored'] as BiomeFlag[],
 });

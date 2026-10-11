@@ -2,7 +2,6 @@ import type { ProtoState } from './protoState';
 import { arriveAt } from './biomeFlags';
 import { discoverActorTiles } from './tileDiscovery';
 import { createQuestExplorationFoundations, EMPTY_HAUL, FOREST_CACHE_REWARD } from './rules/setup';
-import { canSpendStamina, spendStamina } from './staminaTesting';
 
 /** Load the destination deal atomically with its selection, preserving the departing deal. */
 export const activateBiome = (state: ProtoState, biomeId: string): ProtoState => {
@@ -22,7 +21,7 @@ export const arriveActorAtBiome = (state: ProtoState, actorId: string, biomeId: 
   destination: { x: number; y: number }, requestedFoundationIndex?: number): ProtoState => {
   const target = state.biomeTiles.find(tile => tile.id === biomeId);
   const actor = state.worldActors.find(entry => entry.id === actorId);
-  if (!actor || target?.tileType === 'impassable-mountain' || !target?.unlocked || !canSpendStamina(state.stamina, target.travelCost)) return state;
+  if (!actor || target?.tileType === 'impassable-mountain' || !target?.unlocked) return state;
   const departing = actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId
     ? { ...state, foundations: state.foundations.map((slot, index) => index === (actor.foundationIndex ?? 0) && slot
       ? { ...slot, count: 0, cards: [], wildcardBridgeFromRank: undefined } : slot) }
@@ -37,7 +36,6 @@ export const arriveActorAtBiome = (state: ProtoState, actorId: string, biomeId: 
     worldActors: active.worldActors.map(entry => entry.id === actorId
       ? { ...entry, position: destination, biomeId, hutId: undefined,
           location: available(index) ? 'foundation' : 'table', foundationIndex: available(index) ? index : undefined } : entry),
-    stamina: spendStamina(state.stamina, target.travelCost),
     settledHaul: actor.location === 'foundation' ? { ...state.haul } : state.settledHaul,
   });
 };

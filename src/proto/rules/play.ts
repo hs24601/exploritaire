@@ -1,8 +1,7 @@
-import { DISABLE_STAMINA_CONSUMPTION, spendStamina } from '../staminaTesting';
 import { isQuestPlacement } from '../protoQuestDeals';
 import { DEFAULT_CHIP_ABILITY } from '../protoData';
 import { preserveSolverRpgValues } from '../tableauSolver';
-import { ACTOR_STAMINA_MAX, type Card, type EnemyRuntimeState, type ProtoState } from '../protoState';
+import { WORK_CYCLE_CARDS, type Card, type EnemyRuntimeState, type ProtoState } from '../protoState';
 import {
   ACTOR_WORK_RESOURCES,
   MOBILITY_COOLDOWN_TURNS,
@@ -59,7 +58,7 @@ export type FoundationPlayOptions = {
 export type FoundationPlayResult = {
   state: ProtoState;
   card: Card;
-  /** The actor's stamina wrapped this play, granting the "TABLEAU COMPLETE" work reward. */
+  /** This play completed a work cycle (every WORK_CYCLE_CARDS cards), granting the "TABLEAU COMPLETE" work reward. */
   workCycleCompleted: boolean;
   chip: { enemyIndex: number; enemy: EnemyRuntimeState } | null;
 };
@@ -102,16 +101,10 @@ export const applyFoundationPlay = (prev: ProtoState, options: FoundationPlayOpt
     ? { ...prev.haul, [card.resource]: prev.haul[card.resource] + 1 }
     : prev.haul;
   const actorResource = ACTOR_WORK_RESOURCES[foundationIndex] ?? 'wood';
-  const staminaRemaining = spendStamina(prev.actorStamina[foundationIndex] ?? ACTOR_STAMINA_MAX, 1);
-  // Preserve work-cycle rewards while testing with frozen stamina.
-  const tableauCompleted = DISABLE_STAMINA_CONSUMPTION
-    ? !hallowedPath && ((prev.foundations[foundationIndex]?.count ?? 0) + 1) % ACTOR_STAMINA_MAX === 0
-    : staminaRemaining === 0;
+  // Plays cost no stamina: stamina pays for foundation redraws (rules/redraw.ts).
+  const tableauCompleted = !hallowedPath && ((prev.foundations[foundationIndex]?.count ?? 0) + 1) % WORK_CYCLE_CARDS === 0;
   const workReward = tableauCompleted ? 3 : 1;
   const rewardedHaul = divine ? collectedHaul : addForestHaul(collectedHaul, { [actorResource]: workReward });
-  const nextActorStamina = prev.actorStamina.map((stamina, index) =>
-    index === foundationIndex ? (!DISABLE_STAMINA_CONSUMPTION && tableauCompleted ? ACTOR_STAMINA_MAX : staminaRemaining) : stamina,
-  );
   const nextActorWorkCompleted = prev.actorWorkCompleted.map((completed, index) =>
     index === foundationIndex ? completed + (tableauCompleted ? 1 : 0) : completed,
   );
@@ -127,7 +120,6 @@ export const applyFoundationPlay = (prev: ProtoState, options: FoundationPlayOpt
     ...prev,
     tableau: nextTableau,
     stock: replacement.stock,
-    actorStamina: nextActorStamina,
     actorWorkCompleted: nextActorWorkCompleted,
     totalWorkCompleted: prev.totalWorkCompleted + 1,
     wildCards: prev.wildCards + (tableauCompleted ? 1 : 0),
