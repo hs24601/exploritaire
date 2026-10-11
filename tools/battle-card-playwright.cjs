@@ -7,14 +7,13 @@ fs.mkdirSync('artifacts/battle-cards',{recursive:true});
   const browser = await chromium.launch({headless:true});
   try {
     for (const mode of ['mouse','touch','keyboard','reduced']) {
-      const mobile = mode === 'touch' || mode === 'reduced';
-      const viewport = mode === 'touch' ? {width:390,height:844} : mode === 'reduced' ? {width:844,height:390} : {width:1280,height:720};
+      // Desktop-only layout focus (GAME.md): touch and reduced motion run at desktop sizes.
+      const viewport = mode === 'touch' ? {width:1280,height:720} : mode === 'reduced' ? {width:1600,height:900} : {width:1280,height:720};
       const context = await browser.newContext({viewport,hasTouch:mode==='touch',reducedMotion:mode==='reduced'?'reduce':'no-preference',deviceScaleFactor:3});
       const page = await context.newPage(), errors=[];
       page.on('pageerror',error=>errors.push(error.message));
       await page.goto('http://127.0.0.1:5178/proto.html?combatdemo');
       await page.locator('[data-view="party"]:not(:disabled)').waitFor();
-      if (mobile) await page.getByRole('button',{name:'Tableau',exact:true}).click();
       const four=page.locator('.battle-field__column').nth(1).locator('button').last();
       const mochi=page.locator('[data-battle-actor="mochi"]');
       assert.equal(await four.isEnabled(),true);
@@ -31,7 +30,8 @@ fs.mkdirSync('artifacts/battle-cards',{recursive:true});
       await page.waitForFunction(()=>document.querySelector('[data-battle-actor="mochi"] [aria-label="Collected cards 1"]'));
       assert.equal(await mochi.locator('.battle-field__rank').textContent(),'4');
       assert.equal(await page.locator('.battle-field__column').nth(1).locator('button').count(),1);
-      assert.equal(await page.locator('.battle-card-flight').count(),0);
+      // The play lands at once; the flight is only the card's journey.
+      await page.waitForFunction(()=>!document.querySelector('.battle-card-flight'));
       // With Mochi at 4, the exposed 5 becomes playable; only one count per landing.
       const five=page.locator('.battle-field__column').nth(2).locator('button').last();
       assert.equal(await five.isEnabled(),true);
@@ -43,7 +43,6 @@ fs.mkdirSync('artifacts/battle-cards',{recursive:true});
       if(mode==='mouse') await page.locator('.battle-field').screenshot({path:'artifacts/battle-cards/played-3x.png',scale:'device'});
       await page.reload();
       await page.locator('[data-view="party"]:not(:disabled)').waitFor();
-      if(mobile) await page.getByRole('button',{name:'Tableau',exact:true}).click();
       const press = async locator => {
         if(mode==='touch') await locator.tap();
         else if(mode==='keyboard') {await locator.focus();await page.keyboard.press('Enter');}

@@ -410,6 +410,7 @@ const selectBiome = (biomeId: string) => {
   const dangerFighter = state.worldActors.find((actor) => actor.location === 'foundation' && isDangerTile(actor.biomeId)) ?? null;
   const [combatDemoOpen, setCombatDemoOpen] = useState(() => new URLSearchParams(window.location.search).has('combatdemo'));
   const [combatDemoReplay, setCombatDemoReplay] = useState(0);
+  const [battleRoster, setBattleRoster] = useState<string[] | undefined>(undefined);
   const watchBattleScene = () => { setCombatDemoReplay(replay => replay + 1); setCombatDemoOpen(true); setMobilePanel('map'); };
   const demoArrival = useRef<string | null>(null);
   useEffect(() => {
@@ -1757,7 +1758,7 @@ const selectBiome = (biomeId: string) => {
 
               <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden ${state.selectedBiomeId || combatDemoOpen ? '' : 'hidden'}${pondSelected && !combatDemoOpen ? ' proto-tableau-field--pond' : ''}${dangerSelected || combatDemoOpen ? ' proto-tableau-field--combat' : ''}`}>
               {dangerSelected || combatDemoOpen ? (
-                <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} />
+                <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} onRosterChange={setBattleRoster} />
               ) : pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && !canSpendStamina(state.stamina, POND_MISS_STAMINA)}
                   landed={Object.fromEntries(POND_CATCHES.map((id) => [id, state.haul[id] - state.settledHaul[id]])) as Record<PondCatch, number>}
@@ -2173,7 +2174,7 @@ const selectBiome = (biomeId: string) => {
               </div>
               </>)}
               </div>
-              {combatDemoOpen ? <CombatDemo key={combatDemoReplay} onClose={() => setCombatDemoOpen(false)} onRestart={watchBattleScene}
+              {combatDemoOpen ? <CombatDemo key={combatDemoReplay} roster={battleRoster} onClose={() => setCombatDemoOpen(false)} onRestart={watchBattleScene}
                 onEscape={dangerFighter ? () => { setCombatDemoOpen(false); leaveTableau(); } : undefined} /> : <ProtoMap
                 extendTableau={Boolean(state.selectedBiomeId) && !dangerSelected && !pondSelected}
                 biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId, sprite: biomeTileSprite(tile),
