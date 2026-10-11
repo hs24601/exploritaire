@@ -178,7 +178,7 @@ export const isPondTile = (biomeId: string | null | undefined, tiles: readonly B
 
 /** A dangerous wood two cells right of the Hero's start, marked by dark red embers and mist. Entering it starts a
  * skirmish (rules/skirmish.ts) instead of a tableau; once its foe is beaten it stays quiet until the next day. */
-export const DANGER_WOODS_TILE = { id: 'woods-danger', title: 'Dark Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: 96, y: 48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'high' as const, terrain: 'woods' as const, danger: true, flags: ['unexplored', 'danger'] as BiomeFlag[] };
+export const DANGER_WOODS_TILE = { id: 'woods-danger', title: 'Dark Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -96, y: 48 }, unlocked: true, travelCost: SMALL_WOODS_TRAVEL_COST, threat: 'high' as const, terrain: 'woods' as const, danger: true, flags: ['unexplored', 'danger'] as BiomeFlag[] };
 export const isDangerTile = (biomeId: string | null | undefined) => biomeId === DANGER_WOODS_TILE.id;
 /** What the foe in the Dark Woods was guarding. */
 export const DANGER_WOODS_REWARD: Partial<ForestHaul> = { wood: 2, berries: 2, herbs: 2 };
