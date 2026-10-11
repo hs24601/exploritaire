@@ -25,6 +25,8 @@ import { WORLD_ACTOR_SPRITES } from '../protoData';
 import type { StandeeLighting } from '../protoLighting';
 import { AbilityCard, AbilityGhost, FoeCard, PartyVitals, TableMark } from './BattleUnits';
 import { useAbilityDrag } from './useAbilityDrag';
+import { useBattleFx } from './useBattleFx';
+import { sceneOf, type BattleScene } from '../rules/battleCues';
 import './BattleTableauField.css';
 import { BATTLE_TURN_PRIORITY } from '../battleTurnPriority';
 
@@ -54,10 +56,10 @@ const statusLine = (battle: BattleState, paused: boolean) =>
         : paused ? 'Paused' : battle.rules.traps ? 'Hit a slime, or trap the card it eyes'
           : battle.rules.hungry ? 'Snatch eyed cards, then strike' : 'Build charge, then drag an ability onto a slime';
 
-export function BattleTableauField({ hours, lights, onWatch, active, onRosterChange, heroStamina, onRedraw }: {
+export function BattleTableauField({ hours, lights, onWatch, active, onSceneChange, heroStamina, onRedraw }: {
   hours: number; lights: readonly TableLight[]; onWatch: () => void; active: boolean;
-  /** Ids of the units still standing, for the 3D arena. */
-  onRosterChange?: (ids: string[]) => void;
+  /** Units (fallen ones included) and recent events, for the 3D arena's animations. */
+  onSceneChange?: (scene: BattleScene) => void;
   /** The Hero's world stamina coming into the fight. */
   heroStamina?: number;
   /** An actor spent 1 stamina on a foundation redraw. */
@@ -87,9 +89,15 @@ export function BattleTableauField({ hours, lights, onWatch, active, onRosterCha
     return () => window.clearInterval(timer);
   }, [running]);
 
-  const roster = [...battle.party.filter((a) => a.hp > 0).map((a) => a.id), ...battle.foes.filter((f) => f.hp > 0).map((f) => f.id)].join(',');
-  const rosterChange = useRef(onRosterChange); rosterChange.current = onRosterChange;
-  useEffect(() => { rosterChange.current?.(roster ? roster.split(',') : []); }, [roster]);
+  // The arena hears about the battle only when a unit falls or something happens, not every tick.
+  const units = [...battle.party.map((a) => `${a.id}:${a.hp > 0}`), ...battle.foes.map((f) => `${f.id}:${f.hp > 0}`)].join(',');
+  const lastEvent = battle.events[battle.events.length - 1]?.id ?? 0;
+  const sceneChange = useRef(onSceneChange); sceneChange.current = onSceneChange;
+  const latest = useRef(battle); latest.current = battle;
+  useEffect(() => { sceneChange.current?.(sceneOf(latest.current)); }, [units, lastEvent]);
+  // Bites, flinches and falls on the cards themselves.
+  const fieldRef = useRef<HTMLElement>(null);
+  useBattleFx(fieldRef, battle.events);
 
   // Announce hits on the party and breaks, for screen readers.
   const announced = useRef(0);
@@ -249,7 +257,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onRosterCha
     })}
   </div>;
 
-  return <section className="battle-field" data-camera-background={active || undefined} data-first-team={BATTLE_TURN_PRIORITY[0]}
+  return <section ref={fieldRef} className="battle-field" data-camera-background={active || undefined} data-first-team={BATTLE_TURN_PRIORITY[0]}
     data-result={battle.result ?? undefined} data-aiming={aim ? aim.mode : undefined} aria-label="Battle foundations and shared woods tableau">
     <header className="battle-field__header">
       <h2>Dark Woods</h2>

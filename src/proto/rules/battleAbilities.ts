@@ -29,6 +29,8 @@ export type AbilityDef = {
   damageScale: number;
   /** Stagger per point of charge. */
   staggerScale: number;
+  /** How the attack looks when played: a lunging bite or a raking scratch. Presentation only. */
+  motion: 'bite' | 'scratch';
   tiers: readonly AbilityTier[];
 };
 
@@ -38,6 +40,7 @@ export const ABILITIES: Record<string, AbilityDef> = {
     actorId: 'hero',
     damageScale: 1,
     staggerScale: 1,
+    motion: 'bite',
     tiers: [
       { name: 'Nip', from: 1, staggerBonus: 0, knockback: 0 },
       { name: 'Bite', from: 4, staggerBonus: 1, knockback: 0.05 },
@@ -49,6 +52,7 @@ export const ABILITIES: Record<string, AbilityDef> = {
     actorId: 'mochi',
     damageScale: 0.5,
     staggerScale: 1.5,
+    motion: 'scratch',
     tiers: [
       { name: 'Scratch', from: 1, staggerBonus: 0, knockback: 0 },
       { name: 'Claw', from: 4, staggerBonus: 1, knockback: 0.05 },
