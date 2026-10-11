@@ -8,7 +8,7 @@ import { simulateSolverMove } from '../tableauSolver';
 const card = (rank: number, id = `c-${rank}`): Card => ({id,rank,sleep:'rest'});
 const restState = (): ProtoState => {
  const base=createInitialState();
- const state=activateBiome({...base,ordinaryDay:undefined,stamina:0,actorStamina:[0,4,4],worldActors:base.worldActors.map(actor=>({...actor,location:'foundation' as const,biomeId:'hero-den',foundationIndex:0}))},'hero-den');
+ const state=activateBiome({...base,ordinaryDay:undefined,inspiration:0,actorInspiration:[0,4,4],worldActors:base.worldActors.map(actor=>({...actor,location:'foundation' as const,biomeId:'hero-den',foundationIndex:0}))},'hero-den');
  return {...state,foundations:[{card:card(2,'receiver'),count:0,cards:[]}]};
 };
 const play = (state: ProtoState) => applyFoundationPlay(state,{columnIndex:0,foundationIndex:0});
@@ -17,8 +17,8 @@ describe('Hero’s Den finite rest', () => {
   it('bedtime has six five-card columns and a receiver plus 21 stock from one deck', () => {
     const state = activateBiome({...restState(),selectedBiomeId:null},'hero-den');
     expect(state.selectedBiomeId).toBe('hero-den');
-    expect(state.stamina).toBe(0);
-    expect(state.actorStamina[0]).toBe(0);
+    expect(state.inspiration).toBe(0);
+    expect(state.actorInspiration[0]).toBe(0);
     expect(state.foundations).toHaveLength(1);
     expect(state.worldActors[0]).toMatchObject({location:'foundation',biomeId:'hero-den',foundationIndex:0});
     expect(state.tableau.map(column=>column.length)).toEqual([5,5,5,5,5,5]);
@@ -36,7 +36,7 @@ describe('Hero’s Den finite rest', () => {
     expect(play({...next,foundations:[{card:card(13),count:1,cards:[]}],tableau:[[card(1)]]})).not.toBeNull();
     expect(play({...next,tableau:[[card(5)]]})).toBeNull();
   });
-  it('only removes a card, retains stock, restores capped stamina, and grants no work loot', () => {
+  it('only removes a card, retains stock, restores capped inspiration, and grants no work loot', () => {
     let state = {...restState(),energy:0};
     const stock = state.stock;
     const haul = {...state.haul};
@@ -46,7 +46,7 @@ describe('Hero’s Den finite rest', () => {
       expect(state.tableau.every(column=>column.length===0)).toBe(true);
       expect(state.stock).toEqual(stock);
     }
-    expect(state.stamina).toBe(state.maxStamina);
+    expect(state.inspiration).toBe(state.maxInspiration);
     expect(state.energy).toBe(0);
     expect(state.haul).toEqual(haul);
     expect(state.totalWorkCompleted).toBe(0);
@@ -59,7 +59,7 @@ describe('Hero’s Den finite rest', () => {
     expect(drawn.stock).toHaveLength(1);
     expect(drawn.foundations[0]!.card.rank).toBe(1);
     expect(drawn.foundations[0]!.cards).toHaveLength(0);
-    expect(drawn.stamina).toBe(0);
+    expect(drawn.inspiration).toBe(0);
     expect(play(drawn)).toBeNull();
     expect(play({...drawn,tableau:[[card(13)]]})).not.toBeNull();
     expect(cloneState(drawn).denRest?.started).toBe(true);
@@ -70,7 +70,7 @@ describe('Hero’s Den finite rest', () => {
     expect(drawn.stock).toHaveLength(0);
     expect(drawSleepStock(drawn)).toBe(drawn);
     const next = play(drawn)!.state;
-    expect(next.stamina).toBe(1);
+    expect(next.inspiration).toBe(1);
     expect(next.tableau[0]).toHaveLength(1);
   });
   it('rejects stock draws once cleared or unstaffed and preserves the finished deal on reopening', () => {
@@ -81,10 +81,10 @@ describe('Hero’s Den finite rest', () => {
     expect(play(unstaffed)).toBeNull();
     expect(activateBiome({...state,selectedBiomeId:null},'hero-den').foundations).toHaveLength(1);
   });
-  it('divine play clears a card without granting stamina', () => {
+  it('divine play clears a card without granting inspiration', () => {
     const state = {...restState(),tableau:[[card(3)]]};
     const next = applyFoundationPlay(state,{columnIndex:0,foundationIndex:0,divine:true})!.state;
-    expect(next.stamina).toBe(0);
+    expect(next.inspiration).toBe(0);
     expect(next.denRest?.restfulCards).toBe(0);
     expect(next.tableau[0]).toHaveLength(0);
   });

@@ -1,0 +1,382 @@
+
+ RUN  v2.1.9 C:/dev/Exploritaire
+
+ ✓ src/proto/biomeEdgeScenery.test.ts (13 tests) 19ms
+ ✓ src/proto/rules/fishing.test.ts (13 tests) 17ms
+ ❯ src/proto/rules/rules.test.ts (12 tests | 1 failed) 12ms
+   × recognizes any water biome as a pond, including the cell at -2,2 5ms
+     → expected false to be true // Object.is equality
+ ✓ src/proto/directionalSprites.test.ts (7 tests) 741ms
+   ✓ covers the complete reference silhouette with the triangulated joint regions 718ms
+ ✓ src/proto/rules/skirmish.test.ts (10 tests) 372ms
+ ✓ tests/engine.combat-actions.test.ts (8 tests) 4ms
+ ✓ src/proto/protoLighting.test.ts (14 tests) 4ms
+ ✓ src/proto/tileLabels.test.ts (74 tests) 20ms
+ ❯ src/proto/tileDiscovery.test.ts (7 tests | 3 failed) 6ms
+   × actor tile discovery > keeps woods, ponds and mountains discoverable by proximity while roads require entry 1ms
+     → Cannot read properties of undefined (reading 'position')
+   × actor tile discovery > keeps distant southern rows hidden and retains initial nearby discoveries 2ms
+     → expected [] to have a length of 60 but got +0
+   × actor tile discovery > handles arrivals and multiple actors without activating neighbouring deals 0ms
+     → Cannot read properties of undefined (reading 'id')
+ ✓ src/proto/gridPathfinding.test.ts (9 tests) 5ms
+ ✓ src/proto/rules/rest.test.ts (9 tests) 5ms
+ ✓ src/proto/rules/fishFight.test.ts (8 tests) 177ms
+ ❯ src/proto/roadTiles.test.ts (4 tests | 3 failed) 5ms
+   × road exploration > places the requested orientations and explores the occupied Hero’s Den 3ms
+     → expected [] to deeply equal [ [ { x: +0, y: +0 }, …(2) ], …(1) ]
+   × path exploration deals > opens a neutral path deal on arrival and reaches full exploration only after all cards clear 1ms
+     → Cannot read properties of undefined (reading 'tileType')
+   × path exploration deals > creates unique deals without overlapping table cells 1ms
+     → expected 8 to be 225 // Object.is equality
+ ✓ src/proto/atmosphere.test.ts (7 tests) 3ms
+ ✓ src/proto/protoCrafting.test.ts (6 tests) 2ms
+ ✓ src/proto/protoQuestDeals.test.ts (5 tests) 4ms
+ ✓ tests/engine.realtime-arbiter.test.ts (7 tests) 1ms
+ ✓ tests/golf.tutorial-seeds.test.ts (7 tests) 7ms
+ ✓ src/proto/quadrupedSprite.test.ts (4 tests) 5ms
+ ✓ src/proto/actorOrientation.test.ts (5 tests) 20ms
+ ✓ tests/engine.rarity-loadouts.test.ts (6 tests) 1ms
+ ✓ src/proto/tableauSolver.test.ts (5 tests) 2ms
+ ✓ src/proto/silhouetteRelief.test.ts (3 tests) 3ms
+ ✓ src/prototype/fire/rules.test.ts (7 tests) 1ms
+ ❯ src/proto/biomeArrival.test.ts (28 tests | 22 failed) 14ms
+   × biome arrival wiring > pond to pond loads the destination for table and foundation actors 1ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > pond to woods-alpha loads the destination for table and foundation actors 1ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > pond to woods-east loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > pond to woods-danger loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-alpha to pond loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-alpha to woods-alpha loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-alpha to woods-east loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-alpha to woods-danger loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-east to pond loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-east to woods-alpha loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-east to woods-east loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-east to woods-danger loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-danger to pond loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-danger to woods-alpha loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-danger to woods-east loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-danger to woods-danger loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-beta to pond loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-beta to woods-alpha loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-beta to woods-east loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > woods-beta to woods-danger loads the destination for table and foundation actors 0ms
+     → Cannot read properties of undefined (reading 'position')
+   × biome arrival wiring > ignores occupants of the same slot in other biomes 1ms
+     → expected { id: 'hero', label: 'Hero', …(3) } to match object { location: 'foundation', …(1) }
+(6 matching properties omitted from actual)
+   × biome arrival wiring > does not clear a different selected biome foundation when an actor leaves 0ms
+     → Cannot set properties of undefined (setting 'count')
+ ✓ src/proto/rules/ordinaryDay.test.ts (3 tests) 2ms
+ ✓ src/proto/volumetricAtmosphere.test.ts (4 tests) 6ms
+ ✓ src/proto/actorOcclusion.test.ts (5 tests) 1ms
+ ✓ src/proto/tableTilt.test.ts (4 tests) 1ms
+ ✓ src/proto/gridCoordinates.test.ts (5 tests) 1ms
+ ✓ src/proto/combatOpening.test.ts (3 tests) 2ms
+ ✓ src/prototype/engine/game.test.ts (4 tests) 1ms
+ ❯ src/proto/protoData.test.ts (5 tests | 1 failed) 1ms
+   × classic plus data contracts > assigns Jarn the cleric-owned Hallowed Path mobility 1ms
+     → expected 'Jimothy' to be 'Jarn' // Object.is equality
+ ✓ src/proto/components/TableActorSprite.test.ts (3 tests) 1ms
+ ✓ src/proto/worldPathfinding.test.ts (5 tests) 1ms
+ ✓ src/prototype/fire/fireLighting.test.ts (3 tests) 1ms
+ ❯ src/prototype/fire/PannableCanvas.test.ts (5 tests | 1 failed) 1ms
+   × hearth direction indicator > pins an offscreen hearth finder to the viewport edge and points at the target 1ms
+     → expected { x: 528, y: 120, angle: +0 } to match object { x: 550, y: 120 }
+(1 matching property omitted from actual)
+ ✓ src/proto/biomeFlags.test.ts (4 tests) 1ms
+ ✓ src/proto/worldBounds.test.ts (3 tests) 1ms
+ ✓ src/proto/mountainTiles.test.ts (1 test) 1ms
+ ✓ src/hooks/cameraInteractionLock.test.ts (4 tests) 0ms
+ ✓ src/proto/tableauLighting.test.ts (2 tests) 1ms
+ ✓ src/proto/staminaTesting.test.ts (2 tests) 1ms
+ ✓ src/proto/protoTransport.test.ts (3 tests) 0ms
+ ✓ src/proto/sceneryFootprint.test.ts (2 tests) 7ms
+ ✓ src/proto/questProgress.test.ts (3 tests) 0ms
+ ✓ src/proto/tableauDepartures.test.ts (1 test) 1ms
+ ✓ src/prototype/fire/cardPhysics.test.ts (3 tests) 1ms
+ ✓ tests/golf.rng-rescue.test.ts (2 tests) 1ms
+ ✓ src/proto/restQuest.test.ts (1 test) 1ms
+ ✓ src/golf/reserve/cardPatternTriggers.test.ts (2 tests) 0ms
+ ✓ src/proto/tableCardPlacement.test.ts (2 tests) 0ms
+ ❯ src/proto/rules/playtestOverrides.test.ts (1 test | 1 failed) 1ms
+   × rest respects session overrides above and below authored caps 1ms
+     → Cannot read properties of undefined (reading 'length')
+ ✓ src/proto/components/TableauCardArea.test.ts (1 test) 0ms
+ ✓ src/proto/components/PlayingCardStack.test.ts (1 test) 0ms
+ ✓ src/proto/components/QuestField.test.ts (1 test) 0ms
+ ✓ src/prototype/fire/tableGrid.test.ts (2 tests) 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 32 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > pond to pond loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > pond to woods-alpha loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > pond to woods-east loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > pond to woods-danger loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-alpha to pond loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-alpha to woods-alpha loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-alpha to woods-east loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-alpha to woods-danger loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-east to pond loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-east to woods-alpha loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-east to woods-east loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-east to woods-danger loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-danger to pond loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-danger to woods-alpha loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-danger to woods-east loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-danger to woods-danger loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-beta to pond loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-beta to woods-alpha loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-beta to woods-east loads the destination for table and foundation actors
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > woods-beta to woods-danger loads the destination for table and foundation actors
+TypeError: Cannot read properties of undefined (reading 'position')
+ ❯ src/proto/biomeArrival.test.ts:14:84
+     12|           worldActors: state.worldActors.map((actor, index) => index =…
+     13|         const target = state.biomeTiles.find(tile => tile.id === to)!;
+     14|         const next = arriveActorAtBiome(state, state.worldActors[0].id…
+       |                                                                                    ^
+     15|         expect(next.selectedBiomeId).toBe(to);
+     16|         expect(next.tableau).toEqual(target.tableau);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/32]⎯
+
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > ignores occupants of the same slot in other biomes
+AssertionError: expected { id: 'hero', label: 'Hero', …(3) } to match object { location: 'foundation', …(1) }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  Object {
+-   "foundationIndex": 0,
+-   "location": "foundation",
++   "location": "table",
+  }
+
+ ❯ src/proto/biomeArrival.test.ts:35:33
+     33|     state.worldActors.push({ ...state.worldActors[0], id: 'other' as '…
+     34|     const next = arriveActorAtBiome(state, state.worldActors[0].id, 'w…
+     35|     expect(next.worldActors[0]).toMatchObject({ location: 'foundation'…
+       |                                 ^
+     36|   });
+     37|   it('does not clear a different selected biome foundation when an act…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/32]⎯
+
+ FAIL  src/proto/biomeArrival.test.ts > biome arrival wiring > does not clear a different selected biome foundation when an actor leaves
+TypeError: Cannot set properties of undefined (setting 'count')
+ ❯ src/proto/biomeArrival.test.ts:40:27
+     38|     let state = activateBiome(createInitialState(), 'woods-east');
+     39|     state.worldActors[0] = { ...state.worldActors[0], location: 'found…
+     40|     state.foundations[0]!.count = 3;
+       |                           ^
+     41|     const next = arriveActorAtBiome(state, state.worldActors[0].id, 'w…
+     42|     expect(next.foundations[0]!.count).toBe(3);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/32]⎯
+
+ FAIL  src/proto/protoData.test.ts > classic plus data contracts > assigns Jarn the cleric-owned Hallowed Path mobility
+AssertionError: expected 'Jimothy' to be 'Jarn' // Object.is equality
+
+Expected: "Jarn"
+Received: "Jimothy"
+
+ ❯ src/proto/protoData.test.ts:29:25
+     27|     const jarn = PROTO_ACTORS.find((actor) => actor.id === 'jarnathan'…
+     28| 
+     29|     expect(jarn?.label).toBe('Jarn');
+       |                         ^
+     30|     expect(jarn?.mobility).toEqual({ kind: 'hallowed_path', label: 'Ha…
+     31|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/32]⎯
+
+ FAIL  src/proto/roadTiles.test.ts > road exploration > places the requested orientations and explores the occupied Hero’s Den
+AssertionError: expected [] to deeply equal [ [ { x: +0, y: +0 }, …(2) ], …(1) ]
+
+- Expected
++ Received
+
+- Array [
+-   Array [
+-     Object {
+-       "x": 0,
+-       "y": 0,
+-     },
+-     "straight",
+-     0,
+-   ],
+-   Array [
+-     Object {
+-       "x": 48,
+-       "y": 48,
+-     },
+-     "straight",
+-     90,
+-   ],
+- ]
++ Array []
+
+ ❯ src/proto/roadTiles.test.ts:13:87
+     11|   it('places the requested orientations and explores the occupied Hero…
+     12|     const roads = createInitialState().biomeTiles.filter(tile => tile.…
+     13|     expect(roads.map(tile => [tile.position, tile.road?.shape, tile.ro…
+       |                                                                                       ^
+     14|       [{ x: 0, y: 0 }, 'straight', 0], [{ x: 48, y: 48 }, 'straight', …
+     15|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/32]⎯
+
+ FAIL  src/proto/roadTiles.test.ts > path exploration deals > opens a neutral path deal on arrival and reaches full exploration only after all cards clear
+TypeError: Cannot read properties of undefined (reading 'tileType')
+ ❯ src/proto/roadTiles.test.ts:45:17
+     43|     let state = createInitialState();
+     44|     const tile = state.biomeTiles.find(tile => tile.id === 'unexplored…
+     45|     expect(tile.tileType).toBe('unexplored');
+       |                 ^
+     46|     expect(biomeExploration(tile.flags, 0)).toBe(0);
+     47|     expect(tile.tableau.flat().every(card => !card.resource && !card.e…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/32]⎯
+
+ FAIL  src/proto/roadTiles.test.ts > path exploration deals > creates unique deals without overlapping table cells
+AssertionError: expected 8 to be 225 // Object.is equality
+
+- Expected
++ Received
+
+- 225
++ 8
+
+ ❯ src/proto/roadTiles.test.ts:71:97
+     69|   it('creates unique deals without overlapping table cells', () => {
+     70|     const state = createInitialState();
+     71|     expect(new Set(state.biomeTiles.map(tile => `${tile.position.x},${…
+       |                                                                                                 ^
+     72|     const cards = state.biomeTiles.filter(tile => tile.tileType || til…
+     73|     expect(new Set(cards.map(card => card.id)).size).toBe(cards.length…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/32]⎯
+
+ FAIL  src/proto/tileDiscovery.test.ts > actor tile discovery > keeps woods, ponds and mountains discoverable by proximity while roads require entry
+TypeError: Cannot read properties of undefined (reading 'position')
+ ❯ src/proto/tileDiscovery.test.ts:24:53
+ Test Files  7 failed | 50 passed (57)
+     22|     for (const id of ['woods-alpha', 'pond', 'road-east', 'mountain-1-…
+     23|       const tile = tiles.find(tile => tile.id === id)!;
+     24|       const nearby = discoverTiles(tiles, { x: tile.position.x - 48, y…
+       |                                                     ^
+     25|       if (tile.road) expect(nearby).toBe(tile);
+     26|       const result = tile.road ? discoverTiles(tiles, tile.position).f…
+      Tests  32 failed | 336 passed (368)
+   Start at  21:33:13
+   Duration  4.35s (transform 1.34s, setup 0ms, collect 2.26s, tests 1.49s, environment 0ms, prepare 80ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/32]⎯
+
+ FAIL  src/proto/tileDiscovery.test.ts > actor tile discovery > keeps distant southern rows hidden and retains initial nearby discoveries
+AssertionError: expected [] to have a length of 60 but got +0
+
+- Expected
++ Received
+
+- 60
++ 0
+
+ ❯ src/proto/tileDiscovery.test.ts:36:22
+     34|     const state = createInitialState();
+     35|     const southern = state.biomeTiles.filter(tile => tile.position.y >…
+     36|     expect(southern).toHaveLength(60);
+       |                      ^
+     37|     expect(southern.every(tile => tile.flags?.includes('unexplored')))…
+     38|     for (const id of ['unexplored--1-1', 'unexplored-0-1', 'road-east'…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/32]⎯
+
+ FAIL  src/proto/tileDiscovery.test.ts > actor tile discovery > handles arrivals and multiple actors without activating neighbouring deals
+TypeError: Cannot read properties of undefined (reading 'id')
+ ❯ src/proto/tileDiscovery.test.ts:71:54
+     69|     let state = createInitialState();
+     70|     const target = state.biomeTiles.find(tile => tile.id === 'woods-al…
+     71|     state = arriveActorAtBiome(state, 'hero', target.id, target.positi…
+       |                                                      ^
+     72|     expect(state.selectedBiomeId).toBe(target.id);
+     73|     expect(state.biomeTiles.find(tile => tile.id === 'pond')!.flags).t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/32]⎯
+
+ FAIL  src/prototype/fire/PannableCanvas.test.ts > hearth direction indicator > pins an offscreen hearth finder to the viewport edge and points at the target
+AssertionError: expected { x: 528, y: 120, angle: +0 } to match object { x: 550, y: 120 }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  Object {
+-   "x": 550,
++   "x": 528,
+    "y": 120,
+  }
+
+ ❯ src/prototype/fire/PannableCanvas.test.ts:29:23
+     27|   it('pins an offscreen hearth finder to the viewport edge and points …
+     28|     const indicator = getOffscreenTargetIndicator({ x: 900, y: -80, sc…
+     29|     expect(indicator).toMatchObject({ x: 550, y: 120 });
+       |                       ^
+     30|     expect(indicator?.angle).toBeCloseTo(0);
+     31|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/32]⎯
+
+ FAIL  src/proto/rules/playtestOverrides.test.ts > rest respects session overrides above and below authored caps
+TypeError: Cannot read properties of undefined (reading 'length')
+ ❯ Module.applySleepPlay src/proto/rules/rest.ts:36:30
+     34| export const applySleepPlay = (state: ProtoState, columnIndex: number,…
+     35|   const column = state.tableau[columnIndex];
+     36|   const card = column[column.length - 1];
+       |                              ^
+     37|   const restful = card.sleep === 'rest';
+     38|   const rest = state.denRest ?? { restfulCards: 0, disruptions: 0 };
+ ❯ src/proto/rules/playtestOverrides.test.ts:9:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/32]⎯
+
+ FAIL  src/proto/rules/rules.test.ts > recognizes any water biome as a pond, including the cell at -2,2
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/proto/rules/rules.test.ts:175:38
+    173|   const pond = { ...state.biomeTiles.find((tile) => tile.terrain === '…
+    174|   const tiles = [...state.biomeTiles, pond];
+    175|   expect(isPondTile(pond.id, tiles)).toBe(true);
+       |                                      ^
+    176|   expect(isPondTile('pond', tiles)).toBe(true);
+    177|   expect(isPondTile('woods-alpha', tiles)).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/32]⎯
+

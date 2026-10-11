@@ -1,7 +1,7 @@
-import { ACTOR_STAMINA_MAX, type Card, type ProtoState } from '../protoState';
+import { ACTOR_INSPIRATION_MAX, type Card, type ProtoState } from '../protoState';
 
 export const SLEEP_ICONS = { rest: '💤', noise: '🔔', itch: '🦟' } as const;
-export const SLEEP_LABELS = { rest: 'Rest · +1 stamina', noise: 'Noise · +1 wake', itch: 'Itch · +1 wake' } as const;
+export const SLEEP_LABELS = { rest: 'Rest · +1 inspiration', noise: 'Noise · +1 wake', itch: 'Itch · +1 wake' } as const;
 export const isDenRest = (state: ProtoState) => state.scene === 'exploration' && state.selectedBiomeId === 'hero-den';
 
 export const REST_COLUMNS = 6;
@@ -40,8 +40,8 @@ export const applySleepPlay = (state: ProtoState, columnIndex: number, foundatio
     tableau: state.tableau.map((column, index) => index === columnIndex ? column.slice(0, -1) : column),
     foundations: state.foundations.map((slot, index) => index === foundationIndex && slot
       ? { card, count: slot.count + 1, cards: [...slot.cards, card] } : slot),
-    stamina: divine ? state.stamina : Math.min(state.maxStamina, state.stamina + (restful ? 1 : 0)),
-    actorStamina: divine ? state.actorStamina : state.actorStamina.map((value, index) => index === 0 ? Math.min(state.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX, value + (restful ? 1 : 0)) : value),
+    inspiration: divine ? state.inspiration : Math.min(state.maxInspiration, state.inspiration + (restful ? 1 : 0)),
+    actorInspiration: divine ? state.actorInspiration : state.actorInspiration.map((value, index) => index === 0 ? Math.min(state.actorMaxInspiration?.[0] ?? ACTOR_INSPIRATION_MAX, value + (restful ? 1 : 0)) : value),
     denRest: { ...rest, started: true, receivingCard: card, restfulCards: rest.restfulCards + (!divine && restful ? 1 : 0), disruptions: 0 },
   };
 };

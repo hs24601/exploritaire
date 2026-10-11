@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { POND_BAIT_PER_DAY, POND_CASTS_PER_DAY, POND_FISH_PER_DAY, POND_HAND_SIZE, POND_WATER_SIZE, GLOWFISH_LIGHT_COLOR, GLOWFISH_LUMINOSITY, GLOWFISH_MAX_STAMINA_BONUS, GLOWFISH_CHANCE, POND_SPECIES, castBait, catchForRank, createPondDeal, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, pondFinished, restockPond, rippleSize, type PondState } from './fishing';
+import { POND_BAIT_PER_DAY, POND_CASTS_PER_DAY, POND_FISH_PER_DAY, POND_HAND_SIZE, POND_WATER_SIZE, GLOWFISH_LIGHT_COLOR, GLOWFISH_LUMINOSITY, GLOWFISH_MAX_INSPIRATION_BONUS, GLOWFISH_CHANCE, POND_SPECIES, castBait, catchForRank, createPondDeal, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, pondFinished, restockPond, rippleSize, type PondState } from './fishing';
 import { isAdjacentRank } from './setup';
 
 const biteFor = (pond: PondState) => pond.hand.find((card) => pond.water.some((fish) => fish.rank === card.rank));
@@ -75,7 +75,7 @@ describe('pond fishing', () => {
     const species = Array.from({ length: 13 }, (_, index) => catchForRank(index + 1));
     expect(new Set(species).size).toBe(13);
     expect([species[0], species[12]]).toEqual(['minnow', 'kingfish']);
-    expect(POND_SPECIES.every((entry, index) => index === 0 || entry.stamina >= POND_SPECIES[index - 1].stamina)).toBe(true);
+    expect(POND_SPECIES.every((entry, index) => index === 0 || entry.inspiration >= POND_SPECIES[index - 1].inspiration)).toBe(true);
   });
 
   it('a lucky roll sometimes brings up a glowfish with the catch, the same way for the same pond', () => {
@@ -121,31 +121,31 @@ describe('pond fishing', () => {
   });
 
   describe('eating the catch', () => {
-    const eater = () => ({ stamina: 3, maxStamina: 8, actorStamina: [2, 4, 4], worldActors: [{ id: 'hero' as const, label: 'Hero', location: 'table' as const, position: { x: 0, y: 0 }, luminosity: 0.3 }], glowfishGlow: false });
+    const eater = () => ({ inspiration: 3, maxInspiration: 8, actorInspiration: [2, 4, 4], worldActors: [{ id: 'hero' as const, label: 'Hero', location: 'table' as const, position: { x: 0, y: 0 }, luminosity: 0.3 }], glowfishGlow: false });
 
-    it('a fish restores its species\' stamina to the party and the actor', () => {
-      expect(eatPondCatch(eater(), 'minnow', 'hero', 4)).toMatchObject({ stamina: 4, actorStamina: [3, 4, 4] });
-      expect(eatPondCatch(eater(), 'bass', 'hero', 4)).toMatchObject({ stamina: 5, actorStamina: [4, 4, 4] });
+    it('a fish restores its species\' inspiration to the party and the actor', () => {
+      expect(eatPondCatch(eater(), 'minnow', 'hero', 4)).toMatchObject({ inspiration: 4, actorInspiration: [3, 4, 4] });
+      expect(eatPondCatch(eater(), 'bass', 'hero', 4)).toMatchObject({ inspiration: 5, actorInspiration: [4, 4, 4] });
       const fed = eatPondCatch(eater(), 'pike', 'hero', 4);
-      expect(fed).toMatchObject({ stamina: 6, maxStamina: 8, actorStamina: [4, 4, 4], glowfishGlow: false });
+      expect(fed).toMatchObject({ inspiration: 6, maxInspiration: 8, actorInspiration: [4, 4, 4], glowfishGlow: false });
       expect(fed.worldActors[0].luminosity).toBe(0.3);
     });
 
-    it('a glowfish raises max stamina and the eater\'s light until the glow ends', () => {
+    it('a glowfish raises max inspiration and the eater\'s light until the glow ends', () => {
       const fed = eatPondCatch(eater(), 'glowfish', 'hero', 4);
-      expect(fed.maxStamina).toBe(8 + GLOWFISH_MAX_STAMINA_BONUS);
-      expect(fed.stamina).toBe(3 + 1 + GLOWFISH_MAX_STAMINA_BONUS);
+      expect(fed.maxInspiration).toBe(8 + GLOWFISH_MAX_INSPIRATION_BONUS);
+      expect(fed.inspiration).toBe(3 + 1 + GLOWFISH_MAX_INSPIRATION_BONUS);
       expect(fed.worldActors[0]).toMatchObject({ luminosity: GLOWFISH_LUMINOSITY, lightColor: GLOWFISH_LIGHT_COLOR });
-      expect(eatPondCatch(fed, 'glowfish', 'hero', 4).maxStamina).toBe(fed.maxStamina);
-      const night = endGlowfishGlow({ ...fed, stamina: fed.maxStamina }, 0.3);
-      expect(night).toMatchObject({ maxStamina: 8, stamina: 8, glowfishGlow: false });
+      expect(eatPondCatch(fed, 'glowfish', 'hero', 4).maxInspiration).toBe(fed.maxInspiration);
+      const night = endGlowfishGlow({ ...fed, inspiration: fed.maxInspiration }, 0.3);
+      expect(night).toMatchObject({ maxInspiration: 8, inspiration: 8, glowfishGlow: false });
       expect(night.worldActors[0]).toMatchObject({ luminosity: 0.3, lightColor: undefined });
       expect(endGlowfishGlow(night, 0.3)).toBe(night);
     });
 
     it('a Kingfish is a feast: the party and the eater are fully restored', () => {
       const fed = eatPondCatch(eater(), 'kingfish', 'hero', 4);
-      expect(fed).toMatchObject({ stamina: 8, maxStamina: 8, actorStamina: [4, 4, 4], glowfishGlow: false });
+      expect(fed).toMatchObject({ inspiration: 8, maxInspiration: 8, actorInspiration: [4, 4, 4], glowfishGlow: false });
     });
   });
 });

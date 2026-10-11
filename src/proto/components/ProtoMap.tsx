@@ -18,7 +18,7 @@ import { ACTOR_SCALE_REFERENCE, immersionActorScale } from '../actorScale';
 import { RoadTileArt } from './RoadTileArt';
 import { HeroDenRoof } from './HeroDenRoof';
 import type { RoadTile } from '../roadTiles';
-import { canSpendStamina } from '../staminaTesting';
+import { canSpendInspiration } from '../inspirationTesting';
 import { TABLE_GRID, TRUE_CENTER, screenToWorld, type GridCell } from '../gridCoordinates';
 import { BLOCKED_REGIONS, blockedSolids, isBlockedPoint } from '../worldBounds';
 import { findGridPath, pathTime, pointAlongTimedPath, remainingPath, type TimedPoint } from '../gridPathfinding';
@@ -65,7 +65,7 @@ export type ProtoBiomeTile = {
   threat?: 'none' | 'low' | 'high';
   /** Water tiles are fished (the pond) rather than dealt as a tableau. */
   terrain?: 'woods' | 'water';
-  tileType?: 'unexplored' | 'path' | 'hero-den' | 'impassable-mountain' | 'berry-patch';
+  tileType?: 'unexplored' | 'path' | 'dirt' | 'hero-den' | 'impassable-mountain' | 'berry-patch';
   road?: RoadTile;
   /** Dangerous tiles have a printed warning flat, embers and mist in immersion. */
   danger?: boolean;
@@ -80,7 +80,7 @@ export type ProtoBiomeTile = {
 
 export type ProtoWorldActor = {
   awakeAtHome?: boolean;
-  id: 'hero';
+  id: 'hero' | 'mochi';
   label: string;
   location?: 'table' | 'foundation';
   biomeId?: string;
@@ -180,7 +180,7 @@ type ProtoMapProps = {
   onPlayBuildCard?: (stackId: string, rank: number) => void;
   onSolveBuildStep?: (stackId: string, divine: boolean) => SolveStepResult;
   onStartSolver?: (divine: boolean) => void;
-  actorStamina?: number;
+  actorInspiration?: number;
   onActorDragStart?: (actorId: string) => void;
   questCards?: PlacedQuestCard[];
   questTitles?: string[];
@@ -219,7 +219,7 @@ export const ProtoMap = ({
   onPlayBuildCard,
   onSolveBuildStep,
   onStartSolver,
-  actorStamina = 0,
+  actorInspiration = 0,
   onActorDragStart,
   onInspectActor,
   onInspectTile,
@@ -299,6 +299,7 @@ export const ProtoMap = ({
     initialState: { x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE },
   });
   const getCameraTilt = useCallback((live: { scale: number }) => tableCameraTilt(viewportHeight, live.scale), [viewportHeight]);
+  const [groundWorld, setGroundWorld] = useState<HTMLDivElement | null>(null);
   const volumeCamera = useMemo(() => ({ getCamera: camera.getLiveCamera, onCameraFrame: camera.onCameraFrame,
     getElevation: (live: { scale: number }) => 90 - getCameraTilt(live).angle }), [camera.getLiveCamera, camera.onCameraFrame, getCameraTilt]);
   useEffect(() => {
@@ -844,14 +845,20 @@ export const ProtoMap = ({
   // canvas effect only reruns when a light actually changes.
   // A travelling actor's light moves with it along its path, frame by frame.
   const travelPosition = travel ? pointAlongTimedPath(travel.path, travel.progress) : null;
-  const actorIsInDen = (actor: ProtoWorldActor, position: { x: number; y: number }) => actor.id === 'hero'
-    && biomeTiles.some(tile => tile.tileType === 'hero-den'
+  const actorIsInDen = (_actor: ProtoWorldActor, position: { x: number; y: number }) => biomeTiles.some(tile => tile.tileType === 'hero-den'
       && TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position)) === TABLE_GRID.reference(TABLE_GRID.atWorld(position)));
+  // Den artwork is a presentation pose, independent of the bedtime gameplay state.
+  // Only actors with both authored views can replace their normal map sprite.
+  const denRestActors: readonly string[] = ['hero', 'mochi'];
   const actorIsSleeping = (actor: ProtoWorldActor, position: { x: number; y: number }) => actorIsInDen(actor, position)
-    && !actor.awakeAtHome
+    && denRestActors.includes(actor.id)
     && travel?.actorId !== actor.id;
+  const actorIsCuddling = (actor: ProtoWorldActor, position: { x: number; y: number }) => actorIsSleeping(actor, position)
+    && actors.some(other => other.id !== actor.id && actorIsSleeping(other, getActorWorldPosition(other))
+      && TABLE_GRID.reference(TABLE_GRID.atWorld(getActorWorldPosition(other))) === TABLE_GRID.reference(TABLE_GRID.atWorld(position)));
+  const sleepingArtName = (actor: ProtoWorldActor, position: { x: number; y: number }) => actorIsCuddling(actor, position) ? 'hero-mochi' : actor.id;
   const actorArt = (actor: ProtoWorldActor, position: { x: number; y: number }) => actorIsSleeping(actor, position)
-    ? `${import.meta.env.BASE_URL}assets/actors/hero-sleeping.png`
+    ? `${import.meta.env.BASE_URL}assets/actors/${sleepingArtName(actor, position)}-sleeping.png`
     : actor.id === 'hero' && travel?.actorId !== actor.id
       ? `${import.meta.env.BASE_URL}assets/actors/hero-sitting.png` : actor.sprite;
   const actorLights = actors.flatMap(actor => actorLight(actor.id, travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor), actor.luminosity, actor.lightColor) ?? []);
@@ -1226,6 +1233,7 @@ export const ProtoMap = ({
           className={`proto-table-stage absolute${staged ? ' proto-table-stage--tilted' : ''}`}
           style={{
             inset: staged ? '-100%' : 0,
+            zIndex: 0,
             transform: stageTransform,
             transition: tilted && airReady || !staged ? 'none' : undefined,
             ['--table-tilt' as string]: `${tiltAngle}deg`,
@@ -1247,6 +1255,14 @@ export const ProtoMap = ({
             backgroundSize: `calc(${CLASSICPLUS_GRID_SIZE}px * var(--camera-scale, ${camera.cameraState.scale})) calc(${CLASSICPLUS_GRID_SIZE}px * var(--camera-scale, ${camera.cameraState.scale}))`,
           }}
         />
+        <div className="proto-table-plane absolute" style={{ inset: staged ? '33.3333%' : 0 }}>
+          <div ref={setGroundWorld} data-ground-world="true" className="proto-map-world absolute" style={{ left: '-150%', top: '-150%', width: '400%', height: '400%', transformOrigin: 'center center', transform: 'var(--camera-transform)', transformStyle: 'flat' }} />
+        </div>
+        </div>
+        {/* Composite ground before physical solids. A depth-bearing solid's
+            projected near half extends below its billboard foot; a coplanar
+            ground layer would slice those pixels off at the table plane. */}
+        <div className={`proto-table-stage absolute${staged ? ' proto-table-stage--tilted' : ''}`} style={{ inset: staged ? '-100%' : 0, zIndex: 1, pointerEvents: 'none', transform: stageTransform, transition: tilted && airReady || !staged ? 'none' : undefined, ['--table-tilt' as string]: `${tiltAngle}deg` }}>
         <div className="proto-table-plane absolute" style={{ inset: staged ? '33.3333%' : 0 }}>
         <div
           ref={camera.contentRef}
@@ -1275,7 +1291,7 @@ export const ProtoMap = ({
             onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
             className="proto-table-lamp absolute z-10 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full"
             style={{ left: 'calc(50% + ' + light.position.x + 'px)', top: 'calc(50% + ' + light.position.y + 'px)', ...faceCameraFlat, ...standee() }}>🕯️</div>)}
-          {questCards.filter(placement => placement.questIndex >= 0).map(placement => <TableQuestCard key={placement.questIndex} placement={placement} title={questTitles[placement.questIndex]} text={questTexts[placement.questIndex]} rewardLabel={questRewardLabels[placement.questIndex]} staminaReward={questRewardLabels[placement.questIndex] ? 0 : undefined} redeemed={placement.questIndex < questClaims} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale} toWorld={worldPointFromClient}
+          {questCards.filter(placement => placement.questIndex >= 0).map(placement => <TableQuestCard key={placement.questIndex} placement={placement} title={questTitles[placement.questIndex]} text={questTexts[placement.questIndex]} rewardLabel={questRewardLabels[placement.questIndex]} inspirationReward={questRewardLabels[placement.questIndex] ? 0 : undefined} redeemed={placement.questIndex < questClaims} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale} toWorld={worldPointFromClient}
             onMove={(position,tilt)=>onMoveQuest?.(placement.questIndex,position,tilt)}
             solids={[
               ...blockedSolids(),
@@ -1287,7 +1303,7 @@ export const ProtoMap = ({
             ]} />)}
           {/* Static ground is one flat plane. It inherits neither billboard
               camera variables nor the 3D layer required by upright scenery. */}
-          <div className="proto-neutral-ground absolute inset-0" style={{
+          {groundWorld && createPortal(<div className="proto-neutral-ground absolute inset-0" style={{
             ['--camera-transform' as string]: 'none', ['--camera-yaw' as string]: '0deg',
             ['--camera-x' as string]: '0px', ['--camera-y' as string]: '0px',
             ['--camera-scale' as string]: '1', ['--camera-sx' as string]: '0px',
@@ -1297,7 +1313,7 @@ export const ProtoMap = ({
             {/* Tilted, the range keeps its solid rock floor (without the overhead peaks) under the standing peaks. */}
             {terrainRegions.map(region => <ConnectedTerrainArt key={region.id} region={region} pieces={terrainPieces} peaks={!upright}
               sprite={`${import.meta.env.BASE_URL}assets/biomes/impassable-mountain_topdown.svg`} rockColor="#354154" />)}
-          </div>
+          </div>, groundWorld)}
           {biomeTiles.map((tile) => (
             (() => {
               const footprint = getBiomeTileFootprint(tile.gridSize);
@@ -1326,7 +1342,7 @@ export const ProtoMap = ({
                 <React.Fragment key={tile.id}>
                 {/* Terrain shares the camera surface; only movable pieces
                     claim pointer gestures. The camera suppresses drag clicks. */}
-                <button
+                {groundWorld && createPortal(<button
                   data-board-piece="tile"
                   data-tabletop={!upright || undefined}
                   type="button"
@@ -1363,13 +1379,16 @@ export const ProtoMap = ({
                   }}
                   aria-label={unexplored ? 'Unexplored biome' : tile.danger ? `${tile.title}, danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
                 >
+                  {!unexplored && tile.tileType === 'hero-den' && <img data-den-ground="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', transform: 'rotate(180deg)' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-ground-v3.png`} alt="" draggable={false} />}
+                  {!unexplored && tile.tileType === 'dirt' && <img data-dirt-ground="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated' }} src={`${import.meta.env.BASE_URL}assets/biomes/dirt-ground.png`} alt="" draggable={false} />}
+                  {!unexplored && tile.tileType === 'berry-patch' && <img data-berry-ground="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated' }} src={`${import.meta.env.BASE_URL}assets/biomes/berry-patch-ground.svg`} alt="" draggable={false} />}
                   {unexplored ? <span aria-hidden="true" className="absolute inset-0" style={{ background: '#182221', filter: 'var(--silhouette-filter) grayscale(1) brightness(0.45)' }} />
                     : tile.road ? <RoadTileArt road={tile.road} exploration={explored} brightness={upright ? standeeLighting(timeOfDay, tile.position, 0, lightSources).brightness : 1} />
-                    : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v2.png`} alt="" draggable={false} />
+                    : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain', transform: 'rotate(180deg)' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v3.png`} alt="" draggable={false} />
                     : tile.tileType === 'berry-patch' ? !upright && <img data-berry-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/berry-patch-topdown.svg`} alt="" draggable={false} />
                     : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <BiomeTopDownArt terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /> : null}
                   <span className="proto-tile-title-anchor">{!compositeTileTitle(tile) && !unexplored && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={footprint.width} height={footprint.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />}</span>
-                </button>
+                </button>, groundWorld)}
                 {upright && !unexplored && !tile.tileType && !tile.road && tile.unlocked !== false ? <BiomeEdgeScenery
                   tileId={tile.id}
                   centre={worldFootprint}
@@ -1521,10 +1540,10 @@ export const ProtoMap = ({
                       <div role="progressbar" aria-label={recipe.label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} className="my-1 h-2 overflow-hidden rounded bg-white/15"><div className="h-full bg-[#8ef2d4]" style={{ width: progress * 100 + '%' }} /></div>
                       <div>{Math.round(progress * 100)}% · {Math.ceil((recipe.durationMs - stack.build.elapsedMs) / 1000)}s remaining</div>
                       {recipe.requiresSolitaire && <>
-                        <div>{staffed ? 'Actor stamina: ' + actorStamina : 'Paused · drop actor on hut foundation'}</div>
+                        <div>{staffed ? 'Actor inspiration: ' + actorInspiration : 'Paused · drop actor on hut foundation'}</div>
                         <div data-hut-foundation>Solitaire {stack.build.work}/{recipe.workRequired} · Foundation {stack.build.foundation}</div>
-                        <div className="mt-1 flex flex-wrap gap-1">{stack.build.tableau.map((rank) => <button type="button" data-hut-card={rank} data-hut-stack={stack.id} key={rank} disabled={!staffed || !canSpendStamina(actorStamina, 1) || Math.abs(rank - stack.build!.foundation) !== 1} onClick={() => onPlayBuildCard?.(stack.id, rank)} className="rounded border border-white/50 bg-white/10 px-2 py-1 disabled:opacity-30" aria-label={'Play ' + rank + ' to hut foundation'}>{rank}</button>)}</div>
-                        <div className="mt-1 text-white/60">Play adjacent rank · 1 stamina/card</div>
+                        <div className="mt-1 flex flex-wrap gap-1">{stack.build.tableau.map((rank) => <button type="button" data-hut-card={rank} data-hut-stack={stack.id} key={rank} disabled={!staffed || !canSpendInspiration(actorInspiration, 1) || Math.abs(rank - stack.build!.foundation) !== 1} onClick={() => onPlayBuildCard?.(stack.id, rank)} className="rounded border border-white/50 bg-white/10 px-2 py-1 disabled:opacity-30" aria-label={'Play ' + rank + ' to hut foundation'}>{rank}</button>)}</div>
+                        <div className="mt-1 text-white/60">Play adjacent rank · 1 inspiration/card</div>
                         {onSolveBuildStep && <div className="mt-2 text-left"><TableauSolveControls disabled={!staffed} onStep={(divine) => {
                           const sources = [...document.querySelectorAll<HTMLElement>('[data-hut-card]')].filter(node => node.dataset.hutStack === stack.id);
                           const destination = sources[0]?.closest('[data-hut-build]')?.querySelector<HTMLElement>('[data-hut-foundation]');
@@ -1555,19 +1574,23 @@ export const ProtoMap = ({
           {routeShown ? <RouteLine path={routeShown.path} labels={labelQuads} /> : null}
           {routeShown?.label ? <span aria-hidden="true" className="proto-route-label proto-face-camera" data-route-label="true"
             style={{ left: `calc(50% + ${routeShown.path[routeShown.path.length - 1].x}px)`, top: `calc(50% + ${routeShown.path[routeShown.path.length - 1].y}px)` }}>{routeShown.label}</span> : null}
-          {actors.map(actor => { const position = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor); return <React.Fragment key={actor.id}>{spriteStandee(actorArt(actor, position), position)?.shadows}</React.Fragment>; })}
+          {actors.map(actor => { const position = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor); return <React.Fragment key={actor.id}>{!(actor.id === 'mochi' && actorIsCuddling(actor, position)) && spriteStandee(actorArt(actor, position), position)?.shadows}</React.Fragment>; })}
           {actors.map((actor) => {
             const actorPosition = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor);
             const actorLight = lightField.at(actorPosition);
             lightReadouts.push({ id: 'actor-' + actor.id, position: actorPosition, lift: upright ? -30 : 24, percent: actorLight.percent, level: actorLight.level });
             const sleeping = actorIsSleeping(actor, actorPosition);
+            const cuddling = actorIsCuddling(actor, actorPosition);
+            // Hero owns the shared silhouette; Mochi keeps an independent
+            // focusable inspection/drag target over her part of the cuddle.
+            const sharedCompanion = cuddling && actor.id === 'mochi';
             const sitting = actor.id === 'hero' && !sleeping && travel?.actorId !== actor.id;
-            const overheadHero = actor.id === 'hero' && !upright;
+            const overheadHero = !upright && (actor.id === 'hero' || sleeping);
             const heading = movementHeading(actorPosition, actorHeadings.current.get(actor.id), actor.heading);
             actorHeadings.current.set(actor.id, { ...actorPosition, heading });
             // Within the immersive den, every pose faces out through its north
             // entrance. Keep travel heading history for movement outside it.
-            const poseHeading = upright && actorIsInDen(actor, actorPosition) ? Math.PI : sleeping ? actor.heading ?? 0 : heading;
+            const poseHeading = actorIsInDen(actor, actorPosition) && (upright || sleeping) ? Math.PI : sleeping ? actor.heading ?? 0 : heading;
             const directional = actor.id === 'hero' && !sleeping;
             const cutOut = spriteStandee(actorArt(actor, actorPosition), actorPosition);
             // Grabbing anywhere on the actor's square drags the actor, never the camera.
@@ -1594,7 +1617,7 @@ export const ProtoMap = ({
 
             {!sleeping && standeeBase('base', actorPosition, Math.max(40, Array.from(actor.label).length * 9))}
             {upright && !sleeping && <ActorBaseName actorId={actor.id} name={actor.label} position={actorPosition} diameter={Math.max(40, Array.from(actor.label).length * 9)} />}
-            {cellGrip(`actor-${actor.id}`, actorPosition, grip)}
+            {!sharedCompanion && cellGrip(`actor-${actor.id}`, actorPosition, grip)}
             <div
               role="button"
               tabIndex={0}
@@ -1604,6 +1627,8 @@ export const ProtoMap = ({
               data-board-piece="actor"
               data-actor-id={actor.id}
               data-actor-pose={sleeping ? 'sleeping' : sitting ? 'sitting' : 'standing'}
+              data-den-rest-art={sleeping ? sleepingArtName(actor, actorPosition) : undefined}
+              data-shared-companion={sharedCompanion || undefined}
               data-actor-heading={poseHeading}
               data-actor-orientation={directional ? 'directional' : 'world-plane'}
               data-actor-shrink={cutOut ? 'true' : undefined}
@@ -1622,16 +1647,17 @@ export const ProtoMap = ({
                 boxShadow: cutOut || !upright ? undefined : tableObjectShadow(timeOfDay, actorPosition, 12, lightSources.filter(light => light.id !== actorLightId(actor.id)), yaw),
                 ...(cutOut || sleeping ? null : faceCameraFlat),
                 left: `calc(50% + ${actorPosition.x}px)`,
-                top: `calc(50% + ${actorPosition.y}px)`,
+                top: `calc(50% + ${actorPosition.y + (!upright && sleeping ? 5 : 0)}px)`,
                 ...(cutOut ? { ...standee(undefined, oversample), transform: `${standee(undefined, oversample)?.transform} scale(var(--actor-world-scale, 1))`, width: SPRITE_STANDEE_SIZE * oversample, height: SPRITE_STANDEE_SIZE * oversample } : standee({ width: 48, height: 64 })),
                 ...(cutOut && !directional ? { transform: `${worldActorTransform(poseHeading, true, oversample)} scale(var(--actor-world-scale, 1))`, animation: undefined } : {}),
                 // Standing/sitting overhead sources point nose-up; sleeping
                 // art is authored nose-down. Both follow the same world heading.
                 ...(overheadHero ? { width: 26, height: 26, transform: worldActorTransform(poseHeading + (sleeping ? 0 : Math.PI), false), transformOrigin: '50% 50%' } : {}),
+                ...(sharedCompanion ? { width: 12 * (upright ? oversample : 1), height: 12 * (upright ? oversample : 1), marginLeft: 7, marginTop: -6 } : {}),
               }}
-              aria-label={`${actor.label} actor token${sleeping ? ', sleeping in her den' : ''}`}
+              aria-label={`${actor.label} actor token${cuddling ? ', cuddling in the den' : sleeping ? ', sleeping in her den' : ''}`}
             >
-              {overheadHero ? <img src={`${import.meta.env.BASE_URL}assets/actors/hero-${sleeping ? 'sleeping' : sitting ? 'sitting' : 'standing'}-topdown.png`} alt="" draggable={false} /> : cutOut ? <Oversample width={SPRITE_STANDEE_SIZE} height={SPRITE_STANDEE_SIZE} factor={oversample}>{directional ? <TableActorSprite position={actorPosition} pose={sitting ? 'sitting' : 'standing'} heading={poseHeading} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} brightness={standeeLighting(timeOfDay, actorPosition, SPRITE_STANDEE_SIZE, lightSources, yaw).brightness} fallback={cutOut.art} /> : cutOut.art}</Oversample> : <BoardObjectLabel text={actor.label} minFontSize={16} maxFontSize={16} />}
+              {sharedCompanion ? null : overheadHero ? <img src={`${import.meta.env.BASE_URL}assets/actors/${sleeping ? sleepingArtName(actor, actorPosition) : actor.id}-${sleeping ? 'sleeping' : sitting ? 'sitting' : 'standing'}-topdown.png`} alt="" draggable={false} /> : cutOut ? <Oversample width={SPRITE_STANDEE_SIZE} height={SPRITE_STANDEE_SIZE} factor={oversample}>{directional ? <TableActorSprite position={actorPosition} pose={sitting ? 'sitting' : 'standing'} heading={poseHeading} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} brightness={standeeLighting(timeOfDay, actorPosition, SPRITE_STANDEE_SIZE, lightSources, yaw).brightness} fallback={cutOut.art} /> : cutOut.art}</Oversample> : <BoardObjectLabel text={actor.label} minFontSize={16} maxFontSize={16} />}
             </div>
             </React.Fragment>
             );
@@ -1646,15 +1672,17 @@ export const ProtoMap = ({
         <div className="proto-table-title-layer absolute pointer-events-none" style={{ inset: staged ? '-100%' : 0, transform: stageTransform, transition: tilted && airReady || !staged ? 'none' : undefined }}>
           <div className="absolute" style={{ inset: staged ? '33.3333%' : 0 }}>
             <div className="absolute" style={{ left: '-150%', top: '-150%', width: '400%', height: '400%', transformOrigin: 'center center', transform: 'var(--camera-transform)' }}>
-          {!upright && biomeTiles.filter(tile => tile.tileType === 'hero-den' && !tile.flags?.includes('unexplored') && !actors.some(actor => actor.awakeAtHome && TABLE_GRID.reference(TABLE_GRID.atWorld(actor.position)) === TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position)))).map(tile => <HeroDenRoof key={`${tile.id}-roof`} position={tile.position} size={CLASSICPLUS_GRID_SIZE} />)}
+          {!upright && biomeTiles.filter(tile => tile.tileType === 'hero-den' && !tile.flags?.includes('unexplored')).map(tile => <HeroDenRoof key={`${tile.id}-roof`} position={tile.position} size={CLASSICPLUS_GRID_SIZE} />)}
           {biomeTiles.filter(tile => compositeTileTitle(tile) && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && !tile.flags?.includes('unexplored')).map(tile => {
             const area = getBiomeWorldFootprint(tile);
             return <div key={`${tile.id}-title`} data-biome-title={tile.id} className="proto-tile-title-anchor" style={{ inset: 'auto', left: `calc(50% + ${area.x}px)`, top: `calc(50% + ${area.y}px)`, width: area.width, height: area.height, transform: 'translate(-50%, -50%)' }}>
               <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={area.width} height={area.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={box => reportBiomeLabel(tile.id, area, box)} />
             </div>;
           })}
-          {biomeTiles.filter(tile => tile.tileType === 'hero-den' && !sharedLabelTiles.has(tile.id) && !tile.flags?.includes('unexplored')).map(tile => <div key={tile.id} className="proto-den-title" data-den-title="true" style={{ position: 'absolute', left: `calc(50% + ${tile.position.x}px)`, top: `calc(50% + ${tile.position.y + (upright ? 12 : 0)}px)`, width: 48, height: upright ? 24 : 48, transform: 'translate(-50%, -50%)' }}>
-            <TileTitle align={upright ? 'center' : 'bottom'} maxLines={upright ? undefined : 1} text={tile.title} width={48} height={upright ? 24 : 48} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} />
+          {biomeTiles.filter(tile => tile.tileType === 'hero-den' && !sharedLabelTiles.has(tile.id) && !tile.flags?.includes('unexplored')).map(tile => <div key={tile.id} className="proto-den-title" data-den-title="true" style={{ position: 'absolute', left: `calc(50% + ${tile.position.x}px)`, top: `calc(50% + ${tile.position.y + (upright ? 12 : 0)}px)`, width: upright ? 48 : 72, height: upright ? 24 : 72, transform: 'translate(-50%, -50%)' }}>
+            <TileTitle align={upright ? 'center' : 'bottom'} maxLines={upright ? undefined : 1}
+              clearCenter={!upright && actors.some(actor => { const p = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor); return Math.abs(p.x - tile.position.x) < 24 && Math.abs(p.y - tile.position.y) < 24; }) ? 18 : undefined}
+              text={tile.title} width={48} height={upright ? 24 : 48} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} />
           </div>)}
           {labelRegions.map(region => <div key={region.id} data-connected-label={region.id} data-label-tiles={region.tiles.map(tile => tile.id).join(' ')}
             data-immutable-region={region.tiles[0].tileType === 'impassable-mountain' ? region.id : undefined} data-region-tile-count={region.tiles.length}
@@ -1680,15 +1708,17 @@ export const ProtoMap = ({
             </div>
           </div>
         </div>
-        {/* Light overlay on its own copy of the table plane. Kept out of the
-            pieces' 3D scene so standees never cut through it: it lays the
-            table's light over them like a projected wash. */}
-        <div aria-hidden="true" className="proto-table-light pointer-events-none absolute z-40" style={{ inset: staged ? '-100%' : 0, transform: stageTransform, transition: tilted && airReady || !staged ? 'none' : undefined }}>
+        {/* Ground wash stays behind the physical scene. Voxel materials already
+            receive world light; projecting this finite plane over their faces
+            exposed its horizon as a horizontal stripe through solid reliefs. */}
+        <div aria-hidden="true" className="proto-table-light proto-ground-light pointer-events-none absolute z-0" style={{ inset: staged ? '-100%' : 0, transform: stageTransform, transition: tilted && airReady || !staged ? 'none' : undefined }}>
         {upright ? <canvas
           ref={lightCanvasRef}
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
         /> : null}
+        </div>
+        <div aria-hidden="true" className="proto-table-light pointer-events-none absolute z-40" style={{ inset: staged ? '-100%' : 0, transform: stageTransform, transition: tilted && airReady || !staged ? 'none' : undefined }}>
         {showLightReadout ? (
           <div aria-hidden="true" data-light-readout="true" className="pointer-events-none absolute inset-0 z-[45] overflow-hidden" style={{ rotate: 'var(--camera-yaw, 0deg)' }}>
             {lightReadouts.map((readout) => (

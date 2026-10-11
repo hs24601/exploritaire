@@ -134,6 +134,7 @@ export function createCombatCueFx(scene: THREE.Scene, camera: THREE.Camera, unit
       const moves = new Map<string, THREE.Vector3>(units.map((unit) => [unit.id, new THREE.Vector3()]));
       const flashes = new Map<string, { amount: number; color: number }>();
       const actions = new Map<string, number>();
+      const hurt = new Set<string>();
       const flash = (id: string, amount: number, color: number) => { if (amount > (flashes.get(id)?.amount ?? 0)) flashes.set(id, { amount, color }); };
       jaws.visible = false; claws.visible = false; light.intensity = 0;
       for (const cue of live) {
@@ -191,6 +192,7 @@ export function createCombatCueFx(scene: THREE.Scene, camera: THREE.Camera, unit
         } else if (cue.kind === 'hurt') {
           const u = age / CUE_SECONDS.hurt;
           if (u >= 1) continue;
+          hurt.add(target.id);
           // Red flash (an ember orange for a tick of burn or bleed), knocked back from the attacker.
           flash(target.id, (cue.light ? .4 : .58) * (1 - u), cue.light ? 0xff8a3c : 0xff3a3a);
           if (!reduced && !cue.light) {
@@ -227,7 +229,7 @@ export function createCombatCueFx(scene: THREE.Scene, camera: THREE.Camera, unit
         } else if (isDown) {
           // Party actors tip over like a knocked standee, greyed, and stay down.
           const u = reduced ? 1 : (now - fell!) / CUE_SECONDS.down;
-          tip = (Math.PI / 2 - .12) * easeOut(u) + (u < 1 ? Math.sin(clamp(u) * Math.PI) * -.08 : 0);
+          if (!rig.hasPose('down')) tip = (Math.PI / 2 - .12) * easeOut(u) + (u < 1 ? Math.sin(clamp(u) * Math.PI) * -.08 : 0);
           if (!reduced && u >= .7 && !emitted.has(`fall:${unit.id}`)) { emitted.add(`fall:${unit.id}`); emit(now, homes.get(unit.id)!.clone().setY(.15), 12, [0x8a7a62, 0x5c5244, 0xb9a98a], { speed: 1.4, up: .5, gravity: 2, life: .6, size: .1, spread: .6 }); }
         }
         rig.root.visible = visible; unit.shadow.visible = visible;
@@ -237,6 +239,11 @@ export function createCombatCueFx(scene: THREE.Scene, camera: THREE.Camera, unit
         unit.shadow.position.x = rig.root.position.x; unit.shadow.position.z = rig.root.position.z;
         rig.root.scale.set(1 / Math.sqrt(stretch), stretch, 1);
         rig.facing.rotation.z = tip;
+        // Authored reactions take priority over idle/action poses. State holds a
+        // fall even if its cue was missed; revival clears it on the next frame.
+        if (isDown && rig.hasPose('down')) rig.setPose('down');
+        else if (hurt.has(unit.id) && rig.hasPose('flinch')) rig.setPose('flinch');
+        else if (rig.pose === 'down' || rig.pose === 'flinch') rig.setPose('standing');
         rig.setOpacity(opacity);
         // Only touch the tint when it changes, so the scripted demo's own tints survive.
         const grey = Boolean(isDown && unit.team === 'party');

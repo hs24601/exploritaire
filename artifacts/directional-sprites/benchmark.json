@@ -1,0 +1,63 @@
+{
+  "device": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "rendererPixels": [
+    1280,
+    480
+  ],
+  "preparationMs": 3.5999999940395355,
+  "atlasMiB": 30.001930236816406,
+  "measurements": [
+    {
+      "count": 1,
+      "population": "hero",
+      "drawCalls": 3,
+      "triangles": 18,
+      "gpuTextures": 2,
+      "textureCountAfterOrbit": 2,
+      "updateMedianMs": 0,
+      "updateP95Ms": 0.09999999403953552,
+      "submitMedianMs": 0,
+      "submitP95Ms": 0.10000002384185791,
+      "gpuWaitP95Ms": 0
+    },
+    {
+      "count": 10,
+      "population": "hero",
+      "drawCalls": 30,
+      "triangles": 180,
+      "gpuTextures": 2,
+      "textureCountAfterOrbit": 2,
+      "updateMedianMs": 0,
+      "updateP95Ms": 0.09999999403953552,
+      "submitMedianMs": 0.09999999403953552,
+      "submitP95Ms": 0.19999998807907104,
+      "gpuWaitP95Ms": 0.09999999403953552
+    },
+    {
+      "count": 10,
+      "population": "hero-slime",
+      "drawCalls": 20,
+      "triangles": 100,
+      "gpuTextures": 3,
+      "textureCountAfterOrbit": 3,
+      "updateMedianMs": 0,
+      "updateP95Ms": 0.09999999403953552,
+      "submitMedianMs": 0.09999999403953552,
+      "submitP95Ms": 0.20000001788139343,
+      "gpuWaitP95Ms": 0.09999999403953552
+    },
+    {
+      "count": 10,
+      "population": "hero-mochi",
+      "drawCalls": 30,
+      "triangles": 156,
+      "gpuTextures": 5,
+      "textureCountAfterOrbit": 5,
+      "updateMedianMs": 0,
+      "updateP95Ms": 0.09999999403953552,
+      "submitMedianMs": 0.10000002384185791,
+      "submitP95Ms": 0.30000001192092896,
+      "gpuWaitP95Ms": 0.09999999403953552
+    }
+  ]
+}

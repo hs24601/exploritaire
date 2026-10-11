@@ -107,7 +107,7 @@ export const applyFoundationPlay = (prev: ProtoState, options: FoundationPlayOpt
     ? { ...prev.haul, [card.resource]: prev.haul[card.resource] + 1 }
     : prev.haul;
   const actorResource = ACTOR_WORK_RESOURCES[foundationIndex] ?? 'wood';
-  // Plays cost no stamina: stamina pays for foundation redraws (rules/redraw.ts).
+  // Plays cost no inspiration: inspiration pays for foundation redraws (rules/redraw.ts).
   const tableauCompleted = !isOrdinaryForage(prev.selectedBiomeId) && !hallowedPath && ((prev.foundations[foundationIndex]?.count ?? 0) + 1) % WORK_CYCLE_CARDS === 0;
   const workReward = tableauCompleted ? 3 : 1;
   const rewardedHaul = divine || isOrdinaryForage(prev.selectedBiomeId) ? collectedHaul : addForestHaul(collectedHaul, { [actorResource]: workReward });

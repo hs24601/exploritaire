@@ -14,20 +14,30 @@ function art(overhead) {
         : 1+Math.min(3,Math.floor((size-y)/10)+(hash<2?1:0)));
     }
   };
-  if(overhead) {
-    for(const [x,y,rx,ry] of [[9,15,9,10],[21,13,10,10],[17,23,10,8],[15,17,9,9]])oval(x,y,rx,ry);
-  } else {
-    for(const x of [9,17,22])for(let y=23;y<30;y++){dot(x,y,0);dot(x+1,y,0);}
-    for(const [x,y,rx,ry] of [[9,18,9,8],[21,16,10,9],[17,20,10,7],[15,13,9,6]])oval(x,y,rx,ry);
+  // Five separate shrubs match the voxel patch's world-space planting.
+  for(const [x,y] of [[6,6],[25,7],[16,16],[7,25],[25,25]]) {
+    if(!overhead)for(let stem=y+2;stem<Math.min(size,y+7);stem++){dot(x,stem,0);dot(x+1,stem,0);}
+    oval(x,y,5,overhead?5:4);
+    oval(x-1,y-2,3.8,3);
+    for(const [dx,dy] of [[-2,-2],[1,0],[-1,2]]) {
+      dot(x+dx,y+dy,4);dot(x+dx+1,y+dy-1,4);
+    }
+    for(const [dx,dy] of [[-3,0],[2,-2],[1,3]]) {
+      oval(x+dx,y+dy,1.1,1.1,true);oval(x+dx+1,y+dy+1,1,1,true);
+    }
   }
-  // Paired leaf strokes break up the crown into readable pixel foliage.
-  for(const [x,y] of [[8,12],[17,8],[24,13],[12,19],[21,23],[5,21]]) {
-    if(pixels[y*size+x]<0)continue;
-    for(const [dx,dy] of [[-1,0],[0,0],[1,-1],[2,-1]])if(pixels[(y+dy)*size+x+dx]>=0)dot(x+dx,y+dy,4);
-  }
-  const bunches=overhead?[[6,13],[17,5],[26,11],[25,22],[14,27],[7,23],[15,15]]:[[5,17],[12,12],[24,14],[19,21],[8,23],[27,22]];
-  for(const [x,y] of bunches){oval(x,y,1.8,1.8,true);oval(x+2,y+1.8,1.8,1.8,true);oval(x-.3,y+3,1.6,1.6,true);}
   const rects=pixels.map((c,i)=>c<0?'':`<rect x="${i%size}" y="${Math.floor(i/size)}" width="1" height="1" fill="${palette[c]}"/>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges"><title>Berry bush${overhead?' overhead':''}</title>${rects}</svg>\n`;
 }
 for(const overhead of [false,true])writeFileSync(new URL(`../public/assets/biomes/berry-${overhead?'patch-topdown':'bush'}.svg`,import.meta.url),art(overhead));
+
+// Flat woodland soil with moss, fallen leaves and a few small stones.
+const earth=['#3b3827','#403c29','#48412c','#514631','#35412b','#3e4b30','#535332','#685238'];
+let ground='';
+for(let y=0;y<32;y++)for(let x=0;x<32;x++) {
+  const noise=(x*37+y*61+x*y*13)%101;
+  const patch=(Math.sin(x*.47)+Math.cos(y*.39))>0.6;
+  const color=earth[noise<8?7:noise<15?6:patch?4+noise%2:noise%4];
+  ground+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${color}"/>`;
+}
+writeFileSync(new URL('../public/assets/biomes/berry-patch-ground.svg',import.meta.url),`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges"><title>Berry patch woodland floor</title>${ground}</svg>\n`);

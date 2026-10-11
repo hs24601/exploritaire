@@ -74,8 +74,8 @@ export const assessSolverMove = (puzzle: SolverPuzzle, options: SolverOptions = 
 /** Divine execution may change puzzle state and rewards, but never RPG values. */
 export const preserveSolverRpgValues = <T extends object>(before: T, after: T): T => {
   const preserved = { ...after };
-  for (const key of ['actorStamina', 'actorWorkCompleted', 'totalWorkCompleted', 'heroHp', 'heroBuffs',
-    'abilityProgress', 'mobilityUsed', 'mobilityCooldown', 'energy', 'energyMax', 'stamina', 'maxStamina',
+  for (const key of ['actorInspiration', 'actorWorkCompleted', 'totalWorkCompleted', 'heroHp', 'heroBuffs',
+    'abilityProgress', 'mobilityUsed', 'mobilityCooldown', 'energy', 'energyMax', 'inspiration', 'maxInspiration',
     'wildCards', 'enemyTeam', 'ambushCardsRemaining'] as const) {
     if (key in before) Object.assign(preserved, { [key]: before[key as keyof T] });
   }

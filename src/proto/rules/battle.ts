@@ -1,4 +1,4 @@
-import { ACTOR_STAMINA_MAX, type Card } from '../protoState';
+import { ACTOR_INSPIRATION_MAX, type Card } from '../protoState';
 import { redrawFoundation, redrawOptions, type RedrawSource } from './redraw';
 import { isAdjacentRank } from './setup';
 import { stockCard } from './skirmish';
@@ -80,7 +80,7 @@ export type BattleActor = {
   count: number;
   charge: number;
   /** Foundation redraws left: each costs 1 (rules/redraw.ts). */
-  stamina: number;
+  inspiration: number;
   spirits: string[];
 };
 
@@ -104,6 +104,8 @@ export type BattleState = {
   foes: BattleFoe[];
   /** Enemy timers wait for the party's first play. */
   started: boolean;
+  /** Opening player ambush: charge freely, then gain ten seconds after the first hit. */
+  ambush: { awaitingAttack: boolean; remaining: number } | null;
   time: number;
   result: 'won' | 'lost' | null;
   events: BattleEvent[];
@@ -137,20 +139,22 @@ export const FED_MAX = 3;
 const FOE_RANKS = [9, 6, 12];
 
 export type BattleSetup = {
+  playerAmbush?: boolean;
   mochi?: boolean; slimes?: number; spirits?: Partial<Record<PartyId, string[]>>;
-  /** Each actor's stamina coming in; defaults to full. */
-  stamina?: Partial<Record<PartyId, number>>;
+  /** Each actor's inspiration coming in; defaults to full. */
+  inspiration?: Partial<Record<PartyId, number>>;
   seed?: number;
   rules?: Partial<BattleRules>;
 };
 
-const newActor = (id: PartyId, spirits: string[] = [], stamina = ACTOR_STAMINA_MAX): BattleActor => {
+const newActor = (id: PartyId, spirits: string[] = [], inspiration = ACTOR_INSPIRATION_MAX): BattleActor => {
   const base = PARTY_ROSTER[id];
-  return { id, name: base.name, hp: base.maxHp, maxHp: base.maxHp, rank: base.rank, count: 0, charge: 0, stamina, spirits: [...spirits] };
+  return { id, name: base.name, hp: base.maxHp, maxHp: base.maxHp, rank: base.rank, count: 0, charge: 0, inspiration, spirits: [...spirits] };
 };
 
 /** Each later slime's timer starts this far behind (a negative timer is a delay), so they don't strike in unison. */
 export const FOE_TIMER_OFFSET = 0.35;
+export const PLAYER_AMBUSH_SECONDS = 10;
 
 const newFoe = (index: number): BattleFoe => ({
   ...SLIME_ROSTER[index], profile: SLIME, hp: SLIME.maxHp, timer: -index * FOE_TIMER_OFFSET, stagger: 0, staggered: 0, effects: [],
@@ -165,11 +169,12 @@ export const createBattle = (deal: { tableau: Card[][]; stock?: Card[] }, setup:
     stock: [...(deal.stock ?? [])],
     dealt: 0,
     party: [
-      newActor('hero', setup.spirits?.hero, setup.stamina?.hero),
-      ...(setup.mochi === false ? [] : [newActor('mochi', setup.spirits?.mochi, setup.stamina?.mochi)]),
+      newActor('hero', setup.spirits?.hero, setup.inspiration?.hero),
+      ...(setup.mochi === false ? [] : [newActor('mochi', setup.spirits?.mochi, setup.inspiration?.mochi)]),
     ],
     foes: Array.from({ length: slimes }, (_, i) => newFoe(i)),
     started: false,
+    ambush: setup.playerAmbush ? { awaitingAttack: true, remaining: PLAYER_AMBUSH_SECONDS } : null,
     time: 0,
     result: null,
     events: [],
@@ -253,7 +258,7 @@ export const actorRedrawOptions = (actor: BattleActor) => redrawOptions(actor.sp
 
 /**
  * Stuck: the actor abandons their foundation value for a new one at 1
- * stamina. Charge and collected cards are untouched. Refused at 0 stamina.
+ * inspiration. Charge and collected cards are untouched. Refused at 0 inspiration.
  */
 export const redrawActor = (state: BattleState, actorId: string, source: RedrawSource = { kind: 'draw' }, random?: number): BattleState => {
   const actor = state.party.find((a) => a.id === actorId);
@@ -261,7 +266,7 @@ export const redrawActor = (state: BattleState, actorId: string, source: RedrawS
   if (source.kind === 'spirit' && !actor.spirits.includes(source.spiritId)) return state;
   const next = redrawFoundation(actor, source, random);
   if (!next) return state;
-  return { ...state, party: state.party.map((a) => (a.id === actorId ? { ...a, rank: next.rank, stamina: next.stamina } : a)) };
+  return { ...state, party: state.party.map((a) => (a.id === actorId ? { ...a, rank: next.rank, inspiration: next.inspiration } : a)) };
 };
 
 /** Golf's draw for a shared table: one card onto every column with room. Foundations and charge are untouched. */
@@ -314,7 +319,7 @@ export const applyAttack = (state: BattleState, actorId: string, foeId: string):
   if (hp <= 0) events.push({ kind: 'ko', targetId: foeId });
   const foes = state.foes.map((foe) => (foe.id === foeId ? { ...foe, hp, stagger: hp > 0 ? stagger : 0, staggered: hp > 0 ? staggered : 0, timer: hp > 0 ? timer : 0, effects } : foe));
   const party = state.party.map((actor) => (actor.id === actorId ? { ...actor, charge: 0 } : actor));
-  return { ...state, started: true, party, foes, result: resultOf(party, foes), ...withEvents(state, events) };
+  return { ...state, started: true, ambush: state.ambush?.awaitingAttack ? { awaitingAttack: false, remaining: PLAYER_AMBUSH_SECONDS } : state.ambush, party, foes, result: resultOf(party, foes), ...withEvents(state, events) };
 };
 
 export type AttackPreview = {
@@ -359,6 +364,11 @@ export const enemyTarget = (state: BattleState) =>
 /** Advances every foe's clock by `dt` seconds. */
 export const tickBattle = (state: BattleState, dt: number): BattleState => {
   if (!state.started || state.result || dt <= 0) return state;
+  const heldSeconds = state.ambush ? (state.ambush.awaitingAttack ? dt : Math.min(dt, state.ambush.remaining)) : 0;
+  const enemyDt = dt - heldSeconds;
+  const ambush = state.ambush && !state.ambush.awaitingAttack
+    ? (state.ambush.remaining - dt > 0.001 ? { awaitingAttack: false, remaining: state.ambush.remaining - dt } : null)
+    : state.ambush;
   const events: Omit<BattleEvent, 'id'>[] = [];
   let party = state.party;
   const foes = state.foes.map((foe) => {
@@ -383,8 +393,8 @@ export const tickBattle = (state: BattleState, dt: number): BattleState => {
       return { ...foe, hp, stagger, staggered, effects };
     }
     stagger = Math.max(0, stagger - foe.profile.staggerDecay * dt);
-    timer += dt / foe.profile.attackSeconds;
-    if (timer >= 1) {
+    if (enemyDt > 0) timer += enemyDt / foe.profile.attackSeconds;
+    if (enemyDt > 0 && timer >= 1) {
       timer = 0;
       const target = enemyTarget({ ...state, party });
       if (target) {
@@ -398,8 +408,8 @@ export const tickBattle = (state: BattleState, dt: number): BattleState => {
     }
     return { ...foe, hp, timer, stagger, staggered, effects };
   });
-  let next: BattleState = { ...state, time: state.time + dt, party, foes, result: resultOf(party, foes), ...(events.length ? withEvents(state, events) : {}) };
-  if (next.rules.hungry && !next.result) next.foes.forEach((foe) => { next = forage(next, foe.id, dt); });
+  let next: BattleState = { ...state, ambush, time: state.time + dt, party, foes, result: resultOf(party, foes), ...(events.length ? withEvents(state, events) : {}) };
+  if (enemyDt > 0 && next.rules.hungry && !next.result) next.foes.forEach((foe) => { next = forage(next, foe.id, enemyDt); });
   return next;
 };
 

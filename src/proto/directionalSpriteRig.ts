@@ -57,6 +57,7 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
         get frame() { return active?.id ?? ''; },
         get view() { return view; },
         get pose() { return poseName; },
+        hasPose(name: string) { return Boolean(definitions[name]); },
         setPose(name: string) {
           const next = definitions[name];
           if (!next) throw new Error(`Unknown sprite pose: ${name}`);

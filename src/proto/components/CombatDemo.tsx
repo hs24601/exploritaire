@@ -15,10 +15,11 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
   const [status, setStatus] = useState('Preparing arena…');
   const [elapsed, setElapsed] = useState(0);
   const [cameraView, setCameraView] = useState<CombatCameraView>(firstTeam);
+  const [freecamEnabled, setFreecamEnabled] = useState(true);
   const [ready, setReady] = useState(false);
   const [cameraInfo, setCameraInfo] = useState<CombatCameraSnapshot | null>(null);
   const [copyStatus, setCopyStatus] = useState('Copy camera cue');
-  const controls = useRef<{select: (view: CombatCameraView) => void; replay: () => void; move: (key: string, held: boolean) => void; cue: () => object; refresh: () => void} | null>(null);
+  const controls = useRef<{select: (view: CombatCameraView) => void; toggleFreecam: () => void; replay: () => void; move: (key: string, held: boolean) => void; cue: () => object; refresh: () => void} | null>(null);
   // The battle panel's units and events: who stands, who fell, and what just happened.
   const battleRef = useRef(battle); battleRef.current = battle;
   // Events from before the arena opened are history, not cues to replay.
@@ -33,6 +34,8 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
   useEffect(() => {
     const heldKeys = new Set<string>();
     let selected: CombatCameraView = firstTeam;
+    let manualEnabled = true;
+    setFreecamEnabled(true);
     const clearInput = () => heldKeys.clear();
     const previous = document.activeElement as HTMLElement | null;
     dialog.current?.focus();
@@ -44,7 +47,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
       else {
         const buttonMove = (event.target as HTMLElement)?.closest<HTMLButtonElement>('[data-move]')?.dataset.move;
         if (buttonMove && (event.key === 'Enter')) { event.preventDefault(); controls.current?.move(buttonMove, true); }
-        if (selected === 'freecam' && !event.ctrlKey && !event.altKey && !event.metaKey && !((event.target as HTMLElement)?.closest('input, textarea, select, [contenteditable="true"]'))) {
+        if (manualEnabled && !event.ctrlKey && !event.altKey && !event.metaKey && !((event.target as HTMLElement)?.closest('input, textarea, select, [contenteditable="true"]'))) {
           const movement = event.key.toLowerCase();
           if ('wasdqe'.includes(movement) && movement.length === 1) { event.preventDefault(); controls.current?.move(movement, true); }
         }
@@ -100,6 +103,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           const seconds = now / 1000;
           pendingCues.current.splice(0).forEach(cue => rig!.cue(cue, seconds));
           if (battleRef.current) rig!.setUnits(battleRef.current.units, seconds);
+          rig!.setAmbushed(Boolean(battleRef.current?.ambushed));
           rig!.update(displayedTime, reduced, seconds); renderer!.render(scene, camera);
           if (host.current) {
             host.current.dataset.cameraView = selected;
@@ -119,7 +123,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           frame = 0;
           if (disposed) return;
           const dt = Math.min(.05, Math.max(0, (now - lastFrame) / 1000)); lastFrame = now;
-          if (selected === 'freecam' && heldKeys.size) {
+          if (manualEnabled && selected === 'freecam' && heldKeys.size) {
             const right = Number(heldKeys.has('d')) - Number(heldKeys.has('a'));
             const forward = Number(heldKeys.has('w')) - Number(heldKeys.has('s'));
             const up = Number(heldKeys.has('e')) - Number(heldKeys.has('q'));
@@ -159,21 +163,39 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           sharedSurface.dataset.projection = visibleArena ? 'extended' : 'tableau';
           paint(performance.now());
         };
-        controls.current = {
-          select(view) {
-            clearInput(); selected = view; const now = performance.now();
-            if (view === 'cinematic') { actionStarted = now; lastTick = -1; displayedTime = 0; setElapsed(0); }
-            cameraControls.select(view, now); lastReadout = -Infinity; paint(now); schedule();
-          },
-          replay() { actionStarted = performance.now(); lastTick = -1; displayedTime = 0; setElapsed(0); schedule(); },
-          move(key, held) { if (selected !== 'freecam') return; if (held) { if (!heldKeys.size) lastFrame = performance.now(); heldKeys.add(key); schedule(); } else { heldKeys.delete(key); lastReadout = -Infinity; paint(performance.now()); } },
-          refresh() { const now = performance.now(); if (paint(now) || rig!.busy(now / 1000)) schedule(); },
-          cue() { const info = cameraControls.snapshot(); return { t: Number(displayedTime.toFixed(3)), p: info.position, target: info.target, fov: info.fov }; },
+        // Manual input takes over the current shot without changing the toggle.
+        const beginManual = () => {
+          if (!manualEnabled) return false;
+          if (selected !== 'freecam') {
+            selected = 'freecam'; setCameraView('freecam');
+            cameraControls.select('freecam', performance.now());
+          }
+          return true;
         };
         const arena = host.current;
         let drag: {id: number; x: number; y: number; pan: boolean} | null = null;
+        const clearDrag = () => {
+          const id = drag?.id;
+          drag = null; delete arena.dataset.dragging;
+          if (id !== undefined && arena.hasPointerCapture(id)) arena.releasePointerCapture(id);
+        };
+        controls.current = {
+          select(view) {
+            clearInput(); clearDrag(); selected = view; const now = performance.now();
+            if (view === 'cinematic') { actionStarted = now; lastTick = -1; displayedTime = 0; setElapsed(0); }
+            cameraControls.select(view, now); lastReadout = -Infinity; paint(now); schedule();
+          },
+          toggleFreecam() {
+            manualEnabled = !manualEnabled; setFreecamEnabled(manualEnabled);
+            clearInput(); clearDrag(); lastReadout = -Infinity; paint(performance.now());
+          },
+          replay() { actionStarted = performance.now(); lastTick = -1; displayedTime = 0; setElapsed(0); schedule(); },
+          move(key, held) { if (held && !beginManual()) return; if (held) { if (!heldKeys.size) lastFrame = performance.now(); heldKeys.add(key); schedule(); } else { heldKeys.delete(key); lastReadout = -Infinity; paint(performance.now()); } },
+          refresh() { const now = performance.now(); if (paint(now) || rig!.busy(now / 1000)) schedule(); },
+          cue() { const info = cameraControls.snapshot(); return { t: Number(displayedTime.toFixed(3)), p: info.position, target: info.target, fov: info.fov }; },
+        };
         const pointerDown = (event: PointerEvent) => {
-          if (selected !== 'freecam' || drag || ![0, 1, 2].includes(event.button)) return;
+          if (drag || ![0, 1, 2].includes(event.button) || !beginManual()) return;
           // touch-action already owns the gesture. Cancelling touch presses can
           // suppress subsequent compatibility clicks on the camera buttons.
           if (event.pointerType !== 'touch') event.preventDefault();
@@ -183,7 +205,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         };
         const pointerMove = (event: PointerEvent) => {
           if (!drag || event.pointerId !== drag.id) return;
-          if (selected !== 'freecam') { pointerEnd(event); return; }
+          if (!manualEnabled || selected !== 'freecam') { pointerEnd(event); return; }
           const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
           drag.x = event.clientX; drag.y = event.clientY;
           if (drag.pan) {
@@ -194,11 +216,10 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         };
         const pointerEnd = (event: PointerEvent) => {
           if (drag?.id !== event.pointerId) return;
-          drag = null; delete arena.dataset.dragging;
-          if (arena.hasPointerCapture(event.pointerId)) arena.releasePointerCapture(event.pointerId);
+          clearDrag();
         };
         const wheel = (event: WheelEvent) => {
-          if (selected !== 'freecam') return;
+          if (!beginManual()) return;
           event.preventDefault();
           const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? arena.clientHeight : 1);
           cameraControls.dolly(THREE.MathUtils.clamp(pixels * .001, -.3, .3));
@@ -220,14 +241,14 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
     void start();
     return () => { disposed = true; controls.current = null; clearInput(); detachPointer(); cancelAnimationFrame(frame); observer?.disconnect(); rig?.dispose(); textures.forEach(t => t.dispose()); renderer?.dispose(); renderer?.domElement.remove(); sharedSurface?.remove(); window.removeEventListener('keydown', key, true); window.removeEventListener('keyup', keyUp, true); window.removeEventListener('blur', clearInput); document.removeEventListener('visibilitychange', visibility); if (previous?.isConnected) previous.focus(); };
   }, [firstTeam]);
-  return <section ref={dialog} className="combat-demo proto-map" aria-labelledby="combat-demo-title" tabIndex={-1} data-elapsed={elapsed.toFixed(1)} data-complete={elapsed >= COMBAT_DEMO_SECONDS || undefined} data-camera-view={cameraView}>
+  return <section ref={dialog} className="combat-demo proto-map" aria-labelledby="combat-demo-title" tabIndex={-1} data-elapsed={elapsed.toFixed(1)} data-complete={elapsed >= COMBAT_DEMO_SECONDS || undefined} data-camera-view={cameraView} data-freecam-enabled={freecamEnabled}>
     <header className="combat-demo__header"><h1 id="combat-demo-title">Dark Woods · battle</h1><CameraButton type="button" onClick={onClose}>Return to table · Esc</CameraButton></header>
     <div ref={host} className="combat-demo__arena" aria-label="Directional Hero, Mochi and dark slime sprites in a Three.js forest arena" />
     <footer className="combat-demo__footer">
       <div className="combat-demo__readout"><span>{status}</span><span>{elapsed.toFixed(1)} / 10s</span></div>
       <div className="combat-demo__camera-panel">
         <div className="combat-demo__views" role="group" aria-label="Camera angles">
-          {COMBAT_CAMERA_VIEWS.map(view => <CameraButton key={view.id} type="button" className="combat-demo__view" data-view={view.id} aria-pressed={cameraView === view.id} title={view.description} disabled={!ready} onClick={() => { setCameraView(view.id); controls.current?.select(view.id); }}>
+          {COMBAT_CAMERA_VIEWS.map(view => <CameraButton key={view.id} type="button" className="combat-demo__view" data-view={view.id} aria-pressed={view.id === 'freecam' ? freecamEnabled : cameraView === view.id} title={view.id === 'freecam' ? 'Toggle manual camera control: WASD pan, Q/E down/up, drag orbit, wheel distance' : view.description} disabled={!ready} onClick={() => { if (view.id === 'freecam') controls.current?.toggleFreecam(); else { setCameraView(view.id); controls.current?.select(view.id); } }}>
             <CameraAngleIcon view={view.id} /><span>{view.label}</span>
           </CameraButton>)}
         </div>

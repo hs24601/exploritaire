@@ -3,6 +3,7 @@ import { actorHeading, type OrientedActor } from './actorOrientation';
 import { HERO_DIRECTIONAL_SPRITE, DARK_SLIME_DIRECTIONAL_SPRITE } from './directionalSprites';
 import { MOCHI_DIRECTIONAL_SPRITE } from './mochiSprite';
 import { HERO_SITTING_DIRECTIONAL_SPRITE } from './heroSittingSprite';
+import { HERO_COMBAT_POSES } from './heroCombatSprites';
 import { createDirectionalSpriteLibrary, type BattleSpriteTextures } from './directionalSpriteRig';
 import { BATTLE_TURN_PRIORITY, type BattleTeam } from './battleTurnPriority';
 import { createCombatCueFx } from './combatCueFx';
@@ -186,7 +187,7 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
     mesh.scale.set(height * image.width / image.height, height, 1); mesh.position.set(x, height / 2 - height * (image.height - bottom - 1) / image.height, z); scene.add(mesh); return mesh;
   };
   const trees = Array.from({length: 16}, (_, i) => { const angle = i / 16 * Math.PI * 2; return billboard(assets.trees, Math.cos(angle) * 20, Math.sin(angle) * 20, 5 + i % 3, 0x77958a); });
-  const heroLibrary = createDirectionalSpriteLibrary(assets, HERO_DIRECTIONAL_SPRITE, { sitting: HERO_SITTING_DIRECTIONAL_SPRITE });
+  const heroLibrary = createDirectionalSpriteLibrary(assets, HERO_DIRECTIONAL_SPRITE, { sitting: HERO_SITTING_DIRECTIONAL_SPRITE, ...HERO_COMBAT_POSES });
   const mochiLibrary = createDirectionalSpriteLibrary(assets, MOCHI_DIRECTIONAL_SPRITE);
   const slimeLibrary = createDirectionalSpriteLibrary(assets, DARK_SLIME_DIRECTIONAL_SPRITE);
   const hero = heroLibrary.create(ACTOR_HEIGHTS[0]), mochi = mochiLibrary.create(ACTOR_HEIGHTS[1]);
@@ -213,11 +214,13 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
   const heroX = (t: number) => -3 + ease((t - 3.3) / 1.6) * 4 - ease((t - 7.2) / 1.8) * 4;
   const headings = instances.map(() => 0);
   const activity = (t: number) => Number((t > 3.3 && t < 4.9) || (t > 7.2 && t < 9));
+  let ambushed = false;
   return {
     // Scene authors may use target/point/fixed policies for an ambush or scripted cue.
     actors,
     /** Who is in the battle and who has fallen (`now` in seconds, the cue clock). Units not listed leave the arena. */
     setUnits(units: BattleScene['units'], now: number) { cues.setUnits(units, now); },
+    setAmbushed(value: boolean) { ambushed = value; },
     /** Plays a battle cue from `now` (seconds). */
     cue(cue: BattleCue, now: number) { cues.cue(cue, now); },
     /** Cue effects still moving, so the arena keeps drawing. */
@@ -230,11 +233,15 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
       slimes[0].setColor(new THREE.Color(1, 1 - impact * .8, 1 - impact * .7));
       slimes[0].root.position.x = 3 + Math.sin((t - 5.7) * 36) * impact * .15;
       const acting = cues.place(now, reduced);
-      // Hero sits at rest and stands to act, and to fall.
-      hero.setPose(activity(t) || (t >= 5.2 && t < 5.85) || acting.has('hero') || hero.facing.rotation.z ? 'standing' : 'sitting');
+      // Hero sits at rest and stands to act; reactions selected by cues hold priority.
+      if (hero.pose !== 'down' && hero.pose !== 'flinch') hero.setPose(activity(t) || (t >= 5.2 && t < 5.85) || acting.has('hero') || hero.facing.rotation.z ? 'standing' : 'sitting');
       // Units that left the battle no longer draw anyone's gaze; fallen ones keep theirs.
       const present = actors.filter((_, i) => instances[i].root.visible);
-      instances.forEach((rig, i) => { headings[i] = actorHeading(actors[i], present, headings[i]); rig.update(camera, headings[i], t, reduced, i * 1.7, Math.max(i === 0 ? activity(t) : 0, acting.get(actors[i].id) ?? 0)); });
+      instances.forEach((rig, i) => {
+        const away = ambushed && actors[i].team === 'enemy' ? Math.PI : 0;
+        headings[i] = actorHeading(actors[i], present, headings[i] - away) + away;
+        rig.update(camera, headings[i], t, reduced, i * 1.7, rig.pose === 'down' || rig.pose === 'flinch' ? 0 : Math.max(i === 0 ? activity(t) : 0, acting.get(actors[i].id) ?? 0));
+      });
       cues.particles(now);
       for (const m of trees) m.rotation.y = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z);
       echoes.forEach((rig, i) => {

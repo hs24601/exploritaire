@@ -49,12 +49,12 @@ describe('tableau guidance', () => {
   });
 
   it('preserves all RPG values in divine mode while allowing puzzle progress', () => {
-    const before = { energy: 0, actorStamina: [0], heroHp: [0], heroBuffs: [{ id: 'well_fed' }],
-      enemyTeam: [{ hp: 8 }], wildCards: 2, stamina: 0, totalWorkCompleted: 0, tableau: [3] };
-    const after = { ...before, energy: -1, actorStamina: [-1], heroHp: [-1], heroBuffs: [],
-      enemyTeam: [{ hp: 7 }], wildCards: 3, stamina: -1, totalWorkCompleted: 1, tableau: [] };
+    const before = { energy: 0, actorInspiration: [0], heroHp: [0], heroBuffs: [{ id: 'well_fed' }],
+      enemyTeam: [{ hp: 8 }], wildCards: 2, inspiration: 0, totalWorkCompleted: 0, tableau: [3] };
+    const after = { ...before, energy: -1, actorInspiration: [-1], heroHp: [-1], heroBuffs: [],
+      enemyTeam: [{ hp: 7 }], wildCards: 3, inspiration: -1, totalWorkCompleted: 1, tableau: [] };
     const result = preserveSolverRpgValues(before, after);
     expect(result).toEqual({ ...before, tableau: [] });
-    expect(result.actorStamina).toBe(before.actorStamina);
+    expect(result.actorInspiration).toBe(before.actorInspiration);
   });
 });

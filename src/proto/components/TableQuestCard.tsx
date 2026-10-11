@@ -44,8 +44,8 @@ export function fitTableQuestCard(card: HTMLElement) {
   title.style.setProperty('--fit-lines', '1');
 }
 
-export function TableQuestCard({ placement, title, text, redeemed, onRedeem, timeOfDay, lights, cameraScale, toWorld, solids, onMove, staminaReward = 1, rewardLabel }: {
-  placement: PlacedQuestCard; title: string; text: string; redeemed: boolean; staminaReward?: number; rewardLabel?: string;
+export function TableQuestCard({ placement, title, text, redeemed, onRedeem, timeOfDay, lights, cameraScale, toWorld, solids, onMove, inspirationReward = 1, rewardLabel }: {
+  placement: PlacedQuestCard; title: string; text: string; redeemed: boolean; inspirationReward?: number; rewardLabel?: string;
   onRedeem: () => void; timeOfDay: number; lights: TableLight[];
   cameraScale: number; solids: TableSolid[];
   /** Client point to table world point; follows a tilted camera. */
@@ -138,6 +138,6 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     }}
     onPointerCancel={()=>{hold.cancel('pointercancel');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;setPickedUp(false);}}
     onLostPointerCapture={()=>{hold.cancel('lost pointer capture');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;setPickedUp(false);}}>
-    <QuestCard title={title} text={text} staminaReward={staminaReward} rewardLabel={rewardLabel} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} />
+    <QuestCard title={title} text={text} inspirationReward={inspirationReward} rewardLabel={rewardLabel} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} />
   </div>;
 }

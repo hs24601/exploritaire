@@ -1,6 +1,6 @@
 // Pond fishing: the Hero walks to the pond and casts bait cards by dragging them
 // into the water (mouse, touch, or Enter on the keyboard). A miss loses the bait
-// and a stamina; a bite starts the fight, a card-driven fishing meter, played here
+// and a inspiration; a bite starts the fight, a card-driven fishing meter, played here
 // by a quick bot with the mouse and with touch. The fish only ever moves where a
 // card in hand answers. A landed fish flies into the catch tray at once as its
 // species (the ace a Minnow, the king a Kingfish), sometimes with a lucky
@@ -14,7 +14,7 @@ const SEED=20261008;
 const seeded=s0=>{let s=s0;Math.random=()=>{s=(s*16807)%2147483647;return s/2147483647;};};
 const centre=async l=>{const r=await l.boundingBox();return {x:r.x+r.width/2,y:r.y+r.height/2};};
 const castsLeft=page=>page.locator('[data-pond-casts]').getAttribute('data-pond-casts').then(Number);
-const stamina=async page=>{const m=(await page.locator('body').innerText()).match(/STAMINA (\d+)\/(\d+)/);return {now:+m[1],max:+m[2]};};
+const inspiration=async page=>{const m=(await page.locator('body').innerText()).match(/INSPIRATION (\d+)\/(\d+)/);return {now:+m[1],max:+m[2]};};
 // The test knows the deal (the face-down ranks) by running the same rules on a
 // mirror of the pond, so it can pick a bite, a miss, a king or a queen on purpose.
 const installOracle=page=>page.evaluate(async seed=>{
@@ -78,9 +78,9 @@ const walkToPond=async page=>{
   const p=await (await b.newContext({viewport:{width:1912,height:914}})).newPage();
   await p.addInitScript(seeded,SEED);
   await p.goto('http://localhost:5178/proto.html');
-  const before=await stamina(p);
+  const before=await inspiration(p);
   await walkToPond(p);await installOracle(p);
-  assert.equal((await stamina(p)).now,before.now,'walking to the pond costs no stamina');
+  assert.equal((await inspiration(p)).now,before.now,'walking to the pond costs no inspiration');
   assert.equal(await p.locator('.proto-pond__fish.playing-card').count(),6,'six fish lie face down in the water as cards');
   assert.deepEqual(await p.evaluate(()=>[...document.querySelectorAll('.proto-pond__bait')].map(el=>+el.dataset.baitRank)),await p.evaluate(()=>window.__handRanks()),'the test knows the deal');
   // A click on bait does not cast; it explains how to.
@@ -93,14 +93,14 @@ const walkToPond=async page=>{
     assert.equal(await p.locator('.proto-pond__water[data-drop-target]').count(),0,'the pond does not light up away from the water');await p.mouse.up();
     assert.equal(await castsLeft(p),10,'bait dropped off the water does not cast');
     assert.equal(await p.locator('.proto-pond__drag').count(),0,'the carried card is gone after letting go');}
-  // A miss: the bait is lost, a stamina is spent, and nibbles show neighbours.
+  // A miss: the bait is lost, a inspiration is spent, and nibbles show neighbours.
   const miss=await castBait(p,await pick(p,'miss'),{whileOver:()=>p.evaluate(()=>({lit:!!document.querySelector('.proto-pond__water[data-drop-target]'),clone:!!document.querySelector('.proto-pond__drag'),dimmed:document.querySelectorAll('.proto-pond__bait[data-dragging]').length}))});
   assert.ok(miss.over.lit,'while dragging, the pond lights up as the drop target');
   assert.ok(miss.over.clone,'the bait card is carried under the pointer');
   assert.equal(miss.over.dimmed,1,'the bait card left behind dims while carried');
   assert.equal(miss.hooked,null,'that bait was a miss');
   assert.equal(await castsLeft(p),9,'dropping bait in the pond casts it');
-  assert.equal((await stamina(p)).now,before.now-1,'a miss costs a stamina');
+  assert.equal((await inspiration(p)).now,before.now-1,'a miss costs a inspiration');
   assert.match(await p.locator('.proto-pond__message').innerText(),/go fish/i,'a miss says go fish');
   assert.equal(await p.locator('.proto-fight').count(),0,'a miss starts no fight');
   // A bite on the king: the fight begins with the king tethered as the line card.
@@ -171,20 +171,20 @@ const walkToPond=async page=>{
   assert.ok(glowLight>=30,`the glowfish lights its spot to at least dim (${glowLight}%)`);
   assert.ok(glowLight>fishLight,`the glowfish is brighter than a plain fish (${glowLight}% vs ${fishLight}%)`);
   const heroLightBefore=Number(await p.locator('[data-board-piece="actor"]').getAttribute('data-light-percent'));
-  const fed=await stamina(p);
+  const fed=await inspiration(p);
   const eat=async id=>{const s=await centre(p.locator(`[data-board-piece="resource"][data-resource="${id}"]`)),h=await centre(p.locator('[data-board-piece="actor"]'));
     await p.mouse.move(s.x,s.y);await p.mouse.down();await p.mouse.move(h.x,h.y,{steps:15});await p.mouse.up();await p.waitForTimeout(500);
     assert.equal(await p.locator(`[data-board-piece="resource"][data-resource="${id}"]`).count(),0,`the ${id} is eaten`);};
   await eat('glowfish');
-  const glowing=await stamina(p);
-  assert.equal(glowing.max,fed.max+2,'eating the glowfish raises max stamina by 2');
-  assert.equal(glowing.now,Math.min(glowing.max,fed.now+3),'and restores 3 stamina');
+  const glowing=await inspiration(p);
+  assert.equal(glowing.max,fed.max+2,'eating the glowfish raises max inspiration by 2');
+  assert.equal(glowing.now,Math.min(glowing.max,fed.now+3),'and restores 3 inspiration');
   const heroLight=Number(await p.locator('[data-board-piece="actor"]').getAttribute('data-light-percent'));
   assert.ok(heroLight>heroLightBefore+15,`the Hero glows brighter (${heroLightBefore}% → ${heroLight}%)`);
   await eat('kingfish');
-  const feast=await stamina(p);
-  assert.equal(feast.now,feast.max,'eating the Kingfish restores all stamina');
-  console.log(`Pond: drag-to-cast (a click only hints, the pond lights up under the bait); a miss cost 1 stamina; the fish turned where the hand could follow; fights landed ${species.join(', ')} plus a lucky glowfish (events ${events.map(ms=>(ms/1000).toFixed(1)+'s').join(', ')}); an idle fight lost its fish; glowfish light ${glowLight}% vs ${smallFry} ${fishLight}%; glowfish stamina ${fed.now}/${fed.max} → ${glowing.now}/${glowing.max}, light ${heroLightBefore}% → ${heroLight}%; Kingfish feast → ${feast.now}/${feast.max}.`);
+  const feast=await inspiration(p);
+  assert.equal(feast.now,feast.max,'eating the Kingfish restores all inspiration');
+  console.log(`Pond: drag-to-cast (a click only hints, the pond lights up under the bait); a miss cost 1 inspiration; the fish turned where the hand could follow; fights landed ${species.join(', ')} plus a lucky glowfish (events ${events.map(ms=>(ms/1000).toFixed(1)+'s').join(', ')}); an idle fight lost its fish; glowfish light ${glowLight}% vs ${smallFry} ${fishLight}%; glowfish inspiration ${fed.now}/${fed.max} → ${glowing.now}/${glowing.max}, light ${heroLightBefore}% → ${heroLight}%; Kingfish feast → ${feast.now}/${feast.max}.`);
   // Touch on phones, the mouse on desktop and the keyboard at 1280x720, with the
   // pond panel and the fight checked for layout at every size.
   const PARTS='.proto-pond__catch-rank, .proto-pond__catch, .proto-pond__catch > li, .proto-pond__header, .proto-pond__header > span, .proto-pond__water, .proto-pond__fish, .proto-pond__band, .proto-pond__rank, .proto-pond__message, .proto-pond__hand, .proto-pond__bait, .proto-pond__bait button, .proto-pond__footer, .proto-pond__legend, .proto-pond__leave';

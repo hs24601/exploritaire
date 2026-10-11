@@ -97,7 +97,7 @@ export function PropVolumeArt({sprite,width,height,lighting,hours,position,camer
   // to the plane-sprite oversampling size added no detail, but uploaded several
   // times as many pixels on every orbit frame. CSS nearest sampling supplies
   // enlargement at all zooms without changing the world footprint.
-  return <canvas ref={ref} aria-hidden="true" data-prop-volume="solid" data-volume-ground-width={volume.width*scale} data-volume-ground-depth={volume.depth*scale} width={VOLUME_RASTER_WIDTH} height={VOLUME_RASTER_HEIGHT}
+  return <canvas ref={ref} aria-hidden="true" data-prop-volume="solid" data-volume-height={volume.height*scale} data-volume-height-scale={propVolumeRecipe(sprite)?.heightScale ?? 1} data-volume-ground-width={volume.width*scale} data-volume-ground-depth={volume.depth*scale} width={VOLUME_RASTER_WIDTH} height={VOLUME_RASTER_HEIGHT}
     style={{position:'absolute',pointerEvents:'none',imageRendering:'pixelated',left:width/2+bounds.left*scale,top:height+bounds.top*scale,
       width:scale*bounds.width,height:scale*bounds.height}}/>;
 }

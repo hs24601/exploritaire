@@ -23,8 +23,8 @@ describe('road exploration', () => {
     expect(state.biomeTiles.filter(tile => tile.position.x === 0 && tile.position.y === 96)).toHaveLength(1);
     expect(den.flags).toEqual([]);
     expect(den.tableau.flat().length).toBeGreaterThan(0);
-    // The Den, five impassable mountains, and the day-one Berry Patch and Old Tree.
-    expect(createInitialState().biomeTiles).toHaveLength(8);
+    // Den, five mountains, Berry Patch, Old Tree, Dark Woods and dirt.
+    expect(createInitialState().biomeTiles).toHaveLength(10);
     expect(roads[0].flags).toEqual(['unexplored']);
     expect(roads[1].flags).toEqual(['unexplored']);
     expect(Object.keys(ROAD_PATHS)).toHaveLength(4);

@@ -39,12 +39,12 @@ const previewDeal = createSeededSmallWoodsDeal();
 const TICK_MS = 100;
 
 /** Hero shares the expedition art; Mochi uses the equivalent quarter-facing pose. */
-function FoundationSprite({ sprite, name, lighting }: { sprite: DirectionalSpriteDefinition | string; name: string; lighting: StandeeLighting }) {
+function FoundationSprite({ sprite, name, lighting, turnedAway = false }: { sprite: DirectionalSpriteDefinition | string; name: string; lighting: StandeeLighting; turnedAway?: boolean }) {
   if (typeof sprite === 'string') return <span className="battle-field__sprite" role="img" aria-label={`${name} sprite`}>
     <SpriteStandeeArt sprite={sprite} lighting={lighting} size={64} />
   </span>;
-  const frame = sprite.low[sprite.id === 'mochi' ? 1 : 0], rect = frame.parts[0].rect;
-  return <svg className="battle-field__sprite" viewBox={rect.join(' ')} preserveAspectRatio="xMidYMax meet" data-foundation-pose={sprite.id === 'mochi' ? 'quarter' : 'front'} role="img" aria-label={`${name} sprite`}>
+  const frame = sprite.low[turnedAway ? 4 : sprite.id === 'mochi' ? 1 : 0], rect = frame.parts[0].rect;
+  return <svg className="battle-field__sprite" viewBox={rect.join(' ')} preserveAspectRatio="xMidYMax meet" data-foundation-pose={turnedAway ? 'rear' : sprite.id === 'mochi' ? 'quarter' : 'front'} role="img" aria-label={`${name} sprite${turnedAway ? ' facing away' : ''}`}>
     <image href={`${import.meta.env.BASE_URL}assets/${BATTLE_SPRITE_ASSETS[frame.source]}`} />
   </svg>;
 }
@@ -52,21 +52,23 @@ function FoundationSprite({ sprite, name, lighting }: { sprite: DirectionalSprit
 const statusLine = (battle: BattleState, paused: boolean) =>
   battle.result === 'won' ? 'Victory · the slimes are beaten'
     : battle.result === 'lost' ? 'The party is down'
+      : battle.ambush?.awaitingAttack ? "Player's ambush · Strike when ready"
+        : battle.ambush ? `Enemy ambushed · Free next turn: ${Math.ceil(battle.ambush.remaining)}s${paused ? ' · Paused' : ''}`
       : !battle.started ? 'Slimes stir on your first play'
         : paused ? 'Paused' : battle.rules.traps ? 'Hit a slime, or trap the card it eyes'
           : battle.rules.hungry ? 'Snatch eyed cards, then strike' : 'Build charge, then drag an ability onto a slime';
 
-export function BattleTableauField({ hours, lights, onWatch, active, onSceneChange, heroStamina, onRedraw }: {
+export function BattleTableauField({ hours, lights, onWatch, active, onSceneChange, heroInspiration, onRedraw }: {
   hours: number; lights: readonly TableLight[]; onWatch: () => void; active: boolean;
   /** Units (fallen ones included) and recent events, for the 3D arena's animations. */
   onSceneChange?: (scene: BattleScene) => void;
-  /** The Hero's world stamina coming into the fight. */
-  heroStamina?: number;
-  /** An actor spent 1 stamina on a foundation redraw. */
+  /** The Hero's world inspiration coming into the fight. */
+  heroInspiration?: number;
+  /** An actor spent 1 inspiration on a foundation redraw. */
   onRedraw?: (actorId: string) => void;
 }) {
   const [scenarioId, setScenarioId] = useState(BATTLE_SCENARIOS[0].id);
-  const [battle, setBattle] = useState(() => createBattle(previewDeal, { ...BATTLE_SCENARIOS[0].setup, stamina: { hero: heroStamina } }));
+  const [battle, setBattle] = useState(() => createBattle(previewDeal, { ...BATTLE_SCENARIOS[0].setup, playerAmbush: true, inspiration: { hero: heroInspiration } }));
   const [paused, setPaused] = useState(false);
   const foundationRefs = useRef(new Map<string, HTMLDivElement>());
   const cardRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -76,7 +78,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const [inspection, setInspection] = useState<{ id: string; name: string; anchor: HTMLElement } | null>(null);
   useEffect(() => () => { flights.current.forEach((cancel) => cancel()); }, []);
 
-  // Enemy clocks run in real time once the party has played.
+  // Ticks also advance effects and the free-turn countdown; enemy clocks wait for it.
   const running = battle.started && !battle.result && !paused;
   useEffect(() => {
     if (!running) return;
@@ -94,7 +96,8 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const lastEvent = battle.events[battle.events.length - 1]?.id ?? 0;
   const sceneChange = useRef(onSceneChange); sceneChange.current = onSceneChange;
   const latest = useRef(battle); latest.current = battle;
-  useEffect(() => { sceneChange.current?.(sceneOf(latest.current)); }, [units, lastEvent]);
+  const ambushed = Boolean(battle.ambush);
+  useEffect(() => { sceneChange.current?.(sceneOf(latest.current)); }, [units, lastEvent, ambushed]);
   // Bites, flinches and falls on the cards themselves.
   const fieldRef = useRef<HTMLElement>(null);
   useBattleFx(fieldRef, battle.events);
@@ -125,7 +128,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     if (!preview) return;
     setBattle((current) => applyAttack(current, actorId, foeId));
     const foe = battle.foes.find((f) => f.id === foeId)!;
-    setAnnouncement(`${preview.attack.name} hits ${foe.name} for ${preview.damage}${preview.ko ? ', defeated' : preview.staggers ? ', staggered' : ''}`);
+    setAnnouncement(`${preview.attack.name} hits ${foe.name} for ${preview.damage}${preview.ko ? ', defeated' : preview.staggers ? ', staggered' : ''}${battle.ambush?.awaitingAttack ? '. Enemy ambushed. Free next turn: ten seconds before enemy attack timers begin' : ''}`);
   };
   const { aim, cardProps, foeProps, cancel } = useAbilityDrag(spend);
   useEffect(() => { if (battle.result) cancel(); }, [battle.result]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -187,18 +190,19 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     setSelection(null);
     setBattle(next);
     onRedraw?.(actorId);
-    setAnnouncement(`${actor.name} redraws: foundation is now ${rankLabel(actor.rank)} · ${actor.stamina} stamina left`);
+    setAnnouncement(`${actor.name} redraws: foundation is now ${rankLabel(actor.rank)} · ${actor.inspiration} inspiration left`);
   };
   /** Restarts the current scenario with the roster as adjusted, or a fresh scenario as authored. */
   const restart = (nextScenario?: string) => {
     cancel(); setSelection(null); setPaused(false);
-    // A new scenario starts as authored; stamina spent on redraws stays spent.
-    if (nextScenario) { setScenarioId(nextScenario); setBattle((current) => createBattle(previewDeal, { ...scenarioById(nextScenario).setup, stamina: Object.fromEntries(current.party.map((a) => [a.id, a.stamina])) })); return; }
+    // A new scenario starts as authored; inspiration spent on redraws stays spent.
+    if (nextScenario) { setScenarioId(nextScenario); setBattle((current) => createBattle(previewDeal, { ...scenarioById(nextScenario).setup, playerAmbush: nextScenario === BATTLE_SCENARIOS[0].id, inspiration: Object.fromEntries(current.party.map((a) => [a.id, a.inspiration])) })); return; }
     setBattle((current) => createBattle(previewDeal, {
       ...scenarioById(scenarioId).setup,
+      playerAmbush: scenarioId === BATTLE_SCENARIOS[0].id,
       mochi: current.party.some((a) => a.id === 'mochi'), slimes: current.foes.length,
       spirits: Object.fromEntries(current.party.map((a) => [a.id, a.spirits])),
-      stamina: Object.fromEntries(current.party.map((a) => [a.id, a.stamina])),
+      inspiration: Object.fromEntries(current.party.map((a) => [a.id, a.inspiration])),
     }));
   };
 
@@ -220,7 +224,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     {battle.foes.map((foe) => <FoeCard key={foe.id} foe={foe} target={target?.name ?? null} events={battle.events}
       preview={previews.get(foe.id) ?? null} focus={aim?.foeId === foe.id} aiming={Boolean(aim && heldAttack)}
       interaction={foeProps(foe.id)}
-      sprite={<FoundationSprite sprite={SPRITES[foe.id]} name={foe.name} lighting={rig.standee(0, -55, 64)} />} />)}
+      sprite={<FoundationSprite sprite={SPRITES[foe.id]} name={foe.name} lighting={rig.standee(0, -55, 64)} turnedAway={ambushed} />} />)}
   </div>;
 
   const partyRow = <div className="battle-field__team" data-team="party" style={{ '--slots': battle.party.length } as CSSProperties}>
@@ -228,7 +232,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     {battle.party.map((actor) => {
       const attack = actorAttack(battle, actor.id);
       const usable = Boolean(attack) && !battle.result && !paused;
-      const canRedraw = actor.stamina > 0 && actor.hp > 0 && !battle.result && !paused;
+      const canRedraw = actor.inspiration > 0 && actor.hp > 0 && !battle.result && !paused;
       return <div key={actor.id} className="battle-field__slot" data-battle-slot={actor.id} data-down={actor.hp <= 0 || undefined}>
         <button type="button" className="battle-field__foundation" data-battle-actor={actor.id}
           data-targetable={selection?.actorIds.includes(actor.id) || undefined} disabled={!!selection && !selection.actorIds.includes(actor.id)}
@@ -247,9 +251,9 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
           <AbilityCard actor={actor} attack={attack} disabled={!usable} armed={aim?.mode === 'armed' && aim.actorId === actor.id}
             dragging={aim?.mode === 'drag' && aim.actorId === actor.id} interaction={cardProps(actor.id, usable)} />
           <button type="button" className="battle-field__redraw" data-redraw-actor={actor.id} disabled={!canRedraw} onClick={() => redraw(actor.id)}
-            aria-label={`Redraw ${actor.name}'s foundation for 1 stamina · ${actor.stamina} stamina left`}
-            title={actor.stamina > 0 ? `Redraw: stuck? Swap ${actor.name}'s foundation value for a new one. Costs 1 stamina (${actor.stamina} left).` : `${actor.name} has no stamina left to redraw`}>
-            <span aria-hidden="true">↻ Redraw</span><span className="battle-field__redraw-left" aria-hidden="true">{actor.stamina}</span>
+            aria-label={`Redraw ${actor.name}'s foundation for 1 inspiration · ${actor.inspiration} inspiration left`}
+            title={actor.inspiration > 0 ? `Redraw: stuck? Swap ${actor.name}'s foundation value for a new one. Costs 1 inspiration (${actor.inspiration} left).` : `${actor.name} has no inspiration left to redraw`}>
+            <span aria-hidden="true">↻ Redraw</span><span className="battle-field__redraw-left" aria-hidden="true">{actor.inspiration}</span>
           </button>
         </div>
         <PartyVitals actor={actor} count={actor.count} events={battle.events} targeted={battle.started && !battle.result && target?.id === actor.id} />
@@ -282,7 +286,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
       objects={[{ id: inspection.id, name: inspection.name, badge: '♟', badgeLabel: 'Actor',
         art: <ActorCardArt sprite={ACTOR_HOLO_ART[inspection.id]} label={inspection.name} />,
         descriptor: `${inspection.name} · battle scene actor`,
-        trays: [{ id: 'stats', label: 'Foundation', details: (() => { const actor = battle.party.find((a) => a.id === inspection.id); return actor ? `Rank ${rankLabel(actor.rank)} · Collected ${actor.count} · Stamina ${actor.stamina}` : 'Left the battle'; })() }] }]}
+        trays: [{ id: 'stats', label: 'Foundation', details: (() => { const actor = battle.party.find((a) => a.id === inspection.id); return actor ? `Rank ${rankLabel(actor.rank)} · Collected ${actor.count} · Inspiration ${actor.inspiration}` : 'Left the battle'; })() }] }]}
       onClose={() => setInspection(null)} onCloseObject={() => setInspection(null)} />}
     <TableauScene immersive={!active} fillScenery={!active} terrain="woods" rig={rig} hours={hours}>
       <div className="battle-field__board">
@@ -305,7 +309,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
             </div>
           </div>
           <div className="battle-field__status">
-            <span className="battle-field__status-text" data-result={battle.result ?? undefined}>{statusLine(battle, paused)}</span>
+            <span className="battle-field__status-text" data-ambush={ambushed && !battle.result || undefined} data-result={battle.result ?? undefined}>{statusLine(battle, paused)}</span>
             {battle.result ? <SceneButton type="button" onClick={() => restart()}>Fight again</SceneButton> : <>
               <SceneButton type="button" aria-pressed={paused} disabled={!battle.started} onClick={() => { cancel(); setSelection(null); setPaused((p) => !p); }}>{paused ? 'Resume' : 'Pause'}</SceneButton>
               <SceneButton type="button" onClick={() => restart()}>Restart</SceneButton>

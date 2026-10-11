@@ -1,0 +1,53 @@
+{
+  "device": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "rendererPixels": [
+    640,
+    250
+  ],
+  "preparationMs": 32,
+  "size": {
+    "width": 1254,
+    "height": 1254
+  },
+  "maskedTextureMiB": 17.996017456054688,
+  "measurements": [
+    {
+      "count": 1,
+      "drawCalls": 3,
+      "triangles": 6,
+      "gpuTextures": 3,
+      "updateMedianMs": 0,
+      "updateP95Ms": 0,
+      "submitMedianMs": 0,
+      "submitP95Ms": 0.19999998807907104,
+      "gpuFinishMedianMs": 0,
+      "gpuFinishP95Ms": 0.09999999403953552
+    },
+    {
+      "count": 10,
+      "drawCalls": 30,
+      "triangles": 60,
+      "gpuTextures": 3,
+      "updateMedianMs": 0,
+      "updateP95Ms": 0.10000002384185791,
+      "submitMedianMs": 0.09999999403953552,
+      "submitP95Ms": 0.29999998211860657,
+      "gpuFinishMedianMs": 0,
+      "gpuFinishP95Ms": 0.09999999403953552
+    }
+  ],
+  "example": [
+    {
+      "id": "0",
+      "heading": 1.7829400797993722,
+      "sourceFlip": -1,
+      "projection": 0.21345905994411235
+    },
+    {
+      "id": "1",
+      "heading": 2.060753653048625,
+      "sourceFlip": 1,
+      "projection": -0.37981948712103397
+    }
+  ]
+}

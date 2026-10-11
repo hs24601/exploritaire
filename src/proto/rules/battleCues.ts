@@ -77,11 +77,13 @@ export const cueSeconds = (cue: BattleCue) => cue.delay + CUE_SECONDS[cue.kind =
 
 /** What the arena shows: every unit still on the field (fallen ones included) and the recent events to cue. */
 export type BattleScene = {
+  ambushed?: boolean;
   units: { id: string; team: 'party' | 'enemy'; down: boolean }[];
   events: readonly BattleEvent[];
 };
 
 export const sceneOf = (battle: BattleState): BattleScene => ({
+  ambushed: Boolean(battle.ambush),
   units: [
     ...battle.party.map((actor) => ({ id: actor.id, team: 'party' as const, down: actor.hp <= 0 })),
     ...battle.foes.map((foe) => ({ id: foe.id, team: 'enemy' as const, down: foe.hp <= 0 })),

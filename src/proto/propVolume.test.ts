@@ -18,6 +18,22 @@ function ink(pixels:Uint8ClampedArray) {
   return {width:right-left+1,count};
 }
 describe('sprite-derived prop volumes',()=>{
+  it('reduces den height by 50% and berry height by 70% without changing their ground footprints',()=>{
+    const rgba=new Uint8ClampedArray(20*20*4).fill(180);
+    for(let i=3;i<rgba.length;i+=4)rgba[i]=255;
+    for(const [sprite,scale] of [['hero-den-standee-v3.png',.5],['berry-bush.svg',.3]] as const) {
+      const recipe=propVolumeRecipe(sprite)!;
+      const original=buildPropVolume(20,20,rgba,{...recipe,heightScale:1});
+      const reduced=buildPropVolume(20,20,rgba,recipe);
+      expect(reduced.height).toBeCloseTo(original.height*scale);
+      expect(reduced.width).toBe(original.width);expect(reduced.depth).toBe(original.depth);
+      expect(reduced.faces.length).toBe(original.faces.length);
+      reduced.faces.forEach((face,index)=>face.vertices.forEach(([x,y,z],corner)=>{
+        const old=original.faces[index].vertices[corner];
+        expect(x).toBe(old[0]);expect(y).toBeCloseTo(old[1]*scale);expect(z).toBe(old[2]);
+      }));
+    }
+  });
   it('maps side detail across depth instead of stretching the source outline into dark slabs',()=>{
     const w=24,h=24,rgba=new Uint8ClampedArray(w*h*4);
     for(let y=0;y<h;y++)for(let x=0;x<w;x++)
@@ -48,6 +64,18 @@ describe('sprite-derived prop volumes',()=>{
     expect(bush.height/bush.width).toBeLessThan(.75);
     expect(bush.depth/bush.width).toBeCloseTo(1);
     expect(bush.faces.filter(face=>face.color[0]>face.color[1]*1.5).length).toBeGreaterThan(100);
+    // A true overhead projection must contain five disconnected shrubs.
+    const overhead=renderPropVolume(bush,0,90,light),seen=new Set<number>();
+    let shrubs=0;
+    for(let i=0;i<overhead.length/4;i++)if(overhead[i*4+3]&&!seen.has(i)) {
+      shrubs++;const pending=[i];seen.add(i);
+      while(pending.length) {
+        const pixel=pending.pop()!,x=pixel%VOLUME_RASTER_WIDTH;
+        for(const next of [x>0?pixel-1:-1,x<VOLUME_RASTER_WIDTH-1?pixel+1:-1,pixel-VOLUME_RASTER_WIDTH,pixel+VOLUME_RASTER_WIDTH])
+          if(next>=0&&next<overhead.length/4&&overhead[next*4+3]&&!seen.has(next)){seen.add(next);pending.push(next);}
+      }
+    }
+    expect(shrubs).toBe(5);
     for(const yaw of [0,90,180,270]) {
       const pixels=renderPropVolume(bush,yaw,30,light);
       let fruit=0;
@@ -60,12 +88,12 @@ describe('sprite-derived prop volumes',()=>{
     expect(pine().width).toBeCloseTo(.92);
     const w=20,h=20,rgba=new Uint8ClampedArray(w*h*4).fill(180);
     for(let i=3;i<rgba.length;i+=4)rgba[i]=255;
-    const cave=buildPropVolume(w,h,rgba,propVolumeRecipe('hero-den-standee-v2.png')!);
+    const cave=buildPropVolume(w,h,rgba,propVolumeRecipe('hero-den-standee-v3.png')!);
     const interior=cave.faces.filter(face=>face.vertices.every(([x,y])=>Math.abs(x)<cave.width*.12&&y<cave.height*.25));
     expect(interior.length).toBeGreaterThan(0);
     expect(Math.min(...interior.flatMap(face=>face.vertices.map(v=>v[2])))).toBeGreaterThan(0);
-    expect(propVolumeRecipe('hero-den-standee-v2.png')?.symmetry).toBe('asymmetric');
-    expect(propVolumeRecipe('hero-den-standee-v2.png')?.facing).toBe('north');
+    expect(propVolumeRecipe('hero-den-standee-v3.png')?.symmetry).toBe('asymmetric');
+    expect(propVolumeRecipe('hero-den-standee-v3.png')?.facing).toBe('north');
     expect(cave.faces.some(face=>face.normal[2]<-.99&&face.color[0]<100)).toBe(true);
     expect(cave.faces.some(face=>face.vertices.every(v=>v[1]>cave.height*.8))).toBe(true);
     for(const yaw of [0,90,180,270])expect(ink(renderPropVolume(cave,yaw,30,light)).count).toBeGreaterThan(500);
@@ -97,7 +125,7 @@ describe('sprite-derived prop volumes',()=>{
     expect(buildPropVolume(2,2,new Uint8ClampedArray(16),{bands:[0,1],depth:1,trim:true}).faces).toEqual([]);
     expect(propVolumeRecipe('/assets/biomes/mountain_standee.svg')).toBeDefined();
     expect(propVolumeRecipe('/assets/actors/hero.png')).toBeUndefined();
-    expect(propVolumeRecipe('/assets/biomes/hero-den-standee-v2.png')?.shape).toBe('cave');
+    expect(propVolumeRecipe('/assets/biomes/hero-den-standee-v3.png')?.shape).toBe('cave');
   });
   it('constrains the complete two-axis ground footprint and uniformly scales small owners',()=>{
     const owner={x:48,y:0,width:48,height:48};

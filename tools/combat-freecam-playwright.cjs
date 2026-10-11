@@ -6,7 +6,7 @@ const { findLayoutDefects } = require('./lib/layout-check.cjs');
 const out = 'artifacts/combat-freecam';
 fs.mkdirSync(out, { recursive: true });
 const url = 'http://localhost:5178/proto.html?combatdemo';
-const parts = '.combat-demo__header, .combat-demo__header h1, .combat-demo__header p, .combat-demo__header button, .combat-demo__arena, .combat-demo__footer, .combat-demo__readout, .combat-demo__readout span, .combat-demo__camera-panel, .combat-demo__camera-heading, .combat-demo__camera-heading h2, .combat-demo__camera-heading p, .combat-demo__views, .combat-demo__view, .combat-demo__view svg, .combat-demo__view span, .combat-demo__replay, .combat-demo__freecam, .combat-demo__freecam p, .combat-demo__movement, .combat-demo__movement button, .combat-demo__diagnostics, .combat-demo__properties, .combat-demo__properties span, .combat-demo__copy';
+const parts = '.combat-demo__header, .combat-demo__header h1, .combat-demo__header p, .combat-demo__header button, .combat-demo__footer, .combat-demo__readout, .combat-demo__readout span, .combat-demo__camera-panel, .combat-demo__camera-heading, .combat-demo__camera-heading h2, .combat-demo__camera-heading p, .combat-demo__views, .combat-demo__view, .combat-demo__view svg, .combat-demo__view span, .combat-demo__replay, .combat-demo__freecam, .combat-demo__freecam p, .combat-demo__movement, .combat-demo__movement button, .combat-demo__diagnostics, .combat-demo__properties, .combat-demo__properties span, .combat-demo__copy';
 const pose = page => page.locator('.combat-demo__arena').evaluate(el => ({ p: el.dataset.cameraPosition.split(',').map(Number), target: el.dataset.cameraTarget.split(',').map(Number) }));
 const distance = shot => Math.hypot(...shot.p.map((n, i) => n - shot.target[i]));
 const near = (a, b, tolerance = .015) => a.forEach((n, i) => assert.ok(Math.abs(n - b[i]) < tolerance, `${a} != ${b}`));
@@ -30,12 +30,17 @@ const drag = async (page, dx, dy, button = 'left') => {
       page.on('pageerror', e => errors.push(e.message));
       await page.goto(url);
       await page.locator('[data-view="freecam"]:not(:disabled)').waitFor();
+      assert.equal(await page.locator('[data-view="freecam"]').getAttribute('aria-pressed'), 'true', 'Manual control defaults on');
       await select(page, 'party');
+      await page.getByRole('button', { name: 'Replay scene', exact: true }).click();
+      await page.locator('[data-view="freecam"]').click();
       const party = await pose(page);
       await page.keyboard.down('w'); await page.waitForTimeout(180); await page.keyboard.up('w');
-      assert.deepEqual(await pose(page), party, 'Freecam keys must not move a preset');
-      await select(page, 'freecam');
+      await drag(page, 80, 20); await page.mouse.wheel(0, -200); await page.waitForTimeout(80);
+      assert.deepEqual(await pose(page), party, 'Disabled Freecam blocks keys, drag and wheel');
+      await page.locator('[data-view="freecam"]').click();
       assert.deepEqual(await pose(page), party, 'Freecam inherits current shot');
+      assert.equal(await page.locator('[data-view="freecam"]').getAttribute('aria-pressed'), 'true');
       assert.equal(await page.locator('.combat-demo__properties [data-property]').count(), 6);
       await drag(page, 100, 35);
       const orbit = await pose(page);
@@ -83,7 +88,7 @@ const drag = async (page, dx, dy, button = 'left') => {
       assert.deepEqual(await findLayoutDefects(page, '.combat-demo', {parts}), []);
       await page.screenshot({path: `${out}/freecam-${width}.png`, scale: 'css'});
       await page.locator('.combat-demo__footer').screenshot({path: `${out}/panel-${width}-3x.png`});
-      await select(page, 'side'); assert.ok((await pose(page)).p[2] > 10, 'Preset restores framing');
+      await select(page, 'side'); assert.equal(await page.locator('[data-view="freecam"]').getAttribute('aria-pressed'), 'true', 'Preset preserves toggle'); assert.ok((await pose(page)).p[2] > 10, 'Preset restores framing');
       await select(page, 'cinematic'); const auto = await pose(page); await page.waitForTimeout(200); assert.notDeepEqual(await pose(page), auto);
       await page.keyboard.press('Escape'); assert.equal(await page.locator('.combat-demo').count(), 0);
       assert.deepEqual(errors, []); await context.close();
@@ -91,7 +96,7 @@ const drag = async (page, dx, dy, button = 'left') => {
     }
     const context = await browser.newContext({viewport: {width: 1280, height: 720}, hasTouch: true, reducedMotion: 'reduce'});
     const page = await context.newPage(); await page.goto(url);
-    await page.locator('[data-view="freecam"]:not(:disabled)').waitFor(); await page.locator('[data-view="freecam"]').tap();
+    await page.locator('[data-view="freecam"]:not(:disabled)').waitFor();
     const session = await context.newCDPSession(page);
     const touch = (type, points) => session.send('Input.dispatchTouchEvent', {type, touchPoints: points});
     const box = await page.locator('.combat-demo__arena').boundingBox();
@@ -99,17 +104,16 @@ const drag = async (page, dx, dy, button = 'left') => {
     const before = await pose(page);
     await touch('touchStart', [{x, y, id: 1}]); await touch('touchMove', [{x: x + 70, y: y + 20, id: 1}]); await touch('touchEnd', []);
     assert.notDeepEqual((await pose(page)).p, before.p); near((await pose(page)).target, before.target);
-    for (const key of ['w', 'a', 's', 'd', 'q', 'e']) {
-      const b = await page.locator(`[data-move="${key}"]`).boundingBox(), before = await pose(page);
-      await touch('touchStart', [{x: b.x + b.width / 2, y: b.y + b.height / 2, id: 1}]);
-      await page.waitForTimeout(180); await touch('touchEnd', []);
-      assert.notDeepEqual(await pose(page), before, 'Touch hold moves camera');
-      const released = await pose(page); await page.waitForTimeout(150); assert.deepEqual(await pose(page), released);
-    }
-    await page.locator('[data-move="e"]').focus(); const beforeKeyboardButton = await pose(page);
-    await page.keyboard.down('Enter'); await page.waitForTimeout(180); await page.keyboard.up('Enter');
-    assert.ok((await pose(page)).p[1] > beforeKeyboardButton.p[1], 'Focused hold button works by keyboard');
+    await page.locator('[data-view="freecam"]').tap();
+    assert.equal(await page.locator('[data-view="freecam"]').getAttribute('aria-pressed'), 'false');
+    const locked = await pose(page);
+    await touch('touchStart', [{x, y, id: 1}]); await touch('touchMove', [{x: x + 70, y: y + 20, id: 1}]); await touch('touchEnd', []);
+    assert.deepEqual(await pose(page), locked, 'Disabled Freecam blocks touch orbit');
+    await page.locator('[data-view="freecam"]').focus(); await page.keyboard.press('Enter');
+    assert.equal(await page.locator('[data-view="freecam"]').getAttribute('aria-pressed'), 'true');
+    await touch('touchStart', [{x, y, id: 1}]); await touch('touchMove', [{x: x - 50, y: y - 20, id: 1}]); await touch('touchEnd', []);
+    assert.notDeepEqual(await pose(page), locked, 'Keyboard toggle re-enables touch orbit');
     assert.deepEqual(await findLayoutDefects(page, '.combat-demo', {parts}), []);
-    await context.close(); console.log('Touch orbit and all six hold controls, keyboard hold button and reduced motion passed');
+    await context.close(); console.log('Touch toggle, blocked/enabled orbit, keyboard toggle and reduced motion passed');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });

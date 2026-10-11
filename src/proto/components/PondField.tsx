@@ -22,7 +22,7 @@ type BaitDrag = { id: string; pointerId: number; type: string; startX: number; s
 const castMessage = (cast: PondCast) => {
   if (cast.outcome === 'landed' && cast.catch) {
     const lucky = cast.bonus === 'glowfish' ? ' Lucky: a glowfish came up with it!' : '';
-    if (cast.catch === 'kingfish') return `A Kingfish! Eat it for a feast that restores all stamina.${lucky}`;
+    if (cast.catch === 'kingfish') return `A Kingfish! Eat it for a feast that restores all inspiration.${lucky}`;
     return `Landed a ${CATCH_LABEL(cast.catch)}!${lucky}`;
   }
   if (cast.outcome === 'escaped') return `The ${rankLabel(cast.rank)} slipped the hook. It is still in the water.`;
@@ -33,13 +33,13 @@ const castMessage = (cast: PondCast) => {
 /**
  * Go Fish for one at the pond. Drag a bait card into the water to ask for its
  * rank: a matching fish bites and the fight begins (FishFight); no match loses
- * the bait and some stamina.
+ * the bait and some inspiration.
  */
 export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onLeave }: {
   pond: PondState;
   /** The actor stationed at the pond, if any; fishing needs one. */
   angler: string | null;
-  /** Too little stamina to risk a miss. */
+  /** Too little inspiration to risk a miss. */
   tired: boolean;
   /** Fish caught this outing and not yet returned to the supplies. */
   landed: Record<PondCatch, number>;
@@ -110,11 +110,11 @@ export const PondField = ({ pond, angler, tired, landed, onCast, onFightEnd, onL
     : pond.castsLeft <= 0 ? 'Your line is worn out for today. The pond restocks tomorrow.'
     : finished ? 'The pond is fished out until tomorrow.'
     : !angler ? 'Bring an actor to the pond to fish.'
-    : tired ? 'Too tired to cast. A missed cast costs stamina, so eat something first.'
+    : tired ? 'Too tired to cast. A missed cast costs inspiration, so eat something first.'
     : hint ? 'Drag a bait card into the pond to cast.'
     : keyboardBait ? 'Press Enter on the pond to cast.'
     : pond.lastCast ? castMessage(pond.lastCast)
-    : 'Drag a bait card into the pond to ask for that rank. A miss loses the bait and costs stamina.';
+    : 'Drag a bait card into the pond to ask for that rank. A miss loses the bait and costs inspiration.';
   const dragged = drag?.moved ? pond.hand.find((card) => card.id === drag.id) : undefined;
   // The same pond, day and cast always fight the same way.
   const fightSeed = pond.seed * 31 + pond.day * 7919 + (POND_CASTS_PER_DAY - pond.castsLeft) * 104729;

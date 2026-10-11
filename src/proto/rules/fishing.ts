@@ -9,7 +9,7 @@ import { createDeck, createSeededRandom, isAdjacentRank, shuffle } from './setup
 //   follows (rules/fishFight.ts) lands it or loses it. A landed fish is caught
 //   as its species (each rank is one, from the ace Minnow to the king Kingfish),
 //   sometimes with a lucky extra (a glowfish), and a fresh fish rises from the school.
-// - Miss ("Go fish!"): the bait is lost and casting costs stamina, but fish one
+// - Miss ("Go fish!"): the bait is lost and casting costs inspiration, but fish one
 //   rank away (golf adjacency, A and K wrap) nibble and show their rank, so a
 //   miss still teaches something.
 // Every cast spends its bait and the angler draws a fresh one from the tin.
@@ -24,8 +24,8 @@ export const POND_BAIT_PER_DAY = 16;
 export const POND_MATCHED_BAIT = 8;
 /** Casts the line holds each day; the tin has more bait than that, so choosing matters. */
 export const POND_CASTS_PER_DAY = 10;
-/** Stamina a missed cast costs; casting needs at least this much. */
-export const POND_MISS_STAMINA = 1;
+/** Inspiration a missed cast costs; casting needs at least this much. */
+export const POND_MISS_INSPIRATION = 1;
 
 export { GLOWFISH_CHANCE, POND_CATCHES, POND_SPECIES, catchForRank, isPondCatch, speciesForRank, type PondCatch, type PondSpecies } from './pondSpecies';
 import { GLOWFISH_CHANCE, POND_SPECIES, catchForRank, type PondCatch, type PondSpecies } from './pondSpecies';
@@ -141,42 +141,42 @@ export const loseHooked = (pond: PondState): PondState => {
   };
 };
 
-// Eating the catch. Each species restores its stamina to the party and the
+// Eating the catch. Each species restores its inspiration to the party and the
 // eater; the Kingfish is a feast that restores both in full. The glowfish lends
-// its glow to the eater until the day ends: more max stamina and a brighter,
+// its glow to the eater until the day ends: more max inspiration and a brighter,
 // cooler carried light.
-export const GLOWFISH_STAMINA = 1;
-export const GLOWFISH_MAX_STAMINA_BONUS = 2;
+export const GLOWFISH_INSPIRATION = 1;
+export const GLOWFISH_MAX_INSPIRATION_BONUS = 2;
 export const GLOWFISH_LUMINOSITY = 0.6;
 export const GLOWFISH_LIGHT_COLOR = '#9ff3ff';
 /** A glowfish lying on the table lights its surroundings faintly ("dim"). */
 export const GLOWFISH_TABLE_LIGHT = { radius: 1.6, height: 18, strength: 0.32, color: GLOWFISH_LIGHT_COLOR, flicker: 0.15, fromPiece: true };
 
-type EaterState = Pick<ProtoState, 'stamina' | 'maxStamina' | 'actorStamina' | 'worldActors' | 'glowfishGlow'>;
+type EaterState = Pick<ProtoState, 'inspiration' | 'maxInspiration' | 'actorInspiration' | 'worldActors' | 'glowfishGlow'>;
 
-export const eatPondCatch = <T extends EaterState>(state: T, kind: PondCatch, actorId: string, actorStaminaMax: number): T => {
+export const eatPondCatch = <T extends EaterState>(state: T, kind: PondCatch, actorId: string, actorInspirationMax: number): T => {
   const glow = kind === 'glowfish';
-  const food = glow ? GLOWFISH_STAMINA : POND_SPECIES.find((species) => species.id === kind)!.stamina;
-  const maxStamina = state.maxStamina + (glow && !state.glowfishGlow ? GLOWFISH_MAX_STAMINA_BONUS : 0);
-  const gain = food + (glow ? GLOWFISH_MAX_STAMINA_BONUS : 0);
+  const food = glow ? GLOWFISH_INSPIRATION : POND_SPECIES.find((species) => species.id === kind)!.inspiration;
+  const maxInspiration = state.maxInspiration + (glow && !state.glowfishGlow ? GLOWFISH_MAX_INSPIRATION_BONUS : 0);
+  const gain = food + (glow ? GLOWFISH_MAX_INSPIRATION_BONUS : 0);
   return {
     ...state,
-    maxStamina,
-    stamina: Math.min(maxStamina, state.stamina + gain),
-    actorStamina: state.actorStamina.map((value, index) => index === 0 ? Math.min(actorStaminaMax, value + food) : value),
+    maxInspiration,
+    inspiration: Math.min(maxInspiration, state.inspiration + gain),
+    actorInspiration: state.actorInspiration.map((value, index) => index === 0 ? Math.min(actorInspirationMax, value + food) : value),
     worldActors: glow ? state.worldActors.map((actor) => actor.id === actorId ? { ...actor, luminosity: GLOWFISH_LUMINOSITY, lightColor: GLOWFISH_LIGHT_COLOR } : actor) : state.worldActors,
     glowfishGlow: state.glowfishGlow || glow,
   };
 };
 
-/** Night falls on the glow: max stamina and every actor's light return to normal. */
+/** Night falls on the glow: max inspiration and every actor's light return to normal. */
 export const endGlowfishGlow = <T extends EaterState>(state: T, defaultLuminosity: number): T => {
   if (!state.glowfishGlow) return state;
-  const maxStamina = state.maxStamina - GLOWFISH_MAX_STAMINA_BONUS;
+  const maxInspiration = state.maxInspiration - GLOWFISH_MAX_INSPIRATION_BONUS;
   return {
     ...state,
-    maxStamina,
-    stamina: Math.min(maxStamina, state.stamina),
+    maxInspiration,
+    inspiration: Math.min(maxInspiration, state.inspiration),
     worldActors: state.worldActors.map((actor) => actor.lightColor === GLOWFISH_LIGHT_COLOR ? { ...actor, luminosity: defaultLuminosity, lightColor: undefined } : actor),
     glowfishGlow: false,
   };

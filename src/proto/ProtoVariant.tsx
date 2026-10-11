@@ -7,7 +7,7 @@ import { activateBiome, arriveActorAtBiome } from './biomeArrival';
 import { eatSupper, isHome, ordinaryHour, ordinaryThought, SUPPER_BERRIES } from './rules/ordinaryDay';
 import { discoverActorTiles, discoverTiles } from './tileDiscovery';
 import { TABLE_GRID } from './gridCoordinates';
-import { DISABLE_STAMINA_CONSUMPTION, canSpendStamina, spendStamina } from './staminaTesting';
+import { DISABLE_INSPIRATION_CONSUMPTION, canSpendInspiration, spendInspiration } from './inspirationTesting';
 import { flyQuestToDiscard } from './questDiscardFlight';
 import { TableauScene } from './components/TableauScene';
 import { FoundationExitButton } from './components/FoundationExitButton';
@@ -31,7 +31,7 @@ import { CombatDemo } from './components/CombatDemo';
 import type { BattleScene } from './rules/battleCues';
 import { BattleTableauField } from './components/BattleTableauField';
 import './components/CombatField.css';
-import { GLOWFISH_TABLE_LIGHT, POND_CATCHES, POND_MISS_STAMINA, POND_SPECIES, isPondCatch, type PondCatch, castBait, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, restockPond } from './rules/fishing';
+import { GLOWFISH_TABLE_LIGHT, POND_CATCHES, POND_MISS_INSPIRATION, POND_SPECIES, isPondCatch, type PondCatch, castBait, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, restockPond } from './rules/fishing';
 
 
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
@@ -68,15 +68,15 @@ import { ActorFoundationPanel, EnemyTeamPanel } from './components/FoundationBoa
 import { AbilityDetailPopup } from './components/AbilityDetailPopup';
 import { AutoPlayControl } from './components/AutoPlayControl';
 import {
-  ACTOR_STAMINA_MAX, AUTO_PLAY_SPEED_OPTIONS, DEV_ACTOR_DEFEAT_OVERRIDE, FOUNDATION_MOCKUPS, FOUNDATION_SLOTS,
+  ACTOR_INSPIRATION_MAX, AUTO_PLAY_SPEED_OPTIONS, DEV_ACTOR_DEFEAT_OVERRIDE, FOUNDATION_MOCKUPS, FOUNDATION_SLOTS,
   rankLabel, targetToneForAbility,
   type AbilityDetail, type Card, type CardTransport,
   type HeroBuff, type PendingAbilityTarget, type PendingMobility,
   type PendingTargetSelection, type ProtoState, type TargetAnnouncement,
 } from './protoState';
-import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_STAMINA, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, isDangerTile, DANGER_WOODS_REWARD, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
+import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_INSPIRATION, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, isDangerTile, DANGER_WOODS_REWARD, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
 import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauMove } from './rules/play';
-import { REDRAW_STAMINA_COST } from './rules/redraw';
+import { REDRAW_INSPIRATION_COST } from './rules/redraw';
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
 import { biomeOpenState } from './biomeFlags';
 
@@ -367,20 +367,20 @@ const selectBiome = (biomeId: string) => {
   const moveResourceStack = (stackId: string, position: { x: number; y: number }, targetId?: string, actorId?: string) => {
     const leftoverId = crypto.randomUUID();
     const eaten = actorId ? state.worldResourceStacks.find((stack) => stack.id === stackId && !stack.build && Object.keys(stackIngredients(stack)).length === 1) : undefined;
-    if (eaten?.resource === 'glowfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWING', impact: '+2 max STA and a brighter light until nightfall' });
-    else if (eaten?.resource === 'kingfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'FEAST', impact: 'Stamina fully restored' });
-    else if (eaten && isPondCatch(eaten.resource)) setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: WORLD_ITEMS[eaten.resource].label.toUpperCase(), impact: `+${POND_SPECIES.find((species) => species.id === eaten.resource)?.stamina} STA` });
+    if (eaten?.resource === 'glowfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWING', impact: '+2 max INSP and a brighter light until nightfall' });
+    else if (eaten?.resource === 'kingfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'FEAST', impact: 'Inspiration fully restored' });
+    else if (eaten && isPondCatch(eaten.resource)) setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: WORLD_ITEMS[eaten.resource].label.toUpperCase(), impact: `+${POND_SPECIES.find((species) => species.id === eaten.resource)?.inspiration} INSP` });
     setState((prev) => {
       const source = prev.worldResourceStacks.find((stack) => stack.id === stackId);
       if (!source || source.build || WORLD_ITEMS[source.resource].kind === 'structure') return prev;
       if (actorId && isPondCatch(source.resource) && Object.keys(stackIngredients(source)).length === 1) {
-        const fed = eatPondCatch(prev, source.resource, actorId, prev.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX);
+        const fed = eatPondCatch(prev, source.resource, actorId, prev.actorMaxInspiration?.[0] ?? ACTOR_INSPIRATION_MAX);
         return { ...fed, worldResourceStacks: prev.worldResourceStacks.map((stack) => stack.id === source.id ? { ...stack, count: stack.count - 1, ingredients: undefined } : stack).filter((stack) => stack.count > 0) };
       }
       if (actorId && (source.resource === 'trail_ration' || source.resource === 'hearty_ration') && Object.keys(stackIngredients(source)).length === 1) {
         const bonus = source.resource === 'hearty_ration' ? DAY_TWO_RATION_ENERGY * 2 : DAY_TWO_RATION_ENERGY;
-        return { ...prev, stamina: Math.min(prev.maxStamina + bonus, prev.stamina + bonus),
-          actorStamina: prev.actorStamina.map((value, index) => index === 0 ? Math.min(prev.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX, value + bonus) : value),
+        return { ...prev, inspiration: Math.min(prev.maxInspiration + bonus, prev.inspiration + bonus),
+          actorInspiration: prev.actorInspiration.map((value, index) => index === 0 ? Math.min(prev.actorMaxInspiration?.[0] ?? ACTOR_INSPIRATION_MAX, value + bonus) : value),
           energy: prev.energy + bonus, energyMax: prev.energyMax + bonus,
           heroBuffs: prev.heroBuffs.map((buffs, index) => index === 0 ? [...buffs.filter((buff) => buff.id !== 'well_fed'), { id: 'well_fed' as const, value: bonus, turnsRemaining: bonus }] : buffs),
           trailRations: source.resource === 'trail_ration' ? Math.max(0, prev.trailRations - 1) : prev.trailRations,
@@ -405,14 +405,14 @@ const selectBiome = (biomeId: string) => {
 
   const pondSelected = isPondTile(state.selectedBiomeId, state.biomeTiles);
   const pondAngler = state.worldActors.find((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId && isPondTile(actor.biomeId, state.biomeTiles)) ?? null;
-  // Casting needs stamina, since a miss costs some.
-  const canCastPond = Boolean(pondAngler) && state.scene === 'exploration' && canSpendStamina(state.stamina, POND_MISS_STAMINA);
+  // Casting needs inspiration, since a miss costs some.
+  const canCastPond = Boolean(pondAngler) && state.scene === 'exploration' && canSpendInspiration(state.inspiration, POND_MISS_INSPIRATION);
   const castPondBait = (baitId: string) => {
     if (!canCastPond) return;
     setState((prev) => {
       const { pond, hooked } = castBait(prev.pond, baitId);
       if (pond === prev.pond) return prev;
-      return { ...prev, pond, stamina: hooked ? prev.stamina : spendStamina(prev.stamina, POND_MISS_STAMINA) };
+      return { ...prev, pond, inspiration: hooked ? prev.inspiration : spendInspiration(prev.inspiration, POND_MISS_INSPIRATION) };
     });
   };
   // Temporary camera study replaces the Dark Woods skirmish entry only.
@@ -433,7 +433,7 @@ const selectBiome = (biomeId: string) => {
   const endPondFight = (landed: boolean) => {
     const preview = landed ? landHooked(state.pond) : null;
     if (preview?.bonus === 'glowfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWFISH', impact: 'Lucky! It glows. Eat it for light' });
-    else if (preview?.caught === 'kingfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'KINGFISH', impact: 'A feast. Eat it to restore all stamina' });
+    else if (preview?.caught === 'kingfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'KINGFISH', impact: 'A feast. Eat it to restore all inspiration' });
     setState((prev) => {
       if (!prev.pond.hooked) return prev;
       if (!landed) return { ...prev, pond: loseHooked(prev.pond) };
@@ -450,14 +450,14 @@ const selectBiome = (biomeId: string) => {
   const playHutCard = (stackId: string, rank: number, divine = false) => {
     setState((prev) => {
       const stack = prev.worldResourceStacks.find((entry) => entry.id === stackId);
-      if (!stack?.build?.stationId || (!divine && (prev.scene !== 'exploration' || !canSpendStamina(prev.actorStamina[0], 1) || !prev.worldActors.some((actor) => actor.hutId === stack.build?.stationId)))) return prev;
+      if (!stack?.build?.stationId || (!divine && (prev.scene !== 'exploration' || !canSpendInspiration(prev.actorInspiration[0], 1) || !prev.worldActors.some((actor) => actor.hutId === stack.build?.stationId)))) return prev;
       let played = playBuildCard(stack, rank);
       if (played === stack) return prev;
       if (divine && played.build) {
         const recipe = CRAFT_RECIPES.find((entry) => entry.id === played.build?.recipeId)!;
         if (played.build.work >= recipe.workRequired) played = advanceBuild({ ...played, build: { ...played.build, elapsedMs: recipe.durationMs } }, 0, true);
       }
-      return { ...prev, actorStamina: divine ? prev.actorStamina : prev.actorStamina.map((value, index) => index === 0 ? spendStamina(value, 1) : value),
+      return { ...prev, actorInspiration: divine ? prev.actorInspiration : prev.actorInspiration.map((value, index) => index === 0 ? spendInspiration(value, 1) : value),
         worldResourceStacks: prev.worldResourceStacks.map((entry) => entry.id === stack.id ? played : entry) };
     });
   };
@@ -516,7 +516,7 @@ const selectBiome = (biomeId: string) => {
         stock: combatDeal.stock,
         scene: 'combat',
         foundations: createFoundations(prev.party),
-        actorStamina: Array.from({ length: FOUNDATION_SLOTS }, () => ACTOR_STAMINA_MAX),
+        actorInspiration: Array.from({ length: FOUNDATION_SLOTS }, () => ACTOR_INSPIRATION_MAX),
         actorWorkCompleted: Array.from({ length: FOUNDATION_SLOTS }, () => 0),
         heroBuffs: FOUNDATION_MOCKUPS.map(() => []),
         suspendedExploration: {
@@ -592,12 +592,12 @@ const selectBiome = (biomeId: string) => {
     pushUndo();
     setState((prev) => ({
       ...prev,
-      stamina: prev.maxStamina,
+      inspiration: prev.maxInspiration,
       heroHp: prev.heroHp.map((hp, index) => index === 0 ? Math.min(prev.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0]?.maxHp ?? hp, hp + 3) : hp),
       city: { ...prev.city, campUsedToday: true, restedOnce: true },
       battleRecovered: prev.deepEncounterResolved ? true : prev.battleRecovered,
     }));
-    setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'REST', impact: 'Stamina restored / +3 HP' });
+    setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'REST', impact: 'Inspiration restored / +3 HP' });
   };
 
   const endDay = () => {
@@ -1208,8 +1208,8 @@ const selectBiome = (biomeId: string) => {
     const stack = current.worldResourceStacks.find((entry) => entry.id === stackId);
     if (!stack?.build || stack.build.tableau.length === 0) return { status: 'complete', message: 'Solitaire cleared' };
     if (current.scene !== 'exploration' || !current.worldActors.some((actor) => actor.hutId === stack.build?.stationId)) return { status: 'blocked', message: 'Posture an actor at this foundation' };
-    if (!divine && !canSpendStamina(current.actorStamina[0], 1)) return { status: 'blocked', message: 'Actor needs stamina' };
-    const assessment = assessSolverMove({ columns: stack.build.tableau.map((rank) => [{ id: stackId + '-' + rank, rank }]), stock: [], foundations: [stack.build.foundation], moveBudget: divine || DISABLE_STAMINA_CONSUMPTION ? undefined : current.actorStamina[0] });
+    if (!divine && !canSpendInspiration(current.actorInspiration[0], 1)) return { status: 'blocked', message: 'Actor needs inspiration' };
+    const assessment = assessSolverMove({ columns: stack.build.tableau.map((rank) => [{ id: stackId + '-' + rank, rank }]), stock: [], foundations: [stack.build.foundation], moveBudget: divine || DISABLE_INSPIRATION_CONSUMPTION ? undefined : current.actorInspiration[0] });
     if (!assessment) return { status: 'blocked', message: 'No legal move' };
     pushUndo();
     playHutCard(stackId, stack.build.tableau[assessment.move.column], divine);
@@ -1703,9 +1703,9 @@ const selectBiome = (biomeId: string) => {
     const rewardSource = document.querySelector<HTMLElement>('[data-table-quest="' + index + '"] .quest-card');
     flyQuestToDiscard(rewardSource);
     const from = rewardSource?.getBoundingClientRect();
-    const destination = document.querySelector('[data-stamina-tray]')?.getBoundingClientRect();
+    const destination = document.querySelector('[data-inspiration-tray]')?.getBoundingClientRect();
     if (from && destination?.width) {
-      const bolt = document.createElement('span'); bolt.textContent = '⚡'; bolt.className = 'quest-stamina-flight';
+      const bolt = document.createElement('span'); bolt.textContent = '⚡'; bolt.className = 'quest-inspiration-flight';
       bolt.style.cssText = 'position:fixed;left:'+(from.x+from.width/2)+'px;top:'+(from.y+from.height/2)+'px;z-index:60001;pointer-events:none;font-size:28px;';
       document.body.append(bolt);
       const flight = bolt.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate('+(destination.x+destination.width/2-from.x-from.width/2)+'px,'+(destination.y+destination.height/2-from.y-from.height/2)+'px) scale(.5)',opacity:0}],{duration:550,easing:'ease-in-out'});
@@ -1715,7 +1715,7 @@ const selectBiome = (biomeId: string) => {
       // Prevent repeated input from redeeming a newly exposed quest.
       if (previous.questClaims !== index) return previous;
       // Rest's energy will be earned in the den tableau, not as a fixed quest bonus.
-      const redeemed = redeemActiveQuest(previous, getExpeditionQuestSteps(previous).map((step) => step.complete), 0, ACTOR_STAMINA_MAX);
+      const redeemed = redeemActiveQuest(previous, getExpeditionQuestSteps(previous).map((step) => step.complete), 0, ACTOR_INSPIRATION_MAX);
       return redeemed === previous ? previous : { ...redeemed, questTableCards: redeemed.questTableCards.filter(card => card.questIndex >= redeemed.questClaims) };
     });
   };
@@ -1778,15 +1778,15 @@ const selectBiome = (biomeId: string) => {
                 <div className="proto-main-foundations min-h-0 h-[clamp(6rem,24dvh,14rem)] rounded-[calc(var(--classic-radius)*1.3)] border border-[#f4c86c]/18 bg-[linear-gradient(180deg,rgba(22,18,12,0.44),rgba(9,10,12,0.28))]" aria-label="Empty foundations" />
               </>) : dangerSelected || combatDemoOpen ? (
                 <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} onSceneChange={setBattleScene}
-                  heroStamina={state.actorStamina[0]} onRedraw={(actorId) => { if (actorId === 'hero') setState((prev) => ({ ...prev, actorStamina: prev.actorStamina.map((value, index) => index === 0 ? Math.max(0, value - REDRAW_STAMINA_COST) : value) })); }} />
+                  heroInspiration={state.actorInspiration[0]} onRedraw={(actorId) => { if (actorId === 'hero') setState((prev) => ({ ...prev, actorInspiration: prev.actorInspiration.map((value, index) => index === 0 ? Math.max(0, value - REDRAW_INSPIRATION_COST) : value) })); }} />
               ) : pondSelected ? (
-                <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && !canSpendStamina(state.stamina, POND_MISS_STAMINA)}
+                <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && !canSpendInspiration(state.inspiration, POND_MISS_INSPIRATION)}
                   landed={Object.fromEntries(POND_CATCHES.map((id) => [id, state.haul[id] - state.settledHaul[id]])) as Record<PondCatch, number>}
                   onCast={castPondBait} onFightEnd={endPondFight} onLeave={() => leaveTableau()} />
               ) : (<>
               <div className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">
                 <div>
-                  {isDenRest(state) && <div className="proto-rest-status" role="status" aria-label="Den rest status"><span>Hero’s Den · Rest</span><span>STA {state.stamina}/{state.maxStamina}</span><span>{state.tableau.every(column => !column.length) ? 'Perfect rest' : !state.stock.length && !hasNormalPlayerTableauMove(state) ? 'Rest finished' : `${state.tableau.reduce((sum, column) => sum + column.length, 0)} left`}</span></div>}
+                  {isDenRest(state) && <div className="proto-rest-status" role="status" aria-label="Den rest status"><span>Hero’s Den · Rest</span><span>INSP {state.inspiration}/{state.maxInspiration}</span><span>{state.tableau.every(column => !column.length) ? 'Perfect rest' : !state.stock.length && !hasNormalPlayerTableauMove(state) ? 'Rest finished' : `${state.tableau.reduce((sum, column) => sum + column.length, 0)} left`}</span></div>}
                   <TableauSolveControls disabled={!state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} guidance={moveGuidance} onGuidanceChange={setMoveGuidance} />
                 </div>
                 <TableauScene immersive={false} terrain={fieldBiome?.terrain ?? 'woods'} rig={fieldRig} hours={tableHours}>
@@ -2030,8 +2030,8 @@ const selectBiome = (biomeId: string) => {
                           className="proto-foundation-card--exploration grid aspect-[56/74] w-full max-w-[clamp(8rem,18vw,14rem)] place-items-center rounded-[calc(var(--classic-radius)*1.15)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(10,15,16,0.96),rgba(5,8,10,0.98))] text-[clamp(0.58rem,1vmin,0.7rem)] font-mono uppercase tracking-[0.18em] text-white/30"
                         >
                           {actor ? (
-                            <span className="proto-actor-energy" aria-label={isDenRest(state) ? `${actor.label} stamina ${state.stamina} of ${state.maxStamina}` : `${actor.label} energy ${state.energy} of ${state.energyMax}`} title={isDenRest(state) ? `${actor.label} stamina` : `${actor.label} energy`}>
-                              <span aria-hidden="true">{isDenRest(state) ? 'Zzz' : '⚡'}</span><span>{isDenRest(state) ? state.stamina : state.energy}</span>
+                            <span className="proto-actor-energy" aria-label={isDenRest(state) ? `${actor.label} inspiration ${state.inspiration} of ${state.maxInspiration}` : `${actor.label} energy ${state.energy} of ${state.energyMax}`} title={isDenRest(state) ? `${actor.label} inspiration` : `${actor.label} energy`}>
+                              <span aria-hidden="true">{isDenRest(state) ? 'Zzz' : '⚡'}</span><span>{isDenRest(state) ? state.inspiration : state.energy}</span>
                             </span>
                           ) : null}
                           {actor ? (
@@ -2173,7 +2173,7 @@ const selectBiome = (biomeId: string) => {
                         scene={state.scene}
                         hp={state.heroHp[index] ?? FOUNDATION_MOCKUPS[index]?.hp ?? 20}
                         buffs={state.heroBuffs[index] ?? []}
-                        stamina={state.actorStamina[index] ?? ACTOR_STAMINA_MAX}
+                        inspiration={state.actorInspiration[index] ?? ACTOR_INSPIRATION_MAX}
                         workCompleted={state.actorWorkCompleted[index] ?? 0}
                         active={tableauTarget || transportTarget || wildTarget || sourceActive || pendingMobility?.sourceIndex === index}
                         placementTargetable={tableauTarget || transportTarget}
@@ -2225,7 +2225,7 @@ const selectBiome = (biomeId: string) => {
                     <span>{ordinaryThought(state)}</span>
                   </div>
                   <div className="proto-ordinary-day__actions" title={state.ordinaryDay.visitedTree ? 'Hero stopped beneath the old tree today.' : undefined}>
-                    <span aria-label="Food carried">Berries {state.haul.berries} · STA {state.stamina}/{state.maxStamina}</span>
+                    <span aria-label="Food carried">Berries {state.haul.berries} · INSP {state.inspiration}/{state.maxInspiration}</span>
                     {state.ordinaryDay.visitedTree && <span title="Hero stopped beneath the old tree today.">A familiar old tree ✓</span>}
                     {!state.ordinaryDay.supper && <button type="button" disabled={!isHome(state) || state.haul.berries < SUPPER_BERRIES || Boolean(cardTransport)} onClick={() => { clearPendingInteractions(); setUndoStack([]); setState(eatSupper); }}>Eat supper · 2 berries</button>}
                     {state.ordinaryDay.supper && !state.ordinaryDay.bedtime && <button type="button" disabled={!isHome(state) || Boolean(cardTransport)} onClick={() => {
@@ -2288,7 +2288,7 @@ const selectBiome = (biomeId: string) => {
                 onStartSolver={startSolver}
                 onInspectActor={inspectActor}
                 onInspectTile={inspectTile}
-                actorStamina={state.actorStamina[0]}
+                actorInspiration={state.actorInspiration[0]}
               />}
             </div>
           </section>
@@ -2311,9 +2311,9 @@ const selectBiome = (biomeId: string) => {
           jumboEditor: <ActorPlaytestEditor state={state} onApply={values => setState(prev => ({ ...prev,
             heroHp: prev.heroHp.map((hp, index) => index === 0 ? values.hp : hp),
             heroMaxHp: FOUNDATION_MOCKUPS.map((actor, index) => index === 0 ? values.maxHp : prev.heroMaxHp?.[index] ?? actor.maxHp),
-            actorStamina: prev.actorStamina.map((value, index) => index === 0 ? values.work : value),
-            actorMaxStamina: prev.actorStamina.map((_, index) => index === 0 ? values.maxWork : prev.actorMaxStamina?.[index] ?? ACTOR_STAMINA_MAX),
-            stamina: values.stamina, maxStamina: values.maxStamina, energy: values.energy, energyMax: values.maxEnergy,
+            actorInspiration: prev.actorInspiration.map((value, index) => index === 0 ? values.work : value),
+            actorMaxInspiration: prev.actorInspiration.map((_, index) => index === 0 ? values.maxWork : prev.actorMaxInspiration?.[index] ?? ACTOR_INSPIRATION_MAX),
+            inspiration: values.inspiration, maxInspiration: values.maxInspiration, energy: values.energy, energyMax: values.maxEnergy,
           }))} />,
           descriptorPreview: 'Expedition hero',
           descriptor: 'An expedition hero who explores the wilderness, gathers resources, and helps build your settlement.',
@@ -2321,8 +2321,8 @@ const selectBiome = (biomeId: string) => {
             { id: 'stats', label: 'Stats', chips: [
               { id: 'hp', icon: '♥', value: `${state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp}/${state.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0].maxHp}`,
                 label: `Health: ${state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp} of ${state.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0].maxHp}` },
-              { id: 'stamina', icon: '⚡', value: `${state.actorStamina[0] ?? ACTOR_STAMINA_MAX}/${state.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX}`,
-                label: `Stamina: ${state.actorStamina[0] ?? ACTOR_STAMINA_MAX} of ${state.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX}` },
+              { id: 'inspiration', icon: '⚡', value: `${state.actorInspiration[0] ?? ACTOR_INSPIRATION_MAX}/${state.actorMaxInspiration?.[0] ?? ACTOR_INSPIRATION_MAX}`,
+                label: `Inspiration: ${state.actorInspiration[0] ?? ACTOR_INSPIRATION_MAX} of ${state.actorMaxInspiration?.[0] ?? ACTOR_INSPIRATION_MAX}` },
             ] },
             { id: 'equipment', label: 'Equipment', details: 'Not yet configured' },
             { id: 'buffs', label: 'Effects', content: state.heroBuffs[0]?.length || '—', details: state.heroBuffs[0]?.length

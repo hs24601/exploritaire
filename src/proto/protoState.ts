@@ -47,7 +47,7 @@ export type BiomeTileState = {
   threat: 'none' | 'low' | 'high';
   /** Water tiles are fished, not dealt as a tableau. Defaults to woods. */
   terrain?: 'woods' | 'water';
-  tileType?: 'unexplored' | 'path' | 'hero-den' | 'impassable-mountain' | 'berry-patch';
+  tileType?: 'unexplored' | 'path' | 'dirt' | 'hero-den' | 'impassable-mountain' | 'berry-patch';
   road?: RoadTile;
   /** What the tile does to travel and to opening its tableau (biomeFlags.ts). */
   flags?: BiomeFlag[];
@@ -96,7 +96,7 @@ export type FoundationPile = {
 export type FoundationSlot = FoundationPile | null;
 
 export type ProtoState = {
-  /** Finite sleep round; stock draws establish a rank without earning stamina. */
+  /** Finite sleep round; stock draws establish a rank without earning inspiration. */
   denRest?: { restfulCards: number; disruptions: number; started?: boolean; receivingCard?: Card };
   ordinaryDay?: { supper: boolean; bedtime: boolean; complete: boolean; visitedTree: boolean };
   tableau: Card[][];
@@ -104,12 +104,13 @@ export type ProtoState = {
   foundations: FoundationSlot[];
   party: Card[];
   wildCards: number;
-  actorStamina: number[];
+  /** Per-foundation redraw resource; distinct from the existing reserve below. */
+  actorInspiration: number[];
   actorWorkCompleted: number[];
   totalWorkCompleted: number;
   heroHp: number[];
   heroMaxHp?: number[];
-  actorMaxStamina?: number[];
+  actorMaxInspiration?: number[];
   heroBuffs: HeroBuff[][];
   abilityProgress: Record<string, number>;
   mobilityUsed: boolean;
@@ -129,8 +130,9 @@ export type ProtoState = {
   enemyTeam: EnemyRuntimeState[];
   ambushCardsRemaining: number;
   day: number;
-  stamina: number;
-  maxStamina: number;
+  /** Existing shared recovery/food reserve; travel does not spend Inspiration. */
+  inspiration: number;
+  maxInspiration: number;
   city: CityState;
   deepEncounterResolved: boolean;
   battleRecovered: boolean;
@@ -138,7 +140,7 @@ export type ProtoState = {
   questTableCards: PlacedQuestCard[];
   questAccomplished: boolean[];
   pond: PondState;
-  /** Eating a glowfish: extra max stamina and a brighter, cooler light until the day ends. */
+  /** Eating a glowfish: extra max inspiration and a brighter, cooler light until the day ends. */
   glowfishGlow: boolean;
 };
 
@@ -224,7 +226,7 @@ export const FOUNDATION_SLOTS = 3;
 export const DEV_ACTOR_DEFEAT_OVERRIDE = (import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV === true;
 export const FOUNDATION_MOCKUPS = PROTO_ACTORS;
 export const ENEMY_TEAM_SLOT_IDS = PROTO_ENEMY_SLOT_IDS;
-export const ACTOR_STAMINA_MAX = 4;
+export const ACTOR_INSPIRATION_MAX = 4;
 /** Cards an actor plays onto their foundation per work cycle (the "TABLEAU COMPLETE" reward). */
 export const WORK_CYCLE_CARDS = 4;
 

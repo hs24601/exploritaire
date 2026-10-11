@@ -1,4 +1,6 @@
 import { createRoadTile } from '../roadTiles';
+import { createDirtTile } from '../dirtTiles';
+import { TABLE_GRID } from '../gridCoordinates';
 import { createOrdinaryPlaces } from './ordinaryDay';
 import { createSleepDeal, isDenRest } from './rest';
 import { discoverTiles } from '../tileDiscovery';
@@ -8,7 +10,7 @@ import { createPondDeal } from './fishing';
 import { POND_CATCHES } from './pondSpecies';
 import { createQuestBiomeDeal, nextQuestCard, QUEST_ROUTE_BUDGET } from '../protoQuestDeals';
 import { DEFAULT_EXPEDITION_ENERGY, MAGE_PHASE_SHIFT_TRIGGER, PROTO_ENEMIES } from '../protoData';
-import { FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, ACTOR_STAMINA_MAX, type BiomeTileState, type Card, type EnemyRuntimeState, type FoundationSlot, type ForestHaul, type ForestResource, type HaulResource, type ProtoState, type SceneKind } from '../protoState';
+import { FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, ACTOR_INSPIRATION_MAX, type BiomeTileState, type Card, type EnemyRuntimeState, type FoundationSlot, type ForestHaul, type ForestResource, type HaulResource, type ProtoState, type SceneKind } from '../protoState';
 
 // Deck, deal, world setup and state helpers. Pure: no React or DOM.
 
@@ -19,12 +21,12 @@ export const MOBILITY_COOLDOWN_TURNS = 2;
 
 export const PARTY_LOADOUT = [2, 5, 6, 13];
 export const ENEMY_TEAM_MOCKUPS: EnemyRuntimeState[] = PROTO_ENEMIES;
-export const HERO_STAMINA_MAX = QUEST_ROUTE_BUDGET.maxStamina;
+export const HERO_INSPIRATION_MAX = QUEST_ROUTE_BUDGET.maxInspiration;
 // Energy plan: Day 1 spends 13 tableau actions and keeps two energy for city work.
 // Day 2 spends 18 Deep Woods placements; the ration bridges the 15-energy
 // default pool while leaving three energy after the route.
 export const DAY_TWO_RATION_ENERGY = QUEST_ROUTE_BUDGET.rationEnergy;
-export const DAY_TWO_RATION_STAMINA = QUEST_ROUTE_BUDGET.rationStamina;
+export const DAY_TWO_RATION_INSPIRATION = QUEST_ROUTE_BUDGET.rationInspiration;
 export const ACTOR_WORK_RESOURCES: ForestResource[] = ['wood', 'berries', 'herbs', 'wood'];
 export const FOREST_RESOURCE_ORDER: ForestResource[] = ['wood', 'berries', 'herbs'];
 export const FOREST_RESOURCE_LABELS: Record<ForestResource, string> = {
@@ -178,7 +180,7 @@ export const isPondTile = (biomeId: string | null | undefined, tiles: readonly B
 
 /** A dangerous wood two cells right of the Hero's start, marked by dark red embers and mist. Entering it starts a
  * skirmish (rules/skirmish.ts) instead of a tableau; once its foe is beaten it stays quiet until the next day. */
-export const DANGER_WOODS_TILE = { id: 'woods-danger', title: 'Dark Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: { x: -96, y: 48 }, unlocked: true, threat: 'high' as const, terrain: 'woods' as const, danger: true, flags: ['unexplored', 'danger'] as BiomeFlag[] };
+export const DANGER_WOODS_TILE = { id: 'woods-danger', title: 'Dark Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: TABLE_GRID.center(TABLE_GRID.cell(-2, 2)), unlocked: true, threat: 'high' as const, terrain: 'woods' as const, danger: true, flags: ['unexplored', 'danger'] as BiomeFlag[] };
 export const isDangerTile = (biomeId: string | null | undefined) => biomeId === DANGER_WOODS_TILE.id;
 /** What the foe in the Dark Woods was guarding. */
 export const DANGER_WOODS_REWARD: Partial<ForestHaul> = { wood: 2, berries: 2, herbs: 2 };
@@ -282,14 +284,14 @@ export const createInitialState = (): ProtoState => {
     if (row === 2 && column === 0) continue;
     biomeTiles.push({ ...createRoadTile(`mountain-${column}-${row}`, column, row), title: 'Impassable Mountains', tileType: 'impassable-mountain', flags: ['unexplored', 'impassable'], tableau: [], stock: [], dealt: 0, tableauSize: 0 });
   }
-  const initialTiles = discoverTiles([...biomeTiles.filter(tile => tile.id === den.id || tile.tileType === 'impassable-mountain'), ...createOrdinaryPlaces(seed)], den.position);
+  const initialTiles = discoverTiles([...biomeTiles.filter(tile => tile.id === den.id || isDangerTile(tile.id) || tile.tileType === 'impassable-mountain'), ...createOrdinaryPlaces(seed), createDirtTile('dirt-0-1', 0, 1)], den.position);
   return {
     tableau: [],
     stock: [],
     foundations: [],
     party,
     wildCards: STARTING_WILD_CARDS,
-    actorStamina: Array.from({ length: FOUNDATION_SLOTS }, () => ACTOR_STAMINA_MAX),
+    actorInspiration: Array.from({ length: FOUNDATION_SLOTS }, () => ACTOR_INSPIRATION_MAX),
     actorWorkCompleted: Array.from({ length: FOUNDATION_SLOTS }, () => 0),
     totalWorkCompleted: 0,
     heroHp: FOUNDATION_MOCKUPS.map((hero) => hero.hp),
@@ -312,10 +314,10 @@ export const createInitialState = (): ProtoState => {
     enemyTeam: [],
     ambushCardsRemaining: 0,
     day: 1,
-    stamina: HERO_STAMINA_MAX,
+    inspiration: HERO_INSPIRATION_MAX,
     ordinaryDay: { supper: false, bedtime: false, complete: false, visitedTree: false },
     denRest: { restfulCards: 0, disruptions: 0, started: true, receivingCard },
-    maxStamina: HERO_STAMINA_MAX,
+    maxInspiration: HERO_INSPIRATION_MAX,
     city: { campBuilt: false, campUsedToday: false, restedOnce: false },
     deepEncounterResolved: false,
     battleRecovered: false,
@@ -360,7 +362,7 @@ export const cloneState = (state: ProtoState): ProtoState => ({
   ),
   party: state.party.map((card) => ({ ...card })),
   wildCards: state.wildCards,
-  actorStamina: [...state.actorStamina],
+  actorInspiration: [...state.actorInspiration],
   actorWorkCompleted: [...state.actorWorkCompleted],
   totalWorkCompleted: state.totalWorkCompleted,
   heroHp: [...state.heroHp],
@@ -394,8 +396,8 @@ export const cloneState = (state: ProtoState): ProtoState => ({
   enemyTeam: state.enemyTeam.map((enemy) => ({ ...enemy })),
   ambushCardsRemaining: state.ambushCardsRemaining,
   day: state.day,
-  stamina: state.stamina,
-  maxStamina: state.maxStamina,
+  inspiration: state.inspiration,
+  maxInspiration: state.maxInspiration,
   city: { ...state.city },
   deepEncounterResolved: state.deepEncounterResolved,
   battleRecovered: state.battleRecovered,

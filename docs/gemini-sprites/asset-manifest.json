@@ -1,0 +1,222 @@
+{
+  "snapshotUtc": "2026-10-10T21:47:49.0060010Z",
+  "notes": "PNG dimensions and SHA256 measured from existing files. Alpha cleanliness and anatomical QA are not inferred from PNG headers. Code snapshots are reference material, not a runnable project.",
+  "files": [
+    {
+      "path": "reference-assets/actors/battle/hero-directions-low-v1.png",
+      "source": "public/assets/actors/battle/hero-directions-low-v1.png",
+      "bytes": 1361825,
+      "sha256": "a22e05b1b02fac359fc79a14a3813d53045e4503c0d902d334b9dd9804f16061",
+      "width": 1122,
+      "height": 1402,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/battle/hero-directions-high-v1.png",
+      "source": "public/assets/actors/battle/hero-directions-high-v1.png",
+      "bytes": 2074843,
+      "sha256": "39d9bf5d210df17580b94f0501da7b9f3a460916f3d66d221a5b0e859b2bd4da",
+      "width": 1024,
+      "height": 1536,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/battle/hero-sitting-low-v1.png",
+      "source": "public/assets/actors/battle/hero-sitting-low-v1.png",
+      "bytes": 1334848,
+      "sha256": "dcb7307f021bb58617c57a3710ed9c154487a3c4b8c47cb5d4fc0b2ccfbeadd2",
+      "width": 1338,
+      "height": 1383,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/battle/hero-sitting-high-v1.png",
+      "source": "public/assets/actors/battle/hero-sitting-high-v1.png",
+      "bytes": 1431091,
+      "sha256": "e445081423ec936d577ec8446f07ebf31fc67b8334449fe07804596f9453de8a",
+      "width": 1353,
+      "height": 1446,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/battle/mochi-directions-low-v1.png",
+      "source": "public/assets/actors/battle/mochi-directions-low-v1.png",
+      "bytes": 1616214,
+      "sha256": "147e7d462bef326a8987ca59fd06dc1ad92ab1cb91491c6cbf902175fcd0cd84",
+      "width": 1774,
+      "height": 887,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/battle/mochi-directions-high-v1.png",
+      "source": "public/assets/actors/battle/mochi-directions-high-v1.png",
+      "bytes": 2062907,
+      "sha256": "042b78dcd2a63acb26489720fe5c544c86328fb2546ee0d0b576e06a8855a462",
+      "width": 1536,
+      "height": 1024,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/battle/dark-slime-directions-v1.png",
+      "source": "public/assets/actors/battle/dark-slime-directions-v1.png",
+      "bytes": 922031,
+      "sha256": "67f48cf0535f49a8c2b2e77b141f4570438332ef4a0ed094733165ef70a7ea0f",
+      "width": 1254,
+      "height": 1254,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/hero.png",
+      "source": "public/assets/actors/hero.png",
+      "bytes": 657486,
+      "sha256": "82f43d7104e636651475434b9c1f25fed6bf69f41868a950e71f0896a197f66f",
+      "width": 1254,
+      "height": 1254,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/hero-sitting.png",
+      "source": "public/assets/actors/hero-sitting.png",
+      "bytes": 157994,
+      "sha256": "3cc64aa45e95c0409af01a39c4558cf08905067233e6000f55c341137221dfce",
+      "width": 368,
+      "height": 346,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/hero-sitting-topdown.png",
+      "source": "public/assets/actors/hero-sitting-topdown.png",
+      "bytes": 133298,
+      "sha256": "80f0b2618d7bf7fda9393173c0e3f16779f3ba97fc25cccc5b1bbcf5ab201e3a",
+      "width": 226,
+      "height": 404,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/hero-standing-topdown.png",
+      "source": "public/assets/actors/hero-standing-topdown.png",
+      "bytes": 135772,
+      "sha256": "8cfce42a65df99837022e9390bb8346b5b8db433d4963e4bec333b04cf76b808",
+      "width": 174,
+      "height": 398,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/hero-sleeping.png",
+      "source": "public/assets/actors/hero-sleeping.png",
+      "bytes": 24059,
+      "sha256": "cb250c0613d35d54c02411217653a6ffe63764291536dac41181d174aa97c3e9",
+      "width": 128,
+      "height": 79,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/hero-sleeping-topdown.png",
+      "source": "public/assets/actors/hero-sleeping-topdown.png",
+      "bytes": 23169,
+      "sha256": "6ee30b78164f1f5a28f434ae2e6c458469eed390db9bb7a2837abe05e2510fbb",
+      "width": 128,
+      "height": 91,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/sources/hero-sleeping-atlas-v1.png",
+      "source": "public/assets/actors/sources/hero-sleeping-atlas-v1.png",
+      "bytes": 962562,
+      "sha256": "04f81990a285a07e012aa59b6566e6471d43115bf870cc97216950017fa695bc",
+      "width": 1774,
+      "height": 887,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/sources/hero-sitting-low-source-v1.png",
+      "source": "public/assets/actors/sources/hero-sitting-low-source-v1.png",
+      "bytes": 1090406,
+      "sha256": "a66fdf79319e78511b074739871bc31d6acdae83179bb9839dc982b096275a7e",
+      "width": 1278,
+      "height": 1230,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/sources/hero-sitting-high-source-v1.png",
+      "source": "public/assets/actors/sources/hero-sitting-high-source-v1.png",
+      "bytes": 1175142,
+      "sha256": "e7d4ed237a361fca33db9f418d1f62d51b129191079f55dd23274ebba3d72c6b",
+      "width": 1254,
+      "height": 1254,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/biomes/sources/hero-den-atlas-v1.png",
+      "source": "public/assets/biomes/sources/hero-den-atlas-v1.png",
+      "bytes": 1139504,
+      "sha256": "884de602b1a627941846e9078767af29d7a3a6a60e08732c78b48cb97b62bc6b",
+      "width": 1774,
+      "height": 887,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/biomes/sources/hero-den-atlas-v2.png",
+      "source": "public/assets/biomes/sources/hero-den-atlas-v2.png",
+      "bytes": 1398291,
+      "sha256": "aebe8155e98ac84f93fd93b93ecfd52a2a0c9584dadd505b115dafe0de4ce2da",
+      "width": 1774,
+      "height": 887,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/biomes/hero-den-topdown-v2.png",
+      "source": "public/assets/biomes/hero-den-topdown-v2.png",
+      "bytes": 33239,
+      "sha256": "e39652b435114d2679c503e0410da1f9052092b36436050440016b44e4f6739b",
+      "width": 128,
+      "height": 115,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/biomes/hero-den-standee-v2.png",
+      "source": "public/assets/biomes/hero-den-standee-v2.png",
+      "bytes": 29523,
+      "sha256": "d8de9e2e5891f2f36a3a3af73ba82b4ca9e5f9dbd1f17801278ad95527d3312c",
+      "width": 128,
+      "height": 107,
+      "pngColorType": 6
+    },
+    {
+      "path": "reference-assets/actors/battle/README.md",
+      "source": "public/assets/actors/battle/README.md",
+      "bytes": 7837,
+      "sha256": "f98f421bd9188e8a8bff595074e531cf03f9e5d335733c8987633b3a52aa1482"
+    },
+    {
+      "path": "reference-assets/actors/battle/mochi-generation.md",
+      "source": "public/assets/actors/battle/mochi-generation.md",
+      "bytes": 8046,
+      "sha256": "2ae1db16707d3c21d210f032833a05f06bdc3208cd7418c71836dc1b012c570b"
+    },
+    {
+      "path": "reference-assets/actors/battle/hero-sitting-generation.json",
+      "source": "public/assets/actors/battle/hero-sitting-generation.json",
+      "bytes": 7267,
+      "sha256": "56a6d34f454d1e731b33a55d2339a1df0c0ec8615496cf3ff5c3cba71877b6aa"
+    },
+    {
+      "path": "reference-assets/actors/battle/hero-sitting-layout.json",
+      "source": "public/assets/actors/battle/hero-sitting-layout.json",
+      "bytes": 2642,
+      "sha256": "02f40becae8791c83e2fb05b1c44c536078eff0372163b08f8950ad044b4219c"
+    },
+    {
+      "path": "reference-assets/biomes/sources/hero-den-generation.json",
+      "source": "public/assets/biomes/sources/hero-den-generation.json",
+      "bytes": 2865,
+      "sha256": "b54fa876096f3490a1116a13f876dc9f4a67c455f857405e9d0d4c0e7bf24275"
+    },
+    {
+      "path": "reference-assets/biomes/sources/hero-den-v2-generation.json",
+      "source": "public/assets/biomes/sources/hero-den-v2-generation.json",
+      "bytes": 1805,
+      "sha256": "34c2ad4b906fa154b3a21bcb1b36e102e695b64925d7e5d10659f76c815ec19d"
+    }
+  ]
+}

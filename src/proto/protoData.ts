@@ -72,7 +72,7 @@ export const WORLD_ACTOR_SPRITES: Record<string, string> = {
 
 /** Pop-up scenery for biome tiles, by tile id (drawn by tools/make-pine-sprite.py). */
 export const BIOME_TILE_SPRITES: Record<string, string> = {
-  'hero-den': `${import.meta.env.BASE_URL}assets/biomes/hero-den-standee-v2.png`,
+  'hero-den': `${import.meta.env.BASE_URL}assets/biomes/hero-den-standee-v3.png`,
   'woods-alpha': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
   'woods-east': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
   pond: `${import.meta.env.BASE_URL}assets/biomes/pond_reeds.png`,

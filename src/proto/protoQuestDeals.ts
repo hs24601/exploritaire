@@ -1,7 +1,7 @@
 export type QuestResource = 'wood' | 'berries' | 'herbs';
 export const QUEST_ROUTE_BUDGET = {
-  startingStamina: 2, maxStamina: 6,
-  rationEnergy: 6, rationStamina: 6,
+  startingInspiration: 2, maxInspiration: 6,
+  rationEnergy: 6, rationInspiration: 6,
 } as const;
 export type QuestCard = {
   id: string;

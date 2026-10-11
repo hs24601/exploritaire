@@ -1,0 +1,518 @@
+[
+  {
+    "width": 1280,
+    "moving": false,
+    "fps": 20,
+    "p95": 66.70000000000073,
+    "worst": 100.09999999999854,
+    "positions": 1,
+    "metrics": {
+      "LayoutCount": 6,
+      "RecalcStyleCount": 183,
+      "LayoutDuration": 0.001,
+      "RecalcStyleDuration": 0.03,
+      "DevToolsCommandDuration": 0.195,
+      "ScriptDuration": 0.166,
+      "V8CompileDuration": 0,
+      "TaskDuration": 1.054,
+      "TaskOtherDuration": 0.662
+    },
+    "hot": [
+      {
+        "name": "(idle)",
+        "url": "",
+        "line": -1,
+        "ms": 4169
+      },
+      {
+        "name": "(program)",
+        "url": "",
+        "line": -1,
+        "ms": 860
+      },
+      {
+        "name": "drawImage",
+        "url": "",
+        "line": -1,
+        "ms": 60
+      },
+      {
+        "name": "paint",
+        "url": "http://localhost:5178/src/proto/components/useImmersiveLabels.ts",
+        "line": 24,
+        "ms": 25
+      },
+      {
+        "name": "(garbage collector)",
+        "url": "",
+        "line": -1,
+        "ms": 13
+      },
+      {
+        "name": "prepareFreshStack",
+        "url": "http://localhost:5178/node_modules/.vite/deps/react-dom_client.js?v=9fd4a6e4",
+        "line": 12094,
+        "ms": 10
+      },
+      {
+        "name": "paint",
+        "url": "http://localhost:5178/src/proto/components/useActorOcclusion.ts?t=1791608940921",
+        "line": 89,
+        "ms": 8
+      },
+      {
+        "name": "run",
+        "url": "",
+        "line": -1,
+        "ms": 7
+      },
+      {
+        "name": "propFace",
+        "url": "http://localhost:5178/src/proto/components/useActorOcclusion.ts?t=1791608940921",
+        "line": 75,
+        "ms": 5
+      },
+      {
+        "name": "projectBillboard",
+        "url": "http://localhost:5178/src/proto/actorOcclusion.ts",
+        "line": 1,
+        "ms": 3
+      },
+      {
+        "name": "update",
+        "url": "http://localhost:5178/src/proto/components/atmosphereRenderer.ts",
+        "line": 129,
+        "ms": 3
+      },
+      {
+        "name": "",
+        "url": "http://localhost:5178/src/proto/components/TableAtmosphere.tsx",
+        "line": 97,
+        "ms": 3
+      },
+      {
+        "name": "coordinate",
+        "url": "http://localhost:5178/src/proto/components/useActorOcclusion.ts?t=1791608940921",
+        "line": 76,
+        "ms": 2
+      },
+      {
+        "name": "point",
+        "url": "http://localhost:5178/src/proto/components/useActorOcclusion.ts?t=1791608940921",
+        "line": 68,
+        "ms": 2
+      },
+      {
+        "name": "",
+        "url": "http://localhost:5178/src/proto/visualLightClock.ts",
+        "line": 7,
+        "ms": 2
+      },
+      {
+        "name": "draw",
+        "url": "http://localhost:5178/src/proto/components/VolumetricAtmosphere.tsx",
+        "line": 49,
+        "ms": 2
+      },
+      {
+        "name": "draw",
+        "url": "http://localhost:5178/src/proto/components/atmosphereRenderer.ts",
+        "line": 278,
+        "ms": 2
+      },
+      {
+        "name": "drawTableLight",
+        "url": "http://localhost:5178/src/proto/components/tableLightCanvas.ts",
+        "line": 9,
+        "ms": 2
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "moving": true,
+    "fps": 5.729753225456756,
+    "p95": 1050,
+    "worst": 1283.2000000000007,
+    "positions": 3,
+    "metrics": {
+      "LayoutCount": 26,
+      "RecalcStyleCount": 76,
+      "LayoutDuration": 0.004,
+      "RecalcStyleDuration": 0.018,
+      "DevToolsCommandDuration": 0.082,
+      "ScriptDuration": 3.756,
+      "V8CompileDuration": 0,
+      "TaskDuration": 4.157,
+      "TaskOtherDuration": 0.296
+    },
+    "hot": [
+      {
+        "name": "closePath",
+        "url": "",
+        "line": -1,
+        "ms": 2492
+      },
+      {
+        "name": "(idle)",
+        "url": "",
+        "line": -1,
+        "ms": 1001
+      },
+      {
+        "name": "closePath",
+        "url": "",
+        "line": -1,
+        "ms": 537
+      },
+      {
+        "name": "(program)",
+        "url": "",
+        "line": -1,
+        "ms": 349
+      },
+      {
+        "name": "closePath",
+        "url": "",
+        "line": -1,
+        "ms": 175
+      },
+      {
+        "name": "closePath",
+        "url": "",
+        "line": -1,
+        "ms": 66
+      },
+      {
+        "name": "(garbage collector)",
+        "url": "",
+        "line": -1,
+        "ms": 42
+      },
+      {
+        "name": "prepareFreshStack",
+        "url": "http://localhost:5178/node_modules/.vite/deps/react-dom_client.js?v=9fd4a6e4",
+        "line": 12094,
+        "ms": 25
+      },
+      {
+        "name": "",
+        "url": "http://localhost:5178/src/proto/components/PropVolume.tsx",
+        "line": 207,
+        "ms": 20
+      },
+      {
+        "name": "run",
+        "url": "",
+        "line": -1,
+        "ms": 17
+      },
+      {
+        "name": "drawImage",
+        "url": "",
+        "line": -1,
+        "ms": 16
+      },
+      {
+        "name": "drawImage",
+        "url": "",
+        "line": -1,
+        "ms": 16
+      },
+      {
+        "name": "",
+        "url": "http://localhost:5178/src/proto/propVolumeRenderer.ts",
+        "line": 27,
+        "ms": 15
+      },
+      {
+        "name": "exports.jsxDEV",
+        "url": "http://localhost:5178/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=9fd4a6e4",
+        "line": 238,
+        "ms": 14
+      },
+      {
+        "name": "",
+        "url": "http://localhost:5178/src/proto/components/PropVolume.tsx",
+        "line": 218,
+        "ms": 14
+      },
+      {
+        "name": "exports.jsxDEV",
+        "url": "http://localhost:5178/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=9fd4a6e4",
+        "line": 238,
+        "ms": 13
+      },
+      {
+        "name": "run",
+        "url": "",
+        "line": -1,
+        "ms": 11
+      },
+      {
+        "name": "",
+        "url": "http://localhost:5178/src/proto/components/PropVolume.tsx",
+        "line": 208,
+        "ms": 10
+      }
+    ]
+  },
+  {
+    "width": 1912,
+    "moving": false,
+    "fps": 15.243298887432651,
+    "p95": 83.39999999999964,
+    "worst": 133.39999999999964,
+    "positions": 1,
+    "metrics": {
+      "LayoutCount": 6,
+      "RecalcStyleCount": 152,
+      "LayoutDuration": 0.001,
+      "RecalcStyleDuration": 0.022,
+      "DevToolsCommandDuration": 0.162,
+      "ScriptDuration": 0.133,
+      "V8CompileDuration": 0,
+      "TaskDuration": 0.976,
+      "TaskOtherDuration": 0.659
+    },
+    "hot": [
+      {
+        "name": "(idle)",
+        "url": "",
+        "line": -1,
+        "ms": 4270
+      },
+      {
+        "name": "(program)",
+        "url": "",
+        "line": -1,
+        "ms": 812
+      },
+      {
+        "name": "drawImage",
+        "url": "",
+        "line": -1,
+        "ms": 57
+      },
+      {
+        "name": "(garbage collector)",
+        "url": "",
+        "line": -1,
+        "ms": 12
+      },
+      {
+        "name": "paint",
+        "url": "http://localhost:5178/src/proto/components/useImmersiveLabels.ts",
+        "line": 24,
+        "ms": 9
+      },
+      {
+        "name": "prepareFreshStack",
+        "url": "http://localhost:5178/node_modules/.vite/deps/react-dom_client.js?v=9fd4a6e4",
+        "line": 12094,
+        "ms": 7
+      },
+      {
+        "name": "draw",
+        "url": "http://localhost:5178/src/proto/components/atmosphereRenderer.ts",
+        "line": 278,
+        "ms": 5
+      },
+      {
+        "name": "WebGLRenderer.renderBufferDirect",
+        "url": "http://localhost:5178/node_modules/.vite/deps/chunk-UG26MVNH.js?v=9fd4a6e4",
+        "line": 17453,
+        "ms": 5
+      },
+      {
+        "name": "propFace",
+        "url": "http://localhost:5178/src/proto/components/useActorOcclusion.ts?t=1791608940921",
+        "line": 75,
+        "ms": 4
+      },
+      {
+        "name": "texImage2D",
+        "url": "",
+        "line": -1,
+        "ms": 4
+      },
+      {
+        "name": "querySelectorAll",
+        "url": "",
+        "line": -1,
+        "ms": 3
+      },
+      {
+        "name": "draw",
+        "url": "http://localhost:5178/src/proto/components/VolumetricAtmosphere.tsx",
+        "line": 49,
+        "ms": 3
+      },
+      {
+        "name": "drawTableLight",
+        "url": "http://localhost:5178/src/proto/components/tableLightCanvas.ts",
+        "line": 9,
+        "ms": 3
+      },
+      {
+        "name": "run",
+        "url": "",
+        "line": -1,
+        "ms": 3
+      },
+      {
+        "name": "getPropertyValue",
+        "url": "",
+        "line": -1,
+        "ms": 2
+      },
+      {
+        "name": "coordinate",
+        "url": "http://localhost:5178/src/proto/components/useActorOcclusion.ts?t=1791608940921",
+        "line": 76,
+        "ms": 2
+      },
+      {
+        "name": "projectBillboard",
+        "url": "http://localhost:5178/src/proto/actorOcclusion.ts",
+        "line": 1,
+        "ms": 2
+      },
+      {
+        "name": "getContext",
+        "url": "",
+        "line": -1,
+        "ms": 2
+      }
+    ]
+  },
+  {
+    "width": 1912,
+    "moving": true,
+    "fps": 5.365553148784008,
+    "p95": 900,
+    "worst": 1266.6000000000022,
+    "positions": 3,
+    "metrics": {
+      "LayoutCount": 25,
+      "RecalcStyleCount": 73,
+      "LayoutDuration": 0.005,
+      "RecalcStyleDuration": 0.016,
+      "DevToolsCommandDuration": 0.082,
+      "ScriptDuration": 3.586,
+      "V8CompileDuration": 0,
+      "TaskDuration": 3.967,
+      "TaskOtherDuration": 0.279
+    },
+    "hot": [
+      {
+        "name": "closePath",
+        "url": "",
+        "line": -1,
+        "ms": 2399
+      },
+      {
+        "name": "(idle)",
+        "url": "",
+        "line": -1,
+        "ms": 1177
+      },
+      {
+        "name": "closePath",
+        "url": "",
+        "line": -1,
+        "ms": 492
+      },
+      {
+        "name": "(program)",
+        "url": "",
+        "line": -1,
+        "ms": 361
+      },
+      {
+        "name": "closePath",
+        "url": "",
+        "line": -1,
+        "ms": 178
+      },
+      {
+        "name": "closePath",
+        "url": "",
+        "line": -1,
+        "ms": 66
+      },
+      {
+        "name": "(garbage collector)",
+        "url": "",
+        "line": -1,
+        "ms": 33
+      },
+      {
+        "name": "",
+        "url": "http://localhost:5178/src/proto/propVolumeRenderer.ts",
+        "line": 27,
+        "ms": 25
+      },
+      {
+        "name": "prepareFreshStack",
+        "url": "http://localhost:5178/node_modules/.vite/deps/react-dom_client.js?v=9fd4a6e4",
+        "line": 12094,
+        "ms": 21
+      },
+      {
+        "name": "drawImage",
+        "url": "",
+        "line": -1,
+        "ms": 21
+      },
+      {
+        "name": "drawImage",
+        "url": "",
+        "line": -1,
+        "ms": 18
+      },
+      {
+        "name": "",
+        "url": "http://localhost:5178/src/proto/components/PropVolume.tsx",
+        "line": 207,
+        "ms": 15
+      },
+      {
+        "name": "",
+        "url": "http://localhost:5178/src/proto/components/PropVolume.tsx",
+        "line": 208,
+        "ms": 14
+      },
+      {
+        "name": "run",
+        "url": "",
+        "line": -1,
+        "ms": 13
+      },
+      {
+        "name": "exports.jsxDEV",
+        "url": "http://localhost:5178/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=9fd4a6e4",
+        "line": 238,
+        "ms": 10
+      },
+      {
+        "name": "run",
+        "url": "",
+        "line": -1,
+        "ms": 10
+      },
+      {
+        "name": "run",
+        "url": "",
+        "line": -1,
+        "ms": 10
+      },
+      {
+        "name": "run",
+        "url": "",
+        "line": -1,
+        "ms": 9
+      }
+    ]
+  }
+]

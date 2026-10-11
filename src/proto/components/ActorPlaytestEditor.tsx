@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { ACTOR_STAMINA_MAX, FOUNDATION_MOCKUPS, type ProtoState } from '../protoState';
-export type PlaytestValues = { hp: number; maxHp: number; stamina: number; maxStamina: number; work: number; maxWork: number; energy: number; maxEnergy: number };
+import { ACTOR_INSPIRATION_MAX, FOUNDATION_MOCKUPS, type ProtoState } from '../protoState';
+export type PlaytestValues = { hp: number; maxHp: number; inspiration: number; maxInspiration: number; work: number; maxWork: number; energy: number; maxEnergy: number };
 const read = (state: ProtoState): PlaytestValues => ({ hp: state.heroHp[0], maxHp: state.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0].maxHp,
-  stamina: state.stamina, maxStamina: state.maxStamina, work: state.actorStamina[0], maxWork: state.actorMaxStamina?.[0] ?? ACTOR_STAMINA_MAX,
+  inspiration: state.inspiration, maxInspiration: state.maxInspiration, work: state.actorInspiration[0], maxWork: state.actorMaxInspiration?.[0] ?? ACTOR_INSPIRATION_MAX,
   energy: state.energy, maxEnergy: state.energyMax });
-const rows = [['HP', 'hp', 'maxHp'], ['Travel stamina', 'stamina', 'maxStamina'], ['Tableau stamina', 'work', 'maxWork'], ['Energy', 'energy', 'maxEnergy']] as const;
+const rows = [['HP', 'hp', 'maxHp'], ['Inspiration reserve', 'inspiration', 'maxInspiration'], ['Foundation inspiration', 'work', 'maxWork'], ['Energy', 'energy', 'maxEnergy']] as const;
 export function ActorPlaytestEditor({ state, onApply }: { state: ProtoState; onApply: (values: PlaytestValues) => void }) {
   const [draft, setDraft] = useState(() => read(state));
   const [message, setMessage] = useState('');

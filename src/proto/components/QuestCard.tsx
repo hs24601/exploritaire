@@ -5,7 +5,7 @@ import { useCardJumbo } from './CardJumbo';
 export type QuestCardProps = {
   title: string;
   text: string;
-  staminaReward: number;
+  inspirationReward: number;
   /** An unquantified reward, such as energy supplied by tableau cards. */
   rewardLabel?: string;
   complete: boolean;
@@ -19,7 +19,7 @@ export type QuestCardProps = {
 };
 
 /** The active quest is a keyboard-accessible reward claim, never an auto-claim. */
-export function QuestCard({ title, text, staminaReward, rewardLabel, complete, redeemed = false, onRedeem, rewardHold, onSelect, selected, jumbo = false }: QuestCardProps) {
+export function QuestCard({ title, text, inspirationReward, rewardLabel, complete, redeemed = false, onRedeem, rewardHold, onSelect, selected, jumbo = false }: QuestCardProps) {
   const viewer = useCardJumbo();
   const pressed=useRef({started:0,moved:false});
   const ownHold = useRewardHold(onRedeem, complete && !redeemed);
@@ -28,17 +28,17 @@ export function QuestCard({ title, text, staminaReward, rewardLabel, complete, r
   return <button type="button" className={`quest-card ${complete ? 'quest-card--complete' : 'quest-card--incomplete'}`}
     aria-haspopup={!jumbo ? 'dialog' : undefined} aria-expanded={onSelect ? Boolean(selected) : undefined}
     onClick={event=>{event.preventDefault();if(jumbo)return;if(pressed.current.moved||(pressed.current.started&&performance.now()-pressed.current.started>500))return;
-      if(viewer){event.currentTarget.focus({preventScroll:true});viewer.open({title,content:<QuestCard title={title} text={text} staminaReward={staminaReward} rewardLabel={rewardLabel} complete={complete} redeemed={redeemed} onRedeem={()=>{viewer.close();onRedeem();}} jumbo />});}else onSelect?.();}}
+      if(viewer){event.currentTarget.focus({preventScroll:true});viewer.open({title,content:<QuestCard title={title} text={text} inspirationReward={inspirationReward} rewardLabel={rewardLabel} complete={complete} redeemed={redeemed} onRedeem={()=>{viewer.close();onRedeem();}} jumbo />});}else onSelect?.();}}
     onPointerDown={event=>{pressed.current={started:performance.now(),moved:false};origin.current={x:event.clientX,y:event.clientY};if(rewardHold||event.button!==0)return;event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);hold.start();}}
     onPointerMove={event=>{if(Math.hypot(event.clientX-origin.current.x,event.clientY-origin.current.y)>holdSlop(event.pointerType)){pressed.current.moved=true;hold.cancel();}}}
     onPointerUp={rewardHold ? undefined : hold.cancel} onPointerCancel={rewardHold ? undefined : hold.cancel}
     onKeyDown={event=>{pressed.current.started=0;pressed.current.moved=false;if(jumbo&&event.key==='Enter'&&!event.repeat&&complete&&!redeemed){event.preventDefault();hold.start();}}}
-    onKeyUp={hold.cancel} onBlur={hold.cancel} aria-label={`${title}. ${redeemed ? 'Reward redeemed' : !complete ? `${text}${rewardLabel ? `. Reward: ${rewardLabel}` : ''}` : rewardLabel ? `Complete. Hold for 1 second to redeem ${rewardLabel} and reveal next quest` : staminaReward ? `Complete. Hold for 1 second to redeem ${staminaReward} stamina and reveal next quest` : `${text} Hold for 1 second to clear this card`}`}>
+    onKeyUp={hold.cancel} onBlur={hold.cancel} aria-label={`${title}. ${redeemed ? 'Reward redeemed' : !complete ? `${text}${rewardLabel ? `. Reward: ${rewardLabel}` : ''}` : rewardLabel ? `Complete. Hold for 1 second to redeem ${rewardLabel} and reveal next quest` : inspirationReward ? `Complete. Hold for 1 second to redeem ${inspirationReward} inspiration and reveal next quest` : `${text} Hold for 1 second to clear this card`}`}>
     <span className="quest-card__title"><QuestEmblem />{title}</span>
     <QuestArtwork resting={title === 'Rest'} />
     <span className="quest-card__text">{text}</span>
-    <span className="quest-card__status" role="status">{redeemed ? '✓ Reward redeemed' : !complete ? 'Objective in progress' : staminaReward || rewardLabel ? '✓ Hold 1s to redeem' : '✓ Try it here'}</span>
-    {(rewardLabel || staminaReward > 0) && <span className="quest-card__reward"><span aria-hidden="true">⚡</span> {rewardLabel ?? `+${staminaReward} STA`}</span>}
+    <span className="quest-card__status" role="status">{redeemed ? '✓ Reward redeemed' : !complete ? 'Objective in progress' : inspirationReward || rewardLabel ? '✓ Hold 1s to redeem' : '✓ Try it here'}</span>
+    {(rewardLabel || inspirationReward > 0) && <span className="quest-card__reward"><span aria-hidden="true">⚡</span> {rewardLabel ?? `+${inspirationReward} INSP`}</span>}
     {hold.progress>0 && <span className="reward-hold-progress" role="progressbar" aria-label="Redeeming reward" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(hold.progress*100)}><span style={{["--hold-progress" as string]:`${hold.progress*100}%`}} /></span>}
   </button>;
 }

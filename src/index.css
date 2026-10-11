@@ -2434,6 +2434,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-table-stage--tilted { pointer-events: none; }
 .proto-table-stage--tilted .proto-table-floor { pointer-events: auto; transform: translateZ(-1px); }
 .proto-table-stage--tilted .proto-map-world > :not(.table-grid-origin) { pointer-events: auto; }
+.proto-map [data-physical-world] > :not(.table-grid-origin) { pointer-events: auto; }
 .proto-standee-base { position: absolute; aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(#0b0907 40%, #2a1e14); border: 2px solid #6b5236; pointer-events: none; }
 .proto-actor-base-name { position: absolute; width: 0; height: 0; transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))); transform-style: preserve-3d; pointer-events: none; }
 .proto-actor-base-name--screen { transform: none; }
@@ -3035,8 +3036,11 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-map [data-board-piece="tile"][data-tile-type="hero-den"] { background: transparent; }
 @media (prefers-reduced-motion: reduce) { .proto-table-actor-layer { transition: none; } }
 
-.proto-map [data-environment-prop] { transition: opacity 180ms ease; }
+.proto-map [data-environment-prop] { transition: opacity 180ms ease, filter 180ms ease; }
 .proto-map [data-actor-occluder="true"] { opacity: .48; }
+/* Solid reliefs dim for the actor outline without becoming transparent to
+   the table grid, ground boundaries or horizon behind their opaque pixels. */
+.proto-map [data-scenery-volume="true"][data-actor-occluder="true"] { opacity: 1; filter: brightness(.65); }
 .proto-actor-ghost { pointer-events: auto !important; }
 .proto-actor-ghost > .proto-oversample { filter: url(#proto-actor-xray); }
 .proto-actor-ghost:not(:has(> .proto-oversample)) { filter: url(#proto-actor-xray); }

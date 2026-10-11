@@ -1,4 +1,4 @@
-// Quest rewards reach the actors (energy and actor stamina), and the foundation's exit icon
+// Quest rewards reach the actors (energy and actor inspiration), and the foundation's exit icon
 // steps the actor out onto a table cell touching the biome tile.
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({headless:true});try{

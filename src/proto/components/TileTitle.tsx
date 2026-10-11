@@ -3,9 +3,12 @@ import { fitTileTitle } from '../tileLabels';
 
 /** Full titles flow through the actual rotated tile footprint. The upright ink
  * can use several staggered lines across an immutable region, without a box. */
-export function TileTitle({ text, width, height, yaw, scale, align = 'center', maxLines, getCamera, onCameraFrame, onTextBox }: {
+export function TileTitle({ text, width, height, yaw, scale, align = 'center', maxLines, clearCenter, getCamera, onCameraFrame, onTextBox }: {
   text: string; width: number; height: number; yaw: number; scale: number;
   align?: 'center' | 'top' | 'bottom'; maxLines?: number;
+  /** Occupied central square half-size; sprite clearance takes priority over
+   * ground containment at orbit angles where a complete row cannot fit. */
+  clearCenter?: number;
   getCamera?: () => { yaw?: number; scale: number };
   onCameraFrame?: (listener: (camera: { yaw?: number; scale: number }) => void) => () => void;
   onTextBox?: (box: { left: number; top: number; width: number; height: number; pivot: { x: number; y: number } }) => void;
@@ -43,6 +46,12 @@ export function TileTitle({ text, width, height, yaw, scale, align = 'center', m
       // retain a bounded compact fit when the footprint cannot hold that size.
       const maximum = Math.max(18, 16 / Math.max(live.scale, 0.1));
       const layout = fitTileTitle(text.toUpperCase(), Math.max(1, width - 8), Math.max(1, height - 8), liveYaw, measure, maximum, 6, align, maxLines);
+      if (clearCenter && layout.lines.length) {
+        const angle = liveYaw * Math.PI / 180;
+        const bottom = clearCenter * (Math.abs(Math.cos(angle)) + Math.abs(Math.sin(angle))) + 2;
+        const shift = Math.max(0, bottom - layout.lines[0].y);
+        for (const line of layout.lines) line.y += shift;
+      }
       frame.dataset.labelOverflow = String(!layout.fits);
       frame.dataset.labelFontSize = String(layout.fontSize);
       frame.dataset.labelYaw = String(liveYaw);
@@ -70,6 +79,6 @@ export function TileTitle({ text, width, height, yaw, scale, align = 'center', m
     document.fonts.addEventListener('loadingdone', fontsChanged);
     const unsubscribe = onCameraFrame?.(live => fit(live));
     return () => { disposed = true; window.clearTimeout(reportTimer); unsubscribe?.(); document.fonts.removeEventListener('loadingdone', fontsChanged); };
-  }, [text, width, height, align, maxLines, getCamera, onCameraFrame, getCamera ? 0 : yaw, getCamera ? 0 : scale]);
+  }, [text, width, height, align, maxLines, clearCenter, getCamera, onCameraFrame, getCamera ? 0 : yaw, getCamera ? 0 : scale]);
   return <span ref={ref} className="proto-tile-title proto-face-camera" data-title-align={align} aria-label={text} title={text} />;
 }

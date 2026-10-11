@@ -6,7 +6,7 @@
 .combat-demo button:disabled { opacity: .5; cursor: wait; }
 .combat-demo button:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 2px; }
 .combat-demo__arena { min-width: 0; min-height: 0; overflow: hidden; }
-.combat-demo[data-camera-view='freecam'] .combat-demo__arena { cursor: grab; touch-action: none; }
+.combat-demo[data-freecam-enabled='true'] .combat-demo__arena { cursor: grab; touch-action: none; }
 .combat-demo__arena[data-dragging='true'] { cursor: grabbing; }
 .combat-demo__footer { position: absolute; bottom: 10px; left: 10px; max-width: calc(100% - 20px); z-index: 3; pointer-events: none; }
 .combat-demo__footer button, .combat-demo__diagnostics { pointer-events: auto; }

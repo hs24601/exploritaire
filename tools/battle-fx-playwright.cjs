@@ -86,10 +86,19 @@ const pause = async page => page.clock.pauseAt(await page.evaluate(() => Date.no
       // Without Mochi, the slime wears Hero down: flinches on each hit, then the fall that holds.
       await page.getByRole('button', {name: 'Remove Mochi'}).click();
       const hp = () => page.locator('[data-battle-slot="hero"] [data-bar="hp"]').getAttribute('aria-valuenow').then(Number);
+      const initialHp = await hp();
+      for (let guard = 0; await hp() === initialHp && guard < 240; guard++) await page.clock.runFor(50);
+      assert.ok(await hp() < initialHp, `${tag} a slime hits Hero`);
+      await page.clock.runFor(260);
+      assert.equal((await unit(page, 'hero')).pose, 'flinch', `${tag} impact uses Hero's flinch sprite`);
+      await page.screenshot({path: `${out}/flinch-${tag}.png`});
+      await page.clock.runFor(500);
+      assert.equal((await unit(page, 'hero')).pose, 'sitting', `${tag} flinch returns to idle`);
       for (let guard = 0; await hp() > 0 && guard < 60; guard++) await page.clock.runFor(1000);
       assert.equal(await hp(), 0);
       await page.clock.runFor(3000);
-      assert.ok((await unit(page, 'hero')).tip > 1.3, `${tag} Hero lies down in the arena`);
+      assert.equal((await unit(page, 'hero')).pose, 'down', `${tag} Hero uses her held down sprite`);
+      assert.equal((await unit(page, 'hero')).tip, 0, `${tag} authored down art stays grounded`);
       assert.equal((await unit(page, 'hero')).visible, true);
       assert.equal(await page.locator('[data-battle-slot="hero"]').getAttribute('data-down'), 'true');
       assert.deepEqual(await findLayoutDefects(page, '.battle-field', {parts}), [], `${tag} layout with Hero down`);
@@ -98,6 +107,7 @@ const pause = async page => page.clock.pauseAt(await page.evaluate(() => Date.no
       await page.getByRole('button', {name: 'Fight again'}).click();
       await page.clock.runFor(100);
       assert.equal((await unit(page, 'hero')).tip, 0, `${tag} Hero is up again`);
+      assert.equal((await unit(page, 'hero')).pose, 'sitting', `${tag} restart clears the down sprite`);
       assert.deepEqual(errors, []);
       await page.close();
     }

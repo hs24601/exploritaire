@@ -1,7 +1,7 @@
 /** Small, sprite-derived voxel solids. X/Z are ground axes; Y is height.
  * Keep this independent of DOM/WebGL so the same model can supply views,
  * shadows and future world renderers. Source colours wrap around the solid. */
-export type PropVolumeRecipe = { bands: readonly number[]; depth: number; trim: boolean; shape?: 'cave' | 'berry-bush'; symmetry?: 'asymmetric'; facing?: 'north' | 'east' | 'south' | 'west' };
+export type PropVolumeRecipe = { bands: readonly number[]; depth: number; trim: boolean; heightScale?: number; shape?: 'cave' | 'berry-bush'; symmetry?: 'asymmetric'; facing?: 'north' | 'east' | 'south' | 'west' };
 export const propVolumeHeading = (recipe?: PropVolumeRecipe) => ({ north: 180, east: 90, south: 0, west: 270 }[recipe?.facing ?? 'south']);
 export const PROP_VOLUME_RECIPES: Readonly<Record<string, PropVolumeRecipe>> = {
   'small_woods_pines.png': { bands: [0, .44, 1], depth: .85, trim: true },
@@ -14,8 +14,10 @@ export const PROP_VOLUME_RECIPES: Readonly<Record<string, PropVolumeRecipe>> = {
   // Seam saddles: long and shallow, the _ns copy turned to run north-south.
   'mountain_standee_ridge.svg': { bands: [0, .5, 1], depth: .5, trim: true },
   'mountain_standee_ridge_ns.svg': { bands: [0, .5, 1], depth: .5, trim: true, facing: 'east' },
-  'hero-den-standee-v2.png': { bands: [0, 1], depth: .95, trim: true, shape: 'cave', symmetry: 'asymmetric', facing: 'north' },
-  'berry-bush.svg': { bands: [0, 1], depth: 1, trim: true, shape: 'berry-bush' },
+  // Fixed world-north mouth, away from the mountains south of the den.
+  'hero-den-standee-v2.png': { bands: [0, 1], depth: .95, trim: true, heightScale: .5, shape: 'cave', symmetry: 'asymmetric', facing: 'north' },
+  'hero-den-standee-v3.png': { bands: [0, 1], depth: .95, trim: true, heightScale: .5, shape: 'cave', symmetry: 'asymmetric', facing: 'north' },
+  'berry-bush.svg': { bands: [0, 1], depth: 1, trim: true, heightScale: .3, shape: 'berry-bush' },
 };
 export function propVolumeRecipe(src?: string) {
   return src ? PROP_VOLUME_RECIPES[src.split('/').pop()!.split('?')[0]] : undefined;
@@ -32,11 +34,22 @@ const SIDES: readonly { normal: Point; corners: readonly Point[] }[] = [
   { normal: [0,0,-1], corners: [[0,0,0],[0,1,0],[1,1,0],[1,0,0]] },
 ];
 
+/** Compress height about the ground without narrowing the footprint. The same
+ * solid supplies camera projections and shadows; normals follow the transform. */
+function scaleVolumeHeight(volume: PropVolume, scale = 1): PropVolume {
+  if (scale === 1) return volume;
+  return { ...volume, height: volume.height * scale, faces: volume.faces.map(face => {
+    const [x, y, z] = face.normal, length = Math.hypot(x, y / scale, z);
+    return { ...face, normal: [x / length, y / scale / length, z / length],
+      vertices: face.vertices.map(([x, y, z]) => [x, y * scale, z] as Point) };
+  }) };
+}
+
 /** Sweep each authored tree/peak's horizontal silhouette into an elliptical
  * cross section, including narrow trunks and the canopy's stepped branches.
  * Bands keep neighbouring trees/peaks independent instead of making a barrel. */
 export function buildPropVolume(width: number, height: number, rgba: ArrayLike<number>, recipe: PropVolumeRecipe): PropVolume {
-  if (recipe.shape === 'berry-bush') return buildBerryBushVolume();
+  if (recipe.shape === 'berry-bush') return scaleVolumeHeight(buildBerryBushVolume(), recipe.heightScale);
   let left = width, right = -1, top = height, bottom = -1;
   for (let y=0; y<height; y++) for (let x=0; x<width; x++) if (rgba[(y*width+x)*4+3] > 100) {
     left=Math.min(left,x); right=Math.max(right,x); top=Math.min(top,y); bottom=Math.max(bottom,y);
@@ -112,7 +125,7 @@ export function buildPropVolume(width: number, height: number, rgba: ArrayLike<n
     const rotate=([x,y,z]:Point):Point=>[c*x+s*z,y,-s*x+c*z];
     face.normal=rotate(face.normal);face.vertices=face.vertices.map(rotate);
   }
-  return { faces, width:w*unit, height:h*unit, depth:d*unit };
+  return scaleVolumeHeight({ faces, width:w*unit, height:h*unit, depth:d*unit }, recipe.heightScale);
 }
 
 /** Authored low shrubs, rather than a forest silhouette swept into a cylinder.
@@ -132,14 +145,16 @@ function buildBerryBushVolume(): PropVolume {
         : 1+Math.min(3,Math.floor(y/7)+(variation<2 ? 1 : 0));
     }
   };
-  for(const [x,z] of [[9,15],[21,13],[17,23]])for(let y=0;y<9;y++) {
-    cells[at(x,y,z)]=0;cells[at(x+1,y,z)]=0;
-  }
-  // Overlapping lobes leave a broad, irregular crown and a short woody base.
-  for(const [x,y,z,rx,ry,rz] of [[9,11,15,9,8,10],[21,13,13,10,9,10],[17,10,23,10,7,8],[15,16,17,9,6,9]])sphere(x,y,z,rx,ry,rz);
-  // Small bunches sit at the crown's outer skin, including its rear and sides.
-  for(const [x,y,z] of [[7,12,6],[20,17,5],[27,12,10],[28,10,19],[22,10,29],[12,13,29],[3,10,20],[3,15,13],[11,20,15],[22,19,18]]) {
-    sphere(x,y,z,1.8,1.8,1.8,true);sphere(x+1.8,y-1.8,z+.5,1.8,1.8,1.8,true);sphere(x-.6,y-2.8,z+1,1.6,1.6,1.6,true);
+  // Separate crowns and stems leave real ground gaps, including on orbit.
+  for(const [x,z] of [[6,6],[25,7],[16,16],[7,25],[25,25]]) {
+    for(let y=0;y<7;y++){cells[at(x,y,z)]=0;cells[at(x+1,y,z)]=0;}
+    sphere(x,12,z,5,8,5);
+    sphere(x-1,16,z,3.8,6,3.8);
+    // Fruit belongs to each shrub, with clusters on every exposed side.
+    for(const [dx,dy,dz] of [[0,13,-4],[4,11,0],[0,12,4],[-4,14,0],[1,20,0]]) {
+      sphere(x+dx,dy,z+dz,1.1,1.4,1.1,true);
+      sphere(x+dx+.8,dy-2,z+dz+.4,1,1.2,1,true);
+    }
   }
   const faces:VolumeFace[]=[];
   for(let y=0;y<h;y++)for(let z=0;z<d;z++)for(let x=0;x<w;x++) {

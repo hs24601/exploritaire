@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { DEFAULT_CHIP_ABILITY } from '../protoData';
 import type { ProtoHeroClass } from '../protoTypes';
-import { ACTOR_STAMINA_MAX, DEV_ACTOR_DEFEAT_OVERRIDE, ENEMY_TEAM_SLOT_IDS, FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, heroLabelForTargetId, rankLabel, targetToneForAbility, type AbilityEffectType, type AbilityTargetKind, type AdvisorAbilityOption, type EnemyRuntimeState, type FoundationSlot, type HeroBuff, type PendingAbilityTarget, type SceneKind, type TargetAnnouncement, type TargetHighlightTone } from '../protoState';
+import { ACTOR_INSPIRATION_MAX, DEV_ACTOR_DEFEAT_OVERRIDE, ENEMY_TEAM_SLOT_IDS, FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, heroLabelForTargetId, rankLabel, targetToneForAbility, type AbilityEffectType, type AbilityTargetKind, type AdvisorAbilityOption, type EnemyRuntimeState, type FoundationSlot, type HeroBuff, type PendingAbilityTarget, type SceneKind, type TargetAnnouncement, type TargetHighlightTone } from '../protoState';
 
 export const FoundationBoard = ({
   label,
@@ -12,8 +12,8 @@ export const FoundationBoard = ({
   maxHp,
   comboCount,
   comboTarget,
-  stamina = 0,
-  staminaMax = 0,
+  inspiration = 0,
+  inspirationMax = 0,
   workCompleted = 0,
   buffs = [],
   charge,
@@ -37,8 +37,8 @@ export const FoundationBoard = ({
   maxHp: number;
   comboCount: number;
   comboTarget: number;
-  stamina?: number;
-  staminaMax?: number;
+  inspiration?: number;
+  inspirationMax?: number;
   workCompleted?: number;
   buffs?: HeroBuff[];
   charge?: { label: string; value: number; threshold: number };
@@ -182,7 +182,7 @@ export const FoundationBoard = ({
             <span className="min-w-[1.8em] rounded-full border border-white/28 bg-black/50 px-1 py-0.5 text-center text-white/95">{comboCount}</span>
           </div>
           <div className="text-[clamp(0.44rem,0.9vmin,0.58rem)] font-black uppercase tracking-[0.1em] text-white/58">
-            Stamina {stamina}/{staminaMax} · Work {workCompleted}
+            Inspiration {inspiration}/{inspirationMax} · Work {workCompleted}
           </div>
         </div>
         <div className={`grid size-[clamp(1.55rem,3.5vmin,2.1rem)] shrink-0 place-items-center rounded-full border bg-[#f8f3dc] text-[clamp(0.78rem,1.78vmin,1.08rem)] font-black leading-none text-black shadow-[0_0_22px_rgba(255,209,102,0.14)] ${accent.valueBorder}`}>
@@ -203,7 +203,7 @@ export const ActorFoundationPanel = ({
   scene,
   hp,
   buffs,
-  stamina,
+  inspiration,
   workCompleted,
   active,
   placementTargetable,
@@ -228,7 +228,7 @@ export const ActorFoundationPanel = ({
   scene: SceneKind;
   hp: number;
   buffs: HeroBuff[];
-  stamina: number;
+  inspiration: number;
   workCompleted: number;
   active: boolean;
   placementTargetable: boolean;
@@ -363,8 +363,8 @@ export const ActorFoundationPanel = ({
       maxHp={mockup.maxHp}
       comboCount={comboCount}
       comboTarget={comboTarget}
-      stamina={stamina}
-      staminaMax={ACTOR_STAMINA_MAX}
+      inspiration={inspiration}
+      inspirationMax={ACTOR_INSPIRATION_MAX}
       workCompleted={workCompleted}
       buffs={buffs}
       accent={accent}

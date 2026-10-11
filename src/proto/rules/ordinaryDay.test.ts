@@ -8,8 +8,8 @@ import { biomeTileSprite } from '../protoData';
 describe('an ordinary first day', () => {
   it('opens rested and awake at home with an empty tableau', () => {
     const state = createInitialState();
-    expect(state.stamina).toBe(state.maxStamina);
-    expect(state.actorStamina[0]).toBe(4);
+    expect(state.inspiration).toBe(state.maxInspiration);
+    expect(state.actorInspiration[0]).toBe(4);
     expect(state.selectedBiomeId).toBeNull();
     expect(state.tableau).toEqual([]);
     expect(state.foundations).toEqual([]);

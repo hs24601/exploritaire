@@ -10,7 +10,7 @@ export type TradingCardChip = { id: string; icon: ReactNode; value?: ReactNode; 
 export type TradingCardSection = { id: string; label: string; icon?: ReactNode; content?: ReactNode;
   /** Plain-text details, shown on hover/tap of the jumbo icon. */
   details?: string;
-  /** Splits the section into several jumbo icons (e.g. HP and STA). */
+  /** Splits the section into several jumbo icons (e.g. HP and INSP). */
   chips?: TradingCardChip[] };
 
 /** Jumbo icons for a section: its own chips, or one icon carrying the section. */

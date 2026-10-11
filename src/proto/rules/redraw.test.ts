@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { REDRAW_STAMINA_COST, canRedraw, drawRedrawRank, redrawFoundation, redrawOptions } from './redraw';
+import { REDRAW_INSPIRATION_COST, canRedraw, drawRedrawRank, redrawFoundation, redrawOptions } from './redraw';
 
 describe('foundation redraw', () => {
-  it('draws a new value and costs the actor 1 stamina', () => {
-    expect(REDRAW_STAMINA_COST).toBe(1);
-    const next = redrawFoundation({ rank: 7, stamina: 3 }, { kind: 'draw' }, 0.5);
+  it('draws a new value and costs the actor 1 inspiration', () => {
+    expect(REDRAW_INSPIRATION_COST).toBe(1);
+    const next = redrawFoundation({ rank: 7, inspiration: 3 }, { kind: 'draw' }, 0.5);
     expect(next).not.toBeNull();
-    expect(next!.stamina).toBe(2);
+    expect(next!.inspiration).toBe(2);
     expect(next!.rank).not.toBe(7);
   });
 
-  it('is refused at 0 stamina', () => {
+  it('is refused at 0 inspiration', () => {
     expect(canRedraw(0)).toBe(false);
-    expect(redrawFoundation({ rank: 7, stamina: 0 })).toBeNull();
+    expect(redrawFoundation({ rank: 7, inspiration: 0 })).toBeNull();
   });
 
   it('never redraws the abandoned value and covers every other rank', () => {
@@ -30,7 +30,7 @@ describe('foundation redraw', () => {
     const spirits = [{ id: 'ember', redrawRank: 9 }, { id: 'cal' }];
     const options = redrawOptions(spirits);
     expect(options).toEqual([{ kind: 'draw' }, { kind: 'spirit', spiritId: 'ember', rank: 9 }]);
-    expect(redrawFoundation({ rank: 4, stamina: 1 }, options[1])).toEqual({ rank: 9, stamina: 0 });
+    expect(redrawFoundation({ rank: 4, inspiration: 1 }, options[1])).toEqual({ rank: 9, inspiration: 0 });
     expect(redrawOptions()).toEqual([{ kind: 'draw' }]);
   });
 });

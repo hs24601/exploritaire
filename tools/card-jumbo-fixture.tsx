@@ -16,8 +16,8 @@ window.renderScenario=(scenario:string)=>root.render(<CardJumboProvider>{scenari
   :scenario==='combat'?<CombatField seed={17} hero={{label:'Hero',hp:30,maxHp:30}} onEnd={()=>{}} onLeave={()=>{}}/>
   :scenario==='reel'?<FishFight seed={17} rank={5} onEnd={()=>{}}/>
   :<main style={{display:'flex',gap:24,padding:50}}>
-    {slot('quest',<QuestCard title="Find food" text="Gather two ripe berries from the nearby berry patch, then carry them home for supper." staminaReward={1} complete={false} onRedeem={()=>window.redeems++}/>)}
-    {slot('reward',<QuestCard title="Supper ready" text="Food is gathered. Hold to claim the reward." staminaReward={1} complete onRedeem={()=>window.redeems++}/>)}
+    {slot('quest',<QuestCard title="Find food" text="Gather two ripe berries from the nearby berry patch, then carry them home for supper." inspirationReward={1} complete={false} onRedeem={()=>window.redeems++}/>)}
+    {slot('reward',<QuestCard title="Supper ready" text="Food is gathered. Hold to claim the reward." inspirationReward={1} complete onRedeem={()=>window.redeems++}/>)}
     {slot('back',<JumboActionCard className="quest-card-back" style={{width:'100%',height:'100%'}} aria-label="Hidden quest card back"/>)}
     {slot('blocked',<ProtoCard card={{id:'blocked',rank:9}} disabled/>)}
   </main>}</CardJumboProvider>);
