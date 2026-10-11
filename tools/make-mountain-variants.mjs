@@ -1,5 +1,5 @@
 // Cuts neighbour-aware mountain pieces (terrainAutotile.ts) from the authored
-// standee: the main peak and the lower west spur. Each
+// standee: the main peak, the lower west spur and a low seam ridge. Each
 // keeps the original pixels, clipped to a slope so the cut reads as a ridge.
 // Run: node tools/make-mountain-variants.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -9,6 +9,9 @@ const source = readFileSync(`${dir}/mountain_standee.svg`, 'utf8');
 const body = source.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').replace(/<!--[\s\S]*?-->\s*/, '');
 const pieces = {
   peak: { box: [16, 0, 104, 96], clip: [[18, 96], [50, 34], [70, 2], [94, 40], [118, 96]], note: 'The main peak alone, for corners.' },
+  // A low saddle laid across the seam between two joined cells; the _ns copy
+  // is the same art, turned a quarter in its prop-volume recipe.
+  ridge: { box: [0, 44, 128, 52], clip: [[0, 96], [6, 74], [24, 60], [44, 54], [64, 48], [84, 54], [104, 62], [122, 74], [128, 96]], note: 'A low ridge between neighbouring peaks.' },
   spur: { box: [0, 18, 76, 78], clip: [[0, 96], [34, 22], [50, 36], [74, 96]], note: 'The lower west shoulder, for range ends.' },
 };
 // Craggy slopes: subdivide each cut edge and nudge the points sideways on the
@@ -41,3 +44,4 @@ ${body.trim()}
 </svg>
 `);
 }
+writeFileSync(`${dir}/mountain_standee_ridge_ns.svg`, readFileSync(`${dir}/mountain_standee_ridge.svg`, 'utf8'));

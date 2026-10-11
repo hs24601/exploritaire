@@ -11,6 +11,9 @@ export const PROP_VOLUME_RECIPES: Readonly<Record<string, PropVolumeRecipe>> = {
   // Neighbour-aware single-peak pieces of the same range (terrainAutotile.ts).
   'mountain_standee_peak.svg': { bands: [0, 1], depth: .9, trim: true },
   'mountain_standee_spur.svg': { bands: [0, 1], depth: .9, trim: true },
+  // Seam saddles: long and shallow, the _ns copy turned to run north-south.
+  'mountain_standee_ridge.svg': { bands: [0, .5, 1], depth: .5, trim: true },
+  'mountain_standee_ridge_ns.svg': { bands: [0, .5, 1], depth: .5, trim: true, facing: 'east' },
   'hero-den-standee-v2.png': { bands: [0, 1], depth: .95, trim: true, shape: 'cave', symmetry: 'asymmetric', facing: 'north' },
   'berry-bush.svg': { bands: [0, 1], depth: 1, trim: true, shape: 'berry-bush' },
 };

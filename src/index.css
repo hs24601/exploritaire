@@ -3031,7 +3031,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-table-actor-layer .proto-map-world > [data-board-piece="actor"],
 .proto-table-actor-layer .proto-map-world > [data-cell-grip] { pointer-events: auto; }
 .proto-table-actor-layer .proto-standee-base, .proto-table-actor-layer .proto-actor-base-name { pointer-events: none !important; }
-.proto-map [data-tabletop][data-tile-type="impassable-mountain"] { background: transparent; }
+.proto-map [data-board-piece="tile"][data-tile-type="impassable-mountain"] { background: transparent; }
 .proto-map [data-board-piece="tile"][data-tile-type="hero-den"] { background: transparent; }
 @media (prefers-reduced-motion: reduce) { .proto-table-actor-layer { transition: none; } }
 

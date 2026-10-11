@@ -9,9 +9,12 @@ type Region = { x: number; y: number; width: number; height: number;
  * cell seams; solid interior rock prevents holes revealing the table grid.
  * Each cell's peak takes its neighbour-aware piece (terrainAutotile.ts):
  * interior massifs draw larger and on top, edges lean into the range, and a
- * per-cell flip and nudge keep neighbours from reading as copies. */
-export function ConnectedTerrainArt({ region, sprite, rockColor, pieces }: { region: Region; sprite: string; rockColor: string;
-  pieces?: ReadonlyMap<string, AutotilePlacement> }) {
+ * per-cell flip and nudge keep neighbours from reading as copies.
+ * Without `peaks` (the tilted view, where peaks stand as solids) it is the
+ * range's rock floor: every member cell filled edge to edge with scree, so no
+ * table ground shows between the standing peaks. */
+export function ConnectedTerrainArt({ region, sprite, rockColor, pieces, peaks: showPeaks = true }: { region: Region; sprite: string; rockColor: string;
+  pieces?: ReadonlyMap<string, AutotilePlacement>; peaks?: boolean }) {
   const clipId = useId().replace(/:/g, '');
   const cell = TABLE_GRID.cellSize;
   const base = Math.min(cell * 1.5, region.width, region.height);
@@ -23,6 +26,19 @@ export function ConnectedTerrainArt({ region, sprite, rockColor, pieces }: { reg
     const y = clamp(tile.position.y - top + (piece?.dy ?? 0) - size / 2, region.height, size);
     return { id: tile.id, size, x, y, flip: piece?.flip ?? false, shape: piece?.shape };
   }).sort((a, b) => a.size - b.size);
+  if (!showPeaks) return <svg aria-hidden="true" data-terrain-floor="mountains" data-terrain-cell-count={region.tiles.length}
+    className="absolute pointer-events-none" width={region.width} height={region.height}
+    viewBox={`0 0 ${region.width} ${region.height}`}
+    style={{ left: `calc(50% + ${left}px)`, top: `calc(50% + ${top}px)`, imageRendering: 'pixelated', pointerEvents: 'none' }}>
+    <defs><pattern id={`${clipId}-scree`} width="12" height="12" patternUnits="userSpaceOnUse">
+      <rect width="12" height="12" fill={rockColor} />
+      <rect x="1" y="2" width="2" height="2" fill="#4a566a" /><rect x="7" y="1" width="2" height="2" fill="#262e3b" />
+      <rect x="4" y="7" width="2" height="2" fill="#5b677c" /><rect x="9" y="8" width="2" height="2" fill="#262e3b" />
+      <rect x="0" y="10" width="2" height="2" fill="#2c3542" />
+    </pattern></defs>
+    {region.tiles.map(tile => <rect key={tile.id} x={tile.position.x - left - cell / 2} y={tile.position.y - top - cell / 2}
+      width={cell} height={cell} fill={`url(#${clipId}-scree)`} />)}
+  </svg>;
   return <svg aria-hidden="true" data-connected-terrain="mountains" data-terrain-cell-count={region.tiles.length}
     className="absolute pointer-events-none" width={region.width} height={region.height}
     viewBox={`0 0 ${region.width} ${region.height}`}

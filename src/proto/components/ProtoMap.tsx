@@ -49,7 +49,7 @@ import { detectFxQuality } from '../atmosphere';
 import type { LabelBox } from '../biomeEdgeScenery';
 import { BIOME_EDGE_SCENERY } from '../protoData';
 import { Oversample, STANDEE_OVERSAMPLE, SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows } from './SpriteStandee';
-import { terrainAutotilePlacements } from '../terrainAutotile';
+import { terrainAutotilePlacements, terrainAutotileSeams } from '../terrainAutotile';
 import { TABLE_MAX_SCALE, TABLE_TILT_MS, tableCameraTilt, tableTiltFor, tableTiltTransform, tiltPanScale, unprojectTilt } from '../tableTilt';
 
 export type ProtoBiomeTile = {
@@ -418,6 +418,8 @@ export const ProtoMap = ({
   // Neighbour-aware variants: each connected terrain cell leans, scales and
   // flips its art from its joined sides, so ranges don't read as copies.
   const terrainPieces = useMemo(() => terrainAutotilePlacements(terrainRegions, position => TABLE_GRID.atWorld(position), TABLE_GRID.cellSize), [terrainRegions]);
+  // Tilted, low ridges cross every joined seam so raised ranges show no ground between peaks.
+  const terrainSeams = useMemo(() => terrainAutotileSeams(terrainRegions, position => TABLE_GRID.atWorld(position), TABLE_GRID.cellSize), [terrainRegions]);
   const terrainOwners = new Map(immutableRegions.flatMap(region => region.tiles.map(tile => [tile.id, region] as const)));
   const sharedLabelTiles = new Set(labelRegions.flatMap(region => region.tiles.map(tile => tile.id)));
   const lightCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1292,7 +1294,8 @@ export const ProtoMap = ({
           }}>
             <UnexploredGround cells={neutralGroundCells} />
             {[...unexploredGround.values()]}
-            {!upright && terrainRegions.map(region => <ConnectedTerrainArt key={region.id} region={region} pieces={terrainPieces}
+            {/* Tilted, the range keeps its solid rock floor (without the overhead peaks) under the standing peaks. */}
+            {terrainRegions.map(region => <ConnectedTerrainArt key={region.id} region={region} pieces={terrainPieces} peaks={!upright}
               sprite={`${import.meta.env.BASE_URL}assets/biomes/impassable-mountain_topdown.svg`} rockColor="#354154" />)}
           </div>
           {biomeTiles.map((tile) => (
@@ -1408,6 +1411,20 @@ export const ProtoMap = ({
               );
             })()
           ))}
+          {upright && terrainSeams.map(seam => <BiomeEdgeScenery key={seam.id}
+            tileId={seam.id}
+            centre={seam.position}
+            footprint={seam.owner}
+            props={[{ id: 'ridge', edge: 'front', src: `${import.meta.env.BASE_URL}assets/biomes/${seam.src}`, x: 0, y: 0, width: TABLE_GRID.cellSize * seam.scale, height: TABLE_GRID.cellSize * seam.scale, flip: seam.flip }]}
+            yaw={0}
+            hours={timeOfDay}
+            lights={lightSources}
+            quality={fxQuality}
+            standee={sceneryStandee}
+            volumeStandee={standee(undefined, oversample)}
+            volumeCamera={volumeCamera}
+            oversample={oversample}
+          />)}
           {resourceStacks.map((stack) => (
             (() => {
               const physicsPosition = resourcePhysicsRef.current.get(stack.id) ?? stack.position;
