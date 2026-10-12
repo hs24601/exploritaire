@@ -36,7 +36,7 @@ export function useImmersiveLabels(root: RefObject<HTMLDivElement | null>, activ
       const signature = JSON.stringify([camera, viewport.clientWidth, viewport.clientHeight,
         actors.map(el => [el.dataset.actorX, el.dataset.actorY, el.dataset.actorPose, el.dataset.actorHeading, el.dataset.actorWidth, el.dataset.actorHeight]),
         nameSources.map(el => [el.dataset.actorNameOwner, el.dataset.actorBaseName]),
-        labels.map(el => [el.getAttribute('aria-label'), el.dataset.labelYaw, el.dataset.labelFontSize, el.parentElement?.style.cssText])]);
+        labels.map(el => [el.getAttribute('aria-label'), el.dataset.labelYaw, el.dataset.labelFontSize, el.parentElement?.style.cssText, el.closest<HTMLElement>('[data-label-owner]')?.dataset.labelShown])]);
       if (signature === previous && now - started > 1000 && copies.size === labels.length && labels.every(label => copies.has(label))) return;
       previous = signature;
       for (const [source, copy] of copies) if (!labels.includes(source)) {
@@ -90,7 +90,9 @@ export function useImmersiveLabels(root: RefObject<HTMLDivElement | null>, activ
         const ids = new Set((owner?.dataset.labelTiles ?? owner?.dataset.biomeTitle ?? owner?.dataset.biomeId
           ?? (owner?.dataset.denTitle ? 'hero-den' : '')).split(' '));
         const sceneryVisible = props.some(prop => ids.has(prop.dataset.biomePopup ?? '') && inView(prop.getBoundingClientRect()));
-        copy.style.display = inView(anchor) || sceneryVisible ? 'block' : 'none';
+        // Tile labels show only while their tile is pointed at, focused or tapped.
+        const hidden = source.closest<HTMLElement>('[data-label-owner]')?.dataset.labelShown === undefined && Boolean(source.closest('[data-label-owner]'));
+        copy.style.display = !hidden && (inView(anchor) || sceneryVisible) ? 'block' : 'none';
         if (copy.style.display === 'none') continue;
         const measured = copy.getBoundingClientRect();
         const width = measured.width, height = measured.height;

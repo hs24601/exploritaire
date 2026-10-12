@@ -117,6 +117,8 @@ const STANDEE_POP_MS = 320;
 const BIOME_POPUP_SIZE = 72;
 /** A pop-up cut below this to clear a label behind it is left out. */
 const BIOME_POPUP_MIN_SIZE = 26;
+/** How long a tapped tile keeps its label showing. */
+const LABEL_TAP_MS = 4000;
 
 /** A biome claims an explicit rectangle of whole world-grid cells. Tableau
  * card capacity is intentionally independent from this visual footprint. */
@@ -429,6 +431,23 @@ export const ProtoMap = ({
   const globalLightCache = useRef<GlobalLightCache | null>(null);
   const lightReadouts: { id: string; position: { x: number; y: number }; lift: number; percent: number; level: LightLevel }[] = [];
   const [hoverCell,setHoverCell] = useState<GridCell>(TRUE_CENTER.cell);
+  // Tile labels stay hidden until a tile is pointed at (mouse or pen), focused
+  // or tapped; a tap keeps its label up for a few seconds.
+  const [labelHoverId, setLabelHoverId] = useState<string | null>(null);
+  const [labelTapId, setLabelTapId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!labelTapId) return;
+    const timer = window.setTimeout(() => setLabelTapId(null), LABEL_TAP_MS);
+    return () => window.clearTimeout(timer);
+  }, [labelTapId]);
+  const labelShown = (ids: readonly string[]) => ids.some(id => id === labelHoverId || id === labelTapId) || undefined;
+  const labelReveal = (id: string) => ({
+    onPointerEnter: (event: React.PointerEvent) => { if (event.pointerType !== 'touch') setLabelHoverId(id); },
+    onPointerLeave: (event: React.PointerEvent) => { if (event.pointerType !== 'touch') setLabelHoverId(current => current === id ? null : current); },
+    // Keyboard focus only; a click or tap also focuses the button.
+    onFocus: (event: React.FocusEvent) => { if (event.currentTarget.matches(':focus-visible')) setLabelHoverId(id); },
+    onBlur: () => setLabelHoverId(current => current === id ? null : current),
+  });
   const [routeBlocked, setRouteBlocked] = useState(false);
   const [draggingActorId, setDraggingActorId] = useState<string | null>(null);
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
@@ -1337,6 +1356,7 @@ export const ProtoMap = ({
               const openState = biomeOpenState(tile.flags);
               const tapTile = (event: React.MouseEvent<HTMLElement>) => {
                 if (unexplored) return;
+                setLabelTapId(tile.id);
                 if (onInspectTile) onInspectTile(tile.id, event.currentTarget);
                 else if (tile.unlocked !== false && openState.opens) onSelectBiome(tile.id);
               };
@@ -1362,6 +1382,7 @@ export const ProtoMap = ({
                   data-terrain={unexplored ? undefined : tile.terrain}
                   data-selected={tile.selected || undefined}
                   onClick={tapTile}
+                  {...labelReveal(tile.id)}
                   data-drop-target={dropTargetId === tile.id ? 'true' : undefined}
                   className={`absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center text-center transition ${dropTargetId === tile.id ? 'proto-drop-target ' : ''}${!unexplored && tile.terrain === 'water' ? 'proto-water-tile ' : ''}${!unexplored && tile.danger ? 'proto-danger-tile ' : ''}${
                     tile.unlocked === false
@@ -1389,7 +1410,7 @@ export const ProtoMap = ({
                     : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain', transform: 'rotate(180deg)' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v3.png`} alt="" draggable={false} />
                     : tile.tileType === 'berry-patch' ? !upright && <img data-berry-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/berry-patch-topdown.svg`} alt="" draggable={false} />
                     : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <BiomeTopDownArt terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /> : null}
-                  <span className="proto-tile-title-anchor">{!compositeTileTitle(tile) && !unexplored && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={footprint.width} height={footprint.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />}</span>
+                  <span className="proto-tile-title-anchor" data-label-owner="tile" data-label-shown={labelShown([tile.id])}>{!compositeTileTitle(tile) && !unexplored && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={footprint.width} height={footprint.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />}</span>
                 </button>, groundWorld)}
                 {upright && !unexplored && !tile.tileType && !tile.road && tile.unlocked !== false ? <BiomeEdgeScenery
                   tileId={tile.id}
@@ -1425,6 +1446,7 @@ export const ProtoMap = ({
                     data-owner-width={popupOwner.width} data-owner-height={popupOwner.height}
                     className="proto-sprite-standee absolute"
                     onClick={tapTile}
+                    {...labelReveal(tile.id)}
                     style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...(propVolumeRecipe(tile.sprite) ? standee(undefined, oversample) : sceneryStandee), width: popupSize * oversample, height: popupSize * oversample }}
                   ><Oversample width={popupSize} height={popupSize} factor={oversample}><Reveal fraction={tile.tileType === 'hero-den' || tile.tileType === 'berry-patch' ? 1 : explored} width={popupSize} height={popupSize} shade={popup.silhouette}>{popup.art}</Reveal></Oversample></div>
                 </React.Fragment> : null}
@@ -1684,16 +1706,16 @@ export const ProtoMap = ({
           {!upright && biomeTiles.filter(tile => tile.tileType === 'hero-den' && !tile.flags?.includes('unexplored')).map(tile => <HeroDenRoof key={`${tile.id}-roof`} position={tile.position} size={CLASSICPLUS_GRID_SIZE} />)}
           {biomeTiles.filter(tile => compositeTileTitle(tile) && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && !tile.flags?.includes('unexplored')).map(tile => {
             const area = getBiomeWorldFootprint(tile);
-            return <div key={`${tile.id}-title`} data-biome-title={tile.id} className="proto-tile-title-anchor" style={{ inset: 'auto', left: `calc(50% + ${area.x}px)`, top: `calc(50% + ${area.y}px)`, width: area.width, height: area.height, transform: 'translate(-50%, -50%)' }}>
+            return <div key={`${tile.id}-title`} data-biome-title={tile.id} data-label-owner="tile" data-label-shown={labelShown([tile.id])} className="proto-tile-title-anchor" style={{ inset: 'auto', left: `calc(50% + ${area.x}px)`, top: `calc(50% + ${area.y}px)`, width: area.width, height: area.height, transform: 'translate(-50%, -50%)' }}>
               <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={area.width} height={area.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={box => reportBiomeLabel(tile.id, area, box)} />
             </div>;
           })}
-          {biomeTiles.filter(tile => tile.tileType === 'hero-den' && !sharedLabelTiles.has(tile.id) && !tile.flags?.includes('unexplored')).map(tile => <div key={tile.id} className="proto-den-title" data-den-title="true" style={{ position: 'absolute', left: `calc(50% + ${tile.position.x}px)`, top: `calc(50% + ${tile.position.y + (upright ? 12 : 0)}px)`, width: upright ? 48 : 72, height: upright ? 24 : 72, transform: 'translate(-50%, -50%)' }}>
+          {biomeTiles.filter(tile => tile.tileType === 'hero-den' && !sharedLabelTiles.has(tile.id) && !tile.flags?.includes('unexplored')).map(tile => <div key={tile.id} className="proto-den-title" data-den-title="true" data-label-owner="tile" data-label-shown={labelShown([tile.id])} style={{ position: 'absolute', left: `calc(50% + ${tile.position.x}px)`, top: `calc(50% + ${tile.position.y + (upright ? 12 : 0)}px)`, width: upright ? 48 : 72, height: upright ? 24 : 72, transform: 'translate(-50%, -50%)' }}>
             <TileTitle align={upright ? 'center' : 'bottom'} maxLines={upright ? undefined : 1}
               clearCenter={!upright && actors.some(actor => { const p = travel?.actorId === actor.id && travelPosition ? travelPosition : getActorWorldPosition(actor); return Math.abs(p.x - tile.position.x) < 24 && Math.abs(p.y - tile.position.y) < 24; }) ? 18 : undefined}
               text={tile.title} width={48} height={upright ? 24 : 48} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} />
           </div>)}
-          {labelRegions.map(region => <div key={region.id} data-connected-label={region.id} data-label-tiles={region.tiles.map(tile => tile.id).join(' ')}
+          {labelRegions.map(region => <div key={region.id} data-connected-label={region.id} data-label-tiles={region.tiles.map(tile => tile.id).join(' ')} data-label-owner="region" data-label-shown={labelShown(region.tiles.map(tile => tile.id))}
             data-immutable-region={region.tiles[0].tileType === 'impassable-mountain' ? region.id : undefined} data-region-tile-count={region.tiles.length}
             className="proto-immutable-region-label" style={{ left: `calc(50% + ${region.x}px)`, top: `calc(50% + ${region.y}px)`, width: region.width, height: region.height }}>
             <TileTitle align={upright ? 'center' : 'top'} text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
