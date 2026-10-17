@@ -34,5 +34,7 @@ export function useDayCinematics(state: ProtoState, run: number, editing: boolea
   const labelBeat = beats.find(b => b.id === dayCinematicLabelBeatId(state));
   const labelSequence = library.find(c => c.id === labelBeat?.choreography.id) ?? labelBeat?.choreography;
   const tileLabelIds = enabled && !editing ? labelSequence?.tileLabelIds ?? [] : [];
-  return { enabled, beats, beat, tileLabelIds, active: Boolean(enabled && state.dayScenario && !editing) };
+  // Releasing a camera shot for card-earned travel does not end the scene's
+  // lighting. Keep its grade and peripheral darkness through the journey.
+  return { enabled, beats, beat, presentationBeat: beat ?? labelBeat, tileLabelIds, active: Boolean(enabled && state.dayScenario && !editing) };
 }

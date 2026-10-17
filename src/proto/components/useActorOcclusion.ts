@@ -4,6 +4,7 @@ import { projectBillboard, type OcclusionCamera, type SceneBillboard } from '../
 import { actorPeekHole, localPeekHole, peekMaskLayers, projectGroundFace, sceneryArtProjection, type ArtBox, type PeekHole } from '../actorPeek';
 import type { TableTilt } from '../tableTilt';
 import { immersionActorScale } from '../actorScale';
+import { readCameraVariable } from '../cameraVariables';
 
 type MaskTarget = { element: HTMLElement; box: ArtBox; signature?: string; count?: number };
 type Scenery = { element: HTMLElement; targets: MaskTarget[] };
@@ -73,7 +74,7 @@ export function useActorOcclusion(root: RefObject<HTMLDivElement | null>, active
       const live = current.current, camera = live.getCamera(), tilt = live.getTilt(camera);
       // Use the scale actually published to CSS, including camera modes that
       // hold the actor's world size while magnifying the surrounding scene.
-      const actorScale = Number(viewport.style.getPropertyValue('--actor-world-scale')) || immersionActorScale(camera.scale);
+      const actorScale = Number(readCameraVariable(viewport, '--actor-world-scale')) || immersionActorScale(camera.scale);
       const obscured = new Set<HTMLElement>();
       const projectedActors = live.active ? actors.map(source => {
         const scale = source.dataset.actorShrink ? actorScale : 1;
@@ -84,7 +85,8 @@ export function useActorOcclusion(root: RefObject<HTMLDivElement | null>, active
         return { source, projection, hole: actorPeekHole(projection) };
       }).filter(({ projection: a }) => a.scale > 0 && a.right > -viewWidth / 2 && a.left < viewWidth / 2
         && a.bottom > -viewHeight / 2 && a.top < viewHeight / 2) : [];
-      if(live.active){
+      // Exposed travel cards are measured; without them this frame reads no layout.
+      if(live.active&&cards.length){
         const origin=viewport.getBoundingClientRect(), angle=(camera.yaw??0)*Math.PI/180;
         for(const source of cards){
           const station=source.closest<HTMLElement>('.travel-world-station');if(!station)continue;

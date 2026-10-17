@@ -1,4 +1,14 @@
 import type { ArtStyle } from './artStyle';
+/** Shared by map rendering and its startup preload; expressions are required
+ * before the sectional Hero can draw its first frame. */
+export const HERO_EXPRESSION_ASSETS = {
+  heroHappyHeads: 'actors/hero/opening-watercolor-v1/hero-happy-heads-v1.png',
+  heroSadHeads: 'actors/hero/heads-watercolor-v2/hero-sad-heads-v2.png',
+  heroNeutralHeads: 'actors/hero/heads-watercolor-v2/hero-neutral-heads-v2.png',
+  heroCuriousHeads: 'actors/hero/heads-watercolor-v2/hero-curious-heads-v1.png',
+  heroSittingLowSadFace: 'actors/hero/faces-watercolor-v1/hero-sitting-sad-low-face-v1.png',
+  heroSittingHighSadFace: 'actors/hero/faces-watercolor-v1/hero-sitting-sad-high-face-v1.png',
+} as const;
 /** Archived effect asset; excluded from active engine loading. */
 export const RETIRED_HERO_EFFECT_ASSETS = { heroFlameTail: 'actors/battle/bobtail-v2/hero-flame-pieces-v2.png' } as const;
 /** Source keys are data: new actors add sheets without changing the renderer. */

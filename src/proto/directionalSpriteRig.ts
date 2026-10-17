@@ -82,13 +82,21 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
       // A hit flash blends every joint toward one colour (white on a defeat, red on a flinch).
       const flash = { amount: { value: 0 }, color: { value: new THREE.Color(1, 1, 1) } };
       const environment = { value: new THREE.Color(1, 1, 1) };
+      const headCut = { value: new THREE.Vector4(0,0,0,0) };
+      const headCutEnabled = { value: 0 };
       const parts = definition.low[0].parts.map((part,i) => {
         const pivot = new THREE.Group(); pivot.name = part.id;
         // Painted washes and spectral tails retain partial alpha; legacy pixel
         // cutouts keep their opaque joint-underlap behavior.
         const painted = Boolean(textures[definition.low[0].source].userData.watercolor);
         const material = new THREE.MeshBasicMaterial({map: textures[definition.low[0].source], color: tint, transparent: painted, alphaTest: painted ? .01 : .45, depthWrite: !painted, side: THREE.DoubleSide, forceSinglePass: true});
+        material.customProgramCacheKey = () => `actor-expression-body-${part.id === 'head' ? 'head' : 'body'}`;
         material.onBeforeCompile = shader => {
+          shader.uniforms.headCut = headCut; shader.uniforms.headCutEnabled = headCutEnabled;
+          shader.fragmentShader = 'uniform vec4 headCut; uniform float headCutEnabled;\n'+shader.fragmentShader;
+          // Feather the anatomical head region across the overlapping joints;
+          // a rectangular discard leaves straight shoulder/back seams.
+          shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', 'if (headCutEnabled > 0.5) { vec2 headUv = (vMapUv - headCut.xy) / headCut.zw; float headMask = 1.0 - smoothstep(0.85, 1.0, length(headUv)); diffuseColor.a *= 1.0 - headMask; }\n#include <alphatest_fragment>');
           shader.uniforms.actorEnvironment = environment;
           shader.uniforms.flashAmount = flash.amount; shader.uniforms.flashColor = flash.color;
           shader.fragmentShader = `uniform vec3 actorEnvironment;\nuniform float flashAmount;\nuniform vec3 flashColor;\n${shader.fragmentShader}`
@@ -102,21 +110,31 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
       const byId = new Map(parts.map(joint => [joint.part.id,joint]));
       const headJoint = byId.get('head');
       const faceMaterial = headJoint && textures.heroSittingLowSadFace ? headJoint.material.clone() : undefined;
+      if(faceMaterial) faceMaterial.customProgramCacheKey=()=> 'actor-expression-head-v2';
       const faceBodyMask = { value: textures[definition.low[0].source] };
       if (faceMaterial) faceMaterial.onBeforeCompile = (shader, renderer) => {
         headJoint!.material.onBeforeCompile(shader, renderer);
+        shader.fragmentShader = shader.fragmentShader.replace('if (headCutEnabled > 0.5) { vec2 headUv = (vMapUv - headCut.xy) / headCut.zw; float headMask = 1.0 - smoothstep(0.85, 1.0, length(headUv)); diffuseColor.a *= 1.0 - headMask; }', '');
         shader.uniforms.faceBodyMask = faceBodyMask;
         shader.vertexShader = 'attribute vec2 facePatchUv; attribute vec2 faceBodyUv; varying vec2 vFacePatchUv; varying vec2 vFaceBodyUv;\n' + shader.vertexShader;
         shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvFacePatchUv = facePatchUv; vFaceBodyUv = faceBodyUv;');
         shader.fragmentShader = 'uniform sampler2D faceBodyMask; varying vec2 vFacePatchUv; varying vec2 vFaceBodyUv;\n' + shader.fragmentShader;
-        shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a *= texture2D(faceBodyMask, vFaceBodyUv).a;\n#include <alphatest_fragment>');
-        shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a *= smoothstep(0.0, 0.08, min(min(vFacePatchUv.x, 1.0-vFacePatchUv.x), min(vFacePatchUv.y, 1.0-vFacePatchUv.y)));\n#include <alphatest_fragment>');
       };
       const faceGeometries = new Map<DirectionalFrame, THREE.BufferGeometry>();
       const faceSources = new Map<DirectionalFrame, string>();
+      const neutralGeometries = new Map<DirectionalFrame, THREE.BufferGeometry>();
+      const curiousGeometries = new Map<DirectionalFrame, THREE.BufferGeometry>();
+      const happyGeometries = new Map<DirectionalFrame, THREE.BufferGeometry>();
       if (faceMaterial) for (const frame of frames) {
         if (faceGeometries.has(frame)) continue;
-        const attachment = heroFaceAttachment(frame);
+        const opening = Boolean(textures[frame.source + 'Joyful']);
+        const attachment = heroFaceAttachment(frame, 'sad', opening);
+        const neutral = heroFaceAttachment(frame, 'neutral');
+        const curious = heroFaceAttachment(frame, 'curious', opening);
+        const happy = heroFaceAttachment(frame, 'happy');
+        if(happy && textures[happy.source]) happyGeometries.set(frame, attachedFaceGeometry(frame.parts[0], happy, textures[happy.source].image, textures[frame.source].image));
+        if(curious && textures[curious.source]) curiousGeometries.set(frame, attachedFaceGeometry(frame.parts[0], curious, textures[curious.source].image, textures[frame.source].image));
+        if(neutral && textures[neutral.source]) neutralGeometries.set(frame, attachedFaceGeometry(frame.parts[0], neutral, textures[neutral.source].image, textures[frame.source].image));
         if (attachment && textures[attachment.source]) {
           const geometry = attachedFaceGeometry(frame.parts[0], attachment, textures[attachment.source].image, textures[frame.source].image);
           faceGeometries.set(frame, geometry); faceSources.set(frame, attachment.source);
@@ -153,7 +171,10 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
         flameTail,
         bobtail,
         faceLayer,
-        setExpression(value: string | undefined) { expression = value; },
+        setExpression(value: string | undefined) {
+          if (value !== expression) active = undefined;
+          expression = value;
+        },
         setBobtailVisible(visible: boolean | undefined) { bobtailVisible = visible; },
         setFlameTailVisible(visible: boolean | undefined) { flameVisible = visible; },
         get frame() { return active?.id ?? ''; },
@@ -185,7 +206,7 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
               const [px,py] = part.pivot ?? [.5,.5];
               joint.part = part; joint.height = h; joint.width = w;
               joint.x = part.x*height+(px-.5)*w; joint.y = part.y*height+(py-.5)*h;
-              joint.mesh.geometry = geometries.get(frame)![i]; joint.mesh.material.map = textures[frame.source];
+              joint.mesh.geometry = geometries.get(frame)![i]; joint.mesh.material.map = textures[expression === 'joyful' && textures[frame.source + 'Joyful'] ? frame.source + 'Joyful' : frame.source];
               joint.mesh.scale.set(w,h,1); joint.mesh.position.set((.5-px)*w,(.5-py)*h,0);
             });
             if (bobtail) {
@@ -196,12 +217,23 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
               bobtail.position.copy(hind.mesh.position); bobtail.position.z += .002;
             }
           }
-          if (bobtail) bobtail.visible = (bobtailVisible ?? getHeroBobtail()) && Boolean(textures[frame.source + 'Bobtail']);
+          if (bobtail) bobtail.visible = (bobtailVisible ?? getHeroBobtail()) && Boolean(textures[frame.source + 'Bobtail']) && (!textures[frame.source + 'Joyful'] || expression === 'joyful');
           if (faceLayer && headJoint) {
-            const texture = textures[faceSources.get(frame) ?? ''];
-            faceLayer.visible = expression === 'sad' && Boolean(texture) && view.elevation !== 'top' && view.direction !== 4;
+            const selectedGeometries=expression==='happy'?happyGeometries:expression==='curious'?curiousGeometries:expression==='neutral'?neutralGeometries:faceGeometries;
+            const texture = textures[expression === 'happy' ? 'heroHappyHeads' : expression === 'curious' ? 'heroCuriousHeads' : expression === 'neutral' ? 'heroNeutralHeads' : faceSources.get(frame) ?? ''];
+            // Happy is painted into the bespoke full bodies; preserve their
+            // coherent face/neck silhouette. Legacy bodies use the new heads.
+            faceLayer.visible = (expression === 'sad' || expression === 'neutral' || expression === 'curious' || expression === 'happy' && !textures[frame.source + 'Joyful']) && Boolean(texture) && selectedGeometries.has(frame) && view.elevation !== 'top' && view.direction !== 4;
+            headCutEnabled.value = 0;
             if (faceLayer.visible) {
-              faceLayer.geometry = faceGeometries.get(frame)!; faceLayer.material.map = texture;
+              faceLayer.geometry = selectedGeometries.get(frame)!; faceLayer.material.map = texture;
+              const attachment=heroFaceAttachment(frame,expression === 'happy' ? 'happy' : expression === 'curious' ? 'curious' : expression === 'neutral' ? 'neutral' : 'sad', Boolean(textures[frame.source + 'Joyful']));
+              if(attachment && textures.heroSadHeads) {
+                const [x,y,w,h]=attachment.replaceTarget ?? attachment.target, [bx,by,bw,bh]=frame.parts[0].rect;
+                const image=textures[frame.source].image;
+                headCut.value.set((bx+(x+w*.5)*bw)/image.width,1-(by+(y+h*.30)*bh)/image.height,w*.68*bw/image.width,h*.65*bh/image.height);
+                headCutEnabled.value=1;
+              }
               faceBodyMask.value = textures[frame.source];
               faceLayer.scale.copy(headJoint.mesh.scale); faceLayer.position.copy(headJoint.mesh.position);
               faceLayer.position.z += .004;
@@ -247,7 +279,7 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
         }); },
         setColor(color: THREE.ColorRepresentation) { parts.forEach(({material}) => material.color.set(color)); bobtailMaterial?.color.set(color); faceMaterial?.color.set(color); },
         setFlash(amount: number, color: THREE.ColorRepresentation = 0xffffff) { flash.amount.value = Math.max(0, Math.min(1, amount)); flash.color.value.set(color); },
-        dispose() { flameTail?.dispose(); bobtailMaterial?.dispose(); faceMaterial?.dispose(); emptyFaceGeometry?.dispose(); faceGeometries.forEach(g => g.dispose()); parts.forEach(({material}) => material.dispose()); },
+        dispose() { flameTail?.dispose(); bobtailMaterial?.dispose(); faceMaterial?.dispose(); emptyFaceGeometry?.dispose(); faceGeometries.forEach(g => g.dispose()); neutralGeometries.forEach(g => g.dispose()); curiousGeometries.forEach(g => g.dispose()); happyGeometries.forEach(g => g.dispose()); parts.forEach(({material}) => material.dispose()); },
       };
     },
     dispose() { geometries.forEach(group => group.forEach(geometry => geometry.dispose())); bobtailGeometries.forEach(geometry => geometry.dispose()); },

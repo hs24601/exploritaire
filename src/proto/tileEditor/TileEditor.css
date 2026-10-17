@@ -42,3 +42,10 @@
 .tile-editor-footer p { margin:4px 0; }
 .tile-editor small { letter-spacing:.04em; }
 .tile-editor { z-index:60005; }
+.tile-deal-preview{height:360px;grid-column:1/-1;min-width:0;margin-top:12px;--classic-radius:8px}
+.tile-deal-preview .tableau-template{grid-template-rows:auto minmax(0,1fr) auto}
+.tile-deal-preview .tableau-template__foundations{font-size:16px;padding:6px}
+.tile-deal-preview__columns{display:grid;gap:4px;width:100%;height:var(--classic-stack-height);align-self:center}
+.tile-deal-preview__column{position:relative;min-width:0}
+.tile-deal-preview .playing-card{padding:3px!important;border-radius:6px}
+@media(max-width:600px){.tile-deal-preview{height:290px}}

@@ -5,6 +5,7 @@ import type { TableTilt } from '../tableTilt';
 import { ATMOSPHERE_ATLAS_SIZE, ATMOSPHERE_EXTENT, ATMOSPHERE_HEIGHT, atmosphereSky, atmospherePointAtHeight, nightFogOpacity, projectAtmospherePoint, type AtmosphereCanopy, type AtmosphereScene } from '../volumetricAtmosphere';
 import { seeded } from '../atmosphere';
 import { projectBillboard } from '../actorOcclusion';
+import { loadMediaImage } from '../mediaCache';
 
 type SpriteProfile = { image: HTMLImageElement; columns: number[]; aspect: number; bounds: [number, number, number, number] };
 const sprites = new Map<string, Promise<SpriteProfile | null>>();
@@ -14,27 +15,23 @@ const sprites = new Map<string, Promise<SpriteProfile | null>>();
 const loadProfile = (src: string): Promise<SpriteProfile | null> => {
   let pending = sprites.get(src);
   if (!pending) {
-    pending = new Promise(resolve => {
-      const image = new Image();
-      image.onload = () => {
-        const c = document.createElement('canvas'); c.width = 64; c.height = 64;
-        const ctx = c.getContext('2d', { willReadFrequently: true });
-        if (!ctx) return resolve(null);
-        ctx.drawImage(image, 0, 0, 64, 64);
-        const data = ctx.getImageData(0, 0, 64, 64).data;
-        let left = 64, right = -1, top = 64, bottom = -1;
-        const columns = Array<number>(64).fill(0);
-        for (let x = 0; x < 64; x++) for (let y = 0; y < 64; y++) {
-          if (data[(y * 64 + x) * 4 + 3] < 40) continue;
-          left = Math.min(left, x); right = Math.max(right, x);
-          top = Math.min(top, y); bottom = Math.max(bottom, y);
-          columns[x] = Math.max(columns[x], 64 - y);
-        }
-        if (right < left) return resolve(null);
-        resolve({ image, columns, aspect: (right - left + 1) * image.width / ((bottom - top + 1) * image.height), bounds: [left, top, right + 1, bottom + 1] });
-      };
-      image.onerror = () => resolve(null); image.src = src;
-    });
+    pending = loadMediaImage(src).then((image): SpriteProfile | null => {
+      const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return null;
+      ctx.drawImage(image, 0, 0, 64, 64);
+      const data = ctx.getImageData(0, 0, 64, 64).data;
+      let left = 64, right = -1, top = 64, bottom = -1;
+      const columns = Array<number>(64).fill(0);
+      for (let x = 0; x < 64; x++) for (let y = 0; y < 64; y++) {
+        if (data[(y * 64 + x) * 4 + 3] < 40) continue;
+        left = Math.min(left, x); right = Math.max(right, x);
+        top = Math.min(top, y); bottom = Math.max(bottom, y);
+        columns[x] = Math.max(columns[x], 64 - y);
+      }
+      if (right < left) return null;
+      return { image, columns, aspect: (right - left + 1) * image.width / ((bottom - top + 1) * image.height), bounds: [left, top, right + 1, bottom + 1] };
+    }).catch(() => null);
     sprites.set(src, pending);
   }
   return pending;
@@ -172,7 +169,22 @@ class SceneAtlas {
   private dirty = true;
   private revision = 0;
   private maskKey = '';
+  private pixels: { revision: number; data: Uint8ClampedArray } | null = null;
   constructor() { this.canvas.width = this.canvas.height = ATMOSPHERE_ATLAS_SIZE; }
+  /** The 64px scratch surface, cleared in place: resizing it reallocated the
+   * backing store once per prop on every mask rebuild. */
+  private clearInk() {
+    if (this.ink.width !== 64 || this.ink.height !== 64) this.ink.width = this.ink.height = 64;
+    const ink = this.ink.getContext('2d')!;
+    ink.globalCompositeOperation = 'source-over'; ink.clearRect(0, 0, 64, 64);
+    return ink;
+  }
+  /** Atlas pixels, read back once per atlas revision rather than per mask. */
+  fieldPixels() {
+    if (this.pixels?.revision !== this.revision)
+      this.pixels = { revision: this.revision, data: this.canvas.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, ATMOSPHERE_ATLAS_SIZE, ATMOSPHERE_ATLAS_SIZE).data };
+    return this.pixels.data;
+  }
   update(scene: AtmosphereScene, yaw: number) {
     const casters = scene.canopies.filter(c=>c.castsShadow!==false);
     const key = JSON.stringify([casters,scene.patches,scene.concealed,scene.relief,casters.some(c=>c.worldHeading===undefined) ? Math.round(yaw) : 0]);
@@ -254,7 +266,7 @@ class SceneAtlas {
     this.maskKey=key;
     this.mask.width=Math.max(1,Math.round(width*scale));this.mask.height=Math.max(1,Math.round(height*scale));
     const ctx=this.mask.getContext('2d')!;
-    const heightField=this.canvas.getContext('2d')!.getImageData(0,0,ATMOSPHERE_ATLAS_SIZE,ATMOSPHERE_ATLAS_SIZE).data;
+    const heightField=this.fieldPixels();
     const canopyHeight=(x:number,y:number) => {
       const ax=Math.floor((x+ATMOSPHERE_EXTENT)/(ATMOSPHERE_EXTENT*2)*ATMOSPHERE_ATLAS_SIZE);
       const ay=Math.floor((y+ATMOSPHERE_EXTENT)/(ATMOSPHERE_EXTENT*2)*ATMOSPHERE_ATLAS_SIZE);
@@ -286,8 +298,7 @@ class SceneAtlas {
         }
         return sum+Math.pow(Math.max(0,1-d*d),2)*(light.strength??DEFAULT_LIGHT_STRENGTH)*(1-input.frame.daylight)*visibility;
       },0);
-      this.ink.width=this.ink.height=64;
-      const ink=this.ink.getContext('2d')!;
+      const ink=this.clearInk();
       ink.drawImage(profile.image,l/64*profile.image.width,t/64*profile.image.height,(r-l)/64*profile.image.width,(b-t)/64*profile.image.height,0,0,64,64);
       ink.globalCompositeOperation='source-in';ink.fillStyle=`rgb(0,${Math.round(Math.min(.94,illumination/.48)*255)},0)`;ink.fillRect(0,0,64,64);
       ctx.drawImage(this.ink,-drawnW/2,-drawnH,drawnW,drawnH);
@@ -300,7 +311,7 @@ class SceneAtlas {
     }
     for(const actor of input.actorGuards ?? []) {
       if(actor.image instanceof HTMLImageElement && (!actor.image.complete || !actor.image.naturalWidth))continue;
-      this.ink.width=this.ink.height=64;const ink=this.ink.getContext('2d')!;
+      const ink=this.clearInk();
       ink.drawImage(actor.image,0,0,64,64);ink.globalCompositeOperation='source-in';ink.fillStyle='#ff0000';ink.fillRect(0,0,64,64);
       ctx.save();ctx.translate(actor.x-width/2,actor.y-height/2);ctx.rotate(actor.angle);
       ctx.drawImage(this.ink,-actor.width/2,-actor.height/2,actor.width,actor.height);ctx.restore();
@@ -418,7 +429,7 @@ const createCanvas = (canvas: HTMLCanvasElement): AtmosphereRenderer => {
       const maskPixels=atlas.mask.getContext('2d')!.getImageData(0,0,w,h).data;
       nightSurface.width=w;nightSurface.height=h;
       const pixels=nightContext.createImageData(w,h);
-      const fieldPixels=atlas.canvas.getContext('2d')!.getImageData(0,0,ATMOSPHERE_ATLAS_SIZE,ATMOSPHERE_ATLAS_SIZE).data;
+      const fieldPixels=atlas.fieldPixels();
       const field=(x:number,y:number,channel:number) => {
         const ax=Math.floor((x+ATMOSPHERE_EXTENT)/(ATMOSPHERE_EXTENT*2)*ATMOSPHERE_ATLAS_SIZE);
         const ay=Math.floor((y+ATMOSPHERE_EXTENT)/(ATMOSPHERE_EXTENT*2)*ATMOSPHERE_ATLAS_SIZE);

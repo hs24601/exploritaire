@@ -38,6 +38,7 @@ import { RestBobtail } from './RestBobtail';
 import { isPaintedScenerySprite, scenerySprite, sceneryWorldHeading } from '../sceneryArt';
 import { directionalScenery } from '../directionalScenery';
 import { useDirectionalScenery } from './useDirectionalScenery';
+import { DirectionalSceneryView } from './DirectionalSceneryView';
 import type { InteriorOccupant } from './SceneryInterior';
 import { UnexploredTile } from './UnexploredTile';
 import { advanceTravelBuffer, immersiveTileScale, travelDuration, followingCamera, cinematicTravelCamera } from '../travelMotion';
@@ -62,6 +63,10 @@ import { TableActorSprite } from './TableActorSprite';
 import { HERO_OVERHEAD_LENGTH_SCALE } from '../directionalSprites';
 import { movementHeading, worldActorTransform } from '../actorOrientation';
 import { ACTOR_SCALE_REFERENCE, immersionActorScale } from '../actorScale';
+import { projectBillboard } from '../actorOcclusion';
+import { projectGroundFace } from '../actorPeek';
+import { registerSceneProjector } from '../sceneProjection';
+import { cameraVariableScope, readCameraVariable, type CameraVariable } from '../cameraVariables';
 import { RoadTileArt } from './RoadTileArt';
 import { HeroDenRoof } from './HeroDenRoof';
 import type { RoadTile } from '../roadTiles';
@@ -84,7 +89,7 @@ import { drawTableLight, tableLightNeedsAnimation, type GlobalLightCache } from 
 import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type WorldItemId } from '../protoCrafting';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
-import { rotateVector, useCameraControls } from '../../hooks/useCameraControls';
+import { rotateVector, useCameraControls, type CameraState } from '../../hooks/useCameraControls';
 import { BiomeEdgeScenery } from './BiomeEdgeScenery';
 import { layoutTableScenery } from '../biomeEdgeScenery';
 import { AtmosphereInAir, LightFireflies, LightShafts } from './TableAtmosphere';
@@ -95,6 +100,7 @@ import { TableGridCanvas } from './TableGridCanvas';
 import { subscribeVisualLight } from '../visualLightClock';
 import type { AtmosphereCanopy } from '../volumetricAtmosphere';
 import { detectFxQuality } from '../atmosphere';
+import { StarfieldSky } from './StarfieldSky';
 import type { LabelBox } from '../biomeEdgeScenery';
 import { BIOME_EDGE_SCENERY } from '../protoData';
 import { Oversample, STANDEE_OVERSAMPLE, SPRITE_STANDEE_SIZE, SpriteStandeeArt, SpriteStandeeShadows } from './SpriteStandee';
@@ -362,17 +368,21 @@ export const ProtoMap = ({
   // Ambiance tier for the tilted camera (atmosphere.ts): fixed for the session.
   const [fxQuality] = useState(detectFxQuality);
   const [useVolume] = useState(() => new URLSearchParams(window.location.search).get('atmosphere') !== 'off');
-  const [biomeLabelBoxes, setBiomeLabelBoxes] = useState<Record<string, LabelBox>>({});
+  // Label ink bounds only shape the route and flat spills while that label is
+  // shown; quarter-turn snaps of hidden labels must not re-render the table.
+  const biomeLabelBoxRef = useRef<Record<string, LabelBox>>({});
+  const biomeLabelBoxes = biomeLabelBoxRef.current;
+  const [, setLabelBoxRevision] = useState(0);
+  const labelVisibleRef = useRef<(tileId: string) => boolean>(() => false);
   // The note shown when a tile that won't open is tapped (e.g. unexplored).
   const reportBiomeLabel = useCallback((tileId: string, tile: { width: number; height: number }, box: { left: number; top: number; width: number; height: number; pivot: { x: number; y: number }; rotation: number }) => {
     const next = { left: box.left - tile.width / 2, top: box.top - tile.height / 2, right: box.left + box.width - tile.width / 2, bottom: box.top + box.height - tile.height / 2,
       pivot: { x: box.pivot.x - tile.width / 2, y: box.pivot.y - tile.height / 2 }, rotation: box.rotation };
-    setBiomeLabelBoxes((boxes) => {
-      const known = boxes[tileId];
-      if (known && known.rotation === next.rotation && (['left', 'top', 'right', 'bottom'] as const).every((side) => Math.abs(known[side] - next[side]) < 0.25)
-        && Math.abs((known.pivot?.x ?? 0) - next.pivot.x) < 0.25 && Math.abs((known.pivot?.y ?? 0) - next.pivot.y) < 0.25) return boxes;
-      return { ...boxes, [tileId]: next };
-    });
+    const known = biomeLabelBoxRef.current[tileId];
+    if (known && known.rotation === next.rotation && (['left', 'top', 'right', 'bottom'] as const).every((side) => Math.abs(known[side] - next[side]) < 0.25)
+      && Math.abs((known.pivot?.x ?? 0) - next.pivot.x) < 0.25 && Math.abs((known.pivot?.y ?? 0) - next.pivot.y) < 0.25) return;
+    biomeLabelBoxRef.current = { ...biomeLabelBoxRef.current, [tileId]: next };
+    if (labelVisibleRef.current(tileId)) setLabelBoxRevision(revision => revision + 1);
   }, []);
   const [viewportHeight, setViewportHeight] = useState(720);
   const [viewportWidth, setViewportWidth] = useState(1280);
@@ -412,7 +422,13 @@ export const ProtoMap = ({
   const getCameraTilt = useCallback((live: { scale: number; pitch?: number; aimY?:number }) => closeupRef.current
     ? actorCloseupTilt(viewportHeight, live.scale, closeupRef.current, live.pitch)
     : ({...tableCameraTilt(viewportHeight, live.scale, live.pitch), ...(live.scale>10||live.aimY!==undefined?{angle:live.pitch??82,aimY:live.aimY??viewportHeight*.28}:{})}), [viewportHeight]);
+  // Live camera properties reach only their readers while moving; the
+  // viewport receives resting values once motion settles (cameraVariables.ts).
+  const writeCameraVariable = useCallback((name: string, value: string, container: HTMLElement) => {
+    cameraVariableScope(container).set(name as CameraVariable, value);
+  }, []);
   const camera = useCameraControls({
+    writeVariable: writeCameraVariable,
     enabled: !inactive,
     canStartPanAt,
     isObjectGestureAt,
@@ -423,7 +439,15 @@ export const ProtoMap = ({
     zoomSensitivity: 0.0048,
     centeredZoom: true,
     initialState: { x: 0, y: 0, scale: CLASSICPLUS_ZOOM_REFERENCE_SCALE },
+    // Live layers follow onCameraFrame; re-rendering the whole table during
+    // pans, zooms and cinematic flights cost most of each frame.
+    motionSyncMs: Infinity,
   });
+  // Resting values reach the viewport once motion settles; publishing them on
+  // every commit restyled the whole map mid-orbit (e.g. directional den views).
+  useLayoutEffect(() => { const viewport = camera.containerRef.current; if (viewport) cameraVariableScope(viewport).settle(); }, [camera.cameraState, tilted, upright]);
+  // Any commit may mount new readers; rescan before the next delivery.
+  useLayoutEffect(() => { const viewport = camera.containerRef.current; if (viewport) cameraVariableScope(viewport).invalidate(); });
   const [groundWorld, setGroundWorld] = useState<HTMLDivElement | null>(null);
   const [gridExtension, setGridExtension] = useState({ left: 0, top: 0, right: 0, bottom: 0 });
   const volumeCamera = useMemo(() => ({ getCamera: camera.getLiveCamera, onCameraFrame: camera.onCameraFrame,
@@ -510,21 +534,23 @@ export const ProtoMap = ({
     const viewport = camera.containerRef.current;
     if (!viewport) return;
     const drawActorScale = (live: { scale: number; aimY?:number }) => {
-      viewport.style.setProperty('--actor-world-scale', String(upright ? closeupRef.current?.actorScale ?? (live.scale>10||live.aimY!==undefined ? 3.6/live.scale : immersionActorScale(live.scale)) : 1));
+      writeCameraVariable('--actor-world-scale', String(upright ? closeupRef.current?.actorScale ?? (live.scale>10||live.aimY!==undefined ? 3.6/live.scale : immersionActorScale(live.scale)) : 1), viewport);
     };
     drawActorScale(camera.getLiveCamera());
     const unsubscribe = camera.onCameraFrame(drawActorScale);
-    return () => { unsubscribe(); viewport.style.removeProperty('--actor-world-scale'); };
+    return () => { unsubscribe(); writeCameraVariable('--actor-world-scale', '', viewport); };
   }, [upright, closeup, camera.getLiveCamera, camera.onCameraFrame]);
   // Zoom and manual orbit drive the rig on the same frame as the world transform. Keep
   // CSS easing for mode switches only; it must not lag wheel or pinch input.
   const drawLiveRig = useCallback(() => {
     if (!tilted || !airReady) return;
-    const rig = getCameraTilt(camera.getLiveCamera());
-    camera.containerRef.current?.querySelectorAll<HTMLElement>('.proto-table-stage, .proto-table-light, .proto-table-title-layer').forEach(el => {
-      el.style.transform = tableTiltTransform(rig);
-      el.style.setProperty('--table-tilt', `${rig.angle}deg`);
+    const rig = getCameraTilt(camera.getLiveCamera()), viewport = camera.containerRef.current;
+    if (!viewport) return;
+    const transform = tableTiltTransform(rig);
+    viewport.querySelectorAll<HTMLElement>('.proto-table-stage, .proto-table-light, .proto-table-title-layer').forEach(el => {
+      if (el.style.transform !== transform) el.style.transform = transform;
     });
+    writeCameraVariable('--table-tilt', `${rig.angle}deg`, viewport);
   }, [tilted, airReady, getCameraTilt, camera.getLiveCamera]);
   // A scene commit can write an older tilt snapshot over a newer live frame.
   // Restore the live projection before the browser paints that commit.
@@ -548,9 +574,45 @@ export const ProtoMap = ({
   const actorHeadings = useRef(new Map<string, { x: number; y: number; heading: number }>());
   useActorOcclusion(camera.containerRef, upright, camera.getLiveCamera, getCameraTilt);
   useImmersiveLabels(camera.containerRef, upright, camera.getLiveCamera, getCameraTilt);
+  // Callouts clear and anchor to actors through projection, not DOM layout.
+  useEffect(() => {
+    const viewport = camera.containerRef.current;
+    if (!viewport || !upright) return;
+    let origin = viewport.getBoundingClientRect();
+    const measure = () => { origin = viewport.getBoundingClientRect(); };
+    const resize = new ResizeObserver(measure); resize.observe(viewport);
+    window.addEventListener('scroll', measure, true); window.addEventListener('resize', measure);
+    const box = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom, width: right - left, height: bottom - top });
+    const unregister = registerSceneProjector({
+      viewport: () => box(origin.left, origin.top, origin.right, origin.bottom),
+      actors: () => {
+        const live = camera.getLiveCamera(), tilt = getCameraTilt(live);
+        const actorScale = Number(readCameraVariable(viewport, '--actor-world-scale')) || immersionActorScale(live.scale);
+        const cx = origin.left + origin.width / 2, cy = origin.top + origin.height / 2;
+        return [...viewport.querySelectorAll<HTMLElement>('[data-physical-world] [data-board-piece="actor"]:not([data-camera-clipped])')].flatMap(el => {
+          if (el.hidden || !el.dataset.actorId) return [];
+          const art = el.querySelector<HTMLElement>(':scope > .proto-oversample'), scale = el.dataset.actorShrink ? actorScale : 1;
+          // Sleeping/overhead actors lie on the ground plane even in immersion.
+          const face = el.classList.contains('proto-actor-overhead') ? projectGroundFace({ x: Number(el.dataset.actorX), y: Number(el.dataset.actorY),
+            width: parseFloat(el.style.width), height: parseFloat(el.style.height), worldHeading: Number(el.dataset.actorHeading) }, live, tilt) : projectBillboard({ x: Number(el.dataset.actorX), y: Number(el.dataset.actorY),
+            width: (art ? parseFloat(art.style.width) : Number(el.dataset.actorWidth)) * scale,
+            height: (art ? parseFloat(art.style.height) : Number(el.dataset.actorHeight)) * scale,
+            worldHeading: el.dataset.actorOrientation === 'world-plane' ? Number(el.dataset.actorHeading) : undefined }, live, tilt);
+          return face.scale > 0 && [face.left, face.top, face.right, face.bottom].every(Number.isFinite)
+            ? [{ id: el.dataset.actorId, box: box(cx + face.left, cy + face.top, cx + face.right, cy + face.bottom) }] : [];
+        });
+      },
+    });
+    return () => { unregister(); resize.disconnect(); window.removeEventListener('scroll', measure, true); window.removeEventListener('resize', measure); };
+  }, [upright, camera.containerRef, camera.getLiveCamera, getCameraTilt]);
   const yaw = camera.cameraState.yaw ?? 0;
   const denSource=biomeTiles.find(tile=>tile.tileType==='hero-den')?.sprite;
-  const denView=useDirectionalScenery(denSource,artStyle==='paint'&&upright,camera.getLiveCamera,camera.onCameraFrame);
+  // The map reads the den view at rest (fog canopy, popup data); its art
+  // follows the live camera in DirectionalSceneryView without a table render.
+  const settleListeners = useRef(new Set<(live: CameraState) => void>());
+  const onCameraSettle = useCallback((listener: (live: CameraState) => void) => { settleListeners.current.add(listener); return () => { settleListeners.current.delete(listener); }; }, []);
+  useLayoutEffect(() => { const live = camera.getLiveCamera(); settleListeners.current.forEach(listener => listener(live)); }, [camera.cameraState, camera.getLiveCamera]);
+  const denView=useDirectionalScenery(denSource,artStyle==='paint'&&upright,camera.getLiveCamera,onCameraSettle);
   const immutableRegions = useMemo(() => immutableTileRegions(biomeTiles), [biomeTiles]);
   const terrainRegions = useMemo(() => immutableTerrainRegions(biomeTiles), [biomeTiles]);
   const labelRegions = useMemo(() => connectedTileLabelRegions(biomeTiles), [biomeTiles]);
@@ -566,11 +628,31 @@ export const ProtoMap = ({
   const groundLightUnavailable=useCallback(()=>setBoundedGroundLight(false),[]);
   const globalLightCache = useRef<GlobalLightCache | null>(null);
   const lightReadouts: { id: string; position: { x: number; y: number }; lift: number; percent: number; level: LightLevel }[] = [];
-  const [hoverCell,setHoverCell] = useState<GridCell>(TRUE_CENTER.cell);
+  // The pointer's grid readout updates in place: as React state it re-rendered
+  // the whole table each time a camera drag crossed a cell border.
+  const gridReadout = useRef<HTMLDivElement>(null);
+  const setHoverCell = useCallback((cell: GridCell) => {
+    const el = gridReadout.current, reference = TABLE_GRID.reference(cell);
+    if (!el || el.dataset.gridReference === reference) return;
+    el.dataset.gridReference = reference; el.textContent = reference;
+    el.title = cell.column === 0 && cell.row === 0 ? 'True Center · table:0,0' : reference;
+  }, []);
   // Hover, keyboard focus, touch and scene/choreography pins share one label.
   // A tap keeps the label up briefly; pins last for their owning scene.
   const [labelHoverId, setLabelHoverId] = useState<string | null>(null);
   const [labelTapId, setLabelTapId] = useState<string | null>(null);
+  // A held button is a camera or piece drag sweeping across tiles: record the
+  // label under the pointer and show it on release instead of re-rendering the
+  // table at every label crossed mid-drag. Undefined means nothing deferred.
+  const deferredLabelHover = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const release = () => {
+      if (deferredLabelHover.current === undefined) return;
+      const id = deferredLabelHover.current; deferredLabelHover.current = undefined; setLabelHoverId(id);
+    };
+    window.addEventListener('pointerup', release); window.addEventListener('pointercancel', release);
+    return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); };
+  }, []);
   useEffect(() => {
     if (!labelTapId) return;
     const timer = gameTime.setTimeout(() => setLabelTapId(null), LABEL_TAP_MS);
@@ -580,8 +662,15 @@ export const ProtoMap = ({
   const pinnedLabels = new Set([...persistentTileLabelIds, ...cameraPlayback.tileLabelIds]);
   const labelShown = (ids: readonly string[]) => ids.some(id => id === labelHoverId || id === labelTapId || pinnedLabels.has(id)) || undefined;
   const labelReveal = (id: string) => ({
-    onPointerEnter: (event: React.PointerEvent) => { if (event.pointerType !== 'touch') setLabelHoverId(id); },
-    onPointerLeave: (event: React.PointerEvent) => { if (event.pointerType !== 'touch') setLabelHoverId(current => current === id ? null : current); },
+    onPointerEnter: (event: React.PointerEvent) => {
+      if (event.pointerType === 'touch') return;
+      if (event.buttons) deferredLabelHover.current = id; else setLabelHoverId(id);
+    },
+    onPointerLeave: (event: React.PointerEvent) => {
+      if (event.pointerType === 'touch') return;
+      if (!event.buttons) { setLabelHoverId(current => current === id ? null : current); return; }
+      if (deferredLabelHover.current === id || deferredLabelHover.current === undefined && labelHoverId === id) deferredLabelHover.current = null;
+    },
     // Keyboard focus only; a click or tap also focuses the button.
     onFocus: (event: React.FocusEvent) => { if (event.currentTarget.matches(':focus-visible')) setLabelHoverId(id); },
     onBlur: () => setLabelHoverId(current => current === id ? null : current),
@@ -1430,6 +1519,12 @@ export const ProtoMap = ({
   })();
   // Ink bounds turn only when the label snaps to another tile edge, so the
   // route passes under the same physical label in each orientation.
+  // Consumers: the drawn route, and flat spills (tilted spills ignore labels).
+  labelVisibleRef.current = tileId => {
+    if (upright && !routeShown) return false;
+    const region = labelRegions.find(region => region.tiles.some(member => member.id === tileId));
+    return Boolean(labelShown(region ? region.tiles.map(member => member.id) : [tileId]));
+  };
   const labelQuads = biomeTiles.flatMap((tile) => {
     const box = biomeLabelBoxes[tile.id];
     const region = labelRegions.find(region => region.tiles.some(member => member.id === tile.id));
@@ -1722,15 +1817,17 @@ export const ProtoMap = ({
 
       <svg aria-hidden="true" width="0" height="0" style={{position:'absolute',pointerEvents:'none'}}><defs><filter id="combat-scenery-tint" colorInterpolationFilters="sRGB"><feColorMatrix type="matrix" values=".32 .42 .12 0 .055  .12 .24 .05 0 .015  .13 .25 .06 0 .022  0 0 0 1 0" /></filter>
         <filter id="actor-visibility-stroke" x="-30%" y="-30%" width="160%" height="160%" colorInterpolationFilters="sRGB">
-          <feMorphology in="SourceAlpha" operator="dilate" radius="0.8" result="expanded" />
-          <feComposite in="expanded" in2="SourceAlpha" operator="out" result="edge" />
+          <feComponentTransfer in="SourceAlpha" result="silhouette"><feFuncA type="discrete" tableValues="0 1 1 1 1 1 1 1" /></feComponentTransfer>
+          <feMorphology in="silhouette" operator="dilate" radius="0.8" result="expanded" />
+          <feComposite in="expanded" in2="silhouette" operator="out" result="edge" />
           <feFlood floodColor="#fff0b5" />
           <feComposite in2="edge" operator="in" result="stroke" />
           <feMerge><feMergeNode in="stroke" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
         <filter id="actor-visibility-stroke-oversampled" x="-30%" y="-30%" width="160%" height="160%" colorInterpolationFilters="sRGB">
-          <feMorphology in="SourceAlpha" operator="dilate" radius={.8 * rasterScale} result="expanded" />
-          <feComposite in="expanded" in2="SourceAlpha" operator="out" result="edge" />
+          <feComponentTransfer in="SourceAlpha" result="silhouette"><feFuncA type="discrete" tableValues="0 1 1 1 1 1 1 1" /></feComponentTransfer>
+          <feMorphology in="silhouette" operator="dilate" radius={.8 * rasterScale} result="expanded" />
+          <feComposite in="expanded" in2="silhouette" operator="out" result="edge" />
           <feFlood floodColor="#fff0b5" />
           <feComposite in2="edge" operator="in" result="stroke" />
           <feMerge><feMergeNode in="stroke" /><feMergeNode in="SourceGraphic" /></feMerge>
@@ -1806,7 +1903,7 @@ export const ProtoMap = ({
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 2 8 M4 4v6h6 M9 12l3-3 3 3v5H9z" /></svg>
         </button>
       </div>
-        <div className="table-grid-reference" data-grid-reference={TABLE_GRID.reference(hoverCell)} aria-label="Table grid coordinate" title={hoverCell.column===0&&hoverCell.row===0 ? 'True Center · table:0,0' : TABLE_GRID.reference(hoverCell)}>{TABLE_GRID.reference(hoverCell)}</div>
+        <div ref={gridReadout} className="table-grid-reference" data-grid-reference={TABLE_GRID.reference(TRUE_CENTER.cell)} aria-label="Table grid coordinate" title="True Center · table:0,0">{TABLE_GRID.reference(TRUE_CENTER.cell)}</div>
       </div>
       </div>
       {routeBlocked && <div className="absolute left-3 bottom-12 z-40 rounded border border-[#ffd166] bg-[#17140b] p-2 text-base" role="status">No clear route. Choose an open destination.</div>}
@@ -1831,7 +1928,7 @@ export const ProtoMap = ({
           // Stationary touch taps emit no pointer move; record the pressed cell
           // before actor grabs or camera gestures can claim the event.
           const cell = TABLE_GRID.atWorld(worldPointFromClient(event.clientX, event.clientY));
-          setHoverCell(previous => previous.column === cell.column && previous.row === cell.row ? previous : cell);
+          setHoverCell(cell);
           if (onEditCell) {
             if (event.button === 0) { onEditCell(cell); event.preventDefault(); event.stopPropagation(); }
             return;
@@ -1867,7 +1964,7 @@ export const ProtoMap = ({
             actorClickClaimed.current = false; event.preventDefault(); event.stopPropagation();
           }
         }}
-        onPointerMoveCapture={event=>{const cell=TABLE_GRID.atWorld(worldPointFromClient(event.clientX,event.clientY));setHoverCell(previous=>previous.column===cell.column&&previous.row===cell.row?previous:cell);}}
+        onPointerMoveCapture={event=>{const cell=TABLE_GRID.atWorld(worldPointFromClient(event.clientX,event.clientY));setHoverCell(cell);}}
         onKeyDownCapture={event => {
           if (onEditCell && (event.key === 'Enter' || event.key === ' ')) {
             event.preventDefault(); event.stopPropagation();
@@ -1880,6 +1977,7 @@ export const ProtoMap = ({
         onDragEnd={clearActorDragState}
         onDrop={event => { if (onEditCell) { event.preventDefault(); return; } handleDrop(event); }}
       >
+        {upright && <StarfieldSky hours={timeOfDay} darkMood={storyMood === 'stone' || storyMood === 'berry' || storyMood === 'night'} view={{width:viewportWidth,height:viewportHeight}} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} onCameraFrame={camera.onCameraFrame} />}
         {closeup && <div data-closeup-gesture-surface="true" aria-hidden="true" className="absolute inset-0 z-[45]" />}
         {/* The table plane. Tilted, it is oversized around the same center so
             its far edge stays off screen; everything on it tilts together. */}
@@ -2092,32 +2190,39 @@ export const ProtoMap = ({
                   volumeCamera={volumeCamera}
                   oversample={oversample}
                 /> : null}
-                {popup ? <React.Fragment key={tile.id + '-popup'}>
-                  {popup.shadows}
+                {popup ? (() => {
+                  // The directional den follows the live camera in its own subtree.
+                  const drawPopup = (piece: NonNullable<typeof popup>, drawnSprite: typeof popupSprite, drawnFlip: boolean, view: typeof denView) => <React.Fragment key={tile.id + '-popup'}>
+                  {piece.shadows}
                   <div
                     aria-hidden="true"
                     data-traversal-pending={tile.traversalProgress !== undefined && tile.traversalProgress < 1 ? "true" : undefined}
                     data-board-piece="biome-popup"
                     data-biome-popup={tile.id}
                     data-environment-prop="true"
-                    data-scenery-heading={propVolumeRecipe(popupSprite) ? propVolumeHeading(propVolumeRecipe(popupSprite)) : sceneryWorldHeading(popupSprite)}
-                    data-scenery-billboard={directionalScenery(popupSprite)?'directional':isPaintedScenerySprite(popupSprite) && sceneryWorldHeading(popupSprite) === undefined && !propVolumeRecipe(popupSprite) ? 'paint' : undefined}
-                    data-scenery-view={directionalScenery(popupSprite)?denView?.direction:undefined}
+                    data-scenery-heading={propVolumeRecipe(drawnSprite) ? propVolumeHeading(propVolumeRecipe(drawnSprite)) : sceneryWorldHeading(drawnSprite)}
+                    data-scenery-billboard={directionalScenery(drawnSprite)?'directional':isPaintedScenerySprite(drawnSprite) && sceneryWorldHeading(drawnSprite) === undefined && !propVolumeRecipe(drawnSprite) ? 'paint' : undefined}
+                    data-scenery-view={directionalScenery(drawnSprite)?view?.direction:undefined}
                     data-scenery-symmetry={propVolumeRecipe(tile.sprite)?.symmetry}
-                    data-scenery-facing={propVolumeRecipe(popupSprite)?.facing ?? (sceneryWorldHeading(popupSprite) === Math.PI ? 'north' : undefined)}
+                    data-scenery-facing={propVolumeRecipe(drawnSprite)?.facing ?? (sceneryWorldHeading(drawnSprite) === Math.PI ? 'north' : undefined)}
                     data-scenery-volume={propVolumeRecipe(tile.sprite) ? 'true' : undefined}
                     data-scenery-x={requestedPosition.x} data-scenery-y={requestedPosition.y}
                     data-scenery-desired-width={requestedSize} data-scenery-desired-height={requestedSize}
-                    data-scenery-width={popupSize} data-scenery-height={popupSize} data-scenery-height-units={sceneryHeightUnits(popupSprite)}
-                    data-terrain-piece={terrainPieces.get(tile.id)?.shape} data-scenery-flip={popupFlip || undefined}
+                    data-scenery-width={popupSize} data-scenery-height={popupSize} data-scenery-height-units={sceneryHeightUnits(drawnSprite)}
+                    data-terrain-piece={terrainPieces.get(tile.id)?.shape} data-scenery-flip={drawnFlip || undefined}
                     data-owner-x={popupOwner.x} data-owner-y={popupOwner.y}
                     data-owner-width={popupOwner.width} data-owner-height={popupOwner.height}
                     className="proto-sprite-standee absolute"
                     onClick={tapTile}
                     {...labelReveal(tile.id)}
-                    style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...(propVolumeRecipe(popupSprite)||directionalScenery(popupSprite)||sceneryWorldHeading(popupSprite) === undefined ? standee(undefined, popupOversample) : sceneryStandee(sceneryWorldHeading(popupSprite))), width: popupSize * popupOversample, height: popupSize * popupOversample }}
-                  ><Oversample width={popupSize} height={popupSize} factor={popupOversample}><span className="absolute inset-0" style={{filter:tile.danger ? "url(#combat-scenery-tint)" : undefined}}><Reveal fraction={isPaintedScenerySprite(tile.sprite) || tile.tileType === 'hero-den' || tile.tileType === 'berry-patch' ? 1 : explored} width={popupSize} height={popupSize} shade={popup.silhouette}>{popup.art}</Reveal></span></Oversample></div>
-                </React.Fragment> : null}
+                    style={{ left: `calc(50% + ${popupPosition.x}px)`, top: `calc(50% + ${popupPosition.y}px)`, ...(propVolumeRecipe(drawnSprite)||directionalScenery(drawnSprite)||sceneryWorldHeading(drawnSprite) === undefined ? standee(undefined, popupOversample) : sceneryStandee(sceneryWorldHeading(drawnSprite))), width: popupSize * popupOversample, height: popupSize * popupOversample }}
+                  ><Oversample width={popupSize} height={popupSize} factor={popupOversample}><span className="absolute inset-0" style={{filter:tile.danger ? "url(#combat-scenery-tint)" : undefined}}><Reveal fraction={isPaintedScenerySprite(tile.sprite) || tile.tileType === 'hero-den' || tile.tileType === 'berry-patch' ? 1 : explored} width={popupSize} height={popupSize} shade={piece.silhouette}>{piece.art}</Reveal></span></Oversample></div>
+                </React.Fragment>;
+                  return directionalScenery(popupSprite) ? <DirectionalSceneryView key={tile.id + '-popup'} src={tile.sprite} settled={denView} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}>
+                    {view => { const live = view ? spriteStandee(view.src, popupPosition, { size: popupSize, owner: 'biome', flip: view.flip, occupants, discoveryTileId: tile.id }) : null;
+                      return drawPopup(live ?? popup, view?.src ?? popupSprite, view?.flip ?? popupFlip, view ?? denView); }}
+                  </DirectionalSceneryView> : drawPopup(popup, popupSprite, popupFlip, denView);
+                })() : null}
                 </React.Fragment>
               );
             })()

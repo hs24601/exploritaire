@@ -1,3 +1,4 @@
+import { resolveLayout, dealLayout, type TableauLayout } from './tableauLayouts';
 import { assignedMovesFor } from './actorLoadouts';
 import { passageStepAllowed, type TerrainPassage } from './terrainPassages';
 import { partyMembers } from './partySystem';
@@ -17,9 +18,9 @@ export function bestTravelMove(journey: TravelJourney): number | null {
 }
 
 export type TravelTerrain = Pick<BiomeTileState, 'id' | 'title' | 'position' | 'gridSize' | 'tileType' | 'terrain' | 'road' | 'flags' | 'traversalProgress' | 'berryPatchVariant' | 'berryHarvested'> & { passage?: TerrainPassage; passageOpen?: boolean; unlocked?: boolean } & { traversalDifficulty?: number; travelCards?: number };
-export type TravelSegment = { sparseBerry?: boolean; passage?: TerrainPassage; passageOpen?: boolean; tileId?: string; title: string; kind: string; unknown: boolean; cards: number; stamina: number; end: number; start: number; easy?: boolean; cellKey?: string };
+export type TravelSegment = { layout?: TableauLayout; sparseBerry?: boolean; passage?: TerrainPassage; passageOpen?: boolean; tileId?: string; title: string; kind: string; unknown: boolean; cards: number; stamina: number; end: number; start: number; easy?: boolean; cellKey?: string };
 export type TravelPlan = { actorId: string; path: TimedPoint[]; segments: TravelSegment[]; estimate: number; cards: number; arrival: { biomeId?: string; directBiome?: boolean; foundationIndex?: number } };
-export type TravelCard = Card & { segment: number; kind: string };
+export type TravelCard = Card & { segment: number; kind: string; pose?: { x: number; y: number; rotation: number; layer: number } };
 export type TravelJourney = TravelPlan & { obstruction?: { segment: number; title: string; tags: string[]; cost: number }; passageStage?: { segment: number; columns: TravelCard[][]; reserve: TravelCard[] }; eventBackfill?: { card: TravelCard; column: number; index: number }; pendingSearch?: number; search?: { remaining: number; total: number; columns: TravelCard[][]; reserve: TravelCard[]; segment: number }; memberRanks?: Record<string, number>; columns: TravelCard[][]; reserve: TravelCard[]; rank: number; completed: number; streak: number; tileStreak: number; progress: number; spent: number; berries: number; bonus: string; paused: boolean; bonusSegments: number[]; blocked?: { progress: number; position: {x:number;y:number}; message:string }; checkedProgress?: number; priorCompleted?: number; completedCardIds?: string[] };
 export const TRAVEL_STAMINA_MAX = 24;
 export const EASY_CROSSING_CARDS = 3;
@@ -30,7 +31,19 @@ export const TRAVEL_MASTERY_CROSSINGS = 5;
 /** Isolate authored crossings from the journey-wide ordinary card window. */
 export function preparePassageStage(state: ProtoState): ProtoState {
   const j=state.journey, active=j&&currentTravelSegment(j);
-  if(!j||!active?.segment.passage||j.passageStage||j.blocked)return state;
+  if(!j||!active||j.passageStage||j.blocked)return state;
+  if(active.segment.layout){
+    const columns:TravelCard[][]=dealLayout(active.segment.layout, active.index+17).map(group=>group.map(c=>({id:'layout-'+active.index+'-'+c.id,rank:c.rank,segment:active.index,kind:active.segment.kind,pose:{x:c.x,y:c.y,rotation:c.rotation,layer:c.layer}})));
+    columns.flat().forEach((card,i)=>{
+      const id='travel-'+j.actorId+'-'+(active.segment.tileId??active.index)+'-'+active.index+'-'+i;
+      let hash=2166136261;for(const c of id)hash=Math.imul(hash^c.charCodeAt(0),16777619);
+      hash=Math.imul(hash^(hash>>>16),0x85ebca6b);hash=Math.imul(hash^(hash>>>13),0xc2b2ae35);hash^=hash>>>16;
+      const berry=active.segment.sparseBerry!==undefined ? active.segment.sparseBerry&&i===active.segment.cards-1 : !state.dayScenario&&active.segment.kind==='berry-patch'&&(hash>>>0)/4294967296<.2;
+      if(berry){card.resource='mana';card.foodSource='berries';}
+    });
+    return {...state,journey:{...j,passageStage:{segment:active.index,columns:j.columns,reserve:j.reserve},columns,reserve:[]}};
+  }
+  if(!active.segment.passage)return state;
   const p=active.segment.passage;
   const opened=state.biomeTiles.find(t=>t.id===active.segment.tileId)?.passageOpen===true;
   const columns:TravelCard[][]=Array.from({length:p.columns},()=>[]);
@@ -80,10 +93,12 @@ export function planTravel(actorId: string, path: TimedPoint[], tiles: readonly 
       const cell = TABLE_GRID.atWorld(point);
       const tile = tiles.find(t => { const anchor = TABLE_GRID.atWorld(t.position); const left = anchor.column - Math.floor(t.gridSize.columns / 2), top = anchor.row - Math.floor(t.gridSize.rows / 2); return cell.column >= left && cell.column < left + t.gridSize.columns && cell.row >= top && cell.row < top + t.gridSize.rows; });
       const profile = traversalProfile(tile, affinity);
+      const layout = !tile?.flags?.includes('unexplored') && !tile?.passage ? resolveLayout(profile.kind,tile?.berryPatchVariant==='sparse') : undefined;
+      if(layout)profile.cards=layout.cards.length;
       const start = total ? elapsed / total : 0;
       elapsed += length * b.pace / steps;
       const unknown = Boolean(tile?.flags?.includes('unexplored'));
-      segments.push({ ...(!unknown && tile?.berryPatchVariant === 'sparse' ? { sparseBerry: !tile.berryHarvested } : {}), ...(!unknown && tile?.passage ? { passage: tile.passage, passageOpen: tile.passageOpen } : {}), tileId: tile?.id, title: unknown ? 'Unknown terrain' : tile?.title ?? 'Open table', kind: profile.kind, unknown, cards: profile.cards, stamina: profile.difficulty * length / steps / TABLE_GRID.cellSize, easy:!unknown&&profile.difficulty<=1,cellKey:TABLE_GRID.reference(cell), start, end: total ? elapsed / total : 1 });
+      segments.push({ ...(layout?{layout}:{}), ...(!unknown && tile?.berryPatchVariant === 'sparse' ? { sparseBerry: !tile.berryHarvested } : {}), ...(!unknown && tile?.passage ? { passage: tile.passage, passageOpen: tile.passageOpen } : {}), tileId: tile?.id, title: unknown ? 'Unknown terrain' : tile?.title ?? 'Open table', kind: profile.kind, unknown, cards: profile.cards, stamina: profile.difficulty * length / steps / TABLE_GRID.cellSize, easy:!unknown&&profile.difficulty<=1,cellKey:TABLE_GRID.reference(cell), start, end: total ? elapsed / total : 1 });
     }
   }
   return { actorId, path, arrival, segments, estimate: segments.reduce((n, s) => n + s.stamina, 0), cards: segments.reduce((n, s) => n + s.cards, 0) };
@@ -93,7 +108,7 @@ export function beginJourney(plan: TravelPlan, startingRank = 2, foodPickups = t
   const cards: TravelCard[] = [];
   let rank = startingRank;
   plan.segments.forEach((segment, index) => {
-    if(segment.passage){rank=(rank+segment.cards-1)%13+1;return;}
+    if(segment.passage||segment.layout){rank=(rank+segment.cards-1)%13+1;return;}
     for (let i = 0; i < segment.cards; i++) {
       rank = rank % 13 + 1;
       // Independent deterministic 20% berry roll for each travel card.
@@ -108,11 +123,22 @@ export function beginJourney(plan: TravelPlan, startingRank = 2, foodPickups = t
       cards.push({ id, rank, segment: index, kind: segment.unknown ? 'unexplored' : segment.kind, ...(berry ? { resource: 'mana' as const, foodSource: 'berries' as const } : {}) });
     }
   });
-  // A sparse-bush approach is one ordered stack, with the next rank exposed.
+  // Preserve the legacy sparse approach when no reusable layout is assigned.
   const sparseApproach = plan.segments.filter(segment => segment.cards > 0).every(segment => segment.sparseBerry !== undefined);
   const columnCount = sparseApproach ? 1 : 7;
   const columns: TravelCard[][] = Array.from({ length: columnCount }, () => []);
   cards.slice(0, 28).forEach((card, i) => columns[i % columnCount].unshift(card));
+  if (sparseApproach && cards.length === 6 && startingRank === 2) {
+    // Explicit stack coverage; incidental rotated corner overlaps do not lock cards.
+    const ranks = [3, 2, 3, 4, 5, 6];
+    const poses = [[1.2, 2.05, 0, 6], [2.2, .15, 7, 2], [1.3, 1.12, 0, 3], [.08, 1.55, -8, 4], [.35, .05, -6, 1], [2.4, 1.6, 8, 5]];
+    cards.forEach((card, index) => {
+      card.rank = ranks[index];
+      const [x, y, rotation, layer] = poses[index];
+      card.pose = { x, y, rotation, layer };
+    });
+    columns.splice(0, columns.length, [cards[4], cards[3]], [cards[1]], [cards[2], cards[0]], [cards[5]]);
+  }
   const firstWork = plan.segments.find(s => s.cards > 0);
   return { ...plan, columns, reserve: cards.slice(28), rank: startingRank, completed: 0, streak: 0, tileStreak: 0, progress: firstWork?.start ?? 1, spent: 0, berries: 0, bonus: '', paused: false, bonusSegments: [] };
 }

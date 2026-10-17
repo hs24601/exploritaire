@@ -1,3 +1,4 @@
+import { validateLayouts } from './src/proto/tableauLayouts';
 import { defineConfig } from 'vite';
 import { validateTileDocument } from './src/proto/tileEditor/schema';
 import react from '@vitejs/plugin-react';
@@ -105,7 +106,7 @@ export default defineConfig({
         const module = context.server.moduleGraph.getModuleById(buildModule);
         if (module) context.server.moduleGraph.invalidateModule(module);
         // Let the save response reach the editor before replacing its document.
-        if (relative === 'src/data/protoTiles.json') setTimeout(() => context.server.ws.send({ type: 'full-reload' }), 400);
+        if (relative === 'src/data/protoTiles.json' || relative === 'src/data/tableauLayouts.json') setTimeout(() => context.server.ws.send({ type: 'full-reload' }), 400);
         else context.server.ws.send({ type: 'full-reload' });
         return [];
       },
@@ -125,6 +126,13 @@ export default defineConfig({
             return;
           }
           next();
+        });
+        server.middlewares.use('/__tableau-layouts/save', (req,res) => {
+          if(req.method!=='POST'){res.statusCode=405;res.end('Method Not Allowed');return;}
+          if(!req.headers['content-type']?.startsWith('application/json')){res.statusCode=415;res.end('Expected application/json');return;}
+          let body='',large=false;
+          req.on('data',chunk=>{if(large)return;body+=chunk;if(Buffer.byteLength(body)>256*1024){large=true;res.statusCode=413;res.end('Document too large');}});
+          req.on('end',()=>{if(large)return;try{const document=JSON.parse(body);validateLayouts(document);const file=path.resolve(__dirname,'src/data/tableauLayouts.json');fs.writeFileSync(file+'.tmp',JSON.stringify(document,null,2)+'\n');fs.renameSync(file+'.tmp',file);res.end('Saved');}catch(error){res.statusCode=400;res.end(String(error));}});
         });
         server.middlewares.use('/__proto-tiles/save', (req, res) => {
           if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }

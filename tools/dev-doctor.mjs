@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 
 const args = new Set(process.argv.slice(2));
 const fix = args.has('--fix');
@@ -11,41 +11,31 @@ if (!Number.isFinite(port) || port <= 0) {
   process.exit(1);
 }
 
-function execJson(command) {
-  const raw = execSync(command, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    return [];
-  }
-}
-
 function getWindowsListeners(localPort) {
-  const command = [
-    'powershell',
-    '-NoProfile',
-    '-Command',
-    `"& {
+  const script = `& {
       $rows = Get-NetTCPConnection -State Listen -LocalPort ${localPort} -ErrorAction SilentlyContinue |
         Select-Object LocalAddress,LocalPort,OwningProcess;
       $result = @();
       foreach ($row in $rows) {
-        $pid = [int]$row.OwningProcess;
-        $proc = Get-CimInstance Win32_Process -Filter (\\"ProcessId=$pid\\") -ErrorAction SilentlyContinue;
+        $listenerProcessId = [int]$row.OwningProcess;
+        $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$listenerProcessId" -ErrorAction SilentlyContinue;
         $result += [PSCustomObject]@{
           localAddress = $row.LocalAddress;
           localPort = $row.LocalPort;
-          pid = $pid;
+          pid = $listenerProcessId;
           name = $proc.Name;
           commandLine = $proc.CommandLine;
         };
       }
       $result | ConvertTo-Json -Compress
-    }"`,
-  ].join(' ');
-  return execJson(command);
+    }`;
+  const raw = execFileSync('powershell', ['-NoProfile', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')],
+    { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+  if (!raw) return [];
+  const parsed = JSON.parse(raw);
+  // Tailnet proxy sockets do not compete for Vite's loopback backend.
+  return (Array.isArray(parsed) ? parsed : [parsed]).filter(row =>
+    ['127.0.0.1', '0.0.0.0', '::1', '::'].includes(row.localAddress));
 }
 
 function getUnixListeners(localPort) {

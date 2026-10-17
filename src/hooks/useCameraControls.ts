@@ -57,6 +57,12 @@ interface UseCameraControlsOptions {
   panScale?: { x: number; y: number } | ((camera: CameraState) => { x: number; y: number });
   /** Vertical middle-drag / three-finger motion tilts cameras that opt in. */
   orbitTilt?: { getAngle: (camera: CameraState) => number; min: number; max: number; onChange?: () => void };
+  /** Minimum ms between React `cameraState` syncs while the camera moves.
+   * Defaults to each gesture's 50-80 ms cadence; `Infinity` syncs only once
+   * motion settles, for scenes whose live layers follow `onCameraFrame`. */
+  motionSyncMs?: number;
+  /** Replaces writing the live `--camera-*` properties on the container. */
+  writeVariable?: (name: string, value: string, container: HTMLDivElement) => void;
 }
 
 interface UseCameraControlsResult {
@@ -106,6 +112,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     centeredZoom = false,
     panScale,
     orbitTilt,
+    motionSyncMs,
+    writeVariable,
   } = options;
 
   const initial = { ...DEFAULT_CAMERA, ...initialState };
@@ -189,6 +197,29 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   const wheelAnchorRef = useRef<{ worldX: number; worldY: number; mouseX: number; mouseY: number } | null>(null);
   const wheelLastTsRef = useRef(0);
   const lastStateSyncRef = useRef(0);
+  const motionSyncRef = useRef(motionSyncMs);
+  motionSyncRef.current = motionSyncMs;
+  const writeVariableRef = useRef(writeVariable);
+  writeVariableRef.current = writeVariable;
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // React catches up at most every `interval` ms during motion, and always once
+  // the camera has been still briefly. A native timer: camera input stays live
+  // during the global pause, so its settle must not wait for the game clock.
+  const syncMotion = useCallback((next: CameraState, interval: number) => {
+    const now = gameTime.now();
+    clearTimeout(settleTimerRef.current);
+    if (now - lastStateSyncRef.current > (motionSyncRef.current ?? interval)) {
+      lastStateSyncRef.current = now;
+      setCameraState(next);
+      return;
+    }
+    settleTimerRef.current = setTimeout(() => {
+      settleTimerRef.current = undefined;
+      lastStateSyncRef.current = gameTime.now();
+      setCameraState(cameraRef.current);
+    }, 120);
+  }, []);
+  useEffect(() => () => clearTimeout(settleTimerRef.current), []);
   const debugRef = useRef({
     wheelCount: 0,
     lastDelta: 0,
@@ -233,15 +264,18 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     el.style.transform = transform;
     const container = containerRef.current;
     if (container) {
-      container.style.setProperty('--camera-transform', transform);
+      // A scene may scope live values to the elements that read them.
+      const scoped = writeVariableRef.current;
+      const write = (name: string, value: string) => scoped ? scoped(name, value, container) : container.style.setProperty(name, value);
+      write('--camera-transform', transform);
       // Live camera for layers that follow the table, e.g. the floor grid and
       // light shafts; pieces counter-rotate by --camera-yaw to face the camera.
-      container.style.setProperty('--camera-x', `${state.x}px`);
-      container.style.setProperty('--camera-y', `${state.y}px`);
-      container.style.setProperty('--camera-scale', `${scale}`);
-      container.style.setProperty('--camera-yaw', `${yaw}deg`);
+      write('--camera-x', `${state.x}px`);
+      write('--camera-y', `${state.y}px`);
+      write('--camera-scale', `${scale}`);
+      write('--camera-yaw', `${yaw}deg`);
       // Screen x of the table's origin offset, once spun.
-      container.style.setProperty('--camera-sx', `${rotateVector(state, yaw).x}px`);
+      write('--camera-sx', `${rotateVector(state, yaw).x}px`);
     }
     // Camera variables belong to this viewport. Publishing them on the document
     // invalidates styles for the entire game on every rotation frame.
@@ -344,12 +378,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       cameraRef.current = next;
       debugRef.current.lastScale = next.scale;
       applyTransform(next);
-
-      const now = gameTime.now();
-      if (now - lastStateSyncRef.current > 80) {
-        lastStateSyncRef.current = now;
-        setCameraState(next);
-      }
+      syncMotion(next, 80);
       rafRef.current = gameTime.requestAnimationFrame(tick);
     };
 
@@ -541,12 +570,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     cameraRef.current = next;
     zoomTargetRef.current = { ...zoomTargetRef.current, x: next.x, y: next.y };
     applyTransform(next);
-    const now = gameTime.now();
-    if (now - lastStateSyncRef.current > 50) {
-      lastStateSyncRef.current = now;
-      setCameraState(next);
-    }
-  }, [applyTransform]);
+    syncMotion(next, 50);
+  }, [applyTransform, syncMotion]);
   /** Brings React state up to the live camera, e.g. when a keyboard pan stops. */
   const syncCamera = useCallback(() => setCameraState(cameraRef.current), []);
   const setCameraFrame = useCallback((next: CameraState, syncScene = true, keepSpin = false) => {
@@ -561,12 +586,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     cameraRef.current = next;
     zoomTargetRef.current = next;
     applyTransform(next);
-    const now = gameTime.now();
-    if (syncScene && now - lastStateSyncRef.current > 80) {
-      lastStateSyncRef.current = now;
-      setCameraState(next);
-    }
-  }, [applyTransform]);
+    if (syncScene) syncMotion(next, 80);
+  }, [applyTransform, syncMotion]);
 
   // ---------------------------------------------------------------------------
   // Mouse-wheel zoom
@@ -656,8 +677,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       cameraRef.current = next;
       zoomTargetRef.current = next;
       applyTransform(next);
-      lastStateSyncRef.current = now;
-      setCameraState(next);
+      syncMotion(next, 0);
       wheelDeltaRef.current = 0;
       if (rafRef.current) {
         gameTime.cancelAnimationFrame(rafRef.current);
@@ -760,11 +780,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       const next = { ...cameraRef.current, x: newX, y: newY };
       cameraRef.current = next;
       applyTransform(next);
-      const now = gameTime.now();
-      if (now - lastStateSyncRef.current > 50) {
-        lastStateSyncRef.current = now;
-        setCameraState(next);
-      }
+      syncMotion(next, 50);
       zoomTargetRef.current = { ...zoomTargetRef.current, x: newX, y: newY };
     };
 

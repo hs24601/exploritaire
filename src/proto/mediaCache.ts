@@ -2,8 +2,36 @@
  * Textures still belong to their renderer and can be disposed independently. */
 const pending = new Map<string, Promise<HTMLImageElement>>();
 const decoded = new Map<string, HTMLImageElement>();
-const MAX_PIXELS = 24 * 1024 * 1024; // About 96 MiB, excluding active renderer textures.
+const retained = new Map<string, number>();
+// About 96 MiB for ordinary cached images. The finite retained opening set may
+// exceed this while mounted; speculative background art cannot evict that set.
+const MAX_PIXELS = 24 * 1024 * 1024;
 let pixels = 0;
+
+function evict() {
+  while (pixels > MAX_PIXELS) {
+    const oldest = [...decoded.keys()].find(key => !retained.has(key));
+    if (!oldest) break;
+    const image = decoded.get(oldest)!;
+    pixels -= image.naturalWidth * image.naturalHeight;
+    decoded.delete(oldest);
+  }
+}
+
+/** Keep the finite opening/travel set warm while its scene is mounted. The
+ * background LRU must not evict it before the first OK constructs Hero's rig.
+ * These are shared decoded images, not additional texture copies. */
+export function retainMediaImages(sources: readonly string[]) {
+  const keys = [...new Set(sources.map(src => new URL(src, document.baseURI).href))];
+  keys.forEach(key => retained.set(key, (retained.get(key) ?? 0) + 1));
+  return () => {
+    keys.forEach(key => {
+      const count = (retained.get(key) ?? 0) - 1;
+      if (count > 0) retained.set(key, count); else retained.delete(key);
+    });
+    evict();
+  };
+}
 
 export function loadMediaImage(src: string): Promise<HTMLImageElement> {
   const key = new URL(src, document.baseURI).href;
@@ -34,12 +62,7 @@ export function loadMediaImage(src: string): Promise<HTMLImageElement> {
   }).then(image => {
     decoded.set(key, image);
     pixels += image.naturalWidth * image.naturalHeight;
-    while (pixels > MAX_PIXELS && decoded.size) {
-      const oldest = decoded.keys().next().value!;
-      const evicted = decoded.get(oldest)!;
-      pixels -= evicted.naturalWidth * evicted.naturalHeight;
-      decoded.delete(oldest);
-    }
+    evict();
     return image;
   }).finally(() => { pending.delete(key); });
   pending.set(key, promise);

@@ -4,6 +4,7 @@ import type { StandeeLighting } from '../protoLighting';
 import { buildSilhouetteSurface, shadeSilhouette, silhouetteLight, type SilhouetteSurface } from '../silhouetteRelief';
 import { spriteLayout, useSpriteBounds } from './spriteBounds';
 import { STANDEE_OVERSAMPLE } from './SpriteStandee';
+import { loadMediaImage } from '../mediaCache';
 
 type Source = { surface: SilhouetteSurface };
 const sources = new Map<string, Promise<Source>>();
@@ -11,25 +12,18 @@ const sources = new Map<string, Promise<Source>>();
 function loadSource(src: string): Promise<Source> {
   let source = sources.get(src);
   if (!source) {
-    source = new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => {
-        // Keep authored pixel resolution, and bound large/SVG assets.
-        const scale = Math.min(1, 128 / Math.max(image.naturalWidth, image.naturalHeight));
-        const width = Math.max(1, Math.round(image.naturalWidth * scale));
-        const height = Math.max(1, Math.round(image.naturalHeight * scale));
-        const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        if (!ctx) { reject(new Error('Relief canvas unavailable')); return; }
-        try {
-          ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(image, 0, 0, width, height);
-          const pixels = ctx.getImageData(0, 0, width, height).data;
-          resolve({ surface: buildSilhouetteSurface(width, height, pixels) });
-        } catch (error) { reject(error); }
-      };
-      image.onerror = () => reject(new Error(`Relief sprite unavailable: ${src}`));
-      image.src = src;
+    source = loadMediaImage(src).then(image => {
+      // Keep authored pixel resolution, and bound large/SVG assets.
+      const scale = Math.min(1, 128 / Math.max(image.naturalWidth, image.naturalHeight));
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) throw new Error('Relief canvas unavailable');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(image, 0, 0, width, height);
+      const pixels = ctx.getImageData(0, 0, width, height).data;
+      return { surface: buildSilhouetteSurface(width, height, pixels) };
     });
     sources.set(src, source);
   }

@@ -8,7 +8,7 @@ import { HERO_WALKING_DIRECTIONAL_SPRITE } from './heroWalkingSprite';
 import { heroFaceAttachment } from './heroFaceAttachments';
 it('registers the body silhouette mask to every face patch vertex and gait phase', () => {
   for (const phase of HERO_WALKING_DIRECTIONAL_SPRITE.animation!.frames) {
-    for (const tier of ['low','high'] as const) for (const frame of phase[tier].slice(0,4)) {
+    for (const tier of ['low','high'] as const) for (const frame of phase[tier].slice(0,3)) {
       const part=frame.parts[0], attachment=heroFaceAttachment(frame)!;
       const image={width:2048,height:4096};
       const geometry=attachedFaceGeometry(part,attachment,image,image);
@@ -26,11 +26,11 @@ it('registers the body silhouette mask to every face patch vertex and gait phase
 it('registers reused expressions for standing views and every walking phase without touching bodies', () => {
   for (const definition of [HERO_DIRECTIONAL_SPRITE, ...HERO_WALKING_DIRECTIONAL_SPRITE.animation!.frames]) {
     for (const tier of ['low', 'high'] as const) {
-      for (let direction=0;direction<4;direction++) {
+      for (let direction=0;direction<3;direction++) {
         const frame = definition[tier][direction];
         const before = JSON.stringify(frame);
         const attachment = heroFaceAttachment(frame)!;
-        expect(attachment.source).toMatch(/^heroSitting(Low|High)SadFace$/);
+        expect(attachment.source).toBe('heroSadHeads');
         expect(attachment.rect[2]).toBeGreaterThan(0);
         expect(attachment.target[2]).toBeGreaterThan(0);
         expect(JSON.stringify(frame)).toBe(before);
@@ -39,6 +39,23 @@ it('registers reused expressions for standing views and every walking phase with
     }
     expect(heroFaceAttachment(definition.top)).toBeUndefined();
   }
+});
+it('switches between reusable sad and neutral heads without changing body geometry', () => {
+  const textures: Record<string,Texture>={};
+  for(const key of ['heroLow','heroHigh','heroSadHeads','heroNeutralHeads','heroCuriousHeads','heroSittingLowSadFace']) {
+    const texture=new Texture();texture.image={width:2048,height:2048};textures[key]=texture;
+  }
+  const library=createDirectionalSpriteLibrary(textures,HERO_DIRECTIONAL_SPRITE),actor=library.create(1),camera=new PerspectiveCamera();camera.position.set(0,.2,10);
+  const body=actor.parts[0].mesh.geometry;
+  actor.setExpression('neutral');actor.update(camera,0,0,true);
+  expect(actor.faceLayer!.visible).toBe(true);expect(actor.faceLayer!.material.map).toBe(textures.heroNeutralHeads);
+  actor.setExpression('curious');actor.update(camera,0,0,true);
+  expect(actor.faceLayer!.visible).toBe(true);expect(actor.faceLayer!.material.map).toBe(textures.heroCuriousHeads);
+  actor.setExpression('sad');actor.update(camera,0,0,true);
+  expect(actor.faceLayer!.material.map).toBe(textures.heroSadHeads);expect(actor.parts[0].mesh.geometry).toBe(body);
+  camera.position.set(10,.2,-10);actor.update(camera,0,0,true);
+  expect(actor.faceLayer!.visible).toBe(false);
+  actor.dispose();library.dispose();Object.values(textures).forEach(t=>t.dispose());
 });
 it('registers sad faces to the head while preserving pose geometry and hiding unseen faces', () => {
   const textures: Record<string, Texture> = {};
@@ -65,4 +82,23 @@ it('registers sad faces to the head while preserving pose geometry and hiding un
   camera.position.set(0,.2,10); actor.setExpression('happy'); actor.update(camera,0,4,true);
   expect(actor.faceLayer!.visible).toBe(false);
   actor.dispose(); library.dispose(); Object.values(textures).forEach(t => t.dispose());
+});
+
+it('switches Happy and preserved Joyful bodies immediately without replacing the rig', () => {
+  const textures: Record<string,Texture> = {};
+  for(const key of ['heroLow','heroHigh','heroLowJoyful','heroHighJoyful','heroHappyHeads','heroSittingLowSadFace']) {
+    const texture=new Texture();texture.image={width:2048,height:2048};textures[key]=texture;
+  }
+  const library=createDirectionalSpriteLibrary(textures,HERO_DIRECTIONAL_SPRITE),actor=library.create(1),camera=new PerspectiveCamera();
+  camera.position.set(0,.2,10);
+  actor.setExpression('happy');actor.update(camera,0,0,true);
+  const geometry=actor.parts[0].mesh.geometry;
+  expect(actor.parts[0].material.map).toBe(textures.heroLow);
+  expect(actor.faceLayer!.visible).toBe(false); // Bespoke Happy is one whole painted pose.
+  actor.setExpression('joyful');actor.update(camera,0,0,true);
+  expect(actor.parts[0].material.map).toBe(textures.heroLowJoyful);
+  expect(actor.parts[0].mesh.geometry).toBe(geometry);
+  actor.setExpression('happy');actor.update(camera,0,0,true);
+  expect(actor.parts[0].material.map).toBe(textures.heroLow);
+  actor.dispose();library.dispose();Object.values(textures).forEach(texture=>texture.dispose());
 });

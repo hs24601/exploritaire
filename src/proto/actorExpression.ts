@@ -1,14 +1,14 @@
 import { useSyncExternalStore } from 'react';
 import type { HeroEmojiEmotion } from './heroEmojis';
-export type ActorExpression = HeroEmojiEmotion | 'neutral';
+export type ActorExpression = HeroEmojiEmotion | 'neutral' | 'curious';
 
 // Callouts publish their resolved expression, after browser-local edits. Owners
 // release only their own lease, so an old bubble cannot clear a newer speaker.
-const expressions = new Map<symbol, { actor: string; emotion: HeroEmojiEmotion }>();
+const expressions = new Map<symbol, { actor: string; emotion: ActorExpression }>();
 const scenes = new Map<string, { fallback?: ActorExpression; override?: ActorExpression }>();
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(listener => listener());
-export function claimActorExpression(actor: string, emotion: HeroEmojiEmotion) {
+export function claimActorExpression(actor: string, emotion: ActorExpression) {
   const owner = Symbol(actor);
   expressions.set(owner, { actor, emotion }); emit();
   return () => { expressions.delete(owner); emit(); };

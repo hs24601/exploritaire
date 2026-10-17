@@ -16,6 +16,7 @@ import './callout.css';
 import { useCalloutEditing } from './CalloutEditing';
 import { CalloutEditor, CalloutText } from './CalloutEditor';
 import { calloutPages, letterDelay, placeCallout, type CalloutRect } from '../calloutPlayback';
+import { sceneActorBoxes } from '../sceneProjection';
 const EMPTY_MARKS: CalloutMark[] = [];
 
 export type CalloutEmoji =
@@ -154,27 +155,44 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
     if (!element) return;
     let frame = 0;
     let previous = '';
+    // Bubble metrics change with text reveal and paging, not with the camera:
+    // measure them on resize so the per-frame placement reads no layout.
+    let size = { w: 0, h: 0, bubbleOffset: 0, bubbleWidth: 0 };
+    const measure = () => {
+      const bubble = element.firstElementChild as HTMLElement;
+      size = { w: element.offsetWidth, h: element.offsetHeight, bubbleOffset: bubble.offsetLeft, bubbleWidth: bubble.offsetWidth };
+    };
+    const hide = () => {
+      if (element.style.visibility !== 'hidden') element.style.visibility = 'hidden';
+      active.current = false; previous = '';
+    };
+    const domActors = (selector: string) => Array.from(document.querySelectorAll<HTMLElement>(selector))
+      .filter(node => !node.hidden && getComputedStyle(node).visibility !== 'hidden' && getComputedStyle(node).display !== 'none')
+      .map(node => node.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
     const place = () => {
       const point = typeof anchor === 'function' ? anchor() : anchor;
       const valid = point && Number.isFinite(point.x) && Number.isFinite(point.y);
-      element.style.visibility = 'hidden'; active.current = false;
-      if (!valid) return;
+      if (!valid) { hide(); return; }
       const viewport = window.visualViewport;
       const left = viewport?.offsetLeft ?? 0;
       const top = viewport?.offsetTop ?? 0;
       const width = viewport?.width ?? window.innerWidth;
       const height = viewport?.height ?? window.innerHeight;
-      const w = element.offsetWidth;
-      const h = element.offsetHeight;
-      const actors = avoidActors?.() ?? Array.from(document.querySelectorAll<HTMLElement>('.proto-map [data-board-piece="actor"], .proto-map [data-interior-actor], .banks-rescue-cinema [data-scene-target]'))
-        .filter(node => !node.hidden && getComputedStyle(node).visibility !== 'hidden' && getComputedStyle(node).display !== 'none')
-        .map(node => node.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+      const { w, h, bubbleOffset, bubbleWidth } = size;
+      // Live map actors come from the camera projection; den interiors and
+      // cinema targets are rare enough to measure directly.
+      const projected = sceneActorBoxes();
+      // Any map actor the projection does not cover is measured directly.
+      const unprojected = projected ? projected.map(actor => `:not([data-actor-id="${CSS.escape(actor.id)}"])`).join('') : '';
+      const actors = avoidActors?.() ?? (projected
+        ? [...projected.map(actor => actor.box), ...domActors(`.proto-map [data-board-piece="actor"]${unprojected}, .proto-map [data-interior-actor], .banks-rescue-cinema [data-scene-target]`)]
+        : domActors('.proto-map [data-board-piece="actor"], .proto-map [data-interior-actor], .banks-rescue-cinema [data-scene-target]'));
       const position = placeCallout(point, w, h, {left, top, right: left + width, bottom: top + height}, actors, alignment === 'after');
-      if (!position) return;
+      if (!position) { hide(); return; }
       const {x, y, below, side} = position;
-      element.style.visibility = 'visible'; active.current = true;
-      const bubbleOffset = (element.firstElementChild as HTMLElement).offsetLeft;
-      const tail = Math.max(22, Math.min(point.x - x - bubbleOffset, (element.firstElementChild as HTMLElement).offsetWidth - 22));
+      if (element.style.visibility !== 'visible') element.style.visibility = 'visible';
+      active.current = true;
+      const tail = Math.max(22, Math.min(point.x - x - bubbleOffset, bubbleWidth - 22));
       const next = `${x},${y},${tail},${below},${side}`;
       if (next === previous) return;
       previous = next;
@@ -185,11 +203,12 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
       element.dataset.side = String(side);
     };
     const tick = () => { place(); frame = gameTime.requestAnimationFrame(tick); };
-    place();
+    measure(); place();
     // Actors/cameras may move even for a static anchor; placement never sets React state.
     frame = gameTime.requestAnimationFrame(tick);
-    const observer = new ResizeObserver(place);
+    const observer = new ResizeObserver(() => { measure(); place(); });
     observer.observe(element);
+    if (element.firstElementChild) observer.observe(element.firstElementChild);
     window.addEventListener('resize', place);
     window.visualViewport?.addEventListener('resize', place);
     window.visualViewport?.addEventListener('scroll', place);

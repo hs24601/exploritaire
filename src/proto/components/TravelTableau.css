@@ -118,3 +118,6 @@
 .travel-obstruction-actions strong,.travel-obstruction-actions>span { flex-basis:100%; }
 .travel-obstruction-card { box-sizing:border-box; width:100%; height:100%; border:2px solid #b89b64; border-radius:7px; background:linear-gradient(145deg,#554b38,#272b23); color:#ffe2ae; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:5px; gap:6px; font-size:clamp(9px,1.2vw,16px); overflow:hidden; }
 .travel-obstruction-card>span:first-child { font-size:2em; }
+
+.travel-free-layout { position:relative; width:calc(var(--classic-card-w) * 3.65); height:calc(var(--classic-card-w) * 3.65); margin:auto; flex:none; }
+.travel-free-layout > .playing-card { width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }

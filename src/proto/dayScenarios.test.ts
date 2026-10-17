@@ -13,9 +13,9 @@ describe('Day 01 before dark',()=>{
   const nearby=dayOnePlan(s);expect(nearby.arrival.biomeId).toBe(s.dayScenarioTiles?.sparsePatchId);
   s={...s,journey:beginJourney(nearby,2,false)};
   expect(nearby.cards).toBe(6);
-  expect(s.journey!.columns).toHaveLength(1);
-  expect([...s.journey!.columns[0]].reverse().map(card=>card.rank)).toEqual([3,4,5,6,7,8]);
-  expect(s.journey!.columns[0].filter(card=>card.foodSource==='berries').map(card=>card.rank)).toEqual([8]);
+  expect(s.journey!.columns.map(column=>column.map(card=>card.rank))).toEqual([[5,4],[2],[3,3],[6]]);
+  expect(s.journey!.columns.flat().every(card=>card.pose)).toBe(true);
+  expect(s.journey!.columns.flat().filter(card=>card.foodSource==='berries').map(card=>card.rank)).toEqual([6]);
   for(let i=0;i<100 && s.journey!.completed<nearby.cards;i++){const col=bestTravelMove(s.journey!);expect(col).not.toBeNull();s=playTravelCard(s,col!);}
   expect(s.haul.mana).toBe(1);expect(s.biomeTiles.find(t=>t.id===s.dayScenarioTiles?.sparsePatchId)?.berryHarvested).toBe(true);
   const sparse=s.biomeTiles.find(t=>t.id===s.dayScenarioTiles?.sparsePatchId)!;

@@ -1,6 +1,6 @@
 import { gameTime } from '../gameTime';
 import {useEffect,useRef,useState} from 'react';
-export type CinemaBeat = {id:string;durationMs?:number;dialogue?:string;speaker?:'Hero'|'Banks';emotion?:'sad'|'upset'|'happy'|'stars';cue?:string};
+export type CinemaBeat = {id:string;durationMs?:number;dialogue?:string;speaker?:'Hero'|'Banks';emotion?:'sad'|'upset'|'joyful'|'stars';cue?:string};
 /** Authored beats own timing; pause, hidden tabs and reading never advance the clock. */
 export function useCinema(beats:readonly CinemaBeat[],onCue:(cue:string)=>void,onComplete:()=>void){
  const [index,setIndex]=useState(0),[paused,setPaused]=useState(false);const remaining=useRef<number|null>(null);
@@ -12,7 +12,7 @@ export function useCinema(beats:readonly CinemaBeat[],onCue:(cue:string)=>void,o
 }
 export const BANKS_RESCUE_BEATS:readonly CinemaBeat[]=[
  {id:'mana',durationMs:1300,cue:'reveal'},
- {id:'hope',speaker:'Hero',emotion:'happy',dialogue:'Manaberries! There are still some here.'},
+ {id:'hope',speaker:'Hero',emotion:'joyful',dialogue:'Manaberries! There are still some here.'},
  {id:'slime-card',durationMs:1500,cue:'slime'},
  {id:'cower',speaker:'Hero',emotion:'upset',dialogue:'Oh! Please... I only need a little food.',cue:'cower'},
  {id:'ambush',durationMs:1700,cue:'hit'},

@@ -15,10 +15,12 @@ export function OffscreenWaypoints() {
       frame = gameTime.requestAnimationFrame(update);
       if (now - last < 32) return;
       last = now;
+      const props = new Set(viewport.querySelectorAll<HTMLElement>('[data-offscreen-waypoint]:not([data-waypoint-preview])'));
+      // Nothing to track: skip the layout read that forced a reflow mid-frame.
+      if (!props.size && !markers.size) return;
       const view = viewport.getBoundingClientRect();
       if (!view.width || !view.height) { layer.hidden = true; return; }
       layer.hidden = false;
-      const props = new Set(viewport.querySelectorAll<HTMLElement>('[data-offscreen-waypoint]:not([data-waypoint-preview])'));
       for (const [prop, marker] of markers) if (!props.has(prop)) {
         marker.observer.disconnect(); marker.node.remove(); markers.delete(prop);
       }

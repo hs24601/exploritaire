@@ -1,7 +1,0 @@
-const {chromium}=require('playwright');
-(async()=>{const b=await chromium.launch({headless:true,executablePath:'C:/Users/ericm/AppData/Local/ms-playwright/chromium-1208/chrome-win64/chrome.exe'});try{
-const p=await b.newPage({viewport:{width:1912,height:914}});await p.goto('http://localhost:5178/proto.html?fx=high');await p.getByRole('button',{name:'Tilt camera view',exact:true}).click();await p.waitForTimeout(1500);
-console.log(await p.evaluate(()=>({counts:[...document.querySelectorAll('[data-atmosphere]')].reduce((a,e)=>(a[e.dataset.atmosphere]=(a[e.dataset.atmosphere]||0)+1,a),{}),largest:[...document.querySelectorAll('.proto-atmosphere__billboard')].map(e=>({left:e.style.left,top:e.style.top,transform:e.style.transform,box:e.firstChild.getBoundingClientRect().toJSON()})).sort((a,b)=>b.box.width-a.box.width).slice(0,8),air:document.querySelector('.proto-table-air').outerHTML.slice(0,450)})));
-const session=await p.context().newCDPSession(p);await session.send('Performance.enable');
-let before=(await session.send('Performance.getMetrics')).metrics;await p.waitForTimeout(3000);let after=(await session.send('Performance.getMetrics')).metrics;console.log(after.filter(e=>['TaskDuration','ScriptDuration','LayoutDuration','RecalcStyleDuration','LayoutCount','RecalcStyleCount'].includes(e.name)).map(e=>({name:e.name,delta:e.value-before.find(x=>x.name===e.name).value})));
-}finally{await b.close()}})();

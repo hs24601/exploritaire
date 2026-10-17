@@ -1,1 +1,0 @@
-const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();try{const c=await b.newBrowserCDPSession();const {gpu}=await c.send('SystemInfo.getInfo');console.log(JSON.stringify({devices:gpu.devices,renderer:gpu.auxAttributes.glRenderer,compositing:gpu.featureStatus.gpu_compositing}));}finally{await b.close()}})();

@@ -1,3 +1,4 @@
+import { TileTableauPreview } from './TileTableauPreview';
 import { EditorTabs, useEditorDrag } from '../components/EditorWorkspace';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -8,14 +9,14 @@ import './TileEditor.css';
 let recentTiles: AuthoredTile[] = [];
 const tileSignature = ({ id, column, row, ...template }: AuthoredTile) => JSON.stringify(template);
 
-type Props = { tools?: React.ReactNode; contextMenu?: { cell: GridCell; x: number; y: number } | null; onDismissMenu?: () => void; document: TileDocument; cell: GridCell; onSelectCell: (cell: GridCell) => void;
+type Props = { workspace?: boolean; renderTableaus?: (tile: AuthoredTile | null) => React.ReactNode; tools?: React.ReactNode; contextMenu?: { cell: GridCell; x: number; y: number } | null; onDismissMenu?: () => void; document: TileDocument; cell: GridCell; onSelectCell: (cell: GridCell) => void;
   onChange: (document: TileDocument) => void; onApply: (document: TileDocument) => void; onClose: () => void };
 const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
-export function TileEditor({ tools, document, cell, onSelectCell, onChange, onApply, onClose, contextMenu, onDismissMenu }: Props) {
+export function TileEditor({ workspace = false, renderTableaus, tools, document, cell, onSelectCell, onChange, onApply, onClose, contextMenu, onDismissMenu }: Props) {
   const floating = useEditorDrag();
   const [section, setSection] = useState('Tiles');
-  const [component, setComponent] = useState('Selection');
+  const [component, setComponent] = useState(workspace ? 'Identity' : 'Selection');
   const menuRef = useRef<HTMLDivElement>(null);
   const choices = [...recentTiles, ...TILE_KINDS.filter(kind => kind !== 'hero-den').map(kind => newAuthoredTile(kind, 0, 0, `template-${kind}`))].filter((tile, i, all) => all.findIndex(other => tileSignature(other) === tileSignature(tile)) === i).slice(0, 5);
   useEffect(() => {
@@ -95,9 +96,9 @@ export function TileEditor({ tools, document, cell, onSelectCell, onChange, onAp
       if (commit({ ...document, tiles: [...document.tiles!, next] }, 'Tile added to the draft preview.')) { onSelectCell(target); onDismissMenu?.(); }
     }}>{template.title}</button>)}
     <button type="button" onClick={onDismissMenu}>Cancel</button>
-  </div>, window.document.body)}{createPortal(<aside ref={node => { floating.ref.current = node; }} style={floating.style} data-editor-safe="true" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} onWheel={e => e.stopPropagation()} className="tile-editor" aria-label="Developer tile editor" data-camera-ignore="true">
-    <div className="tile-editor-heading editor-drag-handle" {...floating.handle}><div><small>DEVELOPER TOOL</small><h2>Edit tiles</h2></div><button type="button" onClick={onClose} disabled={saving} aria-label="Close tile editor">×</button></div>
-    <div className="editor-command-bar">      <button disabled={saving} onClick={() => { try { onApply(prepareDocument()); setError(''); setStatus('Applied to this playtest. Close the editor to resume. Disk data has not changed.'); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to apply'); } }}>Apply to playtest</button>
+  </div>, window.document.body)}{createPortal(<aside ref={node => { floating.ref.current = node; }} style={floating.style} data-editor-safe="true" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} onWheel={e => e.stopPropagation()} className={`tile-editor ${workspace ? 'tile-editor--workspace' : ''}`} aria-label="Developer tile editor" data-camera-ignore="true">
+    <div className="tile-editor-heading editor-drag-handle" {...floating.handle}><div><small>PROTO AUTHORING</small><h2>Tiles &amp; tableaus</h2></div><button type="button" onClick={onClose} disabled={saving} aria-label="Close tile editor">×</button></div>
+    <div className="editor-command-bar">      <button disabled={saving} onClick={() => { try { onApply(prepareDocument()); setError(''); setStatus('Applied to this playtest. Close the editor to resume. Disk data has not changed.'); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to apply'); } }}>{workspace ? 'Apply tiles to playtest' : 'Apply to playtest'}</button>
       <button disabled={saving} onClick={async () => {
         try {
           const next = prepareDocument(); setSaving(true); setError(''); setStatus('Saving authored tile data…');
@@ -107,11 +108,20 @@ export function TileEditor({ tools, document, cell, onSelectCell, onChange, onAp
           setStatus('Saved to src/data/protoTiles.json. The development server reloads the game with the authored layout.');
         } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to save authored data'); }
         finally { setSaving(false); }
-      }}>Save authored data</button>
-      <button disabled={saving} onClick={exportJson}>Export authored JSON</button>
-      <button disabled={saving} onClick={onClose}>Close · discard unapplied draft</button></div>
-    <EditorTabs names={['Tiles', 'Terrain defaults', 'Tools']} value={section} onChange={setSection} label="Editor tools" />
-    <div hidden={section !== 'Tools'}>{tools}</div><div hidden={section !== 'Tiles'}>
+      }}>{workspace ? 'Save tile data' : 'Save authored data'}</button>
+      <button disabled={saving} onClick={exportJson}>{workspace ? 'Export tile JSON' : 'Export authored JSON'}</button>
+      <label className="tile-editor-import">Import tile JSON<input aria-label="Import tile JSON" disabled={saving} type="file" accept=".json,application/json" onChange={async event => {
+        const file=event.target.files?.[0]; event.target.value=''; if(!file)return;
+        try { const next=JSON.parse(await file.text()); validateTileDocument(next); if(!next.tiles)throw new Error('Import requires a complete tile layout'); if(commit(next,'Imported tile draft. Apply or save to use it.'))onSelectCell(TABLE_GRID.cell(0,2)); }
+        catch(reason){setError(reason instanceof Error ? reason.message : 'Invalid tile JSON');}
+      }} /></label>
+      <button disabled={saving} onClick={onClose}>Close · playtest applied data</button></div>
+    <div className="tile-editor-context">    <label>Choose tile<select aria-label="Choose tile" value={selected?.id ?? ''} onChange={event => { const entry = document.tiles!.find(t => t.id === event.target.value); if (entry) onSelectCell(TABLE_GRID.cell(entry.column, entry.row)); }}>
+      <option value="">Empty cell</option>{document.tiles!.map(entry => <option value={entry.id} key={entry.id}>{entry.title} · {entry.column},{entry.row}</option>)}
+    </select></label><p className="tile-editor-current"><strong>{tile?.title ?? 'Empty cell'}</strong> · {TABLE_GRID.reference(cell)}{tile && ' · '+tile.kind}</p></div>
+    <EditorTabs names={['Tiles', 'Terrain defaults', ...(renderTableaus ? ['Tableaus'] : []), ...(tools ? ['Tools'] : [])]} value={section} onChange={setSection} label="Editor tools" />
+    <div hidden={section !== 'Tableaus'}>{renderTableaus?.(tile)}</div><div hidden={section !== 'Tools'}>{tools}</div><div hidden={section !== 'Tiles'}>
+
     <EditorTabs names={['Selection', 'Identity', 'Travel', 'Resources', 'Rules', 'Lighting']} value={component} onChange={setComponent} label="Tile components" />
     <div className="tile-editor-selection" hidden={component !== 'Selection'}><p>Full terrain preview · gameplay paused. Changes below stay in a draft until applied or saved.</p>
     <div className="tile-editor-actions">
@@ -119,9 +129,7 @@ export function TileEditor({ tools, document, cell, onSelectCell, onChange, onAp
       <button disabled={!future.length || saving} onClick={() => { const next = future[0]; setHistory(items => [...items, copy(document)]); setFuture(items => items.slice(1)); onChange(next); setStatus('Draft change restored.'); }}>Redo edit</button>
     </div>
     <label>Selected cell<input readOnly value={TABLE_GRID.reference(cell)} /></label>
-    <label>Choose tile<select aria-label="Choose tile" value={selected?.id ?? ''} onChange={event => { const entry = document.tiles!.find(t => t.id === event.target.value); if (entry) onSelectCell(TABLE_GRID.cell(entry.column, entry.row)); }}>
-      <option value="">Empty cell</option>{document.tiles!.map(entry => <option value={entry.id} key={entry.id}>{entry.title} · {entry.column},{entry.row}</option>)}
-    </select></label>
+
     <div className="tile-editor-actions">
       <label>Column<input aria-label="Select column" type="number" min="-7" max="7" value={cell.column} onChange={event => { const col = Number(event.target.value); if (Number.isInteger(col) && Math.abs(col) <= 7) onSelectCell(TABLE_GRID.cell(col, cell.row)); }} /></label>
       <label>Row<input aria-label="Select row" type="number" min="-7" max="7" value={cell.row} onChange={event => { const row = Number(event.target.value); if (Number.isInteger(row) && Math.abs(row) <= 7) onSelectCell(TABLE_GRID.cell(cell.column, row)); }} /></label>
@@ -152,13 +160,15 @@ export function TileEditor({ tools, document, cell, onSelectCell, onChange, onAp
         <label>Columns after breach<input type="number" min="1" max="10" value={tile.passage.columns} onChange={event=>update({passage:{...tile.passage!,columns:Number(event.target.value)}})} /></label>
         <label>Breach AP<input type="number" min="1" max="100" value={tile.passage.breachAP} onChange={event=>update({passage:{...tile.passage!,breachAP:Number(event.target.value)}})} /></label>
         </>}</>}
-        <p>Blank overrides inherit terrain defaults. Zero STA terrain requires no travel cards.</p>
+        {renderTableaus && <button type="button" onClick={() => setSection('Tableaus')}>Edit travel tableau layout</button>}
+        <p>Blank overrides inherit terrain defaults. Travel layouts override the inherited card count. Zero STA still uses card-driven crossings.</p>
         </div><div hidden={component !== 'Resources'}>{tile.kind === 'berry-patch' && <label className="tile-editor-check"><input type="checkbox" checked={tile.berryPatchVariant === 'sparse'} onChange={event => update({ berryPatchVariant: event.target.checked ? 'sparse' : undefined,
           ...(event.target.checked ? { populationDensity: 1, tableauSize: 0, opensTableauOnArrival: false } : { tableauSize: 28, opensTableauOnArrival: undefined }) })} />Sparse patch · one bush, one travel manaberry</label>}
         <label>Population density (0–10)<input type="number" min="0" max="10" step="1" disabled={tile.berryPatchVariant === 'sparse'} value={tile.populationDensity ?? (tile.kind === 'woods' ? 3 : tile.kind === 'berry-patch' ? 2 : 0)} onChange={event => update({ populationDensity: Number(event.target.value) })} /></label>
         <label>Resource density<input type="number" min="0" max="1" step="0.05" disabled={protectedDen || !['woods'].includes(tile.kind)} value={tile.resourceDensity} onChange={event => update({ resourceDensity: Number(event.target.value) })} /></label>
         <label>Gathering deal size<input type="number" min="0" max="51" disabled={protectedDen || tile.kind !== 'woods'} value={tile.tableauSize} onChange={event => update({ tableauSize: Number(event.target.value) })} /></label>
-        <p>Woods deals can be tuned here. Manaberry and path deals use their existing game generators; encounters retain existing authored behavior.</p>
+        <p>{tile.kind === 'hero-den' ? 'Den rest: six columns of five cards, plus 22 stock cards (one initially revealed). Plays restore inspiration. Travel layout assignments do not change rest.' : tile.kind === 'water' ? 'Ponds use Proto fishing, with no gathering tableau.' : tile.berryPatchVariant === 'sparse' ? 'Sparse patches have no gathering deal: the finite manaberry is earned by completing travel.' : tile.kind === 'berry-patch' ? 'Dense patches use Proto’s finite manaberry generator. Scripted days supply their own finite gathering deals.' : tile.kind === 'path' ? 'Paths use the resource-free 13-card arrival deal.' : tile.kind === 'woods' ? 'Woods use these resource-density and deal-size values in Proto’s gathering generator. Travel layout assignments are separate.' : tile.passage ? 'The passage exposes its crossing after a legal breach. No gathering deal.' : 'This terrain has no gathering deal.'}</p>
+        {component === 'Resources' && <TileTableauPreview tile={tile} document={document} />}
         </div><div hidden={component !== 'Rules'}><label>Threat<select value={tile.threat} disabled={protectedDen} onChange={event => update({ threat: event.target.value as AuthoredTile['threat'] })}>{['none', 'low', 'high'].map(t => <option key={t}>{t}</option>)}</select></label>
         <label className="tile-editor-check"><input type="checkbox" checked={tile.unlocked} disabled={protectedDen} onChange={event => update({ unlocked: event.target.checked })} />Unlocked</label>
         <label className="tile-editor-check"><input type="checkbox" checked={tile.initiallyRevealed} onChange={event => update({ initiallyRevealed: event.target.checked })} />Revealed at game start</label>

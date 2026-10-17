@@ -49,22 +49,33 @@ export function DayObjectiveWaypoint(props: Props) {
     setAutomaticOpacity(0);
     setTapped(false); setHovered(false); setFocused(false);
   }, [props.objective.biomeId, props.objective.label]);
+  const measure = useRef<() => void>(() => {});
+  // The tracker is fixed UI: measure it on mount, resize and React commits,
+  // never inside the camera frame, where layout reads stalled every frame.
+  useLayoutEffect(() => { measure.current(); });
   useLayoutEffect(() => {
     const element = layer.current!, map = element.closest('.proto-map')!;
     const tracker = element.querySelector<HTMLElement>('.day-objective__tracker')!;
     const line = element.querySelector('line')!, ring = element.querySelector('circle')!, grid = element.querySelector('polygon')!;
-    const place = () => {
-      const view = element.getBoundingClientRect(), point = input.current.project(input.current.objective.position);
+    let layout = { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, boxWidth: 0, boxHeight: 0 };
+    measure.current = () => {
+      const view = element.getBoundingClientRect();
       const config = map.querySelector('.art-settings__cog')?.getBoundingClientRect();
       const controls = map.querySelector('.proto-travel-controls')?.getBoundingClientRect();
       let top = Math.max(12, (config?.bottom ?? view.top + 40) - view.top + 12);
       const x = view.width - tracker.offsetWidth - 12;
       // A wrapping travel toolbar may occupy the same right-hand corner.
       if (controls && controls.right > view.left + x && controls.bottom > view.top + top) top = controls.bottom - view.top + 12;
-      tracker.style.top = `${top}px`;
+      if (tracker.style.top !== `${top}px`) tracker.style.top = `${top}px`;
       const box = tracker.getBoundingClientRect();
-      const left = box.left - view.left, right = box.right - view.left, bottom = box.bottom - view.top;
-      element.dataset.offscreen = String(point.x < 0 || point.x > view.width || point.y < 0 || point.y > view.height);
+      layout = { width: view.width, height: view.height, top, left: box.left - view.left, right: box.right - view.left,
+        bottom: box.bottom - view.top, boxWidth: box.width, boxHeight: box.height };
+      place();
+    };
+    const place = () => {
+      const point = input.current.project(input.current.objective.position);
+      const { top, left, right, bottom } = layout, box = { width: layout.boxWidth, height: layout.boxHeight };
+      element.dataset.offscreen = String(point.x < 0 || point.x > layout.width || point.y < 0 || point.y > layout.height);
       line.setAttribute('x1', String(Math.max(left, Math.min(right, point.x))));
       line.setAttribute('y1', String(Math.max(top, Math.min(bottom, point.y))));
       line.setAttribute('x2', String(point.x)); line.setAttribute('y2', String(point.y));
@@ -74,13 +85,13 @@ export function DayObjectiveWaypoint(props: Props) {
         .map(([x, y]) => { const p = input.current.project({ x, y }); return `${p.x},${p.y}`; }).join(' '));
       const arrow = element.querySelector<SVGElement>('.day-objective__arrow')!;
       arrow.style.transform = `rotate(${Math.atan2(point.y - top - box.height / 2, point.x - left - box.width / 2)}rad)`;
-      element.style.visibility = 'visible';
+      if (element.style.visibility !== 'visible') element.style.visibility = 'visible';
     };
-    place();
-    const unsubscribe = props.onCameraFrame(place), resize = new ResizeObserver(place);
+    measure.current();
+    const unsubscribe = props.onCameraFrame(place), resize = new ResizeObserver(() => measure.current());
     resize.observe(element); resize.observe(tracker);
     const controls = map.querySelector('.proto-travel-controls'); if (controls) resize.observe(controls);
-    return () => { unsubscribe(); resize.disconnect(); };
+    return () => { unsubscribe(); resize.disconnect(); measure.current = () => {}; };
   }, [props.objective, props.project, props.onCameraFrame]);
   useLayoutEffect(() => {
     const clear = (event: PointerEvent) => { if (!layer.current?.querySelector('.day-objective__tracker')?.contains(event.target as Node)) { setTapped(false); window.dispatchEvent(new Event('proto-quest-highlight-cancel')); } };

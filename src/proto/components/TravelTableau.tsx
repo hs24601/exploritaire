@@ -1,3 +1,4 @@
+import { layoutBounds } from '../tableauLayouts';
 import { assignedMovesFor, useActorLoadouts } from '../actorLoadouts';
 import { TravelMapTableau } from './TravelMapTableau';
 import { TableauTemplate, TableauPlayArea } from './TableauTemplate';
@@ -29,6 +30,9 @@ export function TravelTableau({ mapOverlay=false, hours=0, journey, actorName, u
   const rig=createTableauLightRig(hours,{x:0,y:0},[]);
   const biome={tileType:segment?.unknown?'unexplored':segment?.sparseBerry!==undefined?'berry-patch-sparse':segment?.kind,terrain:segment?.kind==='water'?'water' as const:'woods' as const};
   const obstruction=journey.obstruction;
+  const freeBounds = segment?.layout ? layoutBounds(segment.layout.cards.map(c=>({pose:c}))) : {width:3.65,height:3.65};
+  const freeLayout = journey.columns.flat().some(card => card.pose);
+  if(freeLayout)mapOverlay=false;
   const eligible=assignedMovesFor(receiver).filter(move=>move.terrainTags?.some(tag=>obstruction?.tags.includes(tag)));
   const memberAP=members?.find(m=>m.id===receiver)?.ap??utilityAP;
   const header = <>
@@ -80,10 +84,14 @@ export function TravelTableau({ mapOverlay=false, hours=0, journey, actorName, u
     <TableauLighting hours={hours} />
     {!mapOverlay && (segment?.unknown?<div className="proto-tableau-landscape" data-biome="unexplored" style={{background:'#111b1c'}} />:<TableauLandscape berriesAvailable={[...journey.columns.flat(), ...journey.reserve].some(card => card.foodSource === 'berries')} tileType={biome.tileType??'path'} manaGlow={Boolean(segment?.sparseBerry && [...journey.columns.flat(), ...journey.reserve].some(card => card.foodSource === 'berries'))} />)}
     <TableauTemplate header={header} foundations={foundations}>
-    <TableauPlayArea columns={journey.columns.length} rows={Math.max(1,...journey.columns.map(c=>c.length))} rig={rig} hours={hours} biome={biome}>
+    <TableauPlayArea columns={freeLayout ? freeBounds.width : journey.columns.length} rows={freeLayout ? 1+(freeBounds.height-88/63)/.48 : Math.max(1,...journey.columns.map(c=>c.length))} rig={rig} hours={hours} biome={biome}>
+    {freeLayout ? <div className="travel-free-layout proto-tableau-stage" data-layout="freeform" style={{width:`calc(var(--classic-card-w) * ${freeBounds.width})`,height:`calc(var(--classic-card-w) * ${freeBounds.height})`}}>{journey.columns.flatMap((column, i) => column.map((card, row) => {
+      const pose = card.pose;
+      return renderCard(card, i, row, { position: 'absolute', left: `calc(var(--classic-card-w) * ${pose?.x ?? i})`, top: `calc(var(--classic-card-w) * ${pose?.y ?? 0})`, transform: `rotate(${pose?.rotation ?? 0}deg)`, zIndex: pose?.layer ?? 1 });
+    }))}</div> :
     <div className="travel-card-grid proto-tableau-stage" style={{['--travel-columns' as string]:journey.columns.length}}>{journey.columns.map((column, i) => <div key={i} className="travel-column">{column.map((card,row)=>{
       return renderCard(card,i,row,{position:'absolute',top:`calc(var(--classic-stack-step) * ${row})`,left:0,zIndex:row+1});
-    })}</div>)}</div>
+    })}</div>)}</div>}
     </TableauPlayArea>
     </TableauTemplate>
   </section>;

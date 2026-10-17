@@ -1,17 +1,127 @@
 Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
   npx update-browserslist-db@latest
   Why you should do it regularly: https://github.com/browserslist/update-db#readme
-12:19:02 PM [vite] Pre-transform error: Failed to resolve import "./heroCombatSprites" from "src/proto/combatDemoRig.ts". Does the file exist?
-12:19:02 PM [vite] Pre-transform error: Failed to resolve import "./heroCombatSprites" from "src/proto/combatDemoRig.ts". Does the file exist?
-12:19:02 PM [vite] Internal server error: Failed to resolve import "./heroCombatSprites" from "src/proto/combatDemoRig.ts". Does the file exist?
+8:26:17 PM [vite] Pre-transform error: C:\dev\Exploritaire\src\proto\ProtoVariant.tsx: Unexpected token (2350:10)
+
+  2348 |             state.tableau[cardTransport.sourceColumnIndex]?.find((card) => card.id === cardTransport.cardId)
+  2349 |               ?? { id: cardTransport.cardId, rank: 1 },
+> 2350 |           }
+       |           ^
+  2351 |           positionRef={cardTransportPositionRef}
+  2352 |           size={cardTransport.size}
+  2353 |         />
+8:26:18 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\ProtoVariant.tsx: Unexpected token (2350:10)
+
+  2348 |             state.tableau[cardTransport.sourceColumnIndex]?.find((card) => card.id === cardTransport.cardId)
+  2349 |               ?? { id: cardTransport.cardId, rank: 1 },
+> 2350 |           }
+       |           ^
+  2351 |           positionRef={cardTransportPositionRef}
+  2352 |           size={cardTransport.size}
+  2353 |         />
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/ProtoVariant.tsx:2350:10
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.unexpected (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6619:16)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11432:22)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10779:36)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4632:31)
+      at TypeScriptParserMixin.jsxParseAttributeValue (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4604:21)
+      at TypeScriptParserMixin.jsxParseAttribute (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4653:38)
+      at TypeScriptParserMixin.jsxParseOpeningElementAfterName (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4667:28)
+      at TypeScriptParserMixin.jsxParseOpeningElementAfterName (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10033:18)
+      at TypeScriptParserMixin.jsxParseOpeningElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4662:17)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4686:33)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+9:43:39 AM [vite] Pre-transform error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+9:43:40 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
   Plugin: vite:import-analysis
-  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:34
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 9)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:44:09 AM [vite] Pre-transform error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+9:44:09 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 9)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:44:42 AM [vite] Pre-transform error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+9:44:42 AM [vite] Pre-transform error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+9:44:43 AM [vite] Internal server error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:48
   4  |  import { MOCHI_DIRECTIONAL_SPRITE } from "./mochiSprite";
   5  |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "./heroSittingSprite";
-  6  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
-     |                                     ^
-  7  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
-  8  |  import { BATTLE_TURN_PRIORITY } from "./battleTurnPriority";
+  6  |  import { HERO_WALKING_DIRECTIONAL_SPRITE } from "./heroWalkingSprite";
+     |                                                   ^
+  7  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
+  8  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
       at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
       at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
       at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
@@ -22,94 +132,346 @@ Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
       at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
       at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
       at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
-12:19:52 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
-12:19:52 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
-12:19:52 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+9:44:43 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
   Plugin: vite:import-analysis
-  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
-  1  |  import measurements from "./art/heroCombatLayout.json";
-     |                            ^
-  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
-  3  |  const layout = {
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
       at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
       at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
       at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
       at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
       at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
-      at async Promise.all (index 0)
+      at async Promise.all (index 9)
       at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
       at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
       at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
       at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
-12:20:05 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
-12:20:05 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+9:45:12 AM [vite] Pre-transform error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+9:45:12 AM [vite] Internal server error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
   Plugin: vite:import-analysis
-  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
-  1  |  import measurements from "./art/heroCombatLayout.json";
-     |                            ^
-  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
-  3  |  const layout = {
+  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:48
+  4  |  import { MOCHI_DIRECTIONAL_SPRITE } from "./mochiSprite";
+  5  |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "./heroSittingSprite";
+  6  |  import { HERO_WALKING_DIRECTIONAL_SPRITE } from "./heroWalkingSprite";
+     |                                                   ^
+  7  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
+  8  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
       at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
       at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
       at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
       at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
       at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
-      at async Promise.all (index 0)
+      at async Promise.all (index 5)
       at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
       at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
       at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
       at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
-12:20:34 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
-12:20:34 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+9:45:12 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
   Plugin: vite:import-analysis
-  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
-  1  |  import measurements from "./art/heroCombatLayout.json";
-     |                            ^
-  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
-  3  |  const layout = {
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
       at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
       at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
       at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
       at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
       at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
-      at async Promise.all (index 0)
+      at async Promise.all (index 9)
       at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
       at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
       at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
       at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
-12:21:09 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
-12:21:10 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+9:45:16 AM [vite] Internal server error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
   Plugin: vite:import-analysis
-  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
-  1  |  import measurements from "./art/heroCombatLayout.json";
-     |                            ^
-  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
-  3  |  const layout = {
+  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:48
+  4  |  import { MOCHI_DIRECTIONAL_SPRITE } from "./mochiSprite";
+  5  |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "./heroSittingSprite";
+  6  |  import { HERO_WALKING_DIRECTIONAL_SPRITE } from "./heroWalkingSprite";
+     |                                                   ^
+  7  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
+  8  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
       at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
       at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
       at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
       at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
       at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
-      at async Promise.all (index 0)
+      at async Promise.all (index 5)
       at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
       at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
       at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
       at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
-12:21:23 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
-12:21:24 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+9:45:16 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
   Plugin: vite:import-analysis
-  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
-  1  |  import measurements from "./art/heroCombatLayout.json";
-     |                            ^
-  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
-  3  |  const layout = {
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
       at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
       at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
       at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
       at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
       at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
-      at async Promise.all (index 0)
+      at async Promise.all (index 9)
       at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
       at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
       at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
       at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:45:17 AM [vite] Pre-transform error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+9:45:17 AM [vite] Pre-transform error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+9:45:17 AM [vite] Internal server error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:48
+  4  |  import { MOCHI_DIRECTIONAL_SPRITE } from "./mochiSprite";
+  5  |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "./heroSittingSprite";
+  6  |  import { HERO_WALKING_DIRECTIONAL_SPRITE } from "./heroWalkingSprite";
+     |                                                   ^
+  7  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
+  8  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 5)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:45:18 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 9)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:45:21 AM [vite] Pre-transform error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+9:45:21 AM [vite] Pre-transform error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+9:45:22 AM [vite] Internal server error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:48
+  4  |  import { MOCHI_DIRECTIONAL_SPRITE } from "./mochiSprite";
+  5  |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "./heroSittingSprite";
+  6  |  import { HERO_WALKING_DIRECTIONAL_SPRITE } from "./heroWalkingSprite";
+     |                                                   ^
+  7  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
+  8  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 5)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:45:22 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 9)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:45:50 AM [vite] Internal server error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:48
+  4  |  import { MOCHI_DIRECTIONAL_SPRITE } from "./mochiSprite";
+  5  |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "./heroSittingSprite";
+  6  |  import { HERO_WALKING_DIRECTIONAL_SPRITE } from "./heroWalkingSprite";
+     |                                                   ^
+  7  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
+  8  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 5)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:45:50 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 9)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:45:51 AM [vite] Pre-transform error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+9:45:51 AM [vite] Pre-transform error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+9:45:51 AM [vite] Internal server error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:48
+  4  |  import { MOCHI_DIRECTIONAL_SPRITE } from "./mochiSprite";
+  5  |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "./heroSittingSprite";
+  6  |  import { HERO_WALKING_DIRECTIONAL_SPRITE } from "./heroWalkingSprite";
+     |                                                   ^
+  7  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
+  8  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 5)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:45:51 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 9)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:46:44 AM [vite] Pre-transform error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+9:46:44 AM [vite] Pre-transform error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+9:46:45 AM [vite] Internal server error: Failed to resolve import "./heroWalkingSprite" from "src/proto/combatDemoRig.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:48
+  4  |  import { MOCHI_DIRECTIONAL_SPRITE } from "./mochiSprite";
+  5  |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "./heroSittingSprite";
+  6  |  import { HERO_WALKING_DIRECTIONAL_SPRITE } from "./heroWalkingSprite";
+     |                                                   ^
+  7  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
+  8  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 5)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+9:46:45 AM [vite] Internal server error: Failed to resolve import "../heroWalkingSprite" from "src/proto/components/TableActorSprite.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/components/TableActorSprite.tsx:7:66
+  22 |  import { HERO_DIRECTIONAL_SPRITE } from "../directionalSprites";
+  23 |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "../heroSittingSprite";
+  24 |  import { HERO_WALKING_DIRECTIONAL_SPRITE, HERO_WALK_STRIDE } from "../heroWalkingSprite";
+     |                                                                     ^
+  25 |  export function tableSpriteEye(camera, tilt, position) {
+  26 |    const angle = tilt.angle * Math.PI / 180, yaw = (camera.yaw ?? 0) * Math.PI / 180;
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 9)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+10:09:58 AM [vite] Pre-transform error: Transform failed with 1 error:
+C:/dev/Exploritaire/src/proto/propVolumeRenderer.ts:69:15: ERROR: Cannot use "continue" here:
+10:09:58 AM [vite] Internal server error: Transform failed with 1 error:
+C:/dev/Exploritaire/src/proto/propVolumeRenderer.ts:69:15: ERROR: Cannot use "continue" here:
+  Plugin: vite:esbuild
+  File: C:/dev/Exploritaire/src/proto/propVolumeRenderer.ts:69:15
+  
+  Cannot use "continue" here:
+  67 |          });
+  68 |        });
+  69 |        if(!copy)continue;
+     |                 ^
+  70 |        geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  71 |        geometry.setAttribute('normal',new THREE.BufferAttribute(normals,3));geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  
+      at failureErrorWithLog (C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:1472:15)
+      at C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:755:50
+      at responseCallbacks.<computed> (C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:622:9)
+      at handleIncomingPacket (C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:677:12)
+      at Socket.readFromStdout (C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:600:7)
+      at Socket.emit (node:events:508:28)
+      at addChunk (node:internal/streams/readable:559:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+      at Readable.push (node:internal/streams/readable:390:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+10:10:12 AM [vite] Internal server error: Transform failed with 1 error:
+C:/dev/Exploritaire/src/proto/propVolumeRenderer.ts:69:15: ERROR: Cannot use "continue" here:
+  Plugin: vite:esbuild
+  File: C:/dev/Exploritaire/src/proto/propVolumeRenderer.ts:69:15
+  
+  Cannot use "continue" here:
+  67 |          });
+  68 |        });
+  69 |        if(!copy)continue;
+     |                 ^
+  70 |        geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  71 |        geometry.setAttribute('normal',new THREE.BufferAttribute(normals,3));geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  
+      at failureErrorWithLog (C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:1472:15)
+      at C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:755:50
+      at responseCallbacks.<computed> (C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:622:9)
+      at handleIncomingPacket (C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:677:12)
+      at Socket.readFromStdout (C:\dev\Exploritaire\node_modules\esbuild\lib\main.js:600:7)
+      at Socket.emit (node:events:508:28)
+      at addChunk (node:internal/streams/readable:559:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+      at Readable.push (node:internal/streams/readable:390:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+12:13:21 PM [vite] Pre-transform error: Failed to load url /src/proto/components/useActorOcclusion.ts (resolved id: C:/dev/Exploritaire/src/proto/components/useActorOcclusion.ts) in C:/dev/Exploritaire/src/index.css. Does the file exist?

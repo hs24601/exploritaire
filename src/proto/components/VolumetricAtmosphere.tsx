@@ -6,6 +6,7 @@ import type { TableTilt } from '../tableTilt';
 import { AtmosphereBudget, atmospherePointAtHeight, projectAtmospherePoint, type AtmosphereScene } from '../volumetricAtmosphere';
 import { subscribeVisualLight } from '../visualLightClock';
 import { createAtmosphereRenderer } from './atmosphereRenderer';
+import { sceneActorBoxes, sceneViewport } from '../sceneProjection';
 
 type Props = {
   active: boolean;
@@ -97,8 +98,16 @@ export function VolumetricAtmosphere(props: Props) {
       const scale = current.lowQuality ? 0.12 : fallback ? 0.25 : budget.scale;
       const actorGuards: { image: HTMLImageElement | HTMLCanvasElement; x: number; y: number; width: number; height: number; angle: number }[]=[];
       const routeGuards: { x: number; y: number }[][]=[];
-      const actorOrigin=canvas.parentElement!.getBoundingClientRect();
-      for(const el of canvas.parentElement!.querySelectorAll<HTMLElement>('[data-board-piece="actor"]')) {
+      // Upright actors use the shared camera projection: measuring them here
+      // forced a full layout right after every camera transform write.
+      const projected=current.overhead ? null : sceneActorBoxes(), projectedOrigin=projected && sceneViewport();
+      if(projected&&projectedOrigin)for(const {id,box} of projected){
+        const el=canvas.parentElement!.querySelector<HTMLElement>(`[data-board-piece="actor"][data-actor-id="${CSS.escape(id)}"]`);
+        const image=el?.querySelector('canvas') ?? el?.querySelector('img');if(!image)continue;
+        actorGuards.push({image,x:(box.left+box.right)/2-projectedOrigin.left,y:(box.top+box.bottom)/2-projectedOrigin.top,width:box.width,height:box.height,angle:0});
+      }
+      const actorOrigin=projected&&projectedOrigin ? null : canvas.parentElement!.getBoundingClientRect();
+      if(actorOrigin)for(const el of canvas.parentElement!.querySelectorAll<HTMLElement>('[data-board-piece="actor"]')) {
         // Use the displayed rig, including its current pose and watercolor alpha.
         // Never substitute the actor definition's legacy static portrait.
         const image=el.querySelector('canvas') ?? el.querySelector('img');if(!image)continue;
@@ -123,8 +132,9 @@ export function VolumetricAtmosphere(props: Props) {
       }
       // Protect only the opaque card quadrilaterals, like the existing label
       // guards. World fog outside those faces and gameplay light stay intact.
-      const cardOrigin=canvas.parentElement!.getBoundingClientRect();
-      const cardGuards=Array.from(canvas.parentElement!.querySelectorAll<HTMLElement>('[data-world-card]')).map(card=>
+      const cards=canvas.parentElement!.querySelectorAll<HTMLElement>('[data-world-card]');
+      const cardOrigin=cards.length ? canvas.parentElement!.getBoundingClientRect() : null;
+      const cardGuards=!cardOrigin ? [] : Array.from(cards).map(card=>
         Array.from(card.querySelectorAll<HTMLElement>('[data-travel-card-corner]')).map(corner=>{const r=corner.getBoundingClientRect();return {x:r.x-cardOrigin.x-current.view.width/2,y:r.y-cardOrigin.y-current.view.height/2};})
       ).filter(points=>points.length===4);
       renderer.draw({ ...current, width:current.view.width, height:current.view.height, camera, tilt,

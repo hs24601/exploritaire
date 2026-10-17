@@ -1,3 +1,4 @@
+import { TableauEditor } from '../tooling/TableauEditor';
 import { tileHasBerries } from './berryPresentation';
 import { trackGameAnimation } from '../gameAnimations';
 import { dayOneDepartureCamera } from './departureCamera';
@@ -155,15 +156,15 @@ const addSpentComboProgress = (progress: Record<string, number>, ability: Pendin
 /** Size of the actor pop-up on its foundation card in the battle camera, in px. */
 
 
-export const ProtoVariant = () => {
-  const [editorDocument, setEditorDocument] = useState<TileDocument | null>(null);
+export const ProtoVariant = ({ authoring = false }: { authoring?: boolean } = {}) => {
+  const [editorDocument, setEditorDocument] = useState<TileDocument | null>(() => authoring ? JSON.parse(JSON.stringify(SAVED_TILE_DOCUMENT)) : null);
   const editorOpen = editorDocument !== null;
   const [scenarioRun, setScenarioRun] = useState(0);
   const [editorMenu, setEditorMenu] = useState<{ cell: ReturnType<typeof TABLE_GRID.cell>; x: number; y: number } | null>(null);
   const [editorCell, setEditorCell] = useState(() => TABLE_GRID.cell(0, 2));
   const appliedTileDocument = useRef<TileDocument | null>(null);
   const [state, setState] = useState<ProtoState>(() =>
-    createDayOneState(),
+    authoring ? createDayScenario('sandbox') : createDayOneState(),
   );
   useCameraStoryTriggers(state, scenarioRun, editorOpen);
   useEffect(() => {
@@ -261,7 +262,7 @@ export const ProtoVariant = () => {
     .filter(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)
     .map(actor => `${actor.biomeId}:${actor.id}`).sort().join('|');
   const [cycleLighting, setCycleLighting] = useState(false);
-  const [tableLightsEnabled, setTableLightsEnabled] = useState(true);
+  const [tableLightsEnabled, setTableLightsEnabled] = useState(!authoring);
   const globalLights = useGlobalLights();
   // Guidance highlights every playable tableau card; off by default.
   const [moveGuidance, setMoveGuidance] = useState(false);
@@ -1786,7 +1787,7 @@ const selectBiome = (biomeId: string) => {
   // Selection alone can be an inspection or a path crossed during travel.
   // Only arrival/staffing promotes the deal, including a completely cleared one.
   const [mapTravelTest, setMapTravelTest] = useState(false);
-  const mapTravelActive = mapTravelTest && Boolean(state.journey) && !combatDemoOpen;
+  const mapTravelActive = mapTravelTest && Boolean(state.journey) && !state.journey?.columns.flat().some(card => card.pose) && !combatDemoOpen;
   const tableauPresent = !mapTravelActive && (Boolean(state.journey || state.selectedBiomeId) || combatDemoOpen);
   const tableauOccupied = Boolean(state.selectedBiomeId) && fieldActors.length > 0 && !pondSelected;
   const journeyActive = Boolean(state.journey);
@@ -1898,7 +1899,7 @@ const selectBiome = (biomeId: string) => {
 
   return (
     <CalloutEditingProvider enabled={Boolean(import.meta.env.DEV && editorOpen)}><div
-      className={`proto-game-root ${editorOpen ? 'tile-editor-open' : ''} h-[100dvh] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(20,38,31,0.24),transparent_38%),linear-gradient(180deg,#05060a,#090d12_38%,#06070a)] p-[clamp(0.6rem,1.8vmin,1.2rem)] text-white`}
+      className={`proto-game-root ${authoring ? 'proto-authoring-root' : ''} ${editorOpen ? 'tile-editor-open' : ''} h-[100dvh] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(20,38,31,0.24),transparent_38%),linear-gradient(180deg,#05060a,#090d12_38%,#06070a)] p-[clamp(0.6rem,1.8vmin,1.2rem)] text-white`}
       onPointerDownCapture={event => { if (editorOpen && event.target instanceof Element && !event.target.closest('.tile-editor, .proto-map, [data-editor-safe]')) { event.preventDefault(); event.stopPropagation(); } }}
       onClickCapture={event => { if (editorOpen && event.target instanceof Element && !event.target.closest('.tile-editor, .proto-map, [data-editor-safe]')) { event.preventDefault(); event.stopPropagation(); } }}
       onKeyDownCapture={event => { if (editorOpen && event.target instanceof Element && !event.target.closest('.tile-editor, .proto-map, [data-editor-safe]')) { event.preventDefault(); event.stopPropagation(); } }}
@@ -1917,7 +1918,7 @@ const selectBiome = (biomeId: string) => {
       {state.dayScenario==='day02' && state.dayTwoAmbush && <BanksRescueCinema key={scenarioRun} onExit={()=>switchDayScenario('day02')} onComplete={()=>switchDayScenario('day03')} />}
       <DayForagingCallout state={state} hidden={combatDemoOpen} cinematicBeat={dayCinema.enabled ? dayCinema.beat : null} />
       {import.meta.env.DEV && <CameraChoreographyTools tiles={state.biomeTiles.map(t => ({ id: t.id, label: t.title }))} />}
-      {editorDocument && <TileEditor tools={<CameraChoreographyButton />} document={editorDocument} cell={editorCell} contextMenu={editorMenu} onDismissMenu={() => setEditorMenu(null)} onSelectCell={setEditorCell} onChange={setEditorDocument}
+      {editorDocument && <TileEditor workspace={authoring} tools={authoring ? undefined : <CameraChoreographyButton />} renderTableaus={tile => <TableauEditor target={tile ? tile.berryPatchVariant === 'sparse' ? 'berry-patch-sparse' : tile.kind : undefined} tileLabel={tile?.title} />} document={editorDocument} cell={editorCell} contextMenu={editorMenu} onDismissMenu={() => setEditorMenu(null)} onSelectCell={setEditorCell} onChange={setEditorDocument}
         onClose={() => { setEditorMenu(null); setEditorDocument(null); }} onApply={document => {
           const next = applyTileDocument(state, document);
           appliedTileDocument.current = JSON.parse(JSON.stringify(document));
@@ -2407,8 +2408,8 @@ const selectBiome = (biomeId: string) => {
               {combatDemoOpen ? <CombatDemo key={combatDemoReplay} battle={battleScene} onClose={() => setCombatDemoOpen(false)} onRestart={watchBattleScene}
                 onEscape={dangerFighter ? () => { setCombatDemoOpen(false); leaveTableau(); } : undefined}
                 overlay={<>{mapSettings()}<WorldMinimap tiles={state.biomeTiles} actors={state.worldActors} selectedBiomeId={state.selectedBiomeId} onViewMap={() => { setCombatDemoOpen(false); setMobilePanel('map'); }} /></>} /> : <ProtoMap departureCamera={dayCinema.enabled ? dayOneDepartureCamera(state) : undefined} cameraDirectorDisabled={Boolean(state.dayScenario === 'day02' && state.dayTwoAmbush)} key={scenarioRun}
-                storyMood={dayCinema.active ? dayCinema.beat?.mood : undefined}
-                peripheralDarkness={dayCinema.active ? dayCinema.beat?.peripheralDarkness : undefined}
+                storyMood={dayCinema.active ? dayCinema.presentationBeat?.mood : undefined}
+                peripheralDarkness={dayCinema.active ? dayCinema.presentationBeat?.peripheralDarkness : undefined}
                 persistentTileLabelIds={dayCinema.tileLabelIds}
                 objective={editorOpen ? null : dayObjective(state)}
                 travelTableau={mapTravelActive ? travelTableau : undefined}

@@ -29,9 +29,12 @@ export function useEnvironmentFootprints(root: RefObject<HTMLDivElement | null>,
         // camera turn cannot slide their trunks around within the tile.
         const fit = d.sceneryVolume || d.sceneryBillboard ? fitSceneryVolumeFootprint(foot, desiredWidth, desiredHeight, owner)
           : fitSceneryFootprint(foot, desiredWidth, desiredHeight, owner, d.sceneryHeading !== undefined ? number('sceneryHeading') * 180 / Math.PI : camera.yaw ?? 0);
-        el.style.left = `calc(50% + ${fit.position.x}px)`;
-        el.style.top = `calc(50% + ${fit.position.y}px)`;
-        el.style.setProperty('--scenery-fit-scale', String(fit.width / Math.max(width, 1e-6)));
+        // Most fits are yaw-independent: rewriting them restyled (and, for the
+        // custom property, re-inherited) every prop on each orbit frame.
+        const left = `calc(50% + ${fit.position.x}px)`, top = `calc(50% + ${fit.position.y}px)`, scale = String(fit.width / Math.max(width, 1e-6));
+        if (el.style.left !== left) el.style.left = left;
+        if (el.style.top !== top) el.style.top = top;
+        if (el.style.getPropertyValue('--scenery-fit-scale') !== scale) el.style.setProperty('--scenery-fit-scale', scale);
       });
     }, [root, getTilt]);
     // A settled React render can change the billboard's base dimensions.

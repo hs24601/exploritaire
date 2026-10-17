@@ -74,4 +74,24 @@ describe('shared media loading', () => {
     expect(prepare).toHaveBeenCalledTimes(5);
     expect(progress).toHaveBeenLastCalledWith(5, 5);
   });
+
+  it('keeps opening artwork warm through background eviction and releases it with the scene', async () => {
+    const { loadMediaImage, retainMediaImages } = await import('./mediaCache');
+    const release = retainMediaImages(['hero.png']);
+    for (const name of ['hero.png', 'background-a.png', 'background-b.png', 'background-c.png']) {
+      const pending = loadMediaImage(name);
+      const image = images[images.length - 1];
+      image.naturalWidth = 4096; image.naturalHeight = 4096;
+      image.onload?.(); await pending;
+    }
+    expect(await loadMediaImage('hero.png')).toBe(images[0]);
+    expect(images).toHaveLength(4);
+    release();
+    const extra = loadMediaImage('extra.png');
+    images[4].naturalWidth = 4096; images[4].naturalHeight = 4096;
+    images[4].onload?.(); await extra;
+    const reload = loadMediaImage('hero.png');
+    expect(images).toHaveLength(6);
+    images[5].onload?.(); await reload;
+  });
 });

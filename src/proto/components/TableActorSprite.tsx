@@ -3,7 +3,8 @@ import { useActorExpression } from '../actorExpression';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { loadMediaTexture } from '../mediaTexture';
-import { battleSpriteAssets } from '../battleSpriteAssets';
+import { battleSpriteAssets, HERO_EXPRESSION_ASSETS } from '../battleSpriteAssets';
+import { OPENING_HERO_ASSETS } from '../openingHeroAssets';
 import { useArtStyle } from '../artStyle';
 import { createDirectionalSpriteLibrary } from '../directionalSpriteRig';
 import { HERO_DIRECTIONAL_SPRITE } from '../directionalSprites';
@@ -41,9 +42,7 @@ export function TableActorSprite({ actorId = 'hero', position, heading, getCamer
   const [ready, setReady] = useState(false);
   useEffect(() => {
     setReady(false);
-    const assets: Record<string, string> = { ...battleSpriteAssets(artStyle), ...BANKS_SPRITE_ASSETS,
-      heroSittingLowSadFace: 'actors/hero/faces-watercolor-v1/hero-sitting-sad-low-face-v1.png',
-      heroSittingHighSadFace: 'actors/hero/faces-watercolor-v1/hero-sitting-sad-high-face-v1.png' };
+    const assets: Record<string, string> = { ...battleSpriteAssets(artStyle), ...BANKS_SPRITE_ASSETS, ...HERO_EXPRESSION_ASSETS, ...(actorId === 'hero' && artStyle === 'paint' ? OPENING_HERO_ASSETS : {}) };
     const painted = artStyle === 'paint' || actorId === 'banks';
     let stopped = false, frame = 0;
     let renderer: THREE.WebGLRenderer | undefined;
@@ -65,7 +64,13 @@ export function TableActorSprite({ actorId = 'hero', position, heading, getCamer
           return [key, texture] as const;
         }));
         if (actorId === 'hero' && painted) {
-          for (const key of ['heroSittingLowSadFace', 'heroSittingHighSadFace'] as const) {
+          for (const key of Object.keys(OPENING_HERO_ASSETS).filter(key => key.endsWith('Joyful'))) {
+            const texture = await loadMediaTexture(`${import.meta.env.BASE_URL}assets/${assets[key]}`);
+            texture.colorSpace = THREE.SRGBColorSpace; texture.magFilter = texture.minFilter = THREE.LinearFilter;
+            texture.generateMipmaps = false; texture.userData.watercolor = true;
+            textures.push(texture); entries.push([key, texture]);
+          }
+          for (const key of Object.keys(HERO_EXPRESSION_ASSETS)) {
             const texture = await loadMediaTexture(`${import.meta.env.BASE_URL}assets/${assets[key]}`);
             texture.colorSpace = THREE.SRGBColorSpace; texture.magFilter = texture.minFilter = THREE.LinearFilter;
             texture.generateMipmaps = false; texture.userData.watercolor = true;
