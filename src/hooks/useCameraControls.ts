@@ -1,5 +1,7 @@
+import { gameTime } from '../gameTime';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { CameraInteractionLock } from './cameraInteractionLock';
+import { ORBIT_DEG_PER_PX, orbitPitch } from './cameraOrbit';
 
 export interface CameraState {
   x: number;
@@ -9,6 +11,10 @@ export interface CameraState {
    * transform is rotate(yaw) translate(x, y) scale(scale), so x and y are in
    * the spun frame and a pan still follows the pointer at any angle. */
   yaw?: number;
+  /** Optional manual table tilt from overhead, in degrees. */
+  pitch?: number;
+  /** Automatic composition offset after perspective, in screen pixels. */
+  aimY?: number;
 }
 
 /** Rotates a vector by `deg` degrees, clockwise on screen (CSS rotate()). */
@@ -20,7 +26,7 @@ export const rotateVector = (vector: { x: number; y: number }, deg: number) => {
 };
 
 /** Degrees of spin per pixel of a right- or middle-button drag. */
-const SPIN_DEG_PER_PX = 0.4;
+const SPIN_DEG_PER_PX = ORBIT_DEG_PER_PX;
 /** How long a stepped or reset spin eases for. */
 const SPIN_EASE_MS = 320;
 
@@ -33,6 +39,8 @@ interface UseCameraControlsOptions {
   zoomEnabled?: boolean;
   baseScale?: number;
   canStartPanAt?: (clientX: number, clientY: number) => boolean;
+  /** Objects covered by scenery or gesture layers still lock the camera on pickup. */
+  isObjectGestureAt?: (clientX: number, clientY: number) => boolean;
   listenOnWindow?: boolean;
   /** Coordinate model for the content element's transform.
    *  'scale' (default) — screenPos = translate + contentPos × effectiveScale.
@@ -47,6 +55,8 @@ interface UseCameraControlsOptions {
   centeredZoom?: boolean;
   /** Content-to-screen pan ratio per axis, e.g. for a camera-tilted table plane. Default 1. */
   panScale?: { x: number; y: number } | ((camera: CameraState) => { x: number; y: number });
+  /** Vertical middle-drag / three-finger motion tilts cameras that opt in. */
+  orbitTilt?: { getAngle: (camera: CameraState) => number; min: number; max: number; onChange?: () => void };
 }
 
 interface UseCameraControlsResult {
@@ -73,6 +83,8 @@ interface UseCameraControlsResult {
   panBy: (dx: number, dy: number) => void;
   /** Brings `cameraState` up to the live camera. */
   syncCamera: () => void;
+  /** Draw an automatic camera frame immediately; throttle React scene updates. */
+  setCameraFrame: (state: CameraState, syncScene?: boolean, keepSpin?: boolean) => void;
 }
 
 const DEFAULT_CAMERA: CameraState = { x: 0, y: 0, scale: 1, yaw: 0 };
@@ -87,11 +99,13 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     zoomEnabled = true,
     baseScale = 1,
     canStartPanAt,
+    isObjectGestureAt,
     listenOnWindow = false,
     transformMode = 'scale',
     zoomSmoothing = 0.18,
     centeredZoom = false,
     panScale,
+    orbitTilt,
   } = options;
 
   const initial = { ...DEFAULT_CAMERA, ...initialState };
@@ -151,7 +165,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     anchorWorld: { x: 0, y: 0 },
   });
   /** Three or more fingers: the camera's spin and each finger's angle about their centre when they landed. */
-  const twistRef = useRef<{ startYaw: number; angles: Map<number, number> } | null>(null);
+  const twistRef = useRef<{ startYaw: number; startY: number; startPitch?: number; tilted: boolean; angles: Map<number, number> } | null>(null);
   const touchPanRef = useRef<{
     active: boolean;
     startX: number;
@@ -199,6 +213,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   const panScaleRef = useRef(panScale ?? { x: 1, y: 1 });
   panScaleRef.current = panScale ?? { x: 1, y: 1 };
   const livePanScale = () => typeof panScaleRef.current === 'function' ? panScaleRef.current(cameraRef.current) : panScaleRef.current;
+  const orbitTiltRef = useRef(orbitTilt);
+  orbitTiltRef.current = orbitTilt;
 
   const frameListenersRef = useRef(new Set<(state: CameraState) => void>());
   const onCameraFrame = useCallback((listener: (state: CameraState) => void) => {
@@ -232,10 +248,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     frameListenersRef.current.forEach((listener) => listener(state));
   }, []);
 
-  // Sync React state → cameraRef (for external setCameraState calls)
-  useEffect(() => {
-    cameraRef.current = cameraState;
-  }, [cameraState]);
+  // The live ref owns motion. Copying a delayed React snapshot back here
+  // rewound automatic movement whenever an unrelated scene render committed.
 
   // Ensure initial transform is applied once contentRef is ready
   useEffect(() => {
@@ -314,7 +328,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
         const settled = { ...prev, x: target.x, y: target.y, scale: target.scale };
         cameraRef.current = settled;
         applyTransform(settled);
-        lastStateSyncRef.current = performance.now();
+        lastStateSyncRef.current = gameTime.now();
         setCameraState(settled);
         rafRef.current = 0;
         return;
@@ -331,15 +345,15 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       debugRef.current.lastScale = next.scale;
       applyTransform(next);
 
-      const now = performance.now();
+      const now = gameTime.now();
       if (now - lastStateSyncRef.current > 80) {
         lastStateSyncRef.current = now;
         setCameraState(next);
       }
-      rafRef.current = requestAnimationFrame(tick);
+      rafRef.current = gameTime.requestAnimationFrame(tick);
     };
 
-    rafRef.current = requestAnimationFrame(tick);
+    rafRef.current = gameTime.requestAnimationFrame(tick);
   }, []);
 
   // Capture before native camera listeners or React drag handlers run. Merely
@@ -352,7 +366,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       touchPanRef.current.active = false;
       setIsPanning(false);
       animatingRef.current = false;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) gameTime.cancelAnimationFrame(rafRef.current);
       rafRef.current = 0;
       wheelDeltaRef.current = 0;
       wheelAnchorRef.current = null;
@@ -362,7 +376,9 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     const down = (event: PointerEvent) => {
       // Pieces only take the left button; the others spin the camera over them.
       if (event.pointerType === 'mouse' && event.button !== 0) return;
-      if (!isCameraInteractiveTarget(event.target) && !objectGestureRef.current.locked) return;
+      const projectedObject = isObjectGestureAt && event.target instanceof Element && containerRef.current?.contains(event.target)
+        && isObjectGestureAt(event.clientX, event.clientY);
+      if (!isCameraInteractiveTarget(event.target) && !projectedObject && !objectGestureRef.current.locked) return;
       objectGestureRef.current.beginPointer(event.pointerId);
       freeze();
     };
@@ -390,12 +406,12 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       window.removeEventListener('blur', clear);
       clear();
     };
-  }, [enabled]);
+  }, [enabled, isObjectGestureAt]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) gameTime.cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
@@ -405,13 +421,13 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   const resetCamera = useCallback(() => {
     if (objectGestureRef.current.locked) return;
     const state = { ...DEFAULT_CAMERA };
-    if (spinRafRef.current) cancelAnimationFrame(spinRafRef.current);
+    if (spinRafRef.current) gameTime.cancelAnimationFrame(spinRafRef.current);
     spinRafRef.current = 0;
     zoomTargetRef.current = state;
     cameraRef.current = state;
     animatingRef.current = false;
     applyTransform(state);
-    lastStateSyncRef.current = performance.now();
+    lastStateSyncRef.current = gameTime.now();
     setCameraState(state);
   }, [applyTransform]);
 
@@ -439,7 +455,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       zoomTargetRef.current = state;
       cameraRef.current = state;
       applyTransform(state);
-      lastStateSyncRef.current = performance.now();
+      lastStateSyncRef.current = gameTime.now();
       return state;
     });
   }, [applyTransform, baseScale]);
@@ -447,14 +463,12 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   // Wrapped setter that keeps refs in sync (no animation)
   const setCamera = useCallback<React.Dispatch<React.SetStateAction<CameraState>>>((action) => {
     if (objectGestureRef.current.locked) return;
-    setCameraState(prev => {
-      const next = typeof action === 'function' ? action(prev) : action;
-      zoomTargetRef.current = next;
-      cameraRef.current = next;
-      applyTransform(next);
-      lastStateSyncRef.current = performance.now();
-      return next;
-    });
+    const next = typeof action === 'function' ? action(cameraRef.current) : action;
+    zoomTargetRef.current = next;
+    cameraRef.current = next;
+    applyTransform(next);
+    lastStateSyncRef.current = gameTime.now();
+    setCameraState(next);
   }, [applyTransform]);
 
   // ---------------------------------------------------------------------------
@@ -467,7 +481,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     const next = { ...cameraRef.current, yaw };
     cameraRef.current = next;
     applyTransform(next);
-    const now = performance.now();
+    const now = gameTime.now();
     if (settled) {
       lastStateSyncRef.current = now;
       setCameraState(next);
@@ -475,20 +489,20 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   }, [applyTransform]);
   const spinTo = useCallback((target: number, animate = true) => {
     if (objectGestureRef.current.locked) return;
-    if (spinRafRef.current) cancelAnimationFrame(spinRafRef.current);
+    if (spinRafRef.current) gameTime.cancelAnimationFrame(spinRafRef.current);
     spinRafRef.current = 0;
     spinTargetRef.current = target;
     const from = cameraRef.current.yaw ?? 0;
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     if (!animate || reducedMotion || Math.abs(target - from) < 0.01) { setYawNow(target); return; }
-    const startedAt = performance.now();
+    const startedAt = gameTime.now();
     const tick = (now: number) => {
       const t = Math.min(1, (now - startedAt) / SPIN_EASE_MS);
       const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
       setYawNow(from + (target - from) * eased, t === 1);
-      spinRafRef.current = t < 1 ? requestAnimationFrame(tick) : 0;
+      spinRafRef.current = t < 1 ? gameTime.requestAnimationFrame(tick) : 0;
     };
-    spinRafRef.current = requestAnimationFrame(tick);
+    spinRafRef.current = gameTime.requestAnimationFrame(tick);
   }, [setYawNow]);
   /** A step lands on the next multiple of `step` past the current angle (or
    * the one it is easing toward), so repeated presses keep a clean grid. */
@@ -498,7 +512,26 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     spinTargetRef.current = target;
     spinTo(target);
   }, [spinTo]);
-  useEffect(() => () => { if (spinRafRef.current) cancelAnimationFrame(spinRafRef.current); }, []);
+  useEffect(() => () => { if (spinRafRef.current) gameTime.cancelAnimationFrame(spinRafRef.current); }, []);
+
+  // Disabling interaction also stops an in-flight gesture or eased turn.
+  // Automatic framing remains available through the explicit setters.
+  useEffect(() => {
+    if (enabled) return;
+    gameTime.cancelAnimationFrame(rafRef.current);
+    gameTime.cancelAnimationFrame(spinRafRef.current);
+    spinRafRef.current = 0;
+    animatingRef.current = false;
+    wheelDeltaRef.current = 0;
+    wheelAnchorRef.current = null;
+    zoomTargetRef.current = { ...cameraRef.current };
+    panButtonRef.current = null;
+    pinchRef.current.active = false;
+    touchPanRef.current.active = false;
+    twistRef.current = null;
+    setIsPanning(false);
+    setCameraState(cameraRef.current);
+  }, [enabled]);
   /** Moves the table by a screen drag of (dx, dy) px, the way a pointer pan
    * would at the current spin and tilt. */
   const panBy = useCallback((dx: number, dy: number) => {
@@ -508,7 +541,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     cameraRef.current = next;
     zoomTargetRef.current = { ...zoomTargetRef.current, x: next.x, y: next.y };
     applyTransform(next);
-    const now = performance.now();
+    const now = gameTime.now();
     if (now - lastStateSyncRef.current > 50) {
       lastStateSyncRef.current = now;
       setCameraState(next);
@@ -516,6 +549,24 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   }, [applyTransform]);
   /** Brings React state up to the live camera, e.g. when a keyboard pan stops. */
   const syncCamera = useCallback(() => setCameraState(cameraRef.current), []);
+  const setCameraFrame = useCallback((next: CameraState, syncScene = true, keepSpin = false) => {
+    if (objectGestureRef.current.locked) return;
+    if (rafRef.current) gameTime.cancelAnimationFrame(rafRef.current);
+    rafRef.current = 0;
+    animatingRef.current = false;
+    if (!keepSpin) {
+      if (spinRafRef.current) gameTime.cancelAnimationFrame(spinRafRef.current);
+      spinRafRef.current = 0;
+    }
+    cameraRef.current = next;
+    zoomTargetRef.current = next;
+    applyTransform(next);
+    const now = gameTime.now();
+    if (syncScene && now - lastStateSyncRef.current > 80) {
+      lastStateSyncRef.current = now;
+      setCameraState(next);
+    }
+  }, [applyTransform]);
 
   // ---------------------------------------------------------------------------
   // Mouse-wheel zoom
@@ -527,6 +578,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     const target: Window | HTMLDivElement = listenOnWindow ? window : container;
 
     const handleWheel = (e: WheelEvent) => {
+      if (e.target instanceof Element && e.target.closest('[data-editor-safe="true"], [data-camera-ignore="true"], dialog[open]')) return;
       const activeContainer = containerRef.current;
       if (!activeContainer) return;
       if (objectGestureRef.current.locked) { e.preventDefault(); return; }
@@ -553,7 +605,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       if (e.deltaMode === 1) deltaPixels *= 16;
       if (e.deltaMode === 2) deltaPixels *= rect.height;
 
-      const now = performance.now();
+      const now = gameTime.now();
       const display = cameraRef.current;
       const displayEffective = display.scale * baseScaleRef.current;
 
@@ -608,7 +660,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       setCameraState(next);
       wheelDeltaRef.current = 0;
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+        gameTime.cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
       }
       animatingRef.current = false;
@@ -632,9 +684,9 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
   }, [enabled, minScale, maxScale, zoomSensitivity, baseScale, startAnimation, canStartPanAt, centeredZoom]);
 
   // ---------------------------------------------------------------------------
-  // Left-mouse-button pan; right or middle button spins
+  // Left/right mouse pan; middle button orbits in yaw and optional pitch.
   // ---------------------------------------------------------------------------
-  const mouseSpinRef = useRef<{ pointerId: number; startX: number; startYaw: number; moved: boolean } | null>(null);
+  const mouseSpinRef = useRef<{ pointerId: number; startX: number; startY: number; startYaw: number; startPitch?: number; tilted: boolean; moved: boolean } | null>(null);
   const rightPanRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const menuStateRef = useRef<{ swallowUntil: number; held: { target: EventTarget; x: number; y: number } | null }>({ swallowUntil: 0, held: null });
   useEffect(() => {
@@ -645,13 +697,14 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     const handlePointerDown = (e: PointerEvent) => {
       if (objectGestureRef.current.locked) return;
       if (e.pointerType !== 'mouse') return;
-      // A sideways drag with the middle button spins the camera, over pieces
+      // A middle-button drag orbits the camera, over pieces
       // too (they only take the left button).
       if (e.button === 1) {
         e.preventDefault();
-        if (spinRafRef.current) cancelAnimationFrame(spinRafRef.current);
+        if (spinRafRef.current) gameTime.cancelAnimationFrame(spinRafRef.current);
         spinRafRef.current = 0;
-        mouseSpinRef.current = { pointerId: e.pointerId, startX: e.clientX, startYaw: cameraRef.current.yaw ?? 0, moved: false };
+        mouseSpinRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
+          startYaw: cameraRef.current.yaw ?? 0, startPitch: orbitTiltRef.current?.getAngle(cameraRef.current), tilted: false, moved: false };
         return;
       }
       // The left button pans from empty table; the right button pans from
@@ -675,9 +728,16 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       const spin = mouseSpinRef.current;
       if (spin && spin.pointerId === e.pointerId) {
         const dx = e.clientX - spin.startX;
-        if (Math.abs(dx) > 3) spin.moved = true;
+        const dy = e.clientY - spin.startY;
+        if (Math.hypot(dx, spin.startPitch === undefined ? 0 : dy) > 3) spin.moved = true;
         if (spin.moved) {
           suppressClickRef.current = true;
+          const tilt = orbitTiltRef.current;
+          if (Math.abs(dy) > 3) spin.tilted = true;
+          if (tilt && spin.startPitch !== undefined && spin.tilted) {
+            cameraRef.current = { ...cameraRef.current, pitch: orbitPitch(spin.startPitch, dy, tilt.min, tilt.max) };
+            tilt.onChange?.();
+          }
           setYawNow(spin.startYaw + dx * SPIN_DEG_PER_PX, false);
         }
         return;
@@ -700,7 +760,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       const next = { ...cameraRef.current, x: newX, y: newY };
       cameraRef.current = next;
       applyTransform(next);
-      const now = performance.now();
+      const now = gameTime.now();
       if (now - lastStateSyncRef.current > 50) {
         lastStateSyncRef.current = now;
         setCameraState(next);
@@ -719,7 +779,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       if (spin && spin.pointerId === e.pointerId) { mouseSpinRef.current = null; setYawNow(cameraRef.current.yaw ?? 0); }
       if (panButtonRef.current === e.button) {
         const right = rightPanRef.current;
-        if (e.button === 2 && right?.moved) menuState.swallowUntil = performance.now() + 400;
+        if (e.button === 2 && right?.moved) menuState.swallowUntil = gameTime.now() + 400;
         rightPanRef.current = null;
         setIsPanning(false);
         panButtonRef.current = null;
@@ -734,7 +794,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
         if (!rightPanRef.current.moved && e.target) menuState.held = { target: e.target, x: e.clientX, y: e.clientY };
         e.preventDefault();
         e.stopImmediatePropagation();
-      } else if (performance.now() < menuState.swallowUntil) {
+      } else if (gameTime.now() < menuState.swallowUntil) {
         e.preventDefault();
         e.stopImmediatePropagation();
       }
@@ -742,6 +802,11 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     // Prevent the middle button's autoscroll/paste.
     const handleAuxClick = (e: MouseEvent) => {
       if (e.button === 1) e.preventDefault();
+    };
+    const releaseOrbit = () => {
+      if (!mouseSpinRef.current) return;
+      mouseSpinRef.current = null;
+      setYawNow(cameraRef.current.yaw ?? 0);
     };
 
     // Auxiliary buttons belong to the camera even when a piece stops bubbling.
@@ -752,6 +817,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     document.addEventListener('pointercancel', handlePointerUp);
     container.addEventListener('auxclick', handleAuxClick);
     window.addEventListener('contextmenu', handleContextMenu, true);
+    window.addEventListener('blur', releaseOrbit);
 
     return () => {
       container.removeEventListener('pointerdown', handlePointerDown, true);
@@ -760,6 +826,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       document.removeEventListener('pointercancel', handlePointerUp);
       container.removeEventListener('auxclick', handleAuxClick);
       window.removeEventListener('contextmenu', handleContextMenu, true);
+      window.removeEventListener('blur', releaseOrbit);
     };
   }, [enabled, isPanning, setYawNow, canStartPanAt]);
 
@@ -827,7 +894,9 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
         setIsPanning(false);
         return;
       }
-      twistRef.current = { startYaw: display.yaw ?? 0, angles: anglesAbout(touches, centroid(touches)) };
+      const centre = centroid(touches);
+      twistRef.current = { startYaw: display.yaw ?? 0, startY: centre.y,
+        startPitch: orbitTiltRef.current?.getAngle(display), tilted: false, angles: anglesAbout(touches, centre) };
       setIsPanning(false);
     };
 
@@ -841,7 +910,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       cameraRef.current = next;
       zoomTargetRef.current = next;
       applyTransform(next);
-      lastStateSyncRef.current = performance.now();
+      lastStateSyncRef.current = gameTime.now();
       setCameraState(next);
     };
 
@@ -865,7 +934,8 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
       const twist = twistRef.current;
       if (twist && e.touches.length >= 3) {
         e.preventDefault();
-        const now = anglesAbout(e.touches, centroid(e.touches));
+        const centre = centroid(e.touches);
+        const now = anglesAbout(e.touches, centre);
         let sum = 0, count = 0;
         now.forEach((angle, id) => {
           const start = twist.angles.get(id);
@@ -874,7 +944,13 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
           count += 1;
         });
         if (count) {
-          if (Math.abs(sum / count) > 1) suppressClickRef.current = true;
+          const dy = centre.y - twist.startY, tilt = orbitTiltRef.current;
+          if (Math.abs(sum / count) > 1 || tilt && Math.abs(dy) > 3) suppressClickRef.current = true;
+          if (Math.abs(dy) > 3) twist.tilted = true;
+          if (tilt && twist.startPitch !== undefined && twist.tilted) {
+            cameraRef.current = { ...cameraRef.current, pitch: orbitPitch(twist.startPitch, dy, tilt.min, tilt.max) };
+            tilt.onChange?.();
+          }
           setYawNow(twist.startYaw + sum / count, false);
         }
         return;
@@ -967,7 +1043,7 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     centerOn,
     setCameraState: setCamera,
     startPanAt: (clientX: number, clientY: number, button = 0) => {
-      if (objectGestureRef.current.locked) return;
+      if (!enabled || objectGestureRef.current.locked) return;
       setIsPanning(true);
       panButtonRef.current = button;
       panStartRef.current = { x: clientX, y: clientY };
@@ -985,5 +1061,6 @@ export function useCameraControls(options: UseCameraControlsOptions = {}): UseCa
     spinStep,
     panBy,
     syncCamera,
+    setCameraFrame,
   };
 }

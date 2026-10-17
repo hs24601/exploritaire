@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { rankLabel, type Card } from '../protoState';
 import { FIGHT_LIMIT, FIGHT_NOTCHES, createFight, fishInZone, meterFraction, playReelCard, reelDirection, stepFight, type FightState } from '../rules/fishFight';
@@ -47,7 +48,7 @@ export const FishFight = ({ seed, rank, onEnd }: {
 
   useEffect(() => {
     let frame = 0;
-    let last = performance.now();
+    let last = gameTime.now();
     const tick = (now: number) => {
       // Long frames (a background tab) are capped so the fish cannot teleport.
       const next = stepFight(fightRef.current, Math.min(0.05, (now - last) / 1000));
@@ -60,10 +61,10 @@ export const FishFight = ({ seed, rank, onEnd }: {
         }
         return;
       }
-      frame = requestAnimationFrame(tick);
+      frame = gameTime.requestAnimationFrame(tick);
     };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    frame = gameTime.requestAnimationFrame(tick);
+    return () => gameTime.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {

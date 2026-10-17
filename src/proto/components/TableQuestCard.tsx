@@ -1,8 +1,11 @@
+import { trackGameAnimation } from '../../gameAnimations';
+import { gameTime } from '../../gameTime';
 import { holdSlop, useRewardHold } from '../useRewardHold';
 import { logHold } from '../holdLog';
-import { TABLE_CARD_WIDTH, CARD_RATIO, settleTableCard, type TableSolid } from '../tableCardPlacement';
+import { TABLE_CARD_WIDTH, CARD_RATIO, settleTableCard, readableTableCardAngle, type TableSolid } from '../tableCardPlacement';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { QuestCard } from './QuestCard';
+import { TableCardLayers } from './TableCardLayers';
 import { useHeldVisual } from './useHeldVisual';
 import { tableObjectShadow, type TableLight } from '../protoLighting';
 
@@ -97,14 +100,14 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     ghost.classList.add('quest-card-flight');
     ghost.style.cssText = `position:fixed;left:${source.x}px;top:${source.y}px;width:${source.width}px;height:${source.height}px;z-index:60000;pointer-events:none;transform-origin:0 0;`;
     document.body.appendChild(ghost);
-    const animation = ghost.animate([
+    const animation = trackGameAnimation(ghost.animate([
       { transform: 'translate(0,0) scale(1)' },
       { transform: `translate(${destination.x - source.x}px,${destination.y - source.y}px) scale(${destination.width / source.width})` },
-    ], { duration: 550, easing: 'ease-in-out' });
+    ], { duration: 550, easing: 'ease-in-out' }));
     animation.onfinish = () => { ghost.remove(); setLanded(true); };
     return () => { animation.cancel(); ghost.remove(); };
   }, [placement.questIndex]);
-  return <div ref={ref} className="table-quest-card" data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState} data-picked-up={pickedUp || undefined}
+  return <div ref={ref} className="table-quest-card" data-offscreen-waypoint="quest" data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState} data-picked-up={pickedUp || undefined}
     style={{ left: `calc(50% + ${displayPosition.x}px)`, top: `calc(50% + ${displayPosition.y}px)`,
       width: cardWidth, height: cardWidth / CARD_RATIO,
       // Undo spin before table tilt while held, so the whole face is parallel
@@ -112,13 +115,13 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
       // grid. Released cards lie on the table with their settle angle.
       transform: pickedUp
         ? 'translate(-50%,-50%) rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt, 0deg))) translateZ(96px)'
-        : `translate(-50%,-50%) rotate(calc(${tilt}deg - var(--camera-yaw, 0deg)))`, touchAction: 'none', cursor: pickedUp ? 'grabbing' : 'grab',
+        : `translate(-50%,-50%) rotate(${tilt}deg)`, touchAction: 'none', cursor: pickedUp ? 'grabbing' : 'grab',
       opacity: landed ? 1 : 0, boxShadow: tableObjectShadow(timeOfDay, displayPosition, 8, lights) }}
     onFocus={()=>setTableState(true)}
     onPointerDown={event => {
       event.stopPropagation(); if(!landed||redeemed||drag.current||event.button!==0)logHold(`card ${placement.questIndex} ignored the press: ${!landed?'still landing':redeemed?'already redeemed':drag.current?'already pressed':'not the main button'}`); if(event.button!==0||!landed||redeemed||drag.current)return;
       event.preventDefault(); setTableState(true); setPickedUp(true);
-      drag.current={pointerId:event.pointerId,x:event.clientX,y:event.clientY,origin:{...displayPosition},moved:false,angle:tilt,started:performance.now()};
+      drag.current={pointerId:event.pointerId,x:event.clientX,y:event.clientY,origin:{...displayPosition},moved:false,angle:tilt,started:gameTime.now()};
       event.currentTarget.setPointerCapture(event.pointerId); hold.start(event.pointerType);
     }}
     onPointerMove={event=>{
@@ -130,14 +133,14 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     onPointerUp={event=>{
       const current=drag.current;if(!current||current.pointerId!==event.pointerId)return;
       hold.cancel('released');drag.current=null;setPickedUp(false);
-      const angle=current.moved ? (Math.random()*8-4) : current.angle;
+      const angle=readableTableCardAngle(event.currentTarget);
       const requested=current.moved ? draggedTo(current,event.clientX,event.clientY) : current.origin;
       const settled=settleTableCard(requested,cardWidth,angle,solids) ?? current.origin;
       setDisplayPosition(settled);setTilt(angle);onMove(settled,angle);
-      if(!current.moved&&performance.now()-current.started<500)event.currentTarget.querySelector<HTMLButtonElement>('.quest-card')?.click();
+      if(!current.moved&&gameTime.now()-current.started<500)event.currentTarget.querySelector<HTMLButtonElement>('.quest-card')?.click();
     }}
     onPointerCancel={()=>{hold.cancel('pointercancel');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;setPickedUp(false);}}
     onLostPointerCapture={()=>{hold.cancel('lost pointer capture');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;setPickedUp(false);}}>
-    <QuestCard title={title} text={text} inspirationReward={inspirationReward} rewardLabel={rewardLabel} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} />
+    <TableCardLayers><QuestCard title={title} text={text} inspirationReward={inspirationReward} rewardLabel={rewardLabel} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} /></TableCardLayers>
   </div>;
 }

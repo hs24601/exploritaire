@@ -8,5 +8,7 @@ const formatTime = (iso: string) => {
 };
 
 export const PROTO_BUILD_COMMIT = build.commit;
-export const PROTO_BUILD_LABEL = `Build ${build.commit}.${build.revision} · ${formatTime(build.startedAt)}`;
+const buildDate = new Date(build.startedAt);
+export const PROTO_BUILD_LABEL = [buildDate.getMonth() + 1, buildDate.getDate(), buildDate.getHours(), buildDate.getMinutes()]
+  .map(value => String(value).padStart(2, '0')).join('');
 export const PROTO_BUILD_TITLE = `Source ${build.revision}, commit ${build.commit}, built ${formatTime(build.startedAt)}`;

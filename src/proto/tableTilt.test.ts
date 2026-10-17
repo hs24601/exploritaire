@@ -1,5 +1,15 @@
 import { expect, it } from 'vitest';
-import { projectTilt, tableCameraTilt, tableTiltFor, unprojectTilt } from './tableTilt';
+import { projectTilt, tableBillboardVisible, tableCameraTilt, tableTiltFor, unprojectTilt } from './tableTilt';
+
+it('clips billboards before their perspective surface blows up at the eye', () => {
+  const tilt = tableCameraTilt(609, 6.8), camera = { x: 0, y: 0, scale: 6.8 };
+  expect(tableBillboardVisible({ x: 0, y: 96 }, camera, tilt)).toBe(true);
+  expect(tableBillboardVisible({ x: 0, y: 144 }, camera, tilt)).toBe(false);
+  expect(tableBillboardVisible({ x: 0, y: 240 }, camera, tilt)).toBe(false);
+  expect(tableBillboardVisible({ x: 0, y: 144 }, { ...camera, yaw: 180 }, tilt)).toBe(true);
+  expect(tableBillboardVisible({ x: 0, y: 144 }, { ...camera, scale: 1.7 }, tableCameraTilt(609, 1.7))).toBe(true);
+  expect(tableBillboardVisible({ x: NaN, y: 0 }, camera, tilt)).toBe(false);
+});
 
 it('descends smoothly only beyond 265% and aims at the upper half of a standee', () => {
   for (const scale of [1.7, 3, 4.5]) {
@@ -45,4 +55,16 @@ it('keeps the pivot fixed, shrinks the far side and enlarges the near side', () 
 it('maps screen points above the horizon to a finite table point', () => {
   const back = unprojectTilt({ x: 10, y: -100000 }, tableTiltFor(720));
   expect(Number.isFinite(back.x) && Number.isFinite(back.y)).toBe(true);
+});
+
+it('holds manual tilt across normal zoom and preserves pointer projection', () => {
+  for (const pitch of [0, 20, 60, 82]) for (const scale of [1.7, 4.5, 6.8]) {
+    const tilt = tableCameraTilt(720, scale, pitch);
+    expect(tilt.angle).toBe(pitch);
+    for (const point of [{ x: 0, y: 0 }, { x: -200, y: -300 }, { x: 140, y: 180 }]) {
+      const back = unprojectTilt(projectTilt(point, tilt), tilt);
+      expect(back.x).toBeCloseTo(point.x, 6);
+      expect(back.y).toBeCloseTo(point.y, 6);
+    }
+  }
 });

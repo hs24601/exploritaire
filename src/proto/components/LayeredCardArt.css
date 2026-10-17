@@ -1,0 +1,15 @@
+.layered-card-art { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: #08152b; }
+.trading-card__art .layered-card-art__background {
+  position: absolute; width: 127.79%; height: 121.95%; left: -13.895%; top: -10.975%;
+  max-width: none; object-fit: fill; image-rendering: auto;
+  transform: translate(calc(var(--art-shift-x, 0) * -3%), calc(var(--art-shift-y, 0) * -3%));
+}
+.trading-card__art .layered-card-art__subject {
+  position: absolute; width: 100%; height: 88%; left: 0; bottom: 3%;
+  object-fit: contain; image-rendering: auto;
+  transform: translate(calc(var(--art-shift-x, 0) * 1.2%), calc(var(--art-shift-y, 0) * 1.2%));
+}
+.trading-card--foundation .layered-card-art img { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .layered-card-art img { transform: none !important; }
+}

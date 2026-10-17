@@ -81,7 +81,7 @@ function frame(spec: QuadrupedFrameSpec,id: string): DirectionalFrame {
  */
 export function createQuadrupedSpriteDefinition(spec: {
   id: string; low: readonly QuadrupedFrameSpec[]; high: readonly QuadrupedFrameSpec[];
-  top: QuadrupedFrameSpec; motion?: Partial<QuadrupedMotionProfile>;
+  top: QuadrupedFrameSpec; motion?: Partial<QuadrupedMotionProfile>; overheadLengthScale?: number;
 }): DirectionalSpriteDefinition {
   const views=(input:readonly QuadrupedFrameSpec[],tier:string)=>{
     if(input.length!==5&&input.length!==8) throw new Error(`${spec.id}: ${tier} requires five or eight directional views`);
@@ -89,7 +89,7 @@ export function createQuadrupedSpriteDefinition(spec: {
     return {base:frames.slice(0,5),opposite:frames.length===8?[frames[0],frames[7],frames[6],frames[5],frames[4]]:undefined};
   };
   const low=views(spec.low,'low'),high=views(spec.high,'high');
-  return {id:spec.id,motion:'quadruped',low:low.base,high:high.base,lowOpposite:low.opposite,highOpposite:high.opposite,top:frame(spec.top,'top'),motionProfile:{...DEFAULT_QUADRUPED_MOTION,...spec.motion}};
+  return {id:spec.id,motion:'quadruped',low:low.base,high:high.base,lowOpposite:low.opposite,highOpposite:high.opposite,top:frame(spec.top,'top'),motionProfile:{...DEFAULT_QUADRUPED_MOTION,...spec.motion},overheadLengthScale:spec.overheadLengthScale};
 }
 
 export function sampleQuadrupedPose(part:string,time:number,phase:number,action:number,reduced:boolean,profile=DEFAULT_QUADRUPED_MOTION) {

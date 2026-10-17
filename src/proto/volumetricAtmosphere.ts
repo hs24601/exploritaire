@@ -13,7 +13,13 @@ export type AtmosphereCanopy = {
   worldHeading?: number;
 };
 export type AtmospherePatch = { x: number; y: number; width: number; height: number; terrain: 'woods' | 'water'; danger?: boolean };
-export type AtmosphereScene = { canopies: readonly AtmosphereCanopy[]; patches: readonly AtmospherePatch[] };
+export type AtmosphereScene = {
+  canopies: readonly AtmosphereCanopy[]; patches: readonly AtmospherePatch[];
+  /** Knowledge only: concealed cells contribute fog, never hidden relief. */
+  concealed?: readonly { x: number; y: number; width: number; height: number }[];
+  /** OTT obstruction uses known footprints, never raised sprite geometry. */
+  relief?: readonly { x: number; y: number; width: number; height: number; elevation: number }[];
+};
 export const ATMOSPHERE_HEIGHT = 140;
 export const ATMOSPHERE_EXTENT = 512;
 export const ATMOSPHERE_ATLAS_SIZE = 256;
@@ -25,7 +31,7 @@ const smooth = (from: number, to: number, v: number) => {
 
 /** Crossfade the visual sky at the horizon. Gameplay retains its original clock. */
 export const atmosphereSky = (frame: TableLightFrame) => {
-  const sun = smooth(5.75, 6.5, frame.hour) * (1 - smooth(17.5, 18.25, frame.hour));
+  const sun = frame.globalLights === false ? 0 : smooth(5.75, 6.5, frame.hour) * (1 - smooth(17.5, 18.25, frame.hour));
   const daylightFrame = getTableLighting(Math.max(6.01, Math.min(17.99, frame.hour)));
   const moonFrame = getTableLighting(frame.hour < 12 ? Math.min(5.99,frame.hour) : Math.max(18.01,frame.hour));
   const moonColor = { r: 154, g: 183, b: 255 };
@@ -38,9 +44,19 @@ export const atmosphereSky = (frame: TableLightFrame) => {
   // clock's instantaneous sun/moon switch. The handover passes through overhead.
   const slope = (axis:'x'|'y') => daylightFrame.source[axis]/Math.max(110,daylightFrame.altitude)*sun
     +moonFrame.source[axis]/Math.max(110,moonFrame.altitude)*(1-sun);
-  return { sun, color, strength: (0.33 + 0.67 * daylightFrame.twilight) * sun + 0.32 * (1 - sun),
+  return { sun, color, strength: frame.globalLights === false ? 0 : (0.33 + 0.67 * daylightFrame.twilight) * sun + 0.025 * (1 - sun),
     slope: { x:slope('x'),y:slope('y') },
+    night: 1 - smooth(0, 0.32, frame.daylight),
     mist: 0.25 + (1 - frame.daylight) * 0.5 };
+};
+
+/** Optical depth of the dark air. Shared by the CPU fallback and validation.
+ * Relief is a soft neighbourhood field, concealment is knowledge, and light
+ * opens a bounded pocket rather than clearing all the surrounding fog. */
+export const nightFogOpacity = (relief: number, concealed: number, noise: number, light: number) => {
+  const depth = (2.7 + relief * 3.2 + concealed * 1.8) * (0.8 + noise * 0.4);
+  const opening = Math.min(0.94, Math.max(0, light) / 0.48);
+  return (1 - Math.exp(-depth)) * (1 - opening);
 };
 
 /** The same world-space beam pattern used by the atmospheric shader. Dust

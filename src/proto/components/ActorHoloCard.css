@@ -4,7 +4,7 @@
 .actor-holocard .trading-card__header h2 { position: absolute; bottom: 0; left: 0; right: 0; font-size: 16px; line-height: 1; text-align: center; background: #061719b8; padding: 3px 0; white-space: nowrap; overflow-wrap: normal; }
 .actor-holocard__rank-bubble { position: absolute; top: 0; right: 0; transform: translate(50%,-50%); z-index: 5; display: grid; place-items: center; width: 32px; height: 32px; box-sizing: border-box; border: 2px solid #d4e7df; border-radius: 50%; background: radial-gradient(circle at 30% 25%,#426f76,#102731 75%); color: #fff1c8; font: 900 20px/1 'Classic Pixel',monospace; box-shadow: 0 2px 4px #000b,inset 0 0 0 1px #07121a; pointer-events: none; }
 .actor-holocard .battle-field__rank { position: static; font: inherit; color: inherit; }
-.actor-holocard__resource { position: absolute; right: 5px; bottom: 28px; font-size: 16px; color: #ffe9a3; text-shadow: 1px 1px #000; pointer-events: none; }
+.actor-holocard__resource { position: absolute; right: 5px; top: 52%; font-size: 16px; line-height: 1; color: #ffe9a3; text-shadow: 1px 1px #000; pointer-events: none; }
 .actor-holocard .trading-card__body { display: none; }
 .actor-holocard .trading-card__art::after { background: linear-gradient(#06161735, transparent 24%, transparent 72%, #041015a0); }
 .proto-occupied-foundation-face:has(> .actor-holocard),

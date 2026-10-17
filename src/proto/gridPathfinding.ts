@@ -1,4 +1,4 @@
-/** Actor routing on the table grid: weighted A*, 8-way, never cutting a corner
+/** Actor routing on the table grid: weighted A*, orthogonal by default, never cutting a corner
  * past a blocked cell. Each cell has a travel cost (1 is open table, higher is
  * slower ground, Infinity can't be crossed); the route is the fastest one, and
  * its points carry the pace of the ground they cross so travel can slow down
@@ -6,7 +6,7 @@
 import type { WorldPoint } from './worldPathfinding';
 
 /** Travel cost of standing in a cell, by column and row. */
-export type CellCost = (column: number, row: number) => number;
+export type CellCost = ((column: number, row: number) => number) & { canStep?: (x:number,y:number,nx:number,ny:number)=>boolean };
 /** A route point; `pace` is the cost per table px of the stretch ending here. */
 export type TimedPoint = WorldPoint & { pace: number };
 
@@ -51,8 +51,9 @@ class OpenSet {
  * `cellSize` cells, or null when none exists. The start and target cells can
  * always be stood on, whatever they cost. The route begins at `start` exactly
  * and ends at `target` exactly, through cell centres in between, with straight
- * runs of even ground merged. `maxCells` bounds the search. */
-export function findGridPath(start: WorldPoint, target: WorldPoint, cost: CellCost, cellSize: number, maxCells = 40000): TimedPoint[] | null {
+ * runs of even ground merged. `maxCells` bounds the search. Diagonal grid
+ * steps require explicit opt-in with `allowDiagonals`. */
+export function findGridPath(start: WorldPoint, target: WorldPoint, cost: CellCost, cellSize: number, maxCells = 40000, allowDiagonals = false): TimedPoint[] | null {
   if (![start.x, start.y, target.x, target.y].every(Number.isFinite)) return null;
   const at = (point: WorldPoint) => ({ column: Math.floor(point.x / cellSize + 0.5), row: Math.floor(point.y / cellSize + 0.5) });
   const from = at(start), to = at(target);
@@ -64,11 +65,11 @@ export function findGridPath(start: WorldPoint, target: WorldPoint, cost: CellCo
     return value > 0 ? value : 1e-6;
   };
   const passable = (column: number, row: number) => Number.isFinite(cellCost(column, row));
-  // Octile distance at the cheapest possible pace never overestimates.
+  // Match the distance estimate to the permitted grid steps.
   const floor = Math.min(1, cellCost(from.column, from.row), cellCost(to.column, to.row));
   const heuristic = (column: number, row: number) => {
     const dx = Math.abs(column - to.column), dy = Math.abs(row - to.row);
-    return (Math.max(dx, dy) + (SQRT2 - 1) * Math.min(dx, dy)) * floor;
+    return (allowDiagonals ? Math.max(dx, dy) + (SQRT2 - 1) * Math.min(dx, dy) : dx + dy) * floor;
   };
   const best = new Map<string, number>([[startKey, 0]]);
   const came = new Map<string, { column: number; row: number; pace: number }>();
@@ -86,7 +87,9 @@ export function findGridPath(start: WorldPoint, target: WorldPoint, cost: CellCo
     const g = best.get(current.key)!;
     for (let dx = -1; dx <= 1; dx += 1) for (let dy = -1; dy <= 1; dy += 1) {
       if (!dx && !dy) continue;
+      if (dx && dy && !allowDiagonals) continue;
       const column = current.column + dx, row = current.row + dy;
+      if (cost.canStep && !cost.canStep(current.column,current.row,column,row)) continue;
       const k = key(column, row);
       if (closed.has(k) || !passable(column, row)) continue;
       // No squeezing diagonally between (or past) blocked cells.

@@ -21,7 +21,7 @@
 .battle-field__actor-base { position: absolute; left: calc(50% - 25px); bottom: 8px; width: 50px; height: 12px; border-radius: 50%; background: radial-gradient(#101517,#182e2580); box-shadow: 0 3px 3px #000b; }
 .battle-field__actor .proto-actor-base-name { top: auto !important; bottom: 0; z-index: 2; }
 .battle-field__tableau {  --classic-radius: 5px; --battle-peek: 32px; container-type: size; display: grid; place-items: center; min-height: 0; height: 100%; }
-.battle-field__column { position: relative; width: var(--classic-card-w); height: calc(var(--classic-card-w) * 74 / 56 + (var(--cards) - 1) * var(--battle-peek)); }
+.battle-field__column { position: relative; width: var(--classic-card-w); height: calc(var(--classic-card-w) * 88 / 63 + (var(--cards) - 1) * var(--battle-peek)); }
 .battle-field__column .proto-card-rank { font-size: 16px; }
 .battle-field__column button { width: var(--classic-card-w); border-radius: 4px; }
 .battle-field__footer { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -56,7 +56,7 @@
 }
 
 
-.battle-field__rack { --classic-card-w: min(calc((100cqw - 18px) / 7), calc((100cqh - var(--battle-peek) - 8px) * 56 / 74)); display: grid; grid-template-columns: repeat(7,var(--classic-card-w)); gap: 3px; align-items: center; }
+.battle-field__rack { --classic-card-w: min(var(--tableau-card-limit, 10000px), calc((100cqw - 18px) / 7), calc((100cqh - var(--battle-peek) - 8px) * 63 / 88)); display: grid; grid-template-columns: repeat(7,var(--classic-card-w)); gap: 3px; align-items: center; }
 
 
 .battle-field__column button:focus-visible { outline: 2px solid #ffe19a; outline-offset: 2px; }
@@ -104,3 +104,86 @@
 .battle-field__redraw:focus-visible { outline: 2px solid #ffe19a; outline-offset: 2px; }
 .battle-field__redraw:disabled { border-color: #5d5648; color: #8d8574; cursor: default; }
 .battle-field__redraw:disabled .battle-field__redraw-left { color: #8d8574; }
+
+/* A short phone viewport puts teams beside the shared cards, leaving the
+   minimap corner clear without taking the cards' vertical space. */
+@media (min-width: 600px) and (max-width: 900px) and (max-height: 450px) {
+  .proto-tableau-field:has(> .proto-world-minimap) .battle-field__board {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows: auto minmax(0,1fr);
+    align-items: center; padding-bottom: 32px;
+  }
+  .proto-tableau-field:has(> .proto-world-minimap) .battle-field__team { grid-template-columns: repeat(var(--slots,2),minmax(0,1fr)); gap: 6px; }
+  .proto-tableau-field:has(> .proto-world-minimap) .battle-field__team[data-team='enemy'] { grid-column: 1; grid-row: 1; }
+  .proto-tableau-field:has(> .proto-world-minimap) .battle-field__team[data-team='party'] { grid-column: 1; grid-row: 2; }
+  .proto-tableau-field:has(> .proto-world-minimap) .battle-field__middle { grid-column: 2; grid-row: 1 / span 2; padding-right: 124px; }
+  .proto-tableau-field:has(> .proto-world-minimap) .battle-field__status { flex-wrap: wrap; gap: 4px; }
+  .proto-tableau-field:has(> .proto-world-minimap) .battle-field__status-text { flex-basis: 100%; }
+}
+
+.battle-field__team[data-team='party'] { --slot-w: 300px; }
+.battle-field__slot { grid-template-columns: minmax(70px, 1fr) minmax(0, 1.8fr); }
+.battle-moves { display: flex; flex-direction: column; gap: 4px; width: 100%; min-width: 0; font-size: 12px; }
+.battle-field .battle-move { width: 100%; min-height: 36px; border: 1px solid #89a795; border-radius: 4px; padding: 4px 6px; background: #162b24; color: #f1e7cb; text-align: left; cursor: grab; touch-action: none; font-size: 14px; }
+.battle-move strong, .battle-move span { display: block; }
+.battle-move span { font-size: inherit; line-height: 1.15; }
+.battle-field .battle-move { display: flex; align-items: center; gap: 2px; }
+.battle-move__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.battle-move__cost { margin-left: auto; flex-shrink: 0; text-align: right; }
+.battle-move:disabled { opacity: .45; cursor: default; }
+.battle-move[aria-pressed='true'], .battle-move:focus-visible { outline: 2px solid #ffd166; }
+.battle-moves input { width: 50px; background: #162b24; color: #f1e7cb; }
+/* Ability descriptions must never squeeze the shared cards out of view. */
+.battle-field__board { grid-template-rows: auto minmax(160px,1fr) auto; overflow-y: auto; overscroll-behavior: contain; }
+.battle-field__middle { min-height: 160px; }
+@media (max-width: 600px) {
+  .battle-field__board { grid-template-rows: auto minmax(180px,1fr) auto; align-items: start; }
+  .battle-field__team[data-team='party'] { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .battle-field__team[data-team='party'] .battle-field__slot { grid-template-columns: 80px minmax(0,1fr); }
+  .battle-field__middle { min-height: 180px; }
+}
+
+.battle-field .battle-move {height:32px;min-height:32px;max-height:32px;flex:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;padding:4px 1px;}
+
+/* One shared four-row measurement keeps foundations and trays aligned. */
+.battle-field {
+  --ability-row-height: 32px;
+  --ability-row-gap: 4px;
+  --ability-bank-height: 16px;
+  --ability-tray-height: calc(var(--combat-ability-slots,4) * var(--ability-row-height) + (var(--combat-ability-slots,4) - 1) * var(--ability-row-gap));
+}
+.battle-field__team[data-team='party'] .battle-field__slot {
+  grid-template-columns: calc((var(--ability-tray-height) - 5px) * 63 / 88 + 4px) minmax(0,1fr);
+  align-items: start;
+}
+.battle-field__team[data-team='party'] .battle-field__foundation {
+  --foundation-holocard-height: calc(var(--ability-tray-height) - 5px);
+  box-sizing: border-box;
+  height: var(--ability-tray-height);
+  min-height: var(--ability-tray-height);
+  margin-top: calc(var(--ability-bank-height) + var(--ability-row-gap));
+  padding: 0;
+}
+.battle-moves { gap: var(--ability-row-gap); font-size: 16px; }
+.battle-moves > strong { height: var(--ability-bank-height); line-height: var(--ability-bank-height); }
+.battle-field .battle-move { height: var(--ability-row-height); min-height: var(--ability-row-height); max-height: var(--ability-row-height); font-size: 16px; box-sizing: border-box; }
+
+/* Share the tray's upright UI plane rather than foreshortening only its foundation. */
+.battle-field__team[data-team='party'] .battle-field__foundation { transform: none; }
+
+.battle-controls__max-ap { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; color: #ffe1a0; cursor: pointer; font-size: 16px; white-space: nowrap; }
+.battle-controls__max-ap input { width: 16px; height: 16px; margin: 0; accent-color: #ffd166; cursor: pointer; }
+
+/* Clear the foundation's protruding rank bubble beside the AP counter. */
+.battle-moves > strong { padding-left: 12px; box-sizing: border-box; }
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .battle-field__team[data-team='party'] { grid-template-columns: minmax(0,1fr); gap: 12px; }
+}
+
+fieldset.battle-controls { min-width: 0; margin: 0; padding: 0; border: 0; }
+.battle-card-flight[data-tactical-paused] .proto-card-rank,
+.battle-card-flight[data-tactical-paused] .proto-card-center-rank { visibility: hidden; }
+
+.battle-field__foundation[data-preview='faint'] { outline: 2px solid #ffd86b66; outline-offset: 3px; }
+.battle-field__foundation[data-preview='focus'] { outline: 3px solid #ffd86b; outline-offset: 3px; }

@@ -1,0 +1,11 @@
+# Banks rescue nuzzle v1
+
+- Generated with the built-in ImageGen tool on 2026-10-15.
+- Runtime sheet: `public/assets/actors/cinema/banks-hero-nuzzle-v1.png`.
+- Source retained at `C:/Users/ericm/.codex/generated_images/01a14134-2440-74d3-9435-c5a3fd24afc9/exec-163573ad-15f6-4caf-adfd-1146dda1cb33.png`.
+- Sheet dimensions: 2172 × 724; four equal 543 × 724 cells in one row, with a consistent ground line and true alpha. CSS plays the authored poses with discrete frame selection; reduced motion holds the contact pose.
+- References: Banks low directional watercolor v2 for identity; Hero high directional watercolor v1 for watercolor style and identity only. Hero has a natural bobtail, with no fire effects.
+
+## Final generation prompt
+
+Use case: illustration-story. Asset type: transparent 4-frame game animation sprite sheet, exactly four equal square cells arranged in one horizontal row, no borders. Primary request: Banks, a gray shorthaired tabby cat with pale green eyes, light muzzle and long ringed natural tail, gently approaches and nuzzles the cheek of unconscious but peaceful Hero, the small tricolor Australian Shepherd from reference 2. Reference 1 defines Banks identity. Reference 2 defines Hero identity and watercolor style ONLY: REMOVE ALL FIRE/FLAME effects and give Hero a tiny natural furry bobtail. Hero lies prone on her belly/side with closed eyes throughout; no wounds, no death, no collars. Frame 1 Banks stands beside Hero's head looking down tenderly; frame 2 Banks leans his head towards her cheek; frame 3 cheeks touch in a gentle nuzzle; frame 4 Banks holds the nuzzle with eyes half closed. Both complete bodies must fit every frame, consistent camera low three-quarter side view, consistent framing, ground baseline and scale across all four frames, left-to-right readable movement. Banks is a small cat next to the slightly larger dog. Use broad irregular wet watercolor dabs and merged pigment pools, lost soft edges with sparse expressive charcoal/indigo brush accents, not individual hairs, glossy digital shading, grain or tiny strokes. True transparent background, opaque cream body markings, no scenery, no baked shadow, no text, no stars, no signature. Preserve complete bodies and generous transparent gutters. Generate at wide landscape aspect to support the 4 equally sized cells.

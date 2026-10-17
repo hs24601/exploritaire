@@ -11,7 +11,8 @@ export const TABLE_DESCENT_SCALE = 4.5;
 export const TABLE_MAX_SCALE = 6.8;
 /** The last stretch of zoom lowers the eye to 8° above the ground and raises
  * its aim to the upper half of a 32px actor standee. */
-export const tableCameraTilt = (viewportHeight: number, scale: number): TableTilt => {
+export const tableCameraTilt = (viewportHeight: number, scale: number, pitch?: number): TableTilt => {
+  if (pitch !== undefined) return { ...tableTiltFor(viewportHeight, pitch), aimY: 0 };
   const t = Math.max(0, Math.min(1, (scale - TABLE_DESCENT_SCALE) / (TABLE_MAX_SCALE - TABLE_DESCENT_SCALE)));
   const eased = t * t * (3 - 2 * t);
   return { ...tableTiltFor(viewportHeight, TABLE_TILT_DEGREES + 22 * eased), aimY: 24 * scale * eased };
@@ -26,6 +27,16 @@ export const tableTiltFor = (viewportHeight: number, angle = TABLE_TILT_DEGREES)
   ({ angle, perspective: Math.max(600, viewportHeight * 1.6) });
 
 export const tableTiltTransform = (tilt: TableTilt) => `${tilt.aimY ? `translateY(${tilt.aimY}px) ` : ''}perspective(${tilt.perspective}px) rotateX(${tilt.angle}deg)`;
+
+/** CSS perspective has no configurable near plane. Filtered billboards just
+ * in front of its eye otherwise expand to enormous raster surfaces, obscuring
+ * the scene and destabilizing GPU compositing. Clip before that singularity. */
+export const tableBillboardVisible = (point: Offset, camera: Offset & { scale: number; yaw?: number }, tilt: TableTilt) => {
+  const yaw = (camera.yaw ?? 0) * Math.PI / 180;
+  const x = point.x * camera.scale + camera.x, y = point.y * camera.scale + camera.y;
+  const depth = tilt.perspective - (x * Math.sin(yaw) + y * Math.cos(yaw)) * Math.sin(tilt.angle * Math.PI / 180);
+  return Number.isFinite(depth) && depth > tilt.perspective * .12;
+};
 
 const trig = (tilt: TableTilt) => {
   const radians = (tilt.angle * Math.PI) / 180;

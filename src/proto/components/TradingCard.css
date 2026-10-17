@@ -1,6 +1,28 @@
 /* Independently authored foil, informed by Simey’s V-card layered-gradient method.
    https://poke-holo.simey.me/ — no demo textures, artwork or source copied. */
-.trading-card-stage { width: 100%; height: 100%; perspective: 650px; touch-action: none; }
+.trading-card-stage { position: relative; width: 100%; height: 100%; perspective: 650px; touch-action: none; }
+.trading-card__abilities { display: grid; gap: 5px; }
+.trading-card__abilities button { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid #a8c0bd99; border-radius: 12px; background: #07191b99; color: #fff0d2; text-shadow: 0 1px 3px #000; font: inherit; font-size: 18px; line-height: 1.1; text-align: left; cursor: pointer; touch-action: manipulation; }
+.trading-card__abilities button > span { width: 24px; text-align: center; color: #ffe39c; }
+.trading-card__abilities button:hover, .trading-card__abilities button[aria-pressed="true"] { color: #ffe39c; }
+.trading-card__abilities button:focus-visible { outline: 2px solid #ffe39c; outline-offset: 2px; }
+.trading-card-ability-view { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 10; }
+/* Keep the actor mounted for loadouts and focus restoration while its ability
+   occupies the centered jumbo slot. Actor trays and controls disappear with it. */
+.trading-card-stage--ability-open { left: -120px; }
+.trading-card-stage--ability-open > .trading-card,
+.trading-card-stage--ability-open > .trading-card__available,
+.trading-card-stage--ability-open > .trading-card__below { visibility: hidden; }
+@media(max-width:900px){.trading-card-stage--ability-open { left: -79px; }}
+.card-jumbo:has(.trading-card-stage--ability-open) > .card-jumbo__close,
+.card-jumbo:has(.trading-card-stage--ability-open) > .card-jumbo__action { visibility: hidden; }
+.details-card-viewer--jumbo:has(.trading-card-stage--ability-open) { box-shadow: none !important; }
+.trading-card-stage > .trading-card--frozen { transform: none !important; will-change: auto; }
+.trading-card--frozen *, .trading-card--frozen *::before, .trading-card--frozen *::after { animation-play-state: paused !important; transition: none !important; }
+.trading-card--frozen .layered-card-art img { transform: none !important; }
+.trading-card--frozen .trading-card__body { transform: none !important; }
+.trading-card__below { position: absolute; top: calc(100% + 12px); left: 0; width: 100%; display: grid; justify-items: center; gap: 10px; }
+.trading-card__below-action { width: min(100%, 280px); }
 .details-card-viewer--floating:focus { outline: none; }
 .details-card-viewer--floating:focus-visible .trading-card { outline: 2px solid #ffe39c; outline-offset: 2px; }
 .trading-card-stage > .details-card.trading-card {
@@ -43,6 +65,10 @@
 .trading-card__close:hover { color: #fff; border-color: #ffe39c; }
 .trading-card__close:focus-visible { outline: 2px solid #ffe39c; outline-offset: 2px; }
 .trading-card__body { display: grid; gap: 5px; position: relative; }
+/* Third plane: copy moves farther forward than the actor (1.2% art travel).
+   Local perspective projects its depth even through the isolated card face. */
+.trading-card-stage > .details-card.trading-card--jumbo { perspective: 2400px; }
+.trading-card--jumbo .trading-card__body { --card-overlay-depth: 48px; --card-overlay-travel: 12px; z-index: 2; transform-style: preserve-3d; transform: translate3d(calc(var(--art-shift-x, 0) * var(--card-overlay-travel)), calc(var(--art-shift-y, 0) * var(--card-overlay-travel)), var(--card-overlay-depth)); }
 .trading-card__description { margin: 0; color: #edf3e2; font-size: 16px; line-height: 1.1; padding: 4px 3px; background: #07191be8; border-top: 1px solid #c0d0bf; border-bottom: 1px solid #677f79; text-align: center; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .trading-card__sections { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 3px; }
 .trading-card__section { display: flex; align-items: center; justify-content: center; gap: 3px; padding: 3px 1px; min-width: 0; font-size: 16px; line-height: 1; border: 1px solid #8eafb1; border-radius: 3px; color: #f3efd6; background: linear-gradient(135deg,#36535beF,#101c29f5 55%,#29434bf0); }
@@ -53,6 +79,7 @@
   .trading-card-stage > .details-card.trading-card { transform: none; will-change: auto; box-shadow: inset 0 0 0 1px #c4d4d8, inset 0 0 0 3px #3c535a; }
   .trading-card--diagonal-holo .trading-card__foil, .trading-card--diagonal-holo .trading-card__glare { background-position: 50% 50%; transition: none; opacity: .16; }
   .trading-card--diagonal-holo .trading-card__glare { opacity: .08; background: linear-gradient(132deg, transparent, #ffffff20, transparent); }
+  .trading-card--jumbo .trading-card__body { transform: none; }
 }
 .details-card-jumbo__backdrop { position: fixed; inset: 0; z-index: 49999; background: #02080d99; backdrop-filter: blur(9px); touch-action: none; }
 .details-card-viewer--jumbo .trading-card-stage { perspective: 1800px; }
@@ -60,7 +87,7 @@
 .details-card-viewer--jumbo .trading-card__header h2 { font-size: 32px; }
 .details-card-viewer--jumbo .trading-card__badge { width: 42px; height: 42px; font-size: 28px; }
 .details-card-viewer--jumbo .trading-card__body { gap: 10px; }
-.trading-card__full-description { padding: 10px 12px; border: 1px solid #a8c0bd; background: #07191bf2; border-radius: 5px; }
+.trading-card__full-description { padding: 10px 12px; border: 1px solid #a8c0bd; background: #07191bb3; border-radius: 12px; text-shadow: 0 1px 3px #000; }
 .trading-card__full-description h3 { margin: 0 0 6px; color: #d5dfbb; font-size: 16px; line-height: 1.1; }
 .trading-card__full-description p { margin: 0; font-size: 18px; line-height: 1.25; }
 /* Jumbo: stats, equipment and effects collapse to one strip of icons; hover,
@@ -85,3 +112,13 @@
 .actor-playtest-grid input { min-width: 0; width: 100%; box-sizing: border-box; padding: 8px 4px; border: 1px solid #8eafb1; background: #07191b; color: #fff; font: inherit; font-size: 16px; touch-action: manipulation; }
 .actor-playtest-actions { display: flex; gap: 8px; }
 .actor-playtest-grid input:focus-visible { outline: 2px solid #ffe39c; }
+
+.trading-card__available { position:absolute; right:calc(100% + 20px); top:0; width:220px; max-height:100%; overflow:auto; padding:12px; border:1px solid #a8c0bd; border-radius:12px; background:#102b28; box-sizing:border-box; }
+.trading-card__available h3,.trading-card__available p {margin:0;font-size:16px;line-height:1.25;}
+[data-loadout-tray] {min-height:44px;}
+[data-loadout-tray] button {touch-action:none;}
+@media(max-width:900px){.trading-card__available{width:150px;right:calc(100% + 8px);padding:8px;}}
+
+.loadout-drag-label {position:fixed;left:var(--loadout-x);top:var(--loadout-y);pointer-events:none;z-index:130000;padding:8px;background:#102b28;border:2px solid #ffe39c;color:#fff0d2;font-size:18px;}
+
+@media(max-width:600px){.trading-card--jumbo .trading-card__header{flex-shrink:0;}.trading-card--jumbo .trading-card__body{min-height:0;overflow-y:auto;flex:1;display:block;touch-action:pan-y;}.trading-card--jumbo .trading-card__body> *+*{margin-top:10px;}.trading-card__available{touch-action:pan-y;}}

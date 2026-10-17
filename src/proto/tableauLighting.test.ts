@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { createTableauLightRig } from './tableauLighting';
+import { createTableauLightRig, tableauCardBrightness } from './tableauLighting';
 
 describe('tableau scene lighting', () => {
+  it('keeps a night rack readable with light from its foundation and combines party sources', () => {
+    const point = { x: 200, y: 50 };
+    const lamp = { x: 200, y: 450, radius: 800 };
+    const dark = tableauCardBrightness(.14, point, []);
+    const solo = tableauCardBrightness(.14, point, [lamp]);
+    const party = tableauCardBrightness(.14, point, [lamp, { ...lamp, x: 350 }]);
+    expect(solo).toBeGreaterThan(.85);
+    expect(solo).toBeGreaterThan(dark);
+    expect(party).toBeGreaterThan(solo);
+    expect(party).toBeLessThanOrEqual(1);
+  });
+  it('does not darken daylight or the global-light bypass, and light falls off with distance', () => {
+    const lamp = { x: 0, y: 0, radius: 400 };
+    expect(tableauCardBrightness(1, { x: 0, y: 0 }, [])).toBe(1);
+    expect(tableauCardBrightness(1, { x: 0, y: 0 }, [lamp])).toBe(1);
+    expect(tableauCardBrightness(.14, { x: 0, y: 0 }, [lamp])).toBeGreaterThan(tableauCardBrightness(.14, { x: 300, y: 0 }, [lamp]));
+  });
   it('adds local overhead light at night without modifying the world light list', () => {
     const lights = [{ id: 'cyan', position: { x: 220, y: 0 }, color: '#33ffff', strength: 0.8 }];
     const dark = createTableauLightRig(0, { x: 0, y: 0 }, lights, false);

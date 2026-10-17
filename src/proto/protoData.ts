@@ -4,6 +4,7 @@ import type { EdgeScenery } from './biomeEdgeScenery';
 export type ProtoMobilityKind = 'dig' | 'blink' | 'hallowed_path';
 
 export type ProtoActorData = {
+  characteristics?: string[];
   id: string;
   label: string;
   animalType: string;
@@ -59,7 +60,7 @@ export const DEFAULT_BIOME: ProtoBiomeData = {
   id: 'forest',
   label: 'Forest',
   objectiveLabel: 'Forage',
-  resources: ['Wood', 'Berries', 'Herbs'],
+  resources: ['Wood'],
 };
 
 // 13 authored Small Woods placements plus two energy for optional Day 1 work.
@@ -72,6 +73,7 @@ export const WORLD_ACTOR_SPRITES: Record<string, string> = {
 
 /** Pop-up scenery for biome tiles, by tile id (drawn by tools/make-pine-sprite.py). */
 export const BIOME_TILE_SPRITES: Record<string, string> = {
+  'curious-sapling': `${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/curious-sapling-sprite-v1.png`,
   'hero-den': `${import.meta.env.BASE_URL}assets/biomes/hero-den-standee-v3.png`,
   'woods-alpha': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
   'woods-east': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
@@ -81,12 +83,17 @@ export const BIOME_TILE_SPRITES: Record<string, string> = {
 };
 
 /** Terrain artwork follows its type, including newly authored cells. */
-export const biomeTileSprite = (tile: { id: string; tileType?: string }) =>
-  tile.tileType === 'berry-patch'
+export const biomeTileSprite = (tile: { id: string; tileType?: string; terrain?: string; berryPatchVariant?: 'sparse' }) =>
+  tile.tileType === 'berry-patch' && tile.berryPatchVariant === 'sparse'
+    ? `${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/manaberry-sparse-standee-v1.png`
+    : tile.tileType === 'berry-patch'
     ? `${import.meta.env.BASE_URL}assets/biomes/berry-bush.svg`
     : tile.tileType === 'impassable-mountain'
     ? `${import.meta.env.BASE_URL}assets/biomes/mountain_standee.svg`
-    : BIOME_TILE_SPRITES[tile.id];
+    : tile.tileType === 'hero-den' ? BIOME_TILE_SPRITES['hero-den']
+    : tile.tileType ? undefined
+    : tile.terrain === 'water' ? BIOME_TILE_SPRITES.pond
+    : BIOME_TILE_SPRITES[tile.id] ?? BIOME_TILE_SPRITES['woods-alpha'];
 
 /** Tilted camera only: scenery lining the sides and front of biome tiles, by
  * terrain (drawn by tools/make-edge-scenery-sprites.py; sizes are the trimmed

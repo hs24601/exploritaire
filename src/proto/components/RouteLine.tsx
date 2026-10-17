@@ -1,5 +1,8 @@
 import { useId } from 'react';
+import { TABLE_GRID } from '../gridCoordinates';
 import type { TimedPoint } from '../gridPathfinding';
+
+export const routeTerrainColor = (difficulty: number) => difficulty < 0 ? '#c5c6b9' : difficulty <= 0 ? '#c4f1b3' : difficulty <= 1 ? '#8ed89a' : difficulty <= 2 ? '#dfcd77' : difficulty <= 3 ? '#e99760' : '#d95c52';
 
 type Point = { x: number; y: number };
 
@@ -26,12 +29,12 @@ export const roundedRoute = (points: readonly Point[], radius = TURN_RADIUS) => 
 };
 
 /** A route laid on the table, like a tactics game's movement preview: short
- * dashes drifting toward the destination, cool at the actor and warm at the
- * end, tighter over slow ground, all red when the move can't be afforded. It
+ * dashes drifting toward the destination, coloured per terrain cell from
+ * pale green through amber to red, tighter over slow ground. It
  * passes under tile labels (`labels`, quads in table px, are cut out of it).
  * Table px, inside the camera-transformed world, so it tilts, spins and
  * zooms with the table. */
-export function RouteLine({ path, unaffordable = false, labels = [] }: { path: readonly TimedPoint[]; unaffordable?: boolean; labels?: readonly (readonly Point[])[] }) {
+export function RouteLine({ path, unaffordable = false, labels = [], difficultyAt = () => 0 }: { difficultyAt?: (point: Point) => number; path: readonly TimedPoint[]; unaffordable?: boolean; labels?: readonly (readonly Point[])[] }) {
   const id = useId().replace(/:/g, '');
   if (path.length < 2) return null;
   const xs = path.map((point) => point.x), ys = path.map((point) => point.y);
@@ -39,7 +42,13 @@ export function RouteLine({ path, unaffordable = false, labels = [] }: { path: r
   const box = { left: Math.min(...xs) - pad, top: Math.min(...ys) - pad, right: Math.max(...xs) + pad, bottom: Math.max(...ys) + pad };
   const local = (point: Point) => ({ x: point.x - box.left, y: point.y - box.top });
   const d = roundedRoute(path.map(local));
-  const start = local(path[0]), end = local(path[path.length - 1]);
+  const end = local(path[path.length - 1]);
+  const cells = new Map<string, ReturnType<typeof TABLE_GRID.atWorld>>();
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i], count = Math.max(1, Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/12));
+    for (let step=0;step<=count;step++) { const cell=TABLE_GRID.atWorld({x:a.x+(b.x-a.x)*step/count,y:a.y+(b.y-a.y)*step/count}); cells.set(TABLE_GRID.reference(cell),cell); }
+  }
+  const terrain = [...cells.values()].map((cell,index) => ({ cell, index, point:TABLE_GRID.center(cell), color:routeTerrainColor(difficultyAt(TABLE_GRID.center(cell))) }));
   // Straight stretches over slow ground, marked with tighter dashes.
   const slow = path.slice(1).flatMap((point, index) => point.pace > 1.01 ? [`M${local(path[index]).x} ${local(path[index]).y} L${local(point).x} ${local(point).y}`] : []).join(' ');
   // The route's turning points in table px, for checks and tools.
@@ -48,11 +57,7 @@ export function RouteLine({ path, unaffordable = false, labels = [] }: { path: r
     style={{ left: `calc(50% + ${box.left}px)`, top: `calc(50% + ${box.top}px)`, width: box.right - box.left, height: box.bottom - box.top }}
     viewBox={`0 0 ${box.right - box.left} ${box.bottom - box.top}`}>
     <defs>
-      <linearGradient id={`${id}-tone`} gradientUnits="userSpaceOnUse" x1={start.x} y1={start.y} x2={end.x} y2={end.y}>
-        {unaffordable
-          ? <><stop offset="0" stopColor="#ff6b6b" /><stop offset="1" stopColor="#ff3b3b" /></>
-          : <><stop offset="0" stopColor="#62e8ff" /><stop offset="0.55" stopColor="#ffe066" /><stop offset="1" stopColor="#ff5c8a" /></>}
-      </linearGradient>
+      {terrain.map(({cell,index}) => { const bounds=TABLE_GRID.bounds(cell); return <clipPath key={index} id={`${id}-cell-${index}`}><rect x={bounds.left-box.left} y={bounds.top-box.top} width={bounds.width} height={bounds.height} /></clipPath>; })}
       <mask id={`${id}-labels`} maskUnits="userSpaceOnUse" x="0" y="0" width={box.right - box.left} height={box.bottom - box.top}>
         <rect width="100%" height="100%" fill="#fff" />
         {labels.map((quad, index) => <polygon key={index} fill="#000" points={quad.map((corner) => `${local(corner).x},${local(corner).y}`).join(' ')} />)}
@@ -60,9 +65,9 @@ export function RouteLine({ path, unaffordable = false, labels = [] }: { path: r
     </defs>
     <g mask={`url(#${id}-labels)`}>
       <path className="proto-route__shade" d={d} />
-      <path className="proto-route__dash" d={d} stroke={`url(#${id}-tone)`} />
+      {terrain.map(({cell,index,color,point}) => <path key={index} className="proto-route__dash" data-route-cell={TABLE_GRID.reference(cell)} data-route-difficulty={difficultyAt(point)} d={d} stroke={color} clipPath={`url(#${id}-cell-${index})`} />)}
       {slow ? <path className="proto-route__slow" d={slow} /> : null}
-      <circle className="proto-route__end" cx={end.x} cy={end.y} r="3.2" fill={unaffordable ? '#ff3b3b' : '#ff5c8a'} />
+      <circle className="proto-route__end" cx={end.x} cy={end.y} r="3.2" fill={routeTerrainColor(difficultyAt(path[path.length - 1]))} />
     </g>
   </svg>;
 }

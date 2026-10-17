@@ -1,3 +1,6 @@
+import { trackGameAnimation } from '../../gameAnimations';
+import { gameTime } from '../../gameTime';
+import { createCombatClock } from '../combatClock';
 import { useEffect, useRef, type RefObject } from 'react';
 import { detectFxQuality } from '../atmosphere';
 import type { BattleEvent } from '../rules/battle';
@@ -19,11 +22,47 @@ const unitNode = (root: HTMLElement, id: string) =>
   root.querySelector<HTMLElement>(`[data-battle-target="${id}"] .battle-foe__figure`)
   ?? root.querySelector<HTMLElement>(`[data-battle-slot="${id}"] .battle-field__actor-card`);
 
-export function useBattleFx(root: RefObject<HTMLElement | null>, events: readonly BattleEvent[]) {
+export function useBattleFx(root: RefObject<HTMLElement | null>, events: readonly BattleEvent[], paused = false, tactical = false) {
   const seen = useRef(events[events.length - 1]?.id ?? 0);
   const layer = useRef<HTMLDivElement | null>(null);
-  const timers = useRef(new Set<number>());
-  useEffect(() => () => { timers.current.forEach((t) => window.clearTimeout(t)); layer.current?.remove(); layer.current = null; }, []);
+  const timers = useRef(new Map<number, { due: number; run: () => void }>());
+  const clock = useRef(createCombatClock(gameTime.now()));
+  const nextTimer = useRef(0);
+  const pauseState = useRef({ paused, tactical }); pauseState.current = { paused, tactical };
+  const pausedAnimations = useRef(new Set<Animation>());
+  const later = (ms: number, run: () => void) => {
+    timers.current.set(++nextTimer.current, { due: clock.current.time + ms, run });
+  };
+  useEffect(() => {
+    let frame = 0;
+    const tick = () => {
+      const { paused, tactical } = pauseState.current;
+      const now = clock.current.sample(gameTime.now(), paused);
+      document.querySelectorAll<HTMLElement>('.battle-card-flight').forEach(node => {
+        node.toggleAttribute('data-tactical-paused', tactical); node.setAttribute('aria-hidden', 'true');
+      });
+      if (paused) {
+        for (const animation of document.getAnimations()) {
+          const node = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
+          if (node instanceof Element && (root.current?.contains(node) || layer.current?.contains(node) || node.closest('.battle-card-flight'))
+            && (animation.playState === 'running' || animation.pending)) {
+            animation.pause(); pausedAnimations.current.add(animation);
+          }
+        }
+      } else {
+        pausedAnimations.current.forEach(animation => { if (animation.playState === 'paused') animation.play(); });
+        pausedAnimations.current.clear();
+        for (const [id, timer] of timers.current) if (timer.due <= now) { timers.current.delete(id); timer.run(); }
+      }
+      frame = gameTime.requestAnimationFrame(tick);
+    };
+    frame = gameTime.requestAnimationFrame(tick);
+    return () => {
+      gameTime.cancelAnimationFrame(frame); timers.current.clear();
+      pausedAnimations.current.forEach(animation => { if (animation.playState === 'paused') animation.play(); });
+      pausedAnimations.current.clear(); layer.current?.remove(); layer.current = null;
+    };
+  }, [root]);
   useEffect(() => {
     const fresh = freshEvents(events, seen.current);
     if (!fresh.length) return;
@@ -40,8 +79,7 @@ export function useBattleFx(root: RefObject<HTMLElement | null>, events: readonl
       document.body.append(layer.current);
     }
     const fx = layer.current;
-    const later = (ms: number, run: () => void) => { const t = window.setTimeout(() => { timers.current.delete(t); run(); }, ms); timers.current.add(t); };
-    for (const cue of cuesFor(fresh)) later(cue.delay * 1000, () => play(cue, host, fx, low));
+    for (const cue of cuesFor(fresh)) later(cue.delay * 1000, () => play(cue, host, fx, low, later));
   }, [events, root]);
 }
 
@@ -61,12 +99,12 @@ function burst(fx: HTMLElement, box: DOMRect, count: number, colors: string[], s
     bit.style.background = colors[i % colors.length];
     const a = Math.random() * Math.PI * 2, d = spec.distance * (.4 + Math.random() * .6);
     const dx = Math.cos(a) * d, dy = Math.sin(a) * d * .6 - spec.rise * (.5 + Math.random());
-    bit.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(.4) rotate(${Math.round(Math.random() * 180)}deg)`, opacity: 0 }],
-      { duration: spec.duration * (.7 + Math.random() * .6), easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'forwards' }).onfinish = () => bit.remove();
+    trackGameAnimation(bit.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(.4) rotate(${Math.round(Math.random() * 180)}deg)`, opacity: 0 }],
+      { duration: spec.duration * (.7 + Math.random() * .6), easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'forwards' })).onfinish = () => bit.remove();
   }
 }
 
-function play(cue: BattleCue, host: HTMLElement, fx: HTMLElement, low: boolean) {
+function play(cue: BattleCue, host: HTMLElement, fx: HTMLElement, low: boolean, later: (ms: number, run: () => void) => void) {
   const target = unitNode(host, cue.targetId);
   if (!target) return;
   const box = target.getBoundingClientRect();
@@ -79,12 +117,12 @@ function play(cue: BattleCue, host: HTMLElement, fx: HTMLElement, low: boolean) 
       const dx = box.left + box.width / 2 - (from.left + from.width / 2), dy = box.top + box.height / 2 - (from.top + from.height / 2);
       const reach = Math.min(1, 34 / Math.max(1, Math.hypot(dx, dy)));
       const hop = cue.motion === 'slam' ? -14 : 0;
-      attacker.animate([
+      trackGameAnimation(attacker.animate([
         { transform: 'translate(0,0)' },
         { transform: `translate(${dx * reach}px,${dy * reach + hop}px) scale(1.08)`, offset: IMPACT_SECONDS / CUE_SECONDS.attack },
         { transform: `translate(${dx * reach * .8}px,${dy * reach * .8}px) scale(1.04)`, offset: (IMPACT_SECONDS + .08) / CUE_SECONDS.attack },
         { transform: 'translate(0,0)' },
-      ], { duration: CUE_SECONDS.attack * 1000, easing: 'ease-out' });
+      ], { duration: CUE_SECONDS.attack * 1000, easing: 'ease-out' }));
     }
     if (cue.motion === 'slam') {
       later(IMPACT_MS, () => burst(fx, box, count(10), ['#5d3a9b', '#2a1748', '#7df9ff'], { distance: 46, rise: 10, duration: 520, size: 6 }));
@@ -97,16 +135,16 @@ function play(cue: BattleCue, host: HTMLElement, fx: HTMLElement, low: boolean) 
       if (cue.element) jaws.dataset.element = cue.element;
       const [upper, lower] = jaws.querySelectorAll<HTMLElement>('.battle-fx-jaw');
       const timing = { duration: lead + 260, easing: 'cubic-bezier(.5,0,.9,.4)', fill: 'forwards' as const };
-      upper.animate([{ transform: 'translateY(-70%)' }, { transform: 'translateY(-6%)', offset: lead / (lead + 260) }, { transform: 'translateY(-6%)' }], timing);
-      lower.animate([{ transform: 'translateY(70%) scaleY(-1)' }, { transform: 'translateY(6%) scaleY(-1)', offset: lead / (lead + 260) }, { transform: 'translateY(6%) scaleY(-1)' }], timing);
-      jaws.animate([{ opacity: 1 }, { opacity: 1, offset: .75 }, { opacity: 0 }], { duration: lead + 260, fill: 'forwards' }).onfinish = () => jaws.remove();
+      trackGameAnimation(upper.animate([{ transform: 'translateY(-70%)' }, { transform: 'translateY(-6%)', offset: lead / (lead + 260) }, { transform: 'translateY(-6%)' }], timing));
+      trackGameAnimation(lower.animate([{ transform: 'translateY(70%) scaleY(-1)' }, { transform: 'translateY(6%) scaleY(-1)', offset: lead / (lead + 260) }, { transform: 'translateY(6%) scaleY(-1)' }], timing));
+      trackGameAnimation(jaws.animate([{ opacity: 1 }, { opacity: 1, offset: .75 }, { opacity: 0 }], { duration: lead + 260, fill: 'forwards' })).onfinish = () => jaws.remove();
     } else {
       const claws = spawn(fx, box, 'battle-fx-claws', size, '<span></span><span></span><span></span>');
       claws.dataset.tier = String(cue.tier);
       if (cue.element) claws.dataset.element = cue.element;
-      claws.querySelectorAll<HTMLElement>('span').forEach((streak, i) => streak.animate(
+      claws.querySelectorAll<HTMLElement>('span').forEach((streak, i) => trackGameAnimation(streak.animate(
         [{ transform: 'rotate(-50deg) scaleX(0)', opacity: 1 }, { transform: 'rotate(-50deg) scaleX(1)', opacity: 1, offset: .45 }, { transform: 'rotate(-50deg) scaleX(1)', opacity: 0 }],
-        { duration: lead + 240, delay: i * 50, easing: 'ease-out', fill: 'both' }));
+        { duration: lead + 240, delay: i * 50, easing: 'ease-out', fill: 'both' })));
       later(lead + 400, () => claws.remove());
     }
     later(lead, () => burst(fx, box, count(8 + cue.tier * 6 + (cue.heavy ? 6 : 0)),
@@ -116,12 +154,12 @@ function play(cue: BattleCue, host: HTMLElement, fx: HTMLElement, low: boolean) 
     // Flinch: knocked back with a hot flash, then settle.
     const away = target.closest('[data-battle-slot]') ? 1 : -1;
     const push = cue.light ? 0 : cue.heavy ? 10 : 6;
-    target.animate([
+    trackGameAnimation(target.animate([
       { transform: 'translate(0,0)', filter: 'none' },
       { transform: `translate(${-push / 2}px,${away * push}px) rotate(${away * -4}deg)`, filter: cue.light ? 'brightness(1.4) sepia(.6)' : 'brightness(0) invert(1)', offset: .12 },
       { transform: `translate(${push / 2}px,${away * push * .6}px) rotate(${away * 3}deg)`, filter: cue.light ? 'brightness(1.2)' : 'brightness(1.4) sepia(1) saturate(5) hue-rotate(-30deg)', offset: .35 },
       { transform: 'translate(0,0)', filter: 'none' },
-    ], { duration: CUE_SECONDS.hurt * 1000, easing: 'ease-out' });
+    ], { duration: CUE_SECONDS.hurt * 1000, easing: 'ease-out' }));
   } else if (cue.kind === 'defeat') {
     // The figure flashes white and evaporates in CSS; here, the pixels it leaves behind.
     burst(fx, box, count(22), ['#2a1748', '#5d3a9b', '#7df9ff', '#ffffff'], { distance: 22, rise: 46, duration: 1100, size: 5 });
@@ -130,5 +168,4 @@ function play(cue: BattleCue, host: HTMLElement, fx: HTMLElement, low: boolean) 
     burst(fx, box, count(10), ['#8a7a62', '#5c5244', '#b9a98a'], { distance: 40, rise: 4, duration: 560, size: 6 });
   }
 
-  function later(ms: number, run: () => void) { window.setTimeout(run, ms); }
 }

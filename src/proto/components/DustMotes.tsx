@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { CameraState } from '../../hooks/useCameraControls';
 import { WORLD_AMBIANCE, ambianceFor, particleStrength, scatter, visibleCells, type FxQuality } from '../atmosphere';
@@ -49,7 +50,7 @@ export function DustMotes(props: Props) {
       ctx.clearRect(0,0,width,height);
       const live = current.getCamera(), yaw = (live.yaw ?? 0) * Math.PI / 180;
       const tilt = current.getTilt?.(live) ?? current.tilt;
-      const seconds = motion.matches ? 0 : performance.now() / 1000;
+      const seconds = motion.matches ? 0 : gameTime.now() / 1000;
       let visible = 0;
       for (const p of dust) {
         const t = ((seconds - p.delay) % p.duration) / p.duration;

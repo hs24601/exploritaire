@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {findLayoutDefects}=require('./lib/layout-check.cjs');
 const URL=process.env.PROTO_URL||'http://127.0.0.1:5178/proto.html';
-const directory='artifacts/prop-volume';fs.mkdirSync(directory,{recursive:true});
+const directory=process.env.PROTO_ARTIFACT_DIR||'artifacts/prop-volume';fs.mkdirSync(directory,{recursive:true});
 async function stats(page){return page.locator('[data-prop-volume]').evaluateAll(canvases=>canvases.map(canvas=>{
   const ctx=canvas.getContext('2d'),data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
   let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity,count=0,hash=0;
@@ -47,7 +47,7 @@ async function placement(page){return page.locator('[data-scenery-volume]').eval
     await page.getByRole('button',{name:'Flat camera view',exact:true}).tap();await page.waitForTimeout(750);assert.equal(await page.locator('[data-prop-volume]').count(),0);assert.equal(await page.locator('[data-volume-shadow]').count(),0);
     // Mouse entry into the food tile uses its dedicated berry bush solid.
     const from=await page.locator('[data-cell-grip="actor-hero"]').boundingBox(),to=await page.locator('[data-biome-id="day-one-berries"]').boundingBox();
-    await page.mouse.move(from.x+from.width/2,from.y+from.height/2);await page.mouse.down();await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:12});await page.mouse.up();await page.waitForTimeout(2700);
+    await page.mouse.move(from.x+from.width/2,from.y+from.height/2);await page.mouse.down();await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:12});await page.mouse.up();await page.locator('[data-route-line]').waitFor({state:'detached',timeout:15000});
     if(await page.getByRole('button',{name:'Tilt camera view',exact:true}).count())await page.getByRole('button',{name:'Tilt camera view',exact:true}).tap();await page.waitForTimeout(1400);
     assert.ok(await page.locator('[data-biome-popup="day-one-berries"] [data-prop-volume]').count()>0,'Berry bushes use the shared solid renderer');
     const trees=[];

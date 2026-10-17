@@ -1,4 +1,5 @@
 import type { RoadTile } from './roadTiles';
+import type { TableLight } from './protoLighting';
 import type { BiomeFlag } from './biomeFlags';
 import type { PlacedQuestCard } from './components/TableQuestCard';
 import type { CraftStack, WorldItemId } from './protoCrafting';
@@ -6,22 +7,29 @@ import type { ProtoHeroClass } from './protoTypes';
 import { PROTO_ACTORS, PROTO_ENEMY_SLOT_IDS, type ProtoEnemyData } from './protoData';
 import type { CardTransportPoint } from './protoTransport';
 import type { PondCatch, PondState } from './rules/fishing';
+import type { TableauCardBackground } from './biomeCardArt';
+import type { TravelJourney } from './travelJourney';
 
 // Shared Proto state shapes and view-facing constants, moved verbatim from ProtoVariant.
 
 export type Card = {
+  event?: import('./eventCards').TableauEvent;
   id: string;
   rank: number;
   questStep?: number;
   resource?: ForestResource;
+  /** Temporary INSP pickup, separate from carried food/materials. */
+  inspirationResource?: boolean;
+  /** Tableau artwork only; collected food is stored as mana. */
+  foodSource?: 'berries';
   encounter?: 'shadow_wolf_cub';
   sleep?: 'rest' | 'noise' | 'itch';
 };
 
-export type ForestResource = 'wood' | 'berries' | 'herbs';
+export type ForestResource = 'wood' | 'mana' | 'herbs';
 /** Caught at the pond rather than foraged from a tableau. */
 export type PondResource = PondCatch;
-export type HaulResource = ForestResource | PondResource;
+export type HaulResource = 'wood' | 'mana';
 export type WorldResourceKind = WorldItemId;
 export type ForestHaul = Record<HaulResource, number>;
 export type SceneKind = 'exploration' | 'combat';
@@ -33,11 +41,25 @@ export type BiomeRunState = {
 };
 
 export type BiomeTileState = {
+  passage?: import('./terrainPassages').TerrainPassage;
+  /** Session-only breach; never serialized into the authored tile document. */
+  passageOpen?: boolean;
+  traversalDifficulty?: number;
+  travelCards?: number;
+  traversalProgress?: number;
+  /** Authored scenery emission; follows the tile and remains hidden in fog. */
+  light?: Omit<TableLight, 'id' | 'position' | 'fromPiece'>;
+  /** Passive destinations leave actors on the map instead of staffing a deal. */
+  opensTableauOnArrival?: boolean;
   id: string;
   title: string;
   sizeLabel: 'Small' | 'Medium' | 'Large';
   gridSize: { columns: number; rows: number };
   resourceDensity: number;
+  populationDensity?: number;
+  berryPatchVariant?: 'sparse';
+  /** Live finite harvest; never serialized into the authored map. */
+  berryHarvested?: boolean;
   tableauSize: number;
   seed: number;
   position: { x: number; y: number };
@@ -66,7 +88,10 @@ export type CityState = {
 };
 
 export type WorldActorState = {
-  id: 'hero';
+  characteristics?: string[];
+  traversalAffinity?: Partial<Record<string, number>>;
+  id: string;
+  partyId?: string;
   label: string;
   location: 'table' | 'foundation';
   biomeId?: string;
@@ -96,9 +121,23 @@ export type FoundationPile = {
 export type FoundationSlot = FoundationPile | null;
 
 export type ProtoState = {
+  /** Per-day finite travel opportunities, keyed by absolute grid cell. */
+  travelVisits?: Record<string, { day: number; crossed: boolean; searchOffered?: boolean }>;
+  terrainCrossings?: Record<string, number>;
+  eventDiscard?: Card[];
+  resolvedEventIds?: string[];
+  journey?: TravelJourney;
+  travelStamina?: number;
+  utilityAP?: Record<string, number>;
   /** Finite sleep round; stock draws establish a rank without earning inspiration. */
   denRest?: { restfulCards: number; disruptions: number; started?: boolean; receivingCard?: Card };
-  ordinaryDay?: { supper: boolean; bedtime: boolean; complete: boolean; visitedTree: boolean };
+  dayScenario?: 'day01' | 'day02' | 'day03';
+  /** Live story bindings and actor budget; never authored tile fields. */
+  dayScenarioTiles?: { sparsePatchId?: string; patchId?: string; woodsId?: string };
+  scenarioStaminaMax?: number;
+  scenarioStartingMana?: number;
+  dayTwoAmbush?: boolean;
+  ordinaryDay?: { questCardSpawned?: boolean; supper: boolean; bedtime: boolean; complete: boolean; visitedTree: boolean };
   tableau: Card[][];
   stock: Card[];
   foundations: FoundationSlot[];
@@ -185,6 +224,8 @@ export type TargetAnnouncement = {
 };
 
 export type CardTransport = {
+  /** Presentation captured at pickup, independent of later biome selection. */
+  background?: TableauCardBackground;
   cardId: string;
   sourceColumnIndex: number;
   targetSide: 'player' | 'enemy';

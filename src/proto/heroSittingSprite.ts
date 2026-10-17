@@ -1,5 +1,6 @@
 import measurements from './art/heroSittingLayout.json';
 import type { AtlasRect } from './directionalSprites';
+import { HERO_OVERHEAD_LENGTH_SCALE } from './directionalSprites';
 import { createQuadrupedSpriteDefinition, type QuadrupedLayout } from './quadrupedSprite';
 
 // Sitting anatomy stays on one coherent registration grid in every direction.
@@ -22,6 +23,7 @@ const frames = (tier: 'low' | 'high') => measurements[tier].rects.slice(0,8).map
 }));
 export const HERO_SITTING_DIRECTIONAL_SPRITE = createQuadrupedSpriteDefinition({
   id: 'hero-sitting', low: frames('low'), high: frames('high'),
+  overheadLengthScale: HERO_OVERHEAD_LENGTH_SCALE,
   top: { source:'heroSittingHigh', rect: atlasRect(measurements.high.rects[8]),
     layout: { kind:'stacked', neck:[[0,.33],[.5,.38],[1,.33]], hip:[[0,.65],[.5,.61],[1,.65]],
       pivots:[[.5,.68],[.5,.48],[.5,.27]] } },

@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -42,7 +43,7 @@ export function GameTooltip() {
       return title;
     };
     // The bubble goes, but a hovered element keeps its title parked until the pointer leaves.
-    const hideBubble = () => { window.clearTimeout(timer.current); tipRef.current = null; setTip(null); };
+    const hideBubble = () => { gameTime.clearTimeout(timer.current); tipRef.current = null; setTip(null); };
     const hide = () => { hideBubble(); restore(); };
     const show = (el: Element) => {
       const text = park(el).trim();
@@ -59,7 +60,7 @@ export function GameTooltip() {
       if (!el || el === parked.current?.el) return;
       hide();
       park(el);
-      timer.current = window.setTimeout(() => show(el), HOVER_DELAY);
+      timer.current = gameTime.setTimeout(() => show(el), HOVER_DELAY);
     };
     const out = (event: PointerEvent) => {
       if (event.pointerType === 'touch') return;
@@ -70,14 +71,15 @@ export function GameTooltip() {
     let press: { x: number; y: number; el: Element; shown: boolean } | null = null;
     const down = (event: PointerEvent) => {
       if (event.pointerType !== 'touch') { hideBubble(); return; }
+      if(event.target instanceof Element && event.target.closest('[data-board-piece="tile"],[data-board-piece="actor"],[data-immutable-region]')){hide();return;}
       const wasShowing = tipRef.current?.anchor;
       hide();
       const el = titled(event.target);
       if (!el) { press = null; return; }
       park(el);
       press = { x: event.clientX, y: event.clientY, el, shown: false };
-      if (!interactive(el) && wasShowing !== el) { press.shown = true; show(el); timer.current = window.setTimeout(hide, TOUCH_SHOW_MS); return; }
-      timer.current = window.setTimeout(() => { if (!press) return; press.shown = true; show(el); timer.current = window.setTimeout(hide, TOUCH_SHOW_MS); }, LONG_PRESS);
+      if (!interactive(el) && wasShowing !== el) { press.shown = true; show(el); timer.current = gameTime.setTimeout(hide, TOUCH_SHOW_MS); return; }
+      timer.current = gameTime.setTimeout(() => { if (!press) return; press.shown = true; show(el); timer.current = gameTime.setTimeout(hide, TOUCH_SHOW_MS); }, LONG_PRESS);
     };
     const move = (event: PointerEvent) => {
       if (!press || event.pointerType !== 'touch' || press.shown) return;

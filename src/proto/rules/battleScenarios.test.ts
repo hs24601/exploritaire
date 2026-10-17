@@ -61,8 +61,8 @@ describe('booby traps', () => {
     let state = charged(setup(), 4);
     expect(previewTrap(state, 'hero', 0)).toMatchObject({ cardId: 'ten', damage: Math.round(attackFor('hero', 4)!.damage * TRAP_BONUS) });
     state = applyTrap(state, 'hero', 0);
-    expect(state.traps.ten).toMatchObject({ name: 'Bite' });
-    expect(state.party[0].charge).toBe(0);
+    expect(state.traps.ten).toMatchObject({ name: 'Nip' });
+    expect(state.party[0].charge).toBe(3);
     state = tickBattle(tickBattle(state, 1.01), EYE_SECONDS);
     expect(dark(state).hp).toBe(SLIME.maxHp - Math.round(attackFor('hero', 4)!.damage * TRAP_BONUS));
     expect(dark(state).fed).toBe(0);
@@ -98,7 +98,7 @@ describe('scenarios', () => {
         const threatened = enemyTarget(state)?.id === actor.id && living.some((f) => !f.staggered && f.timer > 1 - (pace * 1.5) / f.profile.attackSeconds);
         const eyed = state.rules.traps ? living.find((f) => f.eye && previewTrap(state, actor.id, f.eye.column)) : undefined;
         if (kill) state = applyAttack(state, actor.id, kill.id);
-        else if (eyed && actor.charge >= 3) state = applyTrap(state, actor.id, eyed.eye!.column);
+        else if (eyed && actor.charge >= 3) state = applyTrap(state, actor.id === 'hero' ? 'hero:Bite' : actor.id, eyed.eye!.column);
         else if ((actor.charge >= 7 || threatened) && living.length) state = applyAttack(state, actor.id, living.sort((a, b) => a.hp - b.hp)[0].id);
       }
       const tops = state.columns.map((c) => c[c.length - 1]);

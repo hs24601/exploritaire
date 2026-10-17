@@ -1,0 +1,38 @@
+[
+  {
+    "name": "hero-sleeping",
+    "sourceRow": 0,
+    "bounds": [
+      17,
+      23,
+      1024,
+      734
+    ],
+    "size": [
+      1023,
+      727
+    ],
+    "alpha": [
+      0,
+      254
+    ]
+  },
+  {
+    "name": "hero-sleeping-topdown",
+    "sourceRow": 1,
+    "bounds": [
+      0,
+      17,
+      1013,
+      750
+    ],
+    "size": [
+      1029,
+      749
+    ],
+    "alpha": [
+      0,
+      254
+    ]
+  }
+]

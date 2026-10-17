@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildPropVolume, propVolumeRecipe, renderPropVolume, VOLUME_RASTER_WIDTH, type VolumeLight } from './propVolume';
 import { fitSceneryVolumeFootprint } from './sceneryFootprint';
+import { isPaintedScenerySprite, scenerySprite, sceneryWorldHeading } from './sceneryArt';
 
 const light:VolumeLight={direction:[1,1,1],brightness:1,localDirection:[0,1,0],localAmount:0,tint:[255,220,160]};
 function pine() {
@@ -18,6 +19,24 @@ function ink(pixels:Uint8ClampedArray) {
   return {width:right-left+1,count};
 }
 describe('sprite-derived prop volumes',()=>{
+  it('shows the selected painted den directly while retaining the north-facing Pixel carve',()=>{
+    const painted=scenerySprite('/assets/biomes/hero-den-standee-v3.png','paint');
+    expect(painted).toContain('hero-den-sprite-v2.png');
+    expect(isPaintedScenerySprite(painted)).toBe(true);
+    expect(propVolumeRecipe(painted)).toBeUndefined();
+    expect(sceneryWorldHeading(painted)).toBe(Math.PI);
+    expect(sceneryWorldHeading(scenerySprite('/assets/biomes/berry-bush.svg','paint'))).toBeUndefined();
+    const pixel=propVolumeRecipe(scenerySprite('/assets/biomes/hero-den-standee-v3.png','pixel'))!;
+    expect(pixel.shape).toBe('cave');
+    expect(pixel.facing).toBe('north');
+    const rgba=new Uint8ClampedArray(16*16*4).fill(255);
+    const model=buildPropVolume(16,16,rgba,pixel);
+    expect(model.surface).toBeUndefined();
+    expect(model.depth).toBeGreaterThan(.5);
+    const front=renderPropVolume(model,0,15,light);
+    const side=renderPropVolume(model,90,15,light);
+    expect(side).not.toEqual(front);
+  });
   it('reduces den height by 50% and berry height by 70% without changing their ground footprints',()=>{
     const rgba=new Uint8ClampedArray(20*20*4).fill(180);
     for(let i=3;i<rgba.length;i+=4)rgba[i]=255;

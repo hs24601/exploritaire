@@ -83,7 +83,7 @@ describe('applyFoundationPlay', () => {
     expect(result?.state.actorInspiration[0]).toBe(0);
   });
 
-  it('spends exploration energy and refuses plays it cannot afford', () => {
+  it('preserves exploration energy and allows plays at zero energy', () => {
     const state = createInitialState();
     const hero = state.worldActors[0];
     const exploring: ProtoState = {
@@ -97,8 +97,8 @@ describe('applyFoundationPlay', () => {
       foundations: createFoundations([card(5)]),
     };
     const played = applyFoundationPlay({ ...exploring, energy: 3 }, { columnIndex: 0, foundationIndex: 0 });
-    expect(played?.state.energy).toBe(2);
-    expect(applyFoundationPlay({ ...exploring, energy: 0 }, { columnIndex: 0, foundationIndex: 0 })).toBeNull();
+    expect(played?.state.energy).toBe(3);
+    expect(applyFoundationPlay({ ...exploring, energy: 0 }, { columnIndex: 0, foundationIndex: 0 })?.state.energy).toBe(0);
   });
 
   it('grants a safety wildcard when no move is left, but not for a cleared tableau', () => {

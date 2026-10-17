@@ -1,3 +1,5 @@
+import { trackGameAnimation } from '../gameAnimations';
+import { gameTime } from '../gameTime';
 import type { PondCatch } from './rules/fishing';
 
 /** A fish that bit: where its face-down card lay, what it turned out to be. */
@@ -32,7 +34,7 @@ export function reelInCatch(rod: DOMRect, hooked: HookedFish[], target: (kind: P
   const tip = { x: rod.left + rod.width / 2, y: rod.top + 2 };
   let running = hooked.length;
   // A fish already on the line (after a fight) skips the cast and comes straight up.
-  const begin = performance.now() - (alreadyHooked ? CAST_MS : 0);
+  const begin = gameTime.now() - (alreadyHooked ? CAST_MS : 0);
 
   hooked.forEach((fish, index) => {
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -56,7 +58,7 @@ export function reelInCatch(rod: DOMRect, hooked: HookedFish[], target: (kind: P
     };
     const frame = (now: number) => {
       const t = now - start;
-      if (t < 0) { requestAnimationFrame(frame); return; }
+      if (t < 0) { gameTime.requestAnimationFrame(frame); return; }
       if (t < CAST_MS) {
         // The line flies out from the bait to the card that bit.
         const p = ease(t / CAST_MS);
@@ -86,14 +88,14 @@ export function reelInCatch(rod: DOMRect, hooked: HookedFish[], target: (kind: P
       } else {
         ghost.remove();
         line.remove();
-        to?.el?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'ease-out' });
+        trackGameAnimation(to?.el?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'ease-out' }));
         onLand(fish.kind);
         running -= 1;
         if (!running) svg.remove();
         return;
       }
-      requestAnimationFrame(frame);
+      gameTime.requestAnimationFrame(frame);
     };
-    requestAnimationFrame(frame);
+    gameTime.requestAnimationFrame(frame);
   });
 }

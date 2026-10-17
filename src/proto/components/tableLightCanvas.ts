@@ -86,7 +86,7 @@ export const drawTableLight = (
   };
   const paintGlobal = () => {
     if (!cache) { drawGlobal(); return; }
-    const key=JSON.stringify([size,camera,frame.hour,outputContext.canvas.width,outputContext.canvas.height]);
+    const key=JSON.stringify([size,camera,frame.hour,frame.globalLights,outputContext.canvas.width,outputContext.canvas.height]);
     if(cache.key!==key){
       cache.key=key;cache.canvas.width=outputContext.canvas.width;cache.canvas.height=outputContext.canvas.height;
       const cached=cache.canvas.getContext('2d')!;

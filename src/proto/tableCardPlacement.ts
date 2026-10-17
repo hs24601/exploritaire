@@ -3,6 +3,11 @@ export const TABLE_CARD_WIDTH = 96;
 export const TABLE_CARD_SCREEN_WIDTH = TABLE_CARD_WIDTH * 1.7;
 export const CARD_RATIO = 63 / 88;
 export type TableSolid = {x:number;y:number;width:number;height:number};
+/** Face the player at placement time, then keep this heading as the camera moves. */
+export function readableTableCardAngle(element: HTMLElement) {
+  const yaw = parseFloat(getComputedStyle(element).getPropertyValue('--camera-yaw')) || 0;
+  return -yaw + Math.random() * 8 - 4;
+}
 /** Use a rotated card's conservative bounds so tilted corners cannot overlap solids. */
 export function settleTableCard(point:{x:number;y:number},width:number,angle:number,solids:TableSolid[]) {
   const radians=angle*Math.PI/180, height=width/CARD_RATIO;

@@ -15,6 +15,52 @@
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
+.proto-game-root .proto-map[hidden],
+.proto-game-root .proto-tableau-field[hidden] { display: none; }
+.proto-world-minimap {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  width: var(--tableau-minimap-width, 140px);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #8ef2d440;
+  border-radius: 8px;
+  background: #07110ef2;
+  color: #d9e9df;
+  font: 16px 'Classic Pixel', monospace;
+}
+.proto-world-minimap__header { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 4px; }
+.proto-world-minimap .proto-world-minimap__header button { padding: 4px; flex: 0 0 auto; }
+.proto-world-minimap .proto-world-minimap__header button:disabled { opacity: .4; }
+.proto-world-minimap button, .proto-return-tableau, .proto-rest-status button { padding: 4px 8px; border: 1px solid #a08a64; border-radius: 4px; background: #12221c; color: #ffe2ae; font: 16px 'Classic Pixel', monospace; touch-action: manipulation; }
+.proto-world-minimap button:focus-visible, .proto-return-tableau:focus-visible, .proto-rest-status button:focus-visible { outline: 2px solid #8ef2d4; outline-offset: -3px; }
+.proto-world-minimap svg { display: block; width: 100%; aspect-ratio: 1; }
+.proto-return-tableau { margin-bottom: 4px; }
+@media (min-width: 901px) {
+  .proto-main-layout[data-primary-viewport="tableau"] > .proto-tableau-field { position: relative; z-index: 1; }
+  .proto-game-root .proto-main-layout[data-primary-viewport="tableau"] > .combat-demo { grid-area: tableau; }
+  .proto-main-layout[data-primary-viewport="tableau"] .combat-demo__footer { right: 8px; left: 8px; bottom: 8px; }
+  .proto-main-layout[data-primary-viewport="tableau"] .combat-demo__readout { gap: 4px; }
+  .proto-main-layout[data-primary-viewport="tableau"] .combat-demo__views { gap: 4px; }
+  .proto-main-layout[data-primary-viewport="tableau"] .combat-demo__header { flex-wrap: wrap; gap: 4px; padding: 8px; }
+}
+@media (max-width: 900px) {
+  .proto-world-minimap { --tableau-minimap-width: 112px; }
+  .proto-world-minimap__header { gap: 2px; padding: 3px; }
+  .proto-world-minimap .proto-world-minimap__header button { padding: 4px 2px; font-size: 14px; }
+}
+.proto-tableau-field:has(> .proto-world-minimap) .proto-tableau-heading,
+.proto-tableau-field:has(> .proto-world-minimap) .battle-field__header { padding-right: calc(var(--tableau-minimap-width, 140px) + 16px); }
+.proto-tableau-field:has(> .proto-world-minimap) { --tableau-minimap-width: 140px; }
+@media (max-width: 900px) {
+  .proto-tableau-field:has(> .proto-world-minimap) { --tableau-minimap-width: 112px; }
+}
+@media (max-width: 900px) and (max-height: 500px) {
+  .proto-game-root .proto-tableau-field:has(> .proto-world-minimap) > .proto-main-foundations { padding-top: 156px; }
+  .proto-tableau-field:has(> .proto-world-minimap) .proto-tableau-heading { padding-right: 0; }
+}
 .proto-game-root .proto-main-layout {
   row-gap: 5px;
 }
@@ -77,12 +123,36 @@
   aspect-ratio: 56 / 74;
 }
 .proto-tableau-field {
+  position: relative;
+  isolation: isolate;
   grid-column: 1;
   grid-row: 2;
   display: grid;
   /* The foundation shelf owns its intrinsic height; the tableau uses the rest. */
   grid-template-rows: minmax(0, 1fr) auto;
   gap: clamp(0.45rem, 1vmin, 0.7rem);
+}
+.proto-tableau-landscape { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; border-radius: 8px; background: #0b1520; }
+.proto-tableau-landscape canvas { display: block; width: 100%; height: 100%; }
+.proto-tableau-landscape[data-ready="false"] canvas { visibility: hidden; }
+.proto-tableau-field:has(> .proto-tableau-landscape[data-woods="true"]) { touch-action: none; }
+.proto-tableau-freecam { position: absolute; bottom: 8px; left: 8px; z-index: 4; padding: 5px 10px; border: 1px solid #b2cfdf66; border-radius: 6px; background: #071120e6; color: #c5d9e8; font-size: 16px; }
+.proto-tableau-freecam[aria-pressed="true"] { border-color: #b6dce5; background: #203944e6; }
+.proto-tableau-freecam:focus-visible { outline: 2px solid #ffe0a0; outline-offset: 2px; }
+.proto-game-root .proto-tableau-field:has(> .proto-tableau-landscape[data-ready="true"]) > .proto-main-tableau,
+.proto-game-root .proto-tableau-field:has(> .proto-tableau-landscape[data-ready="true"]) > .proto-main-foundations,
+.proto-game-root .proto-tableau-field:has(> .proto-tableau-landscape[data-ready="true"]) > .battle-field {
+  background: linear-gradient(90deg, #07121a99, #07121a66);
+}
+/* Low scenery needs exposed crowns above the rack, rather than a tree-height
+   backdrop buried beneath it. Reserve space before measuring the card area. */
+.proto-tableau-field:has(> .proto-tableau-landscape[data-biome="berry-patch"]) .proto-tableau-scene {
+  display: grid;
+  grid-template-rows: clamp(48px, 9vh, 82px) minmax(0, 1fr);
+}
+.proto-tableau-field:has(> .proto-tableau-landscape[data-biome="berry-patch"]) .proto-tableau-scene > .proto-tableau-card-area { grid-row: 2; }
+.proto-game-root .proto-tableau-field:has(> .proto-tableau-landscape[data-biome="berry-patch"][data-ready="true"]) > .proto-main-tableau {
+  background: linear-gradient(180deg, #07121a66 0%, #07121a22 22%, #07121a44 52%, #07121a88 100%);
 }
 .proto-tableau-field.hidden {
   display: none;
@@ -399,7 +469,24 @@
 }
 .proto-map-viewport {
   background-color: #102823;
+  /* End the perspective scene below the screen-space map controls. */
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
 }
+/* Bound each composited scene at the viewport before applying its oversized
+   perspective transform inside. Flattening the stage itself would destroy
+   standee depth; these outer surfaces preserve it while keeping lighting
+   repaints from re-sorting ground, props and the screen-space controls. */
+.proto-map-composite { position: absolute; inset: 0; isolation: isolate; pointer-events: none; }
+.proto-map-composite--ground { z-index: 0; }
+.proto-map-composite--physical { z-index: 1; }
+.proto-map [data-camera-clipped] { display: none !important; }
+.proto-map [data-ground-world] > [data-board-piece="tile"] { pointer-events: auto; }
+/* Screen UI stays on a bounded flat surface. Promoting the whole footer with
+   translateZ(0) tied live FPS text to the same compositor churn as the world. */
+.proto-map-hud { position: absolute; inset: 0; z-index: 50; contain: layout paint; isolation: isolate; pointer-events: none; }
+.proto-travel-controls { pointer-events: auto; }
 .proto-map [data-board-piece="tile"] {
   border: 0;
   border-radius: 0;
@@ -427,8 +514,8 @@
 .proto-map[data-camera-view="tabletop"] .proto-map-world,
 .proto-map[data-camera-view="tabletop"] .proto-map-world * { box-shadow: none !important; text-shadow: none !important; }
 .proto-map[data-camera-view="tabletop"] [data-board-piece="actor"] { width: 36px; height: 36px; padding: 0; border-width: 2px; border-color: #d8b776; outline-offset: 2px; background: #3f3430; }
-.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"]:focus-visible { outline: 2px solid #fff0b5; }
-.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"][data-selected] { outline: 2px solid #fff0b5; }
+.proto-map [data-board-piece="actor"]:focus-visible { outline: none; }
+.proto-map [data-board-piece="actor"][data-selected] { outline: none; }
 .proto-map [data-board-piece="resource"] {
   border: 3px solid #080507;
   border-bottom-width: 5px;
@@ -1831,6 +1918,12 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-map-readouts { display: flex; flex-direction: column; gap: 4px; }
 .proto-map-fps { color: #e2eae5; font-variant-numeric: tabular-nums; }
 .proto-map-zoom { color: #e2eae5; }
+.proto-travel-controls { position: absolute; top: 8px; left: 12px; right: 12px; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; width: fit-content; max-width: calc(100% - 24px); padding: 8px 10px; border: 1px solid #a08a64; border-radius: 4px; background: #07110ef2; color: #ffe2ae; font: 16px 'Classic Pixel', monospace; }
+.proto-travel-speed, .proto-travel-follow { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.proto-travel-speed input { width: 128px; min-height: 24px; accent-color: #ffd166; touch-action: none; }
+.proto-travel-speed output { width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
+.proto-travel-follow input { width: 18px; height: 18px; accent-color: #ffd166; }
+.proto-travel-controls input:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 3px; }
 .proto-map-toolbar { display: flex; flex: 0 0 auto; gap: 5px; pointer-events: auto; }
 @media (max-width: 600px) {
   .proto-map-footer { flex-wrap: wrap; gap: 8px; }
@@ -1838,6 +1931,8 @@ html.drag-perf-mode .target-swirl-sparkles {
 }
 .proto-map-camera-button { display: grid; place-items: center; width: 36px; height: 36px; padding: 6px; border: 1px solid #a08a64; border-radius: 3px; color: #ffe2ae; background: #07110ef2; box-shadow: inset 0 1px #ffe2ae26, 0 3px 0 #020504; touch-action: manipulation; }
 .proto-map-camera-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: square; stroke-linejoin: miter; }
+.proto-map-camera-button:disabled { opacity: .45; cursor: default; }
+.proto-actor-closeup-control { flex-basis: 100%; }
 .proto-map-camera-button:hover { background: #25352b; border-color: #ffe2ae; }
 .proto-map-camera-button[aria-pressed="true"] { background: #3d3420; border-color: #ffd166; color: #ffd166; }
 .proto-map-camera-button:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 3px; }
@@ -2485,7 +2580,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-atmosphere__world { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; transform: var(--camera-transform, none); transform-style: preserve-3d; }
 .proto-atmosphere__billboard { position: absolute; width: 0; height: 0; transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt))); transform-origin: 0 0; transform-style: preserve-3d; }
 .proto-dust { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; }
-.proto-halo { position: absolute; border-radius: 50%; transform: scale(var(--light-flicker, 1)); opacity: calc(var(--halo-opacity, 1) * var(--light-flicker, 1)); }
+.proto-halo { position: absolute; border-radius: 50%; transform: scale(calc(var(--light-flicker, 1) * var(--halo-projection-scale, 1))); opacity: calc(var(--halo-opacity, 1) * var(--light-flicker, 1) * var(--halo-camera-opacity, 1)); }
 .proto-firefly { position: absolute; left: 0; border-radius: 50%; background: #f4ff9c; box-shadow: 0 0 3px 1px #e6ff6acc, 0 0 9px 3px #b8f04a55; animation-name: proto-firefly-drift, proto-firefly-blink; animation-timing-function: ease-in-out, ease-in-out; animation-iteration-count: infinite, infinite; animation-direction: alternate, alternate; }
 @keyframes proto-firefly-drift { 0% { translate: 0 0; } 33% { translate: var(--fx-dx) calc(var(--fx-dy) * -0.6); } 66% { translate: calc(var(--fx-dx) * -0.5) var(--fx-dy); } 100% { translate: calc(var(--fx-dx) * 0.4) calc(var(--fx-dy) * 0.3); } }
 @keyframes proto-firefly-blink { 0%, 55% { scale: 0.3; } 80%, 100% { scale: 1; } }
@@ -2500,9 +2595,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 @keyframes proto-mist-drift { 0% { opacity: 0; translate: 0 0; scale: 0.6; } 30% { opacity: var(--fx-peak); } 70% { opacity: calc(var(--fx-peak) * 0.8); } 100% { opacity: 0; translate: var(--fx-dx) calc(var(--fx-dy) * 0.5 - 6px); scale: 1.25; } }
 @keyframes proto-mote-drift { 0% { translate: 0 0; opacity: 0; } 15% { opacity: var(--fx-illumination, 1); } 85% { opacity: var(--fx-illumination, 1); } 100% { translate: var(--fx-dx) var(--fx-dy); opacity: 0; } }
 .proto-volumetrics { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 41; pointer-events: none; opacity: 0; }
-.proto-volumetrics[data-active="true"] { animation: proto-volume-enter 350ms ease-out both; }
-@media (prefers-reduced-motion: reduce) { .proto-volumetrics[data-active="true"] { animation: none; opacity: 1; } }
-@keyframes proto-volume-enter { from { opacity: 0; } to { opacity: 1; } }
+.proto-volumetrics[data-active="true"] { opacity: 1; }
 /* Dangerous tiles (the Dark Woods): the woods' fireflies and mist in dark red,
    embers and a blood mist, shown in both cameras as a warning of a fight. */
 .proto-atmosphere--danger .proto-firefly { background: #ff5a3c; box-shadow: 0 0 3px 1px #d0201acc, 0 0 10px 4px #8b000088; }
@@ -2510,7 +2603,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-table-air--flat .proto-atmosphere__billboard { transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))); }
 .proto-map .proto-danger-tile { border-color: rgba(190, 40, 36, 0.8); background: radial-gradient(ellipse at 50% 60%, #3a0d10, #1a0708 70%); color: #ffb3a6; }
 .proto-map .proto-danger-tile:hover { border-color: rgba(255, 90, 70, 0.9); }
-.proto-map :is([data-biome-popup="woods-danger"], [data-biome-edge="woods-danger"]) { filter: brightness(0.5) sepia(1) hue-rotate(-38deg) saturate(3.2); }
+.proto-map :is([data-biome-popup="woods-danger"], [data-biome-edge="woods-danger"]):not([data-scenery-billboard="paint"]) { filter: brightness(0.5) sepia(1) hue-rotate(-38deg) saturate(3.2); }
 @media (prefers-reduced-motion: reduce) { .proto-halo, .proto-firefly, .proto-fizz, .proto-shaft, .proto-mote, .proto-mist { animation: none; } .proto-fizz { opacity: 0.5; } .proto-mist { opacity: calc(var(--fx-peak) * 0.7); } }
 /* Tilted camera: scenery lining a biome tile's sides and front (BiomeEdgeScenery). */
 .proto-map .proto-map-world > .proto-biome-edge,
@@ -2522,10 +2615,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-cell-grip { position: absolute; transform: translate(-50%, -50%); cursor: grab; touch-action: none; }
 .proto-table-stage--tilted .proto-map-world > .proto-cell-grip { transform: translate3d(-50%, -50%, 2px); }
 .proto-oversample { position: absolute; left: 0; top: 0; display: block; transform-origin: 0 0; }
-.proto-sprite-standee--selected:has(> .proto-oversample) { filter: none; }
-.proto-sprite-standee--selected > .proto-oversample { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
+/* Stroke the complete live sprite alpha after oversampled layers compose. */
+.proto-map [data-board-piece="actor"] { filter: url(#actor-visibility-stroke); }
 .proto-sprite-standee__art { display: block; width: 100%; height: 100%; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
-.proto-sprite-standee--selected { filter: drop-shadow(0 0 2px #fff0b5) drop-shadow(0 0 6px #ffd16699); }
 .proto-sprite-shadow {
   position: absolute; pointer-events: none;
   transform-origin: 50% 100%;
@@ -2922,6 +3014,10 @@ html.drag-perf-mode .target-swirl-sparkles {
    resource; the rank stays above it, dimmed. The veil sweeps away behind a
    slanted edge when the card reaches the front. */
 .proto-card-veil { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: #0a1220a8; -webkit-backdrop-filter: var(--silhouette-card-filter); backdrop-filter: var(--silhouette-card-filter); transition: mask-position 0.9s ease-in-out, -webkit-mask-position 0.9s ease-in-out; }
+.proto-card-tableau-background { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+.proto-card-tableau-background > img { width: 100%; height: 100%; object-fit: cover; }
+.proto-card-tableau-background[data-card-art-style="pixel"] > img { image-rendering: pixelated; }
+.playing-card:has(> .proto-card-tableau-background) .proto-card-header { position: relative; text-shadow: 0 1px 2px #000, 0 0 5px #000; }
 :root { --silhouette-card-filter: saturate(0) brightness(0.55) sepia(0.5) hue-rotate(175deg); }
 .proto-card-rank { position: relative; z-index: 2; }
 .proto-card--buried .proto-card-rank { color: #c6d3e4a6; }
@@ -2964,6 +3060,14 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-tableau-field .proto-occupied-foundation-owner, .proto-tableau-field .proto-empty-foundation-face { font-size: 16px; letter-spacing: normal; }
 .proto-occupied-foundation-face.proto-lit-surface { position: relative; }
 /* A quiet pixel bevel and inset header keep the exposed stack edges readable. */
+.proto-game-root .proto-tableau-stage .playing-card,
+.proto-game-root .battle-field__column .playing-card {
+  box-sizing: border-box;
+  width: var(--classic-card-w);
+  height: calc(var(--classic-card-w) * 88 / 63);
+  min-height: 0;
+  aspect-ratio: 63 / 88;
+}
 .proto-game-root .proto-tableau-stage .playing-card {
   padding: max(4px, calc(var(--classic-card-w) * .075)) max(5px, calc(var(--classic-card-w) * .09));
   border-radius: 3px;
@@ -3007,21 +3111,15 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-tile-title__line {
   display: block; position: absolute; transform: translateX(-50%);
   text-align: center; white-space: pre; letter-spacing: 0;
-  -webkit-text-stroke: 2px #10171a; paint-order: stroke fill;
+  -webkit-text-stroke: 0.2px #10171a; paint-order: stroke fill;
 }
-.proto-tile-title[data-projected-title="true"] { visibility: hidden; }
-/* Tile labels stay hidden until their tile is pointed at, focused or tapped
-   (ProtoMap labelReveal); the tilted camera's projected copies follow suit. */
+/* Tile ink stays in the shared table plane, including its perspective and
+   foreshortening. The foreground title stage keeps terrain from covering it.
+   Hover, focus, touch and scene pins all reveal this same physical label. */
 [data-label-owner]:not([data-label-shown]) .proto-tile-title { opacity: 0; }
 [data-label-owner] .proto-tile-title { transition: opacity 120ms ease-out; }
 @media (prefers-reduced-motion: reduce) { [data-label-owner] .proto-tile-title { transition: none; } }
 .proto-projected-titles { position: absolute; inset: 0; z-index: 44; pointer-events: none; }
-.proto-projected-title {
-  position: absolute; width: max-content; font-family: 'Classic Pixel', monospace;
-  font-weight: 900; color: #eee9d5; line-height: 1.2; text-align: center;
-  -webkit-text-stroke: 2px #10171a; paint-order: stroke fill;
-}
-.proto-projected-title[data-label-depth="background"] { color: #b1b8ac; }
 .proto-immutable-region-label {
   position: absolute; transform: translate(-50%, -50%);
   pointer-events: none; transform-style: preserve-3d;
@@ -3030,32 +3128,28 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-table-title-layer { z-index: 42; transform-origin: 50% 50%; transition: transform 520ms ease; }
 @media (prefers-reduced-motion: reduce) { .proto-table-title-layer { transition: none; } }
 
-/* Shared x-ray pass. Physical actors remain in the world's depth scene. */
-.proto-table-actor-layer { z-index: 43; pointer-events: none; transform-origin: 50% 50%; transition: transform 520ms ease; }
+/* Physical actors and their grab areas remain in the world's depth scene. */
 .proto-map .proto-map-world > .proto-neutral-ground { pointer-events: none; transform-style: flat; }
 .proto-neutral-ground > button { pointer-events: auto; }
-.proto-table-actor-layer .proto-map-world > [data-board-piece="actor"],
-.proto-table-actor-layer .proto-map-world > [data-cell-grip] { pointer-events: auto; }
-.proto-table-actor-layer .proto-standee-base, .proto-table-actor-layer .proto-actor-base-name { pointer-events: none !important; }
 .proto-map [data-board-piece="tile"][data-tile-type="impassable-mountain"] { background: transparent; }
 .proto-map [data-board-piece="tile"][data-tile-type="hero-den"] { background: transparent; }
-@media (prefers-reduced-motion: reduce) { .proto-table-actor-layer { transition: none; } }
 
 .proto-map [data-environment-prop] { transition: opacity 180ms ease, filter 180ms ease; }
-.proto-map [data-actor-occluder="true"] { opacity: .48; }
-/* Solid reliefs dim for the actor outline without becoming transparent to
-   the table grid, ground boundaries or horizon behind their opaque pixels. */
-.proto-map [data-scenery-volume="true"][data-actor-occluder="true"] { opacity: 1; filter: brightness(.65); }
-.proto-actor-ghost { pointer-events: auto !important; }
-.proto-actor-ghost > .proto-oversample { filter: url(#proto-actor-xray); }
-.proto-actor-ghost:not(:has(> .proto-oversample)) { filter: url(#proto-actor-xray); }
-.proto-map [data-board-piece="actor"][data-actor-occluded="true"] > .proto-oversample { opacity: .28; }
-.proto-map [data-board-piece="actor"][data-actor-occluded="true"]:not(:has(> .proto-oversample)) { opacity: .28; }
-.proto-map[data-camera-view="tabletop"] [data-board-piece="actor"].proto-actor-overhead { padding: 0; border: 0; background: none; box-shadow: none; }
-.proto-actor-overhead img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
+/* Composite a cached ragged opening on the art only, preserving opaque relief
+   coverage everywhere else and the prop's existing world depth/input plane. */
+.proto-map [data-actor-peek="true"] {
+  mask-image: var(--peek-image);
+  mask-size: var(--peek-size);
+  mask-position: var(--peek-position);
+  mask-repeat: no-repeat;
+  mask-mode: alpha;
+  mask-composite: var(--peek-composite);
+}
+.proto-map [data-board-piece="actor"].proto-actor-overhead { display: block; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.proto-actor-overhead img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; pointer-events: none; transform: scaleY(var(--actor-overhead-length, 1)); }
 @media (prefers-reduced-motion: reduce) { .proto-map [data-environment-prop] { transition: none; } }
-.proto-story-card { position: absolute; z-index: 18; width: 252px; height: 352px; transform: translate(-50%,-50%) rotateZ(calc(-1 * var(--camera-yaw,0deg))) scale(calc(1 / var(--camera-scale,1.7))); transform-origin: center; touch-action: none; cursor: grab; }
-.proto-story-card[data-picked-up] { transform: translate(-50%,-50%) rotateZ(calc(-1 * var(--camera-yaw,0deg))) rotateX(calc(-1 * var(--table-tilt,0deg))) translateZ(24px) scale(calc(1 / var(--camera-scale,1.7))); cursor: grabbing; }
+.proto-story-card { position: absolute; z-index: 18; width: 252px; height: 352px; transform: translate(-50%,-50%) rotate(var(--placed-angle,0deg)) scale(calc(1 / 1.7)); transform-origin: center; touch-action: none; cursor: grab; }
+.proto-story-card[data-picked-up] { transform: translate(-50%,-50%) rotateZ(calc(-1 * var(--camera-yaw,0deg))) rotateX(calc(-1 * var(--table-tilt,0deg))) translateZ(24px) scale(calc(1 / 1.7)); cursor: grabbing; }
 
 /* All held faces outrank table pieces, scenery, flights and inspection cards. */
 [data-held-visual], body .proto-pond__drag, body .proto-skirmish__drag { z-index: 100000; pointer-events: none; }
@@ -3153,3 +3247,141 @@ html.drag-perf-mode .target-swirl-sparkles {
 
 .proto-actor-base-name[data-projected-name] { visibility: hidden; }
 .proto-projected-actor-name { position: absolute; font-family: 'Classic Pixel', monospace; font-weight: 900; line-height: 1; text-transform: uppercase; white-space: nowrap; color: #ffe7ad; text-shadow: 0 1px 0 #090705, 1px 0 0 #090705, -1px 0 0 #090705; pointer-events: none; }
+
+/* Close-up dedicates the scene to camera gestures, preserving table objects. */
+.proto-map[data-actor-closeup="true"] .proto-map-viewport [data-camera-ignore="true"],
+.proto-map[data-actor-closeup="true"] .proto-map-viewport [draggable="true"],
+.proto-map[data-actor-closeup="true"] .proto-map-viewport [data-component="playing-card"] { pointer-events: none; }
+
+
+.proto-map .proto-sprite-standee[data-board-piece="actor"] { filter: url(#actor-visibility-stroke-oversampled); }
+
+/* Utility controls share the foundation's compact side space. */
+.proto-foundation-assembly:has(> .battle-moves) { grid-template-columns: auto minmax(100px, 130px); grid-template-areas: "foundation utilities" "resources utilities"; }
+.proto-foundation-assembly > .battle-moves { grid-area: utilities; align-self: center; }
+.proto-foundation-assembly > .battle-moves .ability-tray { grid-template-rows: repeat(2,32px); height: 68px; min-height: 68px; max-height: 68px; }
+.proto-foundation-assembly > .battle-moves .ability-tray__empty { display: none; }
+.proto-foundation-assembly > .battle-moves { gap: 4px; color: #f1e7cb; font-size: 16px; }
+.proto-foundation-assembly > .battle-moves > strong { height: auto; line-height: 1.25; padding: 0; }
+.proto-foundation-assembly .battle-move { display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%; height: 32px; box-sizing: border-box; padding: 2px 5px; border: 1px solid #89a795; border-radius: 4px; background: #162b24; color: #f1e7cb; font-size: 16px; cursor: pointer; }
+.proto-foundation-assembly .battle-move[aria-pressed='true'], .proto-foundation-assembly .battle-move:focus-visible { outline: 2px solid #ffd166; }
+.proto-foundation-assembly .battle-move:disabled { opacity: .45; cursor: default; }
+
+
+/* Native touch callouts are replaced by authored game inspection. */
+html { -webkit-touch-callout:none; }
+.tile-inspection-hold { position:fixed; translate:-50% -50%; z-index:1000000; pointer-events:none; filter:drop-shadow(0 1px 3px #000); }
+.tile-inspection-hold circle { fill:#0b191b99; stroke-width:3; }
+.tile-inspection-hold__track { stroke:#fff4; }
+.tile-inspection-hold__progress { fill:none!important; stroke:#ffe39c; stroke-linecap:round; transform:rotate(-90deg); transform-origin:24px 24px; stroke-dasharray:125.664; animation:tile-inspection-progress linear forwards; }
+@keyframes tile-inspection-progress { from {stroke-dashoffset:125.664;} to {stroke-dashoffset:0;} }
+@media(prefers-reduced-motion:reduce) { .tile-inspection-hold__progress {animation:none;stroke-dashoffset:0;} }
+
+/* Scenario tools sit outside the game frame, beside both map/tableau views. */
+.proto-workspace { display:grid; grid-template-columns:minmax(0,1fr) 320px; align-items:start; max-width:2020px; }
+.proto-play-area { height:100%; }
+.proto-day-panel { min-width:0; padding:12px; border-radius:12px; border:1px solid #88785c; background:#171e20; color:#f4e5cd; font-size:16px; line-height:1.2; }
+.proto-day-panel__toolbar,.proto-day-panel__actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.proto-day-panel__toolbar { justify-content:space-between; }
+.proto-day-panel select,.proto-day-panel button { min-height:40px; font-size:16px; background:#293334; border:1px solid #a79470; padding:4px 8px; color:#f4e5cd; max-width:100%; }
+.proto-day-panel__toolbar label { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0; }
+.proto-day-panel__thought { margin:8px 0; max-width:100ch; }
+.proto-day-panel button:disabled { opacity:.5; }
+@media(max-width:1000px) {
+  .proto-workspace { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto; }
+  .proto-day-panel { padding:8px; }
+}
+@media(max-width:600px) { .proto-day-panel { padding:5px; } .proto-day-panel__toolbar,.proto-day-panel__actions { gap:4px; } .proto-day-panel__thought { margin:5px 0; } }
+
+/* Physical tile ink lies on the ground plane; relief owns depth above it. */
+.proto-surface-title-layer .proto-tile-title { transform: none; }
+
+/* Biome pigments remain on the physical ink plane, including prop occlusion. */
+.proto-tile-title { --label-pigment-light: #f3e8c9; --label-pigment-dark: #a88a60; --label-halo: #e8d8ae; }
+.proto-tile-title[data-label-biome="woods"] { --label-pigment-light: #e4edb5; --label-pigment-dark: #63865b; --label-halo: #cedfa1; }
+.proto-tile-title[data-label-biome="water"] { --label-pigment-light: #ddf3f0; --label-pigment-dark: #588f9c; --label-halo: #abdce8; }
+.proto-tile-title[data-label-biome="berry-patch"] { --label-pigment-light: #f3dfdc; --label-pigment-dark: #a36d87; --label-halo: #f1c9db; }
+.proto-tile-title[data-label-biome="hero-den"], .proto-tile-title[data-label-biome="impassable-mountain"] {
+  --label-pigment-light: #eee6d3; --label-pigment-dark: #77838b; --label-halo: #dce5e6;
+  --label-texture: url('/assets/biomes/hero-den-topdown-v3.png');
+}
+.proto-tile-title__line {
+  color: var(--label-pigment-light);
+  -webkit-text-stroke: 1.12px #10191e;
+  text-shadow: none;
+  filter: drop-shadow(0 .96px .8px #071016) drop-shadow(0 0 1.2px var(--label-halo));
+}
+@supports (background-clip: text) {
+  .proto-tile-title__line {
+    background-color: var(--label-pigment-light);
+    background-image: repeating-linear-gradient(166deg, #f9efd980 0 1.76px, transparent 1.76px 5.6px, #27333d33 5.6px 7.36px, transparent 7.36px 12px), linear-gradient(125deg, #fff3dcdd, #e1e7debb 45%, #c1ccd5bb 76%, #fff3dcdd), var(--label-texture, linear-gradient(23deg, var(--label-pigment-dark), var(--label-pigment-light)));
+    background-size: auto, cover, 224px 224px;
+    background-position: center;
+    background-clip: text; -webkit-background-clip: text; color: transparent;
+  }
+}
+
+/* Keep high-resolution ink out of intermediate tile-sized raster layers. */
+.proto-surface-title-layer [data-label-owner],
+.proto-surface-title-layer .proto-tile-title { transform-style: preserve-3d; }
+/* Simultaneous mobile play fields; scenario data can return its space to play. */
+.proto-workspace[data-scenario-expanded='false'] { grid-template-columns:minmax(0,1fr) auto; }
+.proto-day-panel__toggle { width:100%; touch-action:manipulation; }
+.proto-workspace[data-scenario-expanded='false'] > .proto-day-panel { padding:0; overflow:hidden; }
+.proto-workspace[data-scenario-expanded='false'] .proto-day-panel__toggle { width:40px; min-height:112px; writing-mode:vertical-rl; border:0; }
+#scenario-data[hidden] { display:none; }
+#scenario-data { margin-top:8px; max-height:calc(100dvh - 100px); overflow:auto; scrollbar-width:none; }
+@media(max-width:1000px) {
+  .proto-workspace[data-scenario-expanded='true'] { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto; }
+  .proto-workspace[data-scenario-expanded='false'] { grid-template-rows:minmax(0,1fr); }
+  .proto-day-panel { max-height:42dvh; overflow:auto; scrollbar-width:none; }
+  #scenario-data { max-height:none; }
+}
+@media(max-width:900px) {
+  .proto-game-root .proto-main-layout { grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); gap:4px; }
+  .proto-game-root .proto-main-layout > .proto-main-header { grid-column:1 / -1; grid-row:1; }
+  .proto-game-root .proto-main-layout > .proto-map,
+  .proto-game-root .proto-main-layout > .combat-demo { display:grid; grid-column:2; grid-row:2; min-width:0; }
+  .proto-game-root .proto-main-layout > .proto-tableau-field:not([hidden]) { display:grid; grid-column:1; grid-row:2; min-width:0; }
+  .proto-game-root .proto-main-layout[data-tableau-present='false'] > .proto-map { grid-column:1 / -1; }
+  .proto-game-root .proto-main-layout > .proto-tableau-field { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto; padding:4px; }
+  .proto-game-root .proto-main-foundations { grid-column:1; grid-row:2; padding:4px; }
+  .proto-game-root .proto-main-tableau { grid-column:1; grid-row:1; }
+  .proto-map-footer { left:4px; right:4px; gap:4px; }
+  .proto-map-toolbar { flex-wrap:wrap; gap:3px; }
+  .proto-map-camera-button { width:32px; height:32px; padding:4px; }
+}
+@media(max-width:900px) {
+  .travel-tableau .tableau-template__foundations { grid-template-columns:minmax(0,1fr); gap:4px; }
+  .travel-tableau .travel-receiver:has(button[aria-pressed]) { flex-wrap:wrap; }
+  .travel-tableau .travel-toolbar { order:0; }
+  .travel-tableau .travel-toolbar button { max-width:100%; }
+  .travel-tableau .travel-foundation { --foundation-holocard-height:80px; }
+  .proto-travel-controls { position:relative; left:auto; top:auto; right:auto; max-width:100%; gap:4px; padding:4px; }
+  .proto-travel-follow { white-space:normal; overflow-wrap:anywhere; }
+}
+.proto-travel-controls { display:block; }
+.proto-travel-controls summary { cursor:pointer; touch-action:manipulation; }
+.proto-travel-controls:not([open]) > :not(summary) { display:none; }
+@media(max-width:900px) {
+ .proto-travel-controls { position:absolute; left:4px; top:54px; right:4px; width:auto; max-width:none; }
+ .proto-travel-controls[open] { z-index:60; }
+ .day-objective__tracker { top:94px; right:4px; max-width:calc(100% - 8px); padding:4px; }
+ .day-objective__heading { display:none; }
+ .day-objective__row { gap:2px; }
+ .day-objective__locate { width:32px; padding:4px; }
+}
+@media(max-width:900px) {
+ .proto-game-root .travel-tableau .tableau-template__foundations { grid-template-columns:minmax(0,1fr); gap:4px; }
+ .proto-game-root .travel-tableau .travel-toolbar { order:0; width:100%; }
+ .proto-game-root .travel-tableau .travel-receiver:has(button[aria-pressed]) { flex-wrap:wrap; }
+ .proto-game-root .proto-map .proto-travel-controls { left:4px; top:54px; right:4px; width:auto; max-width:none; padding:4px; }
+ .proto-game-root .proto-map .proto-travel-controls summary { white-space:nowrap; }
+ .proto-game-root .day-objective__tracker { top:98px; right:4px; max-width:calc(100% - 8px); padding:4px; }
+ .proto-game-root .day-objective__heading { display:none; }
+ .proto-game-root .day-objective__row { gap:2px; }
+ .proto-game-root .day-objective__locate { width:32px; padding:4px; }
+}
+@media(max-width:900px) {
+ .proto-game-root .proto-map:has(.proto-settings-host) .proto-travel-controls { right:4px; max-width:calc(100% - 8px); width:calc(100% - 8px); box-sizing:border-box; }
+}

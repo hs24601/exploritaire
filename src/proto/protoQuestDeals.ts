@@ -1,9 +1,10 @@
-export type QuestResource = 'wood' | 'berries' | 'herbs';
+export type QuestResource = 'wood' | 'mana' | 'herbs';
 export const QUEST_ROUTE_BUDGET = {
   startingInspiration: 2, maxInspiration: 6,
   rationEnergy: 6, rationInspiration: 6,
 } as const;
 export type QuestCard = {
+  event?: import('./eventCards').TableauEvent;
   id: string;
   rank: number;
   questStep?: number;
@@ -16,8 +17,8 @@ export type QuestCard = {
 export const createQuestBiomeDeal = (biome: 'small' | 'deep') => {
   const size = biome === 'small' ? 13 : 18;
   const resources: Array<QuestResource | undefined> = biome === 'small'
-    ? ['wood', 'berries', 'wood', 'herbs', 'wood', 'berries', 'wood']
-    : ['wood', 'berries', 'herbs', 'wood', 'berries', 'herbs', 'wood', 'berries', 'wood', 'herbs'];
+    ? ['wood', undefined, 'wood', undefined, 'wood', undefined, 'wood']
+    : ['wood', undefined, undefined, 'wood', undefined, undefined, 'wood', undefined, 'wood', undefined];
   const tableau: QuestCard[][] = Array.from({ length: 7 }, () => []);
   for (let step = 0; step < size; step += 1) {
     const resource = resources[step % resources.length];

@@ -1,19 +1,29 @@
+import { sceneryHeightScale, sceneryWidthScale } from '../sceneryHeight';
 import { useEffect, type ReactNode } from 'react';
 import { rgba, type StandeeLighting, type StandeeShadow } from '../protoLighting';
 import { spriteLayout, useSpriteBounds } from './spriteBounds';
+import { propVolumeRecipe } from '../propVolume';
+import { isPaintedActorSprite } from '../actorArt';
+import { isPaintedScenerySprite } from '../sceneryArt';
+import { GroundShadowPortal } from './GroundShadowLayer';
+import { SceneryInterior,type InteriorOccupant } from './SceneryInterior';
+import { RestBobtail, isBobtailRestSprite } from './RestBobtail';
+import { TileDiscoveryArt } from './TileDiscoveryArt';
 
 /** Tilted pieces are 3D layers, which the browser rasterizes at their layout
  * size and then stretches with the camera's zoom and perspective, so pixel
  * art went soft as the camera zoomed in. A standee is laid out this many
  * times larger and scaled back down inside its own 3D transform, so its layer
- * holds that many times the pixels and zooming only ever shrinks it. */
+ * holds that many times the pixels and zooming only ever shrinks it. The map
+ * divides this allowance by display density so high-DPI screens do not pay
+ * for that raster density twice. */
 export const STANDEE_OVERSAMPLE = 6;
 
 /** Inside an oversampled standee: lays its children out at their normal
  * size, enlarged with layout zoom so nested filters and canvases paint at
  * the larger resolution before the outer standee transform shrinks it. */
-export function Oversample({ width, height, factor, children }: { width: number; height: number; factor: number; children: ReactNode }) {
-  if (factor === 1) return <>{children}</>;
+export function Oversample({ width, height, factor, children, persistent = false }: { width: number; height: number; factor: number; children: ReactNode; persistent?: boolean }) {
+  if (factor === 1 && !persistent) return <>{children}</>;
   return <span className="proto-oversample" style={{ width, height, zoom: factor }}>{children}</span>;
 }
 
@@ -23,21 +33,31 @@ export const SPRITE_STANDEE_SIZE = 32;
 
 /** The standee's face: trimmed pixel art, shaded by the light reaching it with
  * a warm rim on the side facing the strongest nearby light. */
-export function SpriteStandeeArt({ sprite, lighting, onError, size = SPRITE_STANDEE_SIZE }: { sprite: string; lighting: StandeeLighting; onError?: () => void; size?: number }) {
+export function SpriteStandeeArt({ sprite, lighting, onError, size = SPRITE_STANDEE_SIZE, flip=false,occupants=[],discoveryTileId }: { sprite: string; lighting: StandeeLighting; onError?: () => void; size?: number; flip?:boolean;occupants?:readonly InteriorOccupant[];discoveryTileId?:string }) {
   const state = useSpriteBounds(sprite);
   const failed = state?.status === 'error';
   useEffect(() => { if (failed) onError?.(); }, [failed, onError]);
   if (state?.status !== 'ready') return null;
-  const layout = spriteLayout(state.bounds, size, size);
+  const layout = spriteLayout(state.bounds, size, size, 1, sceneryHeightScale(sprite, size, size, state.bounds.aspect), sceneryWidthScale(sprite, size, size, state.bounds.aspect));
   const { rim } = lighting;
   const filter = [
     `brightness(${lighting.brightness.toFixed(3)})`,
     `sepia(${(lighting.warmth * 0.45).toFixed(3)})`,
     rim ? `drop-shadow(${(rim.x * 2).toFixed(2)}px ${(-1 - Math.abs(rim.y)).toFixed(2)}px 1px ${rgba(rim.color, rim.amount * 0.8)})` : '',
   ].filter(Boolean).join(' ');
+  if (discoveryTileId) return <>
+    <TileDiscoveryArt relief tileId={discoveryTileId}>
+      <span aria-hidden="true" className="proto-sprite-standee__art" style={{ backgroundImage: `url("${sprite}")`, backgroundSize: layout.size, backgroundPosition: layout.position, filter, transform:flip?'scaleX(-1)':undefined, imageRendering:isPaintedScenerySprite(sprite)?'auto':undefined }} />
+      {flip ? <span style={{position:'absolute',inset:0,transform:'scaleX(-1)'}}><LightWash sprite={sprite} lighting={lighting} maskSize={layout.size} maskPosition={layout.position} flip /></span>
+        : <LightWash sprite={sprite} lighting={lighting} maskSize={layout.size} maskPosition={layout.position} />}
+    </TileDiscoveryArt>
+    {/* Live inhabitants retain their own art/lighting during discovery. */}
+    <span className="proto-sprite-standee__art" style={{filter,transform:flip?'scaleX(-1)':undefined}}><SceneryInterior sprite={sprite} occupants={occupants} layout={layout} /></span>
+  </>;
   return <>
-    <span aria-hidden="true" className="proto-sprite-standee__art" style={{ backgroundImage: `url("${sprite}")`, backgroundSize: layout.size, backgroundPosition: layout.position, filter }} />
-    <LightWash sprite={sprite} lighting={lighting} maskSize={layout.size} maskPosition={layout.position} />
+    <span aria-hidden="true" className="proto-sprite-standee__art" style={{ backgroundImage: `url("${sprite}")`, backgroundSize: layout.size, backgroundPosition: layout.position, filter, transform:flip?'scaleX(-1)':undefined, imageRendering:isPaintedActorSprite(sprite)||isPaintedScenerySprite(sprite)||propVolumeRecipe(sprite)?.surface==='paint'?'auto':undefined }}><SceneryInterior sprite={sprite} occupants={occupants} layout={layout} />{isBobtailRestSprite(sprite) && <span style={{position:'absolute',left:parseFloat(layout.position),top:parseFloat(layout.position.split(' ')[1]),width:parseFloat(layout.size),height:parseFloat(layout.size.split(' ')[1])}}><RestBobtail sprite={sprite} /></span>}</span>
+    {flip ? <span style={{position:'absolute',inset:0,transform:'scaleX(-1)'}}><LightWash sprite={sprite} lighting={lighting} maskSize={layout.size} maskPosition={layout.position} flip /></span>
+      : <LightWash sprite={sprite} lighting={lighting} maskSize={layout.size} maskPosition={layout.position} />}
   </>;
 }
 
@@ -92,19 +112,19 @@ export const standeeShadowSkew = (angleDeg: number) => {
  * away from its light and lengthening as the light gets lower. The board
  * faces a camera spun by `yaw`, so its shadow's foot line turns by -yaw on
  * the table (shadow angles from standeeLighting are already in that frame). */
-export function SpriteStandeeShadows({ sprite, position, shadows, size = SPRITE_STANDEE_SIZE, owner, yaw = 0 }: { sprite: string; position: { x: number; y: number }; shadows: StandeeShadow[]; size?: number; owner?: string; yaw?: number }) {
+export function SpriteStandeeShadows({ sprite, position, shadows, size = SPRITE_STANDEE_SIZE, width = size, height = size, owner, yaw = 0, actorId, flip=false, natural=false }: { sprite: string; position: { x: number; y: number }; shadows: StandeeShadow[]; size?: number; width?: number; height?: number; owner?: string; yaw?: number; actorId?: string; flip?:boolean; natural?:boolean }) {
   const state = useSpriteBounds(sprite);
   if (state?.status !== 'ready') return null;
-  return <>{shadows.map((shadow) => {
-    const layout = spriteLayout(state.bounds, size, size, shadow.length);
+  return <GroundShadowPortal>{shadows.map((shadow) => {
+    const layout = spriteLayout(state.bounds, width, height, shadow.length, natural ? 1 : sceneryHeightScale(sprite, width, height, state.bounds.aspect), natural ? 1 : sceneryWidthScale(sprite, width, height, state.bounds.aspect));
     const mask = `url("${sprite}")`;
-    return <div key={shadow.lightId} aria-hidden="true" className="proto-sprite-shadow" data-shadow-light={shadow.lightId} data-shadow-owner={owner} style={{
+    return <div key={shadow.lightId} aria-hidden="true" className="proto-sprite-shadow" data-travel-actor={actorId} data-shadow-light={shadow.lightId} data-shadow-owner={owner} style={{
       left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`,
-      width: size, height: size * shadow.length,
-      transform: `translate3d(-50%, -100%, 0.5px)${yaw ? ` rotate(${(-yaw).toFixed(2)}deg)` : ''} ${standeeShadowSkew(shadow.angle)}${owner === 'actor' ? ' scale(var(--actor-world-scale, 1))' : ''}`, transformOrigin: '50% 100%', opacity: shadow.opacity,
+      width, height: height * shadow.length,
+      transform: `translate3d(-50%, -100%, 0.5px)${yaw ? ` rotate(${(-yaw).toFixed(2)}deg)` : ''} ${standeeShadowSkew(shadow.angle)}${flip?' scaleX(-1)':''}${owner === 'actor' ? ' scale(var(--actor-world-scale, 1))' : ''}`, transformOrigin: '50% 100%', opacity: shadow.opacity,
       maskImage: mask, WebkitMaskImage: mask, maskSize: layout.size, WebkitMaskSize: layout.size, maskPosition: layout.position, WebkitMaskPosition: layout.position,
     }} />;
-  })}</>;
+  })}</GroundShadowPortal>;
 }
 
 /** Even, neutral light for standees shown outside the table (the foundation). */

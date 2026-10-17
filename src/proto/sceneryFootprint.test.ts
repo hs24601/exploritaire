@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { fitSceneryFootprint } from './sceneryFootprint';
+import { fitSceneryFootprint, fitSceneryVolumeFootprint, walkableSceneryOwner } from './sceneryFootprint';
+
+it('keeps scenery out of centered actors and both travel lanes through every orbit', () => {
+  const tile = { x: 48, y: -96, width: 48, height: 48 };
+  for (const x of [-24, 0, 24]) for (const y of [-24, 0, 24]) {
+    const foot = { x: tile.x + x, y: tile.y + y };
+    const owner = walkableSceneryOwner(foot, tile);
+    for (let yaw = 0; yaw < 360; yaw += 5) {
+      const fit = fitSceneryFootprint(foot, 60, 80, owner, yaw);
+      const angle = yaw * Math.PI / 180;
+      for (const end of [-1, 1]) {
+        expect(Math.abs(fit.position.x + end * fit.width / 2 * Math.cos(angle) - tile.x)).toBeGreaterThanOrEqual(8);
+        expect(Math.abs(fit.position.y - end * fit.width / 2 * Math.sin(angle) - tile.y)).toBeGreaterThanOrEqual(8);
+      }
+    }
+    const fit = fitSceneryVolumeFootprint(foot, 60, 80, owner);
+    expect(Math.abs(fit.position.x - tile.x) - fit.width / 2).toBeGreaterThanOrEqual(8);
+    expect(Math.abs(fit.position.y - tile.y) - fit.width / 2).toBeGreaterThanOrEqual(8);
+  }
+});
 
 describe('environment footprint', () => {
   it('keeps both ends inside the owning square throughout camera rotation', () => {

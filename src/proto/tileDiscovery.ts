@@ -1,3 +1,4 @@
+import { traversalProfile } from './travelJourney';
 import { arriveAt } from './biomeFlags';
 import { TABLE_GRID } from './gridCoordinates';
 import type { BiomeTileState, ProtoState } from './protoState';
@@ -41,7 +42,7 @@ export function discoverTiles(tiles: BiomeTileState[], from: Point, to = from) {
       return value < bounds[axis][0] || value >= bounds[axis][1];
     })) return tile;
     changed = true;
-    return { ...tile, tileType: tile.tileType === 'unexplored' ? 'path' as const : tile.tileType, flags: arriveAt(tile.flags) };
+    return { ...tile, ...(tile.tileType !== 'impassable-mountain' && !tile.flags?.includes('impassable') && traversalProfile(tile).difficulty > 0 ? { traversalProgress: tile.traversalProgress ?? 0 } : {}), tileType: tile.tileType === 'unexplored' ? 'path' as const : tile.tileType, flags: arriveAt(tile.flags) };
   });
   return changed ? next : tiles;
 }

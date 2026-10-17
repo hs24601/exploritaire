@@ -1,0 +1,6 @@
+/* Shared pale blue emission stays gentle, including under reduced motion. */
+/* Visible resource peeks emit above the buried face veil. */
+.playing-card[data-mana-infused='true'] .proto-card-icon { position:relative; z-index:2; }
+.mana-object-glow { position:absolute; inset:0; pointer-events:none; border-radius:inherit; background:radial-gradient(ellipse at 76% 20%,#d7f7ff4d 0%,#8cdeff26 18%,#70cfff0d 40%,transparent 65%); box-shadow:inset 0 0 12px #a3e5ff30; }
+.playing-card[data-mana-infused='true'] .proto-card-icon { filter:brightness(1.3) drop-shadow(0 0 3px #d8f7ff) drop-shadow(0 0 8px #7cd7ffb3); }
+.proto-resource-stack[data-mana-infused='true'] > .mana-object-glow { inset:-14%; background:radial-gradient(ellipse,#d7f7ff33,#80d5ff26 35%,transparent 70%); box-shadow:none; }

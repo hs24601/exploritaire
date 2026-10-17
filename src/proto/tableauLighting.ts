@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { rgba, sampleTableLight, standeeLighting, tableObjectShadow, type TableLight } from './protoLighting';
+import { globalLightsEnabled } from './globalLighting';
 
 /** A local view of the biome's world lighting; the fixture is visual scaffolding
  * for this field only and never changes table exploration or gameplay light. */
@@ -18,10 +19,23 @@ export function createTableauLightRig(hours: number, origin: { x: number; y: num
       return {
         '--surface-light': rgba(lit.rim?.color ?? lit.lightColor, 0.12 + sample.local * 0.18),
         '--surface-angle': `${lit.rim ? Math.atan2(lit.rim.x, -lit.rim.y) * 180 / Math.PI : 135}deg`,
-        '--surface-brightness': 0.72 + sample.total * 0.28,
+        '--surface-brightness': globalLightsEnabled() ? 0.72 + sample.total * 0.28 : 1,
         '--table-object-shadow': tableObjectShadow(hours, position, 8, lights),
       } as CSSProperties;
     },
   };
 }
 export type TableauLightRig = ReturnType<typeof createTableauLightRig>;
+
+export type TableauLamp = { x: number; y: number; radius: number };
+/** Screen-space foundation light; separate from the world's gameplay lights. */
+export function tableauCardBrightness(ambient: number, point: { x: number; y: number }, lamps: readonly TableauLamp[]) {
+  let unlit = 1;
+  for (const lamp of lamps) {
+    const distance = Math.min(1, Math.hypot(point.x - lamp.x, point.y - lamp.y) / lamp.radius);
+    const falloff = (1 - distance * distance) ** 2;
+    unlit *= 1 - .94 * falloff;
+  }
+  const total = ambient + (1 - ambient) * (1 - unlit);
+  return .4 + .6 * Math.sqrt(total);
+}

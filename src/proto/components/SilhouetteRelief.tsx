@@ -1,3 +1,4 @@
+import { sceneryHeightScale, sceneryWidthScale } from '../sceneryHeight';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { StandeeLighting } from '../protoLighting';
 import { buildSilhouetteSurface, shadeSilhouette, silhouetteLight, type SilhouetteSurface } from '../silhouetteRelief';
@@ -71,7 +72,7 @@ export function SilhouetteRelief({ sprite, width, height, lighting, hours, posit
     ctx.drawImage(raster, 0, 0, ctx.canvas.width, ctx.canvas.height);
   }, [source, light.x, light.y, light.z, light.amount, light.localX, light.localY, light.localAmount, light.exposure, light.tint.r, light.tint.g, light.tint.b]);
   if (!source) return <span style={{ filter: 'var(--silhouette-filter)' }}>{fallback}</span>;
-  const layout = trim && bounds?.status === 'ready' ? spriteLayout(bounds.bounds, width, height) : null;
+  const layout = trim && bounds?.status === 'ready' ? spriteLayout(bounds.bounds, width, height, 1, sceneryHeightScale(sprite, width, height, bounds.bounds.aspect), sceneryWidthScale(sprite, width, height, bounds.bounds.aspect)) : null;
   const [drawWidth, drawHeight] = layout ? layout.size.split(' ').map(parseFloat) : [width, height];
   const [left, top] = layout ? layout.position.split(' ').map(parseFloat) : [0, 0];
   return <span data-silhouette-material="relief" style={{ position: 'absolute', inset: 0, display: 'block', overflow: 'hidden', pointerEvents: 'none', transform: flip ? 'scaleX(-1)' : undefined }}>

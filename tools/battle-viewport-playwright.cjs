@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { findLayoutDefects } = require('./lib/layout-check.cjs');
-const out = 'artifacts/battle-viewport';
+const out = 'artifacts/battle-pane-order';
 fs.mkdirSync(out, { recursive: true });
 const sceneParts = '.combat-demo__header, .combat-demo__header h1, .combat-demo__header button, .combat-demo__footer, .combat-demo__readout, .combat-demo__readout span, .combat-demo__camera-panel, .combat-demo__views, .combat-demo__view, .combat-demo__view svg, .combat-demo__view span, .combat-demo__replay, .combat-demo__scene-actions, .combat-demo__scene-actions button, .combat-demo__freecam, .combat-demo__freecam p, .combat-demo__movement, .combat-demo__movement button, .combat-demo__diagnostics summary';
 const fieldParts = '.battle-field__header, .battle-field__board, .battle-field__team, .battle-field__team h3, .battle-field__foundation, .battle-field__pile, .battle-field__counters, .battle-field__actor-card, .battle-field__name, .battle-field__tableau, .battle-field__column, .battle-field__footer, .battle-field__footer button';
@@ -14,6 +14,13 @@ const fieldParts = '.battle-field__header, .battle-field__board, .battle-field__
       const page = await context.newPage(), errors = [];
       page.on('pageerror', e => errors.push(e.message));
       await page.goto('http://127.0.0.1:5178/proto.html?combatdemo');
+      const cameraTools = page.locator('.combat-demo__tools');
+      await cameraTools.waitFor();
+      if (await cameraTools.getAttribute('open') === null) await cameraTools.locator('summary').first().click();
+      const leftPane = await page.locator('.proto-tableau-field').boundingBox();
+      const rightPane = await page.locator('.combat-demo').boundingBox();
+      assert.ok(leftPane.x + leftPane.width <= rightPane.x, 'Combat cards left, camera right');
+      console.log('PASS combat pane order', width);
       await page.locator('[data-view="side"]:not(:disabled)').waitFor();
       assert.equal(await page.locator('.proto-map-viewport').count(), 0, 'CSS table camera is unmounted');
       assert.equal(await page.locator('.proto-main-layout > .combat-demo').count(), 1, 'Scene occupies the table layout slot');
@@ -26,6 +33,7 @@ const fieldParts = '.battle-field__header, .battle-field__board, .battle-field__
       const sharedBox = await page.locator('.combat-shared-view').boundingBox();
       const fieldBox = await page.locator('.battle-field').boundingBox();
       const arenaBox = await page.locator('.combat-demo__arena').boundingBox();
+      assert.ok(fieldBox.x + fieldBox.width <= arenaBox.x, 'Combat tableau and foundations occupy the left pane, camera the right');
       assert.ok(sharedBox.x <= fieldBox.x && sharedBox.x + sharedBox.width >= arenaBox.x + arenaBox.width - 1,'Canvas covers field and arena continuously');
       assert.equal(await page.locator('.proto-supply-sidebar[data-open="true"], .proto-quest-sidebar[data-open="true"], .tray-restore').count(), 0, 'Combat stows trays and keeps their handles off the cards');
       const cardBoxes = await page.locator('.battle-field__column').evaluateAll(columns => columns.map(column => {
@@ -54,7 +62,7 @@ const fieldParts = '.battle-field__header, .battle-field__board, .battle-field__
         const cards = [...column.querySelectorAll('button')];
         return cards.flatMap((card, index) => {
           const rect = card.getBoundingClientRect();
-          const failures = Math.abs(rect.height / rect.width - 74 / 56) > .02 ? ['Card aspect ratio changed'] : [];
+          const failures = Math.abs(rect.height / rect.width - 88 / 63) > .02 ? ['Card aspect ratio changed'] : [];
           if (index < cards.length - 1) {
             const text = card.querySelector('.proto-card-rank').firstChild;
             const range = document.createRange(); range.selectNodeContents(text);
@@ -63,11 +71,17 @@ const fieldParts = '.battle-field__header, .battle-field__board, .battle-field__
           return failures;
         });
       })), [], 'Full portrait cards and readable buried ranks');
+      if (process.env.COMBAT_LAYOUT_ONLY) {
+        await page.screenshot({ path: `${out}/layout-${width}.png` });
+        await context.close();
+        console.log('PASS combat layout and controls', width);
+        continue;
+      }
       await page.screenshot({ path: `${out}/side-${width}.png`, scale: 'css' });
       await page.locator('.battle-field').screenshot({ path: `${out}/field-${width}-3x.png`, scale: 'device' });
       await page.locator('.combat-demo__footer').screenshot({ path: `${out}/camera-${width}-3x.png`, scale: 'device' });
       await page.locator('.combat-demo__header').screenshot({ path: `${out}/header-${width}-3x.png`, scale: 'device' });
-      await page.locator('[data-view="freecam"]').click();
+      if (await page.locator('[data-view="freecam"]').getAttribute('aria-pressed') !== 'true') await page.locator('[data-view="freecam"]').click();
       assert.equal(await page.locator('.combat-demo__freecam, [data-move]').count(),0,'Freecam movement panel is removed');
       const floatingFooter = await page.locator('.combat-demo__footer').boundingBox();
       const floatingArena = await page.locator('.combat-demo__arena').boundingBox();
@@ -82,6 +96,7 @@ const fieldParts = '.battle-field__header, .battle-field__board, .battle-field__
       assert.deepEqual(await findLayoutDefects(page, '.combat-demo', { parts: '.combat-demo__diagnostic-body, .combat-demo__properties, .combat-demo__properties span, .combat-demo__copy' }), []);
       await page.locator('.combat-demo__diagnostics summary').click();
       await page.getByRole('button',{name:'Restart battle scene'}).click();
+      await page.locator('.combat-demo__tools > summary').click();
       await page.locator('[data-view="side"]:not(:disabled)').waitFor();
       await page.locator('[data-view="cinematic"]').click();
       await page.waitForFunction(() => document.querySelector('.combat-demo')?.dataset.complete === 'true');
@@ -101,6 +116,7 @@ const fieldParts = '.battle-field__header, .battle-field__board, .battle-field__
       await context.close();
       console.log(`${width}: opening sweep, Party rest, roster, stacked field, layout, freecam, diagnostics, replay, final hold, Escape passed`);
     }
+    if (process.env.COMBAT_LAYOUT_ONLY) return;
     for (const [width, height] of [[390,844], [844,390]]) {
       const context = await browser.newContext({ viewport: {width,height}, hasTouch: true, reducedMotion: 'reduce' });
       const page = await context.newPage();

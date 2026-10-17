@@ -1,6 +1,7 @@
-import { memo, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { gameTime } from '../../gameTime';
+import { memo, useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { viewQuarter } from '../biomeEdgeScenery';
-import { BIOME_AMBIANCE, DANGER_STRENGTH_FLOOR, WORLD_AMBIANCE, ambianceFor, emitterArea, haloFor, particleStrength, scatter, shaftSlots, visibleCells, type FxQuality, type Particle as ParticleSpot, type ParticleKind } from '../atmosphere';
+import { BIOME_AMBIANCE, DANGER_STRENGTH_FLOOR, WORLD_AMBIANCE, ambianceFor, emitterArea, haloFor, haloProjection, particleStrength, scatter, shaftSlots, visibleCells, type FxQuality, type Particle as ParticleSpot, type ParticleKind } from '../atmosphere';
 import type { TableTilt } from '../tableTilt';
 import { DEFAULT_LIGHT_COLOR, hexToRgb, lightFlicker, rgba, type TableLight, type TableLightFrame } from '../protoLighting';
 import { atmosphereSky } from '../volumetricAtmosphere';
@@ -8,6 +9,15 @@ import { subscribeVisualLight } from '../visualLightClock';
 
 type Camera = { x: number; y: number; scale: number; yaw?: number };
 type Area = { id: string; x: number; y: number; width: number; height: number; terrain: 'woods' | 'water'; danger?: boolean };
+
+/** Sparse emitter particles share stable seeds and reduced-motion CSS. */
+export function LightFireflies({ lights, quality, flat = false }: { lights: readonly TableLight[]; quality: FxQuality; flat?: boolean }) {
+  return <>{lights.filter(light => light.fireflies).flatMap(light =>
+    scatter(`fireflies-${light.id}`, quality === 'low' ? 3 : 5,
+      { x: light.position.x, y: light.position.y, width: 24, height: 24 },
+      flat ? [0, 0] : [2, 10], 2, [.65, 1.1], [7, 12])
+      .map(particle => <Particle key={particle.id} kind="firefly" particle={particle} strength={.32} night />))}</>;
+}
 
 /** Places an upright billboard's foot on a table point, inside the
  * camera-transformed world layer (table px from the table's centre). */
@@ -45,11 +55,24 @@ const Particle = memo(function Particle({ kind, particle, strength, night, dange
  * standing up toward the camera. Everything sits in table px on a layer that
  * takes the camera's live transform, so it pans and zooms with the table on
  * every frame; `camera` only picks which world cells hold particles. */
-export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, tilt, dangerOnly = false }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null;
+export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, tilt, getCamera, getTilt, onCameraFrame, dangerOnly = false }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null;
+  getCamera: () => Camera; getTilt: (camera: Camera) => TableTilt; onCameraFrame: (draw: (camera: Camera) => void) => () => void;
   /** Flat camera: only the danger warnings, lying over the board. */
   dangerOnly?: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   const visual = useRef({frame,lights,yaw:camera.yaw??0}); visual.current = {frame,lights,yaw:camera.yaw??0};
+  const projection = useRef({ lights, view, getCamera, getTilt }); projection.current = { lights, view, getCamera, getTilt };
+  const projectHalos = () => {
+    const current = projection.current, live = current.getCamera(), rig = current.getTilt(live);
+    root.current?.querySelectorAll<HTMLElement>('[data-halo-light]').forEach(el => {
+      const light = current.lights.find(light => light.id === el.dataset.haloLight);
+      const guard = light ? haloProjection(light, live, rig, current.view) : { scale: 0, opacity: 0 };
+      el.style.setProperty('--halo-projection-scale', String(guard.scale));
+      el.style.setProperty('--halo-camera-opacity', String(guard.opacity));
+    });
+  };
+  useLayoutEffect(projectHalos);
+  useEffect(() => onCameraFrame(projectHalos), [onCameraFrame]);
   useEffect(() => {
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const draw = (time:number) => {
@@ -59,7 +82,7 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
         el.style.setProperty('--light-flicker',String(light ? lightFlicker(light,motion.matches?0:time) : 1));
       });
     };
-    draw(performance.now());
+    draw(gameTime.now());
     if (dangerOnly || motion.matches) return;
     return subscribeVisualLight(draw);
   },[dangerOnly]);
@@ -68,6 +91,7 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
   // Patches that sit behind a tile follow the side facing a spun camera.
   const { quarter } = viewQuarter(camera.yaw ?? 0);
   return <div ref={root} className="proto-atmosphere" aria-hidden="true"><div className="proto-atmosphere__world">
+    {!dangerOnly && <LightFireflies lights={lights} quality={quality} />}
     {(dangerOnly ? [] : lights).map((light) => {
       const halo = haloFor(light, mood.halos);
       if (halo.opacity < 0.03) return null;

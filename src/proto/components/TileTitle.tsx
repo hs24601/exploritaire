@@ -1,84 +1,71 @@
 import { useLayoutEffect, useRef } from 'react';
-import { fitTileTitle } from '../tileLabels';
+import { fitTileTitle, tileLabelFacing, TILE_TITLE_TRACKING_EM } from '../tileLabels';
 
-/** Full titles flow through the actual rotated tile footprint. The upright ink
- * can use several staggered lines across an immutable region, without a box. */
-export function TileTitle({ text, width, height, yaw, scale, align = 'center', maxLines, clearCenter, getCamera, onCameraFrame, onTextBox }: {
-  text: string; width: number; height: number; yaw: number; scale: number;
+/** Surface ink faces the nearest tile edge in whole quarter turns. Between
+ * those snaps, its layout is fixed and the tile supplies all perspective. */
+export function TileTitle({ biome, text, width, height, align = 'bottom', maxLines, clearCenter, getCamera, onCameraFrame, onTextBox }: {
+  biome?: string;
+  text: string; width: number; height: number;
   align?: 'center' | 'top' | 'bottom'; maxLines?: number;
-  /** Occupied central square half-size; sprite clearance takes priority over
-   * ground containment at orbit angles where a complete row cannot fit. */
+  /** Fixed local clearance for an occupied central square. */
   clearCenter?: number;
-  getCamera?: () => { yaw?: number; scale: number };
-  onCameraFrame?: (listener: (camera: { yaw?: number; scale: number }) => void) => () => void;
-  onTextBox?: (box: { left: number; top: number; width: number; height: number; pivot: { x: number; y: number } }) => void;
+  getCamera?: () => { yaw?: number };
+  onCameraFrame?: (listener: () => void) => () => void;
+  onTextBox?: (box: { left: number; top: number; width: number; height: number; pivot: { x: number; y: number }; rotation: number }) => void;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
+  const rasterScale = 8;
   const callback = useRef(onTextBox);
   callback.current = onTextBox;
   useLayoutEffect(() => {
     const frame = ref.current;
     if (!frame) return;
     let disposed = false;
-    const cache = new Map<string, number>();
     const canvas = document.createElement('canvas').getContext('2d');
     if (!canvas) return;
     const style = getComputedStyle(frame);
-    const font = `${style.fontWeight}`;
-    const family = style.fontFamily;
-    let reportTimer = 0;
-    let previousYaw = NaN, previousScale = NaN;
-    const fit = (live = getCamera?.() ?? { yaw, scale }, force = false) => {
+    let previousFacing = -1;
+    const fit = (force = false) => {
       if (disposed) return;
-      const liveYaw = live.yaw ?? 0;
-      if (!force && Math.abs(liveYaw - previousYaw) < 0.05 && Math.abs(live.scale - previousScale) < 0.001) return;
-      previousYaw = liveYaw; previousScale = live.scale;
+      const facing = tileLabelFacing(getCamera?.().yaw ?? 0);
+      if (!force && facing === previousFacing) return;
+      previousFacing = facing;
+      frame.style.rotate = `${-facing}deg`;
       const measure = (value: string, size: number) => {
-        const key = `${size}:${value}`;
-        const known = cache.get(key);
-        if (known !== undefined) return known;
-        canvas.font = `${font} ${size}px ${family}`;
-        const measured = canvas.measureText(value).width;
-        cache.set(key, measured);
-        return measured;
+        canvas.font = `${style.fontWeight} ${size}px ${style.fontFamily}`;
+        return canvas.measureText(value).width + value.length * size * TILE_TITLE_TRACKING_EM;
       };
-      // Local units are transformed by table zoom. Prefer 16 screen px and
-      // retain a bounded compact fit when the footprint cannot hold that size.
-      const maximum = Math.max(18, 16 / Math.max(live.scale, 0.1));
-      const layout = fitTileTitle(text.toUpperCase(), Math.max(1, width - 8), Math.max(1, height - 8), liveYaw, measure, maximum, 6, align, maxLines);
+      // Fit against the selected tile edge only. Zoom, tilt and movement
+      // inside the same 90-degree sector never change wrapping or font size.
+      const layout = fitTileTitle(text.toUpperCase(), Math.max(1, width - 8), Math.max(1, height - 8), facing, measure, 18, 6, align, maxLines);
       if (clearCenter && layout.lines.length) {
-        const angle = liveYaw * Math.PI / 180;
-        const bottom = clearCenter * (Math.abs(Math.cos(angle)) + Math.abs(Math.sin(angle))) + 2;
-        const shift = Math.max(0, bottom - layout.lines[0].y);
+        const shift = Math.max(0, clearCenter + 2 - layout.lines[0].y);
         for (const line of layout.lines) line.y += shift;
       }
       frame.dataset.labelOverflow = String(!layout.fits);
       frame.dataset.labelFontSize = String(layout.fontSize);
-      frame.dataset.labelYaw = String(liveYaw);
+      frame.dataset.labelYaw = String(facing);
       while (frame.children.length > layout.lines.length) frame.lastElementChild?.remove();
       for (const [index, line] of layout.lines.entries()) {
         const span = frame.children[index] as HTMLElement | undefined ?? document.createElement('span');
         span.className = 'proto-tile-title__line';
         if (span.textContent !== line.text) span.textContent = line.text;
-        Object.assign(span.style, { left: `${line.x}px`, top: `${line.y}px`, width: `${line.width}px`, fontSize: `${layout.fontSize}px`, lineHeight: `${layout.lineHeight}px` });
+        Object.assign(span.style, { left: `${line.x}px`, top: `${line.y}px`, width: `${measure(line.text, layout.fontSize) * rasterScale}px`, fontSize: `${layout.fontSize * rasterScale}px`, letterSpacing: `${TILE_TITLE_TRACKING_EM}em`, lineHeight: `${layout.lineHeight * rasterScale}px`, transform: `scale(${1 / rasterScale}) translateX(-50%)`, transformOrigin: '0 0' });
         if (!span.parentElement) frame.append(span);
       }
       if (layout.lines.length) {
         const left = Math.min(...layout.lines.map(line => line.x - measure(line.text, layout.fontSize) / 2));
         const right = Math.max(...layout.lines.map(line => line.x + measure(line.text, layout.fontSize) / 2));
         const top = layout.lines[0].y, bottom = layout.lines[layout.lines.length - 1].y + layout.lineHeight;
-        window.clearTimeout(reportTimer);
-        // Ink follows every live frame; layout/scenery state catches up once
-        // the gesture settles instead of rerendering the whole map per frame.
-        reportTimer = window.setTimeout(() => callback.current?.({ left: width / 2 + left, top: height / 2 + top, width: right - left, height: bottom - top, pivot: { x: width / 2, y: height / 2 } }), 100);
+        callback.current?.({ left: width / 2 + left, top: height / 2 + top, width: right - left, height: bottom - top, pivot: { x: width / 2, y: height / 2 }, rotation: -facing });
       }
     };
     fit();
-    const fontsChanged = () => { cache.clear(); fit(undefined, true); };
+    const fontsChanged = () => fit(true);
     document.fonts.ready.then(fontsChanged);
     document.fonts.addEventListener('loadingdone', fontsChanged);
-    const unsubscribe = onCameraFrame?.(live => fit(live));
-    return () => { disposed = true; window.clearTimeout(reportTimer); unsubscribe?.(); document.fonts.removeEventListener('loadingdone', fontsChanged); };
-  }, [text, width, height, align, maxLines, clearCenter, getCamera, onCameraFrame, getCamera ? 0 : yaw, getCamera ? 0 : scale]);
-  return <span ref={ref} className="proto-tile-title proto-face-camera" data-title-align={align} aria-label={text} title={text} />;
+    const unsubscribe = onCameraFrame?.(() => fit());
+    return () => { disposed = true; unsubscribe?.(); document.fonts.removeEventListener('loadingdone', fontsChanged); };
+  }, [text, width, height, align, maxLines, clearCenter, getCamera, onCameraFrame]);
+  return <span ref={ref} className="proto-tile-title" data-label-biome={biome ?? "neutral"} data-label-raster={rasterScale} data-label-surface="tile" data-title-align={align} aria-label={text} title={text} />;
 }

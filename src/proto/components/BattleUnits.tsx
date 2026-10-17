@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ABILITIES, MAX_CHARGE, SPIRITS, nextBreakpoint, type Attack } from '../rules/battleAbilities';
 import type { AttackPreview, BattleActor, BattleEvent, BattleFoe, Trap } from '../rules/battle';
@@ -5,7 +6,7 @@ import { rankLabel } from '../protoState';
 import './BattleUnits.css';
 
 const pct = (value: number, max: number) => `${Math.max(0, Math.min(100, (value / max) * 100))}%`;
-const EFFECT_ICON = { burn: '🔥', bleed: '🩸' } as const;
+const EFFECT_ICON = { burn: '🔥', bleed: '🩸', stun:'Stunned ', grip:'Held ', exposed:'Exposed ' } as const;
 
 /**
  * A bar with an optional preview segment between `value` and `preview`: a loss
@@ -36,8 +37,8 @@ function useFloaters(events: readonly BattleEvent[], unitId: string) {
     const mine = fresh.filter((event) => event.targetId === unitId && (event.amount || ['stagger', 'ko', 'down', 'take', 'snatch'].includes(event.kind)));
     if (!mine.length) return;
     setFloaters((current) => [...current, ...mine].slice(-6));
-    const timer = window.setTimeout(() => setFloaters((current) => current.filter((event) => !mine.includes(event))), 1100);
-    return () => window.clearTimeout(timer);
+    const timer = gameTime.setTimeout(() => setFloaters((current) => current.filter((event) => !mine.includes(event))), 1100);
+    return () => gameTime.clearTimeout(timer);
   }, [events, unitId]);
   return floaters;
 }
@@ -66,7 +67,7 @@ export function FoeCard({ foe, target, preview, focus, events, sprite, aiming, i
   interaction: Record<string, unknown>;
 }) {
   const alive = foe.hp > 0, staggered = foe.staggered > 0;
-  const show = preview;
+  const show = focus ? preview : null;
   const state = !alive ? 'down' : staggered ? 'staggered' : 'ready';
   return <button type="button" className="battle-foe" data-battle-target={foe.id} data-targetable={alive && aiming} data-state={state}
     data-preview={preview ? (focus ? 'focus' : 'faint') : undefined} disabled={!alive || !aiming}
@@ -90,7 +91,7 @@ export function FoeCard({ foe, target, preview, focus, events, sprite, aiming, i
       {preview?.ko && <span className="battle-chip" data-preview-chip="ko">KO</span>}
       {preview?.staggers && <span className="battle-chip" data-preview-chip="break">BREAK</span>}
       {preview?.vulnerable && <span className="battle-chip" data-preview-chip="vulnerable">×{foe.profile.vulnerability}</span>}
-      {preview?.effects.map((effect) => <span key={effect.kind} className="battle-chip" data-preview-chip={effect.kind}>+{EFFECT_ICON[effect.kind]}</span>)}
+      {preview?.effects.map((effect) => <span key={effect.kind} className="battle-chip" data-preview-chip={effect.kind}>+{EFFECT_ICON[effect.kind]}{effect.chance !== undefined ? ` ${Math.round(effect.chance*100)}%` : ''}</span>)}
     </span>}
   </button>;
 }
@@ -125,10 +126,10 @@ export function AbilityCard({ actor, attack, armed, dragging, interaction, disab
   </button>;
 }
 
-export function PartyVitals({ actor, count, events, targeted }: { actor: BattleActor; count: number; events: readonly BattleEvent[]; targeted: boolean }) {
+export function PartyVitals({ actor, count, events, targeted, preview }: { actor: BattleActor; count: number; events: readonly BattleEvent[]; targeted: boolean; preview?: number }) {
   return <span className="battle-vitals" data-targeted={targeted || undefined}>
     <span className="proto-foundation-count-token" aria-label={`Collected cards ${count}`}>▤{count}</span>
-    <Bar kind="hp" value={actor.hp} max={actor.maxHp} label={`${actor.name} HP`}>{actor.hp > 0 ? `${actor.hp}/${actor.maxHp}` : 'Down'}</Bar>
+    <Bar kind="hp" value={actor.hp} max={actor.maxHp} preview={preview} label={`${actor.name} HP`}>{actor.hp > 0 ? `${actor.hp}/${actor.maxHp}` : 'Unconscious'}</Bar>
     {actor.spirits.map((id) => SPIRITS[id] && <span key={id} className="battle-chip" data-spirit={id} title={`${SPIRITS[id].name}: ${SPIRITS[id].blurb}`}>{SPIRITS[id].glyph}{SPIRITS[id].name}</span>)}
     <Floaters events={events} unitId={actor.id} />
   </span>;

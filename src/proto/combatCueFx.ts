@@ -61,6 +61,14 @@ const drawSlash = (ctx: CanvasRenderingContext2D) => {
 export function createCombatCueFx(scene: THREE.Scene, camera: THREE.Camera, units: CueUnit[], quality: FxQuality) {
   const owned: { dispose(): void }[] = [];
   const keep = <T extends { dispose(): void }>(thing: T) => { owned.push(thing); return thing; };
+  const starShape = new THREE.Shape();
+  for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,r=i%2?.055:.13;const x=Math.cos(a)*r,y=Math.sin(a)*r;if(i)starShape.lineTo(x,y);else starShape.moveTo(x,y);}starShape.closePath();
+  const starGeometry=keep(new THREE.ShapeGeometry(starShape));
+  const dazed=units.filter(u=>u.team==='party').map(unit=>{
+    const group=new THREE.Group();group.name='unconscious-stars';
+    for(let i=0;i<3;i++)group.add(new THREE.Mesh(starGeometry,keep(new THREE.MeshBasicMaterial({color:0xffdf79,side:THREE.DoubleSide,depthTest:false}))));
+    unit.rig.billboard.add(group);return {unit,group};
+  });
   const byId = new Map(units.map((unit) => [unit.id, unit]));
   const jawTexture = keep(pixelTexture(64, 16, drawJaw)), slashTexture = keep(pixelTexture(64, 8, drawSlash));
   const plane = keep(new THREE.PlaneGeometry(1, 1));
@@ -123,12 +131,17 @@ export function createCombatCueFx(scene: THREE.Scene, camera: THREE.Camera, unit
       });
     },
     /** Effects still playing, so the arena keeps drawing. */
-    busy(now: number) { return live.some((cue) => now < cue.start + cue.delay + CUE_SECONDS[cue.kind === 'attack' ? 'attack' : cue.kind] + .4) || particles.some((p) => now - p.start < p.life); },
+    busy(now: number) { return [...down].some(([id,value])=>value&&present.get(id)&&byId.get(id)?.team==='party') || live.some((cue) => now < cue.start + cue.delay + CUE_SECONDS[cue.kind === 'attack' ? 'attack' : cue.kind] + .4) || particles.some((p) => now - p.start < p.life); },
     /**
      * Call after the sprites are placed for the frame, before their own update:
      * moves, tips and tints the units for the cues in play.
      */
     place(now: number, reduced: boolean) {
+      dazed.forEach(({unit,group})=>{
+        group.visible=Boolean(present.get(unit.id)&&down.get(unit.id));
+        group.position.set(0,unit.height*.55, .02);
+        group.children.forEach((star,i)=>{const angle=(reduced?0:now*2.5)+i*Math.PI*2/3;star.position.set(Math.cos(angle)*.42,Math.sin(angle)*.12,Math.sin(angle)*.04);star.rotation.z=reduced?0:now*.6;});
+      });
       live = live.filter((cue) => now < cue.start + cue.delay + 2);
       units.forEach((unit) => homes.set(unit.id, unit.rig.root.position.clone()));
       const moves = new Map<string, THREE.Vector3>(units.map((unit) => [unit.id, new THREE.Vector3()]));
@@ -264,6 +277,6 @@ export function createCombatCueFx(scene: THREE.Scene, camera: THREE.Camera, unit
         p.mesh.material.opacity = 1 - age / p.life;
       }
     },
-    dispose() { [jaws, claws, light, ...particles.map((p) => p.mesh)].forEach((o) => scene.remove(o)); owned.forEach((o) => o.dispose()); },
+    dispose() { dazed.forEach(({group})=>group.removeFromParent()); [jaws, claws, light, ...particles.map((p) => p.mesh)].forEach((o) => scene.remove(o)); owned.forEach((o) => o.dispose()); },
   };
 }

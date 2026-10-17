@@ -1,8 +1,10 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { rankLabel, type Card } from '../protoState';
 import { SNAP_DAMAGE, createSkirmish, heroCanPlay, heroDraw, heroPlay, stepSkirmish, type SkirmishFoe, type SkirmishState } from '../rules/skirmish';
 import { ProtoCard } from './ProtoCard';
+import { BiomeCardBackgroundProvider } from './BiomeCardBackground';
 import './CombatField.css';
 
 /** Movement before a press on a card becomes a drag, by input type. */
@@ -57,15 +59,15 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
 
   useEffect(() => {
     let frame = 0;
-    let last = performance.now();
+    let last = gameTime.now();
     const tick = (now: number) => {
       // Long frames (a background tab) are capped so the enemy never takes several cards at once.
       update(stepSkirmish(fightRef.current, Math.min(0.05, (now - last) / 1000)));
       last = now;
-      frame = requestAnimationFrame(tick);
+      frame = gameTime.requestAnimationFrame(tick);
     };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    frame = gameTime.requestAnimationFrame(tick);
+    return () => gameTime.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -117,6 +119,7 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
   const foeHit = fight.event?.kind === 'strike' || fight.event?.kind === 'snap' ? fight.event : null;
   const meter = (value: number, max: number) => `${Math.max(0, Math.min(100, (value / max) * 100)).toFixed(1)}%`;
   return (
+    <BiomeCardBackgroundProvider biome={{ terrain: 'woods', danger: true }}>
     <section className="proto-skirmish" aria-label={`Fighting the ${fight.foe.label}`} data-result={fight.result ?? undefined}
       data-enemy-hp={fight.enemy.hp} data-hero-hp={fight.hero.hp} data-fury={fight.enemy.fury} data-eye-column={fight.eye?.column}>
       <header className="proto-skirmish__foe" data-pounce={fight.eye?.pounce ? 'true' : undefined}>
@@ -206,12 +209,13 @@ export const CombatField = ({ seed, hero, foe, onEnd, onLeave }: {
       {/* The dragged card follows the pointer above the page, portalled out of the size container. */}
       {dragged && drag ? createPortal(
         <div className="proto-skirmish__drag" aria-hidden="true" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width, ['--classic-card-w' as string]: `${drag.width}px` }}>
-          <ProtoCard card={dragged} />
+          <ProtoCard card={dragged} allowJumbo={false} centerRank />
         </div>,
         document.body,
       ) : null}
       {/* Rank shorthand for screen readers: the hero's and enemy's cards. */}
       <span className="sr-only">{`Your card ${rankLabel(fight.hero.rank)}. ${fight.foe.label}'s card ${rankLabel(fight.enemy.rank)}.`}</span>
     </section>
+    </BiomeCardBackgroundProvider>
   );
 };

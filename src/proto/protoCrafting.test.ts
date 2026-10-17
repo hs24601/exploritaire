@@ -7,17 +7,17 @@ const pile = (resource: CraftStack['resource'], count: number): CraftStack => ({
 
 describe('stack crafting', () => {
   it('accepts any mixture of low quality food, excluding crafted food', () => {
-    expect(matchRecipe({ berries: 2, herbs: 1 })?.id).toBe('ration');
-    expect(matchRecipe({ berries: 3 })?.id).toBe('ration');
+    expect(matchRecipe({ mana: 2, herbs: 1 })?.id).toBe('ration');
+    expect(matchRecipe({ mana: 3 })?.id).toBe('ration');
     expect(matchRecipe({ herbs: 3 })?.id).toBe('ration');
-    expect(matchRecipe({ berries: 2, hearty_ration: 1 })).toBeUndefined();
+    expect(matchRecipe({ mana: 2, hearty_ration: 1 })).toBeUndefined();
     expect(matchRecipe({ wood: 3 })?.id).toBe('lumber');
   });
 
   it('reserves exactly one recipe and preserves excess and unrelated ingredients', () => {
-    const recipe = matchRecipe({ berries: 2, herbs: 4 })!;
-    expect(reserveIngredients({ berries: 2, herbs: 4, wood: 1 }, recipe)).toEqual({
-      reserved: { berries: 2, herbs: 1 }, leftovers: { herbs: 3, wood: 1 },
+    const recipe = matchRecipe({ mana: 2, herbs: 4 })!;
+    expect(reserveIngredients({ mana: 2, herbs: 4, wood: 1 }, recipe)).toEqual({
+      reserved: { mana: 2, herbs: 1 }, leftovers: { herbs: 3, wood: 1 },
     });
     const [job, leftover] = startStackBuild(pile('wood', 5));
     expect(job.count).toBe(3);
@@ -48,11 +48,11 @@ describe('stack crafting', () => {
   });
 
   it('splits mixed stacks without losing resources and locks reserved ingredients', () => {
-    const mixed = { ...pile('berries', 3), ingredients: { berries: 1, wood: 2 } };
+    const mixed = { ...pile('mana', 3), ingredients: { mana: 1, wood: 2 } };
     const [remaining, piece] = splitStack(mixed, 'split');
     expect(remaining.ingredients).toEqual({ wood: 2 });
     expect(remaining.resource).toBe('wood');
-    expect(piece.resource).toBe('berries');
+    expect(piece.resource).toBe('mana');
     expect(piece.count + remaining.count).toBe(3);
     const [job] = startStackBuild(pile('wood', 3));
     expect(splitStack(job, 'split')).toEqual([job]);
@@ -60,7 +60,7 @@ describe('stack crafting', () => {
 
   it('requires hut staffing, build time, and legal solitaire work for enhanced food', () => {
     const hut = { ...pile('provisions_hut', 1), id: 'hut' };
-    let [job] = startStackBuild({ ...pile('berries', 3), ingredients: { berries: 1, herbs: 2 } }, hut);
+    let [job] = startStackBuild({ ...pile('mana', 3), ingredients: { mana: 1, herbs: 2 } }, hut);
     expect(job.build?.stationId).toBe('hut');
     expect(advanceBuild(job, 12000, false)).toBe(job);
     job = advanceBuild(job, 12000, true);
@@ -70,7 +70,7 @@ describe('stack crafting', () => {
     expect(job.build?.work).toBe(4);
     expect(playBuildCard(job, 9)).toBe(job);
     expect(advanceBuild(job, 0, true).resource).toBe('hearty_ration');
-    const [earlyWork] = startStackBuild(pile('berries', 3), hut);
+    const [earlyWork] = startStackBuild(pile('mana', 3), hut);
     let worked = earlyWork;
     for (const rank of [4, 5, 6, 7]) worked = playBuildCard(worked, rank);
     expect(advanceBuild(worked, 11999, true).build).toBeDefined();

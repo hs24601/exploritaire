@@ -20,9 +20,16 @@ const cellsOf = (path: { x: number; y: number }[]) => {
 };
 
 describe('grid pathfinding', () => {
-  it('goes straight and diagonally on open table', () => {
+  it('uses only orthogonal grid steps by default on open table', () => {
     expect(findGridPath(at(0, 0), at(3, 0), table(), CELL)!.map(({ x, y }) => ({ x, y }))).toEqual([at(0, 0), at(3, 0)]);
-    expect(findGridPath(at(0, 0), at(2, 2), table(), CELL)!.map(({ x, y }) => ({ x, y }))).toEqual([at(0, 0), at(2, 2)]);
+    const path = findGridPath(at(0, 0), at(2, 2), table(), CELL)!;
+    expect(pathTime(path)).toBe(4 * CELL);
+    expect(path[path.length - 1]).toMatchObject(at(2, 2));
+    path.slice(1).forEach((point, index) => expect(point.x === path[index].x || point.y === path[index].y).toBe(true));
+  });
+
+  it('retains diagonal routing as an explicit opt-in', () => {
+    expect(findGridPath(at(0, 0), at(2, 2), table(), CELL, 40000, true)!.map(({x,y}) => ({x,y}))).toEqual([at(0,0), at(2,2)]);
   });
 
   it('crosses an explored biome to save time and goes around an unexplored one', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BIOME_AMBIANCE, ambianceFor, emitterArea, haloFor, rayAngle, scatter, shaftSlots, visibleCells } from './atmosphere';
+import { BIOME_AMBIANCE, ambianceFor, emitterArea, haloFor, haloProjection, rayAngle, scatter, shaftSlots, visibleCells } from './atmosphere';
 import { tableTiltFor } from './tableTilt';
 import { actorLight, getTableLighting } from './protoLighting';
 
@@ -26,6 +26,26 @@ describe('tilted-camera ambiance', () => {
     expect(candle.opacity).toBeLessThan(lamp.opacity);
     expect(candle.lift).toBeGreaterThan(4);
     expect(haloFor({ id: 'glow', position: { x: 0, y: 0 }, fromPiece: true }, 1).lift).toBeLessThan(lamp.lift);
+  });
+
+  it('bounds halos at close zoom and hides anchors behind the perspective eye', () => {
+    const light = actorLight('hero', { x: 0, y: 96 })!;
+    const view = { width: 1280, height: 720 }, tilt = tableTiltFor(720, 82);
+    const camera = { x: 0, y: 0, scale: 6.8 };
+    const guarded = haloProjection(light, camera, tilt, view);
+    const depth = tilt.perspective - 96 * camera.scale * Math.sin(82 * Math.PI / 180);
+    const radius = haloFor(light, 1).radius * camera.scale * tilt.perspective / depth * guarded.scale * 1.1;
+    expect(radius).toBeLessThanOrEqual(view.height * .16 + 1e-6);
+    const atEye = { ...light, position: { x: 0, y: tilt.perspective / Math.sin(82 * Math.PI / 180) / camera.scale } };
+    expect(haloProjection(atEye, camera, tilt, view).opacity).toBe(0);
+    expect(haloProjection({ ...atEye, position: { x: 0, y: atEye.position.y + 10 } }, camera, tilt, view)).toEqual({ scale: 0, opacity: 0 });
+    expect(haloProjection(light, { ...camera, yaw: 180 }, tilt, view).scale).toBeGreaterThan(guarded.scale);
+  });
+
+  it('preserves ordinary halo size and suppresses offscreen halo anchors', () => {
+    const light = actorLight('hero', { x: 0, y: 0 })!;
+    expect(haloProjection(light, { x: 0, y: 0, scale: 1.7 }, tableTiltFor(720), { width: 1280, height: 720 })).toEqual({ scale: 1, opacity: 1 });
+    expect(haloProjection(light, { x: 4000, y: 0, scale: 1.7 }, tableTiltFor(720), { width: 1280, height: 720 }).opacity).toBe(0);
   });
 
   it('scatters particles deterministically inside their area', () => {

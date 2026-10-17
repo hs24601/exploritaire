@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
 /** Unexplored or out-of-play things show as a cool, dark silhouette that
@@ -76,9 +77,9 @@ export function Reveal({ fraction, width, height, children, shade, className = '
     if (target < 1) setSettled(false);
     if (target === shown) return undefined;
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    const frame = requestAnimationFrame(() => setShown(target));
-    const done = target >= 1 ? window.setTimeout(() => setSettled(true), reducedMotion ? 0 : REVEAL_SWEEP_MS + 50) : 0;
-    return () => { cancelAnimationFrame(frame); window.clearTimeout(done); };
+    const frame = gameTime.requestAnimationFrame(() => setShown(target));
+    const done = target >= 1 ? gameTime.setTimeout(() => setSettled(true), reducedMotion ? 0 : REVEAL_SWEEP_MS + 50) : 0;
+    return () => { gameTime.cancelAnimationFrame(frame); gameTime.clearTimeout(done); };
   }, [target]);
   if (settled && target >= 1) return <>{children}</>;
   return <span className={`proto-reveal ${className}`} data-reveal={target.toFixed(2)} style={{ width, height }}>

@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useRef, useState } from 'react';
 import type { CameraState } from '../../hooks/useCameraControls';
 import type { TableLight, TableLightFrame } from '../protoLighting';
@@ -8,6 +9,8 @@ import { createAtmosphereRenderer } from './atmosphereRenderer';
 
 type Props = {
   active: boolean;
+  lowQuality?: boolean;
+  overhead?: boolean;
   frame: TableLightFrame; lights: readonly TableLight[]; scene: AtmosphereScene;
   tilt: TableTilt; view: { width: number; height: number };
   getCamera: () => CameraState;
@@ -17,7 +20,7 @@ type Props = {
 
 /** A single viewport-sized atmospheric surface, independent of React's travel
  * and camera updates. Inputs are consumed through a ref, GPU resources persist.
- * Low quality continues to use the small CSS shafts rather than this pass. */
+ * Low quality uses the same darkness at a smaller atmospheric resolution. */
 export function VolumetricAtmosphere(props: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const redraw = useRef<(() => void) | null>(null);
@@ -37,17 +40,27 @@ export function VolumetricAtmosphere(props: Props) {
     let stopped = false;
     let guardKey = '';
     let lastDraw = -Infinity;
+    let deferredDraw = 0;
     let guards: { left: number; top: number; right: number; bottom: number }[] = [];
     let labelGuards: { point: { x: number; y: number }; lift: number; offsetX: number; width: number; height: number }[] = [];
     let fixedGuards: typeof guards = [];
     const draw = (now: number, frameMs?: number, warm = false) => {
       if (!input.current.active && !warm) return;
       if (frameMs!==undefined)budget.observe(frameMs);
-      if (stopped || document.hidden || now-lastDraw<(frameMs===undefined?8:budget.interval)) return;
+      // Camera and light-clock callbacks share the same budget. Camera follow
+      // used to bypass it and run a full scattering/mask pass every frame.
+      if (stopped || document.hidden) return;
+      const remaining=budget.interval-(now-lastDraw);
+      if(remaining>0){
+        // Retain the final camera/time update even when reduced motion has no
+        // animation clock to draw it after this budget window.
+        if(frameMs===undefined&&!deferredDraw)deferredDraw=gameTime.setTimeout(()=>{deferredDraw=0;draw(gameTime.now());},remaining);
+        return;
+      }
       lastDraw=now;
       const current = input.current, camera = current.getCamera();
       const tilt = current.getTilt?.(camera) ?? current.tilt;
-      const state = JSON.stringify([current.view,current.frame.hour,current.scene.canopies]);
+      const state = JSON.stringify([current.view,current.frame.hour,current.frame.globalLights,current.overhead,current.scene.canopies,current.scene.relief]);
       if (guardKey !== state) {
         guardKey = state;
         const viewport = canvas.parentElement!;
@@ -81,9 +94,41 @@ export function VolumetricAtmosphere(props: Props) {
         const size = foot.y-top.y, x = foot.x+offsetX*size+current.view.width/2, y = foot.y+current.view.height/2;
         return { left:x-width*size/2,right:x+width*size/2,top:y-height*size/2,bottom:y+height*size/2 };
       })];
-      const scale = fallback ? 0.25 : budget.scale;
+      const scale = current.lowQuality ? 0.12 : fallback ? 0.25 : budget.scale;
+      const actorGuards: { image: HTMLImageElement | HTMLCanvasElement; x: number; y: number; width: number; height: number; angle: number }[]=[];
+      const routeGuards: { x: number; y: number }[][]=[];
+      const actorOrigin=canvas.parentElement!.getBoundingClientRect();
+      for(const el of canvas.parentElement!.querySelectorAll<HTMLElement>('[data-board-piece="actor"]')) {
+        // Use the displayed rig, including its current pose and watercolor alpha.
+        // Never substitute the actor definition's legacy static portrait.
+        const image=el.querySelector('canvas') ?? el.querySelector('img');if(!image)continue;
+        const r=image.getBoundingClientRect(),matrix=new DOMMatrix(getComputedStyle(el).transform);
+        const angle=current.overhead ? Math.atan2(matrix.b,matrix.a)+(camera.yaw??0)*Math.PI/180 : 0;
+        const extent=Math.abs(Math.cos(angle))+Math.abs(Math.sin(angle));
+        actorGuards.push({image,x:r.left+r.width/2-actorOrigin.left,y:r.top+r.height/2-actorOrigin.top,
+          width:r.width/extent,height:r.height/extent,angle});
+      }
+      if (current.overhead) {
+        const origin=canvas.parentElement!.getBoundingClientRect();
+        for(const el of canvas.parentElement!.querySelectorAll('.travel-route-control, .proto-route-label')) {
+          const r=el.getBoundingClientRect();
+          guards.push({left:r.left-origin.left,top:r.top-origin.top,right:r.right-origin.left,bottom:r.bottom-origin.top});
+        }
+        for(const el of canvas.parentElement!.querySelectorAll<HTMLElement>('[data-route-points]')) {
+          const points=(el.dataset.routePoints??'').trim().split(/\s+/).map(pair=>{
+            const [x,y]=pair.split(',').map(Number);return projectAtmospherePoint({x,y},0,camera,tilt);
+          }).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
+          if(points.length>1)routeGuards.push(points);
+        }
+      }
+      // Protect only the opaque card quadrilaterals, like the existing label
+      // guards. World fog outside those faces and gameplay light stay intact.
+      const cardOrigin=canvas.parentElement!.getBoundingClientRect();
+      const cardGuards=Array.from(canvas.parentElement!.querySelectorAll<HTMLElement>('[data-world-card]')).map(card=>
+        Array.from(card.querySelectorAll<HTMLElement>('[data-travel-card-corner]')).map(corner=>{const r=corner.getBoundingClientRect();return {x:r.x-cardOrigin.x-current.view.width/2,y:r.y-cardOrigin.y-current.view.height/2};})
+      ).filter(points=>points.length===4);
       renderer.draw({ ...current, width:current.view.width, height:current.view.height, camera, tilt,
-        time:motion.matches ? 0 : now, guards, scale });
+        time:motion.matches ? 0 : now, guards, actorGuards, routeGuards, cardGuards, scale });
       canvas.dataset.resolution = (canvas.width/current.view.width).toFixed(2);
       canvas.dataset.canopies = String(current.scene.canopies.length);
     };
@@ -91,20 +136,20 @@ export function VolumetricAtmosphere(props: Props) {
       stopClock?.(); stopClock = undefined;
       if (document.hidden || !input.current.active) return;
       guardKey = ''; lastDraw = -Infinity;
-      draw(performance.now());
+      draw(gameTime.now());
       if (!motion.matches) stopClock = subscribeVisualLight(draw);
     };
-    redraw.current=()=>draw(performance.now());
+    redraw.current=()=>draw(gameTime.now());
     restart.current=start;
-    // Warm a hidden surface while the table is flat. No ongoing animation or
-    // camera redraws run until the lean has finished; resources survive toggles.
+    // Warm inactive surfaces too; resources survive lighting/visibility toggles.
+    // Camera transitions keep the visibility mask active throughout the lean.
     const warmDraw = () => {
-      if (!input.current.active) draw(performance.now(), undefined, true);
+      if (!input.current.active) draw(gameTime.now(), undefined, true);
     };
     const warm = window.requestIdleCallback
       ? window.requestIdleCallback(warmDraw)
-      : window.setTimeout(warmDraw, 200);
-    const unFollow = props.onCameraFrame(() => draw(performance.now()));
+      : gameTime.setTimeout(warmDraw, 200);
+    const unFollow = props.onCameraFrame(() => draw(gameTime.now()));
     // Reduced-motion scenes still update on time, scenery and light changes.
     const observer = new MutationObserver(records => {
       const selector = '.board-object-label__text, .proto-map-toolbar';
@@ -113,10 +158,10 @@ export function VolumetricAtmosphere(props: Props) {
         return element?.closest(selector) || [...record.addedNodes,...record.removedNodes].some(node =>
           node instanceof Element && (node.matches(selector) || node.querySelector(selector)));
       })) guardKey = '';
-      if (motion.matches) draw(performance.now());
+      if (motion.matches) draw(gameTime.now());
     });
     observer.observe(canvas.parentElement!,{ attributes:true, childList:true, characterData:true, subtree:true, attributeFilter:['data-light-percent'] });
-    const resize = new ResizeObserver(() => { guardKey = ''; draw(performance.now()); });
+    const resize = new ResizeObserver(() => { guardKey = ''; draw(gameTime.now()); });
     resize.observe(canvas.parentElement!);
     const lost = (event: Event) => { event.preventDefault(); setFallback(true); };
     canvas.addEventListener('webglcontextlost',lost);
@@ -124,13 +169,14 @@ export function VolumetricAtmosphere(props: Props) {
     start();
     return () => {
       stopped = true;redraw.current=null;restart.current=null;
-      if (window.cancelIdleCallback) window.cancelIdleCallback(warm); else window.clearTimeout(warm);
+      gameTime.clearTimeout(deferredDraw);
+      if (window.cancelIdleCallback) window.cancelIdleCallback(warm); else gameTime.clearTimeout(warm);
       stopClock?.(); unFollow(); resize.disconnect(); observer.disconnect(); renderer.dispose();
       canvas.removeEventListener('webglcontextlost',lost); document.removeEventListener('visibilitychange',start); motion.removeEventListener('change',start);
     };
   }, [fallback,props.getCamera,props.onCameraFrame]);
   useEffect(()=>{restart.current?.();},[props.active]);
-  useEffect(()=>{redraw.current?.();},[props.frame.hour,props.lights,props.scene]);
+  useEffect(()=>{redraw.current?.();},[props.frame.hour,props.frame.globalLights,props.overhead,props.lights,props.scene]);
   // Replace the canvas on failure: browser contexts cannot change type in place.
   return <canvas key={fallback ? 'canvas' : 'gpu'} ref={ref} aria-hidden="true" data-atmosphere="volume" data-active={props.active} className="proto-volumetrics" />;
 }

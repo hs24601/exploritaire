@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useSyncExternalStore } from 'react';
 import { clearHoldLog, holdLogEntries, logHold, subscribeHoldLog } from '../holdLog';
 
@@ -19,7 +20,7 @@ export function HoldLogOverlay() {
       const target = event.target as Element | null;
       const card = target?.closest?.('[data-table-quest]');
       const label = card ? `card ${card.getAttribute('data-table-quest')}` : (target?.className?.toString().split(' ')[0] || target?.tagName || 'page');
-      logHold(`${event.type.replace('pointer', 'press ')} (${event.pointerType}) on ${label}, ${Math.max(0, Math.round(performance.now() - event.timeStamp))}ms late`);
+      logHold(`${event.type.replace('pointer', 'press ')} (${event.pointerType}) on ${label}, ${Math.max(0, Math.round(gameTime.now() - event.timeStamp))}ms late`);
     };
     document.addEventListener('pointerdown', press, true);
     document.addEventListener('pointerup', press, true);

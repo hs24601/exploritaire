@@ -1,11 +1,18 @@
+import { gameTime } from '../../gameTime';
+import { cardIsManaInfused } from '../manaInfusion';
+import { ManaGlow } from './ManaGlow';
 import React, { useEffect, useState } from 'react';
 import { PlayingCard } from '../../golf/components/PlayingCard';
 import { rankLabel, type Card } from '../protoState';
 import { REVEAL_SWEEP_MS, revealMask } from './Reveal';
 import { useCardJumbo } from './CardJumbo';
+import { cardResourceFace } from '../cardResourceFace';
+import type { TableauCardBackground } from '../biomeCardArt';
+import { BiomeCardBackground } from './BiomeCardBackground';
+import { EventCard } from './EventCard';
 
-/** A tableau card's height over its width (56:74). */
-const CARD_ASPECT = 74 / 56;
+/** Tableau faces match the foundation's standard playing-card proportions. */
+const CARD_ASPECT = 88 / 63;
 
 /** The silhouette veil over a buried card. It only exists while the card is
  * buried and while it sweeps away once the card reaches the front: a lit
@@ -18,9 +25,9 @@ function CardVeil({ buried }: { buried: boolean }) {
   useEffect(() => {
     if (buried) { setRevealed(false); return undefined; }
     // Draw the full veil a frame, then sweep it away and drop it.
-    const frame = requestAnimationFrame(() => setRevealed(true));
-    const done = window.setTimeout(() => setSweeping(false), REVEAL_SWEEP_MS + 50);
-    return () => { cancelAnimationFrame(frame); window.clearTimeout(done); };
+    const frame = gameTime.requestAnimationFrame(() => setRevealed(true));
+    const done = gameTime.setTimeout(() => setSweeping(false), REVEAL_SWEEP_MS + 50);
+    return () => { gameTime.cancelAnimationFrame(frame); gameTime.clearTimeout(done); };
   }, [buried]);
   if (!buried && !sweeping) return null;
   return <span aria-hidden="true" className="proto-card-veil" style={revealMask(1, CARD_ASPECT, revealed ? 1 : 0, { invert: true, unit: 'var(--classic-card-w)' })} />;
@@ -43,10 +50,13 @@ export const ProtoCard = ({
   buried = false,
   lit = false,
   centerRank = false,
+  concealValue = false,
   style,
   jumbo = false,
   allowJumbo = true,
   actionLabel = 'Play card',
+  background,
+  onDiscard,
 }: {
   card: Card;
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -68,26 +78,37 @@ export const ProtoCard = ({
   /** Front tableau card: the value sits large in the middle of the face and
    * the corner index steps aside (buried cards keep it for the peek row). */
   centerRank?: boolean;
+  /** Tactical combat holds remove values from ink and accessible card names. */
+  concealValue?: boolean;
   style?: React.CSSProperties;
   jumbo?: boolean;
   /** Tableau cards activate gameplay directly instead of opening inspection. */
   allowJumbo?: boolean;
   actionLabel?: string;
+  /** Explicit appearance for flights outside the tableau's biome provider. */
+  background?: TableauCardBackground;
+  onDiscard?: () => void;
 }) => {
   const viewer = useCardJumbo();
+  if(card.event)return <EventCard card={card} disabled={disabled} buried={buried} style={style} cardRef={cardRef} onPlay={onClick?()=>onClick({} as React.MouseEvent<HTMLButtonElement>):undefined} onDiscard={onDiscard} actionLabel={actionLabel==='Play card'?'Play event':actionLabel} />;
   return (
   <PlayingCard
     cardRef={cardRef}
-    data-resource-node={card.resource}
+    data-resource-node={card.inspirationResource ? 'inspiration' : card.resource}
+    data-food-source={card.foodSource}
+    data-mana-infused={cardIsManaInfused(card) || undefined}
+    data-story-mana={card.id==='day02-woods-mana'&&!buried||undefined}
     data-encounter={card.encounter}
     data-highlight={active || mobilityTarget ? 'true' : undefined}
     aria-pressed={selected || undefined}
     data-buried={buried || undefined}
+    data-value-concealed={concealValue || undefined}
+    aria-label={concealValue ? 'Tableau card · value hidden during tactical pause' : undefined}
     onClick={event=>{
       if(jumbo)return;
       if(!viewer || !allowJumbo){if(!disabled)onClick?.(event);return;}
       const source=event.currentTarget;
-      viewer.open({title: `${rankLabel(card.rank)}${card.resource ? ` · ${card.resource}` : ''}`,
+      viewer.open({title: `${rankLabel(card.rank)}${cardResourceFace(card) ? ` · ${cardResourceFace(card)?.label}` : ''}`,
         ratio:56/74,content:<ProtoCard card={card} footerLabel={footerLabel} buried={buried} jumbo />,
         action: !disabled&&onClick ? ()=>onClick({...event,currentTarget:source,detail:0}) : undefined,actionLabel});
     }}
@@ -110,10 +131,12 @@ export const ProtoCard = ({
             : 'border-white/12 bg-[linear-gradient(180deg,#14161b,#080a0e)] text-white/92 hover:-translate-y-0.5 hover:border-[#ffd166]/38'
     }`}
   >
+    {!allowJumbo && <BiomeCardBackground background={background} cardId={card.id} buried={buried} />}
+    {!buried && cardIsManaInfused(card) && <ManaGlow />}
     <CardVeil buried={buried} />
     <div className="proto-card-header flex min-w-0 items-start justify-between gap-1">
       <div aria-hidden={centerRank || undefined} className={`proto-card-rank ${centerRank ? 'invisible ' : ''}font-semibold leading-none ${standardRankSize ? 'text-[calc(var(--classic-card-w)*0.34)]' : muted ? 'text-[calc(var(--classic-card-w)*0.27)]' : 'text-[calc(var(--classic-card-w)*0.4)]'}`}>
-        {rankLabel(card.rank)}
+        {concealValue ? null : rankLabel(card.rank)}
       </div>
       {footerLabel ? (
         <div className="proto-card-icon -mt-0.5 shrink-0 font-sans text-[clamp(1rem,calc(var(--classic-card-w)*0.42),1.8rem)] leading-none drop-shadow-[0_0_5px_rgba(255,255,255,0.24)]">
@@ -121,7 +144,7 @@ export const ProtoCard = ({
         </div>
       ) : null}
     </div>
-    {centerRank ? <span className="proto-card-center-rank">{rankLabel(card.rank)}</span> : null}
+    {centerRank && !concealValue ? <span className="proto-card-center-rank">{rankLabel(card.rank)}</span> : null}
   </PlayingCard>
 );
 };

@@ -43,6 +43,6 @@ describe('classic plus data contracts', () => {
       label: 'Forest',
       objectiveLabel: 'Forage',
     });
-    expect(DEFAULT_BIOME.resources).toEqual(['Wood', 'Berries', 'Herbs']);
+    expect(DEFAULT_BIOME.resources).toEqual(['Wood']);
   });
 });

@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { validateTileDocument } from './src/proto/tileEditor/schema';
 import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import path from 'path';
@@ -90,6 +91,7 @@ export default defineConfig({
       : {}),
   },
   plugins: [
+    { name: 'game-context-menu', transformIndexHtml: { order: 'pre', handler: () => [{ tag: 'script', attrs: { type: 'module', src: '/src/browserContextMenu.ts' }, injectTo: 'head' }] } },
     {
       name: 'proto-build-revision',
       resolveId(id) { if (id === 'virtual:proto-build') return buildModule; },
@@ -102,7 +104,9 @@ export default defineConfig({
         currentBuild = { ...PROTO_BUILD, revision, startedAt: new Date().toISOString() };
         const module = context.server.moduleGraph.getModuleById(buildModule);
         if (module) context.server.moduleGraph.invalidateModule(module);
-        context.server.ws.send({ type: 'full-reload' });
+        // Let the save response reach the editor before replacing its document.
+        if (relative === 'src/data/protoTiles.json') setTimeout(() => context.server.ws.send({ type: 'full-reload' }), 400);
+        else context.server.ws.send({ type: 'full-reload' });
         return [];
       },
     },
@@ -121,6 +125,33 @@ export default defineConfig({
             return;
           }
           next();
+        });
+        server.middlewares.use('/__proto-tiles/save', (req, res) => {
+          if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
+          if (!req.headers['content-type']?.startsWith('application/json')) { res.statusCode = 415; res.end('Expected application/json'); return; }
+          let body = '', tooLarge = false;
+          req.on('data', chunk => {
+            if (tooLarge) return;
+            body += chunk;
+            if (Buffer.byteLength(body) > 256 * 1024) { tooLarge = true; res.statusCode = 413; res.end('Tile document too large'); }
+          });
+          req.on('end', () => {
+            if (tooLarge) return;
+            try {
+              const document = JSON.parse(body);
+              validateTileDocument(document);
+              if (!document.tiles) throw new Error('Save requires a complete authored layout');
+              const file = path.resolve(__dirname, 'src/data/protoTiles.json');
+              const temporary = `${file}.tmp`;
+              fs.writeFileSync(temporary, JSON.stringify(document, null, 2) + '\n', 'utf8');
+              fs.renameSync(temporary, file);
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ saved: true }));
+            } catch (error) {
+              res.statusCode = 400;
+              res.end(error instanceof Error ? error.message : 'Unable to save tile data');
+            }
+          });
         });
         server.middlewares.use('/__light-patterns/save', (req, res, next) => {
           if (req.method !== 'POST') {

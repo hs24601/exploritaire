@@ -5,11 +5,11 @@ import { biomeTravelCost, biomeOpenState } from './biomeFlags';
 import { discoverTiles } from './tileDiscovery';
 it('mountains block crossing, arrivals and tableau activation and retain their type', () => {
  const state = createInitialState();
- expect(state.biomeTiles).toHaveLength(8);
+ expect(state.biomeTiles).toHaveLength(12);
  const mountains = state.biomeTiles.filter(t => t.tileType === 'impassable-mountain');
- expect(mountains).toHaveLength(5);
+ expect(mountains).toHaveLength(6);
  expect(new Set(mountains.map(t => `${t.position.x / 48},${t.position.y / 48}`))).toEqual(
-   new Set(Array.from({ length: 2 }, (_, row) => Array.from({ length: 3 }, (_, column) => `${column - 1},${row + 2}`)).flat().filter(cell => cell !== '0,2')),
+   new Set(['-2,2', '-1,2', '1,2', '-1,3', '0,3', '1,3']),
  );
  for (const tile of mountains) {
  expect(biomeTravelCost(tile.flags)).toBe(Infinity);

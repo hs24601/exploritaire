@@ -1,25 +1,61 @@
+import { tileHasBerries } from './berryPresentation';
+import { trackGameAnimation } from '../gameAnimations';
+import { dayOneDepartureCamera } from './departureCamera';
+import { isTextEditingTarget } from './keyboardInput';
+import { GlobalPauseControl, useGlobalPauseLifecycle } from './components/GlobalPause';
+import { gameTime } from '../gameTime';
+import { useDayCinematics } from './hooks/useDayCinematics';
+import { ScenarioCameraDetails } from './components/ScenarioCameraDetails';
+import { SceneActorEmotion } from './components/SceneActorEmotion';
+import { DayCinematicReview } from './components/DayCinematicReview';
+import { CameraChoreographyTools, CameraChoreographyButton } from './components/CameraChoreographyTools';
+import { useCameraStoryTriggers } from './hooks/useCameraStoryTriggers';
+import { fireCameraTrigger, stopCameraPlayback } from './cameraDirector';
+import { CalloutEditingProvider } from './components/CalloutEditing';
+import { pointAlongTimedPath } from './gridPathfinding';
+import { BanksRescueCinema } from './components/BanksRescueCinema';
+import { createDayScenario, createDayOneState, dayOneAllowsPlan, dayOnePlan, dayOneReturning, dayTwoPatchForaged, dayTravelAction, dayOneHour, dayOneThought, manaCarrierLuminosity } from './dayScenarios';
+import { DayForagingCallout } from './components/DayForagingCallout';
+import { dayObjective } from './dayObjectives';
+import type { TravelPlan } from './travelJourney';
+import { tileDetailsCard } from './components/TileDetailsCard';
+import { flyTravelCard } from './travelCardFlight';
+import { TableauPlayArea } from './components/TableauTemplate';
+import { TableauLighting } from './components/TableauLighting';
+import { EVENT_CARDS_ENABLED } from './eventCards';
+import { removeTravelEvents } from './travelJourney';
+import { EventDiscardPile } from './components/EventDiscardPile';
+import { partyMembers, joinParty, leaveParty, addPartyCompanion } from './partySystem';
+import { TravelTableau } from './components/TravelTableau';
+import { TileEditor } from './tileEditor/TileEditor';
+import { SAVED_TILE_DOCUMENT, materializeTiles, applyTileDocument } from './tileEditor/runtime';
+import { authorTile, coversCell, type TileDocument } from './tileEditor/schema';
+import { paintTravelProgress, breachTravelPassage, beginJourney, prepareTravelTableau, travelTableauHeld, checkTravelCairn, bestTravelMove, playTravelCard, playTravelEvent, travelEventCost, discardTravelEvent, redrawTravel, TRAVEL_STAMINA_MAX } from './travelJourney';
+import { AbilityTray } from './components/AbilityTray';
+import { availableMovesFor } from './rules/battleAbilities';
 import { ActorPlaytestEditor } from './components/ActorPlaytestEditor';
+import { ArtSettings } from './components/ArtSettings';
+import { useGlobalLights, setGlobalLightsEnabled } from './globalLighting';
+
 import { ACTOR_HOLO_ART } from './art/actorCardArt';
 import { JumboActionCard } from './components/CardJumbo';
 import { drawSleepStock, isDenRest, REST_COLUMNS, REST_ROWS, SLEEP_ICONS, SLEEP_LABELS } from './rules/rest';
 import { ActorHoloCard } from './components/ActorHoloCard';
 import { activateBiome, arriveActorAtBiome } from './biomeArrival';
-import { eatSupper, isHome, ordinaryHour, ordinaryThought, SUPPER_BERRIES } from './rules/ordinaryDay';
+import { eatSupper, isHome, ordinaryThought, SUPPER_MANA } from './rules/ordinaryDay';
 import { discoverActorTiles, discoverTiles } from './tileDiscovery';
 import { TABLE_GRID } from './gridCoordinates';
 import { DISABLE_INSPIRATION_CONSUMPTION, canSpendInspiration, spendInspiration } from './inspirationTesting';
 import { flyQuestToDiscard } from './questDiscardFlight';
-import { TableauScene } from './components/TableauScene';
+import { TableauLandscape } from './components/TableauLandscape';
 import { FoundationExitButton } from './components/FoundationExitButton';
 import { createTableauLightRig } from './tableauLighting';
 import { tableauDepartures } from './tableauDepartures';
-import { actorLight } from './protoLighting';
-import { TableauCardArea } from './components/TableauCardArea';
+import { actorLight, biomeLights } from './protoLighting';
 import { solverFlightDuration } from './solverTiming';
 import { type PlacedQuestCard } from './components/TableQuestCard';
 import { QuestArtwork, QuestEmblem } from './components/QuestArtwork';
 import { DetailsCardViewer, ActorCardArt, type DetailsCardObject } from './components/DetailsCardViewer';
-import { tileDetailsCard } from './components/TileDetailsCard';
 import { requestHoloDeviceTilt } from './useHoloDeviceTilt';
 import { redeemActiveQuest } from './questProgress';
 import { logHold } from './holdLog';
@@ -27,11 +63,12 @@ import { blockedSolids } from './worldBounds';
 import { DEFAULT_ACTOR_LUMINOSITY, getTableLighting, tableObjectShadow } from './protoLighting';
 import { TimeOfDaySlider } from './components/TimeOfDaySlider';
 import { PondField } from './components/PondField';
+import { WorldMinimap } from './components/WorldMinimap';
 import { CombatDemo } from './components/CombatDemo';
 import type { BattleScene } from './rules/battleCues';
 import { BattleTableauField } from './components/BattleTableauField';
 import './components/CombatField.css';
-import { GLOWFISH_TABLE_LIGHT, POND_CATCHES, POND_MISS_INSPIRATION, POND_SPECIES, isPondCatch, type PondCatch, castBait, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, restockPond } from './rules/fishing';
+import { GLOWFISH_TABLE_LIGHT, POND_MISS_INSPIRATION, POND_SPECIES, isPondCatch, castBait, eatPondCatch, endGlowfishGlow, landHooked, loseHooked, restockPond } from './rules/fishing';
 
 
 import { PROTO_BUILD_COMMIT, PROTO_BUILD_LABEL, PROTO_BUILD_TITLE } from './buildInfo';
@@ -40,8 +77,11 @@ import { TableauSolveControls, type SolveStepResult } from './components/Tableau
 import { nextQuestCard, isQuestPlacement } from './protoQuestDeals';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { advanceBuild, splitStack, playBuildCard, stackIngredients, ingredientCount, startStackBuild, WORLD_ITEMS, CRAFT_RECIPES, type WorldItemId } from './protoCrafting';
-import { DragPreview } from '../components/DragPreview';
-import type { Card as EngineCard } from '../engine/types';
+import { ProtoCardFlight } from './components/ProtoCardFlight';
+import { snapshotCardBackground } from './components/BiomeCardBackground';
+import { cardResourceFace } from './cardResourceFace';
+import { createRuntimeId } from './runtimeId';
+import type { FoodLanding } from './components/FoodCollectionFx';
 import {
   DEFAULT_CHIP_ABILITY,
   DEFAULT_BIOME,
@@ -75,33 +115,26 @@ import {
   type PendingTargetSelection, type ProtoState, type TargetAnnouncement,
 } from './protoState';
 import { ACTOR_WORK_RESOURCES, DAY_TWO_RATION_ENERGY, DAY_TWO_RATION_INSPIRATION, ENCOUNTER_GLYPH, ENEMY_TEAM_MOCKUPS, FOREST_RESOURCE_GLYPHS, FOREST_RESOURCE_LABELS, FOREST_RESOURCE_ORDER, MOBILITY_COOLDOWN_TURNS, TABLEAU_COLUMNS, TABLEAU_ROWS, addForestHaul, canAffordExplorationAction, canPlayOnFoundation, cloneState, createAmbushCombatDeal, isPondTile, isDangerTile, DANGER_WOODS_REWARD, createFoundations, createInitialState, createQuestExplorationFoundations, drawTableauReplacement, getExpeditionQuestSteps, isAdjacentRank, isBiomeDealComplete, isOpenExplorationFoundation, materializeDeepWoods, spendExplorationEnergy } from './rules/setup';
-import { adjacentFoundationIndexes, applyFoundationPlay, hasNormalPlayerTableauMove } from './rules/play';
+import { adjacentFoundationIndexes, applyFoundationPlay, discardTableauEvent, utilityRetrievalCost, hasNormalPlayerTableauMove } from './rules/play';
 import { REDRAW_INSPIRATION_COST } from './rules/redraw';
 import { AMBUSH_PLAYER_CARD_BUDGET, ENEMY_TURN_MAX_MOVES, actorIndexForId, applyEnemyTableauMove, getTauntTargetIndex, hasBlinkStrain, resolveEnemyIntents, selectEnemyTableauMove } from './rules/combat';
 import { biomeOpenState } from './biomeFlags';
 
 /** Hour the table opens at, on the first day and every day after. */
-const TABLE_OPENING_HOUR = 9;
+const TABLE_OPENING_HOUR = 0;
 
 
-/** The tableau is a permanent table surface, even without a selected deal. */
-const desktopLayoutTracks = () => {
-  const tracks = [
-    ['tableau', 'minmax(0, 1fr)'],
-    ['map', 'minmax(0, 1.7fr)'],
-  ].filter((track): track is string[] => Boolean(track));
+/** Keep the active deal beside a larger world or combat view. */
+const desktopLayoutTracks = (tableauPresent: boolean, headerPresent: boolean) => {
+  const tracks = tableauPresent
+    ? [['tableau', 'minmax(0, 1fr)'], ['map', 'minmax(0, 1.7fr)']]
+    : [['map', 'minmax(0, 1fr)']];
   return {
     '--layout-columns': tracks.map(([, size]) => size).join(' '),
-    '--layout-areas': `"${tracks.map(() => 'header').join(' ')}" "${tracks.map(([area]) => area).join(' ')}"`,
+    '--layout-areas': (headerPresent ? '"' + tracks.map(() => 'header').join(' ') + '" ' : '') + '"' + tracks.map(([area]) => area).join(' ') + '"',
+    '--layout-rows': headerPresent ? 'auto minmax(0, 1fr)' : 'minmax(0, 1fr)',
   } as CSSProperties;
 };
-
-const asDragPreviewCard = (card: Card): EngineCard => ({
-  id: card.id,
-  rank: card.rank,
-  element: 'N',
-  suit: '☀️',
-});
 
 const mobilityLabelForKind = (kind: PendingMobility['kind']) =>
   kind === 'hallowed_path' ? 'Hallowed Path' : kind;
@@ -123,14 +156,29 @@ const addSpentComboProgress = (progress: Record<string, number>, ability: Pendin
 
 
 export const ProtoVariant = () => {
+  const [editorDocument, setEditorDocument] = useState<TileDocument | null>(null);
+  const editorOpen = editorDocument !== null;
+  const [scenarioRun, setScenarioRun] = useState(0);
+  const [editorMenu, setEditorMenu] = useState<{ cell: ReturnType<typeof TABLE_GRID.cell>; x: number; y: number } | null>(null);
+  const [editorCell, setEditorCell] = useState(() => TABLE_GRID.cell(0, 2));
+  const appliedTileDocument = useRef<TileDocument | null>(null);
   const [state, setState] = useState<ProtoState>(() =>
-    createInitialState(),
+    createDayOneState(),
   );
+  useCameraStoryTriggers(state, scenarioRun, editorOpen);
   useEffect(() => {
+    if (!EVENT_CARDS_ENABLED) setState(removeTravelEvents);
+  }, []);
+  useEffect(() => {
+    if (editorOpen) return;
     setState(discoverActorTiles);
-  }, [state.worldActors, state.biomeTiles]);
+  }, [state.worldActors, state.biomeTiles, editorOpen]);
+  const previewTiles = useMemo(() => editorDocument ? materializeTiles(editorDocument, state.biomeTiles).map(tile => ({ ...tile,
+    flags: tile.flags?.filter(flag => flag !== 'unexplored'), unlocked: true, traversalProgress: 1 })) : state.biomeTiles, [editorDocument, state.biomeTiles]);
   const [pendingTargetSelection, setPendingTargetSelection] =
     useState<PendingTargetSelection | null>(null);
+  const [utility, setUtility] = useState<{ foundationIndex: number; move: 'Fetch' | 'Dig' } | null>(null);
+  useEffect(() => { setUtility(null); }, [state.selectedBiomeId, state.worldActors]);
   const [pendingWildCardTarget, setPendingWildCardTarget] = useState(false);
   const [pendingMobility, setPendingMobility] = useState<PendingMobility | null>(null);
   const [pendingAbilityTarget, setPendingAbilityTarget] = useState<PendingAbilityTarget | null>(null);
@@ -146,97 +194,97 @@ export const ProtoVariant = () => {
   const [currentTurn, setCurrentTurn] = useState<'player' | 'enemy'>('player');
   const [turnCount, setTurnCount] = useState(1);
   const [cardTransport, setCardTransport] = useState<CardTransport | null>(null);
+  const [foodLanding, setFoodLanding] = useState<(FoodLanding & { foundationIndex: number; biomeId: string | null }) | null>(null);
   const [mobilePanel, setMobilePanel] = useState<'map' | 'tableau'>('map');
-  useEffect(() => { if (state.selectedBiomeId) setMobilePanel('tableau'); }, [state.selectedBiomeId]);
+  const [scenarioExpanded, setScenarioExpanded] = useState(false);
+
   const [inspectedActorId, setInspectedActorId] = useState<string | null>(null);
-  const [inspectedTileId, setInspectedTileId] = useState<string | null>(null);
+  const [inspectedTileId,setInspectedTileId]=useState<string|null>(null);
   const [inspectionAnchor, setInspectionAnchor] = useState<HTMLElement | null>(null);
   const [inspectionId, setInspectionId] = useState(0);
   const [inspectionJumboId, setInspectionJumboId] = useState<string | null>(null);
-  const tileAt = (point: { x: number; y: number }) => state.biomeTiles.find(tile => {
-    const area = getBiomeWorldFootprint(tile);
-    return point.x >= area.left && point.x < area.right && point.y >= area.top && point.y < area.bottom;
-  });
   const inspectActor = (id: string, anchor: HTMLElement, jumbo = false) => {
+    setInspectedTileId(null);
     setInspectionJumboId(jumbo ? id : null);
     requestHoloDeviceTilt();
     setInspectionId(value => value + 1);
     const actor = state.worldActors.find(entry => entry.id === id);
-    const tile = anchor.closest('.proto-map') && actor
-      ? actor.location === 'foundation' ? state.biomeTiles.find(entry => entry.id === actor.biomeId) : tileAt(actor.position)
-      : undefined;
-    const visibleTile = tile && !tile.flags?.includes('unexplored') ? tile : undefined;
-    setInspectionAnchor(visibleTile ? document.querySelector<HTMLElement>(`button[data-biome-id="${visibleTile.id}"]`) ?? anchor : anchor);
+    const tile = anchor.closest('.proto-map') && actor ? state.biomeTiles.find(tile => {
+      if (actor.location === 'foundation') return tile.id === actor.biomeId;
+      const area = getBiomeWorldFootprint(tile);
+      return actor.position.x >= area.left && actor.position.x < area.right && actor.position.y >= area.top && actor.position.y < area.bottom;
+    }) : undefined;
+    // Keep the compact card anchored to the actor's square in perspective.
+    // The tile supplies placement only; it never adds a tile inspection card.
+    setInspectionAnchor(tile && !tile.flags?.includes('unexplored') ? document.querySelector<HTMLElement>(`button[data-biome-id="${tile.id}"]`) ?? anchor : anchor);
     setInspectedActorId(id);
-    setInspectedTileId(visibleTile?.id ?? null);
   };
-  const inspectTile = (id: string, anchor: HTMLElement) => {
-    setInspectionJumboId(null);
-    const tile = state.biomeTiles.find(entry => entry.id === id);
-    if (!tile || tile.flags?.includes('unexplored')) return;
-    requestHoloDeviceTilt();
-    setInspectionId(value => value + 1);
-    setInspectionAnchor(anchor);
-    setInspectedTileId(id);
-    setInspectedActorId(state.worldActors.find(actor => actor.location === 'foundation'
-      ? actor.biomeId === id : tileAt(actor.position)?.id === id)?.id ?? null);
+  const inspectTile=(id:string,anchor:HTMLElement)=>{
+    const tile=state.biomeTiles.find(t=>t.id===id);
+    if(!tile||tile.flags?.includes('unexplored')||!tile.unlocked)return;
+    setInspectedActorId(null);setInspectedTileId(id);setInspectionJumboId(null);setInspectionAnchor(anchor);setInspectionId(value=>value+1);
   };
-  const closeInspection = () => { setInspectedActorId(null); setInspectedTileId(null); };
-  // The table opens in the morning.
-  const [tableHours, setTableHours] = useState(TABLE_OPENING_HOUR);
-  const dayHour = ordinaryHour(state);
-  useEffect(() => { if (state.ordinaryDay) setTableHours(dayHour); }, [dayHour]);
+  const closeInspection = () => { setInspectedActorId(null);setInspectedTileId(null); };
+  // Hold midnight unless the player changes time or enables cycling.
+  const [tableHours, setTableHours] = useState(10);
+  const scriptedHour = state.dayScenario ? dayOneHour(state) : null;
+  useEffect(() => { if (scriptedHour !== null) setTableHours(scriptedHour); }, [scriptedHour]);
   // Battle-camera tilt for the table and the tableau field, toggled from the map.
   const [cameraTilted, setCameraTilted] = useState(false);
-  // Reserve both phases of Space globally so focused controls cannot activate.
+  useGlobalPauseLifecycle();
+  // Capture both phases, including on buttons, without stealing editable text or shortcuts.
   useEffect(() => {
-    const space = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' && event.key !== ' ') return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (event.type === 'keydown' && !event.repeat) setCameraTilted(value => !value);
+    const shortcut = (event: KeyboardEvent) => {
+      if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || isTextEditingTarget(event.target)) return;
+      const pause = event.code === 'Space' || event.key === ' ';
+      const view = event.code === 'KeyO' || event.key.toLowerCase() === 'o';
+      if (!pause && !view) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (event.type === 'keydown' && !event.repeat) {
+        if (pause) gameTime.setPaused(!gameTime.isPaused());
+        else if (!gameTime.isPaused()) { stopCameraPlayback(); setCameraTilted(value => !value); }
+      }
     };
-    window.addEventListener('keydown', space, true);
-    window.addEventListener('keyup', space, true);
+    const block = (event: Event) => {
+      if ((event.target instanceof Element && event.target.closest('[data-editor-safe="true"]')) || !gameTime.isPaused() || isTextEditingTarget(event.target) || (event.target instanceof Element && event.target.closest('[data-global-pause-control]'))) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+    };
+    window.addEventListener('keydown', shortcut, true); window.addEventListener('keyup', shortcut, true);
+    const blocked = ['pointerdown', 'pointermove', 'pointerup', 'mousemove', 'touchmove', 'click', 'dblclick', 'wheel', 'keydown', 'keyup'] as const;
+    blocked.forEach(type => window.addEventListener(type, block, { capture: true, passive: false }));
     return () => {
-      window.removeEventListener('keydown', space, true);
-      window.removeEventListener('keyup', space, true);
+      window.removeEventListener('keydown', shortcut, true); window.removeEventListener('keyup', shortcut, true);
+      blocked.forEach(type => window.removeEventListener(type, block, true));
     };
   }, []);
-  // A newly staffed encounter enters immersion. Exiting never changes the
-  // mode: only the player's camera toggle can return to tabletop.
   const engagementKey = state.worldActors
     .filter(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)
     .map(actor => `${actor.biomeId}:${actor.id}`).sort().join('|');
-  const previousEngagement = useRef(engagementKey);
-  useEffect(() => {
-    if (previousEngagement.current === engagementKey) return;
-    previousEngagement.current = engagementKey;
-    if (engagementKey) setCameraTilted(true);
-  }, [engagementKey]);
   const [cycleLighting, setCycleLighting] = useState(false);
   const [tableLightsEnabled, setTableLightsEnabled] = useState(true);
+  const globalLights = useGlobalLights();
   // Guidance highlights every playable tableau card; off by default.
   const [moveGuidance, setMoveGuidance] = useState(false);
   const [lightReadoutVisible, setLightReadoutVisible] = useState(false);
   const lighting = getTableLighting(tableHours);
-  // Each later day starts in the morning too.
+  // Each later day uses the same midnight opening.
   const startedDay = useRef(state.day);
-  useEffect(() => { if (state.day !== startedDay.current) { startedDay.current = state.day; setTableHours(TABLE_OPENING_HOUR); } }, [state.day]);
+  useEffect(() => { if (state.day !== startedDay.current) { startedDay.current = state.day; setTableHours(state.dayScenario ? dayOneHour(state) : TABLE_OPENING_HOUR); } }, [state.day]);
   useEffect(() => {
     if (!cycleLighting) return;
-    let previous = performance.now();
-    const timer = window.setInterval(() => {
-      const now = performance.now();
+    let previous = gameTime.now();
+    const timer = gameTime.setInterval(() => {
+      const now = gameTime.now();
       const elapsed = (now - previous) / 1000;
       previous = now;
       setTableHours((hours) => (hours + elapsed * 0.2) % 24);
     // Each tick re-renders the whole table; light drifts slowly, so once a second
     // is smooth enough and keeps phones free to answer input.
     }, 1000);
-    return () => window.clearInterval(timer);
+    return () => gameTime.clearInterval(timer);
   }, [cycleLighting]);
   const tableLights = tableLightsEnabled ? [
+    ...biomeLights(state.biomeTiles),
     ...(state.city.campBuilt ? [{ id: 'camp-lamp', position: { x: 0, y: 96 }, radius: 5.5, height: 120, color: '#ff8a3d', flicker: 1 }] : []),
     ...state.worldResourceStacks.filter((stack) => stack.resource === 'provisions_hut' && !stack.build)
       .map((stack) => ({ id: 'hut-lamp-' + stack.id, position: { x: stack.position.x + 36, y: stack.position.y - 36 }, radius: 4, height: 85, color: '#ffd08a', flicker: 0.3 })),
@@ -257,15 +305,15 @@ export const ProtoVariant = () => {
 
   useEffect(() => {
     if (!targetAnnouncement) return undefined;
-    const timeoutId = window.setTimeout(() => {
+    const timeoutId = gameTime.setTimeout(() => {
       setTargetAnnouncement(null);
     }, 3000);
-    return () => window.clearTimeout(timeoutId);
+    return () => gameTime.clearTimeout(timeoutId);
   }, [targetAnnouncement]);
 
   useEffect(() => {
     if (burningEnemyIds.length === 0) return undefined;
-    const timeoutId = window.setTimeout(() => {
+    const timeoutId = gameTime.setTimeout(() => {
       setState((prev) => {
         const enemyTeam = prev.enemyTeam.filter((enemy) => !burningEnemyIds.includes(enemy.id));
         if (enemyTeam.length > 0) return { ...prev, enemyTeam };
@@ -297,10 +345,11 @@ export const ProtoVariant = () => {
       });
       setBurningEnemyIds([]);
     }, 700);
-    return () => window.clearTimeout(timeoutId);
+    return () => gameTime.clearTimeout(timeoutId);
   }, [burningEnemyIds]);
 
   const clearPendingInteractions = () => {
+    setUtility(null);
     setPendingTargetSelection(null);
     setPendingWildCardTarget(false);
     setPendingMobility(null);
@@ -310,7 +359,7 @@ export const ProtoVariant = () => {
   };
 
 const selectBiome = (biomeId: string) => {
-    if (state.scene !== 'exploration' || biomeId === state.selectedBiomeId) return;
+    if (state.journey || state.scene !== 'exploration' || biomeId === state.selectedBiomeId) return;
     const target = state.biomeTiles.find((tile) => tile.id === biomeId);
     // An unknown biome keeps its tableau hidden until an actor gets nearby.
     if (!target || !target.unlocked || !biomeOpenState(target.flags).opens) return;
@@ -325,6 +374,8 @@ const selectBiome = (biomeId: string) => {
   ) => {
     const actor = state.worldActors.find((entry) => entry.id === actorId);
     if (!actor) return;
+    if (state.dayScenario && destination && !state.journey &&
+      (destination.x !== actor.position.x || destination.y !== actor.position.y)) return;
     const hut = destination && state.worldResourceStacks.find((stack) =>
       (stack.resource === 'provisions_hut' && !stack.build || stack.build && CRAFT_RECIPES.find((recipe) => recipe.id === stack.build?.recipeId)?.output === 'provisions_hut') &&
       Math.hypot(stack.position.x - destination.x, stack.position.y - destination.y) < 52);
@@ -338,7 +389,7 @@ const selectBiome = (biomeId: string) => {
       return;
     }
     if (actor.location === 'table') {
-      if (destination) setState(prev => ({ ...prev, worldActors: prev.worldActors.map(entry => entry.id === actorId
+      if (destination) setState(prev => ({ ...prev, worldActors: prev.worldActors.map(entry => partyMembers(prev, actorId).some(member => member.id === entry.id)
         ? { ...entry, position: destination, biomeId: undefined, hutId: undefined } : entry) }));
       return;
     }
@@ -353,10 +404,10 @@ const selectBiome = (biomeId: string) => {
     setState((prev) => ({
       ...prev,
       foundations: prev.foundations.map((slot, index) =>
-        actor.biomeId === prev.selectedBiomeId && index === foundationIndex && slot ? { ...slot, count: 0, cards: [], wildcardBridgeFromRank: undefined } : slot,
+        actor.biomeId === prev.selectedBiomeId && partyMembers(prev, actorId).some(member => (member.foundationIndex ?? 0) === index) && slot ? { ...slot, count: 0, cards: [], wildcardBridgeFromRank: undefined } : slot,
       ),
       worldActors: prev.worldActors.map((entry) =>
-        entry.id === actorId
+        partyMembers(prev, actorId).some(member => member.id === entry.id)
           ? { ...entry, location: 'table' as const, foundationIndex: undefined, biomeId: arrival.biomeId, position: arrivalPosition, hutId: hut?.id }
           : entry,
       ),
@@ -365,7 +416,7 @@ const selectBiome = (biomeId: string) => {
   };
 
   const moveResourceStack = (stackId: string, position: { x: number; y: number }, targetId?: string, actorId?: string) => {
-    const leftoverId = crypto.randomUUID();
+    const leftoverId = createRuntimeId();
     const eaten = actorId ? state.worldResourceStacks.find((stack) => stack.id === stackId && !stack.build && Object.keys(stackIngredients(stack)).length === 1) : undefined;
     if (eaten?.resource === 'glowfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWING', impact: '+2 max INSP and a brighter light until nightfall' });
     else if (eaten?.resource === 'kingfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'FEAST', impact: 'Inspiration fully restored' });
@@ -419,6 +470,7 @@ const selectBiome = (biomeId: string) => {
   const dangerSelected = isDangerTile(state.selectedBiomeId);
   const dangerFighter = state.worldActors.find((actor) => actor.location === 'foundation' && isDangerTile(actor.biomeId)) ?? null;
   const [combatDemoOpen, setCombatDemoOpen] = useState(() => new URLSearchParams(window.location.search).has('combatdemo'));
+  const dayCinema = useDayCinematics(state, scenarioRun, editorOpen || combatDemoOpen);
   const [combatDemoReplay, setCombatDemoReplay] = useState(0);
   const [battleScene, setBattleScene] = useState<BattleScene | undefined>(undefined);
   const watchBattleScene = () => { setCombatDemoReplay(replay => replay + 1); setCombatDemoOpen(true); setMobilePanel('map'); };
@@ -432,6 +484,8 @@ const selectBiome = (biomeId: string) => {
   // The fight's outcome: a landed fish joins the haul at once, as its kind.
   const endPondFight = (landed: boolean) => {
     const preview = landed ? landHooked(state.pond) : null;
+    if (preview?.caught && pondAngler) setFoodLanding({ id: createRuntimeId(), foundationIndex: pondAngler.foundationIndex ?? 0,
+      biomeId: state.selectedBiomeId, berries: false, glyph: '✨', x: 20 + Math.random() * 60, y: 25 + Math.random() * 45 });
     if (preview?.bonus === 'glowfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'GLOWFISH', impact: 'Lucky! It glows. Eat it for light' });
     else if (preview?.caught === 'kingfish') setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'KINGFISH', impact: 'A feast. Eat it to restore all inspiration' });
     setState((prev) => {
@@ -443,7 +497,7 @@ const selectBiome = (biomeId: string) => {
   };
 
   const splitResourceStack = (stackId: string) => {
-    const id = crypto.randomUUID();
+    const id = createRuntimeId();
     setState((prev) => ({ ...prev, worldResourceStacks: prev.worldResourceStacks.flatMap((stack) => stack.id === stackId ? splitStack(stack, id) : [stack]) }));
   };
 
@@ -463,9 +517,10 @@ const selectBiome = (biomeId: string) => {
   };
 
   useEffect(() => {
-    let lastTick = performance.now();
-    const timer = window.setInterval(() => {
-      const now = performance.now();
+    if (editorOpen) return;
+    let lastTick = gameTime.now();
+    const timer = gameTime.setInterval(() => {
+      const now = gameTime.now();
       const elapsedMs = now - lastTick;
       lastTick = now;
       setState((prev) => {
@@ -475,8 +530,8 @@ const selectBiome = (biomeId: string) => {
         return { ...prev, worldResourceStacks: stacks, trailRations: prev.trailRations + rations };
       });
     }, 250);
-    return () => window.clearInterval(timer);
-  }, []);
+    return () => gameTime.clearInterval(timer);
+  }, [editorOpen]);
 
   useEffect(() => {
     if (state.scene !== 'exploration' || !state.selectedBiomeId) return;
@@ -568,6 +623,7 @@ const selectBiome = (biomeId: string) => {
     const previous = undoStack[0] ?? null;
     if (!previous) return;
     setState(cloneState(previous));
+    setFoodLanding(null);
     setUndoStack((prev) => prev.slice(1));
     clearPendingInteractions();
     setBurningEnemyIds([]);
@@ -575,12 +631,12 @@ const selectBiome = (biomeId: string) => {
   };
 
   const buildCamp = () => {
-    if (state.scene !== 'exploration' || state.city.campBuilt || state.settledHaul.wood < 3 || state.settledHaul.berries < 1) return;
+    if (state.scene !== 'exploration' || state.city.campBuilt || state.settledHaul.wood < 3 || state.settledHaul.mana < 1) return;
     pushUndo();
     setState((prev) => ({
       ...prev,
-      haul: { ...prev.haul, wood: prev.haul.wood - 3, berries: prev.haul.berries - 1 },
-      settledHaul: { ...prev.settledHaul, wood: Math.max(0, prev.settledHaul.wood - 3), berries: Math.max(0, prev.settledHaul.berries - 1) },
+      haul: { ...prev.haul, wood: prev.haul.wood - 3, mana: prev.haul.mana - 1 },
+      settledHaul: { ...prev.settledHaul, wood: Math.max(0, prev.settledHaul.wood - 3), mana: Math.max(0, prev.settledHaul.mana - 1) },
       city: { ...prev.city, campBuilt: true },
     }));
     setTargetAnnouncement({ targetKind: 'hero', targetIndex: 0, abilityName: 'CAMP BUILT', impact: 'Rest is available' });
@@ -660,7 +716,9 @@ const selectBiome = (biomeId: string) => {
     setUndoStack([]);
     setCurrentTurn('player');
     setTurnCount(1);
-    setState(createInitialState());
+    const fresh = createDayScenario(state.dayScenario ?? 'sandbox', appliedTileDocument.current ?? SAVED_TILE_DOCUMENT);
+    setState(fresh);
+    setTableHours(state.dayScenario ? dayOneHour(fresh) : TABLE_OPENING_HOUR);
   };
 
   const returnToBase = () => {
@@ -736,7 +794,7 @@ const selectBiome = (biomeId: string) => {
   };
 
   const selectPlayerAutoMove = (sourceState: ProtoState) => {
-    if (!canAffordExplorationAction(sourceState)) return null;
+
     type Candidate = {
       columnIndex: number;
       foundationIndex: number;
@@ -1097,19 +1155,21 @@ const selectBiome = (biomeId: string) => {
   const playColumnToFoundation = (
     columnIndex: number,
     foundationIndex: number,
-    options: { hallowedPath?: boolean; divine?: boolean } = {},
+    options: { hallowedPath?: boolean; divine?: boolean; retrieval?: { move: 'Fetch' | 'Dig'; cardIndex: number } } = {},
   ) => {
     const divine = Boolean(options.divine);
     const hallowedPath = Boolean(options.hallowedPath && foundationIndex === actorIndexForId('jarnathan'));
     const playOptions = {
       columnIndex,
       foundationIndex,
+      retrieval: options.retrieval,
       divine,
       hallowedPath,
       hallowedEmergency: hallowedPath && pendingMobility?.emergency === true,
     };
     const base = stateRef.current;
     const result = applyFoundationPlay(base, playOptions);
+    setUtility(null);
     setPendingTargetSelection(null);
     setPendingWildCardTarget(false);
     setPendingMobility(null);
@@ -1124,13 +1184,25 @@ const selectBiome = (biomeId: string) => {
     // A card landed early (the next play was clicked mid-flight) must be visible
     // to that next play in the same event.
     if (stateRef.current === base) stateRef.current = result.state;
+    // Commit the move before starting its presentation effect.
+    const gainedMaterial = (Object.keys(base.haul) as Array<keyof typeof base.haul>).find(key => result.state.haul[key] > base.haul[key]);
+    const gainedInspiration = result.state.actorInspiration[foundationIndex] > base.actorInspiration[foundationIndex] || result.state.inspiration > base.inspiration;
+    const receivesResource = result.state.actorInspiration[foundationIndex] > base.actorInspiration[foundationIndex]
+      || result.state.inspiration > base.inspiration || result.state.wildCards > base.wildCards
+      || Object.keys(base.haul).some(key => result.state.haul[key as keyof typeof base.haul] > base.haul[key as keyof typeof base.haul]);
+    if (receivesResource) {
+      setFoodLanding({ id: createRuntimeId(), foundationIndex, biomeId: base.selectedBiomeId,
+        berries: result.card.foodSource === 'berries',
+        glyph: gainedInspiration ? '💫' : gainedMaterial ? FOREST_RESOURCE_GLYPHS[gainedMaterial] : '✨',
+        x: 20 + Math.random() * 60, y: 25 + Math.random() * 45 });
+    }
     if (result.workCycleCompleted && !divine) {
       const actorLabel = FOUNDATION_MOCKUPS[foundationIndex]?.label ?? `Actor ${foundationIndex + 1}`;
       setTargetAnnouncement({
         targetKind: 'hero',
         targetIndex: foundationIndex,
         abilityName: 'TABLEAU COMPLETE',
-        impact: `${actorLabel}: +3 ${ACTOR_WORK_RESOURCES[foundationIndex]?.toUpperCase() ?? 'WOOD'} +1 WILD`,
+        impact: `${actorLabel}: ${ACTOR_WORK_RESOURCES[foundationIndex] ? `+3 ${ACTOR_WORK_RESOURCES[foundationIndex]!.toUpperCase()} ` : ''}+1 WILD`,
       });
     }
     const chip = result.chip;
@@ -1182,7 +1254,7 @@ const selectBiome = (biomeId: string) => {
       }
       return { status: 'played', message: divine ? 'Divine encounter resolved' : 'Encounter started' };
     }
-    if (!divine && !canAffordExplorationAction(current)) return { status: 'blocked', message: 'Not enough energy' };
+
     if (!divine && current.worldActors.some((actor) => actor.hutId)) return { status: 'blocked', message: 'Actor is working at a hut' };
     const rootMoves: SolverMove[] = current.tableau.flatMap((column, columnIndex) => {
       const card = column[column.length - 1];
@@ -1196,11 +1268,30 @@ const selectBiome = (biomeId: string) => {
       stockMode: isDenRest(current) ? 'draw' : 'backfill',
       foundations: current.foundations.map((foundation) => foundation?.card.rank ?? null),
       openFoundations: current.foundations.map((foundation, index) => isOpenExplorationFoundation(current.scene, index, foundation) && (!isDenRest(current) || !current.denRest?.started)),
-      moveBudget: divine || current.scene === 'combat' || isDenRest(current) ? undefined : current.energy,
+
     }, { rootMoves });
     if (!assessment) return { status: 'blocked', message: 'No legal move; check actor posture or puzzle state' };
     queueCardTransport(assessment.move.column, { side: 'player', index: assessment.move.foundation }, { divine, solver: true });
     return { status: 'played', message: assessment.method + (assessment.samples ? ' · ' + assessment.samples + ' rollouts/move' : ' next move') };
+  };
+
+  const solveTravelStep = (): SolveStepResult => {
+    const current = stateRef.current;
+    const journey = current.journey;
+    if (!journey || journey.completed >= journey.cards && !journey.search && journey.pendingSearch===undefined && !travelTableauHeld(journey)) return { status: 'complete', message: 'Destination reached' };
+    if (journey.obstruction) return {status:'blocked',message:'Terrain blocked · use a matching ability or choose another route'};
+    if (journey.paused) return { status: 'blocked', message: 'Journey paused' };
+    if (travelTableauHeld(journey)) return {status:'blocked',message:'Tile work complete · resolve or discard its event to continue'};
+    const column = bestTravelMove(journey);
+    if (column === null) return { status: 'blocked', message: 'No legal move · Reset trail to continue' };
+    const next = playTravelCard(current, column);
+    if (next === current) return { status: 'blocked', message: 'Not enough stamina to advance' };
+    const cards = journey.columns[column];
+    const card = cards?.[cards.length - 1];
+    const receiver = partyMembers(current, journey.actorId).find(member => (next.utilityAP?.[member.id] ?? 0) > (current.utilityAP?.[member.id] ?? 0))?.id ?? journey.actorId;
+    if (card) flyTravelCard(card.id, receiver);
+    setState(next);
+    return { status: 'played', message: 'Advanced travel' };
   };
 
   const solveHutStep = (stackId: string, divine: boolean): SolveStepResult => {
@@ -1227,7 +1318,7 @@ const selectBiome = (biomeId: string) => {
     if (!card) return;
     const validPlayerTarget =
       target.side === 'player' &&
-      (options.divine || canAffordExplorationAction(current)) &&
+
       (options.divine || adjacentFoundationIndexes(card, current).includes(target.index) || Boolean(options.hallowedPath));
     const enemy = current.enemyTeam[target.index] ?? null;
     const validEnemyTarget =
@@ -1256,6 +1347,7 @@ const selectBiome = (biomeId: string) => {
     }
 
     const sourceRect = source.getBoundingClientRect();
+    source.closest('.proto-tableau-field')?.dispatchEvent(new CustomEvent('tableau-vegetation-rustle', { detail: { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 } }));
     const targetRect = targetNode.getBoundingClientRect();
     const from = { x: sourceRect.left, y: sourceRect.top };
     const to = {
@@ -1267,6 +1359,7 @@ const selectBiome = (biomeId: string) => {
       : enemy?.cardTransportSpeed ?? 1;
     cardTransportPositionRef.current = from;
     setCardTransport({
+      background: snapshotCardBackground(source),
       cardId: card.id,
       sourceColumnIndex: columnIndex,
       targetSide: target.side,
@@ -1337,18 +1430,18 @@ const selectBiome = (biomeId: string) => {
   useEffect(() => {
     if (!cardTransport) return undefined;
     let animationFrame = 0;
-    const startedAt = performance.now();
+    const startedAt = gameTime.now();
     const animate = (now: number) => {
       const progress = Math.min(1, (now - startedAt) / cardTransport.durationMs);
       cardTransportPositionRef.current = interpolateCardTransport(cardTransport.from, cardTransport.to, progress);
       if (progress < 1) {
-        animationFrame = window.requestAnimationFrame(animate);
+        animationFrame = gameTime.requestAnimationFrame(animate);
         return;
       }
       landCardTransport(cardTransport);
     };
-    animationFrame = window.requestAnimationFrame(animate);
-    return () => window.cancelAnimationFrame(animationFrame);
+    animationFrame = gameTime.requestAnimationFrame(animate);
+    return () => gameTime.cancelAnimationFrame(animationFrame);
   }, [cardTransport]);
 
   // While a plain manual exploration play is in the air, the tableau already
@@ -1372,7 +1465,7 @@ const selectBiome = (biomeId: string) => {
     setAbilityDetail(null);
     setSelectedAdvisorAbilities({});
     const current = stateRef.current;
-    if (!canAffordExplorationAction(current)) return;
+
     const column = current.tableau[columnIndex] ?? [];
     const card = column[column.length - 1] ?? null;
     if (!card) return;
@@ -1615,11 +1708,11 @@ const selectBiome = (biomeId: string) => {
   };
 
   useEffect(() => {
-    if (playerAutoPaused) return undefined;
+    if (playerAutoPaused || editorOpen) return undefined;
     if (currentTurn !== 'player') return undefined;
     if (cardTransport) return undefined;
-    const timeoutId = window.setTimeout(runPlayerAutoStep, AUTO_PLAY_SPEED_OPTIONS[playerAutoSpeedIndex]?.ms ?? 800);
-    return () => window.clearTimeout(timeoutId);
+    const timeoutId = gameTime.setTimeout(runPlayerAutoStep, AUTO_PLAY_SPEED_OPTIONS[playerAutoSpeedIndex]?.ms ?? 800);
+    return () => gameTime.clearTimeout(timeoutId);
   }, [
     abilityDetail,
     pendingAbilityTarget,
@@ -1627,6 +1720,7 @@ const selectBiome = (biomeId: string) => {
     pendingWildCardTarget,
     pendingMobility,
     playerAutoPaused,
+    editorOpen,
     playerAutoSpeedIndex,
     currentTurn,
     enemyAutoPaused,
@@ -1635,12 +1729,12 @@ const selectBiome = (biomeId: string) => {
   ]);
 
   useEffect(() => {
-    if (enemyAutoPaused) return undefined;
+    if (enemyAutoPaused || editorOpen) return undefined;
     if (currentTurn !== 'enemy') return undefined;
     if (cardTransport) return undefined;
-    const timeoutId = window.setTimeout(runEnemyAutoStep, AUTO_PLAY_SPEED_OPTIONS[enemyAutoSpeedIndex]?.ms ?? 800);
-    return () => window.clearTimeout(timeoutId);
-  }, [currentTurn, enemyAutoPaused, enemyAutoSpeedIndex, cardTransport, state]);
+    const timeoutId = gameTime.setTimeout(runEnemyAutoStep, AUTO_PLAY_SPEED_OPTIONS[enemyAutoSpeedIndex]?.ms ?? 800);
+    return () => gameTime.clearTimeout(timeoutId);
+  }, [currentTurn, enemyAutoPaused, enemyAutoSpeedIndex, cardTransport, state, editorOpen]);
 
   const questSteps = getExpeditionQuestSteps(state);
   const questInstructions = questSteps.map(step => step.text);
@@ -1689,10 +1783,29 @@ const selectBiome = (biomeId: string) => {
   };
   const fieldBiome = state.biomeTiles.find(tile => tile.id === state.selectedBiomeId);
   const fieldActors = state.worldActors.filter(actor => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId);
+  // Selection alone can be an inspection or a path crossed during travel.
+  // Only arrival/staffing promotes the deal, including a completely cleared one.
+  const [mapTravelTest, setMapTravelTest] = useState(false);
+  const mapTravelActive = mapTravelTest && Boolean(state.journey) && !combatDemoOpen;
+  const tableauPresent = !mapTravelActive && (Boolean(state.journey || state.selectedBiomeId) || combatDemoOpen);
+  const tableauOccupied = Boolean(state.selectedBiomeId) && fieldActors.length > 0 && !pondSelected;
+  const journeyActive = Boolean(state.journey);
+
+  useEffect(() => {
+
+    setMobilePanel(tableauOccupied || combatDemoOpen || journeyActive && !mapTravelActive ? 'tableau' : 'map');
+  }, [tableauOccupied, engagementKey, combatDemoOpen, journeyActive, mapTravelActive]);
+  const finishResting = () => {
+    clearPendingInteractions(); setUndoStack([]);
+    setState(previous => previous.ordinaryDay?.bedtime && isHome(previous) ? { ...previous,
+      biomeTiles: previous.biomeTiles.map(tile => tile.id === previous.selectedBiomeId ? { ...tile, tableau: previous.tableau, stock: previous.stock } : tile),
+      selectedBiomeId: null, tableau: [], stock: [], foundations: [],
+      ordinaryDay: { ...previous.ordinaryDay, complete: true } } : previous);
+  };
   const fieldRig = createTableauLightRig(tableHours, fieldBiome?.position ?? { x: 0, y: 0 }, [
     ...tableLights,
     ...state.worldActors.flatMap(actor => {
-      const light = actorLight(actor.id, actor.location === 'foundation' ? state.biomeTiles.find(tile => tile.id === actor.biomeId)?.position ?? actor.position : actor.position, actor.luminosity, actor.lightColor);
+      const light = actorLight(actor.id, actor.location === 'foundation' ? state.biomeTiles.find(tile => tile.id === actor.biomeId)?.position ?? actor.position : actor.position, manaCarrierLuminosity(state, actor.id, actor.luminosity), actor.lightColor);
       return light ? [light] : [];
     }),
   ], cameraTilted);
@@ -1705,10 +1818,10 @@ const selectBiome = (biomeId: string) => {
     const from = rewardSource?.getBoundingClientRect();
     const destination = document.querySelector('[data-inspiration-tray]')?.getBoundingClientRect();
     if (from && destination?.width) {
-      const bolt = document.createElement('span'); bolt.textContent = '⚡'; bolt.className = 'quest-inspiration-flight';
+      const bolt = document.createElement('span'); bolt.textContent = '💫'; bolt.className = 'quest-inspiration-flight';
       bolt.style.cssText = 'position:fixed;left:'+(from.x+from.width/2)+'px;top:'+(from.y+from.height/2)+'px;z-index:60001;pointer-events:none;font-size:28px;';
       document.body.append(bolt);
-      const flight = bolt.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate('+(destination.x+destination.width/2-from.x-from.width/2)+'px,'+(destination.y+destination.height/2-from.y-from.height/2)+'px) scale(.5)',opacity:0}],{duration:550,easing:'ease-in-out'});
+      const flight = trackGameAnimation(bolt.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate('+(destination.x+destination.width/2-from.x-from.width/2)+'px,'+(destination.y+destination.height/2-from.y-from.height/2)+'px) scale(.5)',opacity:0}],{duration:550,easing:'ease-in-out'}));
       flight.onfinish=()=>bolt.remove();flight.oncancel=()=>bolt.remove();
     }
     setState((previous) => {
@@ -1720,9 +1833,75 @@ const selectBiome = (biomeId: string) => {
     });
   };
 
+  const editorToggle = import.meta.env.DEV && <button className="tile-editor-toggle" data-editor-safe="true" type="button" aria-label="Edit tiles" aria-pressed={editorOpen}
+    disabled={!editorOpen && Boolean(cardTransport || burningEnemyIds.length)}
+    title="Developer tile editor · stops travel and pauses gameplay" onClick={() => {
+      stopCameraPlayback();
+      setEditorMenu(null);
+      if (editorOpen) { setEditorDocument(null); return; }
+      closeInspection(); clearPendingInteractions(); setCombatDemoOpen(false); setMobilePanel('map');
+      leaveTableau();
+      setState(previous => ({ ...previous, scene: 'exploration', journey: undefined, selectedBiomeId: null }));
+      setTableLightsEnabled(false); setCycleLighting(false);
+      const base = appliedTileDocument.current ?? { ...SAVED_TILE_DOCUMENT, tiles: SAVED_TILE_DOCUMENT.tiles ?? createInitialState(false).biomeTiles.map(authorTile) };
+      setEditorDocument(JSON.parse(JSON.stringify(base)));
+    }}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5" /></svg></button>;
+
+  const travelTableau = state.journey ? <TravelTableau onBreach={(actorId,ability)=>setState(prev=>breachTravelPassage(prev,actorId,ability))} onReplan={()=>setState(prev=>{const j=prev.journey;if(!j)return prev;return {...prev,journey:{...j,paused:true,streak:0,tileStreak:0,blocked:{progress:j.progress,position:pointAlongTimedPath(j.path,j.progress),message:'Terrain obstructs this passage. Choose another route or cancel.'}}};})} mapOverlay={mapTravelActive} hours={tableHours} eventCost={(column,row,actorId,utility)=>travelEventCost(state,column,row,actorId,utility)} onEventPlay={(column,row,actorId,utility,cardId)=>setState(prev=>playTravelEvent(prev,column,row,actorId,utility,cardId))} onDiscard={(column,cardId)=>setState(prev=>discardTravelEvent(prev,column,cardId))} discarded={state.eventDiscard} terrainCrossings={state.terrainCrossings} members={partyMembers(state, state.journey.actorId).map(member => ({ id: member.id, label: member.label, inspiration: state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(a => a.id === member.id))] ?? 0, ap: state.utilityAP?.[member.id] ?? 0 }))} actorName={state.worldActors.find(actor => actor.id === state.journey!.actorId)?.label ?? state.journey.actorId} utilityAP={state.utilityAP?.[state.journey.actorId] ?? 0} onInspectActor={(anchor, actorId) => inspectActor(actorId ?? state.journey!.actorId, anchor, true)} onSolveStep={solveTravelStep} journey={state.journey} stamina={state.travelStamina ?? TRAVEL_STAMINA_MAX} inspiration={state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(actor => actor.id === state.journey!.actorId))]} onPlay={(column, actorId) => {
+      const current = stateRef.current;
+      const next = playTravelCard(current, column, actorId);
+      if (next === current) return;
+      const cards = current.journey?.columns[column];
+      const card = cards?.[cards.length - 1];
+      if (card && current.journey) flyTravelCard(card.id, actorId ?? current.journey.actorId);
+      setState(next);
+    }} onRedraw={actorId => setState(prev => redrawTravel(prev, actorId))} onPause={() => setState(prev => prev.journey ? { ...prev, journey: { ...prev.journey, paused: !prev.journey.paused } } : prev)} /> : null;
+
+  const startScenarioTravel = (plan: TravelPlan) => {
+    if (!dayOneAllowsPlan(state, plan)) return;
+    clearPendingInteractions(); setUndoStack([]);
+    setState(prev => prepareTravelTableau({ ...prev, journey: { ...beginJourney(plan, 2, false), memberRanks: { [plan.actorId]: 2 } },
+      biomeTiles: prev.biomeTiles.map(tile => tile.id === prev.selectedBiomeId ? { ...tile, tableau: prev.tableau, stock: prev.stock } : tile),
+      selectedBiomeId: null, tableau: [], stock: [], foundations: [],
+      worldActors: prev.worldActors.map(actor => actor.id === plan.actorId ? { ...actor, location: 'table', position: plan.path[0], biomeId: undefined, foundationIndex: undefined } : actor) }));
+    setMobilePanel('tableau');
+  };
+  const switchDayScenario = (scenario: string, carriedMana?: number) => {
+    stopCameraPlayback();
+    setScenarioRun(run => run + 1);
+    clearPendingInteractions(); setUndoStack([]); setCardTransport(null); setFoodLanding(null);
+    setPlayerAutoPaused(true); setCombatDemoOpen(false); closeInspection(); setEditorDocument(null);
+    setState(createDayScenario(scenario, appliedTileDocument.current ?? SAVED_TILE_DOCUMENT, carriedMana));
+    setTableHours(scenario === 'sandbox' ? TABLE_OPENING_HOUR : scenario==='day03'?9:10); setCycleLighting(false);
+    setGlobalLightsEnabled(true); setTableLightsEnabled(true); setMobilePanel('map');
+  };
+  const mapSettings = (travelControls?: React.ReactNode) => (<div className="proto-settings-host" data-editor-safe="true">{editorToggle}<ArtSettings>{travelControls}
+                  <label className="art-settings__toggle"><input type="checkbox" checked={mapTravelTest} onChange={event => { setMapTravelTest(event.target.checked); setMobilePanel('map'); }} />Map tableau (test)</label>
+                  <label className="art-settings__toggle" title="Apply global day/night lighting and haze. Uncheck for a bright view; local lights remain independent."><input type="checkbox" checked={globalLights} onChange={(event) => setGlobalLightsEnabled(event.target.checked)} />Global lights</label>
+                  <div className="art-settings__section" aria-label="Lighting controls">
+                  <span>Day {state.day} · {lighting.phase} · {String(Math.floor(lighting.hour)).padStart(2, '0')}:{String(Math.floor((lighting.hour % 1) * 60)).padStart(2, '0')}</span>
+                  {state.dayScenario ? <span>Story milestones advance the day. Reading takes no time.</span> : <><label className="flex items-center gap-2">Time <TimeOfDaySlider hours={tableHours} onChange={setTableHours} /></label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={cycleLighting} onChange={(event) => setCycleLighting(event.target.checked)} />Cycle day/night</label></>}
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={tableLightsEnabled} onChange={(event) => setTableLightsEnabled(event.target.checked)} />Table lights</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={lightReadoutVisible} onChange={(event) => setLightReadoutVisible(event.target.checked)} />Light %</label>
+                  </div>
+                <div className="proto-party-controls" data-camera-ignore="true" aria-label="Party controls">
+                  <span>Party · {state.worldActors.filter(a => a.partyId).map(a => a.label).join(', ') || 'Solo'}</span>
+                  <button type="button" disabled={Boolean(state.journey) || editorOpen || state.worldActors.length >= 3 || state.worldActors.some(a => a.location !== 'table')} onClick={() => setState(addPartyCompanion)}>Add playtest companion</button>
+                  {state.worldActors.filter(a => a.id !== 'hero').map(actor => <button type="button" key={actor.id} disabled={editorOpen || Boolean(state.journey) || (actor.partyId ? leaveParty(state, actor.id) === state : joinParty(state, actor.id, 'hero') === state)} onClick={() => setState(prev => actor.partyId ? leaveParty(prev, actor.id) : joinParty(prev, actor.id, 'hero'))}>{actor.partyId ? 'Leave party' : 'Join Hero'} · {actor.label}</button>)}
+                </div>
+                <div className="art-settings__section" aria-label="Development controls">
+                  {import.meta.env.DEV && !editorOpen && <CameraChoreographyButton />}
+                  <span className="proto-build-label" data-build-commit={PROTO_BUILD_COMMIT} title={PROTO_BUILD_TITLE}>{PROTO_BUILD_LABEL}</span>
+                </div>
+                </ArtSettings></div>);
+
   return (
-    <div
-      className="proto-game-root h-[100dvh] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(20,38,31,0.24),transparent_38%),linear-gradient(180deg,#05060a,#090d12_38%,#06070a)] p-[clamp(0.6rem,1.8vmin,1.2rem)] text-white"
+    <CalloutEditingProvider enabled={Boolean(import.meta.env.DEV && editorOpen)}><div
+      className={`proto-game-root ${editorOpen ? 'tile-editor-open' : ''} h-[100dvh] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(20,38,31,0.24),transparent_38%),linear-gradient(180deg,#05060a,#090d12_38%,#06070a)] p-[clamp(0.6rem,1.8vmin,1.2rem)] text-white`}
+      onPointerDownCapture={event => { if (editorOpen && event.target instanceof Element && !event.target.closest('.tile-editor, .proto-map, [data-editor-safe]')) { event.preventDefault(); event.stopPropagation(); } }}
+      onClickCapture={event => { if (editorOpen && event.target instanceof Element && !event.target.closest('.tile-editor, .proto-map, [data-editor-safe]')) { event.preventDefault(); event.stopPropagation(); } }}
+      onKeyDownCapture={event => { if (editorOpen && event.target instanceof Element && !event.target.closest('.tile-editor, .proto-map, [data-editor-safe]')) { event.preventDefault(); event.stopPropagation(); } }}
       style={{
         ['--classic-card-w' as string]: 'clamp(2.35rem, min(8.8vw, 10dvh), 5rem)',
         ['--classic-gap' as string]: 'clamp(0.3rem, 1vmin, 0.9rem)',
@@ -1735,22 +1914,21 @@ const selectBiome = (biomeId: string) => {
         ['--table-wood-light' as string]: `${18 + lighting.daylight * 12}%`,
       }}
     >
-      <div className="mx-auto flex h-full w-full max-w-[1680px] min-h-0 flex-col gap-[clamp(0.55rem,1.4vmin,1rem)]">
-        <div className="min-h-0 flex-1">
+      {state.dayScenario==='day02' && state.dayTwoAmbush && <BanksRescueCinema key={scenarioRun} onExit={()=>switchDayScenario('day02')} onComplete={()=>switchDayScenario('day03')} />}
+      <DayForagingCallout state={state} hidden={combatDemoOpen} cinematicBeat={dayCinema.enabled ? dayCinema.beat : null} />
+      {import.meta.env.DEV && <CameraChoreographyTools tiles={state.biomeTiles.map(t => ({ id: t.id, label: t.title }))} />}
+      {editorDocument && <TileEditor tools={<CameraChoreographyButton />} document={editorDocument} cell={editorCell} contextMenu={editorMenu} onDismissMenu={() => setEditorMenu(null)} onSelectCell={setEditorCell} onChange={setEditorDocument}
+        onClose={() => { setEditorMenu(null); setEditorDocument(null); }} onApply={document => {
+          const next = applyTileDocument(state, document);
+          appliedTileDocument.current = JSON.parse(JSON.stringify(document));
+          setUndoStack([]); setState(next);
+        }} />}
+      <div data-scenario-expanded={scenarioExpanded} className="proto-workspace mx-auto h-full w-full min-h-0 gap-[clamp(0.55rem,1.4vmin,1rem)]">
+        <div className="proto-play-area min-h-0 min-w-0">
           <section className="flex h-full min-h-0 flex-col rounded-[calc(var(--classic-radius)*1.75)] border border-white/10 bg-black/20 p-[clamp(0.6rem,1.6vmin,1.2rem)] shadow-[0_24px_90px_rgba(0,0,0,0.24)]">
-            <div data-mobile-panel={mobilePanel} style={desktopLayoutTracks()} className="proto-main-layout grid h-full min-h-0 flex-1 gap-[clamp(0.55rem,1.4vmin,0.9rem)]">
-              <div className="proto-main-header min-h-0">
-                <nav className="proto-mobile-nav" aria-label="Game panels">
-                  {(['map', 'tableau'] as const).map(panel => <button key={panel} type="button" aria-pressed={mobilePanel === panel} onClick={() => setMobilePanel(panel)}>{panel === 'map' ? 'Table' : 'Tableau'}</button>)}
-                </nav>
-                <div className="proto-lighting-rail" data-camera-ignore="true">
-                  <span className="proto-lighting-rail__clock">Day {state.day} · {lighting.phase} · {String(Math.floor(lighting.hour)).padStart(2, '0')}:{String(Math.floor((lighting.hour % 1) * 60)).padStart(2, '0')}</span>
-                  <label className="flex items-center gap-2">Time <TimeOfDaySlider hours={tableHours} onChange={setTableHours} /></label>
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={cycleLighting} onChange={(event) => setCycleLighting(event.target.checked)} />Cycle day/night</label>
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={tableLightsEnabled} onChange={(event) => setTableLightsEnabled(event.target.checked)} />Table lights</label>
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={lightReadoutVisible} onChange={(event) => setLightReadoutVisible(event.target.checked)} />Light %</label>
-                  <span className="proto-build-label" data-build-commit={PROTO_BUILD_COMMIT} title={PROTO_BUILD_TITLE}>{PROTO_BUILD_LABEL}</span>
-                </div>
+            <div data-mobile-panel={mobilePanel} data-primary-viewport="map" data-tableau-present={tableauPresent} data-layout-emphasis="map" style={desktopLayoutTracks(tableauPresent, state.scene === 'combat')} className="proto-main-layout grid h-full min-h-0 flex-1 gap-[clamp(0.55rem,1.4vmin,0.9rem)]">
+              <div className="proto-main-header min-h-0" data-combat-header={state.scene === 'combat'}>
+
                 {state.scene === 'combat' ? (
                   <EnemyTeamPanel
                     enemies={state.enemyTeam}
@@ -1772,8 +1950,10 @@ const selectBiome = (biomeId: string) => {
 
               </div>
 
-              <div className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden${pondSelected && !combatDemoOpen ? ' proto-tableau-field--pond' : ''}${dangerSelected || combatDemoOpen ? ' proto-tableau-field--combat' : ''}`}>
-              {!state.selectedBiomeId && !combatDemoOpen ? (<>
+              <div hidden={!tableauPresent} className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden${pondSelected && !combatDemoOpen ? ' proto-tableau-field--pond' : ''}${dangerSelected || combatDemoOpen ? ' proto-tableau-field--combat' : ''}`}>
+              {!state.journey && (state.selectedBiomeId || combatDemoOpen) && !pondSelected && <TableauLighting hours={tableHours} />}
+              {state.selectedBiomeId && !pondSelected && !combatDemoOpen && <TableauLandscape tileType={fieldBiome?.tileType} berriesAvailable={fieldBiome ? tileHasBerries(fieldBiome, state.tableau, state.stock) : false} />}
+              {state.journey ? (mapTravelActive ? null : travelTableau) : !state.selectedBiomeId && !combatDemoOpen ? (<>
                 <div className="proto-main-tableau min-h-0 rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))]" aria-label="Empty tableau" />
                 <div className="proto-main-foundations min-h-0 h-[clamp(6rem,24dvh,14rem)] rounded-[calc(var(--classic-radius)*1.3)] border border-[#f4c86c]/18 bg-[linear-gradient(180deg,rgba(22,18,12,0.44),rgba(9,10,12,0.28))]" aria-label="Empty foundations" />
               </>) : dangerSelected || combatDemoOpen ? (
@@ -1781,16 +1961,15 @@ const selectBiome = (biomeId: string) => {
                   heroInspiration={state.actorInspiration[0]} onRedraw={(actorId) => { if (actorId === 'hero') setState((prev) => ({ ...prev, actorInspiration: prev.actorInspiration.map((value, index) => index === 0 ? Math.max(0, value - REDRAW_INSPIRATION_COST) : value) })); }} />
               ) : pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && !canSpendInspiration(state.inspiration, POND_MISS_INSPIRATION)}
-                  landed={Object.fromEntries(POND_CATCHES.map((id) => [id, state.haul[id] - state.settledHaul[id]])) as Record<PondCatch, number>}
+                  landed={state.haul.mana - state.settledHaul.mana}
                   onCast={castPondBait} onFightEnd={endPondFight} onLeave={() => leaveTableau()} />
               ) : (<>
               <div className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">
-                <div>
-                  {isDenRest(state) && <div className="proto-rest-status" role="status" aria-label="Den rest status"><span>Hero’s Den · Rest</span><span>INSP {state.inspiration}/{state.maxInspiration}</span><span>{state.tableau.every(column => !column.length) ? 'Perfect rest' : !state.stock.length && !hasNormalPlayerTableauMove(state) ? 'Rest finished' : `${state.tableau.reduce((sum, column) => sum + column.length, 0)} left`}</span></div>}
+                <div className="proto-tableau-heading">
+                  {isDenRest(state) && <div className="proto-rest-status" role="status" aria-label="Den rest status"><span>Hero’s Den · Rest</span><span>INSP {state.inspiration}/{state.maxInspiration}</span><span>{state.tableau.every(column => !column.length) ? 'Perfect rest' : !state.stock.length && !hasNormalPlayerTableauMove(state) ? 'Rest finished' : `${state.tableau.reduce((sum, column) => sum + column.length, 0)} left`}</span>{state.ordinaryDay?.bedtime && !state.ordinaryDay.complete && <button type="button" disabled={Boolean(cardTransport)} onClick={finishResting}>Finish resting</button>}</div>}
                   <TableauSolveControls disabled={!state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} guidance={moveGuidance} onGuidanceChange={setMoveGuidance} />
                 </div>
-                <TableauScene immersive={false} terrain={fieldBiome?.terrain ?? 'woods'} rig={fieldRig} hours={tableHours}>
-                <TableauCardArea columns={isDenRest(state) ? REST_COLUMNS : TABLEAU_COLUMNS} rows={isDenRest(state) ? REST_ROWS : Math.max(1, ...tableState.tableau.map((column) => column.length))}>
+                <TableauPlayArea biome={fieldBiome} rig={fieldRig} hours={tableHours} immersive={false} columns={isDenRest(state)?REST_COLUMNS:TABLEAU_COLUMNS} rows={isDenRest(state)?REST_ROWS:Math.max(1,...tableState.tableau.map(c=>c.length))}>
                 <div className={`proto-tableau-stage${cameraTilted ? ' proto-tableau-stage--tilted' : ''}`}>
                 <Tableau
                   columns={tableState.tableau}
@@ -1821,7 +2000,8 @@ const selectBiome = (biomeId: string) => {
                           const isTopCard = cardIndex === column.length - 1;
                           const targetIndexes = adjacentFoundationIndexes(card, tableState);
                           const encounterReady = isTopCard && tableState.scene === 'exploration' && Boolean(card.encounter);
-                          const playable = isTopCard && canAffordExplorationAction(tableState) && targetIndexes.length > 0;
+                          const playable = isTopCard && targetIndexes.length > 0;
+                          const utilityCost = utility ? utilityRetrievalCost(state, utility.foundationIndex, utility.move, columnIndex, cardIndex) : null;
                           const transporting = cardTransport?.cardId === card.id;
                           const mobilityTarget =
                             isTopCard &&
@@ -1838,29 +2018,32 @@ const selectBiome = (biomeId: string) => {
                               cardRef={(node) => {
                                 tableauCardRefs.current[card.id] = node;
                               }}
+                              onDiscard={card.event && isTopCard && !cardTransport && state.scene==='exploration' ? ()=>setState(prev=>discardTableauEvent(prev,columnIndex)) : undefined}
                               transporting={transporting}
-                              active={(moveGuidance && (playable || encounterReady)) || choosingTarget}
+                              active={utility ? utilityCost !== null : (moveGuidance && (playable || encounterReady)) || choosingTarget}
                               mobilityTarget={mobilityTarget}
-                              muted={!isTopCard}
+                              muted={!isTopCard && !utility}
                               buried={!isTopCard}
                               centerRank={isTopCard}
                               lit={cameraTilted}
                               standardRankSize
                               footerLabel={
-                                isDenRest(state) && card.sleep ? (
+                                utility ? (utilityCost !== null ? `${utilityCost} AP` : undefined) : isDenRest(state) && card.sleep ? (
                                   <span role="img" aria-label={SLEEP_LABELS[card.sleep]}>{SLEEP_ICONS[card.sleep]}</span>
                                 ) : state.scene === 'exploration' && card.encounter ? (
                                   <span role="img" aria-label="Shadow Wolf encounter">
                                     {ENCOUNTER_GLYPH}
                                   </span>
-                                ) : card.resource && state.scene === 'exploration' ? (
-                                  <span role="img" aria-label={FOREST_RESOURCE_LABELS[card.resource]}>
-                                    {FOREST_RESOURCE_GLYPHS[card.resource]}
+                                ) : cardResourceFace(card) && state.scene === 'exploration' ? (
+                                  <span role="img" aria-label={cardResourceFace(card)?.label}>
+                                    {cardResourceFace(card)?.glyph}
                                   </span>
                                 ) : undefined
                               }
-                              disabled={!playable && !encounterReady && !mobilityTarget}
+                              disabled={utility ? utilityCost === null || Boolean(cardTransport) : !playable && !encounterReady && !mobilityTarget}
                               onClick={() => {
+                                if(card.event && stateRef.current.tableau[columnIndex]?.[cardIndex]?.id!==card.id)return;
+                                if (utility) { if (utilityCost !== null && !cardTransport) playColumnToFoundation(columnIndex, utility.foundationIndex, { retrieval: { move: utility.move, cardIndex } }); return; }
                                 if (cardTransport) {
                                   if (flightProjection && playable && !mobilityTarget && !encounterReady) playColumn(columnIndex);
                                   return;
@@ -1895,8 +2078,7 @@ const selectBiome = (biomeId: string) => {
                   })}
                 </Tableau>
                 </div>
-                </TableauCardArea>
-                </TableauScene>
+                </TableauPlayArea>
                 <div className="proto-tableau-status grid gap-[clamp(0.4rem,1vmin,0.65rem)] self-stretch content-center">
                   {state.scene === 'exploration' ? (
                     <div className={`rounded-[calc(var(--classic-radius)*0.55)] border px-2 py-2 text-center font-mono ${
@@ -1936,7 +2118,7 @@ const selectBiome = (biomeId: string) => {
                         : `Deal ${state.tableau.reduce((total, column) => total + column.length, 0) + state.stock.length} cards`}
                     </div>
                     <div className="mt-0.5 text-[clamp(0.38rem,0.76vmin,0.5rem)] font-black uppercase tracking-[0.06em] text-[#ffe7ad]">
-                      Cache +{state.biome.cacheReward.wood}W +{state.biome.cacheReward.berries}B +{state.biome.cacheReward.herbs}H
+                      Cache +{state.biome.cacheReward.wood}W +{state.biome.cacheReward.mana} mana
                     </div>
                   </div>
                   <div className="rounded-[calc(var(--classic-radius)*0.55)] border border-[#ffd166]/18 bg-[#ffd166]/8 px-2 py-2 text-center font-mono">
@@ -2006,7 +2188,7 @@ const selectBiome = (biomeId: string) => {
                       })) : FOREST_RESOURCE_ORDER.map((resource) => ({
                         resource,
                         label: FOREST_RESOURCE_LABELS[resource], glyph: FOREST_RESOURCE_GLYPHS[resource],
-                        count: foundation?.cards.filter((card) => card.resource === resource).length ?? 0,
+                        count: foundation?.cards.filter((card) => (card.resource && WORLD_ITEMS[card.resource].food ? 'mana' : card.resource) === resource).length ?? 0,
                       }));
                       return (
                         <div key={`exploration-foundation-${index}`} className="proto-foundation-assembly">
@@ -2031,7 +2213,7 @@ const selectBiome = (biomeId: string) => {
                         >
                           {actor ? (
                             <span className="proto-actor-energy" aria-label={isDenRest(state) ? `${actor.label} inspiration ${state.inspiration} of ${state.maxInspiration}` : `${actor.label} energy ${state.energy} of ${state.energyMax}`} title={isDenRest(state) ? `${actor.label} inspiration` : `${actor.label} energy`}>
-                              <span aria-hidden="true">{isDenRest(state) ? 'Zzz' : '⚡'}</span><span>{isDenRest(state) ? state.inspiration : state.energy}</span>
+                              <span aria-hidden="true">{isDenRest(state) ? '💫' : '⚡'}</span><span>{isDenRest(state) ? state.inspiration : state.energy}</span>
                             </span>
                           ) : null}
                           {actor ? (
@@ -2088,7 +2270,7 @@ const selectBiome = (biomeId: string) => {
                                   requestHoloDeviceTilt();
                                   // Let the release's synthesized click finish before mounting
                                   // the jumbo backdrop, so a tap cannot immediately dismiss it.
-                                  requestAnimationFrame(() => inspectActor(actor.id, anchor, true));
+                                  gameTime.requestAnimationFrame(() => inspectActor(actor.id, anchor, true));
                                 }
                                 foundationActorPointerRef.current = null;
                               }}
@@ -2099,7 +2281,8 @@ const selectBiome = (biomeId: string) => {
                               className="proto-exploration-actor cursor-grab touch-none text-center text-[#ffe7ad] active:cursor-grabbing"
                             >
                               <span className={`proto-occupied-foundation-face${cameraTilted ? ' proto-lit-surface' : ''}`} aria-label={isDenRest(state) ? 'Hero resting in her den' : `Foundation top card ${rankLabel(foundation?.card.rank ?? 2)}${foundation?.card.resource ? `, ${FOREST_RESOURCE_LABELS[foundation.card.resource]}` : ''}`}>
-                                <ActorHoloCard actorId={actor.id} name={actor.label} rank={isDenRest(state) ? '' : rankLabel(foundation?.card.rank ?? 2)} resource={collectedCardCount > 0 && foundation?.card.resource ? FOREST_RESOURCE_GLYPHS[foundation.card.resource] : undefined} />
+                                <ActorHoloCard actorId={actor.id} name={actor.label} rank={isDenRest(state) ? '' : rankLabel(foundation?.card.rank ?? 2)} resource={collectedCardCount > 0 && foundation?.card.resource ? FOREST_RESOURCE_GLYPHS[foundation.card.resource] : undefined}
+                                  foodLanding={foodLanding?.foundationIndex === index && foodLanding.biomeId === state.selectedBiomeId ? foodLanding : undefined} />
                               </span>
 
                             </div>
@@ -2118,6 +2301,11 @@ const selectBiome = (biomeId: string) => {
                             <span aria-hidden="true">▤</span><span>{collectedCardCount}</span>
                           </span>
                         </div>
+                          {actor?.id === 'hero' && <div className="battle-moves" role="group" aria-label={actor.label + ' utility abilities'}>
+                            <strong>{state.utilityAP?.[actor.id] ?? 0} AP banked</strong>
+                            <AbilityTray actorName={actor.label} abilities={availableMovesFor(actor.id).filter(move => move.retrieval).map(move => <button key={move.name} type="button" className="battle-move" disabled={Boolean(cardTransport)} aria-pressed={utility?.foundationIndex === index && utility.move === move.name} title={move.description} onClick={() => { setPendingMobility(null); setPendingTargetSelection(null); setUtility(utility?.move === move.name ? null : { foundationIndex: index, move: move.name as 'Fetch' | 'Dig' }); }}><span>{move.name}</span><span>{move.name === 'Dig' ? 'Depth' : 2} AP</span></button>)} />
+                            {utility && <button type="button" onClick={() => setUtility(null)}>Cancel {utility.move}</button>}
+                          </div>}
                           <ul className="proto-foundation-resources" aria-label="Resources collected this tableau">
                             {collectedResources.map(({ resource, count, label, glyph }) => (
                               <li key={resource} data-resource={resource} data-count={count} aria-label={`${label} ${count}`} title={label}>
@@ -2206,6 +2394,7 @@ const selectBiome = (biomeId: string) => {
                     </div>
                   ))) }
                 </div>
+                {EVENT_CARDS_ENABLED && state.eventDiscard?.length ? <EventDiscardPile cards={state.eventDiscard} /> : null}
                 {isDenRest(state) && <div className="proto-rest-stock">
                   <span aria-live="polite">Stock {state.stock.length}</span>
                   <JumboActionCard type="button" className="proto-rest-receiver" cardRef={node=>{foundationTransportRefs.current[0]=node;}} aria-label={`Receiving card ${rankLabel(state.foundations[0]?.card.rank ?? 1)} · Draw stock · ${state.stock.length} cards remaining`} disabled={Boolean(cardTransport) || !state.stock.length || state.tableau.every(column => !column.length) || !fieldActors.length}
@@ -2216,18 +2405,36 @@ const selectBiome = (biomeId: string) => {
               </>)}
               </div>
               {combatDemoOpen ? <CombatDemo key={combatDemoReplay} battle={battleScene} onClose={() => setCombatDemoOpen(false)} onRestart={watchBattleScene}
-                onEscape={dangerFighter ? () => { setCombatDemoOpen(false); leaveTableau(); } : undefined} /> : <ProtoMap
-                extendTableau={Boolean(state.selectedBiomeId) && !dangerSelected && !pondSelected}
-                storyCard={state.ordinaryDay && <div className="proto-ordinary-day" aria-label="An ordinary day" data-resting={state.ordinaryDay.bedtime || state.ordinaryDay.complete || undefined}>
-                  <div className="proto-ordinary-day__heading"><QuestEmblem /><div><strong>An ordinary day</strong><span>Day 1 · {state.ordinaryDay.complete ? 'Home, at last' : state.ordinaryDay.bedtime ? 'Good night' : state.ordinaryDay.supper ? 'A quiet evening' : 'A little foraging'}</span></div></div>
-                  <QuestArtwork sprite={`${import.meta.env.BASE_URL}assets/art/quests/hero-snuffling-berries-v1.png`} />
-                  <div className="proto-ordinary-day__thought" role="status" title={ordinaryThought(state)}>
-                    <span>{ordinaryThought(state)}</span>
+                onEscape={dangerFighter ? () => { setCombatDemoOpen(false); leaveTableau(); } : undefined}
+                overlay={<>{mapSettings()}<WorldMinimap tiles={state.biomeTiles} actors={state.worldActors} selectedBiomeId={state.selectedBiomeId} onViewMap={() => { setCombatDemoOpen(false); setMobilePanel('map'); }} /></>} /> : <ProtoMap departureCamera={dayCinema.enabled ? dayOneDepartureCamera(state) : undefined} cameraDirectorDisabled={Boolean(state.dayScenario === 'day02' && state.dayTwoAmbush)} key={scenarioRun}
+                storyMood={dayCinema.active ? dayCinema.beat?.mood : undefined}
+                peripheralDarkness={dayCinema.active ? dayCinema.beat?.peripheralDarkness : undefined}
+                persistentTileLabelIds={dayCinema.tileLabelIds}
+                objective={editorOpen ? null : dayObjective(state)}
+                travelTableau={mapTravelActive ? travelTableau : undefined}
+                settings={mapSettings}
+                inactive={false}
+                onEditCell={editorOpen ? cell => { setEditorCell(cell); setEditorMenu(null); } : undefined}
+                onEditContextMenu={editorOpen ? (cell, x, y) => {
+                  setEditorCell(cell);
+                  setEditorMenu(editorDocument?.tiles?.some(tile => coversCell(tile, cell.column, cell.row)) || Math.abs(cell.column) > 7 || Math.abs(cell.row) > 7 ? null : { cell, x, y });
+                } : undefined}
+                editCell={editorOpen ? editorCell : undefined}
+                extendTableau={false}
+                storyCard={!state.dayScenario && state.ordinaryDay?.questCardSpawned && <div className="proto-ordinary-day" aria-label="An ordinary day" data-resting={state.ordinaryDay.bedtime || state.ordinaryDay.complete || undefined}>
+                  <div className="proto-ordinary-day__heading"><QuestEmblem /><div><strong>{state.dayScenario ? 'Day 01 · Before dark' : 'An ordinary day'}</strong><span>{state.ordinaryDay.complete ? 'Home, at last' : state.ordinaryDay.bedtime ? 'Good night' : state.ordinaryDay.supper ? 'A quiet evening' : 'A little foraging'}</span></div></div>
+                  <QuestArtwork sprite={`${import.meta.env.BASE_URL}assets/art/quests/hero-snuffling-berries-v1.png`} paintedSprite={`${import.meta.env.BASE_URL}assets/art/quests/hero-snuffling-berries-paint-bobtail-v2.png`} />
+                  <div className="proto-ordinary-day__thought" role="status" title={state.dayScenario ? dayOneThought(state) : ordinaryThought(state)}>
+                    <span>{state.dayScenario ? dayOneThought(state) : ordinaryThought(state)}</span>
                   </div>
                   <div className="proto-ordinary-day__actions" title={state.ordinaryDay.visitedTree ? 'Hero stopped beneath the old tree today.' : undefined}>
-                    <span aria-label="Food carried">Berries {state.haul.berries} · INSP {state.inspiration}/{state.maxInspiration}</span>
+                    <span aria-label="Food carried">Mana {state.haul.mana}</span>
+                    {state.dayScenario && <><span>STA {(state.travelStamina ?? 0).toFixed(1)} · {String(Math.floor(tableHours)).padStart(2,'0')}:{String(Math.round(tableHours%1*60)).padStart(2,'0')}</span>
+                      {!state.ordinaryDay.supper && !state.ordinaryDay.bedtime && !state.ordinaryDay.complete && <button type="button" disabled={Boolean(cardTransport || state.journey) || (dayOneReturning(state) ? isHome(state) : !isHome(state))} onClick={() => startScenarioTravel(dayOnePlan(state))}>{dayOneReturning(state) ? 'Return before dark' : 'Visit manaberry patch'}</button>}
+                      {!isHome(state) && !state.journey && !dayOneReturning(state) && <span>Forage two manaberries, then head home.</span>}
+                    </>}
                     {state.ordinaryDay.visitedTree && <span title="Hero stopped beneath the old tree today.">A familiar old tree ✓</span>}
-                    {!state.ordinaryDay.supper && <button type="button" disabled={!isHome(state) || state.haul.berries < SUPPER_BERRIES || Boolean(cardTransport)} onClick={() => { clearPendingInteractions(); setUndoStack([]); setState(eatSupper); }}>Eat supper · 2 berries</button>}
+                    {!state.ordinaryDay.supper && <button type="button" disabled={!isHome(state) || state.haul.mana < SUPPER_MANA || Boolean(cardTransport)} onClick={() => { clearPendingInteractions(); setUndoStack([]); setState(eatSupper); }}>Eat supper · 2 mana</button>}
                     {state.ordinaryDay.supper && !state.ordinaryDay.bedtime && <button type="button" disabled={!isHome(state) || Boolean(cardTransport)} onClick={() => {
                       clearPendingInteractions(); setUndoStack([]);
                       setState(previous => {
@@ -2236,24 +2443,18 @@ const selectBiome = (biomeId: string) => {
                         return arriveActorAtBiome(ready, 'hero', 'hero-den', { x: 0, y: 96 });
                       });
                     }}>Curl up · Zzz</button>}
-                    {state.ordinaryDay.bedtime && !state.ordinaryDay.complete && <button type="button" disabled={Boolean(cardTransport) || !isHome(state)} onClick={() => {
-                      clearPendingInteractions(); setUndoStack([]);
-                      setState(previous => previous.ordinaryDay?.bedtime && isHome(previous) ? { ...previous,
-                        biomeTiles: previous.biomeTiles.map(tile => tile.id === previous.selectedBiomeId ? { ...tile, tableau: previous.tableau, stock: previous.stock } : tile),
-                        selectedBiomeId: null, tableau: [], stock: [], foundations: [],
-                        ordinaryDay: { ...previous.ordinaryDay, complete: true } } : previous);
-                    }}>Finish resting</button>}
+                    {state.ordinaryDay.bedtime && !state.ordinaryDay.complete && <button type="button" disabled={Boolean(cardTransport) || !isHome(state)} onClick={finishResting}>Finish resting</button>}
                   </div>
                 </div>}
-                biomeTiles={state.biomeTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId, sprite: biomeTileSprite(tile),
+                biomeTiles={previewTiles.map((tile) => ({ ...tile, selected: tile.id === state.selectedBiomeId, berriesAvailable: tileHasBerries(tile, tile.id === state.selectedBiomeId ? state.tableau : tile.tableau, tile.id === state.selectedBiomeId ? state.stock : tile.stock), sprite: biomeTileSprite(tile),
                   // A foe beaten today leaves its woods quiet: no danger, so passable.
                   flags: tile.clearedDay === state.day ? tile.flags?.filter((flag) => flag !== 'danger') : tile.flags,
                   // Discovery shows the entire biome, independent of solitaire work.
                   exploration: tile.flags?.includes('unexplored') ? 0 : 1 }))}
                 actors={state.worldActors
-                  .filter((actor) => actor.location === 'table' || Boolean(actor.biomeId))
-                  .map(({ id, label, location, biomeId, position, hutId, luminosity, lightColor }) => ({ id, label, location, biomeId, position, hutId, luminosity, lightColor, awakeAtHome: Boolean(state.ordinaryDay && !state.ordinaryDay.bedtime), sprite: WORLD_ACTOR_SPRITES[id] }))}
-                actorOrigins={state.worldActors.map(({ id, label, location, biomeId, position }) => ({ id, label, location, biomeId, position }))}
+                  .filter((actor) => (actor.location === 'table' || Boolean(actor.biomeId)) && (!actor.partyId || state.worldActors.find(member => member.partyId === actor.partyId)?.id === actor.id))
+                  .map(({ id, label, location, biomeId, position, hutId, luminosity, lightColor, partyId }) => ({ id, label: partyId ? `${label} +${state.worldActors.filter(member => member.partyId === partyId).length - 1}` : label, location, biomeId, position, hutId, luminosity: manaCarrierLuminosity(state, id, luminosity), lightColor, partyId, awakeAtHome: Boolean(state.ordinaryDay && !state.ordinaryDay.bedtime), sprite: WORLD_ACTOR_SPRITES[id] }))}
+                actorOrigins={state.worldActors.map(({ id, label, location, biomeId, position, traversalAffinity, partyId }) => ({ id, label, location, biomeId, position, traversalAffinity, partyId }))}
                 resourceStacks={state.worldResourceStacks}
                 questCards={state.questTableCards}
                 questTitles={questSteps.map(step => step.label)}
@@ -2262,12 +2463,13 @@ const selectBiome = (biomeId: string) => {
                 questClaims={state.questClaims}
                 onMoveQuest={(index, position, tilt) => setState(previous => ({ ...previous, questTableCards: previous.questTableCards.map(card => card.questIndex === index ? { ...card, position, tilt, tableState: true, flightFrom: undefined } : card) }))}
                 tilted={cameraTilted}
-                focusBiomeId={cameraTilted && fieldActors.length ? state.selectedBiomeId : null}
+                focusBiomeId={!state.journey && cameraTilted && fieldActors.length ? state.selectedBiomeId : null}
                 onTiltedChange={setCameraTilted}
                 onRedeemQuest={(index) => { logHold(index === state.questClaims ? `redeem quest ${index}` : `redeem ignored: card ${index}, next claim is ${state.questClaims}`); if (index === state.questClaims) redeemQuest(); }}
-                lightSources={tableLights}
+                lightSources={editorOpen && tableLightsEnabled ? [...tableLights.filter(light => !light.id.startsWith('biome-light-')), ...biomeLights(previewTiles)] : tableLights}
                 timeOfDay={tableHours}
                 showLightReadout={lightReadoutVisible}
+                onEnterTile={(actorId, tileId) => { if (actorId === 'hero' && !editorOpen) fireCameraTrigger('tile-enter', tileId); }}
                 onActorExplore={(actorId, from, to) => setState(prev => {
                   if (!prev.worldActors.some(actor => actor.id === actorId)) return prev;
                   const biomeTiles = discoverTiles(prev.biomeTiles, from, to);
@@ -2277,9 +2479,30 @@ const selectBiome = (biomeId: string) => {
                   const cell = TABLE_GRID.atWorld(to);
                   const occupied = biomeTiles.find(tile => (tile.road || tile.tileType === 'path') &&
                     TABLE_GRID.atWorld(tile.position).column === cell.column && TABLE_GRID.atWorld(tile.position).row === cell.row);
-                  return occupied && prev.scene === 'exploration' ? activateBiome(next, occupied.id) : next;
+                  return occupied && !prev.journey && prev.scene === 'exploration' ? activateBiome(next, occupied.id) : next;
                 })}
                 onSelectBiome={selectBiome}
+                journey={state.journey}
+                travelAllowed={plan => dayOneAllowsPlan(state, plan)}
+                travelStamina={state.travelStamina ?? TRAVEL_STAMINA_MAX}
+                travelStaminaMax={state.scenarioStaminaMax ?? TRAVEL_STAMINA_MAX}
+                initialCenter={state.dayScenario ? {x:0,y:96}:undefined}
+                onConfirmTravel={plan => {
+                  if (state.dayScenario) { startScenarioTravel(plan); return; }
+                  clearPendingInteractions(); setUndoStack([]);
+                  setState(prev => prepareTravelTableau({ ...prev, journey: { ...beginJourney(plan), memberRanks: Object.fromEntries(partyMembers(prev, plan.actorId).map((member, i) => [member.id, prev.journey?.memberRanks?.[member.id] ?? 2 + i * 3])), spent: prev.journey?.spent ?? 0, berries: prev.journey?.berries ?? 0, priorCompleted: (prev.journey?.priorCompleted ?? 0) + (prev.journey?.completed ?? 0), completedCardIds: prev.journey?.completedCardIds ?? [] },
+                    biomeTiles: prev.biomeTiles.map(tile => ({ ...tile, ...(tile.id === prev.selectedBiomeId ? { tableau: prev.tableau, stock: prev.stock } : {}), ...(plan.segments.some(segment => segment.tileId === tile.id && segment.unknown) ? { traversalProgress: tile.traversalProgress ?? 0 } : {}) })),
+                    selectedBiomeId: null, tableau: [], stock: [], foundations: [],
+                    worldActors: prev.worldActors.map(actor => partyMembers(prev, plan.actorId).some(member => member.id === actor.id) ? { ...actor, location: 'table', position: plan.path[0], biomeId: undefined, foundationIndex: undefined, hutId: undefined } : actor) }));
+                }}
+                onTravelPaint={progress => setState(prev => paintTravelProgress(prev, progress))}
+                onTravelCheckpoint={progress => {
+                  const previous=stateRef.current;
+                  const next=checkTravelCairn(previous,progress);
+                  if(next!==previous){stateRef.current=next;setState(next);}
+                  return !next.journey?.blocked;
+                }}
+                onFinishTravel={() => setState(prev => ({ ...prev, journey: undefined }))}
                 onDropActorToTable={dropActorToTable}
                 onMoveResourceStack={moveResourceStack}
                 onSplitResourceStack={splitResourceStack}
@@ -2293,17 +2516,40 @@ const selectBiome = (biomeId: string) => {
             </div>
           </section>
         </div>
+        <aside aria-label="Scenario controls" className="proto-day-panel" data-day-scenario={state.dayScenario ?? 'sandbox'}>
+          <button type="button" className="proto-day-panel__toggle" aria-expanded={scenarioExpanded} aria-controls="scenario-data" onClick={() => setScenarioExpanded(value => !value)}>Scenario {scenarioExpanded ? '−' : '+'}</button>
+          <div id="scenario-data" hidden={!scenarioExpanded}>
+          <div className="proto-day-panel__toolbar"><label>Scenario <select aria-label="Day scenario" value={state.dayScenario ?? 'sandbox'} onChange={event => switchDayScenario(event.target.value)}><option value="day01">Day 01 · Before dark</option><option value="day02">Day 02 · The darker woods</option><option value="day03">Day 03 · Home with Banks</option><option value="sandbox">Sandbox · Authored map</option></select></label><div className="proto-day-panel__review-actions"><GlobalPauseControl />{state.dayScenario && <DayCinematicReview state={state} beats={dayCinema.beats} current={dayCinema.beat?.id} enabled={dayCinema.enabled} />}<button type="button" onClick={() => switchDayScenario(state.dayScenario ?? 'sandbox')}>Restart scenario</button></div></div>
+          {state.dayScenario && <>
+            <p className="proto-day-panel__thought" role="status">{dayOneThought(state)}</p>
+            <div className="proto-day-panel__actions"><span>Mana {state.haul.mana} · STA {(state.travelStamina ?? 0).toFixed(1)} · {String(Math.floor(tableHours)).padStart(2,'0')}:{String(Math.round(tableHours%1*60)).padStart(2,'0')}</span>
+              {dayTravelAction(state) && <button type="button" disabled={Boolean(cardTransport || state.journey)} onClick={() => startScenarioTravel(dayOnePlan(state))}>{dayTravelAction(state)}</button>}
+              {state.dayScenario==='day01' && !state.journey && state.selectedBiomeId===state.dayScenarioTiles?.patchId && !dayOneReturning(state) && <span>Gather two more: supper tonight, and keep the first berry for light.</span>}
+              {state.dayScenario==='day02' && !state.journey && state.selectedBiomeId===state.dayScenarioTiles?.patchId && !dayTwoPatchForaged(state) && <span>Search the last few branches.</span>}
+              {state.dayScenario==='day02' && !state.journey && state.selectedBiomeId===state.dayScenarioTiles?.woodsId && <span>Uncover the mana in the woods.</span>}
+              {state.dayScenario==='day01' && state.ordinaryDay?.complete && <button type="button" onClick={()=>switchDayScenario('day02',state.haul.mana)}>Begin Day 02</button>}
+              {!state.ordinaryDay?.supper && isHome(state) && dayOneReturning(state) && <button type="button" disabled={Boolean(cardTransport || state.journey)} onClick={() => {clearPendingInteractions();setUndoStack([]);setState(eatSupper);}}>Eat supper · 2 mana</button>}
+              {state.dayScenario==='day01' && state.ordinaryDay?.supper && !state.ordinaryDay.bedtime && <button type="button" disabled={Boolean(cardTransport)} onClick={() => {clearPendingInteractions();setUndoStack([]);setState(prev => arriveActorAtBiome({...prev,ordinaryDay:{...prev.ordinaryDay!,bedtime:true}},'hero','hero-den',{x:0,y:96}));}}>Curl up · Zzz</button>}
+              {state.ordinaryDay?.bedtime && !state.ordinaryDay.complete && <button type="button" disabled={Boolean(cardTransport)} onClick={finishResting}>Finish resting</button>}
+            </div>
+          </>}
+          <SceneActorEmotion scenario={state.dayScenario ?? 'sandbox'} relieved={Boolean(state.ordinaryDay?.supper || state.ordinaryDay?.bedtime || state.ordinaryDay?.complete)} />
+          <ScenarioCameraDetails />
+          </div>
+        </aside>
       </div>
-      {inspectionAnchor && (inspectedActorId || inspectedTileId) ? <DetailsCardViewer
+      {inspectionAnchor && inspectedTileId && state.biomeTiles.some(t=>t.id===inspectedTileId) ? <DetailsCardViewer key={inspectionId} anchor={inspectionAnchor} timeOfDay={tableHours} lights={tableLights} position={state.biomeTiles.find(t=>t.id===inspectedTileId)!.position} objects={[tileDetailsCard(state.biomeTiles.find(t=>t.id===inspectedTileId)!,state.day,()=>{closeInspection();selectBiome(inspectedTileId);})]} onClose={closeInspection} onCloseObject={closeInspection}/>:null}
+      {inspectionAnchor && inspectedActorId ? <DetailsCardViewer
         key={inspectionId}
         initialJumboId={inspectionJumboId}
         anchor={inspectionAnchor}
         timeOfDay={tableHours}
         lights={tableLights}
-        position={(state.biomeTiles.find(tile => tile.id === inspectedTileId) ?? state.worldActors.find(actor => actor.id === inspectedActorId))?.position ?? { x: 0, y: 0 }}
+        position={state.worldActors.find(actor => actor.id === inspectedActorId)?.position ?? { x: 0, y: 0 }}
         objects={[
         ...(inspectedActorId && state.worldActors.some(actor => actor.id === inspectedActorId) ? [{
           id: inspectedActorId,
+          travelActorId: inspectedActorId,
           name: state.worldActors.find((actor) => actor.id === inspectedActorId)!.label,
           badge: '♟',
           badgeLabel: 'Actor',
@@ -2321,7 +2567,7 @@ const selectBiome = (biomeId: string) => {
             { id: 'stats', label: 'Stats', chips: [
               { id: 'hp', icon: '♥', value: `${state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp}/${state.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0].maxHp}`,
                 label: `Health: ${state.heroHp[0] ?? FOUNDATION_MOCKUPS[0].hp} of ${state.heroMaxHp?.[0] ?? FOUNDATION_MOCKUPS[0].maxHp}` },
-              { id: 'inspiration', icon: '⚡', value: `${state.actorInspiration[0] ?? ACTOR_INSPIRATION_MAX}/${state.actorMaxInspiration?.[0] ?? ACTOR_INSPIRATION_MAX}`,
+              { id: 'inspiration', icon: '💫', value: `${state.actorInspiration[0] ?? ACTOR_INSPIRATION_MAX}/${state.actorMaxInspiration?.[0] ?? ACTOR_INSPIRATION_MAX}`,
                 label: `Inspiration: ${state.actorInspiration[0] ?? ACTOR_INSPIRATION_MAX} of ${state.actorMaxInspiration?.[0] ?? ACTOR_INSPIRATION_MAX}` },
             ] },
             { id: 'equipment', label: 'Equipment', details: 'Not yet configured' },
@@ -2330,34 +2576,22 @@ const selectBiome = (biomeId: string) => {
               : 'No active buffs or debuffs' },
           ],
         } satisfies DetailsCardObject] : []),
-        ...(() => {
-          const tile = state.biomeTiles.find(entry => entry.id === inspectedTileId);
-          return tile && !tile.flags?.includes('unexplored') ? [tileDetailsCard(tile, state.day, () => {
-            selectBiome(tile.id);
-            closeInspection();
-          })] : [];
-        })(),
         ]}
         onClose={closeInspection}
-        onCloseObject={id => { if (id === inspectedActorId) setInspectedActorId(null); if (id === inspectedTileId) setInspectedTileId(null); }}
+        onCloseObject={id => { if (id === inspectedActorId) setInspectedActorId(null); }}
       /> : null}
       <AbilityDetailPopup detail={abilityDetail} onClose={() => setAbilityDetail(null)} />
       {cardTransport ? (
-        <DragPreview
-          card={asDragPreviewCard(
+        <ProtoCardFlight
+          background={cardTransport.background}
+          card={
             state.tableau[cardTransport.sourceColumnIndex]?.find((card) => card.id === cardTransport.cardId)
-              ?? { id: cardTransport.cardId, rank: 1 },
-          )}
+              ?? { id: cardTransport.cardId, rank: 1 }
+          }
           positionRef={cardTransportPositionRef}
-          offset={{ x: 0, y: 0 }}
           size={cardTransport.size}
-          showText
-          zIndex={100000}
         />
       ) : null}
-    </div>
+    </div></CalloutEditingProvider>
   );
 };
-
-
-

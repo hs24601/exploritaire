@@ -6,7 +6,7 @@
  * clock. The high tier adds a bounded GPU volume; low retains simple shafts. */
 import { DEFAULT_LIGHT_STRENGTH, type TableLight, type TableLightFrame } from './protoLighting';
 import { unprojectTilt, type TableTilt } from './tableTilt';
-import { atmosphereSky } from './volumetricAtmosphere';
+import { atmosphereSky, projectAtmospherePoint } from './volumetricAtmosphere';
 
 export type FxQuality = 'high' | 'low';
 
@@ -66,6 +66,23 @@ export const haloFor = (light: TableLight, strength: number) => {
     lift: light.fromPiece ? 4 : light.id.startsWith('actor-light-') ? 16 : 20,
     opacity: Math.min(0.85, strength * (0.35 + 0.5 * power)),
   };
+};
+
+/** A billboard near the perspective eye can otherwise cover the whole map.
+ * Bound cosmetic glow in screen space and fade it before its anchor crosses
+ * the eye; the actual light field and its world position remain unchanged. */
+export const haloProjection = (light: TableLight, camera: { x: number; y: number; scale: number; yaw?: number }, tilt: TableTilt,
+  view: { width: number; height: number }) => {
+  const halo = haloFor(light, 1), yaw = (camera.yaw ?? 0) * Math.PI / 180;
+  const x = light.position.x * camera.scale + camera.x, y = light.position.y * camera.scale + camera.y;
+  const depth = tilt.perspective - (x * Math.sin(yaw) + y * Math.cos(yaw)) * Math.sin(tilt.angle * Math.PI / 180);
+  if (depth <= 0 || camera.scale <= 0) return { scale: 0, opacity: 0 };
+  const projectedScale = camera.scale * tilt.perspective / depth;
+  const radius = Math.min(view.width, view.height) * .16;
+  const scale = Math.min(1, radius / (halo.radius * projectedScale * 1.1));
+  const center = projectAtmospherePoint(light.position, halo.lift, camera, tilt);
+  if (Math.abs(center.x) > view.width / 2 + radius || Math.abs(center.y) > view.height / 2 + radius) return { scale, opacity: 0 };
+  return { scale, opacity: Math.min(1, depth / (tilt.perspective * .15)) };
 };
 
 export type Particle = {

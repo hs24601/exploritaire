@@ -1,14 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
+import { gameTime } from '../../gameTime';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createCombatClock } from '../combatClock';
 import * as THREE from 'three';
-import { BATTLE_SPRITE_ASSETS } from '../battleSpriteAssets';
-import { COMBAT_CAMERA_VIEWS, COMBAT_DEMO_SECONDS, createCombatCameraControls, createCombatDemoRig, demoPhase, type CombatCameraView, type CombatCameraSnapshot } from '../combatDemoRig';
+import { loadMediaTexture } from '../mediaTexture';
+import { BANKS_SPRITE_ASSETS } from '../banksSprite';
+import { battleSpriteAssets } from '../battleSpriteAssets';
+import { useArtStyle } from '../artStyle';
+import { COMBAT_CAMERA_VIEWS, COMBAT_DEMO_SECONDS, createCombatCameraControls, createCombatDemoRig, demoPhase, type CombatAuthoredShot, type CombatCameraView, type CombatCameraSnapshot } from '../combatDemoRig';
 import './CombatDemo.css';
 import { SceneButton as CameraButton } from './SceneButton';
 import { BATTLE_TURN_PRIORITY, type BattleTeam } from '../battleTurnPriority';
 import { detectFxQuality } from '../atmosphere';
 import { cuesFor, freshEvents, type BattleScene } from '../rules/battleCues';
 
-export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TURN_PRIORITY[0], battle}: {onClose: () => void; onRestart: () => void; onEscape?: () => void; firstTeam?: BattleTeam; battle?: BattleScene}) {
+export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TURN_PRIORITY[0], battle, overlay, cameraShot}: {onClose: () => void; onRestart: () => void; onEscape?: () => void; firstTeam?: BattleTeam; battle?: BattleScene; overlay?: ReactNode; cameraShot?: CombatAuthoredShot}) {
+  const artStyle = useArtStyle();
   const host = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLElement>(null);
   const close = useRef(onClose); close.current = onClose;
@@ -19,7 +25,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
   const [ready, setReady] = useState(false);
   const [cameraInfo, setCameraInfo] = useState<CombatCameraSnapshot | null>(null);
   const [copyStatus, setCopyStatus] = useState('Copy camera cue');
-  const controls = useRef<{select: (view: CombatCameraView) => void; toggleFreecam: () => void; replay: () => void; move: (key: string, held: boolean) => void; cue: () => object; refresh: () => void} | null>(null);
+  const controls = useRef<{frame: (shot: CombatAuthoredShot) => void; select: (view: CombatCameraView) => void; toggleFreecam: () => void; replay: () => void; move: (key: string, held: boolean) => void; cue: () => object; refresh: () => void} | null>(null);
   // The battle panel's units and events: who stands, who fell, and what just happened.
   const battleRef = useRef(battle); battleRef.current = battle;
   // Events from before the arena opened are history, not cues to replay.
@@ -32,6 +38,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
     controls.current?.refresh();
   }, [battle]);
   useEffect(() => {
+    setReady(false);
     const heldKeys = new Set<string>();
     let selected: CombatCameraView = firstTeam;
     let manualEnabled = true;
@@ -47,7 +54,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
       else {
         const buttonMove = (event.target as HTMLElement)?.closest<HTMLButtonElement>('[data-move]')?.dataset.move;
         if (buttonMove && (event.key === 'Enter')) { event.preventDefault(); controls.current?.move(buttonMove, true); }
-        if (manualEnabled && !event.ctrlKey && !event.altKey && !event.metaKey && !((event.target as HTMLElement)?.closest('input, textarea, select, [contenteditable="true"]'))) {
+        if (manualEnabled && !event.ctrlKey && !event.altKey && !event.metaKey && !((event.target as HTMLElement)?.closest('input:not([type="range"]), textarea, select, [contenteditable="true"]'))) {
           const movement = event.key.toLowerCase();
           if ('wasdqe'.includes(movement) && movement.length === 1) { event.preventDefault(); controls.current?.move(movement, true); }
         }
@@ -60,7 +67,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
       const buttonMove = (event.target as HTMLElement)?.closest<HTMLButtonElement>('[data-move]')?.dataset.move;
       if (buttonMove && (event.key === 'Enter')) controls.current?.move(buttonMove, false);
     };
-    const visibility = () => { if (document.hidden) clearInput(); };
+    const visibility = () => { if (document.hidden) clearInput(); controls.current?.refresh(); };
     window.addEventListener('keyup', keyUp, true);
     window.addEventListener('blur', clearInput);
     document.addEventListener('visibilitychange', visibility);
@@ -70,6 +77,9 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
     let observer: ResizeObserver | undefined;
     let detachPointer = () => {};
     let sharedSurface: HTMLDivElement | undefined;
+    const dropRegions = new Map<string, HTMLDivElement>();
+    let canvasBounds = { left: 0, top: 0, width: 0, height: 0 };
+    let arenaBounds = { left: 0, top: 0, width: 0, height: 0 };
     const textures: THREE.Texture[] = [];
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const quality = detectFxQuality();
@@ -78,12 +88,17 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         renderer = new THREE.WebGLRenderer({antialias: false, alpha: false});
         renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
         const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(45, 1, .1, 100);
-        const loader = new THREE.TextureLoader();
-        const load = async (path: string) => { const t = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/${path}`); if (disposed) { t.dispose(); throw new Error('closed'); } textures.push(t); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t; };
-        const entries = await Promise.all(Object.entries({...BATTLE_SPRITE_ASSETS,trees:'biomes/small_woods_pines.png'}).map(async ([key,path]) => [key,await load(path)] as const));
+        const load = async (path: string) => {
+          const t = await loadMediaTexture(`${import.meta.env.BASE_URL}assets/${path}`);
+          if (disposed) { t.dispose(); throw new Error('closed'); }
+          textures.push(t); t.userData.watercolor = /watercolor|bobtail/.test(path);
+          t.magFilter = t.userData.watercolor ? THREE.LinearFilter : THREE.NearestFilter;
+          t.minFilter = t.magFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
+        };
+        const entries = await Promise.all(Object.entries({...battleSpriteAssets(artStyle),...BANKS_SPRITE_ASSETS,trees:artStyle==='paint'?'biomes/watercolor-v1/woods-cluster-sprite-v1.png':'biomes/small_woods_pines.png'}).map(async ([key,path]) => [key,await load(path)] as const));
         const assets = Object.fromEntries(entries) as Record<string,THREE.Texture> & {trees:THREE.Texture};
         if (disposed || !host.current) return;
-        const layout = host.current.closest<HTMLElement>('.proto-main-layout')!;
+        const layout = host.current.closest<HTMLElement>('.proto-main-layout') ?? host.current.closest<HTMLElement>('.banks-rescue-cinema__stage') ?? host.current.parentElement!;
         const field = layout.querySelector<HTMLElement>('.proto-tableau-field--combat');
         sharedSurface = document.createElement('div');
         sharedSurface.className = 'combat-shared-view';
@@ -93,24 +108,47 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         rig = createCombatDemoRig(scene, camera, assets, quality);
         const cameraControls = createCombatCameraControls(camera, firstTeam);
         let displayedTime = 0;
-        const entered = performance.now();
+        const entered = gameTime.now();
+        const combatClock = createCombatClock(entered / 1000);
+        const cameraClock = createCombatClock(entered / 1000);
+        let authoredCamera = false;
         let actionStarted: number | null = null;
         let lastTick = -1, lastFrame = entered, lastReadout = -Infinity;
         const paint = (now: number) => {
           // Entry overview and scripted battle action have independent clocks.
           const cameraTime = selected === 'cinematic' ? displayedTime : (now - entered) / 1000;
-          const shot = cameraControls.update(cameraTime, now, reduced);
-          const seconds = now / 1000;
+          const cueTime = cameraClock.sample(now / 1000, Boolean(battleRef.current?.paused) || document.hidden) * 1000;
+          const shot = cameraControls.update(cameraTime, authoredCamera ? cueTime : now, reduced);
+          const seconds = combatClock.sample(now / 1000, Boolean(battleRef.current?.paused));
           pendingCues.current.splice(0).forEach(cue => rig!.cue(cue, seconds));
           if (battleRef.current) rig!.setUnits(battleRef.current.units, seconds);
           rig!.setAmbushed(Boolean(battleRef.current?.ambushed));
           rig!.update(displayedTime, reduced, seconds); renderer!.render(scene, camera);
+          rig!.projectDropTargets(canvasBounds.width, canvasBounds.height, (id, bounds, targetable) => {
+            let region = dropRegions.get(id);
+            if (!region && host.current) {
+              region = document.createElement('div'); region.className = 'combat-demo__drop-target';
+              region.dataset.sceneTarget = id;
+              region.setAttribute('aria-hidden', 'true'); host.current.append(region); dropRegions.set(id, region);
+            }
+            if (!region) return;
+            const left = bounds ? Math.max(0, canvasBounds.left + bounds.left - arenaBounds.left) : 0;
+            const top = bounds ? Math.max(0, canvasBounds.top + bounds.top - arenaBounds.top) : 0;
+            const right = bounds ? Math.min(arenaBounds.width, canvasBounds.left + bounds.right - arenaBounds.left) : 0;
+            const bottom = bounds ? Math.min(arenaBounds.height, canvasBounds.top + bounds.bottom - arenaBounds.top) : 0;
+            region.hidden = !bounds || right <= left || bottom <= top;
+            region.dataset.targetable = String(targetable && !region.hidden);
+            region.dataset.depth = String(bounds?.depth ?? 0);
+            if (!region.hidden) Object.assign(region.style, { left: left+'px', top: top+'px', width: (right-left)+'px', height: (bottom-top)+'px' });
+          });
           if (host.current) {
             host.current.dataset.cameraView = selected;
             host.current.dataset.cameraPosition = camera.position.toArray().map(n => n.toFixed(3)).join(',');
             host.current.dataset.cameraTarget = shot.target.toArray().map(n => n.toFixed(3)).join(',');
             host.current.dataset.cameraMoving = String(shot.moving);
             host.current.dataset.actionStarted = String(actionStarted !== null);
+            host.current.dataset.combatTime = String(seconds);
+            host.current.dataset.combatPaused = String(Boolean(battleRef.current?.paused));
             if (import.meta.env.DEV) host.current.dataset.actors = JSON.stringify(rig!.snapshot());
           }
           if (now - lastReadout >= 100 || displayedTime === COMBAT_DEMO_SECONDS) {
@@ -118,7 +156,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           }
           return shot.moving;
         };
-        const schedule = () => { if (!disposed && !frame) frame = requestAnimationFrame(render); };
+        const schedule = () => { if (!disposed && !frame) frame = gameTime.requestAnimationFrame(render); };
         const render = (now: number) => {
           frame = 0;
           if (disposed) return;
@@ -131,15 +169,15 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
             const speed = Math.max(2, cameraControls.snapshot().distance * .5) * dt / length;
             cameraControls.pan(right * speed, forward * speed, up * speed);
           }
-          const t = actionStarted === null ? 0 : Math.min(COMBAT_DEMO_SECONDS, (now - actionStarted) / 1000);
+          const t = actionStarted === null ? 0 : Math.min(COMBAT_DEMO_SECONDS, combatClock.sample(now / 1000, Boolean(battleRef.current?.paused)) - actionStarted / 1000);
           displayedTime = t;
           const moving = paint(now);
           if (Math.floor(t * 10) !== lastTick) { lastTick = Math.floor(t * 10); setElapsed(t); }
           setStatus(actionStarted === null
             ? moving ? 'Battlefield overview' : `${firstTeam === 'party' ? 'Player' : 'Enemy'} goes first`
             : reduced ? 'Reduced motion · scene effects off' : demoPhase(t));
-          // Freecam can wake the final hold; idle cameras do not run a render loop.
-          if ((actionStarted !== null && t < COMBAT_DEMO_SECONDS) || moving || heldKeys.size || rig!.busy(now / 1000)) schedule();
+          // Keep the forest breeze live after the camera and battle cues settle.
+          if (!reduced || (actionStarted !== null && t < COMBAT_DEMO_SECONDS) || moving || heldKeys.size || rig!.busy(combatClock.time)) schedule();
         };
         const resize = () => {
           if (!host.current || !renderer || !sharedSurface) return;
@@ -153,7 +191,10 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           const width = Math.max(...boxes.map(box=>box.right)) - left, height = Math.max(...boxes.map(box=>box.bottom)) - top;
           const parent = layout.getBoundingClientRect();
           Object.assign(sharedSurface.style,{left:`${left-parent.left}px`,top:`${top-parent.top}px`,width:`${width}px`,height:`${height}px`});
-          renderer.setSize(Math.max(1,Math.round(width/2)),Math.max(1,Math.round(height/2)),false);
+          const density = layout.classList.contains('banks-rescue-cinema__stage') ? 1 : 2;
+          renderer.setSize(Math.max(1,Math.round(width/density)),Math.max(1,Math.round(height/density)),false);
+          canvasBounds = { left, top, width, height }; arenaBounds = arena;
+          rig?.setMarkerViewport(width,height);
           // Extend the original lens sideways/upwards instead of recentering,
           // stretching, or duplicating the arena image beneath the cards.
           if (visibleArena) camera.setViewOffset(arena.width,arena.height,left-arena.left,top-arena.top,width,height);
@@ -161,14 +202,14 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           camera.updateProjectionMatrix();
           renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%';
           sharedSurface.dataset.projection = visibleArena ? 'extended' : 'tableau';
-          paint(performance.now());
+          paint(gameTime.now());
         };
         // Manual input takes over the current shot without changing the toggle.
         const beginManual = () => {
           if (!manualEnabled) return false;
           if (selected !== 'freecam') {
-            selected = 'freecam'; setCameraView('freecam');
-            cameraControls.select('freecam', performance.now());
+            authoredCamera = false; selected = 'freecam'; setCameraView('freecam');
+            cameraControls.select('freecam', gameTime.now());
           }
           return true;
         };
@@ -180,18 +221,19 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           if (id !== undefined && arena.hasPointerCapture(id)) arena.releasePointerCapture(id);
         };
         controls.current = {
+          frame(cue) { clearInput(); clearDrag(); authoredCamera = true; selected = 'side'; setCameraView('side'); const now = gameTime.now(); cameraControls.frame(cue, cameraClock.sample(now / 1000, Boolean(battleRef.current?.paused) || document.hidden) * 1000); lastReadout = -Infinity; paint(now); schedule(); },
           select(view) {
-            clearInput(); clearDrag(); selected = view; const now = performance.now();
-            if (view === 'cinematic') { actionStarted = now; lastTick = -1; displayedTime = 0; setElapsed(0); }
+            clearInput(); clearDrag(); authoredCamera = false; selected = view; const now = gameTime.now();
+            if (view === 'cinematic') { actionStarted = combatClock.sample(now / 1000, Boolean(battleRef.current?.paused)) * 1000; lastTick = -1; displayedTime = 0; setElapsed(0); }
             cameraControls.select(view, now); lastReadout = -Infinity; paint(now); schedule();
           },
           toggleFreecam() {
             manualEnabled = !manualEnabled; setFreecamEnabled(manualEnabled);
-            clearInput(); clearDrag(); lastReadout = -Infinity; paint(performance.now());
+            clearInput(); clearDrag(); lastReadout = -Infinity; paint(gameTime.now());
           },
-          replay() { actionStarted = performance.now(); lastTick = -1; displayedTime = 0; setElapsed(0); schedule(); },
-          move(key, held) { if (held && !beginManual()) return; if (held) { if (!heldKeys.size) lastFrame = performance.now(); heldKeys.add(key); schedule(); } else { heldKeys.delete(key); lastReadout = -Infinity; paint(performance.now()); } },
-          refresh() { const now = performance.now(); if (paint(now) || rig!.busy(now / 1000)) schedule(); },
+          replay() { actionStarted = combatClock.sample(gameTime.now() / 1000, Boolean(battleRef.current?.paused)) * 1000; lastTick = -1; displayedTime = 0; setElapsed(0); schedule(); },
+          move(key, held) { if (held && !beginManual()) return; if (held) { if (!heldKeys.size) lastFrame = gameTime.now(); heldKeys.add(key); schedule(); } else { heldKeys.delete(key); lastReadout = -Infinity; paint(gameTime.now()); } },
+          refresh() { const now = gameTime.now(); if (paint(now) || rig!.busy(combatClock.time)) schedule(); },
           cue() { const info = cameraControls.snapshot(); return { t: Number(displayedTime.toFixed(3)), p: info.position, target: info.target, fov: info.fov }; },
         };
         const pointerDown = (event: PointerEvent) => {
@@ -212,7 +254,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
             const units = cameraControls.snapshot().distance * 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.max(1, arena.clientHeight);
             cameraControls.pan(-dx * units, -dy * units, 0);
           } else cameraControls.orbit(dx * .005, dy * .005);
-          lastReadout = -Infinity; paint(performance.now());
+          lastReadout = -Infinity; paint(gameTime.now());
         };
         const pointerEnd = (event: PointerEvent) => {
           if (drag?.id !== event.pointerId) return;
@@ -223,7 +265,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           event.preventDefault();
           const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? arena.clientHeight : 1);
           cameraControls.dolly(THREE.MathUtils.clamp(pixels * .001, -.3, .3));
-          lastReadout = -Infinity; paint(performance.now());
+          lastReadout = -Infinity; paint(gameTime.now());
         };
         const contextMenu = (event: Event) => event.preventDefault();
         arena.addEventListener('pointerdown', pointerDown); arena.addEventListener('pointermove', pointerMove);
@@ -239,11 +281,20 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
       } catch (error) { if (!disposed) setStatus(`Arena could not load: ${error instanceof Error ? error.message : 'WebGL unavailable'}`); }
     }
     void start();
-    return () => { disposed = true; controls.current = null; clearInput(); detachPointer(); cancelAnimationFrame(frame); observer?.disconnect(); rig?.dispose(); textures.forEach(t => t.dispose()); renderer?.dispose(); renderer?.domElement.remove(); sharedSurface?.remove(); window.removeEventListener('keydown', key, true); window.removeEventListener('keyup', keyUp, true); window.removeEventListener('blur', clearInput); document.removeEventListener('visibilitychange', visibility); if (previous?.isConnected) previous.focus(); };
-  }, [firstTeam]);
-  return <section ref={dialog} className="combat-demo proto-map" aria-labelledby="combat-demo-title" tabIndex={-1} data-elapsed={elapsed.toFixed(1)} data-complete={elapsed >= COMBAT_DEMO_SECONDS || undefined} data-camera-view={cameraView} data-freecam-enabled={freecamEnabled}>
+    return () => { disposed = true; controls.current = null; clearInput(); detachPointer(); gameTime.cancelAnimationFrame(frame); observer?.disconnect(); dropRegions.forEach(region => region.remove()); rig?.dispose(); textures.forEach(t => t.dispose()); renderer?.dispose(); renderer?.domElement.remove(); sharedSurface?.remove(); window.removeEventListener('keydown', key, true); window.removeEventListener('keyup', keyUp, true); window.removeEventListener('blur', clearInput); document.removeEventListener('visibilitychange', visibility); if (previous?.isConnected) previous.focus(); };
+  }, [firstTeam, artStyle]);
+  const hadAuthoredShot = useRef(false);
+  useEffect(() => {
+    if (!ready) return;
+    if (cameraShot) { controls.current?.frame(cameraShot); hadAuthoredShot.current = true; }
+    else if (hadAuthoredShot.current) { controls.current?.select(firstTeam); hadAuthoredShot.current = false; }
+  }, [cameraShot?.id, ready, artStyle]);
+  return <section data-authored-shot={cameraShot?.id} ref={dialog} className="combat-demo proto-map" aria-labelledby="combat-demo-title" tabIndex={-1} data-elapsed={elapsed.toFixed(1)} data-complete={elapsed >= COMBAT_DEMO_SECONDS || undefined} data-camera-view={cameraView} data-freecam-enabled={freecamEnabled}>
+    {overlay}
+    <div ref={host} className="combat-demo__arena" aria-label="Combatants in a Three.js forest arena" />
+    {status.startsWith('Arena could not load:') && <div role="alert" className="combat-demo__load-error">{status}</div>}
+    <details className="combat-demo__tools"><summary>Camera controls</summary>
     <header className="combat-demo__header"><h1 id="combat-demo-title">Dark Woods · battle</h1><CameraButton type="button" onClick={onClose}>Return to table · Esc</CameraButton></header>
-    <div ref={host} className="combat-demo__arena" aria-label="Directional Hero, Mochi and dark slime sprites in a Three.js forest arena" />
     <footer className="combat-demo__footer">
       <div className="combat-demo__readout"><span>{status}</span><span>{elapsed.toFixed(1)} / 10s</span></div>
       <div className="combat-demo__camera-panel">
@@ -273,6 +324,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         }}>{copyStatus}</CameraButton>
       </div></details>
     </footer>
+    </details>
   </section>;
 }
 

@@ -1,9 +1,19 @@
 import { describe,expect,it } from 'vitest';
-import { AtmosphereBudget,atmospherePointAtHeight,atmosphereSky,projectAtmospherePoint,shaftIllumination } from './volumetricAtmosphere';
+import { AtmosphereBudget,atmospherePointAtHeight,atmosphereSky,nightFogOpacity,projectAtmospherePoint,shaftIllumination } from './volumetricAtmosphere';
 import { getTableLighting } from './protoLighting';
 import { tableCameraTilt } from './tableTilt';
 
 describe('visual atmospheric volume',()=>{
+  it('makes unlit night nearly opaque, with heavier relief and concealed air and bounded light openings',()=>{
+    const open=nightFogOpacity(0,0,.5,0);
+    expect(open).toBeGreaterThan(.9);
+    expect(nightFogOpacity(1,0,.5,0)).toBeGreaterThan(open);
+    expect(nightFogOpacity(1,1,.5,0)).toBeGreaterThan(nightFogOpacity(1,0,.5,0));
+    expect(nightFogOpacity(0,0,.5,.3)).toBeLessThan(open*.5);
+    expect(nightFogOpacity(0,0,.5,2)).toBeGreaterThan(.05);
+    expect(atmosphereSky(getTableLighting(0)).night).toBe(1);
+    expect(atmosphereSky(getTableLighting(12)).night).toBe(0);
+  });
   it('keeps elevated air anchored through pan, zoom and spin',()=>{
     for(const yaw of [0,45,90,180,-75])for(const scale of [0.65,1.7,2.25,4.5,5.65,6.8])for(const height of [0,16,72,140]){
       const camera={x:125,y:-53,scale,yaw},tilt=tableCameraTilt(720,scale),world={x:-74,y:125};

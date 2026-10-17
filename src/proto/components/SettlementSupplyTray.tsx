@@ -1,3 +1,4 @@
+import { trackGameAnimation } from '../../gameAnimations';
 import { useEffect, useRef, useState } from 'react';
 import { PinnedToast } from './PinnedToast';
 
@@ -41,11 +42,11 @@ export function SettlementSupplyTray({ items, open = true, onPlace, onClose }: {
           document.body.appendChild(ghost);
           const dx = destination.left + destination.width / 2 - actor.left - actor.width / 2;
           const dy = destination.top + destination.height / 2 - actor.top - actor.height / 2;
-          const animation = ghost.animate([
+          const animation = trackGameAnimation(ghost.animate([
             { transform: 'translate(-50%, -50%) scale(.6)', opacity: 0 },
             { transform: `translate(${dx * .5}px, ${dy * .5 - 70}px) scale(1)`, opacity: 1, offset: .5 },
             { transform: `translate(${dx}px, ${dy}px) scale(.5)`, opacity: 0 },
-          ], { duration: 650, delay: index * 70, easing: 'ease-in-out' });
+          ], { duration: 650, delay: index * 70, easing: 'ease-in-out' }));
           animation.onfinish = () => ghost.remove();
           animations.push(animation); ghosts.push(ghost);
         }

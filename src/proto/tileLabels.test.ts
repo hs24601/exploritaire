@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { connectedTileLabelRegions, fitTileTitle, immutableTerrainRegions, immutableTileRegions, titleBand } from './tileLabels';
+import { connectedTileLabelRegions, fitTileTitle, tileLabelFacing, immutableTerrainRegions, immutableTileRegions, titleBand } from './tileLabels';
 import { createInitialState } from './rules/setup';
 
 describe('immutable region labels', () => {
@@ -81,7 +81,7 @@ describe('one label per connected named tile type', () => {
 
 describe('complete titles within rotating footprints', () => {
   const measure = (text: string, size: number) => text.length * size * 0.6;
-  for (const align of ['center', 'top'] as const) {
+  for (const align of ['center', 'top', 'bottom'] as const) {
   for (const yaw of [0, 22.5, 45, 89, 90, 135, 180, 225, 270, 315, 359]) {
     for (const [title, width, height] of [['IMPASSABLE MOUNTAINS', 136, 40], ["HERO'S DEN", 40, 16], ['SMALL WOODS', 40, 40]] as const) {
       it(`retains ${title} aligned ${align} at ${yaw} degrees without crossing the footprint`, () => {
@@ -89,6 +89,7 @@ describe('complete titles within rotating footprints', () => {
         expect(layout.fits).toBe(true);
         expect(layout.lines.map(line => line.text).join('').replace(/ /g, '')).toBe(title.replace(/ /g, ''));
         if (align === 'top' && yaw === 0) expect(layout.lines[0].y).toBeCloseTo(-height / 2);
+        if (align === 'bottom' && yaw === 0) expect(layout.lines[layout.lines.length - 1].y + layout.lineHeight).toBeCloseTo(height / 2);
         for (const line of layout.lines) {
           const band = titleBand(width, height, yaw, line.y, line.y + layout.lineHeight)!;
           expect(line.x - measure(line.text, layout.fontSize) / 2).toBeGreaterThanOrEqual(band.left - 0.01);
@@ -98,4 +99,19 @@ describe('complete titles within rotating footprints', () => {
     }
   }
   }
+});
+
+describe('quarter-turn tile label facing', () => {
+  it('selects only the nearest cardinal edge and wraps repeated or negative turns', () => {
+    for (const [yaw, expected] of [[0,0],[44.9,0],[45,90],[90,90],[134.9,90],[135,180],[180,180],[224.9,180],[225,270],[270,270],[314.9,270],[315,0],[360,0],[-90,270],[-180,180],[-270,90],[810,90]]) expect(tileLabelFacing(yaw)).toBe(expected);
+  });
+  it('keeps complete, identical local layouts inside a sector at every zoom-independent fit', () => {
+    const measure = (text: string, size: number) => text.length * size * .6;
+    for (const heading of [0,90,180,270]) {
+      const layout = (yaw: number) => fitTileTitle('IMPASSABLE MOUNTAINS',136,40,tileLabelFacing(yaw),measure);
+      const fixed = layout(heading);
+      expect(fixed.fits).toBe(true);
+      for (const offset of [-44,-12,0,12,44]) expect(layout(heading+offset)).toEqual(fixed);
+    }
+  });
 });

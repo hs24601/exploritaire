@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useState } from 'react';
 
 /** Sample browser frames without re-rendering the table on every frame. */
@@ -22,12 +23,12 @@ export function FpsCounter() {
           }
         }
       }
-      frame = requestAnimationFrame(tick);
+      frame = gameTime.requestAnimationFrame(tick);
     };
     document.addEventListener('visibilitychange', reset);
-    frame = requestAnimationFrame(tick);
+    frame = gameTime.requestAnimationFrame(tick);
     return () => {
-      cancelAnimationFrame(frame);
+      gameTime.cancelAnimationFrame(frame);
       document.removeEventListener('visibilitychange', reset);
     };
   }, []);

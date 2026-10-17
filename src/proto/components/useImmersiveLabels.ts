@@ -1,52 +1,47 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, type RefObject } from 'react';
+import { projectBillboard } from '../actorOcclusion';
+import { immersionActorScale } from '../actorScale';
+import type { TableTilt } from '../tableTilt';
 
 type Box = { left: number; right: number; top: number; bottom: number };
-const gap = 10;
-const horizontal = (a: Box, b: Box) => a.left < b.right + gap && a.right > b.left - gap;
-const overlaps = (a: Box, b: Box) => horizontal(a, b) && a.top < b.bottom + gap && a.bottom > b.top - gap;
-const inkBox = (el: HTMLElement): Box => {
-  const lines = [...el.querySelectorAll<HTMLElement>('.proto-tile-title__line')].map(line => line.getBoundingClientRect());
-  return { left: Math.min(...lines.map(line => line.left)), right: Math.max(...lines.map(line => line.right)),
-    top: Math.min(...lines.map(line => line.top)), bottom: Math.max(...lines.map(line => line.bottom)) };
-};
-
-/** World anchors feed readable projected ink. Actors have first claim, nearby
- * places come next, and background terrain retreats above both. Only measure
- * when camera, actor pose/position, viewport or authored title layout changes. */
+/** Project actor base names only. TileTitle stays in the physical table plane
+ * so its ink shares the tile's foreshortening, perspective and live camera. */
 export function useImmersiveLabels(root: RefObject<HTMLDivElement | null>, active: boolean,
-  getCamera: () => { x: number; y: number; yaw?: number; scale: number }) {
+  getCamera: () => { x: number; y: number; yaw?: number; scale: number }, getTilt: (camera: { scale: number }) => TableTilt) {
   useEffect(() => {
     const viewport = root.current;
     if (!viewport || !active) return;
     const layer = document.createElement('div');
     layer.className = 'proto-projected-titles'; layer.setAttribute('aria-hidden', 'true');
     viewport.append(layer);
-    const copies = new Map<HTMLElement, HTMLElement>();
     const names = new Map<HTMLElement, HTMLElement>();
+    const nameSizes = new Map<HTMLElement, { key: string; width: number; height: number }>();
+    let view = viewport.getBoundingClientRect();
+    const resize = new ResizeObserver(() => { view = viewport.getBoundingClientRect(); });
+    resize.observe(viewport);
     let frame = 0, lastPaint = 0, previous = '';
-    const started = performance.now();
+    const started = gameTime.now();
     const paint = (now: number) => {
-      frame = requestAnimationFrame(paint);
+      frame = gameTime.requestAnimationFrame(paint);
       if (now - lastPaint < 50) return;
       lastPaint = now;
       const camera = getCamera();
       const actors = [...viewport.querySelectorAll<HTMLElement>('[data-physical-world] [data-board-piece="actor"]')];
       const nameSources = [...viewport.querySelectorAll<HTMLElement>('[data-physical-world] [data-actor-base-name]')];
-      const labels = [...viewport.querySelectorAll<HTMLElement>('.proto-tile-title')].filter(el => el.children.length);
-      const signature = JSON.stringify([camera, viewport.clientWidth, viewport.clientHeight,
+      const signature = JSON.stringify([camera, view.width, view.height,
         actors.map(el => [el.dataset.actorX, el.dataset.actorY, el.dataset.actorPose, el.dataset.actorHeading, el.dataset.actorWidth, el.dataset.actorHeight]),
-        nameSources.map(el => [el.dataset.actorNameOwner, el.dataset.actorBaseName]),
-        labels.map(el => [el.getAttribute('aria-label'), el.dataset.labelYaw, el.dataset.labelFontSize, el.parentElement?.style.cssText, el.closest<HTMLElement>('[data-label-owner]')?.dataset.labelShown])]);
-      if (signature === previous && now - started > 1000 && copies.size === labels.length && labels.every(label => copies.has(label))) return;
+        nameSources.map(el => [el.dataset.actorNameOwner, el.dataset.actorBaseName])]);
+      if (signature === previous && now - started > 1000) return;
       previous = signature;
-      for (const [source, copy] of copies) if (!labels.includes(source)) {
-        copy.remove(); delete source.dataset.projectedTitle; copies.delete(source);
-      }
-      const view = viewport.getBoundingClientRect();
       const inView = (box: Box) => box.right > view.left && box.left < view.right && box.bottom > view.top && box.top < view.bottom;
-      const props = [...viewport.querySelectorAll<HTMLElement>('[data-physical-world] [data-biome-popup]')];
-      const actorBoxes: Box[] = actors.map(el => el.getBoundingClientRect());
-      const obstacles: Box[] = [...actorBoxes];
+      const actorBoxes: Box[] = actors.map(el => {
+        const scale = el.dataset.actorShrink ? immersionActorScale(camera.scale) : 1;
+        const projected = projectBillboard({ x: Number(el.dataset.actorX), y: Number(el.dataset.actorY), width: Number(el.dataset.actorWidth)*scale, height: Number(el.dataset.actorHeight)*scale,
+          worldHeading: el.dataset.actorOrientation === 'world-plane' ? Number(el.dataset.actorHeading) : undefined }, camera, getTilt(camera));
+        return { left: view.left+view.width/2+projected.left, right: view.left+view.width/2+projected.right,
+          top: view.top+view.height/2+projected.top, bottom: view.top+view.height/2+projected.bottom };
+      });
       for (const [source, copy] of names) if (!nameSources.includes(source)) {
         copy.remove(); delete source.dataset.projectedName; names.delete(source);
       }
@@ -58,64 +53,25 @@ export function useImmersiveLabels(root: RefObject<HTMLDivElement | null>, activ
           copy = document.createElement('div'); copy.className = 'proto-projected-actor-name';
           layer.append(copy); names.set(source, copy);
         }
-        source.dataset.projectedName = 'true';
-        copy.textContent = source.dataset.actorBaseName ?? '';
-        const body = actor.getBoundingClientRect();
-        copy.style.fontSize = `${Math.min(20, Math.max(16, 14 + camera.scale))}px`;
-        copy.style.display = inView(body) ? 'block' : 'none';
-        const size = copy.getBoundingClientRect();
+        if (source.dataset.projectedName !== 'true') source.dataset.projectedName = 'true';
+        const text = source.dataset.actorBaseName ?? '', fontSize = Math.min(20, Math.max(16, 14 + camera.scale));
+        const body = actorBoxes[actors.indexOf(actor)];
+        const visible = inView(body);
+        const key = `${text}|${fontSize.toFixed(1)}`;
+        let size = nameSizes.get(source);
+        if (!size || size.key !== key) {
+          copy.style.display = 'block';
+          copy.textContent = text; copy.style.fontSize = `${fontSize.toFixed(1)}px`;
+          const rect = copy.getBoundingClientRect(); size = { key, width: rect.width, height: rect.height }; nameSizes.set(source, size);
+        }
+        copy.style.display = visible ? 'block' : 'none';
         // Never raise the name onto the shrinking body at a viewport edge.
         const left = (body.left + body.right - size.width) / 2;
         const top = body.bottom + 8;
         copy.style.left = `${left - view.left}px`; copy.style.top = `${top - view.top}px`;
-        obstacles.push({ left, right: left + size.width, top, bottom: top + size.height });
-      }
-      const nearTitles: Box[] = [];
-      const entries = labels.map(source => ({ source, anchor: inkBox(source), background: Boolean(source.closest('[data-immutable-region]')) }));
-      entries.sort((a, b) => Number(a.background) - Number(b.background) || b.anchor.bottom - a.anchor.bottom);
-      for (const { source, anchor, background } of entries) {
-        let copy = copies.get(source);
-        if (!copy) {
-          copy = document.createElement('div'); copy.className = 'proto-projected-title';
-          layer.append(copy); copies.set(source, copy);
-        }
-        source.dataset.projectedTitle = 'true';
-        const text = (source.getAttribute('aria-label') ?? '').toUpperCase();
-        if (copy.textContent !== text) copy.textContent = text;
-        copy.dataset.labelDepth = background ? 'background' : 'near';
-        const nearSize = Math.min(24, Math.max(16, 14 + camera.scale * 1.4));
-        copy.style.fontSize = `${background ? Math.max(16, nearSize * .9) : nearSize}px`;
-        copy.style.maxWidth = `${Math.max(80, view.width - 24)}px`;
-        const owner = source.closest<HTMLElement>('[data-label-tiles], [data-biome-title], [data-den-title], [data-biome-id]');
-        const ids = new Set((owner?.dataset.labelTiles ?? owner?.dataset.biomeTitle ?? owner?.dataset.biomeId
-          ?? (owner?.dataset.denTitle ? 'hero-den' : '')).split(' '));
-        const sceneryVisible = props.some(prop => ids.has(prop.dataset.biomePopup ?? '') && inView(prop.getBoundingClientRect()));
-        // Tile labels show only while their tile is pointed at, focused or tapped.
-        const hidden = source.closest<HTMLElement>('[data-label-owner]')?.dataset.labelShown === undefined && Boolean(source.closest('[data-label-owner]'));
-        copy.style.display = !hidden && (inView(anchor) || sceneryVisible) ? 'block' : 'none';
-        if (copy.style.display === 'none') continue;
-        const measured = copy.getBoundingClientRect();
-        const width = measured.width, height = measured.height;
-        const left = Math.max(view.left + 12, Math.min(view.right - width - 12, (anchor.left + anchor.right - width) / 2));
-        let top = Math.max(view.top + 12, Math.min(view.bottom - height - 16, (anchor.top + anchor.bottom - height) / 2));
-        const originalTop = top;
-        let box = { left, right: left + width, top, bottom: top + height };
-        for (let pass = 0; pass <= obstacles.length; pass++) {
-          const conflicts = [...obstacles.filter(other => overlaps(box, other)),
-            ...actorBoxes.filter(other => horizontal(box, other) && box.bottom > other.top - gap),
-            ...(background ? nearTitles.filter(other => horizontal(box, other) && box.bottom > other.top - gap) : [])];
-          if (!conflicts.length) break;
-          top = Math.min(...conflicts.map(other => other.top)) - height - gap - 2;
-          box = { ...box, top, bottom: top + height };
-        }
-        copy.style.left = `${left - view.left}px`; copy.style.top = `${top - view.top}px`;
-        copy.dataset.labelLift = Math.max(0, originalTop - top).toFixed(3);
-        copy.dataset.labelRetreat = background ? copy.dataset.labelLift : '0';
-        obstacles.push(box);
-        if (!background) nearTitles.push(box);
       }
     };
-    frame = requestAnimationFrame(paint);
-    return () => { cancelAnimationFrame(frame); layer.remove(); copies.forEach((_, source) => delete source.dataset.projectedTitle); names.forEach((_, source) => delete source.dataset.projectedName); };
-  }, [root, active, getCamera]);
+    frame = gameTime.requestAnimationFrame(paint);
+    return () => { gameTime.cancelAnimationFrame(frame); resize.disconnect(); layer.remove(); names.forEach((_, source) => delete source.dataset.projectedName); };
+  }, [root, active, getCamera, getTilt]);
 }

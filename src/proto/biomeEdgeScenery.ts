@@ -14,7 +14,7 @@ export type EdgeSprite = { src: string; width: number; height: number };
 export type EdgeScenery = { side: EdgeSprite; front: EdgeSprite };
 /** The label's text box on the tile, in table px from the tile's centre, and
  * the point the label turns about to stay upright for a spun camera. */
-export type LabelBox = { left: number; top: number; right: number; bottom: number; pivot?: { x: number; y: number } };
+export type LabelBox = { left: number; top: number; right: number; bottom: number; pivot?: { x: number; y: number }; /** Tile-local snapped ink rotation, when present. */ rotation?: number };
 export type EdgeProp = {
   id: string;
   edge: 'left' | 'right' | 'front';

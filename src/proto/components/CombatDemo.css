@@ -5,6 +5,7 @@
 .combat-demo button:hover:not(:disabled) { background: #324a3e; border-color: #c9dec9; }
 .combat-demo button:disabled { opacity: .5; cursor: wait; }
 .combat-demo button:focus-visible { outline: 2px solid #8ef2d4; outline-offset: 2px; }
+.combat-demo { grid-template-rows: minmax(0,1fr); }
 .combat-demo__arena { min-width: 0; min-height: 0; overflow: hidden; }
 .combat-demo[data-freecam-enabled='true'] .combat-demo__arena { cursor: grab; touch-action: none; }
 .combat-demo__arena[data-dragging='true'] { cursor: grabbing; }
@@ -34,3 +35,24 @@
 .combat-shared-view { position: absolute; z-index: -1; pointer-events: none; overflow: hidden; border-radius: 6px; background: #0b1520; }
 .combat-shared-view[hidden] { display: none; }
 .combat-shared-view canvas { display: block; image-rendering: pixelated; }
+
+/* The arena shares the full tableau viewport; its tools fold into one corner. */
+.proto-main-layout[data-primary-viewport='tableau'] > .combat-demo {
+  position: relative; grid-template-rows: minmax(0,1fr); z-index: 2;
+  pointer-events: none; border: 0; border-radius: 0; overflow: visible;
+}
+.combat-demo__tools { position: absolute; left: 10px; bottom: 10px; z-index: 3; width: min(340px,calc(100% - 20px)); pointer-events: auto; }
+.combat-demo__tools > summary { width: fit-content; padding: 5px 8px; border: 1px solid #7b9583; border-radius: 4px; background: #142720f2; cursor: pointer; touch-action: manipulation; }
+.combat-demo__tools:not([open]) > :not(summary) { display: none; }
+.combat-demo__tools[open] { padding: 8px; border: 1px solid #49645d; border-radius: 6px; background: #101b22f5; }
+.combat-demo__tools[open] > summary { margin-bottom: 6px; }
+.combat-demo__tools .combat-demo__header { padding: 0 0 6px; }
+.combat-demo__tools .combat-demo__footer { position: static; max-width: none; }
+@media (max-width: 900px) {
+  .proto-game-root .proto-main-layout[data-primary-viewport='tableau'][data-mobile-panel='tableau'] > .combat-demo { display: grid; }
+}
+
+/* Drop geometry never intercepts camera input; captured ability drags query it. */
+.combat-demo__arena { position: relative; }
+.combat-demo__drop-target { position: absolute; pointer-events: none; }
+.combat-demo__drop-target[hidden] { display: none; }

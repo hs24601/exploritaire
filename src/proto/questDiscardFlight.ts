@@ -1,3 +1,5 @@
+import { trackGameAnimation } from '../gameAnimations';
+import { gameTime } from '../gameTime';
 import { PLAYING_CARD_RATIO } from './components/PlayingCardStack';
 
 /** Capture the departing card now; measure its destination after the reward's layout commit. */
@@ -21,7 +23,7 @@ export function flyQuestToDiscard(source: HTMLElement | null) {
 
   // React applies redemption, removes its notice, and updates the discard count
   // before this frame. The icon's header row does not depend on quest contents.
-  requestAnimationFrame(() => {
+  gameTime.requestAnimationFrame(() => {
     const icon = document.querySelector<HTMLElement>('[data-quest-discard-icon]');
     const tray = icon?.closest('[data-open]');
     const target = icon?.getBoundingClientRect();
@@ -36,12 +38,12 @@ export function flyQuestToDiscard(source: HTMLElement | null) {
     const dx = destination.x - from.left, dy = destination.y - from.top;
     const scale = destination.width / from.width;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const flip = flipper.animate([{transform:'rotateY(0deg)'}, {transform:'rotateY(180deg)'}], {duration: reduced ? 1 : 260, fill:'forwards', easing:'ease-in-out'});
-    const move = flight.animate([
+    const flip = trackGameAnimation(flipper.animate([{transform:'rotateY(0deg)'}, {transform:'rotateY(180deg)'}], {duration: reduced ? 1 : 260, fill:'forwards', easing:'ease-in-out'}));
+    const move = trackGameAnimation(flight.animate([
       {transform:'translate(0,0) scale(1)'},
       {transform:`translate(${dx * 0.45}px,${dy * 0.45 - 60}px) scale(${(1 + scale) / 2})`, offset:0.5},
       {transform:`translate(${dx}px,${dy}px) scale(${scale})`},
-    ], {duration: reduced ? 1 : 650, easing:'ease-in-out', fill:'forwards'});
+    ], {duration: reduced ? 1 : 650, easing:'ease-in-out', fill:'forwards'}));
     const cleanup = () => { flip.cancel(); flight.remove(); };
     move.onfinish = cleanup;
     move.oncancel = cleanup;

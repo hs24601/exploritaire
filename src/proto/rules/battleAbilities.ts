@@ -1,14 +1,13 @@
 // Combat abilities and spirits as data. Pure: no React or DOM.
 //
-// Every party actor has one ability. Each card played onto the actor's
-// foundation adds one charge (up to MAX_CHARGE); the ability's power and its
-// form come from that charge. Forms upgrade in place at charge breakpoints
-// (Nip > Bite > Takedown). Spirits that accompany an actor layer on top at
-// their own breakpoint, adding an element (Cal: fire, so Bite > Inferno Bite).
-
+// Foundation cards bank AP. Hero chooses fixed-cost moves; Mochi's existing
+// charge curves remain available to simulations, with explicit tier selection
+// spending only that tier's cost. MAX_CHARGE bounds Mochi's legacy curve, not AP.
 export const MAX_CHARGE = 10;
+/** Combat loadouts never grow beyond four selected abilities per actor. */
+export const COMBAT_ABILITY_SLOTS = 4;
 
-export type AbilityEffect = { kind: 'burn' | 'bleed'; dps: number; seconds: number };
+export type AbilityEffect = { kind: 'burn' | 'bleed' | 'stun' | 'grip' | 'exposed'; chance?: number; gripBudget?: number; dps: number; seconds: number };
 
 export type AbilityTier = {
   name: string;
@@ -35,7 +34,8 @@ export type AbilityDef = {
 };
 
 export const ABILITIES: Record<string, AbilityDef> = {
-  // Hero is the damage dealer: full combo damage, plain stagger.
+  banks: { actorId:'banks', damageScale:4, staggerScale:3, motion:'scratch', tiers:[{name:'Scratch',from:2,staggerBonus:4,knockback:.15},{name:'Bite',from:4,staggerBonus:8,knockback:.3}] },
+  // Hero tier names remain animation profiles; HERO_MOVES defines gameplay.
   hero: {
     actorId: 'hero',
     damageScale: 1,
@@ -124,16 +124,25 @@ export type Attack = {
 
 export const tierFor = (def: AbilityDef, charge: number) => {
   let index = 0;
-  def.tiers.forEach((tier, i) => { if (charge >= tier.from) index = i; });
+  def.tiers.slice(0, COMBAT_ABILITY_SLOTS).forEach((tier, i) => { if (charge >= tier.from) index = i; });
   return index;
 };
 
-/** The ability an actor would use right now, or null with no charge to spend. */
-export const attackFor = (actorId: string, charge: number, spiritIds: readonly string[] = []): Attack | null => {
+/** Resolve a chosen move, or the default move used by older simulations. */
+export const attackFor = (actorId: string, charge: number, spiritIds: readonly string[] = [], choice?: string): Attack | null => {
+  if (actorId === 'banks') {
+    const move = BANKS_MOVES.find(m => m.name === (choice ?? 'Bite'));
+    if (!move || charge < move.cost) return null;
+    return {actorId,name:move.name,form:move.name,tier:move.name==='Bite'?1:0,charge:move.cost,damage:move.damage,stagger:move.name==='Scratch'?10:18,knockback:.3,element:null,effects:[],tags:[]};
+  }
+  if (actorId === "hero") return heroAttack(charge, choice, spiritIds);
   const def = ABILITIES[actorId];
-  const n = Math.min(MAX_CHARGE, Math.floor(charge));
-  if (!def || n < 1) return null;
-  const tierIndex = tierFor(def, n);
+  const selected = choice ? def?.tiers.slice(0, COMBAT_ABILITY_SLOTS).findIndex(t => t.name === choice) : undefined;
+  if (choice && (selected === undefined || selected < 0)) return null;
+  const cost = selected !== undefined ? def.tiers[selected].from : Math.min(MAX_CHARGE, Math.floor(charge));
+  const n = cost;
+  if (!def || n < 1 || charge < cost) return null;
+  const tierIndex = selected ?? tierFor(def, n);
   const tier = def.tiers[tierIndex];
   const spirits = spiritIds.map((id) => SPIRITS[id]).filter((spirit): spirit is SpiritDef => Boolean(spirit?.element) && n >= spirit.from);
   const damageMul = spirits.reduce((mul, spirit) => mul * spirit.damageMul, 1);
@@ -164,3 +173,50 @@ export const nextBreakpoint = (actorId: string, charge: number, spiritIds: reado
   ].filter((point) => point.at > charge).sort((a, b) => a.at - b.at);
   return points[0] ?? null;
 };
+
+export const MOCHI_MOVES = [
+ {name:'Scratch',cost:1,description:'1 damage; 1.5 stagger.'},
+ {name:'Claw',cost:4,description:'3 damage; 7 stagger and timer knockback.'},
+ {name:'Lacerate',cost:7,description:'6 damage; 12.5 stagger and bleeding (1/s, 4s).'},
+] as const;
+export const HERO_MOVES = [
+ {name:'Nip',cost:1,damage:1,description:'1 damage (+1 vs bleeding).'},
+ {name:'Bite',cost:3,damage:2,description:'2 damage; 25% bleed chance. Exposed for 6s: direct hits from any source gain +10% bleed chance.'},
+ {name:'Takedown',cost:3,damage:3,description:'3 damage + 2s stun; interrupts the current action.'},
+ {name:'Vice Grip',cost:3,damage:1,description:'Sustained hold: 1 damage; 3s/AP. After 6s, each extra 3s contributes half as much as the previous. Other abilities release.'},
+] as const;
+function heroAttack(bank: number, choice = 'Nip', spirits: readonly string[] = []): Attack | null {
+  const move = HERO_MOVES.slice(0, COMBAT_ABILITY_SLOTS).find(m => m.name === choice);
+  if (!move || !Number.isFinite(bank) || bank < move.cost) return null;
+  const committed = move.name === 'Vice Grip' ? Math.floor(bank) : move.cost;
+  const effects: AbilityEffect[] = [];
+  if (move.name === 'Bite') effects.push({ kind: 'bleed', dps: 1, seconds: 4, chance: 0.25 }, {kind:'exposed',dps:0,seconds:6});
+  if (move.name === 'Takedown') effects.push({ kind: 'stun', dps: 0, seconds: 2 });
+  if (move.name === 'Vice Grip') effects.push({ kind: 'grip', dps: 0, seconds: gripDuration(committed * 3), gripBudget: committed * 3 });
+  const fire = spirits.includes('cal') && bank >= SPIRITS.cal.from;
+  if (fire) effects.push(SPIRITS.cal.effect!);
+  return {
+    actorId: 'hero', name: fire ? 'Inferno ' + move.name : move.name,
+    form: move.name, tier: HERO_MOVES.indexOf(move), charge: committed,
+    damage: fire ? Math.round(move.damage * SPIRITS.cal.damageMul) : move.damage,
+    stagger: 0, knockback: 0, element: fire ? 'fire' : null, effects, tags: [],
+  };
+}
+
+/** First six seconds are full value; successive three-second blocks give 1.5, .75, .375... seconds. */
+export function gripDuration(budget: number): number {
+  if (budget <= 6) return Math.max(0,budget);
+  const extra = budget - 6, blocks = Math.floor(extra / 3), remainder = extra % 3;
+  return 6 + 3 * (1 - Math.pow(.5,blocks)) + remainder * Math.pow(.5,blocks+1);
+}
+
+/** Selected combat moves, distinct from any future learned-ability catalogue. */
+/** Visiting mentor tuning; Hunt and Stealth remain unauthored. */
+export const BANKS_MOVES = [{name:'Scratch',cost:2,damage:10,description:'10 damage and a heavy stagger.'},{name:'Bite',cost:4,damage:28,description:'28 damage; a decisive finishing bite.'}] as const;
+export const combatMovesFor = (actorId: string) => (actorId === 'hero' ? HERO_MOVES : actorId === 'mochi' ? MOCHI_MOVES : actorId === 'banks' ? BANKS_MOVES : []).slice(0, COMBAT_ABILITY_SLOTS);
+
+export type ActorMove = {name:string;cost:number;description:string;retrieval?:boolean;terrainTags?:readonly string[]};
+export const HERO_RETRIEVAL_MOVES: readonly ActorMove[] = [
+{name:'Fetch',cost:2,description:"Retrieve any card from the tableau's top row onto your foundation, regardless of rank.",retrieval:true},
+{name:'Dig',cost:1,description:'Retrieve any tableau card onto your foundation. Costs 1 AP for the top row, 2 for the second row, and so on. Breach #buried terrain for its displayed AP cost to reveal the crossing.',retrieval:true,terrainTags:['buried']}];
+export const availableMovesFor=(id:string):readonly ActorMove[]=>[...combatMovesFor(id),...(id==='hero'?HERO_RETRIEVAL_MOVES:[])];

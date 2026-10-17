@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Card } from '../protoState';
-import { applyAttack, createBattle, tickBattle, type BattleState } from './battle';
+import { applyAttack, createBattle, previewAttack, tickBattle, type BattleState } from './battle';
 import { IMPACT_SECONDS, cuesFor, freshEvents, sceneOf } from './battleCues';
 
 const card = (rank: number, id = `c${rank}-${Math.random()}`): Card => ({ id, rank });
@@ -9,9 +9,25 @@ const withCharge = (state: BattleState, actorId: string, charge: number) => ({ .
 const withFoeHp = (state: BattleState, hp: number) => ({ ...state, foes: state.foes.map((f) => (f.id === 'dark-slime' ? { ...f, hp } : f)) });
 
 describe('battle cues', () => {
+  it('mirrors valid targets but predicts HP only for the focused living foe', () => {
+    const battle = createBattle(deal, { maxAP: true });
+    const aim = { actorId: 'hero:Nip', foeId: 'dark-slime' };
+    const scene = sceneOf(battle, aim);
+    const focused = scene.units.find(unit => unit.id === aim.foeId)!;
+    expect(focused.targeting).toBe('focused');
+    expect(focused.markers?.health?.preview).toBe(previewAttack(battle, aim.actorId, aim.foeId)!.hp.after);
+    expect(scene.units.find(unit => unit.id === 'rear-slime')?.targeting).toBe('valid');
+    expect(scene.units.filter(unit => unit.markers?.health?.preview !== undefined)).toHaveLength(1);
+    for (const nextAim of [null, { ...aim, foeId: null }, { ...aim, foeId: 'card:0' }]) {
+      expect(sceneOf(battle, nextAim).units.every(unit => unit.markers?.health?.preview === undefined)).toBe(true);
+    }
+    const defeated = withFoeHp(battle, 0);
+    expect(sceneOf(defeated, aim).units.find(unit => unit.id === aim.foeId)?.targeting).toBeUndefined();
+    expect(sceneOf(battle).units.every(unit => unit.targeting === undefined)).toBe(true);
+  });
   it('turns a Hero bite into a lunge and a flinch at impact', () => {
     const before = withCharge(createBattle(deal, { mochi: false }), 'hero', 5);
-    const after = applyAttack(before, 'hero', 'dark-slime');
+    const after = applyAttack(before, 'hero:Bite', 'dark-slime');
     const cues = cuesFor(freshEvents(after.events, before.nextEventId - 1));
     expect(cues.map((cue) => cue.kind)).toEqual(['attack', 'hurt']);
     expect(cues[0]).toMatchObject({ actorId: 'hero', targetId: 'dark-slime', motion: 'bite', tier: 1, element: null, delay: 0 });
@@ -20,8 +36,8 @@ describe('battle cues', () => {
 
   it('reads the form and element from the attack name', () => {
     const state = withCharge(createBattle(deal, { mochi: true, spirits: { hero: ['cal'] } }), 'hero', 8);
-    const fire = cuesFor(applyAttack(state, 'hero', 'dark-slime').events)[0];
-    expect(fire).toMatchObject({ motion: 'bite', tier: 2, element: 'fire', heavy: true });
+    const fire = cuesFor(applyAttack(state, 'hero:Takedown', 'dark-slime').events)[0];
+    expect(fire).toMatchObject({ motion: 'bite', tier: 2, element: 'fire', heavy: false });
     const scratch = cuesFor(applyAttack(withCharge(state, 'mochi', 7), 'mochi', 'dark-slime').events)[0];
     expect(scratch).toMatchObject({ actorId: 'mochi', motion: 'scratch', tier: 2 });
   });
@@ -41,7 +57,7 @@ describe('battle cues', () => {
     expect(cues.map((cue) => cue.kind)).toEqual(['attack', 'hurt', 'down']);
     expect(cues[0]).toMatchObject({ actorId: 'dark-slime', targetId: 'hero', motion: 'slam' });
     expect(cues[2]).toMatchObject({ targetId: 'hero', delay: IMPACT_SECONDS });
-    expect(sceneOf(next).units).toContainEqual({ id: 'hero', team: 'party', down: true });
+    expect(sceneOf(next).units).toContainEqual(expect.objectContaining({ id: 'hero', team: 'party', down: true, markers:{health:{current:0,max:12}} }));
   });
 
   it('keeps fallen units in the scene so the arena can hold their pose', () => {

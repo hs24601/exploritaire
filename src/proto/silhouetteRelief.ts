@@ -1,4 +1,4 @@
-import { getTableLighting, type StandeeLighting } from './protoLighting';
+import { getVisualTableLighting, type StandeeLighting } from './protoLighting';
 
 /** Presentation-only relief inferred from a sprite's luminance and contour.
  * It preserves foliage planes without copying the sprite's colour. No game
@@ -82,7 +82,7 @@ export type SilhouetteLight = {
  * supplied by the same day/night frame, turned into the standee's camera frame.
  * This adapter stays outside the LE so atmosphere work can evolve separately. */
 export function silhouetteLight(lighting: StandeeLighting, hours: number, position: { x: number; y: number }, yaw = 0, flip = false): SilhouetteLight {
-  const frame = getTableLighting(hours);
+  const frame = getVisualTableLighting(hours);
   const dx = frame.source.x - position.x, dy = frame.source.y - position.y;
   const angle = yaw * Math.PI / 180;
   const sx = dx * Math.cos(angle) - dy * Math.sin(angle);
@@ -93,7 +93,7 @@ export function silhouetteLight(lighting: StandeeLighting, hours: number, positi
   const length = Math.hypot(x, y, z);
   return {
     x: x / length, y: y / length, z: z / length,
-    amount: 0.18 + frame.daylight * 0.6 + frame.twilight * 0.12,
+    amount: frame.globalLights ? 0.18 + frame.daylight * 0.6 + frame.twilight * 0.12 : 0,
     localX: (lighting.rim?.x ?? 0) * (flip ? -1 : 1),
     localY: lighting.rim?.y ?? 0,
     localAmount: lighting.rim?.amount ?? 0,

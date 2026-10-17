@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { startTransition, useEffect, useRef } from 'react';
 
 /** How often a drag re-lights the table. Each new hour re-renders and re-lights
@@ -20,9 +21,9 @@ export function TimeOfDaySlider({ hours, onChange }: { hours: number; onChange: 
   useEffect(() => {
     if (!dragging.current && pending.current === null && input.current) input.current.value = String(hours);
   }, [hours]);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  useEffect(() => () => gameTime.clearTimeout(timer.current), []);
   const flush = () => {
-    window.clearTimeout(timer.current);
+    gameTime.clearTimeout(timer.current);
     timer.current = 0;
     const next = pending.current;
     pending.current = null;
@@ -46,7 +47,7 @@ export function TimeOfDaySlider({ hours, onChange }: { hours: number; onChange: 
         const next = Number(event.target.value);
         pending.current = next;
         if (!dragging.current) flush();
-        else if (!timer.current) timer.current = window.setTimeout(flush, RELIGHT_INTERVAL_MS);
+        else if (!timer.current) timer.current = gameTime.setTimeout(flush, RELIGHT_INTERVAL_MS);
       }}
     />
   );

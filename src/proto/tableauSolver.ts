@@ -15,7 +15,7 @@ export const solverMoves = (puzzle: SolverPuzzle): SolverMove[] => {
   if ((puzzle.moveBudget ?? Infinity) <= 0) return [];
   return puzzle.columns.flatMap((column, index) => {
     const card = column[column.length - 1];
-    if (!card || card.encounter || !isQuestPlacement(puzzle.columns, card)) return [];
+    if (!card || card.event || card.encounter || !isQuestPlacement(puzzle.columns, card)) return [];
     return puzzle.foundations.flatMap((rank, foundation) => rank !== null &&
       (puzzle.openFoundations?.[foundation] || [1, 12].includes(Math.abs(card.rank - rank)))
       ? [{ column: index, foundation }] : []);

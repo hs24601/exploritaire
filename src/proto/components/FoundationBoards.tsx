@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import React, { useEffect, useRef } from 'react';
 import { DEFAULT_CHIP_ABILITY } from '../protoData';
 import type { ProtoHeroClass } from '../protoTypes';
@@ -62,7 +63,7 @@ export const FoundationBoard = ({
   const devDefeatTriggered = useRef(false);
   const cancelDevDefeat = () => {
     if (devDefeatTimer.current === null) return;
-    window.clearTimeout(devDefeatTimer.current);
+    gameTime.clearTimeout(devDefeatTimer.current);
     devDefeatTimer.current = null;
   };
   useEffect(() => cancelDevDefeat, []);
@@ -113,7 +114,7 @@ export const FoundationBoard = ({
             if (!DEV_ACTOR_DEFEAT_OVERRIDE || !onDevDefeat) return;
             cancelDevDefeat();
             devDefeatTriggered.current = false;
-            devDefeatTimer.current = window.setTimeout(() => {
+            devDefeatTimer.current = gameTime.setTimeout(() => {
               devDefeatTimer.current = null;
               devDefeatTriggered.current = true;
               onDevDefeat();

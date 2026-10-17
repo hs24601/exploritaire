@@ -8,6 +8,12 @@ import { nextQuestCard } from './protoQuestDeals';
 import { createInitialState } from './rules/setup';
 
 describe('road exploration', () => {
+  it('places Curious Sapling at (0,-2) with a safe wood-only deal', () => {
+    const sapling = createInitialState().biomeTiles.find(tile => tile.id === 'curious-sapling')!;
+    expect(sapling).toMatchObject({ title: 'Curious Sapling', position: { x: 0, y: -96 }, terrain: 'woods', flags: ['unexplored'] });
+    expect(sapling.tableau.flat()).toHaveLength(13);
+    expect(sapling.tableau.flat().every(card => !card.resource || card.resource === 'wood')).toBe(true);
+  });
   it('places the requested orientations and explores the occupied Hero’s Den', () => {
     // The starting world has no roads; roads keep their authored orientation when created.
     expect(createInitialState().biomeTiles.filter(tile => tile.road)).toEqual([]);
@@ -23,8 +29,8 @@ describe('road exploration', () => {
     expect(state.biomeTiles.filter(tile => tile.position.x === 0 && tile.position.y === 96)).toHaveLength(1);
     expect(den.flags).toEqual([]);
     expect(den.tableau.flat().length).toBeGreaterThan(0);
-    // Den, five mountains, Berry Patch, Old Tree, Dark Woods and dirt.
-    expect(createInitialState().biomeTiles).toHaveLength(10);
+    // Den, six mountains, Berry Patch, Old Tree, Curious Sapling, Dark Woods and two dirt tiles.
+    expect(createInitialState().biomeTiles).toHaveLength(13);
     expect(roads[0].flags).toEqual(['unexplored']);
     expect(roads[1].flags).toEqual(['unexplored']);
     expect(Object.keys(ROAD_PATHS)).toHaveLength(4);

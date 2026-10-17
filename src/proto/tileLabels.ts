@@ -128,8 +128,17 @@ export function connectedTileLabelRegions<T extends LabelTile>(tiles: readonly T
   return regions;
 }
 
+/** Nearest camera-facing tile edge. Ink only turns in whole quarter turns. */
+export function tileLabelFacing(cameraYaw: number): number {
+  return Number.isFinite(cameraYaw) ? ((Math.round(cameraYaw / 90) % 4 + 4) % 4) * 90 : 0;
+}
+
 export type TitleLine = { text: string; x: number; y: number; width: number };
 export type TitleLayout = { fontSize: number; lineHeight: number; lines: TitleLine[]; fits: boolean };
+
+// Match the CSS tracking when measuring the high-resolution label raster.
+export const TILE_TITLE_TRACKING_EM = -0.08;
+const TITLE_LINE_HEIGHT = 0.72;
 
 /** An upright line must fit for its entire height inside the rotated footprint,
  * not merely inside its bounding box. This also works at arbitrary spin angles. */
@@ -154,7 +163,7 @@ export function fitTileTitle(text: string, width: number, height: number, yaw: n
   // A smaller complete word is easier to read than oversized word fragments.
   // Only split a long word when no complete-word layout fits at the floor.
   for (const splitWords of [false, true]) for (let size = maximum; size >= minimum - 1e-6; size -= 0.25) {
-    const lineHeight = size * 1.12;
+    const lineHeight = size * TITLE_LINE_HEIGHT;
     const maxRows = Math.min(maxLines, title.length, Math.floor(extent / lineHeight));
     for (let count = 1; count <= maxRows; count++) {
       let remaining = title;
@@ -205,5 +214,5 @@ export function fitTileTitle(text: string, width: number, height: number, yaw: n
       }
     }
   }
-  return { fontSize: minimum, lineHeight: minimum * 1.12, lines: [], fits: false };
+  return { fontSize: minimum, lineHeight: minimum * TITLE_LINE_HEIGHT, lines: [], fits: false };
 }

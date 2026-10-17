@@ -2,8 +2,9 @@
 // falls. Pure, so the 3D arena and the battle cards read the same story.
 // Cues never feed back into the rules; a dropped or skipped cue changes nothing.
 
+import type { ActorMarkerContent } from '../actorMarkers';
 import { ABILITIES, SPIRITS, type SpiritDef } from './battleAbilities';
-import type { BattleEvent, BattleState } from './battle';
+import { previewAttack, type BattleEvent, type BattleState } from './battle';
 
 /** Seconds from an attack's start to its impact, where flinches and defeats begin. */
 export const IMPACT_SECONDS = 0.24;
@@ -30,7 +31,7 @@ const attackLook = (actorId: string, label = '') => {
   const tiers = ABILITIES[actorId]?.tiers ?? [];
   const tier = Math.max(0, tiers.findIndex((t) => label === t.name || label.endsWith(` ${t.name}`)));
   const element = Object.values(SPIRITS).find((spirit) => spirit.element && spirit.prefix && label.startsWith(`${spirit.prefix} `))?.element ?? null;
-  return { tier, element, motion: (ABILITIES[actorId]?.motion ?? 'bite') as CueMotion };
+  return { tier, element, motion: (actorId === 'banks' && label === 'Bite' ? 'bite' : ABILITIES[actorId]?.motion ?? 'bite') as CueMotion };
 };
 
 /**
@@ -77,16 +78,29 @@ export const cueSeconds = (cue: BattleCue) => cue.delay + CUE_SECONDS[cue.kind =
 
 /** What the arena shows: every unit still on the field (fallen ones included) and the recent events to cue. */
 export type BattleScene = {
+  paused?: boolean;
   ambushed?: boolean;
-  units: { id: string; team: 'party' | 'enemy'; down: boolean }[];
+  units: { id: string; team: 'party' | 'enemy'; down: boolean; position?: readonly [number,number]; pose?: 'standing' | 'sitting' | 'flinch'; targeting?: 'valid' | 'focused'; markers?: ActorMarkerContent }[];
   events: readonly BattleEvent[];
 };
 
-export const sceneOf = (battle: BattleState): BattleScene => ({
+export const sceneOf = (battle: BattleState, aim?: { actorId: string; foeId: string | null } | null): BattleScene => ({
   ambushed: Boolean(battle.ambush),
   units: [
-    ...battle.party.map((actor) => ({ id: actor.id, team: 'party' as const, down: actor.hp <= 0 })),
-    ...battle.foes.map((foe) => ({ id: foe.id, team: 'enemy' as const, down: foe.hp <= 0 })),
+    ...battle.party.map((actor) => {
+      const preview = aim && !battle.result ? previewAttack(battle, aim.actorId, actor.id) : null;
+      const focused = Boolean(preview && aim?.foeId === actor.id);
+      return { id: actor.id, team: 'party' as const, down: actor.hp <= 0,
+        targeting: preview ? focused ? 'focused' as const : 'valid' as const : undefined,
+        markers: { health: { current: actor.hp, max: actor.maxHp, preview: focused ? preview!.hp.after : undefined } } };
+    }),
+    ...battle.foes.map((foe) => {
+      const preview = aim && !battle.result ? previewAttack(battle, aim.actorId, foe.id) : null;
+      const focused = Boolean(preview && aim?.foeId === foe.id);
+      return { id: foe.id, team: 'enemy' as const, down: foe.hp <= 0,
+        targeting: preview ? focused ? 'focused' as const : 'valid' as const : undefined,
+        markers: { health: { current: foe.hp, max: foe.profile.maxHp, preview: focused ? preview!.hp.after : undefined } } };
+    }),
   ],
   events: battle.events,
 });

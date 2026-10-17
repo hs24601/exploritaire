@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { loadMediaImage } from '../mediaCache';
 
 /** The opaque part of a sprite, as fractions of its full width and height, plus
  * its pixel aspect ratio. Padding around the art is trimmed so a standee's feet
@@ -7,14 +8,18 @@ export type SpriteBounds = { x0: number; y0: number; x1: number; y1: number; asp
 export type SpriteState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; bounds: SpriteBounds };
 
 const cache = new Map<string, Promise<SpriteBounds>>();
+const readyBounds = new Map<string, SpriteBounds>();
 const SAMPLE_SIZE = 128;
 
 const measure = (src: string) => {
   let pending = cache.get(src);
   if (!pending) {
     pending = new Promise<SpriteBounds>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => {
+      // Detached resting tails retain the original complete silhouette's trim,
+      // so hiding a layer never enlarges or shifts the sleeping body.
+      const registration = /hero-sleeping(?:-topdown)?-body-v3\.png$/.test(src)
+        ? src.replace('-body-v3.png', '-bobtail-v2.png') : src;
+      loadMediaImage(registration).then(image => {
         const full = { x0: 0, y0: 0, x1: 1, y1: 1, aspect: image.naturalWidth / Math.max(1, image.naturalHeight) };
         const canvas = document.createElement('canvas');
         canvas.width = SAMPLE_SIZE;
@@ -40,14 +45,15 @@ const measure = (src: string) => {
         if (maxX < 0) return resolve(full);
         const bounds = { x0: minX / SAMPLE_SIZE, y0: minY / SAMPLE_SIZE, x1: (maxX + 1) / SAMPLE_SIZE, y1: (maxY + 1) / SAMPLE_SIZE };
         resolve({ ...bounds, aspect: ((bounds.x1 - bounds.x0) * image.naturalWidth) / Math.max(1, (bounds.y1 - bounds.y0) * image.naturalHeight) });
-      };
-      image.onerror = () => reject(new Error(`Sprite failed to load: ${src}`));
-      image.src = src;
+      }).catch(reject);
     });
     cache.set(src, pending);
   }
   return pending;
 };
+
+/** Cache both image data and trim before a directional sprite first needs it. */
+export const prewarmSpriteBounds = (src:string) => measure(src).then(bounds=>{readyBounds.set(src,bounds);return bounds;});
 
 /** Loads a sprite and measures its opaque bounds; 'error' when it can't load. */
 export function useSpriteBounds(src: string | undefined): SpriteState | null {
@@ -55,26 +61,29 @@ export function useSpriteBounds(src: string | undefined): SpriteState | null {
   useEffect(() => {
     if (!src) return;
     let live = true;
-    measure(src).then(
+    prewarmSpriteBounds(src).then(
       (bounds) => { if (live) setState({ src, value: { status: 'ready', bounds } }); },
       () => { if (live) setState({ src, value: { status: 'error' } }); },
     );
     return () => { live = false; };
   }, [src]);
   if (!src) return null;
+  const bounds=readyBounds.get(src);
+  if(bounds)return {status:'ready',bounds};
   return state?.src === src ? state.value : { status: 'loading' };
 }
 
 /** CSS background (or mask) size and position that draws a sprite's trimmed art
  * contained in a box, standing on the box's bottom edge. `stretch` lengthens
  * it vertically, as a shadow falling across the table does. */
-export const spriteLayout = (bounds: SpriteBounds, width: number, height: number, stretch = 1) => {
+export const spriteLayout = (bounds: SpriteBounds, width: number, height: number, stretch = 1, heightScale = 1, widthScale = 1) => {
   const drawWidth = bounds.aspect >= width / height ? width : height * bounds.aspect;
-  const drawHeight = drawWidth / bounds.aspect;
-  const fullWidth = drawWidth / (bounds.x1 - bounds.x0);
+  const drawHeight = drawWidth / bounds.aspect * heightScale;
+  const scaledWidth = drawWidth * widthScale;
+  const fullWidth = scaledWidth / (bounds.x1 - bounds.x0);
   const fullHeight = drawHeight / (bounds.y1 - bounds.y0);
   return {
     size: `${fullWidth.toFixed(2)}px ${(fullHeight * stretch).toFixed(2)}px`,
-    position: `${((width - drawWidth) / 2 - bounds.x0 * fullWidth).toFixed(2)}px ${((height - drawHeight - bounds.y0 * fullHeight) * stretch).toFixed(2)}px`,
+    position: `${((width - scaledWidth) / 2 - bounds.x0 * fullWidth).toFixed(2)}px ${((height - drawHeight - bounds.y0 * fullHeight) * stretch).toFixed(2)}px`,
   };
 };

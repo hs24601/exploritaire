@@ -1,3 +1,4 @@
+import { gameTime } from '../gameTime';
 /** Opt-in diagnostics for reward holds on real devices. Off unless the page
  * URL carries `?holdlog`; nothing is recorded or shown otherwise. */
 export const HOLD_LOG_ENABLED = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('holdlog');
@@ -5,11 +6,11 @@ export const HOLD_LOG_ENABLED = typeof window !== 'undefined' && new URLSearchPa
 export type HoldLogEntry = { at: number; text: string };
 const entries: HoldLogEntry[] = [];
 const listeners = new Set<() => void>();
-const origin = typeof performance !== 'undefined' ? performance.now() : 0;
+const origin = typeof performance !== 'undefined' ? gameTime.now() : 0;
 
 export function logHold(text: string) {
   if (!HOLD_LOG_ENABLED) return;
-  entries.push({ at: Math.round(performance.now() - origin), text });
+  entries.push({ at: Math.round(gameTime.now() - origin), text });
   if (entries.length > 40) entries.shift();
   listeners.forEach((listener) => listener());
 }

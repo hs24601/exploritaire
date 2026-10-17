@@ -1,4 +1,5 @@
 import { createRoadTile } from '../roadTiles';
+import { SAVED_TILE_DOCUMENT, materializeTiles } from '../tileEditor/runtime';
 import { createDirtTile } from '../dirtTiles';
 import { TABLE_GRID } from '../gridCoordinates';
 import { createOrdinaryPlaces } from './ordinaryDay';
@@ -6,11 +7,12 @@ import { createSleepDeal, isDenRest } from './rest';
 import { discoverTiles } from '../tileDiscovery';
 import type { BiomeFlag } from '../biomeFlags';
 import { DEFAULT_ACTOR_LUMINOSITY } from '../protoLighting';
+import { heightToWorld } from '../sceneryHeight';
 import { createPondDeal } from './fishing';
-import { POND_CATCHES } from './pondSpecies';
+import { WORLD_ITEMS } from '../protoCrafting';
 import { createQuestBiomeDeal, nextQuestCard, QUEST_ROUTE_BUDGET } from '../protoQuestDeals';
 import { DEFAULT_EXPEDITION_ENERGY, MAGE_PHASE_SHIFT_TRIGGER, PROTO_ENEMIES } from '../protoData';
-import { FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, ACTOR_INSPIRATION_MAX, type BiomeTileState, type Card, type EnemyRuntimeState, type FoundationSlot, type ForestHaul, type ForestResource, type HaulResource, type ProtoState, type SceneKind } from '../protoState';
+import { FOUNDATION_MOCKUPS, FOUNDATION_SLOTS, ACTOR_INSPIRATION_MAX, type BiomeTileState, type Card, type EnemyRuntimeState, type FoundationSlot, type ForestHaul, type ForestResource, type HaulResource, type PondResource, type ProtoState, type SceneKind } from '../protoState';
 
 // Deck, deal, world setup and state helpers. Pure: no React or DOM.
 
@@ -27,20 +29,20 @@ export const HERO_INSPIRATION_MAX = QUEST_ROUTE_BUDGET.maxInspiration;
 // default pool while leaving three energy after the route.
 export const DAY_TWO_RATION_ENERGY = QUEST_ROUTE_BUDGET.rationEnergy;
 export const DAY_TWO_RATION_INSPIRATION = QUEST_ROUTE_BUDGET.rationInspiration;
-export const ACTOR_WORK_RESOURCES: ForestResource[] = ['wood', 'berries', 'herbs', 'wood'];
-export const FOREST_RESOURCE_ORDER: ForestResource[] = ['wood', 'berries', 'herbs'];
+export const ACTOR_WORK_RESOURCES: Array<ForestResource | undefined> = ['wood', undefined, undefined, 'wood'];
+export const FOREST_RESOURCE_ORDER: HaulResource[] = ['wood', 'mana'];
 export const FOREST_RESOURCE_LABELS: Record<ForestResource, string> = {
   wood: 'WOOD',
-  berries: 'BERRY',
+  mana: 'MANA',
   herbs: 'HERB',
 };
 export const FOREST_RESOURCE_GLYPHS: Record<ForestResource, string> = {
   wood: '🪵',
-  berries: '🫐',
+  mana: '✨',
   herbs: '🌿',
 };
-export const EMPTY_HAUL: ForestHaul = { wood: 0, berries: 0, herbs: 0, ...Object.fromEntries(POND_CATCHES.map((id) => [id, 0])) } as ForestHaul;
-export const FOREST_CACHE_REWARD: ForestHaul = { ...EMPTY_HAUL, wood: 4, berries: 3, herbs: 2 };
+export const EMPTY_HAUL: ForestHaul = { wood: 0, mana: 0 };
+export const FOREST_CACHE_REWARD: ForestHaul = { ...EMPTY_HAUL, wood: 4 };
 export const ENCOUNTER_GLYPH = '⚔';
 
 export const createRandomProtoCard = (): Card => {
@@ -180,10 +182,10 @@ export const isPondTile = (biomeId: string | null | undefined, tiles: readonly B
 
 /** A dangerous wood two cells right of the Hero's start, marked by dark red embers and mist. Entering it starts a
  * skirmish (rules/skirmish.ts) instead of a tableau; once its foe is beaten it stays quiet until the next day. */
-export const DANGER_WOODS_TILE = { id: 'woods-danger', title: 'Dark Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: TABLE_GRID.center(TABLE_GRID.cell(-2, 2)), unlocked: true, threat: 'high' as const, terrain: 'woods' as const, danger: true, flags: ['unexplored', 'danger'] as BiomeFlag[] };
+export const DANGER_WOODS_TILE = { id: 'woods-danger', title: 'Dark Woods', sizeLabel: 'Small' as const, gridSize: { columns: 1, rows: 1 }, resourceDensity: 0, tableauSize: 0, position: TABLE_GRID.center(TABLE_GRID.cell(-3, 1)), unlocked: true, threat: 'high' as const, terrain: 'woods' as const, danger: true, flags: ['unexplored', 'danger'] as BiomeFlag[] };
 export const isDangerTile = (biomeId: string | null | undefined) => biomeId === DANGER_WOODS_TILE.id;
 /** What the foe in the Dark Woods was guarding. */
-export const DANGER_WOODS_REWARD: Partial<ForestHaul> = { wood: 2, berries: 2, herbs: 2 };
+export const DANGER_WOODS_REWARD: Partial<ForestHaul> = { wood: 2 };
 
 export const createDeepWoodsTile = (seed: number) => ({
   id: 'woods-beta',
@@ -211,8 +213,17 @@ export const materializeDeepWoods = (seed: number): BiomeTileState => {
 export const isBiomeDealComplete = (tableau: Card[][], stock: Card[]) =>
   stock.length === 0 && tableau.every((column) => column.length === 0);
 
-export const addForestHaul = (haul: ForestHaul, reward: Partial<ForestHaul>): ForestHaul =>
-  Object.fromEntries((Object.keys(EMPTY_HAUL) as HaulResource[]).map((key) => [key, (haul[key] ?? 0) + (reward[key] ?? 0)])) as ForestHaul;
+/** All gathered food becomes mana before entering inventory. Source identities are not stored in inventory. */
+export const addForestHaul = (haul: ForestHaul, reward: Partial<Record<ForestResource | PondResource, number>>): ForestHaul => {
+  const next = { ...EMPTY_HAUL, wood: haul.wood ?? 0, mana: 0 };
+  for (const items of [haul, reward]) {
+    for (const [id, count] of Object.entries(items)) {
+      if (WORLD_ITEMS[id as keyof typeof WORLD_ITEMS]?.food) next.mana += count ?? 0;
+      else if (items === reward && id === 'wood') next.wood += count ?? 0;
+    }
+  }
+  return next;
+};
 
 export const isAdjacentRank = (left: number, right: number) => {
   if (left === right) return false;
@@ -262,7 +273,7 @@ export const createQuestExplorationFoundations = (party: Card[], count: number, 
     ? { ...foundation, card: { ...foundation.card, rank } } : foundation);
 };
 
-export const createInitialState = (): ProtoState => {
+export const createInitialState = (useAuthoredTiles = true): ProtoState => {
   const party = PARTY_LOADOUT.map((rank, index) => ({
     id: `proto-party-${rank}-${index}`,
     rank,
@@ -280,11 +291,20 @@ export const createInitialState = (): ProtoState => {
   const { sleep: _sleep, ...receivingCard } = denDeal.stock[0];
   const den = { ...createRoadTile('hero-den', 0, 2), title: "Hero's Den", tileType: 'hero-den' as const, flags: [], tableau: denDeal.tableau, stock: denDeal.stock.slice(1), tableauSize: 30, dealt: 52 };
   biomeTiles.push(createRoadTile('road-center', 0, 0, { shape: 'straight', rotation: 0 }), createRoadTile('road-east', 1, 1, { shape: 'straight', rotation: 90 }), den);
-  for (let row = 2; row <= 3; row++) for (let column = -1; column <= 1; column++) {
+  for (let row = 2; row <= 3; row++) for (let column = row === 2 ? -2 : -1; column <= 1; column++) {
     if (row === 2 && column === 0) continue;
     biomeTiles.push({ ...createRoadTile(`mountain-${column}-${row}`, column, row), title: 'Impassable Mountains', tileType: 'impassable-mountain', flags: ['unexplored', 'impassable'], tableau: [], stock: [], dealt: 0, tableauSize: 0 });
   }
-  const initialTiles = discoverTiles([...biomeTiles.filter(tile => tile.id === den.id || isDangerTile(tile.id) || tile.tileType === 'impassable-mountain'), ...createOrdinaryPlaces(seed), createDirtTile('dirt-0-1', 0, 1)], den.position);
+  const saplingDeal = createSeededSmallWoodsDeal();
+  const sapling: BiomeTileState = {
+    ...EAST_WOODS_TILE, id: 'curious-sapling', title: 'Curious Sapling', terrain: 'woods',
+    light: { color: '#d4ed9b', strength: 0.65, radius: 3, height: heightToWorld(2), flicker: 0.15 },
+    position: TABLE_GRID.center(TABLE_GRID.cell(0, -2)), flags: ['unexplored'], seed: seed + 4 * 7919,
+    tableau: saplingDeal.tableau.map(column => column.map(card => ({ ...card, id: `curious-sapling-${card.questStep}` }))),
+    stock: [], dealt: dealtCards(saplingDeal),
+  };
+  const baseTiles = [...biomeTiles.filter(tile => tile.id === den.id || isDangerTile(tile.id) || tile.tileType === 'impassable-mountain'), ...createOrdinaryPlaces(seed), sapling, createDirtTile('dirt-0-1', 0, 1), createDirtTile('dirt--2-1', -2, 1)];
+  const initialTiles = useAuthoredTiles ? discoverTiles(materializeTiles(SAVED_TILE_DOCUMENT, baseTiles, false), den.position) : baseTiles;
   return {
     tableau: [],
     stock: [],
@@ -306,7 +326,7 @@ export const createInitialState = (): ProtoState => {
     suspendedExploration: null,
     biomeTiles: initialTiles,
     selectedBiomeId: null,
-    worldActors: [{ id: 'hero', label: 'Hero', location: 'table', position: { ...den.position }, luminosity: DEFAULT_ACTOR_LUMINOSITY }],
+    worldActors: [{ id: 'hero', label: 'Hero', characteristics: FOUNDATION_MOCKUPS.find(a=>a.id==='hero')?.characteristics?.slice(), location: 'table', position: { ...den.position }, luminosity: DEFAULT_ACTOR_LUMINOSITY }],
     worldResourceStacks: [],
     trailRations: 0,
     haul: { ...EMPTY_HAUL },
@@ -315,7 +335,7 @@ export const createInitialState = (): ProtoState => {
     ambushCardsRemaining: 0,
     day: 1,
     inspiration: HERO_INSPIRATION_MAX,
-    ordinaryDay: { supper: false, bedtime: false, complete: false, visitedTree: false },
+    ordinaryDay: { questCardSpawned: false, supper: false, bedtime: false, complete: false, visitedTree: false },
     denRest: { restfulCards: 0, disruptions: 0, started: true, receivingCard },
     maxInspiration: HERO_INSPIRATION_MAX,
     city: { campBuilt: false, campUsedToday: false, restedOnce: false },
@@ -347,6 +367,13 @@ export const spendExplorationEnergy = (state: ProtoState, cost: number) =>
 
 
 export const cloneState = (state: ProtoState): ProtoState => ({
+  journey:state.journey?structuredClone(state.journey):undefined,
+  travelStamina:state.travelStamina,
+  utilityAP:state.utilityAP?{...state.utilityAP}:undefined,
+  travelVisits:state.travelVisits?structuredClone(state.travelVisits):undefined,
+  terrainCrossings:state.terrainCrossings?{...state.terrainCrossings}:undefined,
+  eventDiscard:state.eventDiscard?structuredClone(state.eventDiscard):undefined,
+  resolvedEventIds:state.resolvedEventIds?[...state.resolvedEventIds]:undefined,
   ordinaryDay: state.ordinaryDay ? { ...state.ordinaryDay } : undefined,
   denRest: state.denRest ? { ...state.denRest, receivingCard: state.denRest.receivingCard ? { ...state.denRest.receivingCard } : undefined } : undefined,
   tableau: state.tableau.map((column) => column.map((card) => ({ ...card }))),
@@ -388,7 +415,7 @@ export const cloneState = (state: ProtoState): ProtoState => ({
     stock: tile.stock.map((card) => ({ ...card })),
   })),
   selectedBiomeId: state.selectedBiomeId,
-  worldActors: state.worldActors.map((actor) => ({ ...actor, position: { ...actor.position } })),
+  worldActors: state.worldActors.map((actor) => ({ ...actor, characteristics:actor.characteristics?.slice(), position: { ...actor.position } })),
   worldResourceStacks: state.worldResourceStacks.map((stack) => ({ ...stack, position: { ...stack.position }, ingredients: stack.ingredients ? { ...stack.ingredients } : undefined, build: stack.build ? { ...stack.build, tableau: [...stack.build.tableau] } : undefined })),
   trailRations: state.trailRations,
   haul: { ...state.haul },

@@ -1,0 +1,42 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const {findLayoutDefects}=require('./lib/layout-check.cjs');
+const url=process.env.PROTO_URL||'http://localhost:5178/proto.html';
+(async()=>{const browser=await chromium.launch({headless:true});try{
+ for(const [width,height,touch] of [[1280,720,false],[1912,914,true]]){
+  const context=await browser.newContext({viewport:{width,height},hasTouch:touch,deviceScaleFactor:3,reducedMotion:'reduce',permissions:['clipboard-read','clipboard-write']});
+  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const press=async element=>touch?element.tap():element.click();
+  await page.goto(url);const bubble=page.locator('.proto-callout');
+  await bubble.waitFor({state:'visible'});const output=page.getByLabel('Live scenario camera',{exact:true});
+  await page.waitForFunction(()=>document.querySelector('.scenario-camera-details output')?.textContent.includes('Yaw 194.00'));
+  assert.match(await page.locator('.proto-callout-dev').innerText(),/Dialog #0001 · day01.opening · bubble 1\/2/);
+  assert.equal(await bubble.getAttribute('data-callout-id'),'day01.opening');
+  assert.deepEqual(await findLayoutDefects(page,'.proto-day-panel',{parts:'select,button,.proto-day-panel__thought,.proto-day-panel__actions > span,.scenario-camera-details output,.scenario-camera-details > [role="status"]'}),[]);
+  assert.deepEqual(await findLayoutDefects(page,'.proto-callout',{parts:'.proto-callout-content,.proto-callout-dev'}),[]);
+  await page.screenshot({path:`artifacts/scenario-camera-${width}-3x.png`});
+  await bubble.screenshot({path:`artifacts/scenario-callout-reference-${width}-3x.png`});
+  const before=await output.innerText();
+  await press(page.getByRole('button',{name:'Turn table right',exact:true}));
+  await page.waitForFunction(previous=>document.querySelector('.scenario-camera-details output').innerText!==previous,before);
+  await press(page.getByRole('button',{name:'Copy camera + dialog',exact:true}));
+  await page.getByText('Copied camera + dialog',{exact:true}).waitFor();
+  const copied=JSON.parse(await page.evaluate(()=>navigator.clipboard.readText()));
+  assert.equal(copied.dialogue[0].reference,'#0001');assert.equal(copied.dialogue[0].configuration,'day01.opening');
+  assert.equal(copied.dialogue[0].bubble,1);assert.ok(Number.isFinite(copied.camera.yaw));
+  assert.match(await output.innerText(),new RegExp('Yaw '+copied.camera.yaw.toFixed(2)));
+  await press(page.locator('.proto-callout-advance'));
+  assert.match(await page.locator('.proto-callout-dev').innerText(),/Dialog #0001 · day01.opening · bubble 2\/2/);
+  await page.reload();await bubble.waitFor({state:'visible'});
+  assert.equal(await bubble.getAttribute('data-callout-reference'),'#0001');
+  await press(page.getByRole('button',{name:'Restart scenario',exact:true}));await bubble.waitFor({state:'visible'});
+  assert.equal(await bubble.getAttribute('data-callout-reference'),'#0001');
+  await press(page.getByRole('button',{name:'Visit nearby bush',exact:true}));
+  await press(page.getByRole('button',{name:'Auto-Solve',exact:true}).first());
+  await page.waitForFunction(()=>document.querySelector('.proto-callout')?.dataset.calloutId==='day01.sparse-patch',null,{timeout:45000});
+  assert.equal(await bubble.getAttribute('data-callout-reference'),'#0002');
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight>innerHeight),false);
+  assert.deepEqual(errors,[]);console.log('PASS',width,'live camera, clipboard, stable references, pagination, restart/reload, next dialogue, desktop layout',touch?'touch':'mouse');
+  await context.close();
+ }
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

@@ -10,3 +10,10 @@ it('maximizes seven proportional card columns while fitting tall stacks', () => 
   }
   expect(fitTableauCards(440, 350, 7, 5).cardWidth).toBeGreaterThan(53.28);
 });
+
+it('caps cards at the foundation size without changing stack proportions', () => {
+  const layout = fitTableauCards(1600, 800, 7, 5, 90);
+  expect(layout.cardWidth).toBe(90);
+  expect(layout.stackHeight).toBeCloseTo(90 * 88 / 63 + 4 * layout.step);
+  expect(fitTableauCards(320, 180, 7, 5, 90).cardWidth).toBeLessThan(90);
+});

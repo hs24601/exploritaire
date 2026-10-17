@@ -18,27 +18,27 @@ describe('abilities', () => {
   it('scales damage faster than the card count', () => {
     expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(comboPower)).toEqual([1, 2, 3, 5, 7, 9, 11, 14, 17, 20]);
   });
-  it('upgrades in place at the charge breakpoints', () => {
-    expect([1, 3, 4, 6, 7, 10].map((n) => attackFor('hero', n)!.name)).toEqual(['Nip', 'Nip', 'Bite', 'Bite', 'Takedown', 'Takedown']);
+  it('keeps Hero abilities selectable while Mochi retains charge breakpoints', () => {
+    expect([1, 3, 4, 6, 7, 10].map((n) => attackFor('hero', n)!.name)).toEqual(['Nip', 'Nip', 'Nip', 'Nip', 'Nip', 'Nip']);
     expect([1, 4, 7].map((n) => attackFor('mochi', n)!.name)).toEqual(['Scratch', 'Claw', 'Lacerate']);
     expect(attackFor('hero', 0)).toBeNull();
-    expect(attackFor('hero', 7)!.tags).toContain('Knockdown');
+    expect(attackFor('hero', 7, [], 'Takedown')!.effects[0]).toMatchObject({kind:'stun',seconds:2});
     expect(attackFor('mochi', 7)!.effects.map((e) => e.kind)).toEqual(['bleed']);
     expect(nextBreakpoint('hero', 2)).toEqual({ at: 4, label: 'Bite' });
   });
-  it('gives Hero the damage and Mochi the stagger', () => {
+  it('keeps Mochi stagger and Hero fixed damage', () => {
     const hero = attackFor('hero', 6)!, mochi = attackFor('mochi', 6)!;
-    expect(hero.damage).toBeGreaterThan(mochi.damage);
+    expect(hero.damage).toBe(1);
     expect(mochi.stagger).toBeGreaterThan(hero.stagger);
   });
   it('adds fire with Cal only above combo 3', () => {
     expect(attackFor('hero', 3, ['cal'])!.name).toBe('Nip');
     const inferno = attackFor('hero', 4, ['cal'])!;
-    expect(inferno.name).toBe('Inferno Bite');
+    expect(inferno.name).toBe('Inferno Nip');
     expect(inferno.element).toBe('fire');
     expect(inferno.damage).toBe(Math.round(attackFor('hero', 4)!.damage * 1.5));
     expect(inferno.effects.map((e) => e.kind)).toEqual(['burn']);
-    expect(attackFor('hero', 10, ['cal'])!.name).toBe('Inferno Takedown');
+    expect(attackFor('hero', 10, ['cal'], 'Takedown')!.name).toBe('Inferno Takedown');
   });
 });
 
@@ -58,7 +58,7 @@ describe('battle table', () => {
     state = playCard(state, 0, 'hero');
     expect(state.party[0]).toMatchObject({ rank: 4, count: 2, charge: 2 });
     state = applyAttack(state, 'hero', 'dark-slime');
-    expect(state.party[0]).toMatchObject({ rank: 4, count: 2, charge: 0 });
+    expect(state.party[0]).toMatchObject({ rank: 4, count: 2, charge: 1 });
     expect(canPlay(state, 'hero', state.columns[0][state.columns[0].length - 1])).toBe(true);
   });
   it("plays Eric's split: a 1-card Nip finishes the 1 HP slime, the next 9 cards hit the other", () => {
@@ -72,10 +72,11 @@ describe('battle table', () => {
     expect(state.party[0]).toMatchObject({ charge: 9, count: 10 });
     expect(previewAttack(state, 'hero', 'dark-slime')).toBeNull();
     const preview = previewAttack(state, 'hero', 'rear-slime')!;
-    expect(preview.attack.name).toBe('Takedown');
+    expect(preview.attack.name).toBe('Nip');
     state = applyAttack(state, 'hero', 'rear-slime');
     expect(foe(state, 'rear-slime').hp).toBe(preview.hp.after);
-    expect(state.result).toBe('won');
+    expect(state.party[0].charge).toBe(8);
+    expect(state.result).toBeNull();
   });
   it('refills an emptied column and deals a row without touching foundations', () => {
     let state = createBattle(runDeal(1), { mochi: false });
@@ -110,7 +111,7 @@ describe('stagger and the attack timer', () => {
     expect(preview.hp.after).toBe(after.hp);
     expect(preview.stagger.after).toBe(after.stagger);
     expect(preview.timer.after).toBe(after.timer);
-    expect(preview.timer.after).toBeLessThan(preview.timer.before);
+    expect(preview.timer.after).toBe(preview.timer.before);
     expect(preview.effects.map((e) => e.kind)).toEqual(['burn']);
   });
   it('staggers on a full gauge: timer stops, damage taken rises, then the gauge resets', () => {
@@ -126,18 +127,18 @@ describe('stagger and the attack timer', () => {
     state = withCharge(state, 'hero', 4);
     const boosted = previewAttack(state, 'hero', 'dark-slime')!;
     expect(boosted.vulnerable).toBe(true);
-    expect(boosted.damage).toBe(Math.round(attackFor('hero', 4)!.damage * SLIME.vulnerability));
+    expect(boosted.damage).toBe(Math.round((attackFor('hero', 4)!.damage + 1) * SLIME.vulnerability));
     state = tickBattle(state, SLIME.staggerSeconds);
     expect(foe(state)).toMatchObject({ staggered: 0, stagger: 0 });
     expect(foe(tickBattle(state, 1)).timer).toBeGreaterThan(timer);
   });
-  it('hits the actor holding the most charge and resets that charge only', () => {
+  it('hits the actor holding the most AP without destroying the bank', () => {
     let state = withCharge(withCharge(started({ slimes: 1 }), 'hero', 2), 'mochi', 5);
     expect(enemyTarget(state)!.id).toBe('mochi');
     state = tickBattle(state, SLIME.attackSeconds + 0.01);
     const mochi = state.party.find((a) => a.id === 'mochi')!;
     expect(mochi.hp).toBe(mochi.maxHp - SLIME.damage);
-    expect(mochi.charge).toBe(0);
+    expect(mochi.charge).toBe(5);
     expect(state.party[0].charge).toBe(2);
   });
   it('ticks burn and bleed, with stagger raising them too', () => {

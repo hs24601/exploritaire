@@ -1,8 +1,12 @@
 .card-jumbo-backdrop { position: fixed; inset: 0; z-index: 120000; display: grid; place-items: center; background: #020807c9; }
 .card-jumbo { position: relative; width: min(calc(78vh * var(--jumbo-ratio)), 82vw); color: #fff0d2; font-family: 'Classic Pixel', monospace; }
 .card-jumbo__face { width: 100%; aspect-ratio: var(--jumbo-ratio); --classic-card-w: min(calc(78vh * var(--jumbo-ratio)), 82vw); --classic-radius: 14px; }
+.card-jumbo:has(.trading-card__below) { width: min(calc((100vh - 164px) * var(--jumbo-ratio)), 82vw); margin-bottom: 100px; }
 .card-jumbo__close { position: absolute; z-index: 5; right: -12px; top: -22px; width: 44px; height: 44px; border: 2px solid #d9b963; border-radius: 50%; background: #182221; color: #fff0d2; font-size: 28px; }
 .card-jumbo__action { display: block; margin: 12px auto 0; padding: 10px 20px; border: 2px solid #d9b963; background: #243b2c; color: #fff0d2; font-size: 20px; }
+.card-jumbo:has(.event-card-details) { width:min(calc((100dvh - 180px) * var(--jumbo-ratio)),82vw); }
+.card-jumbo__actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:12px; }
+.card-jumbo__actions .card-jumbo__action { margin:0; min-height:44px; font-size:16px; padding:8px; }
 .card-jumbo__face > .playing-card, .card-jumbo__face > .quest-card, .card-jumbo__face > .proto-ordinary-day { width: 100%; height: 100%; transform: none; opacity: 1; }
 .card-jumbo__face .quest-card { padding: 16px; gap: 12px; font-size: 20px; }
 .card-jumbo__face .quest-card__title { font-size: 26px; padding: 10px; }
@@ -22,3 +26,6 @@
 .card-jumbo__face .proto-pond__fish[data-revealed] { background: linear-gradient(145deg,#40202a,#180d16); border-color: #ffd166; }
 .card-jumbo__face .proto-pond__band { font-size: 24px; }
 .card-jumbo__face > .proto-pond__fish:nth-child(n) { transform: none; }
+
+.card-jumbo:has(.trading-card__available) {width:min(calc((100vh - 164px) * var(--jumbo-ratio)),calc(100vw - 280px));transform:translateX(120px);}
+@media(max-width:900px){.card-jumbo:has(.trading-card__available){width:min(calc((100vh - 164px) * var(--jumbo-ratio)),calc(100vw - 190px));transform:translateX(79px);}}

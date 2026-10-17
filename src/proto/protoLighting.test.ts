@@ -23,8 +23,8 @@ describe('table lighting scaffold', () => {
 describe('light sampling', () => {
   const lamp = { id: 'lamp', position: { x: 0, y: 0 }, radius: 3, strength: 0.85 };
 
-  it('reports full light at noon and the moonlight floor at night away from lights', () => {
-    expect(sampleTableLight(12, { x: 500, y: 0 }, [lamp])).toMatchObject({ percent: 100, level: 'bright' });
+  it('keeps noon dim and the moonlight floor at night away from lights', () => {
+    expect(sampleTableLight(12, { x: 500, y: 0 }, [lamp])).toMatchObject({ percent: 38, level: 'dim' });
     const night = sampleTableLight(0, { x: 500, y: 0 }, [lamp]);
     expect(night.total).toBeCloseTo(AMBIENT_FLOOR);
     expect(night.level).toBe('dark');

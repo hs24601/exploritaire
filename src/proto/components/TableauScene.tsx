@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { BIOME_EDGE_SCENERY } from '../protoData';
 import type { TableauLightRig } from '../tableauLighting';
-import { getTableLighting, rgba } from '../protoLighting';
+import { getVisualTableLighting, rgba } from '../protoLighting';
 import { detectFxQuality } from '../atmosphere';
 import { SpriteStandeeArt } from './SpriteStandee';
+import { useArtStyle } from '../artStyle';
+import { scenerySprite } from '../sceneryArt';
+import type { CardBiome } from '../biomeCardArt';
+import { BiomeCardBackgroundProvider } from './BiomeCardBackground';
 
 /** Decoration stays behind the cards and never participates in hit testing. */
-export function TableauScene({ children, immersive, terrain, rig, hours, fillScenery = false }: {
+export function TableauScene({ children, immersive, terrain, rig, hours, fillScenery = false, biome }: {
   children: ReactNode; immersive: boolean; terrain: 'woods' | 'water'; rig: TableauLightRig; hours: number; fillScenery?: boolean;
+  biome?: CardBiome;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [sceneryHeight, setSceneryHeight] = useState(150);
@@ -17,7 +22,8 @@ export function TableauScene({ children, immersive, terrain, rig, hours, fillSce
     observer.observe(ref.current);
     return () => observer.disconnect();
   }, [fillScenery]);
-  const sky = getTableLighting(hours);
+  const sky = getVisualTableLighting(hours);
+  const artStyle=useArtStyle();
   const props = BIOME_EDGE_SCENERY[terrain];
   // The effects tier is fixed for the session, as on the table.
   const [particles] = useState(() => detectFxQuality() === 'high');
@@ -49,13 +55,13 @@ export function TableauScene({ children, immersive, terrain, rig, hours, fillSce
           return <span key={index} className="proto-tableau-scenery__prop" style={fillScenery
             ? { left: `${index * 17 + (layer % 2 ? 7 : 0)}%`, bottom: `${[60,32,3][layer] + (index % 3) * 2}%`, width: size, height: size, transform: 'translateX(-50%)' }
             : { left: `${index * 17 - 2}%`, bottom: `${8 + (index % 3) * 5}%`, width: layer === 2 ? 70 : 88, height: layer === 2 ? 55 : 150 }}>
-            <SpriteStandeeArt sprite={sprite} lighting={rig.standee(x, y, 88)} size={size} />
+            <SpriteStandeeArt sprite={scenerySprite(sprite,artStyle)!} lighting={rig.standee(x, y, 88)} size={size} />
           </span>;
         })}
       </div>)}
       <div className="proto-tableau-scenery__mist" />
       {particles && <div className="proto-tableau-scenery__motes">{[0, 1, 2, 3, 4, 5].map(i => <i key={i} style={{ left: `${12 + i * 15}%`, top: `${25 + i % 3 * 20}%`, animationDelay: `${-i * 1.7}s` }} />)}</div>}
     </div>}
-    {children}
+    <BiomeCardBackgroundProvider biome={biome ?? { terrain }}>{children}</BiomeCardBackgroundProvider>
   </div>;
 }

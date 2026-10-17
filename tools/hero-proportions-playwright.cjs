@@ -11,6 +11,7 @@ const fs=require('node:fs');
    const {HERO_DIRECTIONAL_SPRITE}=await import('/src/proto/directionalSprites.ts');
    const {MOCHI_DIRECTIONAL_SPRITE}=await import('/src/proto/mochiSprite.ts');
    const {HERO_SITTING_DIRECTIONAL_SPRITE}=await import('/src/proto/heroSittingSprite.ts');
+   const {HERO_WALKING_DIRECTIONAL_SPRITE}=await import('/src/proto/heroWalkingSprite.ts');
    const {BATTLE_SPRITE_ASSETS}=await import('/src/proto/battleSpriteAssets.ts');
    const loader=new THREE.TextureLoader(),textures={};
    for(const[key,file]of Object.entries(BATTLE_SPRITE_ASSETS)){
@@ -41,7 +42,7 @@ const fs=require('node:fs');
     }return largest/total;
    };
    const measurements=[];
-   for(const definition of [HERO_DIRECTIONAL_SPRITE,MOCHI_DIRECTIONAL_SPRITE,HERO_SITTING_DIRECTIONAL_SPRITE]){
+   for(const definition of [HERO_DIRECTIONAL_SPRITE,MOCHI_DIRECTIONAL_SPRITE,HERO_SITTING_DIRECTIONAL_SPRITE,...HERO_WALKING_DIRECTIONAL_SPRITE.animation.frames]){
    const library=createDirectionalSpriteLibrary(textures,definition),height=definition.id==='mochi'?1.85:2.55;
    for(const tier of ['low','high','top'])for(let direction=0;direction<(tier==='top'?1:8);direction++){
     const actor=library.create(height),scene=new THREE.Scene();scene.background=new THREE.Color(0x223038);scene.add(actor.root);
@@ -52,7 +53,7 @@ const fs=require('node:fs');
     const group=new THREE.Group();group.matrixAutoUpdate=false;group.matrix.copy(actor.facing.matrixWorld);referenceScene.add(group);
     const geometry=directionalPartGeometry({...part,clip:frame.outline},textures[frame.source].image);
     const material=new THREE.MeshBasicMaterial({map:textures[frame.source],transparent:false,alphaTest:.45,side:THREE.DoubleSide,forceSinglePass:true});
-    const mesh=new THREE.Mesh(geometry,material);mesh.scale.set(height*part.rect[2]/part.rect[3],height,1);mesh.position.y=height/2;group.add(mesh);
+    const mesh=new THREE.Mesh(geometry,material);mesh.scale.set(height*part.height*part.rect[2]/part.rect[3],height*part.height,1);mesh.position.y=part.y*height;group.add(mesh);
     const reference=render(referenceScene),referenceMask=mask(reference),actualMask=mask(actual);let missing=0,extra=0,colorMismatch=0,colorError=0,visible=0,interiorMissing=0;
     for(let i=0;i<referenceMask.length;i++){
      if(referenceMask[i])visible++;

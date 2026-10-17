@@ -1,9 +1,14 @@
 /** Small, sprite-derived voxel solids. X/Z are ground axes; Y is height.
  * Keep this independent of DOM/WebGL so the same model can supply views,
  * shadows and future world renderers. Source colours wrap around the solid. */
-export type PropVolumeRecipe = { bands: readonly number[]; depth: number; trim: boolean; heightScale?: number; shape?: 'cave' | 'berry-bush'; symmetry?: 'asymmetric'; facing?: 'north' | 'east' | 'south' | 'west' };
+import { buildPaintedPropVolume } from './paintedPropVolume';
+export type PropVolumeRecipe = { bands: readonly number[]; depth: number; trim: boolean; heightScale?: number; berries?: boolean; shape?: 'cave' | 'berry-bush'; symmetry?: 'asymmetric'; facing?: 'north' | 'east' | 'south' | 'west'; surface?: 'paint'; instances?: readonly { x:number; z:number; scale:number; heading?:number }[] };
 export const propVolumeHeading = (recipe?: PropVolumeRecipe) => ({ north: 180, east: 90, south: 0, west: 270 }[recipe?.facing ?? 'south']);
 export const PROP_VOLUME_RECIPES: Readonly<Record<string, PropVolumeRecipe>> = {
+  'pine-relief-v1.png': { bands: [0, 1], depth: .9, trim: true, surface: 'paint', instances: [
+    {x:-.25,z:.23,scale:.43,heading:-24}, {x:0,z:-.24,scale:.52,heading:18}, {x:.27,z:.23,scale:.39,heading:140},
+  ] },
+  'pine-edge-relief-v1.png': { bands: [0, 1], depth: .9, trim: true, surface: 'paint' },
   'small_woods_pines.png': { bands: [0, .44, 1], depth: .85, trim: true },
   'woods_side.svg': { bands: [0, 1], depth: .9, trim: false },
   'woods_front.svg': { bands: [0, .55, 1], depth: .85, trim: false },
@@ -17,14 +22,17 @@ export const PROP_VOLUME_RECIPES: Readonly<Record<string, PropVolumeRecipe>> = {
   // Fixed world-north mouth, away from the mountains south of the den.
   'hero-den-standee-v2.png': { bands: [0, 1], depth: .95, trim: true, heightScale: .5, shape: 'cave', symmetry: 'asymmetric', facing: 'north' },
   'hero-den-standee-v3.png': { bands: [0, 1], depth: .95, trim: true, heightScale: .5, shape: 'cave', symmetry: 'asymmetric', facing: 'north' },
+  // Historical carve experiment. The selected v2 painting uses the cutout path.
+  'hero-den-sprite-v1.png': { bands: [0, 1], depth: .95, trim: true, heightScale: .5, shape: 'cave', symmetry: 'asymmetric', facing: 'north' },
+  'berry-bush-empty-v1.svg': { bands: [0, 1], depth: 1, trim: true, heightScale: .3, shape: 'berry-bush', berries: false },
   'berry-bush.svg': { bands: [0, 1], depth: 1, trim: true, heightScale: .3, shape: 'berry-bush' },
 };
 export function propVolumeRecipe(src?: string) {
   return src ? PROP_VOLUME_RECIPES[src.split('/').pop()!.split('?')[0]] : undefined;
 }
 type Point = readonly [number, number, number];
-export type VolumeFace = { vertices: readonly Point[]; normal: Point; color: readonly [number, number, number] };
-export type PropVolume = { faces: VolumeFace[]; width: number; height: number; depth: number };
+export type VolumeFace = { vertices: readonly Point[]; normal: Point; color: readonly [number, number, number]; colors?: readonly (readonly [number,number,number])[]; normals?: readonly Point[] };
+export type PropVolume = { faces: VolumeFace[]; width: number; height: number; depth: number; surface?: 'paint'; paintShading?: boolean };
 const SIDES: readonly { normal: Point; corners: readonly Point[] }[] = [
   { normal: [1,0,0], corners: [[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
   { normal: [-1,0,0], corners: [[0,0,1],[0,1,1],[0,1,0],[0,0,0]] },
@@ -49,7 +57,9 @@ function scaleVolumeHeight(volume: PropVolume, scale = 1): PropVolume {
  * cross section, including narrow trunks and the canopy's stepped branches.
  * Bands keep neighbouring trees/peaks independent instead of making a barrel. */
 export function buildPropVolume(width: number, height: number, rgba: ArrayLike<number>, recipe: PropVolumeRecipe): PropVolume {
-  if (recipe.shape === 'berry-bush') return scaleVolumeHeight(buildBerryBushVolume(), recipe.heightScale);
+  if (recipe.surface === 'paint' && recipe.shape !== 'cave')
+    return buildPaintedPropVolume(width, height, rgba, recipe);
+  if (recipe.shape === 'berry-bush') return scaleVolumeHeight(buildBerryBushVolume(recipe.berries !== false), recipe.heightScale);
   let left = width, right = -1, top = height, bottom = -1;
   for (let y=0; y<height; y++) for (let x=0; x<width; x++) if (rgba[(y*width+x)*4+3] > 100) {
     left=Math.min(left,x); right=Math.max(right,x); top=Math.min(top,y); bottom=Math.max(bottom,y);
@@ -72,20 +82,31 @@ export function buildPropVolume(width: number, height: number, rgba: ArrayLike<n
       // Offset separate crowns/peaks slightly in depth, fixed in world space.
       // Each peak/crown uses the tile's depth budget; splitting a cluster
       // into horizontal bands must not make its side view wafer-thin.
-      const cz=d/2+(band%2 ? .04 : -.04)*d, rz=Math.max(.6,rx*recipe.depth*w/Math.max(1,to-from));
+      const cz=d/2+(band%2 ? .04 : -.04)*d;
+      // Cave geometry follows a broad dome, independent of the front image's
+      // painted arch bands. Sweeping those bands produced concentric shelves.
+      if(recipe.shape==='cave') {
+        const dome=Math.sqrt(Math.max(0,1-((h-y-.5)/h)**2));
+        a=Math.max(from,Math.floor(w/2-w*.5*dome));
+        b=Math.min(to-1,Math.ceil(w/2+w*.5*dome)-1);
+      }
+      const caveRadius=(b-a+1)/2;
+      const rowCx=recipe.shape==='cave'?w/2:cx;
+      const rowRx=recipe.shape==='cave'?caveRadius:rx;
+      const rz=Math.max(.6,rowRx*recipe.depth*w/Math.max(1,to-from));
       // Project each exposed axis onto the source row. Extruding X colours
       // through Z stretched the sprite's dark outline into entire side slabs.
       // Resolve holes once per row, then use the same palette on both axes.
       const rowSamples=Array.from({length:b-a+1},(_,offset)=>{
         const x=a+offset;
-        for(let step=0;step<=b-a;step++)for(const candidate of [x-step,x+step]) {
-          if(candidate>=a&&candidate<=b&&rgba[((y+top)*width+candidate+left)*4+3]>100)
+        for(let step=0;step<=(recipe.shape==='cave'?w:b-a);step++)for(const candidate of [x-step,x+step]) {
+          if(candidate>=(recipe.shape==='cave'?0:a)&&candidate<=(recipe.shape==='cave'?w-1:b)&&rgba[((y+top)*width+candidate+left)*4+3]>100)
             return ((y+top)*width+candidate+left)*4;
         }
         return -1;
       });
       for(let x=a;x<=b;x++) for(let z=0;z<d;z++) {
-        if(((x+.5-cx)/rx)**2+((z+.5-cz)/rz)**2>1)continue;
+        if(((x+.5-rowCx)/rowRx)**2+((z+.5-cz)/rz)**2>1)continue;
         // Carve a front-facing arch into the cave, with a thick roof, side
         // walls and a closed rear. Never sweep the entrance into a solid rock.
         if(caveHollow(x,y,z))continue;
@@ -113,8 +134,22 @@ export function buildPropVolume(width: number, height: number, rgba: ArrayLike<n
       // on the alcove's back wall made the carved mouth read as filled rock.
       const inside=nx>=0&&nx<w&&ny>=0&&ny<h&&nz>=0&&nz<d&&caveHollow(nx,ny,nz);
       const ink=inside?((y+top)*width+x+left)*4:sample;
+      let stoneInk=ink;
+      if(recipe.shape==='cave'&&!inside) {
+        // Paint the roof with roof stone, not concentric copies of the dark
+        // entrance outline. Spread a broad upper-source patch across X/Z.
+        const paintRow=recipe.surface==='paint' ? .08+.27*(.55*y/Math.max(1,h-1)+.45*z/Math.max(1,d-1)) : .12+.22*z/Math.max(1,d-1);
+        const sourceY=top+Math.min(h-1,Math.floor(h*paintRow));
+        const sourceX=left+(recipe.surface==='paint'
+          ? Math.max(0,Math.min(w-1,Math.round(x+w*(.22*(y/Math.max(1,h-1)-.5)+.1*(z/Math.max(1,d-1)-.5))))) : x);
+        for(let step=0;step<w;step++) {
+          const candidate=Math.max(left,Math.min(right,sourceX+(step%2?-1:1)*Math.ceil(step/2)));
+          const offset=(sourceY*width+candidate)*4;
+          if(rgba[offset+3]>100){stoneInk=offset;break;}
+        }
+      }
       const shade=inside ? .35 : 1;
-      faces.push({ normal, color:[rgba[ink]*shade,rgba[ink+1]*shade,rgba[ink+2]*shade],
+      faces.push({ normal, color:[rgba[stoneInk]*shade,rgba[stoneInk+1]*shade,rgba[stoneInk+2]*shade],
         vertices:corners.map(([a,b,c])=>[(x+a-w/2)*unit,(h-y-1+b)*unit,(z+c-d/2)*unit] as Point) });
     }
   }
@@ -125,12 +160,15 @@ export function buildPropVolume(width: number, height: number, rgba: ArrayLike<n
     const rotate=([x,y,z]:Point):Point=>[c*x+s*z,y,-s*x+c*z];
     face.normal=rotate(face.normal);face.vertices=face.vertices.map(rotate);
   }
-  return scaleVolumeHeight({ faces, width:w*unit, height:h*unit, depth:d*unit }, recipe.heightScale);
+  return scaleVolumeHeight({ faces, width:w*unit, height:h*unit, depth:d*unit, surface:recipe.surface,
+    // Cave stone needs the existing diffuse contrast to distinguish its roof
+    // and hollow. Smooth Paint sampling is independent of that light response.
+    paintShading:recipe.shape==='cave'?false:undefined }, recipe.heightScale);
 }
 
 /** Authored low shrubs, rather than a forest silhouette swept into a cylinder.
  * Fruit is actual geometry on all sides, so orbit reveals different clusters. */
-function buildBerryBushVolume(): PropVolume {
+function buildBerryBushVolume(berries = true): PropVolume {
   const w=32,h=23,d=32,unit=.92/w;
   const cells=new Int16Array(w*h*d).fill(-1), at=(x:number,y:number,z:number)=>(y*d+z)*w+x;
   const palette: readonly (readonly [number,number,number])[] = [
@@ -151,7 +189,7 @@ function buildBerryBushVolume(): PropVolume {
     sphere(x,12,z,5,8,5);
     sphere(x-1,16,z,3.8,6,3.8);
     // Fruit belongs to each shrub, with clusters on every exposed side.
-    for(const [dx,dy,dz] of [[0,13,-4],[4,11,0],[0,12,4],[-4,14,0],[1,20,0]]) {
+    if (berries) for(const [dx,dy,dz] of [[0,13,-4],[4,11,0],[0,12,4],[-4,14,0],[1,20,0]]) {
       sphere(x+dx,dy,z+dz,1.1,1.4,1.1,true);
       sphere(x+dx+.8,dy-2,z+dz+.4,1,1.2,1,true);
     }
@@ -170,6 +208,9 @@ function buildBerryBushVolume(): PropVolume {
 
 export type VolumeLight = { direction: Point; brightness: number; localDirection: Point; localAmount: number; tint: readonly [number,number,number] };
 export const VOLUME_RASTER_WIDTH=128, VOLUME_RASTER_HEIGHT=160;
+export const PAINT_VOLUME_RASTER_WIDTH=384, PAINT_VOLUME_RASTER_HEIGHT=480;
+export const propVolumeRaster = (volume:PropVolume, shadow=false) => volume.surface === 'paint' && !shadow
+  ? {width:PAINT_VOLUME_RASTER_WIDTH,height:PAINT_VOLUME_RASTER_HEIGHT} : {width:VOLUME_RASTER_WIDTH,height:VOLUME_RASTER_HEIGHT};
 // Fixed projection bounds and a fixed foot anchor; never fit each view to its
 // visible bounds (that would make trees inflate and their feet slide on orbit).
 export const VOLUME_VIEW={ left:-.75, top:-1.2, width:1.5, height:1.875, footY:1.2/1.875 };
@@ -178,17 +219,17 @@ export function propVolumeView(volume: PropVolume) {
   const top=Math.min(VOLUME_VIEW.top,-Math.hypot(volume.height,Math.hypot(volume.width,volume.depth)/2)-.1);
   return {...VOLUME_VIEW,top,height:.675-top};
 }
-export function shadeVolumeFace(face:VolumeFace, light:VolumeLight, monochrome=false) {
+export function shadeVolumeFace(face:VolumeFace, light:VolumeLight, monochrome=false,paint=false) {
   const dot=(a:Point,b:Point)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
   const length=Math.max(.001,Math.hypot(...light.direction)),localLength=Math.max(.001,Math.hypot(...light.localDirection));
-  const shade=(.64+.48*Math.max(0,dot(face.normal,light.direction)/length))*light.brightness;
+  const shade=((paint?.8:.64)+(paint?.25:.48)*Math.max(0,dot(face.normal,light.direction)/length))*light.brightness;
   const local=Math.max(0,dot(face.normal,light.localDirection)/localLength)*light.localAmount*.38;
   return face.color.map((value,i)=>Math.min(255, Math.max(0,(monochrome?[45,60,73][i]:value)*shade+light.tint[i]*local)));
 }
 export function renderPropVolume(volume:PropVolume, yaw:number, elevation:number, light:VolumeLight, monochrome=false) {
   const bounds=propVolumeView(volume);
-  const w=VOLUME_RASTER_WIDTH,h=VOLUME_RASTER_HEIGHT, pixels=new Uint8ClampedArray(w*h*4), depths=new Float32Array(w*h).fill(-Infinity);
-  const a=yaw*Math.PI/180,e=elevation*Math.PI/180,c=Math.cos(a),s=Math.sin(a),ce=Math.cos(e),se=Math.sin(e);
+  const {width:w,height:h}=propVolumeRaster(volume), pixels=new Uint8ClampedArray(w*h*4), depths=new Float32Array(w*h).fill(-Infinity);
+  const a=((yaw%360+360)%360)*Math.PI/180,e=elevation*Math.PI/180,c=Math.cos(a),s=Math.sin(a),ce=Math.cos(e),se=Math.sin(e);
   const view:Point=[s*ce,se,c*ce];
   const project=([x,y,z]:Point):Point=>[(c*x-s*z-bounds.left)/bounds.width*w,
     ((s*x+c*z)*se-y*ce-bounds.top)/bounds.height*h, s*x*ce+y*se+c*z*ce];
@@ -196,7 +237,9 @@ export function renderPropVolume(volume:PropVolume, yaw:number, elevation:number
   for(const face of volume.faces) {
     if(dot(face.normal,view)<=0)continue;
     const vertices=face.vertices.map(project);
-    const color=shadeVolumeFace(face,light,monochrome);
+    const paint=volume.surface==='paint'&&volume.paintShading!==false;
+    const color=shadeVolumeFace(face,light,monochrome,paint);
+    const colors=face.colors?.map((ink,i)=>shadeVolumeFace({...face,color:ink,normal:face.normals?.[i]??face.normal},light,monochrome,paint));
     for(const indices of [[0,1,2],[0,2,3]]) {
       const [p,q,r]=indices.map(i=>vertices[i]);
       const area=(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);
@@ -210,7 +253,9 @@ export function renderPropVolume(volume:PropVolume, yaw:number, elevation:number
         if(u<-.0001||v<-.0001||t<-.0001)continue;
         const depth=u*p[2]+v*q[2]+t*r[2],i=y*w+x;
         if(depth<depths[i])continue;
-        depths[i]=depth;pixels[i*4]=color[0];pixels[i*4+1]=color[1];pixels[i*4+2]=color[2];pixels[i*4+3]=255;
+        depths[i]=depth;
+        for(let channel=0;channel<3;channel++)pixels[i*4+channel]=colors ? u*colors[indices[0]][channel]+v*colors[indices[1]][channel]+t*colors[indices[2]][channel] : color[channel];
+        pixels[i*4+3]=255;
       }
     }
   }

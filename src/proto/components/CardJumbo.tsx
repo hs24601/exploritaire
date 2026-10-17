@@ -2,7 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode,
 import { createPortal } from 'react-dom';
 import './CardJumbo.css';
 
-type JumboCard = { title: string; content: ReactNode; ratio?: number; action?: () => void; actionLabel?: string };
+type JumboCard = { title: string; content: ReactNode; ratio?: number; action?: () => void; actionLabel?: string;
+  actions?: { label: string; run: () => void }[] };
 const Context = createContext<{ open: (card: JumboCard) => void; close: () => void } | null>(null);
 export const useCardJumbo = () => useContext(Context);
 
@@ -22,7 +23,11 @@ export function JumboActionCard({children,onClick,disabled,cardRef,...props}:But
 export function CardJumboProvider({ children }: { children: ReactNode }) {
   const [card,setCard]=useState<JumboCard|null>(null);
   const host=useRef<HTMLDivElement>(null),previousFocus=useRef<HTMLElement|null>(null);
-  const close=()=>setCard(null);
+  const close=()=>{
+    const abilityClose=host.current?.querySelector<HTMLButtonElement>('.trading-card-ability-view [aria-label="Close ability card"]');
+    if(abilityClose){abilityClose.click();return;}
+    setCard(null);
+  };
   useEffect(()=>{
     if(!card)return;
     const root=document.getElementById('root'),wasInert=root?.inert??false;
@@ -30,9 +35,9 @@ export function CardJumboProvider({ children }: { children: ReactNode }) {
     if(root){root.inert=true;root.classList.add('details-card-game-blurred');}
     host.current?.querySelector<HTMLButtonElement>('.card-jumbo__close')?.focus();
     const key=(event:KeyboardEvent)=>{
-      if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();close();}
+      if(event.key==='Escape'){if(host.current?.querySelector('.trading-card-ability-view'))return;event.preventDefault();event.stopImmediatePropagation();close();}
       if(event.key==='Tab'){
-        const controls=Array.from(host.current?.querySelectorAll<HTMLElement>('button:not(:disabled),[tabindex="0"]')??[]);
+        const controls=Array.from(host.current?.querySelectorAll<HTMLElement>('button:not(:disabled),[tabindex="0"]')??[]).filter(control=>!control.closest('[inert]')&&getComputedStyle(control).visibility!=='hidden');
         const first=controls[0],last=controls[controls.length-1];
         if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
         else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
@@ -52,6 +57,7 @@ export function CardJumboProvider({ children }: { children: ReactNode }) {
         <button type="button" className="card-jumbo__close" aria-label="Close jumbo card" onClick={close}>×</button>
         <div className="card-jumbo__face" onClick={event=>{if((event.target as HTMLElement).closest('.proto-ordinary-day__actions button'))close();}}>{card.content}</div>
         {card.action&&<button type="button" className="card-jumbo__action" onClick={()=>{close();card.action?.();}}>{card.actionLabel??'Play card'}</button>}
+        {card.actions&&<div className="card-jumbo__actions">{card.actions.map(action=><button key={action.label} type="button" className="card-jumbo__action" onClick={()=>{close();action.run();}}>{action.label}</button>)}</div>}
       </div>
     </div>,document.body)}
   </Context.Provider>;

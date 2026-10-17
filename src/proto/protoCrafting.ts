@@ -1,6 +1,6 @@
 export const WORLD_ITEMS = {
   wood: { label: 'Wood', glyph: '🪵', kind: 'resource', quality: 0, food: false },
-  berries: { label: 'Berries', glyph: '🫐', kind: 'resource', quality: 0, food: true },
+  mana: { manaInfused: true, label: 'Mana', glyph: '✨', kind: 'resource', quality: 0, food: true },
   herbs: { label: 'Edible herbs', glyph: '🌿', kind: 'resource', quality: 0, food: true },
   // Pond species, one per rank (rules/fishing.ts POND_SPECIES), and the lucky glowfish.
   minnow: { label: 'Minnow', glyph: '🐟', kind: 'resource', quality: 0, food: true },

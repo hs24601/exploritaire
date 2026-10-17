@@ -91,7 +91,8 @@ async function checkLiveFootprints(page) {
       await page.getByRole('button', { name: 'Reset View', exact: true }).click(); await page.waitForTimeout(500);
       await dragOverMountain(page, touch);
       assert.equal(await page.locator('[data-physical-world] [data-board-piece="actor"]').count(), await page.locator('[data-board-piece="actor"]').count());
-      assert.equal(await page.locator('.proto-table-actor-layer [data-actor-ghost]').count(), await page.locator('[data-board-piece="actor"]').count());
+      assert.equal(await page.locator('[data-actor-ghost]').count(), 0, 'Cutouts reveal original actors without an x-ray copy');
+      assert.ok(await page.locator('[data-environment-prop]').evaluateAll(props => props.every(prop => getComputedStyle(prop).opacity === '1')), 'Scenery stays opaque outside localized openings');
       const actor = page.locator('[data-board-piece="actor"]').first(); const box = await actor.boundingBox();
       if (touch) await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height * .65);
       else await page.mouse.click(box.x + box.width / 2, box.y + box.height * .65);

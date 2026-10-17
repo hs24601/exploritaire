@@ -1,7 +1,8 @@
+import { sceneryHeightScale, sceneryWidthScale } from '../sceneryHeight';
 import type { CameraState } from '../../hooks/useCameraControls';
 import { DEFAULT_LIGHT_COLOR, DEFAULT_LIGHT_RADIUS, DEFAULT_LIGHT_STRENGTH, hexToRgb, lightFlicker, type TableLight, type TableLightFrame } from '../protoLighting';
 import type { TableTilt } from '../tableTilt';
-import { ATMOSPHERE_ATLAS_SIZE, ATMOSPHERE_EXTENT, ATMOSPHERE_HEIGHT, atmosphereSky, projectAtmospherePoint, type AtmosphereCanopy, type AtmosphereScene } from '../volumetricAtmosphere';
+import { ATMOSPHERE_ATLAS_SIZE, ATMOSPHERE_EXTENT, ATMOSPHERE_HEIGHT, atmosphereSky, atmospherePointAtHeight, nightFogOpacity, projectAtmospherePoint, type AtmosphereCanopy, type AtmosphereScene } from '../volumetricAtmosphere';
 import { seeded } from '../atmosphere';
 import { projectBillboard } from '../actorOcclusion';
 
@@ -43,6 +44,10 @@ export type AtmosphereDraw = {
   width: number; height: number; camera: CameraState; tilt: TableTilt;
   frame: TableLightFrame; lights: readonly TableLight[]; time: number;
   scene: AtmosphereScene; scale: number;
+  overhead?: boolean;
+  actorGuards?: readonly { image: HTMLImageElement | HTMLCanvasElement; x: number; y: number; width: number; height: number; angle: number }[];
+  cardGuards?: readonly (readonly { x:number; y:number }[])[];
+  routeGuards?: readonly (readonly { x: number; y: number }[])[];
   /** Screen rectangles protected from the veil: labels and camera controls. */
   guards: readonly { left: number; top: number; right: number; bottom: number }[];
 };
@@ -58,10 +63,11 @@ uniform vec3 uTilt; // cos, sin, perspective
 uniform float uAimY;
 uniform vec3 uColor;
 uniform vec2 uSlope;
-uniform float uStrength, uMist, uTime;
+uniform float uStrength, uMist, uTime, uNight, uOverhead;
 uniform sampler2D uAtlas, uSprites;
 uniform vec4 uLights[4]; // position xy, radius, power
 uniform vec3 uLightColor[4];
+uniform float uLightHeight[4];
 const float EXTENT=${ATMOSPHERE_EXTENT.toFixed(1)}, HEIGHT=${ATMOSPHERE_HEIGHT.toFixed(1)};
 float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
 float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
@@ -72,9 +78,15 @@ float y=(screen.y+z*uCamera.z)*uTilt.z/(uTilt.x*uTilt.z+screen.y*uTilt.y);
 float x=screen.x*(uTilt.z-y*uTilt.y)/uTilt.z;
 float c=cos(uCamera.w),s=sin(uCamera.w);
 return (vec2(c*x+s*y,-s*x+c*y)-uCamera.xy)/uCamera.z; }
-vec2 field(vec2 p){ vec2 uv=(p+EXTENT)/(2.0*EXTENT);
-if(any(lessThan(uv,vec2(0)))||any(greaterThan(uv,vec2(1))))return vec2(0);
-return texture2D(uAtlas,uv).rg; }
+vec3 field(vec2 p){ vec2 uv=(p+EXTENT)/(2.0*EXTENT);
+if(any(lessThan(uv,vec2(0)))||any(greaterThan(uv,vec2(1))))return vec3(0);
+return texture2D(uAtlas,uv).rgb; }
+float lampVisibility(vec2 p,vec2 lamp,float height){
+float shade=0.0;
+for(int j=0;j<4;j++){float t=(float(j)+0.5)/4.0;
+float h=field(mix(p,lamp,t)).r*HEIGHT;
+shade=max(shade,smoothstep(height*t+3.0,height*t+9.0,h));}
+return 1.0-shade*0.97; }
 float visibility(vec2 p,float z){
 float shade=0.0;
 // Four stratified taps toward the sky catch nearby and distant canopy shadows.
@@ -98,9 +110,9 @@ vec2 screen=pixel-uView*0.5;
 vec3 scatter=vec3(0);float trans=1.0;
 // Integrate front-to-back through a shallow billboard volume. Fixed work per
 // pixel; only the render target scales down when frames are slow.
-for(int i=0;i<8;i++){
+if(uNight<0.999 && uOverhead<0.5)for(int i=0;i<8;i++){
 float z=HEIGHT*(1.0-(float(i)+0.5)/8.0);
-vec2 p=worldAt(screen,z);vec2 f=field(p);
+vec2 p=worldAt(screen,z);vec3 f=field(p);
 float inside=1.0-smoothstep(345.0,420.0,max(abs(p.x),abs(p.y)));
 float n=noise(p*0.016+vec2(uTime*0.018,z*0.014));
 float detail=noise(p*0.043-vec2(uTime*0.009,z*0.027));
@@ -113,7 +125,7 @@ float vis=visibility(p,z);
 float beam=beams(p,z)*vis;
 vec3 light=uColor*(0.035+beam*uStrength*7.0);
 for(int k=0;k<4;k++){
-float d=length(vec3(p-uLights[k].xy,z-16.0));
+float d=length(vec3(p-uLights[k].xy,z-uLightHeight[k]));
 float fall=max(0.0,1.0-d/max(1.0,uLights[k].z));
 light+=uLightColor[k]*fall*fall*uLights[k].w*(1.0-step(360.0,max(abs(p.x),abs(p.y))));
 }
@@ -123,11 +135,30 @@ scatter+=trans*extinction*light;trans*=1.0-extinction;
 }
 // Black alpha marks sprite ink; red marks protected labels and controls.
 vec4 guard=texture2D(uSprites,pixel/uView);
-float protect=(1.0-guard.a*0.92)*(1.0-guard.r*0.95);
+float protect=(1.0-guard.a*mix(0.92,0.08,uNight))*(1.0-guard.r*0.95);
 // Premultiplied output; a small cool extinction veil gives the bright air body.
 float alpha=(1.0-trans)*0.85*protect;
 vec3 fog=vec3(0.040,0.052,0.064)*alpha;
-gl_FragColor=vec4((scatter*0.85+fog)*protect,alpha);
+vec3 dayColor=(scatter*0.85+fog)*protect;
+// A low, rolling extinction layer blankets the ground and its relief. Local
+// emitters open pockets with real radius/power; canopy taps block their reach.
+vec2 ground=worldAt(screen,0.0);vec3 terrain=field(ground);
+float rolling=noise(ground*0.019+vec2(uTime*0.008,-uTime*0.005));
+float depth=(2.7+terrain.g*3.2+terrain.b*1.8)*(0.8+rolling*0.4);
+float opening=0.0;vec3 glow=vec3(0.0);
+for(int k=0;k<4;k++){
+float d=length(ground-uLights[k].xy)/max(1.0,uLights[k].z);
+float fall=pow(max(0.0,1.0-d*d),2.0);
+float power=fall*uLights[k].w*lampVisibility(ground,uLights[k].xy,uLightHeight[k]);
+opening+=power;glow+=uLightColor[k]*power;}
+// Sprite ink uses illumination at its owning prop, so a tall peak cannot
+// inherit alternating ground-light bands from cells projected behind it.
+float clearAir=mix(min(0.94,opening/0.48),min(0.94,guard.g/max(0.001,guard.a)),guard.a);
+float nightAlpha=(1.0-exp(-depth))*(1.0-clearAir)*protect*mix(1.0,0.93,uOverhead);
+vec3 nightColor=(vec3(0.006,0.009,0.016)+rolling*vec3(0.003,0.004,0.007))*nightAlpha;
+// A restrained lit rim gives the opaque air body without washing out the dark.
+nightColor+=glow*0.055*nightAlpha;
+gl_FragColor=vec4(mix(dayColor,nightColor,uNight),mix(alpha,nightAlpha,uNight));
 }`;
 
 /** Cached world atlas: R canopy height, G biome mist density. Camera movement
@@ -135,6 +166,7 @@ gl_FragColor=vec4((scatter*0.85+fog)*protect,alpha);
 class SceneAtlas {
   canvas = document.createElement('canvas');
   mask = document.createElement('canvas');
+  ink = document.createElement('canvas');
   profiles = new Map<string, SpriteProfile | null>();
   private key = '';
   private dirty = true;
@@ -143,7 +175,7 @@ class SceneAtlas {
   constructor() { this.canvas.width = this.canvas.height = ATMOSPHERE_ATLAS_SIZE; }
   update(scene: AtmosphereScene, yaw: number) {
     const casters = scene.canopies.filter(c=>c.castsShadow!==false);
-    const key = JSON.stringify([casters,scene.patches,casters.some(c=>c.worldHeading===undefined) ? Math.round(yaw) : 0]);
+    const key = JSON.stringify([casters,scene.patches,scene.concealed,scene.relief,casters.some(c=>c.worldHeading===undefined) ? Math.round(yaw) : 0]);
     if (key !== this.key) { this.key = key; this.dirty = true; }
     for (const canopy of scene.canopies) if (!this.profiles.has(canopy.sprite)) {
       this.profiles.set(canopy.sprite, null);
@@ -163,8 +195,9 @@ class SceneAtlas {
       const profile = this.profiles.get(c.sprite);
       if (!profile) continue;
       const [left, top, right, bottom] = c.trimmed ? profile.bounds : [0, 0, 64, 64];
-      const h = c.trimmed ? Math.min(c.height, c.width / profile.aspect) : c.height;
-      const w = c.trimmed ? h * profile.aspect : c.width;
+      const baseHeight = c.trimmed ? Math.min(c.height, c.width / profile.aspect) : c.height;
+      const h = baseHeight * sceneryHeightScale(c.sprite, c.width, c.height, profile.aspect);
+      const w = (c.trimmed ? baseHeight * profile.aspect : c.width) * sceneryWidthScale(c.sprite, c.width, c.height, profile.aspect);
       ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(-(c.worldHeading ?? yaw * Math.PI / 180));
       for (let column = left; column < right; column++) {
         const height = Math.max(0, profile.columns[column] - (64 - bottom)) / Math.max(1, bottom - top) * h;
@@ -175,6 +208,30 @@ class SceneAtlas {
       }
       ctx.restore();
     }
+    // Height-weighted neighbourhood density. It is built only from visible
+    // relief and stays anchored to its ground footprint at every camera angle.
+    ctx.globalCompositeOperation = 'lighten';
+    for (const c of casters) {
+      const profile = this.profiles.get(c.sprite);
+      if (!profile) continue;
+      const h = (c.trimmed ? Math.min(c.height,c.width/profile.aspect) : c.height)
+        * sceneryHeightScale(c.sprite,c.width,c.height,profile.aspect);
+      const radius = c.width * 0.5 + h * 1.8;
+      const density = ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,radius);
+      density.addColorStop(0,`rgba(0,${Math.round(Math.min(1,h/50)*255)},0,1)`);
+      density.addColorStop(0.3,`rgba(0,${Math.round(Math.min(1,h/70)*255)},0,0.9)`);
+      density.addColorStop(1,'transparent');
+      ctx.fillStyle=density;ctx.fillRect(c.x-radius,c.y-radius,radius*2,radius*2);
+    }
+    ctx.globalCompositeOperation = 'lighten';
+    for (const c of scene.relief ?? []) {
+      const radius=Math.max(c.width,c.height)/2+c.elevation*1.8;
+      const mist=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,radius);
+      mist.addColorStop(0,`rgb(0,${Math.round(Math.min(1,c.elevation/50)*255)},0)`);mist.addColorStop(1,'transparent');
+      ctx.fillStyle=mist;ctx.fillRect(c.x-radius,c.y-radius,radius*2,radius*2);
+      ctx.fillStyle=`rgb(${Math.round(Math.min(1,c.elevation/ATMOSPHERE_HEIGHT)*255)},0,0)`;
+      ctx.fillRect(c.x-c.width/2,c.y-c.height/2,c.width,c.height);
+    }
     ctx.globalCompositeOperation = 'lighter';
     for (const patch of scene.patches) {
       const radius = Math.max(patch.width, patch.height) * 0.5 + 65;
@@ -183,32 +240,72 @@ class SceneAtlas {
       ctx.fillStyle = mist; ctx.fillRect(patch.x - radius, patch.y - radius, radius * 2, radius * 2);
     }
     ctx.globalCompositeOperation = 'source-over';
+    // Blue stores concealed cells without any terrain-type or height data.
+    // Additive blue preserves the independently authored red/green fields.
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#0000ff';
+    for (const c of scene.concealed ?? []) ctx.fillRect(c.x-c.width/2,c.y-c.height/2,c.width,c.height);
+    ctx.globalCompositeOperation = 'source-over';
     return true;
   }
   updateMask(input: AtmosphereDraw) {
     const { width,height,scale,camera,tilt,scene } = input;
-    const key=JSON.stringify([this.key,this.revision,scene.canopies,input.guards,width,height,scale,camera,tilt]);
+    const key=JSON.stringify([this.key,this.revision,scene.canopies,input.lights,input.frame.hour,input.frame.globalLights,input.guards,input.actorGuards?.map(({image,...box})=>[image instanceof HTMLImageElement ? image.src : [image.dataset.spriteFrame,image.dataset.animationFrame],box]),input.routeGuards,input.cardGuards,width,height,scale,camera,tilt]);
     if(key===this.maskKey)return false;
     this.maskKey=key;
     this.mask.width=Math.max(1,Math.round(width*scale));this.mask.height=Math.max(1,Math.round(height*scale));
     const ctx=this.mask.getContext('2d')!;
+    const heightField=this.canvas.getContext('2d')!.getImageData(0,0,ATMOSPHERE_ATLAS_SIZE,ATMOSPHERE_ATLAS_SIZE).data;
+    const canopyHeight=(x:number,y:number) => {
+      const ax=Math.floor((x+ATMOSPHERE_EXTENT)/(ATMOSPHERE_EXTENT*2)*ATMOSPHERE_ATLAS_SIZE);
+      const ay=Math.floor((y+ATMOSPHERE_EXTENT)/(ATMOSPHERE_EXTENT*2)*ATMOSPHERE_ATLAS_SIZE);
+      return ax<0||ay<0||ax>=ATMOSPHERE_ATLAS_SIZE||ay>=ATMOSPHERE_ATLAS_SIZE ? 0 : heightField[(ay*ATMOSPHERE_ATLAS_SIZE+ax)*4]/255*ATMOSPHERE_HEIGHT;
+    };
     ctx.setTransform(scale,0,0,scale,width*scale/2,height*scale/2);
     for(const c of scene.canopies){
       const profile=this.profiles.get(c.sprite);if(!profile)continue;
       const [l,t,r,b]=c.trimmed?profile.bounds:[0,0,64,64];
-      const h=c.trimmed?Math.min(c.height,c.width/profile.aspect):c.height;
-      const w=c.trimmed?h*profile.aspect:c.width;
+      const baseHeight=c.trimmed?Math.min(c.height,c.width/profile.aspect):c.height;
+      const h=baseHeight*sceneryHeightScale(c.sprite,c.width,c.height,profile.aspect);
+      const w=(c.trimmed?baseHeight*profile.aspect:c.width)*sceneryWidthScale(c.sprite,c.width,c.height,profile.aspect);
       const foot=projectAtmospherePoint(c,0,camera,tilt),top=projectAtmospherePoint(c,h,camera,tilt);
       const face=c.worldHeading === undefined ? null : projectBillboard({...c,width:w,height:h},camera,tilt);
       const drawnH=face ? face.bottom-face.top : foot.y-top.y,drawnW=face ? face.right-face.left : w*drawnH/h;
       if(face){foot.x=(face.left+face.right)/2;foot.y=face.bottom;}
       const backFace=c.worldHeading !== undefined && Math.cos((camera.yaw ?? 0)*Math.PI/180-c.worldHeading)<0;
       ctx.save();ctx.translate(foot.x,foot.y);if(Boolean(c.flip)!==backFace)ctx.scale(-1,1);
-      ctx.drawImage(profile.image,l/64*profile.image.width,t/64*profile.image.height,(r-l)/64*profile.image.width,(b-t)/64*profile.image.height,-drawnW/2,-drawnH,drawnW,drawnH);
+      // Retain silhouette alpha and encode the surface's light opening in G.
+      // Tint at low resolution: no full-size sprite copies or per-frame reads.
+      const illumination=input.lights.reduce((sum,light)=>{
+        const d=Math.hypot(c.x-light.position.x,c.y-light.position.y)/((light.radius??DEFAULT_LIGHT_RADIUS)*48);
+        let visibility=1;
+        for(let j=0;j<6;j++){
+          const t=(j+.5)/6, x=c.x+(light.position.x-c.x)*t,y=c.y+(light.position.y-c.y)*t;
+          // A prop's own silhouette does not extinguish its lit surface.
+          if(Math.hypot(x-c.x,y-c.y)<w*.55)continue;
+          if(canopyHeight(x,y)>h*(1-t)+(light.height??16)*t+3)visibility=.03;
+        }
+        return sum+Math.pow(Math.max(0,1-d*d),2)*(light.strength??DEFAULT_LIGHT_STRENGTH)*(1-input.frame.daylight)*visibility;
+      },0);
+      this.ink.width=this.ink.height=64;
+      const ink=this.ink.getContext('2d')!;
+      ink.drawImage(profile.image,l/64*profile.image.width,t/64*profile.image.height,(r-l)/64*profile.image.width,(b-t)/64*profile.image.height,0,0,64,64);
+      ink.globalCompositeOperation='source-in';ink.fillStyle=`rgb(0,${Math.round(Math.min(.94,illumination/.48)*255)},0)`;ink.fillRect(0,0,64,64);
+      ctx.drawImage(this.ink,-drawnW/2,-drawnH,drawnW,drawnH);
       ctx.restore();
     }
-    ctx.globalCompositeOperation='source-in';ctx.fillStyle='#000';ctx.fillRect(-width/2,-height/2,width,height);
     ctx.globalCompositeOperation='source-over';ctx.fillStyle='#ff0000';
+    ctx.strokeStyle='#ff0000';ctx.lineWidth=3*camera.scale;ctx.lineCap='round';ctx.lineJoin='round';
+    for(const points of input.routeGuards ?? []) {
+      ctx.beginPath();points.forEach((p,index)=>index ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y));ctx.stroke();
+    }
+    for(const actor of input.actorGuards ?? []) {
+      if(actor.image instanceof HTMLImageElement && (!actor.image.complete || !actor.image.naturalWidth))continue;
+      this.ink.width=this.ink.height=64;const ink=this.ink.getContext('2d')!;
+      ink.drawImage(actor.image,0,0,64,64);ink.globalCompositeOperation='source-in';ink.fillStyle='#ff0000';ink.fillRect(0,0,64,64);
+      ctx.save();ctx.translate(actor.x-width/2,actor.y-height/2);ctx.rotate(actor.angle);
+      ctx.drawImage(this.ink,-actor.width/2,-actor.height/2,actor.width,actor.height);ctx.restore();
+    }
+    for(const points of input.cardGuards??[]){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();}
     ctx.shadowColor='#ff0000';ctx.shadowBlur=3;
     for(const r of input.guards)ctx.fillRect(r.left-width/2-2,r.top-height/2-2,r.right-r.left+4,r.bottom-r.top+4);
     ctx.shadowBlur=0;
@@ -217,7 +314,7 @@ class SceneAtlas {
 }
 
 const createGpu = (canvas: HTMLCanvasElement): AtmosphereRenderer | null => {
-  const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' });
+  const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: 'low-power', preserveDrawingBuffer: true });
   if (!gl) return null;
   const compile = (type: number, source: string) => {
     const shader = gl.createShader(type)!; gl.shaderSource(shader, source); gl.compileShader(shader);
@@ -260,17 +357,19 @@ const createGpu = (canvas: HTMLCanvasElement): AtmosphereRenderer | null => {
     gl.uniform1f(u('uAimY'), (tilt.aimY ?? 0) * scale);
     gl.uniform3f(u('uColor'), sky.color.r / 255, sky.color.g / 255, sky.color.b / 255);
     gl.uniform2f(u('uSlope'), sky.slope.x, sky.slope.y);
-    gl.uniform1f(u('uStrength'), sky.strength); gl.uniform1f(u('uMist'), sky.mist); gl.uniform1f(u('uTime'), time / 1000);
+    gl.uniform1f(u('uStrength'), sky.strength); gl.uniform1f(u('uMist'), sky.mist); gl.uniform1f(u('uTime'), time / 1000); gl.uniform1f(u('uNight'),sky.night);
+    gl.uniform1f(u('uOverhead'),input.overhead ? 1 : 0);
     // Choose only nearby lights. No atmospheric local glow leaks onto terrain.
     const lights = input.lights.filter(l => Math.abs(l.position.x) <= 360 && Math.abs(l.position.y) <= 360)
       .sort((a,b) => (b.strength ?? DEFAULT_LIGHT_STRENGTH) - (a.strength ?? DEFAULT_LIGHT_STRENGTH)).slice(0, 4);
-    const values = new Float32Array(16), colors = new Float32Array(12);
+    const values = new Float32Array(16), colors = new Float32Array(12), heights = new Float32Array(4);
     lights.forEach((l, index) => {
       const color = hexToRgb(l.color ?? DEFAULT_LIGHT_COLOR);
       values.set([l.position.x, l.position.y, (l.radius ?? DEFAULT_LIGHT_RADIUS) * 48, (l.strength ?? DEFAULT_LIGHT_STRENGTH) * lightFlicker(l, time) * (1-frame.daylight)], index * 4);
       colors.set([color.r/255,color.g/255,color.b/255],index*3);
+      heights[index] = l.height ?? 16;
     });
-    gl.uniform4fv(u('uLights[0]'),values); gl.uniform3fv(u('uLightColor[0]'),colors);
+    gl.uniform4fv(u('uLights[0]'),values); gl.uniform3fv(u('uLightColor[0]'),colors); gl.uniform1fv(u('uLightHeight[0]'),heights);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }, dispose() { gl.deleteTexture(texture);gl.deleteTexture(maskTexture); gl.deleteBuffer(buffer); gl.deleteProgram(program); } };
 };
@@ -279,14 +378,15 @@ const createGpu = (canvas: HTMLCanvasElement): AtmosphereRenderer | null => {
  * scene and camera and never relies on WebGL to keep the board playable. */
 const createCanvas = (canvas: HTMLCanvasElement): AtmosphereRenderer => {
   const ctx = canvas.getContext('2d')!, atlas = new SceneAtlas();
+  const nightSurface = document.createElement('canvas'), nightContext = nightSurface.getContext('2d')!;
   return { kind: 'canvas', draw(input) {
     const { width, height, camera, tilt, frame, scene } = input;
-    const scale=Math.min(input.scale,512/width,320/height);
+    const scale=Math.min(input.scale,256/width,160/height);
     const w = Math.max(1, Math.round(width * scale)), h = Math.max(1, Math.round(height * scale));
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     ctx.setTransform(scale,0,0,scale,width*scale/2,height*scale/2); ctx.clearRect(-width/2,-height/2,width,height);
     const sky = atmosphereSky(frame);
-    for (let slot=-5;slot<=5;slot++) {
+    for (let slot=-5;!input.overhead && slot<=5;slot++) {
       const next = seeded(`volume-${slot}`), x=slot*95+next()*35;
       const foot={x,y:-40+next()*80}, top={x:x+sky.slope.x*ATMOSPHERE_HEIGHT,y:foot.y+sky.slope.y*ATMOSPHERE_HEIGHT};
       const a=projectAtmospherePoint(foot,0,camera,tilt), b=projectAtmospherePoint(top,ATMOSPHERE_HEIGHT,camera,tilt);
@@ -313,6 +413,45 @@ const createCanvas = (canvas: HTMLCanvasElement): AtmosphereRenderer => {
       ctx.restore();
     }
     ctx.globalCompositeOperation='source-over';
+    if (sky.night > 0) {
+      atlas.updateMask({...input,scale});
+      const maskPixels=atlas.mask.getContext('2d')!.getImageData(0,0,w,h).data;
+      nightSurface.width=w;nightSurface.height=h;
+      const pixels=nightContext.createImageData(w,h);
+      const fieldPixels=atlas.canvas.getContext('2d')!.getImageData(0,0,ATMOSPHERE_ATLAS_SIZE,ATMOSPHERE_ATLAS_SIZE).data;
+      const field=(x:number,y:number,channel:number) => {
+        const ax=Math.floor((x+ATMOSPHERE_EXTENT)/(ATMOSPHERE_EXTENT*2)*ATMOSPHERE_ATLAS_SIZE);
+        const ay=Math.floor((y+ATMOSPHERE_EXTENT)/(ATMOSPHERE_EXTENT*2)*ATMOSPHERE_ATLAS_SIZE);
+        return ax<0||ay<0||ax>=ATMOSPHERE_ATLAS_SIZE||ay>=ATMOSPHERE_ATLAS_SIZE ? 0 : fieldPixels[(ay*ATMOSPHERE_ATLAS_SIZE+ax)*4+channel]/255;
+      };
+      const lights=input.lights.filter(l=>Math.abs(l.position.x)<=360&&Math.abs(l.position.y)<=360)
+        .sort((a,b)=>(b.strength??DEFAULT_LIGHT_STRENGTH)-(a.strength??DEFAULT_LIGHT_STRENGTH)).slice(0,4);
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+        const p=atmospherePointAtHeight({x:(x+.5)/scale-width/2,y:(y+.5)/scale-height/2},0,camera,tilt);
+        let illumination=0;
+        for(const l of lights){
+          const d=Math.hypot(p.x-l.position.x,p.y-l.position.y)/((l.radius??DEFAULT_LIGHT_RADIUS)*48);
+          if(d>=1)continue;
+          let shade=0;
+          for(let j=0;j<4;j++){
+            const t=(j+.5)/4,h=field(p.x+(l.position.x-p.x)*t,p.y+(l.position.y-p.y)*t,0)*ATMOSPHERE_HEIGHT;
+            shade=Math.max(shade,Math.max(0,Math.min(1,(h-(l.height??16)*t-3)/6)));
+          }
+          illumination+=Math.pow(1-d*d,2)*(l.strength??DEFAULT_LIGHT_STRENGTH)*lightFlicker(l,input.time)*(1-frame.daylight)*(1-shade*.97);
+        }
+        const rolling=.5+.25*Math.sin(p.x*.019+input.time*.000008)*Math.cos(p.y*.023-input.time*.000005);
+        const i=(y*w+x)*4;
+        const ink=maskPixels[i+3]/255;
+        // Match the GPU's surface opening without bright ground bands on props.
+        illumination=illumination*(1-ink)+(maskPixels[i+1]/Math.max(1,maskPixels[i+3]))*.48*ink;
+        pixels.data[i]=2;pixels.data[i+1]=3;pixels.data[i+2]=5;
+        pixels.data[i+3]=Math.round(nightFogOpacity(field(p.x,p.y,1),field(p.x,p.y,2),rolling,illumination)*sky.night*(input.overhead ? .93 : 1)*(1-maskPixels[i]/255*.95)*255);
+      }
+      nightContext.putImageData(pixels,0,0);
+      ctx.drawImage(nightSurface,-width/2,-height/2,width,height);
+    }
+    ctx.save();ctx.globalCompositeOperation='destination-out';
+    for(const points of input.cardGuards??[]){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();}ctx.restore();
     for(const r of input.guards)ctx.clearRect(r.left-width/2-3,r.top-height/2-3,r.right-r.left+6,r.bottom-r.top+6);
   },dispose(){} };
 };

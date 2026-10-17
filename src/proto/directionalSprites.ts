@@ -23,7 +23,10 @@ export type AtlasRect = readonly [number, number, number, number];
 export type SpritePoint = readonly [number, number];
 export type DirectionalPart = { id: string; rect: AtlasRect; x: number; y: number; height: number; depth: number; pivot?: SpritePoint; clip?: readonly SpritePoint[]; parent?: string };
 export type DirectionalFrame = { id: string; source: string; parts: readonly DirectionalPart[]; outline?: readonly SpritePoint[] };
-export type DirectionalSpriteDefinition = { id: string; low: readonly DirectionalFrame[]; high: readonly DirectionalFrame[]; lowOpposite?: readonly DirectionalFrame[]; highOpposite?: readonly DirectionalFrame[]; top: DirectionalFrame; motion: 'quadruped' | 'slime'; motionProfile?: QuadrupedMotionProfile };
+export type DirectionalSpriteDefinition = { id: string; low: readonly DirectionalFrame[]; high: readonly DirectionalFrame[]; lowOpposite?: readonly DirectionalFrame[]; highOpposite?: readonly DirectionalFrame[]; top: DirectionalFrame; motion: 'quadruped' | 'slime'; motionProfile?: QuadrupedMotionProfile; overheadLengthScale?: number; animation?: { frames: readonly DirectionalSpriteDefinition[]; fps: number } };
+
+// Shared by Hero's flat print and sectional rig; length changes along her heading.
+export const HERO_OVERHEAD_LENGTH_SCALE = 1.25;
 
 // The independently generated pieces do not share anatomy/pixel scale. Their
 // stitched pose stretched the neck and doubled the hips. Use the coherent
@@ -42,6 +45,7 @@ const heroLayouts: readonly QuadrupedLayout[] = [
 ];
 export const HERO_DIRECTIONAL_SPRITE = createQuadrupedSpriteDefinition({
   id:'hero',
+  overheadLengthScale: HERO_OVERHEAD_LENGTH_SCALE,
   low:low.map((rect,i)=>({source:'heroLow',rect,layout:heroLayouts[i]})),
   high:[...high.map((rect,i)=>({source:'heroHigh',rect,layout:heroLayouts[i]})),{source:'heroLow',rect:low[4],layout:heroLayouts[4]}],
   top:{source:'heroHigh',rect:[71,1022,174,398],layout:{kind:'stacked',neck:[[0,.33],[.5,.35],[1,.33]],hip:[[0,.62],[.5,.59],[1,.62]],pivots:[[.5,.67],[.5,.55],[.5,.39]]}},

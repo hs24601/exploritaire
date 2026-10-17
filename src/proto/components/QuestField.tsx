@@ -73,9 +73,9 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
       </div>
     </div>
     {note && <PinnedToast className="quest-note" title={note.title} subtitle={note.status === 'complete' ? 'Complete · hold the card 1s to redeem' : 'Objective in progress'}
-      icon="⚡" side="left" anchor={ref.current?.querySelector('[data-quest-slot="1"]') ?? null} edge={ref.current} onClose={() => setNoteQuestId(null)}>
+      icon="💫" side="left" anchor={ref.current?.querySelector('[data-quest-slot="1"]') ?? null} edge={ref.current} onClose={() => setNoteQuestId(null)}>
       <p className="quest-note__text">{note.text}</p>
-      <p className="quest-note__reward">⚡ {note.rewards.some(reward => reward.kind === 'energy') ? 'Energy' : `+${note.rewards.reduce((sum, reward) => sum + (reward.kind === 'inspiration' ? reward.amount : 0), 0)} INSP`}</p>
+      <p className="quest-note__reward">{note.rewards.some(reward => reward.kind === 'energy') ? '⚡ Energy' : `💫 +${note.rewards.reduce((sum, reward) => sum + (reward.kind === 'inspiration' ? reward.amount : 0), 0)} INSP`}</p>
     </PinnedToast>}
   </aside>;
 }

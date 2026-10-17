@@ -132,6 +132,7 @@ export function terrainAutotileSeams(regions: readonly { id: string; tiles: read
       const left = Math.min(...columns), right = Math.max(...columns), top = Math.min(...rows), bottom = Math.max(...rows);
       const centre = world((left + right) / 2, (top + bottom) / 2);
       return { id: `${region.id}:${seam.id}`, kind: seam.kind, src: seams[seam.kind], scale: seams.scale, flip: seam.roll < .5,
+        tileIds: region.tiles.filter(tile => seam.cells.some(cell => { const at = cellOf(tile.position); return at.column === cell.column && at.row === cell.row; })).map(tile => tile.id),
         position: world(seam.column, seam.row),
         owner: { ...centre, width: (right - left + 1) * cellSize, height: (bottom - top + 1) * cellSize } };
     });

@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useRef } from 'react';
 import { holdSlop, useRewardHold, type RewardHold } from '../useRewardHold';
 import { QuestArtwork, QuestEmblem } from './QuestArtwork';
@@ -27,9 +28,9 @@ export function QuestCard({ title, text, inspirationReward, rewardLabel, complet
   const origin = useRef({x:0,y:0});
   return <button type="button" className={`quest-card ${complete ? 'quest-card--complete' : 'quest-card--incomplete'}`}
     aria-haspopup={!jumbo ? 'dialog' : undefined} aria-expanded={onSelect ? Boolean(selected) : undefined}
-    onClick={event=>{event.preventDefault();if(jumbo)return;if(pressed.current.moved||(pressed.current.started&&performance.now()-pressed.current.started>500))return;
+    onClick={event=>{event.preventDefault();if(jumbo)return;if(pressed.current.moved||(pressed.current.started&&gameTime.now()-pressed.current.started>500))return;
       if(viewer){event.currentTarget.focus({preventScroll:true});viewer.open({title,content:<QuestCard title={title} text={text} inspirationReward={inspirationReward} rewardLabel={rewardLabel} complete={complete} redeemed={redeemed} onRedeem={()=>{viewer.close();onRedeem();}} jumbo />});}else onSelect?.();}}
-    onPointerDown={event=>{pressed.current={started:performance.now(),moved:false};origin.current={x:event.clientX,y:event.clientY};if(rewardHold||event.button!==0)return;event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);hold.start();}}
+    onPointerDown={event=>{pressed.current={started:gameTime.now(),moved:false};origin.current={x:event.clientX,y:event.clientY};if(rewardHold||event.button!==0)return;event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);hold.start();}}
     onPointerMove={event=>{if(Math.hypot(event.clientX-origin.current.x,event.clientY-origin.current.y)>holdSlop(event.pointerType)){pressed.current.moved=true;hold.cancel();}}}
     onPointerUp={rewardHold ? undefined : hold.cancel} onPointerCancel={rewardHold ? undefined : hold.cancel}
     onKeyDown={event=>{pressed.current.started=0;pressed.current.moved=false;if(jumbo&&event.key==='Enter'&&!event.repeat&&complete&&!redeemed){event.preventDefault();hold.start();}}}
@@ -38,7 +39,7 @@ export function QuestCard({ title, text, inspirationReward, rewardLabel, complet
     <QuestArtwork resting={title === 'Rest'} />
     <span className="quest-card__text">{text}</span>
     <span className="quest-card__status" role="status">{redeemed ? '✓ Reward redeemed' : !complete ? 'Objective in progress' : inspirationReward || rewardLabel ? '✓ Hold 1s to redeem' : '✓ Try it here'}</span>
-    {(rewardLabel || inspirationReward > 0) && <span className="quest-card__reward"><span aria-hidden="true">⚡</span> {rewardLabel ?? `+${inspirationReward} INSP`}</span>}
+    {(rewardLabel || inspirationReward > 0) && <span className="quest-card__reward"><span aria-hidden="true">{inspirationReward > 0 ? '💫' : '⚡'}</span> {rewardLabel ?? `+${inspirationReward} INSP`}</span>}
     {hold.progress>0 && <span className="reward-hold-progress" role="progressbar" aria-label="Redeeming reward" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(hold.progress*100)}><span style={{["--hold-progress" as string]:`${hold.progress*100}%`}} /></span>}
   </button>;
 }

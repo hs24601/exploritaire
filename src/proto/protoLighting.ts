@@ -1,4 +1,5 @@
 import { crossesObstacle } from './worldPathfinding';
+import { globalLightsEnabled } from './globalLighting';
 // Table light engine. Pure math shared by rendering (canvas overlay, object
 // shadows) and game logic (how lit is this object or tile?). Rendering may add
 // flicker and glow; gameplay must only read the steady values sampled here.
@@ -18,9 +19,35 @@ export type TableLight = {
   flicker?: number;
   /** The light shines from a piece already on the table (a glowfish), so no lamp token is drawn. */
   fromPiece?: boolean;
+  fireflies?: boolean;
 };
 
 export type Rgb = { r: number; g: number; b: number };
+
+/** Scenery emitters share the normal field, shadows and atmosphere. Deriving
+ * positions from live tiles keeps moved/removed/hidden scenery in sync. */
+export const biomeLights = (tiles: readonly {
+  id: string; position: TableLight['position']; unlocked: boolean;
+  danger?: boolean; tileType?: string; road?: unknown; gridSize?: { columns: number; rows: number };
+  berryPatchVariant?: 'sparse'; berryHarvested?: boolean;
+  flags?: readonly string[]; light?: Omit<TableLight, 'id' | 'position' | 'fromPiece'>;
+}[]): TableLight[] => tiles.flatMap(tile => [
+  ...(tile.tileType === 'berry-patch' && tile.berryPatchVariant === 'sparse' && !tile.berryHarvested && tile.unlocked && !tile.flags?.includes('unexplored')
+    ? [{ id: `biome-light-berry-${tile.id}`, position: tile.position, color: '#9cdeff',
+      strength: .58, radius: .85, height: 10, flicker: 0, fromPiece: true }]
+    : []),
+  ...(tile.light && tile.unlocked && (!tile.flags?.includes('unexplored') || tile.id === 'curious-sapling')
+    ? [{ ...tile.light, ...(tile.id === 'curious-sapling' ? { fireflies: true, ...(tile.flags?.includes('unexplored') ? { strength: .16, radius: 1.25 } : {}) } : {}), id: `biome-light-${tile.id}`, position: tile.position, fromPiece: true }]
+    : []),
+  // One pooled source for the ember cloud, rather than a moving light for
+  // every mote. Match the visible danger-particle gate; concealed tiles emit
+  // neither warnings nor their light. All renderers share this bounded source.
+  ...(tile.danger && tile.unlocked && !tile.road && !tile.tileType && !tile.flags?.includes('unexplored')
+    ? [{ id: `biome-light-danger-${tile.id}`, position: tile.position, color: '#ff3828',
+      strength: .62, radius: Math.max(1.6, Math.max(tile.gridSize?.columns ?? 1, tile.gridSize?.rows ?? 1) * .75),
+      height: 18, flicker: .25, fromPiece: true }]
+    : []),
+]);
 export type LightLevel = 'dark' | 'dim' | 'lit' | 'bright';
 
 export const LIGHT_CELL_SIZE = 48;
@@ -76,21 +103,30 @@ export const getTableLighting = (hours: number) => {
   const nightness = 1 - daylight;
   return {
     hour,
+    globalLights: true,
     daylight,
     twilight,
     phase: daylight > 0.65 ? 'Day' : daylight > 0 ? 'Twilight' : 'Night',
     source: { x: -Math.cos(angle) * 480, y: -Math.sin(angle) * 320 },
     altitude: 65 + (night ? Math.abs(Math.sin(angle)) * 150 : daylight * 430),
     /** Opacity of the sky overlay on the table. */
-    darkness: 0.04 + nightness * 0.62,
+    darkness: 0.34 + nightness * 0.32,
     /** Ambient light on the table, 0–1, before local lights. */
-    ambient: AMBIENT_FLOOR + daylight * (1 - AMBIENT_FLOOR),
+    ambient: AMBIENT_FLOOR + daylight * 0.24,
     skyTint: night ? NIGHT_SKY : mixRgb(DAY_SKY, DUSK_SKY, twilight),
     sunColor: mixRgb(NOON_SUN, LOW_SUN, twilight),
   };
 };
 
 export type TableLightFrame = ReturnType<typeof getTableLighting>;
+
+/** Render-only lighting bypass. Clock, discovery and steady gameplay sampling
+ * continue to use getTableLighting and are independent of this preference. */
+export const getVisualTableLighting = (hours: number): TableLightFrame => {
+  const frame = getTableLighting(hours);
+  return globalLightsEnabled() ? frame : { ...frame, globalLights: false,
+    daylight: 1, twilight: 0, ambient: 1, darkness: 0, skyTint: DAY_SKY };
+};
 
 /** Smooth falloff from 1 at the light to 0 at its radius. */
 export const lightFalloff = (distance: number, radiusCells = DEFAULT_LIGHT_RADIUS) => {
@@ -231,7 +267,7 @@ export const lightFlicker = (light: TableLight, timeMs: number) => {
 /** 2.5D projection onto a 2D table: elevated pieces cast away from each light.
  * Clamp grazing-angle shadows so they remain useful within the board viewport. */
 export const tableObjectShadow = (hours: number, position: { x: number; y: number }, elevation = 8, lights: readonly TableLight[] = [], frameYaw = 0) => {
-  const frame = getTableLighting(hours);
+  const frame = getVisualTableLighting(hours);
   // A piece turned to face a spun camera draws its shadow in its own frame.
   const turn = (x: number, y: number) => {
     if (!frameYaw) return { x, y };
@@ -251,7 +287,7 @@ export const tableObjectShadow = (hours: number, position: { x: number; y: numbe
     'inset 0 -3px 1px rgba(0,0,0,0.3)',
     '0 3px 1px rgba(0,0,0,0.45)',
     // Low sun casts longer, stronger shadows.
-    project(frame.source, frame.altitude, 0.22 + frame.daylight * 0.2 + frame.twilight * 0.18),
+    ...(frame.globalLights ? [project(frame.source, frame.altitude, 0.22 + frame.daylight * 0.2 + frame.twilight * 0.18)] : []),
   ];
   for (const light of lights) {
     const reach = lightFalloff(Math.hypot(position.x - light.position.x, position.y - light.position.y), light.radius ?? DEFAULT_LIGHT_RADIUS);
@@ -312,7 +348,7 @@ const standeeLightingInWorld = (
   standeeHeight: number,
   lights: readonly TableLight[],
 ): StandeeLighting => {
-  const frame = getTableLighting(hours);
+  const frame = getVisualTableLighting(hours);
   const sample = sampleTableLight(hours, position, lights);
   const cast = (lightId: string, source: { x: number; y: number }, height: number, opacity: number): StandeeShadow => {
     const dx = position.x - source.x;
@@ -326,7 +362,7 @@ const standeeLightingInWorld = (
       opacity: clamp01(opacity),
     };
   };
-  const shadows = [cast('sky', frame.source, frame.altitude, 0.2 + frame.daylight * 0.16 + frame.twilight * 0.14)];
+  const shadows = frame.globalLights ? [cast('sky', frame.source, frame.altitude, 0.2 + frame.daylight * 0.16 + frame.twilight * 0.14)] : [];
   let rim: StandeeLighting['rim'] = null;
   let rimReach = 0;
   for (const light of lights) {
@@ -343,7 +379,7 @@ const standeeLightingInWorld = (
   }
   const dominant = lights.find((light) => light.id === sample.dominantLightId);
   return {
-    brightness: 0.35 + 0.75 * sample.total,
+    brightness: frame.globalLights ? 0.35 + 0.75 * sample.total : 1,
     warmth: clamp01(sample.local * (1 - frame.daylight * 0.7)),
     lightColor: dominant ? hexToRgb(dominant.color ?? DEFAULT_LIGHT_COLOR) : frame.sunColor,
     rim,

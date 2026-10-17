@@ -1,17 +1,25 @@
+import { trackGameAnimation } from '../../gameAnimations';
+import { gameTime } from '../../gameTime';
+import { assignedMovesFor, useActorLoadouts } from '../actorLoadouts';
+import { retrievalCost, retrieveCard } from '../rules/battle';
 import { ActorHoloCard, ACTOR_HOLO_ART } from './ActorHoloCard';
 import { DetailsCardViewer, ActorCardArt } from './DetailsCardViewer';
+import { AbilityArtwork } from './AbilityArtwork';
 import { requestHoloDeviceTilt } from '../useHoloDeviceTilt';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { BATTLE_SPRITE_ASSETS } from '../battleSpriteAssets';
-import { DARK_SLIME_DIRECTIONAL_SPRITE, type DirectionalSpriteDefinition } from '../directionalSprites';
+import { battleSpriteAssets } from '../battleSpriteAssets';
+import { useArtStyle } from '../artStyle';
+import { useTableauCardLimit } from './useTableauCardLimit';
+import { HERO_DIRECTIONAL_SPRITE, DARK_SLIME_DIRECTIONAL_SPRITE, type DirectionalSpriteDefinition } from '../directionalSprites';
 import { MOCHI_DIRECTIONAL_SPRITE } from '../mochiSprite';
 import { rankLabel, type Card } from '../protoState';
 import { createSeededSmallWoodsDeal } from '../rules/setup';
 import {
-  MAX_FOES, actorAttack, addSlime, applyAttack, applyTrap, canDeal, createBattle, dealRow, eligibleActors, enemyTarget, playCard,
-  previewAttack, previewTrap, redrawActor, removeSlime, setMochi, setSpirit, tickBattle, type BattleState,
+  releaseGrip, MAX_FOES, actorAttack, inspectActorAbility, addSlime, applyAttack, applyTrap, canDeal, createBattle, dealRow, eligibleActors, enemyTarget, playCard,
+  previewAttack, previewTrap, redrawActor, removeSlime, setMochi, setSpirit, setMaxAP, tickBattle, type BattleState,
 } from '../rules/battle';
+import { COMBAT_ABILITY_SLOTS, combatMovesFor, type Attack } from '../rules/battleAbilities';
 import { BATTLE_SCENARIOS, scenarioById } from '../rules/battleScenarios';
 import { getCardTransportDurationMs } from '../protoTransport';
 import { solverFlightDuration } from '../solverTiming';
@@ -21,31 +29,37 @@ import { ProtoCard } from './ProtoCard';
 import { TableauScene } from './TableauScene';
 import { SceneButton } from './SceneButton';
 import { SpriteStandeeArt } from './SpriteStandee';
-import { WORLD_ACTOR_SPRITES } from '../protoData';
 import type { StandeeLighting } from '../protoLighting';
-import { AbilityCard, AbilityGhost, FoeCard, PartyVitals, TableMark } from './BattleUnits';
+import { FoeCard, PartyVitals, TableMark } from './BattleUnits';
+import { AbilityTray } from './AbilityTray';
+import { AbilityCard } from './AbilityCard';
 import { useAbilityDrag } from './useAbilityDrag';
 import { useBattleFx } from './useBattleFx';
 import { sceneOf, type BattleScene } from '../rules/battleCues';
 import './BattleTableauField.css';
 import { BATTLE_TURN_PRIORITY } from '../battleTurnPriority';
+import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
+import { assessSolverMove } from '../tableauSolver';
 
 const SPRITES: Record<string, DirectionalSpriteDefinition | string> = {
-  hero: WORLD_ACTOR_SPRITES.hero, mochi: MOCHI_DIRECTIONAL_SPRITE,
+  hero: HERO_DIRECTIONAL_SPRITE, mochi: MOCHI_DIRECTIONAL_SPRITE,
   'dark-slime': DARK_SLIME_DIRECTIONAL_SPRITE, 'rear-slime': DARK_SLIME_DIRECTIONAL_SPRITE, 'small-slime': DARK_SLIME_DIRECTIONAL_SPRITE,
 };
 const previewDeal = createSeededSmallWoodsDeal();
 /** Battle state updates this often; bars ease between updates in CSS. */
 const TICK_MS = 100;
 
-/** Hero shares the expedition art; Mochi uses the equivalent quarter-facing pose. */
+/** Painted Hero/slimes share their rig atlas; Mochi retains its earlier art. */
 function FoundationSprite({ sprite, name, lighting, turnedAway = false }: { sprite: DirectionalSpriteDefinition | string; name: string; lighting: StandeeLighting; turnedAway?: boolean }) {
+  const assets = battleSpriteAssets(useArtStyle());
   if (typeof sprite === 'string') return <span className="battle-field__sprite" role="img" aria-label={`${name} sprite`}>
     <SpriteStandeeArt sprite={sprite} lighting={lighting} size={64} />
   </span>;
-  const frame = sprite.low[turnedAway ? 4 : sprite.id === 'mochi' ? 1 : 0], rect = frame.parts[0].rect;
-  return <svg className="battle-field__sprite" viewBox={rect.join(' ')} preserveAspectRatio="xMidYMax meet" data-foundation-pose={turnedAway ? 'rear' : sprite.id === 'mochi' ? 'quarter' : 'front'} role="img" aria-label={`${name} sprite${turnedAway ? ' facing away' : ''}`}>
-    <image href={`${import.meta.env.BASE_URL}assets/${BATTLE_SPRITE_ASSETS[frame.source]}`} />
+  const quarter = sprite.id === 'mochi' || sprite.id === 'hero';
+  const frame = sprite.low[turnedAway ? 4 : quarter ? 1 : 0], rect = frame.parts[0].rect;
+  const painted = assets[frame.source].includes('/watercolor-v1/');
+  return <svg className="battle-field__sprite" style={painted ? {imageRendering:'auto'} : undefined} viewBox={rect.join(' ')} preserveAspectRatio="xMidYMax meet" data-foundation-pose={turnedAway ? 'rear' : quarter ? 'quarter' : 'front'} role="img" aria-label={`${name} sprite${turnedAway ? ' facing away' : ''}`}>
+    <image href={`${import.meta.env.BASE_URL}assets/${assets[frame.source]}`} />
   </svg>;
 }
 
@@ -67,40 +81,30 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   /** An actor spent 1 inspiration on a foundation redraw. */
   onRedraw?: (actorId: string) => void;
 }) {
+  useActorLoadouts();
+  const [retrieval,setRetrieval]=useState<string|null>(null);
   const [scenarioId, setScenarioId] = useState(BATTLE_SCENARIOS[0].id);
   const [battle, setBattle] = useState(() => createBattle(previewDeal, { ...BATTLE_SCENARIOS[0].setup, playerAmbush: true, inspiration: { hero: heroInspiration } }));
   const [paused, setPaused] = useState(false);
+  const [solverSession, setSolverSession] = useState(0);
   const foundationRefs = useRef(new Map<string, HTMLDivElement>());
   const cardRefs = useRef(new Map<string, HTMLButtonElement>());
   const [selection, setSelection] = useState<{columnIndex: number; cardId: string; actorIds: string[]} | null>(null);
   const flights = useRef(new Set<() => void>());
   const [announcement, setAnnouncement] = useState('');
+  const [abilityInspection, setAbilityInspection] = useState<{ attack: Attack; anchor: HTMLElement } | null>(null);
   const [inspection, setInspection] = useState<{ id: string; name: string; anchor: HTMLElement } | null>(null);
   useEffect(() => () => { flights.current.forEach((cancel) => cancel()); }, []);
 
-  // Ticks also advance effects and the free-turn countdown; enemy clocks wait for it.
-  const running = battle.started && !battle.result && !paused;
-  useEffect(() => {
-    if (!running) return;
-    let last = performance.now();
-    const timer = window.setInterval(() => {
-      const now = performance.now();
-      const dt = Math.min(0.25, (now - last) / 1000); last = now;
-      setBattle((current) => tickBattle(current, dt));
-    }, TICK_MS);
-    return () => window.clearInterval(timer);
-  }, [running]);
-
-  // The arena hears about the battle only when a unit falls or something happens, not every tick.
-  const units = [...battle.party.map((a) => `${a.id}:${a.hp > 0}`), ...battle.foes.map((f) => `${f.id}:${f.hp > 0}`)].join(',');
+  // Sync HP changes to scene markers; frame-by-frame positioning stays inside the renderer.
+  const units = [...battle.party.map((a) => `${a.id}:${a.hp}:${a.maxHp}`), ...battle.foes.map((f) => `${f.id}:${f.hp}:${f.profile.maxHp}`)].join(',');
   const lastEvent = battle.events[battle.events.length - 1]?.id ?? 0;
   const sceneChange = useRef(onSceneChange); sceneChange.current = onSceneChange;
   const latest = useRef(battle); latest.current = battle;
   const ambushed = Boolean(battle.ambush);
-  useEffect(() => { sceneChange.current?.(sceneOf(latest.current)); }, [units, lastEvent, ambushed]);
   // Bites, flinches and falls on the cards themselves.
   const fieldRef = useRef<HTMLElement>(null);
-  useBattleFx(fieldRef, battle.events);
+  const tableauCardLimit = useTableauCardLimit(fieldRef);
 
   // Announce hits on the party and breaks, for screen readers.
   const announced = useRef(0);
@@ -127,13 +131,41 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     const preview = previewAttack(battle, actorId, foeId);
     if (!preview) return;
     setBattle((current) => applyAttack(current, actorId, foeId));
-    const foe = battle.foes.find((f) => f.id === foeId)!;
+    const foe = [...battle.party, ...battle.foes].find((unit) => unit.id === foeId)!;
     setAnnouncement(`${preview.attack.name} hits ${foe.name} for ${preview.damage}${preview.ko ? ', defeated' : preview.staggers ? ', staggered' : ''}${battle.ambush?.awaitingAttack ? '. Enemy ambushed. Free next turn: ten seconds before enemy attack timers begin' : ''}`);
   };
-  const { aim, cardProps, foeProps, cancel } = useAbilityDrag(spend);
+  const [gripAP,setGripAP]=useState(3);
+  const [abilityAnchor, setAbilityAnchor] = useState({x:20,y:120});
+  const { aim, holding, holdingRef, cardProps, foeProps, cancel, prime } = useAbilityDrag(spend);
+  const loadoutKey=battle.party.map(a=>a.id+':'+assignedMovesFor(a.id).map(m=>m.name).join(',')).join('|');
+  useEffect(()=>{cancel();setRetrieval(null);setAbilityInspection(null);},[loadoutKey]);
+  useEffect(()=>{if(battle.result)setRetrieval(null);},[battle.result]);
+  const battlePaused = paused || holding;
+  // Ticks also advance effects and the free-turn countdown; enemy clocks wait for it.
+  const running = battle.started && !battle.result && !battlePaused;
+  useEffect(() => {
+    if (!running) return;
+    let last = gameTime.now();
+    const timer = gameTime.setInterval(() => {
+      const now = gameTime.now();
+      const dt = Math.min(0.25, (now - last) / 1000); last = now;
+      if (!holdingRef.current) setBattle((current) => tickBattle(current, dt));
+    }, TICK_MS);
+    return () => gameTime.clearInterval(timer);
+  }, [running]);
+
+  useBattleFx(fieldRef, battle.events, battlePaused, holding);
+  useEffect(() => { if (holding) { setSelection(null); setAnnouncement('Tactical pause · Tableau values hidden'); } }, [holding]);
+  // Target changes are presentation updates, including when the battle clock is paused.
+  const aimActor = aim?.actorId, aimFoe = aim?.foeId;
+  const aimBattle = aimActor ? battle : null;
+  useEffect(() => {
+    sceneChange.current?.({ ...sceneOf(latest.current, aimActor && !abilityInspection ? { actorId: aimActor, foeId: aimFoe ?? null } : null), paused: battlePaused });
+  }, [units, lastEvent, ambushed, aimActor, aimFoe, aimBattle, battlePaused, abilityInspection]);
   useEffect(() => { if (battle.result) cancel(); }, [battle.result]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const play = (index: number, source: HTMLButtonElement, actorId: string) => {
+    if (holdingRef.current || paused) return;
     const column = battle.columns[index];
     const card = column[column.length - 1];
     const actor = card && eligibleActors(battle, card).find(actor => actor.id === actorId);
@@ -141,7 +173,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     if (!card || !actor) return;
     setSelection(null);
     setBattle((current) => playCard(current, index, actor.id));
-    setAnnouncement(`${rankLabel(card.rank)} added to ${actor.name}'s foundation · charge ${Math.min(10, actor.charge + 1)}`);
+    setAnnouncement(`${rankLabel(card.rank)} added to ${actor.name}'s foundation · AP ${actor.charge + 1}`);
     if (!destination) return;
     // The play lands at once; the flight is the card's journey to the foundation.
     const from = source.getBoundingClientRect(), to = destination.getBoundingClientRect();
@@ -154,11 +186,11 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     const scale = to.width / from.width;
     const dx = to.x - from.x, dy = to.y - from.y;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const animation = ghost.animate([
+    const animation = trackGameAnimation(ghost.animate([
       {transform:'translate(0,0) scale(1)'},
       {transform:`translate(${dx * .5}px,${dy * .5 - 35}px) scale(${(1 + scale) / 2})`, offset:.5},
       {transform:`translate(${dx}px,${dy}px) scale(${scale})`},
-    ], {duration:reduced ? 1 : solverFlightDuration(getCardTransportDurationMs(from,to)), easing:'ease-out', fill:'forwards'});
+    ], {duration:reduced ? 1 : solverFlightDuration(getCardTransportDurationMs(from,to)), easing:'ease-out', fill:'forwards'}));
     const done = () => { animation.cancel(); ghost.remove(); flights.current.delete(done); };
     flights.current.add(done);
     animation.onfinish = done;
@@ -166,6 +198,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   // Match Proto's playColumn / chooseFoundationTarget sequence: never choose
   // between equally eligible actors on the player's behalf.
   const activate = (index: number, source: HTMLButtonElement) => {
+    if (holdingRef.current || paused) return;
     const column = battle.columns[index], card = column[column.length - 1];
     if (!card) return;
     // An armed ability in a trap battle sets its trap on the pressed card instead.
@@ -183,7 +216,40 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     const source = cardRefs.current.get(selection.cardId);
     if (source && column[column.length - 1]?.id === selection.cardId) play(selection.columnIndex,source,actorId);
   };
+  const solveStep = (): SolveStepResult => {
+    const current = latest.current;
+    if (current.result) return { status: 'complete', message: current.result === 'won' ? 'Victory' : 'Party defeated' };
+    if (paused || holdingRef.current) return { status: 'blocked', message: 'Battle paused' };
+    if (flights.current.size) return { status: 'waiting', message: 'Waiting for card flight' };
+    // Use real attacks to release the opening ambush and finish the fight.
+    for (const actor of current.party) {
+      for (const foe of current.foes) {
+        const attack = previewAttack(current, actor.id, foe.id);
+        if (attack && attack.damage > 0) {
+          setBattle(state => applyAttack(state, actor.id, foe.id));
+          return { status: 'played', message: `${actor.name} · ${attack.attack.name}` };
+        }
+      }
+    }
+    const rootMoves = current.columns.flatMap((column, index) => eligibleActors(current, column[column.length - 1]).map(actor => ({ column: index, foundation: current.party.indexOf(actor) })));
+    const assessment = assessSolverMove({ columns: current.columns, stock: current.stock, foundations: current.party.map(actor => actor.rank) }, { rootMoves });
+    if (assessment) {
+      const { column, foundation } = assessment.move;
+      const cards = current.columns[column];
+      const card = cards[cards.length - 1];
+      const source = cardRefs.current.get(card.id);
+      if (!source) return { status: 'waiting', message: 'Waiting for tableau' };
+      play(column, source, current.party[foundation].id);
+      return { status: 'played', message: `${assessment.method} battle move` };
+    }
+    if (canDeal(current)) {
+      setBattle(dealRow);
+      return { status: 'played', message: 'Deal a row' };
+    }
+    return { status: 'blocked', message: 'No legal move · Redraw a foundation to continue' };
+  };
   const redraw = (actorId: string) => {
+    if (holdingRef.current || paused) return;
     const next = redrawActor(battle, actorId);
     if (next === battle) return;
     const actor = next.party.find((a) => a.id === actorId)!;
@@ -194,11 +260,13 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   };
   /** Restarts the current scenario with the roster as adjusted, or a fresh scenario as authored. */
   const restart = (nextScenario?: string) => {
-    cancel(); setSelection(null); setPaused(false);
+    setSolverSession(session => session + 1);
+    cancel(); setRetrieval(null); setAbilityInspection(null); setSelection(null); setPaused(false);
     // A new scenario starts as authored; inspiration spent on redraws stays spent.
-    if (nextScenario) { setScenarioId(nextScenario); setBattle((current) => createBattle(previewDeal, { ...scenarioById(nextScenario).setup, playerAmbush: nextScenario === BATTLE_SCENARIOS[0].id, inspiration: Object.fromEntries(current.party.map((a) => [a.id, a.inspiration])) })); return; }
+    if (nextScenario) { setScenarioId(nextScenario); setBattle((current) => createBattle(previewDeal, { ...scenarioById(nextScenario).setup, maxAP: current.maxAP, playerAmbush: nextScenario === BATTLE_SCENARIOS[0].id, inspiration: Object.fromEntries(current.party.map((a) => [a.id, a.inspiration])) })); return; }
     setBattle((current) => createBattle(previewDeal, {
       ...scenarioById(scenarioId).setup,
+      maxAP: current.maxAP,
       playerAmbush: scenarioId === BATTLE_SCENARIOS[0].id,
       mochi: current.party.some((a) => a.id === 'mochi'), slimes: current.foes.length,
       spirits: Object.fromEntries(current.party.map((a) => [a.id, a.spirits])),
@@ -211,18 +279,18 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const target = enemyTarget(battle);
   const hasMochi = battle.party.some((a) => a.id === 'mochi');
   const heroCal = battle.party.find((a) => a.id === 'hero')?.spirits.includes('cal') ?? false;
-  const heldAttack = aim ? actorAttack(battle, aim.actorId) : null;
-  const previews = new Map(aim ? battle.foes.map((foe) => [foe.id, previewAttack(battle, aim.actorId, foe.id)]) : []);
-  const trapPreviews = aim && battle.rules.traps ? battle.columns.map((_, column) => previewTrap(battle, aim.actorId, column)) : [];
+  const playableAttack = aim && !abilityInspection ? actorAttack(battle, aim.actorId) : null;
+  const heldAttack = aim ? actorAttack(battle, aim.actorId) ?? inspectActorAbility(battle, aim.actorId) : null;
+  const previews = new Map(aim && !abilityInspection ? [...battle.party, ...battle.foes].map((unit) => [unit.id, previewAttack(battle, aim.actorId, unit.id)]) : []);
+  const trapPreviews = aim && !abilityInspection && battle.rules.traps ? battle.columns.map((_, column) => previewTrap(battle, aim.actorId, column)) : [];
   const aimedColumn = aim?.foeId?.startsWith('card:') ? Number(aim.foeId.slice(5)) : null;
-  const ghostPreview = aim?.foeId && aimedColumn === null ? previews.get(aim.foeId) ?? null : null;
-  const ghostTrap = aimedColumn !== null ? trapPreviews[aimedColumn] ?? null : null;
+
   const scenario = scenarioById(scenarioId);
 
   const foeRow = <div className="battle-field__team" data-team="enemy" style={{ '--slots': battle.foes.length } as CSSProperties}>
     <h3>Enemies</h3>
     {battle.foes.map((foe) => <FoeCard key={foe.id} foe={foe} target={target?.name ?? null} events={battle.events}
-      preview={previews.get(foe.id) ?? null} focus={aim?.foeId === foe.id} aiming={Boolean(aim && heldAttack)}
+      preview={previews.get(foe.id) ?? null} focus={aim?.foeId === foe.id} aiming={Boolean(aim && playableAttack && !paused)}
       interaction={foeProps(foe.id)}
       sprite={<FoundationSprite sprite={SPRITES[foe.id]} name={foe.name} lighting={rig.standee(0, -55, 64)} turnedAway={ambushed} />} />)}
   </div>;
@@ -230,46 +298,66 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const partyRow = <div className="battle-field__team" data-team="party" style={{ '--slots': battle.party.length } as CSSProperties}>
     <h3>Players</h3>
     {battle.party.map((actor) => {
-      const attack = actorAttack(battle, actor.id);
-      const usable = Boolean(attack) && !battle.result && !paused;
-      const canRedraw = actor.inspiration > 0 && actor.hp > 0 && !battle.result && !paused;
+      const canRedraw = actor.inspiration > 0 && actor.hp > 0 && !battle.result && !battlePaused;
       return <div key={actor.id} className="battle-field__slot" data-battle-slot={actor.id} data-down={actor.hp <= 0 || undefined}>
         <button type="button" className="battle-field__foundation" data-battle-actor={actor.id}
-          data-targetable={selection?.actorIds.includes(actor.id) || undefined} disabled={!!selection && !selection.actorIds.includes(actor.id)}
+          data-battle-target={actor.id} data-targetable={Boolean(previews.get(actor.id) && !paused) || selection?.actorIds.includes(actor.id) || undefined}
+          data-preview={previews.get(actor.id) ? (aim?.foeId === actor.id ? 'focus' : 'faint') : undefined}
+          {...(aim && playableAttack && !paused ? foeProps(actor.id) : {})}
+          disabled={aim ? !previews.get(actor.id) || paused : !!selection && !selection.actorIds.includes(actor.id)}
           onClick={event => {
+            if (aim) { if (previews.get(actor.id) && !paused) foeProps(actor.id).onClick(); return; }
             if (selection) { choose(actor.id); return; }
             requestHoloDeviceTilt();
             setInspection({ id: actor.id, name: actor.name, anchor: event.currentTarget });
           }} aria-haspopup="dialog" aria-label={`${actor.name} foundation${selection?.actorIds.includes(actor.id) ? ' · choose for selected card' : ''}`} style={rig.surface(55, 60)}>
           <div className="battle-field__pile">
             <div className="battle-field__actor-card proto-lit-surface" ref={node => { if (node) foundationRefs.current.set(actor.id,node); else foundationRefs.current.delete(actor.id); }}>
-              <ActorHoloCard actorId={actor.id} name={actor.name} rank={rankLabel(actor.rank)} />
+              <ActorHoloCard actorId={actor.id} name={actor.name} rank={rankLabel(actor.rank)} receivedResources={{ AP: actor.charge, inspiration: actor.inspiration }} />
             </div>
           </div>
         </button>
         <div className="battle-field__side">
-          <AbilityCard actor={actor} attack={attack} disabled={!usable} armed={aim?.mode === 'armed' && aim.actorId === actor.id}
-            dragging={aim?.mode === 'drag' && aim.actorId === actor.id} interaction={cardProps(actor.id, usable)} />
+          {<div className="battle-moves" role="group" aria-label={actor.name + ' abilities'}>
+            <strong>{battle.maxAP ? '∞ AP (maxAP)' : `${actor.charge} AP banked`}</strong>
+            <AbilityTray actorName={actor.name} abilities={assignedMovesFor(actor.id).map(move => {
+              const committed = Math.max(3, battle.maxAP ? gripAP : Math.min(gripAP, actor.charge));
+              const key = `${actor.id}:${move.name}${move.name === 'Vice Grip' ? ':' + committed : ''}`;
+              const enabled = !holding;
+              return <button key={move.name} type="button" className="battle-move" disabled={!enabled} data-ability-actor={key} aria-pressed={aim?.actorId === key || retrieval === key}
+                aria-label={move.name} onClick={event => {
+                  const rect=event.currentTarget.getBoundingClientRect();
+                  setAbilityAnchor({x:Math.max(12,Math.min(window.innerWidth-230,rect.right+12)),y:Math.max(48,Math.min(window.innerHeight-350,rect.top-120))});
+                  if(move.retrieval){cancel();setRetrieval(key);setAnnouncement(move.name+' · Choose a highlighted tableau card');}else{setRetrieval(null);prime(key);}
+                }}><span className="battle-move__name">{move.name}</span><span className="battle-move__cost" aria-label={`${move.name==='Dig'?'Variable':move.cost}${move.name === 'Vice Grip' ? ' minimum' : ''} AP`}>{move.name==='Dig'?'Variable':move.cost}{move.name === 'Vice Grip' ? '+' : ''} AP</span></button>;
+            })} />
+            {battle.foes.some(f => f.gripSource === actor.id && f.effects.some(e => e.kind === 'grip')) && <button type="button" disabled={battlePaused || Boolean(battle.result)} onClick={() => setBattle(b => releaseGrip(b, actor.id))}>Release hold</button>}
+          </div>}
           <button type="button" className="battle-field__redraw" data-redraw-actor={actor.id} disabled={!canRedraw} onClick={() => redraw(actor.id)}
             aria-label={`Redraw ${actor.name}'s foundation for 1 inspiration · ${actor.inspiration} inspiration left`}
             title={actor.inspiration > 0 ? `Redraw: stuck? Swap ${actor.name}'s foundation value for a new one. Costs 1 inspiration (${actor.inspiration} left).` : `${actor.name} has no inspiration left to redraw`}>
             <span aria-hidden="true">↻ Redraw</span><span className="battle-field__redraw-left" aria-hidden="true">{actor.inspiration}</span>
           </button>
         </div>
-        <PartyVitals actor={actor} count={actor.count} events={battle.events} targeted={battle.started && !battle.result && target?.id === actor.id} />
+        <PartyVitals actor={actor} preview={aim?.foeId === actor.id ? previews.get(actor.id)?.hp.after : undefined} count={actor.count} events={battle.events} targeted={battle.started && !battle.result && target?.id === actor.id} />
       </div>;
     })}
   </div>;
 
-  return <section ref={fieldRef} className="battle-field" data-camera-background={active || undefined} data-first-team={BATTLE_TURN_PRIORITY[0]}
-    data-result={battle.result ?? undefined} data-aiming={aim ? aim.mode : undefined} aria-label="Battle foundations and shared woods tableau">
+  return <section ref={fieldRef} className="battle-field" style={{'--combat-ability-slots': COMBAT_ABILITY_SLOTS, '--tableau-card-limit': `${Number.isFinite(tableauCardLimit) ? tableauCardLimit : 10000}px`} as CSSProperties} data-camera-background={active || undefined} data-first-team={BATTLE_TURN_PRIORITY[0]}
+    data-result={battle.result ?? undefined} data-tactical-paused={holding || undefined} data-aiming={aim && !abilityInspection ? aim.mode : undefined} aria-label="Battle foundations and shared woods tableau">
     <header className="battle-field__header">
-      <h2>Dark Woods</h2>
-      <div className="battle-controls" role="group" aria-label="Battle setup">
+      <TableauSolveControls key={solverSession} onStep={solveStep} onStart={() => { cancel(); setRetrieval(null); setSelection(null); }} disabled={battlePaused} allowDivine={false} />
+      <h2>Dark Woods</h2>{retrieval && <button type="button" onClick={()=>setRetrieval(null)}>Cancel {retrieval.split(':')[1]}</button>}
+      <fieldset className="battle-controls" aria-label="Battle setup" disabled={holding}>
         <label className="battle-controls__scenario" title={scenario.blurb}>
           <select aria-label="Scenario" value={scenarioId} onChange={(event) => restart(event.target.value)}>
             {BATTLE_SCENARIOS.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
           </select>
+        </label>
+        <label className="battle-controls__max-ap" title="Debug: unlimited ability AP for all player actors. Banked AP is preserved.">
+          <input type="checkbox" checked={battle.maxAP} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();event.currentTarget.click();}}} onChange={event => {cancel();setBattle(current=>setMaxAP(current,event.target.checked));}} />
+          <span>maxAP</span>
         </label>
         <SceneButton type="button" aria-pressed={hasMochi} onClick={() => setBattle((b) => setMochi(b, !hasMochi))}>{hasMochi ? 'Remove Mochi' : 'Add Mochi'}</SceneButton>
         <span className="battle-controls__stepper" role="group" aria-label={`Slimes: ${battle.foes.length}`}>
@@ -278,7 +366,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
           <SceneButton type="button" aria-label="Add a slime" disabled={battle.foes.length >= MAX_FOES} onClick={() => setBattle(addSlime)}>+</SceneButton>
         </span>
         <SceneButton type="button" aria-pressed={heroCal} title="Cal, a fire spirit: Hero's ability gains fire above combo 3" onClick={() => setBattle((b) => setSpirit(b, 'hero', 'cal', !heroCal))}>Cal {heroCal ? 'on' : 'off'}</SceneButton>
-      </div>
+      </fieldset>
     </header>
     <span className="sr-only" role="status">{announcement}</span>
     {inspection && <DetailsCardViewer key={inspection.id} initialJumboId={inspection.id}
@@ -288,7 +376,15 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
         descriptor: `${inspection.name} · battle scene actor`,
         trays: [{ id: 'stats', label: 'Foundation', details: (() => { const actor = battle.party.find((a) => a.id === inspection.id); return actor ? `Rank ${rankLabel(actor.rank)} · Collected ${actor.count} · Inspiration ${actor.inspiration}` : 'Left the battle'; })() }] }]}
       onClose={() => setInspection(null)} onCloseObject={() => setInspection(null)} />}
-    <TableauScene immersive={!active} fillScenery={!active} terrain="woods" rig={rig} hours={hours}>
+    {abilityInspection && <DetailsCardViewer initialJumboId={'ability-'+abilityInspection.attack.actorId+'-'+abilityInspection.attack.form}
+      anchor={abilityInspection.anchor} timeOfDay={hours} lights={[...lights]} position={{x:0,y:-48}}
+      objects={[{ id:'ability-'+abilityInspection.attack.actorId+'-'+abilityInspection.attack.form, name:abilityInspection.attack.name,
+        badge:abilityInspection.attack.charge+' AP', badgeLabel:'Action point cost',
+        art:<AbilityArtwork name={abilityInspection.attack.form} fire={abilityInspection.attack.element==='fire'} fallback={<ActorCardArt sprite={ACTOR_HOLO_ART[abilityInspection.attack.actorId]} label={abilityInspection.attack.name} />} />,
+        descriptor:combatMovesFor(abilityInspection.attack.actorId).find(move=>move.name===abilityInspection.attack.form)?.description ?? '',
+        trays:[], footer:abilityInspection.attack.charge+' AP required' }]}
+      onClose={() => setAbilityInspection(null)} onCloseObject={() => setAbilityInspection(null)} />}
+    <TableauScene immersive={false} terrain="woods" biome={{ terrain: 'woods', danger: true }} rig={rig} hours={hours}>
       <div className="battle-field__board">
         {foeRow}
         <div className="battle-field__middle">
@@ -297,10 +393,10 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
             {battle.columns.map((column: Card[], index) => <div className="battle-field__column" key={index} style={{ '--cards': Math.max(1,column.length) } as CSSProperties}
               data-battle-target={`card:${index}`} data-targetable={Boolean(trapPreviews[index]) || undefined}
               data-preview={trapPreviews[index] ? (aimedColumn === index ? 'focus' : 'faint') : undefined}>
-              {column.map((card, depth) => <ProtoCard key={card.id} card={card} allowJumbo={false} disabled={paused || depth < column.length - 1 || !eligibleActors(battle, card).length} buried={depth < column.length - 1} centerRank={depth === column.length - 1} lit
-                active={selection?.cardId === card.id} selected={selection?.cardId === card.id}
+              {column.map((card, depth) => <ProtoCard key={card.id} card={card} allowJumbo={false} concealValue={holding} disabled={battlePaused || (retrieval ? retrievalCost(battle,retrieval,index,depth)===null : depth < column.length - 1 || !eligibleActors(battle, card).length)} footerLabel={retrieval && retrievalCost(battle,retrieval,index,depth)!==null ? retrievalCost(battle,retrieval,index,depth)+' AP' : undefined} buried={depth < column.length - 1} centerRank={depth === column.length - 1} lit
+                active={!holding && (selection?.cardId === card.id || !!retrieval && retrievalCost(battle,retrieval,index,depth)!==null)} selected={!holding && selection?.cardId === card.id}
                 cardRef={node => { if (node) cardRefs.current.set(card.id,node); else cardRefs.current.delete(card.id); }}
-                onClick={event => activate(index,event.currentTarget)}
+                onClick={event => {if(retrieval){setBattle(current=>retrieveCard(current,retrieval,index,depth));setRetrieval(null);}else activate(index,event.currentTarget);}}
                 style={{ position: 'absolute', left: 0, top: `calc(var(--battle-peek) * ${depth})`, zIndex: depth + 1, ...rig.surface(index * 14 - 42, 0) }} />)}
               {column.length > 0 && <TableMark depth={column.length - 1} trap={battle.traps[column[column.length - 1].id]}
                 eyes={battle.foes.filter((foe) => foe.hp > 0 && foe.eye?.cardId === column[column.length - 1].id)}
@@ -309,11 +405,11 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
             </div>
           </div>
           <div className="battle-field__status">
-            <span className="battle-field__status-text" data-ambush={ambushed && !battle.result || undefined} data-result={battle.result ?? undefined}>{statusLine(battle, paused)}</span>
+            <span className="battle-field__status-text" data-ambush={ambushed && !battle.result || undefined} data-result={battle.result ?? undefined}>{holding ? 'Tactical pause · Choose a target' : statusLine(battle, paused)}</span>
             {battle.result ? <SceneButton type="button" onClick={() => restart()}>Fight again</SceneButton> : <>
-              <SceneButton type="button" aria-pressed={paused} disabled={!battle.started} onClick={() => { cancel(); setSelection(null); setPaused((p) => !p); }}>{paused ? 'Resume' : 'Pause'}</SceneButton>
-              <SceneButton type="button" onClick={() => restart()}>Restart</SceneButton>
-              <SceneButton type="button" disabled={!canDeal(battle) || paused} title="Deal one card onto every column with room" onClick={() => setBattle(dealRow)}>Deal a row</SceneButton>
+              <SceneButton type="button" aria-pressed={paused} disabled={!battle.started || holding} onClick={() => { cancel(); setSelection(null); setPaused((p) => !p); }}>{paused ? 'Resume' : 'Pause'}</SceneButton>
+              <SceneButton type="button" disabled={holding} onClick={() => restart()}>Restart</SceneButton>
+              <SceneButton type="button" disabled={!canDeal(battle) || battlePaused} title="Deal one card onto every column with room" onClick={() => setBattle(dealRow)}>Deal a row</SceneButton>
             </>}
           </div>
         </div>
@@ -321,6 +417,11 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
       </div>
     </TableauScene>
     {!active && <footer className="battle-field__footer"><SceneButton type="button" onClick={onWatch}>Watch battle scene</SceneButton></footer>}
-    {aim?.mode === 'drag' && heldAttack && createPortal(<AbilityGhost attack={heldAttack} x={aim.x} y={aim.y} preview={ghostPreview} trap={ghostTrap?.damage ?? null} />, document.body)}
+    {aim && heldAttack && createPortal(<><div className="ability-card-popover" style={{left:abilityAnchor.x,top:abilityAnchor.y,opacity:aim.mode==='drag'?0:1,visibility:abilityInspection?'hidden':undefined}} role="region" aria-label="Primed ability">
+          <button className="ability-card-popover__close" type="button" onClick={cancel} aria-label="Cancel ability">×</button>
+          <AbilityCard attack={heldAttack} unavailableReason={!playableAttack ? 'Not enough AP to play · Click to inspect' : undefined} interaction={cardProps(aim.actorId,!paused && !battle.result,anchor => setAbilityInspection({attack:heldAttack,anchor}))} />
+          {heldAttack.form === 'Vice Grip' && <label className="ability-card-popover__commit">Commit AP <input type="number" min="3" max={battle.maxAP ? undefined : Math.max(3,battle.party.find(a=>a.id===heldAttack.actorId)?.charge ?? 0)} value={heldAttack.charge} aria-label="AP to commit to Vice Grip"
+            onChange={event=>{const points=Math.max(3,Math.floor(Number(event.target.value))||3);setGripAP(points);prime(heldAttack.actorId+':Vice Grip:'+points);}} /></label>}
+        </div>{aim.mode==='drag' && <div className="ability-card-drag" style={{left:aim.x,top:aim.y}} aria-hidden="true"><AbilityCard attack={heldAttack} ghost /></div>}</>, document.body)}
   </section>;
 }

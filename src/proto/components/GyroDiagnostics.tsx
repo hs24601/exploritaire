@@ -1,3 +1,4 @@
+import { gameTime } from '../../gameTime';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { GYRO_LOG_ENABLED, readHoloCardTrace } from '../holoDiagnostics';
@@ -82,10 +83,10 @@ export function GyroDiagnostics() {
     };
     window.addEventListener('deviceorientation', orientation);
     draw();
-    const timer = window.setInterval(draw, 300);
+    const timer = gameTime.setInterval(draw, 300);
     return () => {
       active = false;
-      window.clearInterval(timer);
+      gameTime.clearInterval(timer);
       window.removeEventListener('deviceorientation', orientation);
       permissionStatuses.forEach(status => { status.onchange = null; });
     };

@@ -13,8 +13,8 @@ await layout('morning');await page.screenshot({path:`artifacts/ordinary-${width}
 const card=page.locator('.proto-story-card');assert.ok(Math.abs((await card.boundingBox()).width-252*.65)<1,'default quest width reduced 35%');const from=await center(card);await drag(page,{x:from.x,y:from.y-80},{x:from.x+10,y:from.y-65},touch);
 await drag(page,await center(page.locator('[data-cell-grip="actor-hero"]')),await center(page.locator('[data-biome-id="day-one-berries"]')),touch);await page.waitForTimeout(2400);
 await page.screenshot({path:'artifacts/ordinary-debug-'+width+'-'+touch+'.png'});console.log('position',touch,await page.locator('[data-board-piece="actor"]').getAttribute('data-grid-reference'));assert.ok(await page.locator('.proto-main-tableau .playing-card').count()>0,'foraging opens');
-for(let i=0;i<2;i++){await press(page,page.locator('.proto-main-tableau .playing-card:not([data-gameplay-disabled="true"])').first(),touch);await press(page,page.locator('.card-jumbo__action'),touch);await page.waitForTimeout(600);}
-assert.match(await page.locator('.proto-ordinary-day').innerText(),/Berries 2/);
+for(let i=0;i<6;i++){await press(page,page.locator('.proto-main-tableau .playing-card:not([data-gameplay-disabled="true"]):not([data-buried])').first(),touch);if(await page.locator('.card-jumbo__action').count())await press(page,page.locator('.card-jumbo__action'),touch);await page.waitForTimeout(600);}
+assert.match(await page.locator('.proto-ordinary-day').innerText(),/Mana 2/);
 await press(page,page.getByRole('button',{name:'Exit tableau',exact:false}).first(),touch);await page.waitForTimeout(1000);
 assert.equal(await page.locator('.proto-map').getAttribute('data-camera-view'),'immersive','exit preserves immersion');
 await press(page,page.getByRole('button',{name:'Reset View',exact:true}),touch);await page.waitForTimeout(700);

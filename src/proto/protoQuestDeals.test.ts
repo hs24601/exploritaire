@@ -9,7 +9,7 @@ describe('opening quest deals', () => {
       expect(deal.tableau).toHaveLength(7);
       expect(deal.tableau.every((column) => column.length > 0)).toBe(true);
       expect(deal.stock).toEqual([]);
-      expect(deal.tableau.flat().filter((card) => !card.encounter).every((card) => Boolean(card.resource))).toBe(true);
+      expect(deal.tableau.flat().every((card) => !card.resource || card.resource === 'wood')).toBe(true);
       expect(new Set(deal.tableau.flat().map((card) => card.id)).size).toBe(deal.tableau.flat().length);
       const columns = deal.tableau.map((column) => column.filter((card) => !card.encounter));
       const visited = new Set<string>();
@@ -51,11 +51,10 @@ describe('opening quest deals', () => {
     });
   }
 
-  it('keeps Camp, food and energy achievable without random rewards', () => {
+  it('retains wood and rank sequences without mana-producing food pickups', () => {
     const small = createQuestBiomeDeal('small').tableau.flat();
     expect(small.filter((card) => card.resource === 'wood').length).toBeGreaterThanOrEqual(3);
-    expect(small.filter((card) => card.resource === 'berries').length).toBeGreaterThanOrEqual(1);
-    expect(small.filter((card) => ['berries', 'herbs'].includes(card.resource ?? '')).length).toBeGreaterThanOrEqual(3);
+    expect(small.filter((card) => ['mana', 'herbs'].includes(card.resource ?? ''))).toHaveLength(0);
     expect(DEFAULT_EXPEDITION_ENERGY).toBeGreaterThanOrEqual(small.length);
     const deep = createQuestBiomeDeal('deep').tableau.flat();
     expect(deep.filter((card) => card.encounter).length).toBe(1);

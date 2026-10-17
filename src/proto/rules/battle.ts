@@ -2,7 +2,8 @@ import { ACTOR_INSPIRATION_MAX, type Card } from '../protoState';
 import { redrawFoundation, redrawOptions, type RedrawSource } from './redraw';
 import { isAdjacentRank } from './setup';
 import { stockCard } from './skirmish';
-import { MAX_CHARGE, SPIRITS, attackFor, type AbilityEffect, type Attack, type PlayRule } from './battleAbilities';
+import { applyHitEffects, bleedChance, BLEED } from './battleEffects';
+import { MAX_CHARGE, combatMovesFor, gripDuration, SPIRITS, attackFor, type AbilityEffect, type Attack, type PlayRule } from './battleAbilities';
 
 // The Dark Woods battle: party actors build charge by playing tableau cards
 // onto their foundations (golf adjacency), then spend it by dragging their
@@ -10,8 +11,8 @@ import { MAX_CHARGE, SPIRITS, attackFor, type AbilityEffect, type Attack, type P
 // Pure: no React or DOM; the view steps `tickBattle` on animation frames.
 //
 // Abilities never consume foundation cards: an attack spends the actor's
-// charge only, so the run on the foundation carries on and the next cards
-// build a fresh charge. A hit from an enemy resets the struck actor's charge.
+// AP cost only. The foundation run and remaining AP survive both attacks
+// and enemy hits. Ability drag keys include actor, move and optional hold AP.
 //
 // Stagger: every attack fills the target's stagger gauge and knocks its attack
 // timer back. A full gauge staggers the foe: its timer stops and it takes
@@ -42,6 +43,7 @@ export const MAX_FOES = SLIME_ROSTER.length;
 export const PARTY_ROSTER = {
   hero: { name: 'Hero', maxHp: 12, rank: 2 },
   mochi: { name: 'Mochi', maxHp: 10, rank: 5 },
+  banks: { name: 'Banks', maxHp: 80, rank: 9 },
 } as const;
 export type PartyId = keyof typeof PARTY_ROSTER;
 
@@ -63,6 +65,7 @@ export type BattleFoe = {
   /** Seconds of stagger left; 0 when not staggered. */
   staggered: number;
   effects: ActiveEffect[];
+  gripSource?: string;
   /** Hungry slimes (rules.hungry): own foundation rank, cards eaten since the last attack (+1 damage each), the card being eyed and seconds before eyeing the next. */
   rank: number;
   fed: number;
@@ -78,6 +81,7 @@ export type BattleActor = {
   /** Foundation top rank and cards collected; never spent by attacks. */
   rank: number;
   count: number;
+  /** Banked action points; no cap. The field name is retained for existing integrations. */
   charge: number;
   /** Foundation redraws left: each costs 1 (rules/redraw.ts). */
   inspiration: number;
@@ -95,7 +99,10 @@ export type BattleEvent = {
 };
 
 export type BattleState = {
+  /** Temporary debug override: abilities are available and do not debit banked AP. */
+  maxAP: boolean;
   seed: number;
+  effectSeed: number;
   columns: Card[][];
   /** The opening deal's own stock, used before the endless seeded stock. */
   stock: Card[];
@@ -126,7 +133,7 @@ export type BattleState = {
  *   opens the card beneath for the party. The party can't play a trapped
  *   card; it waits for a slime.
  */
-export type BattleRules = { hungry: boolean; traps: boolean };
+export type BattleRules = { hungry: boolean; traps: boolean; finiteTableau?: boolean };
 export const BASIC_RULES: BattleRules = { hungry: false, traps: false };
 export type Trap = { actorId: string; name: string; damage: number; stagger: number; effects: AbilityEffect[] };
 
@@ -139,6 +146,7 @@ export const FED_MAX = 3;
 const FOE_RANKS = [9, 6, 12];
 
 export type BattleSetup = {
+  maxAP?: boolean;
   playerAmbush?: boolean;
   mochi?: boolean; slimes?: number; spirits?: Partial<Record<PartyId, string[]>>;
   /** Each actor's inspiration coming in; defaults to full. */
@@ -164,7 +172,9 @@ const newFoe = (index: number): BattleFoe => ({
 export const createBattle = (deal: { tableau: Card[][]; stock?: Card[] }, setup: BattleSetup = {}): BattleState => {
   const slimes = Math.max(1, Math.min(MAX_FOES, setup.slimes ?? 2));
   return {
+    maxAP: setup.maxAP ?? false,
     seed: setup.seed ?? 7,
+    effectSeed: setup.seed ?? 7,
     columns: deal.tableau.map((column) => [...column]),
     stock: [...(deal.stock ?? [])],
     dealt: 0,
@@ -228,7 +238,7 @@ export const takeTop = (state: BattleState, column: number) => {
   if (!card) return null;
   let { stock, dealt } = state;
   const columns = state.columns.map((c, i) => (i === column ? c.slice(0, -1) : c));
-  if (columns[column].length === 0) {
+  if (columns[column].length === 0 && !state.rules.finiteTableau) {
     const refill: Card[] = [];
     for (let i = 0; i < REFILL; i += 1) { const next = draw({ ...state, stock, dealt }); refill.push(next.card); stock = next.stock; dealt = next.dealt; }
     columns[column] = refill;
@@ -247,8 +257,8 @@ export const playCard = (state: BattleState, column: number, actorId: string): B
   return {
     ...state, columns, stock, dealt, started: true,
     party: state.party.map((actor) => actor.id === actorId
-      ? { ...actor, rank: card.rank, count: actor.count + 1, charge: Math.min(MAX_CHARGE, actor.charge + gain) } : actor),
-    foes: snatchedFrom ? state.foes.map((foe) => (foe === snatchedFrom ? { ...foe, eye: null, rest: 1 } : foe)) : state.foes,
+      ? { ...actor, rank: card.rank, count: actor.count + 1, charge: actor.charge + gain } : actor),
+    foes:state.foes.map(foe=>({...foe,...(foe===snatchedFrom?{eye:null,rest:1}:{}),effects:foe.effects.map(e=>e.kind==='grip' && foe.gripSource===actorId?{...e,gripBudget:(e.gripBudget ?? e.seconds)+3,left:e.left+gripDuration((e.gripBudget ?? e.seconds)+3)-gripDuration(e.gripBudget ?? e.seconds)}:e)})),
     ...(snatchedFrom ? withEvents(state, [{ kind: 'snatch', targetId: actorId, label: snatchedFrom.name }]) : {}),
   };
 };
@@ -286,19 +296,46 @@ export const canDeal = (state: BattleState) => !state.result && state.columns.so
 
 /** The attack an actor would make now, with its spirits. */
 export const actorAttack = (state: BattleState, actorId: string): Attack | null => {
-  const actor = state.party.find((a) => a.id === actorId);
-  return actor && actorAlive(actor) ? attackFor(actor.id, actor.charge, actor.spirits) : null;
+  const [id, choice, points] = actorId.split(':');
+  const actor = state.party.find(a => a.id === id);
+  const requested = points ? Math.max(3, Math.floor(Number(points))) : undefined;
+  const available = state.maxAP ? Math.max(actor?.charge ?? 0, MAX_CHARGE, requested ?? 0) : actor?.charge ?? 0;
+  const committed = requested === undefined ? available : Math.min(available, requested);
+  return actor && actorAlive(actor) && Number.isFinite(committed) ? attackFor(actor.id, committed, actor.spirits, choice) : null;
 };
 
 const scaled = (foe: BattleFoe, amount: number) => (foe.staggered > 0 ? Math.round(amount * foe.profile.vulnerability) : amount);
 
-/** Spends an actor's charge on a foe. The drop and the drag preview both use this. */
+/** Inspection describes an authored ability even when the actor cannot afford it.
+ * This never changes eligibility: actorAttack remains the gate for real plays.
+ */
+export const inspectActorAbility = (state: BattleState, key: string): Attack | null => {
+  const [id, choice, points] = key.split(':');
+  const actor = state.party.find(actor => actor.id === id);
+  const move = combatMovesFor(id).find(move => move.name === choice);
+  if (!actor || !move) return null;
+  const requested = points ? Math.max(move.cost, Math.floor(Number(points))) : move.cost;
+  return Number.isFinite(requested) ? attackFor(id, requested, actor.spirits, choice) : null;
+};
+
+/** Spends the selected AP cost on a foe. The drop and preview share this rule. */
 export const applyAttack = (state: BattleState, actorId: string, foeId: string): BattleState => {
   const attack = actorAttack(state, actorId);
+  actorId=actorId.split(':')[0];
+  const friendly = state.party.find(actor => actor.id === foeId);
+  if (friendly) {
+    if (!attack || !actorAlive(friendly) || state.result) return state;
+    const hp = Math.max(0, friendly.hp - attack.damage);
+    const party = spendActorAP(state, actorId, attack.charge).map(actor => actor.id === foeId ? { ...actor, hp } : actor);
+    const events: Omit<BattleEvent, 'id'>[] = [{ kind: 'hit', targetId: foeId, sourceId: actorId, amount: attack.damage, label: attack.name }];
+    if (hp <= 0) events.push({ kind: 'down', targetId: foeId, sourceId: actorId });
+    return { ...state, party, started: true, ambush: state.ambush?.awaitingAttack ? { awaitingAttack: false, remaining: PLAYER_AMBUSH_SECONDS } : state.ambush,
+      result: resultOf(party, state.foes), ...withEvents(state, events) };
+  }
   const target = state.foes.find((foe) => foe.id === foeId);
   if (!attack || !target || !foeAlive(target) || state.result) return state;
   const events: Omit<BattleEvent, 'id'>[] = [];
-  const damage = scaled(target, attack.damage);
+  const damage = scaled(target, attack.damage+(attack.form==='Nip' && target.effects.some(e=>e.kind==='bleed' && e.left>0)?1:0));
   const hp = Math.max(0, target.hp - damage);
   events.push({ kind: 'hit', targetId: foeId, sourceId: actorId, amount: damage, label: attack.name });
   let { stagger, staggered, timer } = target;
@@ -312,14 +349,13 @@ export const applyAttack = (state: BattleState, actorId: string, foeId: string):
     }
   }
   // A fresh effect of the same kind refreshes the old one rather than stacking.
-  const effects = hp > 0 ? [
-    ...target.effects.filter((effect) => !attack.effects.some((next) => next.kind === effect.kind)),
-    ...attack.effects.map((effect) => ({ ...effect, left: effect.seconds, tickIn: 1 })),
-  ] : [];
+  const resolved = applyHitEffects(target.effects, attack.effects, state.effectSeed);
+  const effects = hp > 0 ? resolved.effects : [];
+  if (attack.form === 'Takedown') timer = Math.min(0, timer);
   if (hp <= 0) events.push({ kind: 'ko', targetId: foeId });
-  const foes = state.foes.map((foe) => (foe.id === foeId ? { ...foe, hp, stagger: hp > 0 ? stagger : 0, staggered: hp > 0 ? staggered : 0, timer: hp > 0 ? timer : 0, effects } : foe));
-  const party = state.party.map((actor) => (actor.id === actorId ? { ...actor, charge: 0 } : actor));
-  return { ...state, started: true, ambush: state.ambush?.awaitingAttack ? { awaitingAttack: false, remaining: PLAYER_AMBUSH_SECONDS } : state.ambush, party, foes, result: resultOf(party, foes), ...withEvents(state, events) };
+  const foes = state.foes.map((foe) => (foe.id === foeId ? { ...foe, gripSource:attack.form==='Vice Grip'?actorId:target.gripSource, ...(attack.form==='Takedown'?{eye:null,rest:FORAGE_REST}:{}), hp, stagger: hp > 0 ? stagger : 0, staggered: hp > 0 ? staggered : 0, timer: hp > 0 ? timer : 0, effects:effects.filter(e=>e.kind!=='grip'||attack.form==='Vice Grip'||target.gripSource!==actorId) } : {...foe,effects:foe.effects.filter(e=>e.kind!=='grip'||foe.gripSource!==actorId)}));
+  const party = spendActorAP(state, actorId, attack.charge);
+  return { ...state, effectSeed: resolved.seed, started: true, ambush: state.ambush?.awaitingAttack ? { awaitingAttack: false, remaining: PLAYER_AMBUSH_SECONDS } : state.ambush, party, foes, result: resultOf(party, foes), ...withEvents(state, events) };
 };
 
 export type AttackPreview = {
@@ -340,6 +376,13 @@ export type AttackPreview = {
 /** What dropping this actor's attack on a foe would do: the same rules as the drop. */
 export const previewAttack = (state: BattleState, actorId: string, foeId: string): AttackPreview | null => {
   const attack = actorAttack(state, actorId);
+  const friendly = state.party.find(actor => actor.id === foeId);
+  if (friendly) {
+    if (!attack || !actorAlive(friendly) || state.result) return null;
+    const after = applyAttack(state, actorId, foeId).party.find(actor => actor.id === foeId)!;
+    return { attack, foeId, damage: friendly.hp - after.hp, hp: { before: friendly.hp, after: after.hp, max: friendly.maxHp },
+      stagger: { before: 0, after: 0, max: 0 }, timer: { before: 0, after: 0 }, staggers: false, vulnerable: false, ko: after.hp <= 0, effects: [] };
+  }
   const before = state.foes.find((foe) => foe.id === foeId);
   if (!attack || !before || !foeAlive(before) || state.result) return null;
   const after = applyAttack(state, actorId, foeId).foes.find((foe) => foe.id === foeId)!;
@@ -353,7 +396,7 @@ export const previewAttack = (state: BattleState, actorId: string, foeId: string
     staggers: before.staggered <= 0 && after.staggered > 0,
     vulnerable: before.staggered > 0,
     ko,
-    effects: ko ? [] : attack.effects,
+    effects: ko ? [] : [...attack.effects.filter(e=>e.kind!=='bleed'), ...(bleedChance(before.effects,attack.effects)>0 ? [{...BLEED,chance:bleedChance(before.effects,attack.effects)}] : [])],
   };
 };
 
@@ -376,9 +419,11 @@ export const tickBattle = (state: BattleState, dt: number): BattleState => {
     let { hp, timer, stagger, staggered } = foe;
     const effects: ActiveEffect[] = [];
     for (const effect of foe.effects) {
+      if(effect.kind === "grip" && !party.some(a=>a.id===foe.gripSource && a.hp>0)) continue;
       let { left, tickIn } = effect;
-      left -= dt; tickIn -= dt;
-      if (tickIn <= 0 && hp > 0) {
+      const elapsed = Math.min(dt, left);
+      left -= dt; tickIn -= elapsed;
+      while (tickIn <= 0.000001 && hp > 0 && effect.dps > 0) {
         const amount = scaled(foe, effect.dps);
         hp = Math.max(0, hp - amount);
         events.push({ kind: 'dot', targetId: foe.id, amount, label: effect.kind });
@@ -387,20 +432,22 @@ export const tickBattle = (state: BattleState, dt: number): BattleState => {
       if (left > 0.001) effects.push({ ...effect, left, tickIn });
     }
     if (hp <= 0) { events.push({ kind: 'ko', targetId: foe.id }); return { ...foe, hp: 0, timer: 0, stagger: 0, staggered: 0, effects: [] }; }
+    const held=foe.effects.filter(e=>e.kind==='stun'||(e.kind==='grip' && party.some(a=>a.id===foe.gripSource && a.hp>0)));
+    const freeDt=Math.max(0,enemyDt-Math.max(0,...held.map(e=>Math.max(0,e.left-heldSeconds))));
     if (staggered > 0) {
       staggered = Math.max(0, staggered - dt);
       if (staggered === 0) stagger = 0;
       return { ...foe, hp, stagger, staggered, effects };
     }
     stagger = Math.max(0, stagger - foe.profile.staggerDecay * dt);
-    if (enemyDt > 0) timer += enemyDt / foe.profile.attackSeconds;
-    if (enemyDt > 0 && timer >= 1) {
+    if (enemyDt > 0) timer += freeDt / foe.profile.attackSeconds;
+    if (freeDt > 0 && timer >= 1) {
       timer = 0;
       const target = enemyTarget({ ...state, party });
       if (target) {
         const damage = foe.profile.damage + foe.fed;
         const hpLeft = Math.max(0, target.hp - damage);
-        party = party.map((actor) => (actor.id === target.id ? { ...actor, hp: hpLeft, charge: 0 } : actor));
+        party = party.map((actor) => (actor.id === target.id ? { ...actor, hp: hpLeft } : actor));
         events.push({ kind: 'enemy-hit', targetId: target.id, sourceId: foe.id, amount: damage, label: foe.name });
         if (hpLeft <= 0) events.push({ kind: 'down', targetId: target.id, sourceId: foe.id });
         return { ...foe, hp, timer, stagger, staggered, effects, fed: 0 };
@@ -417,7 +464,7 @@ export const tickBattle = (state: BattleState, dt: number): BattleState => {
 const forage = (state: BattleState, foeId: string, dt: number): BattleState => {
   const foe = state.foes.find((f) => f.id === foeId)!;
   const update = (patch: Partial<BattleFoe>, base: BattleState = state) => ({ ...base, foes: base.foes.map((f) => (f.id === foeId ? { ...f, ...patch } : f)) });
-  if (!foeAlive(foe) || foe.staggered > 0) return foe.eye ? update({ eye: null, rest: FORAGE_REST }) : state;
+  if (!foeAlive(foe) || foe.staggered > 0 || foe.effects.some(e=>e.kind==='stun'||e.kind==='grip')) return foe.eye ? update({ eye: null, rest: FORAGE_REST }) : state;
   const top = (column: number) => { const cards = state.columns[column]; return cards[cards.length - 1]; };
   if (foe.eye) {
     // The eyed card went (the party took it): look again soon.
@@ -448,6 +495,7 @@ const eat = (state: BattleState, foeId: string, column: number): BattleState => 
   const trap = state.traps[taken.card.id];
   const { [taken.card.id]: _sprung, ...traps } = state.traps;
   const events: Omit<BattleEvent, 'id'>[] = [{ kind: 'take', targetId: foeId, label: String(taken.card.rank) }];
+  let effectSeed = state.effectSeed;
   const foes = state.foes.map((foe) => {
     if (foe.id !== foeId) return foe;
     let next: BattleFoe = { ...foe, rank: taken.card.rank, fed: Math.min(FED_MAX, foe.fed + 1), eye: null, rest: FORAGE_REST };
@@ -461,24 +509,27 @@ const eat = (state: BattleState, foeId: string, column: number): BattleState => 
         if (stagger >= foe.profile.staggerMax && hp > 0) { staggered = foe.profile.staggerSeconds; events.push({ kind: 'stagger', targetId: foeId }); }
       }
       // A trap spoils the meal: the card doesn't feed the slime.
-      next = { ...next, hp, stagger, staggered, fed: foe.fed, effects: hp > 0 ? [...foe.effects.filter((e) => !trap.effects.some((t) => t.kind === e.kind)), ...trap.effects.map((e) => ({ ...e, left: e.seconds, tickIn: 1 }))] : [] };
+      const resolved = applyHitEffects(foe.effects, trap.effects, effectSeed); effectSeed = resolved.seed;
+      next = { ...next, hp, stagger, staggered, fed: foe.fed, effects: hp > 0 ? resolved.effects : [] };
       if (hp <= 0) { events.push({ kind: 'ko', targetId: foeId }); next = { ...next, stagger: 0, staggered: 0, timer: 0, eye: null }; }
     }
     return next;
   });
-  return { ...state, columns: taken.columns, stock: taken.stock, dealt: taken.dealt, traps, foes, result: resultOf(state.party, foes), ...withEvents(state, events) };
+  return { ...state, effectSeed, columns: taken.columns, stock: taken.stock, dealt: taken.dealt, traps, foes, result: resultOf(state.party, foes), ...withEvents(state, events) };
 };
 
 /** Spends an actor's charge arming a trap in a column's top card (rules.traps). */
 export const applyTrap = (state: BattleState, actorId: string, column: number): BattleState => {
   const attack = actorAttack(state, actorId);
+  actorId = actorId.split(':')[0];
   const cards = state.columns[column];
   const card = cards?.[cards.length - 1];
-  if (!state.rules.traps || !attack || !card || state.traps[card.id] || state.result) return state;
+  if (!state.rules.traps || attack?.form==='Vice Grip' || !attack || !card || state.traps[card.id] || state.result) return state;
+  state = releaseGrip(state, actorId);
   return {
     ...state, started: true,
     traps: { ...state.traps, [card.id]: { actorId, name: attack.name, damage: attack.damage, stagger: attack.stagger, effects: attack.effects } },
-    party: state.party.map((actor) => (actor.id === actorId ? { ...actor, charge: 0 } : actor)),
+    party: spendActorAP(state, actorId, attack.charge),
   };
 };
 
@@ -487,7 +538,7 @@ export const previewTrap = (state: BattleState, actorId: string, column: number)
   const attack = actorAttack(state, actorId);
   const cards = state.columns[column];
   const card = cards?.[cards.length - 1];
-  if (!state.rules.traps || !attack || !card || state.traps[card.id] || state.result) return null;
+  if (!state.rules.traps || attack?.form==='Vice Grip' || !attack || !card || state.traps[card.id] || state.result) return null;
   return { attack, cardId: card.id, damage: Math.round(attack.damage * TRAP_BONUS), eyedBy: state.foes.find((foe) => foe.eye?.cardId === card.id)?.name ?? null };
 };
 
@@ -519,3 +570,32 @@ export const setSpirit = (state: BattleState, actorId: string, spiritId: string,
     ...actor, spirits: on ? [...new Set([...actor.spirits, spiritId])] : actor.spirits.filter((id) => id !== spiritId),
   }),
 });
+
+export const releaseGrip=(state:BattleState,actorId:string):BattleState=>({...state,foes:state.foes.map(f=>f.gripSource===actorId?{...f,effects:f.effects.filter(e=>e.kind!=='grip'),gripSource:undefined}:f)});
+
+/** One cost path for direct abilities and traps; maxAP never replaces finite bank values. */
+const spendActorAP = (state: BattleState, actorId: string, cost: number) => state.maxAP ? state.party
+  : state.party.map(actor => actor.id === actorId ? {...actor, charge:Math.max(0,actor.charge-cost)} : actor);
+export const setMaxAP = (state: BattleState, enabled: boolean): BattleState => state.maxAP === enabled ? state : {...state,maxAP:enabled};
+
+/** Depth is measured from the exposed top card, starting at one. */
+export function retrievalCost(state:BattleState,key:string,column:number,index:number):number|null {
+ const [id,move]=key.split(':');
+ const actor=state.party.find(a=>a.id===id),cards=state.columns[column];
+ if(id!=='hero'||!actor||actor.hp<=0||state.result||!cards||!Number.isInteger(index)||index<0||index>=cards.length)return null;
+ const depth=cards.length-index;
+ const cost=move==='Fetch'?(depth===1?2:null):move==='Dig'?depth:null;
+ return cost!==null&&(state.maxAP||actor.charge>=cost)?cost:null;
+}
+export function retrieveCard(state:BattleState,key:string,column:number,index:number):BattleState {
+ const cost=retrievalCost(state,key,column,index);if(cost===null)return state;
+ const [id,move]=key.split(':'),card=state.columns[column][index];
+ let columns=state.columns.map((c,i)=>i===column?c.filter((_,j)=>j!==index):c),stock=state.stock,dealt=state.dealt;
+ if(!columns[column].length){const top=takeTop(state,column)!;columns=top.columns;stock=top.stock;dealt=top.dealt;}
+ state=releaseGrip(state,id);
+ return {...state,columns,stock,dealt,started:true,
+ party:spendActorAP(state,id,cost).map(a=>a.id===id?{...a,rank:card.rank,count:a.count+1}:a),
+ foes:state.foes.map(f=>f.eye?.cardId===card.id?{...f,eye:null,rest:1}:f),
+ traps:Object.fromEntries(Object.entries(state.traps).filter(([cardId])=>cardId!==card.id)),
+ ...withEvents(state,[{kind:'take',sourceId:id,targetId:id,label:move,amount:cost}])};
+}
