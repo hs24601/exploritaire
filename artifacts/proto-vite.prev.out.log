@@ -1,0 +1,327 @@
+
+> exploritaire@0.1.0 dev
+> npm run dev:doctor:fix && vite
+
+
+> exploritaire@0.1.0 dev:doctor:fix
+> node tools/dev-doctor.mjs --fix
+
+[dev:doctor] No listener currently bound to port 5178.
+[dev:doctor] OK
+
+  VITE v5.4.21  ready in 482 ms
+
+  ➜  Local:   http://localhost:5178/
+  ➜  Network: http://100.82.227.20:5178/
+  ➜  Network: http://192.168.68.54:5178/
+  ➜  press h + enter to show help
+12:24:16 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:24:16 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:24:17 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:24:17 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:24:17 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:24:56 PM [vite] hmr update /src/proto/components/TableAtmosphere.tsx, /src/index.css
+12:25:01 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableAtmosphere.tsx
+12:25:02 PM [vite] hmr update /src/index.css
+12:25:02 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:25:02 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:25:17 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:25:17 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:25:17 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:25:17 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:25:34 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:25:34 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:25:34 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:25:59 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:26:00 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:26:00 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:43:46 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:43:46 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:43:46 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:43:46 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:43:46 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:43:56 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:43:56 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:43:56 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:43:56 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:44:07 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:44:07 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:44:07 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:44:21 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:44:22 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:44:22 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:44:22 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:44:43 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:44:43 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:44:43 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:44:43 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:44:50 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:44:50 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:44:50 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:45:40 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:45:40 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:45:40 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:45:40 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:45:40 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:45:40 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:45:40 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:46:11 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/SpriteStandee.tsx, /src/proto/components/DetailsCardViewer.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx, /src/proto/components/TableQuestCard.tsx, /src/proto/components/TableAtmosphere.tsx
+12:46:11 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/SpriteStandee.tsx, /src/proto/components/DetailsCardViewer.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx, /src/proto/components/TableQuestCard.tsx, /src/proto/components/TableAtmosphere.tsx
+12:46:12 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/SpriteStandee.tsx, /src/proto/components/DetailsCardViewer.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx, /src/proto/components/TableQuestCard.tsx, /src/proto/components/TableAtmosphere.tsx
+12:46:12 PM [vite] hmr invalidate /src/proto/components/SpriteStandee.tsx Could not Fast Refresh ("NEUTRAL_STANDEE_LIGHTING" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:46:12 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+12:46:12 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:46:12 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:46:12 PM [vite] hmr invalidate /src/proto/components/TableQuestCard.tsx Could not Fast Refresh ("fitTableQuestCard" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:46:12 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:46:12 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:46:12 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:46:22 PM [vite] hmr update /src/proto/components/SpriteStandee.tsx, /src/index.css
+12:46:22 PM [vite] hmr update /src/proto/components/SpriteStandee.tsx, /src/index.css
+12:46:22 PM [vite] hmr invalidate /src/proto/components/SpriteStandee.tsx Could not Fast Refresh ("NEUTRAL_STANDEE_LIGHTING" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:46:22 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+12:46:22 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:46:22 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:46:41 PM [vite] hmr update /src/index.css, /src/proto/components/BiomeEdgeScenery.tsx
+12:47:05 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:47:06 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:47:06 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:47:06 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:47:14 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableAtmosphere.tsx
+12:47:15 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableAtmosphere.tsx
+12:47:15 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:47:15 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:47:22 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableAtmosphere.tsx
+12:47:22 PM [vite] hmr update /src/index.css, /src/proto/components/BiomeEdgeScenery.tsx
+12:47:22 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:47:22 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:47:32 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableAtmosphere.tsx
+12:47:32 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableAtmosphere.tsx
+12:47:32 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:47:32 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:47:36 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableAtmosphere.tsx
+12:47:36 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:47:36 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:47:43 PM [vite] hmr update /src/proto/components/TableAtmosphere.tsx, /src/index.css
+12:47:43 PM [vite] hmr update /src/proto/components/TableAtmosphere.tsx, /src/index.css
+12:48:01 PM [vite] hmr update /src/proto/components/TableAtmosphere.tsx, /src/index.css
+12:48:08 PM [vite] hmr update /src/proto/components/TableAtmosphere.tsx, /src/index.css
+12:48:25 PM [vite] hmr update /src/proto/components/TableAtmosphere.tsx, /src/index.css
+12:48:37 PM [vite] hmr update /src/index.css
+12:48:37 PM [vite] hmr update /src/index.css
+12:48:52 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:48:52 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:48:52 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:48:52 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:49:05 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:49:05 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:49:05 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:49:05 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:49:22 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:49:23 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:49:23 PM [vite] hmr update /src/proto/components/BiomeEdgeScenery.tsx, /src/index.css
+12:49:23 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:49:23 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:49:23 PM [vite] hmr update /src/proto/components/BiomeEdgeScenery.tsx, /src/index.css
+12:49:47 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:49:47 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:49:47 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:49:47 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:49:59 PM [vite] hmr update /src/proto/components/TableQuestCard.tsx, /src/index.css
+12:49:59 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:49:59 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:49:59 PM [vite] hmr invalidate /src/proto/components/TableQuestCard.tsx Could not Fast Refresh ("fitTableQuestCard" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:49:59 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:50:00 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:50:00 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:50:08 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:50:09 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:50:09 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:50:09 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:50:17 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:50:17 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:50:17 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:50:17 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:50:25 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:50:26 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:50:26 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:50:26 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:51:09 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:51:09 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:51:09 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:51:09 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:52:17 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+12:52:18 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+12:52:18 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:52:18 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:53:59 PM [vite] page reload src/proto/biomeEdgeScenery.test.ts
+12:54:08 PM [vite] page reload src/proto/biomeEdgeScenery.test.ts
+12:55:19 PM [vite] hmr update /src/proto/components/BoardObjectLabel.tsx, /src/index.css
+12:55:19 PM [vite] hmr update /src/proto/components/BoardObjectLabel.tsx, /src/index.css
+12:55:19 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:55:19 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+12:55:19 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:55:19 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:55:33 PM [vite] page reload src/proto/biomeEdgeScenery.test.ts
+12:57:55 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+12:57:55 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:57:55 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:58:35 PM [vite] hmr update /src/proto/components/BoardObjectLabel.tsx, /src/index.css
+12:58:50 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+12:58:50 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:58:50 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:27:59 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+1:27:59 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+1:27:59 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:27:59 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:27:59 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+1:27:59 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:27:59 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:28:07 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+1:28:07 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:28:07 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:29:19 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+1:29:19 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:29:19 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:29:41 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:29:41 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:29:41 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:29:46 PM [vite] hmr update /src/index.css
+1:32:48 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+1:32:48 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:32:48 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:35:26 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+1:35:27 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:35:27 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:44:50 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/AutoPlayControl.tsx, /src/proto/components/ProtoCard.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FoundationBoards.tsx, /src/proto/components/FishFight.tsx
+1:44:53 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/AutoPlayControl.tsx, /src/proto/components/ProtoCard.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FoundationBoards.tsx, /src/proto/components/FishFight.tsx
+1:45:12 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+1:45:12 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+1:45:12 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+1:45:16 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+1:45:20 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+1:45:35 PM [vite] page reload src/proto/gridPathfinding.test.ts
+1:46:10 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:46:11 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:46:16 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:46:20 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/AutoPlayControl.tsx, /src/proto/components/ProtoCard.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FoundationBoards.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/ProtoMap.tsx
+1:46:20 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:46:20 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:47:26 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:47:26 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:47:26 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:47:32 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:47:32 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:47:32 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:47:32 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:47:49 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:47:50 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:47:50 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:48:59 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+1:48:59 PM [vite] page reload src/proto/gridPathfinding.test.ts
+1:48:59 PM [vite] page reload src/proto/gridPathfinding.test.ts
+1:49:48 PM [vite] hmr update /src/index.css
+1:50:09 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:50:10 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:50:10 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:50:10 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:50:10 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:50:10 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:50:10 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:50:14 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:50:15 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:50:15 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:50:15 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:50:19 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:52:09 PM [vite] hmr update /src/index.css
+1:52:42 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:52:42 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:52:42 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:54:24 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+1:54:25 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:54:25 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:55:00 PM [vite] hmr update /src/proto/components/BiomeEdgeScenery.tsx, /src/index.css
+1:55:00 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:55:01 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:55:01 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:56:07 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx
+1:56:07 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:56:07 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:56:27 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx
+1:56:46 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx
+1:56:47 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:56:47 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:57:17 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:57:18 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:57:18 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:58:31 PM [vite] page reload src/proto/biomeEdgeScenery.test.ts
+1:58:49 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx
+1:58:49 PM [vite] page reload src/proto/biomeEdgeScenery.test.ts
+1:59:13 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx
+1:59:13 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:59:13 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+1:59:37 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx
+1:59:38 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+1:59:38 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:01:24 PM [vite] hmr update /src/proto/components/Reveal.tsx, /src/index.css
+2:01:24 PM [vite] hmr update /src/proto/components/ProtoCard.tsx, /src/index.css
+2:01:24 PM [vite] hmr update /src/proto/components/ProtoCard.tsx, /src/index.css
+2:01:24 PM [vite] hmr invalidate /src/proto/components/Reveal.tsx Could not Fast Refresh ("revealEdgeX" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:01:24 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+2:01:24 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:01:24 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:01:24 PM [vite] hmr update /src/proto/components/ProtoCard.tsx, /src/index.css
+2:01:24 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:01:24 PM [vite] hmr update /src/index.css
+2:02:25 PM [vite] hmr update /src/index.css
+2:03:34 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx
+2:03:34 PM [vite] hmr update /src/proto/components/RouteLine.tsx, /src/index.css
+2:03:34 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:03:34 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:03:34 PM [vite] hmr invalidate /src/proto/components/RouteLine.tsx Could not Fast Refresh ("roundedRoute" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:03:34 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+2:03:54 PM [vite] hmr update /src/index.css, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/ProtoMap.tsx
+2:03:54 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:03:54 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:21:08 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+2:21:08 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:21:08 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:21:08 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:21:08 PM [vite] hmr update /src/index.css
+2:22:35 PM [vite] hmr update /src/index.css
+2:35:38 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+2:35:38 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:35:38 PM [vite] hmr update /src/index.css, /src/proto/ProtoVariant.tsx, /src/proto/components/ProtoMap.tsx
+2:35:38 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:35:38 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:36:03 PM [vite] page reload src/proto/biomeFlags.test.ts
+2:36:03 PM [vite] page reload src/proto/rules/rules.test.ts
+2:38:56 PM [vite] hmr update /src/index.css, /src/proto/ProtoVariant.tsx, /src/proto/components/ProtoMap.tsx
+2:38:56 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:38:56 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:42:51 PM [vite] hmr update /src/proto/components/TableQuestCard.tsx, /src/index.css
+2:42:51 PM [vite] hmr invalidate /src/proto/components/TableQuestCard.tsx Could not Fast Refresh ("fitTableQuestCard" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:42:51 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+2:42:51 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:42:51 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:48:41 PM [vite] hmr update /src/proto/components/TableQuestCard.tsx, /src/index.css
+2:48:41 PM [vite] hmr invalidate /src/proto/components/TableQuestCard.tsx Could not Fast Refresh ("fitTableQuestCard" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:48:41 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+2:48:42 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:48:42 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+2:49:42 PM [vite] hmr update /src/proto/components/TableQuestCard.tsx, /src/index.css
+2:49:42 PM [vite] hmr invalidate /src/proto/components/TableQuestCard.tsx Could not Fast Refresh ("fitTableQuestCard" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:49:42 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+2:49:42 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:49:42 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+3:52:53 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+3:52:53 PM [vite] hmr update /src/index.css, /src/proto/ProtoVariant.tsx, /src/proto/components/ProtoMap.tsx
+3:52:53 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+3:52:53 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+3:52:53 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+4:07:21 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+4:07:22 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+4:07:22 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+4:07:22 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+4:07:22 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+4:07:22 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css

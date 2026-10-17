@@ -1,0 +1,60 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {findLayoutDefects}=require('./lib/layout-check.cjs');
+const out='artifacts/event-cards';fs.mkdirSync(out,{recursive:true});
+const state=page=>page.locator('[data-event-state]').getAttribute('data-event-state').then(JSON.parse);
+const activate=async(locator,touch)=>{await locator.scrollIntoViewIfNeeded();const covered=await locator.getAttribute('data-buried');const options=covered?{position:{x:8,y:8}}:{};if(touch)await locator.tap(options);else await locator.click(options);};
+async function checkJumbo(page,tag){
+ const dialog=page.getByRole('dialog');await dialog.waitFor();
+ const bounds=await dialog.boundingBox(),viewport=page.viewportSize();
+ assert(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=viewport.width+1&&bounds.y+bounds.height<=viewport.height+1,'jumbo stays in viewport');
+ const close=await dialog.getByRole('button',{name:'Close jumbo card',exact:true}).boundingBox();assert(close.y>=0&&close.x>=0&&close.x+close.width<=viewport.width&&close.y+close.height<=viewport.height,'jumbo close button remains in view');
+ assert.deepEqual(await findLayoutDefects(page,'.card-jumbo',{parts:'.card-jumbo__face,.card-jumbo__actions,.card-jumbo__actions button'}),[]);
+ await page.screenshot({path:`${out}/${tag}-jumbo-3x.png`});
+}
+(async()=>{const browser=await chromium.launch({headless:true});try{
+ for(const [width,height,touch] of [[1280,720,false],[390,844,true],[844,390,true]]){
+  const page=await browser.newPage({viewport:{width,height},hasTouch:touch,deviceScaleFactor:3});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('http://127.0.0.1:5178/tools/event-cards-fixture.html?scenario=covered');
+  let before=await state(page);
+  const covered=page.locator('[data-event-card][data-buried]');await activate(covered,touch);await checkJumbo(page,`${width}-covered`);
+  assert.equal(await page.getByRole('button',{name:'Play event to Hero',exact:true}).count(),0,'inspection cannot play covered event');
+  assert.equal(await page.getByRole('button',{name:'Discard event',exact:true}).count(),0,'covered event cannot be discarded');
+  await activate(page.getByRole('button',{name:'Close jumbo card',exact:true}),touch);assert.deepEqual(await state(page),before);
+  await page.getByRole('combobox',{name:'Event utility actions'}).selectOption('Dig');await activate(covered,touch);
+  await activate(page.getByRole('dialog').getByRole('button',{name:'Dig event',exact:true}),touch);
+  assert.equal((await state(page)).ap,3);assert.equal((await state(page)).haul.wood,before.haul.wood+1);
+  await page.goto('http://127.0.0.1:5178/tools/event-cards-fixture.html?scenario=trait');
+  await activate(page.locator('[data-event-card]'),touch);await checkJumbo(page,`${width}-trait`);
+  assert.equal(await page.getByRole('button',{name:'Play event to Hero',exact:true}).count(),0,'missing tags block play');
+  await activate(page.getByRole('button',{name:'Close jumbo card',exact:true}),touch);
+  await activate(page.getByRole('button',{name:'Grant test flight characteristic',exact:true}),touch);
+  await activate(page.locator('[data-event-card]'),touch);await activate(page.getByRole('button',{name:'Play event to Hero',exact:true}),touch);
+  assert.equal((await state(page)).haul.mana,1);
+  await page.goto('http://127.0.0.1:5178/tools/event-cards-fixture.html?scenario=search');
+  assert(await page.getByRole('button',{name:'Auto-Solve',exact:true}).isDisabled());
+  assert.equal((await state(page)).pending,0);assert.equal((await state(page)).completed,0);
+  assert(await page.getByRole('button',{name:'Best Move',exact:true}).isEnabled(),'an event does not disable supported solver actions');
+  assert.equal(await page.locator('.travel-card-grid button:enabled:not([data-event-card])').count(),1,'normal legal plays remain available with SEARCH visible');
+  for(let i=0;i<3;i++)await activate(page.locator('.travel-card-grid button:enabled:not([data-event-card])').first(),touch);
+  const search=page.locator('[data-event-card="search"]');await search.waitFor();before=await state(page);
+  await activate(search,touch);await checkJumbo(page,`${width}-search`);
+  await activate(page.getByRole('button',{name:'Play event to Hero',exact:true}),touch);
+  assert.equal((await state(page)).rank,before.rank);assert.equal((await state(page)).spent,1.5);
+  for(let i=0;i<4;i++)await activate(page.locator('.travel-card-grid button:enabled:not([data-event-card])').first(),touch);
+  assert.equal((await state(page)).haul.mana,1);assert.equal((await state(page)).streak,7);
+  await page.goto('http://127.0.0.1:5178/tools/event-cards-fixture.html?scenario=search');
+  for(let i=0;i<3;i++)await activate(page.locator('.travel-card-grid button:enabled:not([data-event-card])').first(),touch);
+  await activate(page.locator('[data-event-card="search"]'),touch);await activate(page.getByRole('button',{name:'Discard event',exact:true}),touch);
+  assert.equal((await state(page)).discarded,1);assert.equal((await state(page)).spent,0);assert.equal((await state(page)).streak,3);
+  await activate(page.getByRole('button',{name:'Event discard pile',exact:true}),touch);await activate(page.getByRole('dialog').locator('[data-event-card]'),touch);
+  assert.equal(await page.getByRole('button',{name:'Play event to Hero',exact:true}).count(),0,'discard pile is inspection only');
+  await activate(page.getByRole('button',{name:'Close jumbo card',exact:true}),touch);
+  await page.goto('http://127.0.0.1:5178/tools/event-cards-fixture.html?scenario=mastery');assert(await page.getByRole('button',{name:'Auto-Solve',exact:true}).isEnabled());
+  await activate(page.getByRole('button',{name:'Auto-Solve',exact:true}),touch);
+  await page.waitForFunction(()=>JSON.parse(document.querySelector('[data-event-state]').dataset.eventState).completed===3);
+  assert.equal((await state(page)).pending,0,'solver leaves the optional event untouched at the tile boundary');
+  assert.deepEqual(errors,[]);console.log('PASS event inspection, Dig, characteristics, SEARCH, discard and mastery',width,height,touch);await page.close();
+ }
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

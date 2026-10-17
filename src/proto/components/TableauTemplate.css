@@ -1,0 +1,5 @@
+.tableau-template { position:relative; isolation:isolate; display:grid; grid-template-rows:auto minmax(0,1fr) auto; height:100%; min-height:0; min-width:0; overflow:hidden; gap:6px; }
+.tableau-template__header,.tableau-template__foundations { position:relative; z-index:2; min-width:0; }
+.tableau-template__play { position:relative; min-height:0; min-width:0; overflow:hidden; }
+.tableau-template__play > .proto-tableau-scene { height:100%; }
+.tableau-template__play .proto-tableau-card-area { height:100%; }

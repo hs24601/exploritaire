@@ -1,0 +1,64 @@
+.banks-rescue-cinema {position:fixed;inset:0;z-index:45000;display:grid;grid-template-rows:auto minmax(0,1fr) minmax(150px,32vh) auto;background:#0c141a;color:#f6e4c7;font-size:16px;isolation:isolate;}
+.banks-rescue-cinema>header,.banks-rescue-cinema>footer {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:#162126;min-width:0;}
+.banks-rescue-cinema>header>div {display:flex;gap:8px;}
+.banks-rescue-cinema button {font-size:16px;min-height:40px;padding:6px 10px;border:1px solid #a79269;background:#263b3b;color:#fff0d6;touch-action:manipulation;}
+.banks-rescue-cinema__stage {position:relative;min-height:0;overflow:hidden;}
+.banks-rescue-cinema .combat-demo {border:0;border-radius:0;}
+.banks-rescue-cinema .combat-demo__tools {display:none;}
+.banks-rescue-cinema__tableaus {display:grid;grid-template-columns:minmax(90px,18%) minmax(0,1fr) minmax(80px,12%);gap:12px;padding:8px 16px;min-height:0;background:#101b1c;border-top:1px solid #526157;}
+.cinema-foundations {display:flex;gap:8px;min-height:0;align-items:center;}
+.cinema-foundations>div {height:auto;display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;gap:4px;text-align:center;}
+.cinema-foundations>div>span:last-child {max-width:100%;min-width:0;overflow-wrap:anywhere;}
+.cinema-foundations .actor-holocard {width:min(100%,100px);height:auto;max-height:calc(100% - 44px);aspect-ratio:63/88;flex:none;}
+.cinema-shared-tableau {display:flex;flex-direction:column;min-height:0;}
+.cinema-shared-tableau>.tableau-scene {flex:1;min-height:0;}
+.cinema-column {position:relative;height:var(--classic-stack-height);width:var(--classic-card-w);}
+.cinema-column__card {position:absolute;left:0;width:100%;}
+.cinema-slime-tableau {display:flex;flex-direction:column;align-items:center;gap:4px;min-height:0;text-align:center;}
+.cinema-slime-tableau>.trading-card {width:min(90px,100%);max-height:calc(100% - 48px);aspect-ratio:63/88;}
+.cinema-card-entrance {position:absolute;width:110px;aspect-ratio:63/88;top:30%;left:65%;z-index:4;pointer-events:none;}
+.cinema-card-entrance--slime {animation:cinema-slime-flight 1.5s ease-in-out both;}
+.cinema-card-entrance--banks {left:25%;animation:cinema-banks-flight 1.6s cubic-bezier(.2,.7,.2,1) both;}
+@keyframes cinema-slime-flight {0%{transform:translate(-25vw,55vh) rotate(-480deg) scale(.4)}65%{transform:translate(0,-25px) rotate(20deg) scale(1.4)}100%{transform:translate(0,30px) rotate(0) scale(.1);opacity:0}}
+@keyframes cinema-banks-flight {0%{transform:translate(-90vw,-20vh) rotate(-480deg) scale(1.6)}70%{transform:translate(0,0) rotate(8deg) scale(1)}100%{transform:translate(0,30px) rotate(0) scale(.1);opacity:0}}
+.cinema-mana-reveal {position:absolute;bottom:10%;left:40%;display:grid;justify-items:center;gap:8px;text-shadow:0 0 16px #aeffbd;}.cinema-mana-reveal>span:first-child{font-size:56px;}
+.cinema-conscious-label {position:absolute;left:16px;bottom:12px;color:#ffe8a3;background:#101b22d9;padding:6px 10px;border-radius:4px;}
+.cinema-nuzzle {position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse,#18252af0,#080f16f0);}
+.cinema-nuzzle>div {width:min(80%,600px);aspect-ratio:6/5;background-size:400% 100%;background-position:0 50%;animation:cinema-nuzzle-frames 2.8s steps(1,end) both;}
+@keyframes cinema-nuzzle-frames {0%,24%{background-position:0% 50%}25%,49%{background-position:33.3333% 50%}50%,74%{background-position:66.6667% 50%}75%,100%{background-position:100% 50%}}
+.cinema-fade {position:absolute;inset:0;z-index:10;background:#000;animation:cinema-fade 1.6s ease-in forwards;}@keyframes cinema-fade{from{opacity:0}to{opacity:1}}
+.banks-rescue-cinema[data-cinema-paused='true'] * {animation-play-state:paused!important;}
+@media(max-width:600px){.banks-rescue-cinema{grid-template-rows:auto minmax(140px,1fr) minmax(140px,27vh) auto;}.banks-rescue-cinema>header,.banks-rescue-cinema>footer{padding:6px;gap:6px;flex-wrap:wrap;}.banks-rescue-cinema__tableaus{padding:5px;gap:5px;grid-template-columns:90px minmax(0,1fr) 70px;}.cinema-foundations{flex-direction:column;gap:3px;}.cinema-foundations>div{flex-direction:row;}.cinema-foundations .actor-holocard{width:40px;max-height:100%;}.cinema-foundations>div>span:last-child{font-size:16px;}.cinema-slime-tableau>.trading-card{width:55px;}}
+@media(max-height:500px){.banks-rescue-cinema{grid-template-columns:55% 45%;grid-template-rows:48px minmax(0,1fr) 62px;}.banks-rescue-cinema>header,.banks-rescue-cinema>footer{grid-column:1/-1;padding:4px 8px;}.banks-rescue-cinema__tableaus{grid-template-columns:70px minmax(0,1fr) 60px;gap:5px;padding:5px;}.cinema-foundations{flex-direction:column;}.cinema-foundations .actor-holocard{width:45px;}.cinema-slime-tableau>.trading-card{width:55px;}}
+@media(prefers-reduced-motion:reduce){.cinema-card-entrance{animation:none;opacity:1;}.cinema-nuzzle>div{animation:none;background-position:66.6667% 50%;}.cinema-fade{animation-duration:.15s;}}
+
+body:has(.banks-rescue-cinema) .proto-callout {font-size:16px;}
+.cinema-shared-tableau>.proto-tableau-scene {flex:1;min-height:0;}
+.cinema-nuzzle>div {width:min(95%,650px);height:min(100%,500px);aspect-ratio:6/5;max-width:75vh;}
+
+.banks-rescue-cinema__stage>.combat-shared-view {z-index:0;}
+.banks-rescue-cinema__stage>.combat-demo {z-index:1;}
+.cinema-shared-tableau .proto-tableau-card-area {grid-template-columns:repeat(7,minmax(0,1fr));align-items:start;gap:4px;padding:6px;}
+.cinema-foundations .trading-card__art {z-index:0;}
+.cinema-foundations .trading-card__header {position:relative;z-index:2;}
+.cinema-slime-tableau>.trading-card-stage {width:min(90px,100%);height:calc(100% - 56px);aspect-ratio:63/88;}
+.cinema-slime-tableau .trading-card__sections {display:none;}
+
+.cinema-foe-cards {position:relative;width:48px;height:110px;--classic-card-w:48px;--classic-radius:4px;flex:1;min-height:72px;}
+.cinema-foe-cards>div {position:absolute;left:0;width:48px;}
+.cinema-foe-cards .proto-card-rank {font-size:24px;}
+.cinema-nuzzle>div {height:100%;width:auto;max-width:100%;aspect-ratio:6/5;}
+.cinema-fade {position:fixed;z-index:45020;}
+
+.banks-rescue-cinema__stage .combat-shared-view canvas {image-rendering:auto;}
+
+.cinema-nuzzle {container-type:size;}
+.cinema-nuzzle>div {width:min(90cqw,120cqh);height:min(75cqw,100cqh);max-width:none;flex:none;}
+
+/* Keep the paired scene's foundation portraits intact beside narrow status text. */
+@media(max-width:600px){
+ .banks-rescue-cinema__tableaus {grid-template-columns:112px minmax(0,1fr) 70px;}
+ .cinema-foundations>div {flex-direction:column;align-items:flex-start;justify-content:center;box-sizing:border-box;width:100%;padding-left:12px;gap:2px;}
+ .cinema-foundations .actor-holocard {width:40px;height:56px;max-height:none;flex:none;}
+ .cinema-foundations>div>span:last-child {width:100%;min-width:0;overflow-wrap:anywhere;}
+}

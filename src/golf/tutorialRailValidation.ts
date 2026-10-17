@@ -10,9 +10,11 @@ export const formatTutorialActionSpec = (action: TutorialActionSpec) => {
 
 export const tutorialActionSpecEquals = (left: TutorialActionSpec, right: TutorialActionSpec) => {
   if (left.kind !== right.kind) return false;
-  if (left.kind === 'tableau' || left.kind === 'rescue') return left.columnIndex === right.columnIndex;
-  if (left.kind === 'swap') return left.starterPackIndex === right.starterPackIndex;
-  if (left.kind === 'ability') return left.effect === right.effect;
+  if (left.kind === 'tableau' || left.kind === 'rescue') {
+    return (right.kind === 'tableau' || right.kind === 'rescue') && left.columnIndex === right.columnIndex;
+  }
+  if (left.kind === 'swap') return right.kind === 'swap' && left.starterPackIndex === right.starterPackIndex;
+  if (left.kind === 'ability') return right.kind === 'ability' && left.effect === right.effect;
   return true;
 };
 

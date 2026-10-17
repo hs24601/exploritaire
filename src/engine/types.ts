@@ -15,6 +15,8 @@ export interface PoiReward {
 }
 
 export type Suit = '💨' | '⛰️' | '🔥' | '💧' | '⭐' | '🌙' | '☀️';
+/** Playing-card suits (plus the ✦ wild), used by the golf variants alongside the elemental suits. */
+export type PlayingCardSuit = '♠' | '♥' | '♣' | '♦' | '✦';
 
 export type Element = 'W' | 'E' | 'A' | 'F' | 'L' | 'D' | 'N';
 export type TurnPlayability = 'player' | 'enemy' | 'anytime';
@@ -235,7 +237,7 @@ export interface ActorDeckState {
 
 export interface Card {
   rank: number;
-  suit: Suit;
+  suit: Suit | PlayingCardSuit;
   element: Element;
   id: string;
   name?: string;

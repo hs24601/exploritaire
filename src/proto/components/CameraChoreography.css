@@ -1,0 +1,27 @@
+.camera-choreography { box-sizing: border-box; position: fixed; z-index: 180; left: 12px; top: 12px; bottom: 12px; width: min(550px, calc(100vw - 24px)); padding: 20px; overflow-y: auto; border: 1px solid #8cbaa9; border-radius: 18px; background: #101e24f5; color: #edf7f6; font: 16px/1.45 system-ui,sans-serif; box-shadow: 0 10px 50px #0009; }
+.camera-choreography header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.camera-choreography h2 { font-size: 22px; margin: 0; }
+.camera-choreography p { margin: 12px 0; color: #bed3d1; }
+.camera-choreography label, .callout-camera-fields label { display: grid; gap: 5px; margin: 10px 0; min-width: 0; }
+.camera-choreography input, .camera-choreography select, .callout-camera-fields input, .callout-camera-fields select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 40px; padding: 6px 8px; border: 1px solid #668e8f; border-radius: 7px; background: #08141b; color: #f4fafb; font: inherit; }
+.camera-choreography button { min-height: 40px; padding: 6px 12px; border: 1px solid #668e8f; border-radius: 8px; background: #20383d; color: #edf7f6; font: inherit; cursor: pointer; }
+.camera-choreography button:disabled { opacity: .45; cursor: default; }
+.camera-choreography :focus-visible, .callout-camera-fields :focus-visible { outline: 2px solid #f1cc81; outline-offset: 2px; }
+.camera-field-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 12px; }
+.camera-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.camera-check { display: flex !important; align-items: center; gap: 8px; }
+.camera-check input { width: 20px; min-height: 20px; flex: 0 0 20px; }
+.camera-shot-list { list-style: none; padding: 0; margin: 10px 0; }
+.camera-shot-list li { padding: 12px; margin: 10px 0; border: 1px solid #668e8f; border-radius: 10px; }
+.camera-shot-list summary { cursor: pointer; overflow-wrap: anywhere; }
+.callout-camera-fields { margin-top: 18px !important; }
+.camera-shot-list details:not([open]) > .camera-shot-fields { display: none; }
+.callout-camera-fields { padding: 12px !important; }
+
+.camera-label-pins summary { cursor: pointer; overflow-wrap: anywhere; }
+.camera-label-pins fieldset { min-width: 0; padding: 10px; border: 1px solid #668e8f; border-radius: 8px; }
+.camera-label-pins label { overflow-wrap: anywhere; }
+
+.camera-choreography { width:min(800px, calc(100vw - 24px)); bottom:auto; max-height:calc(100dvh - 24px); overscroll-behavior:contain; }
+.camera-shot-list { padding-left:24px; }
+.camera-choreography { z-index:60006; }

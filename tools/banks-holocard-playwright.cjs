@@ -1,0 +1,10 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
+(async()=>{const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1280,height:800}});await page.goto((process.env.BANKS_REVIEW_URL || 'http://127.0.0.1:5189/tools/banks-character.html'));await page.locator('.banks-rig canvas[data-pose]').waitFor();await page.locator('.layered-card-art__subject').evaluate(i=>i.decode());
+ const card=page.locator('.banks-review__card .trading-card-stage'),bounds=await card.boundingBox();await page.mouse.move(bounds.x+bounds.width*.8,bounds.y+bounds.height*.25);await page.waitForTimeout(800);
+ const transforms=await card.locator('.layered-card-art img').evaluateAll(images=>images.map(i=>new DOMMatrix(getComputedStyle(i).transform).m41));assert.ok(transforms[0]<0&&transforms[1]>0);
+ await page.mouse.move(1,1);await page.waitForTimeout(800);await page.screenshot({path:'artifacts/banks-watercolor-v5/character-1280.png'});
+ await page.locator('.banks-review__card article').click();await page.locator('.card-jumbo').waitFor();await page.screenshot({path:'artifacts/banks-watercolor-v5/holocard-jumbo-1280.png'});await page.keyboard.press('Escape');
+ await page.setViewportSize({width:390,height:844});await page.waitForTimeout(150);await page.screenshot({path:'artifacts/banks-watercolor-v5/character-390.png'});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight));
+ await page.emulateMedia({reducedMotion:'reduce'});await page.mouse.move(150,300);assert.deepEqual(await page.locator('.banks-review__card .layered-card-art img').evaluateAll(images=>images.map(i=>getComputedStyle(i).transform)),['none','none']);
+ fs.writeFileSync('artifacts/banks-watercolor-v5/holocard-validation.json',JSON.stringify({opposingParallax:transforms,jumbo:true,mobileFit:true,reducedMotion:true},null,2));console.log('Banks holocard: opposing parallax, jumbo, mobile fit and static reduced motion passed.');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

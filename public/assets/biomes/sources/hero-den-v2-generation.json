@@ -1,0 +1,10 @@
+{
+  "tool": "Built-in image_gen (edit)",
+  "prompt": "Edit target: attached den sprite atlas. Preserve its slate gray craggy pixel-art style, palette, individual rock facets and transparency. Revise BOTH views to depict a roofed rocky CAVE shelter, not a circular firepit. Keep exactly two equal side-by-side square cells with transparent margin and gutter. LEFT cell is true top-down: the northern/top HALF is a solid broad rocky roof of interlocking slabs, the lower half opens into a shadowed sleeping hollow, front entrance toward bottom. The roof must extend over the hollow's top central region so an actor drawn there can be partly hidden beneath the rocks. RIGHT cell is a frontal slightly elevated cave: taller substantial solid rocky roof and side walls surrounding a large deep dark arch-shaped entrance; clearly recessed interior, small earthy sleeping floor at the entrance, no enclosing ring of low stones across front, no open-topped bowl. Entire shelter fits one game square. No dog, fire, text, extra objects, scenery, colored rectangle, green backing, cast ground shadow or ground plane outside the cave. Retain crisp chunky pixel clusters and stepped edges with limited palette, no smooth rendering. Genuine transparent background outside each cave. Preserve attractive original art style.",
+  "source": "C:/dev/Exploritaire/public/assets/biomes/sources/hero-den-atlas-v2.png",
+  "assets": {
+    "overhead": "C:/dev/Exploritaire/public/assets/biomes/hero-den-topdown-v2.png",
+    "immersion": "C:/dev/Exploritaire/public/assets/biomes/hero-den-standee-v2.png"
+  },
+  "preparation": "Two atlas cells extracted at 128px width, alpha retained, nearest-neighbor sampling. Overhead roof is a clipped second rendering of the authored print above the sleeping actor; no new opaque backing."
+}

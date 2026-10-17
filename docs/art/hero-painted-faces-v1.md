@@ -1,0 +1,13 @@
+# Hero painted face layer, first pass
+
+Built-in ImageGen generated sad variants from the original seated low/high atlases and the existing `hero_emoji_sad.png` reference. Sources remain in `output/imagegen/hero-faces-v1`; runtime face-only atlases live in `public/assets/actors/hero/faces-watercolor-v1`. Original body assets remain unchanged.
+
+Prompt (both sheets):
+
+> Use case: precise-object-edit. Edit target is Hero's existing sitting directional sprite atlas. Create an EXACTLY registered expression variant of this sheet. Preserve the exact canvas aspect ratio, sprite layout, scale, positions, silhouettes, ears, body poses, paws, fur marking colors, and all transparent gutters. Change ONLY each visible facial expression: gently sad, closed drooping eyes, raised inner tan brows and a small closed downturned mouth, matching the supplied sad face reference. NO tears or symbols. Mouth must be CLOSED without tongue. Preserve nose location and the muzzle perspective of EACH individual pose, including profile and overhead. Rear view has no visible face, leave unchanged. Keep broad loose wet watercolor dabs, rich charcoal/copper/cream, sparse expressive brush ink. Do not add any assets or text. Output a transparent RGBA atlas. Image 1 is the atlas edit target, image 2 is expression/style reference only.
+
+`node tools/prepare-hero-faces.cjs` deterministically measures each generated pose's alpha bounds, registers it to the corresponding original atlas pose and extracts cheek/eye/muzzle washes with a five-pixel feather. Masks are authored separately for front, quarter, profile and their opposite sides. No generated body or ear pixels are used in gameplay. Runtime atlas sizes match `heroSittingLayout.json` (1338×1383 low, 1353×1446 high).
+
+The shared rig places a separate mesh under the existing head pivot, copying that head's registration and motion; it shares tint, flash, opacity and environment lighting. The map supplies the expression published by the active Day 01 callout after local overrides. Closing, unmounting, switching scenarios and travel release that callout's expression lease. Unsupported expressions/poses use their original face; no frontal emoji is pasted over profiles or unseen faces. True overhead and rear art have no readable face to replace.
+
+Preview: `/tools/hero-faces-preview.html` (one eight-view tier at a time to stay below browser WebGL context limits). Checks: `tools/hero-faces-playwright.cjs`, `actorExpression.test.ts`, `heroFaceLayer.test.ts` and existing directional rig tests. First-pass coverage is seated sadness; additional emotions and sleeping/walk/reaction alignment are not yet authored.

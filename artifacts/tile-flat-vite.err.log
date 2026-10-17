@@ -1,0 +1,785 @@
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+2:57:43 PM [vite] Pre-transform error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1500:8)
+
+  1498 |
+  1499 |         </div>
+> 1500 |         </div>
+       |         ^
+  1501 |         </div>
+  1502 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1503 |             plane so tall scenery cannot conceal its title. This is a drawing
+2:57:43 PM [vite] Pre-transform error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1500:8)
+
+  1498 |
+  1499 |         </div>
+> 1500 |         </div>
+       |         ^
+  1501 |         </div>
+  1502 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1503 |             plane so tall scenery cannot conceal its title. This is a drawing
+2:57:43 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1500:8)
+
+  1498 |
+  1499 |         </div>
+> 1500 |         </div>
+       |         ^
+  1501 |         </div>
+  1502 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1503 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1500:8
+  1510|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1511|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1512|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                         ^
+  1513|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1514|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:57:44 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1500:8)
+
+  1498 |
+  1499 |         </div>
+> 1500 |         </div>
+       |         ^
+  1501 |         </div>
+  1502 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1503 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1500:8
+  1510|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1511|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1512|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                         ^
+  1513|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1514|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:57:44 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1500:8)
+
+  1498 |
+  1499 |         </div>
+> 1500 |         </div>
+       |         ^
+  1501 |         </div>
+  1502 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1503 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1500:8
+  1510|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1511|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1512|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                         ^
+  1513|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1514|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:58:05 PM [vite] Pre-transform error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+2:58:05 PM [vite] Pre-transform error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+2:58:08 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1506:8
+  1516|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1517|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1518|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                   ^
+  1519|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1520|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:58:08 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1506:8
+  1516|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1517|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1518|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                   ^
+  1519|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1520|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:58:08 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1506:8
+  1516|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1517|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1518|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                   ^
+  1519|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1520|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:58:08 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1506:8
+  1516|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1517|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1518|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                   ^
+  1519|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1520|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:58:19 PM [vite] Pre-transform error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+2:58:21 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1506:8
+  1516|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1517|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1518|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                   ^
+  1519|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1520|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:58:21 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1506:8
+  1516|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1517|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1518|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                   ^
+  1519|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1520|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:58:21 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1506:8
+  1516|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1517|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1518|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                   ^
+  1519|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1520|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+2:58:21 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Expected corresponding JSX closing tag for <React.Fragment>. (1506:8)
+
+  1504 |
+  1505 |         </div>
+> 1506 |         </div>
+       |         ^
+  1507 |         </div>
+  1508 |         {/* Shared immutable-region ink is composited on a copy of the ground
+  1509 |             plane so tall scenery cannot conceal its title. This is a drawing
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1506:8
+  1516|              <TileTitle text={region.title} width={region.width} height={region.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
+  1517|                onTextBox={box => region.tiles.forEach(tile => reportBiomeLabel(tile.id, { width: TABLE_GRID.cellSize, height: TABLE_GRID.cellSize }, { ...box,
+  1518|                  left: box.left + region.x - region.width / 2 - tile.position.x + TABLE_GRID.cellSize / 2,
+     |                   ^
+  1519|                  top: box.top + region.y - region.height / 2 - tile.position.y + TABLE_GRID.cellSize / 2,
+  1520|                  pivot: { x: region.x - tile.position.x + 24, y: region.y - tile.position.y + 24 } }))} />
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4727:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:39
+      at TypeScriptParserMixin.tryParse (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6907:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9765:18)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12483:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11665:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10894:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12411:16)
+      at TypeScriptParserMixin.parseExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10770:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13132:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12788:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9508:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12757:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12737:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13306:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13299:10)
+      at TypeScriptParserMixin.parseBlock (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:13287:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12090:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12065:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11677:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11321:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4764:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)

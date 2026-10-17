@@ -1,0 +1,6 @@
+Mochi full-art holocard v1
+Generated with the built-in image_gen tool on 2026-10-08.
+Asset: public/assets/actors/mochi-card-v1.png
+References: hero-card-v2.png (style), battle/mochi-directions-low-v1.png (identity).
+Prompt: Create an original portrait full-art illustration of Mochi, the fluffy long-haired tortoiseshell cat with asymmetric charcoal/copper coat, tawny ruff, dark paws, amber-green eyes and dark plume tail. Mochi steps toward the viewer through an enchanted teal pine forest with mossy stones, fireflies and warm diagonal sunlight. Match Hero's premium pixel-inspired fantasy illustration. Natural feline proportions, four paws, closed mouth, no white socks. Portrait 2:3 composition, full background. No lettering, rank, frames, logos or baked-in holographic foil; the app supplies live foil and frame.
+Source: exec-8dcb3395-894a-487a-8202-c442d4c8405e.png

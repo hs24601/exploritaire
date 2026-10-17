@@ -5,7 +5,11 @@ import abilitiesData from '../data/abilities.json';
 import enemyEncountersData from '../data/enemyEncounters.json';
 
 type EntityTab = 'kin' | 'enemies' | 'abilities' | 'encounters' | 'combat-logs';
-type AbilityDefinition = (typeof abilitiesData.abilities)[number];
+type AbilityJson = (typeof abilitiesData.abilities)[number];
+type KeysOfUnion<T> = T extends unknown ? keyof T : never;
+type ValueOfUnion<T, K extends PropertyKey> = T extends unknown ? (K extends keyof T ? T[K] : never) : never;
+/** One editable ability: every field any ability in abilities.json uses, all optional except the id. */
+type AbilityDefinition = { id: string } & { [K in KeysOfUnion<AbilityJson>]?: ValueOfUnion<AbilityJson, K> };
 type EnemyEncounterBiome = (typeof enemyEncountersData.biomes)[number];
 type EnemyEncounter = EnemyEncounterBiome['encounters'][number];
 type CombatLogEntry = {
@@ -264,7 +268,7 @@ function ActorEditor({
         <TextField label="Sprite" value={actor.sprite ?? ''} onChange={(sprite) => onChange({ ...actor, sprite })} />
         <SelectField label="Type" value={actor.type} onChange={(type) => onChange({ ...actor, type: type as ActorDefinition['type'] })} options={['adventurer', 'npc']} />
         <SelectField label="Element" value={actor.element ?? 'N'} onChange={(element) => onChange({ ...actor, element: element as ActorDefinition['element'] })} options={['N', 'A', 'E', 'F', 'W']} />
-        <TextField label="Suit" value={actor.suit ?? ''} onChange={(suit) => onChange({ ...actor, suit: suit || undefined })} />
+        <TextField label="Suit" value={actor.suit ?? ''} onChange={(suit) => onChange({ ...actor, suit: (suit || undefined) as ActorDefinition['suit'] })} />
         <NumberField label="Value" value={actor.value} onChange={(value) => onChange({ ...actor, value: value ?? 1 })} />
         <NumberField label="Base HP" value={actor.baseHp} onChange={(baseHp) => onChange({ ...actor, baseHp })} />
         <NumberField label="Base Armor" value={actor.baseArmor} onChange={(baseArmor) => onChange({ ...actor, baseArmor })} />
@@ -971,7 +975,7 @@ export function ToolingApp() {
               onDelete={handleDelete}
               getLabel={(item) =>
                 activeTab === 'abilities'
-                  ? (item as AbilityDefinition).label
+                  ? (item as AbilityDefinition).label ?? item.id
                   : 'encounters' in item
                     ? (item as EnemyEncounterBiome).label
                     : (item as ActorDefinition).name

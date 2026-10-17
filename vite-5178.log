@@ -1,0 +1,23 @@
+
+  VITE v5.4.21  ready in 562 ms
+
+  ➜  Local:   http://localhost:5178/
+  ➜  Network: http://100.82.227.20:5178/
+  ➜  Network: http://192.168.68.54:5178/
+  ➜  press h + enter to show help
+12:19:51 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+12:19:52 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+12:20:34 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+12:21:09 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+12:21:23 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+12:21:25 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+1:02:51 PM [vite] hmr update /src/proto/components/CombatDemo.css
+1:20:42 PM [vite] page reload tools/den-rest-preview.html
+3:30:17 PM [vite] page reload src/proto/propVolume.test.ts
+3:31:46 PM [vite] page reload src/proto/propVolume.test.ts
+3:38:03 PM [vite] page reload src/proto/propVolume.test.ts
+3:42:10 PM [vite] page reload src/proto/propVolume.test.ts
+3:42:11 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx, /src/proto/components/PropVolume.tsx
+3:42:11 PM [vite] hmr update /src/proto/components/HeroDenRoof.tsx, /src/index.css
+4:14:09 PM [vite] hmr update /src/proto/components/HeroDenRoof.tsx, /src/index.css
+4:39:44 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css

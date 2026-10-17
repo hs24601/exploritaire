@@ -1,0 +1,20 @@
+
+> exploritaire@0.1.0 dev
+> npm run dev:doctor:fix && vite --host 0.0.0.0
+
+
+> exploritaire@0.1.0 dev:doctor:fix
+> node tools/dev-doctor.mjs --fix
+
+[dev:doctor] No listener currently bound to port 5178.
+[dev:doctor] OK
+Re-optimizing dependencies because lockfile has changed
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m359[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5178[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.50.27:[1m5178[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.16.0.1:[1m5178[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m1:17:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/KinHandVariant.tsx, /src/index.css[22m
+[2m1:18:15 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/golf/KinHandVariant.tsx, /src/index.css[22m

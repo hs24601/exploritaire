@@ -1,0 +1,101 @@
+
+ RUN  v2.1.9 C:/dev/Exploritaire
+
+ ❯ src/proto/protoData.test.ts (5 tests | 1 failed) 11ms
+   × classic plus data contracts > assigns Jarn the cleric-owned Hallowed Path mobility 7ms
+     → expected 'Jimothy' to be 'Jarn' // Object.is equality
+ ❯ src/prototype/fire/PannableCanvas.test.ts (5 tests | 1 failed) 13ms
+   × hearth direction indicator > pins an offscreen hearth finder to the viewport edge and points at the target 10ms
+     → expected { x: 528, y: 120, angle: +0 } to match object { x: 550, y: 120 }
+(1 matching property omitted from actual)
+ ❯ src/proto/mountainTiles.test.ts (1 test | 1 failed) 13ms
+   × mountains block crossing, arrivals and tableau activation and retain their type 12ms
+     → expected [ { id: 'woods-danger', …(14) }, …(8) ] to have a length of 8 but got 9
+ ❯ src/proto/roadTiles.test.ts (4 tests | 1 failed) 24ms
+   × road exploration > places the requested orientations and explores the occupied Hero’s Den 15ms
+     → expected [ { id: 'woods-danger', …(14) }, …(8) ] to have a length of 8 but got 9
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/proto/mountainTiles.test.ts > mountains block crossing, arrivals and tableau activation and retain their type
+AssertionError: expected [ { id: 'woods-danger', …(14) }, …(8) ] to have a length of 8 but got 9
+
+- Expected
++ Received
+
+- 8
++ 9
+
+ ❯ src/proto/mountainTiles.test.ts:8:27
+      6| it('mountains block crossing, arrivals and tableau activation and reta…
+      7|  const state = createInitialState();
+      8|  expect(state.biomeTiles).toHaveLength(8);
+       |                           ^
+      9|  const mountains = state.biomeTiles.filter(t => t.tileType === 'impass…
+     10|  expect(mountains).toHaveLength(5);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/proto/protoData.test.ts > classic plus data contracts > assigns Jarn the cleric-owned Hallowed Path mobility
+AssertionError: expected 'Jimothy' to be 'Jarn' // Object.is equality
+
+Expected: "Jarn"
+Received: "Jimothy"
+
+ ❯ src/proto/protoData.test.ts:29:25
+     27|     const jarn = PROTO_ACTORS.find((actor) => actor.id === 'jarnathan'…
+     28| 
+     29|     expect(jarn?.label).toBe('Jarn');
+       |                         ^
+     30|     expect(jarn?.mobility).toEqual({ kind: 'hallowed_path', label: 'Ha…
+     31|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/proto/roadTiles.test.ts > road exploration > places the requested orientations and explores the occupied Hero’s Den
+AssertionError: expected [ { id: 'woods-danger', …(14) }, …(8) ] to have a length of 8 but got 9
+
+- Expected
++ Received
+
+- 8
++ 9
+
+ ❯ src/proto/roadTiles.test.ts:27:45
+     25|     expect(den.tableau.flat().length).toBeGreaterThan(0);
+     26|     // The Den, five impassable mountains, and the day-one Berry Patch…
+     27|     expect(createInitialState().biomeTiles).toHaveLength(8);
+       |                                             ^
+     28|     expect(roads[0].flags).toEqual(['unexplored']);
+     29|     expect(roads[1].flags).toEqual(['unexplored']);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/prototype/fire/PannableCanvas.test.ts > hearth direction indicator > pins an offscreen hearth finder to the viewport edge and points at the target
+AssertionError: expected { x: 528, y: 120, angle: +0 } to match object { x: 550, y: 120 }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  Object {
+-   "x": 550,
++   "x": 528,
+    "y": 120,
+  }
+
+ ❯ src/prototype/fire/PannableCanvas.test.ts:29:23
+     27|   it('pins an offscreen hearth finder to the viewport edge and points …
+     28|     const indicator = getOffscreenTargetIndicator({ x: 900, y: -80, sc…
+     29|     expect(indicator).toMatchObject({ x: 550, y: 120 });
+       |                       ^
+     30|     expect(indicator?.angle).toBeCloseTo(0);
+     31|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+ Test Files  4 failed (4)
+      Tests  4 failed | 11 passed (15)
+   Start at  12:10:16
+   Duration  926ms (transform 484ms, setup 0ms, collect 773ms, tests 61ms, environment 1ms, prepare 865ms)
+

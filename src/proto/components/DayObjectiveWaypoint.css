@@ -1,0 +1,19 @@
+.day-objective { position: absolute; inset: 0; z-index: 49; pointer-events: none; }
+.day-objective__tracker { position: absolute; right: 12px; top: 60px; width: 260px; max-width: calc(100% - 24px); box-sizing: border-box; padding: 12px; border: 1px solid #718278; border-radius: 8px; background: #121d18ed; color: #fff0bb; box-shadow: 0 4px 16px #0006; font: 16px 'Classic Pixel', monospace; line-height: 1.25; pointer-events: auto; }
+.day-objective__heading { display: block; margin-bottom: 8px; color: #d4cbae; }
+.day-objective__row { display: flex; align-items: center; gap: 8px; }
+.day-objective button { min-height: 44px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: inherit; font: inherit; line-height: inherit; text-align: left; cursor: pointer; touch-action: manipulation; }
+.day-objective__title { flex: 1; min-width: 0; padding: 4px; overflow-wrap: anywhere; }
+.day-objective button:hover, .day-objective__title[aria-pressed=true] { background: #29392a; border-color: #e1c985; }
+.day-objective button:focus-visible { outline: 3px solid #8ef2d4; outline-offset: 2px; }
+.day-objective strong { display: block; font-weight: normal; }
+.day-objective__reference { display: block; margin-top: 4px; color: #d4cbae; }
+.day-objective__locate { flex: none; width: 44px; padding: 9px; }
+.day-objective__arrow { display: block; width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; }
+.day-objective__pin { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; opacity: 0; }
+.day-objective[data-active=true] .day-objective__pin { opacity: 1; }
+.day-objective__pin line, .day-objective__pin circle { stroke: #ffe3a1; stroke-width: 2; }
+.day-objective__pin circle { fill: #263d2acc; }
+.day-objective__grid { fill: #ffe3a12b; stroke: #ffe3a1; stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 6px #ffd77a); animation: quest-target-glow 1.6s ease-in-out infinite alternate; }
+@keyframes quest-target-glow { from { fill-opacity: .55; stroke-opacity: .7; } to { fill-opacity: 1; stroke-opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .day-objective__grid { animation: none; } }

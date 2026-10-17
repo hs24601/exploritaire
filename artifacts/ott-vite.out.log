@@ -1,0 +1,13 @@
+
+  VITE v5.4.21  ready in 600 ms
+
+  ➜  Local:   http://127.0.0.1:5178/
+  ➜  press h + enter to show help
+8:43:25 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+8:44:09 PM [vite] hmr update /src/index.css, /src/proto/components/VolumetricAtmosphere.tsx
+9:20:43 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+9:28:05 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+7:05:23 AM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+8:04:27 AM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+10:09:15 AM [vite] hmr update /src/proto/components/GyroDiagnostics.tsx, /src/index.css
+11:41:52 AM [vite] page reload src/proto/components/TileDetailsCard.tsx

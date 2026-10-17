@@ -1,0 +1,2 @@
+const {chromium}=require('playwright');
+(async()=>{const b=await chromium.launch({headless:true});const p=await b.newPage();p.on('pageerror',e=>console.log('ERROR',e.message));await p.goto('http://localhost:5178/proto.html?combatdemo');await p.waitForTimeout(2500);console.log(await p.locator('.combat-demo').innerText());await p.screenshot({path:'artifacts/combat-demo-first.png'});await b.close();})().catch(e=>{console.error(e);process.exit(1)});

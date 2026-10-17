@@ -1,0 +1,73 @@
+vite v5.4.21 building for production...
+transforming...
+<script src="/auramjs.js"> in "/auram.html" can't be bundled without type="module" attribute
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 803 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/classic.html                                 0.66 kB │ gzip:   0.37 kB
+dist/inverse.html                                 0.66 kB │ gzip:   0.37 kB
+dist/immersion.html                               0.76 kB │ gzip:   0.39 kB
+dist/tooling.html                                 0.83 kB │ gzip:   0.38 kB
+dist/ux.html                                      0.90 kB │ gzip:   0.45 kB
+dist/city.html                                    0.96 kB │ gzip:   0.48 kB
+dist/exploritaire.html                            1.04 kB │ gzip:   0.43 kB
+dist/hearth.html                                  1.04 kB │ gzip:   0.43 kB
+dist/benchclassic.html                            1.14 kB │ gzip:   0.46 kB
+dist/banks.html                                   1.14 kB │ gzip:   0.47 kB
+dist/chargeup.html                                1.22 kB │ gzip:   0.48 kB
+dist/proto.html                                   1.42 kB │ gzip:   0.50 kB
+dist/kinhand.html                                 1.47 kB │ gzip:   0.53 kB
+dist/megahand.html                                1.64 kB │ gzip:   0.56 kB
+dist/golf-legacy.html                             1.66 kB │ gzip:   0.62 kB
+dist/cardDesigner.html                            1.77 kB │ gzip:   0.88 kB
+dist/index.html                                   3.96 kB │ gzip:   1.15 kB
+dist/world.html                                   6.98 kB │ gzip:   1.94 kB
+dist/auram.html                                  19.01 kB │ gzip:   4.39 kB
+dist/assets/Tableau-D-Y934s3.css                  0.10 kB │ gzip:   0.11 kB
+dist/assets/main-BGz4V_Pn.css                    41.73 kB │ gzip:   9.12 kB
+dist/assets/proto-Ds8IzWLR.css                   52.76 kB │ gzip:  11.69 kB
+dist/assets/index-CBtox5H5.css                  272.65 kB │ gzip:  47.56 kB
+dist/assets/Tableau-BK5RP6Qs.js                   0.36 kB │ gzip:   0.22 kB
+dist/assets/banks-CQzt_sBF.js                     0.40 kB │ gzip:   0.29 kB
+dist/assets/constants-ByoT4bzD.js                 0.62 kB │ gzip:   0.46 kB
+dist/assets/modulepreload-polyfill-B5Qt9EMX.js    0.71 kB │ gzip:   0.40 kB
+dist/assets/cardDesigner-CcM_7zqK.js              1.54 kB │ gzip:   0.81 kB
+dist/assets/combatResolver-Bxo3Y1a0.js            1.98 kB │ gzip:   0.85 kB
+dist/assets/actors-nVPUOHyR.js                    2.18 kB │ gzip:   1.00 kB
+dist/assets/BurnEdgesEffect-7512IiLm.js           5.68 kB │ gzip:   2.33 kB
+dist/assets/Callout-D4Swc9i1.js                   6.66 kB │ gzip:   2.33 kB
+dist/assets/inverse-CjrhFWiZ.js                   7.26 kB │ gzip:   2.76 kB
+dist/assets/Tooltip-D2syGKls.js                   8.46 kB │ gzip:   3.60 kB
+dist/assets/classic-CVYj78YL.js                   8.86 kB │ gzip:   3.03 kB
+dist/assets/starterKinData-hcO4gymi.js            9.69 kB │ gzip:   3.69 kB
+dist/assets/DragPreview-C3HxRSi9.js              11.32 kB │ gzip:   4.20 kB
+dist/assets/abilities-FZsfgr0w.js                12.63 kB │ gzip:   1.49 kB
+dist/assets/megahandAbilityData-BMfY_Fu3.js      13.13 kB │ gzip:   3.98 kB
+dist/assets/city-CdTCXt08.js                     14.18 kB │ gzip:   4.20 kB
+dist/assets/ux-DDpFi6R4.js                       14.50 kB │ gzip:   3.41 kB
+dist/assets/PetrovaLineAtmosphere-CaAClV5B.js    18.84 kB │ gzip:   5.32 kB
+dist/assets/benchclassic-COQKHUcP.js             26.77 kB │ gzip:   8.93 kB
+dist/assets/immersion-DF8qn5pT.js                27.48 kB │ gzip:   8.08 kB
+dist/assets/chargeup-B5nSEuGM.js                 29.15 kB │ gzip:   9.32 kB
+dist/assets/tooling-Bjgc2aUA.js                  30.82 kB │ gzip:   7.27 kB
+dist/assets/BanksThinSlice-B2SpJP9E.js           35.00 kB │ gzip:  10.62 kB
+dist/assets/world-C6gYM0_D.js                    44.33 kB │ gzip:  13.43 kB
+dist/assets/main-CoQMWCwV.js                     60.23 kB │ gzip:  20.36 kB
+dist/assets/megahand-BJHyykUe.js                 66.44 kB │ gzip:  19.29 kB
+dist/assets/proxy-CDxKdiPg.js                   114.37 kB │ gzip:  37.76 kB
+dist/assets/kinhand-KV3o1V_C.js                 117.14 kB │ gzip:  30.65 kB
+dist/assets/index-B2CNvRue.js                   192.73 kB │ gzip:  60.15 kB
+dist/assets/golfLegacy-BGwUqVCc.js              232.95 kB │ gzip:  61.93 kB
+dist/assets/Card-Dji5JFLF.js                    275.55 kB │ gzip:  73.24 kB
+dist/assets/proto-l-u62tOy.js                   449.55 kB │ gzip: 156.25 kB
+dist/assets/three.module-BUk7tD8k.js            520.24 kB │ gzip: 132.77 kB
+dist/assets/main-Duy96qri.js                    764.57 kB │ gzip: 208.18 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.75s

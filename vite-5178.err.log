@@ -1,0 +1,115 @@
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+12:19:02 PM [vite] Pre-transform error: Failed to resolve import "./heroCombatSprites" from "src/proto/combatDemoRig.ts". Does the file exist?
+12:19:02 PM [vite] Pre-transform error: Failed to resolve import "./heroCombatSprites" from "src/proto/combatDemoRig.ts". Does the file exist?
+12:19:02 PM [vite] Internal server error: Failed to resolve import "./heroCombatSprites" from "src/proto/combatDemoRig.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/combatDemoRig.ts:6:34
+  4  |  import { MOCHI_DIRECTIONAL_SPRITE } from "./mochiSprite";
+  5  |  import { HERO_SITTING_DIRECTIONAL_SPRITE } from "./heroSittingSprite";
+  6  |  import { HERO_COMBAT_POSES } from "./heroCombatSprites";
+     |                                     ^
+  7  |  import { createDirectionalSpriteLibrary } from "./directionalSpriteRig";
+  8  |  import { BATTLE_TURN_PRIORITY } from "./battleTurnPriority";
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 5)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+12:19:52 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+12:19:52 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+12:19:52 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
+  1  |  import measurements from "./art/heroCombatLayout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const layout = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+12:20:05 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+12:20:05 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
+  1  |  import measurements from "./art/heroCombatLayout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const layout = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+12:20:34 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+12:20:34 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
+  1  |  import measurements from "./art/heroCombatLayout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const layout = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+12:21:09 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+12:21:10 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
+  1  |  import measurements from "./art/heroCombatLayout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const layout = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+12:21:23 PM [vite] Pre-transform error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+12:21:24 PM [vite] Internal server error: Failed to resolve import "./art/heroCombatLayout.json" from "src/proto/heroCombatSprites.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroCombatSprites.ts:1:25
+  1  |  import measurements from "./art/heroCombatLayout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const layout = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)

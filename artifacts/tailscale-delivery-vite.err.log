@@ -1,0 +1,327 @@
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+9:20:34 PM [vite] Internal server error: Failed to resolve import "./components/ActorPlaytestEditor" from "src/proto/ProtoVariant.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/ProtoVariant.tsx:1:36
+  16 |  }
+  17 |  var _s = $RefreshSig$();
+  18 |  import { ActorPlaytestEditor } from "./components/ActorPlaytestEditor";
+     |                                       ^
+  19 |  import { ACTOR_HOLO_ART } from "./art/actorCardArt";
+  20 |  import { drawSleepStock, isDenRest, REST_COLUMNS, REST_ROWS, SLEEP_ICONS, SLEEP_LABELS } from "./rules/rest";
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 3)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+9:20:34 PM [vite] Pre-transform error: Failed to resolve import "./components/ActorPlaytestEditor" from "src/proto/ProtoVariant.tsx". Does the file exist?
+9:20:34 PM [vite] Internal server error: Failed to resolve import "./components/ActorPlaytestEditor" from "src/proto/ProtoVariant.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/ProtoVariant.tsx:1:36
+  16 |  }
+  17 |  var _s = $RefreshSig$();
+  18 |  import { ActorPlaytestEditor } from "./components/ActorPlaytestEditor";
+     |                                       ^
+  19 |  import { ACTOR_HOLO_ART } from "./art/actorCardArt";
+  20 |  import { drawSleepStock, isDenRest, REST_COLUMNS, REST_ROWS, SLEEP_ICONS, SLEEP_LABELS } from "./rules/rest";
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 3)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+9:20:34 PM [vite] Internal server error: Failed to resolve import "./components/ActorPlaytestEditor" from "src/proto/ProtoVariant.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/ProtoVariant.tsx:1:36
+  16 |  }
+  17 |  var _s = $RefreshSig$();
+  18 |  import { ActorPlaytestEditor } from "./components/ActorPlaytestEditor";
+     |                                       ^
+  19 |  import { ACTOR_HOLO_ART } from "./art/actorCardArt";
+  20 |  import { drawSleepStock, isDenRest, REST_COLUMNS, REST_ROWS, SLEEP_ICONS, SLEEP_LABELS } from "./rules/rest";
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 3)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+1:06:51 PM [vite] Pre-transform error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Unexpected token, expected "}" (1359:906)
+
+  1357 |                   aria-label={unexplored ? 'Unexplored biome' : tile.danger ? `${tile.title}, danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
+  1358 |                 >
+> 1359 |                   {unexplored ? <span aria-hidden="true" className="absolute inset-0" style={{ background: '#182221', filter: 'var(--silhouette-filter) grayscale(1) brightness(0.45)' }} /> : tile.road ? <RoadTileArt road={tile.road} exploration={explored} brightness={upright ? standeeLighting(timeOfDay, tile.position, 0, lightSources).brightness : 1} /> : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v2.png`} alt="" draggable={false} /> : tile.tileType === 'berry-patch' ? !upright && <img data-berry-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={${import.meta.env.BASE_URL}assets/biomes/berry-patch-topdown.svg} alt="" draggable={false} /> : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <BiomeTopDownArt terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /> : null}
+       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           ^
+  1360 |                   <span className="proto-tile-title-anchor">{!compositeTileTitle(tile) && !unexplored && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={footprint.width} height={footprint.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />}</span>
+  1361 |                 </button>
+  1362 |                 {upright && !unexplored && !tile.tileType && !tile.road && tile.unlocked !== false ? <BiomeEdgeScenery
+1:06:51 PM [vite] Pre-transform error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Unexpected token, expected "}" (1359:906)
+
+  1357 |                   aria-label={unexplored ? 'Unexplored biome' : tile.danger ? `${tile.title}, danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
+  1358 |                 >
+> 1359 |                   {unexplored ? <span aria-hidden="true" className="absolute inset-0" style={{ background: '#182221', filter: 'var(--silhouette-filter) grayscale(1) brightness(0.45)' }} /> : tile.road ? <RoadTileArt road={tile.road} exploration={explored} brightness={upright ? standeeLighting(timeOfDay, tile.position, 0, lightSources).brightness : 1} /> : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v2.png`} alt="" draggable={false} /> : tile.tileType === 'berry-patch' ? !upright && <img data-berry-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={${import.meta.env.BASE_URL}assets/biomes/berry-patch-topdown.svg} alt="" draggable={false} /> : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <BiomeTopDownArt terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /> : null}
+       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           ^
+  1360 |                   <span className="proto-tile-title-anchor">{!compositeTileTitle(tile) && !unexplored && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={footprint.width} height={footprint.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />}</span>
+  1361 |                 </button>
+  1362 |                 {upright && !unexplored && !tile.tileType && !tile.road && tile.unlocked !== false ? <BiomeEdgeScenery
+1:06:51 PM [vite] Internal server error: C:\dev\Exploritaire\src\proto\components\ProtoMap.tsx: Unexpected token, expected "}" (1359:906)
+
+  1357 |                   aria-label={unexplored ? 'Unexplored biome' : tile.danger ? `${tile.title}, danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
+  1358 |                 >
+> 1359 |                   {unexplored ? <span aria-hidden="true" className="absolute inset-0" style={{ background: '#182221', filter: 'var(--silhouette-filter) grayscale(1) brightness(0.45)' }} /> : tile.road ? <RoadTileArt road={tile.road} exploration={explored} brightness={upright ? standeeLighting(timeOfDay, tile.position, 0, lightSources).brightness : 1} /> : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v2.png`} alt="" draggable={false} /> : tile.tileType === 'berry-patch' ? !upright && <img data-berry-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={${import.meta.env.BASE_URL}assets/biomes/berry-patch-topdown.svg} alt="" draggable={false} /> : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <BiomeTopDownArt terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /> : null}
+       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           ^
+  1360 |                   <span className="proto-tile-title-anchor">{!compositeTileTitle(tile) && !unexplored && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={footprint.width} height={footprint.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />}</span>
+  1361 |                 </button>
+  1362 |                 {upright && !unexplored && !tile.tileType && !tile.road && tile.unlocked !== false ? <BiomeEdgeScenery
+  Plugin: vite:react-babel
+  File: C:/dev/Exploritaire/src/proto/components/ProtoMap.tsx:1359:906
+  1357|                    aria-label={unexplored ? 'Unexplored biome' : tile.danger ? `${tile.title}, danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
+  1358|                  >
+  1359|                    {unexplored ? <span aria-hidden="true" className="absolute inset-0" style={{ background: '#182221', filter: 'var(--silhouette-filter) grayscale(1) brightness(0.45)' }} /> : tile.road ? <RoadTileArt road={tile.road} exploration={explored} brightness={upright ? standeeLighting(timeOfDay, tile.position, 0, lightSources).brightness : 1} /> : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v2.png`} alt="" draggable={false} /> : tile.tileType === 'berry-patch' ? !upright && <img data-berry-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: 'pixelated', objectFit: 'contain' }} src={${import.meta.env.BASE_URL}assets/biomes/berry-patch-topdown.svg} alt="" draggable={false} /> : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <BiomeTopDownArt terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /> : null}
+     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ^
+  1360|                    <span className="proto-tile-title-anchor">{!compositeTileTitle(tile) && !unexplored && tile.tileType !== 'hero-den' && !sharedLabelTiles.has(tile.id) && <TileTitle align={upright ? 'center' : 'top'} text={tile.title} width={footprint.width} height={footprint.height} yaw={yaw} scale={camera.effectiveScale} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} onTextBox={(box) => reportBiomeLabel(tile.id, footprint, box)} />}</span>
+  1361|                  </button>
+      at constructor (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6599:19)
+      at TypeScriptParserMixin.unexpected (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6619:16)
+      at TypeScriptParserMixin.expect (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:6899:12)
+      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4637:10)
+      at TypeScriptParserMixin.jsxParseAttributeValue (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4604:21)
+      at TypeScriptParserMixin.jsxParseAttribute (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4653:38)
+      at TypeScriptParserMixin.jsxParseOpeningElementAfterName (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4667:28)
+      at TypeScriptParserMixin.jsxParseOpeningElementAfterName (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10033:18)
+      at TypeScriptParserMixin.jsxParseOpeningElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4662:17)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4686:33)
+      at TypeScriptParserMixin.jsxParseElement (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4749:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:4759:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11071:23)
+      at TypeScriptParserMixin.parseUpdate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11056:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:11036:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9827:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10889:61)
+      at TypeScriptParserMixin.parseExprOpBaseRightExpr (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10976:34)
+      at TypeScriptParserMixin.parseExprOpRightExpr (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10971:21)
+      at TypeScriptParserMixin.parseExprOp (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10937:27)
+      at TypeScriptParserMixin.parseExprOp (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9306:18)
+      at TypeScriptParserMixin.parseExprOps (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10898:17)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10871:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:39
+      at TypeScriptParserMixin.allowInAnd (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:12416:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10790:17)
+      at TypeScriptParserMixin.parseConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10881:30)
+      at TypeScriptParserMixin.parseConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9603:18)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10875:17)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10883:29)
+      at TypeScriptParserMixin.parseConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9603:18)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10875:17)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10883:29)
+      at TypeScriptParserMixin.parseConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9603:18)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10875:17)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10883:29)
+      at TypeScriptParserMixin.parseConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9603:18)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10875:17)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10821:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:9776:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\dev\Exploritaire\node_modules\@babel\parser\lib\index.js:10774:23)
+2:28:43 PM [vite] Pre-transform error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+2:28:43 PM [vite] Pre-transform error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+2:28:43 PM [vite] Internal server error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroSittingSprite.ts:1:25
+  1  |  import measurements from "../../public/assets/actors/battle/hero-sitting-layout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const front = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+2:28:45 PM [vite] Internal server error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroSittingSprite.ts:1:25
+  1  |  import measurements from "../../public/assets/actors/battle/hero-sitting-layout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const front = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+2:28:57 PM [vite] Internal server error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroSittingSprite.ts:1:25
+  1  |  import measurements from "../../public/assets/actors/battle/hero-sitting-layout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const front = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+2:29:47 PM [vite] Internal server error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroSittingSprite.ts:1:25
+  1  |  import measurements from "../../public/assets/actors/battle/hero-sitting-layout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const front = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+2:30:15 PM [vite] Internal server error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroSittingSprite.ts:1:25
+  1  |  import measurements from "../../public/assets/actors/battle/hero-sitting-layout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const front = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+2:30:20 PM [vite] Internal server error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroSittingSprite.ts:1:25
+  1  |  import measurements from "../../public/assets/actors/battle/hero-sitting-layout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const front = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+2:31:21 PM [vite] Pre-transform error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+2:31:21 PM [vite] Pre-transform error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+2:31:21 PM [vite] Internal server error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroSittingSprite.ts:1:25
+  1  |  import measurements from "../../public/assets/actors/battle/hero-sitting-layout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const front = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+2:31:23 PM [vite] Pre-transform error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+2:31:23 PM [vite] Pre-transform error: Failed to resolve import "../../public/assets/actors/battle/hero-sitting-layout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+Assets in public directory cannot be imported from JavaScript.
+If you intend to import that asset, put the file in the src directory, and use /src/assets/actors/battle/hero-sitting-layout.json instead of /public/assets/actors/battle/hero-sitting-layout.json.
+If you intend to use the URL of that asset, use /assets/actors/battle/hero-sitting-layout.json?url.
+2:47:46 PM [vite] Pre-transform error: Failed to resolve import "./art/heroSittingLayout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+2:47:46 PM [vite] Pre-transform error: Failed to resolve import "./art/heroSittingLayout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+2:47:47 PM [vite] Internal server error: Failed to resolve import "./art/heroSittingLayout.json" from "src/proto/heroSittingSprite.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/dev/Exploritaire/src/proto/heroSittingSprite.ts:1:25
+  1  |  import measurements from "./art/heroSittingLayout.json";
+     |                            ^
+  2  |  import { createQuadrupedSpriteDefinition } from "./quadrupedSprite";
+  3  |  const front = {
+      at TransformPluginContext._formatError (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 0)
+      at async TransformPluginContext.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/dev/Exploritaire/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)

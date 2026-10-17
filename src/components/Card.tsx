@@ -2,7 +2,7 @@ import { memo, useRef, useCallback, useMemo, useState, useEffect, type CSSProper
 import { motion } from 'framer-motion';
 import type { Card as CardType, OrimDefinition, OrimRarity, Element } from '../engine/types';
 import { getRankDisplay } from '../engine/rules';
-import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, WILD_SENTINEL_RANK } from '../engine/constants';
+import { SUIT_COLORS, CARD_SIZE, getSuitDisplay, ELEMENT_TO_SUIT, SUIT_TO_ELEMENT, isElementalSuit, WILD_SENTINEL_RANK } from '../engine/constants';
 import { useCardScale } from '../contexts/CardScaleContext';
 import { CardFrame } from './card/CardFrame';
 import { CardTokens, type CardToken } from './card/CardTokens';
@@ -325,9 +325,9 @@ export const Card = memo(function Card({
     const rect = cardRef.current.getBoundingClientRect();
     onDragStart(card, e.clientX, e.clientY, rect);
   }, [onDragStart, card, faceDown]);
-  const suitColor = card ? SUIT_COLORS[card.suit] : '#f0f0f0';
+  const suitColor = card && isElementalSuit(card.suit) ? SUIT_COLORS[card.suit] : '#f0f0f0';
   const elementKey = card
-    ? (card.element ?? (card.suit ? SUIT_TO_ELEMENT[card.suit] : undefined))
+    ? (card.element ?? (card.suit && isElementalSuit(card.suit) ? SUIT_TO_ELEMENT[card.suit] : undefined))
     : undefined;
   const isWaterElement = elementKey === 'W' || card?.suit === '💧';
   const elementChipStyles: Record<Element, {

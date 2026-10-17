@@ -1,5 +1,5 @@
 import type { Card, Challenge, ChallengeProgress, Suit } from './types';
-import { SUITS } from './constants';
+import { SUITS, isElementalSuit } from './constants';
 
 export const CHALLENGES: Challenge[] = [
   {
@@ -39,7 +39,7 @@ export function updateProgress(
   const collected = { ...progress.collected };
 
   for (const card of newCards) {
-    collected[card.suit]++;
+    if (isElementalSuit(card.suit)) collected[card.suit]++;
   }
 
   return {

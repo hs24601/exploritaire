@@ -1,0 +1,15 @@
+.event-card { display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:6px; border:2px solid #e6c675; border-radius:8px; background:linear-gradient(145deg,#274a41,#101c2d); color:#ffedbb; cursor:pointer; touch-action:manipulation; font-size:16px; }
+.event-card-name { max-width:100%; overflow-wrap:anywhere; font-size:16px; font-weight:bold; }
+.event-card-symbol { font-size:32px; line-height:1; color:#f4d57f; }
+.event-card:focus-visible { outline:3px solid #ffe066; outline-offset:2px; }
+.proto-game-root .playing-card.event-card { background:linear-gradient(145deg,#274a41,#101c2d); border:2px solid #e6c675; color:#ffedbb; padding:4px; }
+.event-card .event-card-symbol { font-size:24px; }
+.event-card--buried { justify-content:flex-start; padding:0 4px; }
+.event-card-details { display:flex; flex-direction:column; align-items:center; justify-content:space-evenly; gap:12px; height:100%; padding:20px; border:2px solid #e6c675; border-radius:12px; background:linear-gradient(145deg,#274a41,#101c2d); color:#ffedbb; font-size:clamp(16px,2.2vh,22px); text-align:center; overflow:auto; }
+.event-card-details h2 { font-size:clamp(22px,3vh,32px); margin:0; }
+.event-card-details p { margin:0; }
+.event-discard { display:flex; flex-wrap:wrap; align-items:center; gap:8px; border:1px dashed #a08a64; border-radius:8px; padding:8px; font-size:16px; }
+.event-discard button { min-height:44px; padding:6px; border:1px solid #a08a64; border-radius:6px; background:#152820; color:#ffe2ae; font-size:16px; }
+.event-discard summary { cursor:pointer; min-height:44px; padding:8px; }
+.event-discard-cards { display:flex; flex-wrap:wrap; gap:8px; max-height:240px; overflow:auto; }
+.event-discard-cards .event-card { width:90px; height:126px; }

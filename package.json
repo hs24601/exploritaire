@@ -15,7 +15,11 @@
     "test": "vitest run",
     "preview": "vite preview",
     "setup:hooks": "git config core.hooksPath .githooks",
-    "balance:deck": "node tools/deck-balance.mjs"
+    "balance:deck": "node tools/deck-balance.mjs",
+    "art:sync": "node tools/sync-art.mjs",
+    "predev": "node tools/sync-art.mjs --if-present",
+    "prebuild": "node tools/sync-art.mjs --if-present",
+    "prebuild:vercel": "node tools/sync-art.mjs --if-present"
   },
   "dependencies": {
     "@pixi/react": "^8.0.5",

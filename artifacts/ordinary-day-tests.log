@@ -1,0 +1,748 @@
+
+> exploritaire@0.1.0 test
+> vitest run --reporter=dot
+
+
+ RUN  v2.1.9 C:/dev/Exploritaire
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 56 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: EPERM: operation not permitted, realpath 'C:\dev\Exploritaire\node_modules\vitest\dist\spy.js'
+ ❯ node:fs:2850:18
+ ❯ getRealPath node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16
+ ❯ Object.tryResolveRealFileOrType node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20
+ ❯ tryCleanFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30
+ ❯ tryFsResolve node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15
+ ❯ ResolveIdContext.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46145:19
+ ❯ PluginContainer.resolveId node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49018:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:103:5
+ ❯ EventEmitter.onMessage node_modules/vitest/dist/chunks/index.68735LiX.js:91:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+ Test Files  no tests
+      Tests  no tests
+     Errors  56 errors
+   Start at  21:29:31
+   Duration  4.36s (transform 15ms, setup 0ms, collect 0ms, tests 0ms, environment 0ms, prepare 0ms)
+

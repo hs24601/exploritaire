@@ -273,6 +273,7 @@ export const BenchClassicVariant = ({ playerArea = 'bench' }: { playerArea?: 'be
         ...prev,
         tableau: nextTableau,
         prime: {
+          ...prev.prime,
           card,
           addedCount: prev.prime.addedCount + 1,
           streak: prev.prime.streak + 1,
@@ -291,6 +292,7 @@ export const BenchClassicVariant = ({ playerArea = 'bench' }: { playerArea?: 'be
         stock: prev.stock.slice(1),
         stockCount: Math.max(0, prev.stockCount - stockCost),
         prime: {
+          ...prev.prime,
           card: next,
           addedCount: prev.prime.addedCount + 1,
           streak: 0,

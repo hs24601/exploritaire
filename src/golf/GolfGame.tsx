@@ -16,7 +16,7 @@ import {
   STARTER_ABILITIES,
   STARTER_KIN_METADATA,
 } from './data/starterKinData';
-import type { GolfStarterAbility as StarterAbility, GolfKinFamily as KinFamily } from './data/starterKinData';
+import type { GolfStarterAbility as StarterAbility, GolfKinFamily as KinFamily, GolfKinEffectDefinition } from './data/starterKinData';
 import {
   TUTORIAL_ROUTE_SEEDS,
   TUTORIAL_SCENE_SEEDS,
@@ -401,7 +401,7 @@ const BIOME_ONE_ENEMIES: EnemyProfile[] = [
       accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(175,223,134,0.12)]',
       moveset: ['Bite', 'Chew', 'Loot Hoard'],
     },
-    combatant: { hp: 102, hpMax: 102, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 0, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    combatant: { staggerPressure: 0, hp: 102, hpMax: 102, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 0, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
     maxActionsPerTurn: 0,
     behavior: 'steady',
   },
@@ -415,7 +415,7 @@ const BIOME_ONE_ENEMIES: EnemyProfile[] = [
       accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(255,120,76,0.14)]',
       moveset: ['Bite', 'Chew', 'Loot Hoard'],
     },
-    combatant: { hp: 14, hpMax: 14, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 0, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    combatant: { staggerPressure: 0, hp: 14, hpMax: 14, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 0, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
     maxActionsPerTurn: 2,
     behavior: 'steady',
   },
@@ -429,7 +429,7 @@ const BIOME_ONE_ENEMIES: EnemyProfile[] = [
       accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(155,124,255,0.16)]',
       moveset: ['Bite', 'Maul'],
     },
-    combatant: { hp: 8, hpMax: 8, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 6, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    combatant: { staggerPressure: 0, hp: 8, hpMax: 8, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 6, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
     maxActionsPerTurn: 1,
     behavior: 'nagging',
   },
@@ -443,7 +443,7 @@ const BIOME_ONE_ENEMIES: EnemyProfile[] = [
       accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(255,120,76,0.12)]',
       moveset: ['Singe', 'Nibble', 'Scorch Dust'],
     },
-    combatant: { hp: 8, hpMax: 8, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 4, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    combatant: { staggerPressure: 0, hp: 8, hpMax: 8, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 4, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
     maxActionsPerTurn: 4,
     behavior: 'steady',
     chipDebuff: 'burn',
@@ -458,7 +458,7 @@ const BIOME_ONE_ENEMIES: EnemyProfile[] = [
       accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(204,173,110,0.12)]',
       moveset: ['Pebble Flick', 'Scrape', 'Brace'],
     },
-    combatant: { hp: 10, hpMax: 10, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 2, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    combatant: { staggerPressure: 0, hp: 10, hpMax: 10, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 2, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
     maxActionsPerTurn: 3,
     behavior: 'armored',
   },
@@ -472,7 +472,7 @@ const BIOME_ONE_ENEMIES: EnemyProfile[] = [
       accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(127,219,202,0.12)]',
       moveset: ['Drift', 'Mist Prick', 'Fade'],
     },
-    combatant: { hp: 7, hpMax: 7, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 14, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    combatant: { staggerPressure: 0, hp: 7, hpMax: 7, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 14, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
     chipDebuff: 'slow',
     maxActionsPerTurn: 4,
     behavior: 'evasive',
@@ -487,7 +487,7 @@ const BIOME_ONE_ENEMIES: EnemyProfile[] = [
       accentClassName: 'border-game-pink/35 bg-black/55 shadow-[0_0_22px_rgba(175,223,134,0.12)]',
       moveset: ['Prick', 'Harry', 'Gust Needle'],
     },
-    combatant: { hp: 9, hpMax: 9, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 8, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
+    combatant: { staggerPressure: 0, hp: 9, hpMax: 9, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 8, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, forecastIntent: false },
     maxActionsPerTurn: 4,
     behavior: 'nagging',
     chipDebuff: 'armor-break',
@@ -778,7 +778,7 @@ const getBanksAbilityTierName = (tier: 1 | 2 | 3) => (
 const getBanksApCap = (tier: 1 | 2 | 3) => tier;
 
 const clampStarterPackApToCap = (
-  actorName: string,
+  actorName: string | undefined,
   actionPoints: number,
   rarity: 1 | 2 | 3
 ) => {
@@ -787,7 +787,7 @@ const clampStarterPackApToCap = (
   return Math.min(14, Math.max(0, actionPoints));
 };
 
-const evaluatePerfectStop = (actorName: string, actionPoints: number, mode: StarterKinMode = 'default', rarity: 1 | 2 | 3 = 1) => {
+const evaluatePerfectStop = (actorName: string | undefined, actionPoints: number, mode: StarterKinMode = 'default', rarity: 1 | 2 | 3 = 1) => {
   if (actorName === 'Mochi') {
     if (actionPoints <= 2) return { label: 'Clean Pop', subtitle: 'Perfect Stop', positive: true };
     if (actionPoints <= 5) return { label: 'Rolling Flow', subtitle: 'Good Stop', positive: true };
@@ -960,7 +960,7 @@ const applyPlayerActionStatusUpdate = (prev: GolfGameState): { state: GolfGameSt
   };
 };
 
-const renderEffectDefinitionTooltip = (definition: KinEffectDefinition) => (
+const renderEffectDefinitionTooltip = (definition: GolfKinEffectDefinition) => (
   <div className="min-w-[180px] max-w-[240px] rounded-2xl border border-white/12 bg-[#05070d] px-3 py-2 text-left shadow-[0_12px_40px_rgba(0,0,0,0.42)]">
     <div className="text-[10px] font-black uppercase tracking-[0.14em] text-game-pink">
       {definition.name}
@@ -1240,7 +1240,7 @@ const reclaimBuriedKinStickers = (state: GolfGameState): GolfGameState => {
       changed = true;
       return {
         ...sticker,
-        state: 'available',
+        state: 'available' as const,
         buriedCardId: null,
         buriedColumnIndex: null,
       };
@@ -1251,7 +1251,7 @@ const reclaimBuriedKinStickers = (state: GolfGameState): GolfGameState => {
       changed = true;
       return {
         ...sticker,
-        state: 'available',
+        state: 'available' as const,
         buriedCardId: null,
         buriedColumnIndex: null,
       };
@@ -1632,7 +1632,7 @@ const advanceJetEfficiencyFromTableauPlay = (state: GolfGameState) => {
   };
 };
 
-const actorKeyFromName = (name: string) => name.trim().toLowerCase();
+const actorKeyFromName = (name: string | undefined) => (name ?? '').trim().toLowerCase();
 
 const getEnemyProfile = (enemyProfileId: string) =>
   BIOME_ONE_ENEMIES.find((profile) => profile.actor.id === enemyProfileId) ?? BIOME_ONE_ENEMIES[0];
@@ -1649,7 +1649,7 @@ const pickEnemyProfileForBiome = (biomeId: string) => {
   return pool[Math.floor(Math.random() * pool.length)] ?? BIOME_ONE_ENEMIES[0];
 };
 
-const createCombatant = (name: string): ActorCombatState => {
+const createCombatant = (name: string | undefined): ActorCombatState => {
   if (name === 'Jet') return { hp: 18, hpMax: 18, armor: 1, defense: 0, defenseBuffAmount: 0, evasion: 7, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, staggerPressure: 0, forecastIntent: false };
   if (name === 'Banks') return { hp: 16, hpMax: 16, armor: 0, defense: 0, defenseBuffAmount: 0, evasion: 12, evasionBuffAmount: 0, superArmorBulwark: 0, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, staggerPressure: 0, forecastIntent: false };
   if (name === 'Hero') return { hp: 20, hpMax: 20, armor: 2, defense: 1, defenseBuffAmount: 0, evasion: 4, evasionBuffAmount: 0, superArmorBulwark: 1, superArmorWard: 0, superArmorReactive: 0, elementalShields: {}, defenseBuffTurns: 0, evasionBuffTurns: 0, burn: 0, doomCounter: null, harmfulTickMeter: 0, beneficialTickMeter: 0, counterWindow: 0, counterDamage: 0, consecutiveHitsTaken: 0, dodgeCounter: 0, slow: 0, haste: 0, staggerPressure: 0, forecastIntent: false };
@@ -1957,7 +1957,7 @@ const STATUS_TONE_STYLES: Record<ActorStatusEntry['tone'], { border: string; bg:
   },
 };
 
-const getActorBackdropStyle = (actorName: string) => {
+const getActorBackdropStyle = (actorName: string | undefined) => {
   if (actorName === 'Jet') {
     return {
       border: 'rgba(230,179,30,0.34)',
@@ -2135,7 +2135,7 @@ const ActorStatusRail = ({
   const chipOffset = Math.max(9, Math.round(iconSize * 0.34));
   const drawerWidth = iconSize + 10;
   const tileSize = drawerWidth;
-  const renderStatusTooltip = (status: ActorStatusEntry) => (
+  const renderStatusTooltip = (status: Pick<ActorStatusEntry, 'key' | 'label' | 'tone' | 'duration' | 'stacks'> & Partial<ActorStatusEntry>) => (
     <div className="min-w-[180px] max-w-[240px] rounded-2xl border border-white/12 bg-black/92 px-3 py-2 text-left shadow-[0_12px_40px_rgba(0,0,0,0.42)]">
       <div className="text-[10px] font-black uppercase tracking-[0.14em] text-white/90">
         {status.title || status.key.replace(/^shield-/, '').replace(/-/g, ' ')}
@@ -2249,7 +2249,7 @@ const ActorStatusRail = ({
             left: `${compact ? -38 : -46}px`,
           }}
         >
-          {visibleNegative.map(renderStatusChip)}
+          {visibleNegative.map((status) => renderStatusChip(status))}
           {transientStatuses.filter((status) => status.tone === 'debuff').map((status) => renderStatusChip(status, { transient: true }))}
           {negativeOverflow > 0 ? (
             <div
@@ -2270,7 +2270,7 @@ const ActorStatusRail = ({
             right: `${compact ? -38 : -46}px`,
           }}
         >
-          {visiblePositive.map(renderStatusChip)}
+          {visiblePositive.map((status) => renderStatusChip(status))}
           {transientStatuses.filter((status) => status.tone === 'buff').map((status) => renderStatusChip(status, { transient: true }))}
           {positiveOverflow > 0 ? (
             <div
@@ -2464,7 +2464,7 @@ const getKinInspectorNarrative = (card: CardType | null) => {
     };
   }
   return {
-    title: `${card.name.toUpperCase()} DOSSIER`,
+    title: `${(card.name ?? '').toUpperCase()} DOSSIER`,
     summary: 'Inspector record available.',
     detail: null,
   };
@@ -3068,12 +3068,12 @@ const buildPokePacket = (sourceCard: CardType, targetCard: CardType, sequence: n
   };
 };
 
-const getKinInspectorSlots = (kinName: string, baseSlots: { left: PlayerHandSlot; right: PlayerHandSlot }) => {
+const getKinInspectorSlots = (kinName: string | undefined, baseSlots: { left: PlayerHandSlot; right: PlayerHandSlot }) => {
   const signature: PlayerHandSlot[] = [];
   const tableauClear: PlayerHandSlot[] = [];
   const tools: PlayerHandSlot[] = [];
   const battle: PlayerHandSlot[] = [];
-  const abilities = STARTER_ABILITIES[kinName] ?? [];
+  const abilities = (kinName === undefined ? undefined : STARTER_ABILITIES[kinName]) ?? [];
   abilities.forEach((ability, index) => {
     const slotId: PlayerHandSlot['slotId'] = index === 0 ? 'left' : index === 1 ? 'right' : 'pan-left';
     const slot =
@@ -3186,7 +3186,7 @@ const resolveEnemyDefeat = (
       tutorialEnemyDefeated: true,
       enemyDefeatFx: {
         id: Date.now() + Math.floor(Math.random() * 1000),
-        name: prev.enemyStock.name,
+        name: prev.enemyStock.name ?? '',
         moveLabel,
         lootRecovered,
       },
@@ -3221,7 +3221,7 @@ const resolveEnemyDefeat = (
       enemyBiteMarks: {},
       enemyDefeatFx: {
         id: Date.now() + Math.floor(Math.random() * 1000),
-        name: prev.enemyStock.name,
+        name: prev.enemyStock.name ?? '',
         moveLabel,
         lootRecovered,
       },
@@ -3248,7 +3248,7 @@ const resolveEnemyDefeat = (
     enemyBiteMarks: {},
     enemyDefeatFx: {
       id: Date.now() + Math.floor(Math.random() * 1000),
-      name: prev.enemyStock.name,
+      name: prev.enemyStock.name ?? '',
       moveLabel,
       lootRecovered,
     },
@@ -3877,6 +3877,12 @@ const isTutorialAbilityVisible = (
   return true;
 };
 
+/** How many cards deep each tableau column can be peeked outside combat (capped at 3). */
+const getNonCombatPeekCount = (tableau: CardType[][]) => Math.min(
+  3,
+  Math.max(0, ...tableau.map((column) => Math.max(0, column.length - 1)))
+);
+
 const getTutorialVisibleAbilityEffects = (state: GolfGameState): Array<NonNullable<PlayerHandSlot['effect']>> => {
   const effects: Array<NonNullable<PlayerHandSlot['effect']>> = [];
   const maybePush = (effect: NonNullable<PlayerHandSlot['effect']>) => {
@@ -3895,7 +3901,7 @@ const getTutorialVisibleAbilityEffects = (state: GolfGameState): Array<NonNullab
       if (
         state.playerStockActionPoints >= 3
         && (mochiCombatant?.whiskersense ?? 0) > 0
-        && findBestExclusionPath(state.tableau, nonCombatGlobalPeekCount, getZoomiesClaimCap(rarity)).length > 0
+        && findBestExclusionPath(state.tableau, getNonCombatPeekCount(state.tableau), getZoomiesClaimCap(rarity)).length > 0
       ) {
         maybePush('tap-out');
       }
@@ -3922,7 +3928,7 @@ export const getTutorialVisibleTopRanks = (state: GolfGameState) => (
 );
 
 export const getTutorialVisibleLegalActions = (state: GolfGameState): TutorialActionSpec[] => {
-  const tableauActions = state.tableau.flatMap((column, columnIndex) => {
+  const tableauActions = state.tableau.flatMap((column, columnIndex): TutorialActionSpec[] => {
     const topCard = column[column.length - 1] ?? null;
     if (!topCard) return [];
     if (isTutorialMochiRescueTokenCollectible(state, columnIndex, topCard)) {
@@ -4398,7 +4404,7 @@ export const choosePlayerAutoAction = (state: GolfGameState, mode: AutoPlayMode)
   const targetStocks = getOrderedPlayerTargetStocks(state);
   const solverStocks: SolverStockState[] = targetStocks.map((target) => ({ stockId: target.stockId, rank: target.card.rank }));
   const stockOrder = new Map(targetStocks.map((target, index) => [target.stockId, index]));
-  const visibleCards = state.tableau.map((column) => column[column.length - 1] ?? null);
+  const visibleCards: (CardType | null)[] = state.tableau.map((column) => column[column.length - 1] ?? null);
   const moveOptions = getEligiblePlayerMoveOptions(state);
   const pickBestVisibleMove = () => {
     if (moveOptions.length === 0) return null;
@@ -4510,7 +4516,7 @@ const buildPlayerHeuristic = (state: GolfGameState): StockHeuristic => {
   const targets = getOrderedPlayerTargetStocks(state);
   const stocks: SolverStockState[] = targets.map((target) => ({ stockId: target.stockId, rank: target.card.rank }));
   const stockOrder = new Map(targets.map((target, index) => [target.stockId, index]));
-  const visibleCards = state.tableau.map((column) => column[column.length - 1] ?? null);
+  const visibleCards: (CardType | null)[] = state.tableau.map((column) => column[column.length - 1] ?? null);
   const visible = solveVisibleBestPlan(visibleCards, stocks, stockOrder);
   const hidden = solveHiddenBestPlan(state.tableau, stocks, stockOrder);
   return {
@@ -5012,7 +5018,7 @@ const KinBenchCard = ({
           </div>
         </div>
       ) : null}
-      <ActorStatusRail actorName={card.name} combatant={combatant} maxVisible={3} iconSize={18} compact flashVersions={flashVersions} />
+      <ActorStatusRail actorName={card.name ?? ''} combatant={combatant} maxVisible={3} iconSize={18} compact flashVersions={flashVersions} />
       <Card
         card={card}
         showGraphics={false}
@@ -5120,7 +5126,7 @@ const StockActorShellView = ({
           boxShadow: getActorBackdropStyle(stock.name).glow,
         }}
       />
-      <ActorStatusRail actorName={stock.name} combatant={combatant} maxVisible={4} iconSize={20} />
+      <ActorStatusRail actorName={stock.name ?? ''} combatant={combatant} maxVisible={4} iconSize={20} />
       <div className="relative">
         <Card
           card={stock}
@@ -5409,7 +5415,7 @@ const GuidanceNaviOverlay = ({
         arcY: lateralY * arcMag * arcSign - verticalLift,
         loopX: isShortHop ? -dirX * retreat + lateralX * retreat * 0.65 * arcSign : 0,
         loopY: isShortHop ? -dirY * retreat - Math.max(18, retreat * 0.75) : -Math.max(10, verticalLift * 0.35),
-        wobbleX: lateralX * wobbleMag * (arcSign === 0 ? 1 : arcSign),
+        wobbleX: lateralX * wobbleMag * arcSign,
         wobbleY: -Math.max(10, wobbleMag * 1.1),
         bank: Math.max(-24, Math.min(24, dx * 0.1)),
         duration: Math.max(520, Math.min(980, 420 + distance * 1.35)),
@@ -5661,8 +5667,9 @@ const GolfPaintOverlay = ({
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    const ctx: CanvasRenderingContext2D = context;
 
     let mounted = true;
     let width = canvas.width = container.clientWidth;
@@ -5877,7 +5884,7 @@ export const GolfGame = () => {
   const [enemyBurnProgress, setEnemyBurnProgress] = useState(0);
   const [primeTapped, setPrimeTapped] = useState(false);
   const [starterBenchLockProgress, setStarterBenchLockProgress] = useState(0);
-  const [highlightedActorNames, setHighlightedActorNames] = useState<string[]>([]);
+  const [highlightedActorNames, setHighlightedActorNames] = useState<(string | undefined)[]>([]);
   const [highlightedStatusKeys, setHighlightedStatusKeys] = useState<string[]>([]);
   const [statusFlashVersions, setStatusFlashVersions] = useState<Record<string, number>>({});
   const [transientStatusEvents, setTransientStatusEvents] = useState<Array<{ id: number; actorName: string; key: string; label: string; tone: 'buff' | 'debuff' }>>([]);
@@ -5889,8 +5896,8 @@ export const GolfGame = () => {
   const maulReadyRef = useRef<HTMLDivElement | null>(null);
   const enemyBenchRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const benchInspectorRef = useRef<HTMLDivElement | null>(null);
-  const playerHandRefs = useRef<Record<HandSlotId, HTMLButtonElement | null>>({ left: null, right: null });
-  const playerCaptureRefs = useRef<Record<HandSlotId, HTMLButtonElement | null>>({ left: null, right: null });
+  const playerHandRefs = useRef<Partial<Record<HandSlotId, HTMLButtonElement | null>>>({ left: null, right: null });
+  const playerCaptureRefs = useRef<Partial<Record<HandSlotId, HTMLButtonElement | null>>>({ left: null, right: null });
   const tableauTopRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tableauCardRefs = useRef<Record<string, HTMLDivElement | HTMLButtonElement | null>>({});
   const tutorialRescueModalRef = useRef<HTMLDivElement | null>(null);
@@ -6182,16 +6189,10 @@ export const GolfGame = () => {
     () => game.tableau.map((column) => column[column.length - 1] ?? null),
     [game.tableau]
   );
-  const nonCombatGlobalPeekCount = useMemo(() => {
-    if (combatLaneActive) return 0;
-    return Math.min(
-      3,
-      Math.max(
-        0,
-        ...game.tableau.map((column) => Math.max(0, column.length - 1))
-      )
-    );
-  }, [combatLaneActive, game.tableau]);
+  const nonCombatGlobalPeekCount = useMemo(
+    () => (combatLaneActive ? 0 : getNonCombatPeekCount(game.tableau)),
+    [combatLaneActive, game.tableau]
+  );
   const tutorialMinimumTableauRows = game.tutorialSliceId ? 3 : 1;
   const displayNonCombatPeekCount = combatLaneActive
     ? 0
@@ -6355,7 +6356,7 @@ export const GolfGame = () => {
         createHandSlot('jet-left-3', 'ability', 'Rewire', 'rewire', null, game.jetRewireActionsRemaining > 0),
       ] as PlayerHandSlot[];
     }
-    const actorAbilities = (STARTER_ABILITIES[activeActorName] ?? []).filter(
+    const actorAbilities = ((activeActorName === undefined ? undefined : STARTER_ABILITIES[activeActorName]) ?? []).filter(
       (ability) => ability.effect !== null && isTutorialAbilityVisible(game, ability.effect)
     );
     return actorAbilities
@@ -6479,7 +6480,7 @@ export const GolfGame = () => {
         storedAp: index === game.activeStarterPackIndex ? game.playerStockActionPoints : (game.starterPackStoredAp[index] ?? 0),
         mode: game.starterPackModes[index] ?? 'default',
         meta: {
-          ...(STARTER_KIN_METADATA[card.name] ?? { benchWeight: 1, abilityName: null }),
+          ...(STARTER_KIN_METADATA[card.name ?? ''] ?? { benchWeight: 1, abilityName: null }),
           abilityName: getStarterPackAbilityName(card.name, game.starterPackAbilityRarities[index] ?? 1),
         },
       }));
@@ -6561,7 +6562,7 @@ export const GolfGame = () => {
       const narrowEscape = getKinEffectDefinition('Narrow Escape');
       const skittish = getKinEffectDefinition('Skittish');
       return [nineLives, narrowEscape, skittish]
-        .filter((effect): effect is KinEffectDefinition => !!effect)
+        .filter((effect): effect is GolfKinEffectDefinition => !!effect)
         .map((effect) => ({
           key: effect.key,
           label: effect.label,
@@ -6713,7 +6714,7 @@ export const GolfGame = () => {
     };
   }, [boardCardSize.height, boardCardSize.width]);
   const activePartyPowerLevel = useMemo(
-    () => game.starterPackBase.reduce((sum, card) => sum + (STARTER_KIN_METADATA[card.name]?.benchWeight ?? 1), 0),
+    () => game.starterPackBase.reduce((sum, card) => sum + (STARTER_KIN_METADATA[card.name ?? '']?.benchWeight ?? 1), 0),
     [game.starterPackBase]
   );
   const renderKinMeter = useCallback((actorName: string, actionPoints: number, mode: StarterKinMode, rarity: 1 | 2 | 3, meterId: string, compact = true) => {
@@ -6832,7 +6833,7 @@ export const GolfGame = () => {
           ) : null}
           {!showFaceDown ? (
             <ActorStatusRail
-              actorName={slot.card.name}
+              actorName={slot.card.name ?? ''}
               combatant={benchCombatant}
               maxVisible={3}
               iconSize={18}
@@ -6882,7 +6883,7 @@ export const GolfGame = () => {
             </div>
           )}
           {!showFaceDown ? renderKinMeter(
-            slot.card.name,
+            slot.card.name ?? '',
             slot.storedAp,
             slot.mode,
             game.starterPackAbilityRarities[slot.index] ?? 1,
@@ -7158,9 +7159,9 @@ export const GolfGame = () => {
     return benchIndex >= 0 ? getCardCenterPoint(playerBenchRefs.current[benchIndex]) : null;
   }, [game.enemyBench, game.enemyStock.name, game.playerBench, game.playerStock.name]);
 
-  const queueDialogueCallout = useCallback((actorName: string, text: string, delayMs = 0, subtitle = 'Dialogue') => {
+  const queueDialogueCallout = useCallback((actorName: string | undefined, text: string, delayMs = 0, subtitle = 'Dialogue') => {
     const timeoutId = window.setTimeout(() => {
-      const anchor = getActorAnchor(actorName);
+      const anchor = getActorAnchor(actorName ?? '');
       if (!anchor) return;
       const id = Date.now() + Math.floor(Math.random() * 1000);
       setDialogueCallouts((prev) => [...prev, { id, text, subtitle, anchor }]);
@@ -7410,9 +7411,10 @@ export const GolfGame = () => {
         : `${game.enemyDefeatFx.name} defeated!`,
       game.enemyDefeatFx.moveLabel ? 'Finisher' : 'Enemy Defeated'
     );
-    if (game.enemyDefeatFx.lootRecovered > 0) {
+    const { lootRecovered } = game.enemyDefeatFx;
+    if (lootRecovered > 0) {
       window.setTimeout(() => {
-        queueAnchoredCallout(anchor, `Recovered ${game.enemyDefeatFx.lootRecovered} loot`, 'Reclaimed');
+        queueAnchoredCallout(anchor, `Recovered ${lootRecovered} loot`, 'Reclaimed');
       }, 120);
     }
     rafId = window.requestAnimationFrame(tick);
@@ -7545,9 +7547,9 @@ export const GolfGame = () => {
   };
 
   const startPlayerHandAnimation = useCallback(
-    (card: CardType, sourceElement: HTMLElement | null, slotId: HandSlotId, label: string) => {
+    (card: CardType, sourceElement: HTMLElement | null, slotId: HandSlotId | 'pan-left', label: string) => {
       const from = getCardCenterPoint(sourceElement);
-      const to = getCardCenterPoint(playerCaptureRefs.current[slotId]);
+      const to = getCardCenterPoint(slotId === 'pan-left' ? null : playerCaptureRefs.current[slotId] ?? null);
       if (!from || !to) return;
       if (playerHandAnimTimeoutRef.current !== null) {
         window.clearTimeout(playerHandAnimTimeoutRef.current);
@@ -8434,7 +8436,7 @@ export const GolfGame = () => {
         guidePlan,
         actor: 'player',
       });
-      let strikeSummary: { name: string; damage: number; upgraded: boolean } | null = null;
+      let strikeSummary = null as { name: string; damage: number; upgraded: boolean } | null;
       setGame((prev) => {
         if (prev.playerStock.name !== 'Banks') return prev;
         const tier = prev.starterPackAbilityRarities[prev.activeStarterPackIndex] ?? 1;
@@ -9261,9 +9263,9 @@ export const GolfGame = () => {
       timestamp: Date.now(),
       biomeId: game.biomeId,
       type: 'ability',
-      actor: benchCard.name,
+      actor: benchCard.name ?? '',
       target: game.playerStock.name,
-      detail: { effect: `bench-${benchCard.name.toLowerCase()}`, role: getBenchRole(game, benchIndex) },
+      detail: { effect: `bench-${(benchCard.name ?? '').toLowerCase()}`, role: getBenchRole(game, benchIndex) },
     });
     if (benchCard.name === 'Hero') {
       queueDialogueCallout('Hero', "I've got you.", 140);
@@ -9464,7 +9466,7 @@ const executeGolfMove = (
         timestamp: Date.now(),
         biomeId: prev.biomeId,
         type: 'move',
-        actor: progressResult.sourceCard.name,
+        actor: progressResult.sourceCard.name ?? '',
         target: prev.enemyStock.name,
         detail: { card: candidate.id, columnIndex, damage: resolved.damageDealt, dodged: resolved.dodged, stockId: resolvedTargetStockId },
       });
@@ -9492,7 +9494,7 @@ const executeGolfMove = (
       timestamp: Date.now(),
       biomeId: nextState.biomeId,
       type: 'move',
-      actor: nextState.enemyStock.name,
+      actor: nextState.enemyStock.name ?? '',
       target: nextState.playerStock.name,
       detail: { card: candidate.id, columnIndex, damage: enemyResolved.damageDealt, dodged: enemyResolved.dodged },
     });
@@ -9617,7 +9619,7 @@ const executeGolfMove = (
       timestamp: Date.now(),
       biomeId: prev.biomeId,
       type: 'move',
-      actor: prev.enemyStock.name,
+      actor: prev.enemyStock.name ?? '',
       target: prev.playerStock.name,
       detail: {
         effect: destroyed ? 'enemy-bite-destroy' : 'enemy-bite',
@@ -9690,7 +9692,7 @@ const executeGolfMove = (
       timestamp: Date.now(),
       biomeId: prev.biomeId,
       type: 'ability',
-      actor: prev.enemyStock.name,
+      actor: prev.enemyStock.name ?? '',
       target: lethalForMochi ? 'Hero' : targetCardName,
       detail: { effect: 'maul', damage, redirected: redirectToHero || lethalForMochi },
     });
@@ -10096,7 +10098,7 @@ const executeGolfMove = (
           timestamp: Date.now(),
           biomeId: game.biomeId,
           type: 'autoplay',
-          actor: game.playerStock.name,
+          actor: game.playerStock.name ?? '',
           detail: { mode: autoPlayMode, turn: currentTurn },
         });
         const nextState = resolvedState ?? latestGameRef.current;
@@ -10684,7 +10686,7 @@ const executeGolfMove = (
                         }}
                       >
                         <ActorStatusRail
-                          actorName={game.enemyStock.name}
+                          actorName={game.enemyStock.name ?? ''}
                           combatant={game.combatants[actorKeyFromName(game.enemyStock.name)] ?? createCombatant(game.enemyStock.name)}
                           maxVisible={4}
                           iconSize={20}
@@ -11172,7 +11174,7 @@ const executeGolfMove = (
                         }}
                       >
                         <ActorStatusRail
-                          actorName={game.playerStock.name}
+                          actorName={game.playerStock.name ?? ''}
                           combatant={game.combatants[actorKeyFromName(game.playerStock.name)] ?? createCombatant(game.playerStock.name)}
                           maxVisible={4}
                           iconSize={20}
@@ -11211,7 +11213,7 @@ const executeGolfMove = (
                           </div>
                         ) : null}
                         {renderKinMeter(
-                          game.playerStock.name,
+                          game.playerStock.name ?? '',
                           game.playerStockActionPoints,
                           game.starterPackModes[game.activeStarterPackIndex] ?? 'default',
                           game.starterPackAbilityRarities[game.activeStarterPackIndex] ?? 1,
@@ -11272,7 +11274,7 @@ const executeGolfMove = (
               ) : null}
             </div>
             {showHeuristicValues && currentTurn === 'player' && effectiveOracleMode !== 'ancestors' ? (
-              <HeuristicPill label={guidePlan?.source === 'prophecy' ? 'prophecy path' : effectiveOracleMode === 'ancestors' ? 'hidden best path' : 'visible best path'} />
+              <HeuristicPill label={guidePlan?.source === 'prophecy' ? 'prophecy path' : 'visible best path'} />
             ) : null}
             <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+12px)] left-3 right-3 z-40 flex items-end justify-end gap-3 md:bottom-6 md:left-auto md:right-6 pointer-events-none">
               <div className="pointer-events-auto flex items-center gap-2 glass-panel rounded-2xl p-2">
