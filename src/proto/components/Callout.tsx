@@ -35,6 +35,7 @@ export interface CalloutProps {
   camera?: CalloutCamera;
   /** Zero-based bubble camera cues, fired only when the reader reaches that bubble. */
   bubbleCameras?: Record<number, CalloutCamera>;
+  onBubbleChange?: (index: number) => void;
   /** Stable authoring identity for locally saved dialogue. */
   authoringId?: string;
   speaker?: string;
@@ -67,7 +68,7 @@ export const Callout = memo(function Callout({ visible = true, ...props }: Callo
 });
 
 function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, instanceKey, anchor, durationMs = 5000, onDismiss, layer = 120,
-  tone = 'dialogue', expression, camera, bubbleCameras, marks = EMPTY_MARKS, alignment = 'center', avoidActors, letterMs = 32, paused = false, onComplete }: Omit<CalloutProps, 'visible'>) {
+  tone = 'dialogue', expression, camera, bubbleCameras, marks = EMPTY_MARKS, alignment = 'center', avoidActors, letterMs = 32, paused = false, onComplete, onBubbleChange }: Omit<CalloutProps, 'visible'>) {
   const editing = useCalloutEditing();
   const [editorVisible, setEditorVisible] = useState(false);
   const id = authoringId ?? `${speaker ?? 'dialogue'}:${instanceKey ?? text}`;
@@ -84,6 +85,8 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
     return () => media.removeEventListener('change', change);
   }, []);
   useLayoutEffect(() => { setPageIndex(0); setRevealed(0); setFinished(false); }, [id, draft.text]);
+  const bubbleCallback=useRef(onBubbleChange); bubbleCallback.current=onBubbleChange;
+  useEffect(()=>{if(!finished && !editing.enabled)bubbleCallback.current?.(pageIndex);},[pageIndex,finished,editing.enabled]);
   const page = pages[Math.min(pageIndex, pages.length - 1)];
   const pageText = draft.text.slice(page.start, page.end);
   const speed = draft.letterMs ?? letterMs;
@@ -241,5 +244,5 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
       {editing.enabled && <button type="button" className="proto-callout-edit" data-editor-safe="true" aria-label="Edit callout" title="Edit callout" onClick={() => setEditorVisible(true)}>✎</button>}
     </div>
     {import.meta.env.DEV && editing.enabled && <div className="proto-callout-dev" aria-label="Callout configuration reference">Dev · Dialog {calloutReference(id)}{calloutReference(id) !== id ? ` · ${id}` : ''} · bubble {pageIndex + 1}/{pages.length}</div>}
-  </div>{editing.enabled && editorVisible && <CalloutEditor authoringId={id} initial={draft} onClose={() => setEditorVisible(false)} onSave={value => editing.save(id, value)} onReset={() => editing.save(id, null)} />}</>;
+  </div>{editing.enabled && editorVisible && <CalloutEditor authoringId={id} initial={draft} speaker={speaker} tone={tone} onClose={() => setEditorVisible(false)} onSave={value => editing.save(id, value)} onReset={() => editing.save(id, null)} />}</>;
 }

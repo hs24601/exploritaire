@@ -2,8 +2,8 @@
 
 Generated with the built-in imagegen tool for the single-bush tile at table:0,1. The originals remain in the Codex generated-images directory; runtime PNGs preserve their original alpha without raster edits.
 
-- Standee: `public/assets/biomes/watercolor-v1/manaberry-sparse-standee-v1.png`
-- Overhead: `public/assets/biomes/watercolor-v1/manaberry-sparse-overhead-v1.png`
+- Standee: `public/assets/runtime/environment/watercolor/v1/manaberry-sparse-standee-v1.png`
+- Overhead: `public/assets/runtime/environment/watercolor/v1/manaberry-sparse-overhead-v1.png`
 - Reference roles: existing `berry-patch-sprite-v2.png` and `berry-patch-overhead-v2.png` supplied only as watercolor style references. These source cluster assets are preserved.
 - Art constraint: exactly one compact connected bush, exactly one luminous magenta manaberry, broad irregular wet green/olive/teal brush masses, transparent edges, no scene background. Use the one plant for this sparse variant, never the existing multi-bush cluster image.
 

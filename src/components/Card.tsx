@@ -19,7 +19,7 @@ import { NEON_COLORS, getNeonElementColor } from '../utils/styles';
 import { FORCE_NEON_CARD_STYLE, SHOW_WATERCOLOR_FILTERS } from '../config/ui';
 import { useImmersiveBattle } from '../contexts/ImmersiveBattleContext';
 
-const BLUEVEE_ASSET = '/assets/Bluevee.png';
+const BLUEVEE_ASSET = '/assets/deprecated/pixel/portraits/Bluevee.png';
 
 function getFoundationOverlayTitleFontPx(title: string): number {
   const length = title.trim().length;

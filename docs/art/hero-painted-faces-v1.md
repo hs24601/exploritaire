@@ -1,6 +1,6 @@
 # Hero painted face layer, first pass
 
-Built-in ImageGen generated sad variants from the original seated low/high atlases and the existing `hero_emoji_sad.png` reference. Sources remain in `output/imagegen/hero-faces-v1`; runtime face-only atlases live in `public/assets/actors/hero/faces-watercolor-v1`. Original body assets remain unchanged.
+Built-in ImageGen generated sad variants from the original seated low/high atlases and the existing `hero_emoji_sad.png` reference. Sources remain in `output/imagegen/hero-faces-v1`; runtime face-only atlases live in `public/assets/runtime/characters/hero/expressions/faces/watercolor/v1`. Original body assets remain unchanged.
 
 Prompt (both sheets):
 

@@ -68,28 +68,28 @@ export const DEFAULT_EXPEDITION_ENERGY = 15;
 
 /** Portrait sprites for world actors, by actor id; actors without one use the drawn placeholder. */
 export const WORLD_ACTOR_SPRITES: Record<string, string> = {
-  hero: `${import.meta.env.BASE_URL}assets/actors/hero.png`,
+  hero: `${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/hero.png`,
 };
 
 /** Pop-up scenery for biome tiles, by tile id (drawn by tools/make-pine-sprite.py). */
 export const BIOME_TILE_SPRITES: Record<string, string> = {
-  'curious-sapling': `${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/curious-sapling-sprite-v1.png`,
-  'hero-den': `${import.meta.env.BASE_URL}assets/biomes/hero-den-standee-v3.png`,
-  'woods-alpha': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
-  'woods-east': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
-  pond: `${import.meta.env.BASE_URL}assets/biomes/pond_reeds.png`,
+  'curious-sapling': `${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/curious-sapling-sprite-v1.png`,
+  'hero-den': `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/hero-den-standee-v3.png`,
+  'woods-alpha': `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/small_woods_pines.png`,
+  'woods-east': `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/small_woods_pines.png`,
+  pond: `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/pond_reeds.png`,
   // The Dark Woods share the pines, darkened and reddened in CSS.
-  'woods-danger': `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`,
+  'woods-danger': `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/small_woods_pines.png`,
 };
 
 /** Terrain artwork follows its type, including newly authored cells. */
 export const biomeTileSprite = (tile: { id: string; tileType?: string; terrain?: string; berryPatchVariant?: 'sparse' }) =>
   tile.tileType === 'berry-patch' && tile.berryPatchVariant === 'sparse'
-    ? `${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/manaberry-sparse-standee-v1.png`
+    ? `${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/manaberry-sparse-standee-v1.png`
     : tile.tileType === 'berry-patch'
-    ? `${import.meta.env.BASE_URL}assets/biomes/berry-bush.svg`
+    ? `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/berry-bush.svg`
     : tile.tileType === 'impassable-mountain'
-    ? `${import.meta.env.BASE_URL}assets/biomes/mountain_standee.svg`
+    ? `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/mountain_standee.svg`
     : tile.tileType === 'hero-den' ? BIOME_TILE_SPRITES['hero-den']
     : tile.tileType ? undefined
     : tile.terrain === 'water' ? BIOME_TILE_SPRITES.pond
@@ -100,12 +100,12 @@ export const biomeTileSprite = (tile: { id: string; tileType?: string; terrain?:
  * art in sprite pixels). Laid out by biomeEdgeScenery.ts. */
 export const BIOME_EDGE_SCENERY: Record<'water' | 'woods', EdgeScenery> = {
   water: {
-    side: { src: `${import.meta.env.BASE_URL}assets/biomes/pond_reeds_side.svg`, width: 14, height: 27 },
-    front: { src: `${import.meta.env.BASE_URL}assets/biomes/pond_reeds_front.svg`, width: 12, height: 9 },
+    side: { src: `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/pond_reeds_side.svg`, width: 14, height: 27 },
+    front: { src: `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/pond_reeds_front.svg`, width: 12, height: 9 },
   },
   woods: {
-    side: { src: `${import.meta.env.BASE_URL}assets/biomes/woods_side.svg`, width: 15, height: 26 },
-    front: { src: `${import.meta.env.BASE_URL}assets/biomes/woods_front.svg`, width: 12, height: 8 },
+    side: { src: `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/woods_side.svg`, width: 15, height: 26 },
+    front: { src: `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/woods_front.svg`, width: 12, height: 8 },
   },
 };
 

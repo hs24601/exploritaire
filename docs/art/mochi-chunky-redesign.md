@@ -8,7 +8,7 @@ Low: use the old low sheet as identity/direction target and Hero's low sheet as 
 
 High: use the new low sheet for identity/style, old high sheet for camera directions and Hero for chunky cartoon style. Nine full standing cats in three rows: front/left front-quarter/left profile; left rear-quarter/rear/right rear-quarter; right profile/right front-quarter/true overhead nose-up. First eight use an elevated camera near 40 degrees. Match new low proportions and expressive eyes, simplify hair into broad pixel clusters; clear transparent gutters, no overlaps, text, shadows, glow or scenery.
 
-Card: see `public/assets/art/holocards/actors/mochi-card-v4.prompt.txt`. Shared inspection/foundation card illustration matches the new sprite proportions.
+Card: see `public/assets/sources/ui/holocards/actors/mochi-card-v4.prompt.txt`. Shared inspection/foundation card illustration matches the new sprite proportions.
 
 Generated sources: `exec-5d5a713a-27c0-46d9-af53-968ac5a92297.png` (low), `exec-ded9ffcc-d361-49b0-90f6-6f5052d6b159.png` (high), `exec-a10d6ff2-08a9-42ff-b9cf-0120b6ebfab7.png` (card).
 

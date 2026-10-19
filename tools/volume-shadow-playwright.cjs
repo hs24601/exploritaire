@@ -12,7 +12,7 @@ const {findLayoutDefects}=require('./lib/layout-check.cjs');
     const {paintVolumeShadow}=await import('/src/proto/components/PropVolume.tsx');
     const results=[];
     for(const sprite of ['mountain_standee.svg','woods_side.svg','small_woods_pines.png']){
-     const image=new Image();image.src='/assets/biomes/'+sprite;await image.decode();
+     const image=new Image();image.src='/assets/deprecated/pixel/environment/'+sprite;await image.decode();
      const input=document.createElement('canvas'),ratio=Math.min(1,64/Math.max(image.naturalWidth,image.naturalHeight));
      input.width=Math.max(1,Math.round(image.naturalWidth*ratio));input.height=Math.max(1,Math.round(image.naturalHeight*ratio));
      const source=input.getContext('2d');source.drawImage(image,0,0,input.width,input.height);

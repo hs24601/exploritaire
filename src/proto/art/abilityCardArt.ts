@@ -7,5 +7,5 @@ export function abilityCardArt(name: string) {
   const slug = ABILITY_CARD_ART[name.replace(/^Inferno /, '')];
   // Fetch/Dig already contain only friendly actors and their ordinary props.
   const version = slug === 'fetch' || slug === 'dig' ? 'v2' : 'v3';
-  return slug ? `${import.meta.env.BASE_URL}assets/art/abilities/watercolor-${version}/${slug}.webp` : undefined;
+  return slug ? `${import.meta.env.BASE_URL}assets/runtime/ui/abilities/watercolor-${version}/${slug}.webp` : undefined;
 }

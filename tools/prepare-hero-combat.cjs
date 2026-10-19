@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
     const page = await browser.newPage();
     const layout = {};
     for (const pose of ['flinch', 'down']) {
-      const file = `public/assets/actors/battle/hero-${pose}-atlas-v1.png`;
+      const file = `public/assets/deprecated/pixel/characters/battle/hero-${pose}-atlas-v1.png`;
       layout[pose] = await page.evaluate(async data => {
         const image = new Image(); image.src = data; await image.decode();
         const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
@@ -35,7 +35,7 @@ const { chromium } = require('playwright');
       }, 'data:image/png;base64,' + fs.readFileSync(file).toString('base64'));
     }
     fs.writeFileSync('src/proto/art/heroCombatLayout.json', JSON.stringify(layout, null, 2) + '\n');
-    fs.writeFileSync('public/assets/actors/battle/hero-combat-layout.json', JSON.stringify(layout, null, 2) + '\n');
+    fs.writeFileSync('public/assets/deprecated/pixel/characters/battle/hero-combat-layout.json', JSON.stringify(layout, null, 2) + '\n');
     console.log(JSON.stringify(layout));
   } finally {await browser.close();}
 })().catch(error => {console.error(error); process.exit(1);});

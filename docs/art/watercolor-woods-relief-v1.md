@@ -6,10 +6,10 @@ Generated with the built-in ImageGen tool on 2026-10-12. Preserve the pixel asse
 
 ## Sources and prompts
 
-- Cluster concept/source: `public/assets/biomes/sources/watercolor-v1/woods-cluster-source.png`.
-- Single tree/runtime relief material: `public/assets/biomes/watercolor-v1/pine-relief-v1.png`.
-- Edge/Old Tree material: `public/assets/biomes/watercolor-v1/pine-edge-relief-v1.png` (same source, separate recipe).
-- Overhead companion: `public/assets/biomes/watercolor-v1/woods-overhead-v1.png`.
+- Cluster concept/source: `public/assets/sources/environment/watercolor-v1/woods-cluster-source.png`.
+- Single tree/runtime relief material: `public/assets/runtime/environment/watercolor/v1/pine-relief-v1.png`.
+- Edge/Old Tree material: `public/assets/runtime/environment/watercolor/v1/pine-edge-relief-v1.png` (same source, separate recipe).
+- Overhead companion: `public/assets/runtime/environment/watercolor/v1/woods-overhead-v1.png`.
 
 ### Cluster prompt
 

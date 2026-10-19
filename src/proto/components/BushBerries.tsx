@@ -1,3 +1,4 @@
+import { ManaberryBlob } from './ManaberryBlob';
 /** Independent fruit elements registered to the foliage canvas. */
 export function BushBerries({ sprite, visible, overhead = false, layout }: { sprite: string; visible: boolean; overhead?: boolean; layout?: { size: string; position: string } }) {
   if (!visible || !/berry|bush/.test(sprite)) return null;
@@ -8,8 +9,8 @@ export function BushBerries({ sprite, visible, overhead = false, layout }: { spr
   const [width, height] = layout?.size.split(' ').map(parseFloat) ?? [100,100];
   const [left, top] = layout?.position.split(' ').map(parseFloat) ?? [0,0];
   return <span data-bush-berries={sparse ? 'sparse' : 'dense'} aria-hidden="true" style={{ position:'absolute', inset:0, pointerEvents:'none' }}>
-    {points.map(([x,y], index) => <img key={index} data-bush-berry="true" alt="" draggable={false}
-      src={`${import.meta.env.BASE_URL}assets/biomes/manaberry-fruit-v1.svg`}
-      style={{ position:'absolute', left:layout ? left+width*x : `${x*100}%`, top:layout ? top+height*y : `${y*100}%`, width:layout ? width*(sparse ? .13 : .035) : sparse?'13%':'3.5%', height:'auto', transform:'translate(-50%, -50%)', filter:'drop-shadow(0 0 1px #9fddff)'  }} />)}
+    {points.map(([x,y], index) => <span key={index} style={{ position:'absolute', left:layout ? left+width*x : `${x*100}%`, top:layout ? top+height*y : `${y*100}%`, width:layout ? width*(sparse ? .13 : .035) : sparse?'13%':'3.5%', aspectRatio:'1', transform:'translate(-50%, -50%)' }}><ManaberryBlob /><img data-bush-berry="true" alt="" draggable={false}
+      src={`${import.meta.env.BASE_URL}assets/runtime/items/manaberry/manaberry-fruit-v1.svg`}
+      style={{ position:'relative', width:'100%', height:'auto', filter:'drop-shadow(0 0 1px #9fddff)' }} /></span>)}
   </span>;
 }

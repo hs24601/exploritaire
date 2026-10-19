@@ -3,10 +3,10 @@
 Built-in ImageGen, 2026-10-13. Authorized replacement for Mochi in Paint OTT, map immersion and battle. Pixel originals, card artwork and den sleeping/cuddle artwork remain preserved. New Paint map travel/standing uses the existing Mochi quadruped definition through the shared TableActorSprite renderer; no gameplay or hit-area change.
 
 Runtime atlases:
-- `public/assets/actors/battle/watercolor-v1/mochi-directions-low-watercolor-v1.png`
-- `public/assets/actors/battle/watercolor-v1/mochi-directions-high-watercolor-v1.png`
+- `public/assets/runtime/characters/mochi/rig/watercolor/v1/mochi-directions-low-watercolor-v1.png`
+- `public/assets/runtime/characters/mochi/rig/watercolor/v1/mochi-directions-high-watercolor-v1.png`
 
-Sources: `public/assets/actors/sources/mochi-watercolor-v1/{low,high}-source.png`. Packing measurements: `mochi-watercolor-v1-packing.json`. Run `node tools/prepare-mochi-watercolor.cjs public/assets/actors/sources/mochi-watercolor-v1/low-source.png public/assets/actors/sources/mochi-watercolor-v1/high-source.png`. Offline connected-component isolation excludes adjacent bodies before uniform packing into the existing Mochi rectangles. Source alpha above 32 is retained, including partial pigment edges; faint haze below that threshold is discarded.
+Sources: `public/assets/sources/characters/mochi-watercolor-v1/{low,high}-source.png`. Packing measurements: `mochi-watercolor-v1-packing.json`. Run `node tools/prepare-mochi-watercolor.cjs public/assets/sources/characters/mochi-watercolor-v1/low-source.png public/assets/sources/characters/mochi-watercolor-v1/high-source.png`. Offline connected-component isolation excludes adjacent bodies before uniform packing into the existing Mochi rectangles. Source alpha above 32 is retained, including partial pigment edges; faint haze below that threshold is discarded.
 
 Validation: 17 atlas crops preserve silhouettes and exclude neighbors; rendered gallery at `artifacts/mochi-watercolor-v1/rig-gallery.png` covers all eight headings at low/elevated/OTT. The overhead correction reduces the upward-looking face; a small nose/eye sliver remains in the authored print. Sleeping/cuddle and holocard conversions are outside this standing/directional pass.
 

@@ -4,9 +4,9 @@ Built-in ImageGen, 2026-10-12. Low: five directions × four phases. High: five e
 
 ## Saved artwork and integration
 
-- Original sheets: `public/assets/actors/sources/hero-walking-{low,high}-source-v1.png`.
-- Runtime atlases: `public/assets/actors/battle/hero-walking-{low,high}-v1.png`.
-- Measured rectangles: `public/assets/actors/battle/hero-walking-layout.json` and `src/proto/art/heroWalkingLayout.json`.
+- Original sheets: `public/assets/deprecated/pixel/sources/characters/hero-walking-{low,high}-source-v1.png`.
+- Runtime atlases: `public/assets/deprecated/pixel/characters/battle/hero-walking-{low,high}-v1.png`.
+- Measured rectangles: `public/assets/deprecated/pixel/characters/battle/hero-walking-layout.json` and `src/proto/art/heroWalkingLayout.json`.
 - Rig definition: `src/proto/heroWalkingSprite.ts`; four phases use the existing three joints and materials. Each view has one uniform scale across every phase, with no anatomy stretching.
 - Consumers: `TableActorSprite` for OTT/immersive travel and `combatDemoRig` for cinematic/cue movement. Sitting, stationary attacks, flinching and down poses keep their existing selection.
 - Validation: `heroWalkingSprite.test.ts`, `tools/hero-walking-playwright.cjs`, and all four phases in `tools/hero-proportions-playwright.cjs`. `tools/hero-walking-preview.cjs` captures the real shared rig into `artifacts/hero-walking/rig-preview.png`.

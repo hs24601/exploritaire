@@ -77,7 +77,7 @@ async function checkLiveFootprints(page) {
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await page.goto(URL); await page.waitForTimeout(800);
       assert.equal(await page.evaluate(async () => {
-        const image = new Image(); image.src = '/assets/biomes/impassable-mountain_topdown.svg'; await image.decode();
+        const image = new Image(); image.src = '/assets/deprecated/pixel/environment/impassable-mountain_topdown.svg'; await image.decode();
         const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
         const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
         return context.getImageData(0, 0, 1, 1).data[3];

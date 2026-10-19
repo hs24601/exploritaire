@@ -6,7 +6,7 @@ from PIL import Image, ImageChops, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / 'output/imagegen/actor-watercolor-v1'
 WORK.mkdir(parents=True, exist_ok=True)
-OLD = ROOT / 'public/assets/actors/battle'
+OLD = ROOT / 'public/assets/deprecated/pixel/characters/battle'
 NEW = OLD / 'watercolor-v1'
 
 def clean_cutout(cut):

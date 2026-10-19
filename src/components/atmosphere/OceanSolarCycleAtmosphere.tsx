@@ -27,7 +27,7 @@ type Props = {
   config?: OceanSolarCycleConfig;
 };
 
-const WATER_NORMALS_TEXTURE_URL = '/assets/vis/textures/waternormals.jpg';
+const WATER_NORMALS_TEXTURE_URL = '/assets/runtime/textures/waternormals.jpg';
 
 export const OceanSolarCycleAtmosphere = memo(function OceanSolarCycleAtmosphere({ 
   className, 

@@ -81,7 +81,7 @@ export const LiquidHoloDemo = memo(function LiquidHoloDemo() {
               content: "";
               position: absolute;
               inset: 0;
-              background-image: url('/assets/Bluevee.png');
+              background-image: url('/assets/deprecated/pixel/portraits/Bluevee.png');
               background-size: cover;
               background-position: center;
               opacity: 0.4;

@@ -3,8 +3,19 @@ import { dayObjective } from './dayObjectives';
 import { createDayScenario } from './dayScenarios';
 import { SAVED_TILE_DOCUMENT } from './tileEditor/runtime';
 import type { TileDocument } from './tileEditor/schema';
+import { dayOnePlan } from './dayScenarios';
+import { beginJourney } from './travelJourney';
 
 describe('daily objective waypoints', () => {
+  it('completes an immutable first card only when travel actually starts', () => {
+    const day = createDayScenario('day01');
+    expect(dayObjective(day)?.quest?.steps[0]).toMatchObject({ text: 'Leave the den.', complete: false });
+    const plan = dayOnePlan(day);
+    const traveling = { ...day, journey: beginJourney(plan, 2) };
+    expect(dayObjective(traveling)?.quest?.steps[0]).toMatchObject({ text: 'Leave the den.', complete: true });
+    expect(dayObjective(traveling)?.quest?.steps[1]).toMatchObject({ id: 'navigate-den', complete: false });
+    expect(dayObjective(traveling)?.label).toBe('Check the nearby bush');
+  });
   it('follows Day 01 from the patch back to the den, including supper and rest', () => {
     const day = createDayScenario('day01');
     expect(dayObjective(day)).toMatchObject({ biomeId: day.dayScenarioTiles?.sparsePatchId, label: 'Check the nearby bush' });

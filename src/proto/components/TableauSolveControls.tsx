@@ -8,6 +8,8 @@ export type TableauSolveControlsProps = {
   onStart?: (divine: boolean) => void;
   /** Future Astral Guidance can grant only a few optimal moves. */
   stepLimit?: number;
+  /** Capture a tile boundary once per run; true stops before another play. */
+  tileBoundary?: () => (() => boolean);
   disabled?: boolean;
   /** Highlight every tableau card that can be played right now. */
   guidance?: boolean;
@@ -16,23 +18,30 @@ export type TableauSolveControlsProps = {
   autoSolveLockedReason?: string;
 };
 
-export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disabled = false, guidance = false, onGuidanceChange, allowDivine = true, autoSolveLockedReason }: TableauSolveControlsProps) => {
+export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disabled = false, guidance = false, onGuidanceChange, allowDivine = true, autoSolveLockedReason, tileBoundary }: TableauSolveControlsProps) => {
   const [divine, setDivine] = useState(false);
   const [running, setRunning] = useState(false);
+  const [tileRunning,setTileRunning]=useState(false);
   const [message, setMessage] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callbacks = useRef({ onStep, onStart });
   callbacks.current = { onStep, onStart };
-  const cancel = () => { if (timer.current) gameTime.clearTimeout(timer.current); timer.current = null; setRunning(false); };
+  const cancel = () => { if (timer.current) gameTime.clearTimeout(timer.current); timer.current = null; setRunning(false); setTileRunning(false); };
   useEffect(() => () => { if (timer.current) gameTime.clearTimeout(timer.current); }, []);
   useEffect(() => { if (disabled) cancel(); }, [disabled]);
-  const start = (limit: number) => {
+  const start = (limit: number, tile = false) => {
     if (disabled) return;
     callbacks.current.onStart?.(divine);
-    setRunning(true);
+    const reachedBoundary=tile?tileBoundary?.():undefined;
+    setRunning(true); setTileRunning(tile);
     let moves = 0;
     let waits = 0;
     const tick = () => {
+      if (reachedBoundary?.()) {
+        setMessage('Tile threshold reached');
+        cancel();
+        return;
+      }
       const result = callbacks.current.onStep(divine);
       if (result.status === 'played') { moves += 1; waits = 0; }
       if (result.status === 'waiting') waits += 1;
@@ -50,7 +59,8 @@ export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disable
   };
   return <div className="proto-solve-controls" onPointerDown={(event) => event.stopPropagation()}>
     <div className="proto-solve-actions">
-      <button type="button" disabled={disabled || Boolean(autoSolveLockedReason)} title={autoSolveLockedReason} onClick={() => running ? cancel() : start(stepLimit)}>{running ? 'Stop' : 'Auto-Solve'}</button>
+      {tileBoundary && <button type="button" disabled={disabled || Boolean(autoSolveLockedReason) || running&&!tileRunning} onClick={()=>running?cancel():start(stepLimit,true)}>{running&&tileRunning?'Stop':'Auto-S Tile'}</button>}
+      <button type="button" disabled={disabled || Boolean(autoSolveLockedReason) || Boolean(tileBoundary)&&running&&tileRunning} title={autoSolveLockedReason} onClick={() => running ? cancel() : start(stepLimit)}>{running&&!tileRunning ? 'Stop' : tileBoundary?'Auto-S All':'Auto-Solve'}</button>
       <button type="button" disabled={disabled || running} onClick={() => start(1)}>Best Move</button>
 
       {allowDivine && <label className="proto-solve-toggle" title="Divine Intervention"><input type="checkbox" aria-label="Divine Intervention" checked={divine} disabled={disabled || running} onChange={(event) => setDivine(event.target.checked)} /><span aria-hidden="true">✦</span></label>}

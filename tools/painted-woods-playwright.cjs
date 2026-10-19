@@ -25,7 +25,7 @@ async function gallery(page,suffix='gpu'){
   const {buildPropVolume,propVolumeRecipe,propVolumeRaster,renderPropVolume}=await import('/src/proto/propVolume.ts');
   const {renderVolumeGPUViews}=await import('/src/proto/propVolumeRenderer.ts');
   const load=async(src,limit)=>{const image=new Image();image.src=src;await image.decode();const scale=limit/Math.max(image.width,image.height),canvas=document.createElement('canvas');canvas.width=Math.round(image.width*scale);canvas.height=Math.round(image.height*scale);const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0,canvas.width,canvas.height);return buildPropVolume(canvas.width,canvas.height,ctx.getImageData(0,0,canvas.width,canvas.height).data,propVolumeRecipe(src));};
-  const volume=await load('/assets/biomes/watercolor-v1/pine-relief-v1.png',192),pixel=await load('/assets/biomes/small_woods_pines.png',64);
+  const volume=await load('/assets/runtime/environment/watercolor\/v1/pine-relief-v1.png',192),pixel=await load('/assets/deprecated/pixel/environment/small_woods_pines.png',64);
   const light={direction:[.5,1,.8],brightness:1,localDirection:[0,1,0],localAmount:0,tint:[255,255,255]};
   const host=document.createElement('div');host.id='painted-gallery';host.style.cssText='position:fixed;left:0;top:0;width:1280px;height:720px;z-index:99999;background:#18221e;display:grid;grid-template-columns:repeat(4,1fr);padding:20px;gap:8px;color:white;box-sizing:border-box;';document.body.append(host);
   const models=[...Array.from({length:8},(_,i)=>({volume,yaw:i*45,elevation:30})),{volume:pixel,yaw:0,elevation:30},{volume,yaw:360,elevation:30}];
@@ -86,9 +86,9 @@ async function gallery(page,suffix='gpu'){
   await page.screenshot({path:`${directory}/${width}-actor-peek-3x.png`});
   // Open settings before keyboard inspection: clicking the cog is an outside
   // press and intentionally dismisses an already-open nonmodal tile card.
-  await cog.click();await woods.focus();await page.keyboard.press('Enter');const card=page.locator('[data-tile-card-art="woods-danger"] img');await card.waitFor();assert.match(await card.getAttribute('src'),/watercolor-v1/);
+  await cog.click();await woods.focus();await page.keyboard.press('Enter');const card=page.locator('[data-tile-card-art="woods-danger"] img');await card.waitFor();assert.match(await card.getAttribute('src'),/watercolor\/v1/);
   await page.getByLabel('Art style',{exact:true}).selectOption('pixel');assert.match(await card.getAttribute('src'),/small_woods_pines/);
-  await page.getByLabel('Art style',{exact:true}).selectOption('paint');assert.match(await card.getAttribute('src'),/watercolor-v1/);await page.keyboard.press('Escape');
+  await page.getByLabel('Art style',{exact:true}).selectOption('paint');assert.match(await card.getAttribute('src'),/watercolor\/v1/);await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Reset View',exact:true}).click();const box=await page.locator('.proto-map-viewport').boundingBox();await page.mouse.move(box.x+box.width*.75,box.y+box.height*.75);
   for(let i=0;i<40;i++){await page.mouse.wheel(0,-160);await page.waitForTimeout(25);}await page.waitForTimeout(800);
   const low=await stats(page);assert.ok(low.every(s=>Number(s.elevation)<30&&s.count>50&&!s.clipped));await page.screenshot({path:`${directory}/${width}-low-3x.png`});

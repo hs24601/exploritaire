@@ -29,7 +29,7 @@ function art(overhead) {
   const rects=pixels.map((c,i)=>c<0?'':`<rect x="${i%size}" y="${Math.floor(i/size)}" width="1" height="1" fill="${palette[c]}"/>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges"><title>Berry bush${overhead?' overhead':''}</title>${rects}</svg>\n`;
 }
-for(const overhead of [false,true])writeFileSync(new URL(`../public/assets/biomes/berry-${overhead?'patch-topdown':'bush'}.svg`,import.meta.url),art(overhead));
+for(const overhead of [false,true])writeFileSync(new URL(`../public/assets/deprecated/pixel/environment/berry-${overhead?'patch-topdown':'bush'}.svg`,import.meta.url),art(overhead));
 
 // Flat woodland soil with moss, fallen leaves and a few small stones.
 const earth=['#3b3827','#403c29','#48412c','#514631','#35412b','#3e4b30','#535332','#685238'];
@@ -40,4 +40,4 @@ for(let y=0;y<32;y++)for(let x=0;x<32;x++) {
   const color=earth[noise<8?7:noise<15?6:patch?4+noise%2:noise%4];
   ground+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${color}"/>`;
 }
-writeFileSync(new URL('../public/assets/biomes/berry-patch-ground.svg',import.meta.url),`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges"><title>Berry patch woodland floor</title>${ground}</svg>\n`);
+writeFileSync(new URL('../public/assets/deprecated/pixel/environment/berry-patch-ground.svg',import.meta.url),`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges"><title>Berry patch woodland floor</title>${ground}</svg>\n`);

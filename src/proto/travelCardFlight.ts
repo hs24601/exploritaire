@@ -5,7 +5,7 @@ import { solverFlightDuration } from './solverTiming';
 /** Capture before the play removes its source, including the last arrival card. */
 export function flyTravelCard(cardId: string, actorId: string) {
   const source = Array.from(document.querySelectorAll<HTMLElement>('[data-travel-card]')).find(node => node.dataset.travelCard === cardId);
-  const target = Array.from(document.querySelectorAll<HTMLElement>('[data-travel-foundation]')).find(node => node.dataset.travelFoundation === actorId);
+  const target = document.querySelector<HTMLElement>(`[data-map-actor-card="${actorId}"]`) ?? Array.from(document.querySelectorAll<HTMLElement>('[data-travel-foundation]')).find(node => node.dataset.travelFoundation === actorId);
   if (!source || !target) return;
   const from = source.getBoundingClientRect(), to = target.getBoundingClientRect();
   if (!from.width || !from.height || !to.width || !to.height) return;

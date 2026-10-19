@@ -28,7 +28,7 @@ const dataUrl = path => `data:image/png;base64,${fs.readFileSync(path).toString(
       ctx.drawImage(subject, (1024 - w) / 2, 1536 * .97 - h, w, h);
       return {png:canvas.toDataURL('image/png').split(',')[1], width:subject.width, height:subject.height, transparent, partial, opaque};
     }, {subjectUrl:dataUrl(`${root}/layered/banks-watercolor-${version}.png`), backgroundUrl:dataUrl(`${root}/layered/hero-night-background-v2-ordinary-day.png`)});
-    fs.writeFileSync(`${root}/actors/banks-card-${version}.png`, Buffer.from(result.png, 'base64'));
+    fs.writeFileSync(`${root}/deprecated/pixel/characters/banks-card-${version}.png`, Buffer.from(result.png, 'base64'));
     delete result.png;
     fs.mkdirSync(output, {recursive:true});
     fs.writeFileSync(`${output}/alpha-validation.json`, JSON.stringify(result, null, 2));

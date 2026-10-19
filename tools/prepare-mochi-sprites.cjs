@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
     const page = await browser.newPage();
     const layout = {};
     for (const pose of ['low', 'high']) {
-      const file = `public/assets/actors/battle/mochi-directions-${pose}-v2.png`;
+      const file = `public/assets/deprecated/pixel/characters/battle/mochi-directions-${pose}-v2.png`;
       layout[pose] = await page.evaluate(async ({data,pose}) => {
         const image = new Image(); image.src = data; await image.decode();
         const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
@@ -35,7 +35,7 @@ const { chromium } = require('playwright');
       }, {data: 'data:image/png;base64,' + fs.readFileSync(file).toString('base64'), pose});
     }
     fs.writeFileSync('src/proto/art/mochiLayout.json', JSON.stringify(layout, null, 2) + '\n');
-    fs.writeFileSync('public/assets/actors/battle/mochi-layout-v2.json', JSON.stringify(layout, null, 2) + '\n');
+    fs.writeFileSync('public/assets/deprecated/pixel/characters/battle/mochi-layout-v2.json', JSON.stringify(layout, null, 2) + '\n');
     console.log(JSON.stringify(layout));
   } finally {await browser.close();}
 })().catch(error => {console.error(error); process.exit(1);});

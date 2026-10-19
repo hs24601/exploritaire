@@ -11,7 +11,7 @@ describe('painted den interior registration',()=>{
   });
   it('keeps the resting body above the threshold on the original painting grid',()=>{
     for(const src of DEN_ORBIT_FILES.slice(0,2)){
-      const profile=sceneryInterior('/assets/biomes/watercolor-v1/'+src)!;
+      const profile=sceneryInterior('/assets/runtime/environment/watercolor/v1/'+src)!;
       const [x,y,width,height]=profile.actor,[canvasWidth,canvasHeight]=profile.canvas;
       expect(x).toBeGreaterThan(0);expect(y).toBeGreaterThan(0);
       expect(x+width).toBeLessThan(canvasWidth);expect(y+height).toBeLessThan(canvasHeight*.87);

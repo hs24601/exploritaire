@@ -3,7 +3,7 @@ import {createDayOneState,createDayTwoState,dayOnePlan,dayOneAllowsPlan,dayOneHo
 import {arriveActorAtBiome} from './biomeArrival';
 import {applyFoundationPlay} from './rules/play';
 import {eatSupper} from './rules/ordinaryDay';
-import {beginJourney,bestTravelMove,playTravelCard} from './travelJourney';
+import {beginJourney,bestTravelMove,playTravelCard,paintTravelProgress} from './travelJourney';
 import {getTableLighting} from './protoLighting';
 
 describe('Day 01 before dark',()=>{
@@ -12,10 +12,12 @@ describe('Day 01 before dark',()=>{
   expect(manaCarrierLuminosity(s,'hero')).toBe(0);
   const nearby=dayOnePlan(s);expect(nearby.arrival.biomeId).toBe(s.dayScenarioTiles?.sparsePatchId);
   s={...s,journey:beginJourney(nearby,2,false)};
-  expect(nearby.cards).toBe(6);
-  expect(s.journey!.columns.map(column=>column.map(card=>card.rank))).toEqual([[5,4],[2],[3,3],[6]]);
-  expect(s.journey!.columns.flat().every(card=>card.pose)).toBe(true);
-  expect(s.journey!.columns.flat().filter(card=>card.foodSource==='berries').map(card=>card.rank)).toEqual([6]);
+  expect(nearby.cards).toBe(12);
+  expect(nearby.segments[0].kind).toBe('den-exit');
+  const berryColumns=s.journey!.passageStage!.columns;
+  expect(berryColumns.map(column=>column.map(card=>card.rank))).toEqual([[5,4],[2],[3,3],[6]]);
+  expect(berryColumns.flat().every(card=>card.pose)).toBe(true);
+  expect(berryColumns.flat().filter(card=>card.foodSource==='berries').map(card=>card.rank)).toEqual([6]);
   for(let i=0;i<100 && s.journey!.completed<nearby.cards;i++){const col=bestTravelMove(s.journey!);expect(col).not.toBeNull();s=playTravelCard(s,col!);}
   expect(s.haul.mana).toBe(1);expect(s.biomeTiles.find(t=>t.id===s.dayScenarioTiles?.sparsePatchId)?.berryHarvested).toBe(true);
   const sparse=s.biomeTiles.find(t=>t.id===s.dayScenarioTiles?.sparsePatchId)!;
@@ -24,6 +26,7 @@ describe('Day 01 before dark',()=>{
   expect(dayOneAllowsPlan(s,{...outward,path:[...outward.path,{x:48,y:48,pace:1}]})).toBe(false);
   s={...s,journey:beginJourney(outward)};
   for(let i=0;i<100 && s.journey!.completed<outward.cards;i++){
+    if(s.journey!.waitingForTraversal!==undefined)s=paintTravelProgress(s,s.journey!.progress);
     const col=bestTravelMove(s.journey!);expect(col).not.toBeNull();s=playTravelCard(s,col!);
   }
   expect(s.journey!.completed).toBe(outward.cards);expect(s.haul.mana).toBe(1);

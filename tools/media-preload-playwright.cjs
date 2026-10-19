@@ -46,7 +46,7 @@ const url = process.env.PROTO_URL || 'http://127.0.0.1:5178/proto.html?atmospher
         return { responses, shared, preserved: root === document.querySelector('.proto-game-root') };
       }, style);
       assert.ok(result.shared); assert.ok(result.preserved, 'style switch keeps game mounted');
-      assert.deepEqual(result.responses.filter(r => !r.ok).map(r => r.src), missing ? ['/assets/biomes/watercolor-v1/hero-den-overhead-v2.png'] : []);
+      assert.deepEqual(result.responses.filter(r => !r.ok).map(r => r.src), missing ? ['/assets/runtime/environment/watercolor/v1/hero-den-overhead-v2.png'] : []);
       assert.deepEqual(errors, []);
       await page.screenshot({ path: `artifacts/media-preload/${style}-${touch}-${missing}-ready.png` });
       console.log(JSON.stringify({ style, touch, missing, shared: result.shared, preserved: result.preserved, failed }));

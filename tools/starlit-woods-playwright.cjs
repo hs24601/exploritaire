@@ -94,7 +94,7 @@ async function press(page, target, touch) {
     const pixel=await browser.newPage({viewport:{width:1280,height:720},reducedMotion:'reduce'});
     await pixel.addInitScript(()=>localStorage.setItem('exploritaire.artStyle','pixel'));
     const pixelErrors=[]; pixel.on('pageerror',e=>pixelErrors.push(e.message));
-    const pixelAssets=[]; pixel.on('response',r=>{if(r.url().endsWith('/biomes/small_woods_pines.png'))pixelAssets.push(r.status());});
+    const pixelAssets=[]; pixel.on('response',r=>{if(r.url().endsWith('/deprecated/pixel/environment/small_woods_pines.png'))pixelAssets.push(r.status());});
     await woods(pixel); assert.ok(pixelAssets.includes(200),'Pixel keeps its own tree artwork');
     await pixel.screenshot({path:`${out}/pixel-woods.png`}); assert.deepEqual(pixelErrors,[]); await pixel.close();
     const page=await browser.newPage({viewport:{width:1280,height:720}}); const errors=[];

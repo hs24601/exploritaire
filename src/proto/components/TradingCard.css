@@ -122,3 +122,8 @@
 .loadout-drag-label {position:fixed;left:var(--loadout-x);top:var(--loadout-y);pointer-events:none;z-index:130000;padding:8px;background:#102b28;border:2px solid #ffe39c;color:#fff0d2;font-size:18px;}
 
 @media(max-width:600px){.trading-card--jumbo .trading-card__header{flex-shrink:0;}.trading-card--jumbo .trading-card__body{min-height:0;overflow-y:auto;flex:1;display:block;touch-action:pan-y;}.trading-card--jumbo .trading-card__body> *+*{margin-top:10px;}.trading-card__available{touch-action:pan-y;}}
+
+.actor-playtest-panel { min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+.actor-playtest-description { display:grid; gap:6px; }
+.actor-playtest-description textarea { width:100%; min-width:0; box-sizing:border-box; resize:vertical; padding:8px; border:1px solid #8eafb1; border-radius:6px; background:#07191b; color:#fff; font:inherit; }
+.actor-playtest-description textarea:focus-visible { outline:2px solid #ffe39c; }

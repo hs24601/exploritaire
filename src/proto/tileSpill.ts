@@ -15,7 +15,7 @@ export type SpillRule = {
   onto: readonly string[];
   /** Sides of the source it spills from; all four when omitted. */
   sides?: readonly SpillSide[];
-  /** Decal files under assets/biomes/spill/. */
+  /** Decal files under assets/deprecated/pixel/environment/spill/. */
   art: readonly string[];
   /** Decals per shared edge. */
   count: number;

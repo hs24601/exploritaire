@@ -6,7 +6,7 @@ const fs = require('node:fs');
   try {
     const page = await browser.newPage();
     for (const name of ['mochi', 'hero-mochi']) {
-      const source = `public/assets/actors/sources/${name}-sleeping-atlas-v1.png`;
+      const source = `public/assets/deprecated/pixel/sources/characters/${name}-sleeping-atlas-v1.png`;
       if (!fs.existsSync(source)) continue;
       const cells = await page.evaluate(async data => {
         const image = new Image(); image.src = data; await image.decode();
@@ -35,7 +35,7 @@ const fs = require('node:fs');
           return out.toDataURL('image/png').split(',')[1];
         });
       }, 'data:image/png;base64,' + fs.readFileSync(source).toString('base64'));
-      cells.forEach((cell, i) => fs.writeFileSync(`public/assets/actors/${name}-sleeping${i ? '-topdown' : ''}.png`, Buffer.from(cell, 'base64')));
+      cells.forEach((cell, i) => fs.writeFileSync(`public/assets/deprecated/pixel/characters/${name}-sleeping${i ? '-topdown' : ''}.png`, Buffer.from(cell, 'base64')));
     }
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

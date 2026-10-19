@@ -2,7 +2,7 @@
 
 Added at grid (0,-2). Safe woods exploration uses the existing finite 13-card wood deal. The tile retains proximity discovery.
 
-Built-in ImageGen created `public/assets/biomes/sources/watercolor-v1/curious-sapling-sheet-v1.png`. The alpha-preserving two-panel crops are `public/assets/biomes/watercolor-v1/curious-sapling-sprite-v1.png` and `curious-sapling-overhead-v1.png`.
+Built-in ImageGen created `public/assets/sources/environment/watercolor-v1/curious-sapling-sheet-v1.png`. The alpha-preserving two-panel crops are `public/assets/runtime/environment/watercolor/v1/curious-sapling-sprite-v1.png` and `curious-sapling-overhead-v1.png`.
 
 Immersion uses uniform scaling to relief height 2; OTT uses the overhead crown. Inspection shares the immersive illustration. No surrounding full-height pine fringe is added to this small sapling.
 

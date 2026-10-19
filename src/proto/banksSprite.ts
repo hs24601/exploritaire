@@ -16,7 +16,7 @@ const sheets: Record<string,string> = {
   heroFlinch:'flinch-atlas',heroDown:'down-atlas',
 };
 export const BANKS_SPRITE_ASSETS = Object.fromEntries(Object.entries(sheets).map(([key,sheet])=>[
-  key.replace('hero','banks'),`actors/battle/banks-watercolor-v3/banks-${sheet}-watercolor-v3.png`,
+  key.replace('hero','banks'),`runtime/characters/banks/rig/watercolor/v3/banks-${sheet}-watercolor-v3.png`,
 ]));
 
 /** Banks uses the existing travel/combat registration and shared joint hierarchy.

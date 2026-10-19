@@ -8,7 +8,7 @@ const FIXTURE=path.join(__dirname,'..','public','assets','actors','mochikin','po
 const setHours=(p,h)=>p.evaluate(h=>{const i=document.querySelector('[aria-label="Table time of day"]');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(i,String(h));i.dispatchEvent(new Event('input',{bubbles:true}));},h);
 (async()=>{const b=await chromium.launch({headless:true});const problems=[];try{
   for(const [w,h] of [[1912,914],[1280,720],[390,844],[844,390]]){
-    const p=await b.newPage({viewport:{width:w,height:h}});await p.route('**/assets/actors/hero.png',r=>r.fulfill({path:FIXTURE,contentType:'image/png'}));
+    const p=await b.newPage({viewport:{width:w,height:h}});await p.route('**/assets/deprecated/pixel/characters/hero.png',r=>r.fulfill({path:FIXTURE,contentType:'image/png'}));
     await p.goto('http://localhost:5178/proto.html');if(w<900)await p.getByRole('button',{name:'Table',exact:true}).click();
     await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(700);
     const actor=p.locator('[data-board-piece="actor"].proto-sprite-standee');await actor.waitFor({timeout:5000});
@@ -34,7 +34,7 @@ const setHours=(p,h)=>p.evaluate(h=>{const i=document.querySelector('[aria-label
     await p.close();
   }
   // Missing art falls back to the cardboard token instead of a broken image.
-  const p=await b.newPage({viewport:{width:1280,height:720}});await p.route('**/assets/actors/hero.png',r=>r.fulfill({status:404,body:''}));
+  const p=await b.newPage({viewport:{width:1280,height:720}});await p.route('**/assets/deprecated/pixel/characters/hero.png',r=>r.fulfill({status:404,body:''}));
   await p.goto('http://localhost:5178/proto.html');await p.getByRole('button',{name:'Tilt camera view'}).click();await p.waitForTimeout(700);await p.waitForTimeout(800);
   assert.equal(await p.locator('.proto-sprite-standee[data-board-piece="actor"]').count(),0,'missing sprite falls back to the token');
   assert.equal(await p.locator('[data-board-piece="actor"] .board-object-label').count(),1);

@@ -20,13 +20,13 @@ function ink(pixels:Uint8ClampedArray) {
 }
 describe('sprite-derived prop volumes',()=>{
   it('shows the selected painted den directly while retaining the north-facing Pixel carve',()=>{
-    const painted=scenerySprite('/assets/biomes/hero-den-standee-v3.png','paint');
+    const painted=scenerySprite('/assets/deprecated/pixel/environment/hero-den-standee-v3.png','paint');
     expect(painted).toContain('hero-den-sprite-v2.png');
     expect(isPaintedScenerySprite(painted)).toBe(true);
     expect(propVolumeRecipe(painted)).toBeUndefined();
     expect(sceneryWorldHeading(painted)).toBe(Math.PI);
-    expect(sceneryWorldHeading(scenerySprite('/assets/biomes/berry-bush.svg','paint'))).toBeUndefined();
-    const pixel=propVolumeRecipe(scenerySprite('/assets/biomes/hero-den-standee-v3.png','pixel'))!;
+    expect(sceneryWorldHeading(scenerySprite('/assets/deprecated/pixel/environment/berry-bush.svg','paint'))).toBeUndefined();
+    const pixel=propVolumeRecipe(scenerySprite('/assets/deprecated/pixel/environment/hero-den-standee-v3.png','pixel'))!;
     expect(pixel.shape).toBe('cave');
     expect(pixel.facing).toBe('north');
     const rgba=new Uint8ClampedArray(16*16*4).fill(255);
@@ -142,9 +142,9 @@ describe('sprite-derived prop volumes',()=>{
   });
   it('has no volume for transparent art and chooses recipes only for authored supported sources',()=>{
     expect(buildPropVolume(2,2,new Uint8ClampedArray(16),{bands:[0,1],depth:1,trim:true}).faces).toEqual([]);
-    expect(propVolumeRecipe('/assets/biomes/mountain_standee.svg')).toBeDefined();
-    expect(propVolumeRecipe('/assets/actors/hero.png')).toBeUndefined();
-    expect(propVolumeRecipe('/assets/biomes/hero-den-standee-v3.png')?.shape).toBe('cave');
+    expect(propVolumeRecipe('/assets/deprecated/pixel/environment/mountain_standee.svg')).toBeDefined();
+    expect(propVolumeRecipe('/assets/deprecated/pixel/characters/hero.png')).toBeUndefined();
+    expect(propVolumeRecipe('/assets/deprecated/pixel/environment/hero-den-standee-v3.png')?.shape).toBe('cave');
   });
   it('constrains the complete two-axis ground footprint and uniformly scales small owners',()=>{
     const owner={x:48,y:0,width:48,height:48};

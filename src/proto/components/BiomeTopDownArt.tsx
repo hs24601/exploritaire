@@ -9,7 +9,7 @@ export function BiomeTopDownArt({ terrain = 'woods', danger = false, exploration
 }) {
   const theme = danger ? 'dark-woods' : terrain === 'water' ? 'pond' : 'woods';
   const style=useArtStyle(),paint=style==='paint'&&terrain==='woods';
-  const src=tileId==='curious-sapling'?`${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/curious-sapling-overhead-v1.png`:terrain==='woods'?woodsOverheadSprite(style,danger):`/assets/biomes/${theme}_topdown.svg`;
+  const src=tileId==='curious-sapling'?`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/curious-sapling-overhead-v1.png`:terrain==='woods'?woodsOverheadSprite(style,danger):`/assets/deprecated/pixel/environment/${theme}_topdown.svg`;
   const artStyle={imageRendering:paint?'auto' as const:'pixelated' as const,objectFit:paint?'contain' as const:'fill' as const,
     filter:paint&&danger?'brightness(.65) saturate(.8)':undefined};
   return <span aria-hidden="true" className="proto-biome-topdown" data-biome-topdown={theme} data-scenery-art-style={paint?'paint':'pixel'}>

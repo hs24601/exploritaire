@@ -302,13 +302,13 @@ export const Depth3DShiftDemo = memo(function Depth3DShiftDemo({
       <style>{`
         @font-face {
           font-family: 'Roboto Local';
-          src: url('/assets/vis/fonts/roboto-0.ttf') format('truetype');
+          src: url('/assets/runtime/fonts/display/roboto-0.ttf') format('truetype');
           font-display: swap;
           font-weight: 400;
         }
         @font-face {
           font-family: 'Roboto Local';
-          src: url('/assets/vis/fonts/roboto-1.ttf') format('truetype');
+          src: url('/assets/runtime/fonts/display/roboto-1.ttf') format('truetype');
           font-display: swap;
           font-weight: 700;
         }

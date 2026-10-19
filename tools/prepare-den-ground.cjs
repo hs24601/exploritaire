@@ -12,6 +12,6 @@ const fs=require('node:fs');
     const paint=tile.getContext('2d');paint.imageSmoothingEnabled=false;
     paint.fillStyle=paint.createPattern(patch,'repeat');paint.fillRect(0,0,128,128);
     return tile.toDataURL('image/png').split(',')[1];
-  },'data:image/png;base64,'+fs.readFileSync('public/assets/biomes/sources/hero-den-dirt-edit-v3.png').toString('base64'));
-  fs.writeFileSync('public/assets/biomes/hero-den-ground-v3.png',Buffer.from(output,'base64'));
+  },'data:image/png;base64,'+fs.readFileSync('public/assets/deprecated/pixel/sources/environment/hero-den-dirt-edit-v3.png').toString('base64'));
+  fs.writeFileSync('public/assets/deprecated/pixel/environment/hero-den-ground-v3.png',Buffer.from(output,'base64'));
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

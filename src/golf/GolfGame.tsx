@@ -5368,10 +5368,10 @@ const GuidanceNaviOverlay = ({
   }, []);
 
   useEffect(() => {
-    zipAudioRef.current = new Audio('/assets/sfx/navi/navi_zip.mp3');
+    zipAudioRef.current = new Audio('/assets/runtime/audio/sfx/navi/navi_zip.mp3');
     arrivalAudioRefs.current = [
-      new Audio('/assets/sfx/navi/navi_hey.mp3'),
-      new Audio('/assets/sfx/navi/navi_look.mp3'),
+      new Audio('/assets/runtime/audio/sfx/navi/navi_hey.mp3'),
+      new Audio('/assets/runtime/audio/sfx/navi/navi_look.mp3'),
     ];
 
     return () => {
@@ -6820,7 +6820,7 @@ export const GolfGame = () => {
           {!showFaceDown && slot.card.name === 'Mochi' ? (
             <ActorFrameEmojiRig
               emojiRig={{
-                src: '/assets/actors/mochikin/mochi_emoji_blush.png',
+                src: '/assets/deprecated/pixel/characters/mochikin/mochi_emoji_blush.png',
                 emotionType: 'happy',
                 speaking: showMochiReadyDialog
                   ? {
@@ -10476,7 +10476,7 @@ const executeGolfMove = (
               style={{ animation: 'golf-mochi-target-bob 2.2s ease-in-out infinite' }}
             >
               <img
-                src="/assets/actors/mochikin/mochi_emoji_sad.png"
+                src="/assets/deprecated/pixel/characters/mochikin/mochi_emoji_sad.png"
                 alt="Mochi target"
                 className="h-auto w-[72px]"
                 style={{ filter: 'drop-shadow(0 8px 18px rgba(0,0,0,0.55)) drop-shadow(0 0 10px rgba(255,72,72,0.32))' }}
@@ -11345,7 +11345,7 @@ const executeGolfMove = (
           title="Kin Rescued!"
           reward_sticker={(
             <img
-              src="/assets/actors/mochikin/mochi_emoji_stars.png"
+              src="/assets/deprecated/pixel/characters/mochikin/mochi_emoji_stars.png"
               alt=""
               aria-hidden="true"
               className="h-auto w-[132px] drop-shadow-[0_10px_18px_rgba(0,0,0,0.42)] md:w-[148px]"
@@ -11574,7 +11574,7 @@ const executeGolfMove = (
               >
                 <ActorFrameEmojiRig
                   emojiRig={{
-                    src: '/assets/actors/mochikin/mochi_emoji_blush.png',
+                    src: '/assets/deprecated/pixel/characters/mochikin/mochi_emoji_blush.png',
                     emotionType: 'happy',
                   }}
                 />
@@ -11609,7 +11609,7 @@ const executeGolfMove = (
                 <div className="relative flex flex-col items-center h-full w-full">
                   <ActorFrameEmojiRig
                     emojiRig={{
-                      src: '/assets/actors/mochikin/mochi_emoji_blush.png',
+                      src: '/assets/deprecated/pixel/characters/mochikin/mochi_emoji_blush.png',
                       emotionType: 'happy',
                     }}
                   />

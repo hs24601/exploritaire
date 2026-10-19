@@ -131,6 +131,13 @@ export function dayOneHour(s:ProtoState) {
   if(s.totalWorkCompleted>0)return 15;
   return isHome(s)?10:13;
 }
+/** The sparse harvest dialogue starts with the last legal play, not the walking buffer's easing tail. */
+export function sparsePatchTableauComplete(s:ProtoState): boolean {
+  const j=s.journey, sparseId=s.dayScenarioTiles?.sparsePatchId;
+  return s.dayScenario==='day01' && Boolean(j && sparseId && j.actorId==='hero' &&
+    j.arrival.biomeId===sparseId && j.completed>=j.cards && j.progress>=1 && !j.paused && !j.blocked &&
+    s.biomeTiles.some(t=>t.id===sparseId && t.berryHarvested));
+}
 export function dayOneThought(s:ProtoState) {
   if(s.dayScenario==='day03')return 'Warm stone beneath me. Someone stayed. Banks is here... I am home.';
   if(s.dayScenario==='day02')return s.dayTwoAmbush?'The mana stirred something in the dark.':dayTwoPatchForaged(s)?'Only one fresh manaberry. I need two for supper, and I must keep yesterday’s berry to light my way. I will have to search the darker woods.':'Yesterday’s manaberry still lights my way. The bush outside is bare now. I should check the denser patch for food.';

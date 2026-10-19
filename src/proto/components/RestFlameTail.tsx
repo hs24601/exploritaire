@@ -16,7 +16,7 @@ export function RestFlameTail({sprite,x=0,y=0,width='100%',height='100%'}:{sprit
     <g transform={`translate(${top?83:86} ${top?40:54}) scale(.29)`}>
       {FLAME_RECTS.map(([px,py,w,h],i)=><g key={i} className={`rest-flame-piece rest-flame-piece--${i}`}>
         <svg x={-17+i*3} y={-75+i*5} width={55-i*9} height={80-i*12} viewBox={`${px} ${py} ${w} ${h}`} overflow="hidden" opacity={.7}>
-          <image href={`${import.meta.env.BASE_URL}assets/actors/battle/bobtail-v2/hero-flame-pieces-v2.png`} width={1774} height={887}/>
+          <image href={`${import.meta.env.BASE_URL}assets/runtime/characters/hero/rig/watercolor/v2/hero-flame-pieces-v2.png`} width={1774} height={887}/>
         </svg>
       </g>)}
     </g>

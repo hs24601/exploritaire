@@ -91,7 +91,7 @@ import { DynamicPaintCanvas } from './DynamicPaintCanvas';
 import { ELEMENT_WATERCOLOR_SWATCH_ORDER, ELEMENT_WATERCOLOR_SWATCHES } from '../watercolor/elementalSwatches';
 import { FpsBadge } from './combat/FpsBadge';
 
-const BLUEYCHU_ASSET = '/assets/Bluevee.png';
+const BLUEYCHU_ASSET = '/assets/deprecated/pixel/portraits/Bluevee.png';
 const PARALLAX_ASSET_ROOT = '/assets/vis/parallax';
 
 interface SubEditorProps {
@@ -811,8 +811,8 @@ const CardDepthEffectsDemo = memo(function CardDepthEffectsDemo({
       suit: '🔥', 
       name: 'Dark Rider',  
       color: '#ff4500', 
-      cover: '/assets/actors/constellations/const_fox.png',
-      character: '/assets/actors/fox_cub.png'
+      cover: '/assets/runtime/characters/shared/constellations/const_fox.png',
+      character: '/assets/deprecated/pixel/characters/fox_cub.png'
     },
     { 
       id: 'force-mage', 
@@ -820,8 +820,8 @@ const CardDepthEffectsDemo = memo(function CardDepthEffectsDemo({
       suit: '💧', 
       name: 'Force Mage', 
       color: '#00bfff',   
-      cover: '/assets/actors/wolf_cub.png',
-      character: '/assets/actors/wolf_cub.png'
+      cover: '/assets/deprecated/pixel/characters/wolf_cub.png',
+      character: '/assets/deprecated/pixel/characters/wolf_cub.png'
     },
     { 
       id: 'bluevee',  
@@ -829,8 +829,8 @@ const CardDepthEffectsDemo = memo(function CardDepthEffectsDemo({
       suit: '⭐', 
       name: 'Bluevee',  
       color: NEON_COLORS.teal,   
-      cover: '/assets/Bluevee.png',                           
-      character: '/assets/actors/battle_back_eevee.png' 
+      cover: '/assets/deprecated/pixel/portraits/Bluevee.png',
+      character: '/assets/deprecated/pixel/characters/battle_back_eevee.png'
     },
   ];
 

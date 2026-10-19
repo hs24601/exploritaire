@@ -29,10 +29,10 @@ const masks={
  try{const page=await browser.newPage();
  for(const entry of manifest.entries){
   const rest=entry.name.startsWith('hero-sleeping');
-  const original=`public/assets/actors/${rest?'watercolor-v1':'battle/bobtail-v2'}/${entry.name}-bobtail-v2.png`;
-  const dir=rest?'public/assets/actors/watercolor-v1':'public/assets/actors/battle/bobtail-v3';
-  fs.mkdirSync(dir,{recursive:true});fs.mkdirSync('public/assets/actors/sources/bobtail-v3',{recursive:true});
-  const saved=`public/assets/actors/sources/bobtail-v3/${entry.name}-body-source-v3.png`;
+  const original=`public/assets/runtime/characters/hero/${rest?'sleeping/watercolor/v1':'rig/watercolor/v2'}/${entry.name}-bobtail-v2.png`;
+  const dir=rest?'public/assets/runtime/characters/hero/sleeping/watercolor/v1':'public/assets/runtime/characters/hero/rig/watercolor/v3';
+  fs.mkdirSync(dir,{recursive:true});fs.mkdirSync('public/assets/sources/characters/bobtail-v3',{recursive:true});
+  const saved=`public/assets/sources/characters/bobtail-v3/${entry.name}-body-source-v3.png`;
   if(fs.existsSync(entry.generated))fs.copyFileSync(entry.generated,saved);
   const result=await page.evaluate(async({old,edit,frames,boxes})=>{
    const load=async(src)=>{const image=new Image();image.src=src;await image.decode();return image;};

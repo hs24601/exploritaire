@@ -1,6 +1,6 @@
 # Dynamic berry bush scaffolding
 
-The `*-empty-v1.png` foliage canvases in `public/assets/biomes/watercolor-v1/` were edited from the matching sparse v1 and dense v2 standee/overhead sources with ImageGen on 2026-10-16. Prompt: remove all pink/red/magenta/wine fruit, fill those areas with olive green watercolor foliage, and retain canvas dimensions, silhouettes, positions, stems, transparent gaps, scale and composition. The four outputs were visually inspected before integration.
+The `*-empty-v1.png` foliage canvases in `public/assets/runtime/environment/watercolor/v1/` were edited from the matching sparse v1 and dense v2 standee/overhead sources with ImageGen on 2026-10-16. Prompt: remove all pink/red/magenta/wine fruit, fill those areas with olive green watercolor foliage, and retain canvas dimensions, silhouettes, positions, stems, transparent gaps, scale and composition. The four outputs were visually inspected before integration.
 
 Pixel counterparts are native SVG copies with fruit pigments replaced by foliage pigments. The empty pixel volume omits its fruit geometry.
 

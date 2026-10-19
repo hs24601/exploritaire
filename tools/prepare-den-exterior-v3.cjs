@@ -13,8 +13,8 @@ const fs = require('node:fs');
         const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = src;
       });
       const [original, painted] = await Promise.all([
-        load('/assets/biomes/watercolor-v1/hero-den-overhead-v2.png'),
-        load('/assets/biomes/watercolor-v1/sources/hero-den-exterior-v3-generated.png'),
+        load('/assets/runtime/environment/watercolor/v1/hero-den-overhead-v2.png'),
+        load('/assets/sources/environment/watercolor/v1/hero-den-exterior-v3-generated.png'),
       ]);
       const canvas = document.createElement('canvas'); canvas.width = original.width; canvas.height = original.height;
       const ctx = canvas.getContext('2d'); ctx.drawImage(original, 0, 0);
@@ -36,7 +36,7 @@ const fs = require('node:fs');
       }
       ctx.putImageData(fresh, 0, 0);
       const png=canvas.toDataURL('image/png').split(',')[1];
-      const [earth,stone]=await Promise.all([load('/assets/biomes/watercolor-v1/woodland-ground-v1.png'),load('/assets/biomes/watercolor-v1/mountain-ground-v1.png')]);
+      const [earth,stone]=await Promise.all([load('/assets/runtime/environment/watercolor/v1/woodland-ground-v1.png'),load('/assets/runtime/environment/watercolor/v1/mountain-ground-v1.png')]);
       ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(earth,0,0,canvas.width,canvas.height);
       const floor=ctx.getImageData(0,0,canvas.width,canvas.height);
       ctx.drawImage(stone,0,0,canvas.width,canvas.height);const rock=ctx.getImageData(0,0,canvas.width,canvas.height);
@@ -49,8 +49,8 @@ const fs = require('node:fs');
       ctx.putImageData(floor,0,0);
       return { png, ground:canvas.toDataURL('image/png').split(',')[1], protectedPixels, width: canvas.width, height: canvas.height };
     });
-    fs.writeFileSync('public/assets/biomes/watercolor-v1/hero-den-overhead-v3.png', Buffer.from(result.png, 'base64'));
-    fs.writeFileSync('public/assets/biomes/watercolor-v1/hero-den-ground-v2.png',Buffer.from(result.ground,'base64'));
+    fs.writeFileSync('public/assets/runtime/environment/watercolor/v1/hero-den-overhead-v3.png', Buffer.from(result.png, 'base64'));
+    fs.writeFileSync('public/assets/runtime/environment/watercolor/v1/hero-den-ground-v2.png',Buffer.from(result.ground,'base64'));
     delete result.png;delete result.ground; console.log(result);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

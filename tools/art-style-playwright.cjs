@@ -19,7 +19,7 @@ const URL=process.env.PROTO_URL||'http://127.0.0.1:5191/proto.html';
    assert.ok(panel.x>=0&&panel.x+panel.width<=width&&panel.y>=0);
    await page.screenshot({path:`artifacts/art-style/paint-${width}.png`});
    await selector.selectOption('pixel');
-   await page.waitForFunction(()=>document.querySelector('[data-actor-id="hero"] .proto-sprite-standee__art')?.style.backgroundImage.includes('/actors/hero-sleeping.png'));
+   await page.waitForFunction(()=>document.querySelector('[data-actor-id="hero"] .proto-sprite-standee__art')?.style.backgroundImage.includes('/deprecated/pixel/characters/hero-sleeping.png'));
    assert.equal(await page.evaluate(()=>localStorage.getItem('exploritaire.artStyle')),'pixel');
    await page.keyboard.press('Escape');assert.equal(await cog.getAttribute('aria-expanded'),'false');
    await page.reload();await cog.click();assert.equal(await selector.inputValue(),'pixel');
@@ -41,7 +41,7 @@ const URL=process.env.PROTO_URL||'http://127.0.0.1:5191/proto.html';
    assert.deepEqual(errors,[]);await context.close();console.log('PASS default, switching, persistence, dismissal, bounds',width);
   }
   const page=await browser.newPage({viewport:{width:1280,height:720}}),assets=[];
-  page.on('response',r=>{if(r.url().includes('/actors/battle/')) assets.push(r.url());});
+  page.on('response',r=>{if(r.url().includes('/deprecated/pixel/characters/battle/')) assets.push(r.url());});
   await page.goto(URL+'?combatdemo');
   await page.getByRole('button',{name:'Game settings',exact:true}).click();
   await Promise.all([page.waitForResponse(r=>r.url().endsWith('/dark-slime-directions-v1.png')),page.getByLabel('Art style',{exact:true}).selectOption('pixel')]);

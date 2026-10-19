@@ -31,12 +31,12 @@ export function sampleCameraSequence(steps: CameraStep[], initial: CameraShot, e
     const step = steps[index], duration = reducedMotion || step.easing === 'cut' ? 0 : step.durationMs;
     if (elapsed < cursor + duration) {
       const t = (elapsed - cursor) / duration;
-      return { shot: interpolateShot(from, step.shot, step.easing === 'smooth' ? t * t * (3 - 2 * t) : t), index, done: false };
+      return { shot: interpolateShot(from, step.shot, step.easing === 'smooth' ? t * t * (3 - 2 * t) : t), index, done: false, moving: true };
     }
     cursor += duration;
-    if (elapsed < cursor + step.holdMs) return { shot: step.shot, index, done: false };
+    if (elapsed < cursor + step.holdMs) return { shot: step.shot, index, done: false, moving: false };
     cursor += step.holdMs;
     from = step.shot;
   }
-  return { shot: from, index: Math.max(0, steps.length - 1), done: true };
+  return { shot: from, index: Math.max(0, steps.length - 1), done: true, moving: false };
 }

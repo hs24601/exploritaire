@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const { chromium } = require('playwright');
 const names = ['happy', 'blush', 'heartEyes', 'sad', 'stars', 'upset', 'upsetWithSymbol', 'behind'];
-const directory = 'public/assets/actors/banks/emojis-watercolor-v1';
+const directory = 'public/assets/runtime/characters/banks/expressions/emojis/watercolor/v1';
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {

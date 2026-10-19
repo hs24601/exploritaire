@@ -95,7 +95,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           t.magFilter = t.userData.watercolor ? THREE.LinearFilter : THREE.NearestFilter;
           t.minFilter = t.magFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
         };
-        const entries = await Promise.all(Object.entries({...battleSpriteAssets(artStyle),...BANKS_SPRITE_ASSETS,trees:artStyle==='paint'?'biomes/watercolor-v1/woods-cluster-sprite-v1.png':'biomes/small_woods_pines.png'}).map(async ([key,path]) => [key,await load(path)] as const));
+        const entries = await Promise.all(Object.entries({...battleSpriteAssets(artStyle),...BANKS_SPRITE_ASSETS,trees:artStyle==='paint'?'runtime/environment/watercolor/v1/woods-cluster-sprite-v1.png':'deprecated/pixel/environment/small_woods_pines.png'}).map(async ([key,path]) => [key,await load(path)] as const));
         const assets = Object.fromEntries(entries) as Record<string,THREE.Texture> & {trees:THREE.Texture};
         if (disposed || !host.current) return;
         const layout = host.current.closest<HTMLElement>('.proto-main-layout') ?? host.current.closest<HTMLElement>('.banks-rescue-cinema__stage') ?? host.current.parentElement!;

@@ -31,7 +31,7 @@ export function deleteCameraChoreography(id: string) { const next = getSavedLibr
 export const useCameraLibrary = () => useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, getCameraLibrary);
 export type CameraPort = { capture: () => CameraShot; play: (steps: CameraStep[], restore: boolean, name: string) => void; stop: (restore?: boolean) => void; pause: () => void };
 let port: CameraPort | null = null;
-let status = { available: false, playing: false, paused: false, name: '', shot: 0, tileLabelIds: [] as readonly string[] };
+let status = { available: false, playing: false, moving: false, paused: false, name: '', shot: 0, tileLabelIds: [] as readonly string[] };
 export const getCameraPlayback = () => status;
 export const useCameraPlayback = () => useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, getCameraPlayback);
 export function setCameraPlayback(patch: Partial<typeof status>) { status = { ...status, ...patch }; emit(); }

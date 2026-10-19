@@ -15,9 +15,13 @@ const inside = (root, relative) => {
   return file;
 };
 const publicRoot = path.join(game, 'public');
+const migration = JSON.parse(fs.readFileSync(path.join(game, 'docs/art/asset-migration.json'), 'utf8')).assets;
 const entries = manifest.assets.map(asset => {
-  if (!asset.target.startsWith('assets/art/')) throw new Error('Invalid art target');
-  return { source: inside(repo, asset.source), target: inside(publicRoot, asset.target) };
+  const target = asset.target.startsWith('assets/art/')
+    ? 'assets/' + (migration[asset.target.slice('assets/'.length)] || asset.target.slice('assets/'.length).replace(/^art\//, 'runtime/ui/'))
+    : asset.target;
+  if (!target.startsWith('assets/runtime/ui/') && !target.startsWith('assets/sources/ui/')) throw new Error('Invalid art target');
+  return { source: inside(repo, asset.source), target: inside(publicRoot, target) };
 });
 // Read all sources before changing any distributable files.
 const files = entries.map(entry => ({ ...entry, bytes: fs.readFileSync(entry.source) }));

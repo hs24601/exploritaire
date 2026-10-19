@@ -2,7 +2,7 @@ import { memo, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
 // Local copy of the smoke texture — avoids CORS issues with the original CDN URL.
-const CLOUD_TEXTURE_PATH = '/assets/cloud-smoke.png';
+const CLOUD_TEXTURE_PATH = '/assets/runtime/effects/cloud-smoke.png';
 
 export type ElectricSkiesConfig = {
   rainCount: number;

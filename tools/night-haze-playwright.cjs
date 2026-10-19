@@ -60,7 +60,7 @@ fs.mkdirSync(out, { recursive: true });
         const alpha = () => { const p = read(); return p[(Math.floor(canvas.height/2)*canvas.width+Math.floor(canvas.width/2))*4+3]; };
         renderer.draw(input); const dark = alpha();
         input.scene.concealed = [{ x: 0, y: 0, width: 96, height: 96 }]; renderer.draw(input); const concealed = alpha();
-        input.scene.canopies = [{ id: 'rock', x: 48, y: 0, width: 46, height: 46, trimmed: true, sprite: '/assets/biomes/watercolor-v1/mountain-peak-sprite-v1.png' }];
+        input.scene.canopies = [{ id: 'rock', x: 48, y: 0, width: 46, height: 46, trimmed: true, sprite: '/assets/runtime/environment/watercolor/v1/mountain-peak-sprite-v1.png' }];
         renderer.draw(input); await new Promise(r => setTimeout(r, 500)); renderer.draw(input); const relief = alpha();
         input.scene = { patches: [], canopies: [], concealed: [] };
         input.lights = [{ id: 'lamp', position: { x: 0, y: 0 }, strength: .85, radius: 2 }]; renderer.draw(input); const lit = alpha();

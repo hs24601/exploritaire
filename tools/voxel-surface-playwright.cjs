@@ -12,7 +12,7 @@ const directory='artifacts/voxel-surface';fs.mkdirSync(directory,{recursive:true
     const light={direction:[1,1,1],brightness:1,localDirection:[0,1,0],localAmount:0,tint:[255,220,160]};
     const models=[];
     for(const src of ['small_woods_pines.png','woods_side.svg','woods_front.svg','mountain_standee.svg','hero-den-standee-v2.png','berry-bush.svg']){
-      const image=new Image();image.src='/assets/biomes/'+src;await image.decode();
+      const image=new Image();image.src='/assets/deprecated/pixel/environment/'+src;await image.decode();
       const scale=Math.min(1,64/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');
       canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
       const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=false;ctx.drawImage(image,0,0,canvas.width,canvas.height);

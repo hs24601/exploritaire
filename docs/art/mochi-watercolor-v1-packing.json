@@ -1,6 +1,6 @@
 {
   "low": {
-    "output": "public/assets/actors/battle/watercolor-v1/mochi-directions-low-watercolor-v1.png",
+    "output": "public/assets/runtime/characters/mochi/rig/watercolor/v1/mochi-directions-low-watercolor-v1.png",
     "frames": [
       {
         "index": 0,
@@ -159,7 +159,7 @@
     "partial": 812118
   },
   "high": {
-    "output": "public/assets/actors/battle/watercolor-v1/mochi-directions-high-watercolor-v1.png",
+    "output": "public/assets/runtime/characters/mochi/rig/watercolor/v1/mochi-directions-high-watercolor-v1.png",
     "frames": [
       {
         "index": 0,

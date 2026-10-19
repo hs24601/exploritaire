@@ -41,7 +41,7 @@ const {findLayoutDefects}=require('./lib/layout-check.cjs');
    assert.equal(await page.locator('.battle-field .proto-actor-base-name--screen').count(),4);
    assert.equal(await page.locator('.battle-field .proto-foundation-exit').count(),0);
    assert.equal(await page.locator('.battle-field__foundation').first().evaluate(e=>getComputedStyle(e).transform),explorationTilt,'Foundation tilt matches exploration');
-   assert.match(await page.locator('[data-battle-actor="hero"] .proto-sprite-standee__art').evaluate(e=>e.style.backgroundImage),/actors\/hero.png/);
+   assert.match(await page.locator('[data-battle-actor="hero"] .proto-sprite-standee__art').evaluate(e=>e.style.backgroundImage),/characters\/hero.png/);
    assert.equal(await page.locator('[data-battle-actor="mochi"] [data-foundation-pose="quarter"]').count(),1);
    const shape=await page.locator('.battle-field__actor-card').first().evaluate(e=>({width:parseFloat(getComputedStyle(e).width),height:parseFloat(getComputedStyle(e).height)}));assert.ok(Math.abs(shape.height/shape.width-74/56)<.01);
    assert.deepEqual(await page.locator('.battle-field__foundation').evaluateAll(foundations=>foundations.flatMap(f=>{

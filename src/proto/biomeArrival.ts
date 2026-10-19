@@ -47,7 +47,15 @@ const arriveSingleActorAtBiome = (state: ProtoState, actorId: string, biomeId: s
       settledHaul: actor.location === 'foundation' ? { ...state.haul } : state.settledHaul,
     });
   }
-  const active = activateBiome(departing, biomeId);
+  let active = activateBiome(departing, biomeId);
+  const incoming=state.travelRanks?.[actorId];
+  if(state.dayScenario && incoming!==undefined && !target.poiRankInitialized && active.tableau.flat().some(c=>c.questStep===0)){
+    const base=active.foundations[0]?.card.rank??2,delta=(incoming-base+13)%13;
+    const shift=(c:typeof active.tableau[number][number])=>({...c,rank:(c.rank-1+delta)%13+1});
+    active={...active,tableau:active.tableau.map(column=>column.map(shift)),stock:active.stock.map(shift),
+      foundations:active.foundations.map(f=>f?{...f,card:{...f.card,rank:(f.card.rank-1+delta)%13+1}}:f),
+      biomeTiles:active.biomeTiles.map(t=>t.id===biomeId?{...t,poiRankInitialized:true}:t)};
+  }
   const available = (index: number) => index >= 0 && index < active.foundations.length &&
     Number.isInteger(index) && active.foundations[index]?.count === 0 && active.foundations[index]?.cards.length === 0 &&
     !active.worldActors.some(entry => entry.id !== actorId && entry.location === 'foundation' && entry.biomeId === biomeId && (entry.foundationIndex ?? 0) === index);

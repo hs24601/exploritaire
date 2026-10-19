@@ -95,13 +95,13 @@ export const DepthPerspectiveShiftDemo = memo(function DepthPerspectiveShiftDemo
       <style>{`
         @font-face {
           font-family: 'Roboto Local';
-          src: url('/assets/vis/fonts/roboto-0.ttf') format('truetype');
+          src: url('/assets/runtime/fonts/display/roboto-0.ttf') format('truetype');
           font-display: swap;
           font-weight: 400;
         }
         @font-face {
           font-family: 'Roboto Local';
-          src: url('/assets/vis/fonts/roboto-1.ttf') format('truetype');
+          src: url('/assets/runtime/fonts/display/roboto-1.ttf') format('truetype');
           font-display: swap;
           font-weight: 700;
         }
@@ -133,7 +133,7 @@ export const DepthPerspectiveShiftDemo = memo(function DepthPerspectiveShiftDemo
           transform-origin: center center;
         }
         .dps-card {
-          background: #fff url('/assets/vis/textures/depth-perspective-bg.jpg') 50% 50%;
+          background: #fff url('/assets/runtime/textures/depth-perspective-bg.jpg') 50% 50%;
           background-size: 450%;
           z-index: 1;
           transform-style: preserve-3d;

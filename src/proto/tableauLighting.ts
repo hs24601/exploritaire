@@ -5,7 +5,7 @@ import { globalLightsEnabled } from './globalLighting';
 /** A local view of the biome's world lighting; the fixture is visual scaffolding
  * for this field only and never changes table exploration or gameplay light. */
 export function createTableauLightRig(hours: number, origin: { x: number; y: number }, worldLights: readonly TableLight[], fixture = true) {
-  const lights: TableLight[] = [...worldLights, ...(fixture ? [{
+  const lights: TableLight[] = [...worldLights, ...(fixture && !new URLSearchParams(window.location.search).has('combatsbx') ? [{
     id: 'tableau-overhead', position: { x: origin.x, y: origin.y - 90 },
     height: 180, radius: 5, strength: 0.72, color: '#ffe0a0',
   }] : [])];

@@ -1,8 +1,8 @@
 // Non-destructive packing: retain every existing expression asset and measurement.
 const fs=require('node:fs');const {chromium}=require('playwright');
-const root='public/assets/actors/hero/heads-watercolor-v2';
+const root='public/assets/runtime/characters/hero/expressions/heads/watercolor/v2';
 (async()=>{const b=await chromium.launch();try{
- const p=await b.newPage(),data=fs.readFileSync(root+'/hero-curious-source-v1.png').toString('base64');
+ const p=await b.newPage(),data=fs.readFileSync('public/assets/sources/characters/hero/expressions/heads/watercolor/v2/hero-curious-source-v1.png').toString('base64');
  const result=await p.evaluate(async data=>{
   const img=new Image();img.src='data:image/png;base64,'+data;await img.decode();
   const raw=document.createElement('canvas');raw.width=img.width;raw.height=img.height;

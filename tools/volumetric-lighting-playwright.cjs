@@ -42,7 +42,7 @@ const zoomShot=async(p,clip,path)=>{
           const canvas=document.createElement('canvas');const renderer=createAtmosphereRenderer(canvas);
           const input={width:640,height:480,scale:0.5,camera:{x:-68,y:0,scale:1.7,yaw:0},tilt:{angle:38,perspective:800},frame:getTableLighting(17),lights:[],time:1000,guards:[],scene:{patches:[{x:40,y:0,width:100,height:100,terrain:'woods'}],canopies:[]}};
           const gl=canvas.getContext('webgl');const read=()=>{const pixels=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels;};
-          input.scene.canopies=[{id:'test-tree',x:40,y:0,width:100,height:100,sprite:'/assets/biomes/small_woods_pines.png',trimmed:true,castsShadow:false}];
+          input.scene.canopies=[{id:'test-tree',x:40,y:0,width:100,height:100,sprite:'/assets/deprecated/pixel/environment/small_woods_pines.png',trimmed:true,castsShadow:false}];
           renderer.draw(input);await new Promise(r=>setTimeout(r,250));renderer.draw(input);const clear=read();const clearImage=canvas.toDataURL().split(',')[1];
           input.scene.canopies[0].castsShadow=true;renderer.draw(input);const shaded=read();
           let visible=0,changed=0,outside=0;

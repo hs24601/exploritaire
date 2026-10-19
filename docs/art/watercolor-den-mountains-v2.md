@@ -1,18 +1,18 @@
 # Broad watercolor den and mountains — v2
 
-Requested 2026-10-12: apply the berry revision's broad wet-dab method to Hero's Den and Impassable Mountains. Generated with built-in ImageGen; original sources and Pixel variants retained. All selected assets reside in `public/assets/biomes/watercolor-v1/`.
+Requested 2026-10-12: apply the berry revision's broad wet-dab method to Hero's Den and Impassable Mountains. Generated with built-in ImageGen; original sources and Pixel variants retained. All selected assets reside in `public/assets/runtime/environment/watercolor/v1/`.
 
 ## Saved assets
 
 | Asset | Use |
 | --- | --- |
-| [hero-den-sprite-v2.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/hero-den-sprite-v2.png) | Original den cutout in immersion, inspection and den landscape |
-| [hero-den-overhead-v2.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/hero-den-overhead-v2.png) | OTT den and separate foreground roof |
-| [mountain-peak-sprite-v1.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/mountain-peak-sprite-v1.png) | Main mountain, corner peak and smaller end spur; authored neighbor scales retained |
-| [mountain-ridge-sprite-v1.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/mountain-ridge-sprite-v1.png) | East-west saddle placement, original painted cutout |
-| [mountain-ridge-ns-sprite-v1.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/mountain-ridge-ns-sprite-v1.png) | Identical unchanged ridge PNG for north-south seam placement |
-| [mountain-overhead-v1.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/mountain-overhead-v1.png) | Connected OTT range print |
-| [mountain-ground-v1.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/mountain-ground-v1.png) | Full opaque stone wash beneath peaks in both views |
+| [hero-den-sprite-v2.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/hero-den-sprite-v2.png) | Original den cutout in immersion, inspection and den landscape |
+| [hero-den-overhead-v2.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/hero-den-overhead-v2.png) | OTT den and separate foreground roof |
+| [mountain-peak-sprite-v1.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/mountain-peak-sprite-v1.png) | Main mountain, corner peak and smaller end spur; authored neighbor scales retained |
+| [mountain-ridge-sprite-v1.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/mountain-ridge-sprite-v1.png) | East-west saddle placement, original painted cutout |
+| [mountain-ridge-ns-sprite-v1.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/mountain-ridge-ns-sprite-v1.png) | Identical unchanged ridge PNG for north-south seam placement |
+| [mountain-overhead-v1.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/mountain-overhead-v1.png) | Connected OTT range print |
+| [mountain-ground-v1.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/mountain-ground-v1.png) | Full opaque stone wash beneath peaks in both views |
 
 ## Integration
 

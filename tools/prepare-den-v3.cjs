@@ -45,6 +45,6 @@ const fs=require('node:fs');
       paint.putImageData(final,0,0);
       return out.toDataURL('image/png').split(',')[1];
     });
-  },'data:image/png;base64,'+fs.readFileSync('public/assets/biomes/sources/hero-den-atlas-v3.png').toString('base64'));
-  ['hero-den-topdown-v3.png','hero-den-standee-v3.png'].forEach((name,i)=>fs.writeFileSync('public/assets/biomes/'+name,Buffer.from(outputs[i],'base64')));
+  },'data:image/png;base64,'+fs.readFileSync('public/assets/deprecated/pixel/sources/environment/hero-den-atlas-v3.png').toString('base64'));
+  ['hero-den-topdown-v3.png','hero-den-standee-v3.png'].forEach((name,i)=>fs.writeFileSync('public/assets/deprecated/pixel/environment/'+name,Buffer.from(outputs[i],'base64')));
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

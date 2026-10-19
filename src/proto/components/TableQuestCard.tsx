@@ -1,3 +1,4 @@
+import { useWorldQuestShimmer } from './useWorldQuestShimmer';
 import { trackGameAnimation } from '../../gameAnimations';
 import { gameTime } from '../../gameTime';
 import { holdSlop, useRewardHold } from '../useRewardHold';
@@ -55,6 +56,7 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
   toWorld?: (clientX: number, clientY: number) => {x:number;y:number}; onMove: (position: {x:number;y:number}, tilt:number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  useWorldQuestShimmer(ref,!redeemed);
   const [displayPosition, setDisplayPosition] = useState(placement.position);
   const hold = useRewardHold(onRedeem, !redeemed);
   const [tableState, setTableState] = useState(Boolean(placement.tableState));

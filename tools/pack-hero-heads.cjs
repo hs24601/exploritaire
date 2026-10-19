@@ -1,10 +1,10 @@
 // Pack existing painted heads and generated neutral heads; never repaint bodies.
 const fs=require('node:fs');
 const {chromium}=require('playwright');
-const out='public/assets/actors/hero/heads-watercolor-v2';
+const out='public/assets/runtime/characters/hero/expressions/heads/watercolor/v2';
 (async()=>{const b=await chromium.launch();try{
  const p=await b.newPage();
- const neutral=fs.readFileSync(out+'/hero-neutral-source-v2.png').toString('base64');
+ const neutral=fs.readFileSync('public/assets/sources/characters/hero/expressions/heads/watercolor/v2/hero-neutral-source-v2.png').toString('base64');
  const sad=['low','high'].map(t=>fs.readFileSync(`output/imagegen/hero-faces-v1/hero-sitting-sad-${t}-source.png`).toString('base64'));
  const result=await p.evaluate(async({neutral,sad})=>{
   const load=async(data)=>{const i=new Image();i.src='data:image/png;base64,'+data;await i.decode();return i;};

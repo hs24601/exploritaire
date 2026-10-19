@@ -1,7 +1,7 @@
 import { CLAUSTROPHOBIC_DARKNESS, type PeripheralDarkness } from './peripheralDarkness';
 import type { CalloutMark } from './calloutEffects';
 import type { ProtoState } from './protoState';
-import { dayOneReturning, dayTwoPatchForaged } from './dayScenarios';
+import { dayOneReturning, dayTwoPatchForaged, sparsePatchTableauComplete } from './dayScenarios';
 import { isHome } from './rules/ordinaryDay';
 import type { CalloutCamera, CameraChoreography, CameraStep, CameraShot } from './cameraChoreography';
 export type StoryMood = 'stone' | 'berry' | 'dusk' | 'night' | 'woods' | 'morning';
@@ -24,7 +24,7 @@ export function buildDayCinematicBeats(state: ProtoState): DayCinematicBeat[] {
   const patchPair = (id: string, at: Point, close = 7) => [step(id + '.place', 'Hero small against the brush', at, 4, 150, 61, 1100, 800), step(id + '.thought', 'Close three-quarter, room above for her thought', at, close, 170, 67, 1900, 1600, .23)];
   return [
     { ...beat('day01','opening','A small home','stone','Hold Hero in the open den mouth with the nearby glowing bush and mountain shelter in view.','Muted morning ambient holds the stone; no added lamp.',[step('d1.home.hero','Hero in the den / nearby bush',home,9.165,194,17.6,0,1800,.24)], 'day01.opening', ['hero-den', state.dayScenarioTiles?.sparsePatchId].filter((id): id is string => Boolean(id))), bubbleCameras: { 1: { kind: 'shot', step: step('d1.home.bush', 'Swing toward the nearby bush', home, 9.935, 186.4, 82, 1800, 1800, .24) } } },
-    beat('day01','sparse-patch','Not enough nearby','berry','A lonely bush in a wider frame, then a gentle push toward Hero as she remembers easier days.','Overcast afternoon; the first carried berry is the only new glow.',patchPair('d1.sparse',sparse), 'day01.sparse-patch'),
+    { ...beat('day01','sparse-patch','Not enough nearby','berry','A lonely bush in a wider frame, then a gentle push toward Hero as she remembers easier days.','Overcast afternoon; the first carried berry is the only new glow.',patchPair('d1.sparse',sparse), 'day01.sparse-patch'), bubbleCameras: { 1: {kind:'shot',step:step('d1.sparse.quest','Denser patch / quest introduction',{x:(sparse.x+patch.x)/2,y:(sparse.y+patch.y)/2},10.9,Math.atan2(sparse.x-patch.x,sparse.y-patch.y)*180/Math.PI,54.8,1800,0,0)} } },
     beat('day01','patch','Farther from home','berry','A shoulder-height environmental view keeps the berry brush behind Hero while the deal remains accessible.','Afternoon greens and pink pigment; no extra scene light.',[step('d1.patch','Hero and berry brush / playable wide',patch,4.6,150,61,1600,1800,.18)]),
     beat('day01','budget','Three small lights','dusk','Move inward for the supper-versus-tomorrow decision, then leave space in the direction of home.','The existing late-afternoon clock warms the earth; carried mana stays finite.',patchPair('d1.budget',patch,6.4), 'day01.budget'),
     beat('day01','home','Before the dark','dusk','Return to the same shelter composition, closer now so home feels earned.','Existing 17:30 sunset; preserve the authored stone and local light settings.',denPair('d1.return',6.8), 'day01.home'),
@@ -39,7 +39,8 @@ export function buildDayCinematicBeats(state: ProtoState): DayCinematicBeat[] {
   ];
 }
 export function dayCinematicBeatId(state: ProtoState): string | null {
-  if (!state.dayScenario || state.journey || state.dayTwoAmbush) return null;
+  if (!state.dayScenario || state.dayTwoAmbush) return null;
+  if (state.journey) return sparsePatchTableauComplete(state) ? 'day01.sparse-patch' : null;
   if (state.dayScenario === 'day03') return 'day03.opening';
   if (state.dayScenario === 'day02') return dayTwoPatchForaged(state) ? state.selectedBiomeId === state.dayScenarioTiles?.woodsId ? 'day02.woods' : 'day02.scarcity' : state.selectedBiomeId === state.dayScenarioTiles?.patchId ? 'day02.patch' : 'day02.opening';
   if (state.ordinaryDay?.complete) return 'day01.complete';

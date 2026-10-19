@@ -41,6 +41,7 @@ export type BiomeRunState = {
 };
 
 export type BiomeTileState = {
+  poiRankInitialized?: boolean;
   passage?: import('./terrainPassages').TerrainPassage;
   /** Session-only breach; never serialized into the authored tile document. */
   passageOpen?: boolean;
@@ -88,6 +89,8 @@ export type CityState = {
 };
 
 export type WorldActorState = {
+  /** World-facing direction, independent of camera orientation. */
+  heading?: number;
   characteristics?: string[];
   traversalAffinity?: Partial<Record<string, number>>;
   id: string;
@@ -127,10 +130,13 @@ export type ProtoState = {
   eventDiscard?: Card[];
   resolvedEventIds?: string[];
   journey?: TravelJourney;
+  travelRanks?: Record<string,number>;
   travelStamina?: number;
   utilityAP?: Record<string, number>;
   /** Finite sleep round; stock draws establish a rank without earning inspiration. */
   denRest?: { restfulCards: number; disruptions: number; started?: boolean; receivingCard?: Card };
+  denQuestDiscovered?: boolean;
+  discoveredTutorialQuests?: string[];
   dayScenario?: 'day01' | 'day02' | 'day03';
   /** Live story bindings and actor budget; never authored tile fields. */
   dayScenarioTiles?: { sparsePatchId?: string; patchId?: string; woodsId?: string };
@@ -149,6 +155,8 @@ export type ProtoState = {
   totalWorkCompleted: number;
   heroHp: number[];
   heroMaxHp?: number[];
+  /** Session-only actor card copy; restarting restores authored descriptions. */
+  actorDescriptions?: Record<string, string>;
   actorMaxInspiration?: number[];
   heroBuffs: HeroBuff[][];
   abilityProgress: Record<string, number>;

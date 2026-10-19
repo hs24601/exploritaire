@@ -1,6 +1,8 @@
 import { gameTime } from '../../gameTime';
+import { useTableauDrag } from './useTableauDrag';
 import { cardIsManaInfused } from '../manaInfusion';
 import { ManaGlow } from './ManaGlow';
+import { ManaberryBlob } from './ManaberryBlob';
 import React, { useEffect, useState } from 'react';
 import { PlayingCard } from '../../golf/components/PlayingCard';
 import { rankLabel, type Card } from '../protoState';
@@ -57,6 +59,7 @@ export const ProtoCard = ({
   actionLabel = 'Play card',
   background,
   onDiscard,
+  onDropActor,
 }: {
   card: Card;
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -88,11 +91,14 @@ export const ProtoCard = ({
   /** Explicit appearance for flights outside the tableau's biome provider. */
   background?: TableauCardBackground;
   onDiscard?: () => void;
+  onDropActor?: (target: HTMLElement) => void;
 }) => {
   const viewer = useCardJumbo();
+  const drag = useTableauDrag(!disabled && !buried ? onDropActor : undefined);
   if(card.event)return <EventCard card={card} disabled={disabled} buried={buried} style={style} cardRef={cardRef} onPlay={onClick?()=>onClick({} as React.MouseEvent<HTMLButtonElement>):undefined} onDiscard={onDiscard} actionLabel={actionLabel==='Play card'?'Play event':actionLabel} />;
   return (
   <PlayingCard
+    {...drag}
     cardRef={cardRef}
     data-resource-node={card.inspirationResource ? 'inspiration' : card.resource}
     data-food-source={card.foodSource}
@@ -116,7 +122,7 @@ export const ProtoCard = ({
     data-gameplay-disabled={disabled || undefined}
     aria-haspopup={!jumbo && allowJumbo ? 'dialog' : undefined}
     data-card-jumbo={jumbo || undefined}
-    style={style}
+    style={{...style, touchAction: onDropActor ? 'none' : style?.touchAction}}
     className={`${cardBaseClassName} ${lit ? 'proto-lit-surface ' : ''}${buried ? 'proto-card--buried ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${
       disabled
         ? selected
@@ -140,7 +146,8 @@ export const ProtoCard = ({
       </div>
       {footerLabel ? (
         <div className="proto-card-icon -mt-0.5 shrink-0 font-sans text-[clamp(1rem,calc(var(--classic-card-w)*0.42),1.8rem)] leading-none drop-shadow-[0_0_5px_rgba(255,255,255,0.24)]">
-          {footerLabel}
+          {cardIsManaInfused(card) && <ManaberryBlob />}
+          <span style={{ position: 'relative' }}>{footerLabel}</span>
         </div>
       ) : null}
     </div>

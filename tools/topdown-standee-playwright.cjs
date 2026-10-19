@@ -23,7 +23,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
     assert.ok(Math.abs(piece.x+piece.width/2-cx)<2&&Math.abs(piece.y+piece.height/2-cy)<2,`${w}x${h} the piece is centered on its cell`);
     await p.close();
   }
-  const p=await b.newPage({viewport:{width:1280,height:720}});await p.route('**/assets/actors/hero.png',r=>r.fulfill({status:404}));
+  const p=await b.newPage({viewport:{width:1280,height:720}});await p.route('**/assets/deprecated/pixel/characters/hero.png',r=>r.fulfill({status:404}));
   await p.goto('http://localhost:5178/proto.html');await p.waitForTimeout(800);
   assert.equal(await p.locator('.proto-sprite-topdown[data-board-piece="actor"]').count(),0,'missing art falls back to the token');
   assert.equal(await p.locator('[data-board-piece="actor"] .board-object-label').count(),1,'the token shows the label');

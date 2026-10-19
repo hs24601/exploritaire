@@ -46,8 +46,8 @@ const layout = require('../src/proto/art/mochiLayout.json');
         if(!transparent||!partial)throw Error('Missing transparent background or watercolor alpha');
         return {png:output.toDataURL('image/png').split(',')[1],frames,transparent,partial};
       },{data:'data:image/png;base64,'+fs.readFileSync(source).toString('base64'),spec:layout[tier],tier});
-      const out=`public/assets/actors/battle/watercolor-v1/mochi-directions-${tier}-watercolor-v1.png`;
-      fs.mkdirSync('public/assets/actors/battle/watercolor-v1',{recursive:true});
+      const out=`public/assets/runtime/characters/mochi/rig/watercolor/v1/mochi-directions-${tier}-watercolor-v1.png`;
+      fs.mkdirSync('public/assets/runtime/characters/mochi/rig/watercolor/v1',{recursive:true});
       fs.writeFileSync(out,Buffer.from(result.png,'base64'));
       delete result.png;checks[tier]={output:out,...result};
     }

@@ -34,12 +34,12 @@ describe('painted scenery relief',()=>{
     expect(renderPropVolume(volume,0,30,light)).not.toEqual(renderPropVolume(volume,90,30,light));
   });
   it('preserves pixel sources and unrelated props, selecting authorized painted scenery',()=>{
-    expect(scenerySprite('/assets/biomes/small_woods_pines.png','paint')).toContain('woods-cluster-sprite-v1.png');
-    expect(scenerySprite('/assets/biomes/woods_side.svg','paint')).toContain('pine-sprite-v1.png');
-    expect(scenerySprite('/assets/biomes/small_woods_pines.png','pixel')).toBe('/assets/biomes/small_woods_pines.png');
-    expect(scenerySprite('/assets/biomes/berry-bush.svg','paint')).toContain('berry-patch-sprite-v2.png');
-    expect(scenerySprite('/assets/biomes/mountain_standee.svg','paint')).toContain('mountain-peak-sprite-v1.png');
-    expect(scenerySprite('/assets/biomes/mountain_standee.svg','pixel')).toBe('/assets/biomes/mountain_standee.svg');
+    expect(scenerySprite('/assets/deprecated/pixel/environment/small_woods_pines.png','paint')).toContain('woods-cluster-sprite-v1.png');
+    expect(scenerySprite('/assets/deprecated/pixel/environment/woods_side.svg','paint')).toContain('pine-sprite-v1.png');
+    expect(scenerySprite('/assets/deprecated/pixel/environment/small_woods_pines.png','pixel')).toBe('/assets/deprecated/pixel/environment/small_woods_pines.png');
+    expect(scenerySprite('/assets/deprecated/pixel/environment/berry-bush.svg','paint')).toContain('berry-patch-sprite-v2.png');
+    expect(scenerySprite('/assets/deprecated/pixel/environment/mountain_standee.svg','paint')).toContain('mountain-peak-sprite-v1.png');
+    expect(scenerySprite('/assets/deprecated/pixel/environment/mountain_standee.svg','pixel')).toBe('/assets/deprecated/pixel/environment/mountain_standee.svg');
     expect(scenerySprite(undefined,'paint')).toBeUndefined();
     expect(propVolumeRaster(model(),true)).toEqual({width:128,height:160});
     expect(buildPropVolume(1,1,new Uint8ClampedArray(4),propVolumeRecipe('pine-relief-v1.png')!).faces).toEqual([]);

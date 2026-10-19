@@ -4,7 +4,7 @@ type Props = {
   className?: string;
 };
 
-const SACRED_REALM_SKY_TEXTURE_URL = '/assets/vis/textures/sacred-realm-sky.jpg';
+const SACRED_REALM_SKY_TEXTURE_URL = '/assets/runtime/textures/sacred-realm-sky.jpg';
 
 const Piece = ({ type }: { type: 'wisdom' | 'courage' | 'power' }) => (
   <div className={`piece ${type}`}>

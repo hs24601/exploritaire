@@ -2,11 +2,13 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { setHeroBobtail, useHeroBobtail } from '../heroBobtail';
 import './ArtSettings.css';
 import { setWatercolorBleed, useWatercolorBleed } from '../watercolorBleed';
+import { setFlickPhysics, useFlickPhysics } from '../flickPhysics';
 
 export function ArtSettings({ children }: { children?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const bobtail = useHeroBobtail();
   const bleed = useWatercolorBleed();
+  const flick = useFlickPhysics();
   const root = useRef<HTMLDivElement>(null), button = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -22,6 +24,7 @@ export function ArtSettings({ children }: { children?: ReactNode }) {
     {open && <div id="art-settings-panel" className="art-settings__panel" role="group" aria-label="Game settings">
       <label className="art-settings__toggle"><input type="checkbox" checked={bobtail} onChange={event => setHeroBobtail(event.target.checked)} /> Hero bobtail</label>
       <label className="art-settings__toggle"><input type="checkbox" checked={bleed} onChange={event => setWatercolorBleed(event.target.checked)} /> Watercolor bleed</label>
+      <label className="art-settings__toggle"><input type="checkbox" checked={flick} onChange={event => setFlickPhysics(event.target.checked)} /> Flick physics</label>
       {children}
     </div>}
   </div>;

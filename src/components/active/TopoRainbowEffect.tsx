@@ -237,7 +237,7 @@ export const TopoRainbowEffect = memo(function TopoRainbowEffect({
             <div className="relative w-full h-full overflow-hidden rounded-lg">
                 {/* Draw the bluey card behind the shader */}
                 <img 
-                    src="/assets/Bluevee.png" 
+                    src="/assets/deprecated/pixel/portraits/Bluevee.png"
                     className="absolute inset-0 w-full h-full object-cover opacity-100" 
                     alt="Bluevee" 
                 />

@@ -16,10 +16,10 @@ export function QuestArtwork({ resting = false, sprite, paintedSprite }: { resti
   const style = useArtStyle();
   const bobtail = useHeroBobtail();
   const art = actorSprite(scenerySprite(style === 'paint' && paintedSprite ? paintedSprite : sprite, style), style);
-  const restArt = actorSprite(`${import.meta.env.BASE_URL}assets/actors/hero-sleeping.png`, style)!;
+  const restArt = actorSprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/hero-sleeping.png`, style)!;
   const tail = restBobtailSprite(sprite ? art ?? '' : restArt);
   return <span className={`quest-artwork${sprite ? ' quest-artwork--scene' : resting ? ' quest-artwork--rest' : ''}`} aria-hidden="true">
-    {sprite ? <img style={{ imageRendering: style === 'paint' ? 'auto' : 'pixelated' }} src={art} alt="" draggable={false} /> : resting && <img style={{ imageRendering: style === 'paint' ? 'auto' : 'pixelated' }} src={actorSprite(`${import.meta.env.BASE_URL}assets/actors/hero-sleeping.png`, style)} alt="" draggable={false} />}
+    {sprite ? <img style={{ imageRendering: style === 'paint' ? 'auto' : 'pixelated' }} src={art} alt="" draggable={false} /> : resting && <img style={{ imageRendering: style === 'paint' ? 'auto' : 'pixelated' }} src={actorSprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/hero-sleeping.png`, style)} alt="" draggable={false} />}
     {bobtail && tail && (sprite || resting) && <img src={tail} alt="" draggable={false} style={{imageRendering:'auto',pointerEvents:'none'}} />}
   </span>;
 }

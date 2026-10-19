@@ -1,4 +1,5 @@
 import { gameTime } from '../gameTime';
+import { globalLightsEnabled } from './globalLighting';
 import { createSpriteDropProjection } from './combatDropTargets';
 import { createSpriteTargetOutline } from './spriteTargetOutline';
 import { createActorMarkers } from './actorMarkersThree';
@@ -287,7 +288,7 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
         m.material.opacity = clamp(1 - age / 1.5); m.rotation.set(age * 3, age * 2, age);
       });
       const burst = clamp((t - 7) / 1.6); ring.visible = !reduced && t > 7 && t < 8.6; ring.scale.setScalar(.4 + burst * 4); ring.material.opacity = 1 - burst;
-      glow.intensity = reduced ? 0 : impact * 16 + (t > 7 && t < 8.6 ? (1 - burst) * 20 : 0);
+      glow.intensity = reduced || !globalLightsEnabled() ? 0 : impact * 16 + (t > 7 && t < 8.6 ? (1 - burst) * 20 : 0);
       for (const rig of instances) landscape.sampleActorLight(rig.root.position, rig.environmentLight);
       for (const rig of echoes) landscape.sampleActorLight(rig.root.position, rig.environmentLight);
     },

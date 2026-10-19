@@ -35,7 +35,7 @@ const specs={
    ic.putImageData(ip,0,0);const [x,y,tw,th]=spec.rects[i],dw=w*scale,dh=h*scale;out.drawImage(isolated,x+(tw-dw)/2,y+th-4-dh,dw,dh);return {source:[sx,sy,w,h],rect:spec.rects[i],scale};});
   const pixels=out.getImageData(0,0,output.width,output.height).data;let transparent=0,partial=0;for(let i=3;i<pixels.length;i+=4){if(!pixels[i])transparent++;else if(pixels[i]<255)partial++;}if(!transparent||!partial)throw Error('Missing watercolor RGBA');
   return {png:output.toDataURL('image/png').split(',')[1],width:output.width,height:output.height,frames,transparent,partial};
- },{data:'data:image/png;base64,'+fs.readFileSync(`public/assets/actors/sources/banks-watercolor-${version}/${name}-source.png`).toString('base64'),spec,name});
- const path=`public/assets/actors/battle/banks-watercolor-${version}/banks-${name}-watercolor-${version}.png`;fs.mkdirSync(`public/assets/actors/battle/banks-watercolor-${version}`,{recursive:true});fs.writeFileSync(path,Buffer.from(result.png,'base64'));delete result.png;report[name]={path,...result};console.log(name,result.frames.length,'frames');}
+ },{data:'data:image/png;base64,'+fs.readFileSync(`public/assets/sources/characters/banks-watercolor-${version}/${name}-source.png`).toString('base64'),spec,name});
+ const path=`public/assets/runtime/characters/banks/rig/watercolor/${version}/banks-${name}-watercolor-${version}.png`;fs.mkdirSync(`public/assets/runtime/characters/banks/rig/watercolor/${version}`,{recursive:true});fs.writeFileSync(path,Buffer.from(result.png,'base64'));delete result.png;report[name]={path,...result};console.log(name,result.frames.length,'frames');}
  fs.writeFileSync(`docs/art/banks-watercolor-${version}-packing.json`,JSON.stringify(report,null,2)+'\n');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

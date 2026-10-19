@@ -29,6 +29,6 @@ const { findLayoutDefects } = require('./lib/layout-check.cjs');
       }
     }
     assert.deepEqual(errors, []);
-    console.log(`${url}: no grass in either camera, biomes/Hero/table boundary retained, desktop layouts and runtime errors passed.`);
+    console.log(`${url}: no grass in either camera, deprecated/pixel/environment/Hero/table boundary retained, desktop layouts and runtime errors passed.`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

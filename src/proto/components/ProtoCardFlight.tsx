@@ -1,3 +1,4 @@
+import { ManaberryIcon } from './ManaberryIcon';
 import { gameTime } from '../../gameTime';
 import { useEffect, useRef, type CSSProperties, type MutableRefObject } from 'react';
 import { createPortal } from 'react-dom';
@@ -33,6 +34,6 @@ export function ProtoCardFlight({ card, positionRef, size, background }: {
       pointerEvents: 'none', zIndex: 100000, '--classic-card-w': `${width}px` } as CSSProperties}>
     <ProtoCard card={card} background={background} allowJumbo={false} centerRank standardRankSize style={{ height: '100%' }}
       footerLabel={card.sleep ? <span aria-label={SLEEP_LABELS[card.sleep]}>{SLEEP_ICONS[card.sleep]}</span>
-        : face ? <span aria-label={face.label}>{face.glyph}</span> : undefined} />
+        : face ? <span aria-label={face.label}>{card.foodSource === 'berries' ? <ManaberryIcon /> : face.glyph}</span> : undefined} />
   </div>, document.body);
 }

@@ -14,7 +14,7 @@ export function TravelDestinationCard({ plan, stamina, onConfirm, onCancel, onEd
       onPointerMove={event => { const d = drag.current; if (!d || d.id !== event.pointerId) return; event.stopPropagation(); const card = event.currentTarget.getBoundingClientRect(), parent = event.currentTarget.parentElement!.getBoundingClientRect(); const x = d.origin.x + event.clientX - d.x, y = d.origin.y + event.clientY - d.y; setOffset({ x: Math.max(-(parent.width-card.width)/2, Math.min((parent.width-card.width)/2, x)), y: Math.max(-(parent.height-card.height)/2, Math.min((parent.height-card.height)/2, y)) }); }}
       onPointerUp={() => { drag.current = null; }} onLostPointerCapture={() => { drag.current = null; }} onPointerCancel={() => { if (drag.current) setOffset(drag.current.origin); drag.current = null; }}>
       <article className="details-card trading-card trading-card--plain trading-card--compact">
-        <div className="trading-card__art" aria-hidden="true"><img src={`${import.meta.env.BASE_URL}assets/art/quests/hero-snuffling-berries-paint-bobtail-v2.png`} alt="" draggable={false} /></div>
+        <div className="trading-card__art" aria-hidden="true"><img src={`${import.meta.env.BASE_URL}assets/runtime/ui/quests/hero-snuffling-berries-paint-bobtail-v2.png`} alt="" draggable={false} /></div>
         <header className="trading-card__header"><h2>Travel destination</h2></header>
         <div className="travel-confirm-copy" tabIndex={0} aria-label="Journey details">
           <p className="travel-confirm-estimate">{plan.segments.length} cells · {plan.cards} cards<br /><strong>Estimated {plan.estimate.toFixed(1)} STA</strong></p>

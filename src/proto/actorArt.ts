@@ -4,7 +4,7 @@ import type { ArtStyle } from './artStyle';
  * Unconverted companions retain their authored artwork. */
 export function actorSprite(src: string | undefined, style: ArtStyle): string | undefined {
   if (!src || style !== 'paint') return src;
-  return src.replace(/assets\/actors\/(hero-sleeping(?:-topdown)?)\.png$/, 'assets/actors/watercolor-v1/$1-body-v3.png');
+  return src.replace(/assets\/deprecated\/pixel\/characters\/(hero-sleeping(?:-topdown)?)\.png$/, 'assets/runtime/characters/hero/sleeping/watercolor/v1/$1-body-v3.png');
 }
 
-export const isPaintedActorSprite = (src: string) => src.includes('/actors/watercolor-v1/');
+export const isPaintedActorSprite = (src: string) => src.includes('/runtime/characters/hero/sleeping/watercolor/v1/');

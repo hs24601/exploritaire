@@ -9,9 +9,9 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 manifest = json.loads((ROOT/'docs/art/hero-bobtail-v2-generation.json').read_text())
-target = ROOT/'public/assets/actors/battle/bobtail-v2'
+target = ROOT/'public/assets/runtime/characters/hero/rig/watercolor/v2'
 target.mkdir(parents=True, exist_ok=True)
-sources = ROOT/'public/assets/actors/sources/bobtail-v2'
+sources = ROOT/'public/assets/sources/characters/bobtail-v2'
 sources.mkdir(parents=True, exist_ok=True)
 checks = []
 for entry in manifest:
@@ -24,7 +24,7 @@ for entry in manifest:
             shutil.copyfile(source, sources/output.name)
         shutil.copyfile(source, output)
         continue
-    original = ROOT/'public/assets/actors'/Path(entry['original'].replace('\\','/').split('/public/assets/actors/')[1])
+    original = ROOT/'public/assets/actors'/Path(entry['original'].replace('\\','/').split('/public/assets/deprecated/pixel/characters/')[1])
     name = original.name.replace('-watercolor-v1.png','-bobtail-v2.png')
     if not source.exists():
         source = sources/name

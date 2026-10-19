@@ -17,6 +17,7 @@
     "setup:hooks": "git config core.hooksPath .githooks",
     "balance:deck": "node tools/deck-balance.mjs",
     "art:sync": "node tools/sync-art.mjs",
+    "art:check": "node tools/check-assets.mjs",
     "predev": "node tools/sync-art.mjs --if-present",
     "prebuild": "node tools/sync-art.mjs --if-present",
     "prebuild:vercel": "node tools/sync-art.mjs --if-present"

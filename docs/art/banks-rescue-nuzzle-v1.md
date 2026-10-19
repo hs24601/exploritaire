@@ -1,7 +1,7 @@
 # Banks rescue nuzzle v1
 
 - Generated with the built-in ImageGen tool on 2026-10-15.
-- Runtime sheet: `public/assets/actors/cinema/banks-hero-nuzzle-v1.png`.
+- Runtime sheet: `public/assets/runtime/cinematics/banks-hero-nuzzle-v1.png`.
 - Source retained at `C:/Users/ericm/.codex/generated_images/01a14134-2440-74d3-9435-c5a3fd24afc9/exec-163573ad-15f6-4caf-adfd-1146dda1cb33.png`.
 - Sheet dimensions: 2172 × 724; four equal 543 × 724 cells in one row, with a consistent ground line and true alpha. CSS plays the authored poses with discrete frame selection; reduced motion holds the contact pose.
 - References: Banks low directional watercolor v2 for identity; Hero high directional watercolor v1 for watercolor style and identity only. Hero has a natural bobtail, with no fire effects.

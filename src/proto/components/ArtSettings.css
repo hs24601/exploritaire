@@ -1,9 +1,9 @@
 .proto-main-header { position: relative; }
 .proto-main-header[data-combat-header="false"]:not(:has(.proto-mobile-nav)) { display: none; }
 .proto-map .proto-settings-host { position: absolute; inset: 0; z-index: 100; pointer-events: none; }
-.proto-map .art-settings { top: 8px; right: 8px; bottom: 8px; pointer-events: none; }
+.proto-map .art-settings { top: 8px; right: 8px; bottom: 8px; left: 8px; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
 .proto-map .art-settings > * { pointer-events: auto; }
-.proto-map .art-settings__panel { top: 48px; max-height: calc(100% - 48px); }
+.proto-map .art-settings__panel { top: 48px; width: min(300px, 100%); box-sizing: border-box; max-height: calc(100% - 48px); }
 .proto-map:has(.proto-settings-host) .proto-travel-controls { right: 108px; max-width: calc(100% - 120px); }
 @media (min-width: 901px) {
   .proto-game-root .proto-main-layout[style] { grid-template-rows: var(--layout-rows); }

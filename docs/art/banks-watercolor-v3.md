@@ -1,17 +1,17 @@
 # Banks global mature watercolor rebuild
 
-2026-10-15, built-in ImageGen. The user approved `public/assets/art/holocards/layered/banks-watercolor-v5.png` and requested this design and simplified soft watercolor style throughout every Banks asset, including protective, almost parental paired artwork with Hero. GAME.md records the standing direction. The approved holocard and static fallback remain unchanged; its source matches the approved generated file byte-for-byte.
+2026-10-15, built-in ImageGen. The user approved `public/assets/runtime/ui/holocards/layered/banks-watercolor-v5.png` and requested this design and simplified soft watercolor style throughout every Banks asset, including protective, almost parental paired artwork with Hero. GAME.md records the standing direction. The approved holocard and static fallback remain unchanged; its source matches the approved generated file byte-for-byte.
 
 ## Complete active inventory
 
 | Set | Runtime location | Coverage |
 | --- | --- | --- |
-| Standing | `public/assets/actors/battle/banks-watercolor-v3/banks-directions-{low,high}-watercolor-v3.png` | 10 complete paintings including true overhead; shared mirrored headings |
+| Standing | `public/assets/runtime/characters/banks/rig/watercolor/v3/banks-directions-{low,high}-watercolor-v3.png` | 10 complete paintings including true overhead; shared mirrored headings |
 | Sitting | same directory, `banks-sitting-{low,high}-watercolor-v3.png` | 18 complete paintings; eight headings plus overhead per tier |
 | Walking | same directory, `banks-walking-{low,high}-watercolor-v3.png` | 44 complete paintings; four paw phases for five low/six elevated-or-overhead rows |
 | Reactions | same directory, `banks-{flinch,down}-atlas-watercolor-v3.png` | 18 complete paintings; hit and unconscious states |
-| Expressions | `public/assets/actors/banks/emojis-watercolor-v2/` | Nine individual 512×512 PNGs, a 1536×1536 PNG atlas and JSON metadata; includes fighting |
-| Banks + Hero | `public/assets/actors/cinema/banks-hero-nuzzle-v2.png` | Four protective paired paintings, horizontally packed into 3072×640; each frame 768×640 |
+| Expressions | `public/assets/runtime/characters/banks/expressions/emojis/watercolor/v2/` | Nine individual 512×512 PNGs, a 1536×1536 PNG atlas and JSON metadata; includes fighting |
+| Banks + Hero | `public/assets/runtime/cinematics/banks-hero-nuzzle-v2.png` | Four protective paired paintings, horizontally packed into 3072×640; each frame 768×640 |
 | Approved portrait | existing `banks-watercolor-v5.png` and `banks-card-v5.png` | Preserved layered holocard and static fallback |
 
 This is 90 travel/combat paintings, nine expressions and four paired frames. Active runtime registrations resolve 21 Banks PNGs including individual expressions and the two preserved portraits. The inventory audit found one existing Banks + Hero composite sequence, the rescue nuzzle; Hero + Mochi sleeping images and the Hero/Mochi ability paintings do not depict Banks. Historical Banks versions and source files are preserved as provenance rather than runtime artwork.
@@ -24,10 +24,10 @@ Banks retains mature shoulders/chest, longer limbs/body, broad cream muzzle, sma
 
 ## Reproduction and prompts
 
-- Each travel/combat source lives in `public/assets/actors/sources/banks-watercolor-v3/`. Exact per-sheet prompts are in `docs/art/banks-watercolor-v3/*.prompt.txt`.
+- Each travel/combat source lives in `public/assets/sources/characters/banks-watercolor-v3/`. Exact per-sheet prompts are in `docs/art/banks-watercolor-v3/*.prompt.txt`.
 - Run `node tools/prepare-banks-watercolor.cjs v3`. It measures 90 connected complete bodies, retains their nearby partial-alpha fringes, uniformly fits each sheet into the existing rig rectangles and bottom-registers paws. It never assembles separately generated anatomical parts. Measurements: `banks-watercolor-v3-packing.json`.
-- Expression source: `public/assets/actors/banks/emojis-watercolor-v2/sources/banks-emojis-generated-v2.png`. Prompt: `banks-emojis-watercolor-v2.prompt.txt`. Run `node tools/prepare-banks-emojis-v2.cjs public/assets/actors/banks/emojis-watercolor-v2/sources/banks-emojis-generated-v2.png`. Component measurement preserves complete heads and assigns detached symbols to their nearest head, avoiding neighboring-row flecks and cut symbols. Reports: `banks-emojis-watercolor-v2-packing.json`.
-- Paired source: `public/assets/actors/cinema/sources/banks-hero-nuzzle-v2-source.png`. Prompts: `banks-rescue-nuzzle-v2.prompt.txt` and the targeted `banks-rescue-nuzzle-v2-framing.prompt.txt`. Run `node tools/prepare-banks-nuzzle.cjs`. The final padded source supersedes the retained framing draft; all four frames use one shared crop, scale and baseline. Report: `banks-rescue-nuzzle-v2-packing.json`.
+- Expression source: `public/assets/sources/characters/banks/expressions/emojis/watercolor/v2/banks-emojis-generated-v2.png`. Prompt: `banks-emojis-watercolor-v2.prompt.txt`. Run `node tools/prepare-banks-emojis-v2.cjs public/assets/sources/characters/banks/expressions/emojis/watercolor/v2/banks-emojis-generated-v2.png`. Component measurement preserves complete heads and assigns detached symbols to their nearest head, avoiding neighboring-row flecks and cut symbols. Reports: `banks-emojis-watercolor-v2-packing.json`.
+- Paired source: `public/assets/sources/cinematics/banks-hero-nuzzle-v2-source.png`. Prompts: `banks-rescue-nuzzle-v2.prompt.txt` and the targeted `banks-rescue-nuzzle-v2-framing.prompt.txt`. Run `node tools/prepare-banks-nuzzle.cjs`. The final padded source supersedes the retained framing draft; all four frames use one shared crop, scale and baseline. Report: `banks-rescue-nuzzle-v2-packing.json`.
 
 Packing tools use the existing Playwright Chromium installation and local image data, without network image editing. They preserve the generated alpha and opaque light markings. Solid generated paint may be encoded at alpha 254; near-opaque validation accepts alpha at least 250. On this host set `PLAYWRIGHT_BROWSERS_PATH=C:/Users/ericm/AppData/Local/ms-playwright` when needed.
 

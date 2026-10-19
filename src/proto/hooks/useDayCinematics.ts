@@ -4,7 +4,7 @@ import type { ProtoState } from '../protoState';
 import { buildDayCinematicBeats, dayCinematicBeatId, dayCinematicLabelBeatId } from '../dayCinematics';
 import { getCameraPlayback, getCameraLibrary, useCameraLibrary, playCameraChoreography, setDefaultCameraLibrary, stopCameraPlayback } from '../cameraDirector';
 import { useStoryCinematicsEnabled } from '../dayCinematicSettings';
-export function useDayCinematics(state: ProtoState, run: number, editing: boolean) {
+export function useDayCinematics(state: ProtoState, run: number, editing: boolean, settledBeat?: string | null) {
   const enabled = useStoryCinematicsEnabled();
   const library = useCameraLibrary();
   const layout = JSON.stringify([state.dayScenarioTiles, state.biomeTiles.map(t => [t.id, t.position.x, t.position.y])]);
@@ -15,7 +15,7 @@ export function useDayCinematics(state: ProtoState, run: number, editing: boolea
   useEffect(() => { seen.current.clear(); return () => { seen.current.clear(); }; }, [run]);
   useEffect(() => { if (!enabled && previousEnabled.current) stopCameraPlayback(); previousEnabled.current = enabled; }, [enabled]);
   useEffect(() => {
-    if (!enabled || editing || !beat || beat.calloutId || seen.current.has(beat.id)) return;
+    if (!enabled || editing || !beat || beat.id === settledBeat || beat.calloutId || seen.current.has(beat.id)) return;
     let frame = 0;
     const play = () => {
       if (!getCameraPlayback().available) { frame = gameTime.requestAnimationFrame(play); return; }
@@ -25,7 +25,7 @@ export function useDayCinematics(state: ProtoState, run: number, editing: boolea
     };
     frame = gameTime.requestAnimationFrame(play);
     return () => gameTime.cancelAnimationFrame(frame);
-  }, [enabled, editing, beat, run]);
+  }, [enabled, editing, beat, run, settledBeat]);
   useEffect(() => {
     if (state.journey && getCameraLibrary().some(c => c.id.startsWith('story.') && c.name === getCameraPlayback().name)) stopCameraPlayback();
   }, [Boolean(state.journey)]);

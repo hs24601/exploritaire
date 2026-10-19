@@ -134,7 +134,7 @@ export default defineConfig({
           req.on('data',chunk=>{if(large)return;body+=chunk;if(Buffer.byteLength(body)>256*1024){large=true;res.statusCode=413;res.end('Document too large');}});
           req.on('end',()=>{if(large)return;try{const document=JSON.parse(body);validateLayouts(document);const file=path.resolve(__dirname,'src/data/tableauLayouts.json');fs.writeFileSync(file+'.tmp',JSON.stringify(document,null,2)+'\n');fs.renameSync(file+'.tmp',file);res.end('Saved');}catch(error){res.statusCode=400;res.end(String(error));}});
         });
-        server.middlewares.use('/__proto-tiles/save', (req, res) => {
+        server.middlewares.use('/__proto-deprecated/pixel/tiles/save', (req, res) => {
           if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
           if (!req.headers['content-type']?.startsWith('application/json')) { res.statusCode = 415; res.end('Expected application/json'); return; }
           let body = '', tooLarge = false;
@@ -376,7 +376,7 @@ export default defineConfig({
             }
           });
         });
-        server.middlewares.use('/__actors/overrides', (req, res) => {
+        server.middlewares.use('/__deprecated/pixel/characters/overrides', (req, res) => {
           if (req.method !== 'GET') {
             res.statusCode = 405;
             res.end('Method Not Allowed');
@@ -399,7 +399,7 @@ export default defineConfig({
             res.end('Unable to load actors');
           }
         });
-        server.middlewares.use('/__actors/save', (req, res) => {
+        server.middlewares.use('/__deprecated/pixel/characters/save', (req, res) => {
           if (req.method !== 'POST') {
             res.statusCode = 405;
             res.end('Method Not Allowed');
@@ -429,7 +429,7 @@ export default defineConfig({
             }
           });
         });
-        server.middlewares.use('/__orims/overrides', (req, res) => {
+        server.middlewares.use('/__deprecated/pixel/orims/overrides', (req, res) => {
           if (req.method !== 'GET') {
             res.statusCode = 405;
             res.end('Method Not Allowed');
@@ -450,7 +450,7 @@ export default defineConfig({
             res.end('Unable to load orims');
           }
         });
-        server.middlewares.use('/__orims/save', (req, res) => {
+        server.middlewares.use('/__deprecated/pixel/orims/save', (req, res) => {
           if (req.method !== 'POST') {
             res.statusCode = 405;
             res.end('Method Not Allowed');

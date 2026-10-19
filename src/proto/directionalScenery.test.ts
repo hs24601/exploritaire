@@ -4,7 +4,7 @@ import {isPaintedScenerySprite,sceneryWorldHeading} from './sceneryArt';
 import {propVolumeRecipe} from './propVolume';
 
 describe('painted den orbit views',()=>{
-  const definition=directionalScenery('/assets/biomes/watercolor-v1/hero-den-sprite-v2.png')!;
+  const definition=directionalScenery('/assets/runtime/environment/watercolor/v1/hero-den-sprite-v2.png')!;
   it('shows a closed rear, both sides and the north-facing entrance across the full orbit',()=>{
     const expected=[['rear',false],['rear-quarter',true],['side',true],['front-quarter',true],['sprite-v2',false],['front-quarter',false],['side',false],['rear-quarter',false],['rear',false]] as const;
     expected.forEach(([name,flip],index)=>{

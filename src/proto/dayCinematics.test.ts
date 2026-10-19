@@ -63,3 +63,12 @@ it('pins the actual den and sparse bush for the opening section only, including 
   expect(labels(createDayTwoState())).toEqual([]);
   expect(labels(createDayThreeState())).toEqual([]);
 });
+
+it('frames the actual denser patch from Hero on the second sparse-reflection bubble',()=>{
+  const state=createDayOneState();
+  const shotFor=(s:typeof state)=>{const camera=buildDayCinematicBeats(s).find(b=>b.id==='day01.sparse-patch')!.bubbleCameras![1];if(camera.kind!=='shot')throw Error('Expected quest shot');return camera.step;};
+  const sparse=state.biomeTiles.find(t=>t.id===state.dayScenarioTiles!.sparsePatchId)!,patch=state.biomeTiles.find(t=>t.id===state.dayScenarioTiles!.patchId)!;
+  expect(shotFor(state)).toMatchObject({durationMs:1800,holdMs:0,shot:{x:(sparse.position.x+patch.position.x)/2,y:(sparse.position.y+patch.position.y)/2,scale:10.9,yaw:90,pitch:54.8,tilted:true}});
+  const moved={...state,biomeTiles:state.biomeTiles.map(t=>t.id===patch.id?{...t,position:{x:sparse.position.x,y:sparse.position.y-48}}:t)};
+  expect(shotFor(moved).shot).toMatchObject({x:sparse.position.x,y:sparse.position.y-24,yaw:0});
+});

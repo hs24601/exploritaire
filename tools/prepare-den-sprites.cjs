@@ -6,8 +6,8 @@ const fs = require('node:fs');
   try {
     const page = await browser.newPage();
     for (const [source, outputs] of [
-      ['public/assets/actors/sources/hero-sleeping-atlas-v1.png', ['public/assets/actors/hero-sleeping.png', 'public/assets/actors/hero-sleeping-topdown.png']],
-      ['public/assets/biomes/sources/hero-den-atlas-v2.png', ['public/assets/biomes/hero-den-topdown-v2.png', 'public/assets/biomes/hero-den-standee-v2.png']],
+      ['public/assets/deprecated/pixel/sources/characters/hero-sleeping-atlas-v1.png', ['public/assets/deprecated/pixel/characters/hero-sleeping.png', 'public/assets/deprecated/pixel/characters/hero-sleeping-topdown.png']],
+      ['public/assets/deprecated/pixel/sources/environment/hero-den-atlas-v2.png', ['public/assets/deprecated/pixel/environment/hero-den-topdown-v2.png', 'public/assets/deprecated/pixel/environment/hero-den-standee-v2.png']],
     ].filter(([source]) => !process.argv.includes('--sleeping-only') || source.includes('hero-sleeping'))) {
       const cells = await page.evaluate(async data => {
         const image = new Image(); image.src = data; await image.decode();

@@ -2,8 +2,8 @@
   {
     "name": "hero-directions-low",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-1ef917c2-2689-4868-ab96-df0a9b001274.png",
-    "bodyPath": "public/assets/actors/battle/bobtail-v3/hero-directions-low-body-v3.png",
-    "tailPath": "public/assets/actors/battle/bobtail-v3/hero-directions-low-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-bobtail-layer-v3.png",
     "frames": [
       [
         48,
@@ -78,8 +78,8 @@
   {
     "name": "hero-directions-high",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-fb41366a-a28b-4cd7-a887-16b8b00854c4.png",
-    "bodyPath": "public/assets/actors/battle/bobtail-v3/hero-directions-high-body-v3.png",
-    "tailPath": "public/assets/actors/battle/bobtail-v3/hero-directions-high-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-high-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-high-bobtail-layer-v3.png",
     "frames": [
       [
         44,
@@ -154,8 +154,8 @@
   {
     "name": "hero-sitting-low",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-b27b443a-6e2f-40f3-ac92-c086f256c4aa.png",
-    "bodyPath": "public/assets/actors/battle/bobtail-v3/hero-sitting-low-body-v3.png",
-    "tailPath": "public/assets/actors/battle/bobtail-v3/hero-sitting-low-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-sitting-low-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-sitting-low-bobtail-layer-v3.png",
     "frames": [
       [
         81,
@@ -278,8 +278,8 @@
   {
     "name": "hero-sitting-high",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-c5f85de4-7244-461e-8791-56237b4319a3.png",
-    "bodyPath": "public/assets/actors/battle/bobtail-v3/hero-sitting-high-body-v3.png",
-    "tailPath": "public/assets/actors/battle/bobtail-v3/hero-sitting-high-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-sitting-high-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-sitting-high-bobtail-layer-v3.png",
     "frames": [
       [
         86,
@@ -402,8 +402,8 @@
   {
     "name": "hero-walking-low",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-8a139845-41fc-46b4-b4f5-01a62b4a500d.png",
-    "bodyPath": "public/assets/actors/battle/bobtail-v3/hero-walking-low-body-v3.png",
-    "tailPath": "public/assets/actors/battle/bobtail-v3/hero-walking-low-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-walking-low-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-walking-low-bobtail-layer-v3.png",
     "frames": [
       [
         115,
@@ -658,8 +658,8 @@
   {
     "name": "hero-walking-high",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-6226bdad-62f9-4671-8455-50303bfb5479.png",
-    "bodyPath": "public/assets/actors/battle/bobtail-v3/hero-walking-high-body-v3.png",
-    "tailPath": "public/assets/actors/battle/bobtail-v3/hero-walking-high-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-walking-high-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-walking-high-bobtail-layer-v3.png",
     "frames": [
       [
         77,
@@ -962,8 +962,8 @@
   {
     "name": "hero-flinch-atlas",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-46477b1e-58fc-4116-8ad0-3945b860b039.png",
-    "bodyPath": "public/assets/actors/battle/bobtail-v3/hero-flinch-atlas-body-v3.png",
-    "tailPath": "public/assets/actors/battle/bobtail-v3/hero-flinch-atlas-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-flinch-atlas-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-flinch-atlas-bobtail-layer-v3.png",
     "frames": [
       [
         77,
@@ -1086,8 +1086,8 @@
   {
     "name": "hero-down-atlas",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-c6861ab8-8e49-4591-816a-28e05d801bba.png",
-    "bodyPath": "public/assets/actors/battle/bobtail-v3/hero-down-atlas-body-v3.png",
-    "tailPath": "public/assets/actors/battle/bobtail-v3/hero-down-atlas-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-down-atlas-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-down-atlas-bobtail-layer-v3.png",
     "frames": [
       [
         38,
@@ -1210,8 +1210,8 @@
   {
     "name": "hero-sleeping",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-fba0457a-80f3-4137-9b14-584e2bc3e8f3.png",
-    "bodyPath": "public/assets/actors/watercolor-v1/hero-sleeping-body-v3.png",
-    "tailPath": "public/assets/actors/watercolor-v1/hero-sleeping-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/sleeping/watercolor/v1/hero-sleeping-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/sleeping/watercolor/v1/hero-sleeping-bobtail-layer-v3.png",
     "size": [
       1023,
       727
@@ -1222,8 +1222,8 @@
   {
     "name": "hero-sleeping-topdown",
     "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a13809-5d33-7fb0-9097-30a196dea928\\exec-138b70f3-d289-49d8-97ef-939bb60c396e.png",
-    "bodyPath": "public/assets/actors/watercolor-v1/hero-sleeping-topdown-body-v3.png",
-    "tailPath": "public/assets/actors/watercolor-v1/hero-sleeping-topdown-bobtail-layer-v3.png",
+    "bodyPath": "public/assets/runtime/characters/hero/sleeping/watercolor/v1/hero-sleeping-topdown-body-v3.png",
+    "tailPath": "public/assets/runtime/characters/hero/sleeping/watercolor/v1/hero-sleeping-topdown-bobtail-layer-v3.png",
     "size": [
       1029,
       749

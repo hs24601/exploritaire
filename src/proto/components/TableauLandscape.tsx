@@ -57,18 +57,34 @@ function VegetationLandscape({ tileType, manaGlow, berriesAvailable }: { tileTyp
       const w = Math.round(width), h = Math.round(height);
       if (renderer.domElement.width !== w || renderer.domElement.height !== h) renderer.setSize(w, h, false);
       camera.aspect = width / height;
+      if (tileType === 'berry-patch-sparse') {
+        const tray = element.parentElement?.querySelector('.travel-free-layout')?.getBoundingClientRect();
+        camera.clearViewOffset();
+        camera.zoom = tray?.height ? tray.height * 1.08 / (height * .6) : 1;
+        camera.updateProjectionMatrix();
+        camera.updateMatrixWorld();
+        if (tray?.height) {
+          const bounds = element.getBoundingClientRect();
+          const center = new THREE.Vector3(0, 5.5, -8).project(camera);
+          // Shift the whole landscape with the bush, retaining its ground contact.
+          camera.setViewOffset(width, height,
+            (center.x + 1) * width / 2 - (tray.left + tray.width / 2 - bounds.left),
+            (1 - center.y) * height / 2 - (tray.top + tray.height * .28 - bounds.top), width, height);
+        }
+      }
       camera.updateProjectionMatrix();
       landscape.update(camera, now / 1000, reduced.matches);
       renderer.render(scene, camera);
       element.dataset.cameraPosition = camera.position.toArray().map(n => n.toFixed(3)).join(',');
-      if ((woods || tileType === 'berry-patch') && !reduced.matches) schedule();
+      if ((woods || berries) && !reduced.matches) schedule();
     };
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, 1, .1, 100);
     camera.position.set(0, woods ? 3.2 : 5.2, 10);
-    // Lift low bush crowns into the exposed band, keeping their feet behind
-    // the rack and the nearer clusters at the sides of the foundation shelf.
-    camera.lookAt(0, woods ? 5.2 : berries ? -.7 : 1.1, -8);
+    // Frame the sparse bush as the card cluster's branching silhouette, with
+    // its crown behind the upper cards and its foot below the front card.
+    // Other berry scenery retains its low, receding planted edge.
+    camera.lookAt(0, woods ? 5.2 : tileType === 'berry-patch-sparse' ? 4 : berries ? -.7 : 1.1, -8);
     const visibility = () => { if (!document.hidden) schedule(); };
     const rustle = (event: Event) => {
       if (reduced.matches || !landscape) return;
@@ -87,15 +103,15 @@ function VegetationLandscape({ tileType, manaGlow, berriesAvailable }: { tileTyp
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         const name = tileType === 'hero-den' ? 'hero-den-standee-v3.png'
           : tileType === 'berry-patch-sparse' ? 'watercolor-v1/manaberry-sparse-standee-v1.png' : berries ? 'berry-bush.svg' : 'small_woods_pines.png';
-        const source = berryScenerySprite(scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/${name}`, artStyle)!, false);
+        const source = berryScenerySprite(scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/${name}`, artStyle)!, false);
         texture = await loadMediaTexture(source);
-        if (berries) fruitTexture = await loadMediaTexture(`${import.meta.env.BASE_URL}assets/biomes/manaberry-fruit-v1.svg`);
+        if (berries) fruitTexture = await loadMediaTexture(`${import.meta.env.BASE_URL}assets/runtime/items/manaberry/manaberry-fruit-v1.svg`);
         if (disposed) { texture.dispose(); fruitTexture?.dispose(); return; }
         texture.magFilter = artStyle === 'paint' ? THREE.LinearFilter : THREE.NearestFilter;
         texture.minFilter = texture.magFilter;
         texture.generateMipmaps = false;
         texture.colorSpace = THREE.SRGBColorSpace;
-        landscape = createTableauLandscape(scene, texture, woods, false, tileType === 'berry-patch-sparse' ? { props: [{ x: 3, z: -8, height: 3.8 }], groundCover: { pixel: artStyle !== 'paint' }, fruitTexture, manaFruit: { x: .59, y: .47, size: .29 } } : berries ? { props: BERRY_TABLEAU_PROPS, groundCover: { pixel: artStyle !== 'paint' }, berryFruit: true, fruitTexture } : {});
+        landscape = createTableauLandscape(scene, texture, woods, false, tileType === 'hero-den' ? { props: [], groundColor: 0x4d3b2a, groundCover: { pixel: artStyle !== 'paint', palette: 'dirt' } } : tileType === 'berry-patch-sparse' ? { props: [{ x: 0, z: -8, height: 11 }], groundCover: { pixel: artStyle !== 'paint' }, fruitTexture, manaFruit: { x: .59, y: .47, size: .29 } } : berries ? { props: BERRY_TABLEAU_PROPS, groundCover: { pixel: artStyle !== 'paint' }, berryFruit: true, fruitTexture } : {});
         refreshFruit.current = () => {
           landscape?.setFruitVisible(fruitState.current.berriesAvailable, fruitState.current.manaGlow);
           schedule();
@@ -110,6 +126,8 @@ function VegetationLandscape({ tileType, manaGlow, berriesAvailable }: { tileTyp
         }
         observer = new ResizeObserver(schedule);
         observer.observe(element);
+        const tray = element.parentElement?.querySelector('.travel-free-layout');
+        if (tileType === 'berry-patch-sparse' && tray) observer.observe(tray);
         schedule();
         setReady(true);
       } catch {

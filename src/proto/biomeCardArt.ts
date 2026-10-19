@@ -19,7 +19,7 @@ const forest: readonly Placement[] = [
 export const BIOME_CARD_RECIPES: Readonly<Record<string, BiomeCardRecipe>> = {
   woods: { sky: ['#060d22', '#405968'], groundColor: '#25392e', ground: 'berry-patch-ground.svg', overhead: 'woods_topdown.svg', scenery: 'woods_side.svg', placements: forest, stars: true },
   'dark-woods': { sky: ['#100b1b', '#60404c'], groundColor: '#38262b', ground: 'berry-patch-ground.svg', overhead: 'dark-woods_topdown.svg', scenery: 'woods_side.svg', placements: forest, stars: true, combat: true },
-  'hero-den': { sky: ['#111a30', '#728086'], groundColor: '#4d443c', ground: 'hero-den-ground-v3.png', scenery: 'hero-den-standee-v3.png', placements: [{ x: .5, foot: .91, height: .74 }], stars: true },
+  'hero-den': { sky: ['#111a30', '#728086'], groundColor: '#4d443c', ground: 'hero-den-ground-v3.png', scenery: 'pebble-a.svg', placements: [{ x: .24, foot: .84, height: .46 }, { x: .78, foot: .98, height: .54, flip: true }], stars: true },
   'berry-patch': { sky: ['#172d3a', '#97aaa1'], groundColor: '#425039', ground: 'berry-patch-ground.svg', overhead: 'berry-patch-topdown.svg', scenery: 'berry-bush.svg', placements: [{ x: .23, foot: .73, height: .37, alpha: .75 }, { x: .78, foot: .87, height: .46, flip: true }, { x: .17, foot: 1.08, height: .37 }] },
   'berry-patch-sparse': { sky: ['#172d3a', '#97aaa1'], groundColor: '#425039', ground: 'berry-patch-ground.svg', overhead: 'watercolor-v1/manaberry-sparse-overhead-v1.png', scenery: 'watercolor-v1/manaberry-sparse-standee-v1.png', placements: [{ x: .72, foot: .87, height: .34 }] },
   water: { sky: ['#17293d', '#6f9ba5'], groundColor: '#264e62', ground: 'pond_topdown.svg', scenery: 'pond_reeds.png', placements: [{ x: .08, foot: .94, height: .59 }, { x: .95, foot: 1.04, height: .44, flip: true }] },
@@ -41,7 +41,7 @@ export function biomeCardKind(biome: CardBiome = {}): string {
 
 export function biomeCardSources(kind: string, style: ArtStyle) {
   const recipe = BIOME_CARD_RECIPES[kind] ?? BIOME_CARD_RECIPES.unexplored;
-  const source = (name?: string) => name ? scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/${name}`, style) : undefined;
+  const source = (name?: string) => name ? scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/${name.startsWith('pebble-') ? 'spill/' : ''}${name}`, style) : undefined;
   return { ground: source(recipe.ground), overhead: kind === 'woods' || kind === 'dark-woods' ? woodsOverheadSprite(style, kind === 'dark-woods') : source(recipe.overhead), scenery: source(recipe.scenery) };
 }
 

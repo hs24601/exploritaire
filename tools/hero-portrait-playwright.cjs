@@ -9,7 +9,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
     const img=p.locator('.details-card__art img.details-card__sprite');await img.waitFor();
     await p.waitForFunction(()=>{const i=document.querySelector('.details-card__sprite');return i&&i.complete;});
     const info=await img.evaluate(i=>({src:i.getAttribute('src'),alt:i.alt,natural:i.naturalWidth,rendering:getComputedStyle(i).imageRendering}));
-    assert.match(info.src,/assets\/actors\/hero\.png$/);assert.equal(info.alt,'Hero portrait');assert.ok(info.natural>0,`${w}x${h} sprite loaded`);assert.equal(info.rendering,'pixelated');
+    assert.match(info.src,/assets\/deprecated\/pixel\/characters\/hero\.png$/);assert.equal(info.alt,'Hero portrait');assert.ok(info.natural>0,`${w}x${h} sprite loaded`);assert.equal(info.rendering,'pixelated');
     const art=await p.locator('.details-card__art').boundingBox(),box=await img.boundingBox();
     assert.ok(box.x>=art.x-.5&&box.y>=art.y-.5&&box.x+box.width<=art.x+art.width+.5&&box.y+box.height<=art.y+art.height+.5,`${w}x${h} sprite stays inside the art frame`);
     // Overflow clips at the padding edge: a clamped descriptor must have no room below its last line for the next one to peek into.

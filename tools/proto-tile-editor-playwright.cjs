@@ -96,7 +96,7 @@ fs.mkdirSync(artifacts, { recursive: true });
     assert.equal(await panel.getByLabel('STA per orthogonal cell override').inputValue(), '2.5');
 
     // Save through the UI and verify a fresh document loads the authored data.
-    const savedResponse = page.waitForResponse(response => response.url().endsWith('/__proto-tiles/save'));
+    const savedResponse = page.waitForResponse(response => response.url().endsWith('/__proto-deprecated/pixel/tiles/save'));
     savedResponse.catch(() => {});
     await panel.getByRole('button', { name: 'Save authored data', exact: true }).click();
     assert.equal((await savedResponse).status(), 200);
@@ -114,10 +114,10 @@ fs.mkdirSync(artifacts, { recursive: true });
     assert.equal(await panel.getByLabel('Tile column', { exact: true }).inputValue(), '5');
 
     // Server-side rejection leaves the saved file intact.
-    const invalid = await page.request.post(`${base}/__proto-tiles/save`, { data: { ...saved, tiles: [...saved.tiles, saved.tiles[0]] } });
+    const invalid = await page.request.post(`${base}/__proto-deprecated/pixel/tiles/save`, { data: { ...saved, tiles: [...saved.tiles, saved.tiles[0]] } });
     assert.equal(invalid.status(), 400);
     assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), saved);
-    const publicTunnel = await page.request.post(`${base}/__proto-tiles/save`, { headers: { 'cf-connecting-ip': '8.8.8.8' }, data: saved });
+    const publicTunnel = await page.request.post(`${base}/__proto-deprecated/pixel/tiles/save`, { headers: { 'cf-connecting-ip': '8.8.8.8' }, data: saved });
     assert.equal(publicTunnel.status(), 403);
     await panel.getByRole('button', { name: 'Close · discard unapplied draft', exact: true }).click();
 

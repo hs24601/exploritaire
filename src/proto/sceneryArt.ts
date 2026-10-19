@@ -28,10 +28,13 @@ const paintedCutouts=new Set(['woods-cluster-sprite-v1.png','pine-sprite-v1.png'
 /** Variant selection belongs to scenery, not gameplay tile definitions. Missing
  * counterparts continue to use their original art. Keep every pixel source. */
 export function scenerySprite(src:string|undefined,style:ArtStyle):string|undefined {
-  if(!src||style!=='paint')return src;
+  if(!src)return src;
+  // Recipe fragments may already name watercolor art rather than a legacy key.
+  src = src.replace('deprecated/pixel/environment/watercolor-v1/', 'runtime/environment/watercolor/v1/');
+  if(style!=='paint')return src;
   const name=src.split('/').pop()?.split('?')[0];
   const variant=name?paintedVariants[name]:undefined;
-  return variant?`${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/${variant}`:src;
+  return variant?`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/${variant}`:src;
 }
 
 /** Approved watercolor cutouts keep their source artwork and smooth sampling.
@@ -49,6 +52,6 @@ export function sceneryWorldHeading(src:string|undefined):number|undefined {
   return isPaintedScenerySprite(src)?undefined:0;
 }
 export function woodsOverheadSprite(style:ArtStyle,danger:boolean) {
-  return style==='paint'?`${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/woods-overhead-v1.png`
-    : `${import.meta.env.BASE_URL}assets/biomes/${danger?'dark-woods':'woods'}_topdown.svg`;
+  return style==='paint'?`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/woods-overhead-v1.png`
+    : `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/${danger?'dark-woods':'woods'}_topdown.svg`;
 }

@@ -26,8 +26,8 @@ describe('biome tableau artwork', () => {
   });
   it('selects painted counterparts and retains original art when no counterpart exists', () => {
     const paint = biomeCardSources('berry-patch', 'paint'), pixel = biomeCardSources('berry-patch', 'pixel');
-    expect(paint.scenery).toContain('watercolor-v1/berry-patch-sprite-v2.png');
-    expect(pixel.scenery).toContain('biomes/berry-bush.svg');
+    expect(paint.scenery).toContain('watercolor/v1/berry-patch-sprite-v2.png');
+    expect(pixel.scenery).toContain('deprecated/pixel/environment/berry-bush.svg');
     expect(biomeCardSources('water', 'paint')).toEqual(biomeCardSources('water', 'pixel'));
   });
 });

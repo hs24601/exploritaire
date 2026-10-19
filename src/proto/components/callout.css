@@ -2,6 +2,9 @@
   position: fixed;
   z-index: 120;
   width: max-content;
+  /* Effects must never determine whether the speaker has room beside the
+   * floating expression. Keep short bubbles readable, bounded by the viewport. */
+  min-width: min(220px, 100%, calc(100dvw - 24px));
   max-width: min(404px, calc(100vw - 24px));
   max-width: min(404px, calc(100dvw - 24px));
   box-sizing: border-box;
@@ -67,9 +70,9 @@
 .proto-callout[data-side='true'] .proto-callout-content::after { display: none; }
 .callout-word { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
 .proto-callout-edit { position: relative; z-index: 1; }
-.proto-callout-copy strong { display: block; color: var(--callout-accent); font-size: 20px; line-height: 1.2; margin-bottom: 3px; }
+.proto-callout-copy strong { display: block; color: var(--callout-accent); font-size: 20px; line-height: 1.2; margin-bottom: 3px; overflow-wrap:normal; word-break:normal; }
 /* Reserve the overhang in placement bounds and only indent the upper text lines. */
-.proto-callout[data-expression='true'] { padding-left: 24px; }
+.proto-callout[data-expression='true'] { padding-left: 24px; min-width:min(300px, 100%, calc(100dvw - 24px)); }
 .proto-callout-expression { position: absolute; top: -32px; left: -24px; z-index: 4; width: 96px; height: 96px; }
 .proto-callout-expression > svg { width: 100%; height: 100%; transform: rotate(-8deg); }
 /* Taper the exclusion beside the cheeks; release it before dialogue line two. */
@@ -88,9 +91,10 @@
 .callout-fx--emphasis { font-weight: clamp(400, calc(400 + 400 * var(--fx-potency, 1)), 1000); color: var(--fx-color, #ffcf70); }
 .callout-fx--whisper { font-style: italic; color: var(--fx-color, #c0c8e0); opacity: calc(1 - .2 * var(--fx-potency, 1)); }
 .callout-fx--glow { color: var(--fx-color, #fff4b9); text-shadow: 0 0 calc(5px * var(--fx-potency, 1)) var(--fx-color, #ffcc66), 0 0 calc(12px * var(--fx-potency, 1)) var(--fx-color, #ffb535); }
-.callout-fx--shake, .callout-fx--wave { display: inline-block; font-weight: 700; }
+.callout-fx--shake { display: inline-block; font-weight: 700; }
 .callout-fx--shake { color: var(--fx-color, #ffb9a0); animation: callout-shake .18s infinite; }
-.callout-fx--wave { color: var(--fx-color, #a8eeff); animation: callout-wave 1.5s ease-in-out infinite; }
+.callout-fx--wave { color: var(--fx-color, #a8eeff); font-weight:700; }
+.callout-wave-character { display:inline-block; animation:callout-wave 1.5s ease-in-out infinite; }
 .callout-fx--rainbow { color: var(--fx-color, #ffc2ef); filter: saturate(var(--fx-potency, 1)); animation: callout-rainbow 4s linear infinite; font-weight: 700; }
 @keyframes callout-shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(calc(-1px * var(--fx-potency, 1)),calc(1px * var(--fx-potency, 1))); } 75% { transform: translate(calc(1px * var(--fx-potency, 1)),calc(-1px * var(--fx-potency, 1))); } }
 @keyframes callout-wave { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(-3px * var(--fx-potency, 1))); } }
@@ -115,7 +119,7 @@
 .callout-editor-preview { display: flex; align-items: center; gap: 10px; overflow-wrap: anywhere; padding: 14px; border: 2px solid #98eaff; border-radius: 20px; background: linear-gradient(#101f2f,#080f19); }
 .callout-editor-preview > div:last-child { min-width: 0; }
 .callout-editor footer { margin-top: 16px; }
-@media (prefers-reduced-motion: reduce) { .callout-fx { animation: none; transform: none; } .callout-fx--shake { text-decoration: underline wavy var(--fx-color, #ffb9a0); } .callout-fx--wave { text-decoration: underline wavy var(--fx-color, #a8eeff); } }
+@media (prefers-reduced-motion: reduce) { .callout-fx, .callout-wave-character { animation: none; transform: none; } .callout-fx--shake { text-decoration: underline wavy var(--fx-color, #ffb9a0); } .callout-fx--wave { text-decoration: underline wavy var(--fx-color, #a8eeff); } }
 
 .callout-editor small { font-size: 16px; }
 .callout-emoji-picker button { width: 90px; font-size: 16px; }
@@ -139,3 +143,13 @@
 .callout-editor .callout-camera-fields { margin:8px 0; }
 .callout-editor .callout-camera-fields input[type=number] { width:100%; }
 .callout-editor .callout-camera-fields { margin:4px 0; padding:8px 12px; }
+
+/* Draft output stays visible while tuning text and expression. */
+.callout-draft-preview { border-top:1px solid #668e8f77; margin-top:16px; padding-top:8px; }
+.callout-draft-preview__stage { padding:12px 0 18px; }
+.callout-draft-preview .callout-draft-preview__bubble { position:relative; z-index:auto; margin:auto; width:404px; max-width:100%; visibility:visible; }
+.callout-draft-preview .proto-callout-expression { position:absolute; transform:none; }
+.callout-draft-preview .proto-callout-content { animation:none; }
+.callout-draft-preview .proto-callout-next { padding:0; border:2px solid var(--callout-accent); border-radius:18px; background:linear-gradient(#101f2f,#080f19); font:24px/1 system-ui,sans-serif; color:#eefaff; }
+.callout-draft-preview nav { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; }
+.callout-draft-preview small { display:block; }

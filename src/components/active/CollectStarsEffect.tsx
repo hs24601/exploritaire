@@ -7,8 +7,8 @@ export type CollectStarsConfig = {
 };
 
 export const DEFAULT_COLLECT_STARS_CONFIG: CollectStarsConfig = {
-  bgImageUrl: "/assets/condition.jpg",
-  starImageUrl: "/assets/star.png",
+  bgImageUrl: "/assets/runtime/textures/condition.jpg",
+  starImageUrl: "/assets/runtime/effects/star.png",
 };
 
 class Star {

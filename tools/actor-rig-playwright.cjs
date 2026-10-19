@@ -50,7 +50,7 @@ function checkFacing(state) {
           const { createDirectionalSpriteLibrary } = await import('/src/proto/directionalSpriteRig.ts');
           const { HERO_DIRECTIONAL_SPRITE } = await import('/src/proto/directionalSprites.ts');
           const loader = new THREE.TextureLoader(), textures = {};
-          for (const [key,file] of [['heroLow','hero-directions-low-v1.png'],['heroHigh','hero-directions-high-v1.png'],['slime','dark-slime-directions-v1.png']]) textures[key] = await loader.loadAsync(`/assets/actors/battle/${file}`);
+          for (const [key,file] of [['heroLow','hero-directions-low-v1.png'],['heroHigh','hero-directions-high-v1.png'],['slime','dark-slime-directions-v1.png']]) textures[key] = await loader.loadAsync(`/assets/deprecated/pixel/characters/battle/${file}`);
           const library = createDirectionalSpriteLibrary(textures, HERO_DIRECTIONAL_SPRITE);
           const hero = library.create(2.55), ally = library.create(2.25), camera = new THREE.PerspectiveCamera(); camera.position.set(4,2,7);
           hero.update(camera,0,0,true); ally.update(camera,0,0,true);

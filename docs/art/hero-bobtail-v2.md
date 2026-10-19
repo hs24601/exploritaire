@@ -4,10 +4,10 @@ Built-in ImageGen edits, 2026-10-13. Hero has a natural charcoal furry bobtail. 
 
 ## Assets
 
-- Eight body-only Paint atlases: `public/assets/actors/battle/bobtail-v2/hero-*-bobtail-v2.png` (standing low/high, sitting low/high, four-phase walking low/high, flinch and down).
-- Two body-only sleeping sprites: `public/assets/actors/watercolor-v1/hero-sleeping{,-topdown}-bobtail-v2.png`.
-- Independent base, tongue and tip sprites: `public/assets/actors/battle/bobtail-v2/hero-flame-pieces-v2.png`.
-- Unnormalized body edit sources: `public/assets/actors/sources/bobtail-v2/`.
+- Eight body-only Paint atlases: `public/assets/runtime/characters/hero/rig/watercolor/v2/hero-*-bobtail-v2.png` (standing low/high, sitting low/high, four-phase walking low/high, flinch and down).
+- Two body-only sleeping sprites: `public/assets/runtime/characters/hero/sleeping/watercolor/v1/hero-sleeping{,-topdown}-bobtail-v2.png`.
+- Independent base, tongue and tip sprites: `public/assets/runtime/characters/hero/rig/watercolor/v2/hero-flame-pieces-v2.png`.
+- Unnormalized body edit sources: `public/assets/sources/characters/bobtail-v2/`.
 - Generation provenance: `hero-bobtail-v2-generation.json`. Canvas normalization report: `hero-bobtail-v2-packing.json`. `tools/prepare-hero-bobtail.py` packages generated images onto the existing atlas dimensions. Existing UV rectangles and joints remain the runtime contract.
 
 The current conversion covers Paint. Historical Pixel sprites and combined Hero/Mochi cuddling art retain their existing artwork. Card portraits are outside the world-sprite rig.

@@ -1,4 +1,6 @@
+import { ActorDragGhost } from './ActorDragGhost';
 import { berryScenerySprite } from '../berryPresentation';
+import { OpeningCardDeal } from './OpeningCardDeal';
 import { BushBerries } from './BushBerries';
 import { trackGameAnimation } from '../../gameAnimations';
 import { matchesDeparture, sampleDepartureCamera, type DepartureCamera } from '../departureCamera';
@@ -236,6 +238,9 @@ type ProtoMapProps = {
   peripheralDarkness?: PeripheralDarknessConfig;
   cameraDirectorDisabled?: boolean;
   departureCamera?: DepartureCamera;
+  actorCard?: React.ReactNode;
+  sceneId?: string;
+  openingCardDeal?: boolean;
   settings?: React.ReactNode | ((travelControls: React.ReactNode) => React.ReactNode);
   travelTableau?: React.ReactNode;
   onEditCell?: (cell: GridCell) => void;
@@ -293,6 +298,9 @@ type ProtoMapProps = {
 
 /** The open expedition field. World tokens are intentionally lightweight DOM
  * nodes so they remain easy to replace with richer map entities later. */
+// Temporary playtest: destination drops begin validated travel directly.
+const ROUTE_PREVIEW_ENABLED = false;
+
 export const ProtoMap = ({
   cameraDirectorDisabled, storyMood, peripheralDarkness, departureCamera, persistentTileLabelIds = [],
   onEditCell, onEditContextMenu, editCell,
@@ -319,7 +327,7 @@ export const ProtoMap = ({
   onInspectActor, onInspectTile,
   questCards = [],
   storyCard,
-  settings, travelTableau,
+  actorCard, sceneId, openingCardDeal = false, settings, travelTableau,
   questTitles = [],
   questTexts = [],
   questRewardLabels = [],
@@ -338,10 +346,11 @@ export const ProtoMap = ({
   const editingRef = useRef(Boolean(onEditCell));
   editingRef.current = Boolean(onEditCell);
   const biomeTiles=useMemo(()=>sourceBiomeTiles.map(tile=>({...tile,sprite:tile.id==='day-one-tree'&&artStyle==='paint'
-    ? `${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/pine-sprite-v1.png` : scenerySprite(tile.sprite,artStyle)})),[sourceBiomeTiles,artStyle]);
+    ? `${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/pine-sprite-v1.png` : scenerySprite(tile.sprite,artStyle)})),[sourceBiomeTiles,artStyle]);
   // Pop-up-book camera: the table tilts back and pieces stand up as cardboard standees.
   // Sprites that failed to load fall back to the cardboard token.
   const [failedSprites, setFailedSprites] = useState<string[]>([]);
+  const actorOriginsRef=useRef(actorOrigins); actorOriginsRef.current=actorOrigins;
   const journeyRef = useRef(journey);
   journeyRef.current = journey;
   const [pendingTravel, setPendingTravel] = useState<TravelPlan | null>(null);
@@ -733,7 +742,10 @@ export const ProtoMap = ({
       // Observe its mode change too, so returning to OTT releases tracking.
       if (followTiltRef.current) enteredImmersion = true;
       else if (enteredImmersion) { cancel(); return; }
-      if (cameraIsPlaying()) { lastTime = now; return; }
+      if (cameraIsPlaying()) {
+        if(journeyRef.current && journeyRef.current.completed>=journeyRef.current.cards){cancel();return;}
+        lastTime = now; return;
+      }
       const trip = liveTravel.current;
       if (!trip) return;
       const elapsed = Math.min(64, Math.max(0, now - lastTime));
@@ -1101,20 +1113,23 @@ export const ProtoMap = ({
     clearActorDragState();
     if (!route) { setRouteBlocked(true); return; }
     setRouteBlocked(false);
+    const plan=planTravel(actorId, route.path, sourceBiomeTiles, arrival, origin.traversalAffinity);
+    if(!ROUTE_PREVIEW_ENABLED){launchTravel(plan);return;}
     setEditingTravelRoute(true); setRouteEditError(''); setTravelControls([TABLE_GRID.snap(route.path[route.path.length - 1])]);
-    setPendingTravel(planTravel(actorId, route.path, sourceBiomeTiles, arrival, origin.traversalAffinity));
+    setPendingTravel(plan);
   };
   useEffect(() => {
-    if(!journey?.blocked || travel || pendingTravel)return;
+    if(!ROUTE_PREVIEW_ENABLED || !journey?.blocked || travel || pendingTravel)return;
     const target=journey.path[journey.path.length-1];
     const route=planRoute(journey.actorId,target,journey.arrival);
     setRouteEditError(journey.blocked.message); setEditingTravelRoute(true);
     const plan=route ? planTravel(journey.actorId,route.path,sourceBiomeTiles,journey.arrival,actorOrigins.find(a=>a.id===journey.actorId)?.traversalAffinity) : {...journey, path:[{...journey.blocked.position,pace:0},target], estimate:Infinity};
     setPendingTravel(plan);setTravelControls(route ? [TABLE_GRID.snap(route.path[route.path.length - 1])]:[]);
   }, [journey?.blocked,travel]);
-  const confirmTravel = () => {
-    if (!pendingTravel || pendingTravel.estimate > travelStamina || travelAllowed && !travelAllowed(pendingTravel)) return;
-    const plan = pendingTravel;
+  const confirmTravel = () => { if(pendingTravel)launchTravel(pendingTravel); };
+  function launchTravel(plan: TravelPlan) {
+    if (plan.estimate > travelStamina || travelAllowed && !travelAllowed(plan)) {setRouteBlocked(true);return;}
+    setEditingTravelRoute(false); setTravelControls([]); setRouteEditError('');
     const trip = { actorId: plan.actorId, label: actorOrigins.find(a => a.id === plan.actorId)?.label ?? 'Actor', path: plan.path, progress: 0, arrival: plan.arrival };
     travelingActorRef.current = plan.actorId;
     liveTravel.current = trip;
@@ -1124,8 +1139,7 @@ export const ProtoMap = ({
       onTiltedChange?.(true);
     }
     setTravel(trip); setPendingTravel(null); onConfirmTravel?.(plan);
-
-  };
+  }
 
   useEffect(() => {
     if (!initialCenter) return;
@@ -1209,7 +1223,7 @@ export const ProtoMap = ({
       lastTime = now;
       const current = pointAlongTimedPath(travel.path, progress);
       const previousPose = actorHeadings.current.get(travel.actorId);
-      const heading = movementHeading(current, previousPose);
+      const heading = movementHeading(current, previousPose, journeyRef.current && journeyRef.current.completed>=journeyRef.current.cards ? actorOriginsRef.current.find(actor=>actor.id===travel.actorId)?.heading : undefined);
       actorHeadings.current.set(travel.actorId, { ...current, heading });
       const inDen = biomeTiles.some(tile => tile.tileType === 'hero-den' && TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position)) === TABLE_GRID.reference(TABLE_GRID.atWorld(current)));
       travelPose.current = { actorId: travel.actorId, position: current, heading: followTiltRef.current && inDen ? Math.PI : heading };
@@ -1389,9 +1403,9 @@ export const ProtoMap = ({
       && TABLE_GRID.reference(TABLE_GRID.atWorld(getActorWorldPosition(other))) === TABLE_GRID.reference(TABLE_GRID.atWorld(position)));
   const sleepingArtName = (actor: ProtoWorldActor, position: { x: number; y: number }) => actorIsCuddling(actor, position) ? 'hero-mochi' : actor.id;
   const actorArt = (actor: ProtoWorldActor, position: { x: number; y: number }) => actorIsSleeping(actor, position)
-    ? actorSprite(`${import.meta.env.BASE_URL}assets/actors/${sleepingArtName(actor, position)}-sleeping.png`, artStyle)
+    ? actorSprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/${sleepingArtName(actor, position)}-sleeping.png`, artStyle)
     : actor.id === 'hero' && travel?.actorId !== actor.id
-      ? `${import.meta.env.BASE_URL}assets/actors/hero-sitting.png` : actor.sprite;
+      ? `${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/hero-sitting.png` : actor.sprite;
   const actorLights = actors.flatMap(actor => actorLight(actor.id, (travel?.actorId === actor.id || Boolean(travel && journey?.memberRanks?.[actor.id] !== undefined)) && travelPosition ? travelPosition : getActorWorldPosition(actor), actor.luminosity, actor.lightColor) ?? []);
   const lightKey = JSON.stringify([placedLights, actorLights]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1565,10 +1579,10 @@ export const ProtoMap = ({
       if (tile.berryPatchVariant === 'sparse') {
         const key = `${tile.id}:${area.x},${area.y}`;
         if (!sparseApproaches.current.has(key)) sparseApproaches.current.set(key, sketchApproach(area, sketchTraveler(area)));
-        tableScenery[tile.id] = [sparseBerryBush(`${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/manaberry-sparse-standee-v1.png`, area.width, area.height, sparseApproaches.current.get(key)!)];
+        tableScenery[tile.id] = [sparseBerryBush(`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/manaberry-sparse-standee-v1.png`, area.width, area.height, sparseApproaches.current.get(key)!)];
         continue;
       }
-      tableScenery[tile.id] = populateScenery({id:'tree',edge:'front',src:tile.tileType === 'berry-patch' ? tile.sprite : `${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/pine-sprite-v1.png`,x:0,y:0,width:24,height:36,flip:false},
+      tableScenery[tile.id] = populateScenery({id:'tree',edge:'front',src:tile.tileType === 'berry-patch' ? tile.sprite : `${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/pine-sprite-v1.png`,x:0,y:0,width:24,height:36,flip:false},
         populationDensity(tile.populationDensity, tile.tileType !== 'berry-patch'), area.width, area.height,
         sketchPending(tile) ? sketchApproach(area,sketchTraveler(area)) : undefined);
       continue;
@@ -1604,14 +1618,14 @@ export const ProtoMap = ({
     const directional=tile.tileType==='hero-den'?denView:null;
     return [tile.id,{ position: fitted.position, size: fitted.width, requestedSize: size, requestedPosition: position, owner, flip: directional?.flip ?? piece?.flip ?? false,
       // A neighbour-aware piece may swap in its own art beside the tile's sprite.
-      sprite: directional?.src ?? (piece?.art && tile.sprite ? scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/${piece.art}`,artStyle) : tile.sprite) }] as const;
+      sprite: directional?.src ?? (piece?.art && tile.sprite ? scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/${piece.art}`,artStyle) : tile.sprite) }] as const;
   }));
   const warmSceneryKey = JSON.stringify([
     ...biomeTiles.filter(tile => !tile.flags?.includes('unexplored')).flatMap(tile => {
       const popup = biomePopups.get(tile.id);
       return popup?.sprite && propVolumeRecipe(popup.sprite) ? [{ sprite: popup.sprite, flip: popup.flip }] : [];
     }),
-    ...terrainSeams.map(seam => ({ sprite: scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/${seam.src}`,artStyle)!, flip: seam.flip })),
+    ...terrainSeams.map(seam => ({ sprite: scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/${seam.src}`,artStyle)!, flip: seam.flip })),
   ]);
   useEffect(() => prewarmPropVolumes(JSON.parse(warmSceneryKey)), [warmSceneryKey]);
   useEffect(() => {
@@ -1804,9 +1818,11 @@ export const ProtoMap = ({
     <TravelWorldContext.Provider value={{host:travelWorldHost,upright,progress:travel?.progress??0,actorPosition:()=>travelPose.current?.position??travelPosition??{x:0,y:0},onCameraFrame:camera.onCameraFrame,
       solids:biomeTiles.filter(tile=>!tile.flags?.includes('unexplored')&&(tile.tileType==='impassable-mountain'||(!tile.tileType&&!tile.road))).map(tile=>{const r=getBiomeWorldFootprint(tile);return {left:r.x-r.width/2,top:r.y-r.height/2,right:r.x+r.width/2,bottom:r.y+r.height/2};}),
       project:point=>{const live=camera.getLiveCamera(),plane=rotateVector({x:live.x+point.x*live.scale,y:live.y+point.y*live.scale},live.yaw??0),screen=tilted?projectTilt(plane,getCameraTilt(live)):plane;return{x:viewportWidth/2+screen.x,y:viewportHeight/2+screen.y};}}}>
-    <section data-story-cinematic={Boolean(storyMood)} hidden={inactive} data-actor-closeup={Boolean(closeup)} data-camera-view={upright ? 'immersive' : 'tabletop'} className="proto-map relative min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/22 bg-[#050807] font-mono">
+    <section data-opening-cards={openingCardDeal ? 'pending' : undefined} data-story-cinematic={Boolean(storyMood)} hidden={inactive} data-actor-closeup={Boolean(closeup)} data-camera-view={upright ? 'immersive' : 'tabletop'} className="proto-map relative min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/22 bg-[#050807] font-mono">
+      <OpeningCardDeal enabled={openingCardDeal} />
       {storyMood && globalLights && <div className="day-cinema-grade" data-story-mood={storyMood} aria-hidden="true" />}
       <PeripheralDarkness config={peripheralDarkness} enabled={globalLights} />
+      {actorCard}
       {typeof settings === 'function' ? settings(<div className="art-settings__section" aria-label="Travel controls"><span>Stamina · {travelStamina.toFixed(1)} / {travelStaminaMax}</span>        <label className="art-settings__toggle"><input type="checkbox" checked={followTravelingActor} onChange={event => setFollowTravelingActor(event.target.checked)} />Follow traveling actor</label>
         <label className="art-settings__toggle"><input type="checkbox" checked={cinematicTravel} onChange={event => {
           setCinematicTravel(event.target.checked);
@@ -1834,7 +1850,7 @@ export const ProtoMap = ({
         </filter>
       </defs></svg>
       <div className="proto-map-hud">
-      {objective && <DayObjectiveWaypoint objective={objective} onCameraFrame={camera.onCameraFrame} project={point => {
+      {objective && <DayObjectiveWaypoint objective={objective} showActorDragPreview={!journey && !travel} onCameraFrame={camera.onCameraFrame} project={point => {
         const live = camera.getLiveCamera();
         const plane = rotateVector({ x: live.x + point.x * live.scale, y: live.y + point.y * live.scale }, live.yaw ?? 0);
         const screen = tilted ? projectTilt(plane, getCameraTilt(live)) : plane;
@@ -1903,7 +1919,10 @@ export const ProtoMap = ({
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 2 8 M4 4v6h6 M9 12l3-3 3 3v5H9z" /></svg>
         </button>
       </div>
-        <div ref={gridReadout} className="table-grid-reference" data-grid-reference={TABLE_GRID.reference(TRUE_CENTER.cell)} aria-label="Table grid coordinate" title="True Center · table:0,0">{TABLE_GRID.reference(TRUE_CENTER.cell)}</div>
+        <div className="proto-map-location-readouts">
+          {sceneId && <div className="proto-map-scene-id" aria-label="Scene ID">Scene · {sceneId}</div>}
+          <div ref={gridReadout} className="table-grid-reference" data-grid-reference={TABLE_GRID.reference(TRUE_CENTER.cell)} aria-label="Table grid coordinate" title="True Center · table:0,0">{TABLE_GRID.reference(TRUE_CENTER.cell)}</div>
+        </div>
       </div>
       </div>
       {routeBlocked && <div className="absolute left-3 bottom-12 z-40 rounded border border-[#ffd166] bg-[#17140b] p-2 text-base" role="status">No clear route. Choose an open destination.</div>}
@@ -2081,8 +2100,8 @@ export const ProtoMap = ({
             {[...unexploredGround.values()]}
             {/* Tilted, the range keeps its solid rock floor (without the overhead peaks) under the standing peaks. */}
             {terrainRegions.map(region => <ConnectedTerrainArt key={region.id} region={region} pieces={terrainPieces} peaks={!upright}
-              sprite={scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/impassable-mountain_topdown.svg`,artStyle)!}
-              floorSprite={artStyle==='paint'?`${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/mountain-ground-v1.png`:undefined} rockColor="#354154" />)}
+              sprite={scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/impassable-mountain_topdown.svg`,artStyle)!}
+              floorSprite={artStyle==='paint'?`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/mountain-ground-v1.png`:undefined} rockColor="#354154" />)}
           </div>, groundWorld)}
           {biomeTiles.map((tile) => (
             (() => {
@@ -2159,14 +2178,14 @@ export const ProtoMap = ({
                   aria-label={unexplored ? 'Unexplored biome' : tile.danger ? `${tile.title}, danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title}, fishing` : tile.unlocked === false ? `${tile.title}, locked until Small Woods is complete` : `${tile.title} ${tile.sizeLabel}, ${Math.round(tile.resourceDensity * 100)}% resources, ${tile.tableauSize} cards`}
                 >
                   <TileDiscoveryArt tileId={tile.id}>
-                  {!unexplored && tile.tileType === 'hero-den' && <img data-den-ground="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle==='paint'?'auto':'pixelated', transform: 'rotate(180deg)' }} src={scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/hero-den-ground-v3.png`,artStyle)} alt="" draggable={false} />}
+                  {!unexplored && tile.tileType === 'hero-den' && <img data-den-ground="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle==='paint'?'auto':'pixelated', transform: 'rotate(180deg)' }} src={scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/hero-den-ground-v3.png`,artStyle)} alt="" draggable={false} />}
                   {!unexplored && !tile.tileType && !tile.road && tile.terrain !== 'water' && tile.unlocked !== false && <WoodlandGround footprint={worldFootprint} danger={tile.danger} brightness={upright ? standeeLighting(timeOfDay, tile.position, 0, lightSources).brightness : 1} />}
-                  {!unexplored && tile.tileType === 'dirt' && <img data-dirt-ground="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle === 'paint' ? 'auto' : 'pixelated' }} src={scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/dirt-ground.png`, artStyle)} alt="" draggable={false} />}
-                  {!unexplored && tile.tileType === 'berry-patch' && <img data-berry-ground="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle==='paint'?'auto':'pixelated' }} src={scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/berry-patch-ground.svg`,artStyle)} alt="" draggable={false} />}
+                  {!unexplored && tile.tileType === 'dirt' && <img data-dirt-ground="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle === 'paint' ? 'auto' : 'pixelated' }} src={scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/dirt-ground.png`, artStyle)} alt="" draggable={false} />}
+                  {!unexplored && tile.tileType === 'berry-patch' && <img data-berry-ground="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle==='paint'?'auto':'pixelated' }} src={scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/berry-patch-ground.svg`,artStyle)} alt="" draggable={false} />}
                   {unexplored ? <span aria-hidden="true" className="absolute inset-0" style={{ background: '#182221', filter: 'var(--silhouette-filter) grayscale(1) brightness(0.45)' }} />
                     : tile.road ? <RoadTileArt road={tile.road} exploration={explored} brightness={upright ? standeeLighting(timeOfDay, tile.position, 0, lightSources).brightness : 1} />
-                    : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle==='paint'?'auto':'pixelated', objectFit: 'contain', transform: 'rotate(180deg)' }} src={scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/hero-den-topdown-v3.png`,artStyle)} alt="" draggable={false} />
-                    : tile.tileType === 'berry-patch' ? !upright && (tile.berryPatchVariant === 'sparse' ? <span className="absolute pointer-events-none" style={{ left: `calc(50% + ${tableScenery[tile.id]?.[0]?.x ?? 0}px)`, top: `calc(50% + ${tableScenery[tile.id]?.[0]?.y ?? 0}px)`, width: 18, height: 18, transform: 'translate(-50%, -50%)' }}><img data-sparse-bush="overhead" aria-hidden="true" className="absolute inset-0 h-full w-full" style={{ objectFit: 'contain' }} src={berryScenerySprite(`${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/manaberry-sparse-overhead-v1.png`, false)} alt="" draggable={false} /><BushBerries sprite="sparse-berry" visible={tile.berriesAvailable ?? !tile.berryHarvested} overhead />{!tile.berryHarvested && <ManaberryGlow overhead />}</span> : <span className="absolute inset-0 pointer-events-none"><img data-berry-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle==='paint'?'auto':'pixelated', objectFit: 'contain' }} src={berryScenerySprite(scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/berry-patch-topdown.svg`,artStyle)!, false)} alt="" draggable={false} /><BushBerries sprite="berry" visible={tile.berriesAvailable ?? true} overhead /></span>)
+                    : tile.tileType === 'hero-den' ? !upright && <img data-den-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle==='paint'?'auto':'pixelated', objectFit: 'contain', transform: 'rotate(180deg)' }} src={scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/hero-den-topdown-v3.png`,artStyle)} alt="" draggable={false} />
+                    : tile.tileType === 'berry-patch' ? !upright && (tile.berryPatchVariant === 'sparse' ? <span className="absolute pointer-events-none" style={{ left: `calc(50% + ${tableScenery[tile.id]?.[0]?.x ?? 0}px)`, top: `calc(50% + ${tableScenery[tile.id]?.[0]?.y ?? 0}px)`, width: 18, height: 18, transform: 'translate(-50%, -50%)' }}><img data-sparse-bush="overhead" aria-hidden="true" className="absolute inset-0 h-full w-full" style={{ objectFit: 'contain' }} src={berryScenerySprite(`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/manaberry-sparse-overhead-v1.png`, false)} alt="" draggable={false} /><BushBerries sprite="sparse-berry" visible={tile.berriesAvailable ?? !tile.berryHarvested} overhead />{!tile.berryHarvested && <ManaberryGlow overhead />}</span> : <span className="absolute inset-0 pointer-events-none"><img data-berry-overhead="true" aria-hidden="true" className="absolute inset-0 h-full w-full pointer-events-none" style={{ imageRendering: artStyle==='paint'?'auto':'pixelated', objectFit: 'contain' }} src={berryScenerySprite(scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/berry-patch-topdown.svg`,artStyle)!, false)} alt="" draggable={false} /><BushBerries sprite="berry" visible={tile.berriesAvailable ?? true} overhead /></span>)
                     : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <span className="absolute inset-0" style={{filter:tile.danger ? "url(#combat-scenery-tint)" : undefined}}><BiomeTopDownArt tileId={tile.id} terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /></span> : null}
                   </TileDiscoveryArt>
                 </button>, groundWorld)}
@@ -2239,7 +2258,7 @@ export const ProtoMap = ({
             discoveryTileIds={seam.tileIds}
             centre={seam.position}
             footprint={seam.owner}
-            props={[{ id: 'ridge', edge: 'front', src: scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/${seam.src}`,artStyle)!, x: 0, y: 0, width: TABLE_GRID.cellSize * seam.scale, height: TABLE_GRID.cellSize * seam.scale, flip: seam.flip }]}
+            props={[{ id: 'ridge', edge: 'front', src: scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/${seam.src}`,artStyle)!, x: 0, y: 0, width: TABLE_GRID.cellSize * seam.scale, height: TABLE_GRID.cellSize * seam.scale, flip: seam.flip }]}
             yaw={0}
             hours={timeOfDay}
             lights={lightSources}
@@ -2458,8 +2477,8 @@ export const ProtoMap = ({
               }}
               aria-label={`${actor.label} actor token${cuddling ? ', cuddling in the den' : sleeping ? ', sleeping in her den' : ''}`}
             >
-              {sharedCompanion || paintedInterior ? null : directional ? <Oversample persistent width={overheadHero ? 26 : SPRITE_STANDEE_SIZE} height={overheadHero ? 26 : SPRITE_STANDEE_SIZE} factor={oversample}><TableActorSprite actorId={actor.id === 'banks' ? 'banks' : actor.id === 'mochi' ? 'mochi' : 'hero'} overhead={overheadHero} position={actorPosition} pose={sitting ? 'sitting' : 'walking'} heading={poseHeading} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} getWorldPose={travel?.actorId === actor.id ? getTravelPose : undefined} brightness={upright ? standeeLighting(timeOfDay, actorPosition, SPRITE_STANDEE_SIZE, lightSources, yaw).brightness : 1} fallback={overheadHero ? <img src={`${import.meta.env.BASE_URL}assets/actors/hero-standing-topdown.png`} alt="" draggable={false} /> : cutOut?.art} /></Oversample> : overheadHero ? <img style={{ imageRendering: artStyle === 'paint' && actor.id === 'hero' && !cuddling ? 'auto' : 'pixelated' }} src={actorSprite(`${import.meta.env.BASE_URL}assets/actors/${sleeping ? sleepingArtName(actor, actorPosition) : actor.id}-${sleeping ? 'sleeping' : sitting ? 'sitting' : 'standing'}-topdown.png`, artStyle)} alt="" draggable={false} /> : cutOut ? <Oversample width={SPRITE_STANDEE_SIZE} height={SPRITE_STANDEE_SIZE} factor={oversample}>{cutOut.art}</Oversample> : <BoardObjectLabel text={actor.label} minFontSize={16} maxFontSize={16} />}
-              {!sharedCompanion && !paintedInterior && !directional && overheadHero && sleeping && <span style={{position:'absolute',inset:0,pointerEvents:'none'}}><RestBobtail sprite={actorSprite(`${import.meta.env.BASE_URL}assets/actors/${sleepingArtName(actor, actorPosition)}-sleeping-topdown.png`,artStyle)!} /></span>}
+              {sharedCompanion || paintedInterior ? null : directional ? <Oversample persistent width={overheadHero ? 26 : SPRITE_STANDEE_SIZE} height={overheadHero ? 26 : SPRITE_STANDEE_SIZE} factor={oversample}><TableActorSprite actorId={actor.id === 'banks' ? 'banks' : actor.id === 'mochi' ? 'mochi' : 'hero'} overhead={overheadHero} position={actorPosition} pose={sitting ? 'sitting' : 'walking'} heading={poseHeading} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} getWorldPose={travel?.actorId === actor.id ? getTravelPose : undefined} brightness={upright ? standeeLighting(timeOfDay, actorPosition, SPRITE_STANDEE_SIZE, lightSources, yaw).brightness : 1} fallback={overheadHero ? <img src={`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/hero-standing-topdown.png`} alt="" draggable={false} /> : cutOut?.art} /></Oversample> : overheadHero ? <img style={{ imageRendering: artStyle === 'paint' && actor.id === 'hero' && !cuddling ? 'auto' : 'pixelated' }} src={actorSprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/${sleeping ? sleepingArtName(actor, actorPosition) : actor.id}-${sleeping ? 'sleeping' : sitting ? 'sitting' : 'standing'}-topdown.png`, artStyle)} alt="" draggable={false} /> : cutOut ? <Oversample width={SPRITE_STANDEE_SIZE} height={SPRITE_STANDEE_SIZE} factor={oversample}>{cutOut.art}</Oversample> : <BoardObjectLabel text={actor.label} minFontSize={16} maxFontSize={16} />}
+              {!sharedCompanion && !paintedInterior && !directional && overheadHero && sleeping && <span style={{position:'absolute',inset:0,pointerEvents:'none'}}><RestBobtail sprite={actorSprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/${sleepingArtName(actor, actorPosition)}-sleeping-topdown.png`,artStyle)!} /></span>}
             </div>
             </React.Fragment>
             );
@@ -2580,15 +2599,7 @@ export const ProtoMap = ({
         <OffscreenWaypoints />
       </div>
       {dragPreview && !travel ? createPortal(
-        <div
-          aria-hidden="true"
-          data-actor-drag-preview="true"
-          className={`pointer-events-none fixed z-[100] grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-dashed border-[#ffe7ad]/80 bg-[#17140b]/55 text-base font-black uppercase tracking-[0.1em] text-[#ffe7ad]/80${upright ? ' shadow-[0_0_24px_rgba(255,209,102,0.22)]' : ''}`}
-          data-actor-drag-ghost="true"
-          style={{ left: dragPreview.x, top: dragPreview.y, zIndex: 100000 }}
-        >
-          {actors.find((actor) => actor.id === dragPreview.actorId)?.label ?? 'Hero'}
-        </div>, document.body
+        <ActorDragGhost actorId={dragPreview.actorId} name={actors.find(actor=>actor.id===dragPreview.actorId)?.label??'Hero'} x={dragPreview.x} y={dragPreview.y} />, document.body
       ) : null}
       {tileHold.feedback}
     </section>

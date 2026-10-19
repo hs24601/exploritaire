@@ -7,6 +7,6 @@ export function ManaberryGlow({ overhead = false, layout }: { overhead?: boolean
     position: 'absolute', pointerEvents: 'none', left: left + width * (overhead ? .58 : .59),
     top: top + height * (overhead ? .49 : .47), width: width * .29, height: height * .29,
     transform: 'translate(-50%, -50%)', borderRadius: '50%',
-    background: 'radial-gradient(ellipse, #e5faff 0%, #b9edfff5 14%, #80d5ffd9 28%, #57bfff66 48%, #57bfff00 74%)',
+    background: 'radial-gradient(ellipse, #b9edff22 0%, #80d5ff18 28%, #57bfff00 74%)',
   }} />;
 }

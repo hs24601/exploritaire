@@ -11,7 +11,7 @@ export function HeroEmoji({ emotion, size = 64, label, className, style }: {
   const directional = emotion === 'curious' || emotion === 'happy' || emotion === 'sad';
   const [x,y,w,h] = (emotion === 'happy' ? happyHeads : emotion === 'sad' ? sadHeads : curiousHeads)[0];
   const frame = directional ? {x,y,w,h} : HERO_EMOJI_ATLAS.frames[emotion].frame;
-  const sheet = `/assets/actors/hero/opening-watercolor-v1/hero-${emotion}-heads-v1.png`;
+  const sheet = `/assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-${emotion}-heads-v1.png`;
   return <svg viewBox={`0 0 ${frame.w} ${frame.h}`} width={size} height={size}
     role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}
     className={className} data-hero-emoji={emotion}

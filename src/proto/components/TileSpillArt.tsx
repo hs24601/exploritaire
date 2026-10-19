@@ -19,7 +19,7 @@ export function TileSpillArt({ decals, raised = false, hours = 9, lights = [], d
   // continues to use the world's physical depth sorting.
   const ordered = raised ? decals : [...decals].sort((a,b)=>Number(a.art.startsWith('pebble-'))-Number(b.art.startsWith('pebble-')));
   return <>{ordered.map(decal => {
-    const sprite = scenerySprite(`${import.meta.env.BASE_URL}assets/biomes/spill/${decal.art}`, style);
+    const sprite = scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/spill/${decal.art}`, style);
     const relief = raised ? Math.max(MIN_SPILL_HEIGHT, decal.relief) : 0;
     const height = heightToWorld(relief);
     const sampling = relief ? STANDEE_OVERSAMPLE : 1;

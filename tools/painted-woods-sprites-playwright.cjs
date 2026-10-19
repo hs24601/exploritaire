@@ -86,12 +86,12 @@ async function stats(page){return page.locator('[data-scenery-billboard="paint"]
  }
  if(!process.env.PREVIEW_ONLY&&!process.env.OVERHEAD_ONLY){
   const context=await browser.newContext({viewport:{width:1280,height:720},deviceScaleFactor:3,reducedMotion:'reduce'}),page=await context.newPage(),errors=[],loaded=new Set();
-  page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/assets/biomes/')){assert.equal(r.status(),200);loaded.add(r.url());}});
+  page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/assets/deprecated/pixel/environment/')){assert.equal(r.status(),200);loaded.add(r.url());}});
   await page.goto(URL+'?combatdemo');await page.waitForFunction(()=>JSON.parse(document.querySelector('.combat-demo__arena')?.dataset.actors||'[]').some(a=>a.id==='hero'));
-  assert.ok([...loaded].some(src=>src.endsWith('/watercolor-v1/woods-cluster-sprite-v1.png')));
+  assert.ok([...loaded].some(src=>src.endsWith('/watercolor/v1/woods-cluster-sprite-v1.png')));
   await page.screenshot({path:`${directory}/combat-paint-3x.png`});
   const cog=page.getByRole('button',{name:'Game settings',exact:true});await cog.click();await page.getByLabel('Art style',{exact:true}).selectOption('pixel');await cog.click();
-  await page.waitForResponse(r=>r.url().endsWith('/assets/biomes/small_woods_pines.png')).catch(()=>assert.ok([...loaded].some(src=>src.endsWith('/small_woods_pines.png'))));
+  await page.waitForResponse(r=>r.url().endsWith('/assets/deprecated/pixel/environment/small_woods_pines.png')).catch(()=>assert.ok([...loaded].some(src=>src.endsWith('/small_woods_pines.png'))));
   await page.waitForFunction(()=>JSON.parse(document.querySelector('.combat-demo__arena')?.dataset.actors||'[]').some(a=>a.id==='hero'));
   await page.screenshot({path:`${directory}/combat-pixel-3x.png`});assert.deepEqual(errors,[]);await context.close();
   console.log('PASS combat-demo woods load the approved cluster, switch back to Pixel and retain live actors without browser errors.');

@@ -14,7 +14,7 @@ export const DEFAULT_BURN_EDGES_CONFIG: BurnEdgesConfig = {
   burnColor: '#ff6b35',
   burnWidth: 0.05,
   noiseScale: 0.75,
-  cardImageUrl: '/assets/Bluevee.png',
+  cardImageUrl: '/assets/deprecated/pixel/portraits/Bluevee.png',
   aspectRatio: 2.2 / 3,
 };
 
@@ -167,7 +167,7 @@ export const BurnEdgesEffect = memo(function BurnEdgesEffect({
     if (config.cardImageUrl !== lastImageUrl.current) {
       lastImageUrl.current = config.cardImageUrl;
       const image = new Image();
-      image.src = config.cardImageUrl || '/assets/Bluevee.png';
+      image.src = config.cardImageUrl || '/assets/deprecated/pixel/portraits/Bluevee.png';
       image.onload = () => {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.bindTexture(gl.TEXTURE_2D, textureRef.current);

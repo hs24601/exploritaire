@@ -4,11 +4,11 @@ Requested 2026-10-12: enough authored painted assets to view Hero's Den through 
 
 | Authored view | Runtime asset |
 | --- | --- |
-| Front (retained) | [hero-den-sprite-v2.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/hero-den-sprite-v2.png) |
-| Front quarter | [hero-den-front-quarter-v1.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/hero-den-front-quarter-v1.png) |
-| Side | [hero-den-side-v1.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/hero-den-side-v1.png) |
-| Rear quarter | [hero-den-rear-quarter-v1.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/hero-den-rear-quarter-v1.png) |
-| Closed rear | [hero-den-rear-v1.png](C:/dev/Exploritaire/public/assets/biomes/watercolor-v1/hero-den-rear-v1.png) |
+| Front (retained) | [hero-den-sprite-v2.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/hero-den-sprite-v2.png) |
+| Front quarter | [hero-den-front-quarter-v1.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/hero-den-front-quarter-v1.png) |
+| Side | [hero-den-side-v1.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/hero-den-side-v1.png) |
+| Rear quarter | [hero-den-rear-quarter-v1.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/hero-den-rear-quarter-v1.png) |
+| Closed rear | [hero-den-rear-v1.png](C:/dev/Exploritaire/public/assets/runtime/environment/watercolor/v1/hero-den-rear-v1.png) |
 
 Five authored views plus mirrored quarter/side paintings cover eight compass directions. The physical entrance stays world north. A camera-facing display plane presents the appropriate view of that fixed object; it no longer shows the entrance from behind or becomes edge-on at the sides. This supersedes the single-view fixed-plane experiment. The shared actor direction selector supplies wrapping and boundary hysteresis. View updates subscribe to the existing live camera clock and change React state only at view boundaries. Sources and trim bounds are prewarmed to avoid blank view changes; original alpha and full-resolution painted pixels remain intact, with no volume reconstruction.
 

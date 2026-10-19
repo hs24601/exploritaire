@@ -102,7 +102,7 @@ Mochi's high atlas needs two convex crop guards because neighboring sprites intr
 ## 6. Development integration checklist
 
 1. Accept artwork only after identity, direction coverage, alpha, full bounds, rectangular crop isolation and consistent scale pass visual/data checks. Keep originals and prompts.
-2. Put accepted actor sheets under `public/assets/actors/battle/`; add source keys to `src/proto/battleSpriteAssets.ts`. Asset URLs include the configured base URL; do not hardcode a deployment root.
+2. Put accepted actor sheets under `public/assets/deprecated/pixel/characters/battle/`; add source keys to `src/proto/battleSpriteAssets.ts`. Asset URLs include the configured base URL; do not hardcode a deployment root.
 3. Author `<actor>Sprite.ts` using `createQuadrupedSpriteDefinition`, with 5 or 8 specs for EACH tier, plus top. Author actor-specific seams/pivots; do not paste Hero anatomy onto a cat or another species. For a one-body creature, use a `DirectionalSpriteDefinition` like slime; other motion types need code work.
 4. Create/cache a library using `createDirectionalSpriteLibrary(textures, definition)`, then separate instances with `library.create(height)`. Reuse atlases/geometries; each instance owns its own joints/materials. Set color space/filtering as existing loaders do.
 5. Wire the actor into its intended consumer. Battle consumers include `combatDemoRig.ts` and `components/BattleTableauField.tsx`. `components/TableActorSprite.tsx` currently hardcodes Hero and loads only heroLow/heroHigh; a new map actor requires deliberate shared parameterization/integration. The asset registry alone does not enable it everywhere.

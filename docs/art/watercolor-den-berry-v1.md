@@ -4,7 +4,7 @@ Berry artwork is superseded by [watercolor-berries-v2.md](./watercolor-berries-v
 
 Eric requested the same direct painted-asset treatment as the approved trees/woods on 2026-10-12. Generated with the built-in ImageGen tool; original Pixel files remain intact.
 
-Runtime assets live in `public/assets/biomes/watercolor-v1/`:
+Runtime assets live in `public/assets/runtime/environment/watercolor/v1/`:
 
 - `hero-den-sprite-v1.png`: front slate-boulder cave cutout.
 - `hero-den-overhead-v1.png`: overhead roof and hollow, authored opening toward the bottom and rotated 180° for the game's north-facing mouth.

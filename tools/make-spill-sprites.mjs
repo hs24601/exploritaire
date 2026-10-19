@@ -4,7 +4,7 @@
 // pixel; '.' is transparent. Run: node tools/make-spill-sprites.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-const dir = 'public/assets/biomes/spill';
+const dir = 'public/assets/deprecated/pixel/environment/spill';
 const palettes = {
   rock: { o: '#101020', d: '#404060', m: '#708090', l: '#a0a0b0', s: '#302020' },
   berry: { o: '#22452a', d: '#2e5b30', m: '#417136', l: '#5a8940', r: '#d45784', p: '#943261' },

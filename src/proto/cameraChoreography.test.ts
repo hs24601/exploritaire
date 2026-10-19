@@ -3,6 +3,12 @@ import { DEFAULT_SHOT, interpolateShot, sampleCameraSequence, shotFromCamera, va
 const first: CameraStep = { id: 'first', name: 'First', shot: { ...DEFAULT_SHOT, x: 100, yaw: 10 }, durationMs: 1000, holdMs: 500, easing: 'linear' };
 const initial = { ...DEFAULT_SHOT, x: 0, yaw: 350 };
 describe('camera choreography timeline', () => {
+  it('distinguishes camera arrival from the reading hold for scene introductions', () => {
+    expect(sampleCameraSequence([first], initial, 999).moving).toBe(true);
+    expect(sampleCameraSequence([first], initial, 1000)).toMatchObject({ moving: false, done: false });
+    expect(sampleCameraSequence([first], initial, 1500)).toMatchObject({ moving: false, done: true });
+    expect(sampleCameraSequence([first], initial, 0, true).moving).toBe(false);
+  });
   it('flies between world targets and uses the shortest rotation', () => {
     const halfway = sampleCameraSequence([first], initial, 500);
     expect(halfway.shot.x).toBe(50); expect(halfway.shot.yaw).toBe(360); expect(halfway.done).toBe(false);

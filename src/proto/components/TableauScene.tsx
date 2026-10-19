@@ -49,7 +49,7 @@ export function TableauScene({ children, immersive, terrain, rig, hours, fillSce
           // A receding forest of complete tree clusters, rather than stretching
           // the tiny edge-prop sprite into a wall across the whole field.
           const sprite = fillScenery && terrain === 'woods'
-            ? `${import.meta.env.BASE_URL}assets/biomes/small_woods_pines.png`
+            ? `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/small_woods_pines.png`
             : layer === 2 ? props.front.src : props.side.src;
           const size = fillScenery ? Math.min(220, sceneryHeight * .48) * (.82 + layer * .12) * (.88 + (index % 3) * .08) : layer === 2 ? 70 : 150;
           return <span key={index} className="proto-tableau-scenery__prop" style={fillScenery

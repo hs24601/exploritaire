@@ -4,8 +4,8 @@ The user requested less detailed berry bushes using GAME.md's broad wet brush da
 
 ## Runtime assets
 
-- `public/assets/biomes/watercolor-v1/berry-patch-sprite-v2.png`: five low camera-facing bushes for immersion and inspection cards.
-- `public/assets/biomes/watercolor-v1/berry-patch-overhead-v2.png`: matching vertical overhead print for OTT.
+- `public/assets/runtime/environment/watercolor/v1/berry-patch-sprite-v2.png`: five low camera-facing bushes for immersion and inspection cards.
+- `public/assets/runtime/environment/watercolor/v1/berry-patch-overhead-v2.png`: matching vertical overhead print for OTT.
 
 The shared scenery selector chooses these in Paint mode. Pixel artwork, ground, den and tree assets retain their existing selection. Original PNG alpha and full-resolution smooth sampling are preserved without filtering, downsampling or volume reconstruction.
 

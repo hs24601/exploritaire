@@ -2,13 +2,13 @@
 const fs = require('node:fs');
 const { chromium } = require('playwright');
 const layout = require('../src/proto/art/heroSittingLayout.json');
-const path = 'public/assets/actors/hero/faces-watercolor-v1';
+const path = 'public/assets/runtime/characters/hero/expressions/faces/watercolor/v1';
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage();
     for (const tier of ['low', 'high']) {
-      const original = fs.readFileSync(`public/assets/actors/battle/bobtail-v3/hero-sitting-${tier}-body-v3.png`).toString('base64');
+      const original = fs.readFileSync(`public/assets/runtime/characters/hero/rig/watercolor/v3/hero-sitting-${tier}-body-v3.png`).toString('base64');
       const generated = fs.readFileSync(`output/imagegen/hero-faces-v1/hero-sitting-sad-${tier}-source.png`).toString('base64');
       const packed = await page.evaluate(async ({ original, generated, layout }) => {
         const load = async data => { const img = new Image(); img.src = 'data:image/png;base64,' + data; await img.decode(); return img; };

@@ -1,12 +1,12 @@
 import { memo, useState } from 'react';
 
 const CARDS = [
-  { id: 1, front: '/assets/Bluevee.png' },
-  { id: 2, front: '/assets/actors/fox_cub.png' },
-  { id: 3, front: '/assets/actors/wolf_cub.png' },
+  { id: 1, front: '/assets/deprecated/pixel/portraits/Bluevee.png' },
+  { id: 2, front: '/assets/deprecated/pixel/characters/fox_cub.png' },
+  { id: 3, front: '/assets/deprecated/pixel/characters/wolf_cub.png' },
 ];
 
-const BACK_IMAGE = '/assets/Blueevee.png';
+const BACK_IMAGE = '/assets/deprecated/pixel/portraits/Blueevee.png';
 
 export const MidairFlipDemo = memo(function MidairFlipDemo() {
   const [flippedStates, setFlippedIds] = useState<Record<number, boolean>>({});

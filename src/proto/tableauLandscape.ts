@@ -5,7 +5,7 @@ import { createActorEnvironmentLight } from './actorEnvironmentLight';
 import { globalLightsEnabled } from './globalLighting';
 
 type LandscapeProp = { x: number; z: number; height: number; tint?: number };
-export type TableauLandscapeOptions = { groundCover?: { pixel: boolean }; props?: readonly LandscapeProp[]; berryFruit?: boolean; fruitTexture?: THREE.Texture; manaFruit?: { x: number; y: number; size: number } };
+export type TableauLandscapeOptions = { groundCover?: { pixel: boolean; palette?: 'woodland' | 'dirt' }; groundColor?: number; props?: readonly LandscapeProp[]; berryFruit?: boolean; fruitTexture?: THREE.Texture; manaFruit?: { x: number; y: number; size: number } };
 
 /** Frame a low biome with nearer side clusters and a receding planted edge.
  * These remain world-space props, using the same cutouts as the map. */
@@ -61,7 +61,7 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
   starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
   const stars = new THREE.Points(starGeometry, material(new THREE.PointsMaterial({color: 0xcbdfff, size: 1.5, sizeAttenuation: false, fog: false, transparent: true, opacity: .82, depthWrite: false})));
   stars.visible = woods; root.add(stars);
-  const ground = new THREE.Mesh(geometry(new THREE.PlaneGeometry(70, 70)), material(new THREE.MeshLambertMaterial({color: 0x283a36})));
+  const ground = new THREE.Mesh(geometry(new THREE.PlaneGeometry(70, 70)), material(new THREE.MeshLambertMaterial({color: options.groundColor ?? 0x283a36})));
   ground.rotation.x = -Math.PI / 2; root.add(ground);
   const hemisphere = new THREE.HemisphereLight(0xb8d9e9, 0x293724, woods ? 1.2 : 2); root.add(hemisphere);
   const moon = new THREE.DirectionalLight(0x98bde0, woods ? 1.4 : 2); moon.position.set(-5, 10, 3); root.add(moon);
@@ -74,7 +74,7 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
     terrain.computeVertexNormals(); root.add(new THREE.Mesh(terrain, material(new THREE.MeshLambertMaterial({color: 0x182b2c}))));
   }
   const square = geometry(new THREE.PlaneGeometry(1, 1));
-  const groundCover = options.groundCover ? createTableauGroundCover(root, options.groundCover.pixel) : undefined;
+  const groundCover = options.groundCover ? createTableauGroundCover(root, options.groundCover.pixel, options.groundCover.palette) : undefined;
   // Ground flecks give each sweep a stable depth reference.
   for (let i = 0; i < (groundCover ? 0 : 180); i++) {
     const fleck = new THREE.Mesh(square, flat(i % 3 ? 0x344b40 : 0x53604c));
@@ -108,23 +108,34 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
         berry.position.set(x-.5,.5-y,.008); berry.scale.set(size,size,1); mesh.add(berry); fruitMeshes.push(berry);
       }
     }
-    if (options.manaFruit) {
-      const fruit = options.manaFruit;
+    if (options.manaFruit || options.berryFruit) {
+      const points = options.manaFruit ? [options.manaFruit] : [[.13,.4],[.42,.34],[.57,.34],[.86,.4],[.33,.65],[.73,.65]].map(([x,y]) => ({x,y,size:.095}));
+      for (const fruit of points) {
       const halo = new THREE.Mesh(square, material(new THREE.ShaderMaterial({
+        uniforms: { berryTime: { value: 0 } },
         transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
         vertexShader: 'varying vec2 glowUv; void main(){glowUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-        fragmentShader: `varying vec2 glowUv;
+        // Transparent merging lobes inspired by Tiffany Rayside's Blob State Matter:
+        // https://codepen.io/tmrDevelops/pen/GoWmaM
+        fragmentShader: `varying vec2 glowUv; uniform float berryTime;
           void main(){
-            float r=length(glowUv-.5)*2.;
-            float a=exp(-r*r*5.)*(1.-smoothstep(.65,1.,r));
-            gl_FragColor=vec4(mix(vec3(.38,.75,1.),vec3(.9,.98,1.),exp(-r*r*28.)),a*.75);
+            vec2 p=(glowUv-.5)*2.; float field=0.;
+            for(int i=0;i<5;i++){
+              float phase=float(i)*1.2566;
+              vec2 center=vec2(sin(berryTime*.7+phase),cos(berryTime*.53+phase))*.24;
+              vec2 d=p-center;
+              field+=exp(-dot(d,d)*18.)*.38;
+            }
+            float a=(field*.5+exp(-dot(p,p)*4.)*.22)*(1.-smoothstep(.65,1.,length(p)));
+            gl_FragColor=vec4(mix(vec3(.18,.44,1.),vec3(.64,.96,1.),smoothstep(.15,.8,field)),a);
             #include <colorspace_fragment>
           }`,
       })));
-      // Let emission overlay the opaque painted fruit center.
-      halo.position.set(fruit.x - .5, .5 - fruit.y, .012);
+      // Behind the painted berries, above foliage; preserve purple fruit detail.
+      halo.position.set(fruit.x - .5, .5 - fruit.y, .004);
       halo.scale.set(fruit.size, fruit.size, 1);
       mesh.add(halo); fruitHalos.push(halo);
+      }
     }
     return { anchor, mesh };
   };
@@ -147,6 +158,7 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
     }) });
     if (impulses.length > 8) impulses.shift();
   }, sampleActorLight: createActorEnvironmentLight(hemisphere, moon, glow), update(camera: THREE.Camera, seconds = 0, reduced = false, actors: readonly THREE.Object3D[] = []) {
+    fruitHalos.forEach(halo => { ((halo as THREE.Mesh).material as THREE.ShaderMaterial).uniforms.berryTime.value = reduced ? 0 : seconds; });
     hemisphere.intensity = globalLightsEnabled() ? (woods ? 1.2 : 2) : 2;
     moon.intensity = globalLightsEnabled() ? (woods ? 1.4 : 2) : 0;
     actorPeek.update(camera, actors);

@@ -102,7 +102,7 @@ export function TileEditor({ workspace = false, renderTableaus, tools, document,
       <button disabled={saving} onClick={async () => {
         try {
           const next = prepareDocument(); setSaving(true); setError(''); setStatus('Saving authored tile data…');
-          const response = await fetch('/__proto-tiles/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) });
+          const response = await fetch('/__proto-deprecated/pixel/tiles/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) });
           if (!response.ok) throw new Error(await response.text());
           const result = await response.json(); if (result.saved !== true) throw new Error('The development save endpoint is unavailable');
           setStatus('Saved to src/data/protoTiles.json. The development server reloads the game with the authored layout.');

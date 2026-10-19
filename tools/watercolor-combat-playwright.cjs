@@ -32,8 +32,8 @@ const url = process.env.PROTO_URL || 'http://127.0.0.1:5192/proto.html';
     await page.locator('[data-view="overview"]').click();
     await page.waitForTimeout(900);
     await page.screenshot({ path: 'artifacts/actor-watercolor-v1/combat-overhead.png' });
-    assert.equal([...assets].filter(src=>src.includes('/assets/actors/battle/')).length, 10, 'all body atlases and the independent flame atlas load');
-    assert.ok([...assets].some(src=>src.endsWith('/biomes/watercolor-v1/woods-cluster-sprite-v1.png')), 'approved painted woods load');
+    assert.equal([...assets].filter(src=>src.includes('/assets/deprecated/pixel/characters/battle/')).length, 10, 'all body atlases and the independent flame atlas load');
+    assert.ok([...assets].some(src=>src.endsWith('/runtime/environment/watercolor/v1/woods-cluster-sprite-v1.png')), 'approved painted woods load');
     assert.deepEqual(errors, []);
     console.log('PASS ten painted body/effect atlases, combat gait, camera views, no browser errors');
   } finally { await browser.close(); }

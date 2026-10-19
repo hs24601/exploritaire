@@ -1,0 +1,17 @@
+.combat-sandbox { height: 100dvh; display: flex; flex-direction: column; gap: 8px; padding: 8px; background: #101c20; color: #e1efea; overflow: hidden; }
+.combat-sandbox__header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font: 16px/1.2 monospace; }
+.combat-sandbox__header h1 { font: inherit; margin: 0; margin-right: auto; }
+.combat-sandbox__header button, .combat-sandbox__header a { padding: 5px 8px; border: 1px solid #7b9583; border-radius: 4px; background: #142720; }
+.combat-sandbox__pane { position: relative; isolation: isolate; flex: 1; min-height: 0; display: grid; grid-template: minmax(0,1fr) / minmax(0,1fr); }
+.combat-sandbox__pane > .proto-tableau-field { grid-area: 1 / 1; min-width: 0; min-height: 0; overflow: hidden; }
+.combat-sandbox__pane .battle-field[data-camera-background='true'] { background: linear-gradient(#101f1c,#070e11); }
+.combat-sandbox .battle-controls button, .combat-sandbox .battle-field__status button, .combat-sandbox select { min-height: 36px; }
+/* Unfolded phone widths can fit both live actors and their four-slot trays. */
+@media (min-width: 650px) and (max-width: 900px) {
+  .combat-sandbox .battle-field__team[data-team='party'] { grid-template-columns: repeat(var(--slots,2),minmax(0,300px)); gap: 10px; }
+}
+@media (max-width: 600px) {
+  .combat-sandbox { padding: 4px; gap: 4px; }
+  .combat-sandbox__header { gap: 8px; font-size: 13px; }
+  .combat-sandbox .battle-field { padding: 6px; gap: 6px; }
+}

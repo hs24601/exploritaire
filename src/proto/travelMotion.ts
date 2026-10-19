@@ -44,15 +44,15 @@ export function followingCamera(position: { x: number; y: number }, heading: num
 
 
 /** Travel in pace-weighted world units. Only the earned buffer supplies distance.
- * Fixed small steps bound acceleration across slow frames; the easing tail
- * brakes long before the endpoint, then settles the final sub-pixel distance. */
+ * Fixed small steps bound acceleration across slow frames. Reserve braking
+ * distance before the endpoint so staged handoffs finish without a long easing tail. */
 export function advanceTravelBuffer(position:number, speed:number, earned:number, elapsedMs:number, paused=false){
   if(paused)return {position,speed:0};
   let remainingTime=Math.min(.25,Math.max(0,elapsedMs/1000));
   while(remainingTime>0){
     const dt=Math.min(1/120,remainingTime), remaining=Math.max(0,earned-position);
     if(remaining<.004&&speed<.03){position=earned;speed=0;break;}
-    const acceleration=remaining*1.44-speed*2.4;
+    const acceleration=remaining<=speed*speed/6+speed*dt ? -4 : 3;
     const next=Math.max(0,Math.min(12,speed+Math.max(-4,Math.min(3,acceleration))*dt));
     const step=Math.min(remaining,(speed+next)*.5*dt);
     position+=step;speed=step>=remaining?0:next;remainingTime-=dt;

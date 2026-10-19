@@ -1,6 +1,6 @@
 # An ordinary day painted illustration
 
-Generated 2026-10-13 with built-in ImageGen. Runtime asset: `public/assets/art/quests/hero-snuffling-berries-paint-bobtail-v2.png` (1536 × 1024). Original Pixel scene remains available through live art settings. Card text, frame, actions and progression remain separate.
+Generated 2026-10-13 with built-in ImageGen. Runtime asset: `public/assets/runtime/ui/quests/hero-snuffling-berries-paint-bobtail-v2.png` (1536 × 1024). Original Pixel scene remains available through live art settings. Card text, frame, actions and progression remain separate.
 
 References: the original `hero-snuffling-berries-v1.png` scene and the user's supplied smaller-bobtail redesign. This card depicts Hero's tiny natural furry bobtail without the optional flame effect; other actor sprite sets are outside this card redraw.
 

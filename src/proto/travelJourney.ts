@@ -1,6 +1,7 @@
+import { dealDenseBerries, isDenseBerryStage, bestDenseBerryMove, travelCardPlayable, type TravelSequenceRule } from './denseBerryTableau';
 import { resolveLayout, dealLayout, type TableauLayout } from './tableauLayouts';
 import { assignedMovesFor } from './actorLoadouts';
-import { passageStepAllowed, type TerrainPassage } from './terrainPassages';
+import { terrainAtCell, passageStepAllowed, type TerrainPassage } from './terrainPassages';
 import { partyMembers } from './partySystem';
 import { FOUNDATION_MOCKUPS, type Card, type ProtoState, type BiomeTileState } from './protoState';
 import { TABLE_GRID } from './gridCoordinates';
@@ -12,16 +13,17 @@ import { EVENT_CARDS_ENABLED, applySimpleEvent, eventChangesRank, eventPlayCost,
 /** Use the same finite backfill model as travel's visible window. */
 export function bestTravelMove(journey: TravelJourney): number | null {
   if(currentTravelSegment(journey)?.segment.passage && !journey.passageStage)return null;
-  if(journey.obstruction || journey.paused || journey.blocked || travelTableauHeld(journey))return null;
+  if(journey.waitingForTraversal!==undefined || journey.obstruction || journey.paused || journey.blocked || travelTableauHeld(journey))return null;
+  if(journey.columns.flat().some(card=>card.sequenceRule))return bestDenseBerryMove(journey);
   const safeColumns=journey.columns.map(column=>column[column.length-1]?.event?[]:column);
   return assessSolverMove({ columns: safeColumns, stock: journey.reserve.filter(card=>!card.event), foundations: Object.values(journey.memberRanks ?? { [journey.actorId]: journey.rank }) })?.move.column ?? null;
 }
 
 export type TravelTerrain = Pick<BiomeTileState, 'id' | 'title' | 'position' | 'gridSize' | 'tileType' | 'terrain' | 'road' | 'flags' | 'traversalProgress' | 'berryPatchVariant' | 'berryHarvested'> & { passage?: TerrainPassage; passageOpen?: boolean; unlocked?: boolean } & { traversalDifficulty?: number; travelCards?: number };
-export type TravelSegment = { layout?: TableauLayout; sparseBerry?: boolean; passage?: TerrainPassage; passageOpen?: boolean; tileId?: string; title: string; kind: string; unknown: boolean; cards: number; stamina: number; end: number; start: number; easy?: boolean; cellKey?: string };
-export type TravelPlan = { actorId: string; path: TimedPoint[]; segments: TravelSegment[]; estimate: number; cards: number; arrival: { biomeId?: string; directBiome?: boolean; foundationIndex?: number } };
-export type TravelCard = Card & { segment: number; kind: string; pose?: { x: number; y: number; rotation: number; layer: number } };
-export type TravelJourney = TravelPlan & { obstruction?: { segment: number; title: string; tags: string[]; cost: number }; passageStage?: { segment: number; columns: TravelCard[][]; reserve: TravelCard[] }; eventBackfill?: { card: TravelCard; column: number; index: number }; pendingSearch?: number; search?: { remaining: number; total: number; columns: TravelCard[][]; reserve: TravelCard[]; segment: number }; memberRanks?: Record<string, number>; columns: TravelCard[][]; reserve: TravelCard[]; rank: number; completed: number; streak: number; tileStreak: number; progress: number; spent: number; berries: number; bonus: string; paused: boolean; bonusSegments: number[]; blocked?: { progress: number; position: {x:number;y:number}; message:string }; checkedProgress?: number; priorCompleted?: number; completedCardIds?: string[] };
+export type TravelSegment = { denseBerry?: boolean; traversalStage?: 'exit' | 'enter'; layout?: TableauLayout; sparseBerry?: boolean; passage?: TerrainPassage; passageOpen?: boolean; tileId?: string; title: string; kind: string; unknown: boolean; cards: number; stamina: number; end: number; start: number; easy?: boolean; cellKey?: string };
+export type TravelPlan = { ordered?: boolean; actorId: string; path: TimedPoint[]; segments: TravelSegment[]; estimate: number; cards: number; arrival: { biomeId?: string; directBiome?: boolean; foundationIndex?: number } };
+export type TravelCard = Card & { sequenceRule?: TravelSequenceRule; segment: number; kind: string; pose?: { x: number; y: number; rotation: number; layer: number } };
+export type TravelJourney = TravelPlan & { orderedStage?: number; walkedProgress?: number; waitingForTraversal?: number; obstruction?: { segment: number; title: string; tags: string[]; cost: number }; passageStage?: { segment: number; columns: TravelCard[][]; reserve: TravelCard[] }; eventBackfill?: { card: TravelCard; column: number; index: number }; pendingSearch?: number; search?: { remaining: number; total: number; columns: TravelCard[][]; reserve: TravelCard[]; segment: number }; memberRanks?: Record<string, number>; columns: TravelCard[][]; reserve: TravelCard[]; rank: number; completed: number; streak: number; tileStreak: number; progress: number; spent: number; berries: number; bonus: string; paused: boolean; bonusSegments: number[]; blocked?: { progress: number; position: {x:number;y:number}; message:string }; checkedProgress?: number; priorCompleted?: number; completedCardIds?: string[] };
 export const TRAVEL_STAMINA_MAX = 24;
 export const EASY_CROSSING_CARDS = 3;
 export const SEARCH_STAMINA = 1.5;
@@ -30,8 +32,31 @@ export const TRAVEL_MASTERY_CROSSINGS = 5;
 
 /** Isolate authored crossings from the journey-wide ordinary card window. */
 export function preparePassageStage(state: ProtoState): ProtoState {
-  const j=state.journey, active=j&&currentTravelSegment(j);
-  if(!j||!active||j.passageStage||j.blocked)return state;
+  let j=state.journey; const active=j&&currentTravelSegment(j);
+  if(!j||!active||j.passageStage||j.blocked||j.waitingForTraversal!==undefined)return state;
+  if(isDenseBerryStage(active.segment)){
+    if(j.ordered && j.orderedStage===active.index)return state;
+    return {...state,journey:denseBerryJourney(j,active.index,!state.dayScenario)};
+  }
+  if(j.ordered){
+    if(j.orderedStage===active.index)return state;
+    let stage=active.segment;
+    const tile=state.biomeTiles.find(t=>t.id===stage.tileId);
+    if(stage.unknown && tile && !tile.flags?.includes('unexplored')){
+      const profile=traversalProfile(tile),a=pointAlongTimedPath(j.path,stage.start),b=pointAlongTimedPath(j.path,stage.end);
+      const updated={...stage,unknown:false,kind:profile.kind,title:stage.traversalStage==='exit'?stage.title:tile.title,cards:stage.traversalStage==='exit'?6:profile.cards,stamina:profile.difficulty*Math.hypot(b.x-a.x,b.y-a.y)/TABLE_GRID.cellSize};
+      j={...j,cards:j.cards+updated.cards-stage.cards,estimate:j.estimate+updated.stamina-stage.stamina,segments:j.segments.map((s,i)=>i===active.index?updated:s)};stage=updated;
+    }
+    const offsets=stage.traversalStage==='exit'?[1,0,1,0,1,0]:Array.from({length:stage.cards},(_,i)=>i+1);
+    const columns:TravelCard[][]=Array.from({length:stage.traversalStage==='exit'?3:7},()=>[]);
+    const stageRank=j.rank;
+    offsets.forEach((offset,i)=>columns[i%columns.length].unshift({id:`stage-${active.index}-${i}`,rank:(stageRank-1+offset)%13+1,segment:active.index,kind:stage.kind}));
+    return {...state,journey:{...j,orderedStage:active.index,columns,reserve:[]}};
+  }
+  if(active.segment.kind==='den-exit'){
+    const columns:TravelCard[][]=Array.from({length:6},(_,i)=>[{id:`den-exit-${j.actorId}-${i}`,rank:(j.rank-1+[1,0,1,0,1,0][i])%13+1,segment:active.index,kind:'hero-den'}]);
+    return {...state,journey:{...j,passageStage:{segment:active.index,columns:j.columns,reserve:j.reserve},columns,reserve:[]}};
+  }
   if(active.segment.layout){
     const columns:TravelCard[][]=dealLayout(active.segment.layout, active.index+17).map(group=>group.map(c=>({id:'layout-'+active.index+'-'+c.id,rank:c.rank,segment:active.index,kind:active.segment.kind,pose:{x:c.x,y:c.y,rotation:c.rotation,layer:c.layer}})));
     columns.flat().forEach((card,i)=>{
@@ -98,16 +123,51 @@ export function planTravel(actorId: string, path: TimedPoint[], tiles: readonly 
       const start = total ? elapsed / total : 0;
       elapsed += length * b.pace / steps;
       const unknown = Boolean(tile?.flags?.includes('unexplored'));
-      segments.push({ ...(layout?{layout}:{}), ...(!unknown && tile?.berryPatchVariant === 'sparse' ? { sparseBerry: !tile.berryHarvested } : {}), ...(!unknown && tile?.passage ? { passage: tile.passage, passageOpen: tile.passageOpen } : {}), tileId: tile?.id, title: unknown ? 'Unknown terrain' : tile?.title ?? 'Open table', kind: profile.kind, unknown, cards: profile.cards, stamina: profile.difficulty * length / steps / TABLE_GRID.cellSize, easy:!unknown&&profile.difficulty<=1,cellKey:TABLE_GRID.reference(cell), start, end: total ? elapsed / total : 1 });
+      segments.push({ ...(!unknown && profile.kind==='berry-patch' && tile?.berryPatchVariant!=='sparse' && !layout && !tile?.passage && profile.cards===12 ? {denseBerry:true}:{}), ...(layout?{layout}:{}), ...(!unknown && tile?.berryPatchVariant === 'sparse' ? { sparseBerry: !tile.berryHarvested } : {}), ...(!unknown && tile?.passage ? { passage: tile.passage, passageOpen: tile.passageOpen } : {}), tileId: tile?.id, title: unknown ? 'Unknown terrain' : tile?.title ?? 'Open table', kind: profile.kind, unknown, cards: profile.cards, stamina: profile.difficulty * length / steps / TABLE_GRID.cellSize, easy:!unknown&&profile.difficulty<=1,cellKey:TABLE_GRID.reference(cell), start, end: total ? elapsed / total : 1 });
     }
+  }
+  // Ordered traversal trial for departures from a known sparse patch.
+  const sourceCell=path[0]&&TABLE_GRID.atWorld(path[0]);
+  const source=sourceCell&&terrainAtCell(tiles,sourceCell.column,sourceCell.row);
+  if(source?.berryPatchVariant==='sparse' && !source.flags?.includes('unexplored') && segments.length && !segments.some(s=>s.passage)){
+    const ordered:TravelSegment[]=[];
+    segments.forEach((segment,index)=>{
+      const from=pointAlongTimedPath(path,segment.start),cell=TABLE_GRID.atWorld(from),tile=terrainAtCell(tiles,cell.column,cell.row);
+      const profile=traversalProfile(tile,affinity),mid=(segment.start+segment.end)/2;
+      const toward=pointAlongTimedPath(path,segment.end),dx=toward.x-from.x,dy=toward.y-from.y;
+      const direction=Math.abs(dx)>Math.abs(dy)?dx<0?'West':'East':dy<0?'North':'South';
+      ordered.push({tileId:tile?.id,title:`Leave ${tile?.title??'tile'} · ${direction}`,kind:profile.kind,unknown:Boolean(tile?.flags?.includes('unexplored')),sparseBerry:tile?.berryPatchVariant==='sparse'?false:undefined,traversalStage:'exit',cards:6,stamina:segment.stamina/2,start:segment.start,end:mid,cellKey:(index?segments[index-1].cellKey:TABLE_GRID.reference(sourceCell!))+':exit'});
+      ordered.push({...segment,layout:undefined,sparseBerry:undefined,traversalStage:'enter',start:mid,stamina:segment.stamina/2});
+    });
+    return {actorId,path,arrival,ordered:true,segments:ordered,estimate:ordered.reduce((n,s)=>n+s.stamina,0),cards:ordered.reduce((n,s)=>n+s.cards,0)};
+  }
+  // Trial: earn the origin's north-facing half-tile before entering its neighbour.
+  const origin=tiles.find(t=>t.tileType==='hero-den' && path[0] && Math.hypot(t.position.x-path[0].x,t.position.y-path[0].y)<1);
+  if(origin && segments.length && path[1]?.x===path[0].x && path[1].y<path[0].y){
+    const first=segments[0],mouth=first.end/2;
+    first.start=mouth;
+    segments.unshift({tileId:origin.id,title:'Leave the Den · North',kind:'den-exit',unknown:false,cards:6,stamina:0,start:0,end:mouth,cellKey:TABLE_GRID.reference(TABLE_GRID.atWorld(origin.position))+':north'});
   }
   return { actorId, path, arrival, segments, estimate: segments.reduce((n, s) => n + s.stamina, 0), cards: segments.reduce((n, s) => n + s.cards, 0) };
 }
 
+/** Idle foundations and the last earned travel rank share one journey handoff. */
+export function travelStartingRank(state:ProtoState,actorId:string,fallback=2){
+  const actor=state.worldActors.find(a=>a.id===actorId);
+  return actor?.location==='foundation' ? state.foundations[actor.foundationIndex??0]?.card.rank??state.travelRanks?.[actorId]??fallback : state.travelRanks?.[actorId]??fallback;
+}
+
 export function beginJourney(plan: TravelPlan, startingRank = 2, foodPickups = true): TravelJourney {
+  if(plan.ordered){
+    const first=plan.segments[0],columns:TravelCard[][]=Array.from({length:3},()=>[]);
+    [1,0,1,0,1,0].forEach((offset,i)=>columns[i%3].unshift({id:`stage-0-${i}`,rank:(startingRank-1+offset)%13+1,segment:0,kind:first.kind}));
+    return {...plan,columns,reserve:[],rank:startingRank,completed:0,streak:0,tileStreak:0,progress:0,orderedStage:0,walkedProgress:0,spent:0,berries:0,bonus:'',paused:false,bonusSegments:[]};
+  }
   const cards: TravelCard[] = [];
   let rank = startingRank;
   plan.segments.forEach((segment, index) => {
+    if(segment.kind==='den-exit')return;
+    if(isDenseBerryStage(segment)){rank=(rank+segment.cards-1)%13+1;return;}
     if(segment.passage||segment.layout){rank=(rank+segment.cards-1)%13+1;return;}
     for (let i = 0; i < segment.cards; i++) {
       rank = rank % 13 + 1;
@@ -124,13 +184,15 @@ export function beginJourney(plan: TravelPlan, startingRank = 2, foodPickups = t
     }
   });
   // Preserve the legacy sparse approach when no reusable layout is assigned.
-  const sparseApproach = plan.segments.filter(segment => segment.cards > 0).every(segment => segment.sparseBerry !== undefined);
+  const sparseApproach = plan.segments.filter(segment => segment.cards > 0 && segment.kind!=='den-exit').every(segment => segment.sparseBerry !== undefined);
   const columnCount = sparseApproach ? 1 : 7;
   const columns: TravelCard[][] = Array.from({ length: columnCount }, () => []);
   cards.slice(0, 28).forEach((card, i) => columns[i % columnCount].unshift(card));
-  if (sparseApproach && cards.length === 6 && startingRank === 2) {
-    // Explicit stack coverage; incidental rotated corner overlaps do not lock cards.
-    const ranks = [3, 2, 3, 4, 5, 6];
+  if (sparseApproach && cards.length === 6) {
+    // A consecutive ladder makes every legal choice safe, including A/K wrap.
+    // The repeated 3 → 2 branch formerly stranded the remaining 5 and 6.
+    // Explicit coverage and scenery poses remain independent of rank ordering.
+    const ranks = cards.map((_, index) => (startingRank + index) % 13 + 1);
     const poses = [[1.2, 2.05, 0, 6], [2.2, .15, 7, 2], [1.3, 1.12, 0, 3], [.08, 1.55, -8, 4], [.35, .05, -6, 1], [2.4, 1.6, 8, 5]];
     cards.forEach((card, index) => {
       card.rank = ranks[index];
@@ -140,7 +202,35 @@ export function beginJourney(plan: TravelPlan, startingRank = 2, foodPickups = t
     columns.splice(0, columns.length, [cards[4], cards[3]], [cards[1]], [cards[2], cards[0]], [cards[5]]);
   }
   const firstWork = plan.segments.find(s => s.cards > 0);
-  return { ...plan, columns, reserve: cards.slice(28), rank: startingRank, completed: 0, streak: 0, tileStreak: 0, progress: firstWork?.start ?? 1, spent: 0, berries: 0, bonus: '', paused: false, bonusSegments: [] };
+  const exit=plan.segments[0]?.kind==='den-exit';
+  const exitColumns:TravelCard[][]=Array.from({length:6},(_,i)=>[{id:`den-exit-${plan.actorId}-${i}`,rank:(startingRank-1+[1,0,1,0,1,0][i])%13+1,segment:0,kind:'hero-den'}]);
+  const journey:TravelJourney = { ...plan, ...(exit?{passageStage:{segment:0,columns,reserve:cards.slice(28)}}:{}), columns:exit?exitColumns:columns, reserve:exit?[]:cards.slice(28), rank: startingRank, completed: 0, streak: 0, tileStreak: 0, progress: firstWork?.start ?? 1, spent: 0, berries: 0, bonus: '', paused: false, bonusSegments: [], walkedProgress:0 };
+  return firstWork && isDenseBerryStage(firstWork)?denseBerryJourney(journey,plan.segments.indexOf(firstWork),foodPickups):journey;
+}
+
+function denseBerryJourney(journey:TravelJourney,index:number,foodPickups=true):TravelJourney {
+  const columns=dealDenseBerries(journey.rank,index);
+  if(foodPickups && !journey.ordered)columns.flat().forEach(card=>{
+    const order=card.id.split('-').pop();
+    const id=`travel-${journey.actorId}-${journey.segments[index].tileId??index}-${index}-${order}`;
+    let hash=2166136261;for(const c of id)hash=Math.imul(hash^c.charCodeAt(0),16777619);
+    hash=Math.imul(hash^(hash>>>16),0x85ebca6b);hash=Math.imul(hash^(hash>>>13),0xc2b2ae35);hash^=hash>>>16;
+    if((hash>>>0)/4294967296<.2){card.resource='mana';card.foodSource='berries';}
+  });
+  return {...journey,columns,reserve:[],...(journey.ordered?{orderedStage:index}:{passageStage:{segment:index,columns:journey.columns,reserve:journey.reserve}})};
+}
+
+/** The occupied tile ends at its outgoing stage, or at the final destination. */
+export function travelTileThreshold(journey:TravelJourney){
+  const index=journey.waitingForTraversal??currentTravelSegment(journey)?.index;
+  if(index===undefined)return 1;
+  const stage=journey.segments[index];
+  let end=stage.end;
+  if(stage.traversalStage==='enter')for(const next of journey.segments.slice(index+1)){
+    if(next.tileId!==stage.tileId)break;
+    end=next.end;if(next.traversalStage==='exit')break;
+  }
+  return end;
 }
 
 export const travelPlayable = (rank: number, target: number) => rank === target % 13 + 1 || target === rank % 13 + 1;
@@ -188,12 +278,12 @@ export function playTravelCard(state: ProtoState, columnIndex: number, receiving
   if(eventColumn?.[eventColumn.length-1]?.event)return playTravelEvent(state,columnIndex,eventColumn.length-1,receivingActorId);
   const ranks = state.journey?.memberRanks ?? (state.journey ? { [state.journey.actorId]: state.journey.rank } : {});
   const top = state.journey?.columns[columnIndex]?.[state.journey.columns[columnIndex].length - 1];
-  const receiver = receivingActorId ?? Object.keys(ranks).find(id => top && travelPlayable(top.rank, ranks[id]));
+  const receiver = receivingActorId ?? Object.keys(ranks).find(id => top && travelCardPlayable(top, ranks[id]));
   if (!receiver || ranks[receiver] === undefined) return state;
 
   const initial=state.journey, column=initial?.columns[columnIndex], candidate=column?.[column.length-1];
   const activeBefore=initial && currentTravelSegment(initial);
-  if(!initial || initial.obstruction || initial.blocked || initial.paused || travelTableauHeld(initial) || !candidate || !travelPlayable(candidate.rank,ranks[receiver]) || !activeBefore || (state.travelStamina??TRAVEL_STAMINA_MAX)<activeBefore.segment.stamina/activeBefore.segment.cards*(1-Math.min(.2,initial.streak*.02)))return state;
+  if(!initial || initial.waitingForTraversal!==undefined || initial.obstruction || initial.blocked || initial.paused || travelTableauHeld(initial) || !candidate || !travelCardPlayable(candidate,ranks[receiver]) || !activeBefore || (state.travelStamina??TRAVEL_STAMINA_MAX)<activeBefore.segment.stamina/activeBefore.segment.cards*(1-Math.min(.2,initial.streak*.02)))return state;
   if (state.journey && !state.journey.paused && !state.journey.blocked) {
     const start=currentTravelSegment(state.journey)?.segment.start ?? 0;
     for (const segment of state.journey.segments) {
@@ -205,7 +295,7 @@ export function playTravelCard(state: ProtoState, columnIndex: number, receiving
   state=prepareTravelTableau(state);
   const journey = state.journey;
   const card = journey?.columns[columnIndex]?.[journey.columns[columnIndex].length - 1];
-  if (!journey || journey.obstruction || journey.blocked || journey.paused || !card || !travelPlayable(card.rank, journey.memberRanks?.[receiver] ?? journey.rank)) return state;
+  if (!journey || journey.obstruction || journey.blocked || journey.paused || !card || !travelCardPlayable(card, journey.memberRanks?.[receiver] ?? journey.rank)) return state;
   const active = currentTravelSegment(journey);
   if (!active) return state;
   const tileStreak = journey.tileStreak + 1, streak = journey.streak + 1;
@@ -216,9 +306,9 @@ export function playTravelCard(state: ProtoState, columnIndex: number, receiving
   const priorVisit=state.travelVisits?.[visitKey];
   const depleted=priorVisit?.day===state.day&&priorVisit.crossed;
   const sparseTile = state.biomeTiles.find(tile => tile.id === active.segment.tileId && tile.berryPatchVariant === 'sparse');
-  const sparseBerry = Boolean(sparseTile && !sparseTile.berryHarvested && active.done + 1 === active.segment.cards);
-  const bonusBerries = !sparseTile && !state.dayScenario && !depleted && active.segment.kind === 'berry-patch' && tileStreak === 7 && !journey.bonusSegments.includes(active.index) ? 3 : 0;
-  const berries = depleted ? 0 : sparseTile ? Number(sparseBerry) : state.dayScenario ? 0 : (card.foodSource ? 1 : 0) + bonusBerries;
+  const sparseBerry = !journey.ordered && Boolean(sparseTile && !sparseTile.berryHarvested && active.done + 1 === active.segment.cards);
+  const bonusBerries = !journey.ordered && !sparseTile && !state.dayScenario && !depleted && active.segment.kind === 'berry-patch' && tileStreak === 7 && !journey.bonusSegments.includes(active.index) ? 3 : 0;
+  const berries = journey.ordered || depleted ? 0 : sparseTile ? Number(sparseBerry) : state.dayScenario ? 0 : (card.foodSource ? 1 : 0) + bonusBerries;
   const completed = journey.completed + 1;
   const tileDone = active.done + 1 === active.segment.cards;
   const nextWork = journey.segments.slice(active.index + 1).find(s => s.cards > 0);
@@ -226,12 +316,13 @@ export function playTravelCard(state: ProtoState, columnIndex: number, receiving
   const reserve = [...journey.reserve];
   const replacement = reserve.shift();
   const columns = journey.columns.map((c, i) => i === columnIndex ? [...(replacement ? [replacement] : []), ...c.slice(0, -1)] : c);
-  let next: ProtoState = { ...state, travelStamina: Math.max(0, stamina - cost), haul: { ...state.haul, mana: state.haul.mana + berries }, utilityAP: { ...state.utilityAP, [receiver]: (state.utilityAP?.[receiver] ?? 0) + (depleted?0:1) },
+  let next: ProtoState = { ...state, travelRanks:{...state.travelRanks,[receiver]:card.rank}, travelStamina: Math.max(0, stamina - cost), haul: { ...state.haul, mana: state.haul.mana + berries }, utilityAP: { ...state.utilityAP, [receiver]: (state.utilityAP?.[receiver] ?? 0) + (depleted?0:1) },
     biomeTiles: state.biomeTiles.map(tile => tile.id === active.segment.tileId ? { ...tile,
       ...(sparseBerry ? { berryHarvested: true } : {}),
       ...(active.segment.unknown || tile.traversalProgress !== undefined ? { traversalProgress: tile.traversalProgress ?? 0, flags: tile.flags?.filter(f => f !== 'unexplored') } : {}) } : tile),
     journey: { ...journey, completedCardIds: [...(journey.completedCardIds ?? []),card.id], bonusSegments: bonusBerries ? [...journey.bonusSegments, active.index] : journey.bonusSegments, eventBackfill:journey.eventBackfill && replacement && journey.eventBackfill.column===columnIndex ? {...journey.eventBackfill,index:journey.eventBackfill.index+1} : journey.eventBackfill, columns, reserve, rank: receiver === journey.actorId ? card.rank : journey.rank, memberRanks: { ...(journey.memberRanks ?? { [journey.actorId]: journey.rank }), [receiver]: card.rank }, completed, streak, tileStreak: tileDone ? 0 : tileStreak, progress, spent: journey.spent + cost, berries: journey.berries + berries, bonus: bonusBerries ? '7 card streak bonus: 3 manaberries' : tileDone ? 'Cairn reached' : journey.bonus } };
   if(tileDone){
+    if(journey.ordered)return {...next,journey:{...next.journey!,waitingForTraversal:active.index,columns:[],reserve:[],bonus:'Walking to the next stage'}};
     if(journey.passageStage){ const saved=journey.passageStage; next={...next,journey:{...next.journey!,passageStage:undefined,columns:saved.columns,reserve:saved.reserve}}; }
     next={...next,travelVisits:{...next.travelVisits,[visitKey]:{day:state.day,crossed:true,searchOffered:priorVisit?.day===state.day&&priorVisit.searchOffered}},
       terrainCrossings:depleted?next.terrainCrossings:{...next.terrainCrossings,[active.segment.kind]:(next.terrainCrossings?.[active.segment.kind]??0)+1}};
@@ -307,8 +398,8 @@ export function playTravelEvent(state: ProtoState, columnIndex: number, cardInde
 function playSearchCard(state: ProtoState, columnIndex: number, actorId?: string): ProtoState {
   const j=state.journey!,search=j.search!,column=j.columns[columnIndex],card=column?.[column.length-1];
   const ranks=j.memberRanks??{[j.actorId]:j.rank};
-  const receiver=actorId??Object.keys(ranks).find(id=>card&&travelPlayable(card.rank,ranks[id]));
-  if(j.paused||j.blocked||!card||!receiver||ranks[receiver]===undefined||!travelPlayable(card.rank,ranks[receiver]))return state;
+  const receiver=actorId??Object.keys(ranks).find(id=>card&&travelCardPlayable(card,ranks[id]));
+  if(j.paused||j.blocked||!card||!receiver||ranks[receiver]===undefined||!travelCardPlayable(card,ranks[receiver]))return state;
   const done=search.remaining===1;
   const resource=card.resource==='herbs'?'mana':card.resource;
   const next={...state,utilityAP:{...state.utilityAP,[receiver]:(state.utilityAP?.[receiver]??0)+1},
@@ -347,8 +438,9 @@ export function redrawTravel(state: ProtoState, receivingActorId?: string): Prot
   if (!j || j.obstruction || j.blocked || j.paused || travelTableauHeld(j) || (state.actorInspiration[actorIndex] ?? 0) < 1) return state;
   const next = j.columns.map(c => c[c.length - 1]).find(card=>card&&!card.event);
   if (!next) return state;
+  const recoveryRank=next.sequenceRule==='match'?next.rank:((next.rank-1-(next.sequenceRule==='skip'?2:1)+13)%13)+1;
   // A reliable recovery value guarantees a legal continuation at the INSP cost.
-  return { ...state, actorInspiration: state.actorInspiration.map((n, i) => i === actorIndex ? n - 1 : n), journey: { ...j, rank: receiver === j.actorId ? (next.rank === 1 ? 13 : next.rank - 1) : j.rank, memberRanks: { ...(j.memberRanks ?? { [j.actorId]: j.rank }), [receiver!]: next.rank === 1 ? 13 : next.rank - 1 }, streak: 0, tileStreak: 0, bonus: 'Trail reset · 1 INSP' } };
+  return { ...state, actorInspiration: state.actorInspiration.map((n, i) => i === actorIndex ? n - 1 : n), journey: { ...j, rank: receiver === j.actorId ? recoveryRank : j.rank, memberRanks: { ...(j.memberRanks ?? { [j.actorId]: j.rank }), [receiver!]: recoveryRank }, streak: 0, tileStreak: 0, bonus: 'Trail reset · 1 INSP' } };
 }
 
 /** Navigation is validated on earned safe cell centres, never on paint completion. */
@@ -373,7 +465,7 @@ export function checkTravelCairn(state: ProtoState, progress: number): ProtoStat
   const worldActors=state.worldActors.map(a=>partyMembers(state,j.actorId).some(member=>member.id===a.id)?{...a,position}:a);
   if(!obstacle){
     const learned=j.segments.some(s=>s.end>progress+1e-9&&s.unknown&&tiles.some(t=>t.id===s.tileId&&!t.flags?.includes('unexplored')));
-    if(learned){
+    if(learned && !j.ordered){
       const actor=state.worldActors.find(a=>a.id===j.actorId);
       const plan=planTravel(j.actorId,remainingPath(j.path,progress),tiles,j.arrival,actor?.traversalAffinity);
       const rebuilt=beginJourney(plan,j.rank);
@@ -392,8 +484,19 @@ export function checkTravelCairn(state: ProtoState, progress: number): ProtoStat
 /** Persistent paint follows actual walking, never banked card distance.
  * Route segments end at cell centres; the next half step exits the tile. */
 export function paintTravelProgress(state: ProtoState, progress: number): ProtoState {
-  const j = state.journey;
+  let j = state.journey;
   if (!j) return state;
+  if(j.paused)return state;
+  const liveWalked=Math.max(j.walkedProgress??0,Math.min(progress,j.progress));
+  if(liveWalked>(j.walkedProgress??0)){state={...state,journey:{...j,walkedProgress:liveWalked}};j=state.journey!;}
+  if(j.ordered){
+    const walked=liveWalked;
+    if(j.waitingForTraversal!==undefined && walked>=j.segments[j.waitingForTraversal].end-1e-5){
+      const finished=j.segments[j.waitingForTraversal],key=finished.cellKey??finished.tileId??String(j.waitingForTraversal),prior=state.travelVisits?.[key];
+      state=prepareTravelTableau({...state,travelVisits:{...state.travelVisits,[key]:{day:state.day,crossed:true,searchOffered:prior?.day===state.day&&prior.searchOffered}},
+        terrainCrossings:prior?.day===state.day&&prior.crossed?state.terrainCrossings:{...state.terrainCrossings,[finished.kind]:(state.terrainCrossings?.[finished.kind]??0)+1},journey:{...j,waitingForTraversal:undefined}});j=state.journey!;
+    }
+  }
   const walked = Math.max(0, Math.min(progress, j.blocked?.progress ?? j.progress));
   let changed = false;
   const biomeTiles = state.biomeTiles.map(tile => {
@@ -401,9 +504,9 @@ export function paintTravelProgress(state: ProtoState, progress: number): ProtoS
     let paint = tile.traversalProgress;
     j.segments.forEach((segment, index) => {
       if (segment.tileId !== tile.id) return;
-      const entry = (segment.start + segment.end) / 2;
+      const entry = j.ordered ? segment.start : (segment.start + segment.end) / 2;
       const next = j.segments[index + 1];
-      const exit = next ? (next.start + next.end) / 2 : segment.end;
+      const exit = j.ordered ? next?.tileId===tile.id?next.end:segment.end : next ? (next.start + next.end) / 2 : segment.end;
       if (exit > entry) paint = Math.max(paint, Math.min(1, Math.max(0, (walked - entry) / (exit - entry))));
     });
     if (paint === tile.traversalProgress) return tile;

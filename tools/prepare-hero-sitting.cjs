@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
     const page = await browser.newPage();
     const measurements = {};
     for (const tier of ['low', 'high']) {
-      const file = `public/assets/actors/sources/hero-sitting-${tier}-source-v1.png`;
+      const file = `public/assets/deprecated/pixel/sources/characters/hero-sitting-${tier}-source-v1.png`;
       const result = await page.evaluate(async data => {
         const image = new Image(); image.src = data; await image.decode();
         const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
@@ -50,9 +50,9 @@ const { chromium } = require('playwright');
         top.getContext('2d').drawImage(packed,tx,ty,tw,th,0,0,tw,th);
         return { width: packed.width, height: packed.height, rects, sourceRects, atlas:packed.toDataURL('image/png').split(',')[1], top:top.toDataURL('image/png').split(',')[1], side: side.toDataURL('image/png').split(',')[1] };
       }, 'data:image/png;base64,' + fs.readFileSync(file).toString('base64'));
-      if (tier === 'low') fs.writeFileSync('public/assets/actors/hero-sitting.png', Buffer.from(result.side, 'base64'));
-      if (tier === 'high') fs.writeFileSync('public/assets/actors/hero-sitting-topdown.png', Buffer.from(result.top, 'base64'));
-      fs.writeFileSync(`public/assets/actors/battle/hero-sitting-${tier}-v1.png`, Buffer.from(result.atlas, 'base64'));
+      if (tier === 'low') fs.writeFileSync('public/assets/deprecated/pixel/characters/hero-sitting.png', Buffer.from(result.side, 'base64'));
+      if (tier === 'high') fs.writeFileSync('public/assets/deprecated/pixel/characters/hero-sitting-topdown.png', Buffer.from(result.top, 'base64'));
+      fs.writeFileSync(`public/assets/deprecated/pixel/characters/battle/hero-sitting-${tier}-v1.png`, Buffer.from(result.atlas, 'base64'));
       delete result.side; delete result.atlas; delete result.top; measurements[tier] = result;
     }
     const standingTop = await page.evaluate(async data => {
@@ -60,10 +60,10 @@ const { chromium } = require('playwright');
       const canvas=document.createElement('canvas');canvas.width=174;canvas.height=398;
       canvas.getContext('2d').drawImage(image,71,1022,174,398,0,0,174,398);
       return canvas.toDataURL('image/png').split(',')[1];
-    },'data:image/png;base64,'+fs.readFileSync('public/assets/actors/battle/hero-directions-high-v1.png').toString('base64'));
-    fs.writeFileSync('public/assets/actors/hero-standing-topdown.png',Buffer.from(standingTop,'base64'));
+    },'data:image/png;base64,'+fs.readFileSync('public/assets/deprecated/pixel/characters/battle/hero-directions-high-v1.png').toString('base64'));
+    fs.writeFileSync('public/assets/deprecated/pixel/characters/hero-standing-topdown.png',Buffer.from(standingTop,'base64'));
     const metadata = JSON.stringify(measurements, null, 2) + '\n';
-    fs.writeFileSync('public/assets/actors/battle/hero-sitting-layout.json', metadata);
+    fs.writeFileSync('public/assets/deprecated/pixel/characters/battle/hero-sitting-layout.json', metadata);
     // Runtime imports live in source; public holds the portable art sidecar.
     fs.writeFileSync('src/proto/art/heroSittingLayout.json', metadata);
     console.log(JSON.stringify(measurements, null, 2));

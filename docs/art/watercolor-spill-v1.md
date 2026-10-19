@@ -1,6 +1,6 @@
 # Watercolor ground and spill v1
 
-Generated with the built-in ImageGen tool on 2026-10-13. Source atlas: `public/assets/biomes/sources/watercolor-spill-v1/terrain-atlas.png`. Runtime assets: `public/assets/biomes/watercolor-v1/{dirt-ground,stone-spill,berry-spill,earth-spill}-v1.png`.
+Generated with the built-in ImageGen tool on 2026-10-13. Source atlas: `public/assets/sources/environment/watercolor-spill-v1/terrain-atlas.png`. Runtime assets: `public/assets/runtime/environment/watercolor/v1/{dirt-ground,stone-spill,berry-spill,earth-spill}-v1.png`.
 
 Prompt: production watercolor terrain decal atlas, four quadrants with transparent gutters: overhead ochre/umber/sienna earth square with diluted olive hints; small slate/cream/indigo stone cluster; moss/olive foliage spill with pink/wine pigment pools; umber/ochre earth wash. Broad merged wet dabs, soft wet-on-wet transitions, deliberate lost detail, no individual leaves, branches, berry beads, black outlines, pixel art, glossy highlights or exterior shadows. Actual alpha for decals.
 

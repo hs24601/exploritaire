@@ -1,6 +1,6 @@
 # Hero snuffling through the berry patch
 
-Generated with the built-in imagegen tool on 2026-10-10, using `public/assets/actors/hero.png` as the identity/style reference. Saved as `public/assets/art/quests/hero-snuffling-berries-v1.png`. Used exclusively on the "An ordinary day" quest card. The original character sprite and other quest illustrations are preserved.
+Generated with the built-in imagegen tool on 2026-10-10, using `public/assets/deprecated/pixel/characters/hero.png` as the identity/style reference. Saved as `public/assets/runtime/ui/quests/hero-snuffling-berries-v1.png`. Used exclusively on the "An ordinary day" quest card. The original character sprite and other quest illustrations are preserved.
 
 ## Final generation prompt
 

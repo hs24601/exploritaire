@@ -2,7 +2,7 @@ import { gameTime } from '../../gameTime';
 import { useEffect, useRef, type RefObject } from 'react';
 import type { CameraState } from '../../hooks/useCameraControls';
 import { sampleCameraSequence, shotFromCamera, validStep, type CameraShot, type CameraStep } from '../cameraChoreography';
-import { registerCameraPort, setCameraPlayback } from '../cameraDirector';
+import { getCameraPlayback, registerCameraPort, setCameraPlayback } from '../cameraDirector';
 import { isTextEditingTarget } from '../keyboardInput';
 type Options = { viewport: RefObject<HTMLDivElement | null>; getCamera: () => CameraState; setFrame: (camera: CameraState, sync?: boolean) => void; sync: () => void; tilted: boolean; pitch: (camera: CameraState) => number; setTilted?: (value: boolean) => void; begin: () => void; paused?: boolean; enabled?: boolean };
 export function useMapCameraDirector(options: Options) {
@@ -21,7 +21,7 @@ export function useMapCameraDirector(options: Options) {
       gameTime.cancelAnimationFrame(frame);
       if (playing && restore) draw(initial);
       playing = false; live.current.sync();
-      setCameraPlayback({ playing: false, paused: false, tileLabelIds: [] });
+      setCameraPlayback({ playing: false, moving: false, paused: false, tileLabelIds: [] });
     };
     const tick = (now: number) => {
       if (!playing) return;
@@ -31,6 +31,7 @@ export function useMapCameraDirector(options: Options) {
       if (!suspended) {
         const result = sampleCameraSequence(steps, initial, elapsed, matchMedia('(prefers-reduced-motion: reduce)').matches);
         draw(result.shot);
+        if (getCameraPlayback().moving !== result.moving) setCameraPlayback({ moving: result.moving });
         if (result.index !== shotIndex) { shotIndex = result.index; setCameraPlayback({ shot: shotIndex }); }
         if (result.done) { stop(restoreOnEnd); return; }
       }
@@ -40,7 +41,7 @@ export function useMapCameraDirector(options: Options) {
       if (!value.length || !value.every(validStep)) throw new Error('The camera sequence contains an invalid shot.');
       stop(); initial = capture(); live.current.begin(); drawnMode = live.current.tilted;
       steps = value; elapsed = 0; last = gameTime.now(); paused = false; playing = true; restoreOnEnd = restore; shotIndex = -1;
-      setCameraPlayback({ playing: true, paused: false, name, shot: 0 });
+      setCameraPlayback({ playing: true, moving: true, paused: false, name, shot: 0 });
       frame = gameTime.requestAnimationFrame(tick);
     } });
     const viewport = live.current.viewport.current;

@@ -6,7 +6,7 @@ const {chromium} = require('playwright');
   try {
     const page = await browser.newPage(), measurements = {};
     for (const tier of ['low','high']) {
-      const data = fs.readFileSync(`public/assets/actors/sources/hero-walking-${tier}-source-v1.png`).toString('base64');
+      const data = fs.readFileSync(`public/assets/deprecated/pixel/sources/characters/hero-walking-${tier}-source-v1.png`).toString('base64');
       const result = await page.evaluate(async ({data,rows}) => {
         const image=new Image();image.src='data:image/png;base64,'+data;await image.decode();
         const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
@@ -57,12 +57,12 @@ const {chromium} = require('playwright');
         });
         return {width:packed.width,height:packed.height,sourceRects,rects,alphaCorners:[rgba[3],rgba[(image.width-1)*4+3]],atlas:packed.toDataURL('image/png').split(',')[1]};
       },{data,rows:tier==='low'?5:6});
-      fs.writeFileSync(`public/assets/actors/battle/hero-walking-${tier}-v1.png`,Buffer.from(result.atlas,'base64'));
+      fs.writeFileSync(`public/assets/deprecated/pixel/characters/battle/hero-walking-${tier}-v1.png`,Buffer.from(result.atlas,'base64'));
       delete result.atlas;measurements[tier]=result;
     }
     const metadata=JSON.stringify(measurements,null,2)+'\n';
     fs.writeFileSync('src/proto/art/heroWalkingLayout.json',metadata);
-    fs.writeFileSync('public/assets/actors/battle/hero-walking-layout.json',metadata);
+    fs.writeFileSync('public/assets/deprecated/pixel/characters/battle/hero-walking-layout.json',metadata);
     console.log(JSON.stringify(measurements,null,2));
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

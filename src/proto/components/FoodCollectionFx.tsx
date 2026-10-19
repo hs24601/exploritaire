@@ -1,3 +1,4 @@
+import { ManaberryIcon } from './ManaberryIcon';
 import { gameTime } from '../../gameTime';
 import { useEffect, useState, type CSSProperties } from 'react';
 import './FoodCollectionFx.css';
@@ -16,7 +17,7 @@ export function FoodCollectionFx({ landing }: { landing: FoodLanding }) {
   return <span className="food-collection-fx" style={style} aria-hidden="true"
     data-resource-receipt={landing.id} data-food-conversion={landing.berries !== false ? landing.id : undefined} data-landing-x={landing.x} data-landing-y={landing.y}>
     <span className="food-collection-fx__foil" />
-    {landing.berries !== false && <span className="food-collection-fx__berry">🫐</span>}
+    {landing.berries !== false && <span className="food-collection-fx__berry"><ManaberryIcon /></span>}
     <span className="food-collection-fx__mana">{landing.glyph ?? '✨'}</span>
     <span className="food-collection-fx__burst">
       {Array.from({ length: 10 }, (_, index) => <i key={index} style={{

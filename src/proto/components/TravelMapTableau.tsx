@@ -39,13 +39,13 @@ export function TravelMapTableau({journey,hours,header,foundations,renderCard}:P
       {journey.columns.map((cards,column)=>{
         const segment=Math.max(0,journey.segments.findIndex(segment=>segment.end>world.progress+1e-6)),crossing=journey.segments[segment],key=travelStationKey(column,crossing);
         if(!stations.current.has(key))stations.current.set(key,travelColumnStation(journey,column,segment,world.solids));
-        const station=stations.current.get(key)!,height=134+Math.max(0,cards.length-1)*36;
+        const station=stations.current.get(key)!,width=station.width,height=134+Math.max(0,cards.length-1)*36;
         return <div key={column} className="travel-world-column" data-world-column={column}>
           <div className="travel-world-station" data-world-x={station.x} data-world-y={station.y} data-world-heading={station.heading} data-world-elevation={station.elevation} data-world-segment={segment}
-            style={{left:station.x,top:station.y,transform:`${worldActorTransform(station.heading,world.upright)}${world.upright?` translateY(${-station.elevation}px)`:String('')}`,transformOrigin:'50% 100%',width:TRAVEL_PROP_WIDTH,height:(height+24)*TRAVEL_PROP_WIDTH/96}}>
-            {!!cards.length && <div className="travel-world-rack" style={{width:96,height:height+24,transform:`scale(${TRAVEL_PROP_WIDTH/96})`}}>
-              <span className="travel-world-stake" aria-hidden="true" />
-              <span className="travel-world-column-number" aria-hidden="true">{column+1}</span>
+            style={{left:station.x,top:station.y,transform:`${worldActorTransform(station.heading,world.upright)}${world.upright?` translateY(${-station.elevation}px)`:String('')} rotate(${station.rotation}deg)`,transformOrigin:'50% 100%',width,height:(height+24)*width/96}}>
+            {!!cards.length && <div className="travel-world-rack" style={{width:96,height:height+24,transform:`scale(${width/96})`}}>
+              {crossing?.kind!=='den-exit' && <span className="travel-world-stake" aria-hidden="true" />}
+              {crossing?.kind!=='den-exit' && <span className="travel-world-column-number" aria-hidden="true">{column+1}</span>}
               {cards.map((card,row)=><div key={card.id} data-world-card={card.id} data-exposed={row===cards.length-1} className="travel-world-card" style={{top:row*36,zIndex:row+1}}>{renderCard(card,column,row,{position:'relative',width:96,height:134})}{[0,1,2,3].map(corner=><i key={corner} data-travel-card-corner={corner} aria-hidden="true" style={{position:'absolute',left:corner===0||corner===3?0:96,top:corner<2?0:134,width:0,height:0,pointerEvents:'none'}} />)}</div>)}
             </div>}
           </div>

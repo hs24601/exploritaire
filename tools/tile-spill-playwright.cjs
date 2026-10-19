@@ -32,7 +32,7 @@ const fs = require('node:fs');
           assert.ok(decals.some(d => d.from === 'impassable-mountain' && d.onto === 'berry-patch'));
           assert.ok(decals.some(d => d.from === 'berry-patch' && d.onto === 'impassable-mountain'));
           assert.ok(decals.every(d => d.input === 'none' && d.sampling === (style === 'paint' ? 'auto' : 'pixelated')));
-          assert.ok(decals.every(d => style === 'paint' ? d.src.includes('/watercolor-v1/') : d.src.includes('/spill/')));
+          assert.ok(decals.every(d => style === 'paint' ? d.src.includes('/watercolor/v1/') : d.src.includes('/spill/')));
           assert.ok(decals.filter(d => d.from === 'impassable-mountain' || d.from === 'hero-den')
             .every(d => d.relief === (mode === 'flat' ? 0 : 1)));
           await page.locator('.proto-map-viewport').screenshot({ path: `${output}/${width}-${mode}-${style}-3x.png` });

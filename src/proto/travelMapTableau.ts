@@ -8,6 +8,12 @@ export const TRAVEL_PROP_WIDTH = 3;
  * enter this calculation. Each column has a fixed roadside station per cell. */
 export function travelColumnStation(journey: Pick<TravelJourney,'path'|'segments'>, column:number, segmentIndex:number, solids:readonly ScreenBox[]=[]) {
   const segment=journey.segments[segmentIndex];
+  if(segment?.kind==='den-exit'){
+    const den=journey.path[0];
+    const pins=[[-20,-15,2,-10],[-16,-10,17,-12],[-5.3,-10,18,-5],[5.3,-10,18,0],[16,-10,17,10],[20,-15,2,8]];
+    const [x,y,elevation,rotation]=pins[column%6];
+    return {x:den.x+x,y:den.y+y,elevation,heading:Math.PI,rotation,width:6.5,progress:segment.start,column,segment:segmentIndex};
+  }
   const start=segment?.start??0,end=segment?.end??1;
   const lane=column%2===0?-1:1;
   const progress=start+(end-start)*((column+.5)/(segment?.passage?.columns??7));
@@ -20,7 +26,7 @@ export function travelColumnStation(journey: Pick<TravelJourney,'path'|'segments
   const position={x:center.x-tangent.y*offset*lane,y:center.y+tangent.x*offset*lane};
   const heading=Math.atan2(-tangent.x,-tangent.y);
   const elevation=[0,1.2,2.4,0,1.8,3,0][column%7];
-  return {...position,elevation,heading,progress,column,segment:segmentIndex};
+  return {...position,elevation,heading,rotation:0,width:TRAVEL_PROP_WIDTH,progress,column,segment:segmentIndex};
 }
 
 /** Segment indices may restart when discovery rebuilds the remaining journey. */

@@ -7,7 +7,8 @@ import { useEffect, useRef, useState } from 'react';
 export { ACTOR_HOLO_ART } from '../art/actorCardArt';
 
 /** Optional foundation rank stays live; rest's separate receiving card owns its rank. */
-export function ActorHoloCard({ actorId, name, rank, resource, foodLanding, receivedResources }: {
+export function ActorHoloCard({ actorId, name, rank, resource, foodLanding, receivedResources, relocated = false }: {
+  relocated?: boolean;
   actorId: string; name: string; rank: string; resource?: string; foodLanding?: FoodLanding;
   /** Live resource amounts; only positive changes produce receipt feedback. */
   receivedResources?: Readonly<Record<string, number>>;
@@ -22,12 +23,13 @@ export function ActorHoloCard({ actorId, name, rank, resource, foodLanding, rece
     if (gained) setReceipt({ id: `${actorId}-receipt-${++sequence.current}`, x: 20 + Math.random() * 60, y: 25 + Math.random() * 45,
       berries: false, glyph: gained === 'inspiration' ? '💫' : gained === 'AP' ? '✦' : '✨' });
   }, [receivedResources, actorId]);
-  return <span className="actor-holocard" data-actor-holocard={actorId}>
+  if (actorId === 'hero' && relocated) return <span data-unified-actor-placeholder="true" />;
+  return <span className="actor-holocard" data-actor-holocard={actorId} data-has-value={Boolean(rank)}>
     <TradingCard id={actorId} title={name} state="foundation"
       art={<ActorCardArt sprite={ACTOR_HOLO_ART[actorId]} label={name} />}
       sections={[...(rank ? [{id:'rank',label:'Foundation rank',content:rank,details:rank}] : []),...(resource ? [{id:'resource',label:'Collected resource',content:resource,details:resource}] : [])]} />
-    {rank && <span className="actor-holocard__rank-bubble" role="img" aria-label={`${name} foundation rank ${rank}`}>
-      <span className="battle-field__rank">{rank}</span>
+    {rank && <span className="actor-holocard__identity" aria-label={`${name} foundation rank ${rank}`}>
+      <strong className="actor-holocard__value">{rank}</strong>
     </span>}
     {resource && <span className="actor-holocard__resource">{resource}</span>}
     {foodLanding && <FoodCollectionFx key={foodLanding.id} landing={foodLanding} />}

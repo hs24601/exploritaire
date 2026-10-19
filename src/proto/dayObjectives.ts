@@ -1,12 +1,14 @@
 import type { ProtoState } from './protoState';
 import { dayOneDestination } from './dayScenarios';
 import { TABLE_GRID } from './gridCoordinates';
+import { dayOneTutorialQuest, type SequentialQuest } from './tutorialQuests';
 
 export type DayObjective = {
   biomeId: string;
   label: string;
   position: { x: number; y: number };
   reference: string;
+  quest?: SequentialQuest;
 };
 
 /** A story landmark, independent of discovery and the player's editable travel route. */
@@ -22,5 +24,5 @@ export function dayObjective(state: ProtoState): DayObjective | null {
       : state.ordinaryDay?.supper ? 'Rest in the den' : 'Home before dark'
     : biomeId === state.dayScenarioTiles?.woodsId ? 'Search the darker woods'
     : biomeId === state.dayScenarioTiles?.sparsePatchId ? 'Check the nearby bush' : 'Gather manaberries';
-  return { biomeId, label, position: { ...tile.position }, reference: TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position)) };
+  return { biomeId, label, quest: state.dayScenario === 'day01' ? dayOneTutorialQuest(state) : undefined, position: { ...tile.position }, reference: TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position)) };
 }

@@ -1,7 +1,7 @@
 // Measure complete heads and detached symbols before deterministic atlas packing.
 const fs=require('node:fs'),{chromium}=require('playwright');
 const names=['happy','blush','heartEyes','sad','stars','upset','upsetWithSymbol','behind','fighting'];
-const directory='public/assets/actors/banks/emojis-watercolor-v2';
+const directory='public/assets/runtime/characters/banks/expressions/emojis/watercolor/v2';
 (async()=>{const browser=await chromium.launch();try{
  const page=await browser.newPage();
  const result=await page.evaluate(async({data,names})=>{

@@ -57,7 +57,7 @@ function FoundationSprite({ sprite, name, lighting, turnedAway = false }: { spri
   </span>;
   const quarter = sprite.id === 'mochi' || sprite.id === 'hero';
   const frame = sprite.low[turnedAway ? 4 : quarter ? 1 : 0], rect = frame.parts[0].rect;
-  const painted = assets[frame.source].includes('/watercolor-v1/');
+  const painted = assets[frame.source].includes('/watercolor/');
   return <svg className="battle-field__sprite" style={painted ? {imageRendering:'auto'} : undefined} viewBox={rect.join(' ')} preserveAspectRatio="xMidYMax meet" data-foundation-pose={turnedAway ? 'rear' : quarter ? 'quarter' : 'front'} role="img" aria-label={`${name} sprite${turnedAway ? ' facing away' : ''}`}>
     <image href={`${import.meta.env.BASE_URL}assets/${assets[frame.source]}`} />
   </svg>;

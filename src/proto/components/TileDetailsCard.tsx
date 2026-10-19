@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 
 function SceneryCardArt({sprite,title,oldTree,children}:{sprite?:string;title:string;oldTree:boolean;children:ReactNode}) {
   const style=useArtStyle();
-  const painted=oldTree&&style==='paint'?`${import.meta.env.BASE_URL}assets/biomes/watercolor-v1/pine-sprite-v1.png`:scenerySprite(sprite,style);
+  const painted=oldTree&&style==='paint'?`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/pine-sprite-v1.png`:scenerySprite(sprite,style);
   return painted&&(painted!==sprite||isPaintedScenerySprite(painted))?<img src={painted} alt={`${title} terrain`} draggable={false} style={{imageRendering:'auto'}}/>:<>{children}</>;
 }
 
@@ -37,7 +37,7 @@ export function tileDetailsCard(tile: BiomeTileState, day: number, onOpen: () =>
     : domestic ? 'A short foraging puzzle. Gather two mana for supper; leave whenever you have enough. Cleared cards stay picked.'
     : `A ${tile.tableauSize}-card exploration deal. Station an actor here to work its tableau.`;
   const reference = TABLE_GRID.reference(TABLE_GRID.atWorld(tile.position));
-  const sprite = dirt ? `${import.meta.env.BASE_URL}assets/biomes/dirt-ground.png` : biomeTileSprite(tile);
+  const sprite = dirt ? `${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/dirt-ground.png` : biomeTileSprite(tile);
   return {
     id: tile.id, name: tile.title, badge: '◇', badgeLabel: 'Tile',
     art: <div className={`tile-card-art${danger ? ' tile-card-art--danger' : ''}`} data-tile-card-art={tile.id}>
