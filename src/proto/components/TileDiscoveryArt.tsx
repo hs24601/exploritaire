@@ -5,6 +5,7 @@ import { useWatercolorBleed } from '../watercolorBleed';
 
 type Discovery = { filter: (ids: string | readonly string[], detail?: boolean, relief?: boolean) => string | undefined };
 const Context = createContext<Discovery>({ filter: () => undefined });
+const SKETCH_SETTLE_MS = 400;
 export const useTileDiscovery = () => useContext(Context);
 
 /** Context crosses the ground/shadow portals. One SVG animation per tile
@@ -38,6 +39,27 @@ export function TileDiscoveryProvider({ tiles, reliefSketch = {}, children }: { 
     }, remaining + 16);
     return () => gameTime.clearTimeout(timer);
   }, [active]);
+  // Chrome re-runs SVG reference filters on the CPU every frame, so the full
+  // watercolor filter only runs while a tile's paint or adjacent ink moves.
+  // Resting sketch tiles use the colour-matrix detail filter (Day 01: 20 -> 60 fps idle).
+  // Plain timers: a paused game clock must still let the filter settle.
+  const painted = useRef(new Map(tiles.map(tile => [tile.id, `${tile.traversalProgress}:${reliefSketch[tile.id] ?? 0}`])));
+  const [moving, setMoving] = useState<ReadonlySet<string>>(new Set());
+  const settleTimers = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const changed = tiles.filter(tile => painted.current.get(tile.id) !== `${tile.traversalProgress}:${reliefSketch[tile.id] ?? 0}`).map(tile => tile.id);
+    painted.current = new Map(tiles.map(tile => [tile.id, `${tile.traversalProgress}:${reliefSketch[tile.id] ?? 0}`]));
+    if (!changed.length) return;
+    setMoving(current => changed.every(id => current.has(id)) ? current : new Set([...current, ...changed]));
+    for (const id of changed) {
+      window.clearTimeout(settleTimers.current.get(id));
+      settleTimers.current.set(id, window.setTimeout(() => {
+        settleTimers.current.delete(id);
+        setMoving(current => { const next = new Set(current); next.delete(id); return next; });
+      }, SKETCH_SETTLE_MS));
+    }
+  }, [tiles, reliefSketch]);
+  useEffect(() => () => settleTimers.current.forEach(timer => window.clearTimeout(timer)), []);
   const entries = useMemo(() => {
     const controlled = tiles.filter(tile => tile.traversalProgress !== undefined && tile.traversalProgress < 1 && discoveryVisible(tile));
     return [...[...active].filter(([id]) => !tiles.some(t => t.id === id && t.traversalProgress !== undefined)).map(([tileId, started]) => ({ tileId, started, progress: undefined as number | undefined })), ...controlled.map(tile => ({ tileId: tile.id, started: 0, progress: tile.traversalProgress }))].map((entry, index) => ({ ...entry, id: `${prefix}-${index}` }));
@@ -45,8 +67,10 @@ export function TileDiscoveryProvider({ tiles, reliefSketch = {}, children }: { 
   const value = useMemo<Discovery>(() => ({ filter: (ids, detail = false, relief = false) => {
     const candidates = typeof ids === 'string' ? [ids] : ids;
     const entry = entries.filter(item => candidates.includes(item.tileId)).sort((a, b) => b.started - a.started)[0];
-    return entry ? `url(#${entry.id}${relief && reliefSketch[entry.tileId] > 0 ? '-relief' : detail ? '-detail' : ''})` : undefined;
-  } }), [entries, reliefSketch]);
+    if (!entry) return undefined;
+    const resting = entry.progress !== undefined && !moving.has(entry.tileId);
+    return `url(#${entry.id}${resting ? '-detail' : relief && reliefSketch[entry.tileId] > 0 ? '-relief' : detail ? '-detail' : ''})`;
+  } }), [entries, reliefSketch, moving]);
   return <Context.Provider value={value}>
     <svg aria-hidden="true" width="0" height="0" style={{ position: 'absolute', pointerEvents: 'none' }}>
       <defs>{entries.map(entry => <DiscoveryFilter key={`${entry.tileId}-${entry.started}`} {...entry} />)}

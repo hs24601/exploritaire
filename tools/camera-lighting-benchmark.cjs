@@ -2,10 +2,13 @@
 // Orbits, zooms and pans the live camera with lighting on, reporting frame
 // pacing, main-thread long tasks and the hottest JS functions (CPU profile).
 // PROTO_URL overrides the page; BENCH_LABEL names the saved result.
+// The idle phase holds the scene still: resting art must not cost frames
+// (live SVG filters re-run every frame). BENCH_IDLE_MIN_FPS fails the run (default 55).
 const { chromium } = require('playwright');
 const fs = require('node:fs');
 const URL = process.env.PROTO_URL || 'http://localhost:5178/proto.html';
 const LABEL = process.env.BENCH_LABEL || 'run';
+const IDLE_MIN_FPS = Number(process.env.BENCH_IDLE_MIN_FPS ?? 55);
 const HEADED = Boolean(process.env.BENCH_HEADED);
 
 const startFrames = page => page.evaluate(() => {
@@ -105,7 +108,7 @@ const renderingWork = events => {
       results[name] = { ...frames, rendering: renderingWork(JSON.parse((await browser.stopTracing()).toString()).traceEvents), hot: hotFunctions(profile) };
       console.log(name, JSON.stringify({ ...results[name], hot: undefined }));
     };
-    await phase('idle', () => page.waitForTimeout(2500));
+    await phase('idle', () => page.waitForTimeout(4000));
     await phase('orbit', async () => {
       await page.mouse.move(box.x, box.y); await page.mouse.down({ button: 'middle' });
       for (let i = 0; i < 180; i++) { await page.mouse.move(box.x + Math.sin(i / 30) * 260, box.y); await page.waitForTimeout(8); }
@@ -124,6 +127,7 @@ const renderingWork = events => {
     await page.screenshot({ path: `artifacts/camera-lighting/${LABEL}.png` });
     fs.writeFileSync(`artifacts/camera-lighting/${LABEL}.json`, JSON.stringify(results, null, 2));
     console.log('gpu', results.gpu, JSON.stringify(results.scene));
-    for (const name of ['orbit', 'zoom', 'pan']) console.log(`\n${name} hot:\n${results[name].hot.slice(0, 12).concat(results[name].hot.slice(20)).join('\n')}`);
+    for (const name of ['idle', 'orbit', 'zoom', 'pan']) console.log(`\n${name} hot:\n${results[name].hot.slice(0, 12).concat(results[name].hot.slice(20)).join('\n')}`);
+    if (results.idle.fps < IDLE_MIN_FPS) { console.error(`\nidle ${results.idle.fps} fps is below ${IDLE_MIN_FPS}`); process.exitCode = 1; }
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
