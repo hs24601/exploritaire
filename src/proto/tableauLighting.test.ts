@@ -1,7 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createTableauLightRig, tableauCardBrightness } from './tableauLighting';
 
 describe('tableau scene lighting', () => {
+  beforeAll(() => vi.stubGlobal('window', { location: { search: '' } }));
+  afterAll(() => vi.unstubAllGlobals());
+  it('bypasses night shading, local lights and shadows while editing', () => {
+    const rig = createTableauLightRig(0, { x: 0, y: 0 }, [{ id: 'glow', position: { x: 0, y: 0 }, strength: 1 }], true, false);
+    expect(rig.standee(0, 0)).toMatchObject({ brightness: 1, warmth: 0, rim: null, shadows: [] });
+    expect(rig.surface(0, 0)).toMatchObject({ '--surface-brightness': 1, '--surface-light': 'transparent', '--table-object-shadow': 'none' });
+  });
   it('keeps a night rack readable with light from its foundation and combines party sources', () => {
     const point = { x: 200, y: 50 };
     const lamp = { x: 200, y: 450, radius: 800 };

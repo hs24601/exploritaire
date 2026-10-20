@@ -1,3 +1,5 @@
+import type { QuestSubtask } from '../tutorialQuests';
+import { KhadRoots, KhadRootLinks } from './KhadRoots';
 import { ManaberryIcon } from './ManaberryIcon';
 import { CaveTableauScenery } from './CaveTableauScenery';
 import { DenQuestDiscovery } from './DenQuestDiscovery';
@@ -22,13 +24,13 @@ import { travelTileThreshold, travelTableauHeld, currentTravelSegment, type Trav
 import { rankLabel } from '../protoState';
 import { useArtStyle } from '../artStyle';
 import { cardBackgroundFallback } from '../biomeCardArt';
-import { loadBiomeCardBackground, type TableauCardBackground } from '../biomeCardArt';
+
 import { useEffect, useState, useRef } from 'react';
 import type { TravelCard } from '../travelJourney';
 import './TravelTableau.css';
 import { TableauSolveControls, type SolveStepResult } from './TableauSolveControls';
 
-export function TravelTableau({ questDiscoveryHeld=false, discoverDenQuest=false, onDiscoverDenQuest, tiles, mapOverlay=false, hours=0, journey, actorName, utilityAP = 0, stamina, inspiration, onPlay, onRedraw, onPause, onSolveStep, onInspectActor, members, eventCost, onEventPlay, onDiscard, discarded = [], terrainCrossings = {}, onBreach, onReplan }: { questDiscoveryHeld?:boolean; discoverDenQuest?:boolean; onDiscoverDenQuest?:()=>void; tiles?: readonly BiomeTileState[]; onBreach:(actorId:string,ability:string)=>void; onReplan:()=>void; mapOverlay?:boolean; hours?:number; eventCost: (column:number,row:number,actorId:string,utility?:EventUtility)=>number|null; onEventPlay: (column:number,row:number,actorId:string,utility?:EventUtility,cardId?:string)=>void; onDiscard:(column:number,cardId?:string)=>void; discarded?:Card[]; terrainCrossings?:Record<string,number>; journey: TravelJourney; actorName: string; utilityAP?: number; stamina: number; inspiration: number; onPlay: (column: number, actorId?: string) => void; onRedraw: (actorId?: string) => void; members?: {id:string;label:string;inspiration:number;ap:number}[]; onPause: () => void; onSolveStep: () => SolveStepResult; onInspectActor?: (anchor: HTMLElement, actorId?: string) => void }) {
+export function TravelTableau({ khadQuest, onDiscoverKhadQuest, lightingEnabled=true, questDiscoveryHeld=false, discoverDenQuest=false, onDiscoverDenQuest, tiles, mapOverlay=false, hours=0, journey, actorName, utilityAP = 0, stamina, inspiration, onPlay, onRedraw, onPause, onSolveStep, onInspectActor, members, eventCost, onEventPlay, onDiscard, discarded = [], terrainCrossings = {}, onBreach, onReplan }: { khadQuest?:QuestSubtask; onDiscoverKhadQuest?:()=>void; lightingEnabled?:boolean; questDiscoveryHeld?:boolean; discoverDenQuest?:boolean; onDiscoverDenQuest?:()=>void; tiles?: readonly BiomeTileState[]; onBreach:(actorId:string,ability:string)=>void; onReplan:()=>void; mapOverlay?:boolean; hours?:number; eventCost: (column:number,row:number,actorId:string,utility?:EventUtility)=>number|null; onEventPlay: (column:number,row:number,actorId:string,utility?:EventUtility,cardId?:string)=>void; onDiscard:(column:number,cardId?:string)=>void; discarded?:Card[]; terrainCrossings?:Record<string,number>; journey: TravelJourney; actorName: string; utilityAP?: number; stamina: number; inspiration: number; onPlay: (column: number, actorId?: string) => void; onRedraw: (actorId?: string) => void; members?: {id:string;label:string;inspiration:number;ap:number}[]; onPause: () => void; onSolveStep: () => SolveStepResult; onInspectActor?: (anchor: HTMLElement, actorId?: string) => void }) {
   useActorLoadouts();
   const [compactBushes,setCompactBushes]=useState(()=>matchMedia('(max-width:600px) and (orientation:portrait)').matches);
   useEffect(()=>{const query=matchMedia('(max-width:600px) and (orientation:portrait)');const update=()=>setCompactBushes(query.matches);query.addEventListener('change',update);return()=>query.removeEventListener('change',update);},[]);
@@ -40,7 +42,9 @@ export function TravelTableau({ questDiscoveryHeld=false, discoverDenQuest=false
   const segment=journey.segments[journey.waitingForTraversal??journey.pendingSearch??journey.search?.segment??current?.index??Math.max(0,journey.segments.length-1)];
   const awaitingArrival=!!segment && segment.start > (journey.walkedProgress ?? journey.progress) + 1e-5;
   const revealKey=journey.path+':'+(journey.waitingForTraversal??journey.pendingSearch??journey.search?.segment??current?.index??-1);
-  const discoveryHeld=questDiscoveryHeld || discoverDenQuest && segment?.kind==='den-exit' && journey.completed===0;
+  // Khad discovery explains already exposed cards; only the initial den deal
+  // waits face-down for its instructions.
+  const discoveryHeld=segment?.kind==='den-exit' && (questDiscoveryHeld || discoverDenQuest && journey.completed===0);
   const discoveryReveal=useArrivalReveal(revealKey+':discovery', !discoveryHeld, journey.paused, !!onDiscoverDenQuest, journey.columns.flat().length);
   const reveal=Math.min(discoveryReveal,useArrivalReveal(revealKey, !awaitingArrival, journey.paused, !!segment && segment.start>0, journey.columns.flat().length));
   const revealing=awaitingArrival || reveal < 1;
@@ -49,12 +53,14 @@ export function TravelTableau({ questDiscoveryHeld=false, discoverDenQuest=false
   const sceneSegment=journey.segments.find(s=>sceneProgress<s.end-1e-5)??journey.segments[journey.segments.length-1];
   const sceneTile=tiles?.find(t=>t.id===sceneSegment?.tileId);
   const sceneKind=sceneTile ? sceneTile.flags?.includes('unexplored')?'unexplored':sceneTile.berryPatchVariant==='sparse'?'berry-patch-sparse':sceneTile.tileType??sceneTile.terrain : sceneSegment?.kind==='den-exit'?'hero-den':sceneSegment?.unknown?'unexplored':sceneSegment?.sparseBerry!==undefined?'berry-patch-sparse':sceneSegment?.kind;
-  const rig=createTableauLightRig(hours,{x:0,y:0},[]);
+  const rig=createTableauLightRig(hours,{x:0,y:0},[],true,lightingEnabled);
   const biome={tileType:segment?.kind==='den-exit'?'hero-den':segment?.unknown?'unexplored':segment?.sparseBerry!==undefined?'berry-patch-sparse':segment?.kind,terrain:segment?.kind==='water'?'water' as const:'woods' as const};
   const obstruction=journey.obstruction;
   const denseBerry=!!segment && isDenseBerryStage(segment);
   const denExit=segment?.kind==='den-exit';
-  const freeBounds = denseBerry ? compactBushes?{width:3.4,height:10.2}:{width:6.95,height:4.7} : segment?.layout ? layoutBounds(segment.layout.cards.map(c=>({pose:c}))) : {width:3.65,height:3.65};
+  // Include the optional rooted pair and its outward hooks in the stable sparse
+  // scene envelope; the older six-card width cropped the Queen and group vine.
+  const freeBounds = denseBerry ? compactBushes?{width:3.4,height:10.2}:{width:6.95,height:4.7} : segment?.layout ? layoutBounds(segment.layout.cards.map(c=>({pose:c}))) : {width:segment?.sparseBerry?4.95:3.65,height:3.65};
   const freeLayout = journey.columns.flat().some(card => card.pose);
   if(freeLayout || denExit || journey.ordered)mapOverlay=false;
   const eligible=assignedMovesFor(receiver).filter(move=>move.terrainTags?.some(tag=>obstruction?.tags.includes(tag)));
@@ -99,7 +105,7 @@ export function TravelTableau({ questDiscoveryHeld=false, discoverDenQuest=false
   const renderCard = (card: TravelCard, i: number, row: number, style: import('react').CSSProperties) => {
     if(obstruction)return <div key={card.id} style={style} className="travel-obstruction-card" role="img" aria-label={obstruction.title+' · '+obstruction.tags.map(t=>'#'+t).join(' ')}><span aria-hidden="true">▧</span><strong>{obstruction.title}</strong><span>{obstruction.tags.map(t=>'#'+t).join(' ')}</span></div>;
     const buried = row !== journey.columns[i].length - 1;
-    const disabled = revealing || (card.event ? eventCost(i,row,receiver,utility)===null : buried||journey.waitingForTraversal!==undefined||journey.paused||Boolean(journey.blocked)||travelTableauHeld(journey)||!travelCardPlayable(card,receiverRank));
+    const disabled = !!card.khadRoot || revealing || (card.event ? eventCost(i,row,receiver,utility)===null : buried||journey.waitingForTraversal!==undefined||journey.paused||Boolean(journey.blocked)||travelTableauHeld(journey)||!travelCardPlayable(card,receiverRank));
     return <TravelCardFace key={card.id} card={card} reveal={segment?.start>0 || denExit || questDiscoveryHeld ? Math.max(0,Math.min(1,(reveal * (320 + Math.max(0,journey.columns.flat().length-1)*85) - (journey.columns.slice(0,i).reduce((n,c)=>n+c.length,0)+row)*85)/320)) : 1} buried={buried} kind={biome.tileType??'unexplored'} disabled={disabled}
       onDropActor={target=>{
         const actorId=target.dataset.mapActorCard ?? target.dataset.travelFoundation;
@@ -111,7 +117,7 @@ export function TravelTableau({ questDiscoveryHeld=false, discoverDenQuest=false
   if (mapOverlay && journey.blocked) return null;
   if (mapOverlay) return <TravelMapTableau journey={journey} hours={hours} header={header} foundations={foundations} renderCard={renderCard} />;
   return <section className={`travel-tableau${mapOverlay ? ' travel-tableau--map' : ''}`} aria-label="Travel tableau" data-camera-ignore="true" data-journey-paused={journey.paused}>
-    <TableauLighting hours={hours} />
+    {lightingEnabled && <TableauLighting hours={hours} />}
     {!mapOverlay && (denseBerry?<div className="proto-tableau-landscape travel-dense-ground" aria-hidden="true" style={{['--dense-ground' as string]:`url(${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/woodland-ground-v1.png)`}}/>:sceneKind==='unexplored'?<div className="proto-tableau-landscape" data-biome="unexplored" style={{background:'#111b1c'}} />:<TableauLandscape berriesAvailable={sceneTile?tileHasBerries(sceneTile):[...journey.columns.flat(), ...journey.reserve].some(card => card.foodSource === 'berries')} tileType={sceneKind??'path'} />)}
     {sceneKind==='hero-den' && !denExit && <CaveTableauScenery className="travel-den-scene-cave" />}
     <TableauTemplate header={header} foundations={foundations}>
@@ -123,7 +129,7 @@ export function TravelTableau({ questDiscoveryHeld=false, discoverDenQuest=false
         const [x,y,rotation]=[[.3,2.6,-8],[1,.25,-12],[2.2,.1,-4],[3.4,.1,3],[4.6,.25,12],[5.2,2.6,8]][i];
         return renderCard(card,i,row,{position:'absolute',left:`calc(var(--classic-card-w) * ${x})`,top:`calc(var(--classic-card-w) * ${y})`,transform:`rotate(${rotation}deg)`,zIndex:2});
       }))}
-    </div> : freeLayout ? <div className={`travel-free-layout proto-tableau-stage${denseBerry?' travel-free-layout--dense':''}`} data-compact={denseBerry&&compactBushes||undefined} data-layout={denseBerry?'dense-bushes':'freeform'} style={{width:`calc(var(--classic-card-w) * ${freeBounds.width})`,height:`calc(var(--classic-card-w) * ${freeBounds.height})`}}>{denseBerry && <DenseBerryBushes compact={compactBushes} fruit={!!sceneTile && tileHasBerries(sceneTile)} />}{journey.columns.flatMap((column, i) => column.map((card, row) => {
+    </div> : freeLayout ? <div className={`travel-free-layout proto-tableau-stage${denseBerry?' travel-free-layout--dense':''}`} data-compact={denseBerry&&compactBushes||undefined} data-layout={denseBerry?'dense-bushes':'freeform'} style={{width:`calc(var(--classic-card-w) * ${freeBounds.width})`,height:`calc(var(--classic-card-w) * ${freeBounds.height})`}}><KhadRootLinks cards={journey.columns.flat()} />{khadQuest && segment?.sparseBerry && <DenQuestDiscovery step={khadQuest} covered={journey.completed < journey.cards} paused={journey.paused || awaitingArrival} onDiscover={()=>onDiscoverKhadQuest?.()} />}{denseBerry && <DenseBerryBushes compact={compactBushes} fruit={!!sceneTile && tileHasBerries(sceneTile)} />}{journey.columns.flatMap((column, i) => column.map((card, row) => {
       const pose = card.pose;
       const x=denseBerry && compactBushes ? .25+(i%2)*1.1 : pose?.x ?? i;
       const y=denseBerry && compactBushes ? Math.floor(i/2)*3.25+.85+(pose?.layer===1?0:.7) : pose?.y ?? 0;
@@ -139,14 +145,15 @@ export function TravelTableau({ questDiscoveryHeld=false, discoverDenQuest=false
 
 function TravelCardFace({ card, reveal, kind, disabled, onPlay, onDiscard, onDropActor, buried, actionLabel, style }: { card: TravelCard; reveal: number; kind: string; disabled: boolean; onPlay: () => void; onDiscard?:()=>void; onDropActor?:(target:HTMLElement)=>void; buried?:boolean; actionLabel?:string; style?:import('react').CSSProperties }) {
   const artStyle = useArtStyle();
-  const [background, setBackground] = useState<TableauCardBackground>();
-  useEffect(() => { let alive = true; loadBiomeCardBackground(kind, artStyle).then(result => { if (alive) setBackground(result); }); return () => { alive = false; }; }, [kind, artStyle]);
+
+
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   return <div className="travel-arrival-card" style={style} data-arrival-face={reveal===1?'up':reveal===0?'down':'flipping'}>
     <div className="travel-arrival-card__turn" style={{transform:reduced?undefined:`perspective(800px) rotateY(${(1-reveal)*180}deg)`,opacity:reduced&&reveal>0&&reveal<1?reveal:1}}>
     {reveal<1 && <div className="travel-arrival-card__back" role="img" aria-label="Face-down travel card" />}
     <div className="travel-arrival-card__face" aria-hidden={reveal<1} inert={reveal<1} style={{visibility:reveal===0?'hidden':undefined}}>
-    <ProtoCard onDropActor={onDropActor} cardRef={node => { if (node) { node.dataset.travelCard = card.id; if(card.sequenceRule)node.setAttribute('aria-label',`${rankLabel(card.rank)} · ${sequenceDescription(card.sequenceRule)}`); } }} card={card} allowJumbo={false} buried={buried} onDiscard={onDiscard} actionLabel={card.event?actionLabel:"Advance travel"} onClick={onPlay} disabled={disabled} centerRank background={background?.kind === kind && background.artStyle === artStyle ? background : cardBackgroundFallback(kind, artStyle)} footerLabel={card.foodSource ? <ManaberryIcon /> : undefined} />
+    <ProtoCard onDropActor={onDropActor} cardRef={node => { if (node) { node.dataset.travelCard = card.id; if(card.khadRoot)node.setAttribute('aria-label',`${rankLabel(card.rank)} · Bound by Khad Roots`); else if(card.sequenceRule)node.setAttribute('aria-label',`${rankLabel(card.rank)} · ${sequenceDescription(card.sequenceRule)}`); } }} card={card} allowJumbo={false} buried={buried} onDiscard={onDiscard} actionLabel={card.event?actionLabel:"Advance travel"} onClick={onPlay} disabled={disabled} centerRank background={cardBackgroundFallback(kind, artStyle)} footerLabel={card.foodSource ? <ManaberryIcon /> : undefined} />
+    {card.khadRoot && <KhadRoots groupId={card.khadRoot.groupId} cardId={card.id} obscureValue={card.khadRoot.obscureValue} />}
     {card.sequenceRule && <span className="travel-sequence-mark" aria-hidden="true" data-sequence-rule={card.sequenceRule}>{sequenceLabel(card.sequenceRule)}</span>}
     </div></div></div>;
 }
@@ -171,3 +178,4 @@ function useArrivalReveal(key:string, arrived:boolean, paused:boolean, animate:b
   },[key,arrived,paused,animate,duration]);
   return !animate?1:!arrived?0:state.key===key?Math.min(1,state.elapsed/duration):0;
 }
+

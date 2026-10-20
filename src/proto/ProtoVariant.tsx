@@ -1,11 +1,12 @@
 import { ManaberryIcon } from './components/ManaberryIcon';
 import { CaveTableauScenery } from './components/CaveTableauScenery';
-import { pendingTutorialQuest } from './tutorialQuests';
+import { dayOneTutorialQuest, pendingTutorialQuest } from './tutorialQuests';
 import { DenQuestDiscovery } from './components/DenQuestDiscovery';
 import { ActorMapCard } from './components/ActorMapCard';
 import { SceneTree } from './components/SceneTree';
-import { createSceneCheckpoint, type SceneCheckpointId } from './sceneCheckpoints';
+import { createSceneCheckpoint, sceneCheckpointFromSearch, type SceneCheckpointId } from './sceneCheckpoints';
 import { buildDayCinematicBeats, dayCinematicBeatId } from './dayCinematics';
+import { finishTravelPresentation } from './travelCompletion';
 import { getCameraPlayback, playCameraSteps } from './cameraDirector';
 import { TableauDragPreview } from './components/TableauDragPreview';
 import { TableauEditor } from '../tooling/TableauEditor';
@@ -170,13 +171,18 @@ export const ProtoVariant = ({ authoring = false }: { authoring?: boolean } = {}
   const [editorDocument, setEditorDocument] = useState<TileDocument | null>(() => authoring ? JSON.parse(JSON.stringify(SAVED_TILE_DOCUMENT)) : null);
   const editorOpen = editorDocument !== null;
   const [scenarioRun, setScenarioRun] = useState(0);
-  const [sceneCheckpoint, setSceneCheckpoint] = useState<SceneCheckpointId>();
-  const [settledSceneBeat, setSettledSceneBeat] = useState<string | null>(null);
+  const [initialScene] = useState(() => {
+    const id = authoring ? undefined : sceneCheckpointFromSearch(window.location.search);
+    const state = id ? createSceneCheckpoint(id) : authoring ? createDayScenario('sandbox') : createDayOneState();
+    return { id, state };
+  });
+  const [sceneCheckpoint, setSceneCheckpoint] = useState<SceneCheckpointId | undefined>(initialScene.id);
+  const [settledSceneBeat, setSettledSceneBeat] = useState<string | null>(() => initialScene.id ? dayCinematicBeatId(initialScene.state) : null);
   const [editorMenu, setEditorMenu] = useState<{ cell: ReturnType<typeof TABLE_GRID.cell>; x: number; y: number } | null>(null);
   const [editorCell, setEditorCell] = useState(() => TABLE_GRID.cell(0, 2));
   const appliedTileDocument = useRef<TileDocument | null>(null);
   const [state, setState] = useState<ProtoState>(() =>
-    authoring ? createDayScenario('sandbox') : createDayOneState(),
+    initialScene.state,
   );
   useCameraStoryTriggers(state, scenarioRun, editorOpen);
   useEffect(() => {
@@ -304,10 +310,20 @@ export const ProtoVariant = ({ authoring = false }: { authoring?: boolean } = {}
     ...state.worldResourceStacks.filter((stack) => !stack.build && (stack.resource === 'glowfish' || (stack.ingredients?.glowfish ?? 0) > 0))
       .map((stack) => ({ id: 'glowfish-' + stack.id, position: stack.position, ...GLOWFISH_TABLE_LIGHT })),
   ] : [];
+  useEffect(() => {
+    const docked = (event: Event) => {
+      const id = (event as CustomEvent<string>).detail;
+      setState(prev => prev.dayScenario === 'day01' && prev.discoveredTutorialQuests?.includes(id)
+        ? { ...prev, dockedTutorialQuests: [...new Set([...(prev.dockedTutorialQuests ?? []), id])] } : prev);
+    };
+    window.addEventListener('proto-quest-docked', docked);
+    return () => window.removeEventListener('proto-quest-docked', docked);
+  }, []);
   const foundQuest = pendingTutorialQuest(state);
   const discoverQuest = (id: string) => setState(prev => {
     if(pendingTutorialQuest(prev)?.id!==id)return prev;
-    return {...prev, denQuestDiscovered:prev.denQuestDiscovered || id==='navigate-den', discoveredTutorialQuests:[...new Set([...(prev.discoveredTutorialQuests ?? []),id])]};
+    const next = {...prev, denQuestDiscovered:prev.denQuestDiscovered || id==='navigate-den', discoveredTutorialQuests:[...new Set([...(prev.discoveredTutorialQuests ?? []),id])]};
+    return id === 'denser-patch' && (prev.journey?.walkedProgress ?? 0) >= 1 ? finishTravelPresentation(next) : next;
   });
   const stateRef = useRef(state);
   const tableauCardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -1851,7 +1867,7 @@ const selectBiome = (biomeId: string) => {
       const light = actorLight(actor.id, actor.location === 'foundation' ? state.biomeTiles.find(tile => tile.id === actor.biomeId)?.position ?? actor.position : actor.position, manaCarrierLuminosity(state, actor.id, actor.luminosity), actor.lightColor);
       return light ? [light] : [];
     }),
-  ], cameraTilted);
+  ], cameraTilted, !editorOpen);
   const redeemQuest = () => {
     const index = state.questClaims;
     const step = getExpeditionQuestSteps(state)[index];
@@ -1890,7 +1906,7 @@ const selectBiome = (biomeId: string) => {
       setEditorDocument(JSON.parse(JSON.stringify(base)));
     }}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5" /></svg></button>;
 
-  const travelTableau = state.journey ? <TravelTableau discoverDenQuest={state.dayScenario==='day01' && !state.denQuestDiscovered} onDiscoverDenQuest={state.dayScenario==='day01'?()=>discoverQuest('navigate-den'):undefined} questDiscoveryHeld={!!foundQuest} tiles={state.biomeTiles} onBreach={(actorId,ability)=>setState(prev=>breachTravelPassage(prev,actorId,ability))} onReplan={()=>setState(prev=>{const j=prev.journey;if(!j)return prev;return {...prev,journey:{...j,paused:true,streak:0,tileStreak:0,blocked:{progress:j.progress,position:pointAlongTimedPath(j.path,j.progress),message:'Terrain obstructs this passage. Choose another route or cancel.'}}};})} mapOverlay={mapTravelActive} hours={tableHours} eventCost={(column,row,actorId,utility)=>travelEventCost(state,column,row,actorId,utility)} onEventPlay={(column,row,actorId,utility,cardId)=>setState(prev=>playTravelEvent(prev,column,row,actorId,utility,cardId))} onDiscard={(column,cardId)=>setState(prev=>discardTravelEvent(prev,column,cardId))} discarded={state.eventDiscard} terrainCrossings={state.terrainCrossings} members={partyMembers(state, state.journey.actorId).map(member => ({ id: member.id, label: member.label, inspiration: state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(a => a.id === member.id))] ?? 0, ap: state.utilityAP?.[member.id] ?? 0 }))} actorName={state.worldActors.find(actor => actor.id === state.journey!.actorId)?.label ?? state.journey.actorId} utilityAP={state.utilityAP?.[state.journey.actorId] ?? 0} onInspectActor={(anchor, actorId) => inspectActor(actorId ?? state.journey!.actorId, anchor, true)} onSolveStep={solveTravelStep} journey={state.journey} stamina={state.travelStamina ?? TRAVEL_STAMINA_MAX} inspiration={state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(actor => actor.id === state.journey!.actorId))]} onPlay={(column, actorId) => {
+  const travelTableau = state.journey ? <TravelTableau khadQuest={state.dayScenario==='day01' && !state.discoveredTutorialQuests?.includes('denser-patch') ? dayOneTutorialQuest(state).steps.find(step=>step.id==='denser-patch') : undefined} onDiscoverKhadQuest={()=>discoverQuest('denser-patch')} lightingEnabled={!editorOpen} discoverDenQuest={state.dayScenario==='day01' && !state.denQuestDiscovered} onDiscoverDenQuest={state.dayScenario==='day01'?()=>discoverQuest('navigate-den'):undefined} questDiscoveryHeld={!!foundQuest} tiles={state.biomeTiles} onBreach={(actorId,ability)=>setState(prev=>breachTravelPassage(prev,actorId,ability))} onReplan={()=>setState(prev=>{const j=prev.journey;if(!j)return prev;return {...prev,journey:{...j,paused:true,streak:0,tileStreak:0,blocked:{progress:j.progress,position:pointAlongTimedPath(j.path,j.progress),message:'Terrain obstructs this passage. Choose another route or cancel.'}}};})} mapOverlay={mapTravelActive} hours={tableHours} eventCost={(column,row,actorId,utility)=>travelEventCost(state,column,row,actorId,utility)} onEventPlay={(column,row,actorId,utility,cardId)=>setState(prev=>playTravelEvent(prev,column,row,actorId,utility,cardId))} onDiscard={(column,cardId)=>setState(prev=>discardTravelEvent(prev,column,cardId))} discarded={state.eventDiscard} terrainCrossings={state.terrainCrossings} members={partyMembers(state, state.journey.actorId).map(member => ({ id: member.id, label: member.label, inspiration: state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(a => a.id === member.id))] ?? 0, ap: state.utilityAP?.[member.id] ?? 0 }))} actorName={state.worldActors.find(actor => actor.id === state.journey!.actorId)?.label ?? state.journey.actorId} utilityAP={state.utilityAP?.[state.journey.actorId] ?? 0} onInspectActor={(anchor, actorId) => inspectActor(actorId ?? state.journey!.actorId, anchor, true)} onSolveStep={solveTravelStep} journey={state.journey} stamina={state.travelStamina ?? TRAVEL_STAMINA_MAX} inspiration={state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(actor => actor.id === state.journey!.actorId))]} onPlay={(column, actorId) => {
       const current = stateRef.current;
       const next = playTravelCard(current, column, actorId);
       if (next === current) return;
@@ -2003,8 +2019,8 @@ const selectBiome = (biomeId: string) => {
               </div>
 
               <div hidden={!tableauPresent} className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden${pondSelected && !combatDemoOpen ? ' proto-tableau-field--pond' : ''}${dangerSelected || combatDemoOpen ? ' proto-tableau-field--combat' : ''}`}>
-              {foundQuest && foundQuest.id!=='navigate-den' && <DenQuestDiscovery key={foundQuest.id} step={foundQuest} paused={!!state.journey?.paused} onDiscover={()=>discoverQuest(foundQuest.id)} />}
-              {!state.journey && (state.selectedBiomeId || idleFieldBiome || combatDemoOpen) && !pondSelected && <TableauLighting hours={tableHours} />}
+              {foundQuest && foundQuest.id!=='navigate-den' && !(foundQuest.id==='denser-patch' && state.journey?.segments.some(segment=>segment.sparseBerry)) && <DenQuestDiscovery key={foundQuest.id} step={foundQuest} paused={!!state.journey?.paused} onDiscover={()=>discoverQuest(foundQuest.id)} />}
+              {!editorOpen && !state.journey && (state.selectedBiomeId || idleFieldBiome || combatDemoOpen) && !pondSelected && <TableauLighting hours={tableHours} />}
               {(state.selectedBiomeId || idleFieldBiome) && !pondSelected && !combatDemoOpen && <TableauLandscape tileType={(fieldBiome ?? idleFieldBiome)?.berryPatchVariant==='sparse' ? 'berry-patch-sparse' : (fieldBiome ?? idleFieldBiome)?.tileType} berriesAvailable={fieldBiome ? tileHasBerries(fieldBiome, state.tableau, state.stock) : idleFieldBiome ? tileHasBerries(idleFieldBiome) : false} />}
               {!state.journey && idleFieldBiome?.tileType==='hero-den' && <CaveTableauScenery className="travel-den-scene-cave" />}
               {state.journey ? (mapTravelActive ? null : travelTableau) : !state.selectedBiomeId && !combatDemoOpen ? (<>
@@ -2565,7 +2581,7 @@ const selectBiome = (biomeId: string) => {
                   if(next!==previous){stateRef.current=next;setState(next);}
                   return !next.journey?.blocked;
                 }}
-                onFinishTravel={() => setState(prev => ({ ...prev, journey: undefined }))}
+                onFinishTravel={() => setState(finishTravelPresentation)}
                 onDropActorToTable={dropActorToTable}
                 onMoveResourceStack={moveResourceStack}
                 onSplitResourceStack={splitResourceStack}

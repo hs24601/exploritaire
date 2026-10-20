@@ -105,7 +105,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         sharedSurface.setAttribute('aria-hidden','true');
         layout.append(sharedSurface);
         sharedSurface.append(renderer.domElement);
-        rig = createCombatDemoRig(scene, camera, assets, quality);
+        rig = createCombatDemoRig(scene, camera, assets, quality, Boolean(battleRef.current?.proceduralSlimeComparison));
         const cameraControls = createCombatCameraControls(camera, firstTeam);
         let displayedTime = 0;
         const entered = gameTime.now();

@@ -1,3 +1,4 @@
+import { khadCalloutHeld } from './tutorialQuests';
 import { CLAUSTROPHOBIC_DARKNESS, type PeripheralDarkness } from './peripheralDarkness';
 import type { CalloutMark } from './calloutEffects';
 import type { ProtoState } from './protoState';
@@ -40,6 +41,8 @@ export function buildDayCinematicBeats(state: ProtoState): DayCinematicBeat[] {
 }
 export function dayCinematicBeatId(state: ProtoState): string | null {
   if (!state.dayScenario || state.dayTwoAmbush) return null;
+  // The next scene waits for pickup, jumbo inspection and the completed dock flight.
+  if (khadCalloutHeld(state)) return null;
   if (state.journey) return sparsePatchTableauComplete(state) ? 'day01.sparse-patch' : null;
   if (state.dayScenario === 'day03') return 'day03.opening';
   if (state.dayScenario === 'day02') return dayTwoPatchForaged(state) ? state.selectedBiomeId === state.dayScenarioTiles?.woodsId ? 'day02.woods' : 'day02.scarcity' : state.selectedBiomeId === state.dayScenarioTiles?.patchId ? 'day02.patch' : 'day02.opening';

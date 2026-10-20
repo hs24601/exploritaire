@@ -122,7 +122,7 @@ export const ProtoCard = ({
     data-gameplay-disabled={disabled || undefined}
     aria-haspopup={!jumbo && allowJumbo ? 'dialog' : undefined}
     data-card-jumbo={jumbo || undefined}
-    style={{...style, touchAction: onDropActor ? 'none' : style?.touchAction}}
+    style={{...style, ...(!allowJumbo ? { background: 'transparent' } : {}), touchAction: onDropActor ? 'none' : style?.touchAction}}
     className={`${cardBaseClassName} ${lit ? 'proto-lit-surface ' : ''}${buried ? 'proto-card--buried ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${
       disabled
         ? selected
@@ -151,7 +151,7 @@ export const ProtoCard = ({
         </div>
       ) : null}
     </div>
-    {centerRank && !concealValue ? <span className="proto-card-center-rank">{rankLabel(card.rank)}</span> : null}
+    {centerRank && !concealValue ? <span className="proto-card-center-rank"><span className="proto-card-value-ink">{rankLabel(card.rank)}</span></span> : null}
   </PlayingCard>
 );
 };

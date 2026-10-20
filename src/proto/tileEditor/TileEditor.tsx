@@ -115,6 +115,7 @@ export function TileEditor({ workspace = false, renderTableaus, tools, document,
         try { const next=JSON.parse(await file.text()); validateTileDocument(next); if(!next.tiles)throw new Error('Import requires a complete tile layout'); if(commit(next,'Imported tile draft. Apply or save to use it.'))onSelectCell(TABLE_GRID.cell(0,2)); }
         catch(reason){setError(reason instanceof Error ? reason.message : 'Invalid tile JSON');}
       }} /></label>
+      <button type="button" onClick={() => window.open(`${import.meta.env.BASE_URL}tools/watercolor-lab.html`, '_blank', 'noopener')}>Watercolor lab</button>
       <button disabled={saving} onClick={onClose}>Close · playtest applied data</button></div>
     <div className="tile-editor-context">    <label>Choose tile<select aria-label="Choose tile" value={selected?.id ?? ''} onChange={event => { const entry = document.tiles!.find(t => t.id === event.target.value); if (entry) onSelectCell(TABLE_GRID.cell(entry.column, entry.row)); }}>
       <option value="">Empty cell</option>{document.tiles!.map(entry => <option value={entry.id} key={entry.id}>{entry.title} · {entry.column},{entry.row}</option>)}

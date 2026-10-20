@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
   const bundle = await build({ stdin:{ contents: `import React from 'react'; import {createRoot} from 'react-dom/client'; import {CalloutText, CalloutEditor} from './src/proto/components/CalloutEditor';
     const root=createRoot(document.getElementById('fixture'));
     window.renderEditor=()=>root.render(<CalloutEditor initial={{text:'…breakfast!',marks:[{start:1,end:10,effect:'wave'}],emoji:{actor:'hero',emotion:'happy'}}} speaker="Hero" onSave={()=>{}} onClose={()=>{}} onReset={()=>{}} />);
-    window.renderCallout=(text,effect,expression,editing)=>root.render(<div className="proto-callout" data-expression={expression} style={{left:12,top:48}}><div className="proto-callout-content">{expression&&<div className="proto-callout-expression"><svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="40" fill="#d9a36a" /></svg></div>}<div className="proto-callout-copy"><strong>Hero</strong><span className="proto-callout-text"><CalloutText draft={{text,marks:effect?[{start:0,end:text.length,effect,potency:2}]:[]}} /></span></div><button className="proto-callout-next">…</button>{editing&&<button className="proto-callout-edit">✎</button>}</div></div>);
+    window.renderCallout=(text,effect,expression,editing)=>root.render(<div className="proto-callout" data-expression={expression} style={{left:12,top:48}}><div className="proto-callout-content">{expression&&<div className="proto-callout-expression"><svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="40" fill="#d9a36a" /></svg></div>}<div className="proto-callout-copy"><strong>Hero</strong><span className="proto-callout-text"><CalloutText draft={{text,marks:effect?[{start:text.startsWith('…')?1:0,end:text.length,effect,potency:2}]:[]}} /></span></div><button className="proto-callout-next">…</button>{editing&&<button className="proto-callout-edit">✎</button>}</div></div>);
   `, resolveDir:process.cwd(),loader:'tsx'}, bundle:true,write:false,format:'iife',jsx:'automatic',loader:{'.css':'empty'},define:{'import.meta.env.BASE_URL':'"/"','import.meta.env.DEV':'false'} });
   const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe'});
   let cases=0;
@@ -26,12 +26,14 @@ const assert = require('node:assert/strict');
             const range=document.createRange();range.selectNodeContents(name);
             const lines=[...range.getClientRects()];
             const copy=root.querySelector('.proto-callout-copy');
-            return {nameLines:lines.length,width:r.width,right:r.right,copyOverflow:copy.scrollWidth-copy.clientWidth,bubbleHeight:b.height,nameHeight:n.height};
+            const wordTops=[...root.querySelectorAll('.callout-word')].map(word=>word.getBoundingClientRect().bottom);
+            return {nameLines:lines.length,width:r.width,right:r.right,copyOverflow:copy.scrollWidth-copy.clientWidth,bubbleHeight:b.height,nameHeight:n.height,wordTops};
           });
           const label=JSON.stringify({width,expression,editing,effect,text});
           assert.equal(result.nameLines,1,'speaker must stay on one line: '+label+' '+JSON.stringify(result));
           assert(result.right<=width+1,'callout must fit viewport: '+label);
           assert(result.copyOverflow<=1,'copy must not overflow: '+label);
+          if(text==='…breakfast!' && width>=390) assert(Math.max(...result.wordTops)-Math.min(...result.wordTops)<6,'ellipsis and breakfast stay together: '+label);
           cases++;
         }
       }
@@ -55,3 +57,4 @@ const assert = require('node:assert/strict');
     console.log(cases+' callout layout cases passed.');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1);});
+

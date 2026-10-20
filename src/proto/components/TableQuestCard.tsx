@@ -102,10 +102,14 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     ghost.classList.add('quest-card-flight');
     ghost.style.cssText = `position:fixed;left:${source.x}px;top:${source.y}px;width:${source.width}px;height:${source.height}px;z-index:60000;pointer-events:none;transform-origin:0 0;`;
     document.body.appendChild(ghost);
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const dx = destination.x - source.x, dy = destination.y - source.y;
+    const scale = destination.width / source.width;
     const animation = trackGameAnimation(ghost.animate([
       { transform: 'translate(0,0) scale(1)' },
-      { transform: `translate(${destination.x - source.x}px,${destination.y - source.y}px) scale(${destination.width / source.width})` },
-    ], { duration: 550, easing: 'ease-in-out' }));
+      ...(!reduced ? [{ transform: `translate(${dx / 2}px,${dy / 2 - 50}px) scale(${(1 + scale) / 2}) perspective(900px) rotateY(180deg) rotateZ(-10deg)`, offset: .5 }] : []),
+      { transform: `translate(${dx}px,${dy}px) scale(${scale}) perspective(900px) rotateY(${reduced ? 0 : 360}deg) rotateZ(0deg)` },
+    ], { duration: reduced ? 120 : 650, easing: 'ease-in-out' }));
     animation.onfinish = () => { ghost.remove(); setLanded(true); };
     return () => { animation.cancel(); ghost.remove(); };
   }, [placement.questIndex]);
@@ -143,6 +147,6 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     }}
     onPointerCancel={()=>{hold.cancel('pointercancel');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;setPickedUp(false);}}
     onLostPointerCapture={()=>{hold.cancel('lost pointer capture');if(drag.current){setDisplayPosition(drag.current.origin);setTilt(drag.current.angle);}drag.current=null;setPickedUp(false);}}>
-    <TableCardLayers><QuestCard title={title} text={text} inspirationReward={inspirationReward} rewardLabel={rewardLabel} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} /></TableCardLayers>
+    <TableCardLayers><QuestCard authoringId={`quest:${placement.questIndex}`} title={title} text={text} inspirationReward={inspirationReward} rewardLabel={rewardLabel} complete={!redeemed} onRedeem={onRedeem} redeemed={redeemed} rewardHold={hold} /></TableCardLayers>
   </div>;
 }

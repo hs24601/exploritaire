@@ -127,6 +127,25 @@ export default defineConfig({
           }
           next();
         });
+        server.middlewares.use('/__quest-cards/save', (req, res) => {
+          if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
+          if (!req.headers['content-type']?.startsWith('application/json')) { res.statusCode = 415; res.end('Expected application/json'); return; }
+          let body = '', large = false;
+          req.on('data', chunk => { body += chunk; if (body.length > 32000) { large = true; res.statusCode = 413; res.end('Too large'); req.destroy(); } });
+          req.on('end', () => {
+            if (large) return;
+            try {
+              const { id, draft } = JSON.parse(body);
+              if (typeof id !== 'string' || !id.trim() || id.length > 500 || ['__proto__', 'constructor', 'prototype'].includes(id)) throw new Error('Invalid quest ID');
+              if (draft !== null && (!draft || typeof draft.title !== 'string' || !draft.title.trim() || draft.title.length > 200 || typeof draft.text !== 'string' || !draft.text.trim() || draft.text.length > 4000)) throw new Error('Invalid quest text');
+              const file = path.resolve(__dirname, 'src/data/questCardEdits.json');
+              const edits = JSON.parse(fs.readFileSync(file, 'utf8'));
+              if (draft === null) delete edits[id]; else edits[id] = { title: draft.title, text: draft.text };
+              fs.writeFileSync(file + '.tmp', JSON.stringify(edits, null, 2) + '\n'); fs.renameSync(file + '.tmp', file);
+              res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(edits));
+            } catch (error) { res.statusCode = 400; res.end(String(error)); }
+          });
+        });
         server.middlewares.use('/__tableau-layouts/save', (req,res) => {
           if(req.method!=='POST'){res.statusCode=405;res.end('Method Not Allowed');return;}
           if(!req.headers['content-type']?.startsWith('application/json')){res.statusCode=415;res.end('Expected application/json');return;}
@@ -690,6 +709,8 @@ export default defineConfig({
         world:      path.resolve(__dirname, 'world.html'),
         auram:      path.resolve(__dirname, 'auram.html'),
         tooling:    path.resolve(__dirname, 'tooling.html'),
+        watercolorLab: path.resolve(__dirname, 'tools/watercolor-lab.html'),
+        bushLab: path.resolve(__dirname, 'tools/bush-lab.html'),
         ux:         path.resolve(__dirname, 'ux.html'),
         exploritaire: path.resolve(__dirname, 'exploritaire.html'),
         hearth: path.resolve(__dirname, 'hearth.html'),

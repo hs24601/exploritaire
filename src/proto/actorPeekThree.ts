@@ -7,7 +7,7 @@ export function createActorPeekThree() {
   const depths = new Float32Array(5);
   const bounds = new THREE.Box3(), point = new THREE.Vector3();
   return {
-    attach(material: THREE.MeshBasicMaterial) {
+    attach(material: THREE.MeshBasicMaterial | THREE.MeshLambertMaterial) {
       material.onBeforeCompile = shader => {
         shader.uniforms.actorPeekHoles = { value: holes };
         shader.uniforms.actorPeekDepths = { value: depths };

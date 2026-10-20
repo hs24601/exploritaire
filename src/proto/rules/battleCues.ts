@@ -78,6 +78,7 @@ export const cueSeconds = (cue: BattleCue) => cue.delay + CUE_SECONDS[cue.kind =
 
 /** What the arena shows: every unit still on the field (fallen ones included) and the recent events to cue. */
 export type BattleScene = {
+  proceduralSlimeComparison?: boolean;
   paused?: boolean;
   ambushed?: boolean;
   units: { id: string; team: 'party' | 'enemy'; down: boolean; position?: readonly [number,number]; pose?: 'standing' | 'sitting' | 'flinch'; targeting?: 'valid' | 'focused'; markers?: ActorMarkerContent }[];

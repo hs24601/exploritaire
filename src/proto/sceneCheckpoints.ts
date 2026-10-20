@@ -15,21 +15,34 @@ export const SCENE_CHECKPOINTS = [
   ['day01.find-quest', 'Discover the cave-mouth quest'],
   ['day01.leave-den', 'Start leaving the den'],
   ['day01.navigate-den', 'Clear the den exit'],
+  ['day01.khad-roots-exposed', 'Khad roots exposed'],
   ['day01.sparse-patch', 'Pick the first berry'],
   ['day01.patch', 'Reach the denser patch'],
-  ['day01.budget', 'Gather supper · three small lights'],
+  ['day01.budget', 'Gather supper'],
   ['day01.home', 'Return home before dark'],
-  ['day01.saved-light', 'Have supper · one for tomorrow'],
-  ['day01.rest', 'Curl up · begin the rest tableau'],
+  ['day01.saved-light', 'Have supper'],
+  ['day01.rest', 'Curl up · begin resting'],
   ['day01.complete', 'Finish resting'],
   ['day02.opening', 'Yesterday’s light'],
   ['day02.patch', 'Reach the dwindling patch'],
   ['day02.scarcity', 'Gather the last berry'],
   ['day02.woods', 'Reach the darker woods'],
-  ['day02.ambush', 'Uncover the woodland mana · Banks rescue'],
+  ['day02.ambush', 'Woodland mana · Banks rescue'],
   ['day03.opening', 'Home with Banks'],
 ] as const;
 export type SceneCheckpointId = typeof SCENE_CHECKPOINTS[number][0];
+
+/** Full IDs are unambiguous; short bookmark flags work when unique across days. */
+export function sceneCheckpointFromSearch(search: string): SceneCheckpointId | undefined {
+  const params = new URLSearchParams(search);
+  const requested = params.get('scene');
+  if (requested) return SCENE_CHECKPOINTS.find(([id]) => id === requested)?.[0];
+  if (params.has('woods-combat')) return 'day02.ambush';
+  for (const key of params.keys()) {
+    const matches = SCENE_CHECKPOINTS.filter(([id]) => id === key || id.split('.')[1] === key);
+    if (matches.length === 1) return matches[0][0];
+  }
+}
 
 /** Rebuild from the applied world, never from the player's partially used deal.
  * Travel checkpoints run the actual card, stamina, discovery and arrival rules. */
@@ -41,7 +54,7 @@ export function createSceneCheckpoint(id: SceneCheckpointId, document: TileDocum
     if (!tile) throw new Error('This applied world has no destination for that scene.');
     state = arriveActorAtBiome({ ...state, journey: undefined }, 'hero', tile.id, tile.position);
   };
-  const travel = (exitOnly = false) => {
+  const travel = (exitOnly = false, exposeRoots = false) => {
     const plan = dayOnePlan(state);
     if (!plan.path.length) throw new Error('That scene is unreachable in the applied world.');
     state = prepareTravelTableau({ ...state, selectedBiomeId: null, tableau: [], stock: [], foundations: [],
@@ -51,7 +64,8 @@ export function createSceneCheckpoint(id: SceneCheckpointId, document: TileDocum
     const exitCards = state.journey!.segments[0]?.cards;
     for (let n = 0; n < 2000; n++) {
       const journey = state.journey!;
-      if (journey.completed >= journey.cards || exitOnly && journey.completed >= exitCards) break;
+      // Leave the last two required berry plays, exposing the optional bound pair.
+      if (journey.completed >= journey.cards || exitOnly && journey.completed >= exitCards || exposeRoots && journey.completed >= journey.cards - 2) break;
       const column = bestTravelMove(journey);
       if (column === null) throw new Error('The applied travel layout cannot be solved for this checkpoint.');
       state = playTravelCard(state, column, 'hero');
@@ -59,7 +73,7 @@ export function createSceneCheckpoint(id: SceneCheckpointId, document: TileDocum
       const position = pointAlongTimedPath(state.journey!.path, state.journey!.progress);
       state = discoverActorTiles({ ...state, worldActors: state.worldActors.map(a => a.id === 'hero' ? { ...a, position } : a) });
     }
-    if (!exitOnly) arrive(plan.arrival.biomeId);
+    if (!exitOnly && !exposeRoots) arrive(plan.arrival.biomeId);
   };
   // Use real POI plays so all resource receipts, work and actor costs agree.
   const gather = () => {
@@ -77,9 +91,13 @@ export function createSceneCheckpoint(id: SceneCheckpointId, document: TileDocum
       const plan = dayOnePlan(state);
       return prepareTravelTableau({ ...state, denQuestDiscovered:id === 'day01.leave-den', journey: { ...beginJourney(plan, 2, false), memberRanks: { hero: 2 } } });
     }
-    travel(id === 'day01.navigate-den');
+    travel(id === 'day01.navigate-den', id === 'day01.khad-roots-exposed');
     if (id === 'day01.navigate-den') return state;
+    if (id === 'day01.khad-roots-exposed') return { ...state, denQuestDiscovered: true,
+      discoveredTutorialQuests: [...new Set([...(state.discoveredTutorialQuests ?? []), 'navigate-den', 'first-berry'])] };
     if (id === 'day01.sparse-patch') {
+      // This bookmark restores the completed reflection, including its pickup.
+      state = { ...state, discoveredTutorialQuests: [...new Set([...(state.discoveredTutorialQuests ?? []), 'denser-patch'])], dockedTutorialQuests: ['denser-patch'] };
       const patch = state.biomeTiles.find(t => t.id === state.dayScenarioTiles?.patchId);
       return patch ? { ...state, worldActors: state.worldActors.map(a => a.id === 'hero' ? { ...a, heading: Math.atan2(patch.position.x-a.position.x, patch.position.y-a.position.y) } : a) } : state;
     }

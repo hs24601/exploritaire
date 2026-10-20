@@ -1,4 +1,6 @@
 import { gameTime } from '../gameTime';
+import { createProceduralSlime } from './proceduralSlime';
+import { createShadowVolume } from './shadowVolume';
 import { globalLightsEnabled } from './globalLighting';
 import { createSpriteDropProjection } from './combatDropTargets';
 import { createSpriteTargetOutline } from './spriteTargetOutline';
@@ -171,7 +173,8 @@ const ACTOR_HEIGHTS = [2.55, 1.85, 1.7, 1.4, 1.2, 2.05];
 const DEFAULT_UNITS: BattleScene['units'] = ['hero', 'mochi', 'dark-slime', 'rear-slime'].map((id, i) => ({ id, team: i < 2 || i === 5 ? 'party' : 'enemy', down: false, markers: {health:{current:i===0?12:i===1?10:14,max:i===0?12:i===1?10:14}} }));
 
 /** A small arena with upright pixel art and pooled, deterministic effects. */
-export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.PerspectiveCamera, assets: BattleSpriteTextures & {trees: THREE.Texture}, quality: FxQuality = 'high') {
+export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.PerspectiveCamera, assets: BattleSpriteTextures & {trees: THREE.Texture}, quality: FxQuality = 'high', comparison = false) {
+  const actorHeights = ACTOR_HEIGHTS.map((height, index) => comparison && index === 3 ? ACTOR_HEIGHTS[2] * 2 : height);
   const resources: (THREE.BufferGeometry | THREE.Material)[] = [];
   const geometry = <T extends THREE.BufferGeometry>(g: T) => { resources.push(g); return g; };
   const material = <T extends THREE.Material>(m: T) => { resources.push(m); return m; };
@@ -182,8 +185,11 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
   const heroLibrary = createDirectionalSpriteLibrary(assets, HERO_DIRECTIONAL_SPRITE, { sitting: HERO_SITTING_DIRECTIONAL_SPRITE, walking: HERO_WALKING_DIRECTIONAL_SPRITE, ...HERO_COMBAT_POSES });
   const mochiLibrary = createDirectionalSpriteLibrary(assets, MOCHI_DIRECTIONAL_SPRITE);
   const slimeLibrary = createDirectionalSpriteLibrary(assets, DARK_SLIME_DIRECTIONAL_SPRITE);
+  const procedural = comparison ? createProceduralSlime() : undefined;
+  const proceduralLibrary = procedural ? createDirectionalSpriteLibrary({ proceduralSlime: procedural.texture }, procedural.definition) : undefined;
   const hero = heroLibrary.create(ACTOR_HEIGHTS[0]), mochi = mochiLibrary.create(ACTOR_HEIGHTS[1]);
-  const slimes = [slimeLibrary.create(ACTOR_HEIGHTS[2]), slimeLibrary.create(ACTOR_HEIGHTS[3], 0xb9a6ef), slimeLibrary.create(ACTOR_HEIGHTS[4], 0x9fd6c8)];
+  const slimes = [slimeLibrary.create(ACTOR_HEIGHTS[2]), proceduralLibrary ? proceduralLibrary.create(actorHeights[3]) : slimeLibrary.create(ACTOR_HEIGHTS[3], 0xb9a6ef), slimeLibrary.create(ACTOR_HEIGHTS[4], 0x9fd6c8)];
+  const shadowVolume = procedural ? createShadowVolume(slimes[1], actorHeights[3]) : undefined;
   const banksLibrary = createDirectionalSpriteLibrary(assets, BANKS_DIRECTIONAL_SPRITE, BANKS_POSES);
   const instances = [hero, mochi, ...slimes, banksLibrary.create(ACTOR_HEIGHTS[5])];
   const outlines = instances.map(createSpriteTargetOutline);
@@ -205,7 +211,7 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
     s.rotation.x = -Math.PI / 2; s.position.set(x, .02, z); s.scale.set(1.1, .6, 1); scene.add(s); return s;
   });
   // Battle cues (bites, flinches, falls) layer over whatever the scripted scene is doing.
-  const cues = createCombatCueFx(scene, camera, actors.map((actor, i) => ({ id: actor.id, team: i < 2 || i === 5 ? 'party' as const : 'enemy' as const, rig: instances[i], shadow: shadows[i], height: ACTOR_HEIGHTS[i], slime: i >= 2 && i < 5 })), quality);
+  const cues = createCombatCueFx(scene, camera, actors.map((actor, i) => ({ id: actor.id, team: i < 2 || i === 5 ? 'party' as const : 'enemy' as const, rig: instances[i], shadow: shadows[i], height: actorHeights[i], slime: i >= 2 && i < 5 })), quality);
   cues.setUnits(DEFAULT_UNITS, 0);
   const echoes = Array.from({length: 5}, () => { const rig = heroLibrary.create(2.55, 0x77fff3); scene.add(rig.root); return rig; });
   const pixels = Array.from({length: 100}, (_, i) => {
@@ -237,8 +243,9 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
     cue(cue: BattleCue, now: number) { cues.cue(cue, now); },
     /** Cue effects still moving, so the arena keeps drawing. */
     busy(now: number) { return cues.busy(now); },
-    snapshot() { return actors.map((actor, i) => ({ id: actor.id, team: actor.team, visible: instances[i].root.visible, targeting: markerUnits?.find(unit => unit.id === actor.id)?.targeting, tip: instances[i].facing.rotation.z, position: [actor.position.x, actor.position.z], heading: headings[i], frame: instances[i].frame, pose: instances[i].pose, marker: markers[i].snapshot(camera), animationFrame: instances[i].animationFrame, view: instances[i].view, billboardYaw: instances[i].billboard.rotation.y, flip: instances[i].facing.scale.x, parts: instances[i].parts.map(({part, pivot}) => ({ id: part.id, position: pivot.position.toArray(), angle: pivot.rotation.z, scaleY: pivot.scale.y })) })); },
+    snapshot() { return actors.map((actor, i) => ({ id: actor.id, team: actor.team, visible: instances[i].root.visible, targeting: markerUnits?.find(unit => unit.id === actor.id)?.targeting, tip: instances[i].facing.rotation.z, position: [actor.position.x, actor.position.z], heading: headings[i], frame: instances[i].frame, pose: instances[i].pose, shadowInkTime: i === 3 ? procedural?.time : undefined, marker: markers[i].snapshot(camera), animationFrame: instances[i].animationFrame, view: instances[i].view, billboardYaw: instances[i].billboard.rotation.y, flip: instances[i].facing.scale.x, parts: instances[i].parts.map(({part, pivot}) => ({ id: part.id, position: pivot.position.toArray(), angle: pivot.rotation.z, scaleY: pivot.scale.y })) })); },
     update(t: number, reduced: boolean, now = gameTime.now() / 1000) {
+      procedural?.update(now, reduced);
       instances.forEach((rig, i) => {
         const target = markerUnits?.find(unit=>unit.id===ACTOR_IDS[i])?.position ?? ACTOR_SPOTS[i];
         const x=rig.root.position.x+(target[0]-rig.root.position.x)*.045, z=rig.root.position.z+(target[1]-rig.root.position.z)*.045;
@@ -249,6 +256,7 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
       slimes[0].setColor(new THREE.Color(1, 1 - impact * .8, 1 - impact * .7));
       slimes[0].root.position.x = 3 + Math.sin((t - 5.7) * 36) * impact * .15;
       const acting = cues.place(now, reduced);
+      if (comparison) shadows[3].material.opacity *= .3;
       const moved = hero.root.position.distanceTo(previousHeroPosition);
       previousHeroPosition.copy(hero.root.position);
       // Keep hits/falls above locomotion; stationary attacks use standing art.
@@ -267,9 +275,10 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
         headings[i] = actorHeading(actors[i], present, headings[i] - away) + away;
         rig.update(camera, headings[i], rig.pose === 'walking' ? walkTime : t, reduced, i * 1.7, rig.pose === 'down' || rig.pose === 'flinch' ? 0 : Math.max(i === 0 ? activity(t) : 0, acting.get(actors[i].id) ?? 0), now);
       });
+      shadowVolume?.update(now, reduced, -.65);
       outlines.forEach((outline, i) => outline.update(markerUnits?.find(unit => unit.id === ACTOR_IDS[i] && !unit.down)?.targeting));
       camera.updateMatrixWorld();
-      markers.forEach((marker,i)=>marker.update(camera,markerViewportWidth,markerViewportHeight,instances[i].view?.elevation==='top'?ACTOR_HEIGHTS[i]*.5*instances[i].facing.scale.y:ACTOR_HEIGHTS[i],instances[i].root.visible));
+      markers.forEach((marker,i)=>marker.update(camera,markerViewportWidth,markerViewportHeight,instances[i].view?.elevation==='top'?actorHeights[i]*.5*instances[i].facing.scale.y:actorHeights[i],instances[i].root.visible));
       cues.particles(now);
       landscape.update(camera, now, reduced, instances.map(rig => rig.root));
       echoes.forEach((rig, i) => {
@@ -292,6 +301,6 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
       for (const rig of instances) landscape.sampleActorLight(rig.root.position, rig.environmentLight);
       for (const rig of echoes) landscape.sampleActorLight(rig.root.position, rig.environmentLight);
     },
-    dispose() { outlines.forEach(outline => outline.dispose()); markers.forEach(marker=>marker.dispose()); landscape.dispose(); cues.dispose(); [...instances, ...echoes].forEach(rig => rig.dispose()); heroLibrary.dispose(); mochiLibrary.dispose(); slimeLibrary.dispose(); banksLibrary.dispose(); resources.forEach(r => r.dispose()); },
+    dispose() { shadowVolume?.dispose(); outlines.forEach(outline => outline.dispose()); markers.forEach(marker=>marker.dispose()); landscape.dispose(); cues.dispose(); [...instances, ...echoes].forEach(rig => rig.dispose()); heroLibrary.dispose(); mochiLibrary.dispose(); slimeLibrary.dispose(); proceduralLibrary?.dispose(); procedural?.dispose(); banksLibrary.dispose(); resources.forEach(r => r.dispose()); },
   };
 }

@@ -27,6 +27,7 @@ export function protoMediaAssets(style: ArtStyle) {
     actorSprite(asset('deprecated/pixel/characters/hero-sleeping.png'), style)!,
     ...['manaberry-sparse-standee-v1.png','manaberry-sparse-overhead-v1.png'].map(name => asset('runtime/environment/watercolor/v1/'+name)),
     asset('runtime/ui/quests/hero-snuffling-berries-v1.png'),
+    ...(style === 'paint' ? ['hero-leaving-cave-night-paint-v1.png', 'hero-snuffling-berries-night-paint-v5.png'].map(name => asset('runtime/ui/quests/'+name)) : []),
     ...['hero-den-topdown-v3.png', 'hero-den-ground-v3.png', 'impassable-mountain_topdown.svg',
       'berry-patch-topdown.svg', 'berry-patch-ground.svg', 'dirt-ground.png'].map(name => scenery(name, style)),
     actorSprite(asset('deprecated/pixel/characters/hero-sleeping-topdown.png'), style)!,

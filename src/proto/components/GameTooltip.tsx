@@ -7,6 +7,9 @@ const LONG_PRESS = 500;
 const TOUCH_SHOW_MS = 2500;
 const MARGIN = 8;
 const TIP_ID = 'game-tooltip';
+// Temporary presentation suppression requested during scene iteration.
+// Keep title parking active so native browser tooltips stay suppressed too.
+const TOOLTIPS_ENABLED = false;
 
 type Tip = { anchor: Element; text: string };
 
@@ -47,6 +50,7 @@ export function GameTooltip() {
     const hide = () => { hideBubble(); restore(); };
     const show = (el: Element) => {
       const text = park(el).trim();
+      if (!TOOLTIPS_ENABLED) return;
       if (!text || !el.isConnected) { hide(); return; }
       el.setAttribute('aria-describedby', TIP_ID);
       tipRef.current = { anchor: el, text };

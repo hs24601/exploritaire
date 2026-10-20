@@ -3017,12 +3017,27 @@ html.drag-perf-mode .target-swirl-sparkles {
    slanted edge when the card reaches the front. */
 .proto-card-veil { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: #0a1220a8; -webkit-backdrop-filter: var(--silhouette-card-filter); backdrop-filter: var(--silhouette-card-filter); transition: mask-position 0.9s ease-in-out, -webkit-mask-position 0.9s ease-in-out; }
 .proto-card-tableau-background { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
-.proto-card-tableau-background > img { width: 100%; height: 100%; object-fit: cover; }
-.proto-card-tableau-background[data-card-art-style="pixel"] > img { image-rendering: pixelated; }
+/* Clear the primitive and travel/combat fills, leaving only the 14% wash. */
+.proto-game-root .playing-card:has(> .proto-card-tableau-background) { background: transparent; }
+.playing-card:has(> .proto-card-tableau-background) > .proto-card-veil { background: #0a122018; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .playing-card:has(> .proto-card-tableau-background) .proto-card-header { position: relative; text-shadow: 0 1px 2px #000, 0 0 5px #000; }
 :root { --silhouette-card-filter: saturate(0) brightness(0.55) sepia(0.5) hue-rotate(175deg); }
 .proto-card-rank { position: relative; z-index: 2; }
-.proto-card--buried .proto-card-rank { color: #c6d3e4a6; }
+.proto-card-rank:not(:empty), .proto-card-value-ink {
+  color: #fff3d6;
+  background: #101923d9;
+  border-radius: .18em .24em .2em .15em;
+  box-shadow: 0 0 0 1px #e5d4a766, 0 .04em .12em #0009;
+  text-shadow: 0 1px 1px #000;
+  padding: .08em .16em;
+  min-width: 1ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+/* Local ink backing keeps rank contrast independent of the illustration.
+   Inset corner padding preserves the authored stack peek and reward clearance. */
+.proto-card-rank:not(:empty) { margin: -.08em -.16em; }
+.proto-card--buried .proto-card-rank { color: #c6d3e4; background: #18222ed9; }
 @media (prefers-reduced-motion: reduce) { .proto-card-veil { transition: none; } }
 /* Upright tableau rack: full portrait faces with the same rank-row peek. */
 .proto-tableau-scene { position: relative; min-width: 0; min-height: 0; height: 100%; isolation: isolate; }

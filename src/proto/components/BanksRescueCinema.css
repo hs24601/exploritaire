@@ -3,6 +3,7 @@
 .banks-rescue-cinema>header>div {display:flex;gap:8px;}
 .banks-rescue-cinema button {font-size:16px;min-height:40px;padding:6px 10px;border:1px solid #a79269;background:#263b3b;color:#fff0d6;touch-action:manipulation;}
 .banks-rescue-cinema__stage {position:relative;min-height:0;overflow:hidden;}
+.slime-comparison-caption {position:absolute;z-index:3;top:12px;right:12px;max-width:calc(100% - 24px);padding:5px 9px;background:#102027df;color:#eadcf6;font-size:16px;pointer-events:none;}
 .banks-rescue-cinema .combat-demo {border:0;border-radius:0;}
 .banks-rescue-cinema .combat-demo__tools {display:none;}
 .banks-rescue-cinema__tableaus {display:grid;grid-template-columns:minmax(90px,18%) minmax(0,1fr) minmax(80px,12%);gap:12px;padding:8px 16px;min-height:0;background:#101b1c;border-top:1px solid #526157;}

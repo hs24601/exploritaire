@@ -111,7 +111,7 @@ function VegetationLandscape({ tileType, manaGlow, berriesAvailable }: { tileTyp
         texture.minFilter = texture.magFilter;
         texture.generateMipmaps = false;
         texture.colorSpace = THREE.SRGBColorSpace;
-        landscape = createTableauLandscape(scene, texture, woods, false, tileType === 'hero-den' ? { props: [], groundColor: 0x4d3b2a, groundCover: { pixel: artStyle !== 'paint', palette: 'dirt' } } : tileType === 'berry-patch-sparse' ? { props: [{ x: 0, z: -8, height: 11 }], groundCover: { pixel: artStyle !== 'paint' }, fruitTexture, manaFruit: { x: .59, y: .47, size: .29 } } : berries ? { props: BERRY_TABLEAU_PROPS, groundCover: { pixel: artStyle !== 'paint' }, berryFruit: true, fruitTexture } : {});
+        landscape = createTableauLandscape(scene, texture, woods, false, tileType === 'hero-den' ? { props: [], groundColor: 0x4d3b2a, groundCover: { pixel: artStyle !== 'paint', palette: 'dirt' } } : tileType === 'berry-patch-sparse' ? { props: [{ x: 0, z: -8, height: 11 }], groundCover: { pixel: artStyle !== 'paint' }, fruitTexture, manaFruit: [{ x: .59, y: .47, size: .29 }, { x: .34, y: .32, size: .29 }] } : berries ? { props: BERRY_TABLEAU_PROPS, groundCover: { pixel: artStyle !== 'paint' }, berryFruit: true, fruitTexture } : {});
         refreshFruit.current = () => {
           landscape?.setFruitVisible(fruitState.current.berriesAvailable, fruitState.current.manaGlow);
           schedule();

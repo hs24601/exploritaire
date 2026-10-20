@@ -23,6 +23,14 @@ export function ActorHoloCard({ actorId, name, rank, resource, foodLanding, rece
     if (gained) setReceipt({ id: `${actorId}-receipt-${++sequence.current}`, x: 20 + Math.random() * 60, y: 25 + Math.random() * 45,
       berries: false, glyph: gained === 'inspiration' ? '💫' : gained === 'AP' ? '✦' : '✨' });
   }, [receivedResources, actorId]);
+  useEffect(() => {
+    const received = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== actorId) return;
+      setReceipt({ id: actorId + '-quest-receipt-' + ++sequence.current, x: 50, y: 45, berries: false, glyph: '✓' });
+    };
+    window.addEventListener('proto-actor-received', received);
+    return () => window.removeEventListener('proto-actor-received', received);
+  }, [actorId]);
   if (actorId === 'hero' && relocated) return <span data-unified-actor-placeholder="true" />;
   return <span className="actor-holocard" data-actor-holocard={actorId} data-has-value={Boolean(rank)}>
     <TradingCard id={actorId} title={name} state="foundation"

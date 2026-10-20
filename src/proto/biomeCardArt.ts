@@ -1,6 +1,8 @@
 import type { ArtStyle } from './artStyle';
 import { scenerySprite, woodsOverheadSprite } from './sceneryArt';
 import { loadMediaImage } from './mediaCache';
+import { biomeWashPalette } from './watercolorWash';
+import { DEFAULT_PAINT, paintCanvas, paintPresetKey, type PaintPreset } from './watercolorPaint';
 
 export type CardBiome = { id?: string; tileType?: string; berryPatchVariant?: 'sparse'; terrain?: string; road?: unknown; danger?: boolean; flags?: readonly string[] };
 type Placement = { x: number; foot: number; height: number; alpha?: number; flip?: boolean };
@@ -54,7 +56,7 @@ export function cardViewIndex(id: string): number {
 }
 export type TableauCardBackground = { key: string; kind: string; artStyle: ArtStyle; color: string; src?: string; view?: number };
 export function cardBackgroundFallback(kind: string, artStyle: ArtStyle, view = 0): TableauCardBackground {
-  return { key: `${kind}:${artStyle}:${view}`, kind, artStyle, view, color: (BIOME_CARD_RECIPES[kind] ?? BIOME_CARD_RECIPES.unexplored).sky[0] };
+  return { key: `${kind}:${artStyle}:${view}${artStyle === 'paint' ? `:${paintPresetKey()}` : ''}`, kind, artStyle, view, color: (BIOME_CARD_RECIPES[kind] ?? BIOME_CARD_RECIPES.unexplored).sky[0] };
 }
 
 const cache = new Map<string, Promise<TableauCardBackground>>();
@@ -75,9 +77,11 @@ function trim(image: HTMLImageElement) {
 /** Bake once per biome/style/view, shared by all cards and flights. No WebGL
  * contexts, animation clocks or per-card raster work. A missing layer leaves
  * the other art intact; unavailable Canvas retains the dark color fallback. */
-export function loadBiomeCardBackground(kind: string, style: ArtStyle, view = 0): Promise<TableauCardBackground> {
+export function loadBiomeCardBackground(kind: string, style: ArtStyle, view = 0, wash: PaintPreset | false = DEFAULT_PAINT): Promise<TableauCardBackground> {
   view = ((Math.floor(view) % CARD_VIEW_COUNT) + CARD_VIEW_COUNT) % CARD_VIEW_COUNT;
-  const fallback = cardBackgroundFallback(kind, style, view), cached = cache.get(fallback.key);
+  const base = cardBackgroundFallback(kind, style, view);
+  const fallback = style === 'paint' ? { ...base, key: `${kind}:${style}:${view}:${wash === false ? 'original' : paintPresetKey(wash)}` } : base;
+  const cached = cache.get(fallback.key);
   if (cached) return cached;
   const promise = (async () => {
     const recipe = BIOME_CARD_RECIPES[kind] ?? BIOME_CARD_RECIPES.unexplored;
@@ -116,6 +120,16 @@ export function loadBiomeCardBackground(kind: string, style: ArtStyle, view = 0)
     ctx.globalAlpha = 1;
     if (kind === 'path') {
       ctx.fillStyle = '#b0a38355'; ctx.beginPath(); ctx.moveTo(w * .49, h * .65); ctx.lineTo(w * .58, h * .65); ctx.lineTo(w * .95, h); ctx.lineTo(w * .14, h); ctx.fill();
+    }
+    // Cached pigment sits on the ground beneath authored cutouts and all rank/
+    // reward protection. Unknown terrain gets no biome-specific paint hints.
+    if (style === 'paint' && wash && kind !== 'unexplored' && BIOME_CARD_RECIPES[kind]) {
+      const pigment = paintCanvas(biomeWashPalette(kind), wash, view, 128);
+      if (pigment) {
+        ctx.save(); ctx.globalAlpha = .72;
+        ctx.drawImage(pigment, -w * .24, h * .52, w * 1.48, h * .64);
+        ctx.restore();
+      }
     }
     if (scenery) {
       const rect = trim(scenery);

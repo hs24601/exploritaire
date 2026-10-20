@@ -1,18 +1,20 @@
 import type { CSSProperties } from 'react';
 import { rgba, sampleTableLight, standeeLighting, tableObjectShadow, type TableLight } from './protoLighting';
+import { NEUTRAL_STANDEE_LIGHTING } from './components/SpriteStandee';
 import { globalLightsEnabled } from './globalLighting';
 
 /** A local view of the biome's world lighting; the fixture is visual scaffolding
  * for this field only and never changes table exploration or gameplay light. */
-export function createTableauLightRig(hours: number, origin: { x: number; y: number }, worldLights: readonly TableLight[], fixture = true) {
+export function createTableauLightRig(hours: number, origin: { x: number; y: number }, worldLights: readonly TableLight[], fixture = true, enabled = true) {
   const lights: TableLight[] = [...worldLights, ...(fixture && !new URLSearchParams(window.location.search).has('combatsbx') ? [{
     id: 'tableau-overhead', position: { x: origin.x, y: origin.y - 90 },
     height: 180, radius: 5, strength: 0.72, color: '#ffe0a0',
   }] : [])];
   const point = (x: number, y: number) => ({ x: origin.x + x, y: origin.y + y });
   return {
-    standee: (x: number, y: number, height = 64) => standeeLighting(hours, point(x, y), height, lights),
+    standee: (x: number, y: number, height = 64) => enabled ? standeeLighting(hours, point(x, y), height, lights) : NEUTRAL_STANDEE_LIGHTING,
     surface: (x: number, y: number): CSSProperties => {
+      if (!enabled) return { '--surface-light': 'transparent', '--surface-brightness': 1, '--table-object-shadow': 'none' } as CSSProperties;
       const position = point(x, y);
       const sample = sampleTableLight(hours, position, lights);
       const lit = standeeLighting(hours, position, 32, lights);

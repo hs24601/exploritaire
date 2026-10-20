@@ -3,6 +3,7 @@ import { useArtStyle } from '../artStyle';
 import { protoMediaAssets } from '../mediaAssets';
 import { preloadMedia, retainMediaImages } from '../mediaCache';
 import { prewarmSpriteBounds } from './spriteBounds';
+import { InkLoader } from './InkLoader';
 
 /** Reveal the opening together; later styles warm without unmounting gameplay. */
 export function MediaReady({ children }: { children: ReactNode }) {
@@ -31,10 +32,6 @@ export function MediaReady({ children }: { children: ReactNode }) {
       {assets.opening.filter(src => /hero-den-(sprite|front-quarter|side|rear|standee)/.test(src)).map(src => <span key={src} style={{ position: 'absolute', width: 1, height: 1,
         backgroundImage: `url("${src}")`, maskImage: `url("${src}")`, WebkitMaskImage: `url("${src}")` }} />)}
     </div>
-    {ready ? children : <div role="status" aria-live="polite" data-media-loading="true"
-    style={{ height: '100dvh', display: 'grid', placeContent: 'center', gap: 16, background: '#10131b', color: '#f2e9d4', fontSize: 16 }}>
-    <span>Preparing the table…</span>
-    <progress aria-label="Loading artwork" value={progress.done} max={progress.total} style={{ width: 240 }} />
-    </div>}
+    {ready ? children : <InkLoader done={progress.done} total={progress.total} />}
   </>;
 }

@@ -131,7 +131,7 @@ export function dayOneHour(s:ProtoState) {
   if(s.totalWorkCompleted>0)return 15;
   return isHome(s)?10:13;
 }
-/** The sparse harvest dialogue starts with the last legal play, not the walking buffer's easing tail. */
+/** Sparse work completes on the last legal play; dialogue separately waits for quest docking. */
 export function sparsePatchTableauComplete(s:ProtoState): boolean {
   const j=s.journey, sparseId=s.dayScenarioTiles?.sparsePatchId;
   return s.dayScenario==='day01' && Boolean(j && sparseId && j.actorId==='hero' &&

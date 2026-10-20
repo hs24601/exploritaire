@@ -1,7 +1,8 @@
 import * as THREE from 'three';
+import { DEFAULT_PAINT, paintCanvas, type PaintPreset } from './watercolorPaint';
 
 /** Small canvas-authored brush atlas: stable world decoration, never game resources. */
-export function createTableauGroundCover(root: THREE.Group, pixel: boolean, palette: 'woodland' | 'dirt' = 'woodland') {
+export function createTableauGroundCover(root: THREE.Group, pixel: boolean, palette: 'woodland' | 'dirt' = 'woodland', preset: PaintPreset | false = DEFAULT_PAINT) {
   let seed = 81723;
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const textures: THREE.Texture[] = [];
@@ -19,9 +20,14 @@ export function createTableauGroundCover(root: THREE.Group, pixel: boolean, pale
     materials.push(material); return material;
   }
   const wash = surface(ctx => {
+    const paint = pixel || !preset ? undefined : paintCanvas(palette, preset);
+    if (paint) ctx.drawImage(paint, 0, 0);
     for (let i = 0; i < 85; i++) {
       const x = 128 + (random() - .5) * 145, y = 128 + (random() - .5) * 145;
       const radius = 18 + random() * 44;
+      // Consume the same placement RNG even with a cached wash: existing litter,
+      // grass, ground islands and plant fringes must keep their original anchors.
+      if (paint) continue;
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
       const pigment = palette === 'dirt' ? (i % 3 ? '153,110,67' : '102,77,52') : i % 3 ? '103,116,62' : '113,85,54';
       gradient.addColorStop(0, `rgba(${pigment},.15)`); gradient.addColorStop(1, `rgba(${pigment},0)`);

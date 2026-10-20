@@ -3,7 +3,8 @@ import type { TravelCard, TravelJourney, TravelSegment } from './travelJourney';
 export type TravelSequenceRule = 'step' | 'match' | 'skip';
 export const sequenceLabel = (rule:TravelSequenceRule) => rule==='match'?'=':rule==='skip'?'±2':'±1';
 export const sequenceDescription = (rule:TravelSequenceRule) => rule==='match'?'Match the receiving rank':rule==='skip'?'Play two ranks higher or lower':'Play one rank higher or lower';
-export function travelCardPlayable(card:Pick<TravelCard,'rank'|'sequenceRule'>, rank:number) {
+export function travelCardPlayable(card:Pick<TravelCard,'rank'|'sequenceRule'|'khadRoot'>, rank:number) {
+  if(card.khadRoot)return false;
   const distance=(card.rank-rank+13)%13;
   return card.sequenceRule==='match'?distance===0:card.sequenceRule==='skip'?distance===2||distance===11:distance===1||distance===12;
 }

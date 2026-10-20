@@ -37,3 +37,10 @@
   filter:brightness(1.2) saturate(1.08);
   box-shadow:inset 0 0 0 2px #fff5d5bb,inset 0 0 18px #ffe5a72b,0 0 12px #fff0bcdd,0 0 32px #ffd77b99;
 }
+
+/* Beneath the final reachable berry, whose coverage layer is 5. */
+.travel-free-layout > .quest-discovery--denser-patch { left:calc(var(--classic-card-w) * .45); top:calc(var(--classic-card-w) * 1.65); bottom:auto; width:var(--classic-card-w); z-index:4; transform:rotate(-4deg); }
+.quest-discovery[data-covered="true"] { pointer-events:none; }
+.quest-discovery[data-covered="true"]::before { display:none; }
+
+.quest-discovery--denser-patch .quest-card__text, .quest-discovery--denser-patch .quest-card__status { font-size:16px; }

@@ -6,11 +6,13 @@ import type { ProtoState } from './protoState';
 /** Explore every legal choice, not merely the solver's preferred solution. */
 function audit(state: ProtoState, seen = new Set<string>()): number {
   const j = state.journey!;
+  if (j.columns[4]?.some(card => card.id.endsWith('-illegal-cover'))) expect(playTravelCard(state, 4, 'hero')).toBe(state);
   const key = JSON.stringify([j.rank, j.completed, j.columns.map(c=>c.map(card=>card.id))]);
   if (seen.has(key)) return 0;
   seen.add(key);
   if (j.completed === j.cards) {
-    expect(j.columns.flat()).toHaveLength(0);
+    expect(j.columns.flat()).toHaveLength(2);
+    expect(playTravelCard(state, 4, 'hero')).toBe(state);
     expect(j.progress).toBe(1);
     expect(state.haul.mana).toBe(1);
     expect(state.biomeTiles.find(t=>t.id===state.dayScenarioTiles!.sparsePatchId)!.berryHarvested).toBe(true);
@@ -37,10 +39,11 @@ describe('unfailable first berry approach', () => {
     }
     const j=state.journey!;
     expect(j.rank).toBe(2);
-    expect(j.columns.map(c=>c.map(card=>card.rank))).toEqual([[7,6],[4],[5,3],[8]]);
+    expect(j.columns.map(c=>c.map(card=>card.rank))).toEqual([[7,6],[4],[5,3],[8],[12,11]]);
     expect(j.columns.flat().every(card=>!!card.pose)).toBe(true);
-    expect(j.columns.flat().filter(card=>card.foodSource)).toHaveLength(1);
+    expect(j.columns.flat().filter(card=>card.foodSource)).toHaveLength(2);
     expect(j.columns.flat().find(card=>card.foodSource)!.rank).toBe(8);
     expect(state.haul.mana).toBe(0);
   });
 });
+

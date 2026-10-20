@@ -1106,7 +1106,9 @@ export const ProtoMap = ({
     arrival: { biomeId?: string; directBiome?: boolean; foundationIndex?: number } = {},
   ) => {
     const origin = actorOrigins.find((actor) => actor.id === actorId);
-    if (!origin || journeyRef.current && !journeyRef.current.blocked || pendingTravel || travelingActorRef.current) return;
+    const activeJourney = journeyRef.current;
+    const arrived = activeJourney && activeJourney.completed >= activeJourney.cards && (activeJourney.walkedProgress ?? 0) >= 1;
+    if (!origin || activeJourney && !activeJourney.blocked && !arrived || pendingTravel || travelingActorRef.current) return;
     const current = origin.location === 'foundation' && origin.biomeId ? resolveBiomeActorCell(origin.biomeId) ?? origin.position : origin.position;
     if (sameTravelCell(current, target)) { clearActorDragState(); setRouteBlocked(false); return; }
     const route = planRoute(actorId, target, arrival);
@@ -2150,7 +2152,7 @@ export const ProtoMap = ({
                   data-biome-id={tile.id}
                   data-scenery-symmetry={upright && !unexplored ? propVolumeRecipe(tile.sprite)?.symmetry : undefined}
                   data-scenery-facing={upright && !unexplored ? propVolumeRecipe(tile.sprite)?.facing : undefined}
-                  title={unexplored ? undefined : tile.berryPatchVariant === 'sparse' ? `${tile.title} · one bush · ${tile.berryHarvested ? 'picked clean' : 'one manaberry along the way'}` : tile.tileType === 'berry-patch' ? `${tile.title} · forage ripe manaberries · 20% yield mana · ${tile.tableauSize} cards` : tile.road ? `${tile.title} · explore the path` : tile.tileType === 'impassable-mountain' ? tile.passage ? `${tile.passage.title} · ${tile.passage.axis} · ${tile.passageOpen ? 'opened passage' : tile.passage.tags.map(t=>'#'+t).join(' ')}` : 'Impassable mountain · find a route around it' : tile.tileType ? `${tile.title} · explore the path` : tile.danger ? `${tile.title} · danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title} · fishing` : `${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
+                  title={unexplored ? undefined : tile.berryPatchVariant === 'sparse' ? `${tile.title} · one bush · ${tile.berryHarvested ? 'one unreachable manaberry remains' : 'two manaberries · one reachable'}` : tile.tileType === 'berry-patch' ? `${tile.title} · forage ripe manaberries · 20% yield mana · ${tile.tableauSize} cards` : tile.road ? `${tile.title} · explore the path` : tile.tileType === 'impassable-mountain' ? tile.passage ? `${tile.passage.title} · ${tile.passage.axis} · ${tile.passageOpen ? 'opened passage' : tile.passage.tags.map(t=>'#'+t).join(' ')}` : 'Impassable mountain · find a route around it' : tile.tileType ? `${tile.title} · explore the path` : tile.danger ? `${tile.title} · danger: a Shadow Wolf prowls here` : tile.terrain === 'water' ? `${tile.title} · fishing` : `${tile.title} · ${tile.sizeLabel} · ${Math.round(tile.resourceDensity * 100)}% resources · ${tile.tableauSize} cards${tile.unlocked === false ? ' · Complete Small Woods to unlock' : ''}`}
                   data-explored={explored.toFixed(2)}
                   data-unexplored={unexplored || undefined}
                   data-tile-type={unexplored ? 'unexplored' : tile.tileType ?? tile.terrain ?? 'woods'}

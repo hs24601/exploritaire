@@ -137,6 +137,7 @@ export type ProtoState = {
   denRest?: { restfulCards: number; disruptions: number; started?: boolean; receivingCard?: Card };
   denQuestDiscovered?: boolean;
   discoveredTutorialQuests?: string[];
+  dockedTutorialQuests?: string[];
   dayScenario?: 'day01' | 'day02' | 'day03';
   /** Live story bindings and actor budget; never authored tile fields. */
   dayScenarioTiles?: { sparsePatchId?: string; patchId?: string; woodsId?: string };

@@ -60,7 +60,7 @@ export function QuestField({ quests, title = 'Expedition Quest', subtitle, onRed
       <header>Quest 1 <span>{remaining.length} cards</span></header>
       <div className="quest-foundation__cards">
       {active ? <PlayingCardStack overlapStep={0.008} cards={remaining.map((quest, index) => index === 0 ?
-        <div key={quest.id} data-quest-id={quest.id} style={{width: '100%', height: '100%'}}><QuestCard title={quest.title} text={quest.text}
+        <div key={quest.id} data-quest-id={quest.id} style={{width: '100%', height: '100%'}}><QuestCard authoringId={`quest:${quest.id}`} title={quest.title} text={quest.text}
           inspirationReward={quest.rewards.reduce((sum, reward) => sum + (reward.kind === 'inspiration' ? reward.amount : 0), 0)}
           rewardLabel={quest.rewards.some(reward => reward.kind === 'energy') ? 'Energy' : undefined}
           complete={!deployed && quest.status === 'complete'} onRedeem={() => onRedeem(quest.id)}

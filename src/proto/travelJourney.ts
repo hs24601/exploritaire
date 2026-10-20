@@ -22,7 +22,7 @@ export function bestTravelMove(journey: TravelJourney): number | null {
 export type TravelTerrain = Pick<BiomeTileState, 'id' | 'title' | 'position' | 'gridSize' | 'tileType' | 'terrain' | 'road' | 'flags' | 'traversalProgress' | 'berryPatchVariant' | 'berryHarvested'> & { passage?: TerrainPassage; passageOpen?: boolean; unlocked?: boolean } & { traversalDifficulty?: number; travelCards?: number };
 export type TravelSegment = { denseBerry?: boolean; traversalStage?: 'exit' | 'enter'; layout?: TableauLayout; sparseBerry?: boolean; passage?: TerrainPassage; passageOpen?: boolean; tileId?: string; title: string; kind: string; unknown: boolean; cards: number; stamina: number; end: number; start: number; easy?: boolean; cellKey?: string };
 export type TravelPlan = { ordered?: boolean; actorId: string; path: TimedPoint[]; segments: TravelSegment[]; estimate: number; cards: number; arrival: { biomeId?: string; directBiome?: boolean; foundationIndex?: number } };
-export type TravelCard = Card & { sequenceRule?: TravelSequenceRule; segment: number; kind: string; pose?: { x: number; y: number; rotation: number; layer: number } };
+export type TravelCard = Card & { khadRoot?: import('./khadRoots').KhadRootBinding; sequenceRule?: TravelSequenceRule; segment: number; kind: string; pose?: { x: number; y: number; rotation: number; layer: number } };
 export type TravelJourney = TravelPlan & { orderedStage?: number; walkedProgress?: number; waitingForTraversal?: number; obstruction?: { segment: number; title: string; tags: string[]; cost: number }; passageStage?: { segment: number; columns: TravelCard[][]; reserve: TravelCard[] }; eventBackfill?: { card: TravelCard; column: number; index: number }; pendingSearch?: number; search?: { remaining: number; total: number; columns: TravelCard[][]; reserve: TravelCard[]; segment: number }; memberRanks?: Record<string, number>; columns: TravelCard[][]; reserve: TravelCard[]; rank: number; completed: number; streak: number; tileStreak: number; progress: number; spent: number; berries: number; bonus: string; paused: boolean; bonusSegments: number[]; blocked?: { progress: number; position: {x:number;y:number}; message:string }; checkedProgress?: number; priorCompleted?: number; completedCardIds?: string[] };
 export const TRAVEL_STAMINA_MAX = 24;
 export const EASY_CROSSING_CARDS = 3;
@@ -193,13 +193,21 @@ export function beginJourney(plan: TravelPlan, startingRank = 2, foodPickups = t
     // The repeated 3 → 2 branch formerly stranded the remaining 5 and 6.
     // Explicit coverage and scenery poses remain independent of rank ordering.
     const ranks = cards.map((_, index) => (startingRank + index) % 13 + 1);
-    const poses = [[1.2, 2.05, 0, 6], [2.2, .15, 7, 2], [1.3, 1.12, 0, 3], [.08, 1.55, -8, 4], [.35, .05, -6, 1], [2.4, 1.6, 8, 5]];
+    const poses = [[1.2, 2.05, 0, 6], [2.2, .15, 7, 2], [1.3, 1.12, 0, 3], [.08, 1.55, -8, 7], [.35, .05, -6, 1], [.45, 1.65, 0, 5]];
     cards.forEach((card, index) => {
       card.rank = ranks[index];
       const [x, y, rotation, layer] = poses[index];
       card.pose = { x, y, rotation, layer };
     });
     columns.splice(0, columns.length, [cards[4], cards[3]], [cards[1]], [cards[2], cards[0]], [cards[5]]);
+    if (plan.segments.some(segment => segment.sparseBerry)) {
+      // Optional branch: its cover is never adjacent to any required route rank.
+      const segment = cards[5].segment;
+      columns.push([
+        { id: cards[5].id+'-unreachable-berry', rank:(startingRank+9)%13+1, segment, kind:'berry-patch', resource:'mana', foodSource:'berries', khadRoot:{groupId:'sparse-berry-khad'}, pose:{x:3.45,y:.35,rotation:8,layer:1} },
+        { id: cards[5].id+'-illegal-cover', rank:(startingRank+8)%13+1, segment, kind:'berry-patch', khadRoot:{groupId:'sparse-berry-khad'}, pose:{x:2.85,y:1.4,rotation:5,layer:2} },
+      ]);
+    }
   }
   const firstWork = plan.segments.find(s => s.cards > 0);
   const exit=plan.segments[0]?.kind==='den-exit';

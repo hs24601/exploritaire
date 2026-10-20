@@ -1,0 +1,26 @@
+.ink-loader {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  box-sizing: border-box;
+  background: radial-gradient(ellipse at 50% 45%, #24363b 0, #131e27 45%, #0b1119 100%);
+  color: #eee4ce;
+}
+.ink-loader__content { width: min(100%, 540px); text-align: center; }
+.ink-loader__hero { display: block; width: clamp(120px, 24vw, 176px); height: auto; margin: 0 auto 12px; overflow: visible; filter: drop-shadow(0 9px 12px #0003); }
+/* Anchor the bobtail at the rump. A lateral bend moves the tip progressively
+   farther than the root; rotating this flat cutout points it into her back. */
+.ink-loader__tail { transform-box: view-box; transform-origin: 560px 1294px; animation: hero-loader-wag .275s ease-in-out infinite; }
+@keyframes hero-loader-wag {
+  0%, 100% { transform: skewX(-12deg) scaleX(.94); }
+  25%, 75% { transform: skewX(0deg) scaleX(1); }
+  50% { transform: skewX(12deg) scaleX(.88); }
+}
+.ink-loader__title { margin: 0 0 25px; font-family: Georgia, serif; font-size: clamp(20px, 4.5vw, 29px); font-weight: 400; line-height: 1.4; text-wrap: balance; }
+.ink-loader__bar { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 5px 12px #0005); }
+.ink-loader__details { display: flex; justify-content: space-between; margin: 11px 8px 0; color: #b3b9b5; font-size: 12px; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.ink-loader__pool { animation: ink-pooling 2.8s ease-in-out infinite alternate; }
+@keyframes ink-pooling { to { opacity: .15; transform: translateX(-5px); } }
+@media (prefers-reduced-motion: reduce) { .ink-loader__pool, .ink-loader__tail { animation: none; } }
+@media (max-height: 480px) { .ink-loader__hero { width: 96px; margin-bottom: 4px; } .ink-loader__title { margin-bottom: 12px; } }

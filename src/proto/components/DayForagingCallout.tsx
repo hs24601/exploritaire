@@ -1,3 +1,4 @@
+import { khadCalloutHeld } from '../tutorialQuests';
 import { storyThoughtMarks, type DayCinematicBeat } from '../dayCinematics';
 import type { ProtoState } from '../protoState';
 import { dayOneThought, sparsePatchTableauComplete } from '../dayScenarios';
@@ -18,7 +19,7 @@ const heroAnchor = () => {
 };
 
 export function DayForagingCallout({ state, hidden, cinematicBeat, onFaceTarget }: { onFaceTarget?: (target: {x:number;y:number})=>void; state: ProtoState; hidden?: boolean; cinematicBeat?: DayCinematicBeat | null }) {
-  if (hidden) return null;
+  if (hidden || khadCalloutHeld(state)) return null;
   const lookTowardPatch=(index:number)=>{
     if(index!==1)return;
     const patch=state.biomeTiles.find(tile=>tile.id===state.dayScenarioTiles?.patchId);

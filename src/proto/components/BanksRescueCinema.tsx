@@ -23,6 +23,7 @@ import './BanksRescueCinema.css';
 export function SlimeEncounterCard(){const frame=DARK_SLIME_DIRECTIONAL_SPRITE.low[0];return <TradingCard id="slime-ambush" title="Hungry Slime" state="foundation" art={<svg viewBox={frame.parts[0].rect.join(' ')} preserveAspectRatio="xMidYMax meet" role="img" aria-label="Hungry purple slime"><image href={import.meta.env.BASE_URL+'assets/'+BATTLE_SPRITE_ASSETS[frame.source]} /></svg>} sections={[{id:'intent',label:'Ambush',content:'A sudden lunge',details:'The slime attacks before Hero can react.'}]} />;}
 const rig=createTableauLightRig(16,{x:0,y:0},[]);
 export function BanksRescueCinema({onComplete,onExit}:{onComplete:()=>void;onExit:()=>void}){
+ const comparison = new URLSearchParams(window.location.search).has('woods-combat');
  const cinematicShots = useStoryCinematicsEnabled();
  const [battle,setBattle]=useState(createRescueBattle),[look,setLook]=useState('reveal');
  const stage=useRef<HTMLDivElement>(null);
@@ -35,6 +36,14 @@ export function BanksRescueCinema({onComplete,onExit}:{onComplete:()=>void;onExi
  const cinema=useCinema(BANKS_RESCUE_BEATS,cue=>{setLook(cue);if(cue==='hit')setBattle(ambushHero);if(cue==='spawn-banks')setBattle(banksArrives);if(cue==='scratch')setBattle(banksScratch);if(cue==='bite')setBattle(banksBite);},onComplete);
  useEffect(()=>{if(cinema.beat?.id!=='run'||cinema.paused)return;const timer=gameTime.setInterval(()=>{if(!document.hidden)setBattle(banksAutoStep);},240);return()=>gameTime.clearInterval(timer);},[cinema.beat?.id,cinema.paused]);
  const scene:BattleScene={...sceneOf(battle),paused:cinema.paused,units:sceneOf(battle).units.filter(u=>u.id!=='dark-slime'||!['mana','hope'].includes(cinema.beat?.id??'')).map(u=>({...u,...(u.id==='hero'&&look==='cower'?{pose:'flinch' as const}:{}),...(u.id==='banks'&&['approach','nuzzle','fade'].includes(look)?{position:[-2.4,.3] as const}:{})}))};
+ if (comparison) {
+  scene.proceduralSlimeComparison = true;
+  // Visual comparison twin, sharing the encounter's life cycle without adding
+  // attacks, rewards or a second required kill to the authored rescue.
+  const source = sceneOf(battle).units.find(unit => unit.id === 'dark-slime');
+  scene.units = scene.units.filter(unit => unit.id !== 'dark-slime');
+  if (source) scene.units.push({ ...source, position: [3, 0] }, { ...source, id: 'rear-slime', position: [7.4, 0], targeting: undefined, markers: undefined });
+ }
  const actorAnchor=()=>{const name=cinema.beat?.speaker==='Banks'?'banks':'hero';const actor=stage.current?.querySelector<HTMLElement>('[data-scene-target="'+name+'"]');if(actor&&!actor.hidden){const r=actor.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+10};}const r=stage.current?.getBoundingClientRect();return r?{x:r.x+r.width*.38,y:r.y+r.height*.6}:null;};
  const banks=battle.party.find(a=>a.id==='banks'),hero=battle.party.find(a=>a.id==='hero')!;
  const previousCards=useRef(new Map<string,{rect:DOMRect;node:HTMLElement}>());
@@ -63,7 +72,8 @@ export function BanksRescueCinema({onComplete,onExit}:{onComplete:()=>void;onExi
   <img hidden data-cinema-nuzzle-preload src={BANKS_NUZZLE_ART} alt="" />
   <header><strong>Day 02 · The darker woods</strong><div><button type="button" onClick={()=>cinema.setPaused(p=>!p)}>{cinema.paused?'Resume cinema':'Pause cinema'}</button><button type="button" onClick={onExit}>Restart Day 02</button></div></header>
   <div className="banks-rescue-cinema__stage" data-rescue-mood={cinematicShots ? 'woods' : undefined} ref={stage}>
-   <CombatDemo battle={scene} onClose={()=>cinema.setPaused(true)} onRestart={()=>{}} onEscape={()=>cinema.setPaused(p=>!p)} firstTeam="party" cameraShot={cinematicShots ? DAY_TWO_RESCUE_SHOTS[cinema.beat?.id ?? 'mana'] : undefined} />
+   {comparison && <div className="slime-comparison-caption">Left: painted asset · Right: shifting shadow ink · Visual twin shares HP</div>}
+   <CombatDemo battle={scene} onClose={()=>cinema.setPaused(true)} onRestart={()=>{}} onEscape={()=>cinema.setPaused(p=>!p)} firstTeam="party" cameraShot={comparison ? {id:'slime-comparison',name:'Slime paint comparison',position:[5.2,3.8,8.5],target:[5.2,1.3,0],durationMs:0} : cinematicShots ? DAY_TWO_RESCUE_SHOTS[cinema.beat?.id ?? 'mana'] : undefined} />
    {cinema.beat?.id==='mana'&&<div className="cinema-mana-reveal"><span>✨</span><span>Mana in the undergrowth...</span></div>}
    {cinema.beat?.id==='slime-card'&&<div className="cinema-card-entrance cinema-card-entrance--slime"><SlimeEncounterCard /></div>}
    {cinema.beat?.id==='banks-card'&&<div className="cinema-card-entrance cinema-card-entrance--banks"><ActorHoloCard actorId="banks" name="Banks" rank="9" /></div>}

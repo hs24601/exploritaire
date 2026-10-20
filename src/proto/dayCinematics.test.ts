@@ -31,7 +31,10 @@ describe('opening days cinematic first pass', () => {
   });
   it('only changes camera beats at real story milestones', () => {
     const state = createDayOneState();
-    expect(dayCinematicBeatId({ ...state, biomeTiles: state.biomeTiles.map(t => t.id === state.dayScenarioTiles?.sparsePatchId ? { ...t, berryHarvested: true } : t) })).toBe('day01.sparse-patch');
+    const exposed = { ...state, biomeTiles: state.biomeTiles.map(t => t.id === state.dayScenarioTiles?.sparsePatchId ? { ...t, berryHarvested: true } : t) };
+    expect(dayCinematicBeatId(exposed)).toBeNull();
+    expect(dayCinematicBeatId({ ...exposed, discoveredTutorialQuests: ['denser-patch'] })).toBeNull();
+    expect(dayCinematicBeatId({ ...exposed, discoveredTutorialQuests: ['denser-patch'], dockedTutorialQuests: ['denser-patch'] })).toBe('day01.sparse-patch');
     expect(dayCinematicBeatId({ ...state, ordinaryDay: { ...state.ordinaryDay!, supper: true } })).toBe('day01.saved-light');
     expect(dayCinematicBeatId({ ...state, ordinaryDay: { ...state.ordinaryDay!, supper: true, bedtime: true } })).toBe('day01.rest');
     expect(dayCinematicBeatId({ ...state, dayScenario: undefined })).toBeNull();

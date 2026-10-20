@@ -35,6 +35,7 @@ export function CardJumboProvider({ children }: { children: ReactNode }) {
     if(root){root.inert=true;root.classList.add('details-card-game-blurred');}
     host.current?.querySelector<HTMLButtonElement>('.card-jumbo__close')?.focus();
     const key=(event:KeyboardEvent)=>{
+      if(host.current?.querySelector('dialog[open]'))return;
       if(event.key==='Escape'){if(host.current?.querySelector('.trading-card-ability-view'))return;event.preventDefault();event.stopImmediatePropagation();close();}
       if(event.key==='Tab'){
         const controls=Array.from(host.current?.querySelectorAll<HTMLElement>('button:not(:disabled),[tabindex="0"]')??[]).filter(control=>!control.closest('[inert]')&&getComputedStyle(control).visibility!=='hidden');

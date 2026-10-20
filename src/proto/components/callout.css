@@ -1,7 +1,8 @@
 .proto-callout {
   position: fixed;
   z-index: 120;
-  width: max-content;
+  /* Match the editor and reserve the final layout throughout letter reveal. */
+  width: 404px;
   /* Effects must never determine whether the speaker has room beside the
    * floating expression. Keep short bubbles readable, bounded by the viewport. */
   min-width: min(220px, 100%, calc(100dvw - 24px));
@@ -82,7 +83,9 @@
 }
 .proto-callout-copy { display: flow-root; }
 .proto-callout-edit { position: absolute; top: 12px; right: 12px; }
-.proto-callout-content:has(.proto-callout-edit) .proto-callout-copy { margin-right: 40px; }
+/* The authoring pencil occupies the speaker row, not the dialogue column.
+ * Use the same clearance in the draft so authoring never changes text wrapping. */
+.proto-callout-copy strong { padding-right: 40px; }
 @keyframes proto-callout-enter { from { opacity: 0; transform: translateY(6px) scale(.96); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .proto-callout-content { animation: none; } }
 .proto-callout-edit { pointer-events: auto; align-self: flex-start; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid #98eaff88; border-radius: 8px; color: #e8faff; background: #203846; font: 23px system-ui; cursor: pointer; }
@@ -147,7 +150,7 @@
 /* Draft output stays visible while tuning text and expression. */
 .callout-draft-preview { border-top:1px solid #668e8f77; margin-top:16px; padding-top:8px; }
 .callout-draft-preview__stage { padding:12px 0 18px; }
-.callout-draft-preview .callout-draft-preview__bubble { position:relative; z-index:auto; margin:auto; width:404px; max-width:100%; visibility:visible; }
+.callout-draft-preview .callout-draft-preview__bubble { position:relative; z-index:auto; margin:auto; max-width:100%; visibility:visible; }
 .callout-draft-preview .proto-callout-expression { position:absolute; transform:none; }
 .callout-draft-preview .proto-callout-content { animation:none; }
 .callout-draft-preview .proto-callout-next { padding:0; border:2px solid var(--callout-accent); border-radius:18px; background:linear-gradient(#101f2f,#080f19); font:24px/1 system-ui,sans-serif; color:#eefaff; }

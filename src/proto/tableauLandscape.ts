@@ -5,7 +5,14 @@ import { createActorEnvironmentLight } from './actorEnvironmentLight';
 import { globalLightsEnabled } from './globalLighting';
 
 type LandscapeProp = { x: number; z: number; height: number; tint?: number };
-export type TableauLandscapeOptions = { groundCover?: { pixel: boolean; palette?: 'woodland' | 'dirt' }; groundColor?: number; props?: readonly LandscapeProp[]; berryFruit?: boolean; fruitTexture?: THREE.Texture; manaFruit?: { x: number; y: number; size: number } };
+type ManaFruitPoint = { x: number; y: number; size: number };
+/** A prop with its own cutout, for side-by-side scenery comparisons. `paintedFruit`
+ * keeps the mana halo but omits the overlaid fruit, because the art already has it. */
+export type ExtraLandscapeProp = LandscapeProp & { texture: THREE.Texture; manaFruit?: readonly ManaFruitPoint[]; paintedFruit?: boolean };
+export type TableauLandscapeOptions = { groundCover?: { pixel: boolean; palette?: 'woodland' | 'dirt' }; groundColor?: number; props?: readonly LandscapeProp[]; berryFruit?: boolean; fruitTexture?: THREE.Texture; manaFruit?: ManaFruitPoint[];
+  extraProps?: readonly ExtraLandscapeProp[];
+  /** Sandbox preview only: shade cutouts with the scene lights. Game scenery stays unlit. */
+  litProps?: boolean };
 
 /** Frame a low biome with nearer side clusters and a receding planted edge.
  * These remain world-space props, using the same cutouts as the map. */
@@ -81,35 +88,45 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
     const x = Math.sin(i * 23.1) * 18, z = Math.cos(i * 17.3) * 18;
     fleck.rotation.x = -Math.PI / 2; fleck.position.set(x, hill(x, z) + .012, z); fleck.scale.set(.2 + (i % 4) * .12, .16, 1); root.add(fleck);
   }
-  // Scan the shared art once, not once per tree, to find its painted ground foot.
-  const image = texture.image as {width: number; height: number};
-  const scan = document.createElement('canvas'); scan.width = image.width; scan.height = image.height;
-  const ctx = scan.getContext('2d')!; ctx.drawImage(texture.image as CanvasImageSource, 0, 0);
-  const rgba = ctx.getImageData(0, 0, image.width, image.height).data;
-  let bottom = image.height - 1;
-  outer: for (; bottom >= 0; bottom--) for (let col = 0; col < image.width; col++) if (rgba[(bottom * image.width + col) * 4 + 3] > 12) break outer;
+  // Scan each cutout once, not once per tree, to find its painted ground foot.
+  const footprints = new Map<THREE.Texture, { width: number; height: number; bottom: number }>();
+  const footprint = (art: THREE.Texture) => {
+    const known = footprints.get(art); if (known) return known;
+    const image = art.image as {width: number; height: number};
+    const scan = document.createElement('canvas'); scan.width = image.width; scan.height = image.height;
+    const ctx = scan.getContext('2d')!; ctx.drawImage(art.image as CanvasImageSource, 0, 0);
+    const rgba = ctx.getImageData(0, 0, image.width, image.height).data;
+    let bottom = image.height - 1;
+    outer: for (; bottom >= 0; bottom--) for (let col = 0; col < image.width; col++) if (rgba[(bottom * image.width + col) * 4 + 3] > 12) break outer;
+    const measured = { width: image.width, height: image.height, bottom }; footprints.set(art, measured); return measured;
+  };
   const fruitMeshes: THREE.Object3D[] = [];
   const fruitHalos: THREE.Object3D[] = [];
-  const treeMaterials = new Map<number, THREE.MeshBasicMaterial>();
+  const treeMaterials = new Map<string, THREE.MeshBasicMaterial | THREE.MeshLambertMaterial>();
   const actorPeek = createActorPeekThree();
-  const billboard = (texture: THREE.Texture, x: number, z: number, height: number, tint = 0xffffff) => {
-    let mat = treeMaterials.get(tint);
-    if (!mat) { mat = material(new THREE.MeshBasicMaterial({map: texture, color: tint, transparent: true, alphaTest: .025, side: THREE.DoubleSide})); treeMaterials.set(tint, mat); }
+  const billboard = (texture: THREE.Texture, x: number, z: number, height: number, tint = 0xffffff,
+    fruit: { mana?: readonly ManaFruitPoint[]; berry?: boolean; painted?: boolean } = { mana: options.manaFruit, berry: options.berryFruit }) => {
+    const image = footprint(texture), bottom = image.bottom, key = `${texture.uuid}:${tint}`;
+    let mat = treeMaterials.get(key);
+    if (!mat) {
+      const settings = {map: texture, color: tint, transparent: true, alphaTest: .025, side: THREE.DoubleSide};
+      mat = material(options.litProps ? new THREE.MeshLambertMaterial(settings) : new THREE.MeshBasicMaterial(settings)); treeMaterials.set(key, mat);
+    }
     if (!mat.userData.actorPeek) { actorPeek.attach(mat); mat.userData.actorPeek = true; }
     const mesh = new THREE.Mesh(square, mat);
     mesh.scale.set(height * image.width / image.height, height, 1);
     mesh.position.y = height / 2 - height * (image.height - bottom - 1) / image.height;
     const anchor = new THREE.Group(); anchor.position.set(x, hill(x, z), z); anchor.add(mesh); root.add(anchor);
     groundCover?.plant(x, z, height * .65, hill(x, z));
-    if (options.berryFruit || options.manaFruit) {
-      const fruitPoints = options.manaFruit ? [[options.manaFruit.x, options.manaFruit.y, .13]] : [[.13,.4,.035],[.42,.34,.035],[.57,.34,.035],[.86,.4,.035],[.33,.65,.035],[.73,.65,.035]];
+    if ((fruit.berry || fruit.mana) && !fruit.painted) {
+      const fruitPoints = fruit.mana ? fruit.mana.map(point => [point.x, point.y, .13]) : [[.13,.4,.035],[.42,.34,.035],[.57,.34,.035],[.86,.4,.035],[.33,.65,.035],[.73,.65,.035]];
       for (const [x,y,size] of fruitPoints) {
         const berry = new THREE.Mesh(square, material(new THREE.MeshBasicMaterial({map:options.fruitTexture, color:0xffffff, transparent:true, alphaTest:.025, side:THREE.DoubleSide})));
         berry.position.set(x-.5,.5-y,.008); berry.scale.set(size,size,1); mesh.add(berry); fruitMeshes.push(berry);
       }
     }
-    if (options.manaFruit || options.berryFruit) {
-      const points = options.manaFruit ? [options.manaFruit] : [[.13,.4],[.42,.34],[.57,.34],[.86,.4],[.33,.65],[.73,.65]].map(([x,y]) => ({x,y,size:.095}));
+    if (fruit.mana || fruit.berry) {
+      const points = fruit.mana ? fruit.mana : [[.13,.4],[.42,.34],[.57,.34],[.86,.4],[.33,.65],[.73,.65]].map(([x,y]) => ({x,y,size:.095}));
       for (const fruit of points) {
       const halo = new THREE.Mesh(square, material(new THREE.ShaderMaterial({
         uniforms: { berryTime: { value: 0 } },
@@ -143,11 +160,14 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
     const layer = Math.floor(i / 30), angle = i * 2.399963, radius = woods ? 14 + layer * 10 + Math.sin(i * 7.3) * 2 : 20;
     return billboard(texture, Math.cos(angle) * radius, Math.sin(angle) * radius, woods ? 8 + (i % 5) * 1.1 : 5 + i % 3, woods ? [0xacc6c7, 0x718f9e, 0x486779][layer] : 0x77958a);
   });
+  const extraHalos = fruitHalos.length, extraFruit = fruitMeshes.length;
+  for (const extra of options.extraProps ?? []) trees.push(billboard(extra.texture, extra.x, extra.z, extra.height, extra.tint, { mana: extra.manaFruit, painted: extra.paintedFruit }));
   const impulses: { start: number; strengths: number[] }[] = [];
   const projected = new THREE.Vector3();
-  return { glow, setFruitVisible(available: boolean, illuminated = true) {
-    fruitMeshes.forEach(fruit => { fruit.visible = available; });
-    fruitHalos.forEach(halo => { halo.visible = available && illuminated; });
+  return { glow, lights: { hemisphere, moon }, setFruitVisible(available: boolean, illuminated = true) {
+    // Comparison props follow the live state directly; the sparse bush keeps its extra lit fruit.
+    fruitMeshes.forEach((fruit, index) => { fruit.visible = available || Boolean(options.manaFruit && index > 0 && index < extraFruit); });
+    fruitHalos.forEach((halo, index) => { halo.visible = (available && illuminated) || Boolean(options.manaFruit && index > 0 && index < extraHalos); });
   }, rustle(camera: THREE.Camera, x: number, y: number, seconds: number) {
     if (!options.props) return;
     impulses.push({ start: seconds, strengths: trees.map(({anchor, mesh}) => {
