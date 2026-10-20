@@ -1,5 +1,9 @@
 # Exploritaire art and theming
 
+- Scenery-only tableau windows (Eric, 2026-10-20): preserve spatial continuity with the surrounding landscape using opaque scenery samples inside numbered cards. Exclude other cards, roots and UI from the samples; soften and slightly desaturate the scenery under a light warm/cool watercolor wash, subtle pooled edges and close contact shadows. Keep rank ink crisp and sample artwork in card flights. This supersedes true-transparent tableau faces.
+
+- Relief prop silhouettes (Eric, 2026-10-20): render the lit monochrome relief layer at 60% brightness so concealed props recede into the scene while retaining branch/facet detail and directional lighting. Preserve alpha, discovery masks and revealed artwork.
+
 - Khad Roots quest illustration (Eric, 2026-10-20): use `runtime/ui/quests/khad-roots-berry-bush-night-paint-v1.png` for the Khad Roots discovery and active card. Built-in ImageGen uses First Fruits as its paint/night/root material reference, with hooked crimson-fissured woody roots constricting a low leafy berry bush, red bumpy manaberries surrounded by blue light, and a moonlit forest; no Hero. Prompt/provenance: `public/assets/sources/khad-roots-berry-bush-night-v1.json`.
 
 Read this with [GAME.md](./GAME.md). This is the standing home for art direction, watercolor rendering, asset production, scene styling, lighting and visual themes. Gameplay legality, resource ownership, progression and interaction remain governed by GAME.md and the safeguards in the migrated contracts below.
@@ -46,7 +50,7 @@ The dated contracts below are preserved verbatim from GAME.md, including superse
 
 Follow [the asset taxonomy](./public/assets/README.md): approved runtime art by purpose/character, original production inputs and provenance in `sources`, retired pixel art in `deprecated/pixel`. Preserve versioned originals, prompts, source sheets, alpha, rig/atlas registration and fallback behavior. Keep exploratory renders in `output/` or `artifacts/`.
 
-ImageGen supplies authored characters, foliage, rocks, illustrations and other recognizable forms. HTML/CSS/JS supplies composition, deposited washes, lighting, motion, masking and interactive tuning around those assets. Preserve opaque cream/white body areas and genuine translucent edges. Never bake a diagnostic paper rectangle, UI lettering, ground shadow or gameplay glow into a transparent sprite.
+ImageGen supplies authored characters, foliage, rocks, illustrations and other recognizable forms. Code-generated assets may supplement or, once Eric approves, replace ImageGen art; follow the [procedural asset playbook](#procedural-asset-playbook-2026-10-20). HTML/CSS/JS supplies composition, deposited washes, lighting, motion, masking and interactive tuning around those assets. Preserve opaque cream/white body areas and genuine translucent edges. Never bake a diagnostic paper rectangle, UI lettering, ground shadow or gameplay glow into a transparent sprite.
 
 ## Reviewed reference: Watercolor Pigment Lab
 
@@ -147,6 +151,61 @@ Each renderer uses a 12-entry CPU canvas cache, with generation on preset change
 The second pass makes brush direction, warm/cool overlap, bark breakup and fruit less synthetic, but repeated leaf fans and simpler surface painting still differ visibly from the approved illustration. Keep the result as an evaluated prototype; it is not approval to replace the production asset. See the [first-pass record](./docs/art/procedural-bush-prototype-v1.md) and [second-pass methods, comparison and validation](./docs/art/procedural-bush-refinement-v2.md).
 
 A third pass (`bush-study-v3`, `src/proto/bushPainter.ts`) is a DOM-free painter with its own growth model. It paints a lit crown of serrated palmate leaf planes, each either sunlit or shaded, which cast soft shade on the planes behind them. It also includes organically grown limbs (wandering heading, kinks, pinched crotch, uneven girth; not geometric curves) with foliage hanging in front, painted as matte, rim-pooled bark dabs along the grain over a darker lumpy base, painted fruit, and an edge-aware watercolor dab glaze (matte, rim-pooled transparent blots, without relief lighting) that imitates the reference's physical dabbing, plus pigment granulation on every surface (requested 2026-10-20 as a supplement to brushwork, not a replacement). It renders without a browser through `tools/bush-painter-render.mjs`, and the lab opens on it. It is the closest code-only result so far, but remains an evaluated prototype, not approval to replace the production asset. `/proto.html?bushsbx` compares it in-world against the approved bush. See the [third-pass record](./docs/art/procedural-bush-v3.md).
+
+## Procedural asset playbook (2026-10-20)
+
+This is the standing method for code-generated art, distilled from the procedural bush (`bushPainter.ts`, `docs/art/procedural-bush-v3.md`) and Khad Roots (`khadRootGeometry.ts`, `khadRootPainter.ts`, `docs/art/khad-roots-*.md`). Follow it when generating new assets such as trees, woods, rocks or other props. Asset-specific rules elsewhere in this file still win.
+
+### When to generate rather than use ImageGen
+
+- **ImageGen** suits featured, close-up and unique art, where hand-painted quality matters most and a fixed image is acceptable.
+- **Procedural generation** suits art that should vary or respond to state: many instances, background or secondary scenery, art that changes with game state (such as fruit counts), or art built from structure (vines, limbs). It costs a per-asset bake and memory instead of downloads and generation runs.
+- A **hybrid**, with procedural structure dressed by a small library of approved painted pieces, is a valid middle path.
+- A procedural asset replaces approved art only after Eric approves it in a side-by-side review. Until then it lives behind a flag or in a sandbox.
+
+### Architecture
+
+- **DOM-free painter.** It writes straight-alpha RGBA from a preset and a seed, so it runs in the lab, a worker and Node alike. Share primitives instead of copying them: `Layer` (premultiplied float), `dabPass` (watercolour glaze and granulation), `cells` (cellular noise), `noise` and `rng` from `bushPainter.ts`.
+- **Off the UI thread.** Add the asset to `paintJobs.ts` and bake it through `paintOffThread` (`paintWorkerClient.ts`). That pool runs up to two workers, encodes the PNG off-thread where supported, and falls back to the main thread when workers are unavailable. Never bake per frame.
+- **Caching and fallback.** Cache by renderer version plus the full preset, with bounded entries and revoked object URLs. Show the existing art (or SVG) until a bake lands, and keep it if the bake fails.
+- **Versions and baselines.** Version every renderer and geometry (for example `bush-study-v3`, `khad-geometry-v2`, `khad-paint-v1`). Freeze the previous version as a baseline module for comparison and for negative tests, and add a URL flag to show it in place.
+- **Painted extent.** Paint into a fixed frame in the asset's own units; clearance masks and protected windows are cut from the painted pixels last.
+
+### Structure: grow, don't draw
+
+- **Grow natural forms.** Clean primitives (quadratic arcs, linear tapers, symmetric layouts, sharp meeting points) read as man-made and are rejected. Grow forms with a walker instead:
+  - a course steered loosely toward a few seeded waypoints;
+  - a bounded side-to-side sway, with alternating noise control values so it never goes flat, indexed over about twice the planned length so it never saturates;
+  - decaying kinks and a curvature limit, so forms bend but never knot.
+- **Guard the walker.** Move waypoints that fall inside protected areas to just outside them. Skip a waypoint once it is passed rather than orbiting it. Use step budgets for waypoints that can't be reached. Soft boundaries turn only forms heading outward. A hard guard keeps steps out of protected windows.
+- **Divergence by lanes.** Branches from one root get ordered heading lanes, so they only diverge. Converging, crossing or A-frame limbs are illegal.
+- **Separate random streams per subsystem** (crown, trunk, fruit, paint), so retuning one never reshuffles the others.
+- **Counts as stable prefixes.** For countable features such as fruit, plan the full ordered slot set and show the first N; harvesting removes one without moving anything else.
+- **Regrow on failure.** Check each generated part against its rules; a failing part regrows from its next deterministic sub-seed (`id#part#attempt`).
+
+### Paint
+
+- **Value structure over gradients.** Organise form into lit and shaded planes (two-value structure). Light the upper shoulder of a rounded form and let it roll off toward the rim. Never peak lighting at the outline (it turns into dashes), and never use a cylindrical highlight band (it reads as plastic or gloss).
+- **Paint along the form.** Paint wood and bark in limb space (along and across the form): a darker lumpy base, plates or dabs laid along the grain with pooled rims and gaps reading as crevices, and stepped tones.
+- **Watercolour, not relief.** Use transparent glazes with pigment pooled at the rims and a few lifted centres. Never light the dabs as raised relief; that reads as oil or plastic. Granulation supplements brushwork where requested and never replaces it.
+- **Paint order.** Washes and glows go beneath everything. Attachments such as thorns go under their parent, so the parent overlaps their bases. Emission belongs only on upward-facing surfaces where moon response applies.
+- **Visibility.** Defining features (thorns, fruit) must stay clearly visible: a lighter body than their surroundings, a lit edge, fine static shimmer and a thin dark outline. Enforce this with a brightness-ratio test.
+
+### Rules as code
+
+- **Name illegal output.** Every illegal output Eric names becomes a named rule constant (`BUSH_CROWN_RULES`, `BUSH_TRUNK_RULES`, `KHAD_ROOT_RULES`), with three things:
+  1. a measure run on the generated output or geometry (`crownStructure`, `trunkStructure`, `khadRootStructure`);
+  2. a seed sweep in tests;
+  3. a negative check (the frozen baseline or a synthetic bad shape) proving the measure catches it.
+- **Measures must match the renderer's maths.** Project onto segments rather than nearest samples. Credit pixels to the topmost painted layer. Ignore hairline slits below a minimum width. Use the painted extent, not the ellipse it came from. A measure that disagrees with what you see is debugged before the art is changed.
+- **Robust statistics** for population rules: a mean, a 99th percentile and a hard ceiling, never a single worst-case maximum. If a limit changes after measuring, say so and record why.
+
+### Review workflow
+
+- **Render and compare in Node.** Render with Node tools (`node --import ./tools/ts-resolve.mjs …`). Compare against the reference at 1:1 crops, enlarged, and at real game size, then iterate on what the crops show.
+- **Give Eric a review surface:** a sandbox or compare view in Proto (`?bushsbx`, `?khad-compare`) with flags to switch versions in place. Browser testing on this machine is prohibited, so Eric reviews in the browser.
+- **Record and measure.** Record failed attempts and why in the asset's doc. Measure bake timing (warm medians, per size) and state that it is not a phone or frame-time figure.
+- **No commits before approval.** Do not commit procedural art changes as improvements before Eric approves them.
 
 ## Migrated standing contracts
 

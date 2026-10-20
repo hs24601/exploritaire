@@ -2,7 +2,9 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import type { TravelCard } from '../travelJourney';
 import { khadRootGeometry as grownRoots, khadBridgeGeometry as grownBridge } from '../khadRootGeometry';
 import { khadRootGeometry as baselineRoots, khadBridgeGeometry as baselineBridge } from '../khadRootGeometryBaseline';
-import { KHAD_PAINT_FRAME, KHAD_PAINT_VERSION, paintKhadBridge, paintKhadRoots } from '../khadRootPainter';
+import { KHAD_PAINT_FRAME, KHAD_PAINT_VERSION } from '../khadRootPainter';
+import type { PaintJob } from '../paintJobs';
+import { paintedObjectUrl, paintOffThread } from '../paintWorkerClient';
 
 /** Which growth to draw. `v2` (grown) is the default; `?khad-geometry=v1`
  * shows the frozen first version in place, for comparison during review. */
@@ -13,29 +15,25 @@ export const khadGeometryFromUrl = (): KhadGeometryVersion => new URLSearchParam
  * the vector pigment instead, which also covers the moment before a bake lands. */
 export type KhadPaintMode = 'svg' | 'painted';
 export const khadPaintFromUrl = (): KhadPaintMode => new URLSearchParams(globalThis.location?.search ?? '').get('khad-paint') === 'svg' ? 'svg' : 'painted';
-type Raster = { width: number; height: number; data: Uint8ClampedArray<ArrayBuffer> };
 const painted = new Map<string, Promise<string>>();
-/** Bakes once per key off the render path and caches an object URL (bounded). */
-function bake(key: string, paint: () => Raster): Promise<string> {
+/** Bakes once per key in the paint worker (main thread only as a fallback) and
+ * caches an object URL, bounded to 48 entries. */
+function bake(key: string, job: PaintJob): Promise<string> {
   const hit = painted.get(key); if (hit) { painted.delete(key); painted.set(key, hit); return hit; }
-  const job = new Promise<string>((resolve, reject) => setTimeout(() => {
-    try {
-      const raster = paint(), canvas = document.createElement('canvas'); canvas.width = raster.width; canvas.height = raster.height;
-      canvas.getContext('2d')!.putImageData(new ImageData(raster.data, raster.width, raster.height), 0, 0);
-      canvas.toBlob(blob => blob ? resolve(URL.createObjectURL(blob)) : reject(new Error('Khad Roots bake failed.')), 'image/png');
-    } catch (error) { reject(error); }
-  }, 0));
-  painted.set(key, job);
+  const result = paintOffThread(job, { encode: true }).then(paintedObjectUrl);
+  painted.set(key, result);
+  // A failed bake is forgotten, so a later render can try again.
+  result.catch(() => { if (painted.get(key) === result) painted.delete(key); });
   if (painted.size > 48) { const [oldest, url] = painted.entries().next().value!; painted.delete(oldest); void url.then(u => URL.revokeObjectURL(u), () => {}); }
-  return job;
+  return result;
 }
 /** The painted image once ready; until then (or on failure) callers keep the SVG. */
-function usePainted(key: string | null, paint: () => Raster) {
+function usePainted(key: string | null, job: () => PaintJob) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!key) { setUrl(null); return; }
     let live = true; setUrl(null);
-    void bake(key, paint).then(u => { if (live) setUrl(u); }, () => {});
+    void bake(key, job()).then(u => { if (live) setUrl(u); }, () => {});
     return () => { live = false; };
   // The key fully identifies the bake.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,7 +85,7 @@ export function KhadRoots({groupId,cardId,obscureValue=false,version=khadGeometr
   /** Painted pixels per card unit (a card is 100 units wide). */ density?:number}) {
   const growth=useMemo(()=>geometryFor(version).roots(cardId,obscureValue),[cardId,obscureValue,version]);
   // The painter draws grown geometry only.
-  const image=usePainted(paint==='painted'&&version==='v2'?`${KHAD_PAINT_VERSION}:${cardId}:${obscureValue}:${density}`:null,()=>paintKhadRoots(cardId,obscureValue,density));
+  const image=usePainted(paint==='painted'&&version==='v2'?`${KHAD_PAINT_VERSION}:${cardId}:${obscureValue}:${density}`:null,()=>({kind:'khad',cardId,obscureValue,density}));
   const pigmentId=`khad-pigment-${useId().replace(/:/g,'')}`;
   return <svg className="khad-roots" viewBox="0 0 100 140" aria-hidden="true" data-khad-group={groupId} data-obscure-value={obscureValue} data-khad-geometry={version} data-khad-paint={image?'painted':'svg'}>
     <RootPigment id={pigmentId} />
@@ -132,7 +130,7 @@ function KhadRootLink({a,b,id,version,paint,density}:{a:{x:number;y:number};b:{x
   const frame={x:-20,y:-20,size:Math.max(w,h)*100+40};
   const key=paint==='painted'&&version==='v2'?`${KHAD_PAINT_VERSION}:link:${id}:${ax.toFixed(1)},${ay.toFixed(1)},${bx.toFixed(1)},${by.toFixed(1)}:${density}`:null;
   // Long links lower their density so the square bake stays within 2048 pixels.
-  const image=usePainted(key,()=>paintKhadBridge({x:ax,y:ay},{x:bx,y:by},id,frame,Math.min(density,2040/frame.size)));
+  const image=usePainted(key,()=>({kind:'khadLink',a:{x:ax,y:ay},b:{x:bx,y:by},id,frame,density:Math.min(density,2040/frame.size)}));
   return <svg className="khad-root-link" viewBox={`0 0 ${w*100} ${h*100}`} preserveAspectRatio="none" aria-hidden="true" data-khad-paint={image?'painted':'svg'} style={{left:`calc(var(--classic-card-w) * ${x})`,top:`calc(var(--classic-card-w) * ${y})`,width:`calc(var(--classic-card-w) * ${w})`,height:`calc(var(--classic-card-w) * ${h})`}}>
     <RootPigment id={pigmentId} />
     {image ? <image href={image} x={frame.x} y={frame.y} width={frame.size} height={frame.size} preserveAspectRatio="none" /> : <RootWood stems={[bridge]} id={pigmentId} />}

@@ -47,4 +47,8 @@ The moon-response rules are unchanged. A new test compares sampled thorn bodies 
 
 ## Default (2026-10-20)
 
-Eric approved the painted version as the game default. `?khad-paint=svg` shows the SVG pigment instead. Bakes still run on the main thread, at about 100 ms per card at the default density; moving them to a worker is the open follow-up.
+Eric approved the painted version as the game default. `?khad-paint=svg` shows the SVG pigment instead. Bakes took about 100 ms per card on the main thread at the default density; they now run in the paint worker pool (see below).
+
+## Paint worker (2026-10-20)
+
+Khad Roots cards, group links and the bush sandbox now bake through `paintOffThread` (`src/proto/paintWorkerClient.ts`). Up to two module workers (`paintWorker.ts`) run the shared `runPaintJob` (`paintJobs.ts`) and encode PNGs with `OffscreenCanvas` where available. Without workers, after a worker error or after a 15 s watchdog, jobs fall back to the main thread. Output is identical either way, since both paths run the same code. Typecheck, the build (which emits a separate worker chunk) and the Khad/bush tests pass. The tests exercise only the fallback path; the worker path has no dedicated tests yet, and the frame-time benefit has not been measured in a browser.

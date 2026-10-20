@@ -4,7 +4,8 @@ import { gameTime } from '../../gameTime';
 import { loadMediaTexture } from '../mediaTexture';
 import { createTableauLandscape, type ExtraLandscapeProp } from '../tableauLandscape';
 import { attachTableauFreecam } from '../tableauFreecam';
-import { BUSH_MAX_FRUIT, paintBush, planBush, type BushPaintPreset } from '../bushPainter';
+import { BUSH_MAX_FRUIT, planBush, type BushPaintPreset } from '../bushPainter';
+import { paintOffThread } from '../paintWorkerClient';
 import { setGlobalLightsEnabled, useGlobalLights } from '../globalLighting';
 import { GlobalPauseControl, useGlobalPauseLifecycle } from './GlobalPause';
 import './BushSandbox.css';
@@ -44,7 +45,7 @@ export function BushSandbox() {
   const field = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState(DEFAULTS);
   const [status, setStatus] = useState('Preparing scene…');
-  const [bake, setBake] = useState<{ ms: number; size: number; seed: number } | null>(null);
+  const [bake, setBake] = useState<{ ms: number; size: number; seed: number; offThread: boolean } | null>(null);
   const live = useRef(settings); live.current = settings;
   const stage = useRef<{ scene: THREE.Scene; camera: THREE.PerspectiveCamera; schedule: () => void; landscape?: ReturnType<typeof createTableauLandscape>; textures: THREE.Texture[] } | null>(null);
   const [stageReady, setStageReady] = useState(0);
@@ -116,11 +117,10 @@ export function BushSandbox() {
         const [standee, fruitTexture] = await Promise.all([loadMediaTexture(IMAGEGEN_STANDEE), loadMediaTexture(FRUIT)]);
         textures.push(standee, fruitTexture);
         setStatus(`Baking procedural bush (${size}px)…`);
-        // Yield so the status paints before the synchronous bake.
-        await new Promise(resolve => setTimeout(resolve, 30));
         if (cancelled) return;
         const preset: BushPaintPreset = { seed, fullness, spread, brush, warmth, fruit: berries };
-        const started = performance.now(), raster = paintBush(preset, size), ms = performance.now() - started;
+        // Painted in the paint worker; raw pixels come back for the texture.
+        const painted = await paintOffThread({ kind: 'bush', preset, size }), raster = painted.raster!, ms = painted.paintMs;
         const canvas = document.createElement('canvas'); canvas.width = raster.width; canvas.height = raster.height;
         canvas.getContext('2d')!.putImageData(new ImageData(raster.data, raster.width, raster.height), 0, 0);
         const procedural = new THREE.CanvasTexture(canvas); textures.push(procedural);
@@ -141,7 +141,7 @@ export function BushSandbox() {
           fruitTexture, manaFruit: IMAGEGEN_FRUIT, extraProps: [extra], litProps: lit,
         });
         current.landscape.setFruitVisible(live.current.berries > 0, live.current.mana);
-        setBake({ ms, size, seed });
+        setBake({ ms, size, seed, offThread: painted.offThread });
         setStatus('');
         current.schedule();
       } catch (error) {
@@ -183,7 +183,7 @@ export function BushSandbox() {
           {slider('moon', 'Moon', 0, 2.5, .05)}{slider('azimuth', 'Moon azimuth', 0, 359, 1)}{slider('ambient', 'Ambient', 0, 2, .05)}
           <p className="bush-sandbox__note">Game scenery cutouts are unlit: moon and ambient change the ground, ground cover and (with lit cutouts) both bushes.</p>
         </fieldset>
-        <p className="bush-sandbox__stat" role="status">{status || (bake ? `Procedural bake: ${bake.ms.toFixed(0)} ms at ${bake.size}px (seed ${bake.seed}, main thread)` : '')}</p>
+        <p className="bush-sandbox__stat" role="status">{status || (bake ? `Procedural bake: ${bake.ms.toFixed(0)} ms at ${bake.size}px (seed ${bake.seed}, ${bake.offThread ? 'paint worker' : 'main thread'})` : '')}</p>
         <p className="bush-sandbox__note">Drag empty scene to orbit · Shift/right drag to pan · wheel to zoom · click the scene, then WASD to move and Q/E for height.</p>
       </aside>
       <div ref={field} className="bush-sandbox__scene" aria-label="Bush comparison scene" />
