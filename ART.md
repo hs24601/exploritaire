@@ -1,5 +1,14 @@
 # Exploritaire art and theming
 
+- Approved Mochi holocard (Eric, 2026-10-21): the final version uses the face enlarged approximately 10% from the pre-eye-reduction painting, retaining its eye-to-face proportions, enlarged paws, poofy mane and colored ankles blending into black feet. The subsequent smaller-eye variant is rejected. Use the existing `mochi-card-watercolor-v1.png` runtime path; remove other project holocard variants.
+
+- Mochi holocard proportions (Eric, 2026-10-21): Hero is the styling baseline, including eye size relative to the face and softer broad watercolor masses. Reduce Mochi's oversized eyes to Hero's scale while retaining green irises; exaggerate all four paws by approximately 20% relative to the preceding holocard pass. Keep the poofy mane, colored ankles feathering into black paws, raised-paw pose and forest composition. ImageGen's proportional changes are approximate.
+
+- Mochi identity refinement (Eric, 2026-10-21): her defining traits include jet-black paws on all four feet, confined to the rounded feet/toes: tortoiseshell color continues through the ankles and bleeds down into the paw tops with a soft irregular transition; black must not extend up the ankles like socks and a prominent, voluminous poofy mane framing her cheeks, neck, shoulders and chest, as shown in the supplied real-cat photos. The holocard incorporates both traits while retaining its approved pose, forest and watercolor treatment. These are standing identity details for future Mochi art; this revision updates only the holocard.
+
+- Mochi holocard (Eric, 2026-10-21): use `runtime/ui/holocards/actors/mochi-card-watercolor-v1.png`, with Hero-matched ink/watercolor brushwork and a cool starry forest. The supplied reference governs the three-quarter raised-paw pose only; Mochi retains her fluffy tortoiseshell cat identity, green eyes, tufted feline ears and plume tail. This is a complete painted portrait using the shared card presentation; separate subject/background parallax is unavailable because ImageGen did not produce usable alpha. The replaced `mochi-card-v4.png` is removed and excluded from legacy art sync. Character sprites remain independent.
+
+
 - Scenery-only tableau windows (Eric, 2026-10-20): preserve spatial continuity with the surrounding landscape using opaque scenery samples inside numbered cards. Exclude other cards, roots and UI from the samples; soften and slightly desaturate the scenery under a light warm/cool watercolor wash, subtle pooled edges and close contact shadows. Keep rank ink crisp and sample artwork in card flights. This supersedes true-transparent tableau faces.
 
 - Relief prop silhouettes (Eric, 2026-10-20): render the lit monochrome relief layer at 60% brightness so concealed props recede into the scene while retaining branch/facet detail and directional lighting. Preserve alpha, discovery masks and revealed artwork.

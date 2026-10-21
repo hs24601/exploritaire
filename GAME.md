@@ -1,5 +1,12 @@
 # Exploritaire development baseline
 
+- Approved Mochi holocard (Eric, 2026-10-21): use the 10% larger-face version based on the painting before the rejected eye-reduction experiment. Remove the other holocard variants; see ART.md.
+
+- Mochi holocard refinement (Eric, 2026-10-21): Hero remains the visual baseline; match Mochi's eye-to-face scale to Hero and enlarge her paws by approximately 20% for this revision. Preserve her established identity details; see ART.md.
+
+- Mochi holocard (Eric, 2026-10-21): replace the old pixel holocard with watercolor styling matching Hero and the supplied playful three-quarter raised-paw pose. Preserve Mochi's tortoiseshell cat identity, including her defining jet-black paws and prominent poofy mane. See ART.md for the asset and presentation details.
+
+
 - Khad Roots explanation tableau (Eric, 2026-10-20): retain the sparse tableau through quest discovery, jumbo inspection and docking until onward travel replaces it. Keep the remaining Khad-bound cards face-up in their authored poses and inactive; do not turn/tap them or hide the field. The quest explains why those visible cards cannot be touched. This supersedes clearing the tray at pickup completion.
 
 - Quest completion receipt (Eric, 2026-10-20): replace tutorial quest burns with a dynamically painted green brushstroke checkmark over the completed card, a face-down turnover (printed back toward the camera), then a flight to Hero's holocard invoking its existing received holo shimmer. Finish the outgoing receipt before the next pickup flies; preserve real progression, global pause, restart and brief reduced-motion presentation. This supersedes all tutorial burn/dissolve timing and queued-burn rules.

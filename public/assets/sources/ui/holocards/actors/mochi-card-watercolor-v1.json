@@ -1,0 +1,13 @@
+{
+  "asset": "runtime/ui/holocards/actors/mochi-card-watercolor-v1.png",
+  "date": "2026-10-21",
+  "generator": "built-in ImageGen",
+  "identityReference": "Previous Mochi tortoiseshell holocard (removed at user request)",
+  "styleReferences": [
+    "runtime/ui/holocards/layered/hero-watercolor-v5-ordinary-day.png",
+    "runtime/ui/holocards/layered/hero-night-background-v2-ordinary-day.png"
+  ],
+  "poseReference": "User-attached Eevee illustration; pose only",
+  "direction": "Full-body fluffy tortoiseshell cat, green eyes, three-quarter standing stance with one raised front paw across chest and plume tail raised left. Hero-matched rich ink/watercolor brushwork over cool starry forest. No text or frame. Identity refinement from user-supplied real Mochi photos: all four rounded paws/toes are jet black, including the raised paw; copper/tawny tortoiseshell color continues through the ankles and bleeds softly down into the paw tops, with no black socks up the ankles; a much fuller poofy mane frames cheeks, neck, shoulders and chest. Hero is the styling baseline: match Hero eye-to-face scale with smaller green eyes and softer broad watercolor masses. Enlarge all four paws by approximately 20 percent in width and height relative to the previous pass, retaining colored ankles and black rounded feet. ImageGen sizing is approximate. FINAL APPROVED: use the pre-eye-reduction version with the entire face enlarged approximately 10%, retaining that version's eye-to-face proportions. The separate smaller-eye experiment was rejected. Other project holocard variants removed.",
+  "productionNote": "Transparent cutout requests returned painted backdrops. Final artwork is a complete opaque forest portrait; shared card tilt remains, separate art-plane parallax does not apply."
+}

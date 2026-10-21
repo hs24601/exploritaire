@@ -2,7 +2,7 @@
 export const ACTOR_HOLO_ART: Readonly<Record<string, string>> = {
   banks: `${import.meta.env.BASE_URL}assets/runtime/ui/holocards/actors/banks-card-v5.png`,
   hero: `${import.meta.env.BASE_URL}assets/runtime/ui/holocards/actors/hero-card-v2.png`,
-  mochi: `${import.meta.env.BASE_URL}assets/runtime/ui/holocards/actors/mochi-card-v4.png`,
+  mochi: `${import.meta.env.BASE_URL}assets/runtime/ui/holocards/actors/mochi-card-watercolor-v1.png`,
 };
 
 /** Approved layered watercolor artwork, bundled separately from legacy art sync. */
