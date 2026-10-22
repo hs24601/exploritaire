@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { loadMediaImage } from '../mediaCache';
+import spriteTrims from '../../data/spriteTrims.json';
 
 /** The opaque part of a sprite, as fractions of its full width and height, plus
  * its pixel aspect ratio. Padding around the art is trimmed so a standee's feet
@@ -9,16 +10,52 @@ export type SpriteState = { status: 'loading' } | { status: 'error' } | { status
 
 const cache = new Map<string, Promise<SpriteBounds>>();
 const readyBounds = new Map<string, SpriteBounds>();
+// Keep in step with tools/sprite-trims.mjs, which precomputes bundled art.
 const SAMPLE_SIZE = 128;
 
+// Detached resting tails retain the original complete silhouette's trim,
+// so hiding a layer never enlarges or shifts the sleeping body.
+const registrationOf = (src: string) => /hero-sleeping(?:-topdown)?-body-v3\.png$/.test(src)
+  ? src.replace('-body-v3.png', '-bobtail-v2.png') : src;
+
+/** Bundled art is trimmed at build time (`node tools/sprite-trims.mjs`, run
+ * before dev and build): decoding a 1–2 MP sprite and reading its pixels back
+ * blocked the main thread for ~1.7 s as Day 01 appeared. */
+const bundled = spriteTrims.sprites as Record<string, SpriteBounds>;
+const bundledBounds = (src: string): SpriteBounds | undefined => {
+  let path: string;
+  try {
+    const url = new URL(registrationOf(src), window.location.href);
+    if (url.origin !== window.location.origin) return undefined;
+    path = decodeURIComponent(url.pathname);
+  } catch { return undefined; }
+  const base = import.meta.env.BASE_URL;
+  const entry = path.startsWith(base) ? bundled[path.slice(base.length)] : undefined;
+  return entry && { x0: entry.x0, y0: entry.y0, x1: entry.x1, y1: entry.y1, aspect: entry.aspect };
+};
+const knownBounds = (src: string) => {
+  let bounds = readyBounds.get(src);
+  if (!bounds && !/^(blob|data):/.test(src)) { bounds = bundledBounds(src); if (bounds) readyBounds.set(src, bounds); }
+  return bounds;
+};
+
+/** Art generated in this session (procedural woods) supplies the trim it painted. */
+export const registerSpriteBounds = (src: string, bounds: SpriteBounds) => {
+  readyBounds.set(src, bounds); cache.set(src, Promise.resolve(bounds));
+};
+
+const reportedRuntimeMeasures = new Set<string>();
 const measure = (src: string) => {
   let pending = cache.get(src);
+  const known = pending ? undefined : knownBounds(src);
+  if (known) { pending = Promise.resolve(known); cache.set(src, pending); }
   if (!pending) {
+    if (import.meta.env.DEV && !reportedRuntimeMeasures.has(src)) {
+      reportedRuntimeMeasures.add(src);
+      console.warn('[spriteBounds] measuring at runtime; run `node tools/sprite-trims.mjs` or register its trim:', src.slice(0, 120));
+    }
     pending = new Promise<SpriteBounds>((resolve, reject) => {
-      // Detached resting tails retain the original complete silhouette's trim,
-      // so hiding a layer never enlarges or shifts the sleeping body.
-      const registration = /hero-sleeping(?:-topdown)?-body-v3\.png$/.test(src)
-        ? src.replace('-body-v3.png', '-bobtail-v2.png') : src;
+      const registration = registrationOf(src);
       loadMediaImage(registration).then(image => {
         const full = { x0: 0, y0: 0, x1: 1, y1: 1, aspect: image.naturalWidth / Math.max(1, image.naturalHeight) };
         const canvas = document.createElement('canvas');
@@ -59,7 +96,7 @@ export const prewarmSpriteBounds = (src:string) => measure(src).then(bounds=>{re
 export function useSpriteBounds(src: string | undefined): SpriteState | null {
   const [state, setState] = useState<{ src: string; value: SpriteState } | null>(null);
   useEffect(() => {
-    if (!src) return;
+    if (!src || knownBounds(src)) return;
     let live = true;
     prewarmSpriteBounds(src).then(
       (bounds) => { if (live) setState({ src, value: { status: 'ready', bounds } }); },
@@ -68,7 +105,7 @@ export function useSpriteBounds(src: string | undefined): SpriteState | null {
     return () => { live = false; };
   }, [src]);
   if (!src) return null;
-  const bounds=readyBounds.get(src);
+  const bounds=knownBounds(src);
   if(bounds)return {status:'ready',bounds};
   return state?.src === src ? state.value : { status: 'loading' };
 }
