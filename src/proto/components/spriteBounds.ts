@@ -114,13 +114,20 @@ export function useSpriteBounds(src: string | undefined): SpriteState | null {
  * contained in a box, standing on the box's bottom edge. `stretch` lengthens
  * it vertically, as a shadow falling across the table does. */
 export const spriteLayout = (bounds: SpriteBounds, width: number, height: number, stretch = 1, heightScale = 1, widthScale = 1) => {
+  const box = spriteLayoutBox(bounds, width, height, stretch, heightScale, widthScale);
+  return {
+    size: `${box.width.toFixed(2)}px ${box.height.toFixed(2)}px`,
+    position: `${box.x.toFixed(2)}px ${box.y.toFixed(2)}px`,
+  };
+};
+
+/** spriteLayout in numbers: the full (untrimmed) image's drawn size and offset. */
+export const spriteLayoutBox = (bounds: SpriteBounds, width: number, height: number, stretch = 1, heightScale = 1, widthScale = 1) => {
   const drawWidth = bounds.aspect >= width / height ? width : height * bounds.aspect;
   const drawHeight = drawWidth / bounds.aspect * heightScale;
   const scaledWidth = drawWidth * widthScale;
   const fullWidth = scaledWidth / (bounds.x1 - bounds.x0);
   const fullHeight = drawHeight / (bounds.y1 - bounds.y0);
-  return {
-    size: `${fullWidth.toFixed(2)}px ${(fullHeight * stretch).toFixed(2)}px`,
-    position: `${((width - scaledWidth) / 2 - bounds.x0 * fullWidth).toFixed(2)}px ${((height - drawHeight - bounds.y0 * fullHeight) * stretch).toFixed(2)}px`,
-  };
+  return { width: fullWidth, height: fullHeight * stretch,
+    x: (width - scaledWidth) / 2 - bounds.x0 * fullWidth, y: (height - drawHeight - bounds.y0 * fullHeight) * stretch };
 };

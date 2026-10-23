@@ -1,7 +1,8 @@
 import { sceneryHeightScale, sceneryWidthScale } from '../sceneryHeight';
 import { useEffect, type ReactNode } from 'react';
 import { rgba, type StandeeLighting, type StandeeShadow } from '../protoLighting';
-import { spriteLayout, useSpriteBounds } from './spriteBounds';
+import { spriteLayout, spriteLayoutBox, useSpriteBounds } from './spriteBounds';
+import { useBakedShadow } from '../shadowSilhouette';
 import { propVolumeRecipe } from '../propVolume';
 import { isPaintedActorSprite } from '../actorArt';
 import { isPaintedScenerySprite } from '../sceneryArt';
@@ -114,14 +115,30 @@ export const standeeShadowSkew = (angleDeg: number) => {
  * the table (shadow angles from standeeLighting are already in that frame). */
 export function SpriteStandeeShadows({ sprite, position, shadows, size = SPRITE_STANDEE_SIZE, width = size, height = size, owner, yaw = 0, actorId, flip=false, natural=false }: { sprite: string; position: { x: number; y: number }; shadows: StandeeShadow[]; size?: number; width?: number; height?: number; owner?: string; yaw?: number; actorId?: string; flip?:boolean; natural?:boolean }) {
   const state = useSpriteBounds(sprite);
-  if (state?.status !== 'ready') return null;
+  const ready = state?.status === 'ready' ? state.bounds : null;
+  const heightScale = !ready || natural ? 1 : sceneryHeightScale(sprite, width, height, ready.aspect);
+  const widthScale = !ready || natural ? 1 : sceneryWidthScale(sprite, width, height, ready.aspect);
+  // Every shadow of a standee shares one full width; only its length differs.
+  const bakedMask = useBakedShadow(sprite, ready ? spriteLayoutBox(ready, width, height, 1, heightScale, widthScale).width : 0);
+  if (!ready) return null;
   return <GroundShadowPortal>{shadows.map((shadow) => {
-    const layout = spriteLayout(state.bounds, width, height, shadow.length, natural ? 1 : sceneryHeightScale(sprite, width, height, state.bounds.aspect), natural ? 1 : sceneryWidthScale(sprite, width, height, state.bounds.aspect));
+    const transform = `translate3d(-50%, -100%, 0.5px)${yaw ? ` rotate(${(-yaw).toFixed(2)}deg)` : ''} ${standeeShadowSkew(shadow.angle)}${flip?' scaleX(-1)':''}${owner === 'actor' ? ' scale(var(--actor-world-scale, 1))' : ''}`;
+    const common = { left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, width, height: height * shadow.length, transform, transformOrigin: '50% 100%', opacity: shadow.opacity };
+    if (bakedMask) {
+      // The pre-blurred silhouette carries a margin for the blur to spread into;
+      // the ::before layer extends past the board by that margin (see index.css).
+      const box = spriteLayoutBox(ready, width, height, shadow.length, heightScale, widthScale);
+      const fx = box.width / bakedMask.width, fy = box.height / bakedMask.height;
+      return <div key={shadow.lightId} aria-hidden="true" className="proto-sprite-shadow" data-shadow-baked="true" data-travel-actor={actorId} data-shadow-light={shadow.lightId} data-shadow-owner={owner} style={{ ...common,
+        ['--shadow-pad-x' as string]: `${(bakedMask.pad * fx).toFixed(2)}px`, ['--shadow-pad-y' as string]: `${(bakedMask.pad * fy).toFixed(2)}px`,
+        ['--shadow-mask' as string]: `url("${bakedMask.url}")`,
+        ['--shadow-mask-size' as string]: `${((bakedMask.width + bakedMask.pad * 2) * fx).toFixed(2)}px ${((bakedMask.height + bakedMask.pad * 2) * fy).toFixed(2)}px`,
+        ['--shadow-mask-position' as string]: `${box.x.toFixed(2)}px ${box.y.toFixed(2)}px`,
+      }} />;
+    }
+    const layout = spriteLayout(ready, width, height, shadow.length, heightScale, widthScale);
     const mask = `url("${sprite}")`;
-    return <div key={shadow.lightId} aria-hidden="true" className="proto-sprite-shadow" data-travel-actor={actorId} data-shadow-light={shadow.lightId} data-shadow-owner={owner} style={{
-      left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`,
-      width, height: height * shadow.length,
-      transform: `translate3d(-50%, -100%, 0.5px)${yaw ? ` rotate(${(-yaw).toFixed(2)}deg)` : ''} ${standeeShadowSkew(shadow.angle)}${flip?' scaleX(-1)':''}${owner === 'actor' ? ' scale(var(--actor-world-scale, 1))' : ''}`, transformOrigin: '50% 100%', opacity: shadow.opacity,
+    return <div key={shadow.lightId} aria-hidden="true" className="proto-sprite-shadow" data-travel-actor={actorId} data-shadow-light={shadow.lightId} data-shadow-owner={owner} style={{ ...common,
       maskImage: mask, WebkitMaskImage: mask, maskSize: layout.size, WebkitMaskSize: layout.size, maskPosition: layout.position, WebkitMaskPosition: layout.position,
     }} />;
   })}</GroundShadowPortal>;

@@ -2627,6 +2627,15 @@ html.drag-perf-mode .target-swirl-sparkles {
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   filter: blur(1.5px);
 }
+/* Pre-blurred silhouette (shadowSilhouette.ts): no live blur pass. The mask
+   layer extends past the board so the baked blur margin is not clipped. */
+.proto-sprite-shadow[data-shadow-baked] { background: none; filter: none; }
+.proto-sprite-shadow[data-shadow-baked]::before {
+  content: ''; position: absolute; background: #000;
+  inset: calc(-1 * var(--shadow-pad-y)) calc(-1 * var(--shadow-pad-x));
+  -webkit-mask: var(--shadow-mask) no-repeat var(--shadow-mask-position) / var(--shadow-mask-size);
+  mask: var(--shadow-mask) no-repeat var(--shadow-mask-position) / var(--shadow-mask-size);
+}
 
 /* Exploration and combat trays share their tilt; actors counter-tilt upright
    at the front edge, with their names between their feet and the camera. */
