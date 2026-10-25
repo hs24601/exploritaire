@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canUseMomentumSkill, createCombatSandboxScenario, createPlayableSandboxScenario, endPlayerTurn, tableauWidth, tickBattle, useMomentumSkill, withdrawPlayer, type BattleState } from './battle';
-import { advanceIntent, canPityFlip, hasHoldSlot, hasPityDraw, heldCard, heldReceivers, holdCard, INTENT_RECEIVER, openPartyTurn, pityFlip, playHeld, playOnIntent, tableauReceivers } from './battleDeadRun';
+import { advanceIntent, intentEnemyPlayOne, canPityFlip, hasHoldSlot, hasPityDraw, heldCard, heldReceivers, holdCard, INTENT_RECEIVER, openPartyTurn, pityFlip, playHeld, playOnIntent, tableauReceivers } from './battleDeadRun';
 import { DEEP_BREATH } from './battleTutorialScenarios';
 import type { Card } from '../protoState';
 
@@ -111,16 +111,16 @@ describe('dead-run scenarios', () => {
     expect(hero(back).hp).toBe(hero(a).hp);
   });
 
-  it('a paced enemy turn plays one action per step: strike, each intent play, passive pip, then the handoff', () => {
+  it('a paced enemy turn plays one action per step: strike, each intent play, then the handoff', () => {
     const base = createPlayableSandboxScenario('1000');
     const s = withIntent(table(base, [5, 4, 13, 13, 13, 13]), 6);
     const steps: BattleState[] = [];
     let next = endPlayerTurn(s);
     for (let i = 0; i < 20 && next.turn === 'enemy'; i++) { next = tickBattle(next, 2); steps.push(next); }
     const cards = steps.map(step => step.tutorial!.intent!.cards.length), pips = steps.map(step => step.tutorial!.intent!.pips);
-    // Strike (0 cards), the 5 then the 4 one step apart, the passive pip, then the party turn.
+    // Strike (0 cards), the 5 then the 4 one step apart, the pip step (1000 has no passive pip), then the party turn.
     expect(cards).toEqual([0, 1, 2, 2, 2]);
-    expect(pips).toEqual([0, 1, 2, 3, 3]);
+    expect(pips).toEqual([0, 1, 2, 2, 2]);
     expect(steps.map(step => step.turn)).toEqual(['enemy', 'enemy', 'enemy', 'enemy', 'party']);
   });
 
@@ -156,5 +156,17 @@ describe('dead-run scenarios', () => {
     const hits: number[] = [];
     for (let i = 0; i < 30 && next.turn === 'enemy'; i++) { next = tickBattle(next, 0.5); hits.push(next.events.filter(event => event.kind === 'enemy-hit').length); }
     expect([...new Set(hits)]).toEqual([0, 1, 2, 3]);
+  });
+
+  it('1000 Deep Breath is caster-built: the party can only deny it, and the dummy picks matching cards at random', () => {
+    const base = withIntent(table(createCombatSandboxScenario('1000'), [5, 7, 13, 5, 13, 7]), 6);
+    expect(tableauReceivers(base, base.columns[0][base.columns[0].length - 1], false)).not.toContain(INTENT_RECEIVER);
+    expect(playOnIntent(base, 0)).toBe(base);
+    const picks = new Set(Array.from({ length: 24 }, (_, seed) => intentEnemyPlayOne({ ...base, effectSeed: seed })!.tutorial!.intent!.cards[0].id));
+    expect([...picks].sort()).toEqual(['top0', 'top1', 'top3', 'top5']);
+    expect(intentEnemyPlayOne(base)!.tutorial!.intent!.cards[0].id).toBe(intentEnemyPlayOne(base)!.tutorial!.intent!.cards[0].id);
+    // Denied: with no card one rank from it exposed, it gains nothing.
+    const denied = withIntent(table(createCombatSandboxScenario('1000'), [9, 9, 9, 9, 9, 9]), 6);
+    expect(advanceIntent(denied, false).tutorial!.intent!.pips).toBe(0);
   });
 });

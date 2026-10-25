@@ -34,7 +34,7 @@ export function dealIntent(state: BattleState, fired = 0): BattleState {
 
 export const canPlayOnIntent = (state: BattleState, card: Card | undefined | null) => {
   const intent = state.tutorial?.intent;
-  return Boolean(card && intent && intentDef(state) && partyTurn(state) && !state.traps[card.id] && isAdjacentRank(card.rank, intent.rank));
+  return Boolean(card && intent && intentDef(state) && !intentDef(state)!.casterOnly && partyTurn(state) && !state.traps[card.id] && isAdjacentRank(card.rank, intent.rank));
 };
 
 /** A card lands on the intent: one pip off, one Momentum, no AP or hit. Golf intents take the card's rank. */
@@ -110,6 +110,14 @@ export function pityFlip(state: BattleState): BattleState {
     party: state.party.map(unit => unit.id === actor.id ? { ...unit, rank: card.rank, foundationCards: [...foundationCardsOf(unit), card] } : unit) };
 }
 
+/** mulberry32 over the effect seed: a reproducible roll that leaves card deals untouched. */
+function seededRoll(previous: number) {
+  const seed = (previous + 0x6D2B79F5) >>> 0;
+  let t = Math.imul(seed ^ (seed >>> 15), seed | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return { seed, value: ((t ^ (t >>> 14)) >>> 0) / 4294967296 };
+}
+
 /** The intent's owner skips it on the same turns it skips its strike. */
 export const intentOwnerSkips = (foe: BattleFoe | undefined) => Boolean(foe && (foe.staggered > 0 || hasStatus(foe, 'dormant') || hasStatus(foe, 'frozen') || hasStatus(foe, 'stun') || hasStatus(foe, 'grip')));
 
@@ -117,10 +125,13 @@ export const intentOwnerSkips = (foe: BattleFoe | undefined) => Boolean(foe && (
 export function intentEnemyPlayOne(state: BattleState): BattleState | null {
   const def = intentDef(state), intent = state.tutorial?.intent;
   if (!def || !intent || intent.pips >= def.pips) return null;
-  const column = state.columns.slice(0, tableauWidth(state)).findIndex(cards => cards.length > 0 && isAdjacentRank(cards[cards.length - 1].rank, intent.rank));
-  if (column < 0) return null;
+  const matches = state.columns.slice(0, tableauWidth(state)).flatMap((cards, column) => cards.length > 0 && isAdjacentRank(cards[cards.length - 1].rank, intent.rank) ? [column] : []);
+  if (!matches.length) return null;
+  // Caster-built foundations pick among matching cards at random (from the effect stream), so the player reads risk, not a fixed order.
+  let effectSeed = state.effectSeed, column = matches[0];
+  if (def.casterOnly && matches.length > 1) { const flip = seededRoll(effectSeed); effectSeed = flip.seed; column = matches[Math.floor(flip.value * matches.length)]; }
   const { card, columns, stock, dealt } = takeTop(state, column)!;
-  return { ...state, columns, stock, dealt, tutorial: { ...state.tutorial!, intent: { ...intent, pips: intent.pips + 1, rank: def.fixedRank ? intent.rank : card.rank, cards: [...intent.cards, card] } } };
+  return { ...state, effectSeed, columns, stock, dealt, tutorial: { ...state.tutorial!, intent: { ...intent, pips: intent.pips + 1, rank: def.fixedRank ? intent.rank : card.rank, cards: [...intent.cards, card] } } };
 }
 
 /** The owner's plays onto the intent this enemy turn: up to `enemyPlays` exposed cards one rank from it, +1 pip each. */
@@ -170,5 +181,7 @@ export function intentSummary(state: BattleState): string | null {
   if (!def || !intent) return null;
   const rank = (value: number) => ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][value];
   const below = rank(intent.rank === 1 ? 13 : intent.rank - 1), above = rank(intent.rank === 13 ? 1 : intent.rank + 1);
-  return `${def.name} · ${intent.pips} of ${def.pips} pips. Each enemy turn ${state.foes[0]?.name ?? 'the enemy'} plays up to ${def.enemyPlays} cards here (+1 pip each) and adds ${def.passive}. At ${def.pips} it fires for ${def.damage} damage on every Kin, then returns as a new card. Play a ${below} or ${above} here to remove a pip and earn 1 Momentum (no AP, no hit).${def.fixedRank ? ' It keeps its rank when played on.' : ' It takes the rank of each card played on it.'}`;
+  const owner = state.foes[0]?.name ?? 'the enemy';
+  if (def.casterOnly) return `${def.name} · ${intent.pips} of ${def.pips} pips. Only ${owner} adds cards here: each enemy turn it plays up to ${def.enemyPlays} exposed ${below}s or ${above}s onto it, picked at random${def.fixedRank ? '' : ', and takes the rank of each'}, +1 pip each${def.passive ? ` and ${def.passive} more on its own` : ''}. At ${def.pips} it fires for ${def.damage} damage on every Kin, then returns as a new card. Take the matching cards first to deny it.`;
+  return `${def.name} · ${intent.pips} of ${def.pips} pips. Each enemy turn ${owner} plays up to ${def.enemyPlays} cards here (+1 pip each) and adds ${def.passive}. At ${def.pips} it fires for ${def.damage} damage on every Kin, then returns as a new card. Play a ${below} or ${above} here to remove a pip and earn 1 Momentum (no AP, no hit).${def.fixedRank ? ' It keeps its rank when played on.' : ' It takes the rank of each card played on it.'}`;
 }

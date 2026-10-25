@@ -510,7 +510,11 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const plans = sandbox ? tableauPlans(battle) : [];
   const concealTableau = (holding || globalPaused || combatInspection.active || sandbox && skillMenuOpen) && !(withdrawSelecting && !paused && !gameTime.isPlayerPaused());
 
-  const foeRow = <div className="battle-field__team" data-team="enemy" style={{ '--slots': battle.foes.length } as CSSProperties}>
+  // A caster-built intent is its owner's foundation and sits beside it; a shared one stays at the end of the rack.
+  const casterIntent = Boolean(intentDef(battle)?.casterOnly);
+  const intentSlot = <IntentCardSlot battle={battle} targetable={Boolean(selection?.actorIds.includes(INTENT_RECEIVER))} concealValue={concealTableau} disabled={battlePaused}
+    cardRef={node => { intentRef.current = node; }} onChoose={() => choose(INTENT_RECEIVER)} />;
+  const foeRow = <div className="battle-field__team" data-team="enemy" style={{ '--slots': battle.foes.length + (sandbox && casterIntent ? 1 : 0) } as CSSProperties}>
     <h3>Enemies</h3>
     {battle.foes.map((foe) => <FoeCard key={foe.id} foe={foe} duskwoodBark={battle.sandboxScenario==='007'} target={target?.name ?? null} targetId={target?.id} events={battle.events}
       enemyTurn={sandbox && battle.turn==='enemy'}
@@ -521,6 +525,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
       sprite={foe.appearance==='khad-root'
         ? <img className="battle-field__khad-root" src={`${import.meta.env.BASE_URL}assets/runtime/ui/quests/khad-roots-berry-bush-night-paint-v1.png`} alt="Dark crimson-thorned Khad Root" />
         : <FoundationSprite sprite={SPRITES[foe.id]} name={foe.name} lighting={rig.standee(0, -55, 64)} turnedAway={ambushed} />} />)}
+    {sandbox && casterIntent && intentSlot}
   </div>;
 
   const partyRow = <div className="battle-field__team" data-team="party" data-momentum={sandbox || undefined} style={{ '--slots': battle.party.length } as CSSProperties}>
@@ -700,10 +705,9 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
         {foeRow}
         <div className="battle-field__middle">
           <div className="battle-field__tableau" role="group" aria-label="Shared tableau · Small Woods at 0,-1">
-            <div className="battle-field__rack" style={sandbox ? { '--rack-columns': tableauWidth(battle) + (battle.tutorial?.intent ? 1 : 0) } as CSSProperties : undefined}>
+            <div className="battle-field__rack" style={sandbox ? { '--rack-columns': tableauWidth(battle) + (battle.tutorial?.intent && !casterIntent ? 1 : 0) } as CSSProperties : undefined}>
             {battle.columns.slice(0,sandbox ? tableauWidth(battle) : undefined).map(renderColumn)}
-            {sandbox && <IntentCardSlot battle={battle} targetable={Boolean(selection?.actorIds.includes(INTENT_RECEIVER))} concealValue={concealTableau} disabled={battlePaused}
-              cardRef={node => { intentRef.current = node; }} onChoose={() => choose(INTENT_RECEIVER)} />}
+            {sandbox && !casterIntent && intentSlot}
             <PlanLegend plans={plans} />
             </div>
           </div>

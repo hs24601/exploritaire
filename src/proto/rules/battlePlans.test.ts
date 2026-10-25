@@ -17,12 +17,11 @@ describe('board plans', () => {
     expect(plans).toEqual([expect.objectContaining({ by: 'enemy', target: { kind: 'tableau' } })]);
   });
 
-  it('marks the exposed cards an intent owner will play next, unless it skips its turn', () => {
+  it('leaves the cards an intent owner will take for the player to read', () => {
     const base = createCombatSandboxScenario('020');
     const s: BattleState = { ...base,
       columns: [5, 13, 13, 13, 13, 13].map((rank, c) => [{ id: `b${c}`, rank: 13 }, { id: `t${c}`, rank }]),
       tutorial: { ...base.tutorial!, intent: { id: 'i', rank: 6, pips: 0, fired: 0, cards: [] } } };
-    expect(tableauPlans(s)).toEqual([expect.objectContaining({ by: 'enemy', target: { kind: 'cards', ids: ['t0'] } })]);
-    expect(tableauPlans({ ...s, foes: s.foes.map(foe => ({ ...foe, staggered: 1 })) })).toEqual([]);
+    expect(tableauPlans(s)).toEqual([]);
   });
 });

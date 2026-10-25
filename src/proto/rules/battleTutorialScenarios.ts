@@ -22,7 +22,9 @@ export type StrikeProfile = { name: string; damage: number; stagger: number };
  * returns as a fresh card. Each party card played on it removes a pip and earns
  * Momentum, but no AP and no hit. `fixedRank` keeps its rank when played on.
  */
-export type IntentCardDef = { name: string; pips: number; enemyPlays: number; passive: number; damage: number; fixedRank?: boolean };
+export type IntentCardDef = { name: string; pips: number; enemyPlays: number; passive: number; damage: number; fixedRank?: boolean;
+  /** A caster-built ability foundation: only its owner adds cards (the party can only deny them), it picks among matching cards at random, and it sits beside the owner. */
+  casterOnly?: boolean };
 export type DeadRunFixes = Pick<TutorialDef, 'intentCard' | 'pityDraw' | 'holdSlot'>;
 export type TutorialDef = {
   id: TutorialScenarioId;
@@ -373,21 +375,24 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
   ...DEAD_RUN_SCENARIOS,
   { id: '1000', name: '1000: Target Dummy', seed: 1000, randomSeed: true, skills: ['hold'], kinRadials: true, hideEmptySlot: true, columns: 6, party: ['hero'], partyHp: 99, enemyTurnSeconds: 1,
     foes: [{ key: 'target-dummy', name: 'Target Dummy', hp: 999, damage: 0, staggerMax: 6 }],
-    intentCard: DEEP_BREATH, pityDraw: true,
+    // Caster-built: only the dummy adds cards, at random among the matches, with no passive pip, so denying the matching cards stops it.
+    intentCard: { ...DEEP_BREATH, passive: 0, casterOnly: true }, pityDraw: true,
     insight: { actorId: 'hero',
       intent: [
         'A test range for the dead-run systems, built like 999: a 999-HP Target Dummy that never strikes, so you can try every rule without the fight ending. Hero fights alone on six columns, with a fresh random deal on every start and restart. Hero has 99 HP.',
-        'Everything is on at once: the Deep Breath intent card (4 pips; up to 2 enemy plays and 1 passive pip a turn; it fires for 4 on every Kin), the pity flip, the delayed-redeal Withdraw and the board-plan markers. The hold slot is an ability here: Hero’s Hold card (6 AP) opens it for the rest of the fight.',
-        'The enemy turn plays out one action at a time: its strike, each card it plays onto Deep Breath, then the passive pip, so you can watch every change land.',
+        'Everything is on at once: Deep Breath, the pity flip, the delayed-redeal Withdraw and the board-plan markers. The hold slot is an ability here: Hero’s Hold card (6 AP) opens it for the rest of the fight.',
+        'Deep Breath is the dummy’s own ability foundation, beside it. Only the dummy adds cards to it: each enemy turn it plays up to 2 exposed cards one rank from Deep Breath, picked at random, and each is a pip. There is no passive pip. At 4 pips it fires for 4 on every Kin and starts again as a new card.',
+        'The enemy turn plays out one action at a time: its strike, then each card it plays onto Deep Breath, so you can watch every change land.',
       ],
       solve: [
-        'Deep Breath: tap or drag a card one rank from it to remove a pip (1 Momentum, no AP or Nip). Red outlines mark the exposed cards the dummy will play onto it next turn; take them first to starve it.',
+        'Deep Breath: you can’t play onto it, but you can starve it. Read its value: every exposed card one rank from it is a card the dummy might take. Take them away (to Hero, or into Hold) and it has nothing to play. The board doesn’t mark which ones it will pick, because it picks at random.',
         'Hold: tap Hero’s foundation to open her abilities and play Hold once she has banked 6 AP (1 per card she receives). The Hold slot appears beside her. Drag a card she could take right now into it, then drag or tap it out on a later turn. Parking also exposes the card underneath without changing Hero’s value.',
         'Pity flip: when a turn opens with nothing legal, PITY FLIP turns one free stock card onto Hero’s foundation.',
         'Withdraw: pick a row and your turn ends. A mint band marks that row while the dummy acts on the current board, and your next turn opens on it.',
       ],
       why: [
-        'Scenarios 019–024 each test one permutation against a real threat. This range puts them all together with no pressure, so you can check how they read and feel side by side before tuning them.',
+        'Scenarios 019–024 each test one permutation against a real threat. This range puts them together with no pressure, so you can check how they read and feel side by side before tuning them.',
+        'Deep Breath here tries a different model: abilities are foundations their caster builds, and the other side can only deny the cards. Reading the risky cards yourself, with no markers and a random pick, is the point. Player abilities that build foundations will mirror this.',
         'The dummy keeps 999 HP like the Dark Tyrant, so a long session never ends in a win screen. Restart for a new deal.',
       ] } },
 ];
