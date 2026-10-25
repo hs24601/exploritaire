@@ -27,7 +27,7 @@ import {
 import { COMBAT_ABILITY_SLOTS, combatMovesFor, type Attack } from '../rules/battleAbilities';
 import { BATTLE_SCENARIOS, scenarioById } from '../rules/battleScenarios';
 import { COMBAT_SANDBOX_SCENARIOS, type CombatSandboxScenarioId } from '../rules/battleSandboxScenarios';
-import { createCombatSandboxScenario, tableauWidth } from '../rules/battle';
+import { createPlayableSandboxScenario, tableauWidth } from '../rules/battle';
 import { IntentCardSlot, HoldSlot } from './BattleDeadRun';
 import { PlanLegend, PlanSegments } from './TableauPlanMarkers';
 import { tableauPlans } from '../rules/battlePlans';
@@ -119,7 +119,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const [insightOpen,setInsightOpen]=useState(false);
   const [momentumValueStyle,setMomentumValueStyle]=useState<MomentumValueStyle>('flamelab');
   const [abilityCast,setAbilityCast]=useState<AbilityCast|null>(null);
-  const newBattle = (setup: Parameters<typeof createBattle>[1]) => sandbox ? createCombatSandboxScenario(sandboxScenarioId) : createBattle(previewDeal, setup);
+  const newBattle = (setup: Parameters<typeof createBattle>[1]) => sandbox ? createPlayableSandboxScenario(sandboxScenarioId) : createBattle(previewDeal, setup);
   useActorLoadouts();
   const globalPaused = useGlobalPaused();
   const [targetDrag,setTargetDrag]=useState<{actorId:string;x:number;y:number;over:string|null}|null>(null);
@@ -238,7 +238,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const battlePaused = nightBlocking || presentationPaused;
   const noLegalMoves = !battle.result && battle.turn === 'party' && !anyLegalPlay(battle);
   // Ticks also advance effects and the free-turn countdown; enemy clocks wait for it.
-  const running = battle.started && !battle.result && !battlePaused && (!sandbox || battle.turn==='enemy' && (battle.sandboxScenario==='999' || battle.tutorial?.enemyClock!==undefined) || battle.turn==='party' && ((battle.momentum?.recentPlays?.length ?? 0)>0 || battle.momentum?.decayEnabled!==false && (battle.momentum?.value ?? 0)>0));
+  const running = battle.started && !battle.result && !battlePaused && (!sandbox || battle.turn==='enemy' && (battle.sandboxScenario==='999' || battle.tutorial?.enemyClock!==undefined || Boolean(battle.enemyPace)) || battle.turn==='party' && ((battle.momentum?.recentPlays?.length ?? 0)>0 || battle.momentum?.decayEnabled!==false && (battle.momentum?.value ?? 0)>0));
   useEffect(() => {
     if (!running) return;
     let last = gameTime.now();
@@ -450,7 +450,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     tableauSnapshots.current.clear();previousEnemyFoundations.current=null;previousIntentCards.current=null;
     if(sandbox){
       const id=COMBAT_SANDBOX_SCENARIOS.find(option=>option.id===nextScenario)?.id ?? sandboxScenarioId;
-      setSandboxScenarioId(id);setBattle(createCombatSandboxScenario(id));return;
+      setSandboxScenarioId(id);setBattle(createPlayableSandboxScenario(id));return;
     }
     // A new scenario starts as authored; inspiration spent on redraws stays spent.
     if (nextScenario) { setScenarioId(nextScenario); setBattle((current) => newBattle({ ...scenarioById(nextScenario).setup, maxAP: current.maxAP, playerAmbush: nextScenario === BATTLE_SCENARIOS[0].id, inspiration: Object.fromEntries(current.party.map((a) => [a.id, a.inspiration])) })); return; }

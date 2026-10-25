@@ -11,7 +11,7 @@ import { advanceIntent, dealIntent, intentEnemyPlayOne, intentOwnerSkips, intent
 // receipt statuses, and the enemy turn with enemy Momentum and reactions.
 
 /** A paced enemy turn's next step; `skips` is fixed when the turn opens (a staggered owner skips the intent). */
-export type EnemyStep = { phase: 'strike' | 'play' | 'passive' | 'end'; plays: number; skips: boolean };
+export type EnemyStep = { phase: 'strike' | 'play' | 'passive' | 'end'; foe: number; plays: number; skips: boolean };
 
 export type TutorialRuntime = {
   id: TutorialScenarioId;
@@ -197,7 +197,7 @@ function regrow(state: BattleState, foeId: string): BattleState {
 
 /** The whole enemy team acts once, then control returns to the party. */
 /** Real seconds between the steps of a paced enemy turn, so each action can animate before the next. */
-export const ENEMY_STEP_SECONDS = { strike: 0.8, play: 0.75, passive: 0.6, fire: 1.1, end: 0.6 } as const;
+export const ENEMY_STEP_SECONDS = { hold: 0.7, strike: 0.8, play: 0.75, passive: 0.6, fire: 1.1, end: 0.6 } as const;
 
 /** Enemy-turn setup shared by the instant and paced turns: party-turn statuses end, foes rearm. */
 const openEnemyTurn = (state: BattleState) => recoverDisarmed({ ...expirePartyTurn(state), foes: state.foes.map(foe => foe.turnSpent ? { ...foe, turnSpent: false } : foe) }, 'foes');
@@ -221,10 +221,9 @@ const closeEnemyTurn = (state: BattleState) => {
  * firing), then the handoff, which lands any delayed Withdraw redeal.
  */
 export function beginTutorialEnemyTurn(state: BattleState): BattleState {
-  const seconds = tutorialById(state.tutorial?.id)?.enemyTurnSeconds;
-  if (!seconds || !state.tutorial) return tutorialEnemyTurn(state);
-  const next = openEnemyTurn(state);
-  return { ...next, turn: 'enemy', tutorial: { ...next.tutorial!, enemyClock: seconds, enemyStep: { phase: 'strike', plays: 0, skips: intentOwnerSkips(next.foes[0]) } } };
+  if (!state.rules.pacedEnemyTurns || !state.tutorial) return tutorialEnemyTurn(state);
+  const next = openEnemyTurn(state), seconds = tutorialById(state.tutorial.id)?.enemyTurnSeconds ?? ENEMY_STEP_SECONDS.hold;
+  return { ...next, turn: 'enemy', tutorial: { ...next.tutorial!, enemyClock: seconds, enemyStep: { phase: 'strike', foe: 0, plays: 0, skips: intentOwnerSkips(next.foes[0]) } } };
 }
 
 /** Advances a paced enemy turn by real seconds, one step each time its clock runs out. */
@@ -237,7 +236,14 @@ export function tickTutorialEnemyTurn(state: BattleState, dt: number): BattleSta
     next.result ? closeEnemyTurn(next) : { ...next, tutorial: { ...next.tutorial!, enemyClock: seconds, enemyStep: { ...step, phase, plays } } };
   const def = tutorialById(state.tutorial!.id)?.intentCard, acts = Boolean(def && state.tutorial!.intent && !step.skips && foeAlive(state.foes[0]));
   switch (step.phase) {
-    case 'strike': return at(foesAct(state), acts ? 'play' : 'end', ENEMY_STEP_SECONDS.strike);
+    case 'strike': {
+      // One foe per step; a foe that does nothing visible (dormant, frozen, recovering) passes straight on.
+      const foe = state.foes[step.foe];
+      if (!foe) return tickTutorialEnemyTurn(at(state, acts ? 'play' : 'end', 0), 0);
+      const after = regrow(foeTurn(state, foe.id), foe.id), shown = after.nextEventId !== state.nextEventId;
+      const next = at(after, 'strike', shown ? ENEMY_STEP_SECONDS.strike : 0);
+      return { ...next, tutorial: next.tutorial && next.tutorial.enemyStep ? { ...next.tutorial, enemyStep: { ...next.tutorial.enemyStep, foe: step.foe + 1 } } : next.tutorial };
+    }
     case 'play': {
       const played = step.plays < (def?.enemyPlays ?? 0) ? intentEnemyPlayOne(state) : null;
       return played ? at(played, 'play', ENEMY_STEP_SECONDS.play, step.plays + 1) : tickTutorialEnemyTurn(at(state, 'passive', 0), 0);

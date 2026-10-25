@@ -1,5 +1,7 @@
 # Exploritaire development baseline
 
+- Stepped enemy turns everywhere (Eric, 2026-10-25; universal requirement): every enemy turn in the played combat sandbox plays out one visible action at a time so players can follow what happened, never jumping ahead to a changed board. After a short hold each foe strikes in its own step, each card an enemy plays onto an intent flies there in its own step, then the passive pip or firing, then the handoff that lands a delayed Withdraw redeal; idle enemy turns still hold briefly. 999 already plays card by card on its own clock. The playable sandbox builds scenarios with `createPlayableSandboxScenario` (`rules.pacedEnemyTurns`); rules tests and tools may still resolve turns instantly. Exception: 007 keeps its scripted handoff and rescue pacing. Apply this to every new combat enemy behavior.
+
 - Stepped enemy turns (Eric, 2026-10-25): paced combatsbx enemy turns (1000) play out one action at a time on real seconds after a short hold: the foes' strikes, each card played onto the intent (each flying from the tableau), the passive pip and any firing, then the handoff that lands a delayed Withdraw redeal. Scenarios without enemyTurnSeconds keep the instant enemy turn.
 
 - Combat sandbox Momentum decay off by default (Eric, 2026-10-25): every combatsbx scenario starts with Momentum decay disabled; the Config toggle still turns it on. Intent-card pips only fill as pips are gained and empty as they are removed; no predictive or next-pip striping.

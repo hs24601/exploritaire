@@ -152,6 +152,8 @@ export type BattleState = {
   pendingWithdraw?: { foeId: string };
   /** A party Withdraw ends the turn on the current board; its redeal (a row, or the whole tableau) lands as the next party turn starts. */
   pendingRedeal?: { row?: number };
+  /** A paced sandbox enemy turn (rules.pacedEnemyTurns): seconds to the next step and the attackers still to strike. */
+  enemyPace?: { clock: number; queue: string[] };
   reposition?: { serial: number; by: 'party' | 'enemy'; removedIds: string[]; addedIds: string[] };
   /** Turn handoff scaffolding for the combat sandbox. */
   turn?: 'party' | 'enemy';
@@ -191,7 +193,9 @@ export type BattleState = {
  *   opens the card beneath for the party. The party can't play a trapped
  *   card; it waits for a slime.
  */
-export type BattleRules = { hungry: boolean; traps: boolean; finiteTableau?: boolean; infinifillRows?: number; autoStrike?: boolean; columns?: number };
+export type BattleRules = { hungry: boolean; traps: boolean; finiteTableau?: boolean; infinifillRows?: number; autoStrike?: boolean; columns?: number;
+ /** Enemy turns play out one action at a time on real seconds (the playable combat sandbox); tests and tools can stay instant. */
+ pacedEnemyTurns?: boolean };
 /** Tableau columns before loose spill columns; the turn-based sandbox defaults to seven. */
 export const tableauWidth = (state: Pick<BattleState, 'rules'>) => state.rules.columns ?? 7;
 export const BASIC_RULES: BattleRules = { hungry: false, traps: false };
@@ -276,6 +280,12 @@ const trainingDeal = (id: CombatSandboxScenarioId, generation: number, incomingR
   stock:Array.from({length:128},(_,i)=>({id:`${prefix}-stock-${i}`,rank:wrap(((id==='004'||id==='005'||id==='006')?[2,10,5,12,7,3,11][i%7]:13)+offset)}))};
 };
 
+/** The combatsbx scenario as played: every enemy turn steps one action at a time (Eric, 2026-10-25). */
+export const createPlayableSandboxScenario = (id: CombatSandboxScenarioId): BattleState => {
+ // 007 keeps its own scripted handoffs and rescue pacing.
+ const state=createCombatSandboxScenario(id);
+ return id==='007'?state:{...state,rules:{...state.rules,pacedEnemyTurns:true}};
+};
 /** Authored training routes retain real card play, damage, stagger and reflection. */
 export const createCombatSandboxScenario = (id: CombatSandboxScenarioId): BattleState => {
  if(tutorialById(id))return createTutorialScenario(id as TutorialScenarioId);
@@ -370,6 +380,32 @@ const applyPendingRedeal=(state:BattleState):BattleState=>{
  return row!==undefined && withdrawRowTarget(cleared,'withdraw-row:'+row)!==null?withdrawToRow(cleared,row):shiftFrontier(cleared,'party');
 };
 const startPartyTurn=(rawState:BattleState):BattleState=>{const state=applyPendingRedeal(rawState);return recoverDisarmed({...state,party:state.party.some(actor=>actor.turnSpent)?state.party.map(actor=>actor.turnSpent?{...actor,turnSpent:false}:actor):state.party},'party');};
+/** Real seconds a paced enemy turn holds the board before acting, and between attackers. */
+export const ENEMY_PACE_SECONDS = { hold: 0.7, strike: 0.8 } as const;
+/** One attacking sandbox foe's handoff strike; a staggered foe recovers instead. */
+const foeAttackStep=(state:BattleState,attackerId:string):BattleState=>{
+ const attacker=state.foes.find(unit=>unit.id===attackerId);
+ if(state.result || !attacker || !foeAlive(attacker) || attacker.turnSpent || attacker.intent!=='attack')return state;
+ if(attacker.staggered>0)return {...state,foes:state.foes.map(unit=>unit.id===attacker.id?{...unit,stagger:0,staggered:0,staggerStage:0}:unit)};
+ const target=attacker.emberPhase===1?state.party.find(actor=>actor.id==='hero' && actorAlive(actor)):enemyTarget(state);if(!target)return state;
+ const damage=attacker.profile.damage+attacker.fed,hp=Math.max(0,target.hp-damage);
+ const events:Omit<BattleEvent,'id'>[]=[{kind:'enemy-hit',sourceId:attacker.id,targetId:target.id,amount:damage,label:attacker.name}];
+ if(hp===0)events.push({kind:'down',sourceId:attacker.id,targetId:target.id});
+ const party=state.party.map(unit=>unit.id===target.id?{...unit,hp}:unit);
+ let next:BattleState={...state,party,foes:state.foes.map(unit=>unit.id===attacker.id?{...unit,fed:0}:unit),result:resultOf(party,state.foes),...withEvents(state,events)};
+ if(next.cir?.status==='bound' && next.cir.actorId===target.id && target.id==='hero')
+  next=cirFireHit(next,attacker.id,CIR_EXPRESSIONS.hero.damage,'Hearthflame',target.id);
+ return next;
+};
+/** A paced sandbox enemy turn: after the hold, one attacker strikes per step, then the party turn (and any delayed redeal) lands. */
+const tickEnemyPace=(state:BattleState,dt:number):BattleState=>{
+ const pace=state.enemyPace!;
+ if(pace.clock-dt>0)return {...state,enemyPace:{...pace,clock:pace.clock-dt}};
+ const [attacker,...queue]=pace.queue;
+ if(attacker===undefined || state.result)return returnPlayerTurn({...state,enemyPace:undefined});
+ const next=foeAttackStep(state,attacker);
+ return next.result?returnPlayerTurn({...next,enemyPace:undefined}):{...next,enemyPace:{clock:next.nextEventId!==state.nextEventId?ENEMY_PACE_SECONDS.strike:0,queue}};
+};
 const beginEnemyTurn = (state: BattleState): BattleState => {
  if(state.tutorial)return beginTutorialEnemyTurn(state);
  state=recoverDisarmed({...state,foes:state.foes.some(foe=>foe.turnSpent)?state.foes.map(foe=>foe.turnSpent?{...foe,turnSpent:false}:foe):state.foes},'foes');
@@ -377,23 +413,14 @@ const beginEnemyTurn = (state: BattleState): BattleState => {
  // Attacking sandbox foes respond once at handoff; the real-time encounter
  // clock remains independent. Retaliation resolves before the next foe acts.
  if(!foe && state.foes.some(unit=>foeAlive(unit) && !unit.turnSpent && unit.intent==='attack')){
-  let next=state;
-  for(const attacker of state.foes){
-   if(next.result)break;
-   if(!foeAlive(attacker) || attacker.turnSpent || attacker.intent!=='attack')continue;
-   if(attacker.staggered>0){next={...next,foes:next.foes.map(unit=>unit.id===attacker.id?{...unit,stagger:0,staggered:0,staggerStage:0}:unit)};continue;}
-   const target=attacker.emberPhase===1?next.party.find(actor=>actor.id==='hero' && actorAlive(actor)):enemyTarget(next);if(!target)break;
-   const damage=attacker.profile.damage+attacker.fed,hp=Math.max(0,target.hp-damage);
-   const events:Omit<BattleEvent,'id'>[]=[{kind:'enemy-hit',sourceId:attacker.id,targetId:target.id,amount:damage,label:attacker.name}];
-   if(hp===0)events.push({kind:'down',sourceId:attacker.id,targetId:target.id});
-   const party=next.party.map(unit=>unit.id===target.id?{...unit,hp}:unit);
-   next={...next,party,foes:next.foes.map(unit=>unit.id===attacker.id?{...unit,fed:0}:unit),result:resultOf(party,next.foes),...withEvents(next,events)};
-   if(next.cir?.status==='bound' && next.cir.actorId===target.id && target.id==='hero')
-    next=cirFireHit(next,attacker.id,CIR_EXPRESSIONS.hero.damage,'Hearthflame',target.id);
-  }
-  return returnPlayerTurn(next);
+  const attackers=state.foes.filter(attacker=>foeAlive(attacker) && !attacker.turnSpent && attacker.intent==='attack').map(attacker=>attacker.id);
+  // Paced turns strike one attacker per step (tickEnemyPace); otherwise all at once.
+  if(state.rules.pacedEnemyTurns)return {...state,turn:'enemy',enemyPace:{clock:ENEMY_PACE_SECONDS.hold,queue:attackers}};
+  return returnPlayerTurn(attackers.reduce(foeAttackStep,state));
  }
  if(state.sandboxScenario==='999' && state.foes.every(foe=>!foeAlive(foe) || foe.turnSpent || foe.intent==='idle'))return finishIndominableTurn(state);
+ // An idle enemy turn still holds the board briefly when paced, so a delayed Withdraw redeal lands visibly.
+ if(state.rules.pacedEnemyTurns && state.foes.every(foe=>!foeAlive(foe) || foe.turnSpent || foe.intent==='idle'))return {...state,turn:'enemy',enemyPace:{clock:ENEMY_PACE_SECONDS.hold,queue:[]}};
  if(state.foes.every(foe=>!foeAlive(foe) || foe.turnSpent || foe.intent==='idle'))return startPartyTurn({...state,turn:'party',pendingWithdraw:undefined,round:(state.round ?? 1)+1,
   momentum:state.momentum?{...state.momentum,sequence:0,rapidClock:0,recentPlays:[],speedBonus:0,sustainedBonus:0}:undefined});
  return {...state,turn:'enemy',pendingWithdraw:foe?{foeId:foe.id}:undefined,
@@ -742,8 +769,9 @@ export const enemyTarget = (state: BattleState) =>
 export const battleTimeScale = (state: BattleState) => state.rules.autoStrike && !state.result && state.foes.some(foe=>foe.hp>0 && foe.staggered>0) ? 0.1 : 1;
 export const tickBattle = (state: BattleState, dt: number): BattleState => {
   if (!state.started || state.result || !Number.isFinite(dt) || dt <= 0) return state;
-  // Paced tutorial enemy turns run on real seconds, unaffected by stagger bullet time.
+  // Paced enemy turns run on real seconds, unaffected by stagger bullet time.
   if (state.turn === 'enemy' && state.tutorial?.enemyClock !== undefined) return tickTutorialEnemyTurn(state, dt);
+  if (state.turn === 'enemy' && state.enemyPace) return tickEnemyPace(state, dt);
   dt *= battleTimeScale(state);
   // The optional playtest decay affects the reserve only, never enemy actions or stagger.
   if (state.rules.autoStrike) {

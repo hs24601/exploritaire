@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canUseMomentumSkill, createCombatSandboxScenario, endPlayerTurn, tableauWidth, tickBattle, useMomentumSkill, withdrawPlayer, type BattleState } from './battle';
+import { canUseMomentumSkill, createCombatSandboxScenario, createPlayableSandboxScenario, endPlayerTurn, tableauWidth, tickBattle, useMomentumSkill, withdrawPlayer, type BattleState } from './battle';
 import { advanceIntent, canPityFlip, hasHoldSlot, hasPityDraw, heldCard, heldReceivers, holdCard, INTENT_RECEIVER, openPartyTurn, pityFlip, playHeld, playOnIntent, tableauReceivers } from './battleDeadRun';
 import { DEEP_BREATH } from './battleTutorialScenarios';
 import type { Card } from '../protoState';
@@ -97,7 +97,7 @@ describe('dead-run scenarios', () => {
   });
 
   it('1000 is a 999-HP dummy with every fix, a fresh deal per start and a paced enemy turn', () => {
-    const a = createCombatSandboxScenario('1000'), b = createCombatSandboxScenario('1000');
+    const a = createPlayableSandboxScenario('1000'), b = createPlayableSandboxScenario('1000');
     expect(a.foes[0]).toMatchObject({ name: 'Target Dummy', hp: 999 });
     expect([hasPityDraw(a), hasHoldSlot(a), Boolean(a.tutorial?.intent), tableauWidth(a), a.party.length]).toEqual([true, false, true, 6, 1]);
     expect(a.columns.flat().map(card => card.id)).not.toEqual(b.columns.flat().map(card => card.id));
@@ -112,7 +112,7 @@ describe('dead-run scenarios', () => {
   });
 
   it('a paced enemy turn plays one action per step: strike, each intent play, passive pip, then the handoff', () => {
-    const base = createCombatSandboxScenario('1000');
+    const base = createPlayableSandboxScenario('1000');
     const s = withIntent(table(base, [5, 4, 13, 13, 13, 13]), 6);
     const steps: BattleState[] = [];
     let next = endPlayerTurn(s);
@@ -134,5 +134,27 @@ describe('dead-run scenarios', () => {
     expect(hero(open).charge).toBe(0);
     expect(canUseMomentumSkill({ ...open, party: open.party.map(actor => ({ ...actor, charge: 6 })) }, 'hold', 'hero')).toBe(false);
     expect(hasHoldSlot(endPlayerTurn(open), 'hero')).toBe(true);
+  });
+
+  it('every playable scenario steps its enemy turn; tests and tools can still resolve it at once', () => {
+    for (const id of ['006', '010', '012', '020'] as const) {
+      const instant = endPlayerTurn(createCombatSandboxScenario(id));
+      expect(instant.turn).toBe('party');
+      const paced = endPlayerTurn(createPlayableSandboxScenario(id));
+      expect(paced.turn).toBe('enemy');
+      expect(paced.party.map(actor => actor.hp)).toEqual(createPlayableSandboxScenario(id).party.map(actor => actor.hp));
+      let next = paced, steps = 0;
+      for (; steps < 30 && next.turn === 'enemy'; steps++) next = tickBattle(next, 0.5);
+      expect(next.turn).toBe('party');
+      expect(steps).toBeGreaterThan(1);
+    }
+    expect(createPlayableSandboxScenario('007').rules.pacedEnemyTurns).toBeUndefined();
+  });
+
+  it('three rootlings strike one step apart', () => {
+    let next = endPlayerTurn(createPlayableSandboxScenario('012'));
+    const hits: number[] = [];
+    for (let i = 0; i < 30 && next.turn === 'enemy'; i++) { next = tickBattle(next, 0.5); hits.push(next.events.filter(event => event.kind === 'enemy-hit').length); }
+    expect([...new Set(hits)]).toEqual([0, 1, 2, 3]);
   });
 });
