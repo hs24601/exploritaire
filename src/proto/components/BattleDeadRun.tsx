@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { ProtoCard } from './ProtoCard';
-import { holdReceiver, INTENT_RECEIVER, intentDef, intentSummary } from '../rules/battleDeadRun';
+import { holdReceiver, INTENT_RECEIVER, intentDef, intentProjectedPips, intentSummary } from '../rules/battleDeadRun';
 import type { BattleState } from '../rules/battle';
 import type { Card } from '../protoState';
 import './BattleDeadRun.css';
@@ -16,16 +16,16 @@ export function IntentCardSlot({ battle, targetable, concealValue, disabled, car
 }) {
   const def = intentDef(battle), intent = battle.tutorial?.intent;
   if (!def || !intent) return null;
-  const summary = intentSummary(battle) ?? def.name;
-  return <div className="battle-intent-slot" data-battle-actor={INTENT_RECEIVER} data-battle-target={INTENT_RECEIVER} data-targetable={targetable || undefined} data-full={intent.pips >= def.pips - 1 || undefined}
+  const summary = intentSummary(battle) ?? def.name, projected = battle.turn === 'party' ? intentProjectedPips(battle) : intent.pips;
+  return <div className="battle-intent-slot" data-battle-actor={INTENT_RECEIVER} data-battle-target={INTENT_RECEIVER} data-targetable={targetable || undefined} data-full={projected >= def.pips || undefined}
     role="group" aria-label={concealValue ? `${def.name} · value hidden during tactical pause` : summary}>
     <span className="battle-intent-slot__name" data-game-tooltip={summary}>{def.name}</span>
     <div className="battle-intent-slot__card" ref={cardRef}>
       <ProtoCard key={intent.id} card={{ id: intent.id, rank: intent.rank }} allowJumbo={false} centerRank lit concealValue={concealValue}
         disabled={disabled || !targetable} active={targetable} actionLabel={`Play onto ${def.name}`} onClick={onChoose} />
     </div>
-    <span className="battle-intent-slot__pips" role="meter" aria-label={`${def.name} pips`} aria-valuemin={0} aria-valuemax={def.pips} aria-valuenow={intent.pips}>
-      {Array.from({ length: def.pips }, (_, pip) => <i key={pip} data-on={pip < intent.pips || undefined} data-next={pip === intent.pips && pip < def.pips || undefined} />)}
+    <span className="battle-intent-slot__pips" role="meter" aria-label={`${def.name} pips · ${projected - intent.pips} more after the enemy turn`} aria-valuemin={0} aria-valuemax={def.pips} aria-valuenow={intent.pips}>
+      {Array.from({ length: def.pips }, (_, pip) => <i key={pip} data-on={pip < intent.pips || undefined} data-next={pip >= intent.pips && pip < projected || undefined} />)}
     </span>
   </div>;
 }

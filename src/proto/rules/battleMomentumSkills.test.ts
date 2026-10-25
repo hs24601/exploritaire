@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {createCombatSandboxScenario,canUseMomentumSkill,useMomentumSkill,tickBattle,eligibleActors} from './battle';
 import type { BattleState } from './battle';
-const base=()=>{const s=createCombatSandboxScenario('005');return {...s,momentum:{...s.momentum!,value:20,earned:20,sequence:4},party:s.party.map(a=>({...a,charge:6}))};};
+const base=()=>{const s=createCombatSandboxScenario('005');return {...s,momentum:{...s.momentum!,value:20,earned:20,sequence:4,decayEnabled:true},party:s.party.map(a=>({...a,charge:6}))};};
 const ap=(s:BattleState,id:string)=>s.party.find(a=>a.id===id)!.charge;
 describe('Momentum skill testbed',()=>{
  it('casts on the dropped enemy atomically and does not spend or retarget an invalid drop',()=>{

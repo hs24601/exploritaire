@@ -258,7 +258,7 @@ export const createBattle = (deal: { tableau: Card[][]; stock?: Card[] }, setup:
 export const createStaggerSandbox = (setup: BattleSetup = {}): BattleState => {
  const state=createBattle({tableau:Array.from({length:7},()=>Array.from({length:4},createRandomProtoCard))},
   {...setup,slimes:1,playerAmbush:false,seed:Math.floor(Math.random()*0x100000000),rules:{hungry:false,traps:false,infinifillRows:4,autoStrike:true}});
- return {...state,turn:'party',started:true,spills:{},momentum:{value:0,earned:0,spent:0,sequence:0,decayEnabled:true},party:state.party.map(actor=>({...actor,targetId:state.foes[0].id})),foes:state.foes.map(f=>({...f,intent:'withdraw',hp:50,timer:0,profile:{...f.profile,maxHp:50,staggerMax:6,staggerDecay:0.15,staggerSeconds:20,vulnerability:2}}))};
+ return {...state,turn:'party',started:true,spills:{},momentum:{value:0,earned:0,spent:0,sequence:0,decayEnabled:false},party:state.party.map(actor=>({...actor,targetId:state.foes[0].id})),foes:state.foes.map(f=>({...f,intent:'withdraw',hp:50,timer:0,profile:{...f.profile,maxHp:50,staggerMax:6,staggerDecay:0.15,staggerSeconds:20,vulnerability:2}}))};
 };
 
 const trainingDeal = (id: CombatSandboxScenarioId, generation: number, incomingRank = 2, blocked = false) => {

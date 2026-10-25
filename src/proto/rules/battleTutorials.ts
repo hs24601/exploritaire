@@ -54,7 +54,7 @@ export function createTutorialScenario(id: TutorialScenarioId): BattleState {
   return openPartyTurn(dealIntent({ ...base, sandboxScenario: id, cir: { status: 'available' }, round: 1, seed, effectSeed: seed,
     rules: { ...base.rules, columns: COLUMNS }, columns, stock: [], dealt: COLUMNS * ROWS, foes,
     tutorial: { id, cleared: 0, waves: Object.fromEntries(def.foes.map(foe => [foe.key, 1])) },
-    momentum: { value: def.momentum ?? 0, earned: 0, spent: 0, sequence: 0, decayEnabled: def.decay ?? true },
+    momentum: { value: def.momentum ?? 0, earned: 0, spent: 0, sequence: 0, decayEnabled: def.decay ?? false },
     party: base.party.filter(actor => !def.party || def.party.includes(actor.id as 'hero' | 'mochi')).map(actor => ({ ...actor, targetId: foes[0].id, charge: def.ap ?? 0, hp: def.partyHp ?? actor.maxHp, maxHp: def.partyHp ?? actor.maxHp,
       statuses: actor.id === def.insight.actorId ? [{ id: 'insight' as const }] : [] })) }));
 }

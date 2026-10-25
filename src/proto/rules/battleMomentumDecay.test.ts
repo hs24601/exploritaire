@@ -1,8 +1,10 @@
 import {describe,it,expect} from 'vitest';
 import {createStaggerSandbox,setMomentumDecay,tickBattle,withdrawPlayer,createBattle} from './battle';
-const charged=()=>{const s=createStaggerSandbox();return {...s,momentum:{...s.momentum!,value:4,earned:4,sequence:4}};};
+// Decay is off by default (Eric, 2026-10-25); these fixtures turn it on to test the drain.
+const charged=()=>{const s=createStaggerSandbox();return {...s,momentum:{...s.momentum!,value:4,earned:4,sequence:4,decayEnabled:true}};};
 describe('optional Momentum decay',()=>{
- it('defaults on and drains a half point per second without changing earnings or combat',()=>{
+ it('defaults off; when on it drains a half point per second without changing earnings or combat',()=>{
+  expect(createStaggerSandbox().momentum?.decayEnabled).toBe(false);
   const s=charged(),n=tickBattle(s,1);expect(s.momentum?.decayEnabled).toBe(true);expect(n.momentum).toMatchObject({value:3.5,earned:4,spent:0,sequence:4});
   expect(n.party).toBe(s.party);expect(n.foes).toBe(s.foes);expect(n.columns).toBe(s.columns);expect(n.events).toBe(s.events);
   expect(tickBattle(s,4).momentum?.value).toBe(2);

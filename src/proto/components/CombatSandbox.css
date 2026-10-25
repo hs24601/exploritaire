@@ -202,7 +202,8 @@
 .battle-foundation__value { grid-area:value; display:flex; align-items:center; justify-content:center; min-height:48px; border:1px solid #b9a178; border-radius:7px; background:#141c23; font:28px/1 monospace; color:#fff2cc; }
 .battle-foundation__status { font:11px/16px monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .battle-party-buffs { height:44px; display:flex; align-items:center; justify-content:flex-start; gap:4px; }
-.combat-sandbox .battle-field__foundation--empty { margin-top:44px!important; height:106px!important; }
+/* Level with Kin foundations: their 44px buff row plus the slot's 4px gap. */
+.combat-sandbox .battle-field__foundation--empty { margin-top:48px!important; }
 @media(max-width:600px) {
  .combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-auto-columns:minmax(0,1fr); gap:5px; }
  .combat-sandbox .battle-field__team[data-team='enemy'] { --slot-w:160px; }

@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {createCombatSandboxScenario,tickBattle,battleTimeScale} from './battle';
-const base=()=>{const s=createCombatSandboxScenario('005');return {...s,momentum:{...s.momentum!,value:10,earned:10,rapidClock:0,recentPlays:[0]},foes:s.foes.map(f=>({...f,staggered:20}))};};
+const base=()=>{const s=createCombatSandboxScenario('005');return {...s,momentum:{...s.momentum!,value:10,earned:10,rapidClock:0,recentPlays:[0],decayEnabled:true},foes:s.foes.map(f=>({...f,staggered:20}))};};
 describe('stagger bullet time',()=>{
  it('slows all shared gameplay clock consumers by 90 percent without ticking untimed stagger',()=>{const s=base(),n=tickBattle(s,10);expect(battleTimeScale(s)).toBe(.1);expect(n.momentum).toMatchObject({value:9.5,rapidClock:1});expect(n.foes).toBe(s.foes);});
  it('slows modifiers as well as reserve decay and does not stack across enemies',()=>{let s=base();s={...s,momentum:{...s.momentum!,decayFrozenFor:5},foes:[...s.foes,{...s.foes[0],id:'second'}]};const n=tickBattle(s,20);expect(n.momentum).toMatchObject({value:10,decayFrozenFor:3,rapidClock:2});});

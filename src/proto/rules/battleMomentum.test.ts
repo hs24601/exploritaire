@@ -11,7 +11,7 @@ describe('shared Momentum and Withdraw',()=>{
   let s=base();s=receipt(s);s=receipt(s,'mochi');s=receipt(s);
   expect(s.momentum).toMatchObject({value:3,earned:3,spent:0,sequence:3,lastActorId:'hero'});
   const bad=playCard({...s,columns:[[{id:'illegal',rank:10}]]},0,'hero');expect(bad.momentum).toBe(s.momentum);
-  expect(tickBattle(s,999).momentum?.value).toBe(0);expect(tickBattle(s,999).momentum?.earned).toBe(3);
+  const decaying={...s,momentum:{...s.momentum!,decayEnabled:true}};expect(tickBattle(decaying,999).momentum?.value).toBe(0);expect(tickBattle(decaying,999).momentum?.earned).toBe(3);
  });
  it('supports an uncapped reserve and rejects invalid or unaffordable spending',()=>{
   let s=base();s={...s,momentum:{value:50,earned:50,spent:0,sequence:50}};
