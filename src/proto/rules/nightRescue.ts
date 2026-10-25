@@ -24,7 +24,7 @@ export function createNightRescue(s:BattleState):BattleState {
   party:s.party.map(a=>({...a,rank:2,foundationCards:[card(a.id,2)],targetId:'khad-root'})),
   foes:s.foes.map(f=>({...f,id:'khad-root',name:'Gallows Khad',appearance:'khad-root',intent:'idle',ironbark:true,hp:30,
    rank:11,foundationCards:[card('boss-base',6),card('stolen',11)],profile:{...f.profile,maxHp:30,staggerMax:3,staggerSeconds:20,vulnerability:1}})),
-  night:{phase:'opening',step:0,serial:1,message:'Strip the Gallows Khad’s Ironbark, then wound its heart. Your sequence will build the Momentum you carry into the snare.'}};
+  night:{phase:'opening',step:0,serial:1,message:'Strip the Gallows Khad’s Ironbark, then wound its heart. Every card a Kin receives banks AP for its own abilities; you carry that AP into the snare.'}};
 }
 
 export function nightAfterHit(s:BattleState):BattleState {
@@ -38,7 +38,7 @@ export function nightAfterHit(s:BattleState):BattleState {
      ? [card('outer',8),...Array.from({length:3},(_,i)=>card('outer-cover-'+i,4))]
      : [...Array.from({length:3},(_,i)=>card('snared-'+column+'-'+i,4)),card('front-'+column,column===1?9:column===2?10:column===6?12:4)]),
     night:{...s.night!,phase:'desperation'}};
-   return say(s,'THE GALLOWS BLOOM · 2 turns until every allied combatant is slain. Snaring Khad Roots block tableau plays and Withdraw. Try your banked abilities—the sealed heartwood must have a weakness…');
+   return say(s,'THE GALLOWS BLOOM · 2 turns until every allied combatant is slain. Snaring Khad Roots block tableau plays and Withdraw. Spend the AP each Kin banked on its abilities—the sealed heartwood must have a weakness…');
   }
  }
  if(s.night?.phase==='rescue' && boss.staggered>0){
