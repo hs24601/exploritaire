@@ -13,7 +13,8 @@ import { BanksEmoji } from './BanksEmoji';
 import { STATUS_SKILLS, isStatusSkill, type StatusSkill } from '../rules/battleStatusData';
 import { abilitySlotSpent, isRaging, isSilenced, statusSkillCost, tutorialAllowsSkill } from '../rules/battleStatuses';
 import { EMBER_RAGE } from '../rules/battleStatusData';
-import { tutorialById } from '../rules/battleTutorialScenarios';
+import { scenarioHand } from '../rules/abilityCatalog';
+import { ABILITY_OVERRIDES } from '../rules/abilityOverrides';
 
 /** Hand pages: each open Kin's Attacks, then Support (Cir and status cards). */
 const kindOf=(id:MomentumSkillId)=>isStatusSkill(id)?STATUS_SKILLS[id].group:isCirMomentumSkill(id)?'support':'attack';
@@ -30,9 +31,8 @@ export function MomentumSkillRadial({battle,fieldRef,disabled,onChoose,onClose,v
   const root=useRef<HTMLDivElement>(null);
   const dragCard=useRef<HTMLDivElement>(null);
   const hitSource=useRef<Contact|null>(null),contactSerial=useRef(0);
-  const hand=tutorialById(battle.tutorial?.id)?.skills;
   const momentumMode=owners.length===0;
-  const pool:MomentumSkillId[]=hand?[...hand]:(Object.keys(MOMENTUM_SKILLS) as MomentumSkillId[]).filter(id=>id!=='cir'&&id!=='withdraw'&&!isStatusSkill(id)&&(!battle.night || !isCirMomentumSkill(id))&&(isCirMomentumSkill(id) || battle.sandboxScenario==='005' || battle.sandboxScenario==='006' || battle.sandboxScenario==='007'));
+  const pool=scenarioHand(battle);
   const allSkills:MomentumSkillId[]=momentumMode?['withdraw']:owners.flatMap(owner=>pool.filter(id=>skillOwner(id)===owner));
   const paged=allSkills.length>FULL_FACE_LIMIT;
   // Group by Kin and kind, then split any group larger than a page ("Hero · Attacks 1/2").
@@ -146,7 +146,7 @@ export function MomentumSkillRadial({battle,fieldRef,disabled,onChoose,onClose,v
     const skill=momentumSkillExpression(battle,id,targetId);
     const cir=battle.cir;
     const status:StatusSkill|null=isStatusSkill(id)?STATUS_SKILLS[id]:null;
-    const effect=id==='ember-rage'?`${status!.card} Now +${rageBonus(actorAP(battle,'hero')+1)} next hit.`:status?status.card:isCirMomentumSkill(id)?skill.description:id==='withdraw'?'Redeal the entire tableau. Ends your team’s turn.':id==='bash'?'Add 2 stagger. No damage.':id==='sticky-paws'?'Next attack steals a foundation card. An empty target must rearm.':'Deal 3 damage. Double against staggered targets.';
+    const effect=id==='ember-rage'?`${status!.card} Now +${rageBonus(actorAP(battle,status!.actorId)+1)} next hit.`:status?status.card:isCirMomentumSkill(id)?skill.description:ABILITY_OVERRIDES[id]?.description?ABILITY_OVERRIDES[id]!.description!:id==='withdraw'?'Redeal the entire tableau. Ends your team’s turn.':id==='bash'?'Add 2 stagger. No damage.':id==='sticky-paws'?'Next attack steals a foundation card. An empty target must rearm.':'Deal 3 damage. Double against staggered targets.';
     const fixedTarget=id==='cir-hearthflame'?'hero':id==='cir-ember-claws'?'mochi':undefined;
     const target=isCirMomentumSkill(id)&&(targetId||fixedTarget)?[...battle.party,...battle.foes].find(unit=>unit.id===(targetId||fixedTarget)):undefined;
     const emoji=target?.id==='hero'?<HeroEmoji emotion="happy"/>:target?.id==='mochi'?<MochiEmoji emotion="happy"/>:target?.id==='banks'?<BanksEmoji emotion="happy"/>:null;

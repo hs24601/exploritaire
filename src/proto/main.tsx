@@ -15,6 +15,7 @@ import { GYRO_LOG_ENABLED, GyroDiagnostics } from './components/GyroDiagnostics'
 import { CardJumboProvider } from './components/CardJumbo';
 import { MediaReady } from './components/MediaReady';
 import { CombatSandbox } from './components/CombatSandbox';
+import { CombatAbilityBrowser } from './components/CombatAbilityBrowser';
 import { BushSandbox } from './components/BushSandbox';
 import { WoodsSandbox } from './components/WoodsSandbox';
 import { KhadCompare } from './components/KhadCompare';
@@ -33,7 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <GameTooltip />
     {HOLD_LOG_ENABLED ? <HoldLogOverlay /> : null}
     {GYRO_LOG_ENABLED ? <GyroDiagnostics /> : null}
-    {new URLSearchParams(window.location.search).has('motifsbx') ? <ActorMotifSandbox /> : new URLSearchParams(window.location.search).has('kerusbx') ? <KeruDraftSandbox /> : new URLSearchParams(window.location.search).has('demsbx') ? <DemDraftSandbox /> : new URLSearchParams(window.location.search).has('momentumsbx') ? <MomentumDesignSandbox /> : new URLSearchParams(window.location.search).has('khad-combat') ? <KhadCombatSandbox /> : isHeroFurSandbox ? <HeroFurSandbox /> : isKhadCompare ? <MediaReady><CardJumboProvider><KhadCompare /></CardJumboProvider></MediaReady> : isBushSandbox ? <BushSandbox /> : isWoodsSandbox ? <WoodsSandbox /> : isCombatSandbox ? <CardJumboProvider><CombatSandbox /></CardJumboProvider> : isHearthExploration ? <ExploreGolfVariant /> : <MediaReady><CardJumboProvider><ProtoVariant /></CardJumboProvider></MediaReady>}
+    {new URLSearchParams(window.location.search).has('combatAbilities') ? <CombatAbilityBrowser /> : new URLSearchParams(window.location.search).has('motifsbx') ? <ActorMotifSandbox /> : new URLSearchParams(window.location.search).has('kerusbx') ? <KeruDraftSandbox /> : new URLSearchParams(window.location.search).has('demsbx') ? <DemDraftSandbox /> : new URLSearchParams(window.location.search).has('momentumsbx') ? <MomentumDesignSandbox /> : new URLSearchParams(window.location.search).has('khad-combat') ? <KhadCombatSandbox /> : isHeroFurSandbox ? <HeroFurSandbox /> : isKhadCompare ? <MediaReady><CardJumboProvider><KhadCompare /></CardJumboProvider></MediaReady> : isBushSandbox ? <BushSandbox /> : isWoodsSandbox ? <WoodsSandbox /> : isCombatSandbox ? <CardJumboProvider><CombatSandbox /></CardJumboProvider> : isHearthExploration ? <ExploreGolfVariant /> : <MediaReady><CardJumboProvider><ProtoVariant /></CardJumboProvider></MediaReady>}
   </React.StrictMode>,
 );
 

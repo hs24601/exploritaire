@@ -7,6 +7,7 @@ import { COMBAT_SANDBOX_SCENARIOS, type CombatSandboxScenarioId } from './battle
 import { applyHitEffects, bleedChance, BLEED } from './battleEffects';
 import { MAX_CHARGE, combatMovesFor, gripDuration, SPIRITS, attackFor, type AbilityEffect, type Attack, type PlayRule } from './battleAbilities';
 import { EMBER_RAGE, STATUS_SKILLS, isStatusSkill, type UnitStatus } from './battleStatusData';
+import { applyAbilityOverrides } from './abilityOverrides';
 import { tutorialById, type TutorialScenarioId } from './battleTutorialScenarios';
 import { afterTutorialReceipt, createTutorialScenario, settleTutorial, tutorialEnemyTurn, tutorialReceiptLegal, tutorialStrike, type TutorialRuntime } from './battleTutorials';
 import { abilitySlotSpent, barkDamage, canUseStatusSkill, fireOn, isRaging, isSilenced, statusSkillTargets, tutorialAllowsSkill, useStatusSkill } from './battleStatuses';
@@ -899,7 +900,7 @@ export function retrieveCard(state:BattleState,key:string,column:number,index:nu
 
 /** Ability cards never generate receipts. Each costs its owner Kin's AP (skillOwner);
  * only Withdraw is a team card, free in shared Momentum. */
-export const MOMENTUM_SKILLS = {
+export const MOMENTUM_SKILLS = applyAbilityOverrides({
  'cir-hearthflame':{actorId:'cir',name:'Cir · Hearthflame',cost:3,damage:0,stagger:0,description:'Attackers take 1 fire damage while attacking Hero. Hero gains 1.25× Momentum.'},
  'cir-ember-claws':{actorId:'cir',name:'Cir · Ember Claws',cost:4,damage:0,stagger:0,description:'Mochi’s attacks deal +1 fire damage.'},
  'cir-meteor':{actorId:'cir',name:'Cir · Meteor',cost:6,damage:8,stagger:0,description:'Deal 8 fire damage. Exhaust Cir for this battle.'},
@@ -909,7 +910,7 @@ export const MOMENTUM_SKILLS = {
  'sticky-paws':{actorId:'mochi',name:'Sticky Paws',cost:2,damage:0,stagger:0,description:'Self-cast on Mochi for 2 Mochi AP. Her next attack steals the target’s top foundation card into the loose tableau. An emptied target is Disarmed and spends its next turn rearming.'},
  pounce:{actorId:'mochi',name:'Pounce',cost:3,damage:3,stagger:0,description:'Spend 3 Mochi AP to deal 3 damage to Mochi’s target, doubled to 6 while staggered. Ironbark blocks it before stagger.'},
  ...STATUS_SKILLS,
-} as const;
+} as const);
 export type MomentumSkillId=keyof typeof MOMENTUM_SKILLS;
 export const isCirMomentumSkill=(id:MomentumSkillId)=>id==='cir'||id==='cir-hearthflame'||id==='cir-ember-claws'||id==='cir-meteor';
 /** Whose AP pays for a card: Cir is paid by the Kin she binds to, and Meteor by Hero. */

@@ -92,7 +92,7 @@ export const focusFireCards = (state: BattleState, target: string) => {
 };
 
 /** Burn the picked rank: columns close up and refill to their usual depth; each card is 1 fire to every foe. */
-function burnRank(state: BattleState, target: string): BattleState {
+function burnRank(state: BattleState, target: string, caster: string): BattleState {
   const burned = new Set(focusFireCards(state, target).map(card => card.id));
   if (!burned.size) return state;
   let { stock, dealt } = state;
@@ -107,7 +107,7 @@ function burnRank(state: BattleState, target: string): BattleState {
   let next: BattleState = { ...state, columns, stock, dealt,
     spills: Object.fromEntries(Object.entries(state.spills ?? {}).filter(([cardId]) => !burned.has(cardId))),
     reposition: { serial: (state.reposition?.serial ?? 0) + 1, by: 'party', removedIds: [...burned], addedIds } };
-  for (const foe of next.foes) if (foeAlive(foe)) next = damageFoe(next, foe.id, barkDamage(foe, 0, burned.size), 'Focus Fire · Fire', 'hit', 'hero');
+  for (const foe of next.foes) if (foeAlive(foe)) next = damageFoe(next, foe.id, barkDamage(foe, 0, burned.size), 'Focus Fire · Fire', 'hit', caster);
   return next;
 }
 
@@ -136,23 +136,24 @@ const strike = (state: BattleState, actorId: string, targetId: string, damage: n
 
 export const useStatusSkill = (state: BattleState, id: StatusSkillId, targetId?: string): BattleState => {
   if (!targetId || !canUseStatusSkill(state, id, targetId)) return state;
-  const skill = STATUS_SKILLS[id], cost = statusSkillCost(state, id);
+  const skill = STATUS_SKILLS[id], cost = statusSkillCost(state, id), caster: string = skill.actorId;
   let next = spendAP(state, skill.actorId, cost);
   // Any other Hero ability releases her hold.
-  if (skill.actorId === 'hero' && id !== 'vice-grip') next = releaseHeroGrip(next);
+  // The Vice Grip holder's other abilities release the hold.
+  if (skill.actorId === STATUS_SKILLS['vice-grip'].actorId && id !== 'vice-grip') next = releaseHeroGrip(next);
   const foe = next.foes.find(unit => unit.id === targetId);
   switch (id) {
     case 'bite':
-      next = strike(next, 'hero', targetId, skill.damage, 0, skill.name);
+      next = strike(next, caster, targetId, skill.damage, 0, skill.name);
       next = patchFoe(bleedFoe(next, targetId, T.biteBleed), targetId, unit => foeAlive(unit) ? withStatus(unit, { id: 'exposed', turns: 2 }) : unit);
       break;
     case 'takedown': {
       if (foe && hasStatus(foe, 'frozen')) {
         // Shatter: double damage and a full gauge, which breaks the guard at once.
         next = patchFoe(next, targetId, unit => withoutStatus(unit, 'frozen'));
-        next = strike(next, 'hero', targetId, skill.damage * 2, Math.max(0, foe.profile.staggerMax - foe.stagger), 'Takedown · Shatter');
+        next = strike(next, caster, targetId, skill.damage * 2, Math.max(0, foe.profile.staggerMax - foe.stagger), 'Takedown · Shatter');
       } else {
-        next = strike(next, 'hero', targetId, skill.damage, 0, skill.name);
+        next = strike(next, caster, targetId, skill.damage, 0, skill.name);
         next = patchFoe(next, targetId, unit => foeAlive(unit) ? withStatus(unit, { id: 'stun' }) : unit);
       }
       break;
@@ -161,21 +162,21 @@ export const useStatusSkill = (state: BattleState, id: StatusSkillId, targetId?:
       next = patchFoe(releaseHeroGrip(next), targetId, unit => withStatus(unit, { id: 'grip', turns: Math.floor(cost / T.gripPerTurn) }));
       break;
     case 'frost-fang':
-      next = chillFoe(strike(next, 'hero', targetId, skill.damage, 0, skill.name), targetId);
-      next = patchActor(next, 'hero', actor => withStatus(actor, { id: 'rime' }));
+      next = chillFoe(strike(next, caster, targetId, skill.damage, 0, skill.name), targetId);
+      next = patchActor(next, caster, actor => withStatus(actor, { id: 'rime' }));
       break;
     case 'thunder-bark': {
       const conducts = Boolean(foe && hasStatus(foe, 'soaked'));
-      next = strike(next, 'hero', targetId, skill.damage, 0, skill.name);
+      next = strike(next, caster, targetId, skill.damage, 0, skill.name);
       if (conducts) for (const other of next.foes) if (other.id !== targetId && foeAlive(other) && hasStatus(other, 'soaked'))
-        next = damageFoe(next, other.id, T.shockDamage, 'Thunder Bark · Conduct', 'hit', 'hero');
+        next = damageFoe(next, other.id, T.shockDamage, 'Thunder Bark · Conduct', 'hit', caster);
       break;
     }
-    case 'lacerate': next = bleedFoe(strike(next, 'mochi', targetId, skill.damage, 0, skill.name), targetId, T.lacerateBleed); break;
+    case 'lacerate': next = bleedFoe(strike(next, caster, targetId, skill.damage, 0, skill.name), targetId, T.lacerateBleed); break;
     case 'puddle-pounce': next = soakFoe(next, targetId); break;
-    case 'ember-swipe': next = fireOn(strike(next, 'mochi', targetId, skill.damage, 0, 'Ember Swipe · Fire'), targetId, true); break;
-    case 'focus-fire': next = burnRank(next, targetId); break;
-    case 'ember-rage': next = patchActor(next, 'hero', actor => withStatus(actor, { id: 'ember-rage' })); break;
+    case 'ember-swipe': next = fireOn(strike(next, caster, targetId, skill.damage, 0, 'Ember Swipe · Fire'), targetId, true); break;
+    case 'focus-fire': next = burnRank(next, targetId, caster); break;
+    case 'ember-rage': next = patchActor(next, caster, actor => withStatus(actor, { id: 'ember-rage' })); break;
     case 'haste': next = patchActor(next, targetId, actor => withStatus(actor, { id: 'haste', stacks: T.hasteCards })); break;
     case 'mire': next = patchFoe(next, targetId, unit => withStatus(unit, { id: 'slow', turns: 2 })); break;
     case 'wild': next = patchActor(next, targetId, actor => withStatus(actor, { id: 'wild' })); break;

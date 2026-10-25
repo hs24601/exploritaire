@@ -1,4 +1,6 @@
-// Tutorial statuses and ability cards as data. Pure and import-free so the
+import { applyAbilityOverrides } from './abilityOverrides';
+
+// Tutorial statuses and ability cards as data. Pure and free of battle.ts so the
 // battle rules can spread these skills into MOMENTUM_SKILLS without a cycle.
 // Ability cards cost their owner's AP; shared Momentum only pays for Withdraw
 // (and interrupting an enemy Withdraw).
@@ -99,7 +101,7 @@ export type StatusSkill = {
 };
 
 const T = STATUS_TUNING;
-export const STATUS_SKILLS = {
+const BASE_STATUS_SKILLS = {
   bite: { actorId: 'hero', group: 'attack', name: 'Bite', cost: 2, damage: 1, stagger: 0, glyph: '🎯', target: 'foe',
     card: `1 damage, +${T.biteBleed} Bleed. Exposed: tableau hits add Bleed.`,
     description: `Hero deals 1 damage and adds ${T.biteBleed} Bleed. The target is Exposed for 2 enemy turns: every tableau hit on it adds 1 more Bleed.` },
@@ -149,5 +151,7 @@ export const STATUS_SKILLS = {
     card: 'Ally: its next card can be any rank.',
     description: 'The next card played onto that foundation may be any rank, ignoring golf adjacency. Its value becomes the new foundation value.' },
 } as const satisfies Record<string, StatusSkill>;
+/** Authored name/owner/description edits (src/data/combatAbilityOverrides.json) apply as the data loads. */
+export const STATUS_SKILLS = applyAbilityOverrides(BASE_STATUS_SKILLS);
 export type StatusSkillId = keyof typeof STATUS_SKILLS;
 export const isStatusSkill = (id: string): id is StatusSkillId => id in STATUS_SKILLS;

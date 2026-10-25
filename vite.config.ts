@@ -187,6 +187,28 @@ export default defineConfig({
             } catch (error) { res.statusCode = 400; res.end(String(error)); }
           });
         });
+        // ?combatAbilities editor: name/owner/description overrides keyed by stable ability id (null resets).
+        server.middlewares.use('/__combat-abilities/save', (req, res) => {
+          if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
+          if (!req.headers['content-type']?.startsWith('application/json')) { res.statusCode = 415; res.end('Expected application/json'); return; }
+          let body = '', large = false;
+          req.on('data', chunk => { body += chunk; if (body.length > 8000) { large = true; res.statusCode = 413; res.end('Too large'); req.destroy(); } });
+          req.on('end', () => {
+            if (large) return;
+            try {
+              const { id, override } = JSON.parse(body);
+              if (typeof id !== 'string' || !/^[a-z][a-z0-9-]{0,39}$/.test(id) || id.startsWith('cir')) throw new Error('Invalid ability ID');
+              if (override !== null && (!override || typeof override.name !== 'string' || !override.name.trim() || override.name.length > 40
+                || typeof override.description !== 'string' || !override.description.trim() || override.description.length > 400
+                || !['hero', 'mochi'].includes(override.owner))) throw new Error('Invalid ability edit');
+              const file = path.resolve(__dirname, 'src/data/combatAbilityOverrides.json');
+              const edits = JSON.parse(fs.readFileSync(file, 'utf8'));
+              if (override === null) delete edits[id]; else edits[id] = { name: override.name.trim(), owner: override.owner, description: override.description.trim() };
+              fs.writeFileSync(file + '.tmp', JSON.stringify(edits, null, 2) + '\n'); fs.renameSync(file + '.tmp', file);
+              res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(edits));
+            } catch (error) { res.statusCode = 400; res.end(String(error)); }
+          });
+        });
         server.middlewares.use('/__tableau-layouts/save', (req,res) => {
           if(req.method!=='POST'){res.statusCode=405;res.end('Method Not Allowed');return;}
           if(!req.headers['content-type']?.startsWith('application/json')){res.statusCode=415;res.end('Expected application/json');return;}
