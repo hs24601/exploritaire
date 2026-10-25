@@ -24,7 +24,7 @@
 }
 
 /* Reserve three buried-card peeks for the four-row sandbox. */
-.combat-sandbox .battle-field__rack { --classic-card-w: min(var(--tableau-card-limit, 10000px), calc((100cqw - 18px) / 7)); }
+.combat-sandbox .battle-field__rack { --classic-card-w: min(var(--tableau-card-limit, 10000px), calc((100cqw - 18px) / var(--rack-columns, 7))); }
 /* Stagger trial: explicit named target links and loose, exposed spill cards. */
 .combat-sandbox .battle-field__foundation { touch-action:none; cursor:grab; }
 .combat-sandbox .battle-field__side { grid-template-columns:1fr; }
@@ -340,7 +340,7 @@
 .combat-sandbox .battle-field__middle { grid-template-rows:320px 72px auto; }
 .combat-sandbox .battle-field__status:has(.battle-field__status-actions:empty) { display:none; }
 .combat-sandbox .battle-field__rack {
- --classic-card-w:min(calc((100cqw - 18px) / 7),calc((100cqh - 3 * var(--battle-peek) - 8px) * 63 / 88));
+ --classic-card-w:min(calc((100cqw - 18px) / var(--rack-columns, 7)),calc((100cqh - 3 * var(--battle-peek) - 8px) * 63 / 88));
 }
 .combat-sandbox__fps { bottom:calc(14px + env(safe-area-inset-bottom)); }
 @media(max-width:600px) {

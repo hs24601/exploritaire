@@ -189,7 +189,9 @@ export type BattleState = {
  *   opens the card beneath for the party. The party can't play a trapped
  *   card; it waits for a slime.
  */
-export type BattleRules = { hungry: boolean; traps: boolean; finiteTableau?: boolean; infinifillRows?: number; autoStrike?: boolean };
+export type BattleRules = { hungry: boolean; traps: boolean; finiteTableau?: boolean; infinifillRows?: number; autoStrike?: boolean; columns?: number };
+/** Tableau columns before loose spill columns; the turn-based sandbox defaults to seven. */
+export const tableauWidth = (state: Pick<BattleState, 'rules'>) => state.rules.columns ?? 7;
 export const BASIC_RULES: BattleRules = { hungry: false, traps: false };
 export type Trap = { actorId: string; name: string; damage: number; stagger: number; effects: AbilityEffect[] };
 
@@ -331,7 +333,7 @@ export const decayMomentum = (state: BattleState, dt: number): BattleState => {
 export const exposedFrontier = (state: BattleState) => state.columns.flatMap(column=>column.length?[column[column.length-1]]:[]);
 export const canWithdraw = (state: BattleState) => Boolean(!state.night && state.rules.autoStrike && state.turn==='party' && !state.result);
 
-const earnMomentum = (state: BattleState, actorId: string): BattleState => {
+export const earnMomentum = (state: BattleState, actorId: string): BattleState => {
  if(!state.rules.autoStrike)return state;
  const pool=state.momentum ?? {value:0,earned:0,spent:0,sequence:0};
  const now=pool.rapidClock ?? 0, recent=pool.recentPlays ?? [];
@@ -393,8 +395,8 @@ const beginEnemyTurn = (state: BattleState): BattleState => {
 /** Withdraw to a row keeps that row exposed and fills vacant space behind it. */
 const withdrawToRow=(state:BattleState,row:number):BattleState=>{
  let {stock,dealt}=state;
- const removedIds=state.columns.slice(7).flat().map(card=>card.id),addedIds:string[]=[];
- const columns=state.columns.slice(0,7).map(column=>{
+ const width=tableauWidth(state),removedIds=state.columns.slice(width).flat().map(card=>card.id),addedIds:string[]=[];
+ const columns=state.columns.slice(0,width).map(column=>{
   const kept=column.slice(0,Math.max(0,column.length-row));
   removedIds.push(...column.slice(kept.length).map(card=>card.id));
   while(kept.length<(state.rules.infinifillRows ?? 4)){
@@ -408,7 +410,7 @@ const withdrawToRow=(state:BattleState,row:number):BattleState=>{
 };
 const withdrawRowTarget=(state:BattleState,targetId?:string)=>{
  const match=/^withdraw-row:(\d+)$/.exec(targetId ?? '');if(!match)return null;
- const row=Number(match[1]);return Number.isSafeInteger(row) && state.columns.slice(0,7).some(column=>column.length>row)?row:null;
+ const row=Number(match[1]);return Number.isSafeInteger(row) && state.columns.slice(0,tableauWidth(state)).some(column=>column.length>row)?row:null;
 };
 /** Untargeted legacy Withdraw replaces the full tableau; row targets move within it. */
 const shiftFrontier = (state: BattleState, by: 'party' | 'enemy'): BattleState => {
@@ -419,7 +421,7 @@ const shiftFrontier = (state: BattleState, by: 'party' | 'enemy'): BattleState =
   const deal=trainingDeal(state.sandboxScenario,(state.reposition?.serial ?? 0)+1,state.party.find(actor=>actor.id==='hero')?.rank ?? 2);
   columns=deal.tableau;stock=deal.stock;dealt=0;addedIds.push(...columns.flat().map(card=>card.id));
  }else{
-  columns=Array.from({length:7},()=>{
+  columns=Array.from({length:tableauWidth(state)},()=>{
    const next:Card[]=[];
    while(next.length<(state.rules.infinifillRows ?? 4)){
     const drawn=draw({...state,stock,dealt});stock=drawn.stock;dealt=drawn.dealt;
@@ -550,7 +552,7 @@ export const takeTop = (state: BattleState, column: number) => {
   if (!card) return null;
   let { stock, dealt } = state;
   const columns = state.columns.map((c, i) => (i === column ? c.slice(0, -1) : c));
-  if (!(state.rules.autoStrike && column >= 7) && !state.rules.finiteTableau && (state.rules.infinifillRows || columns[column].length === 0)) {
+  if (!(state.rules.autoStrike && column >= tableauWidth(state)) && !state.rules.finiteTableau && (state.rules.infinifillRows || columns[column].length === 0)) {
     const refill: Card[] = [];
     const count = state.rules.infinifillRows ? Math.max(0, state.rules.infinifillRows - columns[column].length) : REFILL;
     for (let i = 0; i < count; i += 1) { const next = draw({ ...state, stock, dealt }); refill.push(next.card); stock = next.stock; dealt = next.dealt; }
@@ -565,7 +567,11 @@ export const playCard = (state: BattleState, column: number, actorId: string, au
   const index=retrieveIndex ?? (cards?.length ?? 0)-1;
   if(retrieveIndex!==undefined && !(automatic && actorId==='banks' && state.night?.phase==='rescue' && state.night.step===1 && (column===0 || column===6)))return state;
   if (!canPlay(state, actorId, cards?.[index], automatic)) return state;
-  const { card, columns, stock, dealt } = retrieveIndex===undefined ? takeTop(state,column)! : {card:cards[index],columns:state.columns.map((c,i)=>i===column?c.filter((_,j)=>j!==index):c),stock:state.stock,dealt:state.dealt};
+  return receiveCard(state, actorId, retrieveIndex===undefined ? takeTop(state,column)! : {card:cards[index],columns:state.columns.map((c,i)=>i===column?c.filter((_,j)=>j!==index):c),stock:state.stock,dealt:state.dealt});
+};
+
+/** A legal card lands on an actor's foundation: AP, Momentum, its hit and tutorial receipts. Held cards arrive here without a column. */
+export const receiveCard = (state: BattleState, actorId: string, { card, columns, stock, dealt }: { card: Card; columns: Card[][]; stock: Card[]; dealt: number }): BattleState => {
   // Snatching a card a hungry slime is eyeing earns a bonus charge and sends it looking again.
   const snatchedFrom = state.foes.find((foe) => foe.eye?.cardId === card.id);
   const gain = snatchedFrom ? 2 : 1;
@@ -601,7 +607,7 @@ export const dealRow = (state: BattleState): BattleState => {
   if (state.result || state.rules.autoStrike && state.turn==='enemy') return state;
   let { stock, dealt } = state;
   const columns = state.columns.map((column, index) => {
-    if (state.rules.autoStrike && index >= 7) return column;
+    if (state.rules.autoStrike && index >= tableauWidth(state)) return column;
     if (column.length >= (state.rules.infinifillRows ?? MAX_COLUMN)) return column;
     const next = draw({ ...state, stock, dealt });
     stock = next.stock; dealt = next.dealt;
@@ -610,7 +616,7 @@ export const dealRow = (state: BattleState): BattleState => {
   return { ...state, columns, stock, dealt };
 };
 
-export const canDeal = (state: BattleState) => !(state.rules.autoStrike && state.turn==='enemy') && !state.result && state.columns.some((column, index) => !(state.rules.autoStrike && index >= 7) && column.length < (state.rules.infinifillRows ?? MAX_COLUMN));
+export const canDeal = (state: BattleState) => !(state.rules.autoStrike && state.turn==='enemy') && !state.result && state.columns.some((column, index) => !(state.rules.autoStrike && index >= tableauWidth(state)) && column.length < (state.rules.infinifillRows ?? MAX_COLUMN));
 
 /** The attack an actor would make now, with its spirits. */
 export const actorAttack = (state: BattleState, actorId: string): Attack | null => {
@@ -931,7 +937,7 @@ export function retrieveCard(state:BattleState,key:string,column:number,index:nu
  const cost=retrievalCost(state,key,column,index);if(cost===null)return state;
  const [id,move]=key.split(':'),card=state.columns[column][index];
  let columns=state.columns.map((c,i)=>i===column?c.filter((_,j)=>j!==index):c),stock=state.stock,dealt=state.dealt;
- if(state.rules.infinifillRows && !state.rules.finiteTableau && !(state.rules.autoStrike && column>=7)){const next=draw({...state,stock,dealt});columns[column]=[next.card,...columns[column]];stock=next.stock;dealt=next.dealt;}
+ if(state.rules.infinifillRows && !state.rules.finiteTableau && !(state.rules.autoStrike && column>=tableauWidth(state))){const next=draw({...state,stock,dealt});columns[column]=[next.card,...columns[column]];stock=next.stock;dealt=next.dealt;}
  else if(!columns[column].length){const top=takeTop(state,column)!;columns=top.columns;stock=top.stock;dealt=top.dealt;}
  state=releaseGrip(state,id);
  return defaultStrike(earnMomentum({...state,columns,stock,dealt,started:true,

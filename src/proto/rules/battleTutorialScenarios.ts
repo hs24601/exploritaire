@@ -6,7 +6,7 @@ import type { StatusSkillId, UnitStatus } from './battleStatusData';
 // and 1 shared Momentum; ability cards cost their owner's AP. Insight copy is
 // the long-form explanation shown by the Insight buff on one party member.
 
-export type TutorialScenarioId = '008' | '009' | '010' | '011' | '012' | '013' | '014' | '015' | '016' | '017' | '018';
+export type TutorialScenarioId = '008' | '009' | '010' | '011' | '012' | '013' | '014' | '015' | '016' | '017' | '018' | '019' | '020' | '021' | '022' | '023' | '024';
 export type TutorialFoeDef = {
   key: string; name: string; hp: number; damage: number; staggerMax: number;
   /** Debuff placed on the Kin it strikes. */
@@ -15,6 +15,15 @@ export type TutorialFoeDef = {
   statuses?: UnitStatus[];
 };
 export type StrikeProfile = { name: string; damage: number; stagger: number };
+/**
+ * An enemy intent played as a golf card on the table (rules/battleDeadRun.ts).
+ * Each enemy turn its owner plays up to `enemyPlays` matching tableau cards onto
+ * it and adds `passive` pips; at `pips` it fires on every living Kin, then
+ * returns as a fresh card. Each party card played on it removes a pip and earns
+ * Momentum, but no AP and no hit. `fixedRank` keeps its rank when played on.
+ */
+export type IntentCardDef = { name: string; pips: number; enemyPlays: number; passive: number; damage: number; fixedRank?: boolean };
+export type DeadRunFixes = Pick<TutorialDef, 'intentCard' | 'pityDraw' | 'holdSlot'>;
 export type TutorialDef = {
   id: TutorialScenarioId;
   name: string;
@@ -33,6 +42,13 @@ export type TutorialDef = {
   seed: number;
   /** An authored opening deal (ranks, buried first); otherwise a seeded deal. Refills always use the seeded stock. */
   deal?: number[][];
+  /** Tableau columns (default 7) and the Kin who fight (default Hero and Mochi). */
+  columns?: number;
+  party?: readonly ('hero' | 'mochi')[];
+  /** Dead-run fixes: an intent card on the table, one free stock flip when a turn opens dead, and one parked card per Kin. */
+  intentCard?: IntentCardDef;
+  pityDraw?: boolean;
+  holdSlot?: boolean;
   insight: { actorId: 'hero' | 'mochi'; intent: string[]; solve: string[]; why: string[] };
 };
 
@@ -42,6 +58,116 @@ const ALL_SKILLS = ['bash', 'ember-rage', 'focus-fire', 'bite', 'takedown', 'vic
 
 /** Shared reading of the AP model, reused across Insight pages. */
 const LINES = 'Under ±1 rules one card rarely fits both foundations (about 0.4 times a turn on this table), so the real choice is which line, which run of cards, you feed to which Kin.';
+
+// Dead-run permutations (019–024): Hero alone on six columns against one
+// foe, with the same seed and tuning, so each fix compares like for like.
+const BELLOWS_ROOT: TutorialFoeDef = { key: 'bellows-root', name: 'Bellows Khad Root', hp: 16, damage: 1, staggerMax: 6 };
+export const DEEP_BREATH: IntentCardDef = { name: 'Deep Breath', pips: 4, enemyPlays: 2, passive: 1, damage: 4 };
+const deadRun = (id: TutorialScenarioId, name: string, fixes: DeadRunFixes, insight: Omit<TutorialDef['insight'], 'actorId'>): TutorialDef =>
+  ({ id, name, seed: 1966, skills: [], columns: 6, party: ['hero'], partyHp: 24, foes: [BELLOWS_ROOT], ...fixes, insight: { actorId: 'hero', ...insight } });
+/** Shared Insight lines for the dead-run scenarios. */
+const ROOT_LINE = 'The Bellows Khad Root has 16 HP and strikes Hero for 1 each enemy turn; it banks 2 Momentum a turn and spends 4 on a Heavy Strike for 2. Each card Hero receives is a Nip: 1 damage and 1 stagger. Six stagger breaks the gauge, doubles every Nip and makes it spend its next turn recovering.';
+const BREATH_LINE = 'Each enemy turn the root plays up to 2 exposed cards that fit Deep Breath (+1 pip each; those columns refill) and adds 1 passive pip. At 4 pips it fires: 4 damage to every Kin, then it returns as a new card with no pips. Each card you play on it removes a pip and earns 1 Momentum, but no AP and no Nip.';
+const BREATH_SOLVE = 'Tap or drag a card onto Deep Breath. If a card fits both Hero and the intent, tap it, then pick where it goes. At 2 pips or more it can fire on the root’s next turn (2 plays plus the passive pip), so bring it down to 1 or 0 before you end the turn.';
+const BREATH_STAGGER = 'A staggered root skips its whole turn, Deep Breath included: no plays and no passive pip. A break is defence as well as damage.';
+const DEAD_RUN_SCENARIOS: readonly TutorialDef[] = [
+  deadRun('019', '019: Dead Run', {}, {
+    intent: [
+      'The control for the dead-run scenarios, 019 to 024. Hero fights alone on six columns, with no intent card, no pity flip and no hold. Every later scenario uses this same deal, foe and tuning, so you can compare the fixes like for like.',
+      ROOT_LINE,
+    ],
+    solve: [
+      'With one foundation every card has one place to go, so find the longest run from Hero’s value (±1, A and K wrap) before you play anything.',
+      'End Turn keeps the board as it is. Withdraw redeals all six columns but ends your turn. If a turn opens with nothing playable, Withdraw at once: ending the turn leaves the same dead board for next time.',
+      'End your turn with the root staggered when you can: it spends that turn recovering instead of striking.',
+    ],
+    why: [
+      'The Monte Carlo found that one foundation needs about 14 columns to keep dead deals down; six columns is far below that, at about 38% dead deals even from a fresh deal each turn.',
+      'Here the board carries over between turns, so a dead board stays dead until you Withdraw. A simple bot on this table opened more than half its turns with nothing legal and averaged about one card a turn. This scenario lets you feel that before trying the fixes.',
+    ],
+  }),
+  deadRun('020', '020: Deep Breath', { intentCard: DEEP_BREATH }, {
+    intent: [
+      'The enemy’s intent is a card on the table. Deep Breath sits at the end of the rack as a golf target (±1, A and K wrap), and its 4 pips fill like AP pips.',
+      BREATH_LINE,
+      'In this version Deep Breath takes the rank of each card played on it, so it is a bridge: a second foundation that you share with the enemy.',
+    ],
+    solve: [
+      BREATH_SOLVE,
+      'Use it as a stepping stone. Changing its rank can open the next card for Hero, or leave the root with nothing to play onto it.',
+      BREATH_STAGGER,
+    ],
+    why: [
+      'The Monte Carlo found the intent card the strongest of the three fixes because it adds a golf target: on two foundations and seven columns it roughly doubled streaks.',
+      'Contesting it matters without making it trivial. Ignored, it fired every 2 to 3 turns; fought, every 4 to 5, at the cost of cards that do not strike. The passive pip is what keeps it firing even when you fight it.',
+    ],
+  }),
+  deadRun('021', '021: Deep Breath, Held Rank', { intentCard: { ...DEEP_BREATH, fixedRank: true } }, {
+    intent: [
+      'Deep Breath again, but it keeps its rank when cards are played on it. It is a target, not a bridge: the same two ranks always remove a pip, and playing on it never changes what comes next.',
+      BREATH_LINE,
+    ],
+    solve: [
+      BREATH_SOLVE,
+      'Learn the two ranks that hit it, one above and one below. The root’s plays hunt for those same two ranks, so taking them first both strips pips and starves its plays.',
+      'Everything else goes to Hero: the intent no longer opens new lines.',
+      BREATH_STAGGER,
+    ],
+    why: [
+      'The Monte Carlo offered a fixed-rank intent as the way to keep today’s pace on seven columns: it stays a target without acting as an extra foundation.',
+      'Play it against 020 to feel the difference between a target and a bridge. A simple bot won less often here than in 020, because a fixed intent gave it fewer plays.',
+    ],
+  }),
+  deadRun('022', '022: Deep Breath + Pity Flip', { intentCard: DEEP_BREATH, pityDraw: true }, {
+    intent: [
+      'Deep Breath plus the pity flip. When a turn opens with nothing legal (no card fits Hero or Deep Breath), PITY FLIP turns one free card from the stock onto Hero’s foundation. It works once, and only at the start of a dead turn.',
+      'The flip is not a receipt: no Nip, AP or Momentum. It only gives Hero a new value.',
+      BREATH_LINE,
+    ],
+    solve: [
+      'If PITY FLIP is lit, nothing is playable: flip first, then look for the run from the new value. If that still fits nothing, Withdraw.',
+      'It only checks the start of your turn. Playing into a dead end mid-turn does not light it, so plan the run before you start.',
+      BREATH_SOLVE,
+    ],
+    why: [
+      'The Monte Carlo found that one free flip, only when a turn opens dead, cut dead deals from 11% to 4% without lengthening streaks. A flip whenever you are stuck boosts streaks instead, and pricing flips in Momentum runs away because every flip pays for itself.',
+      'With one foundation, dead openings are common, so expect to flip on about two turns in three. A simple bot here nearly doubled its cards per turn and almost always won. That frequency is the clearest sign that one foundation on six columns is too tight.',
+    ],
+  }),
+  deadRun('023', '023: Deep Breath + Hold', { intentCard: DEEP_BREATH, holdSlot: true }, {
+    intent: [
+      'Deep Breath plus a hold slot beside Hero. Drag a card Hero could take right now into Hold to park it. Later, drag or tap it onto Hero or Deep Breath. The slot holds one card, and it waits across turns.',
+      'Only a playable card can be parked, and parking is not a receipt: no Nip, AP or Momentum until you play it.',
+      BREATH_LINE,
+    ],
+    solve: [
+      'Save the last card of a run instead of playing it. Next turn it opens for you even if the board has gone dead.',
+      'Parking takes the card off the table, so the card under it is exposed while Hero keeps her value. Sometimes parking is how you reach the run below.',
+      'A parked card can also go onto Deep Breath, so it can strip a pip on the turn that matters.',
+      BREATH_SOLVE,
+    ],
+    why: [
+      'The Monte Carlo found the hold a planning tool rather than a dead-deal fix. Alone it moved dead deals only from 11% to 10%, but good players saved a playable card at the end of a turn as insurance for the next.',
+      'Only playable cards may be parked. Otherwise a dead card could clog the slot for the rest of the fight.',
+    ],
+  }),
+  deadRun('024', '024: All Three Fixes', { intentCard: DEEP_BREATH, pityDraw: true, holdSlot: true }, {
+    intent: [
+      'Every dead-run fix at once, at the Monte Carlo’s starting tuning: Deep Breath (4 pips, up to 2 enemy plays and 1 passive pip a turn), one pity flip when a turn opens dead, and a hold slot.',
+      'The Monte Carlo pitched this package for two foundations on six columns (4% dead deals, median streak 11). Here Hero fights alone, so notice how far short of that it falls.',
+      BREATH_LINE,
+    ],
+    solve: [
+      'At the start of a turn, flip first if PITY FLIP is lit, then check Hold: a parked card can open the turn.',
+      'Bring Deep Breath down to 1 pip or fewer, feed Hero the rest, and end the turn with a playable card parked if you can.',
+      BREATH_STAGGER,
+    ],
+    why: [
+      'The fixes cover each other. The pity flip handles dead openings, the hold carries a card across turns, and the intent adds a target along with a reason to spend cards on defence.',
+      'If this still feels tight, the problem is the table, not the rules: add a second foundation (Mochi, in Config) or widen the table toward the Monte Carlo’s band.',
+    ],
+  }),
+];
 
 export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
   { id: '008', name: '008: Chip Tutorial', seed: 608, skills: [],
@@ -236,6 +362,7 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
         'Most abilities change the fight; Focus Fire changes the board. It teaches that the tableau itself is a target: one rank can be the wall between you and a ten-card turn.',
         'It costs AP that Hero could spend on Bash, and the cards it burns earn nothing, so it is only worth it when the run it opens is longer than the cards it removes.',
       ] } },
+  ...DEAD_RUN_SCENARIOS,
 ];
 
 export const tutorialById = (id: string | undefined) => TUTORIAL_SCENARIOS.find(def => def.id === id);

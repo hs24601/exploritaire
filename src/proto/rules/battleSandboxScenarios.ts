@@ -17,6 +17,12 @@ export const COMBAT_SANDBOX_SCENARIOS = [
   { id: '016', name: '016: Haste + Vice Grip', hp: 0, thorns: 0 },
   { id: '017', name: '017: Ember Rage', hp: 0, thorns: 0 },
   { id: '018', name: '018: Focus Fire', hp: 0, thorns: 0 },
+  { id: '019', name: '019: Dead Run', hp: 0, thorns: 0 },
+  { id: '020', name: '020: Deep Breath', hp: 0, thorns: 0 },
+  { id: '021', name: '021: Deep Breath, Held Rank', hp: 0, thorns: 0 },
+  { id: '022', name: '022: Deep Breath + Pity Flip', hp: 0, thorns: 0 },
+  { id: '023', name: '023: Deep Breath + Hold', hp: 0, thorns: 0 },
+  { id: '024', name: '024: All Three Fixes', hp: 0, thorns: 0 },
   { id: '999', name: '999: Dark Tyrant', hp: 999, thorns: 0 },
 ] as const;
 export type CombatSandboxScenarioId = typeof COMBAT_SANDBOX_SCENARIOS[number]['id'];

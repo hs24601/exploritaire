@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { CIR_ART, MOMENTUM_SKILLS, actorAP, isCirMomentumSkill, canUseMomentumSkill, momentumSkillExpression, momentumSkillTargets, rageBonus, skillOwner, type BattleState, type MomentumSkillId } from '../rules/battle';
+import { CIR_ART, MOMENTUM_SKILLS, actorAP, tableauWidth, isCirMomentumSkill, canUseMomentumSkill, momentumSkillExpression, momentumSkillTargets, rageBonus, skillOwner, type BattleState, type MomentumSkillId } from '../rules/battle';
 import { ACTOR_HOLO_ART } from '../art/actorCardArt';
 import './MomentumSkillRadial.css';
 import './FoodCollectionFx.css';
@@ -80,7 +80,7 @@ export function MomentumSkillRadial({battle,fieldRef,disabled,onChoose,onClose,v
       setGaugeRect(gauge ?? null);
       const width=Math.min(1120,window.innerWidth-24),height=window.innerWidth<500?270:window.innerWidth<900?300:430;
       const columns=Array.from(fieldRef.current?.querySelectorAll<HTMLElement>('.battle-field__rack > .battle-field__column') ?? []);
-      const rows=Array.from({length:Math.max(0,...battle.columns.slice(0,7).map(column=>column.length))},(_,row)=>{
+      const rows=Array.from({length:Math.max(0,...battle.columns.slice(0,tableauWidth(battle)).map(column=>column.length))},(_,row)=>{
         const rects=columns.flatMap(column=>{
           const cards=Array.from(column.querySelectorAll<HTMLElement>('[data-battle-card]'));
           const index=cards.length-1-row,card=cards[index];if(!card)return [];

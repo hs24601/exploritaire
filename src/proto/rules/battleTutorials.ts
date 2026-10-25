@@ -4,6 +4,7 @@ import { tutorialById, type StrikeProfile, type TutorialDef, type TutorialFoeDef
 import { bleedFoe as bleed, chillFoe as chill, damageFoe, expireEnemyTurn, expirePartyTurn, hasStatus, outcome, patchActor, pushEvents, statusOf, foeMomentumGain, scaleMomentumGain, withStatus, withoutStatus } from './battleStatuses';
 import { stockCard } from './skirmish';
 import type { Card } from '../protoState';
+import { advanceIntent, dealIntent, openPartyTurn, type IntentCard } from './battleDeadRun';
 
 // Tutorial and focused combat-sandbox scenarios over the turn-based battle
 // rules: scenario setup, endless backfill and the rounds counter, tableau
@@ -19,10 +20,14 @@ export type TutorialRuntime = {
   lastReceiver?: string;
   /** Abilities played this party turn (Stifling Sap allows one). */
   abilitiesThisTurn?: number;
+  /** Dead-run fixes (rules/battleDeadRun.ts): the intent card, parked cards by Kin, and this turn's pity flip. */
+  intent?: IntentCard;
+  holds?: Partial<Record<string, Card>>;
+  pity?: 'ready' | 'spent';
 };
 
 const FOE_RANKS = [9, 6, 12];
-const ROWS = 4, COLUMNS = 7;
+const ROWS = 4;
 
 /** One foe at a given wave: endless scenarios grow HP, damage and gauge with each wave. */
 export function spawnTutorialFoe(def: TutorialDef, foe: TutorialFoeDef, wave: number, slot: number, template: BattleFoe): BattleFoe {
@@ -38,16 +43,16 @@ export function spawnTutorialFoe(def: TutorialDef, foe: TutorialFoeDef, wave: nu
 }
 
 export function createTutorialScenario(id: TutorialScenarioId): BattleState {
-  const def = tutorialById(id)!, base = createStaggerSandbox();
+  const def = tutorialById(id)!, base = createStaggerSandbox(), COLUMNS = def.columns ?? 7;
   const columns = def.deal ? def.deal.map((ranks, c) => ranks.map((rank, r) => ({ id: `tutorial-${id}-${c}-${r}`, rank })))
     : Array.from({ length: COLUMNS }, (_, c) => Array.from({ length: ROWS }, (_, r) => stockCard(def.seed, c * ROWS + r)));
   const foes = def.foes.map((foe, slot) => spawnTutorialFoe(def, foe, 1, slot, base.foes[0]));
-  return { ...base, sandboxScenario: id, cir: { status: 'available' }, round: 1, seed: def.seed, effectSeed: def.seed,
-    columns, stock: [], dealt: COLUMNS * ROWS, foes,
+  return openPartyTurn(dealIntent({ ...base, sandboxScenario: id, cir: { status: 'available' }, round: 1, seed: def.seed, effectSeed: def.seed,
+    rules: { ...base.rules, columns: COLUMNS }, columns, stock: [], dealt: COLUMNS * ROWS, foes,
     tutorial: { id, cleared: 0, waves: Object.fromEntries(def.foes.map(foe => [foe.key, 1])) },
     momentum: { value: def.momentum ?? 0, earned: 0, spent: 0, sequence: 0, decayEnabled: def.decay ?? true },
-    party: base.party.map(actor => ({ ...actor, targetId: foes[0].id, charge: def.ap ?? 0, hp: def.partyHp ?? actor.maxHp, maxHp: def.partyHp ?? actor.maxHp,
-      statuses: actor.id === def.insight.actorId ? [{ id: 'insight' as const }] : [] })) };
+    party: base.party.filter(actor => !def.party || def.party.includes(actor.id as 'hero' | 'mochi')).map(actor => ({ ...actor, targetId: foes[0].id, charge: def.ap ?? 0, hp: def.partyHp ?? actor.maxHp, maxHp: def.partyHp ?? actor.maxHp,
+      statuses: actor.id === def.insight.actorId ? [{ id: 'insight' as const }] : [] })) }));
 }
 
 /** Rounds completed in an endless scenario, or null when the scenario is finite. */
@@ -185,12 +190,14 @@ function regrow(state: BattleState, foeId: string): BattleState {
 /** The whole enemy team acts once, then control returns to the party. */
 export function tutorialEnemyTurn(state: BattleState): BattleState {
   let next = recoverDisarmed({ ...expirePartyTurn(state), foes: state.foes.map(foe => foe.turnSpent ? { ...foe, turnSpent: false } : foe) }, 'foes');
+  // The intent's owner skips it on the same turns it skips its strike.
+  const owner = next.foes[0], ownerSkips = Boolean(owner && (owner.staggered > 0 || hasStatus(owner, 'dormant') || hasStatus(owner, 'frozen') || hasStatus(owner, 'stun') || hasStatus(owner, 'grip')));
   for (const id of next.foes.map(foe => foe.id)) {
     if (next.result) break;
     next = regrow(foeTurn(next, id), id);
   }
-  next = settleTutorial(expireEnemyTurn(next));
-  return next.result ? { ...next, turn: 'party' } : returnPlayerTurn(next);
+  next = settleTutorial(expireEnemyTurn(advanceIntent(next, ownerSkips)));
+  return next.result ? { ...next, turn: 'party' } : openPartyTurn(returnPlayerTurn(next));
 }
 
 export type TutorialIntent = { summary: string; detail: string; skips: boolean; heavy: boolean };

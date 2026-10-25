@@ -1,5 +1,5 @@
 import { indominableAfterDamage } from './indominable';
-import { AP_CAP, actorAP, defaultStrike, drawCard, foeAlive, actorAlive, setActorTarget, spendAP, type BattleActor, type BattleEvent, type BattleFoe, type BattleState } from './battle';
+import { AP_CAP, actorAP, defaultStrike, drawCard, tableauWidth, foeAlive, actorAlive, setActorTarget, spendAP, type BattleActor, type BattleEvent, type BattleFoe, type BattleState } from './battle';
 import { STATUS_META, STATUS_SKILLS, STATUS_TUNING as T, type StatusId, type StatusSkillId, type UnitStatus } from './battleStatusData';
 import { tutorialById } from './battleTutorialScenarios';
 
@@ -100,7 +100,7 @@ function burnRank(state: BattleState, target: string, caster: string): BattleSta
   const addedIds: string[] = [];
   const columns = state.columns.map((cards, column) => {
     const kept = cards.filter(card => !burned.has(card.id));
-    if (column >= 7 || !state.rules.infinifillRows) return kept;
+    if (column >= tableauWidth(state) || !state.rules.infinifillRows) return kept;
     const refill = [];
     while (refill.length + kept.length < state.rules.infinifillRows) { const next = drawCard({ ...state, stock, dealt }); refill.push(next.card); addedIds.push(next.card.id); stock = next.stock; dealt = next.dealt; }
     return [...refill, ...kept];

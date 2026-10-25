@@ -1,0 +1,30 @@
+/* Intent card: the last rack cell, a red-framed golf target with AP-style pips. */
+.battle-intent-slot { position:relative; display:flex; flex-direction:column; align-items:center; gap:4px; width:var(--classic-card-w); padding:4px 0; border-radius:6px; background:#3a141455; box-shadow:0 0 0 1px #c95b4a88; }
+.battle-intent-slot__name { max-width:100%; color:#ffb9a6; font:bold 16px/1.05 monospace; text-align:center; overflow-wrap:anywhere; cursor:help; }
+.battle-intent-slot__card { position:relative; width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }
+.battle-intent-slot__card button { width:var(--classic-card-w); border-radius:4px; border-color:#e0705c; }
+.battle-intent-slot__card .proto-card-rank { font-size:16px; }
+.battle-intent-slot[data-targetable='true'] { box-shadow:0 0 0 2px #ffd166, 0 0 12px #ffd16655; }
+.battle-intent-slot__pips { display:flex; gap:3px; width:calc(100% - 8px); }
+.battle-intent-slot__pips > i { flex:1 1 0; min-width:4px; height:10px; border:1px solid #e0705c; border-radius:3px; background:#1d1210; }
+.battle-intent-slot__pips > i[data-on] { background:linear-gradient(#ff9d7a,#c8402e); border-color:#ffc6b0; }
+.battle-intent-slot__pips > i[data-next] { background:repeating-linear-gradient(45deg,#c8402e88 0 3px,transparent 3px 6px); }
+.battle-intent-slot[data-full='true'] .battle-intent-slot__pips > i[data-on] { animation:battle-intent-pulse 1.1s ease-in-out infinite alternate; }
+@keyframes battle-intent-pulse { to { filter:brightness(1.4); } }
+@media (prefers-reduced-motion: reduce) { .battle-intent-slot[data-full='true'] .battle-intent-slot__pips > i[data-on] { animation:none; } }
+.battle-field[data-combat-paused] .battle-intent-slot__pips > i { animation-play-state:paused; }
+
+/* Hold slot: sits beside Hero in the party row, styled like the empty foundation well. */
+.combat-sandbox [data-battle-slot^='hold:'] { grid-column:2; grid-row:1; align-self:end; width:100%; }
+.combat-sandbox .battle-hold-slot { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; height:100%; box-sizing:border-box; padding:6px; border-style:dashed; border-color:#71857980; background:#17272355; cursor:default; touch-action:auto; }
+.battle-hold-slot__label { cursor:help; color:#c7d8c9; font:bold 16px/1 monospace; letter-spacing:.06em; text-transform:uppercase; }
+.battle-hold-slot__card { position:relative; width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }
+.battle-hold-slot__card button { width:var(--classic-card-w); border-radius:4px; }
+.battle-hold-slot__card .proto-card-rank { font-size:16px; }
+.combat-sandbox .battle-hold-slot__well { display:grid; place-items:center; width:52px; height:calc(52px * 88 / 63); padding:0; border:2px dashed #71857980; border-radius:5px; background:transparent; color:#91a397; font:24px/1 Georgia,serif; }
+.combat-sandbox .battle-hold-slot__well:not(:disabled) { border-color:#ffd166; color:#ffd166; cursor:pointer; }
+.battle-hold-slot[data-targetable='true'] { border-color:#ffd166; }
+
+/* Pity flip sits with End Turn and Withdraw, in the Withdraw button's style. */
+.combat-sandbox .battle-pity-button { padding:7px 10px; border:1px solid #b6cbbd; border-radius:6px; background:#233c38; color:#edf1d7; }
+.combat-sandbox .battle-pity-button:disabled { opacity:.4; }

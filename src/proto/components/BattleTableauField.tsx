@@ -27,7 +27,9 @@ import {
 import { COMBAT_ABILITY_SLOTS, combatMovesFor, type Attack } from '../rules/battleAbilities';
 import { BATTLE_SCENARIOS, scenarioById } from '../rules/battleScenarios';
 import { COMBAT_SANDBOX_SCENARIOS, type CombatSandboxScenarioId } from '../rules/battleSandboxScenarios';
-import { createCombatSandboxScenario } from '../rules/battle';
+import { createCombatSandboxScenario, tableauWidth } from '../rules/battle';
+import { IntentCardSlot, HoldSlot } from './BattleDeadRun';
+import { anyLegalPlay, canPityFlip, hasHoldSlot, hasPityDraw, heldCard, heldReceivers, holdCard, holdOwner, holdReceiver, INTENT_RECEIVER, intentDef, playHeld, playOnIntent, pityFlip, tableauReceivers } from '../rules/battleDeadRun';
 import { getCardTransportDurationMs } from '../protoTransport';
 import { solverFlightDuration } from '../solverTiming';
 import { createTableauLightRig } from '../tableauLighting';
@@ -131,10 +133,13 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const [solverSession, setSolverSession] = useState(0);
   const foundationRefs = useRef(new Map<string, HTMLElement>());
   const cardRefs = useRef(new Map<string, HTMLButtonElement>());
-  const [selection, setSelection] = useState<{columnIndex: number; cardId: string; actorIds: string[]} | null>(null);
+  /** A tableau card (or a parked one, `heldBy`) waiting for the player to pick its receiver. */
+  const [selection, setSelection] = useState<{columnIndex: number; cardId: string; actorIds: string[]; heldBy?: string} | null>(null);
   const flights = useRef(new Set<() => void>());
   const tableauSnapshots=useRef(new Map<string,{source:HTMLButtonElement;rect:DOMRect}>());
   const previousEnemyFoundations=useRef<BattleState['foes']|null>(null);
+  const intentRef=useRef<HTMLElement|null>(null);
+  const previousIntentCards=useRef<string[]|null>(null);
   const [bannerSession,setBannerSession]=useState(0);
   const [announcement, setAnnouncement] = useState('');
   const [abilityInspection, setAbilityInspection] = useState<{ attack: Attack; anchor: HTMLElement } | null>(null);
@@ -229,7 +234,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   useEffect(()=>{if(battle.result)setRetrieval(null);},[battle.result]);
   const presentationPaused = paused || holding || globalPaused || skillMenuOpen || cirInspection || insightOpen || Boolean(abilityCast) || Boolean(inspection);
   const battlePaused = nightBlocking || presentationPaused;
-  const noLegalMoves = !battle.result && battle.turn === 'party' && !battle.columns.some(column => eligibleActors(battle, column[column.length - 1]).length > 0);
+  const noLegalMoves = !battle.result && battle.turn === 'party' && !anyLegalPlay(battle);
   // Ticks also advance effects and the free-turn countdown; enemy clocks wait for it.
   const running = battle.started && !battle.result && !battlePaused && (!sandbox || battle.turn==='enemy' && battle.sandboxScenario==='999' || battle.turn==='party' && ((battle.momentum?.recentPlays?.length ?? 0)>0 || battle.momentum?.decayEnabled!==false && (battle.momentum?.value ?? 0)>0));
   useEffect(() => {
@@ -299,6 +304,16 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
       }
     }
   },[battle.foes]);
+  // Cards either side plays onto the intent fly there from their retained tableau geometry.
+  useLayoutEffect(()=>{
+    const cards=battle.tutorial?.intent?.cards ?? [],previous=previousIntentCards.current;
+    previousIntentCards.current=cards.map(card=>card.id);
+    if(!previous || !intentRef.current)return;
+    for(const card of cards){
+      const snapshot=previous.includes(card.id)?undefined:tableauSnapshots.current.get(card.id);
+      if(snapshot)flyTableauCard(snapshot.source,INTENT_RECEIVER,intentRef.current,snapshot.rect);
+    }
+  },[battle.tutorial?.intent]);
   useLayoutEffect(()=>{
     const capture=()=>{
       tableauSnapshots.current=new Map([...cardRefs.current].map(([id,source])=>[id,{source,rect:source.getBoundingClientRect()}]));
@@ -310,10 +325,21 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     window.addEventListener('resize',capture);
     return()=>{resize.disconnect();window.removeEventListener('resize',capture);};
   },[battle.columns]);
+  const receiverName = (id: string) => id === INTENT_RECEIVER ? intentDef(battle)?.name ?? 'the intent' : holdOwner(id) ? 'Hold' : battle.party.find(actor => actor.id === id)?.name ?? id;
   const play = (index: number, source: HTMLButtonElement, actorId: string) => {
     if (holdingRef.current || paused) return;
     const column = battle.columns[index];
     const card = column[column.length - 1];
+    // The intent card and hold slots receive tableau cards beside the Kin foundations.
+    const parkFor = holdOwner(actorId);
+    if (card && (actorId === INTENT_RECEIVER || parkFor) && tableauReceivers(battle, card).includes(actorId)) {
+      setSelection(null);
+      setBattle(current => parkFor ? holdCard(current, index, parkFor) : playOnIntent(current, index));
+      setAnnouncement(parkFor ? `${rankLabel(card.rank)} parked in the hold` : `${rankLabel(card.rank)} played onto ${receiverName(actorId)} · one pip removed · Momentum +1`);
+      const hold = parkFor && fieldRef.current?.querySelector<HTMLElement>(`[data-battle-slot="${actorId}"] .battle-hold-slot`);
+      if (hold) flyTableauCard(source, actorId, hold);
+      return;
+    }
     const actor = card && eligibleActors(battle, card).find(actor => actor.id === actorId);
     const destination = actor && (sandbox ? fieldRef.current?.querySelector<HTMLElement>(`[data-battle-actor="${actor.id}"] .battle-foundation__value`) : foundationRefs.current.get(actor.id));
     if (!card || !actor) return;
@@ -323,6 +349,25 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     if (!destination) return;
     flyTableauCard(source,actor.id,destination);
   };
+  /** A parked card leaves its hold for a Kin foundation or the intent. */
+  const playFromHold = (ownerId: string, source: HTMLButtonElement, receiverId: string) => {
+    const card = heldCard(battle, ownerId);
+    if (holdingRef.current || paused || !card || !heldReceivers(battle, ownerId).includes(receiverId)) return;
+    setSelection(null);
+    setBattle(current => playHeld(current, ownerId, receiverId));
+    setAnnouncement(`Held ${rankLabel(card.rank)} played onto ${receiverName(receiverId)}`);
+    const destination = receiverId === INTENT_RECEIVER ? null : fieldRef.current?.querySelector<HTMLElement>(`[data-battle-actor="${receiverId}"] .battle-foundation__value`);
+    if (destination) flyTableauCard(source, receiverId, destination);
+  };
+  const activateHeld = (ownerId: string, source: HTMLButtonElement) => {
+    const card = heldCard(battle, ownerId), receivers = heldReceivers(battle, ownerId);
+    if (holdingRef.current || paused || !card) return;
+    if (receivers.length === 1) { playFromHold(ownerId, source, receivers[0]); return; }
+    if (receivers.length > 1) {
+      setSelection(selection?.cardId === card.id ? null : {columnIndex:-1,cardId:card.id,actorIds:receivers,heldBy:ownerId});
+      setAnnouncement(`Choose where held ${rankLabel(card.rank)} goes: ${receivers.map(receiverName).join(' or ')}`);
+    }
+  };
   // Match Proto's playColumn / chooseFoundationTarget sequence: never choose
   // between equally eligible actors on the player's behalf.
   const activate = (index: number, source: HTMLButtonElement) => {
@@ -331,17 +376,20 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     if (!card) return;
     // An armed ability in a trap battle sets its trap on the pressed card instead.
     if (aim?.mode === 'armed' && previewTrap(battle, aim.actorId, index)) { cancel(); spend(aim.actorId, `card:${index}`); return; }
-    const actors = eligibleActors(battle, card);
-    if (actors.length === 1) { play(index,source,actors[0].id); return; }
-    if (actors.length > 1) {
-      setSelection(selection?.cardId === card.id ? null : {columnIndex:index,cardId:card.id,actorIds:actors.map(actor=>actor.id)});
-      setAnnouncement(`Choose a foundation for ${rankLabel(card.rank)}: ${actors.map(actor=>actor.name).join(' or ')}`);
+    // A tap plays straight onto a single receiver; hold slots are offered only when there is a choice.
+    const receivers = tableauReceivers(battle, card, false);
+    if (receivers.length === 1) { play(index,source,receivers[0]); return; }
+    if (receivers.length > 1) {
+      const options = tableauReceivers(battle, card);
+      setSelection(selection?.cardId === card.id ? null : {columnIndex:index,cardId:card.id,actorIds:options});
+      setAnnouncement(`Choose where ${rankLabel(card.rank)} goes: ${options.map(receiverName).join(' or ')}`);
     }
   };
   const choose = (actorId: string) => {
     if (!selection || !selection.actorIds.includes(actorId)) return;
-    const column = battle.columns[selection.columnIndex];
     const source = cardRefs.current.get(selection.cardId);
+    if (selection.heldBy) { if (source) playFromHold(selection.heldBy, source, actorId); return; }
+    const column = battle.columns[selection.columnIndex];
     if (source && column[column.length - 1]?.id === selection.cardId) play(selection.columnIndex,source,actorId);
   };
   const solveStep = (): SolveStepResult => {
@@ -397,7 +445,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     setSolverSession(session => session + 1);
     cancel(); setTargetDrag(null); setTargetPicker(null); dragRef.current=null; setRetrieval(null); setAbilityInspection(null); setSelection(null); setPaused(false);
     flights.current.forEach(done=>done());seenSpills.current.clear();
-    tableauSnapshots.current.clear();previousEnemyFoundations.current=null;
+    tableauSnapshots.current.clear();previousEnemyFoundations.current=null;previousIntentCards.current=null;
     if(sandbox){
       const id=COMBAT_SANDBOX_SCENARIOS.find(option=>option.id===nextScenario)?.id ?? sandboxScenarioId;
       setSandboxScenarioId(id);setBattle(createCombatSandboxScenario(id));return;
@@ -450,6 +498,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const aimedColumn = aim?.foeId?.startsWith('card:') ? Number(aim.foeId.slice(5)) : null;
 
   const scenario = scenarioById(scenarioId);
+  const concealTableau = (holding || globalPaused || combatInspection.active || sandbox && skillMenuOpen) && !(withdrawSelecting && !paused && !gameTime.isPlayerPaused());
 
   const foeRow = <div className="battle-field__team" data-team="enemy" style={{ '--slots': battle.foes.length } as CSSProperties}>
     <h3>Enemies</h3>
@@ -534,6 +583,11 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
 
       </div>;
     })}
+    {sandbox && hasHoldSlot(battle) && battle.party.map(actor => { const held = heldCard(battle, actor.id); return <HoldSlot key={'hold-'+actor.id} actorId={actor.id} card={held}
+      targetable={Boolean(selection?.actorIds.includes(holdReceiver(actor.id)))} concealValue={concealTableau} disabled={battlePaused || !heldReceivers(battle, actor.id).length}
+      cardRef={node => { if (!held) return; if (node) { cardRefs.current.set(held.id,node); node.dataset.battleCard=held.id; node.dataset.battleRank=String(held.rank); } else cardRefs.current.delete(held.id); }}
+      onChoose={() => choose(holdReceiver(actor.id))} onActivate={source => activateHeld(actor.id, source)}
+      onDropActor={target => { const id = target.dataset.battleActor, source = held && cardRefs.current.get(held.id); if (id && source && !battlePaused) playFromHold(actor.id, source, id); }} />; })}
     {sandbox && !battle.party.some(a=>a.controller==='npc') && <div className="battle-field__slot" data-battle-slot="empty">
       <div className="battle-field__foundation battle-field__foundation--empty" role="img" aria-label="Empty player foundation">
         <span aria-hidden="true">◇</span>
@@ -545,7 +599,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const renderColumn = (column: Card[], index: number) => <div className="battle-field__column" key={index} style={{ '--cards': Math.max(1,column.length) } as CSSProperties}
               data-withdraw-preview={withdrawPreview && column.length>0 || undefined} data-battle-target={`card:${index}`} data-targetable={Boolean(trapPreviews[index]) || undefined}
               data-preview={trapPreviews[index] ? (aimedColumn === index ? 'focus' : 'faint') : undefined}>
-              {column.map((card, depth) => <ProtoCard key={card.id} card={card} allowJumbo={false} concealValue={(holding || globalPaused || combatInspection.active || sandbox && skillMenuOpen) && !(withdrawSelecting && !paused && !gameTime.isPlayerPaused())} disabled={battlePaused || (retrieval ? retrievalCost(battle,retrieval,index,depth)===null : depth < column.length - 1 || !eligibleActors(battle, card).length)} footerLabel={retrieval && retrievalCost(battle,retrieval,index,depth)!==null ? retrievalCost(battle,retrieval,index,depth)+' AP' : undefined} buried={depth < column.length - 1} centerRank={depth === column.length - 1} lit
+              {column.map((card, depth) => <ProtoCard key={card.id} card={card} allowJumbo={false} concealValue={concealTableau} disabled={battlePaused || (retrieval ? retrievalCost(battle,retrieval,index,depth)===null : depth < column.length - 1 || !tableauReceivers(battle, card).length)} footerLabel={retrieval && retrievalCost(battle,retrieval,index,depth)!==null ? retrievalCost(battle,retrieval,index,depth)+' AP' : undefined} buried={depth < column.length - 1} centerRank={depth === column.length - 1} lit
                 active={!holding && (selection?.cardId === card.id || !!retrieval && retrievalCost(battle,retrieval,index,depth)!==null)} selected={!holding && selection?.cardId === card.id}
                 cardRef={node => { if (node) { cardRefs.current.set(card.id,node); node.dataset.battleCard=card.id; node.dataset.battleRank=String(card.rank); } else cardRefs.current.delete(card.id); }}
                 onDropActor={sandbox && !retrieval ? target=>{
@@ -565,6 +619,9 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
               title={battlePaused?'Combat paused':battle.turn==='enemy'?'Enemy turn':battle.result?'Battle complete':canEndPlayerTurn(battle)?'Pass control to the enemy team':'Scripted rescue in progress'}
               onClick={()=>performManeuver(endPlayerTurn)}>END TURN</SceneButton>;
   const withdrawControl = <SceneButton type="button" className="battle-withdraw-button" disabled={battlePaused || !canUseMomentumSkill(battle,'withdraw')} onClick={()=>{cancel();setSelection(null);setSkillOwners([]);setDirectWithdraw(true);setSkillMenuOpen(true);}}>WITHDRAW</SceneButton>;
+  const pityControl = sandbox && hasPityDraw(battle) && <SceneButton type="button" className="battle-pity-button" disabled={battlePaused || !canPityFlip(battle)}
+              title={canPityFlip(battle) ? 'Nothing is legal: flip one free stock card onto your foundation' : 'Only when a turn opens with nothing legal, once per turn'}
+              onClick={()=>{const next=pityFlip(latest.current);if(next===latest.current)return;cancel();setSelection(null);setBattle(next);setAnnouncement(`Pity flip: foundation is now ${rankLabel(next.party.find(actor=>actor.hp>0)?.rank ?? 1)}`);}}>PITY FLIP</SceneButton>;
   const sandboxUtilityControls = <>{battle.result ? <SceneButton type="button" onClick={() => restart()}>Fight again</SceneButton> : <>
               <SceneButton type="button" aria-pressed={paused} disabled={!battle.started || holding} onClick={() => { cancel(); setSelection(null); setPaused((p) => !p); }}>{paused ? 'Resume' : 'Pause'}</SceneButton>
               <SceneButton type="button" disabled={holding} onClick={() => restart()}>Restart</SceneButton>
@@ -631,11 +688,14 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
         {foeRow}
         <div className="battle-field__middle">
           <div className="battle-field__tableau" role="group" aria-label="Shared tableau · Small Woods at 0,-1">
-            <div className="battle-field__rack">
-            {battle.columns.slice(0,sandbox ? 7 : undefined).map(renderColumn)}            </div>
+            <div className="battle-field__rack" style={sandbox ? { '--rack-columns': tableauWidth(battle) + (battle.tutorial?.intent ? 1 : 0) } as CSSProperties : undefined}>
+            {battle.columns.slice(0,sandbox ? tableauWidth(battle) : undefined).map(renderColumn)}
+            {sandbox && <IntentCardSlot battle={battle} targetable={Boolean(selection?.actorIds.includes(INTENT_RECEIVER))} concealValue={concealTableau} disabled={battlePaused}
+              cardRef={node => { intentRef.current = node; }} onChoose={() => choose(INTENT_RECEIVER)} />}
+            </div>
           </div>
           {sandbox && <div className="battle-spills" role="group" aria-label="Loose tableau cards">
-            {battle.columns.slice(7).map((column,i)=>column.length ? renderColumn(column,i+7) : null)}
+            {battle.columns.slice(tableauWidth(battle)).map((column,i)=>column.length ? renderColumn(column,i+tableauWidth(battle)) : null)}
           </div>}
           <div className="battle-field__status">
             <div className="battle-field__status-actions">
@@ -664,7 +724,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     {cirInspection && battle.cir?.status==='bound' && <CirFamiliarInspector kin={battle.cir.actorId} disabled={paused || holding || gameTime.isPlayerPaused()} onClose={()=>setCirInspection(false)} onReturn={()=>{setBattle(returnCirToDeck);setCirInspection(false);}} />}
     {abilityCast && <MomentumAbilityFlight cast={abilityCast} fieldRef={fieldRef} paused={paused || holding || globalPaused} onImpact={()=>{if(abilityCast.id==='focus-fire')burnCardsFx(focusFireCards(latest.current,abilityCast.targetId).flatMap(card=>cardRefs.current.get(card.id) ?? []));setBattle(state=>useMomentumSkill(state,abilityCast.id,abilityCast.targetId));}} onComplete={()=>setAbilityCast(null)} />}
     {!sandbox && <BattleDamageCallouts battle={battle} fieldRef={fieldRef} paused={battlePaused} />}
-    {sandbox && <div className="battle-field__solver-dock"><div className="battle-field__solver-actions">{solveControls}{sandboxUtilityControls}</div><div className="battle-field__turn-actions"><div ref={setSingleMoveTarget} className="battle-field__single-move" />{endTurnControl}{withdrawControl}</div></div>}
+    {sandbox && <div className="battle-field__solver-dock"><div className="battle-field__solver-actions">{solveControls}{sandboxUtilityControls}</div><div className="battle-field__turn-actions"><div ref={setSingleMoveTarget} className="battle-field__single-move" />{endTurnControl}{withdrawControl}{pityControl}</div></div>}
     {sandbox && battle.result && (battle.result!=='won' || finishedDefeat>=lastDefeat) && <CombatScenarioComplete scenarioId={sandboxScenarioId} won={battle.result==='won'} onChoose={restart} detail={tutorialRounds(battle)!==null ? `Rounds completed: ${tutorialRounds(battle)}` : undefined} />}
     {insightOpen && tutorialById(battle.tutorial?.id) && <InsightDialog scenario={tutorialById(battle.tutorial?.id)!} onClose={()=>setInsightOpen(false)} />}
     {!active && <footer className="battle-field__footer"><SceneButton type="button" onClick={onWatch}>Watch battle scene</SceneButton></footer>}

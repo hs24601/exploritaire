@@ -56,7 +56,7 @@
 }
 
 
-.battle-field__rack { --classic-card-w: min(var(--tableau-card-limit, 10000px), calc((100cqw - 18px) / 7), calc((100cqh - var(--battle-peek) - 8px) * 63 / 88)); display: grid; grid-template-columns: repeat(7,var(--classic-card-w)); gap: 3px; align-items: center; }
+.battle-field__rack { --classic-card-w: min(var(--tableau-card-limit, 10000px), calc((100cqw - 18px) / var(--rack-columns, 7)), calc((100cqh - var(--battle-peek) - 8px) * 63 / 88)); display: grid; grid-template-columns: repeat(var(--rack-columns, 7),var(--classic-card-w)); gap: 3px; align-items: center; }
 
 
 .battle-field__column button:focus-visible { outline: 2px solid #ffe19a; outline-offset: 2px; }
