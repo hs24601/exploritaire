@@ -1,3 +1,5 @@
+import { createKhadWeed } from './khadWeedRig';
+import type { KhadWeedOptions } from './khadSpriteFaces';
 import { gameTime } from '../gameTime';
 import { createProceduralSlime } from './proceduralSlime';
 import { createShadowVolume } from './shadowVolume';
@@ -9,6 +11,7 @@ import { createTableauLandscape } from './tableauLandscape';
 import * as THREE from 'three';
 import { actorHeading, type OrientedActor } from './actorOrientation';
 import { HERO_DIRECTIONAL_SPRITE, DARK_SLIME_DIRECTIONAL_SPRITE } from './directionalSprites';
+import { HERO_ORBIT_DIRECTIONAL_SPRITE, HERO_ORBIT_SOURCE } from './heroOrbitSprite';
 import { BANKS_DIRECTIONAL_SPRITE, BANKS_POSES } from './banksSprite';
 import { MOCHI_DIRECTIONAL_SPRITE } from './mochiSprite';
 import { HERO_SITTING_DIRECTIONAL_SPRITE } from './heroSittingSprite';
@@ -173,16 +176,17 @@ const ACTOR_HEIGHTS = [2.55, 1.85, 1.7, 1.4, 1.2, 2.05];
 const DEFAULT_UNITS: BattleScene['units'] = ['hero', 'mochi', 'dark-slime', 'rear-slime'].map((id, i) => ({ id, team: i < 2 || i === 5 ? 'party' : 'enemy', down: false, markers: {health:{current:i===0?12:i===1?10:14,max:i===0?12:i===1?10:14}} }));
 
 /** A small arena with upright pixel art and pooled, deterministic effects. */
-export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.PerspectiveCamera, assets: BattleSpriteTextures & {trees: THREE.Texture}, quality: FxQuality = 'high', comparison = false) {
+export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.PerspectiveCamera, assets: BattleSpriteTextures & {trees: THREE.Texture}, quality: FxQuality = 'high', comparison = false, khadRoot = false, treeVariants: readonly THREE.Texture[] = [], heroOrbit = false) {
   const actorHeights = ACTOR_HEIGHTS.map((height, index) => comparison && index === 3 ? ACTOR_HEIGHTS[2] * 2 : height);
   const resources: (THREE.BufferGeometry | THREE.Material)[] = [];
   const geometry = <T extends THREE.BufferGeometry>(g: T) => { resources.push(g); return g; };
   const material = <T extends THREE.Material>(m: T) => { resources.push(m); return m; };
   const flat = (color: number) => material(new THREE.MeshBasicMaterial({color}));
-  const landscape = createTableauLandscape(scene, assets.trees, true, true);
+  // Procedural woods vary tree by tree; without variants every tree uses `trees`.
+  const landscape = createTableauLandscape(scene, assets.trees, true, true, treeVariants.length ? { treeTextures: [assets.trees, ...treeVariants] } : {});
   const { glow } = landscape;
   const square = geometry(new THREE.PlaneGeometry(1, 1));
-  const heroLibrary = createDirectionalSpriteLibrary(assets, HERO_DIRECTIONAL_SPRITE, { sitting: HERO_SITTING_DIRECTIONAL_SPRITE, walking: HERO_WALKING_DIRECTIONAL_SPRITE, ...HERO_COMBAT_POSES });
+  const heroLibrary = createDirectionalSpriteLibrary(assets, heroOrbit && assets[HERO_ORBIT_SOURCE] ? HERO_ORBIT_DIRECTIONAL_SPRITE : HERO_DIRECTIONAL_SPRITE, { sitting: HERO_SITTING_DIRECTIONAL_SPRITE, walking: HERO_WALKING_DIRECTIONAL_SPRITE, ...HERO_COMBAT_POSES });
   const mochiLibrary = createDirectionalSpriteLibrary(assets, MOCHI_DIRECTIONAL_SPRITE);
   const slimeLibrary = createDirectionalSpriteLibrary(assets, DARK_SLIME_DIRECTIONAL_SPRITE);
   const procedural = comparison ? createProceduralSlime() : undefined;
@@ -191,6 +195,9 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
   const slimes = [slimeLibrary.create(ACTOR_HEIGHTS[2]), proceduralLibrary ? proceduralLibrary.create(actorHeights[3]) : slimeLibrary.create(ACTOR_HEIGHTS[3], 0xb9a6ef), slimeLibrary.create(ACTOR_HEIGHTS[4], 0x9fd6c8)];
   const shadowVolume = procedural ? createShadowVolume(slimes[1], actorHeights[3]) : undefined;
   const banksLibrary = createDirectionalSpriteLibrary(assets, BANKS_DIRECTIONAL_SPRITE, BANKS_POSES);
+  const weed = khadRoot ? createKhadWeed(2.5) : undefined;
+  if(weed) slimes[0].root.add(weed.root);
+  let weedOptions:KhadWeedOptions={girth:1,sway:1};
   const instances = [hero, mochi, ...slimes, banksLibrary.create(ACTOR_HEIGHTS[5])];
   const outlines = instances.map(createSpriteTargetOutline);
   const dropProjections = instances.map(createSpriteDropProjection);
@@ -230,6 +237,9 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
     // Scene authors may use target/point/fixed policies for an ambush or scripted cue.
     actors,
     /** Who is in the battle and who has fallen (`now` in seconds, the cue clock). Units not listed leave the arena. */
+    present(renderer:THREE.WebGLRenderer) { weed?.present(renderer,camera,weedOptions); },
+    khadFace() { return weed?.root.userData.spriteFace; },
+    setWeedOptions(options:KhadWeedOptions) { weedOptions=options; },
     setUnits(units: BattleScene['units'], now: number) { cues.setUnits(units, now); if(markerUnits!==units){markerUnits=units;markers.forEach((marker,i)=>marker.setContent(units.find(unit=>unit.id===ACTOR_IDS[i])?.markers));} },
     projectDropTargets(width: number, height: number, update: (id: string, bounds: ReturnType<ReturnType<typeof createSpriteDropProjection>>, targetable: boolean) => void) {
       dropProjections.forEach((project, index) => {
@@ -240,9 +250,20 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
     setMarkerViewport(width: number, height: number) { markerViewportWidth = width; markerViewportHeight = height; },
     setAmbushed(value: boolean) { ambushed = value; },
     /** Plays a battle cue from `now` (seconds). */
-    cue(cue: BattleCue, now: number) { cues.cue(cue, now); },
+    cue(cue: BattleCue, now: number) {
+      if(weed) {
+        if(cue.kind==='attack' && cue.actorId==='dark-slime') {
+          const target=instances[ACTOR_IDS.indexOf(cue.targetId)]?.root.position;
+          if(target) weed.attack(now+cue.delay,target.clone().sub(slimes[0].root.position).setY(1.1));
+          return;
+        }
+        if(cue.kind==='hurt' && cue.targetId==='dark-slime') weed.hurt(now+cue.delay);
+        if(cue.kind==='defeat' && cue.targetId==='dark-slime') weed.defeat(now+cue.delay);
+      }
+      cues.cue(cue, now);
+    },
     /** Cue effects still moving, so the arena keeps drawing. */
-    busy(now: number) { return cues.busy(now); },
+    busy(now: number) { return cues.busy(now) || Boolean(weed?.busy(now)); },
     snapshot() { return actors.map((actor, i) => ({ id: actor.id, team: actor.team, visible: instances[i].root.visible, targeting: markerUnits?.find(unit => unit.id === actor.id)?.targeting, tip: instances[i].facing.rotation.z, position: [actor.position.x, actor.position.z], heading: headings[i], frame: instances[i].frame, pose: instances[i].pose, shadowInkTime: i === 3 ? procedural?.time : undefined, marker: markers[i].snapshot(camera), animationFrame: instances[i].animationFrame, view: instances[i].view, billboardYaw: instances[i].billboard.rotation.y, flip: instances[i].facing.scale.x, parts: instances[i].parts.map(({part, pivot}) => ({ id: part.id, position: pivot.position.toArray(), angle: pivot.rotation.z, scaleY: pivot.scale.y })) })); },
     update(t: number, reduced: boolean, now = gameTime.now() / 1000) {
       procedural?.update(now, reduced);
@@ -251,7 +272,7 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
         const x=rig.root.position.x+(target[0]-rig.root.position.x)*.045, z=rig.root.position.z+(target[1]-rig.root.position.z)*.045;
         rig.root.position.set(x,0,z); shadows[i].position.set(x,.02,z);
       });
-      hero.root.position.x = heroX(t);
+      hero.root.position.x = markerUnits?.find(u=>u.id==='hero')?.position?.[0] ?? heroX(t);
       const impact = clamp(1 - (t - 5.7) / .65) * Number(t >= 5.7);
       slimes[0].setColor(new THREE.Color(1, 1 - impact * .8, 1 - impact * .7));
       slimes[0].root.position.x = 3 + Math.sin((t - 5.7) * 36) * impact * .15;
@@ -276,6 +297,7 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
         rig.update(camera, headings[i], rig.pose === 'walking' ? walkTime : t, reduced, i * 1.7, rig.pose === 'down' || rig.pose === 'flinch' ? 0 : Math.max(i === 0 ? activity(t) : 0, acting.get(actors[i].id) ?? 0), now);
       });
       shadowVolume?.update(now, reduced, -.65);
+      if(weed) { slimes[0].facing.visible=false; weed.update(now,reduced,weedOptions); }
       outlines.forEach((outline, i) => outline.update(markerUnits?.find(unit => unit.id === ACTOR_IDS[i] && !unit.down)?.targeting));
       camera.updateMatrixWorld();
       markers.forEach((marker,i)=>marker.update(camera,markerViewportWidth,markerViewportHeight,instances[i].view?.elevation==='top'?actorHeights[i]*.5*instances[i].facing.scale.y:actorHeights[i],instances[i].root.visible));
@@ -301,6 +323,6 @@ export function createCombatDemoRig(scene: THREE.Scene, camera: THREE.Perspectiv
       for (const rig of instances) landscape.sampleActorLight(rig.root.position, rig.environmentLight);
       for (const rig of echoes) landscape.sampleActorLight(rig.root.position, rig.environmentLight);
     },
-    dispose() { shadowVolume?.dispose(); outlines.forEach(outline => outline.dispose()); markers.forEach(marker=>marker.dispose()); landscape.dispose(); cues.dispose(); [...instances, ...echoes].forEach(rig => rig.dispose()); heroLibrary.dispose(); mochiLibrary.dispose(); slimeLibrary.dispose(); proceduralLibrary?.dispose(); procedural?.dispose(); banksLibrary.dispose(); resources.forEach(r => r.dispose()); },
+    dispose() { weed?.dispose(); shadowVolume?.dispose(); outlines.forEach(outline => outline.dispose()); markers.forEach(marker=>marker.dispose()); landscape.dispose(); cues.dispose(); [...instances, ...echoes].forEach(rig => rig.dispose()); heroLibrary.dispose(); mochiLibrary.dispose(); slimeLibrary.dispose(); proceduralLibrary?.dispose(); procedural?.dispose(); banksLibrary.dispose(); resources.forEach(r => r.dispose()); },
   };
 }

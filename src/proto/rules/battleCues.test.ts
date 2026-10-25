@@ -9,6 +9,11 @@ const withCharge = (state: BattleState, actorId: string, charge: number) => ({ .
 const withFoeHp = (state: BattleState, hp: number) => ({ ...state, foes: state.foes.map((f) => (f.id === 'dark-slime' ? { ...f, hp } : f)) });
 
 describe('battle cues', () => {
+  it('leaves Momentum skill hits to the card flight but retains the defeat cue',()=>{
+    const cues=cuesFor([{id:1,kind:'hit',sourceId:'mochi',targetId:'dark-slime',amount:6,label:'Pounce'},
+      {id:2,kind:'ko',sourceId:'mochi',targetId:'dark-slime'}]);
+    expect(cues).toEqual([{id:2,kind:'defeat',targetId:'dark-slime',delay:IMPACT_SECONDS}]);
+  });
   it('mirrors valid targets but predicts HP only for the focused living foe', () => {
     const battle = createBattle(deal, { maxAP: true });
     const aim = { actorId: 'hero:Nip', foeId: 'dark-slime' };

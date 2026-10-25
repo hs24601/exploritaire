@@ -86,7 +86,8 @@
 /* The authoring pencil occupies the speaker row, not the dialogue column.
  * Use the same clearance in the draft so authoring never changes text wrapping. */
 .proto-callout-copy strong { padding-right: 40px; }
-@keyframes proto-callout-enter { from { opacity: 0; transform: translateY(6px) scale(.96); } to { opacity: 1; transform: none; } }
+/* Dialogue stays readable even when its entrance is held by a covering loader. */
+@keyframes proto-callout-enter { from { transform: translateY(6px) scale(.96); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .proto-callout-content { animation: none; } }
 .proto-callout-edit { pointer-events: auto; align-self: flex-start; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid #98eaff88; border-radius: 8px; color: #e8faff; background: #203846; font: 23px system-ui; cursor: pointer; }
 .proto-callout-text, .callout-editor-preview { white-space: pre-wrap; }
@@ -103,7 +104,7 @@
 @keyframes callout-wave { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(-3px * var(--fx-potency, 1))); } }
 @keyframes callout-rainbow { from { filter: hue-rotate(0deg) saturate(var(--fx-potency, 1)); } to { filter: hue-rotate(360deg) saturate(var(--fx-potency, 1)); } }
 .callout-editor { box-sizing: border-box; width: min(620px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 22px; overflow-y: auto; border: 1px solid #8cbaa9; border-radius: 18px; background: #101e24; color: #edf7f6; font: 16px/1.45 system-ui, sans-serif; box-shadow: 0 20px 80px #000a; }
-.callout-editor::backdrop { background: #020810bb; backdrop-filter: blur(4px); }
+.callout-editor::backdrop { background: transparent; backdrop-filter: none; }
 .callout-editor header, .callout-editor footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .callout-editor h2 { margin: 0; font-size: 22px; }
 .callout-editor h3 { margin: 14px 0 8px; font-size: 16px; }
@@ -132,7 +133,19 @@
 .callout-effect-settings input[type=range] { flex: 1; min-width: 80px; max-width: 260px; }
 .callout-effect-settings input[type=color] { width: 48px; height: 32px; }
 
-.callout-editor { width:min(860px, calc(100vw - 24px)); padding:18px; overscroll-behavior:contain; }
+.callout-editor { position:fixed; width:min(500px, calc(100vw - 16px)); max-height:calc(100dvh - 16px); padding:12px; border-radius:14px; font-size:14px; line-height:1.35; overscroll-behavior:contain; }
+.callout-editor h2 { font-size:18px; }
+.callout-editor .editor-drag-handle { flex-wrap:nowrap; }
+.callout-editor h2 { min-width:0; overflow-wrap:anywhere; }
+.callout-editor-id { font-size:12px; font-weight:400; color:#b9cecf; }
+.callout-editor h3 { margin:0; font-size:14px; }
+.callout-editor p { margin:6px 0; }
+.callout-editor small { font-size:12px; }
+.callout-editor button { min-height:32px; padding:4px 8px; }
+.callout-editor textarea { min-height:72px; height:80px; padding:8px; }
+.callout-editor .editor-ribbon { gap:4px; margin:6px 0; }
+.callout-editor .callout-draft-preview { margin-top:10px; padding-top:6px; }
+.callout-editor .callout-draft-preview__stage { padding:6px 0 10px; }
 .callout-editor footer.editor-command-bar { margin-top:8px; justify-content:flex-end; }
 .callout-editor-preview .proto-callout-expression { position:static; flex:0 0 96px; transform:none; }
 .callout-emoji-picker { max-height:none; overflow:visible; }
@@ -156,3 +169,26 @@
 .callout-draft-preview .proto-callout-next { padding:0; border:2px solid var(--callout-accent); border-radius:18px; background:linear-gradient(#101f2f,#080f19); font:24px/1 system-ui,sans-serif; color:#eefaff; }
 .callout-draft-preview nav { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; }
 .callout-draft-preview small { display:block; }
+
+/* Brief damage reactions belong to the foundation, not a distant free rectangle. */
+.proto-callout[data-placement='foundation'] { width:280px; min-width:min(220px,calc(100dvw - 24px)); padding:20px 0 0 16px; font-size:14px; }
+.proto-callout[data-placement='foundation'] .proto-callout-content { padding:10px; border-radius:18px; animation:none; }
+.proto-callout[data-placement='foundation'] .proto-callout-expression { width:64px; height:64px; top:-20px; left:-16px; }
+.proto-callout[data-placement='foundation'] .proto-callout-copy strong { font-size:16px; }
+.proto-callout[data-placement='foundation'] .proto-callout-next { display:none; }
+.proto-callout[data-placement='foundation'] .proto-callout-advance { pointer-events:none; }
+
+.proto-callout[data-placement='foundation'] .proto-callout-copy { padding-right:32px; }
+
+.proto-callout-choices { position:relative; z-index:2; display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.proto-callout-choices button { pointer-events:auto; padding:8px 12px; border:1px solid #e6c66f; border-radius:6px; background:#18332b; color:#ffe6a0; cursor:pointer; }
+
+/* Combat flinches show only the painted expression. */
+.proto-callout[data-emoji-only='true'] { width:56px; min-width:0; padding:0; }
+.proto-callout[data-emoji-only='true'] .proto-callout-content { width:56px; height:56px; padding:0; border:0; background:none; box-shadow:none; }
+.proto-callout[data-emoji-only='true'] .proto-callout-expression { position:static; width:56px; height:56px; }
+.proto-callout[data-emoji-only='true'] .proto-callout-copy { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); }
+.proto-callout[data-emoji-only='true'] .proto-callout-content::after,
+.proto-callout[data-emoji-only='true'] .proto-callout-advance,
+.proto-callout[data-emoji-only='true'] .proto-callout-next,
+.proto-callout[data-emoji-only='true'] .proto-callout-page { display:none; }

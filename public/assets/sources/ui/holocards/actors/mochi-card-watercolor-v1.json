@@ -1,6 +1,8 @@
 {
   "asset": "runtime/ui/holocards/actors/mochi-card-watercolor-v1.png",
-  "date": "2026-10-21",
+  "date": "2026-10-22",
+  "faceIdentityRefinement": "User real-cat photo guides asymmetrical charcoal/copper nose-bridge markings, pink nose top with black underside/philtrum, copper muzzle and dark chin. Slightly lowered head angle; broad watercolor integration. Prompts: mochi-face-identity.prompt.txt. Supersedes the prior pale muzzle coloring.",
+  "muzzleRefinement": "Built-in ImageGen localized edit: soft salmon pigment nose, feathered cream muzzle/chin, broken warm brown mouth and short faint irregular whisker suggestions. Preserve approved proportions, eyes, identity, pose and forest. Prompts: mochi-muzzle-watercolor.prompt.txt",
   "generator": "built-in ImageGen",
   "identityReference": "Previous Mochi tortoiseshell holocard (removed at user request)",
   "styleReferences": [

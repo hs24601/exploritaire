@@ -2,11 +2,11 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 (async () => {
-  const out = 'artifacts/quest-receipt'; fs.mkdirSync(out, { recursive: true });
+  const out = process.env.QUEST_OUTPUT || 'artifacts/quest-receipt'; fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
   try {
     for (const reducedMotion of process.env.QUEST_MOTION ? [process.env.QUEST_MOTION] : ['no-preference', 'reduce']) {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion });
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion, permissions: ['clipboard-read', 'clipboard-write'] });
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.goto('http://127.0.0.1:5178/proto.html?khad-roots-exposed');
       await page.waitForSelector('[data-travel-card]', { timeout: 60000 }).catch(async e => { await page.screenshot({path:out+'/failure.png'}); console.log(errors, await page.locator('body').innerText()); throw e; });
@@ -59,12 +59,25 @@ const fs = require('node:fs');
       await page.waitForTimeout(250);
       assert.equal(await page.locator('.proto-callout').count(), 0, 'Jumbo inspection still holds dialogue');
       assert.ok(await deck.getAttribute('data-map-jumbo'));
+      await deck.hover();
+      assert.equal(await page.locator('.day-objective__pin').evaluate(el => +getComputedStyle(el).opacity), 0, 'Jumbo hover does not highlight the target');
       assert.ok((await deck.locator('img').first().getAttribute('src')).includes('khad-roots-berry-bush-night-paint-v1'));
       await page.screenshot({ path: `${out}/jumbo-${reducedMotion}.png` });
       await deck.locator('button.quest-card').click();
       await page.waitForFunction(() => !document.querySelector('.quest-subtask-deck[data-presentation-flight]'));
       await page.waitForSelector('.proto-callout');
       assert.equal(await deck.getAttribute('data-map-jumbo'), null);
+      await page.waitForFunction(async () => {
+        const { captureCameraShot, getCameraPlayback } = await import('/src/proto/cameraDirector.ts');
+        return !getCameraPlayback().playing && Math.abs(captureCameraShot().yaw - 90) < .01;
+      });
+      await page.waitForTimeout(1000);
+      await page.screenshot({ path: `${out}/target-${reducedMotion}.png` });
+      await page.getByRole('button', { name: 'Copy camera details', exact: true }).click();
+      const details = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
+      assert.equal(details.camera.yaw, 90);
+      assert.ok(Number.isFinite(details.camera.x) && Number.isFinite(details.camera.pitch));
+      await page.waitForFunction(() => +getComputedStyle(document.querySelector('.day-objective__pin')).opacity === 0);
       assert.deepEqual(errors, []);
       await page.screenshot({ path: `${out}/docked-${reducedMotion}.png` });
       await page.close();

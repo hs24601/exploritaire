@@ -1,10 +1,13 @@
 import { gameTime } from '../../gameTime';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createCombatClock } from '../combatClock';
+import { createCombatCameraAction } from '../combatCameraAction';
 import * as THREE from 'three';
 import { loadMediaTexture } from '../mediaTexture';
+import { bakeProceduralWoods, proceduralClusters } from '../proceduralWoods';
 import { BANKS_SPRITE_ASSETS } from '../banksSprite';
 import { battleSpriteAssets } from '../battleSpriteAssets';
+import { HERO_ORBIT_ASSETS } from '../heroOrbitSprite';
 import { useArtStyle } from '../artStyle';
 import { COMBAT_CAMERA_VIEWS, COMBAT_DEMO_SECONDS, createCombatCameraControls, createCombatDemoRig, demoPhase, type CombatAuthoredShot, type CombatCameraView, type CombatCameraSnapshot } from '../combatDemoRig';
 import './CombatDemo.css';
@@ -88,14 +91,20 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         renderer = new THREE.WebGLRenderer({antialias: false, alpha: false});
         renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
         const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(45, 1, .1, 100);
+        // Baked procedural woods arrive as object URLs; everything else is an asset path.
         const load = async (path: string) => {
-          const t = await loadMediaTexture(`${import.meta.env.BASE_URL}assets/${path}`);
+          const baked = path.startsWith('blob:');
+          const t = await loadMediaTexture(baked ? path : `${import.meta.env.BASE_URL}assets/${path}`);
           if (disposed) { t.dispose(); throw new Error('closed'); }
-          textures.push(t); t.userData.watercolor = /watercolor|bobtail/.test(path);
+          textures.push(t); t.userData.watercolor = baked || /watercolor|bobtail/.test(path);
           t.magFilter = t.userData.watercolor ? THREE.LinearFilter : THREE.NearestFilter;
           t.minFilter = t.magFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
         };
-        const entries = await Promise.all(Object.entries({...battleSpriteAssets(artStyle),...BANKS_SPRITE_ASSETS,trees:artStyle==='paint'?'runtime/environment/watercolor/v1/woods-cluster-sprite-v1.png':'deprecated/pixel/environment/small_woods_pines.png'}).map(async ([key,path]) => [key,await load(path)] as const));
+        // Paint combat woods use the procedural pine clusters (static cluster if the bake failed).
+        if (artStyle === 'paint') await bakeProceduralWoods();
+        const clusters = artStyle === 'paint' ? proceduralClusters() : [];
+        const entries = await Promise.all(Object.entries({...battleSpriteAssets(artStyle),...BANKS_SPRITE_ASSETS,...(battleRef.current?.heroOrbit && artStyle==='paint'?HERO_ORBIT_ASSETS:{}),trees:clusters[0]??(artStyle==='paint'?'runtime/environment/watercolor/v1/woods-cluster-sprite-v1.png':'deprecated/pixel/environment/small_woods_pines.png')}).map(async ([key,path]) => [key,await load(path)] as const));
+        const treeVariants = await Promise.all(clusters.slice(1).map(load));
         const assets = Object.fromEntries(entries) as Record<string,THREE.Texture> & {trees:THREE.Texture};
         if (disposed || !host.current) return;
         const layout = host.current.closest<HTMLElement>('.proto-main-layout') ?? host.current.closest<HTMLElement>('.banks-rescue-cinema__stage') ?? host.current.parentElement!;
@@ -105,8 +114,11 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         sharedSurface.setAttribute('aria-hidden','true');
         layout.append(sharedSurface);
         sharedSurface.append(renderer.domElement);
-        rig = createCombatDemoRig(scene, camera, assets, quality, Boolean(battleRef.current?.proceduralSlimeComparison));
+        rig = createCombatDemoRig(scene, camera, assets, quality, Boolean(battleRef.current?.proceduralSlimeComparison), Boolean(battleRef.current?.khadRoot), treeVariants, Boolean(battleRef.current?.heroOrbit));
         const cameraControls = createCombatCameraControls(camera, firstTeam);
+        const cameraAction = createCombatCameraAction();
+        const basePosition = new THREE.Vector3();
+        const cameraRight = new THREE.Vector3();
         let displayedTime = 0;
         const entered = gameTime.now();
         const combatClock = createCombatClock(entered / 1000);
@@ -120,10 +132,26 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           const cueTime = cameraClock.sample(now / 1000, Boolean(battleRef.current?.paused) || document.hidden) * 1000;
           const shot = cameraControls.update(cameraTime, authoredCamera ? cueTime : now, reduced);
           const seconds = combatClock.sample(now / 1000, Boolean(battleRef.current?.paused));
-          pendingCues.current.splice(0).forEach(cue => rig!.cue(cue, seconds));
-          if (battleRef.current) rig!.setUnits(battleRef.current.units, seconds);
+          pendingCues.current.splice(0).forEach(cue => {
+            rig!.cue(cue, seconds);
+            if (cue.kind === 'attack') {
+              const actors = rig!.snapshot();
+              const attacker = actors.find(actor => actor.id === cue.actorId);
+              const target = actors.find(actor => actor.id === cue.targetId);
+              cameraRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
+              const direction = attacker && target ? Math.sign((target.position[0] - attacker.position[0]) * cameraRight.x + (target.position[1] - attacker.position[1]) * cameraRight.z) : 0;
+              cameraAction.cue(cue, seconds, direction);
+            }
+          });
+          if (battleRef.current) { rig!.setWeedOptions(battleRef.current.weedOptions ?? {girth:1,sway:1}); rig!.setUnits(battleRef.current.units, seconds); }
           rig!.setAmbushed(Boolean(battleRef.current?.ambushed));
-          rig!.update(displayedTime, reduced, seconds); renderer!.render(scene, camera);
+          const action = cameraAction.sample(seconds, reduced);
+          basePosition.copy(camera.position);
+          cameraRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
+          camera.position.addScaledVector(cameraRight, action.drift);
+          camera.zoom = action.zoom; camera.updateProjectionMatrix();
+          renderer!.domElement.style.filter = action.blur > .001 ? `blur(${action.blur.toFixed(3)}px)` : '';
+          rig!.update(displayedTime, reduced, seconds); rig!.present(renderer!); renderer!.render(scene, camera);
           rig!.projectDropTargets(canvasBounds.width, canvasBounds.height, (id, bounds, targetable) => {
             let region = dropRegions.get(id);
             if (!region && host.current) {
@@ -149,11 +177,15 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
             host.current.dataset.actionStarted = String(actionStarted !== null);
             host.current.dataset.combatTime = String(seconds);
             host.current.dataset.combatPaused = String(Boolean(battleRef.current?.paused));
-            if (import.meta.env.DEV) host.current.dataset.actors = JSON.stringify(rig!.snapshot());
+            host.current.dataset.actionZoom = String(action.zoom);
+            host.current.dataset.actionBlur = String(action.blur);
+            if (import.meta.env.DEV) { host.current.dataset.actors = JSON.stringify(rig!.snapshot()); host.current.dataset.khadFace=JSON.stringify(rig!.khadFace()??null); }
           }
           if (now - lastReadout >= 100 || displayedTime === COMBAT_DEMO_SECONDS) {
             lastReadout = now; setCameraInfo(cameraControls.snapshot());
           }
+          // Input and authored framing always operate on the unmodified camera.
+          camera.position.copy(basePosition); camera.zoom = 1; camera.updateProjectionMatrix();
           return shot.moving;
         };
         const schedule = () => { if (!disposed && !frame) frame = gameTime.requestAnimationFrame(render); };

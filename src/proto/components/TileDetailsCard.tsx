@@ -5,12 +5,12 @@ import { TABLE_GRID } from '../gridCoordinates';
 import type { DetailsCardObject } from './DetailsCardViewer';
 import { RoadTileArt } from './RoadTileArt';
 import { useArtStyle } from '../artStyle';
-import { scenerySprite, isPaintedScenerySprite } from '../sceneryArt';
+import { scenerySprite, isPaintedScenerySprite, paintPineSprite } from '../sceneryArt';
 import type { ReactNode } from 'react';
 
 function SceneryCardArt({sprite,title,oldTree,children}:{sprite?:string;title:string;oldTree:boolean;children:ReactNode}) {
   const style=useArtStyle();
-  const painted=oldTree&&style==='paint'?`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/pine-sprite-v1.png`:scenerySprite(sprite,style);
+  const painted=oldTree&&style==='paint'?paintPineSprite(`tile:${title}`):scenerySprite(sprite,style,`tile:${title}`);
   return painted&&(painted!==sprite||isPaintedScenerySprite(painted))?<img src={painted} alt={`${title} terrain`} draggable={false} style={{imageRendering:'auto'}}/>:<>{children}</>;
 }
 

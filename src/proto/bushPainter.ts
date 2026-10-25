@@ -10,9 +10,9 @@ export const BUSH_PAINTER_VERSION = 'bush-study-v3';
 export type BushPaintPreset = { seed: number; fullness: number; spread: number; brush: number; warmth: number; fruit: number };
 export type BushRaster = { width: number; height: number; data: Uint8ClampedArray<ArrayBuffer> };
 
-const TAU = Math.PI * 2;
-const clamp = (n: number, low = 0, high = 1) => Math.max(low, Math.min(high, n));
-const smooth = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+export const TAU = Math.PI * 2;
+export const clamp = (n: number, low = 0, high = 1) => Math.max(low, Math.min(high, n));
+export const smooth = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 export function rng(seed: number) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
 /** Value noise over a cells×cells grid; samples outside [0,1] wrap. */
 export function noise(cells: number, random: () => number) {
@@ -25,9 +25,9 @@ export function noise(cells: number, random: () => number) {
     return top * (1 - sv) + (values[jy * cells + ix] * (1 - su) + values[jy * cells + jx] * su) * sv;
   };
 }
-type RGB = readonly [number, number, number];
-const hex = (value: string): RGB => [parseInt(value.slice(1, 3), 16) / 255, parseInt(value.slice(3, 5), 16) / 255, parseInt(value.slice(5, 7), 16) / 255];
-function ramp(stops: readonly (readonly [number, RGB])[]) {
+export type RGB = readonly [number, number, number];
+export const hex = (value: string): RGB => [parseInt(value.slice(1, 3), 16) / 255, parseInt(value.slice(3, 5), 16) / 255, parseInt(value.slice(5, 7), 16) / 255];
+export function ramp(stops: readonly (readonly [number, RGB])[]) {
   return (v: number, out: number[]) => {
     let i = 1; while (i < stops.length - 1 && v > stops[i][0]) i++;
     const [a, ca] = stops[i - 1], [b, cb] = stops[i], t = clamp((v - a) / (b - a));
@@ -60,7 +60,7 @@ export class Layer {
 }
 
 type Clump = { x: number; y: number; z: number; rx: number; ry: number; angle: number; light: number; tint: number; outline: Float32Array; seed: number };
-type Limb = { points: { x: number; y: number; w: number }[] };
+export type Limb = { points: { x: number; y: number; w: number }[] };
 type FruitSlot = { x: number; y: number; r: number; cover: number };
 /** `fruit` is the painted prefix of `slots` for the preset's live count. */
 export type BushPlan = { clumps: Clump[]; limbs: Limb[]; fruit: FruitSlot[]; slots: FruitSlot[]; ground: number; drape: number; trunk: BushTrunkForm;
@@ -507,7 +507,8 @@ export function cells(seed: number) {
   };
 }
 
-function paintLimb(layer: Layer, limb: Limb, fields: Fields, random: () => number) {
+/** `tone` swaps the bark ramp and its cool shade (the pine uses greyer bark); the default is the bush's. */
+export function paintLimb(layer: Layer, limb: Limb, fields: Fields, random: () => number, tone: { bark: ReturnType<typeof ramp>; cool: RGB } = { bark, cool: hex('#4b4060') }) {
   const { size } = layer, pts = limb.points, pad = pts[0].w * 1.8 + 2;
   const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
   const minX = Math.max(0, Math.floor(Math.min(...xs) - pad)), maxX = Math.min(size - 1, Math.ceil(Math.max(...xs) + pad));
@@ -525,7 +526,7 @@ function paintLimb(layer: Layer, limb: Limb, fields: Fields, random: () => numbe
         if (d < near[k]) { near[k] = d; along[k] = (i + s) / (pts.length - 1); across[k] = (ox * -ey + oy * ex) / l / w; }
       }
   }
-  const out = [0, 0, 0], cool = hex('#4b4060'), girth = pts[0].w;
+  const out = [0, 0, 0], { cool } = tone, girth = pts[0].w;
   // Bark is measured in pixels along and across the limb, so grain keeps one
   // physical scale on thick and thin limbs and at every bake size.
   let length = 0; for (let i = 1; i < pts.length; i++) length += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
@@ -562,7 +563,7 @@ function paintLimb(layer: Layer, limb: Limb, fields: Fields, random: () => numbe
     value -= crevice * .1 + .08;
     value -= smooth(.72, 1.05, Math.abs(bestSide)) * .2;
     const v0 = clamp(value), stepped = Math.round(v0 * 7) / 7;
-    bark(stepped * .5 + v0 * .5, out);
+    tone.bark(stepped * .5 + v0 * .5, out);
     const shade = clamp(smooth(-.05, -.75, up) * .42 + (cell.id < .2 ? .14 : 0) + crevice * .12);
     layer.over(y * size + x, out[0] + (cool[0] - out[0]) * shade, out[1] + (cool[1] - out[1]) * shade, out[2] + (cool[2] - out[2]) * shade, alpha);
   }
@@ -583,7 +584,7 @@ function paintLimb(layer: Layer, limb: Limb, fields: Fields, random: () => numbe
     const tilt = (random() - .5) * .5, ca = Math.cos(tilt), sa = Math.sin(tilt), dx = c.dx * ca - c.dy * sa, dy = c.dx * sa + c.dy * ca;
     // Lighter ochre dabs gather across the upper front; darker ones at the margins.
     let value = .56 + up * .2 - Math.abs(side) ** 1.6 * .36 + (random() - .5) * .38;
-    const v0 = clamp(value), stepped = Math.round(v0 * 7) / 7; bark(stepped * .5 + v0 * .5, out);
+    const v0 = clamp(value), stepped = Math.round(v0 * 7) / 7; tone.bark(stepped * .5 + v0 * .5, out);
     const shade = clamp(smooth(-.05, -.75, up) * .42 + (random() < .15 ? .2 : 0)), pool = .18 + random() * .14;
     const col = [0, 1, 2].map(k => out[k] + (cool[k] - out[k]) * shade);
     const reach = len + 1.5;
@@ -709,21 +710,25 @@ function paintFruit(layer: Layer, fruit: BushPlan['fruit'][number], seed: number
     }
 }
 
-type Fields = { fine: (x: number, y: number) => number; mid: (x: number, y: number) => number; broad: (x: number, y: number) => number;
+export type Fields = { fine: (x: number, y: number) => number; mid: (x: number, y: number) => number; broad: (x: number, y: number) => number;
   /** The same three fields sampled once at every bake pixel. */
   grid: { fine: Float32Array; mid: Float32Array; broad: Float32Array } };
 
-export function paintBush(preset: Readonly<BushPaintPreset>, size = 512): BushRaster {
-  if (!Number.isInteger(size) || size < 64 || size > 1024) throw new Error('Bush raster must be 64–1024 pixels.');
-  const layer = new Layer(size), plan = planBush(preset, size), random = rng(preset.seed ^ 0x9e37);
-  // Fields are defined in canvas-relative units so the painting holds its
-  // character at every bake size; tooth size stays proportional to the clump.
+/** Fields are defined in canvas-relative units so the painting holds its
+ * character at every bake size; tooth size stays proportional to the clump. */
+export function paintFields(size: number, random: () => number): Fields {
   const fine = noise(150, random), mid = noise(46, random), broad = noise(7, random);
   const grid = { fine: new Float32Array(size * size), mid: new Float32Array(size * size), broad: new Float32Array(size * size) };
   for (let y = 0, i = 0; y < size; y++) for (let x = 0; x < size; x++, i++) {
     grid.fine[i] = fine(x / size, y / size); grid.mid[i] = mid(x / size, y / size); grid.broad[i] = broad(x / size, y / size);
   }
-  const fields: Fields = { fine, mid, broad, grid };
+  return { fine, mid, broad, grid };
+}
+
+export function paintBush(preset: Readonly<BushPaintPreset>, size = 512): BushRaster {
+  if (!Number.isInteger(size) || size < 64 || size > 1024) throw new Error('Bush raster must be 64–1024 pixels.');
+  const layer = new Layer(size), plan = planBush(preset, size), random = rng(preset.seed ^ 0x9e37);
+  const fields = paintFields(size, random);
   const w = preset.warmth;
   const colors = ramp([
     [0, hex('#14302f')], [.24, hex('#24594f')], [.44, hex('#3c7a56')],

@@ -24,3 +24,5 @@
 @keyframes ink-pooling { to { opacity: .15; transform: translateX(-5px); } }
 @media (prefers-reduced-motion: reduce) { .ink-loader__pool, .ink-loader__tail { animation: none; } }
 @media (max-height: 480px) { .ink-loader__hero { width: 96px; margin-bottom: 4px; } .ink-loader__title { margin-bottom: 12px; } }
+/* While the mounted scene settles underneath, the loader covers it. */
+.ink-loader--cover { position: fixed; inset: 0; z-index: 2147483000; }

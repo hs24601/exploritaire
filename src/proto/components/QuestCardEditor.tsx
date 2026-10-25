@@ -6,6 +6,12 @@ import authored from '../../data/questCardEdits.json';
 type Draft = { title: string; text: string };
 let edits: Record<string, Draft> = authored;
 const listeners = new Set<() => void>();
+// Keep mounted world previews subscribed when the saved JSON changes via HMR.
+if (import.meta.hot) import.meta.hot.accept('../../data/questCardEdits.json', module => {
+  if (!module) return;
+  edits = module.default;
+  listeners.forEach(notify => notify());
+});
 export function useQuestCardEdit(id: string) {
   return useSyncExternalStore(callback => { listeners.add(callback); return () => { listeners.delete(callback); }; }, () => edits[id]);
 }

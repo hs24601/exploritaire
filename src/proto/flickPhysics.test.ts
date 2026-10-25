@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { flickVelocity, flickPosition } from './flickPhysics';
 
 describe('flick physics', () => {
-  it('inherits recent direction and speed, with a bounded launch speed', () => {
-    expect(flickVelocity([{x:0,y:0,t:0},{x:60,y:-30,t:60}])).toEqual({x:1000,y:-500});
-    expect(flickVelocity([{x:0,y:0,t:0},{x:1000,y:0,t:10}]).x).toBe(3200);
+  it('triples recent release velocity, including the bounded launch speed', () => {
+    expect(flickVelocity([{x:0,y:0,t:0},{x:60,y:-30,t:60}])).toEqual({x:3000,y:-1500});
+    expect(flickVelocity([{x:0,y:0,t:0},{x:1000,y:0,t:10}]).x).toBe(9600);
   });
   it('does not launch slow drags or motion followed by a hold', () => {
     expect(flickVelocity([{x:0,y:0,t:0},{x:5,y:0,t:80}]).x).toBe(0);

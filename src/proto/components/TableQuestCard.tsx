@@ -6,6 +6,7 @@ import { logHold } from '../holdLog';
 import { TABLE_CARD_WIDTH, CARD_RATIO, settleTableCard, readableTableCardAngle, type TableSolid } from '../tableCardPlacement';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { QuestCard } from './QuestCard';
+import { animateQuestTravel } from './questCardTravel';
 import { TableCardLayers } from './TableCardLayers';
 import { useHeldVisual } from './useHeldVisual';
 import { tableObjectShadow, type TableLight } from '../protoLighting';
@@ -102,16 +103,10 @@ export function TableQuestCard({ placement, title, text, redeemed, onRedeem, tim
     ghost.classList.add('quest-card-flight');
     ghost.style.cssText = `position:fixed;left:${source.x}px;top:${source.y}px;width:${source.width}px;height:${source.height}px;z-index:60000;pointer-events:none;transform-origin:0 0;`;
     document.body.appendChild(ghost);
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const dx = destination.x - source.x, dy = destination.y - source.y;
-    const scale = destination.width / source.width;
-    const animation = trackGameAnimation(ghost.animate([
-      { transform: 'translate(0,0) scale(1)' },
-      ...(!reduced ? [{ transform: `translate(${dx / 2}px,${dy / 2 - 50}px) scale(${(1 + scale) / 2}) perspective(900px) rotateY(180deg) rotateZ(-10deg)`, offset: .5 }] : []),
-      { transform: `translate(${dx}px,${dy}px) scale(${scale}) perspective(900px) rotateY(${reduced ? 0 : 360}deg) rotateZ(0deg)` },
-    ], { duration: reduced ? 120 : 650, easing: 'ease-in-out' }));
-    animation.onfinish = () => { ghost.remove(); setLanded(true); };
-    return () => { animation.cancel(); ghost.remove(); };
+    ghost.style.left=`${destination.left}px`;ghost.style.top=`${destination.top}px`;
+    ghost.style.width=`${destination.width}px`;ghost.style.height=`${destination.height}px`;
+    const dispose=animateQuestTravel(ghost,new DOMRect(source.x,source.y,source.width,source.height),{onArrival:()=>{ghost.remove();setLanded(true);}});
+    return ()=>{dispose();ghost.remove();};
   }, [placement.questIndex]);
   return <div ref={ref} className="table-quest-card" data-offscreen-waypoint="quest" data-table-quest={placement.questIndex} data-camera-ignore="true" data-table-state={tableState} data-picked-up={pickedUp || undefined}
     style={{ left: `calc(50% + ${displayPosition.x}px)`, top: `calc(50% + ${displayPosition.y}px)`,

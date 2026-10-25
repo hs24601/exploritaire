@@ -17,17 +17,17 @@ const scenery = (name: string, style: ArtStyle) => scenerySprite(asset(`deprecat
 /** Only active runtime art: no source sheets, old versions or alternate style. */
 export function protoMediaAssets(style: ArtStyle) {
   const opening = [
+    ...(style === 'paint' ? [asset('runtime/environment/watercolor/v1/manaberry-sparse-khad-right-v1.png')] : []),
     // The first OK changes both the den's orbit view and Hero's body pose.
     // Warm these before play, ahead of combat/ability/card decoration.
     ...Object.entries(battleSpriteAssets(style)).filter(([key]) => key.startsWith('hero') && !key.startsWith('heroFlinch') && !key.startsWith('heroDown')).map(([, path]) => asset(path)),
     ...(style === 'paint' ? [...Object.values(HERO_EXPRESSION_ASSETS), ...Object.values(OPENING_HERO_ASSETS)].map(asset) : []),
     ...(style === 'paint' ? DEN_ORBIT_FILES.map(name => asset(`runtime/environment/watercolor/v1/${name}`)) : []),
     scenery('hero-den-standee-v3.png', style),
-    actorSprite(asset('deprecated/pixel/characters/hero.png'), style)!,
     actorSprite(asset('deprecated/pixel/characters/hero-sleeping.png'), style)!,
     ...['manaberry-sparse-standee-v1.png','manaberry-sparse-overhead-v1.png'].map(name => asset('runtime/environment/watercolor/v1/'+name)),
     asset('runtime/ui/quests/hero-snuffling-berries-v1.png'),
-    ...(style === 'paint' ? ['hero-leaving-cave-night-paint-v1.png', 'hero-snuffling-berries-night-paint-v5.png'].map(name => asset('runtime/ui/quests/'+name)) : []),
+    ...(style === 'paint' ? ['hero-den-overhead-simple-steps-v3.png', 'hero-leaving-cave-night-paint-v2.png', 'hero-snuffling-berries-night-paint-v5.png'].map(name => asset('runtime/ui/quests/'+name)) : []),
     ...['hero-den-topdown-v3.png', 'hero-den-ground-v3.png', 'impassable-mountain_topdown.svg',
       'berry-patch-topdown.svg', 'berry-patch-ground.svg', 'dirt-ground.png'].map(name => scenery(name, style)),
     actorSprite(asset('deprecated/pixel/characters/hero-sleeping-topdown.png'), style)!,

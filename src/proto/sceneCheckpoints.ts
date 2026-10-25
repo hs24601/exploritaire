@@ -1,3 +1,4 @@
+import {denseBerryChoicePending,chooseDenseBerry} from './travelJourney';
 import type { ProtoState } from './protoState';
 import { createDayScenario, dayOnePlan } from './dayScenarios';
 import { SAVED_TILE_DOCUMENT } from './tileEditor/runtime';
@@ -66,6 +67,7 @@ export function createSceneCheckpoint(id: SceneCheckpointId, document: TileDocum
       const journey = state.journey!;
       // Leave the last two required berry plays, exposing the optional bound pair.
       if (journey.completed >= journey.cards || exitOnly && journey.completed >= exitCards || exposeRoots && journey.completed >= journey.cards - 2) break;
+      if(denseBerryChoicePending(state)){state=chooseDenseBerry(state,'collect');state=paintTravelProgress(state,state.journey!.progress);continue;}
       const column = bestTravelMove(journey);
       if (column === null) throw new Error('The applied travel layout cannot be solved for this checkpoint.');
       state = playTravelCard(state, column, 'hero');

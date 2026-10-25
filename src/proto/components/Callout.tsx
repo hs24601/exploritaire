@@ -29,10 +29,13 @@ export type CalloutAnchor = CalloutPoint | (() => CalloutPoint | null);
 export interface CalloutProps {
   /** Overlay stacking layer; callers hosting a cinema can lift its dialogue. */
   layer?: number;
+  choices?: {label:string; onSelect:()=>void}[];
   text: string;
   marks?: CalloutMark[];
   /** Authored default, superseded by local edits and matching custom triggers. */
   camera?: CalloutCamera;
+  /** Conceal the opening bubble until its first camera action settles. */
+  waitForFirstCamera?: boolean;
   /** Zero-based bubble camera cues, fired only when the reader reaches that bubble. */
   bubbleCameras?: Record<number, CalloutCamera>;
   onBubbleChange?: (index: number) => void;
@@ -40,7 +43,11 @@ export interface CalloutProps {
   authoringId?: string;
   speaker?: string;
   alignment?: 'center' | 'after';
+  /** Short combat reactions stay attached to their foundation instead of searching the scene. */
+  placement?: 'free' | 'foundation';
   emoji?: CalloutEmoji;
+  /** Compact expression-only reaction with accessible dialogue retained. */
+  emojiOnly?: boolean;
   /** Let the speaking actor share the resolved (possibly edited) expression. */
   syncActorExpression?: boolean;
   anchor: CalloutAnchor;
@@ -67,8 +74,8 @@ export const Callout = memo(function Callout({ visible = true, ...props }: Callo
   return createPortal(<CalloutBody key={props.instanceKey} {...props} />, document.body);
 });
 
-function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, instanceKey, anchor, durationMs = 5000, onDismiss, layer = 120,
-  tone = 'dialogue', expression, camera, bubbleCameras, marks = EMPTY_MARKS, alignment = 'center', avoidActors, letterMs = 32, paused = false, onComplete, onBubbleChange }: Omit<CalloutProps, 'visible'>) {
+function CalloutBody({ text, speaker, emoji, emojiOnly = false, syncActorExpression, authoringId, instanceKey, anchor, durationMs = 5000, onDismiss, layer = 120,
+  choices, tone = 'dialogue', expression, camera, waitForFirstCamera = false, bubbleCameras, marks = EMPTY_MARKS, alignment = 'center', placement = 'free', avoidActors, letterMs = 32, paused = false, onComplete, onBubbleChange }: Omit<CalloutProps, 'visible'>) {
   const editing = useCalloutEditing();
   const [editorVisible, setEditorVisible] = useState(false);
   const id = authoringId ?? `${speaker ?? 'dialogue'}:${instanceKey ?? text}`;
@@ -90,9 +97,11 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
   const page = pages[Math.min(pageIndex, pages.length - 1)];
   const pageText = draft.text.slice(page.start, page.end);
   const speed = draft.letterMs ?? letterMs;
-  const count = reduced || (editing.enabled || editorVisible) || speed === 0 ? pageText.length : revealed;
+  const count = reduced || (editing.enabled || editorVisible) || speed === 0 ? pageText.length : Math.max(waitForFirstCamera ? [...pageText][0]?.length ?? 0 : 0, revealed);
   const ready = count >= pageText.length;
   const active = useRef(false);
+  const firstCameraStarted = useRef(false);
+  const firstCameraSettled = useRef(false);
   useEffect(() => {
     if (ready || paused || editorVisible || finished) return;
     let frame = 0, last = gameTime.now(), elapsed = 0;
@@ -119,6 +128,7 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
     if (paused || (editing.enabled || editorVisible) || finished) return;
     if (!ready) { setRevealed(pageText.length); return; }
     if (pageIndex < pages.length - 1) { setRevealed(0); setPageIndex(i => i + 1); return; }
+    if(choices?.length)return;
     setFinished(true); onComplete?.(); onDismiss?.();
   };
   emoji = draft.emoji;
@@ -141,6 +151,7 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
       if (!getCameraPlayback().available) { frame = gameTime.requestAnimationFrame(trigger); return; }
       cameraFired.current.add(pageIndex);
       playCalloutCamera(id, pageIndex === 0 ? cameraDraft.current.camera : bubbleCameras?.[pageIndex], pageIndex > 0 || (!customCamera && Boolean(camera)));
+      if (pageIndex === 0) firstCameraStarted.current = true;
     };
     frame = gameTime.requestAnimationFrame(trigger);
     return () => gameTime.cancelAnimationFrame(frame);
@@ -173,6 +184,12 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
       .filter(node => !node.hidden && getComputedStyle(node).visibility !== 'hidden' && getComputedStyle(node).display !== 'none')
       .map(node => node.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
     const place = () => {
+      if (waitForFirstCamera && !firstCameraSettled.current && !(editing.enabled || editorVisible)) {
+        const playback = getCameraPlayback();
+        if (!firstCameraStarted.current || !playback.available || playback.moving || playback.paused) { hide(); return; }
+        // Later bubble cameras must not conceal dialogue again.
+        firstCameraSettled.current = true;
+      }
       const point = typeof anchor === 'function' ? anchor() : anchor;
       const valid = point && Number.isFinite(point.x) && Number.isFinite(point.y);
       if (!valid) { hide(); return; }
@@ -190,7 +207,9 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
       const actors = avoidActors?.() ?? (projected
         ? [...projected.map(actor => actor.box), ...domActors(`.proto-map [data-board-piece="actor"]${unprojected}, .proto-map [data-interior-actor], .banks-rescue-cinema [data-scene-target]`)]
         : domActors('.proto-map [data-board-piece="actor"], .proto-map [data-interior-actor], .banks-rescue-cinema [data-scene-target]'));
-      const position = placeCallout(point, w, h, {left, top, right: left + width, bottom: top + height}, actors, alignment === 'after');
+      const position = placement==='foundation'
+        ? {x:Math.max(left+12,Math.min(left+width-w-12,point.x-w/2)),y:point.y-h-12,below:false,side:false}
+        : placeCallout(point, w, h, {left, top, right: left + width, bottom: top + height}, actors, alignment === 'after');
       if (!position) { hide(); return; }
       const {x, y, below, side} = position;
       if (element.style.visibility !== 'visible') element.style.visibility = 'visible';
@@ -222,10 +241,10 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
       window.visualViewport?.removeEventListener('resize', place);
       window.visualViewport?.removeEventListener('scroll', place);
     };
-  }, [anchor, alignment, avoidActors, finished]);
+  }, [anchor, alignment, placement, avoidActors, finished]);
 
   if (finished) return null;
-  return <><div ref={root} className="proto-callout" data-expression={Boolean(expression || emoji)} data-callout-id={id} data-callout-reference={calloutReference(id)} data-tone={tone} data-page={pageIndex + 1} data-pages={pages.length} data-revealing={!ready} style={{ visibility: 'hidden', zIndex: layer }}>
+  return <><div ref={root} className="proto-callout" data-placement={placement} data-emoji-only={emojiOnly} data-expression={Boolean(expression || emoji)} data-callout-id={id} data-callout-reference={calloutReference(id)} data-tone={tone} data-page={pageIndex + 1} data-pages={pages.length} data-revealing={!ready} style={{ visibility: 'hidden', zIndex: layer }}>
     <div className="proto-callout-content">
       <button type="button" className="proto-callout-advance" disabled={paused || (editing.enabled || editorVisible)} aria-label={`${speaker ? speaker + ': ' : ''}${pageText} — ${!ready ? 'Reveal text' : pageIndex < pages.length - 1 ? 'Next bubble' : onComplete ? 'Continue' : 'Close dialogue'}`} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); advance(); }} />
       {(expression || emoji) && <div className="proto-callout-expression" aria-hidden="true">
@@ -238,11 +257,13 @@ function CalloutBody({ text, speaker, emoji, syncActorExpression, authoringId, i
         <span className="proto-callout-accessible" role="status" aria-live="polite" aria-atomic="true">{speaker ? speaker + ': ' : ''}{pageText}</span>
       </div>
       {pages.length > 1 && <span className="proto-callout-page" aria-label={`Bubble ${pageIndex + 1} of ${pages.length}`}>({pageIndex + 1}/{pages.length})</span>}
-      <button type="button" className="proto-callout-next" disabled={paused || (editing.enabled || editorVisible)} aria-label={!ready ? 'Reveal text' : pageIndex < pages.length - 1 ? 'Next bubble' : onComplete ? 'Continue' : 'Close dialogue'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); advance(); }}>
+      {ready && pageIndex===pages.length-1 && choices?.length ? <div className="proto-callout-choices" role="group" aria-label="Choose what Hero does">{choices.map(choice=><button key={choice.label} type="button" disabled={paused || (editing.enabled || editorVisible)} onClick={e=>{e.stopPropagation();choice.onSelect();}}>{choice.label}</button>)}</div> : <button type="button" className="proto-callout-next" disabled={paused || (editing.enabled || editorVisible)} aria-label={!ready ? 'Reveal text' : pageIndex < pages.length - 1 ? 'Next bubble' : onComplete ? 'Continue' : 'Close dialogue'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); advance(); }}>
         <span aria-hidden="true"><i>.</i><i>.</i><i>.</i></span>
       </button>
-      {import.meta.env.DEV && <button type="button" className="proto-callout-edit" data-editor-safe="true" aria-label="Edit callout" title="Edit callout" onClick={() => setEditorVisible(true)}>✎</button>}
+      }
+      {import.meta.env.DEV && !emojiOnly && <button type="button" className="proto-callout-edit" data-editor-safe="true" aria-label="Edit callout" title="Edit callout" onClick={() => setEditorVisible(true)}>✎</button>}
     </div>
     {import.meta.env.DEV && editing.enabled && <div className="proto-callout-dev" aria-label="Callout configuration reference">Dev · Dialog {calloutReference(id)}{calloutReference(id) !== id ? ` · ${id}` : ''} · bubble {pageIndex + 1}/{pages.length}</div>}
-  </div>{import.meta.env.DEV && editorVisible && <CalloutEditor authoringId={id} initial={draft} speaker={speaker} tone={tone} onClose={() => setEditorVisible(false)} onSave={value => editing.save(id, value)} onReset={() => editing.save(id, null)} />}</>;
+  </div>{import.meta.env.DEV && editorVisible && <CalloutEditor source={root} authoringId={id} initial={draft} speaker={speaker} tone={tone} onClose={() => setEditorVisible(false)} onSave={value => editing.save(id, value)} onReset={() => editing.save(id, null)} />}</>;
 }
+

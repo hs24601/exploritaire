@@ -77,14 +77,15 @@ function DraftPreview({ draft, speaker, tone }: { draft: CalloutDraft; speaker?:
     <small>Unsaved draft · text, expression and effects update as you edit.</small>
   </section>;
 }
-export function CalloutEditor({ authoringId, initial, speaker, tone, onSave, onReset, onClose }: { authoringId?: string; initial: CalloutDraft; speaker?: string; tone?: string; onSave: (draft: CalloutDraft) => void; onReset: () => void; onClose: () => void }) {
+export function CalloutEditor({ authoringId, source, initial, speaker, tone, onSave, onReset, onClose }: { authoringId?: string; source?: { current: HTMLElement | null }; initial: CalloutDraft; speaker?: string; tone?: string; onSave: (draft: CalloutDraft) => void | Promise<void>; onReset: () => void | Promise<void>; onClose: () => void }) {
   const [draft, setDraft] = useState(initial), [selection, setSelection] = useState([0, 0]), [error, setError] = useState('');
   const [section, setSection] = useState('Text & effects');
-  const floating = useEditorDrag();
+  const floating = useEditorDrag(source);
   const dialog = useRef<HTMLDialogElement>(null), text = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { const previous = document.activeElement as HTMLElement; dialog.current?.showModal(); return () => { dialog.current?.close(); if (previous?.isConnected) previous.focus(); }; }, []);
   const rememberSelection = () => { if (text.current) setSelection([text.current.selectionStart, text.current.selectionEnd]); };
-  const commit = (action: () => void) => { try { action(); onClose(); } catch (e) { setError(e instanceof Error ? e.message : 'Could not save in this browser. Your draft is still open; try again.'); } };
+  const [saving, setSaving] = useState(false);
+  const commit = async (action: () => void | Promise<void>) => { setSaving(true); try { await action(); onClose(); } catch (e) { setError(e instanceof Error ? e.message : 'Could not save to disk. Your draft is still open; try again.'); } finally { setSaving(false); } };
   const actor = draft.emoji?.actor ?? 'hero';
   const emotions = actor === 'hero' ? HERO_EMOJI_EMOTIONS : actor === 'banks' ? BANKS_EMOJI_EMOTIONS : MOCHI_EMOJI_EMOTIONS;
   const selectedMark = draft.marks.find(m => m.start <= selection[0] && m.end >= selection[1] && selection[1] > selection[0]);
@@ -97,8 +98,8 @@ export function CalloutEditor({ authoringId, initial, speaker, tone, onSave, onR
     text.current?.focus(); text.current?.setSelectionRange(selection[0], selection[1]);
   };
   return <dialog ref={node => { dialog.current = node; floating.ref.current = node; }} style={floating.style} data-camera-ignore="true" onWheel={e => e.stopPropagation()} onClick={e => e.stopPropagation()} className="callout-editor" data-editor-safe="true" aria-labelledby="callout-editor-title" onCancel={e => { e.preventDefault(); onClose(); }} onPointerDown={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-    <header className="editor-drag-handle" {...floating.handle}><h2 id="callout-editor-title">Edit callout</h2><button type="button" onClick={onClose} aria-label="Close callout editor">×</button></header>
-    <footer className="editor-command-bar"><button type="button" onClick={() => commit(onReset)}>Restore original</button><button type="button" onClick={onClose}>Cancel</button><button type="button" disabled={!draft.text.trim()} onClick={() => commit(() => onSave(draft))}>Save callout</button></footer>
+    <header className="editor-drag-handle" {...floating.handle}><h2 id="callout-editor-title">Edit callout{authoringId && <span className="callout-editor-id"> · {authoringId}</span>}</h2><button type="button" onClick={onClose} aria-label="Close callout editor">×</button></header>
+    <footer className="editor-command-bar"><button type="button" disabled={saving} onClick={() => commit(onReset)}>Restore original</button><button type="button" onClick={onClose}>Cancel</button><button type="button" disabled={saving || !draft.text.trim()} onClick={() => commit(() => onSave(draft))}>Save callout</button></footer>
     <EditorTabs names={['Text & effects', 'Expression', 'Camera', 'Preview']} value={section} onChange={setSection} label="Callout sections" />
     <div className="editor-section" hidden={section !== 'Expression'}>
     <p>Choose an expression, then select words in the text to give them an effect.</p>
@@ -123,8 +124,9 @@ export function CalloutEditor({ authoringId, initial, speaker, tone, onSave, onR
     <CalloutCameraFields value={draft.camera} onChange={camera => setDraft({ ...draft, camera })} />
     </div><div className="editor-section" hidden={section !== 'Preview'}>
     <p>Preview each bubble below, or replay its reveal at the selected speed. Camera framing is applied in the scene when the saved callout plays.</p>
-    <p>Save callout stores this draft locally in this browser, across scenario restarts and reloads.</p>
+    <p>Save callout writes permanent project data shared by every testing device.</p>
     </div><DraftPreview draft={draft} speaker={speaker} tone={tone} />{error && <p role="alert">{error}</p>}
 
   </dialog>;
 }
+

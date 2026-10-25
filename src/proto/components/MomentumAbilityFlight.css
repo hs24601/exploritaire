@@ -1,0 +1,7 @@
+.ability-cast { position:fixed; inset:0; z-index:61000; pointer-events:none; }
+.ability-cast__shell { position:absolute; left:0; top:0; transform-origin:center; }
+.ability-cast .ability-cast__card { position:relative; left:0; top:0; transform:none; transition:none; margin:0; }
+.ability-cast .ability-cast__impact { position:fixed; inset:auto; border-radius:14px; overflow:hidden; z-index:5; }
+.ability-cast__impact .food-collection-fx__foil { background:repeating-linear-gradient(125deg,#ff252580 0%,#ffae9cbb 14%,#e2234abb 28%,#ff4c60aa 42%,#ffcab8bb 56%,#ff252580 70%); background-size:250% 250%; animation-delay:0ms; }
+
+.ability-cast > .battle-fx-bit { position:fixed; pointer-events:none; }

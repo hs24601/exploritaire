@@ -1,5 +1,8 @@
-html[data-global-paused='true'] *,
-html[data-global-paused='true'] *::before,
-html[data-global-paused='true'] *::after { animation-play-state:paused !important; }
+html[data-global-paused='true'] *:not([data-media-loading], [data-media-loading] *),
+html[data-global-paused='true'] *:not([data-media-loading], [data-media-loading] *)::before,
+html[data-global-paused='true'] *:not([data-media-loading], [data-media-loading] *)::after { animation-play-state:paused !important; }
 html[data-global-paused='true'] .proto-play-area { outline:2px solid #dcc47b99; outline-offset:-2px; }
 [data-global-pause-control][aria-pressed='true'] { background:#514730; border-color:#f1d489; }
+/* The arena canvas is shared behind both panes; tint it once, separately from cards. */
+html[data-global-paused='true'] .combat-shared-view canvas,
+html[data-global-paused='true'] .battle-field { filter:sepia(1); }

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "callouts": {
+    "day01.opening": {
+      "text": "...breakfast!",
+      "emoji": {
+        "actor": "hero",
+        "emotion": "happy"
+      },
+      "marks": [
+        {
+          "start": 3,
+          "end": 12,
+          "effect": "wave",
+          "color": "#ffd500"
+        }
+      ],
+      "camera": {
+        "kind": "choreography",
+        "id": "story.day01.opening"
+      },
+      "letterMs": 32
+    }
+  },
+  "cameras": {},
+  "emotions": {}
+}

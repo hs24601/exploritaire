@@ -28,6 +28,19 @@ export function GameTooltip() {
   const parked = useRef<{ el: Element; title: string } | null>(null);
 
   useEffect(() => {
+    if (!tip?.anchor.hasAttribute('data-game-tooltip')) return;
+    // A defeated enemy or a changed intent must not leave an obsolete callout.
+    const observer = new MutationObserver(() => {
+      if (!tip.anchor.isConnected) { tipRef.current=null; setTip(null); return; }
+      const text=tip.anchor.getAttribute('data-game-tooltip') ?? '';
+      if(text!==tip.text){const next={anchor:tip.anchor,text};tipRef.current=next;setTip(next);}
+    });
+    observer.observe(document.body,{childList:true,subtree:true});
+    observer.observe(tip.anchor,{attributes:true,attributeFilter:['data-game-tooltip']});
+    return () => observer.disconnect();
+  }, [tip]);
+
+  useEffect(() => {
     const restore = () => {
       const current = parked.current;
       parked.current = null;
@@ -38,6 +51,7 @@ export function GameTooltip() {
     };
     // Take the title off the element now, so the native tooltip never shows.
     const park = (el: Element) => {
+      if (el.hasAttribute('data-game-tooltip')) return el.getAttribute('data-game-tooltip') ?? '';
       if (parked.current?.el === el) return parked.current.title;
       restore();
       const title = el.getAttribute('title') ?? '';
@@ -46,32 +60,35 @@ export function GameTooltip() {
       return title;
     };
     // The bubble goes, but a hovered element keeps its title parked until the pointer leaves.
-    const hideBubble = () => { gameTime.clearTimeout(timer.current); tipRef.current = null; setTip(null); };
+    const hideBubble = () => { gameTime.clearTimeout(timer.current); if(tipRef.current?.anchor.hasAttribute('data-game-tooltip'))tipRef.current.anchor.removeAttribute('aria-describedby'); tipRef.current = null; setTip(null); };
     const hide = () => { hideBubble(); restore(); };
     const show = (el: Element) => {
+      if (el.hasAttribute('data-combat-inspected')) return;
       const text = park(el).trim();
-      if (!TOOLTIPS_ENABLED) return;
+      if (!TOOLTIPS_ENABLED && !el.hasAttribute('data-game-tooltip')) return;
       if (!text || !el.isConnected) { hide(); return; }
       el.setAttribute('aria-describedby', TIP_ID);
       tipRef.current = { anchor: el, text };
       setTip(tipRef.current);
     };
-    const titled = (target: EventTarget | null) => target instanceof Element ? target.closest('[title]') : null;
+    const titled = (target: EventTarget | null) => target instanceof Element ? target.closest('[title], [data-game-tooltip]') : null;
 
     const over = (event: PointerEvent) => {
       if (event.pointerType === 'touch') return;
       const el = titled(event.target);
       if (!el || el === parked.current?.el) return;
+      if (event.relatedTarget instanceof Node && el.contains(event.relatedTarget)) return;
       hide();
       park(el);
       timer.current = gameTime.setTimeout(() => show(el), HOVER_DELAY);
     };
     const out = (event: PointerEvent) => {
       if (event.pointerType === 'touch') return;
-      const anchor = parked.current?.el;
+      const anchor = parked.current?.el ?? tipRef.current?.anchor;
       if (anchor && !(event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget))) hide();
     };
 
+    let touchIntent=false;
     let press: { x: number; y: number; el: Element; shown: boolean } | null = null;
     const down = (event: PointerEvent) => {
       if (event.pointerType !== 'touch') { hideBubble(); return; }
@@ -80,6 +97,13 @@ export function GameTooltip() {
       hide();
       const el = titled(event.target);
       if (!el) { press = null; return; }
+      // Intent summaries have no gameplay action: one tap opens their explanation.
+      if (el.hasAttribute('data-game-tooltip')) {
+        touchIntent=true;
+        press = null;
+        if (wasShowing !== el) show(el);
+        return;
+      }
       park(el);
       press = { x: event.clientX, y: event.clientY, el, shown: false };
       if (!interactive(el) && wasShowing !== el) { press.shown = true; show(el); timer.current = gameTime.setTimeout(hide, TOUCH_SHOW_MS); return; }
@@ -105,6 +129,11 @@ export function GameTooltip() {
       if (tipRef.current?.anchor !== event.target) return;
       if (parked.current?.el.matches(':hover')) hideBubble(); else hide();
     };
+    const click = (event: MouseEvent) => {
+      if(touchIntent){touchIntent=false;return;}
+      const el = titled(event.target);
+      if (el?.hasAttribute('data-game-tooltip') && !tipRef.current) show(el);
+    };
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') hideBubble(); };
     const contextMenu = (event: Event) => { if (press) event.preventDefault(); };
 
@@ -117,6 +146,7 @@ export function GameTooltip() {
     document.addEventListener('focusin', focus);
     document.addEventListener('focusout', blur);
     document.addEventListener('keydown', key);
+    document.addEventListener('click', click);
     document.addEventListener('contextmenu', contextMenu, true);
     window.addEventListener('scroll', hideBubble, true);
     window.addEventListener('wheel', hideBubble, { passive: true });
@@ -132,6 +162,7 @@ export function GameTooltip() {
       document.removeEventListener('focusin', focus);
       document.removeEventListener('focusout', blur);
       document.removeEventListener('keydown', key);
+      document.removeEventListener('click', click);
       document.removeEventListener('contextmenu', contextMenu, true);
       window.removeEventListener('scroll', hideBubble, true);
       window.removeEventListener('wheel', hideBubble);
@@ -143,21 +174,30 @@ export function GameTooltip() {
 }
 
 /** Sits above its anchor, flips below when there's no room, and stays on screen. */
-function TooltipBubble({ tip }: { tip: Tip }) {
+export function TooltipBubble({ tip, inspection = false }: { tip: Tip; inspection?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<{ left: number; top: number; arrow: number; below: boolean } | null>(null);
   useLayoutEffect(() => {
+    const position = () => {
     const target = tip.anchor.getBoundingClientRect();
     const bubble = ref.current?.getBoundingClientRect();
     if (!bubble) return;
     const below = target.top - bubble.height - MARGIN < MARGIN;
     const centre = target.left + target.width / 2;
     const left = Math.max(MARGIN, Math.min(window.innerWidth - bubble.width - MARGIN, centre - bubble.width / 2));
-    const top = below ? Math.min(window.innerHeight - bubble.height - MARGIN, target.bottom + MARGIN) : target.top - bubble.height - MARGIN;
+    const top = Math.max(MARGIN, below ? Math.min(window.innerHeight - bubble.height - MARGIN, target.bottom + MARGIN) : target.top - bubble.height - MARGIN);
     setPlace({ left, top, below, arrow: Math.max(12, Math.min(bubble.width - 12, centre - left)) });
+    };
+    position();
+    const observer = new ResizeObserver(position);
+    observer.observe(tip.anchor);
+    if (ref.current) observer.observe(ref.current);
+    window.addEventListener('resize', position);
+    window.addEventListener('scroll', position, true);
+    return () => { observer.disconnect(); window.removeEventListener('resize', position); window.removeEventListener('scroll', position, true); };
   }, [tip]);
-  return <div ref={ref} id={TIP_ID} role="tooltip" className={`game-tooltip${place?.below ? ' game-tooltip--below' : ''}`}
-    style={place ? { left: place.left, top: place.top, ['--arrow-x' as string]: `${place.arrow}px` } : { left: 0, top: 0, visibility: 'hidden' }}>
+  return <div ref={ref} id={inspection ? 'combat-inspection-tooltip' : TIP_ID} role="tooltip" className={`game-tooltip${inspection ? ' combat-inspection' : ''}${place?.below ? ' game-tooltip--below' : ''}`}
+    style={{ ...(place ? { left: place.left, top: place.top, ['--arrow-x' as string]: `${place.arrow}px` } : { left: 0, top: 0, visibility: 'hidden' as const }), ...(inspection ? { animation: 'none' } : {}) }}>
     {tip.text}
   </div>;
 }

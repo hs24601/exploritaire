@@ -2,7 +2,7 @@ import type { BiomeTileState, Card, ProtoState } from './protoState';
 import { createInitialState } from './rules/setup';
 import { SUPPER_MANA, OVERNIGHT_LIGHT_MANA, isHome } from './rules/ordinaryDay';
 import { discoverActorTiles } from './tileDiscovery';
-import { planTravel, traversalProfile, type TravelPlan } from './travelJourney';
+import { planTravel, playtestTravelPlan, traversalProfile, type TravelPlan } from './travelJourney';
 import { findGridPath, type CellCost } from './gridPathfinding';
 import { TABLE_GRID } from './gridCoordinates';
 import { passageStepAllowed, terrainAtCell } from './terrainPassages';
@@ -109,7 +109,7 @@ export function dayOneAllowsPlan(state: ProtoState, plan: TravelPlan) {
   const target = state.biomeTiles.find(tile=>tile.id===dayOneDestination(state));
   const hero = state.worldActors.find(actor=>actor.id==='hero');
   const start=plan.path[0],end=plan.path[plan.path.length-1],cost=routeCost(state);
-  if(!target||!hero||!start||!end||start.x!==hero.position.x||start.y!==hero.position.y||end.x!==target.position.x||end.y!==target.position.y||plan.estimate>(state.travelStamina??0)) return false;
+  if(!target||!hero||!start||!end||start.x!==hero.position.x||start.y!==hero.position.y||end.x!==target.position.x||end.y!==target.position.y||playtestTravelPlan(plan).estimate>(state.travelStamina??0)) return false;
   for(let i=1;i<plan.path.length;i++){
     const from=TABLE_GRID.atWorld(plan.path[i-1]),to=TABLE_GRID.atWorld(plan.path[i]);
     if(from.column!==to.column&&from.row!==to.row)return false;
@@ -143,8 +143,8 @@ export function dayOneThought(s:ProtoState) {
   if(s.dayScenario==='day02')return s.dayTwoAmbush?'The mana stirred something in the dark.':dayTwoPatchForaged(s)?'Only one fresh manaberry. I need two for supper, and I must keep yesterday’s berry to light my way. I will have to search the darker woods.':'Yesterday’s manaberry still lights my way. The bush outside is bare now. I should check the denser patch for food.';
   if(s.ordinaryDay?.complete)return 'The nights feel colder, too. I made it home, and kept one manaberry to light tomorrow’s search.';
   if(s.ordinaryDay?.bedtime)return 'Cold outside. Safe in my hollow. One manaberry is still glowing beside me for tomorrow.';
-  if(s.ordinaryDay?.supper)return 'Two manaberries for supper. I will keep the last one to light my way to food tomorrow.';
-  if(dayOneReturning(s))return isHome(s)?'Home before dark. Two for supper, and one to keep glowing for tomorrow.':'Three manaberries. Two for supper and one for tomorrow’s light. I need to get home before it gets too dark.';
+  if(s.ordinaryDay?.supper)return 'Two manaberries for supper. I will keep the others for tomorrow, and one can light my way.';
+  if(dayOneReturning(s))return isHome(s)?'Home before dark. Two for supper, and enough to keep some glowing for tomorrow.':'Enough manaberries for supper, with some to save for tomorrow. I need to get home before it gets too dark.';
   const sparse = s.biomeTiles.find(tile => tile.id === s.dayScenarioTiles?.sparsePatchId);
   if(sparse?.berryHarvested && s.selectedBiomeId !== s.dayScenarioTiles?.patchId)return 'There used to be enough manaberries right outside my den. I hardly had to wander at all. Now they are harder and harder to find... I will need to try the denser patch.';
   if(s.haul.mana>0)return 'This little glow will help me find my way. I still need two more manaberries for supper.';

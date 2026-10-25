@@ -187,3 +187,5 @@ fieldset.battle-controls { min-width: 0; margin: 0; padding: 0; border: 0; }
 
 .battle-field__foundation[data-preview='faint'] { outline: 2px solid #ffd86b66; outline-offset: 3px; }
 .battle-field__foundation[data-preview='focus'] { outline: 3px solid #ffd86b; outline-offset: 3px; }
+
+.battle-field__status-actions { display:contents; }

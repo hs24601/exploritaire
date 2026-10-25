@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createTableauGroundCover } from './tableauGroundCover';
+import { createTableauGroundCover, tintKhadGround } from './tableauGroundCover';
 import { createActorPeekThree } from './actorPeekThree';
 import { createActorEnvironmentLight } from './actorEnvironmentLight';
 import { globalLightsEnabled } from './globalLighting';
@@ -10,7 +10,10 @@ type ManaFruitPoint = { x: number; y: number; size: number };
  * keeps the mana halo but omits the overlaid fruit, because the art already has it. */
 export type ExtraLandscapeProp = LandscapeProp & { texture: THREE.Texture; manaFruit?: readonly ManaFruitPoint[]; paintedFruit?: boolean };
 export type TableauLandscapeOptions = { groundCover?: { pixel: boolean; palette?: 'woodland' | 'dirt' }; groundColor?: number; props?: readonly LandscapeProp[]; berryFruit?: boolean; fruitTexture?: THREE.Texture; manaFruit?: ManaFruitPoint[];
+  khadGroundTint?: boolean;
   extraProps?: readonly ExtraLandscapeProp[];
+  /** Per-tree cutouts for the default forest (procedural woods variants), cycled tree by tree; `texture` otherwise. */
+  treeTextures?: readonly THREE.Texture[];
   /** Sandbox preview only: shade cutouts with the scene lights. Game scenery stays unlit. */
   litProps?: boolean };
 
@@ -69,6 +72,7 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
   const stars = new THREE.Points(starGeometry, material(new THREE.PointsMaterial({color: 0xcbdfff, size: 1.5, sizeAttenuation: false, fog: false, transparent: true, opacity: .82, depthWrite: false})));
   stars.visible = woods; root.add(stars);
   const ground = new THREE.Mesh(geometry(new THREE.PlaneGeometry(70, 70)), material(new THREE.MeshLambertMaterial({color: options.groundColor ?? 0x283a36})));
+  if (options.khadGroundTint) tintKhadGround(ground.material);
   ground.rotation.x = -Math.PI / 2; root.add(ground);
   const hemisphere = new THREE.HemisphereLight(0xb8d9e9, 0x293724, woods ? 1.2 : 2); root.add(hemisphere);
   const moon = new THREE.DirectionalLight(0x98bde0, woods ? 1.4 : 2); moon.position.set(-5, 10, 3); root.add(moon);
@@ -81,7 +85,7 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
     terrain.computeVertexNormals(); root.add(new THREE.Mesh(terrain, material(new THREE.MeshLambertMaterial({color: 0x182b2c}))));
   }
   const square = geometry(new THREE.PlaneGeometry(1, 1));
-  const groundCover = options.groundCover ? createTableauGroundCover(root, options.groundCover.pixel, options.groundCover.palette) : undefined;
+  const groundCover = options.groundCover ? createTableauGroundCover(root, options.groundCover.pixel, options.groundCover.palette, undefined, options.khadGroundTint) : undefined;
   // Ground flecks give each sweep a stable depth reference.
   for (let i = 0; i < (groundCover ? 0 : 180); i++) {
     const fleck = new THREE.Mesh(square, flat(i % 3 ? 0x344b40 : 0x53604c));
@@ -158,7 +162,8 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
   };
   const trees = options.props ? options.props.map(({x, z, height, tint}) => billboard(texture, x, z, height, tint)) : Array.from({length: woods ? 90 : 16}, (_, i) => {
     const layer = Math.floor(i / 30), angle = i * 2.399963, radius = woods ? 14 + layer * 10 + Math.sin(i * 7.3) * 2 : 20;
-    return billboard(texture, Math.cos(angle) * radius, Math.sin(angle) * radius, woods ? 8 + (i % 5) * 1.1 : 5 + i % 3, woods ? [0xacc6c7, 0x718f9e, 0x486779][layer] : 0x77958a);
+    const art = options.treeTextures?.length ? options.treeTextures[(i * 7 + layer) % options.treeTextures.length] : texture;
+    return billboard(art, Math.cos(angle) * radius, Math.sin(angle) * radius, woods ? 8 + (i % 5) * 1.1 : 5 + i % 3, woods ? [0xacc6c7, 0x718f9e, 0x486779][layer] : 0x77958a);
   });
   const extraHalos = fruitHalos.length, extraFruit = fruitMeshes.length;
   for (const extra of options.extraProps ?? []) trees.push(billboard(extra.texture, extra.x, extra.z, extra.height, extra.tint, { mana: extra.manaFruit, painted: extra.paintedFruit }));

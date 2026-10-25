@@ -1,3 +1,5 @@
+import { DenQuestDiscovery } from './DenQuestDiscovery';
+import { ScenarioCameraDetails } from './ScenarioCameraDetails';
 import { ActorDragGhost } from './ActorDragGhost';
 import { berryScenerySprite } from '../berryPresentation';
 import { OpeningCardDeal } from './OpeningCardDeal';
@@ -22,7 +24,8 @@ import { useTileInspectionHold } from './useTileInspectionHold';
 import { exposedTravelCardAt } from './travelCardHit';
 import { TravelWorldContext } from './TravelMapTableau';
 import { TravelDestinationActions } from './TravelDestinationActions';
-import { planTravel, travelTableauHeld, traversalProfile, type TravelJourney, type TravelPlan } from '../travelJourney';
+import { planTravel as planTraversal, playtestTravelPlan, travelTableauHeld, traversalProfile, type TravelJourney, type TravelPlan } from '../travelJourney';
+const planTravel=(...args:Parameters<typeof planTraversal>)=>playtestTravelPlan(planTraversal(...args));
 import { sameTravelCell, addTravelWaypoint, routeThroughTravelCells } from '../travelRouting';
 import { WoodlandGround } from './WoodlandGround';
 import { standeeRasterScale } from '../spriteRaster';
@@ -37,7 +40,8 @@ import { actorCloseupCamera, actorCloseupTilt, type ActorCloseup } from '../acto
 import { useArtStyle } from '../artStyle';
 import { actorSprite } from '../actorArt';
 import { RestBobtail } from './RestBobtail';
-import { isPaintedScenerySprite, scenerySprite, sceneryWorldHeading } from '../sceneryArt';
+import { isPaintedScenerySprite, paintPineSprite, scenerySprite, sceneryWorldHeading } from '../sceneryArt';
+import { useProceduralWoodsVersion } from '../proceduralWoods';
 import { directionalScenery } from '../directionalScenery';
 import { useDirectionalScenery } from './useDirectionalScenery';
 import { DirectionalSceneryView } from './DirectionalSceneryView';
@@ -241,6 +245,8 @@ type ProtoMapProps = {
   actorCard?: React.ReactNode;
   sceneId?: string;
   openingCardDeal?: boolean;
+  openingQuestPosition?: {x:number;y:number};
+  onDiscoverOpeningQuest?: () => void;
   settings?: React.ReactNode | ((travelControls: React.ReactNode) => React.ReactNode);
   travelTableau?: React.ReactNode;
   onEditCell?: (cell: GridCell) => void;
@@ -327,7 +333,7 @@ export const ProtoMap = ({
   onInspectActor, onInspectTile,
   questCards = [],
   storyCard,
-  actorCard, sceneId, openingCardDeal = false, settings, travelTableau,
+  actorCard, sceneId, openingCardDeal = false, openingQuestPosition, onDiscoverOpeningQuest, settings, travelTableau,
   questTitles = [],
   questTexts = [],
   questRewardLabels = [],
@@ -345,8 +351,10 @@ export const ProtoMap = ({
   const artStyle=useArtStyle();
   const editingRef = useRef(Boolean(onEditCell));
   editingRef.current = Boolean(onEditCell);
+  // Paint pines are baked procedurally at load; re-render when the set lands.
+  const woodsVersion=useProceduralWoodsVersion();
   const biomeTiles=useMemo(()=>sourceBiomeTiles.map(tile=>({...tile,sprite:tile.id==='day-one-tree'&&artStyle==='paint'
-    ? `${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/pine-sprite-v1.png` : scenerySprite(tile.sprite,artStyle)})),[sourceBiomeTiles,artStyle]);
+    ? paintPineSprite(tile.id) : scenerySprite(tile.sprite,artStyle,tile.id)})),[sourceBiomeTiles,artStyle,woodsVersion]);
   // Pop-up-book camera: the table tilts back and pieces stand up as cardboard standees.
   // Sprites that failed to load fall back to the cardboard token.
   const [failedSprites, setFailedSprites] = useState<string[]>([]);
@@ -1262,7 +1270,9 @@ export const ProtoMap = ({
         travelingActorRef.current=null; liveTravel.current=null; travelPose.current=null; setTravel(null);
         return;
       }
-      if (progress < 1 || journeyRef.current && travelTableauHeld(journeyRef.current) || journeyRef.current?.pendingSearch !== undefined || journeyRef.current?.search) {
+      const waitingForGathering=journeyRef.current?.traversalSuspended && journeyRef.current.completed<journeyRef.current.cards;
+      if(progress>=1 && waitingForGathering && (journeyRef.current?.walkedProgress??0)<1)onTravelPaint?.(1);
+      if (progress < 1 || waitingForGathering || journeyRef.current && travelTableauHeld(journeyRef.current) || journeyRef.current?.pendingSearch !== undefined || journeyRef.current?.search) {
         frame = gameTime.requestAnimationFrame(tick);
       } else {
         const destination = travel.path[travel.path.length - 1] ?? travel.path[0];
@@ -1560,7 +1570,7 @@ export const ProtoMap = ({
       // Author placement in a fixed world frame; live label fitting must not
       // move or resize physical scenery when the camera turns.
       scenery: (()=>{const scenery=BIOME_EDGE_SCENERY[tile.terrain === 'water' ? 'water' : 'woods'];
-        return {side:{...scenery.side,src:scenerySprite(scenery.side.src,artStyle)!},front:{...scenery.front,src:scenerySprite(scenery.front.src,artStyle)!}};})(),
+        return {side:{...scenery.side,src:scenerySprite(scenery.side.src,artStyle,`${tile.id}:side`)!},front:{...scenery.front,src:scenerySprite(scenery.front.src,artStyle,`${tile.id}:front`)!}};})(),
       label: { left: -area.width * .25, right: area.width * .25, top: -8, bottom: 8 } };
   });
   const tableScenery = upright ? layoutTableScenery(sceneryTiles, 60, 0) : {};
@@ -1584,7 +1594,7 @@ export const ProtoMap = ({
         tableScenery[tile.id] = [sparseBerryBush(`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/manaberry-sparse-standee-v1.png`, area.width, area.height, sparseApproaches.current.get(key)!)];
         continue;
       }
-      tableScenery[tile.id] = populateScenery({id:'tree',edge:'front',src:tile.tileType === 'berry-patch' ? tile.sprite : `${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/pine-sprite-v1.png`,x:0,y:0,width:24,height:36,flip:false},
+      tableScenery[tile.id] = populateScenery({id:'tree',edge:'front',src:tile.tileType === 'berry-patch' ? tile.sprite : artStyle === 'paint' ? paintPineSprite(tile.id) : `${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/pine-sprite-v1.png`,x:0,y:0,width:24,height:36,flip:false},
         populationDensity(tile.populationDensity, tile.tileType !== 'berry-patch'), area.width, area.height,
         sketchPending(tile) ? sketchApproach(area,sketchTraveler(area)) : undefined);
       continue;
@@ -1905,6 +1915,7 @@ export const ProtoMap = ({
           <div className="proto-map-zoom" aria-live="polite">{closeup ? 'Close-up ' + (camera.cameraState.scale / closeup.camera.scale).toFixed(1) + '×' : 'Zoom ' + Math.round((camera.cameraState.scale / CLASSICPLUS_ZOOM_REFERENCE_SCALE) * 100) + '%'}</div>
         </div>
       <div className="proto-map-toolbar" role="group" aria-label="Map camera controls">
+        <ScenarioCameraDetails compact />
         <button type="button" className="proto-map-camera-button" aria-pressed={tilted} aria-label={tilted ? 'Flat camera view' : 'Tilt camera view'} title={tilted ? 'Flat camera view · O' : 'Tilt camera view · O'} onClick={() => { if (closeup) exitCloseup(false); onTiltedChange?.(!tilted); }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={tilted ? 'M4 4h16v16H4z M4 12h16 M12 4v16' : 'M3 17l5-10h8l5 10z M6 12h12 M12 7v10'} /></svg></button>
         {/* Turn the table 45° (Q / E); a double-click turns it back to 0°. */}
         <button type="button" className="proto-map-camera-button" disabled={inactive} aria-label="Turn table left" title="Turn table left (Q) · double-click to straighten" onClick={() => camera.spinStep(-45)} onDoubleClick={unspin}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 2 8 M4 4v6h6" /></svg></button>
@@ -2072,6 +2083,7 @@ export const ProtoMap = ({
             className={`proto-cell-cue${dragPlan.route ? '' : ' proto-cell-cue--blocked'}`}
             style={{ left: `calc(50% + ${TABLE_GRID.center(dragPlan.cell).x}px)`, top: `calc(50% + ${TABLE_GRID.center(dragPlan.cell).y}px)` }} /> : null}
           <div className="table-grid-origin" data-grid-landmark="true-center" data-grid-reference={TRUE_CENTER.reference} aria-hidden="true" style={{left:'50%',top:'50%',width:CLASSICPLUS_GRID_SIZE,height:CLASSICPLUS_GRID_SIZE}}>＋</div>
+          {openingQuestPosition && <DenQuestDiscovery paused={Boolean(journey?.paused)} onDiscover={()=>{ onDiscoverOpeningQuest?.(); window.dispatchEvent(new CustomEvent('proto-quest-highlight',{detail:objective?.biomeId})); }} groundStyle={{left:`calc(50% + ${openingQuestPosition.x}px)`,top:`calc(50% + ${openingQuestPosition.y}px)`,bottom:'auto',pointerEvents:'auto',width:220,transform:'translate(-50%,-50%) rotateZ(173deg) scale(0.1181818182)',zIndex:46}} />}
           {storyCard && <TableStoryCard toWorld={worldPointFromClient} solids={[
             ...biomeTiles.map(tile => { const area = getBiomeWorldFootprint(tile); return { x: area.x, y: area.y, width: area.width, height: area.height }; }),
           ]}>{storyCard}</TableStoryCard>}

@@ -1,5 +1,6 @@
 import type { ArtStyle } from './artStyle';
 import { scenerySprite, woodsOverheadSprite } from './sceneryArt';
+import { proceduralWoodsGeneration } from './proceduralWoods';
 import { loadMediaImage } from './mediaCache';
 import { biomeWashPalette } from './watercolorWash';
 import { DEFAULT_PAINT, paintCanvas, paintPresetKey, type PaintPreset } from './watercolorPaint';
@@ -41,9 +42,10 @@ export function biomeCardKind(biome: CardBiome = {}): string {
   return BIOME_CARD_RECIPES[kind] ? kind : 'unexplored';
 }
 
-export function biomeCardSources(kind: string, style: ArtStyle) {
+export function biomeCardSources(kind: string, style: ArtStyle, view = 0) {
   const recipe = BIOME_CARD_RECIPES[kind] ?? BIOME_CARD_RECIPES.unexplored;
-  const source = (name?: string) => name ? scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/${name.startsWith('pebble-') ? 'spill/' : ''}${name}`, style) : undefined;
+  // Each card view picks its own procedural pine variant.
+  const source = (name?: string) => name ? scenerySprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/environment/${name.startsWith('pebble-') ? 'spill/' : ''}${name}`, style, `card:${kind}:${view}`) : undefined;
   return { ground: source(recipe.ground), overhead: kind === 'woods' || kind === 'dark-woods' ? woodsOverheadSprite(style, kind === 'dark-woods') : source(recipe.overhead), scenery: source(recipe.scenery) };
 }
 
@@ -56,7 +58,8 @@ export function cardViewIndex(id: string): number {
 }
 export type TableauCardBackground = { key: string; kind: string; artStyle: ArtStyle; color: string; src?: string; view?: number };
 export function cardBackgroundFallback(kind: string, artStyle: ArtStyle, view = 0): TableauCardBackground {
-  return { key: `${kind}:${artStyle}:${view}${artStyle === 'paint' ? `:${paintPresetKey()}` : ''}`, kind, artStyle, view, color: (BIOME_CARD_RECIPES[kind] ?? BIOME_CARD_RECIPES.unexplored).sky[0] };
+  // Paint keys include the procedural woods generation, so cards composed before the pines bake recompose after.
+  return { key: `${kind}:${artStyle}:${view}${artStyle === 'paint' ? `:${paintPresetKey()}:w${proceduralWoodsGeneration()}` : ''}`, kind, artStyle, view, color: (BIOME_CARD_RECIPES[kind] ?? BIOME_CARD_RECIPES.unexplored).sky[0] };
 }
 
 const cache = new Map<string, Promise<TableauCardBackground>>();
@@ -80,12 +83,12 @@ function trim(image: HTMLImageElement) {
 export function loadBiomeCardBackground(kind: string, style: ArtStyle, view = 0, wash: PaintPreset | false = DEFAULT_PAINT): Promise<TableauCardBackground> {
   view = ((Math.floor(view) % CARD_VIEW_COUNT) + CARD_VIEW_COUNT) % CARD_VIEW_COUNT;
   const base = cardBackgroundFallback(kind, style, view);
-  const fallback = style === 'paint' ? { ...base, key: `${kind}:${style}:${view}:${wash === false ? 'original' : paintPresetKey(wash)}` } : base;
+  const fallback = style === 'paint' ? { ...base, key: `${kind}:${style}:${view}:${wash === false ? 'original' : paintPresetKey(wash)}:w${proceduralWoodsGeneration()}` } : base;
   const cached = cache.get(fallback.key);
   if (cached) return cached;
   const promise = (async () => {
     const recipe = BIOME_CARD_RECIPES[kind] ?? BIOME_CARD_RECIPES.unexplored;
-    const sources = biomeCardSources(kind, style);
+    const sources = biomeCardSources(kind, style, view);
     const images = await Promise.all(Object.values(sources).map(async src => {
       if (!src) return undefined;
       try { return await loadMediaImage(src); } catch { return undefined; }

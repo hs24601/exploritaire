@@ -66,10 +66,8 @@ export const DEFAULT_BIOME: ProtoBiomeData = {
 // 13 authored Small Woods placements plus two energy for optional Day 1 work.
 export const DEFAULT_EXPEDITION_ENERGY = 15;
 
-/** Portrait sprites for world actors, by actor id; actors without one use the drawn placeholder. */
-export const WORLD_ACTOR_SPRITES: Record<string, string> = {
-  hero: `${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/hero.png`,
-};
+/** Static portraits for actors without a directional rig. Hero renders through TableActorSprite. */
+export const WORLD_ACTOR_SPRITES: Record<string, string> = {};
 
 /** Pop-up scenery for biome tiles, by tile id (drawn by tools/make-pine-sprite.py). */
 export const BIOME_TILE_SPRITES: Record<string, string> = {

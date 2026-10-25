@@ -10,6 +10,9 @@ type Point = { x: number; y: number };
  * a rounded corner stays within the cells the route passes through. */
 const TURN_RADIUS = 14;
 
+// Let the full rounded stroke finish beyond a terrain cell boundary.
+const CELL_STROKE_BLEED = 2.2;
+
 /** An SVG path through the route's points with each turn rounded off. */
 export const roundedRoute = (points: readonly Point[], radius = TURN_RADIUS) => {
   if (points.length < 2) return '';
@@ -57,7 +60,7 @@ export function RouteLine({ path, unaffordable = false, labels = [], difficultyA
     style={{ left: `calc(50% + ${box.left}px)`, top: `calc(50% + ${box.top}px)`, width: box.right - box.left, height: box.bottom - box.top }}
     viewBox={`0 0 ${box.right - box.left} ${box.bottom - box.top}`}>
     <defs>
-      {terrain.map(({cell,index}) => { const bounds=TABLE_GRID.bounds(cell); return <clipPath key={index} id={`${id}-cell-${index}`}><rect x={bounds.left-box.left} y={bounds.top-box.top} width={bounds.width} height={bounds.height} /></clipPath>; })}
+      {terrain.map(({cell,index}) => { const bounds=TABLE_GRID.bounds(cell); return <clipPath key={index} id={`${id}-cell-${index}`}><rect x={bounds.left-box.left-CELL_STROKE_BLEED} y={bounds.top-box.top-CELL_STROKE_BLEED} width={bounds.width+2*CELL_STROKE_BLEED} height={bounds.height+2*CELL_STROKE_BLEED} /></clipPath>; })}
       <mask id={`${id}-labels`} maskUnits="userSpaceOnUse" x="0" y="0" width={box.right - box.left} height={box.bottom - box.top}>
         <rect width="100%" height="100%" fill="#fff" />
         {labels.map((quad, index) => <polygon key={index} fill="#000" points={quad.map((corner) => `${local(corner).x},${local(corner).y}`).join(' ')} />)}

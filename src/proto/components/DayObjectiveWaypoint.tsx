@@ -21,7 +21,21 @@ export function DayObjectiveWaypoint(props: Props) {
   const layer = useRef<HTMLDivElement>(null), input = useRef(props);
   const [hovered, setHovered] = useState(false), [focused, setFocused] = useState(false), [tapped, setTapped] = useState(false);
   const [automaticOpacity, setAutomaticOpacity] = useState(0);
-  const manualActive = hovered || focused || tapped;
+  const [jumbo, setJumbo] = useState(false);
+  useLayoutEffect(() => {
+    const tracker = layer.current;
+    if (!tracker) return;
+    const update = () => {
+      const presented = Boolean(tracker.querySelector('[data-map-jumbo="true"]'));
+      setJumbo(presented);
+      if (presented) { setHovered(false); setFocused(false); setTapped(false); }
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(tracker, { subtree: true, attributes: true, attributeFilter: ['data-map-jumbo'], childList: true });
+    return () => observer.disconnect();
+  }, []);
+  const manualActive = !jumbo && (hovered || focused || tapped);
   const active = manualActive || automaticOpacity > 0;
   useLayoutEffect(() => {
     let frame = 0;
@@ -115,7 +129,7 @@ export function DayObjectiveWaypoint(props: Props) {
     {props.showActorDragPreview && objective.label === 'Check the nearby bush' && <ActorDragPreview targetId={objective.biomeId} target={objective.position} project={props.project} />}
     <svg className="day-objective__pin" aria-hidden="true" style={{ opacity: manualActive ? 1 : automaticOpacity }}><polygon className="day-objective__grid" /><line /><circle r="8" /></svg>
     <section className={`day-objective__tracker${firstTrip ? ' day-objective__tracker--card' : ''}`} aria-label="Quest tracker" data-camera-ignore="true" onPointerDown={event => event.stopPropagation()}
-      onPointerEnter={event=>{if(event.pointerType!=='touch')setHovered(true);}} onPointerLeave={()=>setHovered(false)}
+      onPointerEnter={event=>{if(event.pointerType!=='touch' && !event.currentTarget.querySelector('[data-map-jumbo="true"]'))setHovered(true);}} onPointerLeave={()=>setHovered(false)}
       onFocus={event=>{if(event.target.matches(':focus-visible'))setFocused(true);}} onBlur={()=>setFocused(false)}>
       {firstTrip ? <>
         {objective.quest && <QuestSubtaskDeck key={objective.quest.id} quest={objective.quest} />}

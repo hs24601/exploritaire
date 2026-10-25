@@ -29,6 +29,8 @@ function loadVolume(src:string) {
     });sources.set(src,pending);
   }return pending;
 }
+/** Settles once every solid requested so far has been built (or failed). */
+export const propVolumesSettled=()=>Promise.allSettled([...sources.values()]).then(()=>undefined);
 function useVolume(src:string,flip=false) {
   const [loaded,setLoaded]=useState<{src:string;volume:Volume}|null>(null);
   useEffect(()=>{let live=true;loadVolume(src).then(volume=>{if(live)setLoaded({src,volume});},()=>{});return()=>{live=false;};},[src]);

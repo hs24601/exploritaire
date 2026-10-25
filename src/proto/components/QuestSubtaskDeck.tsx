@@ -4,6 +4,7 @@ import { gameTime } from '../../gameTime';
 import { trackGameAnimation } from '../../gameAnimations';
 import { firstUnfinishedSubtask, questCardTransition, type SequentialQuest } from '../tutorialQuests';
 import { QuestCard } from './QuestCard';
+import { animateQuestTravel } from './questCardTravel';
 import './QuestSubtaskDeck.css';
 
 /** Card transitions follow requirements; visual queues never gate gameplay. */
@@ -11,6 +12,14 @@ export function QuestSubtaskDeck({ quest }: { quest: SequentialQuest }) {
   const root = useRef<HTMLDivElement>(null);
   const desired = firstUnfinishedSubtask(quest);
   const [shown, setShown] = useState(() => desired);
+  const [receipts, setReceipts] = useState(0);
+  useLayoutEffect(() => {
+    const start = () => setReceipts(n => n + 1);
+    const end = () => setReceipts(n => Math.max(0, n - 1));
+    window.addEventListener('proto-quest-receipt-start', start);
+    window.addEventListener('proto-quest-receipt-end', end);
+    return () => { window.removeEventListener('proto-quest-receipt-start', start); window.removeEventListener('proto-quest-receipt-end', end); };
+  }, []);
   const [phase, setPhase] = useState<'idle' | 'check' | 'tap' | 'receive' | 'flip'>('idle');
   const [dockedStep, setDockedStep] = useState<string>();
   const departure = useRef<DOMRect | undefined>(undefined);
@@ -21,6 +30,7 @@ export function QuestSubtaskDeck({ quest }: { quest: SequentialQuest }) {
   useLayoutEffect(() => {
     const queue = (event: Event) => {
       const id = (event as CustomEvent<string>).detail;
+      if(id==='navigate-den' || id==='simple-steps') setDockedStep(id);
       pendingPickup.current = root.current?.dataset.stepId !== id || root.current?.dataset.phase === 'check' ? id : undefined;
     };
     window.addEventListener('proto-quest-pickup-queued', queue);
@@ -35,32 +45,21 @@ export function QuestSubtaskDeck({ quest }: { quest: SequentialQuest }) {
     departure.current = undefined;
     if (!from) return;
     const notifyDocked = () => { if (!presented && step) window.dispatchEvent(new CustomEvent('proto-quest-docked', { detail: step.id })); };
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { notifyDocked(); return; }
     const element = root.current!;
     const card = element.querySelector<HTMLElement>('.quest-subtask-deck__active');
     if (!card) return;
     const to = card.getBoundingClientRect();
     if (!to.width || !to.height) return;
-    const dx = from.left - to.left, dy = from.top - to.top;
-    card.style.transformOrigin = 'top left';
     element.dataset.presentationFlight = 'true';
-    const flight = trackGameAnimation(card.animate([
-      { transform: `translate(${dx}px,${dy}px) scale(${from.width / to.width},${from.height / to.height}) perspective(900px) rotateY(0deg)` },
-      { transform: `translate(${dx / 2}px,${dy / 2 - 36}px) scale(${(1 + from.width / to.width) / 2},${(1 + from.height / to.height) / 2}) perspective(900px) rotateY(180deg) rotateZ(-8deg)`, offset: .5 },
-      { transform: 'translate(0,0) scale(1,1) perspective(900px) rotateY(360deg) rotateZ(0deg)' },
-    ], { duration: 650, easing: 'ease-in-out' }));
-    presentationFlight.current = flight;
-    const clear = () => { presentationFlight.current = undefined; delete element.dataset.presentationFlight; card.style.removeProperty('transform-origin'); };
-    flight.onfinish = () => { clear(); notifyDocked(); };
-    flight.oncancel = clear;
-    return () => { flight.onfinish = null; flight.oncancel = null; flight.cancel(); clear(); };
+    const dispose=animateQuestTravel(card,from,{shimmer:presented,onArrival:()=>{delete element.dataset.presentationFlight;notifyDocked();}});
+    return ()=>{dispose();delete element.dataset.presentationFlight;};
   }, [presented, shown]);
   const animating = phase !== 'idle';
   useLayoutEffect(() => {
     if (desired < shown) { setShown(desired); setPhase('idle'); }
     else if (desired === shown && phase === 'check') setPhase('idle');
-    else if (desired > shown && phase === 'idle') setPhase('check');
-  }, [desired, shown, phase]);
+    else if (desired > shown && phase === 'idle' && !receipts) setPhase('check');
+  }, [desired, shown, phase, receipts]);
   useLayoutEffect(() => {
     if (!animating) return;
     const element = root.current!, reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -116,7 +115,7 @@ export function QuestSubtaskDeck({ quest }: { quest: SequentialQuest }) {
     data-awaiting-discovery={quest.awaitingDiscovery && shown === desired || undefined} data-phase={phase} data-remaining={Math.max(0, quest.steps.length - shown)} aria-label={`${quest.title} · Tutorial quest stack`}>
     {step ? <div className="quest-subtask-deck__active" data-subtask-card={step.id}>
       <div className="quest-subtask-deck__flip-back" aria-hidden="true" />
-      <div className="quest-subtask-deck__face"><QuestCard authoringId={`tutorial:${quest.id}:${step.id}`} key={step.id} title={step.title} text={step.text} inspirationReward={0} complete={false} onRedeem={()=>{}}
+      <div className="quest-subtask-deck__face"><QuestCard progress={step.progress} authoringId={`tutorial:${quest.id}:${step.id}`} key={step.id} title={step.title} text={step.text} inspirationReward={0} complete={false} onRedeem={()=>{}}
         jumbo={presented} selected={presented} onSelect={() => {
           if (gameTime.isPaused() || phase !== 'idle' || presentationFlight.current) return;
           departure.current = root.current?.querySelector('.quest-subtask-deck__active')?.getBoundingClientRect();

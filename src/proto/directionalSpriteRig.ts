@@ -211,7 +211,8 @@ export function createDirectionalSpriteLibrary(textures: BattleSpriteTextures, d
             });
             if (bobtail) {
               const hind = byId.get('hind')!;
-              bobtail.geometry = bobtailGeometries.get(frame)!;
+              // Sheets without a bobtail layer (the orbit slice paints it in) keep the last geometry; the tail stays hidden.
+              bobtail.geometry = bobtailGeometries.get(frame) ?? bobtail.geometry;
               bobtail.material.map = textures[frame.source + 'Bobtail'];
               bobtail.scale.copy(hind.mesh.scale);
               bobtail.position.copy(hind.mesh.position); bobtail.position.z += .002;

@@ -1,4 +1,5 @@
 import { validateLayouts } from './src/proto/tableauLayouts';
+import { validateAuthoringEdit } from './src/proto/authoringValidation';
 import { defineConfig } from 'vite';
 import { validateTileDocument } from './src/proto/tileEditor/schema';
 import react from '@vitejs/plugin-react';
@@ -81,6 +82,7 @@ export default defineConfig({
     // Tailscale MagicDNS names (zenduo.<tailnet>.ts.net); raw IPs are always allowed.
     allowedHosts: ['.ts.net'],
     strictPort: true,
+    headers: { 'Cache-Control': 'no-store' },
     ...(DEV_HMR_HOST
       ? {
         hmr: {
@@ -95,6 +97,19 @@ export default defineConfig({
     { name: 'game-context-menu', transformIndexHtml: { order: 'pre', handler: () => [{ tag: 'script', attrs: { type: 'module', src: '/src/browserContextMenu.ts' }, injectTo: 'head' }] } },
     {
       name: 'proto-build-revision',
+      configureServer(server) {
+        server.middlewares.use('/__playtest-revision', (_req, res) => {
+          res.setHeader('Cache-Control', 'no-store');
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ revision: currentBuild.revision }));
+        });
+      },
+      transformIndexHtml: {
+        order: 'pre',
+        handler: (_html, context) => context.server ? [{
+          tag: 'script', attrs: { type: 'module', src: '/src/devFreshness.ts' }, injectTo: 'head',
+        }] : [],
+      },
       resolveId(id) { if (id === 'virtual:proto-build') return buildModule; },
       load(id) { if (id === buildModule) return `export default ${JSON.stringify(currentBuild)}`; },
       handleHotUpdate(context) {
@@ -106,7 +121,7 @@ export default defineConfig({
         const module = context.server.moduleGraph.getModuleById(buildModule);
         if (module) context.server.moduleGraph.invalidateModule(module);
         // Let the save response reach the editor before replacing its document.
-        if (relative === 'src/data/protoTiles.json' || relative === 'src/data/tableauLayouts.json') setTimeout(() => context.server.ws.send({ type: 'full-reload' }), 400);
+        if (relative.startsWith('src/data/')) setTimeout(() => context.server.ws.send({ type: 'full-reload' }), 400);
         else context.server.ws.send({ type: 'full-reload' });
         return [];
       },
@@ -126,6 +141,32 @@ export default defineConfig({
             return;
           }
           next();
+        });
+        server.middlewares.use('/__authoring/save', (req, res) => {
+          if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
+          if (!req.headers['content-type']?.startsWith('application/json')) { res.statusCode = 415; res.end('Expected application/json'); return; }
+          let body = '', large = false;
+          req.on('data', chunk => {
+            if (large) return;
+            body += chunk;
+            if (Buffer.byteLength(body) > 256 * 1024) { large = true; res.statusCode = 413; res.end('Document too large'); }
+          });
+          req.on('end', () => {
+            if (large) return;
+            try {
+              const { kind, id, value } = JSON.parse(body);
+              validateAuthoringEdit(kind, id, value);
+              const file = path.resolve(__dirname, 'src/data/sharedAuthoring.json');
+              // Patch the latest disk document, rather than replacing another device's edits.
+              const document = JSON.parse(fs.readFileSync(file, 'utf8'));
+              document[kind][id] = value;
+              fs.writeFileSync(file + '.tmp', JSON.stringify(document, null, 2) + '\n');
+              fs.renameSync(file + '.tmp', file);
+              res.setHeader('Content-Type', 'application/json');
+              res.setHeader('Cache-Control', 'no-store');
+              res.end(JSON.stringify(document));
+            } catch (error) { res.statusCode = 400; res.end(String(error)); }
+          });
         });
         server.middlewares.use('/__quest-cards/save', (req, res) => {
           if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }

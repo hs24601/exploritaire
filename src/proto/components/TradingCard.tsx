@@ -26,14 +26,20 @@ const jumboChips = (section: TradingCardSection): TradingCardChip[] => section.c
 export type TradingCardProps = {
   id: string; title: ReactNode; titleId?: string; badge?: ReactNode; badgeLabel?: string; headerAction?: ReactNode;
   art: ReactNode; description?: string; descriptionPreview?: ReactNode; descriptionId?: string;
+  cornerAdornment?: ReactNode;
   sections?: TradingCardSection[]; footer?: ReactNode; belowCard?: ReactNode; finish?: 'diagonal-holo' | 'plain';
   state?: 'compact' | 'jumbo' | 'foundation';
+  /** A parent card control owns input (for example the combat ability fan). */
+  interactive?: boolean;
+  /** Read motion from the owning ability control without adding nested input. */
+  motionFromParent?: boolean;
+  className?: string;
 };
 
 /** Modular face: art, title, description, sections and footer remain real DOM slots.
  * Foil sits above the art but below the copy; pointer input never reaches the camera. */
 export function TradingCard({ id, title, titleId, badge, badgeLabel, headerAction, art, description, descriptionPreview,
-  descriptionId, sections = [], footer, belowCard, finish = 'diagonal-holo', state = 'compact' }: TradingCardProps) {
+  descriptionId, sections = [], footer, belowCard, cornerAdornment, finish = 'diagonal-holo', state = 'compact', interactive = true, motionFromParent = false, className = '' }: TradingCardProps) {
   const jumboViewer = useCardJumbo();
   const openJumbo = (source:HTMLElement) => {
     const foundation=source.closest<HTMLButtonElement>('button[data-targetable="true"]');
@@ -132,7 +138,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     trace();
   };
   const interact = (event: PointerEvent<HTMLDivElement>) => {
-    if (state === 'foundation' || frozen) return;
+    if (!interactive || state === 'foundation' || frozen) return;
     // Measure the stationary stage, never the rotating face: avoids hover feedback.
     const rect = event.currentTarget.getBoundingClientRect();
     if (reducedMotion.current) return;
@@ -160,8 +166,45 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     face.current?.style.setProperty('--foil-active', target.current.lift > 0 ? '1' : '0');
     animate();
   };
+  useEffect(() => {
+    if (!motionFromParent) return;
+    const host = face.current?.parentElement?.parentElement;
+    if (!host) return;
+    const follow = (event: globalThis.PointerEvent) => {
+      if (reducedMotion.current || frozen) return;
+      const rect = host.getBoundingClientRect();
+      pointerActive.current = true;
+      target.current = { x: Math.max(0, Math.min(100, (event.clientX - rect.left) / rect.width * 100)),
+        y: Math.max(0, Math.min(100, (event.clientY - rect.top) / rect.height * 100)), lift: 1 };
+      face.current?.style.setProperty('--foil-active', '1');
+      animate();
+    };
+    const focus = () => {
+      if (reducedMotion.current || frozen) return;
+      target.current = { x: 58, y: 42, lift: 1 };
+      face.current?.style.setProperty('--foil-active', '1');
+      animate();
+    };
+    const release = (event: globalThis.PointerEvent) => { if (event.pointerType === 'touch') reset(); };
+    host.addEventListener('pointerenter', follow);
+    host.addEventListener('pointermove', follow);
+    host.addEventListener('pointerdown', follow);
+    host.addEventListener('pointerleave', reset);
+    host.addEventListener('pointercancel', reset);
+    host.addEventListener('pointerup', release);
+    host.addEventListener('focusin', focus);
+    host.addEventListener('focusout', reset);
+    window.addEventListener('blur', reset);
+    return () => {
+      host.removeEventListener('pointerenter', follow); host.removeEventListener('pointermove', follow);
+      host.removeEventListener('pointerdown', follow); host.removeEventListener('pointerleave', reset);
+      host.removeEventListener('pointercancel', reset); host.removeEventListener('pointerup', release);
+      host.removeEventListener('focusin', focus); host.removeEventListener('focusout', reset);
+      window.removeEventListener('blur', reset);
+    };
+  }, [motionFromParent, frozen]);
   useEffect(() => { if (frozen) reset(); }, [frozen]);
-  useHoloDeviceTilt(state !== 'foundation' && !frozen && finish === 'diagonal-holo', `${id}:${state}`, tilt => {
+  useHoloDeviceTilt(interactive && state !== 'foundation' && !frozen && finish === 'diagonal-holo', `${id}:${state}`, tilt => {
     deviceTilt.current = tilt;
     if (!tilt && (document.hidden || reducedMotion.current)) {
       // Stop immediately while hidden/static; don't leave a spring queued for
@@ -176,7 +219,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     }
     if (!pointerActive.current) reset();
   }, GYRO_LOG_ENABLED ? sensor => { debug.current.sensor = sensor; trace(); } : undefined);
-  return <div className={`trading-card-stage${move ? ' trading-card-stage--ability-open' : ''}`}
+  return <div className={`trading-card-stage ${className}${move ? ' trading-card-stage--ability-open' : ''}`}
     tabIndex={state === 'foundation' ? 0 : undefined} role={state === 'foundation' ? 'button' : undefined} aria-haspopup={state === 'foundation' ? 'dialog' : undefined}
     onClick={event=>{if(state==='foundation'&&!event.currentTarget.closest('.proto-exploration-actor')){
       // Let an armed tableau choice reach its foundation's gameplay handler.
@@ -188,7 +231,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
       const target=event.currentTarget.closest<HTMLButtonElement>('button[data-targetable="true"]');
       if(target)target.click();else openJumbo(event.currentTarget);
     }}}
-    onPointerMove={interact} onPointerDown={event => { if (state !== 'foundation') requestHoloDeviceTilt(); interact(event); }} onPointerLeave={reset} onPointerCancel={reset}
+    onPointerMove={interact} onPointerDown={event => { if (interactive && state !== 'foundation') requestHoloDeviceTilt(); interact(event); }} onPointerLeave={reset} onPointerCancel={reset}
     onPointerUp={event => { if (event.pointerType === 'touch') reset(); }}>
     {moving && createPortal(<div className="loadout-drag-label" style={{left:moving.x+12,top:moving.y+12}} aria-hidden="true">{moving.name}</div>,document.body)}
     {!!catalogue.length && <aside inert={frozen} className="trading-card__available trading-card__abilities" data-loadout-tray="available" data-loadout-actor={id} aria-label="Available abilities"><h3>Available abilities</h3><p>Drag to assign or remove. Drop on an assigned ability to replace it. {moves.length}/4 assigned.</p>{available.map(entry=><button type="button" key={entry.name} data-loadout-move={entry.name} {...transferProps(entry.name)} title="Drag to assign or Shift+Enter" onClick={e=>{e.stopPropagation();if(drag.current?.moved){drag.current=null;return;}abilitySource.current=e.currentTarget;setSelectedMove(entry.name);}}>{entry.name}</button>)}{!available.length&&<p>All abilities assigned</p>}</aside>}
@@ -196,6 +239,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     <div className="trading-card__art">{art}</div>
     <div className="trading-card__foil" aria-hidden="true" />
     <div className="trading-card__glare" aria-hidden="true" />
+    {cornerAdornment}
     <header className="trading-card__header">
       <h2 id={titleId}>{title}</h2>
       {headerAction ?? (badge && <span className="trading-card__badge" role="img" aria-label={badgeLabel}>{badge}</span>)}
@@ -204,7 +248,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
       {description && (state === 'jumbo' ? <section className="trading-card__full-description" data-card-layer="description" aria-label="Description">
         <h3>Description</h3><p id={descriptionId}>{description}</p>
       </section> : <p id={descriptionId} className="trading-card__description" title={description}
-        tabIndex={0} aria-label={description}>{descriptionPreview ?? description}</p>)}
+        tabIndex={interactive?0:undefined} aria-label={description}>{descriptionPreview ?? description}</p>)}
       {!!catalogue.length && <div data-loadout-tray="assigned" data-loadout-actor={id} className="trading-card__abilities" data-card-layer="abilities" role="group" aria-label={`${typeof title === 'string' ? title : 'Actor'} abilities`}>
         {!moves.length && <p>Drop abilities here</p>}{moves.map(entry => <button type="button" key={entry.name} data-loadout-move={entry.name} {...transferProps(entry.name)} title="Drag to remove or press Delete" aria-pressed={selectedMove === entry.name}
           onClick={event => { event.stopPropagation(); if(drag.current?.moved){drag.current=null;return;} abilitySource.current = event.currentTarget; setSelectedMove(entry.name); }}>

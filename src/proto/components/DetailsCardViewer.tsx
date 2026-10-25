@@ -1,6 +1,6 @@
 import { gameTime } from '../../gameTime';
 import { TradingCard, type TradingCardSection } from './TradingCard';
-import { ACTOR_HOLO_LAYERS } from '../art/actorCardArt';
+import { ACTOR_HOLO_ART, ACTOR_HOLO_LAYERS } from '../art/actorCardArt';
 import { useArtStyle } from '../artStyle';
 import { LayeredCardArt } from './LayeredCardArt';
 import { TABLE_CARD_SCREEN_WIDTH, CARD_RATIO } from '../tableCardPlacement';
@@ -230,7 +230,10 @@ export function ActorCardArt({ sprite, label }: { sprite?: string; label: string
   const artStyle = useArtStyle();
   const [failedSprite, setFailedSprite] = useState<string | null>(null);
   const layers = artStyle === 'paint' && sprite && ACTOR_HOLO_LAYERS[sprite];
-  if (layers) return <LayeredCardArt {...layers} label={label} />;
+  if (layers) return <LayeredCardArt {...layers} label={label} motifs={sprite === ACTOR_HOLO_ART.hero} />;
+  if (artStyle === 'paint' && sprite === ACTOR_HOLO_ART.mochi && sprite !== failedSprite) return <div className="actor-motif-flat">
+    <img className="details-card__sprite" src={sprite} alt={`${label} portrait`} draggable={false} onError={() => setFailedSprite(sprite)} />
+  </div>;
   if (sprite && sprite !== failedSprite) {
     return <img className="details-card__sprite" src={sprite} alt={`${label} portrait`} draggable={false} onError={() => setFailedSprite(sprite)} />;
   }

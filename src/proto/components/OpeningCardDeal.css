@@ -23,3 +23,13 @@
 
 
 .proto-map[data-opening-quest="waiting-travel"] .day-objective__tracker { visibility:hidden !important; pointer-events:none; }
+
+.proto-map:is([data-opening-cards="pending"], [data-opening-cards="dealing"]) .quest-discovery--navigate-den { pointer-events:none; }
+.proto-map .quest-discovery--navigate-den:not([data-flying="true"])::before { box-shadow:none; }
+
+.proto-map[data-opening-cards]:not([data-opening-quest-revealed]) .quest-discovery--navigate-den { pointer-events:none !important; }
+
+.proto-map .quest-discovery--navigate-den, .proto-map .quest-discovery--navigate-den .quest-card { filter:none; }
+
+/* Keep the first prop as the only card until its pickup has landed. */
+.proto-map:has(.quest-discovery--navigate-den) .actor-map-card { visibility:hidden !important; pointer-events:none !important; }

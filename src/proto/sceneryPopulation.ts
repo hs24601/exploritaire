@@ -1,4 +1,5 @@
 import type { EdgeProp } from './biomeEdgeScenery';
+import { sceneryFileName } from './proceduralWoods';
 
 export const populationDensity = (value: number | undefined, woods = true) => value ?? (woods ? 3 : 2);
 
@@ -29,7 +30,7 @@ export function populateScenery(prototype: EdgeProp, density: number, width: num
 }
 
 /** Raise tree crowns while retaining their contained ground width. */
-export const sceneryReliefRise = (src: string | undefined) => /(?:pine(?:-edge)?|woods-cluster)-sprite-v1\.png|pine-edge-relief-v1\.png/.test(src ?? '') ? 3 : 1;
+export const sceneryReliefRise = (src: string | undefined) => /(?:pine(?:-edge)?|woods-cluster)-sprite-v1\.png|pine-edge-relief-v1\.png/.test(sceneryFileName(src) ?? '') ? 3 : 1;
 
 export const populationOwner = (foot: {x:number;y:number}, area: {x:number;y:number;width:number;height:number}, population: boolean) =>
   population ? { ...area, x: foot.x, y: foot.y, width: Math.min(22, area.width), height: Math.min(22, area.height) } : undefined;

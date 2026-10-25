@@ -54,10 +54,10 @@
 .proto-party-controls button:disabled { opacity:.5; }
 .travel-foundation button[aria-pressed="true"] { outline:2px solid #ffe39c; }
 
-.travel-receiver:has(button[aria-pressed]) { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; gap:6px; }
-.travel-receiver:has(button[aria-pressed]) .travel-foundation { --foundation-holocard-height:clamp(110px,10vw,140px); padding:6px; min-width:0; }
-.travel-receiver:has(button[aria-pressed]) .travel-foundation button { width:100%; padding:6px; margin:4px 0; }
-.travel-receiver:has(button[aria-pressed]) .travel-foundation-actor { margin:auto; }
+.travel-receiver--party { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; gap:6px; }
+.travel-receiver--party .travel-foundation { --foundation-holocard-height:clamp(110px,10vw,140px); padding:6px; min-width:0; }
+.travel-receiver--party .travel-foundation button { width:100%; padding:6px; margin:4px 0; }
+.travel-receiver--party .travel-foundation-actor { margin:auto; }
 
 /* Shared measured card surface: controls and foundations never consume its bounds. */
 .travel-tableau { position:relative; height:100%; max-width:none; padding:6px; overflow:hidden; }
@@ -65,9 +65,9 @@
 .travel-column { position:relative; height:var(--classic-stack-height); max-width:none; container-type:inline-size; }
 .travel-column button,.travel-tableau .travel-column .event-card--buried { height:calc(var(--classic-card-w) * 88 / 63); width:var(--classic-card-w); aspect-ratio:63/88; }
 .travel-foundation { display:grid; gap:4px; justify-items:center; min-width:0; }
-.travel-tableau .travel-receiver:has(button[aria-pressed]) { display:flex; justify-content:center; align-items:start; gap:8px; flex-wrap:nowrap; }
-.travel-tableau .travel-receiver:has(button[aria-pressed]) .travel-foundation { --foundation-holocard-height:100px; padding:0; flex:0 1 auto; }
-.travel-tableau .travel-receiver:has(button[aria-pressed]) .travel-foundation button { width:auto; padding:2px; margin:0; font-size:16px; min-height:28px; }
+.travel-tableau .travel-receiver--party { display:flex; justify-content:center; align-items:start; gap:8px; flex-wrap:nowrap; }
+.travel-tableau .travel-receiver--party .travel-foundation { --foundation-holocard-height:100px; padding:0; flex:0 1 auto; }
+.travel-tableau .travel-receiver--party .travel-foundation button { width:auto; padding:2px; margin:0; font-size:16px; min-height:28px; }
 .travel-tableau .tableau-template__foundations { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,210px); align-items:center; gap:8px; }
 .travel-toolbar { order:2; display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
 .travel-toolbar select { min-width:0; max-width:150px; min-height:32px; background:#152820; color:#ffe2ae; font-size:16px; border:1px solid #a08a64; }
@@ -79,7 +79,7 @@
  .event-card-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; }
 }
 @media(max-height:500px) {
- .travel-tableau .travel-receiver:has(button[aria-pressed]) .travel-foundation { --foundation-holocard-height:64px; grid-template-columns:auto auto; grid-template-rows:auto auto; align-items:center; }
+ .travel-tableau .travel-receiver--party .travel-foundation { --foundation-holocard-height:64px; grid-template-columns:auto auto; grid-template-rows:auto auto; align-items:center; }
  .travel-tableau .travel-foundation-actor { grid-column:1; grid-row:1 / 3; }
  .travel-tableau .travel-foundation > button { grid-column:2; }
  .travel-tableau .travel-toolbar { display:grid; grid-template-columns:1fr 1fr; gap:3px; }
@@ -106,9 +106,9 @@
 .travel-world-hud > button { border:1px solid #a08a64; border-radius:6px; padding:6px; background:#152820; color:#ffe2ae; font-size:16px; }
 .travel-actor-popup { position:absolute; translate:-100% -20%; margin-left:-64px; max-width:calc(100% - 24px); pointer-events:none; }
 .travel-actor-popup .travel-toolbar { display:none; }
-.travel-actor-popup .travel-receiver:has(button[aria-pressed]) { display:flex; gap:8px; justify-content:center; flex-wrap:nowrap; }
-.travel-actor-popup .travel-receiver:has(button[aria-pressed]) .travel-foundation { --foundation-holocard-height:128px; max-width:160px; padding:0; flex:0 1 auto; pointer-events:auto; }
-.travel-actor-popup .travel-receiver:has(button[aria-pressed]) .travel-foundation button { padding:4px; max-width:160px; width:auto; margin:0; font-size:16px; }
+.travel-actor-popup .travel-receiver--party { display:flex; gap:8px; justify-content:center; flex-wrap:nowrap; }
+.travel-actor-popup .travel-receiver--party .travel-foundation { --foundation-holocard-height:128px; max-width:160px; padding:0; flex:0 1 auto; pointer-events:auto; }
+.travel-actor-popup .travel-receiver--party .travel-foundation button { padding:4px; max-width:160px; width:auto; margin:0; font-size:16px; }
 .travel-actor-popup .travel-foundation-actor { pointer-events:auto; }
 .travel-actor-popup { translate:none; margin:0; }
 .travel-world-hud { left:auto; right:12px; }
@@ -120,6 +120,12 @@
 .travel-obstruction-card>span:first-child { font-size:2em; }
 
 .travel-free-layout { position:relative; width:calc(var(--classic-card-w) * 3.65); height:calc(var(--classic-card-w) * 3.65); margin:auto; flex:none; }
+.travel-tableau { box-sizing:border-box; }
+.travel-scenery-camera { position:absolute; inset:0; z-index:-1; pointer-events:none; }
+/* Travel scenery already shares the fitted envelope. Do not inherit a second
+   gathering-only crown rail that shrinks the measured field underneath it. */
+.proto-tableau-field .travel-tableau .proto-tableau-scene { display:block; }
+.travel-free-layout--dense { align-self:start; margin:6px auto 0; }
 .travel-free-layout > .playing-card { width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }
 
 /* Cave art and cards share one fitted composition, independent of the map camera. */
@@ -133,6 +139,10 @@
 .travel-arrival-card { width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }
 .travel-arrival-card__turn { position:relative; width:100%; height:100%; transform-style:preserve-3d; }
 .travel-arrival-card__face { backface-visibility:hidden; transform:translateZ(.1px); width:100%; height:100%; }
+/* Repaint the whole value plaque above the sibling Khad overlay. Keep one
+   visible backing so its semitransparency does not compound. */
+.travel-arrival-card__face:has(> .travel-khad-value) .playing-card .proto-card-center-rank { visibility: hidden; }
+.travel-arrival-card__face > .travel-khad-value { z-index: 5; }
 .travel-arrival-card__back { position:absolute; inset:0; transform:rotateY(180deg); backface-visibility:hidden; border:3px double #c7aa74; border-radius:var(--classic-radius); background:repeating-linear-gradient(45deg,#132c3c 0 6px,#203b4a 6px 8px); box-shadow:inset 0 0 0 5px #071722,inset 0 0 20px #0008; }
 @media (prefers-reduced-motion:reduce) { .travel-arrival-card__back { transform:none; } .travel-arrival-card[data-arrival-face="flipping"] .travel-arrival-card__back { display:none; } }
 
@@ -145,9 +155,9 @@
 .travel-dense-bush > img { width:100%; height:100%; object-fit:fill; }
 .travel-dense-bush::after { content:''; position:absolute; left:10%; bottom:-3%; width:80%; height:13%; border-radius:50%; background:radial-gradient(ellipse,#30452f88,transparent 70%); }
 
-.travel-free-layout--dense[data-compact="true"] .travel-dense-bush { width:calc(var(--classic-card-w) * 3.15); height:calc(var(--classic-card-w) * 3.25); }
 
-.travel-free-layout--dense .proto-card-center-rank { padding-top:70%; font-size:max(16px,calc(var(--classic-card-w) * .48)); }
+
+.travel-free-layout--dense .proto-card-center-rank { align-items:end; padding:0 2% 8%; font-size:max(16px,calc(var(--classic-card-w) * .48)); }
 
 
 /* Covered cards keep a readable rank in their peek; the rule is unveiled with the face. */

@@ -1,4 +1,5 @@
 import { dealDenseBerries, isDenseBerryStage, bestDenseBerryMove, travelCardPlayable, type TravelSequenceRule } from './denseBerryTableau';
+import { TRAVERSAL_TABLEAUS_ENABLED } from './traversalTesting';
 import { resolveLayout, dealLayout, type TableauLayout } from './tableauLayouts';
 import { assignedMovesFor } from './actorLoadouts';
 import { terrainAtCell, passageStepAllowed, type TerrainPassage } from './terrainPassages';
@@ -14,16 +15,16 @@ import { EVENT_CARDS_ENABLED, applySimpleEvent, eventChangesRank, eventPlayCost,
 export function bestTravelMove(journey: TravelJourney): number | null {
   if(currentTravelSegment(journey)?.segment.passage && !journey.passageStage)return null;
   if(journey.waitingForTraversal!==undefined || journey.obstruction || journey.paused || journey.blocked || travelTableauHeld(journey))return null;
-  if(journey.columns.flat().some(card=>card.sequenceRule))return bestDenseBerryMove(journey);
+  if(journey.columns.flat().some(card=>card.id.startsWith('dense-')))return bestDenseBerryMove(journey);
   const safeColumns=journey.columns.map(column=>column[column.length-1]?.event?[]:column);
   return assessSolverMove({ columns: safeColumns, stock: journey.reserve.filter(card=>!card.event), foundations: Object.values(journey.memberRanks ?? { [journey.actorId]: journey.rank }) })?.move.column ?? null;
 }
 
 export type TravelTerrain = Pick<BiomeTileState, 'id' | 'title' | 'position' | 'gridSize' | 'tileType' | 'terrain' | 'road' | 'flags' | 'traversalProgress' | 'berryPatchVariant' | 'berryHarvested'> & { passage?: TerrainPassage; passageOpen?: boolean; unlocked?: boolean } & { traversalDifficulty?: number; travelCards?: number };
-export type TravelSegment = { denseBerry?: boolean; traversalStage?: 'exit' | 'enter'; layout?: TableauLayout; sparseBerry?: boolean; passage?: TerrainPassage; passageOpen?: boolean; tileId?: string; title: string; kind: string; unknown: boolean; cards: number; stamina: number; end: number; start: number; easy?: boolean; cellKey?: string };
+export type TravelSegment = { denseBerry?: boolean; traversalStage?: 'exit' | 'enter' | 'gather'; layout?: TableauLayout; sparseBerry?: boolean; passage?: TerrainPassage; passageOpen?: boolean; tileId?: string; title: string; kind: string; unknown: boolean; cards: number; stamina: number; end: number; start: number; easy?: boolean; cellKey?: string };
 export type TravelPlan = { ordered?: boolean; actorId: string; path: TimedPoint[]; segments: TravelSegment[]; estimate: number; cards: number; arrival: { biomeId?: string; directBiome?: boolean; foundationIndex?: number } };
 export type TravelCard = Card & { khadRoot?: import('./khadRoots').KhadRootBinding; sequenceRule?: TravelSequenceRule; segment: number; kind: string; pose?: { x: number; y: number; rotation: number; layer: number } };
-export type TravelJourney = TravelPlan & { orderedStage?: number; walkedProgress?: number; waitingForTraversal?: number; obstruction?: { segment: number; title: string; tags: string[]; cost: number }; passageStage?: { segment: number; columns: TravelCard[][]; reserve: TravelCard[] }; eventBackfill?: { card: TravelCard; column: number; index: number }; pendingSearch?: number; search?: { remaining: number; total: number; columns: TravelCard[][]; reserve: TravelCard[]; segment: number }; memberRanks?: Record<string, number>; columns: TravelCard[][]; reserve: TravelCard[]; rank: number; completed: number; streak: number; tileStreak: number; progress: number; spent: number; berries: number; bonus: string; paused: boolean; bonusSegments: number[]; blocked?: { progress: number; position: {x:number;y:number}; message:string }; checkedProgress?: number; priorCompleted?: number; completedCardIds?: string[] };
+export type TravelJourney = TravelPlan & { traversalSuspended?: boolean; denseBerryChoice?: 'collect' | 'leave'; orderedStage?: number; walkedProgress?: number; waitingForTraversal?: number; obstruction?: { segment: number; title: string; tags: string[]; cost: number }; passageStage?: { segment: number; columns: TravelCard[][]; reserve: TravelCard[] }; eventBackfill?: { card: TravelCard; column: number; index: number }; pendingSearch?: number; search?: { remaining: number; total: number; columns: TravelCard[][]; reserve: TravelCard[]; segment: number }; memberRanks?: Record<string, number>; columns: TravelCard[][]; reserve: TravelCard[]; rank: number; completed: number; streak: number; tileStreak: number; progress: number; spent: number; berries: number; bonus: string; paused: boolean; bonusSegments: number[]; blocked?: { progress: number; position: {x:number;y:number}; message:string }; checkedProgress?: number; priorCompleted?: number; completedCardIds?: string[] };
 export const TRAVEL_STAMINA_MAX = 24;
 export const EASY_CROSSING_CARDS = 3;
 export const SEARCH_STAMINA = 1.5;
@@ -36,7 +37,7 @@ export function preparePassageStage(state: ProtoState): ProtoState {
   if(!j||!active||j.passageStage||j.blocked||j.waitingForTraversal!==undefined)return state;
   if(isDenseBerryStage(active.segment)){
     if(j.ordered && j.orderedStage===active.index)return state;
-    return {...state,journey:denseBerryJourney(j,active.index,!state.dayScenario)};
+    return {...state,journey:denseBerryJourney(j,active.index,state.dayScenario!=='day02')};
   }
   if(j.ordered){
     if(j.orderedStage===active.index)return state;
@@ -137,7 +138,11 @@ export function planTravel(actorId: string, path: TimedPoint[], tiles: readonly 
       const toward=pointAlongTimedPath(path,segment.end),dx=toward.x-from.x,dy=toward.y-from.y;
       const direction=Math.abs(dx)>Math.abs(dy)?dx<0?'West':'East':dy<0?'North':'South';
       ordered.push({tileId:tile?.id,title:`Leave ${tile?.title??'tile'} · ${direction}`,kind:profile.kind,unknown:Boolean(tile?.flags?.includes('unexplored')),sparseBerry:tile?.berryPatchVariant==='sparse'?false:undefined,traversalStage:'exit',cards:6,stamina:segment.stamina/2,start:segment.start,end:mid,cellKey:(index?segments[index-1].cellKey:TABLE_GRID.reference(sourceCell!))+':exit'});
-      ordered.push({...segment,layout:undefined,sparseBerry:undefined,traversalStage:'enter',start:mid,stamina:segment.stamina/2});
+      if (segment.denseBerry) {
+        const gatheringStart = (mid + segment.end) / 2;
+        ordered.push({...segment, denseBerry:undefined, layout:undefined, sparseBerry:undefined, traversalStage:'enter', cards:6, start:mid, end:gatheringStart, stamina:segment.stamina/4, cellKey:segment.cellKey+':approach'});
+        ordered.push({...segment,layout:undefined,sparseBerry:undefined,traversalStage:'gather',start:gatheringStart,stamina:segment.stamina/4});
+      } else ordered.push({...segment,layout:undefined,sparseBerry:undefined,traversalStage:'enter',start:mid,stamina:segment.stamina/2});
     });
     return {actorId,path,arrival,ordered:true,segments:ordered,estimate:ordered.reduce((n,s)=>n+s.stamina,0),cards:ordered.reduce((n,s)=>n+s.cards,0)};
   }
@@ -155,6 +160,20 @@ export function planTravel(actorId: string, path: TimedPoint[], tiles: readonly 
 export function travelStartingRank(state:ProtoState,actorId:string,fallback=2){
   const actor=state.worldActors.find(a=>a.id===actorId);
   return actor?.location==='foundation' ? state.foundations[actor.foundationIndex??0]?.card.rank??state.travelRanks?.[actorId]??fallback : state.travelRanks?.[actorId]??fallback;
+}
+
+/** Runtime policy; the original planner/dealer remains available to authoring and tests. */
+export function playtestTravelPlan(plan:TravelPlan):TravelPlan {
+  if(TRAVERSAL_TABLEAUS_ENABLED)return plan;
+  const segments=plan.segments.filter(s=>s.kind!=='den-exit').map(segment=>{
+    const gathering=segment.tileId===plan.arrival.biomeId && (segment.sparseBerry===true || segment.denseBerry && segment.traversalStage!=='exit');
+    return gathering ? {...segment,start:1,end:1,traversalStage:undefined} :
+      {...segment,cards:0,stamina:0,layout:undefined,passage:undefined,sparseBerry:undefined,denseBerry:undefined,traversalStage:undefined};
+  });
+  return {...plan,ordered:false,segments,cards:segments.reduce((n,s)=>n+s.cards,0),estimate:segments.reduce((n,s)=>n+s.stamina,0)};
+}
+export function beginPlaytestJourney(plan:TravelPlan,startingRank=2,foodPickups=true):TravelJourney {
+  return {...beginJourney(playtestTravelPlan(plan),startingRank,foodPickups),traversalSuspended:!TRAVERSAL_TABLEAUS_ENABLED};
 }
 
 export function beginJourney(plan: TravelPlan, startingRank = 2, foodPickups = true): TravelJourney {
@@ -213,18 +232,12 @@ export function beginJourney(plan: TravelPlan, startingRank = 2, foodPickups = t
   const exit=plan.segments[0]?.kind==='den-exit';
   const exitColumns:TravelCard[][]=Array.from({length:6},(_,i)=>[{id:`den-exit-${plan.actorId}-${i}`,rank:(startingRank-1+[1,0,1,0,1,0][i])%13+1,segment:0,kind:'hero-den'}]);
   const journey:TravelJourney = { ...plan, ...(exit?{passageStage:{segment:0,columns,reserve:cards.slice(28)}}:{}), columns:exit?exitColumns:columns, reserve:exit?[]:cards.slice(28), rank: startingRank, completed: 0, streak: 0, tileStreak: 0, progress: firstWork?.start ?? 1, spent: 0, berries: 0, bonus: '', paused: false, bonusSegments: [], walkedProgress:0 };
-  return firstWork && isDenseBerryStage(firstWork)?denseBerryJourney(journey,plan.segments.indexOf(firstWork),foodPickups):journey;
+  return firstWork && isDenseBerryStage(firstWork)?denseBerryJourney(journey,plan.segments.indexOf(firstWork),true):journey;
 }
 
 function denseBerryJourney(journey:TravelJourney,index:number,foodPickups=true):TravelJourney {
   const columns=dealDenseBerries(journey.rank,index);
-  if(foodPickups && !journey.ordered)columns.flat().forEach(card=>{
-    const order=card.id.split('-').pop();
-    const id=`travel-${journey.actorId}-${journey.segments[index].tileId??index}-${index}-${order}`;
-    let hash=2166136261;for(const c of id)hash=Math.imul(hash^c.charCodeAt(0),16777619);
-    hash=Math.imul(hash^(hash>>>16),0x85ebca6b);hash=Math.imul(hash^(hash>>>13),0xc2b2ae35);hash^=hash>>>16;
-    if((hash>>>0)/4294967296<.2){card.resource='mana';card.foodSource='berries';}
-  });
+  if(!foodPickups)columns.flat().forEach(card=>{delete card.resource;delete card.foodSource;});
   return {...journey,columns,reserve:[],...(journey.ordered?{orderedStage:index}:{passageStage:{segment:index,columns:journey.columns,reserve:journey.reserve}})};
 }
 
@@ -284,12 +297,14 @@ export function playTravelCard(state: ProtoState, columnIndex: number, receiving
   if(state.journey?.search)return playSearchCard(state,columnIndex,receivingActorId);
   const eventColumn=state.journey?.columns[columnIndex];
   if(eventColumn?.[eventColumn.length-1]?.event)return playTravelEvent(state,columnIndex,eventColumn.length-1,receivingActorId);
+  if(denseBerryChoicePending(state))return state;
   const ranks = state.journey?.memberRanks ?? (state.journey ? { [state.journey.actorId]: state.journey.rank } : {});
   const top = state.journey?.columns[columnIndex]?.[state.journey.columns[columnIndex].length - 1];
   const receiver = receivingActorId ?? Object.keys(ranks).find(id => top && travelCardPlayable(top, ranks[id]));
   if (!receiver || ranks[receiver] === undefined) return state;
 
   const initial=state.journey, column=initial?.columns[columnIndex], candidate=column?.[column.length-1];
+  if(initial?.traversalSuspended && (initial.walkedProgress??0)<1)return state;
   const activeBefore=initial && currentTravelSegment(initial);
   if(!initial || initial.waitingForTraversal!==undefined || initial.obstruction || initial.blocked || initial.paused || travelTableauHeld(initial) || !candidate || !travelCardPlayable(candidate,ranks[receiver]) || !activeBefore || (state.travelStamina??TRAVEL_STAMINA_MAX)<activeBefore.segment.stamina/activeBefore.segment.cards*(1-Math.min(.2,initial.streak*.02)))return state;
   if (state.journey && !state.journey.paused && !state.journey.blocked) {
@@ -315,8 +330,8 @@ export function playTravelCard(state: ProtoState, columnIndex: number, receiving
   const depleted=priorVisit?.day===state.day&&priorVisit.crossed;
   const sparseTile = state.biomeTiles.find(tile => tile.id === active.segment.tileId && tile.berryPatchVariant === 'sparse');
   const sparseBerry = !journey.ordered && Boolean(sparseTile && !sparseTile.berryHarvested && active.done + 1 === active.segment.cards);
-  const bonusBerries = !journey.ordered && !sparseTile && !state.dayScenario && !depleted && active.segment.kind === 'berry-patch' && tileStreak === 7 && !journey.bonusSegments.includes(active.index) ? 3 : 0;
-  const berries = journey.ordered || depleted ? 0 : sparseTile ? Number(sparseBerry) : state.dayScenario ? 0 : (card.foodSource ? 1 : 0) + bonusBerries;
+  const bonusBerries = !journey.ordered && !sparseTile && !active.segment.denseBerry && !state.dayScenario && !depleted && active.segment.kind === 'berry-patch' && tileStreak === 7 && !journey.bonusSegments.includes(active.index) ? 3 : 0;
+  const berries = journey.ordered && !active.segment.denseBerry || depleted ? 0 : sparseTile ? Number(sparseBerry) : state.dayScenario && !(state.dayScenario==='day01' && active.segment.denseBerry) ? 0 : (card.foodSource ? 1 : 0) + bonusBerries;
   const completed = journey.completed + 1;
   const tileDone = active.done + 1 === active.segment.cards;
   const nextWork = journey.segments.slice(active.index + 1).find(s => s.cards > 0);
@@ -327,6 +342,7 @@ export function playTravelCard(state: ProtoState, columnIndex: number, receiving
   let next: ProtoState = { ...state, travelRanks:{...state.travelRanks,[receiver]:card.rank}, travelStamina: Math.max(0, stamina - cost), haul: { ...state.haul, mana: state.haul.mana + berries }, utilityAP: { ...state.utilityAP, [receiver]: (state.utilityAP?.[receiver] ?? 0) + (depleted?0:1) },
     biomeTiles: state.biomeTiles.map(tile => tile.id === active.segment.tileId ? { ...tile,
       ...(sparseBerry ? { berryHarvested: true } : {}),
+      ...(state.dayScenario==='day01' && active.segment.denseBerry ? {tableau:[],stock:[],berryHarvested:tileDone} : {}),
       ...(active.segment.unknown || tile.traversalProgress !== undefined ? { traversalProgress: tile.traversalProgress ?? 0, flags: tile.flags?.filter(f => f !== 'unexplored') } : {}) } : tile),
     journey: { ...journey, completedCardIds: [...(journey.completedCardIds ?? []),card.id], bonusSegments: bonusBerries ? [...journey.bonusSegments, active.index] : journey.bonusSegments, eventBackfill:journey.eventBackfill && replacement && journey.eventBackfill.column===columnIndex ? {...journey.eventBackfill,index:journey.eventBackfill.index+1} : journey.eventBackfill, columns, reserve, rank: receiver === journey.actorId ? card.rank : journey.rank, memberRanks: { ...(journey.memberRanks ?? { [journey.actorId]: journey.rank }), [receiver]: card.rank }, completed, streak, tileStreak: tileDone ? 0 : tileStreak, progress, spent: journey.spent + cost, berries: journey.berries + berries, bonus: bonusBerries ? '7 card streak bonus: 3 manaberries' : tileDone ? 'Cairn reached' : journey.bonus } };
   if(tileDone){
@@ -438,6 +454,7 @@ export function discardTravelEvent(state: ProtoState, columnIndex: number, expec
 }
 
 export function redrawTravel(state: ProtoState, receivingActorId?: string): ProtoState {
+  if(denseBerryChoicePending(state))return state;
   const j = state.journey;
   if(j && currentTravelSegment(j)?.segment.passage && !j.passageStage)return state;
   const receiver = receivingActorId ?? j?.actorId;
@@ -446,7 +463,7 @@ export function redrawTravel(state: ProtoState, receivingActorId?: string): Prot
   if (!j || j.obstruction || j.blocked || j.paused || travelTableauHeld(j) || (state.actorInspiration[actorIndex] ?? 0) < 1) return state;
   const next = j.columns.map(c => c[c.length - 1]).find(card=>card&&!card.event);
   if (!next) return state;
-  const recoveryRank=next.sequenceRule==='match'?next.rank:((next.rank-1-(next.sequenceRule==='skip'?2:1)+13)%13)+1;
+  const recoveryRank=((next.rank-2+13)%13)+1;
   // A reliable recovery value guarantees a legal continuation at the INSP cost.
   return { ...state, actorInspiration: state.actorInspiration.map((n, i) => i === actorIndex ? n - 1 : n), journey: { ...j, rank: receiver === j.actorId ? recoveryRank : j.rank, memberRanks: { ...(j.memberRanks ?? { [j.actorId]: j.rank }), [receiver!]: recoveryRank }, streak: 0, tileStreak: 0, bonus: 'Trail reset · 1 INSP' } };
 }
@@ -476,7 +493,7 @@ export function checkTravelCairn(state: ProtoState, progress: number): ProtoStat
     if(learned && !j.ordered){
       const actor=state.worldActors.find(a=>a.id===j.actorId);
       const plan=planTravel(j.actorId,remainingPath(j.path,progress),tiles,j.arrival,actor?.traversalAffinity);
-      const rebuilt=beginJourney(plan,j.rank);
+      const rebuilt=j.traversalSuspended?beginPlaytestJourney(plan,j.rank):beginJourney(plan,j.rank);
       const continuation={...rebuilt,memberRanks:j.memberRanks,path:j.path,segments:rebuilt.segments.map(s=>({...s,start:progress+(1-progress)*s.start,end:progress+(1-progress)*s.end})),progress:progress+(1-progress)*rebuilt.progress,spent:j.spent,berries:j.berries,streak:j.streak,priorCompleted:(j.priorCompleted??0)+j.completed,completedCardIds:j.completedCardIds,checkedProgress:progress};
       // Discovery refreshes the next tableau automatically. Actual plays enforce
       // remaining stamina; a revised estimate alone does not require route confirmation.
@@ -522,4 +539,20 @@ export function paintTravelProgress(state: ProtoState, progress: number): ProtoS
     return { ...tile, traversalProgress: paint };
   });
   return changed ? { ...state, biomeTiles } : state;
+}
+
+export function denseBerryChoicePending(state:ProtoState):boolean {
+ const j=state.journey,a=j&&currentTravelSegment(j);
+ return state.dayScenario==='day01' && !!j && !j.denseBerryChoice && !!a?.segment.denseBerry && a.done===a.segment.cards-1 && j.columns.flat().length===1 && !j.paused && j.waitingForTraversal===undefined;
+}
+export function chooseDenseBerry(state:ProtoState,choice:'collect'|'leave'):ProtoState {
+ if(!denseBerryChoicePending(state))return state;
+ const j=state.journey!,column=j.columns.findIndex(c=>c.length),tileId=currentTravelSegment(j)?.segment.tileId;
+ const accepted={...state,journey:{...j,denseBerryChoice:choice}};
+ if(choice==='collect'){const next=playTravelCard(accepted,column);return next.journey?.completed===j.completed?state:next;}
+ const card=j.columns[column][0];
+ const next=playTravelCard({...accepted,journey:{...accepted.journey,columns:j.columns.map(c=>c.map(card=>({...card,resource:undefined,foodSource:undefined}))) }},column);
+ if(next.journey?.completed===j.completed)return state;
+ return {...next,travelRanks:state.travelRanks,travelStamina:state.travelStamina,utilityAP:state.utilityAP,journey:next.journey?{...next.journey,rank:j.rank,memberRanks:j.memberRanks,spent:j.spent,completedCardIds:j.completedCardIds}:undefined,
+ biomeTiles:next.biomeTiles.map(tile=>tile.id===tileId?{...tile,berryHarvested:false,tableau:[[card]],stock:[]}:tile)};
 }

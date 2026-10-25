@@ -16,9 +16,8 @@ export function useWorldQuestShimmer(root: RefObject<HTMLDivElement | null>, ena
       if (!pause.current) elapsed += now - last;
       last = now;
       const phase = (elapsed % 3200) / 3200;
-      element.style.setProperty('--quest-gleam-position', `${-70 + Math.min(1, phase / .55) * 240}%`);
+      element.style.setProperty('--quest-gleam-offset', `${-100 + Math.min(1, phase / .55) * 200}%`);
       element.style.setProperty('--quest-gleam-opacity', String(reduced.matches ? .18 : phase < .55 ? Math.sin(phase / .55 * Math.PI) * .85 : 0));
-      element.style.setProperty('--quest-edge-glow', String(reduced.matches ? .65 : .55 + Math.sin(elapsed / 900) * .25));
       if (!reduced.matches) frame = gameTime.requestAnimationFrame(tick);
     };
     const restart = () => { gameTime.cancelAnimationFrame(frame); last = gameTime.now(); tick(); };
@@ -26,7 +25,7 @@ export function useWorldQuestShimmer(root: RefObject<HTMLDivElement | null>, ena
     return () => {
       gameTime.cancelAnimationFrame(frame); reduced.removeEventListener('change', restart);
       delete element.dataset.worldQuestShimmer;
-      ['--quest-gleam-position','--quest-gleam-opacity','--quest-edge-glow'].forEach(key => element.style.removeProperty(key));
+      ['--quest-gleam-offset','--quest-gleam-opacity'].forEach(key => element.style.removeProperty(key));
     };
   }, [root, enabled]);
 }

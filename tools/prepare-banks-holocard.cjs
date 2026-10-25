@@ -3,11 +3,11 @@ const fs = require('node:fs');
 const {chromium} = require('playwright');
 const version = process.argv[2] || 'v5';
 if (!/^v\d+$/.test(version)) throw new Error('Expected version such as v5');
-const root = `public/assets/art/holocards`;
+const root = `public/assets/runtime/ui/holocards`;
 const output = `artifacts/banks-watercolor-${version}`;
 const dataUrl = path => `data:image/png;base64,${fs.readFileSync(path).toString('base64')}`;
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({executablePath:process.env.CHROME_PATH||undefined});
   try {
     const page = await browser.newPage();
     const result = await page.evaluate(async ({subjectUrl, backgroundUrl}) => {
@@ -28,7 +28,7 @@ const dataUrl = path => `data:image/png;base64,${fs.readFileSync(path).toString(
       ctx.drawImage(subject, (1024 - w) / 2, 1536 * .97 - h, w, h);
       return {png:canvas.toDataURL('image/png').split(',')[1], width:subject.width, height:subject.height, transparent, partial, opaque};
     }, {subjectUrl:dataUrl(`${root}/layered/banks-watercolor-${version}.png`), backgroundUrl:dataUrl(`${root}/layered/hero-night-background-v2-ordinary-day.png`)});
-    fs.writeFileSync(`${root}/deprecated/pixel/characters/banks-card-${version}.png`, Buffer.from(result.png, 'base64'));
+    fs.writeFileSync(`${root}/actors/banks-card-${version}.png`, Buffer.from(result.png, 'base64'));
     delete result.png;
     fs.mkdirSync(output, {recursive:true});
     fs.writeFileSync(`${output}/alpha-validation.json`, JSON.stringify(result, null, 2));

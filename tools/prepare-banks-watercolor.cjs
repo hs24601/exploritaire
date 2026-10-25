@@ -14,7 +14,7 @@ const specs={
  ])),
  ...Object.fromEntries(['flinch','down'].map(pose=>[`${pose}-atlas`,{...combat[pose],cols:3}])),
 };
-(async()=>{const browser=await chromium.launch();try{const page=await browser.newPage(),report={};
+(async()=>{const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||undefined});try{const page=await browser.newPage(),report={};
  for(const [name,spec]of Object.entries(specs)){
  const result=await page.evaluate(async({data,spec,name})=>{
   const image=new Image();image.src=data;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const cx=c.getContext('2d');cx.drawImage(image,0,0);

@@ -1,3 +1,4 @@
+import { authored, saveAuthored } from './sharedAuthoring';
 import { useSyncExternalStore } from 'react';
 import { validChoreography, type CameraChoreography, type CameraShot, type CameraStep, type CameraTrigger, type CalloutCamera } from './cameraChoreography';
 const KEY = 'exploritaire.camera-choreographies.v1';
@@ -10,7 +11,7 @@ const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(fn => fn());
 function getSavedLibrary(): CameraChoreography[] {
   if (!library) { try { const value = JSON.parse(localStorage.getItem(KEY) || '[]'); library = Array.isArray(value) ? value.filter(validChoreography) : []; } catch { library = []; } }
-  return library!;
+  return [...library!.filter(c => !Object.prototype.hasOwnProperty.call(authored.cameras, c.id)), ...Object.values(authored.cameras).filter((c): c is CameraChoreography => c !== null)];
 }
 export function getCameraLibrary(): CameraChoreography[] {
   return merged ??= [...defaults.filter(c => !getSavedLibrary().some(saved => saved.id === c.id)), ...getSavedLibrary().map(saved => {
@@ -20,14 +21,14 @@ export function getCameraLibrary(): CameraChoreography[] {
     return saved.tileLabelIds === undefined && source?.tileLabelIds ? { ...saved, tileLabelIds: source.tileLabelIds } : saved;
   })];
 }
-export function saveCameraChoreography(value: CameraChoreography) {
+export async function saveCameraChoreography(value: CameraChoreography) {
   if (!validChoreography(value)) throw new Error('Give the choreography a name and at least one valid shot.');
   const current = getCameraLibrary();
   if (current.some(c => c.id !== value.id && c.name.toLowerCase() === value.name.trim().toLowerCase())) throw new Error('Choose a unique choreography name.');
   const next = [...getSavedLibrary().filter(c => c.id !== value.id), { ...value, name: value.name.trim() }];
-  localStorage.setItem(KEY, JSON.stringify(next)); library = next; merged = undefined; emit();
+  await saveAuthored('cameras', value.id, value); library = next; merged = undefined; emit();
 }
-export function deleteCameraChoreography(id: string) { const next = getSavedLibrary().filter(c => c.id !== id); localStorage.setItem(KEY, JSON.stringify(next)); library = next; merged = undefined; emit(); }
+export async function deleteCameraChoreography(id: string) { await saveAuthored('cameras', id, null); library = getSavedLibrary().filter(c => c.id !== id); merged = undefined; emit(); }
 export const useCameraLibrary = () => useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, getCameraLibrary);
 export type CameraPort = { capture: () => CameraShot; play: (steps: CameraStep[], restore: boolean, name: string) => void; stop: (restore?: boolean) => void; pause: () => void };
 let port: CameraPort | null = null;

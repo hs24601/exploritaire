@@ -2,10 +2,10 @@ import { useId } from 'react';
 import './InkLoader.css';
 
 /** Procedural cloth and displaced pigment need no artwork downloads themselves. */
-export function InkLoader({ done, total }: { done: number; total: number }) {
+export function InkLoader({ done, total, cover = false }: { done: number; total: number; cover?: boolean }) {
   const id = useId().replace(/:/g, '');
   const fraction = Math.max(0, Math.min(1, done / Math.max(1, total)));
-  return <div className="ink-loader" data-media-loading="true">
+  return <div className={cover ? 'ink-loader ink-loader--cover' : 'ink-loader'} data-media-loading="true">
     <div className="ink-loader__content">
       <svg className="ink-loader__hero" viewBox="490 960 350 420" role="img" aria-label="Hero sitting with a gently wagging tail">
         <defs>

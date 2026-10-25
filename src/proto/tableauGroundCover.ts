@@ -1,8 +1,25 @@
 import * as THREE from 'three';
 import { DEFAULT_PAINT, paintCanvas, type PaintPreset } from './watercolorPaint';
 
+/** World-space pigment shared by the ground and its brush/grass layers. */
+export function tintKhadGround(material: THREE.MeshLambertMaterial) {
+  material.onBeforeCompile = shader => {
+    shader.vertexShader = 'varying vec2 khadGroundPosition;\n' + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nkhadGroundPosition = (modelMatrix * vec4(position, 1.)).xz;');
+    shader.fragmentShader = 'varying vec2 khadGroundPosition;\n' + shader.fragmentShader;
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      vec2 p = khadGroundPosition;
+      float edge = sin(p.x * 2.3 + p.y * 1.1) * .12 + sin(p.y * 3.7) * .08;
+      float area = (1. - smoothstep(.45, 1.15, length((p - vec2(3.3, -7.3)) / vec2(5.4, 5.8)) + edge)) * smoothstep(-.6, 1.4, p.x);
+      float value = dot(diffuseColor.rgb, vec3(.2126, .7152, .0722));
+      vec3 pigment = mix(vec3(.18, .20, .22), vec3(.38, .065, .10), .5 + .5 * sin(p.x * 1.3 + sin(p.y * .9)));
+      diffuseColor.rgb = mix(diffuseColor.rgb, pigment * (.42 + value), area * .86);`);
+  };
+  material.customProgramCacheKey = () => 'khad-ground-pigment-v1';
+}
+
 /** Small canvas-authored brush atlas: stable world decoration, never game resources. */
-export function createTableauGroundCover(root: THREE.Group, pixel: boolean, palette: 'woodland' | 'dirt' = 'woodland', preset: PaintPreset | false = DEFAULT_PAINT) {
+export function createTableauGroundCover(root: THREE.Group, pixel: boolean, palette: 'woodland' | 'dirt' = 'woodland', preset: PaintPreset | false = DEFAULT_PAINT, khadTint = false) {
   let seed = 81723;
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const textures: THREE.Texture[] = [];
@@ -17,6 +34,7 @@ export function createTableauGroundCover(root: THREE.Group, pixel: boolean, pale
     texture.magFilter = pixel ? THREE.NearestFilter : THREE.LinearFilter;
     textures.push(texture);
     const material = new THREE.MeshLambertMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    if (khadTint) tintKhadGround(material);
     materials.push(material); return material;
   }
   const wash = surface(ctx => {

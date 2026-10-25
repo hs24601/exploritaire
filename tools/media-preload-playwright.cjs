@@ -20,8 +20,9 @@ const url = process.env.PROTO_URL || 'http://127.0.0.1:5178/proto.html?atmospher
       await page.goto(url, { waitUntil: 'domcontentloaded' });
       await page.waitForSelector('[data-media-loading]');
       await page.screenshot({ path: `artifacts/media-preload/${style}-${touch}-loading.png` });
-      await page.waitForSelector('.proto-game-root', { timeout: 12000 });
-      assert.equal(await page.locator('[data-media-loading]').count(), 0);
+      // The scene mounts and settles beneath the covering loader before reveal.
+      await page.waitForSelector('[data-media-loading]', { state: 'detached', timeout: 30000 });
+      assert.equal(await page.locator('.proto-game-root').count(), 1);
       if (!missing) {
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const ready = await page.locator('[data-den-overhead]').evaluate(img => img.complete && img.naturalWidth > 0);

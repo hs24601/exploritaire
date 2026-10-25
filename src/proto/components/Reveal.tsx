@@ -83,7 +83,7 @@ export function Reveal({ fraction, width, height, children, shade, className = '
   }, [target]);
   if (settled && target >= 1) return <>{children}</>;
   return <span className={`proto-reveal ${className}`} data-reveal={target.toFixed(2)} style={{ width, height }}>
-    <span className="proto-reveal__shade" style={shade ? { filter: 'none' } : undefined}>{shade ?? children}</span>
+    <span className="proto-reveal__shade" style={shade ? { filter: 'brightness(0.6)' } : undefined}>{shade ?? children}</span>
     <span className="proto-reveal__lit" style={revealMask(width, height, shown)}>{children}</span>
   </span>;
 }

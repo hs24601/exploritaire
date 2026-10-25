@@ -1,7 +1,15 @@
 .combat-sandbox { height: 100dvh; display: flex; flex-direction: column; gap: 8px; padding: 8px; background: #101c20; color: #e1efea; overflow: hidden; }
-.combat-sandbox__header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font: 16px/1.2 monospace; }
-.combat-sandbox__header h1 { font: inherit; margin: 0; margin-right: auto; }
-.combat-sandbox__header button, .combat-sandbox__header a { padding: 5px 8px; border: 1px solid #7b9583; border-radius: 4px; background: #142720; }
+.combat-sandbox .combat-sandbox__pane[data-battle-camera] { grid-template-columns:minmax(260px,1fr) minmax(0,2fr); }
+.combat-sandbox .combat-sandbox__pane[data-battle-camera] > .proto-tableau-field { grid-area:1 / 1; }
+.combat-sandbox .combat-sandbox__pane[data-battle-camera] > .combat-demo { grid-area:1 / 2; }
+.combat-sandbox .battle-field__header .combat-sandbox__camera-toggle { font-size:16px; min-height:36px; }
+.combat-sandbox__camera-loading { grid-area:1 / 2; padding:12px; font-size:16px; }
+@media(max-width:900px) {
+ .combat-sandbox__camera-loading { grid-area:1 / 1; }
+ .combat-sandbox .combat-sandbox__pane[data-battle-camera] { grid-template:minmax(180px,30%) minmax(0,1fr) / minmax(0,1fr); overflow:auto; }
+ .combat-sandbox .combat-sandbox__pane[data-battle-camera] > .proto-tableau-field { grid-area:2 / 1; }
+ .combat-sandbox .combat-sandbox__pane[data-battle-camera] > .combat-demo { grid-area:1 / 1; }
+}
 .combat-sandbox__pane { position: relative; isolation: isolate; flex: 1; min-height: 0; display: grid; grid-template: minmax(0,1fr) / minmax(0,1fr); }
 .combat-sandbox__pane > .proto-tableau-field { grid-area: 1 / 1; min-width: 0; min-height: 0; overflow: hidden; }
 .combat-sandbox__pane .battle-field[data-camera-background='true'] { background: linear-gradient(#101f1c,#070e11); }
@@ -12,6 +20,312 @@
 }
 @media (max-width: 600px) {
   .combat-sandbox { padding: 4px; gap: 4px; }
-  .combat-sandbox__header { gap: 8px; font-size: 13px; }
   .combat-sandbox .battle-field { padding: 6px; gap: 6px; }
 }
+
+/* Reserve three buried-card peeks for the four-row sandbox. */
+.combat-sandbox .battle-field__rack { --classic-card-w: min(var(--tableau-card-limit, 10000px), calc((100cqw - 18px) / 7)); }
+/* Stagger trial: explicit named target links and loose, exposed spill cards. */
+.combat-sandbox .battle-field__foundation { touch-action:none; cursor:grab; }
+.combat-sandbox .battle-field__side { grid-template-columns:1fr; }
+.combat-sandbox .battle-field__middle { min-height:min-content; grid-template-rows:minmax(220px,1fr) auto auto; }
+.combat-sandbox .battle-field__board { grid-template-rows:auto minmax(min-content,1fr) auto; }
+.combat-sandbox .battle-bar[data-bar='stagger'] { height:22px; }
+.battle-target-link { display:inline-block; border:1px solid currentColor; border-radius:5px; padding:3px 6px; background:#12212b; color:#92dfff; font:13px/1.3 monospace; }
+.battle-target-link[data-actor='mochi'] { background:#2c1c31; color:#f8b6e2; }
+.battle-target-ghost { position:fixed; width:90px; height:126px; transform:translate(-50%,-50%) rotate(-6deg); opacity:.8; pointer-events:none; z-index:65000; }
+.combat-sandbox .battle-field[data-target-drag] .battle-foe { outline:3px solid #fff1a8; }
+.battle-spills { display:flex; flex-wrap:wrap; justify-content:space-around; gap:6px; max-height:120px; overflow:auto; padding:8px; }
+.battle-spills:empty { display:none; }
+.battle-spills .battle-field__column { --classic-card-w:55px; --battle-peek:0px; flex:none; transform:rotate(-5deg); }
+.battle-spills .battle-field__column:nth-child(even) { transform:rotate(6deg); }
+.combat-sandbox .battle-field__team[data-team='party'] { grid-template-columns:repeat(2,minmax(0,180px)); align-items:start; }
+.combat-sandbox .battle-field__slot { display:flex; flex-direction:column; gap:4px; }
+.combat-sandbox .battle-field__slot > .battle-vitals { width:100%; }
+.combat-sandbox .battle-target-link { max-width:100%; }
+.combat-sandbox .battle-field__slot > .battle-target-link { min-height:36px; }
+.combat-sandbox .battle-field__team h3 { display:none; }
+.combat-sandbox .battle-field__header { gap:6px; }
+@media (max-width:600px) {
+ .combat-sandbox .battle-field__header { font-size:13px; }
+ .combat-sandbox .battle-field__board { gap:4px; padding:4px 0; }
+ .combat-sandbox .battle-field__status { flex-wrap:wrap; gap:3px; font-size:12px; }
+ .combat-sandbox .battle-field__status-text { flex-basis:100%; }
+ .combat-sandbox .battle-field__tableau { --battle-peek:25px; }
+}
+/* Spills add scrollable content, never take space away from the playable rack. */
+.combat-sandbox .battle-field__tableau { --battle-peek:32px; min-height:220px; height:auto; align-self:stretch; }
+@media (max-width:600px) {
+ .combat-sandbox .battle-field__middle { grid-template-rows:minmax(190px,1fr) auto auto; }
+ .combat-sandbox .battle-field__tableau { --battle-peek:28px; min-height:190px; }
+}
+.battle-spills { max-height:90px; }
+.battle-spills .battle-field__column { --classic-card-w:44px; }
+@media (max-width:600px) {
+ .combat-sandbox .battle-field__actor-card { width:80px; }
+ .combat-sandbox .battle-field__status-text { font-size:11px; }
+}
+.combat-sandbox .battle-target-arrows { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; z-index:0; opacity:.8; }
+.combat-sandbox .battle-field__board > :not(.battle-target-arrows) { position:relative; z-index:1; }
+.combat-sandbox .battle-foe[data-stagger-stage] { --stagger-color:#ffd166; border:3px solid var(--stagger-color); box-shadow:0 0 20px var(--stagger-color),inset 0 0 18px #ffd16630; margin-bottom:10px; animation:stagger-radiance 1.2s ease-in-out infinite alternate; isolation:isolate; }
+.combat-sandbox .battle-foe[data-stagger-stage='2'] { --stagger-color:#ff92ca; }
+.combat-sandbox .battle-foe[data-stagger-stage='3'] { --stagger-color:#bfa3ff; }
+.combat-sandbox .battle-foe[data-stagger-stage]::before { content:''; position:absolute; inset:-7px; border:2px dashed var(--stagger-color); border-radius:19px; opacity:.7; pointer-events:none; animation:stagger-ring 1.6s ease-out infinite; }
+.combat-sandbox .battle-foe[data-stagger-stage] .battle-chip[data-chip='staggered'] { color:#20151c; background:var(--stagger-color); box-shadow:0 0 10px var(--stagger-color); font-weight:bold; letter-spacing:1px; }
+.battle-stagger-orbit { position:absolute; inset:0 -5px 8px; border:1px solid #ffe49c99; border-radius:50%; color:#fff3bc; animation:stagger-orbit 2.6s linear infinite; pointer-events:none; }
+.battle-stagger-orbit i { position:absolute; font:18px serif; text-shadow:0 0 8px #ffcc66; }
+.battle-stagger-orbit i:nth-child(1) { top:-8px; left:40%; }.battle-stagger-orbit i:nth-child(2) { bottom:-6px; left:0; }.battle-stagger-orbit i:nth-child(3) { right:-5px; top:40%; }
+@keyframes stagger-radiance { from { box-shadow:0 0 10px var(--stagger-color),inset 0 0 9px #ffffff22; } to { box-shadow:0 0 26px var(--stagger-color),inset 0 0 16px #ffffff44; } }
+@keyframes stagger-ring { from { opacity:.8; scale:1; } to { opacity:0; scale:1.14; } }
+@keyframes stagger-orbit { to { transform:rotate(360deg); } }
+.battle-field[data-combat-paused] .battle-foe,.battle-field[data-combat-paused] .battle-foe::before,.battle-field[data-combat-paused] .battle-stagger-orbit { animation-play-state:paused; }
+.combat-sandbox .battle-foe[data-stagger-stage] { margin-top:16px; margin-bottom:14px; }
+.battle-stagger-banner { position:absolute; bottom:-16px; left:50%; transform:translateX(-50%); white-space:nowrap; background:var(--stagger-color,#ffd166); color:#231526; border:2px solid #fff1be; border-radius:5px; padding:3px 8px; box-shadow:0 0 16px var(--stagger-color,#ffd166); font:bold 12px/1.2 monospace; letter-spacing:1px; z-index:3; }
+/* The sandbox has no ability tray; release its inherited height and top gap. */
+.combat-sandbox .battle-field__team[data-team='party'] .battle-field__foundation { --foundation-holocard-height:112px; height:124px; min-height:0; margin-top:0; }
+@media (max-width:600px) {
+ .combat-sandbox .battle-field__team[data-team='party'] .battle-field__foundation { --foundation-holocard-height:96px; height:108px; }
+ .combat-sandbox .battle-field__header { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; }
+ .combat-sandbox .battle-field__header > fieldset { grid-column:3; grid-row:1; }
+ .combat-sandbox .battle-field__header > fieldset button { font-size:10px; min-height:28px; padding:2px; }
+}
+
+
+.battle-enemy-turn { grid-column:1/-1; font:11px/1.3 monospace; color:#c5d3e7; text-align:center; }
+.combat-sandbox .battle-field__status .battle-end-turn { min-height:44px; padding:8px 14px; border:2px solid #f1d37e; border-radius:6px; background:#42351c; color:#fff0b7; font-weight:bold; }
+.combat-sandbox .battle-end-turn:disabled { opacity:.4; }
+.combat-sandbox .battle-field[data-team-turn='enemy'] { border-color:#ad8ac2; }
+@media (prefers-reduced-motion:reduce) { .combat-sandbox .battle-foe[data-stagger-stage],.combat-sandbox .battle-foe[data-stagger-stage]::before,.battle-stagger-orbit { animation:none; } }
+
+/* Keep solver tools in the lower-left flow row, clear of the tableau and actors. */
+.combat-sandbox .battle-field[data-camera-background='true'] { grid-template-rows:auto minmax(0,1fr) auto; }
+.combat-sandbox .battle-field__header { justify-content:flex-end; }
+.combat-sandbox .battle-field__solver-dock { justify-self:start; max-width:100%; min-width:0; }
+.combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:minmax(0,150px) minmax(90px,130px) minmax(0,150px); gap:6px 12px; }
+.combat-sandbox .battle-field__team[data-team='party'] > .momentum-engine { grid-column:3; grid-row:1; }
+.combat-sandbox [data-battle-slot='hero'] { grid-column:1; grid-row:1; }
+.combat-sandbox [data-battle-slot='mochi'] { grid-column:3; grid-row:1; }
+.combat-sandbox .battle-field__status { flex-wrap:wrap; }
+.combat-sandbox .battle-field__status .battle-withdraw { min-height:44px; padding:7px 12px; border:1px solid #99b8b2; border-radius:5px; background:#1c3437; color:#e1efeb; }
+.battle-withdraw-reaction { flex:1 0 100%; display:flex; gap:7px; flex-wrap:wrap; align-items:center; padding:9px; border:1px solid #d6b07b; border-radius:7px; background:linear-gradient(120deg,#382b22,#201c2c); }
+.battle-withdraw-reaction > div { flex:1 0 100%; }
+.battle-withdraw-reaction strong { display:block; font-size:13px; color:#ffdcaa; }
+.battle-withdraw-reaction span { display:block; margin-top:3px; font-size:11px; color:#d5c4bd; }
+.battle-withdraw-reaction button { font-size:12px; padding:6px; border:1px solid #b39a79; border-radius:4px; background:#27343b; }
+.battle-field__column[data-withdraw-preview]::after { content:''; position:absolute; pointer-events:none; z-index:40; left:0; right:0; top:calc((var(--cards) - 1) * var(--battle-peek)); height:calc(var(--classic-card-w) * 88 / 63); border:2px dashed #f1b586; background:#ee994314; border-radius:5px; box-shadow:0 0 10px #ee994330; }
+@media (max-width:600px) {
+ .combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:minmax(0,1fr) 88px minmax(0,1fr); gap:4px; }
+ .combat-sandbox .battle-field__team[data-team='party'] .battle-field__foundation { width:100%; }
+ .combat-sandbox .battle-withdraw-reaction { padding:6px; gap:4px; }
+}
+.battle-target-badge { width:max-content; max-width:68px; box-sizing:border-box; margin:auto; padding:3px 5px; border:1px solid #92dfff; border-radius:4px; background:#12212bf5; color:#92dfff; font:11px/1.2 monospace; white-space:nowrap; }
+.battle-target-badge[data-actor='mochi'] { border-color:#f8b6e2; background:#2c1c31f5; color:#f8b6e2; }
+.battle-controls__sandbox-scenario { margin-right:auto; max-width:calc(100% - 75px); min-width:0; }
+.battle-controls__sandbox-scenario select { width:100%; max-width:340px; min-height:36px; padding:5px 7px; border:1px solid #91aca6; border-radius:4px; background:#142825; color:#e3eee5; font:12px/1.2 monospace; }
+.battle-field__khad-root { display:block; width:52px; height:52px; object-fit:cover; border-radius:6px; filter:saturate(.7); }
+.battle-chip[data-buff='thorns'] { border:1px solid #dd899c; color:#ffc0cf; background:#411d2c; }
+.combat-sandbox .battle-field__column[data-withdraw-preview]::after { top:0; height:calc(var(--classic-card-w) * 88 / 63 + (var(--cards) - 1) * var(--battle-peek)); }
+@media (max-width:600px) { .battle-controls__sandbox-scenario { grid-column:1/3; grid-row:1; max-width:100%; }.battle-controls__sandbox-scenario select { font-size:11px; } }
+
+/* The shared engine belongs to team controls; actor foundations remain adjacent. */
+.combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:repeat(3,minmax(0,150px)); gap:8px; }
+.combat-sandbox [data-battle-slot='hero'] { grid-column:1; }
+.combat-sandbox [data-battle-slot='mochi'] { grid-column:2; }
+.combat-sandbox [data-battle-slot='empty'] { grid-column:3; grid-row:1; width:100%; }
+.combat-sandbox .battle-field__foundation--empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; border-style:dashed; border-color:#71857980; background:#17272355; color:#91a397; cursor:default; touch-action:auto; font:11px/1.2 monospace; }
+.battle-field__foundation--empty > span:first-child { font:30px/1 Georgia,serif; opacity:.6; }
+.combat-sandbox .battle-field__status { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; align-items:center; }
+.combat-sandbox .battle-field__status-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center; }
+.combat-sandbox .battle-field__status > .momentum-engine { display:grid; width:100%; grid-template-columns:minmax(0,1fr) 96px minmax(0,1fr); column-gap:12px; align-items:center; justify-self:center; }
+.combat-sandbox .battle-field__status .momentum-engine__title { grid-column:2; grid-row:1; }
+.combat-sandbox .battle-field__status .momentum-engine__chamber { grid-column:2; grid-row:2/7; }
+.combat-sandbox .battle-field__status .momentum-engine__overflow-label { grid-column:3; grid-row:1; }
+.combat-sandbox .battle-field__status .momentum-engine__pace { grid-column:3; grid-row:2; }
+.combat-sandbox .battle-field__status .momentum-engine__sequence { grid-column:3; grid-row:3; }
+.combat-sandbox .battle-field__status .momentum-engine__embers { grid-column:3; grid-row:4; justify-content:center; }
+.combat-sandbox .battle-field__status .momentum-engine__ready { grid-column:3; grid-row:5; }
+.combat-sandbox .battle-field__status .momentum-engine__decay { grid-column:3; grid-row:6; }
+@media (max-width:600px) {
+ .combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+ .combat-sandbox .battle-field__status { grid-template-columns:minmax(0,1fr); gap:8px; }
+ .combat-sandbox .battle-field__status > .momentum-engine { grid-template-columns:minmax(0,1fr) 76px minmax(0,1fr); column-gap:8px; }
+ .combat-sandbox .battle-field__status-actions { gap:5px; }
+}
+
+.combat-sandbox .battle-field__status .momentum-engine > :is(.momentum-engine__pace,.momentum-engine__sequence,.momentum-engine__embers,.momentum-engine__ready,.momentum-engine__decay,.momentum-engine__overflow-label) { justify-self:start; width:min(140px,100%); }
+
+/* Legal-move assistance is opt-in; selected cards retain their own feedback. */
+.combat-sandbox .battle-field[data-highlight-legal='false'] .battle-field__column .playing-card:not([data-highlight='true']):not([aria-pressed='true']) { border-color:#ffffff1a; }
+.combat-sandbox .battle-field[data-highlight-legal='true'] .battle-field__column .playing-card:not([data-gameplay-disabled]):not([data-buried]) { border-color:#fff; }
+.combat-sandbox .proto-solve-actions button[aria-pressed='true'] { border-color:#fff; background:#315447; color:#fff; }
+
+/* A bounded combat stage: reserve stagger space and fit the entire composition. */
+.combat-sandbox, .combat-sandbox__pane, .combat-sandbox .battle-field { box-sizing:border-box; max-height:100dvh; overflow:hidden; }
+.combat-sandbox .battle-field > .proto-tableau-scene { overflow:hidden; }
+.combat-sandbox .battle-field__board { position:absolute; inset:0 0 auto; height:auto; min-height:0; grid-template-rows:auto auto auto; overflow:visible; transform:scale(var(--combat-fit,1)); transform-origin:top center; gap:6px; padding:2px 0; }
+.combat-sandbox .battle-field__team[data-team='enemy'] { height:210px; box-sizing:border-box; align-content:center; }
+.combat-sandbox .battle-foe[data-stagger-stage] { margin:0; }
+.combat-sandbox .battle-field__middle { height:auto; min-height:0; grid-template-rows:220px 72px auto; }
+.combat-sandbox .battle-field__tableau { min-height:0; height:100%; }
+.combat-sandbox .battle-spills, .combat-sandbox .battle-spills:empty { display:flex; height:72px; min-height:0; max-height:72px; box-sizing:border-box; flex-wrap:nowrap; align-items:center; overflow:visible; padding:4px 8px; gap:5px; }
+.combat-sandbox .battle-spills .battle-field__column { --classic-card-w:min(40px,calc((100cqw - 56px) / 9)); }
+.combat-sandbox .battle-field__status { grid-template-columns:minmax(0,1fr); gap:4px; }
+.combat-sandbox .battle-field__status > .momentum-engine { min-height:110px; }
+.combat-sandbox .battle-field__status-actions { justify-content:space-evenly; }
+@media (max-width:600px) {
+ .combat-sandbox .battle-field__team[data-team='enemy'] { height:200px; }
+ .combat-sandbox .battle-field__middle { grid-template-rows:190px 64px auto; }
+ .combat-sandbox .battle-spills, .combat-sandbox .battle-spills:empty { height:64px; max-height:64px; }
+ .combat-sandbox .battle-spills .battle-field__column { --classic-card-w:min(36px,calc((100cqw - 56px) / 9)); }
+ .combat-sandbox .battle-field__status > .momentum-engine { min-height:100px; }
+}
+
+.combat-sandbox .battle-momentum-skill { width:100%; min-height:36px; padding:5px 3px; border:1px solid #e2c684; border-radius:6px; background:#423821; color:#ffecb4; font:11px/1.3 monospace; cursor:pointer; }
+.combat-sandbox .battle-momentum-skill[aria-disabled='true'] { opacity:.45; cursor:help; border-color:#7c8982; }
+.combat-sandbox .battle-momentum-skill:focus-visible { outline:2px solid #92dfff; outline-offset:2px; }
+.momentum-engine__freeze { grid-column:3; color:#a5edff; font:10px/1.3 monospace; }
+
+/* A separate tilted plane keeps the halo elliptical while its stars orbit within it. */
+.battle-stagger-halo { position:absolute; left:-3px; top:-15px; width:56px; height:30px; perspective:160px; pointer-events:none; z-index:4; }
+.battle-stagger-halo .battle-stagger-orbit { inset:0; width:56px; height:56px; top:-13px; border-width:2px; border-color:#ffe49c99; transform-origin:50% 50%; animation:stagger-halo-orbit 26s linear infinite; }
+.battle-stagger-halo .battle-stagger-orbit i { font-size:15px; font-weight:700; -webkit-text-stroke:0.5px currentColor; text-shadow:0 0 3px #ffcc66; }
+.battle-stagger-halo .battle-stagger-orbit i:nth-child(1) { left:21px; top:-8px; bottom:auto; right:auto; }
+.battle-stagger-halo .battle-stagger-orbit i:nth-child(2) { left:-6px; top:34px; bottom:auto; right:auto; }
+.battle-stagger-halo .battle-stagger-orbit i:nth-child(3) { left:44px; top:34px; bottom:auto; right:auto; }
+@keyframes stagger-halo-orbit { from { transform:rotateX(62deg) rotateZ(-14deg) rotate(0deg); } to { transform:rotateX(62deg) rotateZ(-14deg) rotate(360deg); } }
+.battle-debuff-icon { border-color:#ffd37f; background:radial-gradient(circle,#59402e,#292032); }
+.battle-field[data-combat-paused] .battle-stagger-halo .battle-stagger-orbit { animation-play-state:paused; }
+@media (prefers-reduced-motion:reduce) { .battle-stagger-halo .battle-stagger-orbit { animation:none; transform:rotateX(62deg) rotateZ(-14deg); } }
+.combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:repeat(3,minmax(0,232px)); }
+.combat-sandbox .battle-field__team[data-team='enemy'] { --slot-w:232px; }
+.combat-sandbox .battle-foe,.combat-sandbox .battle-field__foundation.battle-foundation--unified { display:grid; grid-template-columns:56px minmax(0,1fr) 34px; grid-template-areas:'name name name' 'figure bars value'; grid-template-rows:22px 64px; gap:4px 6px; padding:6px; width:232px; max-width:100%; height:106px; min-height:106px; border:2px solid #b9a178; border-bottom-width:3px; border-radius:14px; background:linear-gradient(145deg,#2a1d33ed,#110a17fa); color:#fff0d0; box-shadow:0 4px 0 #020708; }
+.combat-sandbox .battle-field__foundation.battle-foundation--unified { width:100%; }
+.combat-sandbox .battle-foundation--unified .battle-field__actor-card,.combat-sandbox .battle-foe__figure { position:relative; display:block; width:56px; height:56px; min-height:0; border:0; margin:0; padding:0; aspect-ratio:1; border-radius:6px; background:none; overflow:visible; }
+.combat-sandbox .battle-foundation--unified .battle-field__actor-card img,.combat-sandbox .battle-field__khad-root { width:56px; height:56px; object-fit:cover; object-position:center 35%; border-radius:6px; }
+.battle-foundation__value { grid-area:value; display:flex; align-items:center; justify-content:center; min-height:48px; border:1px solid #b9a178; border-radius:7px; background:#141c23; font:28px/1 monospace; color:#fff2cc; }
+.battle-foundation__status { font:11px/16px monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.battle-party-buffs { height:44px; display:flex; align-items:center; justify-content:flex-start; gap:4px; }
+.combat-sandbox .battle-field__foundation--empty { margin-top:44px!important; height:106px!important; }
+@media(max-width:600px) {
+ .combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+ .combat-sandbox .battle-field__team[data-team='enemy'] { --slot-w:160px; }
+ .combat-sandbox .battle-foe,.combat-sandbox .battle-field__foundation.battle-foundation--unified { width:160px; grid-template-columns:30px minmax(0,1fr) 20px; grid-template-rows:18px 56px; gap:3px; padding:4px; height:90px; min-height:90px; }
+ .combat-sandbox .battle-foundation--unified .battle-field__actor-card,.combat-sandbox .battle-foe__figure,.combat-sandbox .battle-foundation--unified .battle-field__actor-card img,.combat-sandbox .battle-field__khad-root { width:30px; height:38px; }
+ .combat-sandbox .battle-foe__name { font-size:10px; }
+ .combat-sandbox .battle-bar__text { font-size:9px; padding:0 1px; }
+ .combat-sandbox .battle-foundation__value { min-height:38px; font-size:19px; }
+ .combat-sandbox .battle-foundation__status { font-size:8px; }
+ .combat-sandbox .battle-field__foundation--empty { height:90px!important; }
+}
+/* Shared foundations: reserve complete rows for labels rather than clipping meter text. */
+.combat-sandbox .battle-foe,
+.combat-sandbox .battle-field__foundation.battle-foundation--unified {
+ box-sizing:border-box; grid-template-rows:18px minmax(0,1fr); align-items:center;
+ justify-content:stretch; padding:8px; gap:5px 7px; border-color:#b7a17b;
+ background:linear-gradient(150deg,#292334,#16131e 75%);
+ box-shadow:inset 0 1px 0 #fff3d515,0 3px 6px #0005;
+}
+.combat-sandbox .battle-foe__name { align-self:center; font:12px/18px Georgia,serif; color:#f1e6d3; }
+.combat-sandbox .battle-foe__bars { align-self:center; gap:3px; }
+.combat-sandbox .battle-foe .battle-bar,
+.combat-sandbox .battle-foundation--unified .battle-bar { box-sizing:border-box; height:18px; border-width:1px; border-color:#080910; border-radius:4px; }
+.combat-sandbox .battle-foe .battle-bar__text,
+.combat-sandbox .battle-foundation--unified .battle-bar__text { font:11px/16px monospace; padding:0 4px; }
+.combat-sandbox .battle-foundation__status { font:10px/13px monospace; color:#d0c9b4; }
+.combat-sandbox .battle-foundation__value { box-sizing:border-box; min-width:0; width:100%; min-height:0; height:54px; align-self:center; font:26px/1 Georgia,serif; border-color:#aa9670; background:linear-gradient(#1a272a,#10191e); box-shadow:inset 0 1px 0 #ffffff12; }
+.combat-sandbox .battle-foundation--unified .battle-field__actor-card img { box-shadow:0 0 0 1px #c9b48c55; }
+@media(max-width:600px) {
+ .combat-sandbox .battle-foe,.combat-sandbox .battle-field__foundation.battle-foundation--unified { padding:5px; gap:4px; grid-template-rows:16px minmax(0,1fr); }
+ .combat-sandbox .battle-foe__name { font-size:10px; line-height:16px; }
+ .combat-sandbox .battle-foe .battle-bar,.combat-sandbox .battle-foundation--unified .battle-bar { height:16px; }
+ .combat-sandbox .battle-foe .battle-bar__text,.combat-sandbox .battle-foundation--unified .battle-bar__text { font-size:9px; line-height:14px; padding:0 2px; }
+ .combat-sandbox .battle-foundation__status { font-size:8px; line-height:11px; }
+ .combat-sandbox .battle-foundation__value { height:44px; font-size:21px; }
+}
+.combat-sandbox .battle-foundation__emoji { display:grid; place-items:center; width:100%; height:100%; background:radial-gradient(ellipse,#dfbd7830,transparent 75%); }
+.combat-sandbox .battle-foundation__emoji svg { display:block; width:100%; height:100%; overflow:visible; }
+/* Portraits span the full inner height; meters sit over their trailing 15%. */
+.combat-sandbox .battle-field__foundation.battle-foundation--unified {
+ --foundation-portrait:80px;
+ grid-template-columns:calc(var(--foundation-portrait) * .85) minmax(0,1fr) 34px;
+ grid-template-areas:'figure name name' 'figure bars value';
+ column-gap:0;
+}
+.combat-sandbox .battle-foundation--unified .battle-field__actor-card {
+ width:var(--foundation-portrait); height:100%; max-height:100%; align-self:stretch;
+ display:grid; place-items:center; z-index:0;
+}
+.combat-sandbox .battle-foundation--unified .battle-foe__name { text-align:left; padding-left:4px; }
+.combat-sandbox .battle-foundation--unified .battle-foe__bars { position:relative; z-index:1; margin-right:6px; }
+.combat-sandbox .battle-foundation--unified .battle-foundation__value { position:relative; z-index:1; }
+@media(max-width:600px) {
+ .combat-sandbox .battle-field__foundation.battle-foundation--unified { --foundation-portrait:48px; grid-template-columns:calc(var(--foundation-portrait) * .85) minmax(0,1fr) 20px; }
+ .combat-sandbox .battle-foundation--unified .battle-foe__bars { margin-right:3px; }
+}
+/* Keep the title distinct and the portrait clear of meter edges. */
+.combat-sandbox .battle-field__foundation.battle-foundation--unified {
+ grid-template-columns:var(--foundation-portrait) minmax(0,1fr) 34px;
+ grid-template-rows:25px minmax(0,1fr); column-gap:5px; row-gap:4px;
+}
+.combat-sandbox .battle-foundation--unified .battle-foe__name {
+ justify-self:end; align-self:start; width:max-content; max-width:100%; box-sizing:border-box;
+ padding:2px 10px; border:1px solid #d5bf91; border-radius:999px;
+ background:#171923; color:#fff0ce; font:600 15px/18px Georgia,serif;
+ text-align:center; box-shadow:inset 0 1px 0 #fff4d515;
+}
+.combat-sandbox .battle-foundation--unified .battle-foe__bars { margin-right:0; }
+@media(max-width:600px) {
+ .combat-sandbox .battle-field__foundation.battle-foundation--unified {
+ --foundation-portrait:40px; grid-template-columns:var(--foundation-portrait) minmax(0,1fr) 20px;
+ grid-template-rows:21px minmax(0,1fr); column-gap:3px; row-gap:3px;
+ }
+ .combat-sandbox .battle-foundation--unified .battle-foe__name { font-size:12px; line-height:16px; padding:1px 6px; }
+ .combat-sandbox .battle-foundation--unified .battle-foe__bars { margin-right:0; gap:2px; }
+}
+.combat-sandbox__fps { position:fixed; right:14px; bottom:14px; z-index:70000; padding:4px 7px; border:1px solid #8fbbb766; border-radius:5px; background:#07171be8; color:#baeee0; font:11px/1.3 monospace; font-variant-numeric:tabular-nums; pointer-events:none; }
+/* Sandbox controls share one footer; End Turn follows the foundation centerline. */
+.combat-sandbox .battle-field__solver-dock { width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:8px; justify-self:stretch; }
+.battle-field__solver-actions { grid-column:1; display:flex; align-items:center; flex-wrap:wrap; gap:5px; min-width:0; }
+.battle-field__turn-actions { grid-column:2; grid-row:1; display:flex; align-items:center; justify-self:center; gap:6px; }
+.battle-field__single-move { display:flex; }
+.battle-field__single-move button { border:1px solid #8ef2d473; border-radius:6px; background:#0b1916; padding:6px 8px; font:12px/1.3 monospace; }
+.battle-field__single-move button:disabled { opacity:.4; }
+.combat-sandbox .battle-field__turn-actions button { min-height:36px; white-space:nowrap; }
+.combat-sandbox .battle-field__turn-actions > .battle-end-turn { padding:7px 12px; border:2px solid #f1d37e; border-radius:6px; background:#42351c; color:#fff0b7; font-weight:bold; }
+.combat-sandbox .battle-field__status-actions:empty { display:none; }
+@media(max-width:600px) {
+ .combat-sandbox .battle-field__solver-dock { gap:4px; }
+ .battle-field__solver-actions { gap:3px; }
+ .battle-field__solver-actions button { font-size:9px; padding:5px; }
+ .combat-sandbox .battle-field__turn-actions button { padding:6px; font-size:10px; }
+}
+.combat-sandbox .battle-field__status > .momentum-engine { grid-template-columns:minmax(0,1fr) 180px minmax(0,1fr); min-height:206px; column-gap:18px; }
+.combat-sandbox .battle-field__status .momentum-engine__chamber { width:180px; height:180px; }
+.combat-sandbox .momentum-engine__value { font-size:52.5px; }
+.battle-config { position:relative; font:12px/1.3 monospace; }
+.battle-config summary { cursor:pointer; list-style:none; padding:8px 12px; border:1px solid #adba9e; border-radius:7px; color:#eee5c9; background:#172b2b; }
+.battle-config summary:focus-visible { outline:2px solid #a4e8ff; outline-offset:3px; }
+.battle-config__panel { position:absolute; right:0; top:calc(100% + 8px); z-index:100; min-width:180px; display:grid; gap:12px; padding:14px; border:1px solid #b5a27e; border-radius:10px; background:#14242bf5; box-shadow:0 8px 24px #0009; color:#f1ead9; }
+.battle-config__panel label { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.battle-config__panel input { accent-color:#efd08e; }
+.battle-config__panel .battle-config__value-style { flex-direction:column; align-items:stretch; gap:6px; }
+.battle-config__value-style select { width:100%; min-width:0; padding:5px 7px; border:1px solid #91aca6; border-radius:4px; background:#142825; color:#e3eee5; font:12px/1.2 monospace; }
+@media(max-width:600px) {
+ .combat-sandbox .battle-field__status > .momentum-engine { grid-template-columns:minmax(0,1fr) 140px minmax(0,1fr); min-height:164px; column-gap:10px; }
+ .combat-sandbox .battle-field__status .momentum-engine__chamber { width:140px; height:140px; }
+ .combat-sandbox .momentum-engine__value { font-size:42.5px; }
+}
+.battle-ember-phase { max-width:280px; margin:4px auto; padding:6px 8px; border:1px solid #e8b967; border-radius:6px; background:#231526; color:#ffe8a5; font:12px/1.4 sans-serif; text-align:center; }
+
+/* Story allies occupy their own left-hand foundation, with no manual receiver. */
+.combat-sandbox .battle-field[data-night-phase] [data-battle-slot='banks'] { grid-column:1;grid-row:1; }
+.combat-sandbox .battle-field[data-night-phase]:has([data-battle-slot='banks']) [data-battle-slot='hero'] { grid-column:2;grid-row:1; }
+.combat-sandbox .battle-field[data-night-phase]:has([data-battle-slot='banks']) [data-battle-slot='mochi'] { grid-column:3;grid-row:1; }
+.combat-sandbox [data-battle-slot='banks'] .actor-holocard { display:block;width:100%;height:100%; }
+.combat-sandbox [data-battle-slot='banks'] .trading-card { width:100%;height:100%; }
+.combat-sandbox [data-night-phase='rescue'][data-night-step='0'] [data-battle-actor='banks']:not([data-night-arrived]) { opacity:0; }
+
+/* Reserve the full status/intent stack before fitting the combat stage. */
+.combat-sandbox .battle-field__team[data-team='enemy'] { height:auto; min-height:210px; padding:6px 0; align-content:start; }
+.combat-sandbox .battle-enemy-buffs, .combat-sandbox .battle-party-buffs { height:auto; min-height:44px; max-width:100%; flex-wrap:wrap; flex-shrink:0; }
+.combat-sandbox .battle-buff-icon { flex:0 0 44px; box-sizing:border-box; font-size:24px; }

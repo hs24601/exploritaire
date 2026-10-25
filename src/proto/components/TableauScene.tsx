@@ -55,7 +55,7 @@ export function TableauScene({ children, immersive, terrain, rig, hours, fillSce
           return <span key={index} className="proto-tableau-scenery__prop" style={fillScenery
             ? { left: `${index * 17 + (layer % 2 ? 7 : 0)}%`, bottom: `${[60,32,3][layer] + (index % 3) * 2}%`, width: size, height: size, transform: 'translateX(-50%)' }
             : { left: `${index * 17 - 2}%`, bottom: `${8 + (index % 3) * 5}%`, width: layer === 2 ? 70 : 88, height: layer === 2 ? 55 : 150 }}>
-            <SpriteStandeeArt sprite={scenerySprite(sprite,artStyle)!} lighting={rig.standee(x, y, 88)} size={size} />
+            <SpriteStandeeArt sprite={scenerySprite(sprite,artStyle,`scene:${layer}:${index}`)!} lighting={rig.standee(x, y, 88)} size={size} />
           </span>;
         })}
       </div>)}

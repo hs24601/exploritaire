@@ -143,7 +143,7 @@ describe('sprite-derived prop volumes',()=>{
   it('has no volume for transparent art and chooses recipes only for authored supported sources',()=>{
     expect(buildPropVolume(2,2,new Uint8ClampedArray(16),{bands:[0,1],depth:1,trim:true}).faces).toEqual([]);
     expect(propVolumeRecipe('/assets/deprecated/pixel/environment/mountain_standee.svg')).toBeDefined();
-    expect(propVolumeRecipe('/assets/deprecated/pixel/characters/hero.png')).toBeUndefined();
+    expect(propVolumeRecipe('/assets/deprecated/pixel/characters/hero-standing-topdown.png')).toBeUndefined();
     expect(propVolumeRecipe('/assets/deprecated/pixel/environment/hero-den-standee-v3.png')?.shape).toBe('cave');
   });
   it('constrains the complete two-axis ground footprint and uniformly scales small owners',()=>{

@@ -1,0 +1,12 @@
+{
+  "tool": "Built-in image_gen",
+  "date": "2026-10-22",
+  "runtime": "runtime/ui/quests/hero-leaving-cave-night-paint-v2.png",
+  "references": [
+    "runtime/ui/quests/hero-leaving-cave-night-paint-v1.png",
+    "runtime/ui/quests/hero-snuffling-berries-night-paint-v5.png"
+  ],
+  "generationFile": "exec-1a66c7dd-d4a8-4a47-a0ac-2fc07a1f3c6b.png",
+  "promptSummary": "Repaint reference 1 as a full-bleed opaque 3:2 landscape quest illustration without text or frame. Preserve third-person rear view of tricolor Australian Shepherd Hero inside a dark cave walking toward moonlit forest and low berry bushes, large ears, charcoal/slate back, copper rump, cream neck/paws and tiny natural bobtail. Keep the subject/path readable in a central square crop. Decisively simplify the whole scene into soft broad irregular wet brush dabs, a small number of large merged pigment masses, diffuse wet-on-wet transitions, diluted feathering and lost edges, occasional pooled boundaries. Avoid individual hairs, fur shards, detailed leaves, repetitive flecks, mosaic marks, stippling, gritty grain, glossy digital shading, dense ink and uniformly sharp edges. Retain rich indigo nighttime and sparse stars. Replace blue bead clusters with a few separated apple-sized red/raspberry stemless manaberries without attached leaves or apple anatomy, bumpy dragonfruit-like circumference made of broad painted lobes. Reference 2 governs fruit identity only. Diffuse cyan-blue magical light surrounds the red fruit and illuminates Hero and rocks. Repaint rather than apply a blur filter.",
+  "validation": "Visually inspected full generated illustration: simplified larger washes, preserved cave-exit framing and Hero identity, red fruit bodies with surrounding blue light. Prior night and daylight variants retained."
+}

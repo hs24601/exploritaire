@@ -3,6 +3,7 @@ import { gameTime } from '../../gameTime';
 import { getCameraPlayback } from '../cameraDirector';
 import { sceneActorBoxes } from '../sceneProjection';
 import './OpeningCardDeal.css';
+import { questTravelPose } from './questCardTravel';
 
 /** Presentation only. Copies fly; the live interactive cards retain their slots. */
 export function OpeningCardDeal({ enabled }: { enabled: boolean }) {
@@ -32,7 +33,8 @@ export function OpeningCardDeal({ enabled }: { enabled: boolean }) {
       }
       if (started === undefined) {
         const slots = targets();
-        const cards = [slots[0]];
+        // Hero is introduced only after the ground quest has been picked up.
+        const cards: (HTMLElement | null)[] = [];
         if (slots.some(card => !card) || cards.some(card => !card)) { frame = gameTime.requestAnimationFrame(tick); return; }
         if (reduced.matches) { release(); return; }
         started = now; map.dataset.openingCards = 'dealing';
@@ -60,21 +62,23 @@ export function OpeningCardDeal({ enabled }: { enabled: boolean }) {
           ?? map.querySelector<HTMLElement>('[data-board-piece="actor"][data-actor-id="hero"]')?.getBoundingClientRect();
         if (!flight.source && actor) flight.source = { x: (actor.left + actor.right) / 2 - view.left, y: (actor.top + actor.bottom) / 2 - view.top };
         if (!flight.source) return;
-        const t = Math.min(1, elapsed / 650), eased = t * t * (3 - 2 * t);
+        const t = Math.min(1, elapsed / 650), {eased,lift,rotation,shadow} = questTravelPose(t);
         const target = flight.card.getBoundingClientRect();
         const x = flight.source.x + (target.left + target.width / 2 - view.left - flight.source.x) * eased;
-        const y = flight.source.y + (target.top + target.height / 2 - view.top - flight.source.y) * eased - Math.sin(t * Math.PI) * Math.min(110, view.height * .16);
+        const y = flight.source.y + (target.top + target.height / 2 - view.top - flight.source.y) * eased - lift;
         const scale = .16 + .84 * eased;
         flight.node.hidden = false;
-        flight.node.style.cssText = `width:${target.width}px;height:${target.height}px;left:${x}px;top:${y}px;opacity:${Math.min(1, .6 + t * 3)};transform:translate(-50%,-50%) perspective(900px) rotateY(${(1-eased)*720}deg) rotateZ(${Math.sin(t*Math.PI)*(index ? 12 : -12)}deg) scale(${scale});`;
+        flight.node.style.cssText = `width:${target.width}px;height:${target.height}px;left:${x}px;top:${y}px;opacity:${Math.min(1, .6 + t * 3)};transform:translate(-50%,-50%) perspective(900px) rotateY(${rotation}deg) scale(${scale});filter:${shadow};`;
         if (t === 1) { flight.landed = true; flight.node.remove(); flight.card.dataset.openingLanded = 'true'; flight.card.inert = false; }
       });
       if (flights.every(flight => flight.landed)) release();
       else frame = gameTime.requestAnimationFrame(tick);
     };
     const arm = () => { if (armedAt !== undefined || finished) return; armedAt = gameTime.now(); frame = gameTime.requestAnimationFrame(tick); };
+    const revealQuest = () => { map.dataset.openingQuestRevealed = 'true'; };
+    window.addEventListener('proto-opening-quest-reveal', revealQuest);
     window.addEventListener('proto-opening-card-deal', arm);
-    return () => { window.removeEventListener('proto-opening-card-deal', arm); release(); delete map.dataset.openingCards; delete map.dataset.openingQuest; };
+    return () => { window.removeEventListener('proto-opening-quest-reveal', revealQuest); delete map.dataset.openingQuestRevealed; window.removeEventListener('proto-opening-card-deal', arm); release(); delete map.dataset.openingCards; delete map.dataset.openingQuest; };
   }, [enabled]);
   return <div ref={root} className="opening-card-deal" aria-hidden="true" inert />;
 }

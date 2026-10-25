@@ -23,7 +23,7 @@ export function ActorDragPreview({ targetId, target, project }: { targetId: stri
     const tick = () => {
       if (!armed || dismissed) return;
       const card = map.querySelector<HTMLElement>('[data-map-actor-card="hero"]');
-      if (!card || getCameraPlayback().playing || document.hidden || map.getAttribute('data-opening-cards') === 'pending' || map.getAttribute('data-opening-cards') === 'dealing') {
+      if (!card || map.hasAttribute('data-opening-quest') || getCameraPlayback().playing || document.hidden || map.getAttribute('data-opening-cards') === 'pending' || map.getAttribute('data-opening-cards') === 'dealing') {
         hide(); started = undefined; frame = gameTime.requestAnimationFrame(tick); return;
       }
       if (!ghost.firstChild) { const copy = card.cloneNode(true) as HTMLElement; copy.removeAttribute('tabindex'); copy.removeAttribute('role'); copy.removeAttribute('data-map-actor-card'); copy.querySelectorAll('[id]').forEach(el => el.removeAttribute('id')); ghost.append(copy); }

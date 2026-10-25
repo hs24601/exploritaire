@@ -11,7 +11,8 @@ export function useTableauCardLimit(ref: RefObject<HTMLElement | null>) {
     const resize = new ResizeObserver(measure);
     function measure() {
       const dock = document.querySelector<HTMLElement>('[data-map-actor-card]');
-      const faces = field!.querySelectorAll<HTMLElement>('.proto-occupied-foundation-face, .proto-empty-foundation-face, .battle-field__actor-card, .travel-foundation-actor');
+      const unified=field!.querySelector('.battle-foundation--unified');
+      const faces = field!.querySelectorAll<HTMLElement>(unified?'.battle-foundation--unified':'.proto-occupied-foundation-face, .proto-empty-foundation-face, .battle-field__actor-card, .travel-foundation-actor');
       let next = Infinity;
       if (dock) { resize.observe(dock); if (dock.offsetWidth && dock.offsetHeight) next = Math.min(dock.offsetWidth, dock.offsetHeight * PLAYING_CARD_RATIO); }
       faces.forEach(face => {

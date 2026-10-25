@@ -15,6 +15,7 @@ export const useFlickPhysics = () => useSyncExternalStore(
 );
 
 export type FlickSample = { x: number; y: number; t: number };
+const FLICK_SENSITIVITY = 3;
 /** Recent motion only: holding still before release must not launch a card. */
 export function flickVelocity(samples: FlickSample[]) {
   const last = samples[samples.length - 1];
@@ -23,7 +24,7 @@ export function flickVelocity(samples: FlickSample[]) {
   const dt = (last.t - first.t) / 1000;
   const x = (last.x - first.x) / dt, y = (last.y - first.y) / dt;
   const speed = Math.hypot(x, y), scale = Math.min(1, 3200 / speed);
-  return speed < 250 ? { x: 0, y: 0 } : { x: x * scale, y: y * scale };
+  return speed < 250 ? { x: 0, y: 0 } : { x: x * scale * FLICK_SENSITIVITY, y: y * scale * FLICK_SENSITIVITY };
 }
 /** Exponential friction gives frame-rate independent displacement in CSS pixels. */
 export function flickPosition(start: FlickSample, velocity: { x: number; y: number }, seconds: number) {

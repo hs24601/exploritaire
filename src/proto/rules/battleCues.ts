@@ -3,6 +3,7 @@
 // Cues never feed back into the rules; a dropped or skipped cue changes nothing.
 
 import type { ActorMarkerContent } from '../actorMarkers';
+import type { KhadWeedOptions } from '../khadSpriteFaces';
 import { ABILITIES, SPIRITS, type SpiritDef } from './battleAbilities';
 import { previewAttack, type BattleEvent, type BattleState } from './battle';
 
@@ -47,6 +48,9 @@ export const cuesFor = (events: readonly BattleEvent[]): BattleCue[] => {
       case 'hit': case 'trap': {
         const actorId = event.sourceId ?? 'hero';
         struck.add(targetId);
+        // Momentum cards own launch, impact and contact presentation; don't
+        // replay the default bite/claw animation after their flight finishes.
+        if(event.kind==='hit' && (event.label==='Bash' || event.label==='Pounce'))return [];
         return [
           { id, kind: 'attack', delay: 0, actorId, targetId, ...attackLook(actorId, event.label), heavy, trap: event.kind === 'trap' },
           { id, kind: 'hurt', delay: event.kind === 'trap' ? 0.12 : IMPACT_SECONDS, targetId, fromId: actorId, amount, heavy, light: false },
@@ -55,6 +59,9 @@ export const cuesFor = (events: readonly BattleEvent[]): BattleCue[] => {
       case 'enemy-hit': {
         const actorId = event.sourceId ?? '';
         struck.add(targetId);
+        if(event.label==='Thorns')return [
+          {id,kind:'hurt',delay:IMPACT_SECONDS,targetId,fromId:actorId || null,amount,heavy:false,light:true},
+        ];
         return [
           { id, kind: 'attack', delay: 0, actorId, targetId, motion: 'slam', tier: 0, element: null, heavy, trap: false },
           { id, kind: 'hurt', delay: IMPACT_SECONDS, targetId, fromId: actorId || null, amount, heavy, light: false },
@@ -78,7 +85,12 @@ export const cueSeconds = (cue: BattleCue) => cue.delay + CUE_SECONDS[cue.kind =
 
 /** What the arena shows: every unit still on the field (fallen ones included) and the recent events to cue. */
 export type BattleScene = {
+  khadRoot?: boolean;
+  sandboxSession?: string;
+  weedOptions?: KhadWeedOptions;
   proceduralSlimeComparison?: boolean;
+  /** Hero standing at the low camera tier uses the orbit v1 slice (docs/art/hero-orbit-v1.md). */
+  heroOrbit?: boolean;
   paused?: boolean;
   ambushed?: boolean;
   units: { id: string; team: 'party' | 'enemy'; down: boolean; position?: readonly [number,number]; pose?: 'standing' | 'sitting' | 'flinch'; targeting?: 'valid' | 'focused'; markers?: ActorMarkerContent }[];

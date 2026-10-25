@@ -158,7 +158,6 @@
     "actors/hero-sleeping-topdown.png": "deprecated/pixel/characters/hero-sleeping-topdown.png",
     "actors/hero-sleeping.png": "deprecated/pixel/characters/hero-sleeping.png",
     "actors/hero-standing-topdown.png": "deprecated/pixel/characters/hero-standing-topdown.png",
-    "actors/hero.png": "deprecated/pixel/characters/hero.png",
     "actors/mochi/emojis-watercolor-v1/mochi-emojis-v1.json": "runtime/characters/mochi/expressions/emojis/watercolor/v1/mochi-emojis-v1.json",
     "actors/mochi/emojis-watercolor-v1/mochi-emojis-v1.png": "runtime/characters/mochi/expressions/emojis/watercolor/v1/mochi-emojis-v1.png",
     "actors/mochi/emojis-watercolor-v1/mochi_emoji_behind.png": "runtime/characters/mochi/expressions/emojis/watercolor/v1/mochi_emoji_behind.png",

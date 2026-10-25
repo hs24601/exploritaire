@@ -1,8 +1,10 @@
 // Measure complete heads and detached symbols before deterministic atlas packing.
 const fs=require('node:fs'),{chromium}=require('playwright');
 const names=['happy','blush','heartEyes','sad','stars','upset','upsetWithSymbol','behind','fighting'];
-const directory='public/assets/runtime/characters/banks/expressions/emojis/watercolor/v2';
-(async()=>{const browser=await chromium.launch();try{
+const version=process.argv[3]||'v2';
+if(!/^v\d+$/.test(version))throw Error('Expected version such as v3');
+const directory=`public/assets/runtime/characters/banks/expressions/emojis/watercolor/${version}`;
+(async()=>{const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||undefined});try{
  const page=await browser.newPage();
  const result=await page.evaluate(async({data,names})=>{
   const image=new Image();image.src=data;await image.decode();
@@ -48,9 +50,9 @@ const directory='public/assets/runtime/characters/banks/expressions/emojis/water
   });
   return {png:sheet.toDataURL('image/png').split(',')[1],individual,frames,measurements,source:[image.width,image.height]};
  },{data:'data:image/png;base64,'+fs.readFileSync(process.argv[2]).toString('base64'),names});
- fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(`${directory}/banks-emojis-v2.png`,Buffer.from(result.png,'base64'));
+ fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(`${directory}/banks-emojis-${version}.png`,Buffer.from(result.png,'base64'));
  for(const name of names)fs.writeFileSync(`${directory}/banks_emoji_${name}.png`,Buffer.from(result.individual[name],'base64'));
- fs.writeFileSync(`${directory}/banks-emojis-v2.json`,JSON.stringify({frames:result.frames,meta:{image:'banks-emojis-v2.png',format:'RGBA8888',size:{w:1536,h:1536},scale:'1'}},null,2)+'\n');
- fs.writeFileSync('docs/art/banks-emojis-watercolor-v2-packing.json',JSON.stringify({source:result.source,frames:result.measurements},null,2)+'\n');
+ fs.writeFileSync(`${directory}/banks-emojis-${version}.json`,JSON.stringify({frames:result.frames,meta:{image:`banks-emojis-${version}.png`,format:'RGBA8888',size:{w:1536,h:1536},scale:'1'}},null,2)+'\n');
+ fs.writeFileSync(`docs/art/banks-emojis-watercolor-${version}-packing.json`,JSON.stringify({source:result.source,frames:result.measurements},null,2)+'\n');
  console.log('Packed nine complete mature Banks expressions with alpha, detached symbols and 32px margins.');
 }finally{await browser.close();}})().catch(error=>{console.error(error);process.exit(1)});

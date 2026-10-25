@@ -1,0 +1,22 @@
+export const COMBAT_SANDBOX_SCENARIOS = [
+  { id: '001', name: '001: Dormant Khad Root', hp: 10, thorns: 0 },
+  { id: '002', name: '002: Thorns Khad Root', hp: 4, thorns: 1 },
+  { id: '003', name: '003: Bad Deal', hp: 10, thorns: 0 },
+  { id: '004', name: '004: Ironbark Khad Root', hp: 10, thorns: 0 },
+  { id: '005', name: '005: Break and Finish', hp: 24, thorns: 0 },
+  { id: '006', name: '006: Ember Trial Sentinel', hp: 36, thorns: 0 },
+  { id: '007', name: '007: The Gallows Bloom', hp: 30, thorns: 0 },
+  { id: '008', name: '008: Chip Tutorial', hp: 0, thorns: 0 },
+  { id: '009', name: '009: Ability Playground', hp: 0, thorns: 0 },
+  { id: '010', name: '010: Tempo', hp: 0, thorns: 0 },
+  { id: '011', name: '011: Frost & Shatter', hp: 0, thorns: 0 },
+  { id: '012', name: '012: Storm', hp: 0, thorns: 0 },
+  { id: '013', name: '013: Steam', hp: 0, thorns: 0 },
+  { id: '014', name: '014: Bleed then Burn', hp: 0, thorns: 0 },
+  { id: '015', name: '015: Silence & Banking', hp: 0, thorns: 0 },
+  { id: '016', name: '016: Haste + Vice Grip', hp: 0, thorns: 0 },
+  { id: '017', name: '017: Ember Rage', hp: 0, thorns: 0 },
+  { id: '018', name: '018: Focus Fire', hp: 0, thorns: 0 },
+  { id: '999', name: '999: Indefatigable Enemy', hp: 999, thorns: 0 },
+] as const;
+export type CombatSandboxScenarioId = typeof COMBAT_SANDBOX_SCENARIOS[number]['id'];

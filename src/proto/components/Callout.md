@@ -25,3 +25,9 @@ The editor keeps an unsaved Live preview visible in every section. It uses runti
 Wave animates individual character spans with a 65 ms stagger across each marked phrase; words retain their wrapping groups. Potency controls character displacement and reduced motion disables character animation.
 
 Layout guard: intrinsic text/effect widths must not collapse the bubble beside the floated expression. Bounded minimum widths reserve space without overflowing editor preview containers, and speaker names use normal word boundaries. Run `node tools/callout-layout-playwright.cjs` for browser regression coverage using the actual CalloutText renderer and editor; the fixture bundles locally without a development server.
+
+Combat damage reactions opt into placement='foundation': a compact bubble sits directly above the supplied foundation-top anchor, with its tail tip touching that anchor. Horizontal viewport clamping retains the actor association. These brief reactions omit the next button and pass gameplay clicks through; the authoring pencil remains available. Free-space dialogue placement is unchanged.
+
+### Player choices
+
+`choices` accepts stable button labels and owner callbacks. The final bubble reveals these actions after its text; advancing cannot dismiss a required choice. Choice buttons respect pause and editing. The owner commits the selected outcome and removes the callout. `day01.last-berry` uses Collect the berry / Leave for home; the travel rules enforce the decision across manual play, solver and reset.

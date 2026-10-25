@@ -10,8 +10,8 @@ import {ActorHoloCard} from './ActorHoloCard';
 import {ProtoCard} from './ProtoCard';
 import {TableauPlayArea} from './TableauTemplate';
 import {TradingCard} from './TradingCard';
-import {DARK_SLIME_DIRECTIONAL_SPRITE} from '../directionalSprites';
-import {BATTLE_SPRITE_ASSETS} from '../battleSpriteAssets';
+
+
 import {rankLabel} from '../protoState';
 import {createTableauLightRig} from '../tableauLighting';
 import {sceneOf,type BattleScene} from '../rules/battleCues';
@@ -20,10 +20,9 @@ import {BANKS_RESCUE_BEATS,useCinema} from '../cinema';
 import {BANKS_NUZZLE_ART} from '../banksCinemaArt';
 import './BanksRescueCinema.css';
 
-export function SlimeEncounterCard(){const frame=DARK_SLIME_DIRECTIONAL_SPRITE.low[0];return <TradingCard id="slime-ambush" title="Hungry Slime" state="foundation" art={<svg viewBox={frame.parts[0].rect.join(' ')} preserveAspectRatio="xMidYMax meet" role="img" aria-label="Hungry purple slime"><image href={import.meta.env.BASE_URL+'assets/'+BATTLE_SPRITE_ASSETS[frame.source]} /></svg>} sections={[{id:'intent',label:'Ambush',content:'A sudden lunge',details:'The slime attacks before Hero can react.'}]} />;}
+export function KhadRootEncounterCard(){return <TradingCard id="khad-ambush" title="Khad Root" state="foundation" art={<img src={import.meta.env.BASE_URL+'assets/runtime/ui/quests/khad-roots-berry-bush-night-paint-v1.png'} alt="Crimson thorned Khad Roots" />} sections={[{id:'intent',label:'Thorn Whip',content:'A noxious, dangerous weed',details:'A rooted vine coils, then lashes out with hooked thorns.'}]} />;}
 const rig=createTableauLightRig(16,{x:0,y:0},[]);
 export function BanksRescueCinema({onComplete,onExit}:{onComplete:()=>void;onExit:()=>void}){
- const comparison = new URLSearchParams(window.location.search).has('woods-combat');
  const cinematicShots = useStoryCinematicsEnabled();
  const [battle,setBattle]=useState(createRescueBattle),[look,setLook]=useState('reveal');
  const stage=useRef<HTMLDivElement>(null);
@@ -35,15 +34,7 @@ export function BanksRescueCinema({onComplete,onExit}:{onComplete:()=>void;onExi
  },[]);
  const cinema=useCinema(BANKS_RESCUE_BEATS,cue=>{setLook(cue);if(cue==='hit')setBattle(ambushHero);if(cue==='spawn-banks')setBattle(banksArrives);if(cue==='scratch')setBattle(banksScratch);if(cue==='bite')setBattle(banksBite);},onComplete);
  useEffect(()=>{if(cinema.beat?.id!=='run'||cinema.paused)return;const timer=gameTime.setInterval(()=>{if(!document.hidden)setBattle(banksAutoStep);},240);return()=>gameTime.clearInterval(timer);},[cinema.beat?.id,cinema.paused]);
- const scene:BattleScene={...sceneOf(battle),paused:cinema.paused,units:sceneOf(battle).units.filter(u=>u.id!=='dark-slime'||!['mana','hope'].includes(cinema.beat?.id??'')).map(u=>({...u,...(u.id==='hero'&&look==='cower'?{pose:'flinch' as const}:{}),...(u.id==='banks'&&['approach','nuzzle','fade'].includes(look)?{position:[-2.4,.3] as const}:{})}))};
- if (comparison) {
-  scene.proceduralSlimeComparison = true;
-  // Visual comparison twin, sharing the encounter's life cycle without adding
-  // attacks, rewards or a second required kill to the authored rescue.
-  const source = sceneOf(battle).units.find(unit => unit.id === 'dark-slime');
-  scene.units = scene.units.filter(unit => unit.id !== 'dark-slime');
-  if (source) scene.units.push({ ...source, position: [3, 0] }, { ...source, id: 'rear-slime', position: [7.4, 0], targeting: undefined, markers: undefined });
- }
+ const scene:BattleScene={...sceneOf(battle),khadRoot:true,paused:cinema.paused,units:sceneOf(battle).units.filter(u=>u.id!=='dark-slime'||!['mana','hope'].includes(cinema.beat?.id??'')).map(u=>({...u,...(u.id==='hero'&&look==='cower'?{pose:'flinch' as const}:{}),...(u.id==='banks'&&['approach','nuzzle','fade'].includes(look)?{position:[-2.4,.3] as const}:{})}))};
  const actorAnchor=()=>{const name=cinema.beat?.speaker==='Banks'?'banks':'hero';const actor=stage.current?.querySelector<HTMLElement>('[data-scene-target="'+name+'"]');if(actor&&!actor.hidden){const r=actor.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+10};}const r=stage.current?.getBoundingClientRect();return r?{x:r.x+r.width*.38,y:r.y+r.height*.6}:null;};
  const banks=battle.party.find(a=>a.id==='banks'),hero=battle.party.find(a=>a.id==='hero')!;
  const previousCards=useRef(new Map<string,{rect:DOMRect;node:HTMLElement}>());
@@ -72,10 +63,9 @@ export function BanksRescueCinema({onComplete,onExit}:{onComplete:()=>void;onExi
   <img hidden data-cinema-nuzzle-preload src={BANKS_NUZZLE_ART} alt="" />
   <header><strong>Day 02 · The darker woods</strong><div><button type="button" onClick={()=>cinema.setPaused(p=>!p)}>{cinema.paused?'Resume cinema':'Pause cinema'}</button><button type="button" onClick={onExit}>Restart Day 02</button></div></header>
   <div className="banks-rescue-cinema__stage" data-rescue-mood={cinematicShots ? 'woods' : undefined} ref={stage}>
-   {comparison && <div className="slime-comparison-caption">Left: painted asset · Right: shifting shadow ink · Visual twin shares HP</div>}
-   <CombatDemo battle={scene} onClose={()=>cinema.setPaused(true)} onRestart={()=>{}} onEscape={()=>cinema.setPaused(p=>!p)} firstTeam="party" cameraShot={comparison ? {id:'slime-comparison',name:'Slime paint comparison',position:[5.2,3.8,8.5],target:[5.2,1.3,0],durationMs:0} : cinematicShots ? DAY_TWO_RESCUE_SHOTS[cinema.beat?.id ?? 'mana'] : undefined} />
+   <CombatDemo battle={scene} onClose={()=>cinema.setPaused(true)} onRestart={()=>{}} onEscape={()=>cinema.setPaused(p=>!p)} firstTeam="party" cameraShot={cinematicShots ? DAY_TWO_RESCUE_SHOTS[cinema.beat?.id ?? 'mana'] : undefined} />
    {cinema.beat?.id==='mana'&&<div className="cinema-mana-reveal"><span>✨</span><span>Mana in the undergrowth...</span></div>}
-   {cinema.beat?.id==='slime-card'&&<div className="cinema-card-entrance cinema-card-entrance--slime"><SlimeEncounterCard /></div>}
+   {cinema.beat?.id==='slime-card'&&<div className="cinema-card-entrance cinema-card-entrance--slime"><KhadRootEncounterCard /></div>}
    {cinema.beat?.id==='banks-card'&&<div className="cinema-card-entrance cinema-card-entrance--banks"><ActorHoloCard actorId="banks" name="Banks" rank="9" /></div>}
    {hero.hp===0&&<span className="cinema-conscious-label">Hero · Unconscious</span>}
    {['nuzzle','fade'].includes(look)&&<div className="cinema-nuzzle" role="img" aria-label="Banks shelters and gently nuzzles the unconscious Hero"><div style={{backgroundImage:`url("${BANKS_NUZZLE_ART}")`}} /></div>}
@@ -84,9 +74,9 @@ export function BanksRescueCinema({onComplete,onExit}:{onComplete:()=>void;onExi
   <div className="banks-rescue-cinema__tableaus" aria-label="Spawned combat tableaus">
     <div className="cinema-foundations"><div data-cinema-foundation="hero"><ActorHoloCard actorId="hero" name="Hero" rank={rankLabel(hero.rank)} /><span>{hero.hp===0?'Unconscious':hero.hp+' HP'}</span></div>{banks&&<div data-cinema-foundation="banks"><ActorHoloCard actorId="banks" name="Banks · AI" rank={rankLabel(banks.rank)} receivedResources={{AP:banks.charge}}/><span>AI · {banks.count}/14 plays · {banks.charge} AP</span></div>}</div>
     <div className="cinema-shared-tableau" data-tableau-owner={banks?'banks':'hero'}><span>{banks?'Banks · Unbroken run':'Hero · Caught off guard'}</span><TableauPlayArea columns={7} rows={rows} rig={rig} hours={16} biome={{terrain:'woods'}}>{foundationCards.map((column,i)=><div className="cinema-column" key={i}>{column.map((card,row)=><div className="cinema-column__card" key={card.id} data-cinema-card={card.id} style={{top:'calc(var(--classic-stack-step) * '+row+')'}}><ProtoCard card={card} buried={row<column.length-1} centerRank disabled /></div>)}</div>)}</TableauPlayArea></div>
-    {slimePresent&&<div className="cinema-slime-tableau" data-tableau-owner="slime"><span>Slime · {battle.foes[0].hp}/32 HP</span><div className="cinema-foe-cards" aria-label="Slime attack tableau">{(hero.hp>0?[6,7,8]:[7,8]).map((rank,i)=><div key={rank} style={{top:i*18}}><ProtoCard card={{id:'slime-tableau-'+rank,rank}} buried={i<(hero.hp>0?2:1)} centerRank disabled /></div>)}</div><span>{hero.hp>0?'Ambush ready':'Lunge spent'}</span></div>}
+    {slimePresent&&<div className="cinema-slime-tableau" data-tableau-owner="slime"><span>Khad Root · {battle.foes[0].hp}/32 HP</span><div className="cinema-foe-cards" aria-label="Thorn Whip tableau">{(hero.hp>0?[6,7,8]:[7,8]).map((rank,i)=><div key={rank} style={{top:i*18}}><ProtoCard card={{id:'slime-tableau-'+rank,rank}} buried={i<(hero.hp>0?2:1)} centerRank disabled /></div>)}</div><span>{hero.hp>0?'Ambush ready':'Thorn Whip spent'}</span></div>}
   </div>
-  <footer aria-live="polite"><span>{cinema.beat?.dialogue??(cinema.beat?.id==='run'?'Banks follows the entire line without hesitation.':cinema.beat?.id==='scratch'?'Scratch · 10 damage':cinema.beat?.id==='bite'?'Bite · Slime defeated':cinema.beat?.id==='nuzzle'?'A gentle nuzzle. A promise of safety.':'')}</span>{cinema.beat?.dialogue&&<button type="button" disabled={cinema.paused} onClick={cinema.next}>Continue</button>}</footer>
+  <footer aria-live="polite"><span>{cinema.beat?.dialogue??(cinema.beat?.id==='run'?'Banks follows the entire line without hesitation.':cinema.beat?.id==='scratch'?'Scratch · 10 damage':cinema.beat?.id==='bite'?'Bite · Khad Root defeated':cinema.beat?.id==='nuzzle'?'A gentle nuzzle. A promise of safety.':'')}</span>{cinema.beat?.dialogue&&<button type="button" disabled={cinema.paused} onClick={cinema.next}>Continue</button>}</footer>
   {cinema.beat?.dialogue&&<Callout authoringId={`rescue.${cinema.beat.id}`} paused={cinema.paused} onComplete={cinema.next} marks={cinematicShots ? storyThoughtMarks(cinema.beat.dialogue) : undefined} key={cinema.index} layer={45010} text={cinema.beat.dialogue} speaker={cinema.beat.speaker} emoji={cinema.beat.speaker==='Banks'?{actor:'banks',emotion:cinema.beat.emotion==='joyful'?'happy':cinema.beat.emotion??'happy'}:{actor:'hero',emotion:cinema.beat.emotion??'joyful'}} anchor={actorAnchor} durationMs={0} />}
  </div>;
 }

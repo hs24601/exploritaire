@@ -1,10 +1,11 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type ButtonHTMLAttributes } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type ButtonHTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import './CardJumbo.css';
+import { animateQuestTravel } from './questCardTravel';
 
-type JumboCard = { title: string; content: ReactNode; ratio?: number; action?: () => void; actionLabel?: string;
+type JumboCard = { questOrigin?: {element:HTMLElement;bounds:DOMRect}; title: string; content: ReactNode; ratio?: number; action?: () => void; actionLabel?: string;
   actions?: { label: string; run: () => void }[] };
-const Context = createContext<{ open: (card: JumboCard) => void; close: () => void } | null>(null);
+const Context = createContext<{ open: (card: JumboCard) => void; close: () => void; dismiss: () => void } | null>(null);
 export const useCardJumbo = () => useContext(Context);
 
 /** Card backs and stock/receiving cards retain their printed face in jumbo. */
@@ -23,10 +24,26 @@ export function JumboActionCard({children,onClick,disabled,cardRef,...props}:But
 export function CardJumboProvider({ children }: { children: ReactNode }) {
   const [card,setCard]=useState<JumboCard|null>(null);
   const host=useRef<HTMLDivElement>(null),previousFocus=useRef<HTMLElement|null>(null);
+  const travelCleanup=useRef<(() => void) | undefined>(undefined), closing=useRef(false);
+  useLayoutEffect(()=>{
+    const face=host.current?.querySelector<HTMLElement>('.card-jumbo__face');
+    const origin=card?.questOrigin;
+    closing.current=false;
+    if(!face || !origin || !face.querySelector('.quest-card'))return;
+    const visibility=origin.element.style.visibility;
+    origin.element.style.visibility='hidden';
+    travelCleanup.current=animateQuestTravel(face,origin.bounds,{shimmer:true});
+    return()=>{travelCleanup.current?.();travelCleanup.current=undefined;origin.element.style.visibility=visibility;};
+  },[card]);
   const close=()=>{
     const abilityClose=host.current?.querySelector<HTMLButtonElement>('.trading-card-ability-view [aria-label="Close ability card"]');
     if(abilityClose){abilityClose.click();return;}
-    setCard(null);
+    const face=host.current?.querySelector<HTMLElement>('.card-jumbo__face');
+    if(card?.questOrigin?.element.isConnected && face){
+      if(closing.current)return;
+      closing.current=true;travelCleanup.current?.();
+      travelCleanup.current=animateQuestTravel(face,card.questOrigin.element.getBoundingClientRect(),{reverse:true,onArrival:()=>setCard(null)});
+    }else setCard(null);
   };
   useEffect(()=>{
     if(!card)return;
@@ -51,11 +68,11 @@ export function CardJumboProvider({ children }: { children: ReactNode }) {
       if(previousFocus.current?.isConnected)previousFocus.current.focus({preventScroll:true});
     };
   },[card]);
-  return <Context.Provider value={{open:next=>{previousFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setCard(next);},close}}>
+  return <Context.Provider value={{open:next=>{previousFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setCard(next);},close,dismiss:()=>setCard(null)}}>
     {children}
     {card&&createPortal(<div className="card-jumbo-backdrop" data-camera-ignore="true" onClick={event=>{if(event.target===event.currentTarget)close();}}>
       <div ref={host} className="card-jumbo" role="dialog" aria-modal="true" aria-label={`${card.title} jumbo card`} style={{'--jumbo-ratio':card.ratio??63/88} as React.CSSProperties}>
-        <button type="button" className="card-jumbo__close" aria-label="Close jumbo card" onClick={close}>×</button>
+        <button type="button" className="card-jumbo__close" aria-label="Close jumbo card" onClick={()=>close()}>×</button>
         <div className="card-jumbo__face" onClick={event=>{if((event.target as HTMLElement).closest('.proto-ordinary-day__actions button'))close();}}>{card.content}</div>
         {card.action&&<button type="button" className="card-jumbo__action" onClick={()=>{close();card.action?.();}}>{card.actionLabel??'Play card'}</button>}
         {card.actions&&<div className="card-jumbo__actions">{card.actions.map(action=><button key={action.label} type="button" className="card-jumbo__action" onClick={()=>{close();action.run();}}>{action.label}</button>)}</div>}

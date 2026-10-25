@@ -1,3 +1,5 @@
+import { sceneryFileName } from './proceduralWoods';
+
 /** World heights, independent of zoom, camera and ground footprint.
  * Calibrated to the existing Paint berry crown envelope: 46px footprint,
  * trimmed height/width 3/7. Five units = one current berry crown envelope.
@@ -17,7 +19,8 @@ export function heightFromWorld(world: number): number {
 /** Reference heights at a fitted 46px footprint. Only immersive sprites;
  * overhead/card artwork and Pixel originals retain their existing shapes. */
 export function sceneryHeightUnits(src: string | undefined): number | undefined {
-  const name = src?.split('/').pop()?.split('?')[0];
+  // Procedural pines and clusters take the height of the cutouts they replace.
+  const name = sceneryFileName(src);
   if (name === 'curious-sapling-sprite-v1.png') return 2;
   if (name === 'woods-cluster-sprite-v1.png' || name === 'pine-sprite-v1.png') return SCENERY_HEIGHTS.woods;
   if (name === 'mountain-peak-sprite-v1.png') return SCENERY_HEIGHTS.mountain;

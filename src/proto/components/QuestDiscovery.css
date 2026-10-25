@@ -22,13 +22,13 @@
 .quest-discovery--rest { left:50%; bottom:32%; }
 .quest-discovery[data-flying="true"] { bottom:auto; margin:0; }
 
-/* The field's overflow clips this scrim to the tableau. The printed card sits
- * above it and emits a small warm pool onto the ground beneath its edges. */
+/* Keep the local warm pool card-sized. The separate viewport shade owns the
+ * dimming; a 200vmax shadow here made every gleam repaint a huge surface. */
 .quest-discovery:not([data-flying="true"]):not([data-picking-up="true"])::before {
   content:''; position:absolute; inset:-5%; border-radius:12%; z-index:-1; pointer-events:none;
   background:radial-gradient(ellipse,#ffe9b94d 0%,#f6ce7526 45%,#07101b9e 75%);
-  box-shadow:0 0 0 200vmax #040a14a6;
 }
+.quest-discovery-shade { position:absolute; inset:0; width:100%; height:100%; z-index:44; pointer-events:none; contain:strict; }
 .quest-discovery[data-world-quest-shimmer="true"] {
   filter:none;
 }
@@ -42,5 +42,15 @@
 .travel-free-layout > .quest-discovery--denser-patch { left:calc(var(--classic-card-w) * .45); top:calc(var(--classic-card-w) * 1.65); bottom:auto; width:var(--classic-card-w); z-index:4; transform:rotate(-4deg); }
 .quest-discovery[data-covered="true"] { pointer-events:none; }
 .quest-discovery[data-covered="true"]::before { display:none; }
+.proto-map .quest-discovery--navigate-den::before { display:none; }
+.quest-tap-preview { position:absolute; inset:0; z-index:5000; pointer-events:none; overflow:hidden; }
+.quest-tap-preview[hidden] { display:none; }
+.quest-tap-preview__scrim { position:absolute; inset:0; width:100%; height:100%; }
+.quest-tap-preview__cue { position:absolute; width:0; height:0; }
+.quest-tap-preview__ring { position:absolute; width:32px; height:32px; border:2px solid #ffe6ab; border-radius:50%; box-shadow:0 0 12px #ffda8b80; }
+.quest-tap-preview__label { position:absolute; top:64px; left:-36px; width:100px; text-align:center; color:#fff1cf; font:600 15px/1.4 Georgia,serif; text-shadow:0 2px 4px #000; }
 
 .quest-discovery--denser-patch .quest-card__text, .quest-discovery--denser-patch .quest-card__status { font-size:16px; }
+
+/* The next lesson rests on the dirt immediately in front of the cave mouth. */
+.travel-den-exit > .quest-discovery--simple-steps { left:50%; top:84%; bottom:auto; width:calc(var(--classic-card-w) * 1.15); transform:translate(-50%,-50%) perspective(600px) rotateX(38deg) rotateZ(-7deg); z-index:5; }

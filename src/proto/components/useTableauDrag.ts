@@ -11,7 +11,7 @@ export function useTableauDrag(onDrop?: (target: HTMLElement) => void) {
   const press = useRef<{ id: number; x: number; y: number; source: HTMLElement; ghost?: HTMLElement; samples: FlickSample[] } | undefined>(undefined);
   const suppressClick = useRef(false);
   const clear = () => { if (frame.current !== undefined) gameTime.cancelAnimationFrame(frame.current); frame.current = undefined; flying.current = false; press.current?.ghost?.remove(); press.current = undefined; };
-  const targetAt = (x: number, y: number) => document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-map-actor-card], [data-travel-foundation], [data-foundation-index]');
+  const targetAt = (x: number, y: number) => document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-map-actor-card], [data-travel-foundation], [data-foundation-index], [data-battle-actor]');
   useEffect(() => { if (!onDrop || !enabled) clear(); }, [!!onDrop, enabled]);
   useEffect(() => {
     window.addEventListener('blur', clear);

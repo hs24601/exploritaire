@@ -6,7 +6,7 @@ export const BANKS_RESCUE_RANK = 9;
 export function createRescueBattle():BattleState {
  const columns:Card[][]=Array.from({length:7},(_,i)=>i<3?[{id:'hero-ambush-'+i,rank:i+3}]:[]);
  const b=createBattle({tableau:columns},{mochi:false,slimes:1,seed:20261015,rules:{finiteTableau:true}});
- return {...b,foes:b.foes.map(f=>({...f,name:'Hungry Slime',profile:{...f.profile,maxHp:32,damage:12,attackSeconds:1},hp:32,timer:0})),started:false};
+ return {...b,foes:b.foes.map(f=>({...f,name:'Khad Root',profile:{...f.profile,maxHp:32,damage:12,attackSeconds:1},hp:32,timer:0})),started:false};
 }
 /** One normal enemy attack, no death shortcut or direct HP assignment. */
 export function ambushHero(b:BattleState):BattleState {

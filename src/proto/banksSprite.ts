@@ -16,7 +16,7 @@ const sheets: Record<string,string> = {
   heroFlinch:'flinch-atlas',heroDown:'down-atlas',
 };
 export const BANKS_SPRITE_ASSETS = Object.fromEntries(Object.entries(sheets).map(([key,sheet])=>[
-  key.replace('hero','banks'),`runtime/characters/banks/rig/watercolor/v3/banks-${sheet}-watercolor-v3.png`,
+  key.replace('hero','banks'),`runtime/characters/banks/rig/watercolor/v5/banks-${sheet}-watercolor-v5.png`,
 ]));
 
 /** Banks uses the existing travel/combat registration and shared joint hierarchy.
@@ -33,6 +33,14 @@ function banksDefinition(template: DirectionalSpriteDefinition): DirectionalSpri
   };
 }
 export const BANKS_DIRECTIONAL_SPRITE = banksDefinition(HERO_DIRECTIONAL_SPRITE);
+// The standing atlas reserves more empty height around Banks's long horizontal
+// body than the walking atlas. Compensate uniformly, keeping paws at ground zero;
+// leave the independently registered overhead footprint unchanged.
+for (const frame of [...BANKS_DIRECTIONAL_SPRITE.low, ...BANKS_DIRECTIONAL_SPRITE.high]) {
+  frame.parts = frame.parts.map(part => ({...part,
+    x:part.x*1.25, y:part.y*1.25, height:part.height*1.25,
+  }));
+}
 export const BANKS_POSES = {
   sitting:banksDefinition(HERO_SITTING_DIRECTIONAL_SPRITE),
   walking:banksDefinition(HERO_WALKING_DIRECTIONAL_SPRITE),

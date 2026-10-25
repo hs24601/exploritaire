@@ -11,19 +11,32 @@ export function EditorTabs({ names, value, onChange, label }: { names: readonly 
   }}>{name}</button>)}</div>;
 }
 
-export function useEditorDrag() {
+export function useEditorDrag(source?: { current: HTMLElement | null }) {
   const ref = useRef<HTMLElement | null>(null);
   const [position, setPosition] = useState<{ left: number; top: number }>();
   const drag = useRef<{ x: number; y: number; left: number; top: number } | undefined>(undefined);
+  const moved = useRef(false);
   const clamp = (left: number, top: number) => ({ left: Math.max(8, Math.min(left, window.innerWidth - (ref.current?.offsetWidth ?? 0) - 8)), top: Math.max(8, Math.min(top, window.innerHeight - (ref.current?.offsetHeight ?? 0) - 8)) });
   useEffect(() => {
     const resize = () => setPosition(p => {
+      const anchor = source?.current?.getBoundingClientRect();
+      const panel = ref.current;
+      if (anchor && panel && !moved.current) {
+        const gap = 16, width = panel.offsetWidth;
+        const right = window.innerWidth - anchor.right - gap - 8;
+        const left = anchor.left - gap - 8;
+        // Prefer a side that fits; otherwise use the roomier edge of the viewport.
+        const x = right >= width ? anchor.right + gap : left >= width ? anchor.left - gap - width : right >= left ? window.innerWidth - width - 8 : 8;
+        return clamp(x, anchor.top + anchor.height / 2 - panel.offsetHeight / 2);
+      }
       if (!p) return p;
       const next = clamp(p.left, p.top);
       return next.left === p.left && next.top === p.top ? p : next;
     });
     const observer = new ResizeObserver(resize);
     if (ref.current) observer.observe(ref.current);
+    if (source?.current) observer.observe(source.current);
+    resize();
     window.addEventListener('resize', resize);
     return () => { observer.disconnect(); window.removeEventListener('resize', resize); };
   }, []);
@@ -31,6 +44,7 @@ export function useEditorDrag() {
     onPointerDown: (event: PointerEvent<HTMLElement>) => {
       if (event.button !== 0 || (event.target as Element).closest('button,input,select')) return;
       const rect = ref.current?.getBoundingClientRect(); if (!rect) return;
+      moved.current = true;
       drag.current = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
       event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault();
     },

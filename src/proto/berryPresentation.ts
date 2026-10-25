@@ -1,5 +1,9 @@
 import type { BiomeTileState, Card } from './protoState';
 
+/** Required fruit first; the remaining, blocked fruit belongs to the right Khad branch.
+ * Shared by map and tableau so harvests and later scene checkpoints agree. */
+export const SPARSE_BERRY_POINTS = [{ x: .59, y: .47 }, { x: .76, y: .42 }];
+
 /** Fruit is session state, never inferred from foliage density or discovery. */
 export function tileHasBerries(tile: Pick<BiomeTileState, 'tileType' | 'berryPatchVariant' | 'berryHarvested' | 'tableau' | 'stock'>, tableau = tile.tableau, stock = tile.stock): boolean {
   if (tile.tileType !== 'berry-patch' || tile.berryHarvested) return false;

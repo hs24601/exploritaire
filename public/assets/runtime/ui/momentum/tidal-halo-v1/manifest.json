@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "size": 768,
+  "turns": 5,
+  "source": "ImageGen master, registered pigment sampling",
+  "pathMap": "R/G unsigned 16-bit cumulative arc length; B cross-path position; A source coverage",
+  "turnEnds": [
+    0.043182296948567137,
+    0.1633840034418504,
+    0.3628153185213893,
+    0.6416667570767844,
+    1
+  ],
+  "layers": [
+    "underpaint",
+    "pigment",
+    "highlights",
+    "turn-01",
+    "turn-02",
+    "turn-03",
+    "turn-04",
+    "turn-05"
+  ],
+  "paintedPixels": 228639,
+  "transparentPixels": 329496
+}

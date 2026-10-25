@@ -1,6 +1,8 @@
 // Repack four complete paired paintings; one shared crop/scale avoids pose jitter.
 const fs=require('node:fs'),{chromium}=require('playwright');
-(async()=>{const browser=await chromium.launch();try{
+const version=process.argv[2]||'v2';
+if(!/^v\d+$/.test(version))throw Error('Expected version such as v3');
+(async()=>{const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||undefined});try{
  const page=await browser.newPage();
  const result=await page.evaluate(async data=>{
   const image=new Image();image.src=data;await image.decode();
@@ -23,7 +25,7 @@ const fs=require('node:fs'),{chromium}=require('playwright');
   const dw=width*scale,dh=height*scale;
   cells.forEach((cell,i)=>out.drawImage(source,cell.sx+left,cell.sy+top,width,height,i*768+(768-dw)/2,620-dh,dw,dh));
   return {png:sheet.toDataURL('image/png').split(',')[1],source:[image.width,image.height],frame:[768,640],crop:[left,top,width,height],scale,cells};
- },'data:image/png;base64,'+fs.readFileSync('public/assets/sources/cinematics/banks-hero-nuzzle-v2-source.png').toString('base64'));
- fs.writeFileSync('public/assets/runtime/cinematics/banks-hero-nuzzle-v2.png',Buffer.from(result.png,'base64'));delete result.png;
- fs.writeFileSync('docs/art/banks-rescue-nuzzle-v2-packing.json',JSON.stringify(result,null,2)+'\n');console.log(result);
+ },'data:image/png;base64,'+fs.readFileSync(`public/assets/sources/cinematics/banks-hero-nuzzle-${version}-source.png`).toString('base64'));
+ fs.writeFileSync(`public/assets/runtime/cinematics/banks-hero-nuzzle-${version}.png`,Buffer.from(result.png,'base64'));delete result.png;
+ fs.writeFileSync(`docs/art/banks-rescue-nuzzle-${version}-packing.json`,JSON.stringify(result,null,2)+'\n');console.log(result);
 }finally{await browser.close();}})().catch(error=>{console.error(error);process.exit(1)});

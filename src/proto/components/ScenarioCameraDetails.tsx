@@ -14,7 +14,7 @@ const dialogue = () => Array.from(document.querySelectorAll<HTMLElement>('.proto
   .map(node => ({ reference: node.dataset.calloutReference, configuration: node.dataset.calloutId, bubble: Number(node.dataset.page), bubbles: Number(node.dataset.pages) }));
 
 /** Only this readout polls; camera animation never rerenders the game. */
-export function ScenarioCameraDetails() {
+export function ScenarioCameraDetails({ compact = false }: { compact?: boolean }) {
   const [shot, setShot] = useState<CameraShot | null>(null);
   const [message, setMessage] = useState('');
   const [fallback, setFallback] = useState('');
@@ -40,15 +40,15 @@ export function ScenarioCameraDetails() {
       if (mounted.current) { setMessage('Select and copy the details below'); setFallback(payload); }
     }
   };
-  return <div className="scenario-camera-details" aria-label="Scenario camera details">
-    <output aria-label="Live scenario camera" aria-live="off">{shot ? <>
+  return <div className={`scenario-camera-details${compact ? " scenario-camera-details--compact" : ""}`} aria-label="Scenario camera details">
+    {!compact && <output aria-label="Live scenario camera" aria-live="off">{shot ? <>
       <span>Camera · {shot.tilted ? 'Immersion' : 'OTT'}</span>
       <span>Target X {shot.x.toFixed(2)} · Y {shot.y.toFixed(2)}</span>
       <span>Zoom {shot.scale.toFixed(3)}×</span>
       <span>Yaw {shot.yaw.toFixed(2)}° · Tilt {(shot.tilted ? shot.pitch : 0).toFixed(2)}°</span>
       <span>Framing {((shot.framing ?? 0) * 100).toFixed(1)}%</span>
-    </> : 'Map camera unavailable'}</output>
-    <button type="button" onClick={copy} disabled={!shot}>Copy camera + dialog</button>
+    </> : 'Map camera unavailable'}</output>}
+    <button type="button" onClick={copy} disabled={!shot}>{compact ? 'Copy camera details' : 'Copy camera + dialog'}</button>
     {message && <span role="status">{message}</span>}
     {fallback && <textarea aria-label="Camera and dialog details to copy" value={fallback} readOnly onFocus={event => event.currentTarget.select()} />}
   </div>;

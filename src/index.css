@@ -1772,7 +1772,7 @@ html.drag-perf-mode .target-swirl-sparkles {
   overflow-wrap: anywhere;
 }
 .quest-card:disabled { opacity: 1; cursor: default; }
-.quest-card__title { font-size: 22px; line-height: 1.05; text-transform: uppercase; border-bottom: 2px solid #8e7487; padding-bottom: 0.5rem; }
+.quest-card__title { display: flex; align-items: center; font-size: 22px; line-height: 1.05; text-transform: uppercase; border-bottom: 2px solid #8e7487; padding-block: 0.25rem; }
 .quest-card__text { font-size: 18px; line-height: 1.15; }
 .quest-card__status { margin-top: auto; font-size: 16px; line-height: 1.05; color: #baacbf; }
 .quest-card__reward { display: flex; align-items: center; justify-content: center; gap: 0.3rem; font-size: 22px; line-height: 1; color: #ffe099; }
@@ -1784,7 +1784,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .quest-chain-complete { padding: 1rem; border: 3px solid #ffe19a; border-radius: 8px; color: #ffe19a; font-size: 22px; text-align: center; }
 @media (max-height: 720px) {
   .quest-card { gap: 0.3rem; padding: 0.6rem; }
-  .quest-card__title { font-size: 18px; padding-bottom: 0.3rem; }
+  .quest-card__title { font-size: 18px; padding-block: 0.15rem; }
   .quest-card__text { font-size: 14px; }
   .quest-card__status { font-size: 12px; }
   .quest-card__reward { font-size: 18px; }
@@ -3026,8 +3026,12 @@ html.drag-perf-mode .target-swirl-sparkles {
    slanted edge when the card reaches the front. */
 .proto-card-veil { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: #0a1220a8; -webkit-backdrop-filter: var(--silhouette-card-filter); backdrop-filter: var(--silhouette-card-filter); transition: mask-position 0.9s ease-in-out, -webkit-mask-position 0.9s ease-in-out; }
 .proto-card-tableau-background { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
-/* Clear the primitive and travel/combat fills, leaving only the 14% wash. */
+/* Opaque scenery-only windows cover buried ink while preserving the landscape. */
 .proto-game-root .playing-card:has(> .proto-card-tableau-background) { background: transparent; }
+.proto-card-scenery-window { display:block; position:absolute; inset:0; width:100%; height:100%; }
+.proto-card-tableau-background [data-window-probe] { position:absolute; width:0; height:0; }
+.proto-card-watercolor-wash { position:absolute; inset:0; background:radial-gradient(ellipse at 22% 18%,#d7d3a52b,transparent 63%),radial-gradient(ellipse at 82% 75%,#637e7630,transparent 68%),linear-gradient(115deg,#b5b9941c,#223a3526 48%,#d6c99c24); box-shadow:inset 0 0 9px #10221e38,inset 0 0 1px #f2e4b85c; }
+.playing-card:has(> .proto-card-tableau-background) { box-shadow:0 2px 4px #030b0b70; }
 .playing-card:has(> .proto-card-tableau-background) > .proto-card-veil { background: #0a122018; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .playing-card:has(> .proto-card-tableau-background) .proto-card-header { position: relative; text-shadow: 0 1px 2px #000, 0 0 5px #000; }
 :root { --silhouette-card-filter: saturate(0) brightness(0.55) sepia(0.5) hue-rotate(175deg); }

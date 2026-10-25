@@ -1,0 +1,47 @@
+/* The hit surface stays still while the shared spring moves its visual face. */
+.ability-card:has(.ability-holo-stage), .ability-fan__card:has(.ability-holo-stage) { overflow:visible; }
+.ability-fan__card.ability-fan__drag { contain:layout; }
+.ability-card .ability-holo-stage.trading-card-stage > .details-card.trading-card,
+.ability-fan__card .ability-holo-stage.trading-card-stage > .details-card.trading-card {
+ transform:translate3d(0,calc(var(--card-lift) * -3px),calc(var(--card-lift) * 18px)) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+ will-change:transform;
+ perspective:1200px;
+}
+.ability-holo-stage .trading-card__header,
+.ability-holo-stage .trading-card__body {
+ transform:translate3d(calc(var(--art-shift-x,0) * 4px),calc(var(--art-shift-y,0) * 4px),24px);
+}
+.ability-holo-stage .trading-card__header { z-index:3; }
+.ability-holo-stage .trading-card__body { z-index:2; }
+.ability-holo-stage .trading-card__art:has(.ability-keru-art) { overflow:visible; }
+.ability-holo-stage .trading-card__art:has(.ability-keru-art)::after { background:none; }
+.ability-keru-art { position:absolute; inset:0; pointer-events:none; }
+.ability-keru-art__sky { position:absolute; inset:0; overflow:hidden; border-radius:5px; background:#07152e; }
+.ability-holo-stage .ability-keru-art__sky img {
+ position:absolute; left:-8%; top:-8%; width:116%; height:116%; max-width:none; max-height:none; object-fit:cover; object-position:50% 0;
+ transform:translate(calc(var(--art-shift-x,0) * -3px),calc(var(--art-shift-y,0) * -3px));
+ filter:brightness(.72) saturate(.85);
+}
+.ability-holo-stage .trading-card__art .ability-keru-art__subject {
+ position:absolute; top:6%; left:0; width:100%; height:48%; object-fit:contain; object-position:center;
+ transform-origin:70% 55%;
+ transform:translate3d(calc(var(--art-shift-x,0) * 6px),calc(var(--art-shift-y,0) * 6px),16px) scale(calc(1 + var(--card-lift,0) * .12));
+ filter:drop-shadow(0 3px 5px #ffb34844);
+}
+/* No idle shimmer; foil/glare respond to inspection and contact still owns its bloom. */
+.ability-holo-stage .trading-card--diagonal-holo .trading-card__foil { opacity:calc(var(--foil-active,0) * .25); }
+.ability-holo-stage .trading-card--diagonal-holo .trading-card__glare { opacity:calc(var(--foil-active,0) * .18); }
+.ability-holo-stage .trading-card__footer { background:#0b1724e6; border-radius:4px; padding:3px; }
+.ability-holo-stage:has(.ability-keru-target) > .trading-card { overflow:visible; }
+.ability-keru-target { position:absolute; top:0; right:0; width:42px; height:42px; transform:translate(50%,-50%); z-index:6; pointer-events:none; filter:drop-shadow(0 2px 3px #000c); }
+.ability-keru-target > svg { display:block; width:100%; height:100%; }
+.ability-keru-target[data-portrait] { box-sizing:border-box; border:2px solid #e7ce91; border-radius:12px; background:#17212c; overflow:hidden; }
+.ability-keru-target__portrait { display:block; width:100%; height:100%; }
+@media(max-width:600px) { .ability-keru-target { width:36px; height:36px; } }
+@media(prefers-reduced-motion:reduce) {
+ .ability-card .ability-holo-stage.trading-card-stage > .details-card.trading-card,
+ .ability-fan__card .ability-holo-stage.trading-card-stage > .details-card.trading-card,
+ .ability-holo-stage .trading-card__header,.ability-holo-stage .trading-card__body,
+ .ability-holo-stage .ability-keru-art__sky img,
+ .ability-holo-stage .trading-card__art .ability-keru-art__subject { transform:none; will-change:auto; }
+}

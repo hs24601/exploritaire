@@ -1,0 +1,175 @@
+
+.ability-fan-overlay { position:fixed; inset:0; z-index:60000; touch-action:none; }
+.ability-fan__backdrop { position:absolute; inset:0; background:#020a10b8; }
+.ability-fan { position:absolute; width:min(430px,calc(100dvw - 24px)); height:300px; transform:translateX(-50%); text-align:center; color:#eef6eb; }
+.ability-fan h2 { position:absolute; top:-35px; margin:0; width:100%; font:18px/1.2 Georgia,serif; color:#ffe8ae; text-shadow:0 2px 4px #000; }
+.ability-fan h2 small { display:block; margin-top:5px; color:#c4dad6; font:11px monospace; }
+.ability-fan__card { position:absolute; left:calc(50% - 76px + var(--fan-offset,0px)); top:32px; width:152px; height:228px; box-sizing:border-box; display:flex; flex-direction:column; gap:4px; padding:10px; border:2px solid #cdb67f; border-radius:12px; color:#f4edd9; background:linear-gradient(145deg,#334638,#122425 70%); box-shadow:0 9px 20px #0009,inset 0 0 0 2px #172522; transform:rotate(var(--fan-angle,0deg)); transform-origin:50% 105%; text-align:left; font:12px/1.25 monospace; cursor:grab; user-select:none; touch-action:none; overflow:hidden; transition:transform .16s ease-out,border-color .16s; z-index:1; }
+.ability-fan__card[data-skill='pounce'] { background:linear-gradient(145deg,#4a3d50,#20202d 70%); }
+.ability-fan__card[data-inspected='true'] { transform:translateY(-10px) rotate(var(--fan-angle,0deg)) scale(1.08); z-index:10; border-color:#fff3bc; box-shadow:0 0 12px #e8d68a55,0 12px 24px #000b; }
+.ability-fan__card[data-unavailable] { filter:grayscale(1); opacity:.7; cursor:help; }
+.ability-fan__card:focus-visible { outline:3px solid #a4edff; outline-offset:3px; }
+.ability-fan__cost { position:absolute; right:5px; top:5px; width:48px; height:48px; display:grid; place-items:center; padding:0; border:0; background:none; z-index:2; pointer-events:none; }
+.ability-fan__cost-value { grid-area:1 / 1; z-index:1; color:#fff5d7; font:bold 24px/1 Georgia,serif; -webkit-text-stroke:3px #17131b; paint-order:stroke fill; text-shadow:0 1px 3px #000; font-variant-numeric:tabular-nums; }
+.ability-fan__cost .momentum-icon { grid-area:1 / 1; width:48px; height:48px; margin:0; object-fit:contain; filter:drop-shadow(0 1px 3px #000a); }
+.ability-fan__name { padding-right:44px; min-height:38px; font:18px/1.2 Georgia,serif; }
+.ability-fan__art { width:100%; height:83px; flex:none; object-fit:cover; object-position:50% 34%; border:1px solid #c5b37d88; border-radius:5px; pointer-events:none; }
+.ability-fan__actor { color:#d7c8a1; font-size:10px; }
+.ability-fan__effect { font-size:11px; flex:1; }
+.ability-fan__availability { color:#cad7d0; font-size:8px; }
+.ability-fan__hint { position:absolute; top:274px; left:-10px; width:calc(100% + 20px); margin:0; color:#c6dad4; font:10px/1.4 monospace; text-shadow:0 1px 3px #000; }
+.ability-fan__close,.ability-fan__cancel { min-height:40px; border:1px solid #a9c6bb; border-radius:8px; background:#152d2bf5; color:#f0f6e8; padding:8px 14px; font:12px/1.2 monospace; cursor:pointer; }
+.ability-fan__close { position:absolute; top:300px; left:50%; transform:translateX(-50%); }
+.ability-fan__target { position:fixed; border:2px dashed #ffe08a; border-radius:16px; background:#ffe28a14; cursor:crosshair; }
+.ability-fan__target[data-over='true'],.ability-fan__target:focus-visible { border:3px solid #fff1bb; background:#ffe28a33; outline:3px solid #fff1bb55; }
+.ability-fan__cancel { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); }
+.ability-fan__drag { position:fixed; left:auto; top:auto; transform:translate(-50%,-85%) rotate(-5deg) scale(.92) !important; pointer-events:none; cursor:grabbing; z-index:20; transition:none; }
+@media(max-width:500px) {
+ .ability-fan { height:270px; }
+ .ability-fan__card { width:132px; height:210px; left:calc(50% - 66px + var(--fan-offset,0px)); padding:8px; }
+ .ability-fan__art { height:72px; }.ability-fan__name { font-size:17px; }.ability-fan__effect { font-size:10px; }
+ .ability-fan__hint { top:256px; font-size:9px; }.ability-fan__close { top:280px; }
+}
+@media(max-height:500px) { .ability-fan__card { top:12px; height:190px; }.ability-fan__art { height:60px; }.ability-fan__hint { top:215px; }.ability-fan__close { top:240px; } }
+
+.ability-fan__target { overflow:hidden; }
+
+.ability-fan-overlay .ability-fan__contact-foil { inset:0; z-index:3; }
+.ability-fan__contact-foil .food-collection-fx__foil { animation-delay:0ms; }
+@media(prefers-reduced-motion:reduce) { .ability-fan__card { transition:none; } }
+/* Keep foundation portraits and values above the dimmer, with no gameplay clicks leaking through. */
+.ability-foundation { position:fixed; z-index:5; cursor:pointer; border-radius:14px; }
+.ability-foundation[aria-pressed='true'] { outline:2px solid #fff0ae; outline-offset:4px; box-shadow:0 0 20px #ffe8a544; }
+.ability-foundation:focus-visible { outline:3px solid #a4edff; outline-offset:4px; }
+.ability-fan__card { top:var(--fan-top,32px); transition:transform .16s ease-out,border-color .16s,left .22s ease-out,top .22s ease-out; }
+.ability-fan__card[data-group-focus='background'] { z-index:1; }
+.ability-fan__card[data-group-focus='background'][data-inspected='true'] { z-index:3; }
+.ability-fan__card[data-group-focus='selected'] { z-index:20; }
+.ability-fan__card[data-group-focus='selected'][data-inspected='true'] { z-index:30; }
+.ability-fan__card[data-utility='true'],.ability-fan__card[data-utility='true'][data-inspected='true'] { z-index:40; }
+@media(max-width:500px) {
+ .ability-fan__card[data-utility='true'] { width:104px; height:168px; left:calc(50% - 52px + var(--fan-offset)); padding:6px; }
+ .ability-fan__card[data-utility='true'] .ability-fan__art { height:44px; }
+ .ability-fan__card[data-utility='true'] .ability-fan__name { font-size:14px; }
+ .ability-fan__card[data-utility='true'] .ability-fan__effect { font-size:8px; }
+ .ability-fan__card[data-utility='true'] .ability-fan__availability { font-size:7px; }
+ .ability-fan__close { left:65%; top:300px; }
+ .ability-fan__hint { top:240px; }
+}
+@media(prefers-reduced-motion:reduce) { .ability-fan__card { transition:none; } }
+/* Gray unavailable cards without making their text show through neighboring cards. */
+.ability-fan__card[data-unavailable] { opacity:1; }
+/* This is a viewport-positioned foundation host, not the full sandbox shell. */
+.ability-foundation.combat-sandbox { display:block; padding:0; gap:0; overflow:visible; background:transparent; max-height:none; }
+/* A wide, gently curved hand leaves more of each face exposed. */
+.ability-fan { width:min(900px,calc(100dvw - 24px)); }
+.ability-fan__gauge { position:fixed; z-index:45; pointer-events:none; }
+.ability-fan-overlay > .ability-fan__close { position:fixed; z-index:46; transform:translateX(-50%); min-height:34px; padding:6px 16px; }
+.ability-fan__gauge .momentum-engine__gain,.ability-fan__gauge .momentum-engine__spend { display:none; }
+.ability-fan__gauge * { animation-play-state:paused!important; }
+
+@media(max-width:500px) {
+ .ability-fan__cost { width:42px; height:42px; right:3px; top:3px; }
+ .ability-fan__cost .momentum-icon { width:42px; height:42px; }
+ .ability-fan__cost-value { font-size:22px; }
+ .ability-fan__name { padding-right:37px; }
+ .ability-fan__card[data-utility='true'] .ability-fan__cost,.ability-fan__card[data-utility='true'] .ability-fan__cost .momentum-icon { width:34px; height:34px; }
+ .ability-fan__card[data-utility='true'] .ability-fan__cost-value { font-size:20px; }
+ .ability-fan__card[data-utility='true'] .ability-fan__name { padding-right:29px; }
+}
+/* Inspection takes precedence over utility placement and actor-group depth. */
+.ability-fan .ability-fan__card[data-inspected='true'] { z-index:50; }
+.ability-fan__drag { will-change:translate; contain:layout paint; isolation:isolate; }
+.ability-fan__self { display:block; color:#ffe9a0; font:bold 10px/1.2 monospace; }
+.ability-fan__self-target { position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); width:max-content; max-width:180px; padding:6px 9px; border:1px solid #ffe49b; border-radius:8px; background:#25332b; color:#fff0b8; font:bold 11px/1.3 monospace; pointer-events:none; }
+.ability-fan__target[data-self-cast] { overflow:visible; border:3px solid #ffe49b; box-shadow:0 0 18px #ffe49b66; }
+.ability-fan__gauge[data-cost-preview] > .momentum-engine__chamber .momentum-engine__value { visibility:hidden; }
+.ability-fan__cost-preview { position:absolute; inset:0; display:grid; place-items:center; color:#ffe3ad; animation:ability-cost-flash .65s ease-out; }
+.ability-fan__projected-value { font:30px/1 Georgia,serif; text-shadow:0 0 10px #ffc46b88; }
+.ability-fan__projected-cost { position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); width:max-content; max-width:220px; padding:4px 8px; border:1px solid #e2c184; border-radius:8px; background:#17262af5; font:10px/1.3 monospace; }
+@keyframes ability-cost-flash { 0%,35% { opacity:.4; filter:brightness(1.8); } 20%,100% { opacity:1; filter:brightness(1); } }
+@media(prefers-reduced-motion:reduce) { .ability-fan__cost-preview { animation:none; } }
+.ability-fan__gauge .ability-fan__cost-preview { animation-play-state:running!important; }
+
+/* Give the hand full card faces and a distinct utility slot on wide screens. */
+@media(min-width:900px) {
+ .ability-fan { height:390px; z-index:10; }
+ .ability-fan__card { width:184px; height:328px; left:calc(50% - 92px + var(--fan-offset,0px)); padding:12px; gap:7px; }
+ .ability-fan__name { min-height:44px; width:calc(100% - 42px); flex:none; font-size:20px; padding-right:0; }
+ .ability-fan__art { box-sizing:border-box; height:80px; }
+ .ability-fan__actor,.ability-fan__self { font:16px/1.2 Georgia,serif; }
+ .ability-fan__effect { font:16px/1.25 Georgia,serif; }
+ .ability-fan__availability { font:16px/1.2 Georgia,serif; }
+ .ability-fan__hint { top:370px; font:16px/1.3 Georgia,serif; }
+ .ability-fan__card[data-inspected='true'] { transform:translateY(-6px) rotate(var(--fan-angle,0deg)) scale(1.025); }
+ .ability-fan__projected-cost { bottom:auto; top:50%; left:calc(100% + 16px); transform:translateY(-50%); }
+}
+/* Ability faces share the actor holocard framework and its 63:88 proportions. */
+.ability-fan__card { height:auto; aspect-ratio:63 / 88; display:block; padding:0; border:0; background:none; }
+.ability-fan__card > .trading-card-stage { pointer-events:none; }
+.ability-fan__card .trading-card-stage > .details-card.trading-card { width:100%; height:100%; min-height:0; box-sizing:border-box; aspect-ratio:63 / 88; padding:9px; border-width:3px; border-radius:11px; transform:none; will-change:auto; }
+.ability-fan__card .trading-card__header { align-items:flex-start; padding-right:40px; }
+.ability-fan__card .trading-card__header h2 { font:600 17px/1.1 Georgia,serif; text-transform:none; overflow-wrap:normal; }
+.ability-fan__card .trading-card__body { margin-top:auto; min-height:0; }
+.ability-fan__card .trading-card__description { margin:0 0 7px; padding:5px; background:#0b1724dc; border-radius:5px; font:10px/1.3 monospace; color:#fff1d2; }
+.ability-fan__card .trading-card__footer { padding:0; line-height:1.1; }
+.ability-fan__card .trading-card__art::after { background:linear-gradient(#081520a0,transparent 30%,transparent 45%,#081520d9 83%); }
+.ability-fan__card[data-inspected='true'] .trading-card { border-color:#e4d09a; }
+@media(max-width:500px) {
+ .ability-fan__card,.ability-fan__card[data-utility='true'] { height:auto; aspect-ratio:63 / 88; padding:0; }
+ .ability-fan__card .trading-card-stage > .details-card.trading-card { padding:6px; }
+ .ability-fan__card .trading-card__header { padding-right:34px; }
+ .ability-fan__card .trading-card__header h2 { font-size:15px; }
+ .ability-fan__card .trading-card__description { font-size:9px; padding:4px; }
+ .ability-fan__card[data-utility='true'] .trading-card__header { padding-right:25px; }
+ .ability-fan__card[data-utility='true'] .trading-card__header h2 { font-size:12px; }
+ .ability-fan__card[data-utility='true'] .trading-card__description { font-size:8px; }
+}
+/* The fan heading rule must not position nested holocard titles. */
+.ability-fan__card .trading-card__header h2 { position:static; top:auto; width:auto; margin:0; }
+.ability-fan__card .trading-card__description { display:block; -webkit-line-clamp:unset; overflow:visible; }
+/* Reserve a larger, content-sized rules panel instead of clipping to a preview. */
+.ability-fan__card .trading-card__body { flex:0 0 auto; min-height:45%; display:flex; flex-direction:column; justify-content:flex-end; gap:5px; }
+.ability-fan__card .trading-card__description { flex:1 0 auto; box-sizing:border-box; min-height:0; max-height:none; height:auto; display:block; -webkit-line-clamp:unset; overflow:visible; white-space:normal; overflow-wrap:break-word; text-align:left; margin:0; padding:8px; font-size:11px; line-height:1.35; }
+.ability-fan__card .trading-card__footer { flex:none; }
+@media(max-width:500px) {
+ .ability-fan__card .trading-card__description { font-size:10px; padding:6px; }
+ .ability-fan__card[data-utility='true'] .trading-card__description { font-size:9px; padding:4px; }
+ .ability-fan__card .trading-card__body { gap:4px; }
+}
+.ability-fan__gauge .momentum-engine__value,.ability-fan__gauge .ability-fan__projected-value { font-size:clamp(42.5px,5vw,52.5px); }
+.ability-fan { width:min(1120px,calc(100dvw - 24px)); }
+.ability-fan__armed-preview { position:fixed; left:20px; top:80px; transform:none; pointer-events:none; }
+@media(max-width:899px) {
+ .ability-fan { top:60px!important; height:min(62dvh,500px); overflow-y:auto; overflow-x:hidden; touch-action:pan-y; background:#07131ceF; border-radius:12px; }
+ .ability-fan > h2 { top:8px; }
+ .ability-fan__hint { display:none; }
+ .ability-fan__card[data-utility='true'] { width:132px; left:calc(50% - 66px + var(--fan-offset)); }
+ .ability-fan__card { touch-action:pan-y; }
+}
+.ability-fan__target[aria-disabled='true'] { border-color:#a48d88; background:#7c383824; }
+@media(min-width:900px) {
+ .ability-fan__hint { top:340px; }
+ .ability-fan__card .trading-card__description { font:16px/1.2 Georgia,serif; padding:6px; }
+ .ability-fan__card .trading-card__header h2 { font-size:18px; }
+}
+
+/* Tutorial status cards: actor art (or a team panel) with the effect glyph. */
+.ability-status-art { position:relative; display:block; width:100%; height:100%; }
+.ability-status-art > img { width:100%; height:100%; object-fit:cover; }
+.ability-status-art > span { position:absolute; right:6px; bottom:6px; display:grid; place-items:center; width:44px; height:44px; border:1px solid #f1d79a; border-radius:50%; background:#14100dd9; font-size:26px; line-height:1; }
+.ability-status-art[data-team='true'] { background:radial-gradient(circle at 50% 40%,#3d5a4c,#122425 75%); }
+.ability-status-art[data-team='true'] > span { inset:0; margin:auto; width:72px; height:72px; font-size:44px; background:#14100d99; }
+/* Group tabs page a large hand so every face keeps a full slot. */
+.ability-fan__groups { position:absolute; top:-88px; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:50; }
+.ability-fan__groups button { min-width:72px; min-height:36px; padding:4px 12px; border:1px solid #a9c6bb; border-radius:18px; background:#152d2bf5; color:#e2ece4; font:16px/1.2 Georgia,serif; cursor:pointer; }
+.ability-fan__groups button[aria-selected='true'] { border-color:#fff0ae; background:#4b4027; color:#fff0bd; }
+.ability-fan__groups button:focus-visible { outline:3px solid #a4edff; outline-offset:2px; }
+
+/* Kin ability cards cost that Kin's AP: an AP token instead of the Momentum ember. */
+.ability-fan__cost--ap { width:48px; height:48px; border:2px solid #f1d79a; border-radius:50%; background:radial-gradient(circle,#3b2a1a,#14100d); box-sizing:border-box; }
+.ability-fan__cost--ap .ability-fan__ap-label { position:absolute; bottom:-12px; left:50%; transform:translateX(-50%); padding:0 3px; white-space:nowrap; z-index:2; border-radius:6px; background:#14100d; color:#f1d79a; font:bold 16px/1 Georgia,serif; }
+.ability-fan__groups button { white-space:nowrap; }
+/* Focus Fire burn preview: every card of the hovered rank glows before it burns. */
+.ability-fan__target[data-burn='true'] { border:3px solid #ffb35a; background:#ff7a1a33; box-shadow:0 0 14px #ff8a2a99; }
+.ability-fan__groups { padding:6px 8px; border:1px solid #2c4a40; border-radius:26px; background:#06110f; box-shadow:0 4px 16px #000c; }

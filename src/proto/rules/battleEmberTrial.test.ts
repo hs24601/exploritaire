@@ -1,0 +1,30 @@
+import {expect,it} from 'vitest';
+import {canUseMomentumSkill,createCombatSandboxScenario,defaultStrike,enemyTarget,returnCirToDeck,useMomentumSkill,withdrawPlayer} from './battle';
+
+it('requires Hearthflame counters, Ember Claws fire, and a final Meteor in order',()=>{
+ let s=createCombatSandboxScenario('006');
+ s={...s,momentum:{...s.momentum!,value:100}};
+ expect(canUseMomentumSkill(s,'cir','khad-root')).toBe(false);
+ for(let i=0;i<10;i++)s=defaultStrike(s,'hero');
+ expect(s.foes[0]).toMatchObject({hp:36,stagger:0,staggered:0,emberPhase:1});
+ s.party=s.party.map(actor=>({...actor,charge:actor.id==='mochi'?100:50}));
+ expect(enemyTarget(s)?.id).toBe('hero');
+ s=useMomentumSkill(s,'cir','hero');
+ for(let i=0;i<3;i++)s=withdrawPlayer(s);
+ expect(s.foes[0]).toMatchObject({hp:33,emberPhase:2,counterflames:3});
+ expect(s.party[0].hp).toBe(6);
+ expect(defaultStrike(s,'mochi').foes[0].hp).toBe(33);
+ expect(withdrawPlayer(s).foes[0].hp).toBe(33);
+ expect(canUseMomentumSkill(returnCirToDeck(s),'cir','khad-root')).toBe(false);
+ s=useMomentumSkill(returnCirToDeck(s),'cir','mochi');
+ expect(defaultStrike(s,'mochi').foes[0].hp).toBe(32);
+ expect(useMomentumSkill(s,'pounce').foes[0].hp).toBe(32);
+ for(let i=0;i<40 && s.foes[0].emberPhase===2;i++)s=defaultStrike(s,'mochi');
+ expect(s.foes[0]).toMatchObject({hp:7,emberPhase:3,stagger:0,staggered:0,staggerStage:0});
+ for(let i=0;i<10;i++)s=defaultStrike(s,'mochi');
+ s=useMomentumSkill(s,'bash');s=useMomentumSkill(s,'pounce');
+ expect(s.foes[0]).toMatchObject({hp:7,stagger:0,staggered:0});
+ s=useMomentumSkill(returnCirToDeck(s),'cir','khad-root');
+ expect(s.result).toBe('won');expect(s.cir).toEqual({status:'exhausted'});
+ expect(createCombatSandboxScenario('006').foes[0]).toMatchObject({hp:36,emberPhase:1,counterflames:0});
+});

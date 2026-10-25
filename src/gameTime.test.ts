@@ -34,4 +34,13 @@ describe('global simulation pause', () => {
     const c=clock(), frame=vi.fn(); const id=c.requestAnimationFrame(frame); c.setPaused(true); c.cancelAnimationFrame(id);
     c.setPaused(false); vi.advanceTimersByTime(100); expect(frame).not.toHaveBeenCalled();
   });
+  it('keeps a loader hold through a reset of the player pause, and the player pause through its release', () => {
+    const c=clock(), complete=vi.fn(); c.setTimeout(complete,50);
+    const release=c.hold(); c.setPaused(false); vi.advanceTimersByTime(1000);
+    expect(c.isPlayerPaused()).toBe(false);
+    expect(c.isPaused()).toBe(true); expect(complete).not.toHaveBeenCalled();
+    c.setPaused(true); release(); release(); vi.advanceTimersByTime(1000); expect(complete).not.toHaveBeenCalled();
+    expect(c.isPlayerPaused()).toBe(true);
+    c.setPaused(false); vi.advanceTimersByTime(50); expect(complete).toHaveBeenCalledTimes(1);
+  });
 });

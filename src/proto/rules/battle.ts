@@ -1,9 +1,15 @@
+import { createNightRescue, nightAfterHit, nightEndTurn } from './nightRescue';
 import { ACTOR_INSPIRATION_MAX, type Card } from '../protoState';
 import { redrawFoundation, redrawOptions, type RedrawSource } from './redraw';
-import { isAdjacentRank } from './setup';
+import { createRandomProtoCard, isAdjacentRank } from './setup';
 import { stockCard } from './skirmish';
+import { COMBAT_SANDBOX_SCENARIOS, type CombatSandboxScenarioId } from './battleSandboxScenarios';
 import { applyHitEffects, bleedChance, BLEED } from './battleEffects';
 import { MAX_CHARGE, combatMovesFor, gripDuration, SPIRITS, attackFor, type AbilityEffect, type Attack, type PlayRule } from './battleAbilities';
+import { EMBER_RAGE, STATUS_SKILLS, isStatusSkill, type UnitStatus } from './battleStatusData';
+import { tutorialById, type TutorialScenarioId } from './battleTutorialScenarios';
+import { afterTutorialReceipt, createTutorialScenario, settleTutorial, tutorialEnemyTurn, tutorialReceiptLegal, tutorialStrike, type TutorialRuntime } from './battleTutorials';
+import { abilitySlotSpent, barkDamage, canUseStatusSkill, fireOn, isRaging, isSilenced, statusSkillTargets, tutorialAllowsSkill, useStatusSkill } from './battleStatuses';
 
 // The Dark Woods battle: party actors build charge by playing tableau cards
 // onto their foundations (golf adjacency), then spend it by dragging their
@@ -55,6 +61,26 @@ export const REFILL = 2;
 export type ActiveEffect = AbilityEffect & { left: number; tickIn: number };
 
 export type BattleFoe = {
+  gallows?: number;
+  sealedHeartwood?: boolean;
+  /** Intents are public by default; hiding them requires an explicit effect. */
+  intent?: 'withdraw' | 'attack' | 'idle' | 'tableau';
+  /** Cosmetic stacks earned by legal enemy receipts in scenario 999. */
+  indominable?: number;
+  appearance?: 'khad-root';
+  thorns?: number;
+  ironbark?: boolean;
+  emberPhase?: 1 | 2 | 3;
+  counterflames?: number;
+  intentHidden?: boolean;
+  /** Tutorial scenarios: turn-based statuses, the enemy's own Momentum (Heavy Strike) and on-hit debuffs. */
+  statuses?: UnitStatus[];
+  momentum?: number;
+  inflicts?: 'sap' | 'silence';
+  tutorialKey?: string;
+
+  /** Current tier of the temporary chained-stagger trial (0–3). */
+  staggerStage?: number;
   id: string;
   name: string;
   profile: FoeProfile;
@@ -68,18 +94,31 @@ export type BattleFoe = {
   gripSource?: string;
   /** Hungry slimes (rules.hungry): own foundation rank, cards eaten since the last attack (+1 damage each), the card being eyed and seconds before eyeing the next. */
   rank: number;
+  foundationCards?: Card[];
+  disarmed?: boolean;
+  turnSpent?: boolean;
   fed: number;
   eye: { cardId: string; column: number; left: number; total: number } | null;
   rest: number;
 };
 
 export type BattleActor = {
+  controller?: 'npc';
+  rooted?: boolean;
+  stagger?: number;
+  staggerMax?: number;
+  stickyPaws?: boolean;
+  statuses?: UnitStatus[];
+  targetId?: string;
   id: PartyId;
   name: string;
   hp: number;
   maxHp: number;
   /** Foundation top rank and cards collected; never spent by attacks. */
   rank: number;
+  foundationCards?: Card[];
+  disarmed?: boolean;
+  turnSpent?: boolean;
   count: number;
   /** Banked action points; no cap. The field name is retained for existing integrations. */
   charge: number;
@@ -99,6 +138,21 @@ export type BattleEvent = {
 };
 
 export type BattleState = {
+  night?: { phase: 'opening'|'desperation'|'last-count'|'entrance'|'rescue'|'finish'; step: number; message: string; serial: number; cloud?: boolean };
+  /** One unique Cir per battle. Bindings survive turn changes until recalled. */
+  cir?: { status: 'available' } | { status: 'bound'; actorId: 'hero' | 'mochi' } | { status: 'exhausted' };
+  sandboxScenario?: CombatSandboxScenarioId;
+  /** Tutorial and focused scenarios (008+): see rules/battleTutorials.ts. */
+  tutorial?: TutorialRuntime;
+  round?: number;
+  momentumSkillModifiers?: Partial<Record<'bash'|'pounce'|'sticky-paws',{kind:'freeze-decay';seconds:number}[]>>;
+  momentum?: { value: number; earned: number; spent: number; sequence: number; lastActorId?: string; lastSpend?: number; decayFrozenFor?: number; decayEnabled?: boolean; rapidClock?: number; recentPlays?: number[]; lastGain?: number; speedBonus?: number; sustainedBonus?: number };
+  pendingWithdraw?: { foeId: string };
+  reposition?: { serial: number; by: 'party' | 'enemy'; removedIds: string[]; addedIds: string[] };
+  /** Turn handoff scaffolding for the combat sandbox. */
+  turn?: 'party' | 'enemy';
+  /** Loose cards map to their staggered source; each occupies a single-card column. */
+  spills?: Record<string, string>;
   /** Temporary debug override: abilities are available and do not debit banked AP. */
   maxAP: boolean;
   seed: number;
@@ -133,7 +187,7 @@ export type BattleState = {
  *   opens the card beneath for the party. The party can't play a trapped
  *   card; it waits for a slime.
  */
-export type BattleRules = { hungry: boolean; traps: boolean; finiteTableau?: boolean };
+export type BattleRules = { hungry: boolean; traps: boolean; finiteTableau?: boolean; infinifillRows?: number; autoStrike?: boolean };
 export const BASIC_RULES: BattleRules = { hungry: false, traps: false };
 export type Trap = { actorId: string; name: string; damage: number; stagger: number; effects: AbilityEffect[] };
 
@@ -157,7 +211,7 @@ export type BattleSetup = {
 
 const newActor = (id: PartyId, spirits: string[] = [], inspiration = ACTOR_INSPIRATION_MAX): BattleActor => {
   const base = PARTY_ROSTER[id];
-  return { id, name: base.name, hp: base.maxHp, maxHp: base.maxHp, rank: base.rank, count: 0, charge: 0, inspiration, spirits: [...spirits] };
+  return { id, name: base.name, hp: base.maxHp, maxHp: base.maxHp, rank: base.rank, foundationCards:[{id:`opening-${id}`,rank:base.rank}], count: 0, charge: 0, inspiration, spirits: [...spirits] };
 };
 
 /** Each later slime's timer starts this far behind (a negative timer is a delay), so they don't strike in unison. */
@@ -165,8 +219,8 @@ export const FOE_TIMER_OFFSET = 0.35;
 export const PLAYER_AMBUSH_SECONDS = 10;
 
 const newFoe = (index: number): BattleFoe => ({
-  ...SLIME_ROSTER[index], profile: SLIME, hp: SLIME.maxHp, timer: -index * FOE_TIMER_OFFSET, stagger: 0, staggered: 0, effects: [],
-  rank: FOE_RANKS[index], fed: 0, eye: null, rest: 1 + index * 0.9,
+  ...SLIME_ROSTER[index], intent:'attack', profile: SLIME, hp: SLIME.maxHp, timer: -index * FOE_TIMER_OFFSET, stagger: 0, staggered: 0, effects: [],
+  rank: FOE_RANKS[index], foundationCards:[{id:`opening-foe-${index}`,rank:FOE_RANKS[index]}], fed: 0, eye: null, rest: 1 + index * 0.9,
 });
 
 export const createBattle = (deal: { tableau: Card[][]; stock?: Card[] }, setup: BattleSetup = {}): BattleState => {
@@ -194,6 +248,217 @@ export const createBattle = (deal: { tableau: Card[][]; stock?: Card[] }, setup:
   };
 };
 
+/** Temporary turn-based combat sandbox; normal encounters keep authored combat. */
+export const createStaggerSandbox = (setup: BattleSetup = {}): BattleState => {
+ const state=createBattle({tableau:Array.from({length:7},()=>Array.from({length:4},createRandomProtoCard))},
+  {...setup,slimes:1,playerAmbush:false,seed:Math.floor(Math.random()*0x100000000),rules:{hungry:false,traps:false,infinifillRows:4,autoStrike:true}});
+ return {...state,turn:'party',started:true,spills:{},momentum:{value:0,earned:0,spent:0,sequence:0,decayEnabled:true},party:state.party.map(actor=>({...actor,targetId:state.foes[0].id})),foes:state.foes.map(f=>({...f,intent:'withdraw',hp:50,timer:0,profile:{...f.profile,maxHp:50,staggerMax:6,staggerDecay:0.15,staggerSeconds:20,vulnerability:2}}))};
+};
+
+const trainingDeal = (id: CombatSandboxScenarioId, generation: number, incomingRank = 2, blocked = false) => {
+ if(id==='999')return {tableau:Array.from({length:7},()=>Array.from({length:4},createRandomProtoCard)),stock:Array.from({length:128},createRandomProtoCard)};
+ const wrap=(rank:number)=>((rank-1)%13+13)%13+1,offset=incomingRank-2;
+ const ranks=blocked?Array.from({length:7},()=>[13,13,13,13]):id==='005'||id==='006'?[
+  [9,8,9,3],[1,2,3,4],[13,12,11,6],[6,7,8,10],[10,11,12,1],[4,5,6,7],[8,7,6,13],
+ ]:id==='004'?[
+  [11,12,13,1],[7,8,9,10],[3,4,5,6],[9,9,9,9],[11,11,11,11],[7,7,7,7],[2,2,2,2],
+ ]:[
+  [6,5,4,3],[10,9,8,7],[13,13,12,11],...Array.from({length:4},()=>[13,13,13,13]),
+ ];
+ const prefix=`training-${id}-${generation}`;
+ return {tableau:ranks.map((column,c)=>column.map((rank,r)=>({id:`${prefix}-${c}-${r}`,rank:blocked?rank:wrap(rank+offset)}))),
+  stock:Array.from({length:128},(_,i)=>({id:`${prefix}-stock-${i}`,rank:wrap(((id==='004'||id==='005'||id==='006')?[2,10,5,12,7,3,11][i%7]:13)+offset)}))};
+};
+
+/** Authored training routes retain real card play, damage, stagger and reflection. */
+export const createCombatSandboxScenario = (id: CombatSandboxScenarioId): BattleState => {
+ if(tutorialById(id))return createTutorialScenario(id as TutorialScenarioId);
+ const definition=COMBAT_SANDBOX_SCENARIOS.find(s=>s.id===id)!;
+ const state=createStaggerSandbox(),deal=trainingDeal(id,0,2,id==='003');
+ if(id==='007')return createNightRescue(state);
+ return {...state,sandboxScenario:id,cir:{status:'available'},round:1,seed:id==='999'?state.seed:100+Number(id),effectSeed:100+Number(id),columns:deal.tableau,stock:deal.stock,
+  party:state.party.map(actor=>({...actor,targetId:'khad-root'})),
+  foes:state.foes.map(foe=>({...foe,id:'khad-root',name:id==='999'?'Indefatigable Enemy':id==='006'?'Ember Trial Sentinel':id==='005'?'Ironbark Sentinel':id==='004'?'Ironbark Khad Root':id==='002'?'Thorns Khad Root':'Dormant Khad Root',appearance:'khad-root',
+   emberPhase:id==='006'?1:undefined,counterflames:id==='006'?0:undefined,
+   indominable:id==='999'?0:undefined,
+   intent:id==='999'?'tableau':id==='006'?'attack':'idle',thorns:definition.thorns,ironbark:id==='004'||id==='005',hp:definition.hp,profile:{...foe.profile,maxHp:definition.hp,damage:id==='006'?2:foe.profile.damage}}))};
+};
+/** Phase gates apply to resolved hits; fire and physical portions never pool to beat a gate. */
+const trialDamage=(foe:BattleFoe,amount:number,expression?:'Hearthflame'|'Ember Claws'|'Meteor')=>{
+ if(foe.sealedHeartwood)return 0;
+ if(foe.emberPhase===1)return expression==='Hearthflame'?1:0;
+ if(foe.emberPhase===2)return expression==='Ember Claws'?Math.min(amount,Math.max(0,foe.hp-7)):0;
+ if(foe.emberPhase===3)return amount>=5?amount:0;
+ return amount;
+};
+const trialAfterHit=(foe:BattleFoe):BattleFoe=>{
+ if(foe.emberPhase===1 && (foe.counterflames ?? 0)>=3)return {...foe,emberPhase:2,stagger:0,staggered:0,staggerStage:0};
+ if(foe.emberPhase===2 && foe.hp<=7)return {...foe,emberPhase:3,stagger:0,staggered:0,staggerStage:0};
+ return foe;
+};
+export const setActorTarget = (state:BattleState,actorId:string,targetId:string):BattleState => {
+ if(state.result || !state.party.some(a=>a.id===actorId && actorAlive(a)) || !state.foes.some(f=>f.id===targetId && foeAlive(f)))return state;
+ return {...state,party:state.party.map(a=>a.id===actorId?{...a,targetId}:a)};
+};
+export const MAX_STAGGER_STAGE = 3;
+export const staggerVulnerability = (foe: BattleFoe) => foe.staggerStage ? foe.staggerStage + 1 : foe.profile.vulnerability;
+
+/** Players may pass with legal moves remaining; scripted rescue beats own control. */
+export const canEndPlayerTurn = (state: BattleState) => Boolean(state.rules.autoStrike && state.turn === 'party' && !state.result &&
+ !['entrance','rescue'].includes(state.night?.phase ?? ''));
+export const endPlayerTurn = (state: BattleState): BattleState => canEndPlayerTurn(state) ?
+ clearDownedAP(state.night && ['desperation','last-count'].includes(state.night.phase) ? nightEndTurn(state) : beginEnemyTurn(state)) : state;
+
+export const WITHDRAW_INTERRUPT_COST = 3;
+export const MOMENTUM_DECAY_PER_SECOND = 0.5;
+export const setMomentumDecay = (state: BattleState, enabled: boolean): BattleState => state.momentum
+ ? {...state,momentum:{...state.momentum,decayEnabled:enabled}} : state;
+export const decayMomentum = (state: BattleState, dt: number): BattleState => {
+ if(state.night && state.night.phase!=='finish')return state;
+ const pool=state.momentum;
+ if(!state.rules.autoStrike || state.result || state.turn!=='party' || !pool || !Number.isFinite(dt) || dt<=0)return state;
+ const rapidClock=pool.recentPlays?.length ? (pool.rapidClock ?? 0)+dt : pool.rapidClock;
+ if((pool.decayEnabled===false || pool.value<=0) && !(pool.decayFrozenFor && pool.decayFrozenFor>0) && rapidClock===pool.rapidClock)return state;
+ const decayFrozenFor=Math.max(0,(pool.decayFrozenFor ?? 0)-dt);
+ const drainTime=Math.max(0,dt-(pool.decayFrozenFor ?? 0));
+ const value=pool.decayEnabled===false ? pool.value : Math.max(0,Math.round((pool.value-drainTime*MOMENTUM_DECAY_PER_SECOND)*1e6)/1e6);
+ return {...state,momentum:{...pool,value,rapidClock,decayFrozenFor}};
+};
+export const exposedFrontier = (state: BattleState) => state.columns.flatMap(column=>column.length?[column[column.length-1]]:[]);
+export const canWithdraw = (state: BattleState) => Boolean(!state.night && state.rules.autoStrike && state.turn==='party' && !state.result);
+
+const earnMomentum = (state: BattleState, actorId: string): BattleState => {
+ if(!state.rules.autoStrike)return state;
+ const pool=state.momentum ?? {value:0,earned:0,spent:0,sequence:0};
+ const now=pool.rapidClock ?? 0, recent=pool.recentPlays ?? [];
+ // Baseline reserves grow linearly; growth bonuses belong to explicit Keru/modifier effects.
+ const lastGain=actorId==='hero' && state.cir?.status==='bound' && state.cir.actorId==='hero'?CIR_EXPRESSIONS.hero.momentumMultiplier:1,speedBonus=0,sustainedBonus=0;
+ return {...state,momentum:{...pool,value:Math.round((pool.value+lastGain)*1000)/1000,earned:Math.round((pool.earned+lastGain)*1000)/1000,sequence:pool.sequence+1,lastActorId:actorId,
+ rapidClock:now,recentPlays:[...recent.slice(-1),now],lastGain,speedBonus,sustainedBonus}};
+};
+
+/** Shared currency has no artificial cap; only explicit spending debits the spent counter. */
+export const spendMomentum = (state: BattleState, amount: number): BattleState => {
+ if(!state.momentum || !Number.isInteger(amount) || amount<=0 || state.momentum.value<amount)return state;
+ return {...state,momentum:{...state.momentum,value:state.momentum.value-amount,spent:state.momentum.spent+amount,lastSpend:amount}};
+};
+
+/** Disarmed recovery is a forced receipt, never an attack or Momentum source. */
+export const recoverDisarmed=(state:BattleState,team:'party'|'foes'):BattleState=>{
+ let next=state;
+ for(const unit of state[team]){
+  if(!unit.disarmed || unit.hp<=0)continue;
+  const candidates=next.columns.flatMap((cards,column)=>cards.length?[{column,card:cards[cards.length-1]}]:[]).sort((a,b)=>a.card.rank-b.card.rank||a.column-b.column);
+  if(!candidates.length)continue;
+  const taken=takeTop(next,candidates[0].column)!;
+  next={...next,columns:taken.columns,stock:taken.stock,dealt:taken.dealt,[team]:next[team].map(actor=>actor.id===unit.id?{...actor,rank:taken.card.rank,foundationCards:[taken.card],disarmed:false,turnSpent:true}:actor)};
+ }
+ return next;
+};
+const startPartyTurn=(state:BattleState):BattleState=>recoverDisarmed({...state,party:state.party.some(actor=>actor.turnSpent)?state.party.map(actor=>actor.turnSpent?{...actor,turnSpent:false}:actor):state.party},'party');
+const beginEnemyTurn = (state: BattleState): BattleState => {
+ if(state.tutorial)return tutorialEnemyTurn(state);
+ state=recoverDisarmed({...state,foes:state.foes.some(foe=>foe.turnSpent)?state.foes.map(foe=>foe.turnSpent?{...foe,turnSpent:false}:foe):state.foes},'foes');
+ const foe=state.foes.find(foe=>foeAlive(foe) && !foe.turnSpent && foe.intent==='withdraw');
+ // Attacking sandbox foes respond once at handoff; the real-time encounter
+ // clock remains independent. Retaliation resolves before the next foe acts.
+ if(!foe && state.foes.some(unit=>foeAlive(unit) && !unit.turnSpent && unit.intent==='attack')){
+  let next=state;
+  for(const attacker of state.foes){
+   if(next.result)break;
+   if(!foeAlive(attacker) || attacker.turnSpent || attacker.intent!=='attack')continue;
+   if(attacker.staggered>0){next={...next,foes:next.foes.map(unit=>unit.id===attacker.id?{...unit,stagger:0,staggered:0,staggerStage:0}:unit)};continue;}
+   const target=attacker.emberPhase===1?next.party.find(actor=>actor.id==='hero' && actorAlive(actor)):enemyTarget(next);if(!target)break;
+   const damage=attacker.profile.damage+attacker.fed,hp=Math.max(0,target.hp-damage);
+   const events:Omit<BattleEvent,'id'>[]=[{kind:'enemy-hit',sourceId:attacker.id,targetId:target.id,amount:damage,label:attacker.name}];
+   if(hp===0)events.push({kind:'down',sourceId:attacker.id,targetId:target.id});
+   const party=next.party.map(unit=>unit.id===target.id?{...unit,hp}:unit);
+   next={...next,party,foes:next.foes.map(unit=>unit.id===attacker.id?{...unit,fed:0}:unit),result:resultOf(party,next.foes),...withEvents(next,events)};
+   if(next.cir?.status==='bound' && next.cir.actorId===target.id && target.id==='hero')
+    next=cirFireHit(next,attacker.id,CIR_EXPRESSIONS.hero.damage,'Hearthflame',target.id);
+  }
+  return returnPlayerTurn(next);
+ }
+ if(state.foes.every(foe=>!foeAlive(foe) || foe.turnSpent || foe.intent==='idle'))return startPartyTurn({...state,turn:'party',pendingWithdraw:undefined,round:(state.round ?? 1)+1,
+  momentum:state.momentum?{...state.momentum,sequence:0,rapidClock:0,recentPlays:[],speedBonus:0,sustainedBonus:0}:undefined});
+ return {...state,turn:'enemy',pendingWithdraw:foe?{foeId:foe.id}:undefined,
+  momentum:state.momentum?{...state.momentum,sequence:0,rapidClock:0,recentPlays:[],speedBonus:0,sustainedBonus:0}:undefined};
+};
+
+/** Withdraw replaces the complete tableau, including buried and spilled cards. */
+const shiftFrontier = (state: BattleState, by: 'party' | 'enemy'): BattleState => {
+ const removedIds=state.columns.flat().map(card=>card.id),addedIds:string[]=[];
+ let {stock,dealt}=state;
+ let columns:Card[][];
+ if(state.sandboxScenario && !state.tutorial){
+  const deal=trainingDeal(state.sandboxScenario,(state.reposition?.serial ?? 0)+1,state.party.find(actor=>actor.id==='hero')?.rank ?? 2);
+  columns=deal.tableau;stock=deal.stock;dealt=0;addedIds.push(...columns.flat().map(card=>card.id));
+ }else{
+  columns=Array.from({length:7},()=>{
+   const next:Card[]=[];
+   while(next.length<(state.rules.infinifillRows ?? 4)){
+    const drawn=draw({...state,stock,dealt});stock=drawn.stock;dealt=drawn.dealt;
+    next.push(drawn.card);addedIds.push(drawn.card.id);
+   }
+   return next;
+  });
+ }
+ return {...state,columns,stock,dealt,spills:{},traps:{},
+  reposition:{serial:(state.reposition?.serial ?? 0)+1,by,removedIds,addedIds}};
+};
+
+export const withdrawPlayer = (state: BattleState): BattleState => canWithdraw(state)?beginEnemyTurn(shiftFrontier(state,'party')):state;
+const hasPendingWithdraw = (state: BattleState) => Boolean(state.rules.autoStrike && !state.result && state.turn==='enemy' && state.pendingWithdraw &&
+ state.foes.some(foe=>foe.id===state.pendingWithdraw!.foeId && foeAlive(foe) && foe.intent==='withdraw'));
+export const canInterruptWithdraw = (state: BattleState) => hasPendingWithdraw(state) && (state.momentum?.value ?? 0)>=WITHDRAW_INTERRUPT_COST;
+export const returnPlayerTurn = (state: BattleState): BattleState => startPartyTurn({...state,turn:'party',pendingWithdraw:undefined,
+ round:(state.round ?? 1)+1,
+ momentum:state.momentum?{...state.momentum,sequence:0,rapidClock:0,recentPlays:[],speedBonus:0,sustainedBonus:0}:undefined});
+export const interruptEnemyWithdraw = (state: BattleState): BattleState => canInterruptWithdraw(state)
+ ? returnPlayerTurn(spendMomentum(state,WITHDRAW_INTERRUPT_COST)) : state;
+export const resolveEnemyWithdraw = (state: BattleState): BattleState => hasPendingWithdraw(state)
+ ? returnPlayerTurn(shiftFrontier(state,'enemy')) : state;
+
+/** A player tableau receipt still triggers its default hit during the player turn. */
+export const defaultStrike = (state:BattleState,actorId:string,skill?:{damage:number;stagger:number;name:string}):BattleState => {
+ if(!state.rules.autoStrike || state.result || state.turn==='enemy')return state;
+ const actor=state.party.find(a=>a.id===actorId && actorAlive(a) && !a.disarmed && !a.turnSpent);
+ const target=state.foes.find(f=>f.id===actor?.targetId && foeAlive(f));
+ if(!actor || !target)return state;
+ if(actor.stickyPaws){
+  const cards=foundationCardsOf(target),card=cards[cards.length-1],remaining=cards.slice(0,-1);
+  state={...state,party:state.party.map(unit=>unit.id===actor.id?{...unit,stickyPaws:false}:unit)};
+  if(card && (!target.sealedHeartwood || actor.controller==='npc'))state={...state,columns:[...state.columns,[card]],spills:{...state.spills,[card.id]:target.id},foes:state.foes.map(unit=>unit.id===target.id?{...unit,foundationCards:remaining,rank:remaining[remaining.length-1]?.rank ?? 0,disarmed:remaining.length===0}:unit)};
+ }
+ const ember=state.cir?.status==='bound' && state.cir.actorId===actorId && actorId==='mochi' && (!skill || skill.damage>0)?CIR_EXPRESSIONS.mochi.damage:0;
+ // Ember Rage: Hero's chip hits add fire from her banked AP. Fire adds no stagger.
+ const rage=!skill && actor.statuses?.some(status=>status.id==='ember-rage')?rageBonus(actor.charge):0;
+ const multiplier=target.staggered>0?(skill?2:staggerVulnerability(target)):1;
+ const strike=skill ?? (state.tutorial?tutorialStrike(state,actorId):undefined);
+ const rawDamage=target.ironbark && target.staggered<=0?0:barkDamage(target,(strike?.damage ?? 1)*multiplier,(ember+rage)*multiplier);
+ const damage=trialDamage(target,target.emberPhase===2?ember*multiplier:rawDamage,ember?'Ember Claws':undefined),hp=Math.max(0,target.hp-damage);
+ const stage=target.staggerStage ?? 0;
+ const stagger=target.sealedHeartwood || target.emberPhase===1 || target.emberPhase===3?0:Math.min(target.profile.staggerMax,target.stagger+(strike?.stagger ?? 1));
+ const broke=hp>0 && stage<MAX_STAGGER_STAGE && stagger>=target.profile.staggerMax;
+ const events:Omit<BattleEvent,'id'>[]=[{kind:'hit',sourceId:actorId,targetId:target.id,amount:damage,label:(strike?.name ?? (actorId==='hero'?'Nip':'Claw'))+(ember?' + Ember Claws':'')+(rage?' + '+EMBER_RAGE:'')}];
+ let columns=state.columns,stock=state.stock,dealt=state.dealt;const spills={...state.spills};
+ if(broke)events.push({kind:'stagger',sourceId:actorId,targetId:target.id,label:String(stage+1)});
+ if(hp===0)events.push({kind:'ko',sourceId:actorId,targetId:target.id});
+ const foes=state.foes.map(f=>f.id===target.id?trialAfterHit({...f,hp,stagger:hp>0?(broke?0:stagger):0,staggerStage:hp>0?(broke?stage+1:stage):0,
+  staggered:hp>0?(broke?f.profile.staggerSeconds:f.staggered):0,eye:null,timer:0}):f);
+ return nightAfterHit(reflectThorns({...state,columns,stock,dealt,spills,foes,started:true,result:resultOf(state.party,foes),...withEvents(state,events)},actorId,target.id));
+};
+
+/** Reflection is paid once per attack, including the hit that defeats the target. */
+const reflectThorns = (state: BattleState, actorId: string, foeId: string): BattleState => {
+ const foe=state.foes.find(f=>f.id===foeId),actor=state.party.find(a=>a.id===actorId);
+ if(!foe?.thorns || !actor || actor.hp<=0)return state;
+ const hp=Math.max(0,actor.hp-foe.thorns),party=state.party.map(a=>a.id===actorId?{...a,hp}:a);
+ const events:Omit<BattleEvent,'id'>[]=[{kind:'enemy-hit',sourceId:foeId,targetId:actorId,amount:foe.thorns,label:'Thorns'}];
+ if(hp===0)events.push({kind:'down',sourceId:foeId,targetId:actorId});
+ return {...state,party,result:resultOf(party,state.foes),...withEvents(state,events)};
+};
+
 const withEvents = (state: BattleState, events: Omit<BattleEvent, 'id'>[]): Pick<BattleState, 'events' | 'nextEventId'> => ({
   events: [...state.events, ...events.map((event, i) => ({ ...event, id: state.nextEventId + i }))].slice(-12),
   nextEventId: state.nextEventId + events.length,
@@ -218,9 +483,9 @@ export const BASE_PLAY_RULE: PlayRule = isAdjacentRank;
 export const legalPlay = (actor: BattleActor, card: Card) =>
   BASE_PLAY_RULE(card.rank, actor.rank) || actor.spirits.some((id) => SPIRITS[id]?.playRule?.(card.rank, actor.rank));
 
-export const canPlay = (state: BattleState, actorId: string, card: Card | undefined | null) => {
+export const canPlay = (state: BattleState, actorId: string, card: Card | undefined | null, automatic = false) => {
   const actor = state.party.find((a) => a.id === actorId);
-  return Boolean(card && actor && actorAlive(actor) && !state.result && !state.traps[card.id] && legalPlay(actor, card));
+  return Boolean(!(state.rules.autoStrike && state.turn==='enemy') && card && actor && !actor.rooted && (automatic || actor.controller!=='npc') && (automatic || !['entrance','rescue'].includes(state.night?.phase ?? '')) && actorAlive(actor) && !actor.disarmed && !actor.turnSpent && !state.result && !state.traps[card.id] && (state.tutorial ? tutorialReceiptLegal(state, actor.id, legalPlay(actor, card)) : legalPlay(actor, card)));
 };
 
 /** Living actors that can take this card, in party order. */
@@ -232,35 +497,43 @@ export const eligibleActors = (state: BattleState, card: Card | undefined | null
  * so the table never runs dry. Any taker (party now, sentient foes later) goes
  * through here.
  */
+/** The next infinifill card (the deal's own stock first, then the seeded stream). */
+export const drawCard = (state: BattleState) => draw(state);
+
 export const takeTop = (state: BattleState, column: number) => {
   const cards = state.columns[column];
   const card = cards?.[cards.length - 1];
   if (!card) return null;
   let { stock, dealt } = state;
   const columns = state.columns.map((c, i) => (i === column ? c.slice(0, -1) : c));
-  if (columns[column].length === 0 && !state.rules.finiteTableau) {
+  if (!(state.rules.autoStrike && column >= 7) && !state.rules.finiteTableau && (state.rules.infinifillRows || columns[column].length === 0)) {
     const refill: Card[] = [];
-    for (let i = 0; i < REFILL; i += 1) { const next = draw({ ...state, stock, dealt }); refill.push(next.card); stock = next.stock; dealt = next.dealt; }
-    columns[column] = refill;
+    const count = state.rules.infinifillRows ? Math.max(0, state.rules.infinifillRows - columns[column].length) : REFILL;
+    for (let i = 0; i < count; i += 1) { const next = draw({ ...state, stock, dealt }); refill.push(next.card); stock = next.stock; dealt = next.dealt; }
+    columns[column] = [...refill, ...columns[column]];
   }
   return { card, columns, stock, dealt };
 };
 
 /** Plays a column's top card onto an actor's foundation, adding one charge. */
-export const playCard = (state: BattleState, column: number, actorId: string): BattleState => {
+export const playCard = (state: BattleState, column: number, actorId: string, automatic = false, retrieveIndex?: number): BattleState => {
   const cards = state.columns[column];
-  if (!canPlay(state, actorId, cards?.[cards.length - 1])) return state;
-  const { card, columns, stock, dealt } = takeTop(state, column)!;
+  const index=retrieveIndex ?? (cards?.length ?? 0)-1;
+  if(retrieveIndex!==undefined && !(automatic && actorId==='banks' && state.night?.phase==='rescue' && state.night.step===1 && (column===0 || column===6)))return state;
+  if (!canPlay(state, actorId, cards?.[index], automatic)) return state;
+  const { card, columns, stock, dealt } = retrieveIndex===undefined ? takeTop(state,column)! : {card:cards[index],columns:state.columns.map((c,i)=>i===column?c.filter((_,j)=>j!==index):c),stock:state.stock,dealt:state.dealt};
   // Snatching a card a hungry slime is eyeing earns a bonus charge and sends it looking again.
   const snatchedFrom = state.foes.find((foe) => foe.eye?.cardId === card.id);
   const gain = snatchedFrom ? 2 : 1;
-  return {
+  const next: BattleState = {
     ...state, columns, stock, dealt, started: true,
     party: state.party.map((actor) => actor.id === actorId
-      ? { ...actor, rank: card.rank, count: actor.count + 1, charge: actor.charge + gain } : actor),
-    foes:state.foes.map(foe=>({...foe,...(foe===snatchedFrom?{eye:null,rest:1}:{}),effects:foe.effects.map(e=>e.kind==='grip' && foe.gripSource===actorId?{...e,gripBudget:(e.gripBudget ?? e.seconds)+3,left:e.left+gripDuration((e.gripBudget ?? e.seconds)+3)-gripDuration(e.gripBudget ?? e.seconds)}:e)})),
+      ? { ...actor, rank: card.rank, foundationCards:[...foundationCardsOf(actor),card], count: actor.count + 1, charge: Math.min(state.rules.autoStrike ? apCap(actor) : Infinity, actor.charge + gain) } : actor),
+    foes:state.foes.map(foe=>({...foe,...(foe===snatchedFrom && !state.rules.autoStrike?{eye:null,rest:1}:{}),effects:foe.effects.map(e=>e.kind==='grip' && foe.gripSource===actorId?{...e,gripBudget:(e.gripBudget ?? e.seconds)+3,left:e.left+gripDuration((e.gripBudget ?? e.seconds)+3)-gripDuration(e.gripBudget ?? e.seconds)}:e)})),
     ...(snatchedFrom ? withEvents(state, [{ kind: 'snatch', targetId: actorId, label: snatchedFrom.name }]) : {}),
   };
+  const struck = defaultStrike(earnMomentum(next, actorId), actorId);
+  return clearDownedAP(next.tutorial ? settleTutorial(afterTutorialReceipt(struck, actorId)) : struck);
 };
 
 /** The redraws an actor can choose from: a random draw, plus a fixed value from each spirit that offers one. */
@@ -272,19 +545,20 @@ export const actorRedrawOptions = (actor: BattleActor) => redrawOptions(actor.sp
  */
 export const redrawActor = (state: BattleState, actorId: string, source: RedrawSource = { kind: 'draw' }, random?: number): BattleState => {
   const actor = state.party.find((a) => a.id === actorId);
-  if (!actor || !actorAlive(actor) || state.result) return state;
+  if (!actor || !actorAlive(actor) || state.result || state.rules.autoStrike && state.turn==='enemy') return state;
   if (source.kind === 'spirit' && !actor.spirits.includes(source.spiritId)) return state;
   const next = redrawFoundation(actor, source, random);
   if (!next) return state;
-  return { ...state, party: state.party.map((a) => (a.id === actorId ? { ...a, rank: next.rank, inspiration: next.inspiration } : a)) };
+  return { ...state, party: state.party.map((a) => (a.id === actorId ? { ...a, rank: next.rank, foundationCards:[...foundationCardsOf(a),{id:`redraw-${a.id}-${state.nextEventId}-${a.inspiration}`,rank:next.rank}], inspiration: next.inspiration } : a)) };
 };
 
 /** Golf's draw for a shared table: one card onto every column with room. Foundations and charge are untouched. */
 export const dealRow = (state: BattleState): BattleState => {
-  if (state.result) return state;
+  if (state.result || state.rules.autoStrike && state.turn==='enemy') return state;
   let { stock, dealt } = state;
-  const columns = state.columns.map((column) => {
-    if (column.length >= MAX_COLUMN) return column;
+  const columns = state.columns.map((column, index) => {
+    if (state.rules.autoStrike && index >= 7) return column;
+    if (column.length >= (state.rules.infinifillRows ?? MAX_COLUMN)) return column;
     const next = draw({ ...state, stock, dealt });
     stock = next.stock; dealt = next.dealt;
     return [...column, next.card];
@@ -292,7 +566,7 @@ export const dealRow = (state: BattleState): BattleState => {
   return { ...state, columns, stock, dealt };
 };
 
-export const canDeal = (state: BattleState) => !state.result && state.columns.some((column) => column.length < MAX_COLUMN);
+export const canDeal = (state: BattleState) => !(state.rules.autoStrike && state.turn==='enemy') && !state.result && state.columns.some((column, index) => !(state.rules.autoStrike && index >= 7) && column.length < (state.rules.infinifillRows ?? MAX_COLUMN));
 
 /** The attack an actor would make now, with its spirits. */
 export const actorAttack = (state: BattleState, actorId: string): Attack | null => {
@@ -304,7 +578,7 @@ export const actorAttack = (state: BattleState, actorId: string): Attack | null 
   return actor && actorAlive(actor) && Number.isFinite(committed) ? attackFor(actor.id, committed, actor.spirits, choice) : null;
 };
 
-const scaled = (foe: BattleFoe, amount: number) => (foe.staggered > 0 ? Math.round(amount * foe.profile.vulnerability) : amount);
+const scaled = (foe: BattleFoe, amount: number) => trialDamage(foe,foe.ironbark && foe.staggered<=0 ? 0 : (foe.staggered > 0 ? Math.round(amount * foe.profile.vulnerability) : amount));
 
 /** Inspection describes an authored ability even when the actor cannot afford it.
  * This never changes eligibility: actorAttack remains the gate for real plays.
@@ -320,6 +594,7 @@ export const inspectActorAbility = (state: BattleState, key: string): Attack | n
 
 /** Spends the selected AP cost on a foe. The drop and preview share this rule. */
 export const applyAttack = (state: BattleState, actorId: string, foeId: string): BattleState => {
+  if(state.rules.autoStrike && state.turn==='enemy')return state;
   const attack = actorAttack(state, actorId);
   actorId=actorId.split(':')[0];
   const friendly = state.party.find(actor => actor.id === foeId);
@@ -339,7 +614,7 @@ export const applyAttack = (state: BattleState, actorId: string, foeId: string):
   const hp = Math.max(0, target.hp - damage);
   events.push({ kind: 'hit', targetId: foeId, sourceId: actorId, amount: damage, label: attack.name });
   let { stagger, staggered, timer } = target;
-  if (staggered <= 0) {
+  if (staggered <= 0 && target.emberPhase!==1 && target.emberPhase!==3) {
     stagger = Math.min(target.profile.staggerMax, stagger + attack.stagger);
     // Knockback never pulls the timer below 0, but a timer still in its opening delay keeps it.
     timer = Math.max(Math.min(timer, 0), timer - attack.knockback);
@@ -355,7 +630,7 @@ export const applyAttack = (state: BattleState, actorId: string, foeId: string):
   if (hp <= 0) events.push({ kind: 'ko', targetId: foeId });
   const foes = state.foes.map((foe) => (foe.id === foeId ? { ...foe, gripSource:attack.form==='Vice Grip'?actorId:target.gripSource, ...(attack.form==='Takedown'?{eye:null,rest:FORAGE_REST}:{}), hp, stagger: hp > 0 ? stagger : 0, staggered: hp > 0 ? staggered : 0, timer: hp > 0 ? timer : 0, effects:effects.filter(e=>e.kind!=='grip'||attack.form==='Vice Grip'||target.gripSource!==actorId) } : {...foe,effects:foe.effects.filter(e=>e.kind!=='grip'||foe.gripSource!==actorId)}));
   const party = spendActorAP(state, actorId, attack.charge);
-  return { ...state, effectSeed: resolved.seed, started: true, ambush: state.ambush?.awaitingAttack ? { awaitingAttack: false, remaining: PLAYER_AMBUSH_SECONDS } : state.ambush, party, foes, result: resultOf(party, foes), ...withEvents(state, events) };
+  return reflectThorns({ ...state, effectSeed: resolved.seed, started: true, ambush: state.ambush?.awaitingAttack ? { awaitingAttack: false, remaining: PLAYER_AMBUSH_SECONDS } : state.ambush, party, foes, result: resultOf(party, foes), ...withEvents(state, events) }, actorId, foeId);
 };
 
 export type AttackPreview = {
@@ -402,11 +677,31 @@ export const previewAttack = (state: BattleState, actorId: string, foeId: string
 
 /** Who the foes go for: the living actor holding the most charge (ties: party order). */
 export const enemyTarget = (state: BattleState) =>
+  state.foes.some(foe=>foe.hp>0 && foe.emberPhase===1)?state.party.find(actor=>actor.id==='hero' && actorAlive(actor)) ?? null:
   state.party.filter(actorAlive).reduce<BattleActor | null>((best, actor) => (!best || actor.charge > best.charge ? actor : best), null);
 
 /** Advances every foe's clock by `dt` seconds. */
+export const battleTimeScale = (state: BattleState) => state.rules.autoStrike && !state.result && state.foes.some(foe=>foe.hp>0 && foe.staggered>0) ? 0.1 : 1;
 export const tickBattle = (state: BattleState, dt: number): BattleState => {
-  if (!state.started || state.result || dt <= 0) return state;
+  if (!state.started || state.result || !Number.isFinite(dt) || dt <= 0) return state;
+  dt *= battleTimeScale(state);
+  // The optional playtest decay affects the reserve only, never enemy actions or stagger.
+  if (state.rules.autoStrike) {
+    if(state.turn==='enemy' && state.sandboxScenario==='999') {
+      const foe=state.foes.find(unit=>foeAlive(unit) && !unit.turnSpent && unit.intent==='tableau');
+      if(!foe)return returnPlayerTurn(state);
+      if(foe.staggered>0)return returnPlayerTurn({...state,foes:state.foes.map(unit=>unit.id===foe.id?{...unit,stagger:0,staggered:0,staggerStage:0}:unit)});
+      const rest=foe.rest-dt;
+      if(rest>0)return {...state,foes:state.foes.map(unit=>unit.id===foe.id?{...unit,rest}:unit)};
+      const column=state.columns.findIndex(cards=>cards.length>0 && isAdjacentRank(cards[cards.length-1].rank,foe.rank) && !state.traps[cards[cards.length-1].id]);
+      if(column<0)return returnPlayerTurn(state);
+      const taken=takeTop(state,column)!;
+      return {...state,columns:taken.columns,stock:taken.stock,dealt:taken.dealt,
+        foes:state.foes.map(unit=>unit.id===foe.id?{...unit,rank:taken.card.rank,foundationCards:[...foundationCardsOf(unit),taken.card],indominable:(unit.indominable ?? 0)+1,rest:0.7}:unit),
+        ...withEvents(state,[{kind:'take',targetId:foe.id,label:String(taken.card.rank)}])};
+    }
+    return decayMomentum(state, dt);
+  }
   const heldSeconds = state.ambush ? (state.ambush.awaitingAttack ? dt : Math.min(dt, state.ambush.remaining)) : 0;
   const enemyDt = dt - heldSeconds;
   const ambush = state.ambush && !state.ambush.awaitingAttack
@@ -483,7 +778,7 @@ const forage = (state: BattleState, foeId: string, dt: number): BattleState => {
   if (!options.length) {
     // Nothing to eat: the slime turns up the next stock card as its own.
     const next = draw(state);
-    return update({ rank: next.card.rank, rest: FORAGE_REST }, { ...state, stock: next.stock, dealt: next.dealt });
+    return update({ rank: next.card.rank, foundationCards:[...foundationCardsOf(foe),next.card], rest: FORAGE_REST }, { ...state, stock: next.stock, dealt: next.dealt });
   }
   const column = options[(state.dealt + state.foes.indexOf(foe) + Math.floor(state.time)) % options.length];
   return update({ eye: { cardId: top(column).id, column, left: EYE_SECONDS, total: EYE_SECONDS } });
@@ -498,7 +793,7 @@ const eat = (state: BattleState, foeId: string, column: number): BattleState => 
   let effectSeed = state.effectSeed;
   const foes = state.foes.map((foe) => {
     if (foe.id !== foeId) return foe;
-    let next: BattleFoe = { ...foe, rank: taken.card.rank, fed: Math.min(FED_MAX, foe.fed + 1), eye: null, rest: FORAGE_REST };
+    let next: BattleFoe = { ...foe, rank: taken.card.rank, foundationCards:[...foundationCardsOf(foe),taken.card], fed: Math.min(FED_MAX, foe.fed + 1), eye: null, rest: FORAGE_REST };
     if (trap) {
       const damage = Math.round(scaled(foe, trap.damage) * TRAP_BONUS);
       const hp = Math.max(0, foe.hp - damage);
@@ -547,7 +842,7 @@ export const previewTrap = (state: BattleState, actorId: string, column: number)
 export const setMochi = (state: BattleState, present: boolean): BattleState => {
   const has = state.party.some((actor) => actor.id === 'mochi');
   if (has === present) return state;
-  const party = present ? [...state.party, newActor('mochi')] : state.party.filter((actor) => actor.id !== 'mochi');
+  const party = present ? [...state.party, { ...newActor('mochi'), ...(state.rules.autoStrike ? { targetId: state.foes.find(foeAlive)?.id } : {}) }] : state.party.filter((actor) => actor.id !== 'mochi');
   return { ...state, party, result: resultOf(party, state.foes) };
 };
 
@@ -582,6 +877,7 @@ export const setMaxAP = (state: BattleState, enabled: boolean): BattleState => s
 export function retrievalCost(state:BattleState,key:string,column:number,index:number):number|null {
  const [id,move]=key.split(':');
  const actor=state.party.find(a=>a.id===id),cards=state.columns[column];
+ if(state.rules.autoStrike && state.turn==='enemy')return null;
  if(id!=='hero'||!actor||actor.hp<=0||state.result||!cards||!Number.isInteger(index)||index<0||index>=cards.length)return null;
  const depth=cards.length-index;
  const cost=move==='Fetch'?(depth===1?2:null):move==='Dig'?depth:null;
@@ -591,11 +887,128 @@ export function retrieveCard(state:BattleState,key:string,column:number,index:nu
  const cost=retrievalCost(state,key,column,index);if(cost===null)return state;
  const [id,move]=key.split(':'),card=state.columns[column][index];
  let columns=state.columns.map((c,i)=>i===column?c.filter((_,j)=>j!==index):c),stock=state.stock,dealt=state.dealt;
- if(!columns[column].length){const top=takeTop(state,column)!;columns=top.columns;stock=top.stock;dealt=top.dealt;}
+ if(state.rules.infinifillRows && !state.rules.finiteTableau && !(state.rules.autoStrike && column>=7)){const next=draw({...state,stock,dealt});columns[column]=[next.card,...columns[column]];stock=next.stock;dealt=next.dealt;}
+ else if(!columns[column].length){const top=takeTop(state,column)!;columns=top.columns;stock=top.stock;dealt=top.dealt;}
  state=releaseGrip(state,id);
- return {...state,columns,stock,dealt,started:true,
- party:spendActorAP(state,id,cost).map(a=>a.id===id?{...a,rank:card.rank,count:a.count+1}:a),
+ return defaultStrike(earnMomentum({...state,columns,stock,dealt,started:true,
+ party:spendActorAP(state,id,cost).map(a=>a.id===id?{...a,rank:card.rank,foundationCards:[...foundationCardsOf(a),card],count:a.count+1}:a),
  foes:state.foes.map(f=>f.eye?.cardId===card.id?{...f,eye:null,rest:1}:f),
  traps:Object.fromEntries(Object.entries(state.traps).filter(([cardId])=>cardId!==card.id)),
- ...withEvents(state,[{kind:'take',sourceId:id,targetId:id,label:move,amount:cost}])};
+ ...withEvents(state,[{kind:'take',sourceId:id,targetId:id,label:move,amount:cost}])},id),id);
 }
+
+/** Ability cards never generate receipts. Each costs its owner Kin's AP (skillOwner);
+ * only Withdraw is a team card, free in shared Momentum. */
+export const MOMENTUM_SKILLS = {
+ 'cir-hearthflame':{actorId:'cir',name:'Cir · Hearthflame',cost:3,damage:0,stagger:0,description:'Attackers take 1 fire damage while attacking Hero. Hero gains 1.25× Momentum.'},
+ 'cir-ember-claws':{actorId:'cir',name:'Cir · Ember Claws',cost:4,damage:0,stagger:0,description:'Mochi’s attacks deal +1 fire damage.'},
+ 'cir-meteor':{actorId:'cir',name:'Cir · Meteor',cost:6,damage:8,stagger:0,description:'Deal 8 fire damage. Exhaust Cir for this battle.'},
+ cir:{actorId:'cir',name:'Cir',cost:3,damage:0,stagger:0,description:'One fire spirit. Bind to a Kin for this battle, or invoke Meteor and exhaust Cir.'},
+ withdraw:{actorId:'hero',name:'Withdraw',cost:0,damage:0,stagger:0,description:'Replace the entire tableau and end your team’s turn. Costs 0 Momentum. No damage or Momentum earned.'},
+ bash:{actorId:'hero',name:'Bash',cost:1,damage:0,stagger:2,description:'Spend 1 Hero AP to add 2 stagger to Hero’s target. No damage. Can break its guard.'},
+ 'sticky-paws':{actorId:'mochi',name:'Sticky Paws',cost:2,damage:0,stagger:0,description:'Self-cast on Mochi for 2 Mochi AP. Her next attack steals the target’s top foundation card into the loose tableau. An emptied target is Disarmed and spends its next turn rearming.'},
+ pounce:{actorId:'mochi',name:'Pounce',cost:3,damage:3,stagger:0,description:'Spend 3 Mochi AP to deal 3 damage to Mochi’s target, doubled to 6 while staggered. Ironbark blocks it before stagger.'},
+ ...STATUS_SKILLS,
+} as const;
+export type MomentumSkillId=keyof typeof MOMENTUM_SKILLS;
+export const isCirMomentumSkill=(id:MomentumSkillId)=>id==='cir'||id==='cir-hearthflame'||id==='cir-ember-claws'||id==='cir-meteor';
+/** Whose AP pays for a card: Cir is paid by the Kin she binds to, and Meteor by Hero. */
+export const skillOwner=(id:MomentumSkillId,targetId?:string|null):'hero'|'mochi'|'team'=>id==='withdraw'?'team':id==='cir'?(targetId==='mochi'?'mochi':'hero')
+ :id==='cir-ember-claws'?'mochi':id==='cir-hearthflame'||id==='cir-meteor'?'hero':MOMENTUM_SKILLS[id].actorId as 'hero'|'mochi';
+/** Whole AP a living Kin can spend; maxAP debugging makes it unlimited. */
+/** Banked AP limit per Kin (Monte Carlo on the 7×4 table recommends 6). Ember Rage raises Hero's for one turn. */
+export const AP_CAP: Record<PartyId, number> = { hero: 6, mochi: 6, banks: 6 };
+export const RAGE_AP_CAP = 12;
+export const apCap = (actor: BattleActor) => actor.statuses?.some(status => status.id === 'ember-rage') ? RAGE_AP_CAP : AP_CAP[actor.id];
+/** A raging Hero adds floor(AP / 3) fire to each chip hit. */
+export const rageBonus = (ap: number) => Math.floor(Math.max(0, ap) / 3);
+export const actorAP=(state:BattleState,actorId:string)=>state.maxAP?Infinity:Math.floor(state.party.find(actor=>actor.id===actorId && actor.hp>0)?.charge ?? 0);
+export const spendAP=(state:BattleState,actorId:string,amount:number):BattleState=>state.maxAP || amount<=0?state:{...state,party:state.party.map(actor=>actor.id===actorId?{...actor,charge:Math.max(0,actor.charge-amount)}:actor)};
+/** A downed Kin loses its banked AP. */
+export const clearDownedAP=(state:BattleState):BattleState=>state.party.some(actor=>actor.hp<=0 && actor.charge>0)?{...state,party:state.party.map(actor=>actor.hp<=0 && actor.charge>0?{...actor,charge:0}:actor)}:state;
+
+/** Playtest tuning lives here so rules, card descriptions and costs agree. */
+export const CIR_ART=`${import.meta.env.BASE_URL}assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png`;
+export const CIR_EXPRESSIONS = {
+ hero:{name:'Hearthflame',cost:3,damage:1,momentumMultiplier:1.25,description:'Attackers take 1 fire damage while attacking Hero. Hero gains 1.25× Momentum.'},
+ mochi:{name:'Ember Claws',cost:4,damage:1,description:'Mochi’s attacks deal +1 fire damage.'},
+ meteor:{name:'Meteor',cost:6,damage:8,description:'Deal 8 fire damage. Exhaust Cir for this battle.'},
+} as const;
+/** Recall only a bound Cir. Prior spending stands; Meteor exhaustion is final. */
+export const returnCirToDeck=(state:BattleState):BattleState=>
+ state.cir?.status==='bound' && state.turn==='party' && !state.result
+  ? {...state,cir:{status:'available'}} : state;
+export const momentumSkillExpression=(state:BattleState,id:MomentumSkillId,targetId?:string|null)=>{
+ const skill=MOMENTUM_SKILLS[id];
+ if(id!=='cir')return skill;
+ const expression=targetId==='hero'?CIR_EXPRESSIONS.hero:targetId==='mochi'?CIR_EXPRESSIONS.mochi:state.foes.some(foe=>foe.id===targetId)?CIR_EXPRESSIONS.meteor:null;
+ return expression?{...skill,...expression,name:'Cir · '+expression.name}:skill;
+};
+/** Fire adds no stagger, receipts, reflection or Momentum. Guard/vulnerability still apply. */
+export const cirFireHit=(state:BattleState,targetId:string,baseDamage:number,label:string,sourceId='cir'):BattleState=>{
+ const target=state.foes.find(foe=>foe.id===targetId && foe.hp>0);if(!target)return state;
+ const damage=trialDamage(target,target.ironbark && target.staggered<=0?0:baseDamage*(target.staggered>0?staggerVulnerability(target):1),label as 'Hearthflame'|'Meteor');
+ const hp=Math.max(0,target.hp-damage),foes=state.foes.map(foe=>foe.id===targetId?trialAfterHit({...foe,hp,counterflames:(foe.counterflames ?? 0)+(foe.emberPhase===1 && damage>0?1:0),...(hp===0?{stagger:0,staggered:0,effects:[]}: {})}):foe);
+ const events:Omit<BattleEvent,'id'>[]=[{kind:'hit',sourceId,targetId,amount:damage,label:label+' · Fire'}];
+ if(hp===0)events.push({kind:'ko',sourceId,targetId});
+ const next={...state,foes,started:true,result:resultOf(state.party,foes),...withEvents(state,events)};
+ // Tutorial reactions: Cir's fire steams Soaked foes and cauterizes Bleeding ones.
+ return next.tutorial && hp>0 ? fireOn(next,targetId,false) : next;
+};
+
+/** Real top-card ownership; older fixtures without stacks retain a seeded opening. */
+export const foundationCardsOf=(unit:BattleActor|BattleFoe):Card[]=>unit.foundationCards ?? (unit.rank>0?[{id:'opening-'+unit.id,rank:unit.rank}]:[]);
+export const momentumSkillTargets=(state:BattleState,id:MomentumSkillId)=>isStatusSkill(id)?statusSkillTargets(state,id):(id==='cir-hearthflame'||id==='cir-ember-claws'?state.party.filter(unit=>unit.id===(id==='cir-hearthflame'?'hero':'mochi')&&!unit.disarmed&&!unit.turnSpent):id==='cir'?[...state.foes,...state.party.filter(unit=>(unit.id==='hero'||unit.id==='mochi') && !unit.disarmed && !unit.turnSpent)]:id==='sticky-paws'?state.party.filter(unit=>unit.id==='mochi'):state.foes).filter(unit=>unit.hp>0);
+export const canUseMomentumSkill=(state:BattleState,id:MomentumSkillId,targetId?:string):boolean=>{
+ if(isStatusSkill(id))return canUseStatusSkill(state,id,targetId);
+ if(state.tutorial && id!=='withdraw' && (!tutorialAllowsSkill(state,id) || abilitySlotSpent(state) || isSilenced(state,skillOwner(id,targetId)) || isRaging(state,skillOwner(id,targetId))))return false;
+ if(state.night && (isCirMomentumSkill(id) || !['desperation','last-count','finish'].includes(state.night.phase)))return false;
+ if(isCirMomentumSkill(id)&&id!=='cir')return momentumSkillTargets(state,id).some(unit=>(!targetId||unit.id===targetId)&&canUseMomentumSkill(state,'cir',unit.id));
+ if(id==='withdraw')return canWithdraw(state) && (!targetId || targetId==='tableau');
+ if(id==='cir'){
+  if(targetId && state.foes.some(foe=>foe.id===targetId && foe.emberPhase && foe.emberPhase<3))return false;
+  if(!state.sandboxScenario || state.turn!=='party' || state.result || state.cir?.status!=='available' || !state.party.some(unit=>unit.hp>0 && !unit.disarmed && !unit.turnSpent))return false;
+  return momentumSkillTargets(state,id).some(target=>(!targetId || target.id===targetId) && actorAP(state,skillOwner(id,target.id))>=momentumSkillExpression(state,id,target.id).cost && !(state.tutorial && isSilenced(state,skillOwner(id,target.id))));
+ }
+ const skill=MOMENTUM_SKILLS[id],actor=state.party.find(actor=>actor.id===skill.actorId && actor.hp>0 && !actor.disarmed && !actor.turnSpent);
+ const targets=momentumSkillTargets(state,id);
+ return Boolean((state.sandboxScenario==='005'||state.sandboxScenario==='006'||state.sandboxScenario==='007'||state.tutorial) && state.turn==='party' && !state.result && actor && (id!=='sticky-paws' || !actor.stickyPaws) &&
+  (targetId?targets.some(target=>target.id===targetId):id==='sticky-paws'?targets.length:targets.some(target=>target.id===actor.targetId)) && actorAP(state,actor.id)>=skill.cost);
+};
+export const useMomentumSkill=(state:BattleState,id:MomentumSkillId,targetId?:string):BattleState=>{
+ if(state.tutorial && id!=='withdraw'){
+  const next=isStatusSkill(id)?useStatusSkill(state,id,targetId):castMomentumSkill(state,id,targetId);
+  if(next===state)return state;
+  const counted=next.tutorial?{...next,tutorial:{...next.tutorial,abilitiesThisTurn:(next.tutorial.abilitiesThisTurn ?? 0)+1}}:next;
+  return clearDownedAP(settleTutorial(counted));
+ }
+ const next=castMomentumSkill(state,id,targetId);
+ return next===state?state:clearDownedAP(next);
+};
+const castMomentumSkill=(state:BattleState,id:MomentumSkillId,targetId?:string):BattleState=>{
+ if(isStatusSkill(id))return useStatusSkill(state,id,targetId);
+ if(isCirMomentumSkill(id)&&id!=='cir')return targetId&&canUseMomentumSkill(state,id,targetId)?useMomentumSkill(state,'cir',targetId):state;
+ if(id==='withdraw')return canUseMomentumSkill(state,id,targetId)?withdrawPlayer(state):state;
+ if(id==='cir'){
+  if(!targetId || !canUseMomentumSkill(state,id,targetId))return state;
+  const expression=momentumSkillExpression(state,id,targetId),paid=spendAP(state,skillOwner(id,targetId),expression.cost);
+  if(targetId==='hero'||targetId==='mochi')return {...paid,cir:{status:'bound',actorId:targetId}};
+  return cirFireHit({...paid,cir:{status:'exhausted'}},targetId,CIR_EXPRESSIONS.meteor.damage,'Meteor');
+ }
+ const skill=MOMENTUM_SKILLS[id],actor=state.party.find(actor=>actor.id===skill.actorId);
+ const chosen=targetId ?? (id==='sticky-paws'?'mochi':actor?.targetId);
+ if(!chosen || !canUseMomentumSkill(state,id,chosen))return state;
+ let next:BattleState;
+ if(id==='sticky-paws'){
+  const paid=spendAP(state,'mochi',skill.cost);
+  next={...paid,party:paid.party.map(unit=>unit.id==='mochi'?{...unit,stickyPaws:true}:unit)};
+ }else{
+  const aimed=setActorTarget(state,skill.actorId,chosen);
+  next=defaultStrike(spendAP(aimed,skill.actorId,skill.cost),skill.actorId,skill);
+ }
+ for(const modifier of state.momentumSkillModifiers?.[id] ?? []){
+  if(modifier.kind==='freeze-decay' && Number.isFinite(modifier.seconds) && modifier.seconds>0 && next.momentum)
+   next={...next,momentum:{...next.momentum,decayFrozenFor:Math.max(next.momentum.decayFrozenFor ?? 0,modifier.seconds)}};
+ }
+ return next;
+};

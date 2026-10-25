@@ -42,12 +42,12 @@ export function CameraChoreographyTools({ tiles = [] }: { tiles?: { id: string; 
   const library = useCameraLibrary(), playback = useCameraPlayback();
   const [open, setOpen] = useState(false), [draft, setDraft] = useState(fresh), [error, setError] = useState(''), [message, setMessage] = useState('');
   useEffect(() => { const show = () => setOpen(true); window.addEventListener('proto-camera-tools-open', show); return () => window.removeEventListener('proto-camera-tools-open', show); }, []);
-  const run = (fn: () => void, message = '') => { try { fn(); setError(''); setMessage(message); } catch (e) { setError((e as Error).message); } };
+  const run = async (fn: () => void | Promise<void>, message = '') => { try { await fn(); setError(''); setMessage(message); } catch (e) { setError((e as Error).message); } };
   const changeStep = (index: number, step: CameraStep) => setDraft(d => ({ ...d, steps: d.steps.map((s, i) => i === index ? step : s) }));
   const move = (index: number, delta: number) => { const steps = [...draft.steps]; [steps[index], steps[index + delta]] = [steps[index + delta], steps[index]]; setDraft({ ...draft, steps }); };
   return <>{open && createPortal(<aside ref={node => { floating.ref.current = node; }} style={floating.style} onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} onWheel={e => e.stopPropagation()} className="camera-choreography" role="region" aria-label="Camera choreography" data-editor-safe="true" data-camera-ignore="true" onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') setOpen(false); }}>
     <header className="editor-drag-handle" {...floating.handle}><h2>Camera choreography</h2><button type="button" aria-label="Close camera choreography" onClick={() => setOpen(false)}>×</button></header>
-    <footer className="camera-actions"><button type="button" onClick={() => run(() => saveCameraChoreography(draft), 'Sequence saved in this browser.')}>Save sequence</button><button type="button" disabled={!library.some(c => c.id === draft.id)} onClick={() => run(() => { deleteCameraChoreography(draft.id); setDraft(fresh()); }, 'Sequence reset or deleted.')}>{isDefaultCameraChoreography(draft.id) ? 'Reset first pass' : 'Delete sequence'}</button></footer>
+    <footer className="camera-actions"><button type="button" onClick={() => run(() => saveCameraChoreography(draft), 'Sequence saved to disk for all testing devices.')}>Save sequence</button><button type="button" disabled={!library.some(c => c.id === draft.id)} onClick={() => run(async () => { await deleteCameraChoreography(draft.id); setDraft(fresh()); }, 'Sequence reset or deleted.')}>{isDefaultCameraChoreography(draft.id) ? 'Reset first pass' : 'Delete sequence'}</button></footer>
     <EditorTabs names={['Sequence', 'Labels', 'Shots', 'Playback']} value={section} onChange={setSection} label="Camera sections" />
     <div hidden={section !== 'Sequence'}><p>Position the map camera, capture shots, then save a named sequence. You can keep moving the camera while this panel is open.</p>
     <label>Saved sequences<select aria-label="Saved camera sequences" value={library.some(c => c.id === draft.id) ? draft.id : ''} onChange={e => { const c = library.find(c => c.id === e.target.value); setDraft(c ? structuredClone(c) : fresh()); setMessage(''); setError(''); }}><option value="">New sequence</option>{library.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
@@ -69,7 +69,7 @@ export function CameraChoreographyTools({ tiles = [] }: { tiles?: { id: string; 
     {error && <p role="alert">{error}</p>}
 
     <p>Label pins last for sequence playback. A story section also retains its authored pins after its shot finishes; edit that section’s saved sequence to change them.
-    Saved locally across reloads. New sequence or choosing a saved sequence replaces the unsaved draft. Camera motion pauses in hidden tabs; manual camera input interrupts it.</p>
+    Saved to project data for all testing devices. New sequence or choosing a saved sequence replaces the unsaved draft. Camera motion pauses in hidden tabs; manual camera input interrupts it.</p>
     </div>{error && <p role="alert">{error}</p>}
   </aside>, document.body)}</>;
 }

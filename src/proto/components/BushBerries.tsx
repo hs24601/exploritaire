@@ -1,11 +1,13 @@
 import { ManaberryBlob } from './ManaberryBlob';
+import { SPARSE_BERRY_POINTS } from '../berryPresentation';
 /** Independent fruit elements registered to the foliage canvas. */
-export function BushBerries({ sprite, visible, overhead = false, layout }: { sprite: string; visible: boolean; overhead?: boolean; layout?: { size: string; position: string } }) {
+export function BushBerries({ sprite, visible, overhead = false, count, layout }: { sprite: string; visible: boolean; count?: number; overhead?: boolean; layout?: { size: string; position: string } }) {
   if (!/berry|bush/.test(sprite) || (!visible && !sprite.includes('sparse'))) return null;
   const sparse = sprite.includes('sparse');
-  const points = sparse ? [[.59, overhead ? .49 : .47], [.34, overhead ? .35 : .32]].slice(visible ? 0 : 1) : overhead
+  const defaultPoints = sparse ? SPARSE_BERRY_POINTS.map(({x,y}, index) => [x, overhead ? y + (index === 0 ? .02 : .03) : y]).slice(visible ? 0 : 1) : overhead
     ? [[.18,.23],[.35,.2],[.31,.35],[.7,.3],[.85,.2],[.87,.36],[.52,.51],[.2,.76],[.32,.68],[.75,.76],[.86,.86]]
     : [[.09,.36],[.13,.43],[.25,.4],[.41,.33],[.56,.3],[.6,.38],[.75,.35],[.9,.42],[.33,.65],[.42,.72],[.71,.64],[.77,.72]];
+  const points=count===undefined?defaultPoints:[[.59,.47],[.34,.32]].slice(0,count);
   const [width, height] = layout?.size.split(' ').map(parseFloat) ?? [100,100];
   const [left, top] = layout?.position.split(' ').map(parseFloat) ?? [0,0];
   return <span data-bush-berries={sparse ? 'sparse' : 'dense'} aria-hidden="true" style={{ position:'absolute', inset:0, pointerEvents:'none' }}>

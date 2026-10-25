@@ -45,14 +45,14 @@ export function VolumetricAtmosphere(props: Props) {
     let guards: { left: number; top: number; right: number; bottom: number }[] = [];
     let labelGuards: { point: { x: number; y: number }; lift: number; offsetX: number; width: number; height: number }[] = [];
     let fixedGuards: typeof guards = [];
-    const draw = (now: number, frameMs?: number, warm = false) => {
+    const draw = (now: number, frameMs?: number, warm = false, cameraFrame = false) => {
       if (!input.current.active && !warm) return;
       if (frameMs!==undefined)budget.observe(frameMs);
-      // Camera and light-clock callbacks share the same budget. Camera follow
-      // used to bypass it and run a full scattering/mask pass every frame.
+      // Idle animation is budgeted, but screen-space visibility masks must
+      // follow every camera frame or dark silhouettes flash across moving art.
       if (stopped || document.hidden) return;
       const remaining=budget.interval-(now-lastDraw);
-      if(remaining>0){
+      if(remaining>0&&!cameraFrame){
         // Retain the final camera/time update even when reduced motion has no
         // animation clock to draw it after this budget window.
         if(frameMs===undefined&&!deferredDraw)deferredDraw=gameTime.setTimeout(()=>{deferredDraw=0;draw(gameTime.now());},remaining);
@@ -159,7 +159,7 @@ export function VolumetricAtmosphere(props: Props) {
     const warm = window.requestIdleCallback
       ? window.requestIdleCallback(warmDraw)
       : gameTime.setTimeout(warmDraw, 200);
-    const unFollow = props.onCameraFrame(() => draw(gameTime.now()));
+    const unFollow = props.onCameraFrame(() => draw(gameTime.now(), undefined, false, true));
     // Reduced-motion scenes still update on time, scenery and light changes.
     const observer = new MutationObserver(records => {
       const selector = '.board-object-label__text, .proto-map-toolbar';

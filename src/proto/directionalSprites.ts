@@ -43,13 +43,16 @@ const heroLayouts: readonly QuadrupedLayout[] = [
   {kind:'side',neck:[[.47,0],[.46,.22],[.38,.40],[.21,.49],[0,.43]],hip:[[.58,0],[.57,.32],[.54,.55],[.47,1]],pivots:[[.32,.63],[.44,.56],[.55,.52]]},
   {kind:'stacked',neck:[[0,.33],[.25,.31],[.5,.39],[.75,.31],[1,.33]],hip:[[0,.52],[.25,.46],[.5,.42],[.75,.46],[1,.52]],pivots:[[.50,.66],[.50,.55],[.50,.51]]},
 ];
-export const HERO_DIRECTIONAL_SPRITE = createQuadrupedSpriteDefinition({
+/** Hero standing. `lowViews` swaps the five low-tier frames (the orbit slice) while
+ * the elevated and overhead frames keep the approved sheets and every view keeps her layouts. */
+export const createHeroDirectionalSprite = (lowViews: readonly {source:string;rect:AtlasRect}[] = low.map(rect=>({source:'heroLow',rect}))) => createQuadrupedSpriteDefinition({
   id:'hero',
   overheadLengthScale: HERO_OVERHEAD_LENGTH_SCALE,
-  low:low.map((rect,i)=>({source:'heroLow',rect,layout:heroLayouts[i]})),
+  low:lowViews.map((view,i)=>({...view,layout:heroLayouts[i]})),
   high:[...high.map((rect,i)=>({source:'heroHigh',rect,layout:heroLayouts[i]})),{source:'heroLow',rect:low[4],layout:heroLayouts[4]}],
   top:{source:'heroHigh',rect:[71,1022,174,398],layout:{kind:'stacked',neck:[[0,.33],[.5,.35],[1,.33]],hip:[[0,.62],[.5,.59],[1,.62]],pivots:[[.5,.67],[.5,.55],[.5,.39]]}},
 });
+export const HERO_DIRECTIONAL_SPRITE = createHeroDirectionalSprite();
 const slimeRects: readonly AtlasRect[] = [[38,114,357,269],[449,102,360,281],[874,104,350,274],[40,495,344,275],[448,501,361,269],[875,522,334,257],[41,896,344,261],[448,893,353,264],[882,883,327,302]];
 const slimeFrame = (index: number, id: string): DirectionalFrame => ({ id, source: 'slime', parts: [{ id: 'body', rect: slimeRects[index], x: 0, y: .5, height: 1, depth: 0, pivot: [.5,0] }] });
 export const DARK_SLIME_DIRECTIONAL_SPRITE: DirectionalSpriteDefinition = {

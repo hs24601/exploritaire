@@ -6,7 +6,9 @@ export function createGameClock(host: {
   timer: (callback: () => void, delay: number) => number;
   cancelTimer: (id: number) => void;
 }) {
-  let paused = false, stoppedAt = 0, offset = 0, nextId = 1;
+  // `chosen` is the player's pause; holds are internal (a covering loader) and
+  // survive anything that resets the player's choice.
+  let paused = false, chosen = false, holds = 0, stoppedAt = 0, offset = 0, nextId = 1;
   const frames = new Map<number, { callback: FrameRequestCallback; native?: number }>();
   const timers = new Map<number, { callback: () => void; due: number; interval?: number; native?: number }>();
   const listeners = new Set<() => void>();
@@ -31,18 +33,14 @@ export function createGameClock(host: {
   return {
     now,
     isPaused: () => paused,
+    isPlayerPaused: () => chosen,
     subscribe: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
-    setPaused(value: boolean) {
-      if (value === paused) return;
-      if (value) {
-        stoppedAt = host.now(); paused = true;
-        frames.forEach(task => { if (task.native !== undefined) host.cancelFrame(task.native); });
-        timers.forEach(task => { if (task.native !== undefined) host.cancelTimer(task.native); });
-      } else {
-        offset += host.now() - stoppedAt; paused = false;
-        frames.forEach((_, id) => armFrame(id)); timers.forEach((_, id) => armTimer(id));
-      }
-      listeners.forEach(fn => fn());
+    setPaused(value: boolean) { chosen = value; apply(); },
+    /** Stop the clock until the returned release runs, without changing the player's pause. */
+    hold() {
+      holds++; apply();
+      let released = false;
+      return () => { if (released) return; released = true; holds--; apply(); };
     },
     requestAnimationFrame(callback: FrameRequestCallback) { const id = nextId++; frames.set(id, { callback }); armFrame(id); return id; },
     cancelAnimationFrame,
@@ -51,6 +49,19 @@ export function createGameClock(host: {
     setInterval: (callback: () => void, delay = 0) => schedule(callback, delay, Math.max(1, delay)),
     clearInterval: clearTimeout,
   };
+  function apply() {
+    const value = chosen || holds > 0;
+    if (value === paused) return;
+    if (value) {
+      stoppedAt = host.now(); paused = true;
+      frames.forEach(task => { if (task.native !== undefined) host.cancelFrame(task.native); });
+      timers.forEach(task => { if (task.native !== undefined) host.cancelTimer(task.native); });
+    } else {
+      offset += host.now() - stoppedAt; paused = false;
+      frames.forEach((_, id) => armFrame(id)); timers.forEach((_, id) => armTimer(id));
+    }
+    listeners.forEach(fn => fn());
+  }
 }
 export const gameTime = createGameClock({
   now: () => performance.now(),

@@ -1,3 +1,4 @@
+import { chooseDenseBerry, denseBerryChoicePending } from './travelJourney';
 import { ManaberryIcon } from './components/ManaberryIcon';
 import { CaveTableauScenery } from './components/CaveTableauScenery';
 import { dayOneTutorialQuest, pendingTutorialQuest } from './tutorialQuests';
@@ -32,6 +33,7 @@ import { dayObjective } from './dayObjectives';
 import type { TravelPlan } from './travelJourney';
 import { tileDetailsCard } from './components/TileDetailsCard';
 import { flyTravelCard } from './travelCardFlight';
+import { cancelQuestReceipts, presentQuestReceipt } from './questProgressReceipt';
 import { TableauPlayArea } from './components/TableauTemplate';
 import { TableauLighting } from './components/TableauLighting';
 import { EVENT_CARDS_ENABLED } from './eventCards';
@@ -42,12 +44,12 @@ import { TravelTableau } from './components/TravelTableau';
 import { TileEditor } from './tileEditor/TileEditor';
 import { SAVED_TILE_DOCUMENT, materializeTiles, applyTileDocument } from './tileEditor/runtime';
 import { authorTile, coversCell, type TileDocument } from './tileEditor/schema';
-import { paintTravelProgress, breachTravelPassage, beginJourney, travelStartingRank, prepareTravelTableau, travelTableauHeld, checkTravelCairn, bestTravelMove, playTravelCard, playTravelEvent, travelEventCost, discardTravelEvent, redrawTravel, TRAVEL_STAMINA_MAX } from './travelJourney';
+import { paintTravelProgress, breachTravelPassage, beginPlaytestJourney, travelStartingRank, prepareTravelTableau, travelTableauHeld, checkTravelCairn, bestTravelMove, playTravelCard, playTravelEvent, travelEventCost, discardTravelEvent, redrawTravel, TRAVEL_STAMINA_MAX } from './travelJourney';
 import { AbilityTray } from './components/AbilityTray';
 import { availableMovesFor } from './rules/battleAbilities';
 import { ActorPlaytestEditor, DEFAULT_ACTOR_DESCRIPTION } from './components/ActorPlaytestEditor';
 import { ArtSettings } from './components/ArtSettings';
-import { useGlobalLights, setGlobalLightsEnabled } from './globalLighting';
+import { useGlobalLights, setGlobalLightsEnabled, globalLightsUnavailable } from './globalLighting';
 
 import { ACTOR_HOLO_ART } from './art/actorCardArt';
 import { JumboActionCard } from './components/CardJumbo';
@@ -265,6 +267,7 @@ export const ProtoVariant = ({ authoring = false }: { authoring?: boolean } = {}
       }
     };
     const block = (event: Event) => {
+      if (document.documentElement.dataset.combatInspection && !gameTime.isPlayerPaused()) return;
       if ((event.target instanceof Element && event.target.closest('[data-editor-safe="true"]')) || !gameTime.isPaused() || isTextEditingTarget(event.target) || (event.target instanceof Element && event.target.closest('[data-global-pause-control]'))) return;
       event.preventDefault(); event.stopImmediatePropagation();
     };
@@ -321,8 +324,8 @@ export const ProtoVariant = ({ authoring = false }: { authoring?: boolean } = {}
   }, []);
   const foundQuest = pendingTutorialQuest(state);
   const discoverQuest = (id: string) => setState(prev => {
-    if(pendingTutorialQuest(prev)?.id!==id)return prev;
-    const next = {...prev, denQuestDiscovered:prev.denQuestDiscovered || id==='navigate-den', discoveredTutorialQuests:[...new Set([...(prev.discoveredTutorialQuests ?? []),id])]};
+    if(pendingTutorialQuest(prev)?.id!==id && !(id==='navigate-den' && prev.dayScenario==='day01' && !prev.denQuestDiscovered && !prev.journey))return prev;
+    const next = {...prev, dockedTutorialQuests:id==='simple-steps'?[...new Set([...(prev.dockedTutorialQuests??[]),id])]:prev.dockedTutorialQuests, denQuestDiscovered:prev.denQuestDiscovered || id==='navigate-den', discoveredTutorialQuests:[...new Set([...(prev.discoveredTutorialQuests ?? []),id])]};
     return id === 'denser-patch' && (prev.journey?.walkedProgress ?? 0) >= 1 ? finishTravelPresentation(next) : next;
   });
   const stateRef = useRef(state);
@@ -383,6 +386,7 @@ export const ProtoVariant = ({ authoring = false }: { authoring?: boolean } = {}
   }, [burningEnemyIds]);
 
   const clearPendingInteractions = () => {
+    cancelQuestReceipts();
     setUtility(null);
     setPendingTargetSelection(null);
     setPendingWildCardTarget(false);
@@ -391,6 +395,7 @@ export const ProtoVariant = ({ authoring = false }: { authoring?: boolean } = {}
     setAbilityDetail(null);
     setSelectedAdvisorAbilities({});
   };
+  useEffect(() => cancelQuestReceipts, []);
 
 const selectBiome = (biomeId: string) => {
     if (state.journey || state.scene !== 'exploration' || biomeId === state.selectedBiomeId) return;
@@ -1234,6 +1239,10 @@ const selectBiome = (biomeId: string) => {
     setSelectedAdvisorAbilities({});
     // Rejected plays leave no undo entry, announcement or burn.
     if (!result) return;
+    const questReceiptSource = tableauCardRefs.current[result.card.id];
+    if (questReceiptSource && base.dayScenario === 'day01' && FOUNDATION_MOCKUPS[foundationIndex]?.id === 'hero') {
+      presentQuestReceipt(questReceiptSource, result.card.foodSource === 'berries' && result.state.haul.mana > base.haul.mana, 0);
+    }
     pushUndo(base);
     setState((prev) => (prev === base ? result.state : applyFoundationPlay(prev, playOptions)?.state ?? prev));
     // A card landed early (the next play was clicked mid-flight) must be visible
@@ -1347,7 +1356,7 @@ const selectBiome = (biomeId: string) => {
     const cards = journey.columns[column];
     const card = cards?.[cards.length - 1];
     const receiver = partyMembers(current, journey.actorId).find(member => (next.utilityAP?.[member.id] ?? 0) > (current.utilityAP?.[member.id] ?? 0))?.id ?? journey.actorId;
-    if (card) flyTravelCard(card.id, receiver);
+    if (card) flyTravelCard(card.id, receiver, next.haul.mana > current.haul.mana);
     setState(next);
     return { status: 'played', message: 'Advanced travel' };
   };
@@ -1906,20 +1915,20 @@ const selectBiome = (biomeId: string) => {
       setEditorDocument(JSON.parse(JSON.stringify(base)));
     }}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5" /></svg></button>;
 
-  const travelTableau = state.journey ? <TravelTableau khadQuest={state.dayScenario==='day01' && !state.discoveredTutorialQuests?.includes('denser-patch') ? dayOneTutorialQuest(state).steps.find(step=>step.id==='denser-patch') : undefined} onDiscoverKhadQuest={()=>discoverQuest('denser-patch')} lightingEnabled={!editorOpen} discoverDenQuest={state.dayScenario==='day01' && !state.denQuestDiscovered} onDiscoverDenQuest={state.dayScenario==='day01'?()=>discoverQuest('navigate-den'):undefined} questDiscoveryHeld={!!foundQuest} tiles={state.biomeTiles} onBreach={(actorId,ability)=>setState(prev=>breachTravelPassage(prev,actorId,ability))} onReplan={()=>setState(prev=>{const j=prev.journey;if(!j)return prev;return {...prev,journey:{...j,paused:true,streak:0,tileStreak:0,blocked:{progress:j.progress,position:pointAlongTimedPath(j.path,j.progress),message:'Terrain obstructs this passage. Choose another route or cancel.'}}};})} mapOverlay={mapTravelActive} hours={tableHours} eventCost={(column,row,actorId,utility)=>travelEventCost(state,column,row,actorId,utility)} onEventPlay={(column,row,actorId,utility,cardId)=>setState(prev=>playTravelEvent(prev,column,row,actorId,utility,cardId))} onDiscard={(column,cardId)=>setState(prev=>discardTravelEvent(prev,column,cardId))} discarded={state.eventDiscard} terrainCrossings={state.terrainCrossings} members={partyMembers(state, state.journey.actorId).map(member => ({ id: member.id, label: member.label, inspiration: state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(a => a.id === member.id))] ?? 0, ap: state.utilityAP?.[member.id] ?? 0 }))} actorName={state.worldActors.find(actor => actor.id === state.journey!.actorId)?.label ?? state.journey.actorId} utilityAP={state.utilityAP?.[state.journey.actorId] ?? 0} onInspectActor={(anchor, actorId) => inspectActor(actorId ?? state.journey!.actorId, anchor, true)} onSolveStep={solveTravelStep} journey={state.journey} stamina={state.travelStamina ?? TRAVEL_STAMINA_MAX} inspiration={state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(actor => actor.id === state.journey!.actorId))]} onPlay={(column, actorId) => {
+  const travelTableau = state.journey && state.journey.cards>0 ? <TravelTableau simpleStepsQuest={foundQuest?.id==='simple-steps'?foundQuest:undefined} onDiscoverSimpleSteps={()=>discoverQuest('simple-steps')} khadQuest={state.dayScenario==='day01' && !state.discoveredTutorialQuests?.includes('denser-patch') ? dayOneTutorialQuest(state).steps.find(step=>step.id==='denser-patch') : undefined} onDiscoverKhadQuest={()=>discoverQuest('denser-patch')} lightingEnabled={!editorOpen} discoverDenQuest={state.dayScenario==='day01' && !state.denQuestDiscovered} onDiscoverDenQuest={state.dayScenario==='day01'?()=>discoverQuest('navigate-den'):undefined} questDiscoveryHeld={!!foundQuest} berryQuestDiscoveryHeld={foundQuest?.id==='first-berry'} tiles={state.biomeTiles} onBreach={(actorId,ability)=>setState(prev=>breachTravelPassage(prev,actorId,ability))} onReplan={()=>setState(prev=>{const j=prev.journey;if(!j)return prev;return {...prev,journey:{...j,paused:true,streak:0,tileStreak:0,blocked:{progress:j.progress,position:pointAlongTimedPath(j.path,j.progress),message:'Terrain obstructs this passage. Choose another route or cancel.'}}};})} mapOverlay={mapTravelActive} hours={tableHours} eventCost={(column,row,actorId,utility)=>travelEventCost(state,column,row,actorId,utility)} onEventPlay={(column,row,actorId,utility,cardId)=>setState(prev=>playTravelEvent(prev,column,row,actorId,utility,cardId))} onDiscard={(column,cardId)=>setState(prev=>discardTravelEvent(prev,column,cardId))} discarded={state.eventDiscard} terrainCrossings={state.terrainCrossings} members={partyMembers(state, state.journey.actorId).map(member => ({ id: member.id, label: member.label, inspiration: state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(a => a.id === member.id))] ?? 0, ap: state.utilityAP?.[member.id] ?? 0 }))} actorName={state.worldActors.find(actor => actor.id === state.journey!.actorId)?.label ?? state.journey.actorId} utilityAP={state.utilityAP?.[state.journey.actorId] ?? 0} onInspectActor={(anchor, actorId) => inspectActor(actorId ?? state.journey!.actorId, anchor, true)} onSolveStep={solveTravelStep} journey={state.journey} stamina={state.travelStamina ?? TRAVEL_STAMINA_MAX} inspiration={state.actorInspiration[Math.max(0, FOUNDATION_MOCKUPS.findIndex(actor => actor.id === state.journey!.actorId))]} onPlay={(column, actorId) => {
       const current = stateRef.current;
       const next = playTravelCard(current, column, actorId);
       if (next === current) return;
       const cards = current.journey?.columns[column];
       const card = cards?.[cards.length - 1];
-      if (card && current.journey) flyTravelCard(card.id, actorId ?? current.journey.actorId);
+      if (card && current.journey) flyTravelCard(card.id, actorId ?? current.journey.actorId, next.haul.mana > current.haul.mana);
       setState(next);
     }} onRedraw={actorId => setState(prev => redrawTravel(prev, actorId))} onPause={() => setState(prev => prev.journey ? { ...prev, journey: { ...prev.journey, paused: !prev.journey.paused } } : prev)} /> : null;
 
   const startScenarioTravel = (plan: TravelPlan) => {
     if (foundQuest || !dayOneAllowsPlan(state, plan)) return;
     clearPendingInteractions(); setUndoStack([]);
-    setState(prev => prepareTravelTableau({ ...prev, journey: { ...beginJourney(plan, travelStartingRank(prev,plan.actorId), false), memberRanks: { [plan.actorId]: travelStartingRank(prev,plan.actorId) } },
+    setState(prev => prepareTravelTableau({ ...prev, journey: { ...beginPlaytestJourney(plan, travelStartingRank(prev,plan.actorId), false), memberRanks: { [plan.actorId]: travelStartingRank(prev,plan.actorId) } },
       biomeTiles: prev.biomeTiles.map(tile => tile.id === prev.selectedBiomeId ? { ...tile, tableau: prev.tableau, stock: prev.stock } : tile),
       selectedBiomeId: null, tableau: [], stock: [], foundations: [],
       worldActors: prev.worldActors.map(actor => actor.id === plan.actorId ? { ...actor, location: 'table', heading: actor.id==='hero'?undefined:actor.heading, position: plan.path[0], biomeId: undefined, foundationIndex: undefined } : actor) }));
@@ -1943,7 +1952,7 @@ const selectBiome = (biomeId: string) => {
   };
   const mapSettings = (travelControls?: React.ReactNode) => (<div className="proto-settings-host" data-editor-safe="true">{editorToggle}<ArtSettings>{travelControls}
                   <label className="art-settings__toggle"><input type="checkbox" checked={mapTravelTest} onChange={event => { setMapTravelTest(event.target.checked); setMobilePanel('map'); }} />Map tableau (test)</label>
-                  <label className="art-settings__toggle" title="Apply global day/night lighting and haze. Uncheck for a bright view; local lights remain independent."><input type="checkbox" checked={globalLights} onChange={(event) => setGlobalLightsEnabled(event.target.checked)} />Global lights</label>
+                  <label className="art-settings__toggle" title={globalLightsUnavailable() ? 'Global lighting is disabled on mobile devices.' : 'Apply global day/night lighting and haze. Uncheck for a bright view; local lights remain independent.'}><input type="checkbox" checked={globalLights} disabled={globalLightsUnavailable()} onChange={(event) => setGlobalLightsEnabled(event.target.checked)} />Global lights</label>
                   <div className="art-settings__section" aria-label="Lighting controls">
                   <span>Day {state.day} · {lighting.phase} · {String(Math.floor(lighting.hour)).padStart(2, '0')}:{String(Math.floor((lighting.hour % 1) * 60)).padStart(2, '0')}</span>
                   {state.dayScenario ? <span>Story milestones advance the day. Reading takes no time.</span> : <><label className="flex items-center gap-2">Time <TimeOfDaySlider hours={tableHours} onChange={setTableHours} /></label>
@@ -1983,7 +1992,7 @@ const selectBiome = (biomeId: string) => {
       {state.dayScenario==='day02' && state.dayTwoAmbush && <BanksRescueCinema key={scenarioRun} onExit={()=>switchDayScenario('day02')} onComplete={()=>switchDayScenario('day03')} />}
       <TableauDragPreview key={`tableau-preview-${scenarioRun}`} enabled={!!state.denQuestDiscovered && !editorOpen && !combatDemoOpen && state.dayScenario==='day01' && state.journey?.segments[0]?.kind==='den-exit' && state.journey.completed===0 && (state.journey.memberRanks?.hero ?? state.journey.rank)===2} paused={Boolean(state.journey?.paused)} cardIds={state.journey?.columns.flatMap(column=>{const card=column[column.length-1];return card?.rank===3?[card.id]:[];}) ?? []} />
       {!authoring && <SceneTree current={sceneCheckpoint} onSelect={jumpToScene} />}
-      <DayForagingCallout onFaceTarget={target=>setState(prev=>({...prev,worldActors:prev.worldActors.map(actor=>actor.id==='hero'?{...actor,heading:Math.atan2(target.x-actor.position.x,target.y-actor.position.y)}:actor)}))} state={state} hidden={combatDemoOpen || Boolean(sceneCheckpoint && dayCinema.beat?.id === settledSceneBeat)} cinematicBeat={dayCinema.enabled ? dayCinema.beat : null} />
+      <DayForagingCallout onBerryChoice={choice=>{const current=stateRef.current,next=chooseDenseBerry(current,choice);if(next===current)return;const card=current.journey?.columns.flat()[0];if(choice==='collect' && card && current.journey)flyTravelCard(card.id,current.journey.actorId,true);setState(next);}} onFaceTarget={target=>setState(prev=>({...prev,worldActors:prev.worldActors.map(actor=>actor.id==='hero'?{...actor,heading:Math.atan2(target.x-actor.position.x,target.y-actor.position.y)}:actor)}))} state={state} hidden={combatDemoOpen || Boolean(sceneCheckpoint && dayCinema.beat?.id === settledSceneBeat && !denseBerryChoicePending(state))} cinematicBeat={dayCinema.enabled ? dayCinema.beat : null} />
       {import.meta.env.DEV && <CameraChoreographyTools tiles={state.biomeTiles.map(t => ({ id: t.id, label: t.title }))} />}
       {editorDocument && <TileEditor workspace={authoring} tools={authoring ? undefined : <CameraChoreographyButton />} renderTableaus={tile => <TableauEditor target={tile ? tile.berryPatchVariant === 'sparse' ? 'berry-patch-sparse' : tile.kind : undefined} tileLabel={tile?.title} />} document={editorDocument} cell={editorCell} contextMenu={editorMenu} onDismissMenu={() => setEditorMenu(null)} onSelectCell={setEditorCell} onChange={setEditorDocument}
         onClose={() => { setEditorMenu(null); setEditorDocument(null); }} onApply={document => {
@@ -2019,7 +2028,7 @@ const selectBiome = (biomeId: string) => {
               </div>
 
               <div hidden={!tableauPresent} className={`proto-tableau-field min-h-0 min-w-0 overflow-hidden${pondSelected && !combatDemoOpen ? ' proto-tableau-field--pond' : ''}${dangerSelected || combatDemoOpen ? ' proto-tableau-field--combat' : ''}`}>
-              {foundQuest && foundQuest.id!=='navigate-den' && !(foundQuest.id==='denser-patch' && state.journey?.segments.some(segment=>segment.sparseBerry)) && <DenQuestDiscovery key={foundQuest.id} step={foundQuest} paused={!!state.journey?.paused} onDiscover={()=>discoverQuest(foundQuest.id)} />}
+              {foundQuest && foundQuest.id!=='navigate-den' && foundQuest.id!=='simple-steps' && !(foundQuest.id==='denser-patch' && state.journey?.segments.some(segment=>segment.sparseBerry)) && <DenQuestDiscovery key={foundQuest.id} step={foundQuest} paused={!!state.journey?.paused} onDiscover={()=>discoverQuest(foundQuest.id)} />}
               {!editorOpen && !state.journey && (state.selectedBiomeId || idleFieldBiome || combatDemoOpen) && !pondSelected && <TableauLighting hours={tableHours} />}
               {(state.selectedBiomeId || idleFieldBiome) && !pondSelected && !combatDemoOpen && <TableauLandscape tileType={(fieldBiome ?? idleFieldBiome)?.berryPatchVariant==='sparse' ? 'berry-patch-sparse' : (fieldBiome ?? idleFieldBiome)?.tileType} berriesAvailable={fieldBiome ? tileHasBerries(fieldBiome, state.tableau, state.stock) : idleFieldBiome ? tileHasBerries(idleFieldBiome) : false} />}
               {!state.journey && idleFieldBiome?.tileType==='hero-den' && <CaveTableauScenery className="travel-den-scene-cave" />}
@@ -2488,6 +2497,8 @@ const selectBiome = (biomeId: string) => {
                 persistentTileLabelIds={dayCinema.tileLabelIds}
                 objective={editorOpen ? null : dayObjective(state)}
                 openingCardDeal={!sceneCheckpoint && !editorOpen && dayCinema.enabled && dayCinema.beat?.id === 'day01.opening'}
+                openingQuestPosition={!sceneCheckpoint && !editorOpen && state.dayScenario==='day01' && !state.denQuestDiscovered ? state.biomeTiles.find(tile=>tile.id===state.dayScenarioTiles?.sparsePatchId)?.position : undefined}
+                onDiscoverOpeningQuest={()=>discoverQuest('navigate-den')}
                 travelTableau={mapTravelActive ? travelTableau : undefined}
                 sceneId={dayCinema.beat?.id ?? (state.journey ? sceneCheckpoint : undefined) ?? dayCinema.presentationBeat?.id ?? state.dayScenario ?? 'sandbox'}
                 actorCard={<ActorMapCard actorId="hero" name="Hero" position={state.journey?.actorId === 'hero' ? pointAlongTimedPath(state.journey.path, state.journey.walkedProgress ?? 0) : state.worldActors.find(a => a.id === 'hero')?.position} rank={rankLabel(state.journey ? state.journey.memberRanks?.hero ?? state.journey.rank : state.worldActors.find(a=>a.id==='hero')?.location==='foundation' ? state.foundations[state.worldActors.find(a=>a.id==='hero')?.foundationIndex ?? 0]?.card.rank ?? 2 : state.travelRanks?.hero ?? 2)} onInspect={anchor=>inspectActor('hero',anchor,true)} receivedResources={{AP:state.utilityAP?.hero??0,mana:state.haul.mana,inspiration:state.actorInspiration[0]??0}} foodLanding={foodLanding??undefined} />}
@@ -2562,14 +2573,14 @@ const selectBiome = (biomeId: string) => {
                 })}
                 onSelectBiome={selectBiome}
                 journey={state.journey}
-                travelAllowed={plan => !foundQuest && dayOneAllowsPlan(state, plan)}
+                travelAllowed={plan => !foundQuest && !(state.dayScenario==='day01' && !sceneCheckpoint && !state.denQuestDiscovered) && dayOneAllowsPlan(state, plan)}
                 travelStamina={state.travelStamina ?? TRAVEL_STAMINA_MAX}
                 travelStaminaMax={state.scenarioStaminaMax ?? TRAVEL_STAMINA_MAX}
                 initialCenter={state.dayScenario ? {x:0,y:96}:undefined}
                 onConfirmTravel={plan => {
                   if (state.dayScenario) { startScenarioTravel(plan); return; }
                   clearPendingInteractions(); setUndoStack([]);
-                  setState(prev => prepareTravelTableau({ ...prev, journey: { ...beginJourney(plan,travelStartingRank(prev,plan.actorId)), memberRanks: Object.fromEntries(partyMembers(prev, plan.actorId).map((member, i) => [member.id, prev.journey?.memberRanks?.[member.id] ?? travelStartingRank(prev,member.id,2+i*3)])), spent: prev.journey?.spent ?? 0, berries: prev.journey?.berries ?? 0, priorCompleted: (prev.journey?.priorCompleted ?? 0) + (prev.journey?.completed ?? 0), completedCardIds: prev.journey?.completedCardIds ?? [] },
+                  setState(prev => prepareTravelTableau({ ...prev, journey: { ...beginPlaytestJourney(plan,travelStartingRank(prev,plan.actorId)), memberRanks: Object.fromEntries(partyMembers(prev, plan.actorId).map((member, i) => [member.id, prev.journey?.memberRanks?.[member.id] ?? travelStartingRank(prev,member.id,2+i*3)])), spent: prev.journey?.spent ?? 0, berries: prev.journey?.berries ?? 0, priorCompleted: (prev.journey?.priorCompleted ?? 0) + (prev.journey?.completed ?? 0), completedCardIds: prev.journey?.completedCardIds ?? [] },
                     biomeTiles: prev.biomeTiles.map(tile => ({ ...tile, ...(tile.id === prev.selectedBiomeId ? { tableau: prev.tableau, stock: prev.stock } : {}), ...(plan.segments.some(segment => segment.tileId === tile.id && segment.unknown) ? { traversalProgress: tile.traversalProgress ?? 0 } : {}) })),
                     selectedBiomeId: null, tableau: [], stock: [], foundations: [],
                     worldActors: prev.worldActors.map(actor => partyMembers(prev, plan.actorId).some(member => member.id === actor.id) ? { ...actor, location: 'table', heading: undefined, position: plan.path[0], biomeId: undefined, foundationIndex: undefined, hutId: undefined } : actor) }));

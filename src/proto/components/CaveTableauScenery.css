@@ -1,4 +1,5 @@
 .cave-tableau-scenery { pointer-events:none; isolation:isolate; }
+.cave-tableau-scenery__camera { position:absolute; inset:0; isolation:isolate; transform-origin:50% 65%; }
 .cave-tableau-scenery__mountains { position:absolute; inset:0; z-index:-3; }
 .cave-tableau-scenery__mountains img { position:absolute; height:100%; object-fit:contain; object-position:center bottom; transform-origin:center bottom; filter:brightness(.58) saturate(.65); }
 .cave-tableau-scenery__soil { position:absolute; z-index:-2; left:-20%; width:140%; top:70%; height:48%; background-size:cover; background-position:center; border-radius:50%; opacity:.92; mask-image:radial-gradient(ellipse,black 15%,#000b 43%,transparent 72%); }
