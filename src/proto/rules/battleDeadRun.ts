@@ -151,19 +151,11 @@ export function advanceIntent(state: BattleState, ownerSkips: boolean): BattleSt
   return dealIntent(next, intent.fired + 1);
 }
 
-/** Pips the intent will hold after its owner's next turn if the board stays as it is: its plays plus the passive pip. */
-export function intentProjectedPips(state: BattleState): number {
-  const def = intentDef(state), intent = state.tutorial?.intent;
-  if (!def || !intent) return 0;
-  if (intentOwnerSkips(state.foes[0])) return intent.pips;
-  return Math.min(def.pips, intentEnemyPlays(state).intent!.pips + def.passive);
-}
-
 /** Inspection copy for the intent card. */
 export function intentSummary(state: BattleState): string | null {
   const def = intentDef(state), intent = state.tutorial?.intent;
   if (!def || !intent) return null;
   const rank = (value: number) => ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][value];
   const below = rank(intent.rank === 1 ? 13 : intent.rank - 1), above = rank(intent.rank === 13 ? 1 : intent.rank + 1);
-  return `${def.name} · ${intent.pips} of ${def.pips} pips. Each enemy turn ${state.foes[0]?.name ?? 'the enemy'} plays up to ${def.enemyPlays} cards here (+1 pip each) and adds ${def.passive}. At ${def.pips} it fires for ${def.damage} damage on every Kin, then returns as a new card. Striped pips are what it gains on its next turn if the board stays as it is. Play a ${below} or ${above} here to remove a pip and earn 1 Momentum (no AP, no hit).${def.fixedRank ? ' It keeps its rank when played on.' : ' It takes the rank of each card played on it.'}`;
+  return `${def.name} · ${intent.pips} of ${def.pips} pips. Each enemy turn ${state.foes[0]?.name ?? 'the enemy'} plays up to ${def.enemyPlays} cards here (+1 pip each) and adds ${def.passive}. At ${def.pips} it fires for ${def.damage} damage on every Kin, then returns as a new card. Play a ${below} or ${above} here to remove a pip and earn 1 Momentum (no AP, no hit).${def.fixedRank ? ' It keeps its rank when played on.' : ' It takes the rank of each card played on it.'}`;
 }
