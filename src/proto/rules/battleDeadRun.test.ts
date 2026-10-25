@@ -103,11 +103,25 @@ describe('dead-run scenarios', () => {
     expect(a.columns.flat().map(card => card.id)).not.toEqual(b.columns.flat().map(card => card.id));
     const pending = withdrawPlayer(a, 1);
     expect(pending.turn).toBe('enemy');expect(pending.columns).toBe(a.columns);
-    const waiting = tickBattle(pending, 1);
+    const waiting = tickBattle(pending, 0.5);
     expect(waiting.turn).toBe('enemy');expect(waiting.columns).toBe(a.columns);
-    const back = tickBattle(waiting, 2);
+    let back = waiting;
+    for (let i = 0; i < 20 && back.turn === 'enemy'; i++) back = tickBattle(back, 1);
     expect(back.turn).toBe('party');expect(back.pendingRedeal).toBeUndefined();expect(back.reposition?.by).toBe('party');
     expect(hero(back).hp).toBe(hero(a).hp);
+  });
+
+  it('a paced enemy turn plays one action per step: strike, each intent play, passive pip, then the handoff', () => {
+    const base = createCombatSandboxScenario('1000');
+    const s = withIntent(table(base, [5, 4, 13, 13, 13, 13]), 6);
+    const steps: BattleState[] = [];
+    let next = endPlayerTurn(s);
+    for (let i = 0; i < 20 && next.turn === 'enemy'; i++) { next = tickBattle(next, 2); steps.push(next); }
+    const cards = steps.map(step => step.tutorial!.intent!.cards.length), pips = steps.map(step => step.tutorial!.intent!.pips);
+    // Strike (0 cards), the 5 then the 4 one step apart, the passive pip, then the party turn.
+    expect(cards).toEqual([0, 1, 2, 2, 2]);
+    expect(pips).toEqual([0, 1, 2, 3, 3]);
+    expect(steps.map(step => step.turn)).toEqual(['enemy', 'enemy', 'enemy', 'enemy', 'party']);
   });
 
   it('in 1000 the 6-AP Hold card opens Hero’s hold slot once, for the rest of the fight', () => {

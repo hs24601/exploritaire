@@ -49,7 +49,7 @@ export type TutorialDef = {
   intentCard?: IntentCardDef;
   pityDraw?: boolean;
   holdSlot?: boolean;
-  /** Seconds the enemy turn plays out on the board before it resolves, so its plans can be read. */
+  /** Paced enemy turn: the board holds this many seconds, then each enemy action plays out in turn (battleTutorials ENEMY_STEP_SECONDS). */
   enemyTurnSeconds?: number;
   /** A fresh random deal on every start and restart instead of the authored seed. */
   randomSeed?: boolean;
@@ -371,14 +371,14 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
         'It costs AP that Hero could spend on Bash, and the cards it burns earn nothing, so it is only worth it when the run it opens is longer than the cards it removes.',
       ] } },
   ...DEAD_RUN_SCENARIOS,
-  { id: '1000', name: '1000: Target Dummy', seed: 1000, randomSeed: true, skills: ['hold'], kinRadials: true, hideEmptySlot: true, columns: 6, party: ['hero'], partyHp: 99, enemyTurnSeconds: 2.5,
+  { id: '1000', name: '1000: Target Dummy', seed: 1000, randomSeed: true, skills: ['hold'], kinRadials: true, hideEmptySlot: true, columns: 6, party: ['hero'], partyHp: 99, enemyTurnSeconds: 1,
     foes: [{ key: 'target-dummy', name: 'Target Dummy', hp: 999, damage: 0, staggerMax: 6 }],
     intentCard: DEEP_BREATH, pityDraw: true,
     insight: { actorId: 'hero',
       intent: [
         'A test range for the dead-run systems, built like 999: a 999-HP Target Dummy that never strikes, so you can try every rule without the fight ending. Hero fights alone on six columns, with a fresh random deal on every start and restart. Hero has 99 HP.',
         'Everything is on at once: the Deep Breath intent card (4 pips; up to 2 enemy plays and 1 passive pip a turn; it fires for 4 on every Kin), the pity flip, the delayed-redeal Withdraw and the board-plan markers. The hold slot is an ability here: Hero’s Hold card (6 AP) opens it for the rest of the fight.',
-        'The enemy turn plays out for a few seconds on the board, so you can watch the plans before they resolve.',
+        'The enemy turn plays out one action at a time: its strike, each card it plays onto Deep Breath, then the passive pip, so you can watch every change land.',
       ],
       solve: [
         'Deep Breath: tap or drag a card one rank from it to remove a pip (1 Momentum, no AP or Nip). Red outlines mark the exposed cards the dummy will play onto it next turn; take them first to starve it.',

@@ -1,5 +1,7 @@
 # Exploritaire development baseline
 
+- Stepped enemy turns (Eric, 2026-10-25): paced combatsbx enemy turns (1000) play out one action at a time on real seconds after a short hold: the foes' strikes, each card played onto the intent (each flying from the tableau), the passive pip and any firing, then the handoff that lands a delayed Withdraw redeal. Scenarios without enemyTurnSeconds keep the instant enemy turn.
+
 - Combat sandbox Momentum decay off by default (Eric, 2026-10-25): every combatsbx scenario starts with Momentum decay disabled; the Config toggle still turns it on. Intent-card pips only fill as pips are gained and empty as they are removed; no predictive or next-pip striping.
 
 - Centered combat foundations (Eric, 2026-10-25): the combatsbx party row is one centered row in party order (Kin, hold slots, the empty well) and stays centered as the foundation count changes: 1000 with Hero alone, 019–024 with Hero and the empty well, Hold appearing, Mochi joining, Banks in 007.

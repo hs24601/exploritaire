@@ -113,33 +113,34 @@ export function pityFlip(state: BattleState): BattleState {
 /** The intent's owner skips it on the same turns it skips its strike. */
 export const intentOwnerSkips = (foe: BattleFoe | undefined) => Boolean(foe && (foe.staggered > 0 || hasStatus(foe, 'dormant') || hasStatus(foe, 'frozen') || hasStatus(foe, 'stun') || hasStatus(foe, 'grip')));
 
+/** One owner play onto the intent: the first exposed card one rank from it, +1 pip. Null when the intent is full or nothing fits. */
+export function intentEnemyPlayOne(state: BattleState): BattleState | null {
+  const def = intentDef(state), intent = state.tutorial?.intent;
+  if (!def || !intent || intent.pips >= def.pips) return null;
+  const column = state.columns.slice(0, tableauWidth(state)).findIndex(cards => cards.length > 0 && isAdjacentRank(cards[cards.length - 1].rank, intent.rank));
+  if (column < 0) return null;
+  const { card, columns, stock, dealt } = takeTop(state, column)!;
+  return { ...state, columns, stock, dealt, tutorial: { ...state.tutorial!, intent: { ...intent, pips: intent.pips + 1, rank: def.fixedRank ? intent.rank : card.rank, cards: [...intent.cards, card] } } };
+}
+
 /** The owner's plays onto the intent this enemy turn: up to `enemyPlays` exposed cards one rank from it, +1 pip each. */
 export function intentEnemyPlays(state: BattleState): { state: BattleState; intent: IntentCard | undefined } {
   const def = intentDef(state);
-  let next = state, intent = state.tutorial?.intent;
-  if (!def || !intent) return { state, intent };
-  for (let play = 0; play < def.enemyPlays && intent.pips < def.pips; play += 1) {
-    const rank = intent.rank, column = next.columns.slice(0, tableauWidth(next)).findIndex(cards => cards.length > 0 && isAdjacentRank(cards[cards.length - 1].rank, rank));
-    if (column < 0) break;
-    const { card, columns, stock, dealt } = takeTop(next, column)!;
-    intent = { ...intent, pips: intent.pips + 1, rank: def.fixedRank ? intent.rank : card.rank, cards: [...intent.cards, card] };
-    next = { ...next, columns, stock, dealt };
+  let next = state;
+  for (let play = 0; def && play < def.enemyPlays; play += 1) {
+    const played = intentEnemyPlayOne(next);
+    if (!played) break;
+    next = played;
   }
-  return { state: next, intent };
+  return { state: next, intent: next.tutorial?.intent };
 }
 
-/**
- * The intent's enemy turn, after its owner acts. A skipping owner (staggered,
- * dormant, frozen, stunned or held) leaves the intent as it is. Otherwise it
- * plays up to `enemyPlays` exposed cards one rank from the intent (+1 pip
- * each), adds its passive pips, and fires at full pips on every living Kin.
- */
-export function advanceIntent(state: BattleState, ownerSkips: boolean): BattleState {
+/** After its plays the intent adds its passive pips, and at full pips fires on every living Kin and returns as a new card. */
+export function intentPassiveAndFire(state: BattleState): BattleState {
   const def = intentDef(state), owner = state.foes[0];
-  if (!def || !state.tutorial?.intent || state.result || !owner || !foeAlive(owner) || ownerSkips) return state;
-  let { state: next, intent } = intentEnemyPlays(state);
-  intent = { ...intent!, pips: Math.min(def.pips, intent!.pips + def.passive) };
-  next = { ...next, tutorial: { ...next.tutorial!, intent } };
+  if (!def || !state.tutorial?.intent || state.result || !owner || !foeAlive(owner)) return state;
+  const intent = { ...state.tutorial.intent, pips: Math.min(def.pips, state.tutorial.intent.pips + def.passive) };
+  let next: BattleState = { ...state, tutorial: { ...state.tutorial, intent } };
   if (intent.pips < def.pips) return next;
   const targets = next.party.filter(actorAlive);
   next = { ...next, party: next.party.map(actor => actorAlive(actor) ? { ...actor, hp: Math.max(0, actor.hp - def.damage) } : actor) };
@@ -149,6 +150,18 @@ export function advanceIntent(state: BattleState, ownerSkips: boolean): BattleSt
   ]));
   next = clearDownedAP({ ...next, result: outcome(next) });
   return dealIntent(next, intent.fired + 1);
+}
+
+/**
+ * The intent's whole enemy turn, after its owner acts. A skipping owner (staggered,
+ * dormant, frozen, stunned or held) leaves the intent as it is. Otherwise it
+ * plays up to `enemyPlays` exposed cards one rank from the intent (+1 pip
+ * each), adds its passive pips, and fires at full pips on every living Kin.
+ */
+export function advanceIntent(state: BattleState, ownerSkips: boolean): BattleState {
+  const owner = state.foes[0];
+  if (!intentDef(state) || !state.tutorial?.intent || state.result || !owner || !foeAlive(owner) || ownerSkips) return state;
+  return intentPassiveAndFire(intentEnemyPlays(state).state);
 }
 
 /** Inspection copy for the intent card. */
