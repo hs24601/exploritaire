@@ -812,6 +812,7 @@ This document records agreed project preferences and behavior from the Proto dev
 
 - [Sprite artwork workflow — art/presentation contract](./ART.md#contract-048).
 
+- Research and findings are Markdown files (Eric, 2026-10-25): deliver simulation results, analyses, reviews and design research as `.md` files in the repo (research under `docs/research/`), not web pages or HTML artifacts, so other agents can read and build on them. Use Markdown tables for data; link raw data or scripts rather than embedding charts. Example: [docs/research/tableau-shape-montecarlo.md](./docs/research/tableau-shape-montecarlo.md).
 - Target Proto unless the user requests another variant or broader scope.
 - Build reusable components and shared behavior where multiple game objects need the same functionality. Avoid accumulating object-specific fixes for common problems.
 - Preserve unrelated changes in the shared workspace.
