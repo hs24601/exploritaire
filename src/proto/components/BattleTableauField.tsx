@@ -21,7 +21,7 @@ import { MOCHI_DIRECTIONAL_SPRITE } from '../mochiSprite';
 import { rankLabel, type Card } from '../protoState';
 import { createSeededSmallWoodsDeal } from '../rules/setup';
 import {
-  releaseGrip, MAX_FOES, actorAttack, inspectActorAbility, addSlime, applyAttack, applyTrap, canDeal, canEndPlayerTurn, endPlayerTurn, createBattle, setActorTarget, dealRow, eligibleActors, enemyTarget, playCard,
+  releaseGrip, MAX_FOES, actorAttack, inspectActorAbility, addSlime, applyAttack, applyTrap, canDeal, canEndPlayerTurn, endPlayerTurn, createBattle, canUseMomentumSkill, setActorTarget, dealRow, eligibleActors, enemyTarget, playCard,
   previewAttack, previewTrap, redrawActor, removeSlime, setMochi, setSpirit, setMaxAP, tickBattle, type BattleState,
 } from '../rules/battle';
 import { COMBAT_ABILITY_SLOTS, combatMovesFor, type Attack } from '../rules/battleAbilities';
@@ -107,6 +107,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const [highlightLegal,setHighlightLegal]=useState(false);
   const [singleMoveTarget,setSingleMoveTarget]=useState<HTMLDivElement|null>(null);
   const [skillMenuOpen,setSkillMenuOpen]=useState(false);
+  const [directWithdraw,setDirectWithdraw]=useState(false);
   const [withdrawSelecting,setWithdrawSelecting]=useState(false);
   /** Open Kin radials; empty while the Momentum radial (Withdraw only) is open. */
   const [skillOwners,setSkillOwners]=useState<string[]>([]);
@@ -389,7 +390,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   };
   /** Restarts the current scenario with the roster as adjusted, or a fresh scenario as authored. */
   const restart = (nextScenario?: string) => {
-    setBannerSession(value=>value+1);
+    setBannerSession(value=>value+1);setDirectWithdraw(false);
     setSkillMenuOpen(false);setAbilityCast(null);setCirInspection(false);setInsightOpen(false);
     announced.current=0;
     setWithdrawPreview(false);
@@ -414,12 +415,6 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   };
 
   /** Several Kin radials can be open together; the Momentum radial is exclusive. */
-  const toggleKinRadial = (actorId: string) => {
-    if (nightBlocking || battle.result || paused || holding || globalPaused || abilityCast) return;
-    const open = skillMenuOpen ? skillOwners : [];
-    const owners = open.includes(actorId) ? open.filter(id => id !== actorId) : [...open, actorId];
-    cancel(); setSelection(null); setSkillOwners(owners); setSkillMenuOpen(owners.length > 0);
-  };
   const performManeuver = (action: (state: BattleState)=>BattleState, fromAbility=false) => {
     if(battlePaused && !fromAbility)return;
     const current=latest.current,next=action(current);if(next===current)return;
@@ -502,11 +497,11 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
             if(suppressTargetClick.current){suppressTargetClick.current=false;return;}
             if (aim) { if (previews.get(actor.id) && !paused) foeProps(actor.id).onClick(); return; }
             if (selection) { choose(actor.id); return; }
-            // combatsbx: a tap opens this Kin's ability radial (the map holocard still opens jumbo).
-            if (sandbox) { if (actor.controller!=='npc') toggleKinRadial(actor.id); return; }
+            // Sandbox ability bindings are unwired; card receipt selection remains available.
+            if (sandbox) return;
             requestHoloDeviceTilt();
             setInspection({ id: actor.id, name: actor.name, anchor: event.currentTarget });
-          }} aria-haspopup="dialog" aria-label={`${actor.name} foundation${selection?.actorIds.includes(actor.id) ? ' · choose for selected card' : ''}`} style={rig.surface(55, 60)}>
+          }} aria-haspopup={sandbox?undefined:'dialog'} aria-label={`${actor.name} foundation${selection?.actorIds.includes(actor.id) ? ' · choose for selected card' : ''}`} style={rig.surface(55, 60)}>
           <>{sandbox ? <PlayerFoundationFace actor={actor} events={battle.events} paused={presentationPaused} noLegalMoves={noLegalMoves} portraitRef={node=>{if(node)foundationRefs.current.set(actor.id,node);else foundationRefs.current.delete(actor.id);}}/> : <div className="battle-field__pile">
             <div className="battle-field__actor-card proto-lit-surface" ref={node => { if (node) foundationRefs.current.set(actor.id,node); else foundationRefs.current.delete(actor.id); }}>
               <ActorHoloCard actorId={actor.id} name={actor.name} rank={rankLabel(actor.rank)} receivedResources={sandbox ? { inspiration: actor.inspiration } : { AP: actor.charge, inspiration: actor.inspiration }} />
@@ -569,6 +564,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const endTurnControl = <SceneButton type="button" className="battle-end-turn" disabled={battlePaused || !canEndPlayerTurn(battle)}
               title={battlePaused?'Combat paused':battle.turn==='enemy'?'Enemy turn':battle.result?'Battle complete':canEndPlayerTurn(battle)?'Pass control to the enemy team':'Scripted rescue in progress'}
               onClick={()=>performManeuver(endPlayerTurn)}>END TURN</SceneButton>;
+  const withdrawControl = <SceneButton type="button" className="battle-withdraw-button" disabled={battlePaused || !canUseMomentumSkill(battle,'withdraw')} onClick={()=>{cancel();setSelection(null);setSkillOwners([]);setDirectWithdraw(true);setSkillMenuOpen(true);}}>WITHDRAW</SceneButton>;
   const sandboxUtilityControls = <>{battle.result ? <SceneButton type="button" onClick={() => restart()}>Fight again</SceneButton> : <>
               <SceneButton type="button" aria-pressed={paused} disabled={!battle.started || holding} onClick={() => { cancel(); setSelection(null); setPaused((p) => !p); }}>{paused ? 'Resume' : 'Pause'}</SceneButton>
               <SceneButton type="button" disabled={holding} onClick={() => restart()}>Restart</SceneButton>
@@ -627,7 +623,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
         descriptor:combatMovesFor(abilityInspection.attack.actorId).find(move=>move.name===abilityInspection.attack.form)?.description ?? '',
         trays:[], footer:abilityInspection.attack.charge+' AP required' }]}
       onClose={() => setAbilityInspection(null)} onCloseObject={() => setAbilityInspection(null)} />}
-    {sandbox && battle.momentum && createPortal(<div className="battle-momentum-overlay"><MomentumEngine valueStyle={momentumValueStyle} showDecay={false} paused={presentationPaused} timeScale={battleTimeScale(battle)} pool={battle.momentum} onOpenSkills={()=>{if(!nightBlocking && !battle.result && !paused && !holding && !globalPaused && !abilityCast){cancel();setSelection(null);setSkillOwners([]);setSkillMenuOpen(true);}}} onDecayChange={enabled=>setBattle(state=>setMomentumDecay(state,enabled))} /></div>, document.querySelector('.combat-sandbox') ?? document.body)}
+    {sandbox && battle.momentum && createPortal(<div className="battle-momentum-overlay"><MomentumEngine valueStyle={momentumValueStyle} showDecay={false} paused={presentationPaused} timeScale={battleTimeScale(battle)} pool={battle.momentum} onOpenSkills={()=>{if(!nightBlocking && !battle.result && !paused && !holding && !globalPaused && !abilityCast){cancel();setSelection(null);setSkillOwners([]);setDirectWithdraw(false);setSkillMenuOpen(true);}}} onDecayChange={enabled=>setBattle(state=>setMomentumDecay(state,enabled))} /></div>, document.querySelector('.combat-sandbox') ?? document.body)}
     <TableauScene immersive={false} terrain="woods" biome={{ terrain: 'woods', danger: true }} rig={rig} hours={hours}>
       <div className="battle-field__board">
         {sandbox && battleTimeScale(battle)<1 && <BattleBulletTime />}
@@ -664,11 +660,11 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
         {partyRow}
       </div>
     </TableauScene>
-    {sandbox && skillMenuOpen && !battle.result && <MomentumSkillRadial onWithdrawSelecting={setWithdrawSelecting} key={skillOwners.length?'kin':'momentum'} owners={skillOwners} onToggleOwner={toggleKinRadial} valueStyle={momentumValueStyle} battle={battle} fieldRef={fieldRef} disabled={paused || holding || globalPaused && (!combatInspection.active || gameTime.isPlayerPaused())} onClose={()=>{setSkillMenuOpen(false);setSkillOwners([]);}} onChoose={(id,targetId)=>{if(id==='withdraw'){setSkillMenuOpen(false);performManeuver(state=>useMomentumSkill(state,id,targetId),true);return;}const card=document.querySelector<HTMLElement>('.ability-fan__drag, .ability-fan__armed-preview') ?? document.querySelector<HTMLElement>(`.ability-fan button[data-skill="${id}"]`);if(!card)return;setAbilityCast({id,targetId,card:card.cloneNode(true) as HTMLElement,origin:card.getBoundingClientRect()});setSkillMenuOpen(false);setSelection(null);}} />}
+    {sandbox && skillMenuOpen && !battle.result && <MomentumSkillRadial initialSkill={directWithdraw?'withdraw':undefined} onWithdrawSelecting={setWithdrawSelecting} key={skillOwners.length?'kin':'momentum'} owners={skillOwners} valueStyle={momentumValueStyle} battle={battle} fieldRef={fieldRef} disabled={paused || holding || globalPaused && (!combatInspection.active || gameTime.isPlayerPaused())} onClose={()=>{setSkillMenuOpen(false);setSkillOwners([]);}} onChoose={(id,targetId)=>{if(id==='withdraw'){setSkillMenuOpen(false);performManeuver(state=>useMomentumSkill(state,id,targetId),true);return;}const card=document.querySelector<HTMLElement>('.ability-fan__drag, .ability-fan__armed-preview') ?? document.querySelector<HTMLElement>(`.ability-fan button[data-skill="${id}"]`);if(!card)return;setAbilityCast({id,targetId,card:card.cloneNode(true) as HTMLElement,origin:card.getBoundingClientRect()});setSkillMenuOpen(false);setSelection(null);}} />}
     {cirInspection && battle.cir?.status==='bound' && <CirFamiliarInspector kin={battle.cir.actorId} disabled={paused || holding || gameTime.isPlayerPaused()} onClose={()=>setCirInspection(false)} onReturn={()=>{setBattle(returnCirToDeck);setCirInspection(false);}} />}
     {abilityCast && <MomentumAbilityFlight cast={abilityCast} fieldRef={fieldRef} paused={paused || holding || globalPaused} onImpact={()=>{if(abilityCast.id==='focus-fire')burnCardsFx(focusFireCards(latest.current,abilityCast.targetId).flatMap(card=>cardRefs.current.get(card.id) ?? []));setBattle(state=>useMomentumSkill(state,abilityCast.id,abilityCast.targetId));}} onComplete={()=>setAbilityCast(null)} />}
     {!sandbox && <BattleDamageCallouts battle={battle} fieldRef={fieldRef} paused={battlePaused} />}
-    {sandbox && <div className="battle-field__solver-dock"><div className="battle-field__solver-actions">{solveControls}{sandboxUtilityControls}</div><div className="battle-field__turn-actions"><div ref={setSingleMoveTarget} className="battle-field__single-move" />{endTurnControl}</div></div>}
+    {sandbox && <div className="battle-field__solver-dock"><div className="battle-field__solver-actions">{solveControls}{sandboxUtilityControls}</div><div className="battle-field__turn-actions"><div ref={setSingleMoveTarget} className="battle-field__single-move" />{endTurnControl}{withdrawControl}</div></div>}
     {sandbox && battle.result && (battle.result!=='won' || finishedDefeat>=lastDefeat) && <CombatScenarioComplete scenarioId={sandboxScenarioId} won={battle.result==='won'} onChoose={restart} detail={tutorialRounds(battle)!==null ? `Rounds completed: ${tutorialRounds(battle)}` : undefined} />}
     {insightOpen && tutorialById(battle.tutorial?.id) && <InsightDialog scenario={tutorialById(battle.tutorial?.id)!} onClose={()=>setInsightOpen(false)} />}
     {!active && <footer className="battle-field__footer"><SceneButton type="button" onClick={onWatch}>Watch battle scene</SceneButton></footer>}

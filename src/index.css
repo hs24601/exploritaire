@@ -3416,3 +3416,6 @@ html { -webkit-touch-callout:none; }
 @media(max-width:900px) {
  .proto-game-root .proto-map:has(.proto-settings-host) .proto-travel-controls { right:4px; max-width:calc(100% - 8px); width:calc(100% - 8px); box-sizing:border-box; }
 }
+
+/* A dragged tableau card keeps its slot and pointer capture while its ghost moves. */
+[data-tableau-drag-origin] { opacity:0 !important; transition:none !important; }

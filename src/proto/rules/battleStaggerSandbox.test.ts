@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {createStaggerSandbox,playCard,defaultStrike,tickBattle,takeTop,setMochi,setActorTarget,canEndPlayerTurn,endPlayerTurn,redrawActor,retrieveCard,dealRow,applyAttack} from './battle';
+import {createStaggerSandbox,staggerThreshold,previewAttack,playCard,defaultStrike,tickBattle,takeTop,setMochi,setActorTarget,canEndPlayerTurn,endPlayerTurn,redrawActor,retrieveCard,dealRow,applyAttack} from './battle';
 const blocked=()=>{
  const s=createStaggerSandbox();
  return {...s,columns:[[{id:'under8',rank:8},{id:'top2',rank:2}],[{id:'top3',rank:3}]],party:s.party.map(a=>({...a,rank:a.id==='hero'?12:9}))};
@@ -39,7 +39,7 @@ describe('turn-based combat sandbox',()=>{
  it('preserves chained stagger and untimed stun without automatic spill cards',()=>{
   let s=createStaggerSandbox();s={...s,foes:s.foes.map(f=>({...f,hp:500,profile:{...f.profile,maxHp:500}}))};
   for(let stage=1;stage<=3;stage++){
-   for(let i=0;i<6;i++)s=defaultStrike(s,i%2?'hero':'mochi');
+   for(let i=0;i<6*2**(stage-1);i++)s=defaultStrike(s,i%2?'hero':'mochi');
    expect(s.foes[0]).toMatchObject({staggerStage:stage,staggered:20,stagger:0});expect(s.columns.slice(7)).toHaveLength(0);
   }
   const hp=s.foes[0].hp;s=defaultStrike(s,'hero');expect(s.foes[0].hp).toBe(hp-4);
@@ -52,4 +52,17 @@ describe('turn-based combat sandbox',()=>{
   const fresh=createStaggerSandbox();expect(fresh.turn).toBe('party');expect(fresh.spills).toEqual({});expect(fresh.party[0].targetId).toBe('dark-slime');
   expect(setMochi(setMochi(fresh,false),true).party[1].targetId).toBe('dark-slime');expect(setActorTarget(fresh,'hero','unknown')).toBe(fresh);
  });
+});
+
+it('doubles the stagger threshold at each stage and keeps it stable at the final stage',()=>{
+ const s=createStaggerSandbox();
+ expect([0,1,2,3].map(staggerStage=>staggerThreshold({...s.foes[0],staggerStage}))).toEqual([6,12,24,24]);
+});
+it('does not advance the second stage before 12 points and previews the same threshold',()=>{
+ let s=createStaggerSandbox();s={...s,maxAP:true,foes:s.foes.map(f=>({...f,hp:500,staggerStage:1,stagger:0,staggered:20}))};
+ for(let i=0;i<11;i++)s=defaultStrike(s,'hero');
+ expect(s.foes[0]).toMatchObject({staggerStage:1,stagger:11});
+ const preview=previewAttack({...s,foes:s.foes.map(f=>({...f,staggered:0}))},'hero:Nip',s.foes[0].id);
+ expect(preview?.stagger.max).toBe(12);
+ s=defaultStrike(s,'hero');expect(s.foes[0]).toMatchObject({staggerStage:2,stagger:0});
 });

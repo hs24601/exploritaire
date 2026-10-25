@@ -10,7 +10,7 @@ export function useTableauDrag(onDrop?: (target: HTMLElement) => void) {
   const flying = useRef(false);
   const press = useRef<{ id: number; x: number; y: number; source: HTMLElement; ghost?: HTMLElement; samples: FlickSample[] } | undefined>(undefined);
   const suppressClick = useRef(false);
-  const clear = () => { if (frame.current !== undefined) gameTime.cancelAnimationFrame(frame.current); frame.current = undefined; flying.current = false; press.current?.ghost?.remove(); press.current = undefined; };
+  const clear = () => { if (frame.current !== undefined) gameTime.cancelAnimationFrame(frame.current); frame.current = undefined; flying.current = false; press.current?.source.removeAttribute('data-tableau-drag-origin'); press.current?.ghost?.remove(); press.current = undefined; };
   const targetAt = (x: number, y: number) => document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-map-actor-card], [data-travel-foundation], [data-foundation-index], [data-battle-actor]');
   useEffect(() => { if (!onDrop || !enabled) clear(); }, [!!onDrop, enabled]);
   useEffect(() => {
@@ -40,11 +40,14 @@ export function useTableauDrag(onDrop?: (target: HTMLElement) => void) {
         drag.ghost = drag.source.cloneNode(true) as HTMLElement;
         drag.ghost.removeAttribute('id');
         drag.ghost.setAttribute('aria-hidden', 'true');
+        drag.ghost.setAttribute('data-tableau-drag-ghost', 'true');
         drag.ghost.inert = true;
         const computed = getComputedStyle(drag.source);
         for (const property of computed) if (property.startsWith('--')) drag.ghost.style.setProperty(property, computed.getPropertyValue(property));
         Object.assign(drag.ghost.style, { position:'fixed', width:`${rect.width}px`, height:`${rect.height}px`, margin:'0', transform:'translate(-50%, -50%)', pointerEvents:'none', zIndex:'2147483647', opacity:'.8', transition:'none' });
         document.body.append(drag.ghost);
+        // Keep the card in its logical slot until a valid receipt commits the play.
+        drag.source.setAttribute('data-tableau-drag-origin','true');
         suppressClick.current = true;
       }
       drag.ghost.style.left = `${event.clientX}px`;

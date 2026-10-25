@@ -27,7 +27,7 @@ const FULL_FACE_LIMIT=7,PAGE_SIZE=6;
 type Contact={targetId:string;x:number;y:number};
 type Drag={id:MomentumSkillId;x:number;y:number;over:string|null;contact?:Contact|null;contactKey?:number};
 /** The Momentum radial (owners empty: team Withdraw only) or the open Kin radials (their own AP cards). */
-export function MomentumSkillRadial({battle,fieldRef,disabled,onChoose,onClose,valueStyle='flamelab',owners=[],onToggleOwner,onWithdrawSelecting}:{battle:BattleState;fieldRef:RefObject<HTMLElement|null>;disabled:boolean;onChoose:(id:MomentumSkillId,targetId:string)=>void;onClose:()=>void;valueStyle?:MomentumValueStyle;owners?:string[];onToggleOwner?:(actorId:string)=>void;onWithdrawSelecting?:(selecting:boolean)=>void}) {
+export function MomentumSkillRadial({battle,fieldRef,disabled,onChoose,onClose,valueStyle='flamelab',owners=[],onToggleOwner,onWithdrawSelecting,initialSkill}:{battle:BattleState;fieldRef:RefObject<HTMLElement|null>;disabled:boolean;onChoose:(id:MomentumSkillId,targetId:string)=>void;onClose:()=>void;valueStyle?:MomentumValueStyle;owners?:string[];onToggleOwner?:(actorId:string)=>void;onWithdrawSelecting?:(selecting:boolean)=>void;initialSkill?:MomentumSkillId}) {
   const root=useRef<HTMLDivElement>(null);
   const dragCard=useRef<HTMLDivElement>(null);
   const hitSource=useRef<Contact|null>(null),contactSerial=useRef(0);
@@ -49,9 +49,9 @@ export function MomentumSkillRadial({battle,fieldRef,disabled,onChoose,onClose,v
   const inspect=(id:MomentumSkillId)=>{setInspected(id);setPreview(old=>({id,serial:(old?.serial ?? 0)+1}));};
   const [inspected,setInspected]=useState<MomentumSkillId>(skills[0]);
   const [drag,setDrag]=useState<Drag|null>(null),dragRef=useRef<Drag|null>(null);
-  const [armed,setArmed]=useState<MomentumSkillId|null>(null);
+  const [armed,setArmed]=useState<MomentumSkillId|null>(initialSkill ?? null);
   const draggedRef=useRef(false);
-  const withdrawCommitted=useRef(false);
+  const withdrawCommitted=useRef(initialSkill==='withdraw');
   const arm=(id:MomentumSkillId)=>{if(id==='withdraw')withdrawCommitted.current=true;setArmed(id);};
   const [focusedTarget,setFocusedTarget]=useState<string|null>(null);
   const press=useRef<{id:MomentumSkillId;pointer:number;x:number;y:number;timer:number}|null>(null);
@@ -104,8 +104,8 @@ export function MomentumSkillRadial({battle,fieldRef,disabled,onChoose,onClose,v
   },[fieldRef,battle.foes,battle.party,battle.columns,paged]);
   useEffect(()=>{
     const previous=document.activeElement as HTMLElement|null;
-    root.current?.querySelector<HTMLButtonElement>('[data-skill]')?.focus();
-    return()=>{cancelPress();previous?.focus();};
+    const focusFrame=requestAnimationFrame(()=>root.current?.querySelector<HTMLButtonElement>(initialSkill?'[data-skill-target]':'[data-skill]')?.focus());
+    return()=>{cancelAnimationFrame(focusFrame);cancelPress();previous?.focus();};
   },[]);
   useEffect(()=>{if(disabled)reset();},[disabled]);
   // Tapping a foundation opens or puts away that Kin's radial; from the Momentum radial it switches to it.
@@ -189,8 +189,8 @@ export function MomentumSkillRadial({battle,fieldRef,disabled,onChoose,onClose,v
       }
     }}>
     {!targeting && <div className="ability-fan__backdrop" onClick={onClose} />}
-    {!targeting && layout.targets.filter(target=>battle.party.some(unit=>unit.id===target.id) || battle.foes.some(unit=>unit.id===target.id)).map(target=><div key={target.id} className="ability-foundation combat-sandbox" role={battle.party.some(actor=>actor.id===target.id)?'button':undefined} tabIndex={battle.party.some(actor=>actor.id===target.id)?0:undefined} data-foundation-focus={target.id} aria-label={'Show '+target.name+' abilities'} aria-pressed={owners.includes(target.id)} style={{left:target.rect.left,top:target.rect.top,width:target.rect.width,height:target.rect.height}}
-      onClick={()=>{if(battle.party.some(actor=>actor.id===target.id))selectFoundation(target.id);}} onKeyDown={event=>{if((event.key==='Enter'||event.key===' ')&&battle.party.some(actor=>actor.id===target.id)){event.preventDefault();event.stopPropagation();selectFoundation(target.id);}}}
+    {!targeting && layout.targets.filter(target=>battle.party.some(unit=>unit.id===target.id) || battle.foes.some(unit=>unit.id===target.id)).map(target=><div key={target.id} className="ability-foundation combat-sandbox" role={Boolean(onToggleOwner) && battle.party.some(actor=>actor.id===target.id)?'button':undefined} tabIndex={Boolean(onToggleOwner) && battle.party.some(actor=>actor.id===target.id)?0:undefined} data-foundation-focus={target.id} aria-label={onToggleOwner?'Show '+target.name+' abilities':target.name} aria-pressed={onToggleOwner?owners.includes(target.id):undefined} style={{left:target.rect.left,top:target.rect.top,width:target.rect.width,height:target.rect.height}}
+      onClick={()=>{if(Boolean(onToggleOwner) && battle.party.some(actor=>actor.id===target.id))selectFoundation(target.id);}} onKeyDown={event=>{if((event.key==='Enter'||event.key===' ')&&Boolean(onToggleOwner) && battle.party.some(actor=>actor.id===target.id)){event.preventDefault();event.stopPropagation();selectFoundation(target.id);}}}
       ref={node=>{if(!node)return;const original=fieldRef.current?.querySelector<HTMLElement>(`[data-battle-target="${target.id}"]`);if(!original)return;const copy=(node.firstElementChild as HTMLElement|null) ?? original.cloneNode(true) as HTMLElement;copy.inert=true;copy.setAttribute('aria-hidden','true');copy.removeAttribute('data-battle-target');copy.removeAttribute('data-battle-actor');copy.style.cssText=original.style.cssText+`;width:${original.offsetWidth}px;max-width:none;height:${original.offsetHeight}px;transform:scale(${target.rect.width/original.offsetWidth});transform-origin:top left;pointer-events:none;margin:0;`;if(!node.childElementCount)node.append(copy);}} />)}
     {!targeting && gaugeRect && <div className="ability-fan__gauge momentum-engine" data-ready={(battle.momentum?.value ?? 0)>=3} aria-label="Momentum reserve" data-cost-preview={preview?true:undefined} style={{left:gaugeRect.left,top:gaugeRect.top,width:gaugeRect.width,height:gaugeRect.height}}
       >
@@ -224,7 +224,7 @@ export function MomentumSkillRadial({battle,fieldRef,disabled,onChoose,onClose,v
           const current=dragRef.current;cancelPress();if(!current)return;
           const target=targetAt(event.clientX,event.clientY);if(target && available(current.id,target))onChoose(current.id,target);reset();
         }} onPointerCancel={reset} onLostPointerCapture={()=>{if(press.current || dragRef.current)reset();}}>{face(id)}</button>)}
-      {!paged && <p className="ability-fan__hint">{momentumMode?'Tap a foundation for its abilities · Hold a card to drag':'Tap a foundation to open or close its abilities · Hold a card to drag'}</p>}
+      {!paged && <p className="ability-fan__hint">{!onToggleOwner?'Hold a card to drag':momentumMode?'Tap a foundation for its abilities · Hold a card to drag':'Tap a foundation to open or close its abilities · Hold a card to drag'}</p>}
     </div>
     {targeting && <>
       {legalTargets.map(target=><button key={target.id} type="button" className="ability-fan__target" data-skill-target={target.id} data-self-cast={(drag?.id ?? armed)==='sticky-paws' || undefined} data-over={(drag?.over ?? focusedTarget)===target.id || undefined} data-withdraw-row={withdrawSelecting || undefined} data-burn={burnRank!==undefined && target.rank===burnRank || undefined}

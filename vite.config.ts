@@ -94,6 +94,7 @@ export default defineConfig({
       : {}),
   },
   plugins: [
+    { name: 'query-page-titles', transformIndexHtml: { order: 'pre', handler: () => [{ tag: 'script', attrs: { type: 'module', src: '/src/browserPageTitle.ts' }, injectTo: 'head' }] } },
     { name: 'game-context-menu', transformIndexHtml: { order: 'pre', handler: () => [{ tag: 'script', attrs: { type: 'module', src: '/src/browserContextMenu.ts' }, injectTo: 'head' }] } },
     {
       name: 'proto-build-revision',

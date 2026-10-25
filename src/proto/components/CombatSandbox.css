@@ -382,3 +382,6 @@
  .combat-sandbox .battle-field__rack [data-buried] .proto-card-header { top:5px; left:4px; right:4px; }
  .combat-sandbox .battle-field__rack [data-buried] .proto-card-rank { font-size:24px; padding:2px; }
 }
+
+.combat-sandbox .battle-withdraw-button { padding:7px 10px; border:1px solid #b6cbbd; border-radius:6px; background:#233c38; color:#edf1d7; }
+@media(max-width:600px) { .combat-sandbox .battle-field__solver-dock { grid-template-columns:minmax(0,1fr) auto; } }

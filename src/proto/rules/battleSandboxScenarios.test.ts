@@ -69,7 +69,7 @@ describe('combat training scenarios',()=>{
 
 it('999 gains persistent stacks only from legal enemy tableau receipts',()=>{
  let s=createCombatSandboxScenario('999');
- expect(s.foes[0]).toMatchObject({name:'Indefatigable Enemy',hp:999,indominable:0,intent:'tableau'});
+ expect(s.foes[0]).toMatchObject({name:'Dark Tyrant',hp:999,indominable:0,intent:'tableau'});
  expect(s.foes[0].profile.maxHp).toBe(999);
  s={...s,columns:[[{id:'a',rank:11},{id:'b',rank:10}],[{id:'blocked',rank:5}]],rules:{...s.rules,infinifillRows:undefined,finiteTableau:true}};
  expect(tickBattle(s,2).foes[0].indominable).toBe(0);

@@ -280,7 +280,7 @@ export const createCombatSandboxScenario = (id: CombatSandboxScenarioId): Battle
  if(id==='007')return createNightRescue(state);
  return {...state,sandboxScenario:id,cir:{status:'available'},round:1,seed:id==='999'?state.seed:100+Number(id),effectSeed:100+Number(id),columns:deal.tableau,stock:deal.stock,
   party:state.party.map(actor=>({...actor,targetId:'khad-root'})),
-  foes:state.foes.map(foe=>({...foe,id:'khad-root',name:id==='999'?'Indefatigable Enemy':id==='006'?'Ember Trial Sentinel':id==='005'?'Ironbark Sentinel':id==='004'?'Ironbark Khad Root':id==='002'?'Thorns Khad Root':'Dormant Khad Root',appearance:'khad-root',
+  foes:state.foes.map(foe=>({...foe,id:'khad-root',name:id==='999'?'Dark Tyrant':id==='006'?'Ember Trial Sentinel':id==='005'?'Ironbark Sentinel':id==='004'?'Ironbark Khad Root':id==='002'?'Thorns Khad Root':'Dormant Khad Root',appearance:'khad-root',
    emberPhase:id==='006'?1:undefined,counterflames:id==='006'?0:undefined,
    indominable:id==='999'?0:undefined,
    intent:id==='999'?'tableau':id==='006'?'attack':'idle',thorns:definition.thorns,ironbark:id==='004'||id==='005',hp:definition.hp,profile:{...foe.profile,maxHp:definition.hp,damage:id==='006'?2:foe.profile.damage}}))};
@@ -303,6 +303,8 @@ export const setActorTarget = (state:BattleState,actorId:string,targetId:string)
  return {...state,party:state.party.map(a=>a.id===actorId?{...a,targetId}:a)};
 };
 export const MAX_STAGGER_STAGE = 3;
+/** Each successive break costs twice the previous stage; the terminal gauge stays capped. */
+export const staggerThreshold = (foe: BattleFoe) => foe.profile.staggerMax * 2 ** Math.min(foe.staggerStage ?? 0, MAX_STAGGER_STAGE - 1);
 export const staggerVulnerability = (foe: BattleFoe) => foe.staggerStage ? foe.staggerStage + 1 : foe.profile.vulnerability;
 
 /** Players may pass with legal moves remaining; scripted rescue beats own control. */
@@ -480,8 +482,8 @@ export const defaultStrike = (state:BattleState,actorId:string,skill?:{damage:nu
  const rawDamage=target.ironbark && target.staggered<=0?0:barkDamage(target,(strike?.damage ?? 1)*multiplier,(ember+rage)*multiplier);
  const damage=trialDamage(target,target.emberPhase===2?ember*multiplier:rawDamage,ember?'Ember Claws':undefined),hp=Math.max(0,target.hp-damage);
  const stage=target.staggerStage ?? 0;
- const stagger=(target.indominable ?? 0)>0?target.stagger:target.sealedHeartwood || target.emberPhase===1 || target.emberPhase===3?0:Math.min(target.profile.staggerMax,target.stagger+(strike?.stagger ?? 1));
- const broke=(target.indominable ?? 0)<=0 && hp>0 && stage<MAX_STAGGER_STAGE && stagger>=target.profile.staggerMax;
+ const stagger=(target.indominable ?? 0)>0?target.stagger:target.sealedHeartwood || target.emberPhase===1 || target.emberPhase===3?0:Math.min(staggerThreshold(target),target.stagger+(strike?.stagger ?? 1));
+ const broke=(target.indominable ?? 0)<=0 && hp>0 && stage<MAX_STAGGER_STAGE && stagger>=staggerThreshold(target);
  const events:Omit<BattleEvent,'id'>[]=[{kind:'hit',sourceId:actorId,targetId:target.id,amount:damage,label:(strike?.name ?? (actorId==='hero'?'Nip':'Claw'))+(ember?' + Ember Claws':'')+(rage?' + '+EMBER_RAGE:'')}];
  let columns=state.columns,stock=state.stock,dealt=state.dealt;const spills={...state.spills};
  if(broke)events.push({kind:'stagger',sourceId:actorId,targetId:target.id,label:String(stage+1)});
@@ -657,10 +659,10 @@ export const applyAttack = (state: BattleState, actorId: string, foeId: string):
   events.push({ kind: 'hit', targetId: foeId, sourceId: actorId, amount: damage, label: attack.name });
   let { stagger, staggered, timer } = target;
   if (staggered <= 0 && target.emberPhase!==1 && target.emberPhase!==3) {
-    stagger = (target.indominable ?? 0)>0?stagger:Math.min(target.profile.staggerMax, stagger + attack.stagger);
+    stagger = (target.indominable ?? 0)>0?stagger:Math.min(staggerThreshold(target), stagger + attack.stagger);
     // Knockback never pulls the timer below 0, but a timer still in its opening delay keeps it.
     timer = Math.max(Math.min(timer, 0), timer - attack.knockback);
-    if ((target.indominable ?? 0)<=0 && stagger >= target.profile.staggerMax && hp > 0) {
+    if ((target.indominable ?? 0)<=0 && stagger >= staggerThreshold(target) && hp > 0) {
       staggered = target.profile.staggerSeconds;
       events.push({ kind: 'stagger', targetId: foeId });
     }
@@ -708,7 +710,7 @@ export const previewAttack = (state: BattleState, actorId: string, foeId: string
     attack, foeId,
     damage: before.hp - after.hp,
     hp: { before: before.hp, after: after.hp, max: before.profile.maxHp },
-    stagger: { before: before.stagger, after: ko ? before.stagger : after.stagger, max: before.profile.staggerMax },
+    stagger: { before: before.stagger, after: ko ? before.stagger : after.stagger, max: staggerThreshold(before) },
     timer: { before: before.timer, after: ko ? before.timer : after.timer },
     staggers: before.staggered <= 0 && after.staggered > 0,
     vulnerable: before.staggered > 0,
@@ -842,8 +844,8 @@ const eat = (state: BattleState, foeId: string, column: number): BattleState => 
       events.push({ kind: 'trap', targetId: foeId, sourceId: trap.actorId, amount: damage, label: trap.name });
       let { stagger, staggered } = foe;
       if (staggered <= 0) {
-        stagger = Math.min(foe.profile.staggerMax, stagger + trap.stagger);
-        if (stagger >= foe.profile.staggerMax && hp > 0) { staggered = foe.profile.staggerSeconds; events.push({ kind: 'stagger', targetId: foeId }); }
+        stagger = Math.min(staggerThreshold(foe), stagger + trap.stagger);
+        if (stagger >= staggerThreshold(foe) && hp > 0) { staggered = foe.profile.staggerSeconds; events.push({ kind: 'stagger', targetId: foeId }); }
       }
       // A trap spoils the meal: the card doesn't feed the slime.
       const resolved = applyHitEffects(foe.effects, trap.effects, effectSeed); effectSeed = resolved.seed;

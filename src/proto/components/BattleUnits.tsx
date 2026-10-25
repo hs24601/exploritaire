@@ -3,7 +3,7 @@ import { gameTime } from '../../gameTime';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ABILITIES, MAX_CHARGE, SPIRITS, nextBreakpoint, type Attack } from '../rules/battleAbilities';
 import type { AttackPreview, BattleActor, BattleEvent, BattleFoe, Trap } from '../rules/battle';
-import { apCap, staggerVulnerability } from '../rules/battle';
+import { apCap, staggerVulnerability, staggerThreshold } from '../rules/battle';
 import type { TutorialIntent } from '../rules/battleTutorials';
 import { rankLabel } from '../protoState';
 import './BattleUnits.css';
@@ -129,8 +129,8 @@ export function FoeCard({ foe, target, targetId, preview, focus, events, sprite,
       <Bar kind="hp" value={foe.hp} max={foe.profile.maxHp} preview={show?.hp.after} label={`${foe.name} HP`}>
         {show ? `${foe.hp}→${show.hp.after}` : `${foe.hp}/${foe.profile.maxHp}`}
       </Bar>
-      <Bar kind="stagger" value={targeters === undefined && staggered ? foe.profile.staggerMax : foe.stagger} max={foe.profile.staggerMax} preview={show && !show.vulnerable ? show.stagger.after : undefined} label={`${foe.name} stagger`} >
-        {targeters !== undefined ? `Stagger ${foe.stagger.toFixed(1)}/${foe.profile.staggerMax}` : null}
+      <Bar kind="stagger" value={targeters === undefined && staggered ? staggerThreshold(foe) : foe.stagger} max={staggerThreshold(foe)} preview={show && !show.vulnerable ? show.stagger.after : undefined} label={`${foe.name} stagger`} >
+        {targeters !== undefined ? `Stagger ${foe.stagger.toFixed(1)}/${staggerThreshold(foe)}` : null}
       </Bar>
       {targeters === undefined && <Bar kind="timer" value={foe.timer} max={1} preview={show && !staggered ? show.timer.after : undefined} label={`${foe.name} attack timer`}>
         {staggered ? `⏸ ${foe.staggered.toFixed(1)}s · ×${staggerVulnerability(foe)}` : target ? `→ ${target}` : ''}

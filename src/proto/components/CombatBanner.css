@@ -4,7 +4,10 @@
 .combat-banner[data-kind='party'] { background:linear-gradient(110deg,#081e2aee,#205268f5,#081e2aee); box-shadow:0 0 50px #92dfff55; }
 .combat-banner[data-kind='enemy'] { background:linear-gradient(110deg,#210e28ee,#5b254bf5,#210e28ee); }
 .combat-banner[data-paused] { animation-play-state:paused; }
-@keyframes combat-banner-enter { from { opacity:0; translate:-8vw 0; } to { opacity:1; translate:0 0; } }
+@keyframes combat-banner-enter { from { filter:brightness(1.35); } to { filter:brightness(1); } }
 @media(prefers-reduced-motion:reduce) { .combat-banner { animation:none; transform:none; } }
 
 .combat-banner[data-position='upper'] { top:5%; }
+
+/* Timed team announcements own their fade and queue completion on the game clock. */
+.combat-banner[data-timed] { animation:none; }
