@@ -50,6 +50,7 @@ import { availableMovesFor } from './rules/battleAbilities';
 import { ActorPlaytestEditor, DEFAULT_ACTOR_DESCRIPTION } from './components/ActorPlaytestEditor';
 import { ArtSettings } from './components/ArtSettings';
 import { useGlobalLights, setGlobalLightsEnabled, globalLightsUnavailable } from './globalLighting';
+import { setFxPreference, useFxPreference, useFxQuality, type FxPreference } from './fxQuality';
 
 import { ACTOR_HOLO_ART } from './art/actorCardArt';
 import { JumboActionCard } from './components/CardJumbo';
@@ -285,6 +286,7 @@ export const ProtoVariant = ({ authoring = false }: { authoring?: boolean } = {}
   const [cycleLighting, setCycleLighting] = useState(false);
   const [tableLightsEnabled, setTableLightsEnabled] = useState(!authoring);
   const globalLights = useGlobalLights();
+  const fxPreference = useFxPreference(), fxQuality = useFxQuality();
   // Guidance highlights every playable tableau card; off by default.
   const [moveGuidance, setMoveGuidance] = useState(false);
   const [lightReadoutVisible, setLightReadoutVisible] = useState(false);
@@ -1953,6 +1955,7 @@ const selectBiome = (biomeId: string) => {
   const mapSettings = (travelControls?: React.ReactNode) => (<div className="proto-settings-host" data-editor-safe="true">{editorToggle}<ArtSettings>{travelControls}
                   <label className="art-settings__toggle"><input type="checkbox" checked={mapTravelTest} onChange={event => { setMapTravelTest(event.target.checked); setMobilePanel('map'); }} />Map tableau (test)</label>
                   <label className="art-settings__toggle" title={globalLightsUnavailable() ? 'Global lighting is disabled on mobile devices.' : 'Apply global day/night lighting and haze. Uncheck for a bright view; local lights remain independent.'}><input type="checkbox" checked={globalLights} disabled={globalLightsUnavailable()} onChange={(event) => setGlobalLightsEnabled(event.target.checked)} />Global lights</label>
+                  <label className="art-settings__toggle" title="Auto picks Low on phones and steps down after sustained slow frames.">Effects <select aria-label="Effects quality" value={fxPreference} onChange={event => setFxPreference(event.target.value as FxPreference)}><option value="auto">Auto ({fxQuality === 'low' ? 'Low' : 'High'})</option><option value="high">High</option><option value="low">Low</option></select></label>
                   <div className="art-settings__section" aria-label="Lighting controls">
                   <span>Day {state.day} · {lighting.phase} · {String(Math.floor(lighting.hour)).padStart(2, '0')}:{String(Math.floor((lighting.hour % 1) * 60)).padStart(2, '0')}</span>
                   {state.dayScenario ? <span>Story milestones advance the day. Reading takes no time.</span> : <><label className="flex items-center gap-2">Time <TimeOfDaySlider hours={tableHours} onChange={setTableHours} /></label>

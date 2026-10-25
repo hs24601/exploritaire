@@ -12,11 +12,52 @@ type Area = { id: string; x: number; y: number; width: number; height: number; t
 
 /** Sparse emitter particles share stable seeds and reduced-motion CSS. */
 export function LightFireflies({ lights, quality, flat = false }: { lights: readonly TableLight[]; quality: FxQuality; flat?: boolean }) {
-  return <>{lights.filter(light => light.fireflies).flatMap(light =>
-    scatter(`fireflies-${light.id}`, quality === 'low' ? 3 : 5,
-      { x: light.position.x, y: light.position.y, width: 24, height: 24 },
-      flat ? [0, 0] : [2, 10], 2, [.65, 1.1], [7, 12])
-      .map(particle => <Particle key={particle.id} kind="firefly" particle={particle} strength={.32} night />))}</>;
+  return <>{lightFireflySpots(lights, quality, flat).map(particle => <Particle key={particle.id} kind="firefly" particle={particle} strength={.32} night />)}</>;
+}
+
+/** One airborne particle and how it shows: shared by the DOM billboards (flat
+ * camera) and the AirParticles canvas (tilted camera). */
+export type AirParticle = { kind: ParticleKind; particle: ParticleSpot; strength: number; night: boolean; danger?: boolean };
+
+const lightFireflySpots = (lights: readonly TableLight[], quality: FxQuality, flat = false) => lights.filter(light => light.fireflies).flatMap(light =>
+  scatter(`fireflies-${light.id}`, quality === 'low' ? 3 : 5,
+    { x: light.position.x, y: light.position.y, width: 24, height: 24 },
+    flat ? [0, 0] : [2, 10], 2, [.65, 1.1], [7, 12]));
+
+/** Every particle hanging in the air for a moment of the day: lamp fireflies,
+ * each biome's emitters (BIOME_AMBIANCE) and world effects other than motes,
+ * which DustMotes draws. `dangerOnly` is the flat camera's warning set. */
+export function airParticles({ frame, lights, camera, areas, quality, view, tilt, dangerOnly = false }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null; dangerOnly?: boolean }): AirParticle[] {
+  const mood = ambianceFor(frame);
+  const night = frame.daylight < 0.25;
+  // Patches that sit behind a tile follow the side facing a spun camera.
+  const { quarter } = viewQuarter(camera.yaw ?? 0);
+  const fireflies = dangerOnly ? [] : lightFireflySpots(lights, quality).map(particle => ({ kind: 'firefly' as const, particle, strength: .32, night: true }));
+  const biome = areas.filter((area) => !dangerOnly || area.danger).flatMap((area) => BIOME_AMBIANCE[area.danger ? 'danger' : area.terrain].flatMap((emitter, index) => {
+    const count = emitter.count[quality];
+    const strength = area.danger ? Math.max(DANGER_STRENGTH_FLOOR[emitter.kind] ?? 0, particleStrength(emitter.kind, mood)) : particleStrength(emitter.kind, mood);
+    if (!count || strength < 0.02) return [];
+    // Only patches set behind or in front of the tile follow the camera's side.
+    const side = emitter.area.offset ? quarter : 0;
+    // Flat warnings hug their tile; airborne spread belongs to immersion.
+    const look = dangerOnly ? { ...emitter,
+      area: emitter.kind === 'firefly' ? { scale: [0.9, 0.9] as [number, number] } : { scale: [1, 0.2] as [number, number], offset: -0.42 },
+      lift: [0, 2] as [number, number], drift: 3,
+      size: emitter.kind === 'mist' ? [18, 28] as [number, number] : emitter.size,
+    } : emitter;
+    return scatter(`${emitter.kind}-${index}-${area.id}${side ? `-q${side}` : ''}`, count, emitterArea(look, area, side), look.lift, look.drift, look.size, look.duration)
+      .map((particle) => ({ kind: emitter.kind, particle, strength, night, danger: area.danger }));
+  }));
+  // World dust is batched in the DustMotes canvas.
+  const world = (dangerOnly ? [] : WORLD_AMBIANCE).flatMap((emitter, index) => {
+    if (emitter.kind === 'mote') return [];
+    const count = emitter.count[quality];
+    const strength = particleStrength(emitter.kind, mood);
+    if (!count || strength < 0.02) return [];
+    return visibleCells(view, camera, tilt, emitter.cell).flatMap((cell) => scatter(`${emitter.kind}-world-${index}-${cell.key}`, count, cell, emitter.lift, emitter.drift, emitter.size, emitter.duration))
+      .map((particle) => ({ kind: emitter.kind, particle, strength, night }));
+  });
+  return [...fireflies, ...biome, ...world];
 }
 
 /** Places an upright billboard's foot on a table point, inside the
@@ -55,10 +96,12 @@ const Particle = memo(function Particle({ kind, particle, strength, night, dange
  * standing up toward the camera. Everything sits in table px on a layer that
  * takes the camera's live transform, so it pans and zooms with the table on
  * every frame; `camera` only picks which world cells hold particles. */
-export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, tilt, getCamera, getTilt, onCameraFrame, dangerOnly = false }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null;
+export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, tilt, getCamera, getTilt, onCameraFrame, dangerOnly = false, particles = true }: { frame: TableLightFrame; lights: readonly TableLight[]; camera: Camera; areas: readonly Area[]; quality: FxQuality; view: { width: number; height: number }; tilt: TableTilt | null;
   getCamera: () => Camera; getTilt: (camera: Camera) => TableTilt; onCameraFrame: (draw: (camera: Camera) => void) => () => void;
   /** Flat camera: only the danger warnings, lying over the board. */
-  dangerOnly?: boolean }) {
+  dangerOnly?: boolean;
+  /** False when the AirParticles canvas draws the particles; halos stay here. */
+  particles?: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   const visual = useRef({frame,lights,yaw:camera.yaw??0}); visual.current = {frame,lights,yaw:camera.yaw??0};
   const projection = useRef({ lights, view, getCamera, getTilt }); projection.current = { lights, view, getCamera, getTilt };
@@ -87,11 +130,7 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
     return subscribeVisualLight(draw);
   },[dangerOnly]);
   const mood = ambianceFor(frame);
-  const night = frame.daylight < 0.25;
-  // Patches that sit behind a tile follow the side facing a spun camera.
-  const { quarter } = viewQuarter(camera.yaw ?? 0);
   return <div ref={root} className="proto-atmosphere" aria-hidden="true"><div className="proto-atmosphere__world">
-    {!dangerOnly && <LightFireflies lights={lights} quality={quality} />}
     {(dangerOnly ? [] : lights).map((light) => {
       const halo = haloFor(light, mood.halos);
       if (halo.opacity < 0.03) return null;
@@ -104,30 +143,9 @@ export function AtmosphereInAir({ frame, lights, camera, areas, quality, view, t
         }} />
       </span>;
     })}
-    {areas.filter((area) => !dangerOnly || area.danger).flatMap((area) => BIOME_AMBIANCE[area.danger ? 'danger' : area.terrain].flatMap((emitter, index) => {
-      const count = emitter.count[quality];
-      const strength = area.danger ? Math.max(DANGER_STRENGTH_FLOOR[emitter.kind] ?? 0, particleStrength(emitter.kind, mood)) : particleStrength(emitter.kind, mood);
-      if (!count || strength < 0.02) return [];
-      // Only patches set behind or in front of the tile follow the camera's side.
-      const side = emitter.area.offset ? quarter : 0;
-      // Flat warnings hug their tile; airborne spread belongs to immersion.
-      const look = dangerOnly ? { ...emitter,
-        area: emitter.kind === 'firefly' ? { scale: [0.9, 0.9] as [number, number] } : { scale: [1, 0.2] as [number, number], offset: -0.42 },
-        lift: [0, 2] as [number, number], drift: 3,
-        size: emitter.kind === 'mist' ? [18, 28] as [number, number] : emitter.size,
-      } : emitter;
-      return scatter(`${emitter.kind}-${index}-${area.id}${side ? `-q${side}` : ''}`, count, emitterArea(look, area, side), look.lift, look.drift, look.size, look.duration)
-        .map((particle) => <Particle key={particle.id} kind={emitter.kind} particle={particle} strength={strength} night={night} danger={area.danger} />);
-    }))}
-    {/* World dust is batched in the viewport canvas, outside this 3D scene. */}
-    {(dangerOnly ? [] : WORLD_AMBIANCE).flatMap((emitter, index) => {
-      if (emitter.kind === 'mote') return [];
-      const count = emitter.count[quality];
-      const strength = particleStrength(emitter.kind, mood);
-      if (!count || strength < 0.02) return [];
-      return visibleCells(view, camera, tilt, emitter.cell).flatMap((cell) => scatter(`${emitter.kind}-world-${index}-${cell.key}`, count, cell, emitter.lift, emitter.drift, emitter.size, emitter.duration))
-        .map((particle) => <Particle key={particle.id} kind={emitter.kind} particle={particle} strength={strength} night={night} />);
-    })}
+    {/* The tilted camera draws these on the AirParticles canvas instead. */}
+    {particles && airParticles({ frame, lights, camera, areas, quality, view, tilt, dangerOnly })
+      .map(({ kind, particle, strength, night, danger }) => <Particle key={particle.id} kind={kind} particle={particle} strength={strength} night={night} danger={danger} />)}
   </div></div>;
 }
 

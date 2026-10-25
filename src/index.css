@@ -2582,6 +2582,7 @@ html.drag-perf-mode .target-swirl-sparkles {
 .proto-atmosphere__world { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; transform: var(--camera-transform, none); transform-style: preserve-3d; }
 .proto-atmosphere__billboard { position: absolute; width: 0; height: 0; transform: rotateZ(calc(-1 * var(--camera-yaw, 0deg))) rotateX(calc(-1 * var(--table-tilt))); transform-origin: 0 0; transform-style: preserve-3d; }
 .proto-dust { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; }
+.proto-air-particles { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; }
 .proto-halo { position: absolute; border-radius: 50%; transform: scale(calc(var(--light-flicker, 1) * var(--halo-projection-scale, 1))); opacity: calc(var(--halo-opacity, 1) * var(--light-flicker, 1) * var(--halo-camera-opacity, 1)); }
 .proto-firefly { position: absolute; left: 0; border-radius: 50%; background: #f4ff9c; box-shadow: 0 0 3px 1px #e6ff6acc, 0 0 9px 3px #b8f04a55; animation-name: proto-firefly-drift, proto-firefly-blink; animation-timing-function: ease-in-out, ease-in-out; animation-iteration-count: infinite, infinite; animation-direction: alternate, alternate; }
 @keyframes proto-firefly-drift { 0% { translate: 0 0; } 33% { translate: var(--fx-dx) calc(var(--fx-dy) * -0.6); } 66% { translate: calc(var(--fx-dx) * -0.5) var(--fx-dy); } 100% { translate: calc(var(--fx-dx) * 0.4) calc(var(--fx-dy) * 0.3); } }

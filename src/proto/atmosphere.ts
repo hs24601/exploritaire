@@ -7,20 +7,13 @@
 import { DEFAULT_LIGHT_STRENGTH, type TableLight, type TableLightFrame } from './protoLighting';
 import { unprojectTilt, type TableTilt } from './tableTilt';
 import { atmosphereSky, projectAtmospherePoint } from './volumetricAtmosphere';
+import { currentFxQuality } from './fxQuality';
 
 export type FxQuality = 'high' | 'low';
 
-/** `?fx=low` or `?fx=high` picks the tier; otherwise reduced-motion users and
- * small devices (four cores or fewer and under 4GB, where reported) get low. */
-export const detectFxQuality = (): FxQuality => {
-  if (typeof window === 'undefined') return 'high';
-  const forced = new URLSearchParams(window.location.search).get('fx');
-  if (forced === 'low' || forced === 'high') return forced;
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return 'low';
-  const nav = navigator as Navigator & { deviceMemory?: number };
-  if ((nav.hardwareConcurrency ?? 8) <= 4 && (nav.deviceMemory ?? 8) < 4) return 'low';
-  return 'high';
-};
+/** The current tier (fxQuality.ts: `?fx=`, the saved setting, the device guess
+ * and the slow-frame step down). React views follow it with useFxQuality. */
+export const detectFxQuality = (): FxQuality => currentFxQuality();
 
 /** How strongly each effect shows at a moment of the day, 0–1. */
 export const ambianceFor = (frame: TableLightFrame) => {

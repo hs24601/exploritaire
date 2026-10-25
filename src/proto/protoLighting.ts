@@ -1,5 +1,6 @@
 import { crossesObstacle } from './worldPathfinding';
 import { globalLightsEnabled } from './globalLighting';
+import type { FxQuality } from './atmosphere';
 // Table light engine. Pure math shared by rendering (canvas overlay, object
 // shadows) and game logic (how lit is this object or tile?). Rendering may add
 // flicker and glow; gameplay must only read the steady values sampled here.
@@ -307,6 +308,11 @@ export const tableObjectShadow = (hours: number, position: { x: number; y: numbe
  * (degrees clockwise from table "up"), its length as a multiple of the
  * cut-out's height, and its darkness. */
 export type StandeeShadow = { lightId: string; angle: number; length: number; opacity: number };
+
+/** Each shadow is its own composited layer, so the low effects tier keeps only
+ * the darkest one per cut-out; at dusk scenery otherwise doubles its shadows. */
+export const shadowBudget = (shadows: StandeeShadow[], quality: FxQuality): StandeeShadow[] =>
+  quality === 'low' && shadows.length > 1 ? [shadows.reduce((best, shadow) => shadow.opacity > best.opacity ? shadow : best)] : shadows;
 
 export type StandeeLighting = {
   /** CSS brightness multiplier for the cut-out's face. */

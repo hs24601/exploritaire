@@ -10,6 +10,7 @@
 //
 // Usage: node tools/perf-mobile-review.cjs
 //   PERF_URL      base URL (default http://127.0.0.1:5190/proto.html, a `vite preview` build)
+//   PERF_VARIANTS name=url pairs, comma separated, measured interleaved (A/B builds)
 //   PERF_SCENES   comma list of checkpoint ids (default: a representative set)
 //   PERF_MODES    comma list of ablation names (default: all)
 //   PERF_CPU      CPU throttle rate (default 4, roughly a mid-range phone)
@@ -20,6 +21,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const URL = process.env.PERF_URL || 'http://127.0.0.1:5190/proto.html';
+const VARIANTS = (process.env.PERF_VARIANTS || `current=${URL}`).split(',').map(pair => { const at = pair.indexOf('='); return [pair.slice(0, at), pair.slice(at + 1)]; });
 const SCENES = (process.env.PERF_SCENES || 'day01.opening,day01.sparse-patch,day01.home,day02.woods').split(',');
 const CPU = Number(process.env.PERF_CPU || 4);
 const WINDOW = Number(process.env.PERF_MS || 4000);
@@ -28,8 +30,12 @@ const EXE = process.env.PERF_CHROME || 'C:/Users/ericm/AppData/Local/ms-playwrig
 
 // Each mode: query additions, localStorage, CSS to inject after load, and an optional page action.
 const hide = sel => `${sel}{display:none!important}`;
+// Phone emulation reports (hover: none), which turns global lights off in the
+// game; every mode except phoneDefault unlocks them so the light engine is measured.
+// baseline pins the high tier, since a phone user agent now selects low on Auto.
 const MODES = {
-  baseline: {},
+  baseline: { query: { fx: 'high' } },
+  phoneDefault: { phone: true },
   fxLow: { query: { fx: 'low' } },
   lightsOff: { lights: 'off' },
   lightsOffFxLow: { lights: 'off', query: { fx: 'low' } },
@@ -144,16 +150,20 @@ const summarizeProfile = profile => {
   return Object.entries(byFile).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([k, v]) => [k, +(v / total * 100).toFixed(1)]);
 };
 
-async function runMode(browser, scene, name, withProfile) {
+async function runMode(browser, scene, name, withProfile, base = URL) {
   const mode = MODES[name];
   const ctx = await browser.newContext({ ...devices['Pixel 7'], ...(mode.dpr ? { deviceScaleFactor: mode.dpr } : {}) });
   await ctx.addInitScript(INIT);
+  if (!mode.phone) await ctx.addInitScript(() => {
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = query => /hover:s*none/.test(query) ? original('(min-width: 999999px)') : original(query);
+  });
   await ctx.addInitScript(lights => { try { localStorage.setItem('exploritaire-global-lights', lights); } catch {} }, mode.lights || 'on');
   const page = await ctx.newPage();
   const cdp = await ctx.newCDPSession(page);
   await cdp.send('Performance.enable');
   const q = new URLSearchParams({ scene, ...(mode.query || {}) });
-  await page.goto(`${URL}?${q}`, { waitUntil: 'load' });
+  await page.goto(`${base}?${q}`, { waitUntil: 'load' });
   await page.waitForTimeout(7000); // cinematics, art preload and camera settle
   if (mode.css) await page.addStyleTag({ content: mode.css });
   if (mode.action === 'pauseAnimations') await page.evaluate(() => document.getAnimations().forEach(a => a.pause()));
@@ -166,7 +176,7 @@ async function runMode(browser, scene, name, withProfile) {
       animations: document.getAnimations().length, canvases: [...document.querySelectorAll('canvas')].map(c => `${c.width}x${c.height}.${c.className.split(' ')[0] || c.parentElement?.className.split(' ')[0] || ''}`) };
   }) : undefined;
   const m0 = await metricMap(cdp);
-  const traceFile = path.join(path.dirname(OUT), `trace-${scene}-${name}.json`);
+  const traceFile = path.join(path.dirname(OUT), `trace-${scene}-${name}-${base.replace(/[^a-z0-9]+/gi, '')}.json`);
   await browser.startTracing(page, { path: traceFile, categories: ['toplevel', 'disabled-by-default-devtools.timeline', 'devtools.timeline', 'gpu', 'viz', 'cc'] });
   if (withProfile) { await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 500 }); await cdp.send('Profiler.start'); }
   const frames = await frameStats(page);
@@ -180,7 +190,7 @@ async function runMode(browser, scene, name, withProfile) {
     ...summarizeTrace(traceFile), inventory,
     rafSources: name === 'baseline' ? await page.evaluate(() => Object.entries(window.__perf.sources).sort((a, b) => b[1] - a[1]).slice(0, 15)) : undefined,
     profile: profile ? summarizeProfile(profile) : undefined };
-  if (name === 'baseline') await page.screenshot({ path: path.join(path.dirname(OUT), `${scene}.png`) });
+  if (withProfile) await page.screenshot({ path: path.join(path.dirname(OUT), `${scene}${VARIANTS.length > 1 ? '-' + base.replace(/[^a-z0-9]+/gi, '') : ''}.png`) });
   fs.rmSync(traceFile, { force: true });
   await ctx.close();
   return result;
@@ -193,20 +203,20 @@ async function runMode(browser, scene, name, withProfile) {
   // Rounds are interleaved so drift (thermal, background load) spreads across modes.
   const REPEATS = Number(process.env.PERF_REPEATS || 3);
   try {
-    for (let round = 0; round < REPEATS; round++) for (const scene of SCENES) for (const name of MODE_NAMES) {
-      const r = { round, ...await runMode(browser, scene, name, round === 0 && name === 'baseline') };
+    for (let round = 0; round < REPEATS; round++) for (const scene of SCENES) for (const name of MODE_NAMES) for (const [variant, base] of VARIANTS) {
+      const r = { round, variant, ...await runMode(browser, scene, name, round === 0 && name === 'baseline', base) };
       results.push(r);
-      console.log(JSON.stringify({ round, scene, mode: name, fps: r.fps, p95: r.p95, janky: r.janky, threads: r.threads, phases: r.main, paints: r.paintsPerSec }));
+      console.log(JSON.stringify({ round, variant, scene, mode: name, fps: r.fps, p95: r.p95, janky: r.janky, threads: r.threads, phases: r.main, paints: r.paintsPerSec }));
       fs.writeFileSync(OUT, JSON.stringify(results, null, 2));
     }
   } finally { await browser.close(); }
   // Medians per scene and mode, plus per-frame cost on the renderer main and GPU threads.
   const med = xs => { const s = xs.filter(x => x !== undefined).sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : undefined; };
   const summary = [];
-  for (const scene of SCENES) for (const mode of MODE_NAMES) {
-    const rs = results.filter(r => r.scene === scene && r.mode === mode);
+  for (const scene of SCENES) for (const mode of MODE_NAMES) for (const [variant] of VARIANTS) {
+    const rs = results.filter(r => r.scene === scene && r.mode === mode && r.variant === variant);
     const fps = med(rs.map(r => r.fps));
-    const row = { scene, mode, fps, p95: med(rs.map(r => r.p95)), janky: med(rs.map(r => r.janky)),
+    const row = { scene, mode, variant, fps, p95: med(rs.map(r => r.p95)), janky: med(rs.map(r => r.janky)),
       mainMsPerSec: med(rs.map(r => r.threads.CrRendererMain)), gpuMsPerSec: med(rs.map(r => r.threads.CrGpuMain)),
       vizMsPerSec: med(rs.map(r => r.threads.VizCompositorThread)), compositorMsPerSec: med(rs.map(r => r.threads.Compositor)),
       mainMsPerFrame: med(rs.map(r => r.threads.CrRendererMain / r.fps)), gpuMsPerFrame: med(rs.map(r => (r.threads.CrGpuMain || 0) / r.fps)),
@@ -215,5 +225,5 @@ async function runMode(browser, scene, name, withProfile) {
     summary.push(row);
   }
   fs.writeFileSync(OUT.replace(/\.json$/, '.summary.json'), JSON.stringify(summary, null, 2));
-  console.table(summary.map(({ scene, mode, fps, janky, mainMsPerFrame, gpuMsPerFrame, gpuMsPerSec, paintsPerSec }) => ({ scene, mode, fps, janky, mainMsPerFrame, gpuMsPerFrame, gpuMsPerSec, paintsPerSec })));
+  console.table(summary.map(({ scene, mode, variant, fps, janky, mainMsPerFrame, gpuMsPerFrame, gpuMsPerSec, paintsPerSec }) => ({ scene, mode, variant, fps, janky, mainMsPerFrame, gpuMsPerFrame, gpuMsPerSec, paintsPerSec })));
 })().catch(e => { console.error(e); process.exitCode = 1; });

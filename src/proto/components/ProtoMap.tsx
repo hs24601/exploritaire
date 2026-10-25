@@ -90,7 +90,7 @@ import { TableQuestCard, type PlacedQuestCard } from './TableQuestCard';
 import { BoardObjectLabel } from './BoardObjectLabel';
 import { BiomeTopDownArt } from './BiomeTopDownArt';
 import { solverFlightDuration } from '../solverTiming';
-import { actorLight, actorLightId, createTableLightField, getVisualTableLighting, standeeLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
+import { actorLight, actorLightId, createTableLightField, getVisualTableLighting, shadowBudget, standeeLighting, tableObjectShadow, type LightLevel, type TableLight } from '../protoLighting';
 import { drawTableLight, tableLightNeedsAnimation, type GlobalLightCache } from './tableLightCanvas';
 import { WORLD_ITEMS, CRAFT_RECIPES, stackIngredients, type CraftStack, type WorldItemId } from '../protoCrafting';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -101,11 +101,12 @@ import { layoutTableScenery } from '../biomeEdgeScenery';
 import { AtmosphereInAir, LightFireflies, LightShafts } from './TableAtmosphere';
 import { VolumetricAtmosphere } from './VolumetricAtmosphere';
 import { DustMotes } from './DustMotes';
+import { AirParticles } from './AirParticles';
 import { GroundLightCanvas } from './GroundLightCanvas';
 import { TableGridCanvas } from './TableGridCanvas';
 import { subscribeVisualLight } from '../visualLightClock';
 import type { AtmosphereCanopy } from '../volumetricAtmosphere';
-import { detectFxQuality } from '../atmosphere';
+import { startFxGovernor, useFxQuality } from '../fxQuality';
 import { StarfieldSky } from './StarfieldSky';
 import type { LabelBox } from '../biomeEdgeScenery';
 import { BIOME_EDGE_SCENERY } from '../protoData';
@@ -382,8 +383,9 @@ export const ProtoMap = ({
   closeupRef.current = closeup;
   // Where each biome tile's label text sits, from the tile's centre, so the
   // tilted camera's edge scenery can keep clear of it.
-  // Ambiance tier for the tilted camera (atmosphere.ts): fixed for the session.
-  const [fxQuality] = useState(detectFxQuality);
+  // Effects tier (fxQuality.ts): live, so a slow device can step down mid-session.
+  const fxQuality = useFxQuality();
+  useEffect(startFxGovernor, []);
   const [useVolume] = useState(() => new URLSearchParams(window.location.search).get('atmosphere') !== 'off');
   // Label ink bounds only shape the route and flat spills while that label is
   // shown; quarter-turn snaps of hidden labels must not re-render the table.
@@ -1730,7 +1732,7 @@ export const ProtoMap = ({
     const lit = standeeLighting(timeOfDay, position, size, lightSources, facingYaw);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
     return {
-      shadows: volume ? <PropVolumeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} flip={flip} /> : <SpriteStandeeShadows sprite={sprite} position={position} shadows={lit.shadows} size={size} owner={owner} yaw={facingYaw} actorId={actorId} flip={flip} />,
+      shadows: volume ? <PropVolumeShadows sprite={sprite} position={position} shadows={shadowBudget(lit.shadows, fxQuality)} size={size} owner={owner} flip={flip} /> : <SpriteStandeeShadows sprite={sprite} position={position} shadows={shadowBudget(lit.shadows, fxQuality)} size={size} owner={owner} yaw={facingYaw} actorId={actorId} flip={flip} />,
       silhouette: volume ? <PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} monochrome flip={flip} fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} size={size} />} /> : <SilhouetteRelief sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} yaw={facingYaw}
         fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} size={size} />} />,
       art: volume ? <TileDiscoveryArt relief tileId={discoveryTileId ?? []}><PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} flip={flip} fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />} /></TileDiscoveryArt> : <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} flip={flip} occupants={occupants} discoveryTileId={discoveryTileId} />,
@@ -2595,7 +2597,10 @@ export const ProtoMap = ({
           quality={fxQuality}
           view={{ width: viewportWidth, height: viewportHeight }}
           tilt={tilt}
+          particles={!tilt}
         /></div> : null}
+        {airReady && tilt ? <AirParticles frame={getVisualTableLighting(timeOfDay)} lights={lightSources} areas={atmosphereAreas} quality={fxQuality}
+          camera={camera.cameraState} tilt={tilt} getTilt={getCameraTilt} view={{ width:viewportWidth,height:viewportHeight }} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} /> : null}
         {airReady && tilt ? <DustMotes frame={getVisualTableLighting(timeOfDay)} quality={fxQuality} camera={camera.cameraState}
           tilt={tilt} getTilt={getCameraTilt} view={{ width:viewportWidth,height:viewportHeight }} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} /> : null}
         {/* Darkness is continuous through camera transitions; airReady gates
