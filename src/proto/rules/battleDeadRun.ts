@@ -1,7 +1,7 @@
-import { canPlay, clearDownedAP, drawCard, earnMomentum, foundationCardsOf, actorAlive, foeAlive, receiveCard, takeTop, tableauWidth, type BattleState } from './battle';
+import { canPlay, clearDownedAP, drawCard, earnMomentum, foundationCardsOf, actorAlive, foeAlive, receiveCard, takeTop, tableauWidth, type BattleFoe, type BattleState } from './battle';
 import { isAdjacentRank } from './setup';
 import { tutorialById, type IntentCardDef } from './battleTutorialScenarios';
-import { outcome, pushEvents } from './battleStatuses';
+import { hasStatus, outcome, pushEvents } from './battleStatuses';
 import type { Card } from '../protoState';
 
 // Dead-run fixes for the combat sandbox (scenarios 019–024), from the
@@ -108,6 +108,24 @@ export function pityFlip(state: BattleState): BattleState {
     party: state.party.map(unit => unit.id === actor.id ? { ...unit, rank: card.rank, foundationCards: [...foundationCardsOf(unit), card] } : unit) };
 }
 
+/** The intent's owner skips it on the same turns it skips its strike. */
+export const intentOwnerSkips = (foe: BattleFoe | undefined) => Boolean(foe && (foe.staggered > 0 || hasStatus(foe, 'dormant') || hasStatus(foe, 'frozen') || hasStatus(foe, 'stun') || hasStatus(foe, 'grip')));
+
+/** The owner's plays onto the intent this enemy turn: up to `enemyPlays` exposed cards one rank from it, +1 pip each. */
+export function intentEnemyPlays(state: BattleState): { state: BattleState; intent: IntentCard | undefined } {
+  const def = intentDef(state);
+  let next = state, intent = state.tutorial?.intent;
+  if (!def || !intent) return { state, intent };
+  for (let play = 0; play < def.enemyPlays && intent.pips < def.pips; play += 1) {
+    const rank = intent.rank, column = next.columns.slice(0, tableauWidth(next)).findIndex(cards => cards.length > 0 && isAdjacentRank(cards[cards.length - 1].rank, rank));
+    if (column < 0) break;
+    const { card, columns, stock, dealt } = takeTop(next, column)!;
+    intent = { ...intent, pips: intent.pips + 1, rank: def.fixedRank ? intent.rank : card.rank, cards: [...intent.cards, card] };
+    next = { ...next, columns, stock, dealt };
+  }
+  return { state: next, intent };
+}
+
 /**
  * The intent's enemy turn, after its owner acts. A skipping owner (staggered,
  * dormant, frozen, stunned or held) leaves the intent as it is. Otherwise it
@@ -117,15 +135,8 @@ export function pityFlip(state: BattleState): BattleState {
 export function advanceIntent(state: BattleState, ownerSkips: boolean): BattleState {
   const def = intentDef(state), owner = state.foes[0];
   if (!def || !state.tutorial?.intent || state.result || !owner || !foeAlive(owner) || ownerSkips) return state;
-  let next = state, intent = state.tutorial.intent;
-  for (let play = 0; play < def.enemyPlays && intent.pips < def.pips; play += 1) {
-    const column = next.columns.slice(0, tableauWidth(next)).findIndex(cards => cards.length > 0 && isAdjacentRank(cards[cards.length - 1].rank, intent.rank));
-    if (column < 0) break;
-    const { card, columns, stock, dealt } = takeTop(next, column)!;
-    intent = { ...intent, pips: intent.pips + 1, rank: def.fixedRank ? intent.rank : card.rank, cards: [...intent.cards, card] };
-    next = { ...next, columns, stock, dealt };
-  }
-  intent = { ...intent, pips: Math.min(def.pips, intent.pips + def.passive) };
+  let { state: next, intent } = intentEnemyPlays(state);
+  intent = { ...intent!, pips: Math.min(def.pips, intent!.pips + def.passive) };
   next = { ...next, tutorial: { ...next.tutorial!, intent } };
   if (intent.pips < def.pips) return next;
   const targets = next.party.filter(actorAlive);

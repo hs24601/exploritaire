@@ -150,6 +150,8 @@ export type BattleState = {
   momentumSkillModifiers?: Partial<Record<'bash'|'pounce'|'sticky-paws',{kind:'freeze-decay';seconds:number}[]>>;
   momentum?: { value: number; earned: number; spent: number; sequence: number; lastActorId?: string; lastSpend?: number; decayFrozenFor?: number; decayEnabled?: boolean; rapidClock?: number; recentPlays?: number[]; lastGain?: number; speedBonus?: number; sustainedBonus?: number };
   pendingWithdraw?: { foeId: string };
+  /** A party Withdraw ends the turn on the current board; its redeal (a row, or the whole tableau) lands as the next party turn starts. */
+  pendingRedeal?: { row?: number };
   reposition?: { serial: number; by: 'party' | 'enemy'; removedIds: string[]; addedIds: string[] };
   /** Turn handoff scaffolding for the combat sandbox. */
   turn?: 'party' | 'enemy';
@@ -361,7 +363,13 @@ export const recoverDisarmed=(state:BattleState,team:'party'|'foes'):BattleState
  }
  return next;
 };
-const startPartyTurn=(state:BattleState):BattleState=>recoverDisarmed({...state,party:state.party.some(actor=>actor.turnSpent)?state.party.map(actor=>actor.turnSpent?{...actor,turnSpent:false}:actor):state.party},'party');
+/** The delayed Withdraw redeal: the enemy acted on the old board, and the party's next turn opens on the new one. */
+const applyPendingRedeal=(state:BattleState):BattleState=>{
+ if(!state.pendingRedeal)return state;
+ const {row}=state.pendingRedeal,cleared={...state,pendingRedeal:undefined};
+ return row!==undefined && withdrawRowTarget(cleared,'withdraw-row:'+row)!==null?withdrawToRow(cleared,row):shiftFrontier(cleared,'party');
+};
+const startPartyTurn=(rawState:BattleState):BattleState=>{const state=applyPendingRedeal(rawState);return recoverDisarmed({...state,party:state.party.some(actor=>actor.turnSpent)?state.party.map(actor=>actor.turnSpent?{...actor,turnSpent:false}:actor):state.party},'party');};
 const beginEnemyTurn = (state: BattleState): BattleState => {
  if(state.tutorial)return tutorialEnemyTurn(state);
  state=recoverDisarmed({...state,foes:state.foes.some(foe=>foe.turnSpent)?state.foes.map(foe=>foe.turnSpent?{...foe,turnSpent:false}:foe):state.foes},'foes');
@@ -434,7 +442,7 @@ const shiftFrontier = (state: BattleState, by: 'party' | 'enemy'): BattleState =
   reposition:{serial:(state.reposition?.serial ?? 0)+1,by,removedIds,addedIds}};
 };
 
-export const withdrawPlayer = (state: BattleState,row?:number): BattleState => canWithdraw(state) && (row===undefined || withdrawRowTarget(state,'withdraw-row:'+row)!==null)?beginEnemyTurn(row===undefined?shiftFrontier(state,'party'):withdrawToRow(state,row)):state;
+export const withdrawPlayer = (state: BattleState,row?:number): BattleState => canWithdraw(state) && (row===undefined || withdrawRowTarget(state,'withdraw-row:'+row)!==null)?beginEnemyTurn({...state,pendingRedeal:{row}}):state;
 const hasPendingWithdraw = (state: BattleState) => Boolean(state.rules.autoStrike && !state.result && state.turn==='enemy' && state.pendingWithdraw &&
  state.foes.some(foe=>foe.id===state.pendingWithdraw!.foeId && foeAlive(foe) && foe.intent==='withdraw'));
 export const canInterruptWithdraw = (state: BattleState) => hasPendingWithdraw(state) && (state.momentum?.value ?? 0)>=WITHDRAW_INTERRUPT_COST;
@@ -954,7 +962,7 @@ export const MOMENTUM_SKILLS = applyAbilityOverrides({
  'cir-ember-claws':{actorId:'cir',name:'Cir · Ember Claws',cost:4,damage:0,stagger:0,description:'Mochi’s attacks deal +1 fire damage.'},
  'cir-meteor':{actorId:'cir',name:'Cir · Meteor',cost:6,damage:8,stagger:0,description:'Deal 8 fire damage. Exhaust Cir for this battle.'},
  cir:{actorId:'cir',name:'Cir',cost:3,damage:0,stagger:0,description:'One fire spirit. Bind to a Kin for this battle, or invoke Meteor and exhaust Cir.'},
- withdraw:{actorId:'hero',name:'Withdraw',cost:0,damage:0,stagger:0,description:'Choose a tableau row to move to. Remove cards in front of it and refill behind it, then end your team’s turn. Selecting Withdraw commits the turn. Costs 0 Momentum.'},
+ withdraw:{actorId:'hero',name:'Withdraw',cost:0,damage:0,stagger:0,description:'Choose a tableau row to move to and end your team’s turn. The enemy acts on the current board; at the start of your next turn the cards in front of that row are removed and the columns refill behind it. Selecting Withdraw commits the turn. Costs 0 Momentum.'},
  bash:{actorId:'hero',name:'Bash',cost:1,damage:0,stagger:2,description:'Spend 1 Hero AP to add 2 stagger to Hero’s target. No damage. Can break its guard.'},
  'sticky-paws':{actorId:'mochi',name:'Sticky Paws',cost:2,damage:0,stagger:0,description:'Self-cast on Mochi for 2 Mochi AP. Her next attack steals the target’s top foundation card into the loose tableau. An emptied target is Disarmed and spends its next turn rearming.'},
  pounce:{actorId:'mochi',name:'Pounce',cost:3,damage:3,stagger:0,description:'Spend 3 Mochi AP to deal 3 damage to Mochi’s target, doubled to 6 while staggered. Ironbark blocks it before stagger.'},

@@ -29,6 +29,8 @@ import { BATTLE_SCENARIOS, scenarioById } from '../rules/battleScenarios';
 import { COMBAT_SANDBOX_SCENARIOS, type CombatSandboxScenarioId } from '../rules/battleSandboxScenarios';
 import { createCombatSandboxScenario, tableauWidth } from '../rules/battle';
 import { IntentCardSlot, HoldSlot } from './BattleDeadRun';
+import { PlanLegend, PlanSegments } from './TableauPlanMarkers';
+import { tableauPlans } from '../rules/battlePlans';
 import { anyLegalPlay, canPityFlip, hasHoldSlot, hasPityDraw, heldCard, heldReceivers, holdCard, holdOwner, holdReceiver, INTENT_RECEIVER, intentDef, playHeld, playOnIntent, pityFlip, tableauReceivers } from '../rules/battleDeadRun';
 import { getCardTransportDurationMs } from '../protoTransport';
 import { solverFlightDuration } from '../solverTiming';
@@ -498,6 +500,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const aimedColumn = aim?.foeId?.startsWith('card:') ? Number(aim.foeId.slice(5)) : null;
 
   const scenario = scenarioById(scenarioId);
+  const plans = sandbox ? tableauPlans(battle) : [];
   const concealTableau = (holding || globalPaused || combatInspection.active || sandbox && skillMenuOpen) && !(withdrawSelecting && !paused && !gameTime.isPlayerPaused());
 
   const foeRow = <div className="battle-field__team" data-team="enemy" style={{ '--slots': battle.foes.length } as CSSProperties}>
@@ -610,6 +613,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
                 } : undefined}
                 onClick={event => {if(retrieval){setBattle(current=>retrieveCard(current,retrieval,index,depth));setRetrieval(null);}else activate(index,event.currentTarget);}}
                 style={{ position: 'absolute', left: 0, top: `calc(var(--battle-peek) * ${depth})`, zIndex: depth + 1, ...rig.surface(index * 14 - 42, 0) }} />)}
+              <PlanSegments plans={plans} column={column} />
               {column.length > 0 && !sandbox && <TableMark depth={column.length - 1} trap={battle.traps[column[column.length - 1].id]}
                 eyes={battle.foes.filter((foe) => foe.hp > 0 && foe.eye?.cardId === column[column.length - 1].id)}
                 party={battle.party} />}
@@ -692,6 +696,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
             {battle.columns.slice(0,sandbox ? tableauWidth(battle) : undefined).map(renderColumn)}
             {sandbox && <IntentCardSlot battle={battle} targetable={Boolean(selection?.actorIds.includes(INTENT_RECEIVER))} concealValue={concealTableau} disabled={battlePaused}
               cardRef={node => { intentRef.current = node; }} onChoose={() => choose(INTENT_RECEIVER)} />}
+            <PlanLegend plans={plans} />
             </div>
           </div>
           {sandbox && <div className="battle-spills" role="group" aria-label="Loose tableau cards">

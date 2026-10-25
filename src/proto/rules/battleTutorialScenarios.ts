@@ -78,7 +78,7 @@ const DEAD_RUN_SCENARIOS: readonly TutorialDef[] = [
     ],
     solve: [
       'With one foundation every card has one place to go, so find the longest run from Hero’s value (±1, A and K wrap) before you play anything.',
-      'End Turn keeps the board as it is. Withdraw redeals all six columns but ends your turn. If a turn opens with nothing playable, Withdraw at once: ending the turn leaves the same dead board for next time.',
+      'End Turn keeps the board as it is. Withdraw ends your turn too, and the enemy still acts on the current board, but your next turn opens on the new row you chose. If a turn opens with nothing playable, Withdraw at once: End Turn would leave the same dead board for next time.',
       'End your turn with the root staggered when you can: it spends that turn recovering instead of striking.',
     ],
     why: [
@@ -185,7 +185,7 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
         'Keep Scratching after the break. Filling the gauge again raises the stagger stage to II (×3) and then III (×4), so a long Mochi run followed by a long Hero run is worth far more than alternating.',
         'A staggered root spends its next enemy turn recovering instead of striking. If you can’t finish it this turn, end your turn with it staggered.',
         'Read the buried cards before you start. Find the longest run, then decide which foundation it lands on: a dead end for one Kin is often the next step for the other.',
-        'The root banks 2 Momentum each turn and spends 4 on a Heavy Strike for double damage, so every second strike hurts. No moves left? Withdraw, in the Momentum dial, redeals the whole tableau but ends your turn.',
+        'The root banks 2 Momentum each turn and spends 4 on a Heavy Strike for double damage, so every second strike hurts. No moves left? Withdraw ends your turn: the root acts on the current board, and your next turn opens on the redealt tableau.',
       ],
       why: [
         'Golf solitaire asks one question: can I play this card? Combat adds a second: who should receive it? The same run is weak or devastating depending on where it lands.',
@@ -356,7 +356,7 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
         'Hero starts with 2 AP. Drag Focus Fire onto any King (or tap the card, then a King). All four Kings light up before you commit, then burn: 4 fire damage to the root.',
         'Underneath are Hero’s climb 3–4–5, 6–7–8, 9–10–J and Mochi’s descent 4–3–2. Feed Hero the climb across the three columns, then Mochi the descent.',
         `${LINES} Burning the right rank decides which lines exist at all.`,
-        'Without Focus Fire your only move is Withdraw, which redeals and hands the root a free turn.',
+        'Without Focus Fire your only move is Withdraw, which hands the root a turn on this board before your redeal arrives.',
       ],
       why: [
         'Most abilities change the fight; Focus Fire changes the board. It teaches that the tableau itself is a target: one rank can be the wall between you and a ten-card turn.',

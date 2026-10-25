@@ -6,16 +6,20 @@ it('offers free Withdraw in every sandbox and preserves full redeal and turn han
 
 it('Withdraw row destinations keep the selected row exposed, backfill behind it and hand off the turn',()=>{
  for(const row of [0,1,2,3]){
-  const s=createCombatSandboxScenario('999');
+  // 999 acts over time: Withdraw hands off at once and holds the redeal until the party turn.
+  const tyrant=createCombatSandboxScenario('999'),pending=useMomentumSkill(tyrant,'withdraw','withdraw-row:'+row);
+  expect(pending.turn).toBe('enemy');expect(pending.columns).toBe(tyrant.columns);expect(pending.pendingRedeal).toEqual({row});
+  // A dormant root acts at once, so the redeal lands on the board the party left.
+  const s=createCombatSandboxScenario('001');
   const n=useMomentumSkill(s,'withdraw','withdraw-row:'+row);
-  expect(n.turn).toBe('enemy');expect(n.columns).toHaveLength(7);
+  expect(n.turn).toBe('party');expect(n.round).toBe(2);expect(n.pendingRedeal).toBeUndefined();expect(n.columns).toHaveLength(7);
   for(const [index,column] of n.columns.entries()){
    expect(column).toHaveLength(4);
    expect(column[column.length-1]).toEqual(s.columns[index][3-row]);
    expect(column.slice(row)).toEqual(s.columns[index].slice(0,4-row));
   }
   expect(n.reposition?.removedIds).toHaveLength(row*7);expect(n.reposition?.addedIds).toHaveLength(row*7);
-  expect(n.party).toEqual(s.party);expect(n.momentum?.value).toBe(s.momentum?.value);expect(n.foes[0].hp).toBe(999);
+  expect(n.party).toEqual(s.party);expect(n.momentum?.value).toBe(s.momentum?.value);expect(n.foes[0].hp).toBe(s.foes[0].hp);
  }
 });
 it('Withdraw rejects missing, invalid and non-row destinations without spending the turn',()=>{

@@ -4,7 +4,7 @@ import { tutorialById, type StrikeProfile, type TutorialDef, type TutorialFoeDef
 import { bleedFoe as bleed, chillFoe as chill, damageFoe, expireEnemyTurn, expirePartyTurn, hasStatus, outcome, patchActor, pushEvents, statusOf, foeMomentumGain, scaleMomentumGain, withStatus, withoutStatus } from './battleStatuses';
 import { stockCard } from './skirmish';
 import type { Card } from '../protoState';
-import { advanceIntent, dealIntent, openPartyTurn, type IntentCard } from './battleDeadRun';
+import { advanceIntent, dealIntent, intentOwnerSkips, openPartyTurn, type IntentCard } from './battleDeadRun';
 
 // Tutorial and focused combat-sandbox scenarios over the turn-based battle
 // rules: scenario setup, endless backfill and the rounds counter, tableau
@@ -190,8 +190,7 @@ function regrow(state: BattleState, foeId: string): BattleState {
 /** The whole enemy team acts once, then control returns to the party. */
 export function tutorialEnemyTurn(state: BattleState): BattleState {
   let next = recoverDisarmed({ ...expirePartyTurn(state), foes: state.foes.map(foe => foe.turnSpent ? { ...foe, turnSpent: false } : foe) }, 'foes');
-  // The intent's owner skips it on the same turns it skips its strike.
-  const owner = next.foes[0], ownerSkips = Boolean(owner && (owner.staggered > 0 || hasStatus(owner, 'dormant') || hasStatus(owner, 'frozen') || hasStatus(owner, 'stun') || hasStatus(owner, 'grip')));
+  const ownerSkips = intentOwnerSkips(next.foes[0]);
   for (const id of next.foes.map(foe => foe.id)) {
     if (next.result) break;
     next = regrow(foeTurn(next, id), id);

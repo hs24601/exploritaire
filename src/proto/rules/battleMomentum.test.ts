@@ -21,29 +21,37 @@ describe('shared Momentum and Withdraw',()=>{
  it('replaces the complete tableau and hands off without hits or currency rewards',()=>{
   let s=receipt(base());s={...s,columns:[...s.columns,[{id:'loose',rank:9}]],spills:{loose:'dark-slime'}};
   const front=s.columns.flat().map(c=>c.id),n=withdrawPlayer(s);
-  expect(n.turn).toBe('enemy');expect(n.pendingWithdraw).toEqual({foeId:'dark-slime'});
-  expect(n.reposition?.removedIds).toEqual(front);expect(n.reposition?.addedIds).toHaveLength(28);
-  expect(n.columns).toHaveLength(7);for(const card of n.columns.flat())expect(front).not.toContain(card.id);
-  expect(n.columns[7]).toBeUndefined();expect(n.spills).toEqual({});expect(n.party).toBe(s.party);expect(n.foes).toBe(s.foes);expect(n.events).toBe(s.events);
+  // Delayed redeal: the enemy acts on the current board; the new tableau lands when the party turn starts.
+  expect(n.turn).toBe('enemy');expect(n.pendingWithdraw).toEqual({foeId:'dark-slime'});expect(n.pendingRedeal).toEqual({row:undefined});
+  expect(n.columns).toBe(s.columns);expect(n.reposition).toBe(s.reposition);
+  expect(n.party).toBe(s.party);expect(n.foes).toBe(s.foes);expect(n.events).toBe(s.events);
   expect(n.momentum).toMatchObject({value:1,earned:1,spent:0,sequence:0});
   expect(withdrawPlayer(n)).toBe(n);
+  const r=interruptEnemyWithdraw({...n,momentum:{...n.momentum!,value:3}});
+  expect(r.turn).toBe('party');expect(r.pendingRedeal).toBeUndefined();
+  expect(r.reposition?.by).toBe('party');expect(r.reposition?.removedIds).toEqual(front);expect(r.reposition?.addedIds).toHaveLength(28);
+  expect(r.columns).toHaveLength(7);for(const card of r.columns.flat())expect(front).not.toContain(card.id);
+  expect(r.columns[7]).toBeUndefined();expect(r.spills).toEqual({});expect(r.party).toBe(n.party);
  });
  it('can Withdraw while legal plays remain and remains available on a bad deal',()=>{
   const s=base();const n=receipt(s);expect(canWithdraw(n)).toBe(true);expect(withdrawPlayer(n).turn).toBe('enemy');
   const blocked={...s,columns:[[{id:'blocked',rank:10}]]};expect(endPlayerTurn(blocked).pendingWithdraw).toBeDefined();
-  expect(withdrawPlayer(blocked).columns[0]).toHaveLength(4);
+  const pending=withdrawPlayer(blocked);expect(pending.columns).toBe(blocked.columns);
+  expect(resolveEnemyWithdraw(pending).columns[0]).toHaveLength(4);
  });
  it('holds an enemy intention without a clock; a three-Momentum interrupt preserves every tableau card',()=>{
   let s=base();for(let i=0;i<6;i++)s=receipt(s,i%2?'hero':'mochi');
   expect(s.foes[0].intent).toBe('withdraw');expect(s.foes[0].intentHidden).not.toBe(true);
   const pending=withdrawPlayer(s);expect(canInterruptWithdraw(pending)).toBe(true);expect(tickBattle(pending,999)).toBe(pending);
-  const n=interruptEnemyWithdraw(pending);expect(n.turn).toBe('party');expect(n.pendingWithdraw).toBeUndefined();expect(n.columns).toBe(pending.columns);expect(n.stock).toBe(pending.stock);expect(n.dealt).toBe(pending.dealt);
+  // The interrupt stops the enemy's shift; only the party's own delayed redeal lands.
+  const n=interruptEnemyWithdraw(pending);expect(n.turn).toBe('party');expect(n.pendingWithdraw).toBeUndefined();expect(n.reposition).toMatchObject({by:'party',serial:(pending.reposition?.serial ?? 0)+1});
   expect(n.momentum).toMatchObject({value:s.momentum!.value-3,earned:s.momentum!.earned,spent:3,sequence:0});expect(n.party).toBe(pending.party);expect(n.foes).toBe(pending.foes);
   expect(interruptEnemyWithdraw(n)).toBe(n);
  });
  it('cannot interrupt without sufficient reserve; allowing Withdraw shifts once and returns player control',()=>{
   const s=withdrawPlayer(base());expect(canInterruptWithdraw(s)).toBe(false);expect(interruptEnemyWithdraw(s)).toBe(s);
-  const n=resolveEnemyWithdraw(s);expect(n.turn).toBe('party');expect(n.pendingWithdraw).toBeUndefined();expect(n.reposition?.serial).toBe(2);expect(n.reposition?.by).toBe('enemy');
+  // The enemy shifts first (serial 1), then the party's delayed redeal lands as its turn starts (serial 2).
+  const n=resolveEnemyWithdraw(s);expect(n.turn).toBe('party');expect(n.pendingWithdraw).toBeUndefined();expect(n.reposition?.serial).toBe(2);expect(n.reposition?.by).toBe('party');
   expect(n.columns.flat().every(card=>!s.columns.flat().some(old=>old.id===card.id))).toBe(true);expect(n.momentum).toEqual(s.momentum);expect(resolveEnemyWithdraw(n)).toBe(n);
  });
  it('does not operate after victory, during player input, or against invalid enemies; restart clears the reserve',()=>{

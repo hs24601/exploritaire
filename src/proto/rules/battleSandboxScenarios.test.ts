@@ -86,7 +86,9 @@ it('999 randomizes every tableau and stock on starts and Withdraw without forcin
  const random=vi.spyOn(Math,'random');
  try{
   random.mockReturnValue(0.1);const a=createCombatSandboxScenario('999');
-  random.mockReturnValue(0.8);const b=createCombatSandboxScenario('999'),c=withdrawPlayer(a);
+  random.mockReturnValue(0.8);const b=createCombatSandboxScenario('999');
+  // Withdraw redeals once the Tyrant's turn ends and the party's begins.
+  let c=withdrawPlayer(a);expect(c.columns).toBe(a.columns);for(let i=0;i<40 && c.turn==='enemy';i++)c=tickBattle(c,1);expect(c.turn).toBe('party');
   for(const [state,rank] of [[a,2],[b,11],[c,11]] as const){
    expect(state.columns).toHaveLength(7);expect(state.columns.every(column=>column.length===4 && column.every(card=>card.rank===rank))).toBe(true);
    expect(state.stock).toHaveLength(128);expect(state.stock.every(card=>card.rank===rank)).toBe(true);
