@@ -1,3 +1,4 @@
+import { INDOMINABLE_THRESHOLD, indominableAfterDamage } from './indominable';
 import { createNightRescue, nightAfterHit, nightEndTurn } from './nightRescue';
 import { ACTOR_INSPIRATION_MAX, type Card } from '../protoState';
 import { redrawFoundation, redrawOptions, type RedrawSource } from './redraw';
@@ -66,7 +67,7 @@ export type BattleFoe = {
   sealedHeartwood?: boolean;
   /** Intents are public by default; hiding them requires an explicit effect. */
   intent?: 'withdraw' | 'attack' | 'idle' | 'tableau';
-  /** Cosmetic stacks earned by legal enemy receipts in scenario 999. */
+  /** Stacks earned by legal enemy receipts in scenario 999; HP damage removes stacks. */
   indominable?: number;
   appearance?: 'khad-root';
   thorns?: number;
@@ -380,13 +381,34 @@ const beginEnemyTurn = (state: BattleState): BattleState => {
   }
   return returnPlayerTurn(next);
  }
+ if(state.sandboxScenario==='999' && state.foes.every(foe=>!foeAlive(foe) || foe.turnSpent || foe.intent==='idle'))return finishIndominableTurn(state);
  if(state.foes.every(foe=>!foeAlive(foe) || foe.turnSpent || foe.intent==='idle'))return startPartyTurn({...state,turn:'party',pendingWithdraw:undefined,round:(state.round ?? 1)+1,
   momentum:state.momentum?{...state.momentum,sequence:0,rapidClock:0,recentPlays:[],speedBonus:0,sustainedBonus:0}:undefined});
  return {...state,turn:'enemy',pendingWithdraw:foe?{foeId:foe.id}:undefined,
   momentum:state.momentum?{...state.momentum,sequence:0,rapidClock:0,recentPlays:[],speedBonus:0,sustainedBonus:0}:undefined};
 };
 
-/** Withdraw replaces the complete tableau, including buried and spilled cards. */
+/** Withdraw to a row keeps that row exposed and fills vacant space behind it. */
+const withdrawToRow=(state:BattleState,row:number):BattleState=>{
+ let {stock,dealt}=state;
+ const removedIds=state.columns.slice(7).flat().map(card=>card.id),addedIds:string[]=[];
+ const columns=state.columns.slice(0,7).map(column=>{
+  const kept=column.slice(0,Math.max(0,column.length-row));
+  removedIds.push(...column.slice(kept.length).map(card=>card.id));
+  while(kept.length<(state.rules.infinifillRows ?? 4)){
+   const next=draw({...state,stock,dealt});stock=next.stock;dealt=next.dealt;
+   kept.unshift(next.card);addedIds.push(next.card.id);
+  }
+  return kept;
+ });
+ return {...state,columns,stock,dealt,spills:{},traps:Object.fromEntries(Object.entries(state.traps).filter(([id])=>!removedIds.includes(id))),
+  reposition:{serial:(state.reposition?.serial ?? 0)+1,by:'party',removedIds,addedIds}};
+};
+const withdrawRowTarget=(state:BattleState,targetId?:string)=>{
+ const match=/^withdraw-row:(\d+)$/.exec(targetId ?? '');if(!match)return null;
+ const row=Number(match[1]);return Number.isSafeInteger(row) && state.columns.slice(0,7).some(column=>column.length>row)?row:null;
+};
+/** Untargeted legacy Withdraw replaces the full tableau; row targets move within it. */
 const shiftFrontier = (state: BattleState, by: 'party' | 'enemy'): BattleState => {
  const removedIds=state.columns.flat().map(card=>card.id),addedIds:string[]=[];
  let {stock,dealt}=state;
@@ -408,13 +430,32 @@ const shiftFrontier = (state: BattleState, by: 'party' | 'enemy'): BattleState =
   reposition:{serial:(state.reposition?.serial ?? 0)+1,by,removedIds,addedIds}};
 };
 
-export const withdrawPlayer = (state: BattleState): BattleState => canWithdraw(state)?beginEnemyTurn(shiftFrontier(state,'party')):state;
+export const withdrawPlayer = (state: BattleState,row?:number): BattleState => canWithdraw(state) && (row===undefined || withdrawRowTarget(state,'withdraw-row:'+row)!==null)?beginEnemyTurn(row===undefined?shiftFrontier(state,'party'):withdrawToRow(state,row)):state;
 const hasPendingWithdraw = (state: BattleState) => Boolean(state.rules.autoStrike && !state.result && state.turn==='enemy' && state.pendingWithdraw &&
  state.foes.some(foe=>foe.id===state.pendingWithdraw!.foeId && foeAlive(foe) && foe.intent==='withdraw'));
 export const canInterruptWithdraw = (state: BattleState) => hasPendingWithdraw(state) && (state.momentum?.value ?? 0)>=WITHDRAW_INTERRUPT_COST;
 export const returnPlayerTurn = (state: BattleState): BattleState => startPartyTurn({...state,turn:'party',pendingWithdraw:undefined,
  round:(state.round ?? 1)+1,
  momentum:state.momentum?{...state.momentum,sequence:0,rapidClock:0,recentPlays:[],speedBonus:0,sustainedBonus:0}:undefined});
+/** Indominable is a passive end-of-turn hit, including skipped/rearm turns. */
+const finishIndominableTurn=(state:BattleState):BattleState=>{
+ let next=state;
+ for(const foe of state.foes){
+  const stacks=foe.indominable ?? 0;
+  if(next.result || !foeAlive(foe) || stacks<=INDOMINABLE_THRESHOLD)continue;
+  const targets=next.party.filter(actorAlive);if(!targets.length)break;
+  const damage=stacks-INDOMINABLE_THRESHOLD;
+  const party=next.party.map(actor=>actorAlive(actor)?{...actor,hp:Math.max(0,actor.hp-damage)}:actor);
+  const events:Omit<BattleEvent,'id'>[]=targets.flatMap(target=>[
+   {kind:'enemy-hit' as const,sourceId:foe.id,targetId:target.id,amount:damage,label:'Indominable'},
+   ...(target.hp<=damage?[{kind:'down' as const,sourceId:foe.id,targetId:target.id}]:[])
+  ]);
+  next=clearDownedAP({...next,party,result:resultOf(party,next.foes),...withEvents(next,events)});
+  if(next.cir?.status==='bound' && next.cir.actorId==='hero' && targets.some(target=>target.id==='hero'))
+   next=cirFireHit(next,foe.id,CIR_EXPRESSIONS.hero.damage,'Hearthflame','hero');
+ }
+ return returnPlayerTurn(next);
+};
 export const interruptEnemyWithdraw = (state: BattleState): BattleState => canInterruptWithdraw(state)
  ? returnPlayerTurn(spendMomentum(state,WITHDRAW_INTERRUPT_COST)) : state;
 export const resolveEnemyWithdraw = (state: BattleState): BattleState => hasPendingWithdraw(state)
@@ -439,13 +480,13 @@ export const defaultStrike = (state:BattleState,actorId:string,skill?:{damage:nu
  const rawDamage=target.ironbark && target.staggered<=0?0:barkDamage(target,(strike?.damage ?? 1)*multiplier,(ember+rage)*multiplier);
  const damage=trialDamage(target,target.emberPhase===2?ember*multiplier:rawDamage,ember?'Ember Claws':undefined),hp=Math.max(0,target.hp-damage);
  const stage=target.staggerStage ?? 0;
- const stagger=target.sealedHeartwood || target.emberPhase===1 || target.emberPhase===3?0:Math.min(target.profile.staggerMax,target.stagger+(strike?.stagger ?? 1));
- const broke=hp>0 && stage<MAX_STAGGER_STAGE && stagger>=target.profile.staggerMax;
+ const stagger=(target.indominable ?? 0)>0?target.stagger:target.sealedHeartwood || target.emberPhase===1 || target.emberPhase===3?0:Math.min(target.profile.staggerMax,target.stagger+(strike?.stagger ?? 1));
+ const broke=(target.indominable ?? 0)<=0 && hp>0 && stage<MAX_STAGGER_STAGE && stagger>=target.profile.staggerMax;
  const events:Omit<BattleEvent,'id'>[]=[{kind:'hit',sourceId:actorId,targetId:target.id,amount:damage,label:(strike?.name ?? (actorId==='hero'?'Nip':'Claw'))+(ember?' + Ember Claws':'')+(rage?' + '+EMBER_RAGE:'')}];
  let columns=state.columns,stock=state.stock,dealt=state.dealt;const spills={...state.spills};
  if(broke)events.push({kind:'stagger',sourceId:actorId,targetId:target.id,label:String(stage+1)});
  if(hp===0)events.push({kind:'ko',sourceId:actorId,targetId:target.id});
- const foes=state.foes.map(f=>f.id===target.id?trialAfterHit({...f,hp,stagger:hp>0?(broke?0:stagger):0,staggerStage:hp>0?(broke?stage+1:stage):0,
+ const foes=state.foes.map(f=>f.id===target.id?trialAfterHit({...f,...indominableAfterDamage(f,hp),hp,stagger:hp>0?(broke?0:stagger):0,staggerStage:hp>0?(broke?stage+1:stage):0,
   staggered:hp>0?(broke?f.profile.staggerSeconds:f.staggered):0,eye:null,timer:0}):f);
  return nightAfterHit(reflectThorns({...state,columns,stock,dealt,spills,foes,started:true,result:resultOf(state.party,foes),...withEvents(state,events)},actorId,target.id));
 };
@@ -616,10 +657,10 @@ export const applyAttack = (state: BattleState, actorId: string, foeId: string):
   events.push({ kind: 'hit', targetId: foeId, sourceId: actorId, amount: damage, label: attack.name });
   let { stagger, staggered, timer } = target;
   if (staggered <= 0 && target.emberPhase!==1 && target.emberPhase!==3) {
-    stagger = Math.min(target.profile.staggerMax, stagger + attack.stagger);
+    stagger = (target.indominable ?? 0)>0?stagger:Math.min(target.profile.staggerMax, stagger + attack.stagger);
     // Knockback never pulls the timer below 0, but a timer still in its opening delay keeps it.
     timer = Math.max(Math.min(timer, 0), timer - attack.knockback);
-    if (stagger >= target.profile.staggerMax && hp > 0) {
+    if ((target.indominable ?? 0)<=0 && stagger >= target.profile.staggerMax && hp > 0) {
       staggered = target.profile.staggerSeconds;
       events.push({ kind: 'stagger', targetId: foeId });
     }
@@ -629,7 +670,7 @@ export const applyAttack = (state: BattleState, actorId: string, foeId: string):
   const effects = hp > 0 ? resolved.effects : [];
   if (attack.form === 'Takedown') timer = Math.min(0, timer);
   if (hp <= 0) events.push({ kind: 'ko', targetId: foeId });
-  const foes = state.foes.map((foe) => (foe.id === foeId ? { ...foe, gripSource:attack.form==='Vice Grip'?actorId:target.gripSource, ...(attack.form==='Takedown'?{eye:null,rest:FORAGE_REST}:{}), hp, stagger: hp > 0 ? stagger : 0, staggered: hp > 0 ? staggered : 0, timer: hp > 0 ? timer : 0, effects:effects.filter(e=>e.kind!=='grip'||attack.form==='Vice Grip'||target.gripSource!==actorId) } : {...foe,effects:foe.effects.filter(e=>e.kind!=='grip'||foe.gripSource!==actorId)}));
+  const foes = state.foes.map((foe) => (foe.id === foeId ? { ...foe, ...indominableAfterDamage(foe,hp), gripSource:attack.form==='Vice Grip'?actorId:target.gripSource, ...(attack.form==='Takedown'?{eye:null,rest:FORAGE_REST}:{}), hp, stagger: hp > 0 ? stagger : 0, staggered: hp > 0 ? staggered : 0, timer: hp > 0 ? timer : 0, effects:effects.filter(e=>e.kind!=='grip'||attack.form==='Vice Grip'||target.gripSource!==actorId) } : {...foe,effects:foe.effects.filter(e=>e.kind!=='grip'||foe.gripSource!==actorId)}));
   const party = spendActorAP(state, actorId, attack.charge);
   return reflectThorns({ ...state, effectSeed: resolved.seed, started: true, ambush: state.ambush?.awaitingAttack ? { awaitingAttack: false, remaining: PLAYER_AMBUSH_SECONDS } : state.ambush, party, foes, result: resultOf(party, foes), ...withEvents(state, events) }, actorId, foeId);
 };
@@ -690,12 +731,12 @@ export const tickBattle = (state: BattleState, dt: number): BattleState => {
   if (state.rules.autoStrike) {
     if(state.turn==='enemy' && state.sandboxScenario==='999') {
       const foe=state.foes.find(unit=>foeAlive(unit) && !unit.turnSpent && unit.intent==='tableau');
-      if(!foe)return returnPlayerTurn(state);
-      if(foe.staggered>0)return returnPlayerTurn({...state,foes:state.foes.map(unit=>unit.id===foe.id?{...unit,stagger:0,staggered:0,staggerStage:0}:unit)});
+      if(!foe)return finishIndominableTurn(state);
+      if(foe.staggered>0)return finishIndominableTurn({...state,foes:state.foes.map(unit=>unit.id===foe.id?{...unit,stagger:0,staggered:0,staggerStage:0}:unit)});
       const rest=foe.rest-dt;
       if(rest>0)return {...state,foes:state.foes.map(unit=>unit.id===foe.id?{...unit,rest}:unit)};
       const column=state.columns.findIndex(cards=>cards.length>0 && isAdjacentRank(cards[cards.length-1].rank,foe.rank) && !state.traps[cards[cards.length-1].id]);
-      if(column<0)return returnPlayerTurn(state);
+      if(column<0)return finishIndominableTurn(state);
       const taken=takeTop(state,column)!;
       return {...state,columns:taken.columns,stock:taken.stock,dealt:taken.dealt,
         foes:state.foes.map(unit=>unit.id===foe.id?{...unit,rank:taken.card.rank,foundationCards:[...foundationCardsOf(unit),taken.card],indominable:(unit.indominable ?? 0)+1,rest:0.7}:unit),
@@ -727,13 +768,13 @@ export const tickBattle = (state: BattleState, dt: number): BattleState => {
       }
       if (left > 0.001) effects.push({ ...effect, left, tickIn });
     }
-    if (hp <= 0) { events.push({ kind: 'ko', targetId: foe.id }); return { ...foe, hp: 0, timer: 0, stagger: 0, staggered: 0, effects: [] }; }
+    if (hp <= 0) { events.push({ kind: 'ko', targetId: foe.id }); return { ...foe, ...indominableAfterDamage(foe,0), hp: 0, timer: 0, stagger: 0, staggered: 0, effects: [] }; }
     const held=foe.effects.filter(e=>e.kind==='stun'||(e.kind==='grip' && party.some(a=>a.id===foe.gripSource && a.hp>0)));
     const freeDt=Math.max(0,enemyDt-Math.max(0,...held.map(e=>Math.max(0,e.left-heldSeconds))));
     if (staggered > 0) {
       staggered = Math.max(0, staggered - dt);
       if (staggered === 0) stagger = 0;
-      return { ...foe, hp, stagger, staggered, effects };
+      return { ...foe, ...indominableAfterDamage(foe,hp), hp, stagger, staggered, effects };
     }
     stagger = Math.max(0, stagger - foe.profile.staggerDecay * dt);
     if (enemyDt > 0) timer += freeDt / foe.profile.attackSeconds;
@@ -806,7 +847,7 @@ const eat = (state: BattleState, foeId: string, column: number): BattleState => 
       }
       // A trap spoils the meal: the card doesn't feed the slime.
       const resolved = applyHitEffects(foe.effects, trap.effects, effectSeed); effectSeed = resolved.seed;
-      next = { ...next, hp, stagger, staggered, fed: foe.fed, effects: hp > 0 ? resolved.effects : [] };
+      next = { ...next, ...indominableAfterDamage(foe,hp), hp, stagger, staggered, fed: foe.fed, effects: hp > 0 ? resolved.effects : [] };
       if (hp <= 0) { events.push({ kind: 'ko', targetId: foeId }); next = { ...next, stagger: 0, staggered: 0, timer: 0, eye: null }; }
     }
     return next;
@@ -905,7 +946,7 @@ export const MOMENTUM_SKILLS = applyAbilityOverrides({
  'cir-ember-claws':{actorId:'cir',name:'Cir · Ember Claws',cost:4,damage:0,stagger:0,description:'Mochi’s attacks deal +1 fire damage.'},
  'cir-meteor':{actorId:'cir',name:'Cir · Meteor',cost:6,damage:8,stagger:0,description:'Deal 8 fire damage. Exhaust Cir for this battle.'},
  cir:{actorId:'cir',name:'Cir',cost:3,damage:0,stagger:0,description:'One fire spirit. Bind to a Kin for this battle, or invoke Meteor and exhaust Cir.'},
- withdraw:{actorId:'hero',name:'Withdraw',cost:0,damage:0,stagger:0,description:'Replace the entire tableau and end your team’s turn. Costs 0 Momentum. No damage or Momentum earned.'},
+ withdraw:{actorId:'hero',name:'Withdraw',cost:0,damage:0,stagger:0,description:'Choose a tableau row to move to. Remove cards in front of it and refill behind it, then end your team’s turn. Selecting Withdraw commits the turn. Costs 0 Momentum.'},
  bash:{actorId:'hero',name:'Bash',cost:1,damage:0,stagger:2,description:'Spend 1 Hero AP to add 2 stagger to Hero’s target. No damage. Can break its guard.'},
  'sticky-paws':{actorId:'mochi',name:'Sticky Paws',cost:2,damage:0,stagger:0,description:'Self-cast on Mochi for 2 Mochi AP. Her next attack steals the target’s top foundation card into the loose tableau. An emptied target is Disarmed and spends its next turn rearming.'},
  pounce:{actorId:'mochi',name:'Pounce',cost:3,damage:3,stagger:0,description:'Spend 3 Mochi AP to deal 3 damage to Mochi’s target, doubled to 6 while staggered. Ironbark blocks it before stagger.'},
@@ -949,7 +990,7 @@ export const momentumSkillExpression=(state:BattleState,id:MomentumSkillId,targe
 export const cirFireHit=(state:BattleState,targetId:string,baseDamage:number,label:string,sourceId='cir'):BattleState=>{
  const target=state.foes.find(foe=>foe.id===targetId && foe.hp>0);if(!target)return state;
  const damage=trialDamage(target,target.ironbark && target.staggered<=0?0:baseDamage*(target.staggered>0?staggerVulnerability(target):1),label as 'Hearthflame'|'Meteor');
- const hp=Math.max(0,target.hp-damage),foes=state.foes.map(foe=>foe.id===targetId?trialAfterHit({...foe,hp,counterflames:(foe.counterflames ?? 0)+(foe.emberPhase===1 && damage>0?1:0),...(hp===0?{stagger:0,staggered:0,effects:[]}: {})}):foe);
+ const hp=Math.max(0,target.hp-damage),foes=state.foes.map(foe=>foe.id===targetId?trialAfterHit({...foe,...indominableAfterDamage(foe,hp),hp,counterflames:(foe.counterflames ?? 0)+(foe.emberPhase===1 && damage>0?1:0),...(hp===0?{stagger:0,staggered:0,effects:[]}: {})}):foe);
  const events:Omit<BattleEvent,'id'>[]=[{kind:'hit',sourceId,targetId,amount:damage,label:label+' · Fire'}];
  if(hp===0)events.push({kind:'ko',sourceId,targetId});
  const next={...state,foes,started:true,result:resultOf(state.party,foes),...withEvents(state,events)};
@@ -965,7 +1006,7 @@ export const canUseMomentumSkill=(state:BattleState,id:MomentumSkillId,targetId?
  if(state.tutorial && id!=='withdraw' && (!tutorialAllowsSkill(state,id) || abilitySlotSpent(state) || isSilenced(state,skillOwner(id,targetId)) || isRaging(state,skillOwner(id,targetId))))return false;
  if(state.night && (isCirMomentumSkill(id) || !['desperation','last-count','finish'].includes(state.night.phase)))return false;
  if(isCirMomentumSkill(id)&&id!=='cir')return momentumSkillTargets(state,id).some(unit=>(!targetId||unit.id===targetId)&&canUseMomentumSkill(state,'cir',unit.id));
- if(id==='withdraw')return canWithdraw(state) && (!targetId || targetId==='tableau');
+ if(id==='withdraw')return canWithdraw(state) && (!targetId || targetId==='tableau' || withdrawRowTarget(state,targetId)!==null);
  if(id==='cir'){
   if(targetId && state.foes.some(foe=>foe.id===targetId && foe.emberPhase && foe.emberPhase<3))return false;
   if(!state.sandboxScenario || state.turn!=='party' || state.result || state.cir?.status!=='available' || !state.party.some(unit=>unit.hp>0 && !unit.disarmed && !unit.turnSpent))return false;
@@ -989,7 +1030,7 @@ export const useMomentumSkill=(state:BattleState,id:MomentumSkillId,targetId?:st
 const castMomentumSkill=(state:BattleState,id:MomentumSkillId,targetId?:string):BattleState=>{
  if(isStatusSkill(id))return useStatusSkill(state,id,targetId);
  if(isCirMomentumSkill(id)&&id!=='cir')return targetId&&canUseMomentumSkill(state,id,targetId)?useMomentumSkill(state,'cir',targetId):state;
- if(id==='withdraw')return canUseMomentumSkill(state,id,targetId)?withdrawPlayer(state):state;
+ if(id==='withdraw')return canUseMomentumSkill(state,id,targetId)?withdrawPlayer(state,withdrawRowTarget(state,targetId) ?? undefined):state;
  if(id==='cir'){
   if(!targetId || !canUseMomentumSkill(state,id,targetId))return state;
   const expression=momentumSkillExpression(state,id,targetId),paid=spendAP(state,skillOwner(id,targetId),expression.cost);

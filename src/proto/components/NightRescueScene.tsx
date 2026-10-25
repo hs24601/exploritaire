@@ -1,3 +1,4 @@
+import { CombatBanner } from './CombatBanner';
 import { useEffect, useLayoutEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import type { BattleState } from '../rules/battle';
 import { nightAIStep, NIGHT_ABILITIES } from '../rules/nightRescue';
@@ -57,7 +58,7 @@ export function NightRescueScene({battle,setBattle,paused,fieldRef,onBlocking}:{
   for(const node of nodes)for(const animation of node.getAnimations({subtree:true}))paused?animation.pause():animation.play();
  },[paused]);
  return <>
-  {night.phase==='entrance'&&<div className="night-challenger" data-paused={paused} role="status"><span className="night-slap" aria-hidden="true"><i>☝️</i><b>🐾</b></span><strong>A NEW CHALLENGER APPROACHES</strong><em>BANKS</em></div>}
+  {night.phase==='entrance'&&<CombatBanner title="A NEW CHALLENGER APPROACHES" subtitle="BANKS" paused={paused}><span className="night-slap" aria-hidden="true"><i>☝️</i><b>🐾</b></span></CombatBanner>}
   {night.phase==='rescue'&&night.step===0&&<div ref={flight}><ActorHoloCard actorId="banks" name="Banks" rank="7"/></div>}
   {night.phase==='rescue'&&night.step===9&&<div className="night-bloom-miss" role="status">THE GALLOWS BLOOM<br/><strong>MISS!</strong></div>}
   {night.phase==='rescue'&&<aside className="night-ai-card" aria-label="Banks ability"><strong>Banks · NPC ally · Precipice of Night</strong>{activeAbility&&<div className="night-ability-face"><AbilityCardFace animated={false} id={'night-'+activeAbility.name} title={activeAbility.name} headerAction={<span className="night-ability-cost">{activeAbility.cost} {activeAbility.dark?'self-stagger':'Momentum'}</span>} art={<ActorCardArt sprite={ACTOR_HOLO_ART.banks} label="Banks"/>} description={activeAbility.effect}/></div>}<p>{night.message}</p><details><summary>Momentum deck · Alternate costs</summary>{NIGHT_ABILITIES.map(a=><p key={a.name}>{a.name} · {a.cost} {a.dark?'self-stagger':'Momentum'} — {a.effect}</p>)}</details></aside>}

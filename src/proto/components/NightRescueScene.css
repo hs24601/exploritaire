@@ -1,8 +1,5 @@
 .night-ai-card { position:absolute; right:12px; top:56px; max-width:280px; z-index:13; padding:10px; border:1px solid #bb8de5; border-radius:9px; background:#1c1232ed; color:#f1ddff; font-size:14px; }
 .night-ai-card p { margin:7px 0; }
-.night-challenger { position:fixed; inset:30% 0 auto; z-index:64000; display:grid; justify-items:center; padding:24px; background:linear-gradient(110deg,#160c29ee,#5b1549f5,#160c29ee); border-block:4px solid #ffd776; color:#fff0bf; text-align:center; transform:rotate(-3deg); box-shadow:0 0 60px #cc75ff88; pointer-events:none; }
-.night-challenger strong { font:italic 900 clamp(22px,4vw,54px)/1.1 sans-serif; text-shadow:3px 3px #3d103f; }
-.night-challenger em { font:bold 38px sans-serif; letter-spacing:.2em; }
 .night-slap { position:fixed; right:12%; bottom:-110px; font-size:58px; }
 .night-slap i { display:inline-block; animation:night-hand 1s both; }
 .night-slap b { display:inline-block; animation:night-paw 1s both; }

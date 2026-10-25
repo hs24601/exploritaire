@@ -93,14 +93,6 @@ export function FoeCard({ foe, target, targetId, preview, focus, events, sprite,
   const state = !alive ? 'down' : staggered ? 'staggered' : 'ready';
   const doom=foe.gallows!==undefined;
   const intent = doom ? (foe.gallows===0?'The Gallows Bloom · Spent':`The Gallows Bloom · All allies · ${foe.gallows} handoffs`) : foe.disarmed ? 'Rearm · Take lowest exposed card' : foe.intentHidden ? 'Intent hidden' : foe.intent==='tableau' ? 'Play tableau · Gain Indominable' : foe.intent==='idle' ? 'Dormant · No attacks' : foe.intent==='withdraw' ? 'Withdraw · Redeal tableau' : `Strike ${foe.profile.damage+foe.fed} → ${target ?? '—'}`;
-  const kind=foe.intentHidden?'hidden':foe.intent ?? 'attack';
-  const damage=tutorialIntent?.heavy?foe.profile.damage*2:foe.profile.damage+foe.fed;
-  const summary=tutorialIntent?tutorialIntent.summary:doom?(foe.gallows===0?'Bloom spent':`All allies · ${foe.gallows} handoffs`):foe.disarmed?'Rearm · lowest card':kind==='hidden'?'Unknown':kind==='tableau'?'Tableau':kind==='idle'?'No target':kind==='withdraw'?'Tableau':target ?? 'No target';
-  const detail=tutorialIntent?tutorialIntent.detail:doom?(foe.gallows===0?'The Gallows Bloom struck the veil and missed every ally.':`The Gallows Bloom will kill every ally in ${foe.gallows} handoffs. Snaring Khad Roots prevent tableau plays and Withdraw; Sealed Heartwood blocks damage, stagger and theft.`):foe.disarmed?'Disarmed: next turn this actor only takes the lowest-value exposed tableau card. This does not attack or earn Momentum.':kind==='hidden' ? `${foe.name}’s next action and target are concealed.`
-    : kind==='tableau' ? `${foe.name} plays adjacent exposed tableau cards until no legal plays remain, gaining one Indominable stack per play. Indominable does nothing.`
-    : kind==='idle' ? `${foe.name} is dormant. It takes no action on its turn and does not attack.${foe.thorns ? ` Thorns is passive: each attacker takes ${foe.thorns} damage whenever they hit it, including the killing blow.` : ''}`
-    : kind==='withdraw' ? `${foe.name} intends to Withdraw, replacing the entire tableau, including buried and spilled cards. It targets the tableau, not an actor. When it begins, spend Momentum to interrupt and preserve your planned sequence, or allow the redeal.`
-    : `${foe.name} intends to Strike ${target ?? 'no available actor'} for ${damage} damage${foe.fed ? `, including ${foe.fed} bonus damage from feeding` : ''}. ${foe.emberPhase===1?'Counterflame targets Hero.':'It targets the living actor with the most AP; ties use party order.'}${staggered ? ' It is currently stunned and cannot attack.' : ''}`;
   return <div className="battle-enemy-unit">
     {alive && foe.emberPhase && <button type="button" className="battle-buff-icon" data-buff="ember-phase" aria-label={foe.emberPhase===1?'Counterflame':foe.emberPhase===2?'Khad Armor':'Indomitable Thorns'} data-ember-phase={foe.emberPhase} data-game-tooltip={
       foe.emberPhase===1?`I · Counterflame ${foe.counterflames ?? 0}/3 · Bind Cir to Hero; only Hearthflame counters advance. Cannot be staggered. Strikes Hero.`:
@@ -108,9 +100,9 @@ export function FoeCard({ foe, target, targetId, preview, focus, events, sprite,
        'III · Indomitable Thorns · Cannot be staggered. Hits below 5 do no damage. Recall Cir and invoke Meteor.'}>{foe.emberPhase===1?'🔥':foe.emberPhase===2?'🛡':'🌵'}
     </button>}
     {alive && foe.gallows!==undefined && <div className="battle-enemy-buffs"><button type="button" className="battle-buff-icon" data-buff="gallows-bloom" aria-label={`The Gallows Bloom · ${foe.gallows} handoffs`} data-game-tooltip={`The Gallows Bloom: ${foe.gallows} handoffs until a fatal attack against every ally. Sealed Heartwood blocks damage, stagger and theft.`}>🌳</button></div>}
-    {alive && (Boolean(foe.indominable) || Boolean(foe.thorns) || foe.ironbark || staggered || foe.disarmed || foe.fed>0 || foe.effects.length>0 || Boolean(statusIcons)) && <div className="battle-enemy-buffs" role="group" aria-label={`${foe.name} statuses`}>
+    {alive && (foe.indominable!==undefined || Boolean(foe.thorns) || foe.ironbark || staggered || foe.disarmed || foe.fed>0 || foe.effects.length>0 || Boolean(statusIcons)) && <div className="battle-enemy-buffs" role="group" aria-label={`${foe.name} statuses`}>
       {statusIcons}
-      {Boolean(foe.indominable) && <button type="button" className="battle-buff-icon" data-buff="indominable" aria-label={`Indominable · ${foe.indominable} stacks`} data-game-tooltip={`Indominable: ${foe.indominable} stacks. Gains one stack per successful tableau play on its turn. Does nothing.`}>∞<span>{foe.indominable}</span></button>}
+      {foe.indominable!==undefined && <button type="button" className="battle-buff-icon" data-buff="indominable" aria-label={`Indominable · ${foe.indominable} stacks`} data-game-tooltip={`Indominable: ${foe.indominable} stacks. Gains one stack per successful tableau play on its turn. Above 25 stacks, deals 1 damage per stack above 25 (26 stacks = 1 damage) at the end of its turn to every living party member. Each HP lost removes one stack. The stagger gauge cannot increase while any Indominable stacks remain.`}>∞<span>{foe.indominable}</span></button>}
       {foe.disarmed && <DisarmedBadge name={foe.name} />}
       {foe.fed>0 && <button type="button" className="battle-buff-icon" data-buff="fed" aria-label="Fed" data-game-tooltip={`Fed: the next strike deals ${foe.fed} additional damage.`}>🍖</button>}
       {foe.effects.map(effect=><button key={effect.kind} type="button" className="battle-buff-icon battle-debuff-icon" data-debuff={effect.kind} aria-label={effect.kind} data-game-tooltip={`${effect.kind}: ${Math.ceil(effect.left)} seconds remaining. ${effect.kind==='burn'?'Takes fire damage over time.':effect.kind==='bleed'?'Takes bleeding damage over time.':effect.kind==='stun'?'Cannot act while stunned.':effect.kind==='grip'?'Held in place by Vice Grip.':'Vulnerable to enhanced attacks.'}`}>{({burn:'🔥',bleed:'🩸',stun:'💫',grip:'🪢',exposed:'🎯'} as const)[effect.kind]}</button>)}
@@ -154,16 +146,32 @@ export function FoeCard({ foe, target, targetId, preview, focus, events, sprite,
       {preview?.effects.map((effect) => <span key={effect.kind} className="battle-chip" data-preview-chip={effect.kind}>+{EFFECT_ICON[effect.kind]}{effect.chance !== undefined ? ` ${Math.round(effect.chance*100)}%` : ''}</span>)}
     </span>}
   </button>
-    {alive && <button type="button" className="battle-enemy-intent" data-intent={kind} data-preparing={enemyTurn || undefined}
+    {alive && targeters===undefined && <EnemyIntentBadge foe={foe} target={target} targetId={targetId} tutorialIntent={tutorialIntent} enemyTurn={enemyTurn} />}
+  </div>;
+}
+
+
+/** Enemy intent shares the player's arrow badge treatment in the sandbox. */
+export function EnemyIntentBadge({foe,target,targetId,tutorialIntent,enemyTurn,route=false}:{foe:BattleFoe;target:string|null;targetId?:string;tutorialIntent?:TutorialIntent|null;enemyTurn?:boolean;route?:boolean}) {
+  const staggered=foe.staggered>0;
+  const doom=foe.gallows!==undefined;
+  const kind=foe.intentHidden?'hidden':foe.intent ?? 'attack';
+  const damage=tutorialIntent?.heavy?foe.profile.damage*2:foe.profile.damage+foe.fed;
+  const summary=tutorialIntent?tutorialIntent.summary:doom?(foe.gallows===0?'Bloom spent':`All allies · ${foe.gallows} handoffs`):foe.disarmed?'Rearm · lowest card':kind==='hidden'?'Unknown':kind==='tableau'?(foe.indominable!==undefined?'All allies':'Tableau'):kind==='idle'?'No target':kind==='withdraw'?'Tableau':target ?? 'No target';
+  const detail=tutorialIntent?tutorialIntent.detail:doom?(foe.gallows===0?'The Gallows Bloom struck the veil and missed every ally.':`The Gallows Bloom will kill every ally in ${foe.gallows} handoffs. Snaring Khad Roots prevent tableau plays and Withdraw; Sealed Heartwood blocks damage, stagger and theft.`):foe.disarmed?'Disarmed: next turn this actor only takes the lowest-value exposed tableau card. This does not attack or earn Momentum.':kind==='hidden' ? `${foe.name}’s next action and target are concealed.`
+    : kind==='tableau' ? `${foe.name} plays adjacent exposed tableau cards until no legal plays remain, gaining one Indominable stack per play. Above 25 stacks, it deals 1 damage per stack above 25 (26 stacks = 1 damage) at the end of its turn to every living party member. Each HP lost removes one stack. The stagger gauge cannot increase while any Indominable stacks remain.`
+    : kind==='idle' ? `${foe.name} is dormant. It takes no action on its turn and does not attack.${foe.thorns ? ` Thorns is passive: each attacker takes ${foe.thorns} damage whenever they hit it, including the killing blow.` : ''}`
+    : kind==='withdraw' ? `${foe.name} intends to Withdraw, replacing the entire tableau, including buried and spilled cards. It targets the tableau, not an actor. When it begins, spend Momentum to interrupt and preserve your planned sequence, or allow the redeal.`
+    : `${foe.name} intends to Strike ${target ?? 'no available actor'} for ${damage} damage${foe.fed ? `, including ${foe.fed} bonus damage from feeding` : ''}. ${foe.emberPhase===1?'Counterflame targets Hero.':'It targets the living actor with the most AP; ties use party order.'}${staggered ? ' It is currently stunned and cannot attack.' : ''}`;
+  return <button type="button" className={route?'battle-enemy-intent battle-target-badge battle-target-badge--enemy':'battle-enemy-intent'} data-intent={kind} data-preparing={enemyTurn || undefined}
       data-intent-target={kind==='attack'?targetId:undefined} data-game-tooltip={detail}
-      aria-label={`${kind==='attack'?`Strike ${damage}`:kind==='withdraw'?'Withdraw':kind==='idle'?'Dormant':'Intent hidden'} · ${summary}. Show intent details`}>
+      aria-label={`${kind==='attack'?`Strike ${damage}`:kind==='withdraw'?'Withdraw':kind==='idle'?'Dormant':kind==='tableau'?'Tableau play':'Intent hidden'} · ${summary}. Show intent details`}>
       <span className="battle-enemy-intent__icon" aria-hidden="true">{kind==='hidden'?'?':kind==='idle'||tutorialIntent?.skips?'☾':kind==='withdraw'?'↶':'⚔'}</span>
       {kind==='attack' && !tutorialIntent?.skips && <strong>{damage}</strong>}
       <span aria-hidden="true">{kind==='attack' && !tutorialIntent?.skips?'→':'·'}</span>
       {kind==='attack' && !tutorialIntent?.skips && targetId && ACTOR_HOLO_ART[targetId] && <img src={ACTOR_HOLO_ART[targetId]} alt="" />}
       <span>{summary}</span>
-    </button>}
-  </div>;
+    </button>;
 }
 
 /** Charge pips, with a notch at each form's breakpoint. */
@@ -234,7 +242,7 @@ export function DisarmedBadge({name}:{name:string}) {
 /** Each Kin's banked AP (pays for its own ability cards), shown in the foundation's meter slot. */
 function ApMeter({actor}:{actor:BattleActor}) {
  const cap=apCap(actor),ap=Math.min(Math.floor(actor.charge),cap);
- return <span className="battle-foundation__ap" role="meter" aria-label={`${actor.name} AP`} aria-valuemin={0} aria-valuemax={cap} aria-valuenow={ap} data-game-tooltip={`${actor.name} AP ${ap}/${cap}: each card this foundation receives banks 1 AP. ${actor.name}’s ability cards spend it. AP stays between turns and is lost if ${actor.name} is downed.`}>
+ return <span className="battle-foundation__ap" role="meter" aria-label={`${actor.name} AP`} aria-valuemin={0} aria-valuemax={cap} aria-valuenow={ap}>
   <b>AP {ap}</b><span className="battle-foundation__ap-pips" aria-hidden="true">{Array.from({length:cap},(_,i)=><i key={i} data-on={i<ap || undefined}/>)}</span>
  </span>;
 }

@@ -329,3 +329,56 @@
 .combat-sandbox .battle-field__team[data-team='enemy'] { height:auto; min-height:210px; padding:6px 0; align-content:start; }
 .combat-sandbox .battle-enemy-buffs, .combat-sandbox .battle-party-buffs { height:auto; min-height:44px; max-width:100%; flex-wrap:wrap; flex-shrink:0; }
 .combat-sandbox .battle-buff-icon { flex:0 0 44px; box-sizing:border-box; font-size:24px; }
+
+/* Floating Momentum leaves the central rack free; reserve the FPS strip below it. */
+.combat-sandbox .battle-momentum-overlay {
+ position:fixed; right:max(14px,env(safe-area-inset-right)); bottom:calc(52px + env(safe-area-inset-bottom));
+ z-index:100; width:180px; pointer-events:none;
+}
+.combat-sandbox .battle-momentum-overlay > .momentum-engine { width:100%; min-height:0; }
+.combat-sandbox .battle-momentum-overlay .momentum-engine__chamber { width:180px; height:180px; margin:0; pointer-events:auto; }
+.combat-sandbox .battle-field__middle { grid-template-rows:320px 72px auto; }
+.combat-sandbox .battle-field__status:has(.battle-field__status-actions:empty) { display:none; }
+.combat-sandbox .battle-field__rack {
+ --classic-card-w:min(calc((100cqw - 18px) / 7),calc((100cqh - 3 * var(--battle-peek) - 8px) * 63 / 88));
+}
+.combat-sandbox__fps { bottom:calc(14px + env(safe-area-inset-bottom)); }
+@media(max-width:600px) {
+ .combat-sandbox .battle-momentum-overlay { width:112px; right:max(8px,env(safe-area-inset-right)); }
+ .combat-sandbox .battle-momentum-overlay .momentum-engine__chamber { width:112px; height:112px; }
+ .combat-sandbox .battle-momentum-overlay .momentum-engine__value { font-size:34px; }
+ .combat-sandbox .battle-field__middle { grid-template-rows:240px 64px auto; }
+}
+
+/* Enemy intent badges share the dashed route layer beneath the tableau. */
+.combat-sandbox .battle-field__team[data-team='enemy'] { pointer-events:none; }
+.combat-sandbox .battle-field__team[data-team='enemy'] .battle-enemy-unit > * { pointer-events:auto; }
+.combat-sandbox .battle-target-intent { overflow:visible; pointer-events:auto; }
+.combat-sandbox .battle-target-badge--enemy {
+ display:flex; align-items:center; justify-content:center; gap:4px; width:max-content; max-width:196px; min-height:24px;
+ margin:0 auto; padding:3px 5px; border:1px solid #d3b5ec; border-radius:4px; background:#241a2ef5; color:#e2c9f5;
+ font:11px/1.2 monospace; white-space:nowrap; cursor:help;
+}
+.combat-sandbox .battle-target-badge--enemy .battle-enemy-intent__icon { font-size:14px; }
+.combat-sandbox .battle-target-badge--enemy img { width:16px;height:18px; }
+
+/* Indominable remains visible above its owner, including before its first stack. */
+.combat-sandbox .battle-buff-icon[data-buff='indominable'] { position:relative; }
+.combat-sandbox .battle-buff-icon[data-buff='indominable'] > span {
+ position:absolute; right:-5px; bottom:-3px; min-width:18px; padding:1px 4px; border:1px solid #d3b5ec;
+ border-radius:9px; background:#241a2e; color:#f1dfff; font:12px/16px monospace; text-align:center;
+}
+
+/* Give every covered rank its full ink height before the next card overlaps it. */
+.combat-sandbox .battle-field__tableau { --battle-peek:48px; }
+.combat-sandbox .battle-field__rack [data-buried] .proto-card-header {
+ position:absolute; top:6px; left:8px; right:6px;
+}
+.combat-sandbox .battle-field__rack [data-buried] .proto-card-rank {
+ margin:0; padding:2px 4px; font-size:28px; line-height:1;
+}
+@media(max-width:600px) {
+ .combat-sandbox .battle-field__tableau { --battle-peek:42px; }
+ .combat-sandbox .battle-field__rack [data-buried] .proto-card-header { top:5px; left:4px; right:4px; }
+ .combat-sandbox .battle-field__rack [data-buried] .proto-card-rank { font-size:24px; padding:2px; }
+}

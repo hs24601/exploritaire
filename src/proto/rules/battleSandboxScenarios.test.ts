@@ -67,7 +67,7 @@ describe('combat training scenarios',()=>{
  });
 });
 
-it('999 gains inert persistent stacks only from legal enemy tableau receipts',()=>{
+it('999 gains persistent stacks only from legal enemy tableau receipts',()=>{
  let s=createCombatSandboxScenario('999');
  expect(s.foes[0]).toMatchObject({name:'Indefatigable Enemy',hp:999,indominable:0,intent:'tableau'});
  expect(s.foes[0].profile.maxHp).toBe(999);

@@ -1,3 +1,4 @@
+import { indominableAfterDamage } from './indominable';
 import { AP_CAP, actorAP, defaultStrike, drawCard, foeAlive, actorAlive, setActorTarget, spendAP, type BattleActor, type BattleEvent, type BattleFoe, type BattleState } from './battle';
 import { STATUS_META, STATUS_SKILLS, STATUS_TUNING as T, type StatusId, type StatusSkillId, type UnitStatus } from './battleStatusData';
 import { tutorialById } from './battleTutorialScenarios';
@@ -31,7 +32,7 @@ export const damageFoe = (state: BattleState, foeId: string, amount: number, lab
   const foe = state.foes.find(unit => unit.id === foeId);
   if (!foe || !foeAlive(foe) || amount <= 0) return state;
   const hp = Math.max(0, foe.hp - amount);
-  const next = patchFoe(state, foeId, unit => hp > 0 ? { ...unit, hp } : { ...unit, hp, stagger: 0, staggered: 0, staggerStage: 0, statuses: [] });
+  const next = patchFoe(state, foeId, unit => hp > 0 ? { ...unit, ...indominableAfterDamage(unit,hp), hp } : { ...unit, ...indominableAfterDamage(unit,hp), hp, stagger: 0, staggered: 0, staggerStage: 0, statuses: [] });
   const events: Omit<BattleEvent, 'id'>[] = [{ kind, targetId: foeId, sourceId, amount, label }];
   if (hp === 0) events.push({ kind: 'ko', targetId: foeId, sourceId });
   const withHits = pushEvents(next, events);
