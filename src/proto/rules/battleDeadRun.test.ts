@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createCombatSandboxScenario, endPlayerTurn, tableauWidth, tickBattle, withdrawPlayer, type BattleState } from './battle';
+import { canUseMomentumSkill, createCombatSandboxScenario, endPlayerTurn, tableauWidth, tickBattle, useMomentumSkill, withdrawPlayer, type BattleState } from './battle';
 import { advanceIntent, canPityFlip, hasHoldSlot, hasPityDraw, heldCard, heldReceivers, holdCard, INTENT_RECEIVER, openPartyTurn, pityFlip, playHeld, playOnIntent, tableauReceivers } from './battleDeadRun';
 import { DEEP_BREATH } from './battleTutorialScenarios';
 import type { Card } from '../protoState';
@@ -99,7 +99,7 @@ describe('dead-run scenarios', () => {
   it('1000 is a 999-HP dummy with every fix, a fresh deal per start and a paced enemy turn', () => {
     const a = createCombatSandboxScenario('1000'), b = createCombatSandboxScenario('1000');
     expect(a.foes[0]).toMatchObject({ name: 'Target Dummy', hp: 999 });
-    expect([hasPityDraw(a), hasHoldSlot(a), Boolean(a.tutorial?.intent), tableauWidth(a), a.party.length]).toEqual([true, true, true, 6, 1]);
+    expect([hasPityDraw(a), hasHoldSlot(a), Boolean(a.tutorial?.intent), tableauWidth(a), a.party.length]).toEqual([true, false, true, 6, 1]);
     expect(a.columns.flat().map(card => card.id)).not.toEqual(b.columns.flat().map(card => card.id));
     const pending = withdrawPlayer(a, 1);
     expect(pending.turn).toBe('enemy');expect(pending.columns).toBe(a.columns);
@@ -108,5 +108,17 @@ describe('dead-run scenarios', () => {
     const back = tickBattle(waiting, 2);
     expect(back.turn).toBe('party');expect(back.pendingRedeal).toBeUndefined();expect(back.reposition?.by).toBe('party');
     expect(hero(back).hp).toBe(hero(a).hp);
+  });
+
+  it('in 1000 the 6-AP Hold card opens Hero’s hold slot once, for the rest of the fight', () => {
+    const start = createCombatSandboxScenario('1000');
+    expect(canUseMomentumSkill(start, 'hold', 'hero')).toBe(false);
+    const rich: BattleState = { ...start, party: start.party.map(actor => ({ ...actor, charge: 6 })) };
+    expect(canUseMomentumSkill(rich, 'hold', 'hero')).toBe(true);
+    const open = useMomentumSkill(rich, 'hold', 'hero');
+    expect(hasHoldSlot(open, 'hero')).toBe(true);
+    expect(hero(open).charge).toBe(0);
+    expect(canUseMomentumSkill({ ...open, party: open.party.map(actor => ({ ...actor, charge: 6 })) }, 'hold', 'hero')).toBe(false);
+    expect(hasHoldSlot(endPlayerTurn(open), 'hero')).toBe(true);
   });
 });

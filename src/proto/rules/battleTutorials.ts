@@ -25,6 +25,8 @@ export type TutorialRuntime = {
   /** Dead-run fixes (rules/battleDeadRun.ts): the intent card, parked cards by Kin, and this turn's pity flip. */
   intent?: IntentCard;
   holds?: Partial<Record<string, Card>>;
+  /** Kin whose Hold ability opened a hold slot for the rest of the fight. */
+  holdsOpen?: string[];
   pity?: 'ready' | 'spent';
 };
 

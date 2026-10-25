@@ -53,11 +53,15 @@ export type TutorialDef = {
   enemyTurnSeconds?: number;
   /** A fresh random deal on every start and restart instead of the authored seed. */
   randomSeed?: boolean;
+  /** Tapping a Kin's foundation opens its ability radial (unwired elsewhere in combatsbx). */
+  kinRadials?: boolean;
+  /** Drop the empty foundation placeholder beside the party. */
+  hideEmptySlot?: boolean;
   insight: { actorId: 'hero' | 'mochi'; intent: string[]; solve: string[]; why: string[] };
 };
 
 const ALL_SKILLS = ['bash', 'ember-rage', 'focus-fire', 'bite', 'takedown', 'vice-grip', 'frost-fang', 'thunder-bark', 'guard', 'regen', 'foresight',
-  'pounce', 'sticky-paws', 'lacerate', 'puddle-pounce', 'ember-swipe', 'haste', 'mire', 'wild',
+  'hold', 'pounce', 'sticky-paws', 'lacerate', 'puddle-pounce', 'ember-swipe', 'haste', 'mire', 'wild',
   'cir-hearthflame', 'cir-ember-claws', 'cir-meteor'] as const;
 
 /** Shared reading of the AP model, reused across Insight pages. */
@@ -367,18 +371,18 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
         'It costs AP that Hero could spend on Bash, and the cards it burns earn nothing, so it is only worth it when the run it opens is longer than the cards it removes.',
       ] } },
   ...DEAD_RUN_SCENARIOS,
-  { id: '1000', name: '1000: Target Dummy', seed: 1000, randomSeed: true, skills: [], columns: 6, party: ['hero'], partyHp: 99, enemyTurnSeconds: 2.5,
+  { id: '1000', name: '1000: Target Dummy', seed: 1000, randomSeed: true, skills: ['hold'], kinRadials: true, hideEmptySlot: true, columns: 6, party: ['hero'], partyHp: 99, enemyTurnSeconds: 2.5,
     foes: [{ key: 'target-dummy', name: 'Target Dummy', hp: 999, damage: 0, staggerMax: 6 }],
-    intentCard: DEEP_BREATH, pityDraw: true, holdSlot: true,
+    intentCard: DEEP_BREATH, pityDraw: true,
     insight: { actorId: 'hero',
       intent: [
         'A test range for the dead-run systems, built like 999: a 999-HP Target Dummy that never strikes, so you can try every rule without the fight ending. Hero fights alone on six columns, with a fresh random deal on every start and restart. Hero has 99 HP.',
-        'Everything is on at once: the Deep Breath intent card (4 pips; up to 2 enemy plays and 1 passive pip a turn; it fires for 4 on every Kin), the pity flip, the hold slot, the delayed-redeal Withdraw and the board-plan markers.',
+        'Everything is on at once: the Deep Breath intent card (4 pips; up to 2 enemy plays and 1 passive pip a turn; it fires for 4 on every Kin), the pity flip, the delayed-redeal Withdraw and the board-plan markers. The hold slot is an ability here: Hero’s Hold card (6 AP) opens it for the rest of the fight.',
         'The enemy turn plays out for a few seconds on the board, so you can watch the plans before they resolve.',
       ],
       solve: [
         'Deep Breath: tap or drag a card one rank from it to remove a pip (1 Momentum, no AP or Nip). Red outlines mark the exposed cards the dummy will play onto it next turn; take them first to starve it.',
-        'Hold: drag a card Hero could take right now into Hold, then drag or tap it out on a later turn. Parking also exposes the card underneath without changing Hero’s value.',
+        'Hold: tap Hero’s foundation to open her abilities and play Hold once she has banked 6 AP (1 per card she receives). The Hold slot appears beside her. Drag a card she could take right now into it, then drag or tap it out on a later turn. Parking also exposes the card underneath without changing Hero’s value.',
         'Pity flip: when a turn opens with nothing legal, PITY FLIP turns one free stock card onto Hero’s foundation.',
         'Withdraw: pick a row and your turn ends. A mint band marks that row while the dummy acts on the current board, and your next turn opens on it.',
       ],

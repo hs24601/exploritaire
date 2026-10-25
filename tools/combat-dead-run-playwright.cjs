@@ -73,7 +73,8 @@ async function dragTop(page, column, target) {
         const intent = page.locator('.battle-intent-slot');
         if ((await intent.count()) !== (id === '019' ? 0 : 1)) failures.push(`${tag}: intent card count`);
         if ((await page.locator('.battle-pity-button').count()) !== (['022', '024', '1000'].includes(id) ? 1 : 0)) failures.push(`${tag}: pity button count`);
-        if ((await page.locator('.battle-hold-slot').count()) !== (['023', '024', '1000'].includes(id) ? 1 : 0)) failures.push(`${tag}: hold slot count`);
+        if ((await page.locator('.battle-hold-slot').count()) !== (['023', '024'].includes(id) ? 1 : 0)) failures.push(`${tag}: hold slot count`);
+        if ((await page.locator('[data-battle-slot="empty"]').count()) !== (id === '1000' ? 0 : 1)) failures.push(`${tag}: empty foundation count`);
 
         // Play one exposed card onto the intent: a pip comes off only if there was one, so check the rank instead.
         // 1000 deals at random, so only the authored deals are played through here.
@@ -107,6 +108,12 @@ async function dragTop(page, column, target) {
         }
         // 1000 paces its enemy turn: a Withdraw row stays marked on the old board until the redeal lands.
         if (id === '1000') {
+          // Hero's radial holds the 6-AP Hold card; it opens the hold slot once cast.
+          await page.locator('[data-battle-actor="hero"]').click();
+          await page.locator('.ability-fan [data-skill="hold"]').first().waitFor({ timeout: 5000 }).catch(() => failures.push(`${tag}: no Hold card in Hero's radial`));
+          await page.screenshot({ path: `${OUT}/${tag}-hero-radial.png` });
+          await page.keyboard.press('Escape');
+          await page.locator('.ability-fan').waitFor({ state: 'detached' }).catch(() => failures.push(`${tag}: radial did not close`));
           await page.locator('.battle-withdraw-button').click();
           await page.locator('.ability-fan__target[data-skill-target="withdraw-row:1"]').click();
           await page.waitForTimeout(400);

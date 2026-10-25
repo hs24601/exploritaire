@@ -19,7 +19,9 @@ export const holdOwner = (receiverId: string) => receiverId.startsWith('hold:') 
 
 const scenario = (state: BattleState) => tutorialById(state.tutorial?.id);
 export const intentDef = (state: BattleState): IntentCardDef | undefined => scenario(state)?.intentCard;
-export const hasHoldSlot = (state: BattleState) => Boolean(scenario(state)?.holdSlot);
+/** A Kin has a hold slot when the scenario grants one, or once its Hold ability opened it; with no Kin named, whether any slot exists. */
+export const hasHoldSlot = (state: BattleState, actorId?: string) => Boolean(scenario(state)?.holdSlot ||
+  (actorId ? state.tutorial?.holdsOpen?.includes(actorId) : state.tutorial?.holdsOpen?.length));
 export const hasPityDraw = (state: BattleState) => Boolean(scenario(state)?.pityDraw);
 const partyTurn = (state: BattleState) => state.turn === 'party' && !state.result;
 
@@ -54,7 +56,7 @@ export const heldCard = (state: BattleState, actorId: string) => state.tutorial?
 
 /** Only a card the Kin could play right now may be parked, and only into an empty slot. */
 export const canHold = (state: BattleState, actorId: string, card: Card | undefined | null) =>
-  Boolean(card && hasHoldSlot(state) && state.tutorial && !heldCard(state, actorId) && canPlay(state, actorId, card));
+  Boolean(card && hasHoldSlot(state, actorId) && state.tutorial && !heldCard(state, actorId) && canPlay(state, actorId, card));
 
 export function holdCard(state: BattleState, column: number, actorId: string): BattleState {
   const cards = state.columns[column], card = cards?.[cards.length - 1];

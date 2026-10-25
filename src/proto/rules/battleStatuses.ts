@@ -120,6 +120,8 @@ export const canUseStatusSkill = (state: BattleState, id: StatusSkillId, targetI
   if (actorAP(state, caster.id) < skill.cost) return false;
   // Ember Rage: once per turn, and while raging Hero has only her chip hits.
   if (isRaging(state, caster.id)) return false;
+  // Hold opens its slot once; the slot then lasts the fight.
+  if (id === 'hold' && state.tutorial.holdsOpen?.includes(caster.id)) return false;
   if (skill.target === 'card') return targetId ? focusFireCards(state, targetId).length > 0 : state.columns.some(cards => cards.length > 0);
   const targets = statusSkillTargets(state, id);
   return targetId ? targets.some(unit => unit.id === targetId) : targets.length > 0;
@@ -184,6 +186,7 @@ export const useStatusSkill = (state: BattleState, id: StatusSkillId, targetId?:
     case 'regen': next = patchActor(next, targetId, actor => withStatus(actor, { id: 'regen', turns: 2 })); break;
     case 'guard': next = patchActor(next, targetId, actor => withStatus(actor, { id: 'guard' })); break;
     case 'foresight': next = patchActor(next, targetId, actor => withStatus(actor, { id: 'foresight', turns: 2 })); break;
+    case 'hold': next = { ...next, tutorial: { ...next.tutorial!, holdsOpen: [...(next.tutorial!.holdsOpen ?? []), caster] } }; break;
   }
   return { ...next, started: true, result: outcome(next) };
 };

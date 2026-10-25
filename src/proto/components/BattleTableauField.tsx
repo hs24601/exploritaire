@@ -465,6 +465,14 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   };
 
   /** Several Kin radials can be open together; the Momentum radial is exclusive. */
+  const kinRadials = Boolean(sandbox && tutorialById(battle.tutorial?.id)?.kinRadials);
+  /** Several Kin radials can be open together; the Momentum radial is exclusive. */
+  const toggleKinRadial = (actorId: string) => {
+    if (nightBlocking || battle.result || paused || holding || globalPaused || abilityCast) return;
+    const open = skillMenuOpen ? skillOwners : [];
+    const owners = open.includes(actorId) ? open.filter(id => id !== actorId) : [...open, actorId];
+    cancel(); setSelection(null); setSkillOwners(owners); setSkillMenuOpen(owners.length > 0);
+  };
   const performManeuver = (action: (state: BattleState)=>BattleState, fromAbility=false) => {
     if(battlePaused && !fromAbility)return;
     const current=latest.current,next=action(current);if(next===current)return;
@@ -549,8 +557,8 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
             if(suppressTargetClick.current){suppressTargetClick.current=false;return;}
             if (aim) { if (previews.get(actor.id) && !paused) foeProps(actor.id).onClick(); return; }
             if (selection) { choose(actor.id); return; }
-            // Sandbox ability bindings are unwired; card receipt selection remains available.
-            if (sandbox) return;
+            // Sandbox ability bindings are unwired, except in scenarios that open Kin radials (1000's Hold); card receipt selection remains available.
+            if (sandbox) { if (kinRadials && actor.controller!=='npc') toggleKinRadial(actor.id); return; }
             requestHoloDeviceTilt();
             setInspection({ id: actor.id, name: actor.name, anchor: event.currentTarget });
           }} aria-haspopup={sandbox?undefined:'dialog'} aria-label={`${actor.name} foundation${selection?.actorIds.includes(actor.id) ? ' · choose for selected card' : ''}`} style={rig.surface(55, 60)}>
@@ -586,12 +594,12 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
 
       </div>;
     })}
-    {sandbox && hasHoldSlot(battle) && battle.party.map(actor => { const held = heldCard(battle, actor.id); return <HoldSlot key={'hold-'+actor.id} actorId={actor.id} card={held}
+    {sandbox && battle.party.filter(actor => hasHoldSlot(battle, actor.id)).map(actor => { const held = heldCard(battle, actor.id); return <HoldSlot key={'hold-'+actor.id} actorId={actor.id} card={held}
       targetable={Boolean(selection?.actorIds.includes(holdReceiver(actor.id)))} concealValue={concealTableau} disabled={battlePaused || !heldReceivers(battle, actor.id).length}
       cardRef={node => { if (!held) return; if (node) { cardRefs.current.set(held.id,node); node.dataset.battleCard=held.id; node.dataset.battleRank=String(held.rank); } else cardRefs.current.delete(held.id); }}
       onChoose={() => choose(holdReceiver(actor.id))} onActivate={source => activateHeld(actor.id, source)}
       onDropActor={target => { const id = target.dataset.battleActor, source = held && cardRefs.current.get(held.id); if (id && source && !battlePaused) playFromHold(actor.id, source, id); }} />; })}
-    {sandbox && !battle.party.some(a=>a.controller==='npc') && <div className="battle-field__slot" data-battle-slot="empty">
+    {sandbox && !battle.party.some(a=>a.controller==='npc') && !tutorialById(battle.tutorial?.id)?.hideEmptySlot && !(battle.party.length > 1 && battle.party.some(actor => hasHoldSlot(battle, actor.id))) && <div className="battle-field__slot" data-battle-slot="empty">
       <div className="battle-field__foundation battle-field__foundation--empty" role="img" aria-label="Empty player foundation">
         <span aria-hidden="true">◇</span>
         <span>Empty</span>
@@ -725,7 +733,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
         {partyRow}
       </div>
     </TableauScene>
-    {sandbox && skillMenuOpen && !battle.result && <MomentumSkillRadial initialSkill={directWithdraw?'withdraw':undefined} onWithdrawSelecting={setWithdrawSelecting} key={skillOwners.length?'kin':'momentum'} owners={skillOwners} valueStyle={momentumValueStyle} battle={battle} fieldRef={fieldRef} disabled={paused || holding || globalPaused && (!combatInspection.active || gameTime.isPlayerPaused())} onClose={()=>{setSkillMenuOpen(false);setSkillOwners([]);}} onChoose={(id,targetId)=>{if(id==='withdraw'){setSkillMenuOpen(false);performManeuver(state=>useMomentumSkill(state,id,targetId),true);return;}const card=document.querySelector<HTMLElement>('.ability-fan__drag, .ability-fan__armed-preview') ?? document.querySelector<HTMLElement>(`.ability-fan button[data-skill="${id}"]`);if(!card)return;setAbilityCast({id,targetId,card:card.cloneNode(true) as HTMLElement,origin:card.getBoundingClientRect()});setSkillMenuOpen(false);setSelection(null);}} />}
+    {sandbox && skillMenuOpen && !battle.result && <MomentumSkillRadial initialSkill={directWithdraw?'withdraw':undefined} onWithdrawSelecting={setWithdrawSelecting} key={skillOwners.length?'kin':'momentum'} owners={skillOwners} onToggleOwner={kinRadials ? toggleKinRadial : undefined} valueStyle={momentumValueStyle} battle={battle} fieldRef={fieldRef} disabled={paused || holding || globalPaused && (!combatInspection.active || gameTime.isPlayerPaused())} onClose={()=>{setSkillMenuOpen(false);setSkillOwners([]);}} onChoose={(id,targetId)=>{if(id==='withdraw'){setSkillMenuOpen(false);performManeuver(state=>useMomentumSkill(state,id,targetId),true);return;}const card=document.querySelector<HTMLElement>('.ability-fan__drag, .ability-fan__armed-preview') ?? document.querySelector<HTMLElement>(`.ability-fan button[data-skill="${id}"]`);if(!card)return;setAbilityCast({id,targetId,card:card.cloneNode(true) as HTMLElement,origin:card.getBoundingClientRect()});setSkillMenuOpen(false);setSelection(null);}} />}
     {cirInspection && battle.cir?.status==='bound' && <CirFamiliarInspector kin={battle.cir.actorId} disabled={paused || holding || gameTime.isPlayerPaused()} onClose={()=>setCirInspection(false)} onReturn={()=>{setBattle(returnCirToDeck);setCirInspection(false);}} />}
     {abilityCast && <MomentumAbilityFlight cast={abilityCast} fieldRef={fieldRef} paused={paused || holding || globalPaused} onImpact={()=>{if(abilityCast.id==='focus-fire')burnCardsFx(focusFireCards(latest.current,abilityCast.targetId).flatMap(card=>cardRefs.current.get(card.id) ?? []));setBattle(state=>useMomentumSkill(state,abilityCast.id,abilityCast.targetId));}} onComplete={()=>setAbilityCast(null)} />}
     {!sandbox && <BattleDamageCallouts battle={battle} fieldRef={fieldRef} paused={battlePaused} />}
