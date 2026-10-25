@@ -1,5 +1,7 @@
 # Exploritaire development baseline
 
+- Centered combat foundations (Eric, 2026-10-25): the combatsbx party row is one centered row in party order (Kin, hold slots, the empty well) and stays centered as the foundation count changes: 1000 with Hero alone, 019–024 with Hero and the empty well, Hold appearing, Mochi joining, Banks in 007.
+
 - Scenario 1000 Hold ability (Eric, 2026-10-25): 1000 has no empty foundation placeholder and starts without a hold slot. Tapping Hero’s foundation opens her ability radial (wired for 1000 only) with a Hold card (6 Hero AP, self-cast, once per fight) that opens her hold slot for the rest of the fight; the slot then behaves as in 023/024. Hold is also in the 009 playground hand.
 
 - Scenario 1000 Target Dummy (Eric, 2026-10-25): a combatsbx test range built like 999: a 999-HP Target Dummy that never strikes, Hero alone (99 HP) on six columns with a fresh random deal on every start and restart. Every dead-run system is on: the Deep Breath intent card, pity flip, hold slot, delayed-redeal Withdraw and board-plan markers. Its enemy turn is paced (`enemyTurnSeconds`, 2.5 s of real time) so the pending Withdraw row stays marked on the old board before the redeal lands. It carries a long-form Insight.

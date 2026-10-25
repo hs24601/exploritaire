@@ -103,8 +103,6 @@
 .combat-sandbox .battle-field__solver-dock { justify-self:start; max-width:100%; min-width:0; }
 .combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:minmax(0,150px) minmax(90px,130px) minmax(0,150px); gap:6px 12px; }
 .combat-sandbox .battle-field__team[data-team='party'] > .momentum-engine { grid-column:3; grid-row:1; }
-.combat-sandbox [data-battle-slot='hero'] { grid-column:1; grid-row:1; }
-.combat-sandbox [data-battle-slot='mochi'] { grid-column:3; grid-row:1; }
 .combat-sandbox .battle-field__status { flex-wrap:wrap; }
 .combat-sandbox .battle-field__status .battle-withdraw { min-height:44px; padding:7px 12px; border:1px solid #99b8b2; border-radius:5px; background:#1c3437; color:#e1efeb; }
 .battle-withdraw-reaction { flex:1 0 100%; display:flex; gap:7px; flex-wrap:wrap; align-items:center; padding:9px; border:1px solid #d6b07b; border-radius:7px; background:linear-gradient(120deg,#382b22,#201c2c); }
@@ -129,9 +127,7 @@
 
 /* The shared engine belongs to team controls; actor foundations remain adjacent. */
 .combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:repeat(3,minmax(0,150px)); gap:8px; }
-.combat-sandbox [data-battle-slot='hero'] { grid-column:1; }
-.combat-sandbox [data-battle-slot='mochi'] { grid-column:2; }
-.combat-sandbox [data-battle-slot='empty'] { grid-column:3; grid-row:1; width:100%; }
+.combat-sandbox [data-battle-slot='empty'] { width:100%; }
 .combat-sandbox .battle-field__foundation--empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; border-style:dashed; border-color:#71857980; background:#17272355; color:#91a397; cursor:default; touch-action:auto; font:11px/1.2 monospace; }
 .battle-field__foundation--empty > span:first-child { font:30px/1 Georgia,serif; opacity:.6; }
 .combat-sandbox .battle-field__status { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; align-items:center; }
@@ -196,7 +192,8 @@
 .battle-debuff-icon { border-color:#ffd37f; background:radial-gradient(circle,#59402e,#292032); }
 .battle-field[data-combat-paused] .battle-stagger-halo .battle-stagger-orbit { animation-play-state:paused; }
 @media (prefers-reduced-motion:reduce) { .battle-stagger-halo .battle-stagger-orbit { animation:none; transform:rotateX(62deg) rotateZ(-14deg); } }
-.combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:repeat(3,minmax(0,232px)); }
+/* Foundations fill one centered row in party order (Kin, hold slots, empty well), so it stays centered at any count. */
+.combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:minmax(0,232px); justify-content:center; }
 .combat-sandbox .battle-field__team[data-team='enemy'] { --slot-w:232px; }
 .combat-sandbox .battle-foe,.combat-sandbox .battle-field__foundation.battle-foundation--unified { display:grid; grid-template-columns:56px minmax(0,1fr) 34px; grid-template-areas:'name name name' 'figure bars value'; grid-template-rows:22px 64px; gap:4px 6px; padding:6px; width:232px; max-width:100%; height:106px; min-height:106px; border:2px solid #b9a178; border-bottom-width:3px; border-radius:14px; background:linear-gradient(145deg,#2a1d33ed,#110a17fa); color:#fff0d0; box-shadow:0 4px 0 #020708; }
 .combat-sandbox .battle-field__foundation.battle-foundation--unified { width:100%; }
@@ -207,7 +204,7 @@
 .battle-party-buffs { height:44px; display:flex; align-items:center; justify-content:flex-start; gap:4px; }
 .combat-sandbox .battle-field__foundation--empty { margin-top:44px!important; height:106px!important; }
 @media(max-width:600px) {
- .combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+ .combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { grid-auto-columns:minmax(0,1fr); gap:5px; }
  .combat-sandbox .battle-field__team[data-team='enemy'] { --slot-w:160px; }
  .combat-sandbox .battle-foe,.combat-sandbox .battle-field__foundation.battle-foundation--unified { width:160px; grid-template-columns:30px minmax(0,1fr) 20px; grid-template-rows:18px 56px; gap:3px; padding:4px; height:90px; min-height:90px; }
  .combat-sandbox .battle-foundation--unified .battle-field__actor-card,.combat-sandbox .battle-foe__figure,.combat-sandbox .battle-foundation--unified .battle-field__actor-card img,.combat-sandbox .battle-field__khad-root { width:30px; height:38px; }

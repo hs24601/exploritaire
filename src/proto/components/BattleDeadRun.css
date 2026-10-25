@@ -14,10 +14,8 @@
 @media (prefers-reduced-motion: reduce) { .battle-intent-slot[data-full='true'] .battle-intent-slot__pips > i[data-on] { animation:none; } }
 .battle-field[data-combat-paused] .battle-intent-slot__pips > i { animation-play-state:paused; }
 
-/* Hold slot: sits beside Hero in the party row, styled like the empty foundation well. */
-.combat-sandbox [data-battle-slot^='hold:'] { grid-column:2; grid-row:1; align-self:end; width:100%; }
-/* With Mochi in the party, the hold takes the empty foundation's place. */
-.combat-sandbox [data-battle-slot='mochi'] ~ [data-battle-slot^='hold:'] { grid-column:3; }
+/* Hold slot: follows the Kin in the centered party row, styled like the empty foundation well. */
+.combat-sandbox [data-battle-slot^='hold:'] { align-self:end; width:100%; }
 .combat-sandbox .battle-hold-slot { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; height:100%; box-sizing:border-box; padding:6px; border-style:dashed; border-color:#71857980; background:#17272355; cursor:default; touch-action:auto; }
 .battle-hold-slot__label { cursor:help; color:#c7d8c9; font:bold 16px/1 monospace; letter-spacing:.06em; text-transform:uppercase; }
 .battle-hold-slot__card { position:relative; width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }
