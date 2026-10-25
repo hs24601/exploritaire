@@ -20,6 +20,8 @@ export type TutorialRuntime = {
   lastReceiver?: string;
   /** Abilities played this party turn (Stifling Sap allows one). */
   abilitiesThisTurn?: number;
+  /** Seconds left before a paced enemy turn resolves (TutorialDef.enemyTurnSeconds). */
+  enemyClock?: number;
   /** Dead-run fixes (rules/battleDeadRun.ts): the intent card, parked cards by Kin, and this turn's pity flip. */
   intent?: IntentCard;
   holds?: Partial<Record<string, Card>>;
@@ -43,11 +45,11 @@ export function spawnTutorialFoe(def: TutorialDef, foe: TutorialFoeDef, wave: nu
 }
 
 export function createTutorialScenario(id: TutorialScenarioId): BattleState {
-  const def = tutorialById(id)!, base = createStaggerSandbox(), COLUMNS = def.columns ?? 7;
+  const def = tutorialById(id)!, base = createStaggerSandbox(), COLUMNS = def.columns ?? 7, seed = def.randomSeed ? base.seed : def.seed;
   const columns = def.deal ? def.deal.map((ranks, c) => ranks.map((rank, r) => ({ id: `tutorial-${id}-${c}-${r}`, rank })))
-    : Array.from({ length: COLUMNS }, (_, c) => Array.from({ length: ROWS }, (_, r) => stockCard(def.seed, c * ROWS + r)));
+    : Array.from({ length: COLUMNS }, (_, c) => Array.from({ length: ROWS }, (_, r) => stockCard(seed, c * ROWS + r)));
   const foes = def.foes.map((foe, slot) => spawnTutorialFoe(def, foe, 1, slot, base.foes[0]));
-  return openPartyTurn(dealIntent({ ...base, sandboxScenario: id, cir: { status: 'available' }, round: 1, seed: def.seed, effectSeed: def.seed,
+  return openPartyTurn(dealIntent({ ...base, sandboxScenario: id, cir: { status: 'available' }, round: 1, seed, effectSeed: seed,
     rules: { ...base.rules, columns: COLUMNS }, columns, stock: [], dealt: COLUMNS * ROWS, foes,
     tutorial: { id, cleared: 0, waves: Object.fromEntries(def.foes.map(foe => [foe.key, 1])) },
     momentum: { value: def.momentum ?? 0, earned: 0, spent: 0, sequence: 0, decayEnabled: def.decay ?? true },
@@ -188,6 +190,19 @@ function regrow(state: BattleState, foeId: string): BattleState {
 }
 
 /** The whole enemy team acts once, then control returns to the party. */
+/** The party hands off: paced scenarios hold the enemy turn on the board for a few seconds first (tickTutorialEnemyTurn). */
+export function beginTutorialEnemyTurn(state: BattleState): BattleState {
+  const seconds = tutorialById(state.tutorial?.id)?.enemyTurnSeconds;
+  return seconds && state.tutorial ? { ...state, turn: 'enemy', tutorial: { ...state.tutorial, enemyClock: seconds } } : tutorialEnemyTurn(state);
+}
+
+/** A paced enemy turn counts down in real seconds, then resolves at once. */
+export function tickTutorialEnemyTurn(state: BattleState, dt: number): BattleState {
+  const clock = state.tutorial?.enemyClock;
+  if (clock === undefined || state.turn !== 'enemy') return state;
+  return clock - dt > 0 ? { ...state, tutorial: { ...state.tutorial!, enemyClock: clock - dt } } : tutorialEnemyTurn({ ...state, tutorial: { ...state.tutorial!, enemyClock: undefined } });
+}
+
 export function tutorialEnemyTurn(state: BattleState): BattleState {
   let next = recoverDisarmed({ ...expirePartyTurn(state), foes: state.foes.map(foe => foe.turnSpent ? { ...foe, turnSpent: false } : foe) }, 'foes');
   const ownerSkips = intentOwnerSkips(next.foes[0]);

@@ -29,8 +29,8 @@ describe('tutorial scenarios', () => {
       expect(state.tutorial?.id).toBe(def.id);
       expect(state.turn).toBe('party');
       expect(state.party.filter(actor => hasStatus(actor, 'insight')).map(actor => actor.id)).toEqual([def.insight.actorId]);
-      // 018 opens locked on purpose: Focus Fire is the way in.
-      if (def.id !== '018') expect(state.columns.some(cards => eligibleActors(state, cards[cards.length - 1]).length > 0)).toBe(true);
+      // 018 opens locked on purpose (Focus Fire is the way in); random-deal ranges may open dead, which the pity flip covers.
+      if (def.id !== '018' && !def.randomSeed) expect(state.columns.some(cards => eligibleActors(state, cards[cards.length - 1]).length > 0)).toBe(true);
       expect(state.foes.map(unit => unit.name)).toEqual(def.foes.map(entry => entry.name));
       for (const id of def.skills) expect(canUseMomentumSkill(rich(state), id as never)).toBe(true);
       for (const insight of [def.insight.intent, def.insight.solve, def.insight.why]) expect(insight.length).toBeGreaterThan(0);

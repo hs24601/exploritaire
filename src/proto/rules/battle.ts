@@ -10,7 +10,7 @@ import { MAX_CHARGE, combatMovesFor, gripDuration, SPIRITS, attackFor, type Abil
 import { EMBER_RAGE, STATUS_SKILLS, isStatusSkill, type UnitStatus } from './battleStatusData';
 import { applyAbilityOverrides } from './abilityOverrides';
 import { tutorialById, type TutorialScenarioId } from './battleTutorialScenarios';
-import { afterTutorialReceipt, createTutorialScenario, settleTutorial, tutorialEnemyTurn, tutorialReceiptLegal, tutorialStrike, type TutorialRuntime } from './battleTutorials';
+import { afterTutorialReceipt, beginTutorialEnemyTurn, createTutorialScenario, settleTutorial, tickTutorialEnemyTurn, tutorialReceiptLegal, tutorialStrike, type TutorialRuntime } from './battleTutorials';
 import { abilitySlotSpent, barkDamage, canUseStatusSkill, fireOn, isRaging, isSilenced, statusSkillTargets, tutorialAllowsSkill, useStatusSkill } from './battleStatuses';
 
 // The Dark Woods battle: party actors build charge by playing tableau cards
@@ -371,7 +371,7 @@ const applyPendingRedeal=(state:BattleState):BattleState=>{
 };
 const startPartyTurn=(rawState:BattleState):BattleState=>{const state=applyPendingRedeal(rawState);return recoverDisarmed({...state,party:state.party.some(actor=>actor.turnSpent)?state.party.map(actor=>actor.turnSpent?{...actor,turnSpent:false}:actor):state.party},'party');};
 const beginEnemyTurn = (state: BattleState): BattleState => {
- if(state.tutorial)return tutorialEnemyTurn(state);
+ if(state.tutorial)return beginTutorialEnemyTurn(state);
  state=recoverDisarmed({...state,foes:state.foes.some(foe=>foe.turnSpent)?state.foes.map(foe=>foe.turnSpent?{...foe,turnSpent:false}:foe):state.foes},'foes');
  const foe=state.foes.find(foe=>foeAlive(foe) && !foe.turnSpent && foe.intent==='withdraw');
  // Attacking sandbox foes respond once at handoff; the real-time encounter
@@ -742,6 +742,8 @@ export const enemyTarget = (state: BattleState) =>
 export const battleTimeScale = (state: BattleState) => state.rules.autoStrike && !state.result && state.foes.some(foe=>foe.hp>0 && foe.staggered>0) ? 0.1 : 1;
 export const tickBattle = (state: BattleState, dt: number): BattleState => {
   if (!state.started || state.result || !Number.isFinite(dt) || dt <= 0) return state;
+  // Paced tutorial enemy turns run on real seconds, unaffected by stagger bullet time.
+  if (state.turn === 'enemy' && state.tutorial?.enemyClock !== undefined) return tickTutorialEnemyTurn(state, dt);
   dt *= battleTimeScale(state);
   // The optional playtest decay affects the reserve only, never enemy actions or stagger.
   if (state.rules.autoStrike) {

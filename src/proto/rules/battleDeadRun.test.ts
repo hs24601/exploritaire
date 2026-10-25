@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createCombatSandboxScenario, endPlayerTurn, tableauWidth, type BattleState } from './battle';
+import { createCombatSandboxScenario, endPlayerTurn, tableauWidth, tickBattle, withdrawPlayer, type BattleState } from './battle';
 import { advanceIntent, canPityFlip, hasHoldSlot, hasPityDraw, heldCard, heldReceivers, holdCard, INTENT_RECEIVER, openPartyTurn, pityFlip, playHeld, playOnIntent, tableauReceivers } from './battleDeadRun';
 import { DEEP_BREATH } from './battleTutorialScenarios';
 import type { Card } from '../protoState';
@@ -94,5 +94,19 @@ describe('dead-run scenarios', () => {
     expect(hero(played)).toMatchObject({ rank: 3, charge: hero(later).charge + 1 });
     expect(played.foes[0].hp).toBeLessThan(later.foes[0].hp);
     expect(playHeld(played, 'hero', INTENT_RECEIVER)).toBe(played);
+  });
+
+  it('1000 is a 999-HP dummy with every fix, a fresh deal per start and a paced enemy turn', () => {
+    const a = createCombatSandboxScenario('1000'), b = createCombatSandboxScenario('1000');
+    expect(a.foes[0]).toMatchObject({ name: 'Target Dummy', hp: 999 });
+    expect([hasPityDraw(a), hasHoldSlot(a), Boolean(a.tutorial?.intent), tableauWidth(a), a.party.length]).toEqual([true, true, true, 6, 1]);
+    expect(a.columns.flat().map(card => card.id)).not.toEqual(b.columns.flat().map(card => card.id));
+    const pending = withdrawPlayer(a, 1);
+    expect(pending.turn).toBe('enemy');expect(pending.columns).toBe(a.columns);
+    const waiting = tickBattle(pending, 1);
+    expect(waiting.turn).toBe('enemy');expect(waiting.columns).toBe(a.columns);
+    const back = tickBattle(waiting, 2);
+    expect(back.turn).toBe('party');expect(back.pendingRedeal).toBeUndefined();expect(back.reposition?.by).toBe('party');
+    expect(hero(back).hp).toBe(hero(a).hp);
   });
 });

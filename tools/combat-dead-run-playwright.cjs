@@ -1,4 +1,4 @@
-// Drives the dead-run combatsbx scenarios (019–024) at desktop sizes: the
+// Drives the dead-run combatsbx scenarios (019–024, and the 1000 range) at desktop sizes: the
 // six-column rack plus the Deep Breath intent card, the hold slot and the pity
 // flip stay inside the viewport without overlaps or text under 16px, and the
 // intent and hold accept real card plays. Screenshots: artifacts/combat-dead-run/.
@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const { findLayoutDefects } = require('./lib/layout-check.cjs');
 
 const BASE = process.env.PROTO_URL ?? 'http://127.0.0.1:5178/proto.html';
-const SCENARIOS = ['019', '020', '021', '022', '023', '024'];
+const SCENARIOS = ['019', '020', '021', '022', '023', '024', '1000'];
 const SIZES = [[1912, 914], [1280, 720]];
 const OUT = 'artifacts/combat-dead-run';
 fs.mkdirSync(OUT, { recursive: true });
@@ -72,11 +72,12 @@ async function dragTop(page, column, target) {
         if (await page.locator('[data-battle-slot="mochi"]').count()) failures.push(`${tag}: Mochi is in the party`);
         const intent = page.locator('.battle-intent-slot');
         if ((await intent.count()) !== (id === '019' ? 0 : 1)) failures.push(`${tag}: intent card count`);
-        if ((await page.locator('.battle-pity-button').count()) !== (['022', '024'].includes(id) ? 1 : 0)) failures.push(`${tag}: pity button count`);
-        if ((await page.locator('.battle-hold-slot').count()) !== (['023', '024'].includes(id) ? 1 : 0)) failures.push(`${tag}: hold slot count`);
+        if ((await page.locator('.battle-pity-button').count()) !== (['022', '024', '1000'].includes(id) ? 1 : 0)) failures.push(`${tag}: pity button count`);
+        if ((await page.locator('.battle-hold-slot').count()) !== (['023', '024', '1000'].includes(id) ? 1 : 0)) failures.push(`${tag}: hold slot count`);
 
         // Play one exposed card onto the intent: a pip comes off only if there was one, so check the rank instead.
-        if (id !== '019' && width === 1912) {
+        // 1000 deals at random, so only the authored deals are played through here.
+        if (!['019', '1000'].includes(id) && width === 1912) {
           const rank = await intentRank(page);
           const fit = (await tops(page)).find(top => top.enabled && adjacent(top.rank, rank));
           if (fit) {
@@ -103,6 +104,20 @@ async function dragTop(page, column, target) {
             await page.waitForTimeout(400);
             if (await page.locator('.battle-hold-slot__card [data-battle-card]').count()) failures.push(`${tag}: held card did not play`);
           } else failures.push(`${tag}: nothing playable to park`);
+        }
+        // 1000 paces its enemy turn: a Withdraw row stays marked on the old board until the redeal lands.
+        if (id === '1000') {
+          await page.locator('.battle-withdraw-button').click();
+          await page.locator('.ability-fan__target[data-skill-target="withdraw-row:1"]').click();
+          await page.waitForTimeout(400);
+          if (await page.locator('.battle-field').getAttribute('data-team-turn') !== 'enemy') failures.push(`${tag}: Withdraw did not hand off`);
+          if (!(await page.locator('.tableau-plan[data-plan-by="party"]').count())) failures.push(`${tag}: no Withdraw row marker`);
+          await page.waitForTimeout(1600);
+          await page.screenshot({ path: `${OUT}/${tag}-withdraw-plan.png` });
+          failures.push(...await checkBoard(page, `${tag} withdraw`, width, height));
+          await page.waitForTimeout(2500);
+          if (await page.locator('.battle-field').getAttribute('data-team-turn') !== 'party') failures.push(`${tag}: enemy turn did not return`);
+          if (await page.locator('.tableau-plan[data-plan-by="party"]').count()) failures.push(`${tag}: Withdraw marker stayed after the redeal`);
         }
         // Insight notes open with all three pages.
         await page.locator('[data-status="insight"]').click();

@@ -24,5 +24,6 @@ export const COMBAT_SANDBOX_SCENARIOS = [
   { id: '023', name: '023: Deep Breath + Hold', hp: 0, thorns: 0 },
   { id: '024', name: '024: All Three Fixes', hp: 0, thorns: 0 },
   { id: '999', name: '999: Dark Tyrant', hp: 999, thorns: 0 },
+  { id: '1000', name: '1000: Target Dummy', hp: 0, thorns: 0 },
 ] as const;
 export type CombatSandboxScenarioId = typeof COMBAT_SANDBOX_SCENARIOS[number]['id'];

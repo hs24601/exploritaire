@@ -6,7 +6,7 @@ import type { StatusSkillId, UnitStatus } from './battleStatusData';
 // and 1 shared Momentum; ability cards cost their owner's AP. Insight copy is
 // the long-form explanation shown by the Insight buff on one party member.
 
-export type TutorialScenarioId = '008' | '009' | '010' | '011' | '012' | '013' | '014' | '015' | '016' | '017' | '018' | '019' | '020' | '021' | '022' | '023' | '024';
+export type TutorialScenarioId = '008' | '009' | '010' | '011' | '012' | '013' | '014' | '015' | '016' | '017' | '018' | '019' | '020' | '021' | '022' | '023' | '024' | '1000';
 export type TutorialFoeDef = {
   key: string; name: string; hp: number; damage: number; staggerMax: number;
   /** Debuff placed on the Kin it strikes. */
@@ -49,6 +49,10 @@ export type TutorialDef = {
   intentCard?: IntentCardDef;
   pityDraw?: boolean;
   holdSlot?: boolean;
+  /** Seconds the enemy turn plays out on the board before it resolves, so its plans can be read. */
+  enemyTurnSeconds?: number;
+  /** A fresh random deal on every start and restart instead of the authored seed. */
+  randomSeed?: boolean;
   insight: { actorId: 'hero' | 'mochi'; intent: string[]; solve: string[]; why: string[] };
 };
 
@@ -363,6 +367,25 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
         'It costs AP that Hero could spend on Bash, and the cards it burns earn nothing, so it is only worth it when the run it opens is longer than the cards it removes.',
       ] } },
   ...DEAD_RUN_SCENARIOS,
+  { id: '1000', name: '1000: Target Dummy', seed: 1000, randomSeed: true, skills: [], columns: 6, party: ['hero'], partyHp: 99, enemyTurnSeconds: 2.5,
+    foes: [{ key: 'target-dummy', name: 'Target Dummy', hp: 999, damage: 0, staggerMax: 6 }],
+    intentCard: DEEP_BREATH, pityDraw: true, holdSlot: true,
+    insight: { actorId: 'hero',
+      intent: [
+        'A test range for the dead-run systems, built like 999: a 999-HP Target Dummy that never strikes, so you can try every rule without the fight ending. Hero fights alone on six columns, with a fresh random deal on every start and restart. Hero has 99 HP.',
+        'Everything is on at once: the Deep Breath intent card (4 pips; up to 2 enemy plays and 1 passive pip a turn; it fires for 4 on every Kin), the pity flip, the hold slot, the delayed-redeal Withdraw and the board-plan markers.',
+        'The enemy turn plays out for a few seconds on the board, so you can watch the plans before they resolve.',
+      ],
+      solve: [
+        'Deep Breath: tap or drag a card one rank from it to remove a pip (1 Momentum, no AP or Nip). Red outlines mark the exposed cards the dummy will play onto it next turn; take them first to starve it.',
+        'Hold: drag a card Hero could take right now into Hold, then drag or tap it out on a later turn. Parking also exposes the card underneath without changing Hero’s value.',
+        'Pity flip: when a turn opens with nothing legal, PITY FLIP turns one free stock card onto Hero’s foundation.',
+        'Withdraw: pick a row and your turn ends. A mint band marks that row while the dummy acts on the current board, and your next turn opens on it.',
+      ],
+      why: [
+        'Scenarios 019–024 each test one permutation against a real threat. This range puts them all together with no pressure, so you can check how they read and feel side by side before tuning them.',
+        'The dummy keeps 999 HP like the Dark Tyrant, so a long session never ends in a win screen. Restart for a new deal.',
+      ] } },
 ];
 
 export const tutorialById = (id: string | undefined) => TUTORIAL_SCENARIOS.find(def => def.id === id);

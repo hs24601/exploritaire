@@ -238,7 +238,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const battlePaused = nightBlocking || presentationPaused;
   const noLegalMoves = !battle.result && battle.turn === 'party' && !anyLegalPlay(battle);
   // Ticks also advance effects and the free-turn countdown; enemy clocks wait for it.
-  const running = battle.started && !battle.result && !battlePaused && (!sandbox || battle.turn==='enemy' && battle.sandboxScenario==='999' || battle.turn==='party' && ((battle.momentum?.recentPlays?.length ?? 0)>0 || battle.momentum?.decayEnabled!==false && (battle.momentum?.value ?? 0)>0));
+  const running = battle.started && !battle.result && !battlePaused && (!sandbox || battle.turn==='enemy' && (battle.sandboxScenario==='999' || battle.tutorial?.enemyClock!==undefined) || battle.turn==='party' && ((battle.momentum?.recentPlays?.length ?? 0)>0 || battle.momentum?.decayEnabled!==false && (battle.momentum?.value ?? 0)>0));
   useEffect(() => {
     if (!running) return;
     let last = gameTime.now();
