@@ -518,7 +518,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     <h3>Enemies</h3>
     {battle.foes.map((foe) => <FoeCard key={foe.id} foe={foe} duskwoodBark={battle.sandboxScenario==='007'} target={target?.name ?? null} targetId={target?.id} events={battle.events}
       enemyTurn={sandbox && battle.turn==='enemy'}
-      statusIcons={battle.tutorial ? <BattleStatusIcons unit={foe} battle={battle} /> : undefined} tutorialIntent={battle.tutorial ? tutorialIntent(foe, target?.name ?? null) : undefined}
+      statusIcons={battle.tutorial ? <BattleStatusIcons unit={foe} battle={battle} /> : undefined} tutorialIntent={battle.tutorial ? tutorialIntent(foe, target?.name ?? null, battle) : undefined}
       preview={previews.get(foe.id) ?? null} focus={aim?.foeId === foe.id} aiming={sandbox ? !battlePaused && !battle.result : Boolean(aim && playableAttack && !paused)}
       targeters={sandbox ? battle.party.filter(a=>a.hp>0 && a.targetId===foe.id).map(a=>({id:a.id,name:a.name})) : undefined}
       interaction={sandbox ? {onClick:()=>{if(targetPicker && !battlePaused){setBattle(b=>setActorTarget(b,targetPicker,foe.id));setTargetPicker(null);}}} : foeProps(foe.id)}

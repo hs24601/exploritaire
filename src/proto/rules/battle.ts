@@ -519,7 +519,8 @@ export const defaultStrike = (state:BattleState,actorId:string,skill?:{damage:nu
  const rawDamage=target.ironbark && target.staggered<=0?0:barkDamage(target,(strike?.damage ?? 1)*multiplier,(ember+rage)*multiplier);
  const damage=trialDamage(target,target.emberPhase===2?ember*multiplier:rawDamage,ember?'Ember Claws':undefined),hp=Math.max(0,target.hp-damage);
  const stage=target.staggerStage ?? 0;
- const stagger=(target.indominable ?? 0)>0?target.stagger:target.sealedHeartwood || target.emberPhase===1 || target.emberPhase===3?0:Math.min(staggerThreshold(target),target.stagger+(strike?.stagger ?? 1));
+ // Indominable stacks and Duskscale Armor keep the gauge where it is.
+ const stagger=(target.indominable ?? 0)>0 || target.statuses?.some(status=>status.id==='duskscale')?target.stagger:target.sealedHeartwood || target.emberPhase===1 || target.emberPhase===3?0:Math.min(staggerThreshold(target),target.stagger+(strike?.stagger ?? 1));
  const broke=(target.indominable ?? 0)<=0 && hp>0 && stage<MAX_STAGGER_STAGE && stagger>=staggerThreshold(target);
  const events:Omit<BattleEvent,'id'>[]=[{kind:'hit',sourceId:actorId,targetId:target.id,amount:damage,label:(strike?.name ?? (actorId==='hero'?'Nip':'Claw'))+(ember?' + Ember Claws':'')+(rage?' + '+EMBER_RAGE:'')}];
  let columns=state.columns,stock=state.stock,dealt=state.dealt;const spills={...state.spills};

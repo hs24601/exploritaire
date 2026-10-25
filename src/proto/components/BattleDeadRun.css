@@ -28,5 +28,11 @@
 .combat-sandbox .battle-pity-button { padding:7px 10px; border:1px solid #b6cbbd; border-radius:6px; background:#233c38; color:#edf1d7; }
 .combat-sandbox .battle-pity-button:disabled { opacity:.4; }
 
-/* A caster-built intent sits beside its owner in the enemy row, at a compact card size. */
-.battle-field__team[data-team='enemy'] > .battle-intent-slot { --classic-card-w:56px; align-self:end; width:auto; min-width:76px; padding:4px 6px; }
+/* A caster-built intent sits beside its owner in the enemy row, at a compact card size, and spins out of it when cast. */
+.battle-field__team[data-team='enemy'] > .battle-intent-slot { --classic-card-w:56px; align-self:end; width:auto; min-width:76px; padding:4px 6px; animation:battle-intent-cast .7s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes battle-intent-cast { from { opacity:0; transform:translateX(-120px) rotate(-540deg) scale(.25); } to { opacity:1; transform:none; } }
+.battle-field[data-combat-paused] .battle-intent-slot { animation-play-state:paused; }
+@media (prefers-reduced-motion: reduce) { .battle-field__team[data-team='enemy'] > .battle-intent-slot { animation:none; } }
+/* Readied: fully charged and waiting out its turn in the owner's hand. */
+.battle-intent-slot[data-readied='true'] { box-shadow:0 0 0 2px #ffb07a, 0 0 18px #ff7a4d88; }
+.battle-intent-slot__ready { color:#ffd0b0; font:bold 16px/1 monospace; }

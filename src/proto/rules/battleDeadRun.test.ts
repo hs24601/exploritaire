@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canUseMomentumSkill, createCombatSandboxScenario, createPlayableSandboxScenario, endPlayerTurn, tableauWidth, tickBattle, useMomentumSkill, withdrawPlayer, type BattleState } from './battle';
+import { canUseMomentumSkill, createCombatSandboxScenario, createPlayableSandboxScenario, endPlayerTurn, playCard, tableauWidth, tickBattle, useMomentumSkill, withdrawPlayer, type BattleState } from './battle';
 import { advanceIntent, intentEnemyPlayOne, canPityFlip, hasHoldSlot, hasPityDraw, heldCard, heldReceivers, holdCard, INTENT_RECEIVER, openPartyTurn, pityFlip, playHeld, playOnIntent, tableauReceivers } from './battleDeadRun';
 import { DEEP_BREATH } from './battleTutorialScenarios';
 import type { Card } from '../protoState';
@@ -9,6 +9,7 @@ const card = (id: string, rank: number): Card => ({ id, rank });
 const table = (state: BattleState, tops: number[]): BattleState => ({ ...state,
   columns: tops.map((rank, c) => [card(`k${c}a`, 13), card(`k${c}b`, 13), card(`k${c}c`, 13), card(`top${c}`, rank)]) });
 const withIntent = (state: BattleState, rank: number, pips = 0): BattleState => ({ ...state, tutorial: { ...state.tutorial!, intent: { id: 'intent-test', rank, pips, fired: 0, cards: [] } } });
+const charging = (state: BattleState): BattleState => ({ ...state, tutorial: { ...state.tutorial!, breath: 'charging' } });
 const hero = (state: BattleState) => state.party.find(actor => actor.id === 'hero')!;
 
 describe('dead-run scenarios', () => {
@@ -96,10 +97,10 @@ describe('dead-run scenarios', () => {
     expect(playHeld(played, 'hero', INTENT_RECEIVER)).toBe(played);
   });
 
-  it('1000 is a 999-HP dummy with every fix, a fresh deal per start and a paced enemy turn', () => {
+  it('1000 is a 999-HP Dusk Dragon range with a fresh deal per start and a paced enemy turn', () => {
     const a = createPlayableSandboxScenario('1000'), b = createPlayableSandboxScenario('1000');
-    expect(a.foes[0]).toMatchObject({ name: 'Target Dummy', hp: 999 });
-    expect([hasPityDraw(a), hasHoldSlot(a), Boolean(a.tutorial?.intent), tableauWidth(a), a.party.length]).toEqual([true, false, true, 6, 1]);
+    expect(a.foes[0]).toMatchObject({ name: 'Dusk Dragon', hp: 999, momentum: undefined });
+    expect([hasPityDraw(a), hasHoldSlot(a), Boolean(a.tutorial?.intent), tableauWidth(a), a.party.length]).toEqual([true, false, false, 6, 1]);
     expect(a.columns.flat().map(card => card.id)).not.toEqual(b.columns.flat().map(card => card.id));
     const pending = withdrawPlayer(a, 1);
     expect(pending.turn).toBe('enemy');expect(pending.columns).toBe(a.columns);
@@ -113,15 +114,15 @@ describe('dead-run scenarios', () => {
 
   it('a paced enemy turn plays one action per step: strike, each intent play, then the handoff', () => {
     const base = createPlayableSandboxScenario('1000');
-    const s = withIntent(table(base, [5, 4, 13, 13, 13, 13]), 6);
+    const s = charging(withIntent(table(base, [5, 4, 13, 13, 13, 13]), 6));
     const steps: BattleState[] = [];
     let next = endPlayerTurn(s);
     for (let i = 0; i < 20 && next.turn === 'enemy'; i++) { next = tickBattle(next, 2); steps.push(next); }
     const cards = steps.map(step => step.tutorial!.intent!.cards.length), pips = steps.map(step => step.tutorial!.intent!.pips);
-    // Strike (0 cards), the 5 then the 4 one step apart, the pip step (1000 has no passive pip), then the party turn.
-    expect(cards).toEqual([0, 1, 2, 2, 2]);
-    expect(pips).toEqual([0, 1, 2, 2, 2]);
-    expect(steps.map(step => step.turn)).toEqual(['enemy', 'enemy', 'enemy', 'enemy', 'party']);
+    // Strike (the dragon has none), the ability step, the 5 then the 4 one step apart, the pip step (no passive pip), then the party turn.
+    expect(cards).toEqual([0, 0, 1, 2, 2, 2]);
+    expect(pips).toEqual([0, 0, 1, 2, 2, 2]);
+    expect(steps.map(step => step.turn)).toEqual(['enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'party']);
   });
 
   it('in 1000 the 6-AP Hold card opens Hero’s hold slot once, for the rest of the fight', () => {
@@ -168,5 +169,41 @@ describe('dead-run scenarios', () => {
     // Denied: with no card one rank from it exposed, it gains nothing.
     const denied = withIntent(table(createCombatSandboxScenario('1000'), [9, 9, 9, 9, 9, 9]), 6);
     expect(advanceIntent(denied, false).tutorial!.intent!.pips).toBe(0);
+  });
+
+  it('the Dusk Dragon casts Deep Breath from behind its armor, readies it, skips a turn, then breathes 55', () => {
+    const start = createCombatSandboxScenario('1000');
+    const dragon = (state: BattleState) => state.foes[0];
+    expect(dragon(start).statuses?.map(status => status.id)).toEqual(['duskscale']);
+    expect(start.tutorial?.breath).toBe('armored');
+    // Armored: Nips deal damage but build no stagger.
+    const nipped = playCard({ ...start, columns: start.columns.map((cards, c) => c === 0 ? [...cards.slice(0, -1), card('nip', 3)] : cards) }, 0, 'hero');
+    expect(dragon(nipped).stagger).toBe(0);expect(dragon(nipped).hp).toBeLessThan(dragon(start).hp);
+    // Its first turn: cast, armor off, then its plays.
+    const cast = endPlayerTurn(start);
+    expect(cast.tutorial?.breath).toBe('charging');expect(Boolean(cast.tutorial?.intent)).toBe(true);
+    expect(dragon(cast).statuses?.map(status => status.id)).toEqual(['deep-breath']);
+    expect(hero(cast).hp).toBe(hero(start).hp);
+    // Full: readied, no damage yet; then a skipped turn; then the breath and the armor back.
+    const full = { ...cast, tutorial: { ...cast.tutorial!, intent: { ...cast.tutorial!.intent!, pips: 3 } } };
+    const readied = endPlayerTurn(table(full, [cast.tutorial!.intent!.rank % 13 + 1, 13, 13, 13, 13, 13]));
+    expect(readied.tutorial?.breath).toBe('readied');expect(hero(readied).hp).toBe(hero(start).hp);
+    const inhaled = endPlayerTurn(readied);
+    expect(inhaled.tutorial?.breath).toBe('inhaled');expect(hero(inhaled).hp).toBe(hero(start).hp);
+    const breathed = endPlayerTurn(inhaled);
+    expect(hero(breathed).hp).toBe(hero(start).hp - 55);
+    expect(breathed.tutorial?.breath).toBe('armored');expect(breathed.tutorial?.intent).toBeUndefined();
+    expect(dragon(breathed).statuses?.map(status => status.id)).toEqual(['duskscale']);
+  });
+
+  it('breaking the dragon’s stagger while it charges chokes Deep Breath; it recovers, re-arms and casts again', () => {
+    const cast = endPlayerTurn(createCombatSandboxScenario('1000'));
+    let s: BattleState = { ...cast, foes: cast.foes.map(foe => ({ ...foe, stagger: 5 })) };
+    s = playCard({ ...s, columns: s.columns.map((cards, c) => c === 0 ? [...cards.slice(0, -1), card('break', hero(s).rank % 13 + 1)] : cards) }, 0, 'hero');
+    expect(s.foes[0].staggered).toBeGreaterThan(0);
+    expect(s.tutorial?.breath).toBe('choked');expect(s.tutorial?.intent).toBeUndefined();
+    const recovered = endPlayerTurn(s);
+    expect(recovered.tutorial?.breath).toBe('armored');expect(recovered.foes[0].statuses?.map(status => status.id)).toEqual(['duskscale']);
+    expect(endPlayerTurn(recovered).tutorial?.breath).toBe('charging');
   });
 });

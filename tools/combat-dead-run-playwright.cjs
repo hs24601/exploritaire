@@ -72,7 +72,8 @@ async function dragTop(page, column, target) {
         if (columns !== 6) failures.push(`${tag}: ${columns} tableau columns`);
         if (await page.locator('[data-battle-slot="mochi"]').count()) failures.push(`${tag}: Mochi is in the party`);
         const intent = page.locator('.battle-intent-slot');
-        if ((await intent.count()) !== (id === '019' ? 0 : 1)) failures.push(`${tag}: intent card count`);
+        // 1000's Dusk Dragon casts Deep Breath on its first turn, so the board opens without it.
+        if ((await intent.count()) !== (['019', '1000'].includes(id) ? 0 : 1)) failures.push(`${tag}: intent card count`);
         if ((await page.locator('.battle-pity-button').count()) !== (['022', '024', '1000'].includes(id) ? 1 : 0)) failures.push(`${tag}: pity button count`);
         if ((await page.locator('.battle-hold-slot').count()) !== (['023', '024'].includes(id) ? 1 : 0)) failures.push(`${tag}: hold slot count`);
         if ((await page.locator('[data-battle-slot="empty"]').count()) !== (id === '1000' ? 0 : 1)) failures.push(`${tag}: empty foundation count`);

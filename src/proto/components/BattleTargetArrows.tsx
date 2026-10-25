@@ -14,7 +14,7 @@ export function BattleTargetArrows({ battle }: { battle: BattleState }) {
     .map(actor => ({ actorId: actor.id, targetId: actor.targetId!, name: actor.name }));
   const victim=enemyTarget(battle);
   const enemies=battle.foes.filter(foe=>foe.hp>0).flatMap(foe=>{
-    const known=!foe.intentHidden,skip=battle.tutorial && tutorialIntent(foe,victim?.name ?? null)?.skips;
+    const known=!foe.intentHidden,skip=battle.tutorial && tutorialIntent(foe,victim?.name ?? null,battle)?.skips;
     const ids=known && foe.indominable!==undefined?battle.party.filter(actor=>actor.hp>0).map(actor=>actor.id):
       known && !foe.disarmed && !skip && foe.gallows!==undefined && foe.gallows>0?battle.party.filter(actor=>actor.hp>0).map(actor=>actor.id):
       known && !foe.disarmed && !skip && foe.intent==='attack' && victim?[victim.id]:
@@ -81,7 +81,7 @@ export function BattleTargetArrows({ battle }: { battle: BattleState }) {
     {arrows.filter(arrow=>arrow.enemy && arrow.badge).map(arrow=>{
       const foe=battle.foes.find(unit=>unit.id===arrow.actorId)!;
       return <foreignObject key={`intent-${arrow.actorId}`} className="battle-target-intent" x={Math.max(0,arrow.badgeX-100)} y={arrow.badgeY-14} width="200" height="32">
-        <EnemyIntentBadge route foe={foe} target={victim?.name ?? null} targetId={victim?.id} enemyTurn={battle.turn==='enemy'} tutorialIntent={battle.tutorial?tutorialIntent(foe,victim?.name ?? null):undefined}/>
+        <EnemyIntentBadge route foe={foe} target={victim?.name ?? null} targetId={victim?.id} enemyTurn={battle.turn==='enemy'} tutorialIntent={battle.tutorial?tutorialIntent(foe,victim?.name ?? null,battle):undefined}/>
       </foreignObject>;
     })}
   </svg>;

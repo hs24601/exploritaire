@@ -16,17 +16,20 @@ export function IntentCardSlot({ battle, targetable, concealValue, disabled, car
 }) {
   const def = intentDef(battle), intent = battle.tutorial?.intent;
   if (!def || !intent) return null;
-  const summary = intentSummary(battle) ?? def.name;
-  return <div className="battle-intent-slot" data-caster-only={def.casterOnly || undefined} data-battle-actor={def.casterOnly ? undefined : INTENT_RECEIVER} data-battle-target={INTENT_RECEIVER} data-targetable={targetable || undefined} data-full={intent.pips >= def.pips - 1 || undefined}
+  const summary = intentSummary(battle) ?? def.name, phase = battle.tutorial?.breath;
+  // A fully charged readying ability is a readied card in its owner's hand, waiting out its turn.
+  const readied = phase === 'readied' || phase === 'inhaled';
+  return <div className="battle-intent-slot" data-caster-only={def.casterOnly || undefined} data-readied={readied || undefined} data-battle-actor={def.casterOnly ? undefined : INTENT_RECEIVER} data-battle-target={INTENT_RECEIVER} data-targetable={targetable || undefined} data-full={intent.pips >= def.pips - 1 || undefined}
     role="group" aria-label={concealValue ? `${def.name} · value hidden during tactical pause` : summary}>
     <span className="battle-intent-slot__name" data-game-tooltip={summary}>{def.name}</span>
     <div className="battle-intent-slot__card" ref={cardRef}>
       <ProtoCard key={intent.id} card={{ id: intent.id, rank: intent.rank }} allowJumbo={false} centerRank lit concealValue={concealValue}
         disabled={disabled || !targetable || def.casterOnly} active={targetable} actionLabel={`Play onto ${def.name}`} onClick={onChoose} />
     </div>
-    <span className="battle-intent-slot__pips" role="meter" aria-label={`${def.name} pips`} aria-valuemin={0} aria-valuemax={def.pips} aria-valuenow={intent.pips}>
+    {readied ? <span className="battle-intent-slot__ready">{phase === 'readied' ? 'Readied' : 'Inhaling'}</span>
+      : <span className="battle-intent-slot__pips" role="meter" aria-label={`${def.name} pips`} aria-valuemin={0} aria-valuemax={def.pips} aria-valuenow={intent.pips}>
       {Array.from({ length: def.pips }, (_, pip) => <i key={pip} data-on={pip < intent.pips || undefined} />)}
-    </span>
+    </span>}
   </div>;
 }
 

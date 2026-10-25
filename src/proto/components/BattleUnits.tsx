@@ -156,7 +156,7 @@ export function EnemyIntentBadge({foe,target,targetId,tutorialIntent,enemyTurn,r
   const staggered=foe.staggered>0;
   const doom=foe.gallows!==undefined;
   const kind=foe.intentHidden?'hidden':foe.intent ?? 'attack';
-  const damage=tutorialIntent?.heavy?foe.profile.damage*2:foe.profile.damage+foe.fed;
+  const damage=tutorialIntent?.damage ?? (tutorialIntent?.heavy?foe.profile.damage*2:foe.profile.damage+foe.fed);
   const summary=tutorialIntent?tutorialIntent.summary:doom?(foe.gallows===0?'Bloom spent':`All allies · ${foe.gallows} handoffs`):foe.disarmed?'Rearm · lowest card':kind==='hidden'?'Unknown':kind==='tableau'?(foe.indominable!==undefined?'All allies':'Tableau'):kind==='idle'?'No target':kind==='withdraw'?'Tableau':target ?? 'No target';
   const detail=tutorialIntent?tutorialIntent.detail:doom?(foe.gallows===0?'The Gallows Bloom struck the veil and missed every ally.':`The Gallows Bloom will kill every ally in ${foe.gallows} handoffs. Snaring Khad Roots prevent tableau plays and Withdraw; Sealed Heartwood blocks damage, stagger and theft.`):foe.disarmed?'Disarmed: next turn this actor only takes the lowest-value exposed tableau card. This does not attack or earn Momentum.':kind==='hidden' ? `${foe.name}’s next action and target are concealed.`
     : kind==='tableau' ? `${foe.name} plays adjacent exposed tableau cards until no legal plays remain, gaining one Indominable stack per play. Above 25 stacks, it deals 1 damage per stack above 25 (26 stacks = 1 damage) at the end of its turn to every living party member. Each HP lost removes one stack. The stagger gauge cannot increase while any Indominable stacks remain.`
@@ -166,7 +166,7 @@ export function EnemyIntentBadge({foe,target,targetId,tutorialIntent,enemyTurn,r
   return <button type="button" className={route?'battle-enemy-intent battle-target-badge battle-target-badge--enemy':'battle-enemy-intent'} data-intent={kind} data-preparing={enemyTurn || undefined}
       data-intent-target={kind==='attack'?targetId:undefined} data-game-tooltip={detail}
       aria-label={`${kind==='attack'?`Strike ${damage}`:kind==='withdraw'?'Withdraw':kind==='idle'?'Dormant':kind==='tableau'?'Tableau play':'Intent hidden'} · ${summary}. Show intent details`}>
-      <span className="battle-enemy-intent__icon" aria-hidden="true">{kind==='hidden'?'?':kind==='idle'||tutorialIntent?.skips?'☾':kind==='withdraw'?'↶':'⚔'}</span>
+      <span className="battle-enemy-intent__icon" aria-hidden="true">{kind==='hidden'?'?':tutorialIntent?.glyph ?? (kind==='idle'||tutorialIntent?.skips?'☾':kind==='withdraw'?'↶':'⚔')}</span>
       {kind==='attack' && !tutorialIntent?.skips && <strong>{damage}</strong>}
       <span aria-hidden="true">{kind==='attack' && !tutorialIntent?.skips?'→':'·'}</span>
       {kind==='attack' && !tutorialIntent?.skips && targetId && ACTOR_HOLO_ART[targetId] && <img src={ACTOR_HOLO_ART[targetId]} alt="" />}

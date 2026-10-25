@@ -15,7 +15,7 @@ import { applyAbilityOverrides } from './abilityOverrides';
 export const EMBER_RAGE = 'Ember Rage';
 
 export type StatusId =
-  | 'ember-rage' | 'haste' | 'sap' | 'silence' | 'wild' | 'regen' | 'guard' | 'foresight' | 'rime'
+  | 'ember-rage' | 'duskscale' | 'deep-breath' | 'haste' | 'sap' | 'silence' | 'wild' | 'regen' | 'guard' | 'foresight' | 'rime'
   | 'dormant' | 'regrowth' | 'heavy-bark' | 'dry-bark' | 'stifling-sap'
   | 'slow' | 'chill' | 'frozen' | 'soaked' | 'burn' | 'bleed' | 'exposed' | 'blind' | 'stun' | 'grip';
 
@@ -33,6 +33,8 @@ export type StatusMeta = {
 
 export const STATUS_META: Record<StatusId, StatusMeta> = {
   'ember-rage': { name: EMBER_RAGE, glyph: '🌋', kind: 'buff' },
+  duskscale: { name: 'Duskscale Armor', glyph: '🐉', kind: 'buff' },
+  'deep-breath': { name: 'Deep Breath', glyph: '🌬️', kind: 'buff' },
   haste: { name: 'Haste', glyph: '⚡', kind: 'buff', expires: 'enemy-turn' },
   sap: { name: 'Sapped', glyph: '🍯', kind: 'debuff', expires: 'party-turn' },
   silence: { name: 'Silenced', glyph: '🤐', kind: 'debuff', expires: 'party-turn' },

@@ -1,7 +1,7 @@
 import { canPlay, clearDownedAP, drawCard, earnMomentum, foundationCardsOf, actorAlive, foeAlive, receiveCard, takeTop, tableauWidth, type BattleFoe, type BattleState } from './battle';
 import { isAdjacentRank } from './setup';
 import { tutorialById, type IntentCardDef } from './battleTutorialScenarios';
-import { hasStatus, outcome, pushEvents } from './battleStatuses';
+import { hasStatus, outcome, pushEvents, withStatus, withoutStatus } from './battleStatuses';
 import type { Card } from '../protoState';
 
 // Dead-run fixes for the combat sandbox (scenarios 019–024), from the
@@ -24,6 +24,90 @@ export const hasHoldSlot = (state: BattleState, actorId?: string) => Boolean(sce
   (actorId ? state.tutorial?.holdsOpen?.includes(actorId) : state.tutorial?.holdsOpen?.length));
 export const hasPityDraw = (state: BattleState) => Boolean(scenario(state)?.pityDraw);
 const partyTurn = (state: BattleState) => state.turn === 'party' && !state.result;
+
+/**
+ * Lifecycle of a readying, armored intent such as the Dusk Dragon's Deep Breath:
+ * armored (stagger-proof, nothing on the table) → charging (cast: the card is
+ * out, the armor is off and the owner plays cards onto it) → readied (full:
+ * it is a card in the owner's hand and the owner skips a turn) → inhaled
+ * (next turn it unleashes) → armored again. Breaking the owner's stagger while
+ * the armor is off chokes it: the card is lost and the owner re-armors after
+ * recovering.
+ */
+export type BreathPhase = 'armored' | 'charging' | 'readied' | 'inhaled' | 'choked';
+const VULNERABLE: readonly BreathPhase[] = ['charging', 'readied', 'inhaled'];
+const patchOwner = (state: BattleState, patch: (foe: BattleFoe) => BattleFoe): BattleState => ({ ...state, foes: state.foes.map((foe, slot) => slot === 0 ? patch(foe) : foe) });
+/** Sets the phase; passing null takes the ability card off the table. */
+const setBreath = (state: BattleState, breath: BreathPhase, intent?: null): BattleState =>
+  ({ ...state, tutorial: { ...state.tutorial!, breath, intent: intent === null ? undefined : state.tutorial?.intent } });
+
+/** The owner (re)armors: no ability on the table, stagger can't build. */
+export const armorOwner = (state: BattleState): BattleState =>
+  setBreath(patchOwner(state, foe => withStatus(withoutStatus(foe, 'deep-breath'), { id: 'duskscale' })), 'armored', null);
+
+/** Breaking the owner's stagger while its armor is off chokes the ability: the card and its pips are lost. */
+export function chokeIfBroken(state: BattleState): BattleState {
+  const owner = state.foes[0], phase = state.tutorial?.breath;
+  if (!phase || !VULNERABLE.includes(phase) || !owner || owner.staggered <= 0) return state;
+  return setBreath(patchOwner(state, foe => withoutStatus(foe, 'deep-breath')), 'choked', null);
+}
+
+/**
+ * The owner's ability step on its turn, before any plays: cast from behind the
+ * armor, wind up (skip), unleash, or re-armor after a choke. `plays`: it goes on
+ * to play cards onto the intent; `acted`: something visible happened.
+ */
+export function breathTurn(state: BattleState): { state: BattleState; plays: boolean; acted: boolean } {
+  const def = intentDef(state), owner = state.foes[0], phase = state.tutorial?.breath;
+  if (!def?.readies || !phase || !owner || !foeAlive(owner) || state.result) return { state, plays: true, acted: false };
+  switch (phase) {
+    case 'armored': {
+      if (intentOwnerSkips(owner)) return { state, plays: false, acted: false };
+      const cast = patchOwner(dealIntent(state), foe => withStatus(withoutStatus(foe, 'duskscale'), { id: 'deep-breath' }));
+      return { state: setBreath(cast, 'charging'), plays: true, acted: true };
+    }
+    case 'charging': return { state, plays: true, acted: false };
+    case 'readied': return { state: setBreath(state, 'inhaled'), plays: false, acted: true };
+    case 'inhaled': {
+      const targets = state.party.filter(actorAlive);
+      let next: BattleState = { ...state, party: state.party.map(actor => actorAlive(actor) ? { ...actor, hp: Math.max(0, actor.hp - def.damage) } : actor) };
+      next = pushEvents(next, targets.flatMap(target => [
+        { kind: 'enemy-hit' as const, sourceId: owner.id, targetId: target.id, amount: def.damage, label: `${owner.name} · ${def.name}` },
+        ...(target.hp <= def.damage ? [{ kind: 'down' as const, sourceId: owner.id, targetId: target.id }] : []),
+      ]));
+      next = clearDownedAP({ ...next, result: outcome(next) });
+      return { state: armorOwner({ ...next, tutorial: { ...next.tutorial!, intent: next.tutorial!.intent && { ...next.tutorial!.intent, fired: next.tutorial!.intent.fired + 1 } } }), plays: false, acted: true };
+    }
+    case 'choked': return { state: armorOwner(state), plays: false, acted: true };
+  }
+}
+
+/** The owner's intent badge while it runs a readying ability. */
+export function breathIntent(state: BattleState): { summary: string; detail: string; skips: boolean; heavy: boolean; glyph?: string; damage?: number } | null {
+  const def = intentDef(state), owner = state.foes[0], phase = state.tutorial?.breath;
+  if (!def?.readies || !phase || !owner || !foeAlive(owner)) return null;
+  const name = def.name, glyph = '🌬️';
+  switch (phase) {
+    case 'armored': return { summary: `Casts ${name}`, detail: `${owner.name} is behind Duskscale Armor (no stagger). On its next turn it casts ${name}, sheds the armor and starts charging.`, skips: true, heavy: false, glyph };
+    case 'charging': return { summary: `${name} · ${state.tutorial!.intent?.pips ?? 0}/${def.pips}`, detail: breathStatusText(state, 'deep-breath'), skips: true, heavy: false, glyph };
+    case 'readied': return { summary: 'Inhaling · skips', detail: breathStatusText(state, 'deep-breath'), skips: true, heavy: false, glyph };
+    case 'inhaled': return { summary: `${name} · all Kin`, detail: breathStatusText(state, 'deep-breath'), skips: false, heavy: false, glyph, damage: def.damage };
+    case 'choked': return { summary: 'Choked · re-arms', detail: `${name} was choked. ${owner.name} spends its next turn recovering and re-arms with Duskscale Armor, then casts again.`, skips: true, heavy: false, glyph: '☾' };
+  }
+}
+
+/** Buff copy for the owner's Duskscale Armor and Deep Breath, by phase. */
+export function breathStatusText(state: BattleState, id: 'duskscale' | 'deep-breath'): string {
+  const def = intentDef(state), owner = state.foes[0]?.name ?? 'The enemy', name = def?.name ?? 'Deep Breath', damage = def?.damage ?? 0;
+  if (id === 'duskscale') return `Duskscale Armor: hits can’t build ${owner}’s stagger gauge. It sheds the armor when it starts ${name}, and stays open to staggers until the breath lands or is choked.`;
+  const pips = state.tutorial?.intent?.pips ?? 0, full = def?.pips ?? 0;
+  const tail = `Break its stagger before then to choke the breath: the charge is lost and the ${owner} re-armors.`;
+  switch (state.tutorial?.breath) {
+    case 'readied': return `${name}: fully charged and readied. ${owner} skips its next turn to inhale, then breathes ${damage} damage on every Kin the turn after. ${tail}`;
+    case 'inhaled': return `${name}: inhaling. On its next turn ${owner} breathes ${damage} damage on every Kin. ${tail}`;
+    default: return `${name}: charging, ${pips} of ${full} pips. Only ${owner} adds cards: each turn it plays up to ${def?.enemyPlays ?? 0} exposed cards one rank from ${name}, at random. When it is full, it skips a turn to inhale, then breathes ${damage} damage on every Kin. Its armor is off: staggers build. ${tail}`;
+  }
+}
 
 /** A fresh intent card ranked from the stock. */
 export function dealIntent(state: BattleState, fired = 0): BattleState {
@@ -153,6 +237,8 @@ export function intentPassiveAndFire(state: BattleState): BattleState {
   const intent = { ...state.tutorial.intent, pips: Math.min(def.pips, state.tutorial.intent.pips + def.passive) };
   let next: BattleState = { ...state, tutorial: { ...state.tutorial, intent } };
   if (intent.pips < def.pips) return next;
+  // A readying ability doesn't fire at full: it becomes a readied card and the owner winds up next turn.
+  if (def.readies) return setBreath(next, 'readied');
   const targets = next.party.filter(actorAlive);
   next = { ...next, party: next.party.map(actor => actorAlive(actor) ? { ...actor, hp: Math.max(0, actor.hp - def.damage) } : actor) };
   next = pushEvents(next, targets.flatMap(target => [
@@ -182,6 +268,7 @@ export function intentSummary(state: BattleState): string | null {
   const rank = (value: number) => ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][value];
   const below = rank(intent.rank === 1 ? 13 : intent.rank - 1), above = rank(intent.rank === 13 ? 1 : intent.rank + 1);
   const owner = state.foes[0]?.name ?? 'the enemy';
+  if (def.readies) return breathStatusText(state, 'deep-breath');
   if (def.casterOnly) return `${def.name} · ${intent.pips} of ${def.pips} pips. Only ${owner} adds cards here: each enemy turn it plays up to ${def.enemyPlays} exposed ${below}s or ${above}s onto it, picked at random${def.fixedRank ? '' : ', and takes the rank of each'}, +1 pip each${def.passive ? ` and ${def.passive} more on its own` : ''}. At ${def.pips} it fires for ${def.damage} damage on every Kin, then returns as a new card. Take the matching cards first to deny it.`;
   return `${def.name} · ${intent.pips} of ${def.pips} pips. Each enemy turn ${owner} plays up to ${def.enemyPlays} cards here (+1 pip each) and adds ${def.passive}. At ${def.pips} it fires for ${def.damage} damage on every Kin, then returns as a new card. Play a ${below} or ${above} here to remove a pip and earn 1 Momentum (no AP, no hit).${def.fixedRank ? ' It keeps its rank when played on.' : ' It takes the rank of each card played on it.'}`;
 }

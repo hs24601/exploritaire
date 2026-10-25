@@ -13,6 +13,8 @@ export type TutorialFoeDef = {
   inflicts?: 'sap' | 'silence';
   /** Statuses it starts each wave with. */
   statuses?: UnitStatus[];
+  /** Banks no Momentum and has no Heavy Strike (no Momentum buff). */
+  noMomentum?: boolean;
 };
 export type StrikeProfile = { name: string; damage: number; stagger: number };
 /**
@@ -24,7 +26,14 @@ export type StrikeProfile = { name: string; damage: number; stagger: number };
  */
 export type IntentCardDef = { name: string; pips: number; enemyPlays: number; passive: number; damage: number; fixedRank?: boolean;
   /** A caster-built ability foundation: only its owner adds cards (the party can only deny them), it picks among matching cards at random, and it sits beside the owner. */
-  casterOnly?: boolean };
+  casterOnly?: boolean;
+  /**
+   * Ability template for a foundation that needs a waiting turn (like summoning sickness): at full pips it becomes a readied card in the
+   * owner's hand instead of firing. The owner skips its next turn to wind up, then unleashes `damage` on every Kin on the turn after.
+   */
+  readies?: boolean;
+  /** The owner starts behind stagger-proof armor (Duskscale Armor), casts the ability on its first turn and sheds the armor until the ability resolves or is choked. */
+  armored?: boolean };
 export type DeadRunFixes = Pick<TutorialDef, 'intentCard' | 'pityDraw' | 'holdSlot'>;
 export type TutorialDef = {
   id: TutorialScenarioId;
@@ -373,27 +382,28 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
         'It costs AP that Hero could spend on Bash, and the cards it burns earn nothing, so it is only worth it when the run it opens is longer than the cards it removes.',
       ] } },
   ...DEAD_RUN_SCENARIOS,
-  { id: '1000', name: '1000: Target Dummy', seed: 1000, randomSeed: true, skills: ['hold'], kinRadials: true, hideEmptySlot: true, columns: 6, party: ['hero'], partyHp: 99, enemyTurnSeconds: 1,
-    foes: [{ key: 'target-dummy', name: 'Target Dummy', hp: 999, damage: 0, staggerMax: 6 }],
-    // Caster-built: only the dummy adds cards, at random among the matches, with no passive pip, so denying the matching cards stops it.
-    intentCard: { ...DEEP_BREATH, passive: 0, casterOnly: true }, pityDraw: true,
+  { id: '1000', name: '1000: Dusk Dragon', seed: 1000, randomSeed: true, skills: ['hold'], kinRadials: true, hideEmptySlot: true, columns: 6, party: ['hero'], partyHp: 99, enemyTurnSeconds: 1,
+    foes: [{ key: 'dusk-dragon', name: 'Dusk Dragon', hp: 999, damage: 0, staggerMax: 6, noMomentum: true }],
+    // Caster-built and readying: only the dragon adds cards (at random among the matches, no passive pip). It casts from
+    // behind Duskscale Armor, and at full charge the breath becomes a readied card: a skipped turn, then 55 to every Kin.
+    intentCard: { name: 'Deep Breath', pips: 4, enemyPlays: 2, passive: 0, damage: 55, casterOnly: true, readies: true, armored: true }, pityDraw: true,
     insight: { actorId: 'hero',
       intent: [
-        'A test range for the dead-run systems, built like 999: a 999-HP Target Dummy that never strikes, so you can try every rule without the fight ending. Hero fights alone on six columns, with a fresh random deal on every start and restart. Hero has 99 HP.',
-        'Everything is on at once: Deep Breath, the pity flip, the delayed-redeal Withdraw and the board-plan markers. The hold slot is an ability here: Hero’s Hold card (6 AP) opens it for the rest of the fight.',
-        'Deep Breath is the dummy’s own ability foundation, beside it. Only the dummy adds cards to it: each enemy turn it plays up to 2 exposed cards one rank from Deep Breath, picked at random, and each is a pip. There is no passive pip. At 4 pips it fires for 4 on every Kin and starts again as a new card.',
-        'The enemy turn plays out one action at a time: its strike, then each card it plays onto Deep Breath, so you can watch every change land.',
+        'A test range built like 999: the Dusk Dragon has 999 HP and no basic attack, so you can practise against its one ability without the fight ending. Hero fights alone on six columns with 99 HP and a fresh random deal on every start and restart.',
+        'The dragon opens behind Duskscale Armor: your hits can’t build its stagger. On its first turn it casts Deep Breath, which spins out beside it, sheds the armor and becomes the dragon’s own foundation. Only the dragon adds cards to it: each enemy turn it plays up to 2 exposed cards one rank from Deep Breath, picked at random, and each is a pip.',
+        'At 4 pips Deep Breath is fully charged and becomes a readied card in the dragon’s hand. Like a card that can’t be used the turn it arrives, it waits: the dragon skips its next turn to inhale, then breathes 55 damage on every Kin on the turn after, and re-arms.',
+        'Also on: the pity flip, the delayed-redeal Withdraw and Hero’s Hold card (6 AP), which opens a hold slot for the rest of the fight. The enemy turn plays out one action at a time.',
       ],
       solve: [
-        'Deep Breath: you can’t play onto it, but you can starve it. Read its value: every exposed card one rank from it is a card the dummy might take. Take them away (to Hero, or into Hold) and it has nothing to play. The board doesn’t mark which ones it will pick, because it picks at random.',
-        'Hold: tap Hero’s foundation to open her abilities and play Hold once she has banked 6 AP (1 per card she receives). The Hold slot appears beside her. Drag a card she could take right now into it, then drag or tap it out on a later turn. Parking also exposes the card underneath without changing Hero’s value.',
-        'Pity flip: when a turn opens with nothing legal, PITY FLIP turns one free stock card onto Hero’s foundation.',
-        'Withdraw: pick a row and your turn ends. A mint band marks that row while the dummy acts on the current board, and your next turn opens on it.',
+        'Break it: from the moment it casts until the breath lands, the dragon has no armor. Fill its stagger gauge (6) with Hero’s Nips and the breath is choked: the charge is lost, and the dragon spends its next turn recovering, re-arms, then casts again.',
+        'Starve it: you can’t play onto Deep Breath, but every exposed card one rank from its value is a card the dragon might take. Play them to Hero or park one in Hold, and it has nothing to charge with. It picks at random, so the board doesn’t mark which.',
+        'Count the window: cast and 2 cards on its first turn, 4 pips the next, then a skipped turn. That is three of your turns to break it, more if you starve it.',
+        'Pity flip, Hold and Withdraw help you keep a long Hero run going when the board dries up.',
       ],
       why: [
-        'Scenarios 019–024 each test one permutation against a real threat. This range puts them together with no pressure, so you can check how they read and feel side by side before tuning them.',
-        'Deep Breath here tries a different model: abilities are foundations their caster builds, and the other side can only deny the cards. Reading the risky cards yourself, with no markers and a random pick, is the point. Player abilities that build foundations will mirror this.',
-        'The dummy keeps 999 HP like the Dark Tyrant, so a long session never ends in a win screen. Restart for a new deal.',
+        'This tries two templates for abilities. First, an ability is a foundation only its caster builds, so the other side’s counterplay is denial and reading the risky cards, not markers.',
+        'Second, an ability that needs a waiting turn after charging becomes a readied card with a delay, which gives the other side a visible window. Here the window is a stagger race: the armor makes breaking the only answer, and only while it charges.',
+        'Player abilities that build foundations will mirror both. The dragon keeps 999 HP so a long session never ends in a win screen; restart for a new deal.',
       ] } },
 ];
 

@@ -4,6 +4,7 @@ import { STATUS_META, STATUS_TUNING as T, type UnitStatus } from '../rules/battl
 import { foeMomentumGain } from '../rules/battleStatuses';
 import { AP_CAP, RAGE_AP_CAP, rageBonus } from '../rules/battle';
 import { upcomingRefills } from '../rules/battleTutorials';
+import { breathStatusText } from '../rules/battleDeadRun';
 import { MomentumIcon } from './MomentumIcon';
 import './BattleStatusIcons.css';
 
@@ -13,6 +14,7 @@ const plural = (count: number | undefined, word: string) => `${count ?? 0} ${wor
 export function statusDetail(status: UnitStatus, unit: BattleActor | BattleFoe, battle: BattleState): string {
   const foe = 'profile' in unit, name = STATUS_META[status.id].name;
   switch (status.id) {
+    case 'duskscale': case 'deep-breath': return breathStatusText(battle, status.id);
     case 'haste': return foe ? `${name}: banks double Momentum on its turns for ${plural(status.turns, 'more enemy turn')}.`
       : `${name}: the next ${plural(status.stacks, 'card')} this foundation receives this turn earn 2 AP and 2 Momentum each.`;
     case 'slow': return foe ? `${name} for ${plural(status.turns, 'enemy turn')}: it gains half Momentum, rounded down, so Heavy Strikes come later.`
