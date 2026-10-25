@@ -57,7 +57,7 @@ import { CombatScenarioComplete } from './CombatScenarioComplete';
 import { BattleStatusIcons } from './BattleStatusIcons';
 import { burnCardsFx } from './burnCardsFx';
 import { focusFireCards } from '../rules/battleStatuses';
-import { InsightDialog } from './InsightDialog';
+import { ScenarioNotes } from './ScenarioNotes';
 import { tutorialIntent, tutorialRounds } from '../rules/battleTutorials';
 import { tutorialById } from '../rules/battleTutorialScenarios';
 import { canInterruptWithdraw, interruptEnemyWithdraw, resolveEnemyWithdraw, WITHDRAW_INTERRUPT_COST, setMomentumDecay } from '../rules/battle';
@@ -116,7 +116,6 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   /** Open Kin radials; empty while the Momentum radial (Withdraw only) is open. */
   const [skillOwners,setSkillOwners]=useState<string[]>([]);
   const [cirInspection,setCirInspection]=useState(false);
-  const [insightOpen,setInsightOpen]=useState(false);
   const [momentumValueStyle,setMomentumValueStyle]=useState<MomentumValueStyle>('flamelab');
   const [abilityCast,setAbilityCast]=useState<AbilityCast|null>(null);
   const newBattle = (setup: Parameters<typeof createBattle>[1]) => sandbox ? createPlayableSandboxScenario(sandboxScenarioId) : createBattle(previewDeal, setup);
@@ -156,7 +155,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const ambushed = Boolean(battle.ambush);
   // Bites, flinches and falls on the cards themselves.
   const fieldRef = useRef<HTMLElement>(null);
-  const combatInspection = useCombatInspection(fieldRef, solverSession, cirInspection || insightOpen || Boolean(inspection) || Boolean(abilityInspection));
+  const combatInspection = useCombatInspection(fieldRef, solverSession, cirInspection || Boolean(inspection) || Boolean(abilityInspection));
   useCombatViewportFit(fieldRef,sandbox);
   const tableauCardLimit = useTableauCardLimit(fieldRef);
   const seenSpills = useRef(new Set<string>());
@@ -234,7 +233,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   const loadoutKey=battle.party.map(a=>a.id+':'+assignedMovesFor(a.id).map(m=>m.name).join(',')).join('|');
   useEffect(()=>{cancel();setRetrieval(null);setAbilityInspection(null);},[loadoutKey]);
   useEffect(()=>{if(battle.result)setRetrieval(null);},[battle.result]);
-  const presentationPaused = paused || holding || globalPaused || skillMenuOpen || cirInspection || insightOpen || Boolean(abilityCast) || Boolean(inspection);
+  const presentationPaused = paused || holding || globalPaused || skillMenuOpen || cirInspection || Boolean(abilityCast) || Boolean(inspection);
   const battlePaused = nightBlocking || presentationPaused;
   const noLegalMoves = !battle.result && battle.turn === 'party' && !anyLegalPlay(battle);
   // Ticks also advance effects and the free-turn countdown; enemy clocks wait for it.
@@ -441,7 +440,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
   /** Restarts the current scenario with the roster as adjusted, or a fresh scenario as authored. */
   const restart = (nextScenario?: string) => {
     setBannerSession(value=>value+1);setDirectWithdraw(false);
-    setSkillMenuOpen(false);setAbilityCast(null);setCirInspection(false);setInsightOpen(false);
+    setSkillMenuOpen(false);setAbilityCast(null);setCirInspection(false);
     announced.current=0;
     setWithdrawPreview(false);
     setSolverSession(session => session + 1);
@@ -529,7 +528,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     {battle.party.map((actor) => {
       const canRedraw = (!sandbox || battle.turn==='party') && actor.inspiration > 0 && actor.hp > 0 && !battle.result && !battlePaused;
       return <div key={actor.id} className="battle-field__slot" data-battle-slot={actor.id} data-down={actor.hp <= 0 || undefined}>
-        {sandbox && <div className="battle-party-buffs">{actor.rooted && <button type="button" className="battle-buff-icon battle-debuff-icon" data-debuff="snaring-khad-roots" aria-label="Snaring Khad Roots" data-game-tooltip="Cannot receive tableau cards or Withdraw. Abilities remain available. Break the caster’s stagger gauge to release the team.">🌿</button>}{actor.controller==='npc' && <button type="button" className="battle-buff-icon" data-buff="precipice-of-night" aria-label="Precipice of Night" data-game-tooltip="NPC ally. Dark abilities cost self-stagger instead of Momentum. Cannot receive manual tableau plays.">🌘</button>}{actor.disarmed && <DisarmedBadge name={actor.name}/>} {battle.cir?.status==='bound' && battle.cir.actorId===actor.id && <CirFamiliarBuff kin={battle.cir.actorId} disabled={battlePaused && !combatInspection.active || Boolean(battle.result) || battle.turn!=='party'} onInspect={()=>setCirInspection(true)} />} {battle.tutorial && <BattleStatusIcons unit={actor} battle={battle} onInsight={()=>setInsightOpen(true)} />}{actor.stickyPaws && <button type="button" className="battle-buff-icon" data-buff="sticky-paws" aria-label="Sticky Paws · Next attack steals" data-game-tooltip="Sticky Paws: Mochi’s next attack steals the target’s top foundation card. If emptied, it becomes Disarmed and spends its next turn rearming.">🐾</button>}</div>}
+        {sandbox && <div className="battle-party-buffs">{actor.rooted && <button type="button" className="battle-buff-icon battle-debuff-icon" data-debuff="snaring-khad-roots" aria-label="Snaring Khad Roots" data-game-tooltip="Cannot receive tableau cards or Withdraw. Abilities remain available. Break the caster’s stagger gauge to release the team.">🌿</button>}{actor.controller==='npc' && <button type="button" className="battle-buff-icon" data-buff="precipice-of-night" aria-label="Precipice of Night" data-game-tooltip="NPC ally. Dark abilities cost self-stagger instead of Momentum. Cannot receive manual tableau plays.">🌘</button>}{actor.disarmed && <DisarmedBadge name={actor.name}/>} {battle.cir?.status==='bound' && battle.cir.actorId===actor.id && <CirFamiliarBuff kin={battle.cir.actorId} disabled={battlePaused && !combatInspection.active || Boolean(battle.result) || battle.turn!=='party'} onInspect={()=>setCirInspection(true)} />} {battle.tutorial && <BattleStatusIcons unit={actor} battle={battle} />}{actor.stickyPaws && <button type="button" className="battle-buff-icon" data-buff="sticky-paws" aria-label="Sticky Paws · Next attack steals" data-game-tooltip="Sticky Paws: Mochi’s next attack steals the target’s top foundation card. If emptied, it becomes Disarmed and spends its next turn rearming.">🐾</button>}</div>}
         <button type="button" className={`battle-field__foundation ${sandbox ? "battle-foundation--unified" : ""}`} data-battle-actor={actor.id}
           data-battle-target={actor.id} data-targetable={Boolean(previews.get(actor.id) && !paused) || selection?.actorIds.includes(actor.id) || undefined}
           data-preview={previews.get(actor.id) ? (aim?.foeId === actor.id ? 'focus' : 'faint') : undefined}
@@ -652,7 +651,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
         </select>
       </label>}
       {sandbox && tutorialRounds(battle)!==null && <output className="battle-rounds" aria-live="polite">Rounds completed: {tutorialRounds(battle)}</output>}
-      {sandbox && <SceneButton className="combat-sandbox__camera-toggle" type="button" aria-pressed={cameraOpen} onClick={onWatch}>{cameraOpen ? 'Close camera' : 'Load battle camera'}</SceneButton>}
+      {sandbox && <SceneButton className="combat-sandbox__camera-toggle" type="button" aria-pressed={cameraOpen} aria-label={cameraOpen ? 'Close battle camera' : 'Load battle camera'} onClick={onWatch}><span aria-hidden="true">📷</span></SceneButton>}
       {!sandbox && <>{solveControls}<h2>Dark Woods</h2></>}{retrieval && <button type="button" onClick={()=>setRetrieval(null)}>Cancel {retrieval.split(':')[1]}</button>}
       <fieldset className="battle-controls" aria-label="Battle setup" disabled={holding || sandbox && battle.turn==='enemy'}>
         {!sandbox && <label className="battle-controls__scenario" title={scenario.blurb}>
@@ -664,7 +663,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
           <input type="checkbox" checked={battle.maxAP} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();event.currentTarget.click();}}} onChange={event => {cancel();setBattle(current=>setMaxAP(current,event.target.checked));}} />
           <span>maxAP</span>
         </label>}
-        {sandbox ? <details className="battle-config"><summary>⚙ Config</summary><div className="battle-config__panel" role="group" aria-label="Sandbox configuration"><label className="battle-config__value-style">Momentum numerals<select value={momentumValueStyle} onChange={event=>setMomentumValueStyle(event.target.value as MomentumValueStyle)}><option value="flamelab">Flame lab</option><option value="stroked">Stroked</option></select></label><label><input type="checkbox" checked={battle.momentum?.decayEnabled!==false} onChange={event=>setBattle(state=>setMomentumDecay(state,event.target.checked))}/> Momentum decay</label><SceneButton type="button" aria-pressed={hasMochi} onClick={() => setBattle((b) => setMochi(b, !hasMochi))}>{hasMochi ? 'Remove Mochi' : 'Add Mochi'}</SceneButton></div></details> : <SceneButton type="button" aria-pressed={hasMochi} onClick={() => setBattle((b) => setMochi(b, !hasMochi))}>{hasMochi ? 'Remove Mochi' : 'Add Mochi'}</SceneButton>}
+        {sandbox ? <details className="battle-config"><summary aria-label="Settings"><span aria-hidden="true">⚙</span></summary><div className="battle-config__panel" role="group" aria-label="Sandbox configuration"><label className="battle-config__value-style">Momentum numerals<select value={momentumValueStyle} onChange={event=>setMomentumValueStyle(event.target.value as MomentumValueStyle)}><option value="flamelab">Flame lab</option><option value="stroked">Stroked</option></select></label><label><input type="checkbox" checked={battle.momentum?.decayEnabled!==false} onChange={event=>setBattle(state=>setMomentumDecay(state,event.target.checked))}/> Momentum decay</label><SceneButton type="button" aria-pressed={hasMochi} onClick={() => setBattle((b) => setMochi(b, !hasMochi))}>{hasMochi ? 'Remove Mochi' : 'Add Mochi'}</SceneButton></div></details> : <SceneButton type="button" aria-pressed={hasMochi} onClick={() => setBattle((b) => setMochi(b, !hasMochi))}>{hasMochi ? 'Remove Mochi' : 'Add Mochi'}</SceneButton>}
         {!sandbox && <span className="battle-controls__stepper" role="group" aria-label={`Slimes: ${battle.foes.length}`}>
           <SceneButton type="button" aria-label="Remove a slime" disabled={battle.foes.length <= 1} onClick={() => setBattle(removeSlime)}>−</SceneButton>
           <span aria-hidden="true">Slimes {battle.foes.length}</span>
@@ -672,6 +671,7 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
         </span>}
         {!sandbox && <SceneButton type="button" aria-pressed={heroCal} title="Cal, a fire spirit: Hero's ability gains fire above combo 3" onClick={() => setBattle((b) => setSpirit(b, 'hero', 'cal', !heroCal))}>Cal {heroCal ? 'on' : 'off'}</SceneButton>}
       </fieldset>
+      {sandbox && tutorialById(battle.tutorial?.id) && <ScenarioNotes key={sandboxScenarioId} scenario={tutorialById(battle.tutorial?.id)!} />}
     </header>
     {targetDrag && createPortal(<div className="battle-target-ghost" style={{left:targetDrag.x,top:targetDrag.y}} aria-hidden="true">
       <ActorHoloCard actorId={targetDrag.actorId} name={battle.party.find(a=>a.id===targetDrag.actorId)?.name ?? ''} rank={rankLabel(battle.party.find(a=>a.id===targetDrag.actorId)?.rank ?? 1)} />
@@ -739,7 +739,6 @@ export function BattleTableauField({ hours, lights, onWatch, active, onSceneChan
     {!sandbox && <BattleDamageCallouts battle={battle} fieldRef={fieldRef} paused={battlePaused} />}
     {sandbox && <div className="battle-field__solver-dock"><div className="battle-field__solver-actions">{solveControls}{sandboxUtilityControls}</div><div className="battle-field__turn-actions"><div ref={setSingleMoveTarget} className="battle-field__single-move" />{endTurnControl}{withdrawControl}{pityControl}</div></div>}
     {sandbox && battle.result && (battle.result!=='won' || finishedDefeat>=lastDefeat) && <CombatScenarioComplete scenarioId={sandboxScenarioId} won={battle.result==='won'} onChoose={restart} detail={tutorialRounds(battle)!==null ? `Rounds completed: ${tutorialRounds(battle)}` : undefined} />}
-    {insightOpen && tutorialById(battle.tutorial?.id) && <InsightDialog scenario={tutorialById(battle.tutorial?.id)!} onClose={()=>setInsightOpen(false)} />}
     {!active && <footer className="battle-field__footer"><SceneButton type="button" onClick={onWatch}>Watch battle scene</SceneButton></footer>}
     {aim && heldAttack && createPortal(<><div className="ability-card-popover" style={{left:abilityAnchor.x,top:abilityAnchor.y,opacity:aim.mode==='drag'?0:1,visibility:abilityInspection?'hidden':undefined}} role="region" aria-label="Primed ability">
           <button className="ability-card-popover__close" type="button" onClick={cancel} aria-label="Cancel ability">×</button>

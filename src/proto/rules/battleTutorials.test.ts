@@ -23,12 +23,11 @@ const foe = (state: BattleState, index = 0) => state.foes[index];
 const create = (id: TutorialScenarioId) => createCombatSandboxScenario(id);
 
 describe('tutorial scenarios', () => {
-  it('each scenario starts on the party turn with Insight, a legal opening and its own hand', () => {
+  it('each scenario starts on the party turn with notes, a legal opening and its own hand', () => {
     for (const def of TUTORIAL_SCENARIOS) {
       const state = create(def.id);
       expect(state.tutorial?.id).toBe(def.id);
       expect(state.turn).toBe('party');
-      expect(state.party.filter(actor => hasStatus(actor, 'insight')).map(actor => actor.id)).toEqual([def.insight.actorId]);
       // 018 opens locked on purpose (Focus Fire is the way in); random-deal ranges may open dead, which the pity flip covers.
       if (def.id !== '018' && !def.randomSeed) expect(state.columns.some(cards => eligibleActors(state, cards[cards.length - 1]).length > 0)).toBe(true);
       expect(state.foes.map(unit => unit.name)).toEqual(def.foes.map(entry => entry.name));

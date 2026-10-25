@@ -5,6 +5,7 @@
 const { chromium } = require('playwright');
 const fs = require('node:fs');
 const { findLayoutDefects } = require('./lib/layout-check.cjs');
+const { checkScenarioNotes } = require('./lib/scenario-notes-check.cjs');
 
 const BASE = process.env.PROTO_URL ?? 'http://127.0.0.1:5178/proto.html';
 const SCENARIOS = ['019', '020', '021', '022', '023', '024', '1000'];
@@ -63,7 +64,7 @@ async function dragTop(page, column, target) {
       for (const id of SCENARIOS) {
         const tag = `${id}-${width}x${height}`;
         await page.goto(`${BASE}?combatsbx&scenario=${id}`);
-        await page.locator('[data-status="insight"]').waitFor({ timeout: 20000 });
+        await page.locator('.scenario-notes').waitFor({ timeout: 20000 });
         await page.waitForTimeout(600);
         await page.screenshot({ path: `${OUT}/${tag}-board.png` });
         failures.push(...await checkBoard(page, tag, width, height));
@@ -126,18 +127,8 @@ async function dragTop(page, column, target) {
           if (await page.locator('.battle-field').getAttribute('data-team-turn') !== 'party') failures.push(`${tag}: enemy turn did not return`);
           if (await page.locator('.tableau-plan[data-plan-by="party"]').count()) failures.push(`${tag}: Withdraw marker stayed after the redeal`);
         }
-        // Insight notes open with all three pages.
-        await page.locator('[data-status="insight"]').click();
-        const dialog = page.locator('dialog.insight-dialog');
-        await dialog.waitFor();
-        for (const tab of ['Intent', 'How to solve it', 'Why it exists']) {
-          await dialog.getByRole('tab', { name: tab }).click();
-          if (width === 1280) await page.screenshot({ path: `${OUT}/${tag}-insight-${tab.split(' ')[0].toLowerCase()}.png` });
-          const defects = await findLayoutDefects(page, 'dialog.insight-dialog', { parts: '.insight-dialog__header, .insight-dialog__tabs, .insight-dialog__panel, .insight-dialog__footer, .insight-dialog button, .insight-dialog h2' });
-          failures.push(...defects.map(defect => `${tag} insight/${tab}: ${defect}`));
-        }
-        await page.keyboard.press('Escape');
-        await dialog.waitFor({ state: 'detached' });
+        // Scenario notes: every page fits beside the board, and taps collapse and expand them.
+        failures.push(...await checkScenarioNotes(page, tag, width, height, width === 1280 ? name => page.screenshot({ path: `${OUT}/${tag}-notes-${name}.png` }) : undefined));
       }
       await page.close();
     }

@@ -5,6 +5,7 @@
 const { chromium } = require('playwright');
 const fs = require('node:fs');
 const { findLayoutDefects } = require('./lib/layout-check.cjs');
+const { checkScenarioNotes } = require('./lib/scenario-notes-check.cjs');
 
 const BASE = process.env.PROTO_URL ?? 'http://127.0.0.1:5178/proto.html';
 const SCENARIOS = ['008', '009', '010', '011', '012', '013', '014', '015', '016', '017', '018'];
@@ -39,30 +40,15 @@ async function checkOwn(page, label, width, height) {
       for (const id of SCENARIOS) {
         const tag = `${id}-${width}x${height}`;
         await page.goto(`${BASE}?combatsbx&scenario=${id}`);
-        await page.locator('[data-status="insight"]').waitFor({ timeout: 20000 });
+        await page.locator('.scenario-notes').waitFor({ timeout: 20000 });
         await page.waitForTimeout(600);
         await page.screenshot({ path: `${OUT}/${tag}-board.png` });
         failures.push(...await checkOwn(page, tag, width, height));
         if (await page.locator('.battle-enemy-momentum').count() === 0) failures.push(`${tag}: enemy Momentum badge missing`);
         if (['008', '009'].includes(id) && !(await page.locator('.battle-rounds').innerText()).includes('Rounds completed: 0')) failures.push(`${tag}: rounds counter missing`);
 
-        // Insight: hover shows the short tip; a click opens the paged notes.
-        const insight = page.locator('[data-status="insight"]');
-        await insight.hover(); await page.waitForTimeout(150);
-        await insight.click();
-        const dialog = page.locator('dialog.insight-dialog');
-        await dialog.waitFor();
-        for (const tab of ['Intent', 'How to solve it', 'Why it exists']) {
-          await dialog.getByRole('tab', { name: tab }).click();
-          const page_ = tab === 'Intent' ? 'intent' : tab === 'How to solve it' ? 'solve' : 'why';
-          if (tab !== 'Why it exists' || width === 1280) await page.screenshot({ path: `${OUT}/${tag}-insight-${page_}.png` });
-          const defects = await findLayoutDefects(page, 'dialog.insight-dialog', { parts: '.insight-dialog__header, .insight-dialog__tabs, .insight-dialog__panel, .insight-dialog__footer, .insight-dialog button, .insight-dialog h2' });
-          failures.push(...defects.map(defect => `${tag} insight/${page_}: ${defect}`));
-          const bounds = await dialog.evaluate(el => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; });
-          if (bounds.top < 0 || bounds.left < 0 || bounds.bottom > height || bounds.right > width) failures.push(`${tag}: Insight outside viewport`);
-        }
-        await page.keyboard.press('Escape');
-        await dialog.waitFor({ state: 'detached' });
+        // Scenario notes: every page fits beside the board, and taps collapse and expand them.
+        failures.push(...await checkScenarioNotes(page, tag, width, height, name => page.screenshot({ path: `${OUT}/${tag}-notes-${name}.png` })));
 
         // Momentum radial: team Withdraw only.
         await page.locator('.momentum-engine__open-skills').click();
@@ -71,26 +57,7 @@ async function checkOwn(page, label, width, height) {
         if (team.join() !== 'withdraw') failures.push(`${tag}: Momentum radial holds ${team.join()}`);
         await page.keyboard.press('Escape');
         await page.locator('.ability-fan').waitFor({ state: 'detached' });
-        // Kin radials: tap Hero's foundation, then add Mochi's; every visible face keeps its own slot.
-        if (id !== '008') {
-          await page.locator('[data-battle-actor="hero"]').click();
-          await page.locator('.ability-fan').waitFor();
-          await page.locator('[data-foundation-focus="mochi"]').click();
-          await page.waitForTimeout(300);
-          const groups = await page.locator('.ability-fan__groups button').all();
-          for (let g = 0; g < Math.max(1, groups.length); g++) {
-            if (groups.length) { await groups[g].click(); await page.waitForTimeout(300); }
-            const cards = await page.locator('.ability-fan > .ability-fan__card').evaluateAll(els => els.map(el => { const r = el.getBoundingClientRect(); return { id: el.dataset.skill, left: r.left, right: r.right, top: r.top, bottom: r.bottom }; }));
-            for (let i = 0; i < cards.length; i++) {
-              const c = cards[i];
-              if (c.left < 0 || c.right > width || c.top < 0 || c.bottom > height) failures.push(`${tag}: card ${c.id} outside viewport`);
-              for (let j = i + 1; j < cards.length; j++) { const d = cards[j]; if (Math.min(c.right, d.right) - Math.max(c.left, d.left) > 30 && Math.min(c.bottom, d.bottom) - Math.max(c.top, d.top) > 30) failures.push(`${tag}: cards ${c.id} and ${d.id} overlap`); }
-            }
-            await page.screenshot({ path: `${OUT}/${tag}-hand${groups.length ? '-' + (await groups[g].innerText()).toLowerCase().replace(/[^a-z0-9]+/g, '-') : ''}.png` });
-          }
-          await page.keyboard.press('Escape');
-          await page.locator('.ability-fan').waitFor({ state: 'detached' });
-        }
+        // Kin radials are unwired in combatsbx (GAME.md, 2026-10-24); 1000's Hold radial is checked by combat-dead-run-playwright.
       }
       // Chip tutorial: play on until a root falls (counter advances) or the party falls (the result shows the rounds reached).
       await page.goto(`${BASE}?combatsbx&scenario=008`);

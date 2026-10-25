@@ -13,7 +13,6 @@ const plural = (count: number | undefined, word: string) => `${count ?? 0} ${wor
 export function statusDetail(status: UnitStatus, unit: BattleActor | BattleFoe, battle: BattleState): string {
   const foe = 'profile' in unit, name = STATUS_META[status.id].name;
   switch (status.id) {
-    case 'insight': return 'Insight: notes on this scenario — what it tests, how to solve it and why it exists. Click, tap again or press Enter to read.';
     case 'haste': return foe ? `${name}: banks double Momentum on its turns for ${plural(status.turns, 'more enemy turn')}.`
       : `${name}: the next ${plural(status.stacks, 'card')} this foundation receives this turn earn 2 AP and 2 Momentum each.`;
     case 'slow': return foe ? `${name} for ${plural(status.turns, 'enemy turn')}: it gains half Momentum, rounded down, so Heavy Strikes come later.`
@@ -43,8 +42,8 @@ export function statusDetail(status: UnitStatus, unit: BattleActor | BattleFoe, 
   }
 }
 
-/** Tutorial statuses beside the established buff icons; Insight opens its long-form notes. */
-export function BattleStatusIcons({ unit, battle, onInsight }: { unit: BattleActor | BattleFoe; battle: BattleState; onInsight?: () => void }) {
+/** Tutorial statuses beside the established buff icons. */
+export function BattleStatusIcons({ unit, battle }: { unit: BattleActor | BattleFoe; battle: BattleState }) {
   const foe = 'profile' in unit ? unit : null;
   return <>
     {foe && foe.momentum !== undefined && foe.hp > 0 && <button type="button" className="battle-buff-icon battle-status-icon battle-enemy-momentum"
@@ -53,12 +52,10 @@ export function BattleStatusIcons({ unit, battle, onInsight }: { unit: BattleAct
       <MomentumIcon /><b>{foe.momentum}</b>
     </button>}
     {unit.statuses?.map(status => {
-      const meta = STATUS_META[status.id], count = status.stacks ?? (status.id === 'insight' ? undefined : status.turns);
-      const insight = status.id === 'insight';
+      const meta = STATUS_META[status.id], count = status.stacks ?? status.turns;
       return <button key={status.id} type="button" className={`battle-buff-icon battle-status-icon${meta.kind === 'debuff' ? ' battle-debuff-icon' : ''}`}
-        data-status={status.id} aria-haspopup={insight ? 'dialog' : undefined}
-        aria-label={`${meta.name}${count !== undefined ? ` ${count}` : ''}${insight ? ' · Read scenario notes' : ' · Show details'}`}
-        data-game-tooltip={statusDetail(status, unit, battle)} onClick={insight ? event => { event.stopPropagation(); onInsight?.(); } : undefined}>
+        data-status={status.id} aria-label={`${meta.name}${count !== undefined ? ` ${count}` : ''} · Show details`}
+        data-game-tooltip={statusDetail(status, unit, battle)}>
         <span aria-hidden="true">{meta.glyph}</span>{count !== undefined && <b aria-hidden="true">{count}</b>}
       </button>;
     })}
