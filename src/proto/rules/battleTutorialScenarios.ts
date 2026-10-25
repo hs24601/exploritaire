@@ -383,19 +383,19 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
       ] } },
   ...DEAD_RUN_SCENARIOS,
   { id: '1000', name: '1000: Dusk Dragon', seed: 1000, randomSeed: true, skills: ['hold'], kinRadials: true, hideEmptySlot: true, columns: 6, party: ['hero'], partyHp: 99, enemyTurnSeconds: 1,
-    foes: [{ key: 'dusk-dragon', name: 'Dusk Dragon', hp: 999, damage: 0, staggerMax: 6, noMomentum: true }],
+    foes: [{ key: 'dusk-dragon', name: 'Dusk Dragon', hp: 100, damage: 0, staggerMax: 6, noMomentum: true }],
     // Caster-built and readying: only the dragon adds cards (at random among the matches, no passive pip). It casts from
     // behind Duskscale Armor, and at full charge the breath becomes a readied card: a skipped turn, then 55 to every Kin.
     intentCard: { name: 'Deep Breath', pips: 4, enemyPlays: 2, passive: 0, damage: 55, casterOnly: true, readies: true, armored: true }, pityDraw: true,
     insight: { actorId: 'hero',
       intent: [
-        'A test range built like 999: the Dusk Dragon has 999 HP and no basic attack, so you can practise against its one ability without the fight ending. Hero fights alone on six columns with 99 HP and a fresh random deal on every start and restart.',
+        'A boss fight against one ability. The Dusk Dragon has 100 HP and no basic attack. Hero fights alone on six columns with 99 HP and a fresh random deal on every start and restart.',
         'The dragon opens behind Duskscale Armor: your hits can’t build its stagger. On its first turn it casts Deep Breath, which spins out beside it, sheds the armor and becomes the dragon’s own foundation. Only the dragon adds cards to it: each enemy turn it plays up to 2 exposed cards one rank from Deep Breath, picked at random, and each is a pip.',
         'At 4 pips Deep Breath is fully charged and becomes a readied card in the dragon’s hand. Like a card that can’t be used the turn it arrives, it waits: the dragon skips its next turn to inhale, then breathes 55 damage on every Kin on the turn after, and re-arms.',
         'Also on: the pity flip, the delayed-redeal Withdraw and Hero’s Hold card (6 AP), which opens a hold slot for the rest of the fight. The enemy turn plays out one action at a time.',
       ],
       solve: [
-        'Break it: from the moment it casts until the breath lands, the dragon has no armor. Fill its stagger gauge (6) with Hero’s Nips and the breath is choked: the charge is lost, and the dragon spends its next turn recovering, re-arms, then casts again.',
+        'Break it: from the moment it casts until the breath lands, the dragon has no armor. Fill its stagger gauge (6) with Hero’s Nips and Deep Breath backfires: its 55 damage hits the dragon instead, the stagger jumps to stage III (every Nip deals ×4) and the dragon is stunned for two enemy turns. That is your run to finish it. If it survives, it recovers, re-arms and casts again.',
         'Starve it: you can’t play onto Deep Breath, but every exposed card one rank from its value is a card the dragon might take. Play them to Hero or park one in Hold, and it has nothing to charge with. It picks at random, so the board doesn’t mark which.',
         'Count the window: cast and 2 cards on its first turn, 4 pips the next, then a skipped turn. That is three of your turns to break it, more if you starve it.',
         'Pity flip, Hold and Withdraw help you keep a long Hero run going when the board dries up.',
@@ -403,7 +403,7 @@ export const TUTORIAL_SCENARIOS: readonly TutorialDef[] = [
       why: [
         'This tries two templates for abilities. First, an ability is a foundation only its caster builds, so the other side’s counterplay is denial and reading the risky cards, not markers.',
         'Second, an ability that needs a waiting turn after charging becomes a readied card with a delay, which gives the other side a visible window. Here the window is a stagger race: the armor makes breaking the only answer, and only while it charges.',
-        'Player abilities that build foundations will mirror both. The dragon keeps 999 HP so a long session never ends in a win screen; restart for a new deal.',
+        'Player abilities that build foundations will mirror both. The break is the defining victory mechanic: a breath that lands costs you 55 of Hero’s 99 HP, so you have one miss to spare.',
       ] } },
 ];
 

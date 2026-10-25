@@ -33,7 +33,7 @@ export function statusDetail(status: UnitStatus, unit: BattleActor | BattleFoe, 
     case 'bleed': return `${name} ${status.stacks}: each card any Kin plays deals 1 and uses 1 Bleed. Fire Cauterizes it: all remaining Bleed at once, no Burn.`;
     case 'exposed': return `${name} for ${plural(status.turns, 'enemy turn')}: each tableau hit on it adds 1 Bleed.`;
     case 'blind': return `${name}: its next strike has a ${Math.round(T.blindMiss * 100)}% chance to miss.`;
-    case 'stun': return `${name}: skips its next enemy turn and banks no Momentum.`;
+    case 'stun': return status.turns ? `${name}: skips its next ${plural(status.turns, 'enemy turn')}${foe && 'staggerStage' in unit && unit.staggerStage ? ` and stays staggered at stage ${['', 'I', 'II', 'III'][unit.staggerStage]}` : ''}.` : `${name}: skips its next enemy turn and banks no Momentum.`;
     case 'ember-rage': return `${name}: until the turn ends ${unit.name} uses no other ability; each chip hit deals +${rageBonus(('charge' in unit ? unit.charge : 0) + 1)} fire on the next card (AP ÷ 3). AP cap ${RAGE_AP_CAP}; AP above ${AP_CAP.hero} burns off when the turn ends.`;
     case 'dormant': return `${name} for ${plural(status.turns, 'more enemy turn')}: it takes no action and banks no Momentum.`;
     case 'regrowth': return `${name}: at the end of each of its turns it heals to full unless it is below ${status.stacks ?? 40}% HP (${Math.ceil((foe ? unit.profile.maxHp : 0) * (status.stacks ?? 40) / 100)} HP).`;

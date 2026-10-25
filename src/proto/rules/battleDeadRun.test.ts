@@ -97,9 +97,9 @@ describe('dead-run scenarios', () => {
     expect(playHeld(played, 'hero', INTENT_RECEIVER)).toBe(played);
   });
 
-  it('1000 is a 999-HP Dusk Dragon range with a fresh deal per start and a paced enemy turn', () => {
+  it('1000 is a 100-HP Dusk Dragon boss with a fresh deal per start and a paced enemy turn', () => {
     const a = createPlayableSandboxScenario('1000'), b = createPlayableSandboxScenario('1000');
-    expect(a.foes[0]).toMatchObject({ name: 'Dusk Dragon', hp: 999, momentum: undefined });
+    expect(a.foes[0]).toMatchObject({ name: 'Dusk Dragon', hp: 100, momentum: undefined });
     expect([hasPityDraw(a), hasHoldSlot(a), Boolean(a.tutorial?.intent), tableauWidth(a), a.party.length]).toEqual([true, false, false, 6, 1]);
     expect(a.columns.flat().map(card => card.id)).not.toEqual(b.columns.flat().map(card => card.id));
     const pending = withdrawPlayer(a, 1);
@@ -196,14 +196,28 @@ describe('dead-run scenarios', () => {
     expect(dragon(breathed).statuses?.map(status => status.id)).toEqual(['duskscale']);
   });
 
-  it('breaking the dragon’s stagger while it charges chokes Deep Breath; it recovers, re-arms and casts again', () => {
+  it('breaking the dragon while it charges backfires Deep Breath: 55 to the dragon, stage III, a two-turn stun, then it re-arms', () => {
     const cast = endPlayerTurn(createCombatSandboxScenario('1000'));
     let s: BattleState = { ...cast, foes: cast.foes.map(foe => ({ ...foe, stagger: 5 })) };
+    const before = s.foes[0].hp;
     s = playCard({ ...s, columns: s.columns.map((cards, c) => c === 0 ? [...cards.slice(0, -1), card('break', hero(s).rank % 13 + 1)] : cards) }, 0, 'hero');
-    expect(s.foes[0].staggered).toBeGreaterThan(0);
     expect(s.tutorial?.breath).toBe('choked');expect(s.tutorial?.intent).toBeUndefined();
-    const recovered = endPlayerTurn(s);
-    expect(recovered.tutorial?.breath).toBe('armored');expect(recovered.foes[0].statuses?.map(status => status.id)).toEqual(['duskscale']);
-    expect(endPlayerTurn(recovered).tutorial?.breath).toBe('charging');
+    // The breaking Nip (1) plus the flat 55 backfire; the party is untouched.
+    expect(s.foes[0]).toMatchObject({ hp: before - 1 - 55, staggerStage: 3 });
+    expect(s.foes[0].staggered).toBeGreaterThan(0);expect(s.foes[0].statuses).toContainEqual({ id: 'stun', turns: 2 });
+    expect(hero(s).hp).toBe(hero(cast).hp);
+    const first = endPlayerTurn(s);
+    expect(first.foes[0].staggered).toBeGreaterThan(0);expect(first.foes[0].staggerStage).toBe(3);expect(first.tutorial?.breath).toBe('choked');
+    const second = endPlayerTurn(first);
+    expect(second.foes[0].staggered).toBe(0);expect(second.tutorial?.breath).toBe('armored');
+    expect(second.foes[0].statuses?.map(status => status.id)).toEqual(['duskscale']);
+    expect(endPlayerTurn(second).tutorial?.breath).toBe('charging');
+  });
+
+  it('a backfire that brings the dragon to 0 wins the fight', () => {
+    const cast = endPlayerTurn(createCombatSandboxScenario('1000'));
+    let s: BattleState = { ...cast, foes: cast.foes.map(foe => ({ ...foe, stagger: 5, hp: 40 })) };
+    s = playCard({ ...s, columns: s.columns.map((cards, c) => c === 0 ? [...cards.slice(0, -1), card('break', hero(s).rank % 13 + 1)] : cards) }, 0, 'hero');
+    expect(s.foes[0].hp).toBe(0);expect(s.result).toBe('won');
   });
 });

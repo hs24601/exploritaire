@@ -159,6 +159,9 @@ function foeTurn(state: BattleState, foeId: string): BattleState {
   const burn = statusOf(foe, 'burn');
   if (burn) { next = damageFoe(next, foeId, burn.stacks ?? T.burnDamage, 'Burn', 'dot'); foe = next.foes.find(unit => unit.id === foeId)!; if (!foeAlive(foe)) return next; }
   const set = (patch: (unit: BattleFoe) => BattleFoe) => { next = { ...next, foes: next.foes.map(unit => unit.id === foeId ? patch(unit) : unit) }; };
+  // A counted stun (a backfire) holds the stagger until its last turn, which is also the recovery.
+  const counted = statusOf(foe, 'stun');
+  if (counted?.turns) { set(unit => (counted.turns ?? 0) > 1 ? withStatus(unit, { ...counted, turns: (counted.turns ?? 0) - 1 }) : { ...withoutStatus(unit, 'stun'), stagger: 0, staggered: 0, staggerStage: 0 }); return next; }
   if (foe.staggered > 0) { set(unit => ({ ...unit, stagger: 0, staggered: 0, staggerStage: 0 })); return next; }
   const dormant = statusOf(foe, 'dormant');
   if (dormant) { set(unit => (dormant.turns ?? 0) > 1 ? withStatus(unit, { ...dormant, turns: (dormant.turns ?? 0) - 1 }) : withoutStatus(unit, 'dormant')); return next; }

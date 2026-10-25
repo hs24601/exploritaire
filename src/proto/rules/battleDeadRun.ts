@@ -1,4 +1,4 @@
-import { canPlay, clearDownedAP, drawCard, earnMomentum, foundationCardsOf, actorAlive, foeAlive, receiveCard, takeTop, tableauWidth, type BattleFoe, type BattleState } from './battle';
+import { MAX_STAGGER_STAGE, canPlay, clearDownedAP, drawCard, earnMomentum, foundationCardsOf, actorAlive, foeAlive, receiveCard, takeTop, tableauWidth, type BattleFoe, type BattleState } from './battle';
 import { isAdjacentRank } from './setup';
 import { tutorialById, type IntentCardDef } from './battleTutorialScenarios';
 import { hasStatus, outcome, pushEvents, withStatus, withoutStatus } from './battleStatuses';
@@ -45,11 +45,24 @@ const setBreath = (state: BattleState, breath: BreathPhase, intent?: null): Batt
 export const armorOwner = (state: BattleState): BattleState =>
   setBreath(patchOwner(state, foe => withStatus(withoutStatus(foe, 'deep-breath'), { id: 'duskscale' })), 'armored', null);
 
-/** Breaking the owner's stagger while its armor is off chokes the ability: the card and its pips are lost. */
+/** Turns a backfired ability keeps its owner stunned. */
+export const BACKFIRE_STUN_TURNS = 2;
+
+/**
+ * Breaking the owner's stagger while its armor is off makes the ability backfire
+ * (Eric, 2026-10-25): its damage, unmultiplied, hits the owner instead of the party;
+ * the stagger jumps to stage III and the owner is stunned for two enemy turns,
+ * a full run to finish it. The card and its pips are lost.
+ */
 export function chokeIfBroken(state: BattleState): BattleState {
-  const owner = state.foes[0], phase = state.tutorial?.breath;
-  if (!phase || !VULNERABLE.includes(phase) || !owner || owner.staggered <= 0) return state;
-  return setBreath(patchOwner(state, foe => withoutStatus(foe, 'deep-breath')), 'choked', null);
+  const owner = state.foes[0], phase = state.tutorial?.breath, def = intentDef(state);
+  if (!def || !phase || !VULNERABLE.includes(phase) || !owner || owner.staggered <= 0) return state;
+  const hp = Math.max(0, owner.hp - def.damage);
+  let next = patchOwner(state, foe => withStatus(withoutStatus(foe, 'deep-breath'), { id: 'stun', turns: BACKFIRE_STUN_TURNS }));
+  next = patchOwner(next, foe => ({ ...foe, hp, staggerStage: hp > 0 ? MAX_STAGGER_STAGE : 0, stagger: 0, staggered: hp > 0 ? Math.max(foe.staggered, 1) : 0 }));
+  next = pushEvents(next, [{ kind: 'hit', targetId: owner.id, amount: def.damage, label: `${def.name} · Backfire` },
+    ...(hp === 0 ? [{ kind: 'ko' as const, targetId: owner.id }] : [])]);
+  return setBreath({ ...next, result: outcome(next) }, 'choked', null);
 }
 
 /**
@@ -78,7 +91,8 @@ export function breathTurn(state: BattleState): { state: BattleState; plays: boo
       next = clearDownedAP({ ...next, result: outcome(next) });
       return { state: armorOwner({ ...next, tutorial: { ...next.tutorial!, intent: next.tutorial!.intent && { ...next.tutorial!.intent, fired: next.tutorial!.intent.fired + 1 } } }), plays: false, acted: true };
     }
-    case 'choked': return { state: armorOwner(state), plays: false, acted: true };
+    // Backfired: it waits out its stun and recovery, then re-arms (and casts on the turn after).
+    case 'choked': return owner.staggered > 0 || hasStatus(owner, 'stun') ? { state, plays: false, acted: false } : { state: armorOwner(state), plays: false, acted: true };
   }
 }
 
@@ -92,7 +106,11 @@ export function breathIntent(state: BattleState): { summary: string; detail: str
     case 'charging': return { summary: `${name} · ${state.tutorial!.intent?.pips ?? 0}/${def.pips}`, detail: breathStatusText(state, 'deep-breath'), skips: true, heavy: false, glyph };
     case 'readied': return { summary: 'Inhaling · skips', detail: breathStatusText(state, 'deep-breath'), skips: true, heavy: false, glyph };
     case 'inhaled': return { summary: `${name} · all Kin`, detail: breathStatusText(state, 'deep-breath'), skips: false, heavy: false, glyph, damage: def.damage };
-    case 'choked': return { summary: 'Choked · re-arms', detail: `${name} was choked. ${owner.name} spends its next turn recovering and re-arms with Duskscale Armor, then casts again.`, skips: true, heavy: false, glyph: '☾' };
+    case 'choked': {
+      const turns = owner.statuses?.find(status => status.id === 'stun')?.turns ?? 0;
+      return turns ? { summary: `Stunned · ${turns} turn${turns === 1 ? '' : 's'}`, detail: `${name} backfired. ${owner.name} is stunned for ${turns} more enemy turn${turns === 1 ? '' : 's'} at stagger stage III (×4 damage): finish it. Afterwards it recovers, re-arms with Duskscale Armor and casts again.`, skips: true, heavy: false, glyph: '💫' }
+        : { summary: 'Recovering · re-arms', detail: `${owner.name} recovers from the backfire, re-arms with Duskscale Armor, then casts ${name} again.`, skips: true, heavy: false, glyph: '☾' };
+    }
   }
 }
 
@@ -101,7 +119,7 @@ export function breathStatusText(state: BattleState, id: 'duskscale' | 'deep-bre
   const def = intentDef(state), owner = state.foes[0]?.name ?? 'The enemy', name = def?.name ?? 'Deep Breath', damage = def?.damage ?? 0;
   if (id === 'duskscale') return `Duskscale Armor: hits can’t build ${owner}’s stagger gauge. It sheds the armor when it starts ${name}, and stays open to staggers until the breath lands or is choked.`;
   const pips = state.tutorial?.intent?.pips ?? 0, full = def?.pips ?? 0;
-  const tail = `Break its stagger before then to choke the breath: the charge is lost and the ${owner} re-armors.`;
+  const tail = `Break its stagger before then and the breath backfires: ${damage} damage to the ${owner} instead, stagger stage III (×4 damage) and a ${BACKFIRE_STUN_TURNS}-turn stun.`;
   switch (state.tutorial?.breath) {
     case 'readied': return `${name}: fully charged and readied. ${owner} skips its next turn to inhale, then breathes ${damage} damage on every Kin the turn after. ${tail}`;
     case 'inhaled': return `${name}: inhaling. On its next turn ${owner} breathes ${damage} damage on every Kin. ${tail}`;
