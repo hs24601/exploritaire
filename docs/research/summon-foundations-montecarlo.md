@@ -11,7 +11,7 @@ Simulator source and raw results are in the project files under `tableau-monteca
 3. **Let the player pick the summon's starting rank from an exposed card.** With a picked start, a dead-start summon brings dead turns to about 1% on every table tested, at almost no cost to pace.
 4. **A summon you can call any time you're stuck is a streak extender, not a dead-run fix.** On 2×7, holding 5 cards, it lifts the median streak from 6 to 11 with no runaways. Treat that as a paid ability (AP or Momentum) with a 1-turn cooldown (median 9).
 5. **+1-only summons and closing a column are weak levers.** Each roughly halves what a summon adds, but the dead-start rule and the card cap already do the job more clearly.
-6. **Split cards need a smaller table before any summon.** 1 foundation × 6 split columns already runs away in 18% of turns with no summon, and every summon makes it worse (20–78%). **1 foundation × 5 split columns** is in band (18% dead, median 6, 0% runaway). With a dead-start summon it gets 4% dead, median 9 and 1% runaway. A table where half the cards are split also works at 7 columns.
+6. **Split cards need a smaller table before any summon.** 1 foundation × 6 split columns already runs away in 18% of turns with no summon, and every summon makes it worse (20–78%). **1 foundation × 5 split columns** has the right pace (median 6, 0% runaway) but 18% dead turns, which is what the summon fixes. With a dead-start summon it gets 4% dead, median 9 and 1% runaway. A table where half the cards are split also works at 7 columns.
 7. **Never put two permanent foundations on split cards.** 2 foundations × 4 split columns runs away in 42% of turns, so with split cards the second receiver should only ever be a temporary summon.
 
 **Starting tuning**
