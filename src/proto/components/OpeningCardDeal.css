@@ -1,0 +1,35 @@
+.proto-map:is([data-opening-cards="pending"], [data-opening-cards="dealing"]) :is(.actor-map-card, .day-objective__tracker [data-subtask-card]):not([data-opening-flight-copy]):not([data-opening-landed]) { visibility:hidden !important; pointer-events:none !important; }
+.proto-map:is([data-opening-cards="pending"], [data-opening-cards="dealing"]) :is(.actor-drag-preview, .day-objective__pin) { visibility:hidden !important; }
+.opening-card-deal { position:absolute; inset:0; z-index:75; pointer-events:none; overflow:hidden; }
+.opening-card-deal__flight { position:absolute; transform-origin:center; transform-style:preserve-3d; pointer-events:none; will-change:transform; }
+.opening-card-deal__flight[hidden] { display:none; }
+.opening-card-deal__flight * { animation:none !important; transition:none !important; }
+.opening-card-deal__face, .opening-card-deal__back { backface-visibility:hidden; }
+.opening-card-deal__face { transform:translateZ(.1px); border-radius:8px; box-shadow:0 10px 14px #0008; }
+.opening-card-deal__back { position:absolute; inset:0; box-sizing:border-box; border:3px double #ccb98c; border-radius:8px; background:repeating-linear-gradient(45deg,#132c3c 0 6px,#203b4a 6px 8px); box-shadow:inset 0 0 0 5px #071722,inset 0 0 20px #0008; transform:rotateY(180deg); }
+/* Keep the opening readable above Hero on short landscape screens, without
+   reducing its text or allowing the reading control to overlap the actor. */
+@media (max-height:500px) and (min-width:600px) {
+  .proto-callout[data-callout-id="day01.opening"] { max-width:min(560px,calc(100dvw - 24px)); }
+}
+
+.opening-card-deal__face--back { background:repeating-linear-gradient(45deg,#132c3c 0 6px,#203b4a 6px 8px); border:2px double #c7aa74; box-sizing:border-box; }
+.proto-map:is([data-opening-cards="pending"], [data-opening-cards="dealing"]) .day-objective__tracker { pointer-events:none; }
+.proto-map:is([data-opening-cards="pending"], [data-opening-cards="dealing"]) .day-objective__tracker > :not(.quest-subtask-deck) { visibility:hidden; }
+
+.proto-map:is([data-opening-cards="pending"], [data-opening-cards="dealing"]) .day-objective__tracker { visibility:hidden !important; }
+.proto-map[data-opening-cards="dealing"] .day-objective__tracker [data-opening-landed] { visibility:visible !important; }
+.opening-card-deal__face { z-index:0; }
+
+
+.proto-map[data-opening-quest="waiting-travel"] .day-objective__tracker { visibility:hidden !important; pointer-events:none; }
+
+.proto-map:is([data-opening-cards="pending"], [data-opening-cards="dealing"]) .quest-discovery--navigate-den { pointer-events:none; }
+.proto-map .quest-discovery--navigate-den:not([data-flying="true"])::before { box-shadow:none; }
+
+.proto-map[data-opening-cards]:not([data-opening-quest-revealed]) .quest-discovery--navigate-den { pointer-events:none !important; }
+
+.proto-map .quest-discovery--navigate-den, .proto-map .quest-discovery--navigate-den .quest-card { filter:none; }
+
+/* Keep the first prop as the only card until its pickup has landed. */
+.proto-map:has(.quest-discovery--navigate-den) .actor-map-card { visibility:hidden !important; pointer-events:none !important; }

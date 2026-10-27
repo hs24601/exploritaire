@@ -35,7 +35,7 @@ export const FrostTextEffect = memo(function FrostTextEffect({
       <style>{`
         @font-face {
           font-family: "Frozen";
-          src: url("/assets/vis/fonts/ice-kingdom.woff");
+          src: url("/assets/runtime/fonts/display/ice-kingdom.woff");
           font-display: swap;
         }
 
@@ -65,7 +65,7 @@ export const FrostTextEffect = memo(function FrostTextEffect({
           font-size: calc(20vw + 0.5rem);
           line-height: 0.9;
           font-family: "Frozen", serif;
-          background-image: url("/assets/vis/textures/ice.jpg");
+          background-image: url("/assets/runtime/textures/ice.jpg");
           background-size: contain;
           background-repeat: repeat;
           -webkit-background-clip: text;

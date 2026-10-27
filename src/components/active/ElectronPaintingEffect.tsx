@@ -4,7 +4,7 @@ type Props = {
   className?: string;
 };
 
-const IMAGE_SRC = '/assets/Blueevee.png';
+const IMAGE_SRC = '/assets/deprecated/pixel/portraits/Blueevee.png';
 const FALLBACK_CANVAS_WIDTH = 522;
 const FALLBACK_CANVAS_HEIGHT = 353;
 const NUMBER_OF_PARTICLES = 5000;

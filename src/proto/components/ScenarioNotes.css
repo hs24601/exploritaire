@@ -1,0 +1,25 @@
+/* Scenario notes: the former Insight popup's parchment-on-forest palette, docked under the header's icon buttons. */
+/* The notes hang from the header's right edge, beneath the camera and settings buttons. */
+.combat-sandbox .battle-field__header:has(> .scenario-notes) { position:relative; }
+.scenario-notes { position:absolute; z-index:40; top:calc(100% + 6px); right:0; box-sizing:border-box; display:flex; flex-direction:column; width:var(--scenario-notes-w, 360px);
+  max-height:var(--scenario-notes-max-h, calc(100dvh - 300px)); border:1px solid #d8bf7b; border-radius:12px; background:linear-gradient(160deg,#16302bf2,#0c1c1bf5); color:#eef2e6; box-shadow:0 8px 22px #0009; overflow:hidden; }
+.scenario-notes__title { display:flex; align-items:center; gap:10px; width:100%; min-height:44px; padding:6px 12px; border:0; background:transparent; color:#fff0bd; text-align:left; cursor:pointer; }
+.scenario-notes__glyph { display:grid; place-items:center; flex:none; width:32px; height:32px; border:1px solid #ffe48a; border-radius:50%; background:radial-gradient(circle,#4a4220,#182321); font-size:18px; }
+.scenario-notes__name { flex:1; min-width:0; font:18px/1.2 Georgia,serif; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.scenario-notes__chevron { flex:none; color:#d8bf7b; font:18px/1 monospace; }
+.scenario-notes__body { display:flex; flex-direction:column; min-height:0; border-top:1px solid #d8bf7b55; }
+.scenario-notes__tabs { display:flex; gap:4px; padding:8px 10px 0; border-bottom:1px solid #d8bf7b55; }
+.scenario-notes__tabs button { flex:1 1 0; min-width:0; min-height:40px; padding:6px 4px; border:1px solid #a5bcb055; border-bottom:0; border-radius:8px 8px 0 0; background:#183330; color:#cfdcd2; font:16px/1.15 Georgia,serif; cursor:pointer; }
+.scenario-notes__tabs button[aria-selected='true'] { background:#2c4a40; border-color:#d8bf7b; color:#fff0bd; }
+.scenario-notes__panel { flex:1 1 auto; min-height:0; overflow:auto; padding:12px 16px; font:16px/1.5 Georgia,serif; overscroll-behavior:contain; cursor:pointer; }
+.scenario-notes__panel p { margin:0 0 10px; }
+.scenario-notes__panel ol { margin:0; padding-left:22px; list-style:decimal; }
+.scenario-notes__panel li { margin:0 0 10px; padding-left:4px; }
+.scenario-notes button:focus-visible, .scenario-notes__panel:focus-visible { outline:3px solid #91d9ee; outline-offset:-3px; }
+/* Narrower desktop boards leave less room right of the tableau. */
+@media (max-width:1500px) { .scenario-notes { --scenario-notes-w:300px; } }
+/* Sandbox buttons set their own type; the note tabs keep the notes' serif. */
+.combat-sandbox .scenario-notes__tabs button { font:16px/1.15 Georgia,serif; }
+/* Icon-only camera and settings buttons share one framed square. */
+.combat-sandbox .battle-field__header .combat-sandbox__camera-toggle, .combat-sandbox .battle-config summary { display:grid; place-items:center; box-sizing:border-box; min-width:40px; height:40px; min-height:40px; padding:0 10px; border:1px solid #adba9e; border-radius:7px; background:#172b2b; color:#eee5c9; font:20px/1 sans-serif; }
+.combat-sandbox .battle-field__header .combat-sandbox__camera-toggle[aria-pressed='true'] { border-color:#ffe48a; background:#2c4a40; }

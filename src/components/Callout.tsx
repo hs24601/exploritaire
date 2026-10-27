@@ -78,7 +78,7 @@ const TONE_STYLES: Record<CalloutTone, {
 };
 
 const DIALOG_EMOJI_ASSETS: Record<CalloutEmojiEmotionType, string> = {
-  happy: '/assets/actors/mochikin/mochi_emoji_blush.png',
+  happy: '/assets/deprecated/pixel/characters/mochikin/mochi_emoji_blush.png',
 };
 
 function renderPanel({

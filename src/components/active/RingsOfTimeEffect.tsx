@@ -11,8 +11,8 @@ export type RingsOfTimeConfig = {
 export const DEFAULT_RINGS_OF_TIME_CONFIG: RingsOfTimeConfig = {
   nRings: 3,
   frequencyRatio: 3,
-  bgImageUrl: "/assets/repeat.jpg",
-  starImageUrl: "/assets/star.png",
+  bgImageUrl: "/assets/runtime/textures/repeat.jpg",
+  starImageUrl: "/assets/runtime/effects/star.png",
   speedScale: 1,
 };
 

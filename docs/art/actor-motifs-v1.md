@@ -1,0 +1,13 @@
+# Hero flame and Mochi greenery layers
+
+2026-10-24. Built-in ImageGen produced six independent transparent motif assets under `public/assets/runtime/ui/holocards/motifs/v1/`: Hero's left shoulder, right shoulder and paw flames; Mochi's mane leaves, paw vine and tail sprig. Exact prompts, reference roles and initial anchors are preserved in `public/assets/sources/ui/holocards/motifs/v1/manifest.json`. Live preview: `/proto.html?motifsbx`.
+
+The original paintings are used directly, never repainted or replaced. Hero's source is `hero-watercolor-v5-ordinary-day.png` (SHA256 `5509C8CC2F0B70978AEF8071B358A6C9F422715D5E00F864E5A2A9F4B6FB4FC2`). Mochi's source is `mochi-card-watercolor-v1.png` (SHA256 `C6556FA30BF57C4452F1653AB4FFDF019A171978EEC2B727301E085975E42383`). Hero's pre-existing detached flame in the original painting remains part of that original; the new overlays do not alter it.
+
+Hero's anchors use the original 2:3 subject coordinate system inside the existing contained portrait plane. That plane follows Hero's existing 1.2% subject parallax. Each motif adds at most 2px of relative travel per axis at the maximum depth setting, keeping the attachment local. Mochi's opaque scene/character painting remains together; her normalized overlay plane follows its cover crop and adds the same small bounded motion. Neither face, markings nor black paws are replaced. The front-only accents do not claim a separately extracted Mochi background or limb occlusion mask.
+
+`ActorMotifLayer` is shared by `ActorCardArt`/`LayeredCardArt`, so original compact, jumbo and foundation holocard paths gain the same layer structure. Foundation and reduced-motion paths remain static. There is no additional animation loop. Decorative overlays ignore pointer events and are hidden from assistive technology. Original portrait fallback paths remain available.
+
+`setActorMotifOptions(actor, patch)` and `useActorMotifOptions(actor)` expose per-actor `enabled`, `strength` (0–1), `depth` (0–2) and hidden motif IDs. The preview's controls update those session-only options; they do not change combat, progression or saved artwork. All six accents default on. Disabling a layer removes it from the rendered overlay; setting strength to zero removes the entire motif plane.
+
+Validation: typecheck passed. Headless desktop/phone checks cover loaded images, master/per-layer toggles, original source URLs, independent transparent paint, parallax, depth/strength controls, reduced motion and horizontal fitting. Reviewed the composed desktop and phone captures. Evidence and check script: `artifacts/actor-motifs-v1/`.

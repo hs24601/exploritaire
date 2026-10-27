@@ -34,7 +34,7 @@ export const PetrifiedTextEffect = memo(function PetrifiedTextEffect({
       <style>{`
         @font-face {
           font-family: "Rubik Distressed Local";
-          src: url('/assets/vis/fonts/rubik-distressed-0.ttf') format('truetype');
+          src: url('/assets/runtime/fonts/display/rubik-distressed-0.ttf') format('truetype');
           font-display: swap;
         }
 

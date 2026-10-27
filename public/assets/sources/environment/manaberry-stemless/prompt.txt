@@ -1,0 +1,4 @@
+Built-in image_gen edit; output: public/assets/runtime/environment/watercolor/v1/manaberry-sparse-standee-v1.png
+Original preserved alongside this prompt as manaberry-sparse-standee-v1-before.png.
+
+Precise localized edit of this transparent watercolor bush sprite. Remove ONLY the small brown stalk protruding upward from the red manaberry fruit. Remove any leaf attached to the fruit itself, but preserve the surrounding bush foliage. Fruit is a stemless irregular red/raspberry berry with dragonfruit-like rounded bumps around its circumference, apple size only, not an apple. Keep exactly the same bush silhouette, branches, leaves, fruit placement, dimensions, broad watercolor style and true transparent background; no new glow, shadows, text or background. No other changes.

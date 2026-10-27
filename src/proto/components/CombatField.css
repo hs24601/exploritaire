@@ -1,0 +1,152 @@
+/* The skirmish panel (CombatField): the enemy at the top, the shared tableau,
+   the hero's foundation and stock below. Lives in the tableau field, which is a
+   size container, so cards scale with the panel and never stretch. */
+.proto-tableau-field.proto-tableau-field--combat { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); container: combat-field / size; }
+.proto-skirmish {
+  /* Seven columns across; a column shows its top card whole and a sliver of the two beneath. */
+  --sk-card-w: min(calc((100cqw - 20px - 6 * 6px) / 7), calc((100cqh - 200px) / 4.2 * 56 / 74), 104px);
+  --sk-card-h: calc(var(--sk-card-w) * 74 / 56);
+  --sk-step: calc(var(--sk-card-h) * 0.36);
+  --classic-card-w: var(--sk-card-w);
+  container-type: size;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  gap: 8px;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 120, 110, 0.22);
+  border-radius: calc(var(--classic-radius) * 1.3);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(120, 14, 18, 0.32), transparent 60%),
+    linear-gradient(180deg, rgba(24, 10, 12, 0.6), rgba(9, 8, 10, 0.4));
+  color: #ffe1d8;
+  font: 16px/1.25 'Classic Pixel', monospace;
+}
+
+/* The enemy: who it is, its fury, HP and its own foundation card. */
+.proto-skirmish__foe, .proto-skirmish__hero {
+  display: grid;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 6px 10px;
+  border: 3px solid #030608;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #5a2a2a, inset 0 2px 7px #020808, 0 3px 0 #020608;
+}
+.proto-skirmish__foe { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; background: linear-gradient(180deg, #2a1012, #160a0c); }
+.proto-skirmish__foe[data-pounce] { animation: proto-skirmish-crouch 380ms ease-in-out infinite alternate; }
+.proto-skirmish__hero { grid-template-columns: auto minmax(0, 1fr) auto; background: linear-gradient(180deg, #13261f, #0a1512); box-shadow: inset 0 0 0 1px #355348, inset 0 2px 7px #020808, 0 3px 0 #020608; }
+.proto-skirmish__hero[data-hit] { animation: proto-skirmish-hit 420ms ease-out; }
+.proto-skirmish__who { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.proto-skirmish__glyph { font-size: 28px; line-height: 1; filter: drop-shadow(0 0 6px #ff2a2a88); }
+.proto-skirmish__name { font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.proto-skirmish__fury { display: inline-flex; gap: 4px; }
+.proto-skirmish__fury > span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #5e1c1c; background: #1a0808; }
+.proto-skirmish__fury > span[data-lit] { background: radial-gradient(circle at 35% 35%, #ff9a7a, #d1201a 60%, #6d0b0b); border-color: #ff6a50; box-shadow: 0 0 8px #ff3a2a99; }
+
+.proto-skirmish__hp { position: relative; height: 22px; border: 2px solid #050409; border-radius: 4px; background: #0b0608; overflow: visible; }
+.proto-skirmish__hp > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; transition: width 220ms ease-out; }
+.proto-skirmish__hp--foe > span { background: linear-gradient(180deg, #ff5a4a, #9b1410); }
+.proto-skirmish__hp--hero > span { background: linear-gradient(180deg, #8ef2d4, #2c8f73); }
+.proto-skirmish__hp > b { position: relative; display: block; text-align: center; font: 900 16px/18px monospace; color: #fff6ea; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+.proto-skirmish__hit {
+  position: absolute; right: 4px; top: -4px; font: 900 18px/1 monospace; font-style: normal; color: #fff2a8; text-shadow: 0 2px 0 #000, 0 0 6px #ff3a2a;
+  pointer-events: none; animation: proto-skirmish-float 900ms ease-out forwards;
+}
+.proto-skirmish__hit[data-kind="snap"] { color: #ffd166; font-size: 22px; }
+.proto-skirmish__hit[data-kind="pounce"] { color: #ff8a7a; }
+
+.proto-skirmish__pile { width: calc(var(--sk-card-w) * 0.9); --classic-card-w: calc(var(--sk-card-w) * 0.9); }
+.proto-game-root .proto-skirmish__pile--foe .playing-card:disabled { background: linear-gradient(140deg, #5a1218, #200609); color: #ffd8cf; border-color: #1a0204; }
+.proto-game-root .proto-skirmish__pile--hero .playing-card:disabled { background: linear-gradient(145deg, #1f4a40, #0b1d18); color: #e9fff8; }
+.proto-skirmish__pile--hero[data-drop-target] { border-radius: 6px; outline: 3px solid #ffd166; outline-offset: 3px; box-shadow: 0 0 22px 6px #ffd16688; animation: proto-drop-pulse 900ms ease-in-out infinite alternate; }
+
+/* The arena: the foe's lair above the shared tableau, using the panel's spare height. */
+.proto-skirmish__arena { min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto minmax(0, 0.35fr); align-items: center; }
+.proto-skirmish__lair { min-height: 0; height: 100%; display: grid; place-items: center; overflow: hidden; }
+.proto-skirmish__beast {
+  font-size: clamp(40px, min(18cqh, 22cqw), 132px); line-height: 1;
+  filter: brightness(0.35) sepia(1) hue-rotate(-40deg) saturate(4) drop-shadow(0 0 18px #ff1a1a88);
+  animation: proto-skirmish-breathe 2.4s ease-in-out infinite alternate;
+}
+.proto-skirmish__beast[data-crouch] { animation: proto-skirmish-crouch-beast 300ms ease-in-out infinite alternate; filter: brightness(0.5) sepia(1) hue-rotate(-40deg) saturate(5) drop-shadow(0 0 26px #ff3a1acc); }
+.proto-skirmish__beast[data-move="take"], .proto-skirmish__beast[data-move="pounce"] { animation: proto-skirmish-lunge 420ms ease-out; }
+.proto-skirmish__beast[data-move="strike"], .proto-skirmish__beast[data-move="snap"] { animation: proto-skirmish-recoil 360ms ease-out; }
+@keyframes proto-skirmish-breathe { from { scale: 1; } to { scale: 1.04; } }
+@keyframes proto-skirmish-crouch-beast { from { translate: 0 0; scale: 1.02 0.96; } to { translate: 0 4px; scale: 1.06 0.9; } }
+@keyframes proto-skirmish-lunge { 0% { translate: 0 0; } 35% { translate: 0 18%; scale: 1.18; } 100% { translate: 0 0; scale: 1; } }
+@keyframes proto-skirmish-recoil { 0% { translate: 0 0; } 30% { translate: 0 -8%; scale: 0.9; filter: brightness(1.4) sepia(1) hue-rotate(-40deg) saturate(3); } 100% { translate: 0 0; scale: 1; } }
+
+/* The shared tableau: seven columns of full-size cards, offset so each top card
+   shows whole and the ones beneath show their top edge. */
+.proto-skirmish__tableau {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, var(--sk-card-w));
+  justify-content: center;
+  align-content: center;
+  gap: 6px;
+}
+/* Ranks stay at the 16px floor on small cards, including the covered ones. */
+.proto-skirmish .playing-card .font-semibold { font-size: max(16px, calc(var(--classic-card-w) * 0.36)); }
+.proto-skirmish__column { position: relative; width: var(--sk-card-w); height: calc(var(--sk-card-h) + (var(--cards) - 1) * var(--sk-step)); }
+.proto-skirmish__card { position: absolute; left: 0; top: calc(var(--depth) * var(--sk-step)); width: var(--sk-card-w); z-index: var(--depth); }
+.proto-skirmish__card[data-top] { touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.proto-skirmish__card[data-top] .playing-card { cursor: inherit; touch-action: none; }
+.proto-skirmish__card[data-dragging] { opacity: 0.3; }
+.proto-skirmish__drag { position: fixed; z-index: 60002; pointer-events: none; transform: rotate(-4deg) scale(1.06); filter: drop-shadow(0 10px 12px #000a); }
+
+/* The card the enemy is about to take: claw marks and a ring that drains as its
+   take comes due. A pounce glows hotter and pulses. */
+.proto-skirmish__eye {
+  position: absolute; inset: -4px; border-radius: 7px; pointer-events: none;
+  outline: 3px solid #ff3a2a; outline-offset: 0;
+  box-shadow: 0 0 16px 3px #ff2a1a88, inset 0 0 14px #ff2a1a66;
+  background: #ff2a1a1f;
+}
+.proto-skirmish__card[data-eyed="pounce"] .proto-skirmish__eye { outline-color: #ff7a2a; box-shadow: 0 0 24px 6px #ff4a1acc, inset 0 0 18px #ff4a1a88; animation: proto-skirmish-pounce 300ms ease-in-out infinite alternate; }
+.proto-skirmish__claw {
+  position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%);
+  font: 900 max(22px, calc(var(--sk-card-w) * 0.46))/1 monospace; color: #ff6a50; text-shadow: 0 0 6px #000, 0 2px 0 #000;
+}
+/* A bar under the eyed card drains as the take comes due. */
+.proto-skirmish__eye::after {
+  content: ''; position: absolute; left: 2px; right: 2px; bottom: -11px; height: 6px; border-radius: 3px;
+  background: linear-gradient(90deg, #ff3a2a, #ffb04a); transform-origin: left center; transform: scaleX(var(--eye-left)); box-shadow: 0 0 8px #ff3a2a;
+}
+
+.proto-skirmish__message { margin: 0; min-height: 2.5em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; text-align: center; color: #ffe9e0; }
+.proto-skirmish__hero-stats { display: grid; gap: 4px; min-width: 0; }
+.proto-skirmish__stock {
+  display: grid; place-items: center; gap: 2px;
+  width: calc(var(--sk-card-w) * 0.9); aspect-ratio: 56 / 74;
+  border: 4px solid #050409; border-bottom-width: 3px; border-radius: 4px;
+  background: repeating-linear-gradient(135deg, #ffffff10 0 3px, transparent 3px 8px), linear-gradient(160deg, #3b2a1a, #1a120a);
+  color: #ffe7ad; font: 16px/1 'Classic Pixel', monospace; box-shadow: var(--table-object-shadow);
+}
+.proto-skirmish__stock > span:first-child { font-size: 22px; }
+.proto-skirmish__stock:disabled { opacity: 0.45; }
+.proto-skirmish__stock:focus-visible, .proto-skirmish__leave:focus-visible { outline: 3px solid #8ef2d4; outline-offset: 2px; }
+.proto-skirmish__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.proto-skirmish__legend { color: rgba(255, 225, 216, 0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.proto-skirmish__leave { padding: 5px 12px; border: 2px solid #9c6262; background: #251717; color: #fff0d0; font: 16px 'Classic Pixel', monospace; }
+.proto-skirmish[data-result="won"] .proto-skirmish__leave { border-color: #9c8c62; background: #17251f; }
+
+.proto-skirmish[data-result] .proto-skirmish__tableau { opacity: 0.55; filter: saturate(0.6); }
+/* Beaten, the foe slinks off into the dark. */
+.proto-skirmish[data-result="won"] .proto-skirmish__beast { animation: proto-skirmish-flee 900ms ease-in forwards; }
+@keyframes proto-skirmish-flee { to { opacity: 0; translate: 0 -30%; scale: 0.6; } }
+.proto-skirmish[data-result="won"] .proto-skirmish__message { color: #ffe7ad; }
+
+@keyframes proto-skirmish-float { 0% { opacity: 0; translate: 0 4px; } 15% { opacity: 1; } 100% { opacity: 0; translate: 0 -22px; } }
+@keyframes proto-skirmish-hit { 0% { translate: 0 0; box-shadow: inset 0 0 0 2px #ff3a2a, 0 0 18px #ff3a2a; } 25% { translate: -5px 0; } 50% { translate: 4px 0; } 75% { translate: -2px 0; } 100% { translate: 0 0; } }
+@keyframes proto-skirmish-crouch { from { box-shadow: inset 0 0 0 1px #5a2a2a, 0 3px 0 #020608; } to { box-shadow: inset 0 0 0 2px #ff4a2a, 0 0 16px #ff3a2a88; } }
+@keyframes proto-skirmish-pounce { from { transform: scale(1); } to { transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) {
+  .proto-skirmish__foe[data-pounce], .proto-skirmish__hero[data-hit], .proto-skirmish__beast, .proto-skirmish__card[data-eyed="pounce"] .proto-skirmish__eye, .proto-skirmish__hit { animation: none; }
+}
+.proto-skirmish--quiet { grid-template-rows: minmax(0, 1fr) auto; align-items: center; }

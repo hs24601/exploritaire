@@ -1,0 +1,41 @@
+.food-collection-fx { position: absolute; inset: 3px; z-index: 4; overflow: hidden; border-radius: 5px; pointer-events: none; }
+.food-collection-fx__foil { position: absolute; inset: 0; border-radius: inherit;
+  background: repeating-linear-gradient(125deg, #ff9bdd70 0%, #ffeda5b0 14%, #9effcbb0 28%, #8ceeffa0 42%, #c5a0ffb0 56%, #ff9bdd70 70%);
+  background-size: 250% 250%; mix-blend-mode: color-dodge;
+  clip-path: circle(0% at var(--food-x) var(--food-y)); opacity: 0;
+  animation: food-foil-bloom 1100ms 240ms ease-out both; }
+.food-collection-fx__berry, .food-collection-fx__mana, .food-collection-fx__burst {
+  position: absolute; left: var(--food-x); top: var(--food-y); transform: translate(-50%, -50%); }
+.food-collection-fx__berry, .food-collection-fx__mana { font-size: 24px; line-height: 1; filter: drop-shadow(0 0 5px #e3caff); }
+.food-collection-fx__berry { animation: food-berry-land 340ms ease-in both; }
+.food-collection-fx__mana { animation: food-mana-rise 1000ms 240ms ease-out both; }
+.food-collection-fx__burst i { position: absolute; left: -8px; top: -8px; font: normal 16px/1 serif; color: #fff4be;
+  text-shadow: 0 0 5px #bc8cff, 0 0 9px #91eeff; opacity: 0;
+  animation: food-sparkle 700ms calc(240ms + var(--spark-delay)) ease-out both; }
+@keyframes food-berry-land {
+  0% { opacity: 1; transform: translate(-50%, -50%) translate(24px,-45px) scale(.7); }
+  70% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(.25); }
+}
+@keyframes food-mana-rise {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.3); }
+  15%, 45% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -50%) translateY(-20px) scale(.7); }
+}
+@keyframes food-sparkle {
+  0% { opacity: 0; transform: scale(.2); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--spark-x),var(--spark-y)) scale(.1) rotate(80deg); }
+}
+@keyframes food-foil-bloom {
+  0% { opacity: 0; clip-path: circle(0% at var(--food-x) var(--food-y)); background-position: 0% 0%; }
+  12% { opacity: .9; }
+  65% { opacity: .65; clip-path: circle(145% at var(--food-x) var(--food-y)); }
+  100% { opacity: 0; clip-path: circle(145% at var(--food-x) var(--food-y)); background-position: 100% 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .food-collection-fx__berry, .food-collection-fx__burst { display: none; }
+  .food-collection-fx__foil { animation: food-quiet-flash 650ms ease-out both; clip-path: none; }
+  .food-collection-fx__mana { animation: food-quiet-flash 650ms ease-out both; }
+  @keyframes food-quiet-flash { from { opacity: .6; } to { opacity: 0; } }
+}

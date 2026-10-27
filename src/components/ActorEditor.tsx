@@ -2120,7 +2120,7 @@ export function ActorEditor({
                       <input
                         value={selected.artSrc ?? ''}
                         onChange={(e) => updateSelected((prev) => ({ ...prev, artSrc: e.target.value }))}
-                        placeholder="/assets/actors/filename.png"
+                        placeholder="/assets/deprecated/pixel/characters/filename.png"
                         className="flex-1 text-xs font-mono bg-game-bg-dark/70 border border-game-teal/30 rounded px-2 py-1"
                       />
                       <button
@@ -2138,7 +2138,7 @@ export function ActorEditor({
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          updateSelected((prev) => ({ ...prev, artSrc: `/assets/actors/${file.name}` }));
+                          updateSelected((prev) => ({ ...prev, artSrc: `/assets/deprecated/pixel/characters/${file.name}` }));
                           e.currentTarget.value = '';
                         }}
                       />

@@ -1,0 +1,15 @@
+[data-world-quest-shimmer="true"] .quest-card {
+  isolation:isolate;
+  box-shadow:inset 0 0 0 2px #fff0bd88,0 0 7px #ffe29c99,0 0 18px #ffd37870;
+}
+[data-world-quest-shimmer="true"] .quest-card::after {
+  content:''; position:absolute; inset:0; z-index:12; border-radius:inherit; pointer-events:none;
+  background:linear-gradient(115deg,transparent 30%,#fff2bf33 40%,#fffef4e6 48%,#bbf5ff88 52%,transparent 63%);
+  /* A persistent card-sized surface: no backdrop blending or animated paint
+     bounds that can invalidate the neighbouring WebGL lighting surfaces. */
+  transform:translateX(var(--quest-gleam-offset,-100%));
+  opacity:var(--quest-gleam-opacity,0); will-change:transform,opacity;
+}
+@media (prefers-reduced-motion:reduce) {
+  [data-world-quest-shimmer="true"] .quest-card::after { transform:none; opacity:.18; will-change:auto; }
+}

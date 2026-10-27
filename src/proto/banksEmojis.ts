@@ -1,0 +1,11 @@
+import atlas from '../../public/assets/runtime/characters/banks/expressions/emojis/watercolor/v4/banks-emojis-v4.json';
+
+export type BanksEmojiEmotion = keyof typeof atlas.frames;
+export const BANKS_EMOJI_SHEET = `${import.meta.env.BASE_URL}assets/runtime/characters/banks/expressions/emojis/watercolor/v4/banks-emojis-v4.png`;
+/** Still-expression frames, usable by Canvas, Three texture UVs, or UI sprites. */
+export const BANKS_EMOJI_ATLAS = atlas;
+export const BANKS_EMOJI_EMOTIONS = Object.keys(atlas.frames) as BanksEmojiEmotion[];
+export const banksEmojiImage = (emotion: BanksEmojiEmotion) =>
+  `${import.meta.env.BASE_URL}assets/runtime/characters/banks/expressions/emojis/watercolor/v4/banks_emoji_${emotion}.png`;
+
+

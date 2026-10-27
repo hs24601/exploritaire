@@ -11,7 +11,7 @@ if (!context) {
 }
 
 const image = new Image();
-image.src = '/assets/Bluevee.png';
+image.src = '/assets/deprecated/pixel/portraits/Bluevee.png';
 
 const drawRoundedRect = (
   ctx: CanvasRenderingContext2D,

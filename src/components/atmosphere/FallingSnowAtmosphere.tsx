@@ -28,7 +28,7 @@ type Props = {
   config?: FallingSnowConfig;
 };
 
-const SNOWFLAKE_TEXTURE_URL = '/assets/vis/textures/snowflake.png';
+const SNOWFLAKE_TEXTURE_URL = '/assets/runtime/textures/snowflake.png';
 
 export const FallingSnowAtmosphere = memo(function FallingSnowAtmosphere({ 
   className, 

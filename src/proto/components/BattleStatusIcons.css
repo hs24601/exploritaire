@@ -1,0 +1,12 @@
+.battle-status-icon { position:relative; line-height:1; }
+.battle-status-icon > span { font-size:24px; }
+.battle-status-icon > b { position:absolute; right:-6px; bottom:-6px; min-width:20px; height:20px; box-sizing:border-box; padding:0 4px; border:1px solid #f1d79a; border-radius:10px; background:#14100d; color:#fff3cf; font:bold 16px/18px Georgia,serif; text-align:center; pointer-events:none; }
+.battle-status-icon[data-status='insight'] { border-color:#ffe48a; background:radial-gradient(circle,#4a4220,#182321); box-shadow:0 0 8px #ffe48a66; cursor:pointer; }
+.battle-enemy-momentum .momentum-icon { width:34px; height:34px; margin:0; object-fit:contain; pointer-events:none; }
+.battle-rounds { flex:none; padding:6px 12px; border:1px solid #d8bf7b; border-radius:16px; background:#14100dd9; color:#fff0bd; font:16px/1.2 Georgia,serif; white-space:nowrap; }
+/* AP replaces the unused party stagger meter: a label and one pip per point up to the cap. */
+.battle-foundation__ap { display:flex; align-items:center; gap:6px; min-width:0; height:20px; }
+.battle-foundation__ap > b { flex:none; color:#ffe7a8; font:bold 16px/1 Georgia,serif; }
+.battle-foundation__ap-pips { display:flex; flex:1 1 auto; min-width:0; gap:2px; }
+.battle-foundation__ap-pips > i { flex:1 1 0; min-width:3px; max-width:10px; height:10px; border:1px solid #c9a86a; border-radius:3px; background:#1d1712; }
+.battle-foundation__ap-pips > i[data-on] { background:linear-gradient(#ffd982,#d9902f); border-color:#ffe7a8; }

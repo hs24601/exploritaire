@@ -5,7 +5,7 @@ type Props = {
   className?: string;
 };
 
-const CLOUDS_TEXTURE_URL = '/assets/vis/textures/alien-muscle-color.jpg';
+const CLOUDS_TEXTURE_URL = '/assets/runtime/textures/alien-muscle-color.jpg';
 
 const vertexShader = `
 void main() {

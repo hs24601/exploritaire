@@ -14,11 +14,11 @@ export const THREEJS_CARD_H = 196;
 // composite operations to create depth and shading.
 
 const CLOUD_URLS = [
-  '/assets/vis/clouds/cloud1.png',
-  '/assets/vis/clouds/cloud2.png',
-  '/assets/vis/clouds/cloud3.png',
-  '/assets/vis/clouds/cloud4.png',
-  '/assets/vis/clouds/cloud5.png'
+  '/assets/runtime/effects/clouds/cloud1.png',
+  '/assets/runtime/effects/clouds/cloud2.png',
+  '/assets/runtime/effects/clouds/cloud3.png',
+  '/assets/runtime/effects/clouds/cloud4.png',
+  '/assets/runtime/effects/clouds/cloud5.png'
 ];
 
 class Cloud {

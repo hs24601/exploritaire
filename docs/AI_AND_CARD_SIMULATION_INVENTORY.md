@@ -75,13 +75,13 @@ Recommendation: build the next shared implementation around the first three laye
 
 - It is a large UI harness, not a small reusable AI engine.
 - Its card/ability model is Combat Lab-specific.
-- Extract only its replay protocol, seeded RNG, trace schema, and test-runner concepts; do not move its component into ClassicPlus.
+- Extract only its replay protocol, seeded RNG, trace schema, and test-runner concepts; do not move its component into Proto.
 
-### 3. ClassicPlus local autoplay
+### 3. Proto local autoplay
 
 **File**
 
-- `src/golf/ClassicPlusVariant.tsx`
+- `src/golf/ProtoVariant.tsx`
 
 **Decision model**
 
@@ -91,7 +91,7 @@ Recommendation: build the next shared implementation around the first three laye
 
 **Strengths**
 
-- Directly matches the current ClassicPlus state model.
+- Directly matches the current Proto state model.
 - Already exposes separate player/enemy controls, speed choices, and turn alternation.
 - Correctly represents the current exploration/combat distinction: finite exploration deal and infinite combat replacement.
 
@@ -126,11 +126,11 @@ Recommendation: build the next shared implementation around the first three laye
 
 - The same core idea is duplicated across three large variants.
 - State transitions and animation are interwoven.
-- Its assumptions about hands, refills, and foundations do not match current ClassicPlus directly.
+- Its assumptions about hands, refills, and foundations do not match current Proto directly.
 
 **Candidate for extraction**
 
-Extract the *concept*, not a file: `evaluateMove(state, move) -> { continuations, unlocks, depth, score }`. Then let ClassicPlus define its own legal moves and scoring weights.
+Extract the *concept*, not a file: `evaluateMove(state, move) -> { continuations, unlocks, depth, score }`. Then let Proto define its own legal moves and scoring weights.
 
 ### 5. GolfGame integrated autoplay
 
@@ -151,7 +151,7 @@ Extract the *concept*, not a file: `evaluateMove(state, move) -> { continuations
 **Gaps / caveats**
 
 - Very large, UI-integrated module with broad game-state responsibilities.
-- Not suitable as a direct dependency for ClassicPlus.
+- Not suitable as a direct dependency for Proto.
 - Its policy should be audited independently before any pieces are reused.
 
 ### 6. Guidance and balance solvers
@@ -213,13 +213,13 @@ Extract the *concept*, not a file: `evaluateMove(state, move) -> { continuations
 **Assessment**
 
 - This is the best foundation for a shared card-execution system.
-- Important asymmetry to resolve before reuse: player card play currently has `shouldBackfill = false`, while enemy card play backfills. Current ClassicPlus intentionally has different finite-exploration/infinite-combat logic, so that policy should be explicit rather than inferred from side.
+- Important asymmetry to resolve before reuse: player card play currently has `shouldBackfill = false`, while enemy card play backfills. Current Proto intentionally has different finite-exploration/infinite-combat logic, so that policy should be explicit rather than inferred from side.
 
-### B. ClassicPlus finite exploration / infinite combat
+### B. Proto finite exploration / infinite combat
 
 **File**
 
-- `src/golf/ClassicPlusVariant.tsx`
+- `src/golf/ProtoVariant.tsx`
 
 **Behavior**
 
@@ -299,7 +299,7 @@ Extract the *concept*, not a file: `evaluateMove(state, move) -> { continuations
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Engine + EnemyAiController | No shared player policy | Yes | No | Via deck deal | Yes, enemy side | No | Yes | Production rules/AI base |
 | CombatSandbox | Yes | Yes | Yes | Configurable | Engine-dependent | Yes | Delegates | Test and comparison harness |
-| ClassicPlus | Yes | Yes | No | Exploration | Combat | Minimal/local | No | Current behavior reference |
+| Proto | Yes | Yes | No | Exploration | Combat | Minimal/local | No | Current behavior reference |
 | ChargeUp family | Yes | Yes | No | Local deck | Local refill | Yes | Local | Heuristic reference |
 | GolfGame | Yes | Enemy runner | No | Game-specific | Game-specific | Integrated | Mixed | Mode/UX reference |
 | Guidance | Evaluator only | Evaluator only | Yes for same inputs | N/A | N/A | No | Yes | Oracle/high-skill reference |
@@ -314,13 +314,13 @@ Extract the *concept*, not a file: `evaluateMove(state, move) -> { continuations
    - `continuation`: adapted from the ChargeUp one-step heuristic.
    - `solver`: adapted from `guidance.ts` for high-skill or diagnostic runs.
 4. **Inject a seeded RNG.** This lets normal/easy variants of the policy be replayed exactly and makes AI comparison meaningful.
-5. **Use the Combat Sandbox harness concepts.** Reuse the trace schema, replay bundle, and batch-run reporting. Keep ClassicPlus presentation independent.
+5. **Use the Combat Sandbox harness concepts.** Reuse the trace schema, replay bundle, and batch-run reporting. Keep Proto presentation independent.
 6. **Make supply/backfill a scenario policy.** For example: `finiteSeeded`, `combatInfinite`, `queuedEnemy`, or `deadlockRedeal`. Do not encode it as a hard side effect of a player/enemy play function.
 7. **Select card animation last.** Commit the pure state transition, then show a card moving. The UI must be able to skip animation in batch mode without changing outcomes.
 
 ## Proposed Next Decision
 
-For the next implementation, compare these two candidate policies against the same seeded ClassicPlus combat states:
+For the next implementation, compare these two candidate policies against the same seeded Proto combat states:
 
 | Candidate | Behavior | Why compare it |
 | --- | --- | --- |

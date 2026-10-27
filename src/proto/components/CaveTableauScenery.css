@@ -1,0 +1,16 @@
+.cave-tableau-scenery { pointer-events:none; isolation:isolate; }
+.cave-tableau-scenery__camera { position:absolute; inset:0; isolation:isolate; transform-origin:50% 65%; }
+.cave-tableau-scenery__mountains { position:absolute; inset:0; z-index:-3; }
+.cave-tableau-scenery__mountains img { position:absolute; height:100%; object-fit:contain; object-position:center bottom; transform-origin:center bottom; filter:brightness(.58) saturate(.65); }
+.cave-tableau-scenery__soil { position:absolute; z-index:-2; left:-20%; width:140%; top:70%; height:48%; background-size:cover; background-position:center; border-radius:50%; opacity:.92; mask-image:radial-gradient(ellipse,black 15%,#000b 43%,transparent 72%); }
+.cave-tableau-scenery__cave { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+.cave-tableau-scenery__clutter { position:absolute; inset:0; z-index:1; }
+.cave-tableau-scenery__clutter img { position:absolute; height:auto; opacity:.68; filter:brightness(.85); }
+
+/* Keep every prop registered to the painted cave, even in tall phone fields. */
+.cave-tableau-scenery.travel-den-scene-cave { height:auto; aspect-ratio:1.5; top:50%; transform:translateY(-50%); }
+
+
+@media (max-width:600px) and (orientation:portrait) {
+  .cave-tableau-scenery__mountains { --cave-mountain-scale:4.5; }
+}

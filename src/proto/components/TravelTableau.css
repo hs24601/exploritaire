@@ -1,0 +1,166 @@
+.travel-tableau { width:100%; max-width:760px; margin:auto; padding:12px; color:#ffe2ae; font-size:16px; min-width:0; --classic-card-w: min(80px, 9vw); }
+.travel-tableau p { margin:8px 0; }
+.travel-summary,.travel-receiver { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.travel-tableau button,.travel-confirm button { border:1px solid #a08a64; border-radius:6px; padding:8px; background:#152820; color:#ffe2ae; font-size:16px; }
+.travel-tableau button:disabled { opacity:.5; }
+.travel-card-grid { display:grid; align-items:start; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; margin:12px 0; }
+.travel-column { min-width:0; display:flex; flex-direction:column; }
+.travel-column button { width:100%; height:auto; flex:none; aspect-ratio:63/88; padding:6px; }
+.travel-buried { display:block; height:20px; font-size:16px; line-height:18px; padding:0 4px; background:#18251f; border:1px solid #a08a64; border-radius:4px 4px 0 0; color:#b9afa0; }
+.travel-column .event-card--buried { aspect-ratio:auto; height:24px; min-height:24px; overflow:hidden; padding:0 4px; }
+.travel-event-utilities { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+.travel-event-utilities button[aria-pressed="true"] { border-color:#ffe066; }
+.travel-foundation { --foundation-holocard-height:clamp(160px,13vw,208px); padding:16px; }
+.travel-foundation-actor { width:calc(var(--foundation-holocard-height) * 63 / 88); height:var(--foundation-holocard-height); cursor:pointer; }
+.travel-foundation-actor:focus-visible { outline:2px solid #ffe39c; outline-offset:4px; }
+.travel-confirm { position:absolute; inset:8px 12px; z-index:60; display:grid; place-items:center; container-type:size; color:#ffe2ae; font-size:16px; pointer-events:none; }
+.travel-confirm > .travel-confirm-card.trading-card-stage { width:min(var(--travel-card-width,163.2px),100cqw,calc(100cqh * 63 / 88)); height:auto; aspect-ratio:63/88; pointer-events:auto; cursor:grab; touch-action:none; }
+.travel-confirm-card > .details-card.trading-card { width:100%; height:100%; min-height:0; box-sizing:border-box; transform:none; will-change:auto; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:5px; padding:6px; }
+.travel-confirm-card .trading-card__header h2 { font-size:20px; line-height:1.15; white-space:normal; text-align:center; }
+.travel-confirm-card .trading-card__art img { image-rendering:auto; object-position:50% 35%; }
+.travel-confirm-copy { align-self:end; max-height:100%; min-height:0; overflow:auto; padding:10px; border:1px solid #c0d0bf88; border-radius:8px; background:#07191bd9; font-size:16px; line-height:1.35; overflow-wrap:anywhere; }
+.travel-confirm p { margin:0 0 10px; }
+.travel-confirm p:last-child { margin-bottom:0; }
+.travel-confirm-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.travel-confirm-actions button:first-child { grid-column:1 / -1; }
+.travel-confirm-actions button { min-height:40px; line-height:1.15; }
+.travel-confirm-actions button:disabled { opacity:.55; cursor:not-allowed; }
+.travel-confirm button:focus-visible,.travel-confirm-copy:focus-visible { outline:2px solid #ffe39c; outline-offset:2px; }
+.travel-route-control { position:absolute; translate:-50% -50%; z-index:65; width:44px; height:44px; border:2px solid #fff0b5; border-radius:50%; background:#143f3bee; color:#fff0b5; font-size:16px; font-weight:bold; pointer-events:auto; touch-action:none; cursor:grab; box-shadow:0 2px 8px #0009; }
+.travel-route-control:active { cursor:grabbing; }
+.travel-route-control:focus-visible { outline:3px solid #ffe066; outline-offset:2px; }
+.travel-route-tools { position:absolute; left:12px; top:8px; width:min(360px,calc(100% - 24px)); box-sizing:border-box; z-index:70; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px; border:1px solid #a08a64; border-radius:8px; background:#07191bf2; color:#ffe2ae; font-size:16px; pointer-events:auto; }
+.travel-route-tools button { padding:8px; border:1px solid #a08a64; border-radius:6px; background:#163531; color:#ffe2ae; font-size:16px; }
+.travel-route-tools [role="status"] { flex-basis:100%; }
+.proto-map:has(.proto-settings-host) .travel-route-tools { max-width:calc(100% - 120px); }
+@media(max-width:600px) { .travel-card-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } .travel-tableau { --classic-card-w:60px; padding:8px; } .travel-column { max-width:60px; } }
+@media(max-height:500px) { .travel-foundation { --foundation-holocard-height:128px; } }
+
+[data-traversal-pending="true"] * { animation-play-state:paused !important; }
+.proto-tableau-field:has(.travel-tableau) { display:block; overflow:hidden; }
+.travel-tableau .travel-column button { font-size:16px; }
+
+.travel-target-actions { position:absolute; translate:-50% -50%; display:flex; gap:6px; z-index:80; pointer-events:auto; }
+.travel-target-actions button { min-width:44px; min-height:44px; padding:8px; border:2px solid #fff0b5; border-radius:8px; background:#143f3bf5; color:#fff0b5; font-size:16px; touch-action:manipulation; }
+.travel-target-actions button:disabled { opacity:.5; }
+.travel-target-actions button:focus-visible { outline:3px solid #ffe066; outline-offset:2px; }
+
+.travel-target-actions { translate:none; align-items:center; width:max-content; max-width:calc(100% - 16px); box-sizing:border-box; color:#ffe2ae; font-size:16px; }
+.travel-target-actions--compact { flex-direction:row; flex-wrap:wrap; }
+.travel-target-buttons { display:flex; gap:6px; }
+
+.proto-party-controls { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:6px; color:#ffe2ae; font-size:16px; }
+.proto-party-controls button { border:1px solid #a08a64; border-radius:6px; padding:6px; background:#152820; color:#ffe2ae; }
+.proto-party-controls button:disabled { opacity:.5; }
+.travel-foundation button[aria-pressed="true"] { outline:2px solid #ffe39c; }
+
+.travel-receiver--party { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; gap:6px; }
+.travel-receiver--party .travel-foundation { --foundation-holocard-height:clamp(110px,10vw,140px); padding:6px; min-width:0; }
+.travel-receiver--party .travel-foundation button { width:100%; padding:6px; margin:4px 0; }
+.travel-receiver--party .travel-foundation-actor { margin:auto; }
+
+/* Shared measured card surface: controls and foundations never consume its bounds. */
+.travel-tableau { position:relative; height:100%; max-width:none; padding:6px; overflow:hidden; }
+.travel-tableau .travel-card-grid { display:grid; grid-template-columns:repeat(var(--travel-columns,7),minmax(0,var(--classic-card-w))); gap:var(--classic-tableau-gap); justify-content:center; margin:0; height:100%; align-items:center; }
+.travel-column { position:relative; height:var(--classic-stack-height); max-width:none; container-type:inline-size; }
+.travel-column button,.travel-tableau .travel-column .event-card--buried { height:calc(var(--classic-card-w) * 88 / 63); width:var(--classic-card-w); aspect-ratio:63/88; }
+.travel-foundation { display:grid; gap:4px; justify-items:center; min-width:0; }
+.travel-tableau .travel-receiver--party { display:flex; justify-content:center; align-items:start; gap:8px; flex-wrap:nowrap; }
+.travel-tableau .travel-receiver--party .travel-foundation { --foundation-holocard-height:100px; padding:0; flex:0 1 auto; }
+.travel-tableau .travel-receiver--party .travel-foundation button { width:auto; padding:2px; margin:0; font-size:16px; min-height:28px; }
+.travel-tableau .tableau-template__foundations { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,210px); align-items:center; gap:8px; }
+.travel-toolbar { order:2; display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
+.travel-toolbar select { min-width:0; max-width:150px; min-height:32px; background:#152820; color:#ffe2ae; font-size:16px; border:1px solid #a08a64; }
+.travel-toolbar button { font-size:16px; padding:4px; min-height:32px; }
+.travel-toolbar .event-discard { padding:0; }
+.travel-tableau .proto-solve-controls p { margin:0; font-size:16px; }
+.travel-summary { font-size:16px; gap:4px; }
+@container(max-width:70px) {
+ .event-card-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; }
+}
+@media(max-height:500px) {
+ .travel-tableau .travel-receiver--party .travel-foundation { --foundation-holocard-height:64px; grid-template-columns:auto auto; grid-template-rows:auto auto; align-items:center; }
+ .travel-tableau .travel-foundation-actor { grid-column:1; grid-row:1 / 3; }
+ .travel-tableau .travel-foundation > button { grid-column:2; }
+ .travel-tableau .travel-toolbar { display:grid; grid-template-columns:1fr 1fr; gap:3px; }
+ .travel-tableau .travel-toolbar select { grid-column:1 / -1; justify-self:center; }
+ .travel-tableau .proto-solve-controls { padding:0; border:0; }
+ .travel-tableau .proto-solve-controls p { display:none; }
+ .travel-summary strong { max-width:50%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+}
+
+/* World travel trial. Card stations inherit the map's one physical projection;
+   no screen-space fitting, camera-facing rotation or tray surrounds the stacks. */
+.travel-tableau--world { position:absolute; inset:0; padding:0; pointer-events:none; overflow:visible; z-index:55; height:auto; }
+.travel-world-hud { position:absolute; left:12px; bottom:62px; max-width:440px; padding:8px; background:#07191bed; border:1px solid #a08a6470; border-radius:8px; pointer-events:auto; }
+.travel-world-hud .proto-solve-controls { padding:0; margin:0; }
+.travel-world-hud .travel-summary { display:grid; gap:4px; }
+.travel-world-props { position:absolute; left:0; top:0; width:0; height:0; transform-style:preserve-3d; color:#ffe2ae; }
+.travel-world-column { position:absolute; width:0; height:0; transform-style:preserve-3d; }
+.travel-world-station { position:absolute; transform-style:preserve-3d; pointer-events:none; }
+.travel-world-rack { position:relative; transform-origin:0 0; pointer-events:none; }
+.travel-world-card { position:absolute; left:0; width:96px; height:134px; pointer-events:auto; }
+.travel-world-card .playing-card { opacity:1; padding:6px; box-sizing:border-box; background-color:#10171c; filter:brightness(var(--tableau-card-brightness,1)); }
+.travel-world-stake { position:absolute; inset:16px 10px 0; border-left:5px solid #8c7655; border-right:5px solid #8c7655; box-shadow:inset 2px 0 #d7ba80; pointer-events:none; }
+.travel-world-column-number { position:absolute; top:100%; left:35%; font-size:18px; line-height:22px; color:#ffe7b3; text-shadow:0 1px 2px #000; }
+.travel-world-hud > button { border:1px solid #a08a64; border-radius:6px; padding:6px; background:#152820; color:#ffe2ae; font-size:16px; }
+.travel-actor-popup { position:absolute; translate:-100% -20%; margin-left:-64px; max-width:calc(100% - 24px); pointer-events:none; }
+.travel-actor-popup .travel-toolbar { display:none; }
+.travel-actor-popup .travel-receiver--party { display:flex; gap:8px; justify-content:center; flex-wrap:nowrap; }
+.travel-actor-popup .travel-receiver--party .travel-foundation { --foundation-holocard-height:128px; max-width:160px; padding:0; flex:0 1 auto; pointer-events:auto; }
+.travel-actor-popup .travel-receiver--party .travel-foundation button { padding:4px; max-width:160px; width:auto; margin:0; font-size:16px; }
+.travel-actor-popup .travel-foundation-actor { pointer-events:auto; }
+.travel-actor-popup { translate:none; margin:0; }
+.travel-world-hud { left:auto; right:12px; }
+
+.travel-card-grid { grid-template-columns:repeat(var(--travel-columns,7),minmax(0,1fr)); }
+.travel-obstruction-actions { display:flex; flex-wrap:wrap; gap:6px; padding:8px; border:1px solid #b89b64; border-radius:8px; background:#182820; }
+.travel-obstruction-actions strong,.travel-obstruction-actions>span { flex-basis:100%; }
+.travel-obstruction-card { box-sizing:border-box; width:100%; height:100%; border:2px solid #b89b64; border-radius:7px; background:linear-gradient(145deg,#554b38,#272b23); color:#ffe2ae; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:5px; gap:6px; font-size:clamp(9px,1.2vw,16px); overflow:hidden; }
+.travel-obstruction-card>span:first-child { font-size:2em; }
+
+.travel-free-layout { position:relative; width:calc(var(--classic-card-w) * 3.65); height:calc(var(--classic-card-w) * 3.65); margin:auto; flex:none; }
+.travel-tableau { box-sizing:border-box; }
+.travel-scenery-camera { position:absolute; inset:0; z-index:-1; pointer-events:none; }
+/* Travel scenery already shares the fitted envelope. Do not inherit a second
+   gathering-only crown rail that shrinks the measured field underneath it. */
+.proto-tableau-field .travel-tableau .proto-tableau-scene { display:block; }
+.travel-free-layout--dense { align-self:start; margin:6px auto 0; }
+.travel-free-layout > .playing-card { width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }
+
+/* Cave art and cards share one fitted composition, independent of the map camera. */
+.travel-den-exit { position:relative; flex:none; width:calc(var(--classic-card-w) * 6.5); height:calc(var(--classic-card-w) * 4.5); margin:auto; }
+.travel-den-exit__cave { position:absolute; left:0; top:8%; width:100%; height:92%; object-fit:contain; pointer-events:none; filter:brightness(.8); }
+.travel-den-exit > .playing-card { width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }
+
+.travel-den-scene-cave { position:absolute; width:80%; height:65%; left:10%; top:15%; object-fit:contain; pointer-events:none; }
+
+/* Placement stays outside the flip to preserve authored freeform rotations. */
+.travel-arrival-card { width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }
+.travel-arrival-card__turn { position:relative; width:100%; height:100%; transform-style:preserve-3d; }
+.travel-arrival-card__face { backface-visibility:hidden; transform:translateZ(.1px); width:100%; height:100%; }
+/* Repaint the whole value plaque above the sibling Khad overlay. Keep one
+   visible backing so its semitransparency does not compound. */
+.travel-arrival-card__face:has(> .travel-khad-value) .playing-card .proto-card-center-rank { visibility: hidden; }
+.travel-arrival-card__face > .travel-khad-value { z-index: 5; }
+.travel-arrival-card__back { position:absolute; inset:0; transform:rotateY(180deg); backface-visibility:hidden; border:3px double #c7aa74; border-radius:var(--classic-radius); background:repeating-linear-gradient(45deg,#132c3c 0 6px,#203b4a 6px 8px); box-shadow:inset 0 0 0 5px #071722,inset 0 0 20px #0008; }
+@media (prefers-reduced-motion:reduce) { .travel-arrival-card__back { transform:none; } .travel-arrival-card[data-arrival-face="flipping"] .travel-arrival-card__back { display:none; } }
+
+.travel-sequence-guide { margin:0 !important; font:16px/1.3 system-ui,sans-serif; color:#ead6ad; }
+.travel-sequence-guide b { color:#c4ecdf; }
+.travel-sequence-mark { position:absolute; right:2px; top:1px; z-index:6; min-width:24px; padding:0 2px; border:1px solid #c3b889; border-radius:5px; background:#112d30ed; color:#f5e7b9; text-align:center; font:700 16px/1.1 system-ui,sans-serif; pointer-events:none; }
+.travel-dense-ground { background:linear-gradient(#081820d9 0%,#10272ab3 45%,#10232599 85%),var(--dense-ground) center bottom/cover; }
+.travel-dense-bushes { position:absolute; inset:0; pointer-events:none; }
+.travel-dense-bush { position:absolute; width:calc(var(--classic-card-w) * 3); height:calc(var(--classic-card-w) * 4.35); filter:drop-shadow(0 8px 4px #07160dbb); }
+.travel-dense-bush > img { width:100%; height:100%; object-fit:fill; }
+.travel-dense-bush::after { content:''; position:absolute; left:10%; bottom:-3%; width:80%; height:13%; border-radius:50%; background:radial-gradient(ellipse,#30452f88,transparent 70%); }
+
+
+
+.travel-free-layout--dense .proto-card-center-rank { align-items:end; padding:0 2% 8%; font-size:max(16px,calc(var(--classic-card-w) * .48)); }
+
+
+/* Covered cards keep a readable rank in their peek; the rule is unveiled with the face. */
+.travel-free-layout--dense .playing-card[data-buried="true"] .proto-card-center-rank { align-items:start; padding-top:6%; font-size:max(16px,calc(var(--classic-card-w) * .4)); }
+.travel-arrival-card:has(.playing-card[data-buried="true"]) .travel-sequence-mark { visibility:hidden; }
+

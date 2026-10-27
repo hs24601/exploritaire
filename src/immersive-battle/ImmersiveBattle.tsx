@@ -84,9 +84,9 @@ const ActorTemplateCard = memo(({ actor, index, isFlashing, setFoundationRef, lo
   const [yOffsetBack, setYOffsetBack] = useState(0);
   const actorDef = getActorDefinition(actor.definitionId);
   const color = SUIT_COLORS[actor.suit ?? '⭐'] || '#7fdbca';
-  const coverArt = actorDef?.artSrc ? (actorDef.artSrc.startsWith('/') ? actorDef.artSrc : `/${actorDef.artSrc}`) : '/assets/Bluevee.png';
-  const backSprite  = '/assets/actors/battle_back_eevee.png';
-  const frontSprite = '/assets/actors/battle_front_eevee.png';
+  const coverArt = actorDef?.artSrc ? (actorDef.artSrc.startsWith('/') ? actorDef.artSrc : `/${actorDef.artSrc}`) : '/assets/deprecated/pixel/portraits/Bluevee.png';
+  const backSprite  = '/assets/deprecated/pixel/characters/battle_back_eevee.png';
+  const frontSprite = '/assets/deprecated/pixel/characters/battle_front_eevee.png';
 
   const isBackFacing = side === 'player' ? lookingNorth : !lookingNorth;
   
@@ -94,14 +94,14 @@ const ActorTemplateCard = memo(({ actor, index, isFlashing, setFoundationRef, lo
   let finalBackSprite = backSprite;
 
   if (side === 'enemy' || (side === 'player' && index === 0)) {
-    finalFrontSprite = '/assets/actors/mochikin/pop_front_mochikin.png';
-    finalBackSprite = '/assets/actors/mochikin/pop_mochikin_behind.png';
+    finalFrontSprite = '/assets/deprecated/pixel/characters/mochikin/pop_front_mochikin.png';
+    finalBackSprite = '/assets/deprecated/pixel/characters/mochikin/pop_mochikin_behind.png';
   } else if (side === 'player' && index === 1) {
-    finalFrontSprite = '/assets/actors/ursokin/pop_ursokin_front.png';
-    finalBackSprite = '/assets/actors/ursokin/pop_ursokin_behind.png';
+    finalFrontSprite = '/assets/deprecated/pixel/characters/ursokin/pop_ursokin_front.png';
+    finalBackSprite = '/assets/deprecated/pixel/characters/ursokin/pop_ursokin_behind.png';
   } else if (side === 'player' && index === 2) {
-    finalFrontSprite = '/assets/actors/herokin/pop_herokin_front.png';
-    finalBackSprite = '/assets/actors/herokin/pop_herokin_behind.png';
+    finalFrontSprite = '/assets/deprecated/pixel/characters/herokin/pop_herokin_front.png';
+    finalBackSprite = '/assets/deprecated/pixel/characters/herokin/pop_herokin_behind.png';
   }
 
   // SANDWICH LOGIC: South skin at 0.05px, North skin at -5.45px

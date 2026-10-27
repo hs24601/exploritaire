@@ -1,0 +1,4 @@
+Built-in image_gen edit. Input: hero-snuffling-berries-night-paint-v4.png
+Output: public/assets/runtime/ui/quests/hero-snuffling-berries-night-paint-v5.png
+
+Precise localized edit. Remove ONLY the LOWER LEFT red manaberry (center near x=185 y=715 in this 1536x1024 image) and its local blue halo. Fill that small area with matching broad soft dark teal watercolor foliage. KEEP the UPPER red manaberry beside Hero's nose (near x=305 y=535) completely unchanged, including its bumpy stemless red shape and blue halo. Exactly ONE fruit total in final image. Preserve all other pixels/composition as closely as possible: Hero, expression, markings, pose, paws, tree, Khad Roots, stars, rocks, vegetation, brushwork, lighting. Maintain exact original 3:2 framing, subject scale and positions so the existing square card crop remains identical. Do not crop, zoom, reframe or add margins or text. No additional changes.

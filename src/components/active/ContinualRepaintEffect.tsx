@@ -18,7 +18,7 @@ export const DEFAULT_CONTINUAL_REPAINT_CONFIG: ContinualRepaintConfig = {
   varW: 5,
   countPerFrame: 150,
   velocity: 1.0,
-  imgUrl: '/assets/Bluevee.png',
+  imgUrl: '/assets/deprecated/pixel/portraits/Bluevee.png',
   highFidelity: false,
   desaturate: false,
 };

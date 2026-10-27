@@ -39,7 +39,7 @@ export const ComboPunchTextEffect = memo(function ComboPunchTextEffect({
       <style>{`
         @font-face {
           font-family: "Luckiest Guy Local";
-          src: url('/assets/vis/fonts/luckiest-guy-0.ttf') format('truetype');
+          src: url('/assets/runtime/fonts/display/luckiest-guy-0.ttf') format('truetype');
           font-display: swap;
         }
 

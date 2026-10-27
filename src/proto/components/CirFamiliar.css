@@ -1,0 +1,14 @@
+.cir-familiar-buff { position:relative; touch-action:none; user-select:none; }
+.cir-familiar-buff > img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.cir-familiar-buff > svg { position:absolute; inset:-3px; width:calc(100% + 6px); height:calc(100% + 6px); transform:rotate(-90deg); pointer-events:none; }
+.cir-familiar-buff circle { fill:none; stroke:#ffe9a4; stroke-width:2.5; }
+.cir-familiar-inspector { position:fixed; inset:0; margin:auto; height:fit-content; box-sizing:border-box; width:min(408px,calc(100dvw - 32px),calc((100dvh - 174px) * 63 / 88 + 48px)); max-height:calc(100dvh - 24px); padding:48px 24px 24px; border:0; overflow:visible; background:transparent; color:#fff1d2; }
+.cir-familiar-inspector::backdrop { background:#020807ce; }
+.cir-familiar-inspector__close { position:absolute; top:0; right:0; z-index:3; width:40px; height:40px; border:2px solid #d9b963; border-radius:50%; background:#182221; color:#fff1d2; font-size:28px; cursor:pointer; }
+.ability-fan__card.cir-familiar-inspector__card { position:relative; top:auto; left:auto; width:100%; transform:none!important; cursor:default; }
+.cir-familiar-inspector .trading-card__header { padding-right:0; }
+.cir-familiar-inspector .trading-card__header h2 { font-size:26px; }
+.cir-familiar-inspector .trading-card__description { font:20px/1.25 Georgia,serif; padding:12px; }
+.cir-familiar-inspector .ability-fan__actor { font-size:20px; }
+.cir-familiar-inspector__return { display:block; width:100%; min-height:44px; margin-top:18px; padding:10px; border:2px solid #d9b963; border-radius:8px; background:#243b2c; color:#fff1d2; font:18px/1.2 Georgia,serif; cursor:pointer; }
+.cir-familiar-inspector__return:disabled { opacity:.5; cursor:default; }

@@ -11,7 +11,7 @@ export type TraceCompleteConfig = {
 };
 
 export const DEFAULT_TRACE_COMPLETE_CONFIG: TraceCompleteConfig = {
-  imgUrl: '/assets/vis/textures/starrynight.jpg',
+  imgUrl: '/assets/runtime/textures/starrynight.jpg',
   particleCount: 1500,
   noiseScale: 0.0025,
   speed: 2.0,

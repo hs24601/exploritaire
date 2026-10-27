@@ -1,0 +1,7 @@
+.combat-sandbox .battle-field .battle-field__board > .battle-bullet-time { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; background:radial-gradient(ellipse at 50% 25%,#a8dffc0a,transparent 65%); }
+.battle-bullet-time i { position:absolute; width:2px; height:9px; border-radius:50%; background:#c0e6ff; box-shadow:0 0 3px #a8ddff80; opacity:.45; animation:battle-time-mote 32s linear infinite; }
+.battle-bullet-time i:nth-child(3n) { width:3px; height:3px; background:#ffe3b2; }
+.battle-bullet-time span { position:absolute; top:3px; right:8px; color:#abd5e5; font:10px/1.3 monospace; letter-spacing:.05em; }
+@keyframes battle-time-mote { from { transform:translate3d(-8px,15px,0) rotate(-12deg); opacity:0; } 15%,80% { opacity:.5; } to { transform:translate3d(14px,-24px,0) rotate(12deg); opacity:0; } }
+.battle-field[data-combat-paused] .battle-bullet-time i { animation-play-state:paused; }
+@media (prefers-reduced-motion:reduce) { .battle-bullet-time i { animation:none; opacity:.35; }.battle-bullet-time i:nth-child(n+7) { display:none; } }

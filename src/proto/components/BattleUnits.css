@@ -1,0 +1,111 @@
+/* Foes, ability cards and vitals for the Dark Woods battle. All text 16px+. */
+
+.battle-bar { position: relative; display: block; height: 10px; min-width: 0; border: 2px solid #050409; border-radius: 4px; background: #160f1a; overflow: hidden; }
+.battle-bar[data-bar='hp'] { height: 20px; }
+.battle-bar__fill { position: absolute; inset: 0 auto 0 0; transition: width 120ms linear; }
+.battle-bar[data-bar='hp'] .battle-bar__fill { background: linear-gradient(#e2564f,#9b2532); }
+.battle-bar[data-bar='stagger'] .battle-bar__fill { background: linear-gradient(#ffd166,#d08a1c); }
+.battle-bar[data-bar='timer'] .battle-bar__fill { background: linear-gradient(#8fb8ff,#4a64c8); }
+.battle-bar__preview { position: absolute; top: 0; bottom: 0; animation: battle-preview-pulse 900ms ease-in-out infinite alternate; }
+.battle-bar__preview[data-direction='loss'] { background: repeating-linear-gradient(135deg,#fff1d6cc 0 4px,#ffb4a0aa 4px 8px); }
+.battle-bar__preview[data-direction='gain'] { background: repeating-linear-gradient(135deg,#fff8c4 0 4px,#ffbe3c 4px 8px); }
+.battle-bar[data-bar='timer'] .battle-bar__preview { background: repeating-linear-gradient(135deg,#d7e6ff99 0 4px,#26346c 4px 8px); }
+.battle-bar__text { position: relative; display: block; padding: 0 4px; color: #fff6e6; font-size: 16px; line-height: 16px; text-shadow: 1px 1px 0 #000, -1px 0 0 #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.battle-bar[data-bar='timer'] { height: 20px; }
+.battle-bar[data-bar='timer'] .battle-bar__text { color: #e6efff; }
+@keyframes battle-preview-pulse { from { opacity: .55; } to { opacity: 1; } }
+
+.battle-foe { position: relative; width: 100%; min-width: 0; display: grid; grid-template-columns: 48px minmax(0,1fr); grid-template-rows: auto auto; grid-template-areas: 'name name' 'figure bars'; align-items: center; gap: 2px 6px; padding: 4px 6px 6px; border: 2px solid #796488; border-bottom-width: 3px; border-radius: 14px; background: linear-gradient(145deg,#2a1d33ed,#110a17fa); box-shadow: 0 4px 0 #020708; color: inherit; text-align: left; font: inherit; }
+.battle-foe:disabled { cursor: default; }
+.battle-foe[data-targetable='true'] { cursor: crosshair; border-color: #ffd166; }
+.battle-foe[data-preview='faint'] { box-shadow: 0 0 0 2px #ffd16655, 0 4px 0 #020708; }
+.battle-foe[data-preview='focus'] { border-color: #fff1b0; box-shadow: 0 0 0 3px #ffd166, 0 0 18px #ffd16688, 0 4px 0 #020708; transform: translateY(-2px); }
+.battle-foe[data-state='staggered'] { border-color: #ffb347; animation: battle-staggered 600ms ease-in-out infinite alternate; }
+.battle-foe[data-state='down'] { opacity: .5; filter: grayscale(.8); }
+.battle-foe:focus-visible { outline: 2px solid #ffe19a; outline-offset: 3px; }
+@keyframes battle-staggered { from { box-shadow: 0 0 0 1px #ffb34766, 0 4px 0 #020708; } to { box-shadow: 0 0 10px 3px #ffb347aa, 0 4px 0 #020708; } }
+.battle-foe__figure { position: relative; grid-area: figure; height: 52px; display: block; }
+.battle-foe__figure .battle-field__sprite { left: 0; bottom: 0; width: 48px; height: 48px; }
+.battle-foe__figure .battle-floaters { inset: -10px -60px 0 0; }
+.battle-foe[data-state='staggered'] .battle-field__sprite { transform: rotate(-8deg) translateY(4px); filter: brightness(1.3) sepia(.4); }
+.battle-foe__name { grid-area: name; color: #ead6f4; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.battle-foe__bars { grid-area: bars; display: grid; gap: 3px; min-width: 0; }
+.battle-foe__defeated { grid-area: bars; color: #b9a6c4; padding: 8px 0; }
+.battle-foe__chips { position: absolute; top: -12px; right: 4px; left: 4px; display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-end; pointer-events: none; }
+
+.battle-chip { display: inline-flex; align-items: center; gap: 1px; padding: 0 3px; border-radius: 4px; background: #0b0710e6; color: #ffe6b0; font-size: 16px; line-height: 18px; white-space: nowrap; }
+.battle-chip[data-preview-chip='ko'] { background: #8d1d2a; color: #fff; }
+.battle-chip[data-preview-chip='break'] { background: #b7741a; color: #fff8e0; }
+.battle-chip[data-preview-chip='vulnerable'] { background: #6b3fa0; color: #fff; }
+.battle-chip[data-chip='staggered'] { background: #b7741a; color: #fff8e0; }
+.battle-chip[data-spirit] { background: #4a1d0e; color: #ffcf8a; }
+
+.battle-floaters { position: absolute; inset: 0; pointer-events: none; }
+.battle-floater { position: absolute; left: 50%; top: 10px; color: #fff; font-size: 22px; text-shadow: 2px 2px 0 #000; white-space: nowrap; transform: translateX(calc(-50% + var(--i) * 14px - 14px)); animation: battle-float 1100ms ease-out forwards; }
+.battle-floater[data-kind='hit'] { color: #ffe08a; }
+.battle-floater[data-kind='dot'] { color: #ff9f6b; font-size: 18px; }
+.battle-floater[data-kind='stagger'] { color: #ffb347; }
+.battle-floater[data-kind='enemy-hit'], .battle-floater[data-kind='down'] { color: #ff6f6f; }
+@keyframes battle-float { from { opacity: 1; translate: 0 6px; } to { opacity: 0; translate: 0 -26px; } }
+@media (prefers-reduced-motion: reduce) { .battle-floater, .battle-bar__preview, .battle-foe[data-state='staggered'] { animation: none; } }
+
+.battle-ability { position: relative; width: 96px; min-height: 0; display: grid; grid-template-rows: auto 1fr auto auto; justify-items: center; gap: 1px; padding: 4px 4px 5px; border: 3px solid #050409; border-radius: 8px; background: linear-gradient(160deg,#2f4a3f,#14231d); box-shadow: inset 0 0 0 1px #9ed6b5, 0 3px 0 #0008; color: #f4f0dc; font: inherit; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.battle-ability[data-tier='1'] { background: linear-gradient(160deg,#3d5a2a,#1b2a12); box-shadow: inset 0 0 0 1px #d7e98a, 0 3px 0 #0008; }
+.battle-ability[data-tier='2'] { background: linear-gradient(160deg,#6a4a1c,#2a1a08); box-shadow: inset 0 0 0 2px #ffd166, 0 0 10px #ffd16666, 0 3px 0 #0008; }
+.battle-ability[data-element='fire'] { background: linear-gradient(160deg,#a8401a,#3b0f06); box-shadow: inset 0 0 0 2px #ffb347, 0 0 12px #ff6a2a88, 0 3px 0 #0008; }
+.battle-ability:disabled { cursor: default; filter: saturate(.4) brightness(.75); }
+.battle-ability[data-armed='true'] { outline: 3px solid #ffd166; outline-offset: 2px; transform: translateY(-4px); }
+.battle-ability[data-dragging='true'] { opacity: .45; }
+.battle-ability:focus-visible { outline: 2px solid #ffe19a; outline-offset: 3px; }
+.battle-ability__name { display: grid; justify-items: center; line-height: 16px; text-align: center; max-width: 100%; }
+.battle-ability__name > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.battle-ability__prefix { color: #ffcf8a; }
+.battle-ability__charge { font-size: 30px; line-height: 30px; color: #fff; text-shadow: 2px 2px 0 #000; }
+.battle-ability__stats { display: flex; gap: 6px; font-size: 16px; line-height: 16px; color: #ffe6b0; }
+.battle-pips { display: grid; grid-template-columns: repeat(10,1fr); gap: 1px; width: 100%; }
+.battle-pip { height: 6px; border-radius: 1px; background: #0a0f0d; }
+.battle-pip[data-on='true'] { background: #9ef0c4; }
+.battle-ability[data-tier='2'] .battle-pip[data-on='true'] { background: #ffd166; }
+.battle-ability[data-element='fire'] .battle-pip[data-on='true'] { background: #ff9a3c; }
+.battle-pip[data-break='true'] { box-shadow: -2px 0 0 #fff8; }
+
+.battle-vitals { position: relative; grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; min-width: 0; }
+.battle-vitals > .battle-bar { flex: 1; }
+.battle-vitals[data-targeted='true'] > .battle-bar { box-shadow: 0 0 0 2px #ff6f6f88; }
+
+.battle-ability-ghost { position: fixed; z-index: 60001; display: grid; justify-items: center; gap: 2px; padding: 6px 8px; border: 3px solid #050409; border-radius: 8px; background: linear-gradient(160deg,#6a4a1c,#2a1a08); box-shadow: inset 0 0 0 2px #ffd166, 0 8px 18px #000a; color: #fff6e6; font: 16px/1.15 'Classic Pixel',monospace; white-space: nowrap; pointer-events: none; transform: translate(14px,14px) rotate(-4deg); }
+.battle-ability-ghost[data-element='fire'] { background: linear-gradient(160deg,#a8401a,#3b0f06); }
+.battle-ability-ghost__result { color: #ffe08a; }
+
+.battle-foe__eye { color: #ffb4f0; }
+.battle-chip[data-chip='fed'] { background: #5a2a14; color: #ffd8a8; }
+.battle-floater[data-kind='take'] { color: #e7b6ff; font-size: 18px; }
+.battle-floater[data-kind='snatch'] { color: #9ef0c4; font-size: 18px; }
+.battle-floater[data-kind='trap'] { color: #ffb347; }
+
+/* Marks over a table card: eyes (with a draining bar) and traps. */
+.battle-card-mark { position: absolute; left: 0; width: var(--classic-card-w); height: calc(var(--classic-card-w) * 74 / 56); z-index: 40; pointer-events: none; }
+.battle-card-mark__eye { position: absolute; left: 3px; right: 3px; bottom: 3px; height: 6px; border-radius: 3px; background: #1a0b22; box-shadow: 0 0 0 1px #000; }
+.battle-card-mark__eye-fill { position: absolute; inset: 0 auto 0 0; background: #d77bff; transition: width 120ms linear; }
+.battle-card-mark__glyph { position: absolute; top: -10px; right: -6px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #2b1236; box-shadow: 0 0 0 2px #d77bff, 0 2px 0 #000; font-size: 16px; line-height: 1; }
+.battle-card-mark__glyph[data-mark='trap'] { left: -6px; right: auto; background: #4a2a06; box-shadow: 0 0 0 2px #ffb347, 0 2px 0 #000; }
+
+/* Visible intentions are shared combat information, never a player ability unlock. */
+.battle-enemy-intent { grid-column:1/-1; display:block; margin-top:4px; padding:4px; border:1px solid #b9a8ce77; border-radius:5px; background:#2c203b; color:#ead6fb; font:11px/1.3 monospace; text-align:center; }
+.battle-enemy-intent[data-preparing] { border-color:#e6b275; background:#3c2a22; color:#ffe1b1; }
+
+/* Intent controls are siblings of the foundation, never nested interactive buttons. */
+.battle-enemy-unit { width:100%; min-width:0; display:flex; flex-direction:column; align-items:center; gap:7px; }
+.battle-enemy-unit .battle-enemy-intent { display:inline-flex; align-items:center; justify-content:center; gap:5px; width:max-content; max-width:100%; min-height:44px; margin:0; padding:4px 9px; border-radius:22px; cursor:help; }
+.battle-enemy-intent__icon { font:20px/1 Georgia,serif; }
+.battle-enemy-intent img { width:23px; height:28px; object-fit:cover; object-position:50% 30%; border-radius:5px; border:1px solid currentColor; }
+.battle-enemy-intent[data-intent-target='hero'] { color:#92dfff; border-color:#92dfff99; }
+.battle-enemy-intent[data-intent-target='mochi'] { color:#f8b6e2; border-color:#f8b6e299; }
+.battle-enemy-intent:focus-visible { outline:2px solid #ffe19a; outline-offset:3px; }
+
+/* Buff controls reserve their own space above the foundation, outside its clipping. */
+.battle-enemy-buffs { display:flex; justify-content:center; gap:6px; min-height:44px; flex:none; }
+.battle-buff-icon { display:grid; place-items:center; width:44px; height:44px; padding:5px; border:1px solid #b99b8d; border-radius:50%; color:#eed6bc; background:radial-gradient(circle,#3b293a,#152225); cursor:help; }
+.battle-buff-icon svg { width:30px; height:30px; overflow:visible; }
+.battle-buff-icon[data-suppressed='true'] { border-color:#ffca7c; background:#3c3122; }
+.battle-buff-icon:focus-visible { outline:2px solid #ffe19a; outline-offset:3px; }

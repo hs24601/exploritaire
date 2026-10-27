@@ -116,7 +116,9 @@ export class NatureManagerUI {
     const step2  = parseFloat(($<HTMLInputElement>('nm-skyStep2'))?.value  ?? '0.6');
     const sharp1 = parseFloat(($<HTMLInputElement>('nm-skySharp1'))?.value ?? '0.05');
     const sharp2 = parseFloat(($<HTMLInputElement>('nm-skySharp2'))?.value ?? '0.05');
-    sky.setGradientEdges(step1, step2, sharp1, sharp2);
+    // The aurora sky shader has no gradient edges yet; only skies that support them are tuned.
+    const tunable = sky as typeof sky & { setGradientEdges?: (s1: number, s2: number, h1: number, h2: number) => void };
+    tunable.setGradientEdges?.(step1, step2, sharp1, sharp2);
   }
 
   // ── Fog ────────────────────────────────────────────────────────────────
@@ -200,7 +202,7 @@ export class NatureManagerUI {
 
     const colorPickers = makeColorRow('grass-colors', ['#2d5a1b', '#6aaa3a', '#88c856']);
     const syncColors = () => {
-      if (colorPickers.length >= 3) {
+      if (grass && colorPickers.length >= 3) {
         grass.setColors(
           hexToColor(colorPickers[0].value),
           hexToColor(colorPickers[1].value),
@@ -223,7 +225,7 @@ export class NatureManagerUI {
     const freq  = parseFloat(($<HTMLInputElement>('nm-windFreq'))?.value  ?? '1.5');
     const amp   = parseFloat(($<HTMLInputElement>('nm-windAmp'))?.value   ?? '0.2');
     const speed = parseFloat(($<HTMLInputElement>('nm-windSpeed'))?.value ?? '0.8');
-    this.engine.getGrass().setWindParams(freq, amp, speed);
+    this.engine.getGrass()?.setWindParams(freq, amp, speed);
   }
 
   // ── Save / Reset ───────────────────────────────────────────────────────

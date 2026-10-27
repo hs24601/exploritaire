@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "method": "radial-dabs",
+  "seed": 81723,
+  "count": 85,
+  "minRadius": 18,
+  "maxRadius": 62,
+  "spreadX": 145,
+  "spreadY": 145,
+  "opacity": 0.15,
+  "colors": {
+    "woodland": ["#67743e", "#715536"],
+    "dirt": ["#996e43", "#664d34"],
+    "slate": ["#6e7b89", "#5e6774"],
+    "water": ["#396f7d", "#426487"],
+    "wine": ["#623946", "#48394c"]
+  }
+}

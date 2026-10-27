@@ -1,0 +1,36 @@
+.night-ai-card { position:absolute; right:12px; top:56px; max-width:280px; z-index:13; padding:10px; border:1px solid #bb8de5; border-radius:9px; background:#1c1232ed; color:#f1ddff; font-size:14px; }
+.night-ai-card p { margin:7px 0; }
+.night-slap { position:fixed; right:12%; bottom:-110px; font-size:58px; }
+.night-slap i { display:inline-block; animation:night-hand 1s both; }
+.night-slap b { display:inline-block; animation:night-paw 1s both; }
+@keyframes night-hand { 0%,35% {transform:none} 100% {transform:translate(-180px,-80px) rotate(-100deg);opacity:0} }
+@keyframes night-paw { 0% {transform:translateX(150px);opacity:0} 35% {transform:translateX(0);opacity:1} 100% {transform:translateX(-40px);opacity:1} }
+[data-paused='true'] .night-slap * { animation-play-state:paused; }
+[data-night-cloud='true'] .battle-field__rack,[data-night-cloud='true'] [data-team='party'] { filter:drop-shadow(0 0 15px #9750ff) brightness(.55); background:radial-gradient(ellipse,#31134cad,#120d2ec9); }
+[data-battle-actor='banks'][data-night-arrived='true'] { animation:night-shimmer 1s ease-out; }
+@keyframes night-shimmer { from {box-shadow:0 0 60px #c796ff;filter:brightness(2)} to {box-shadow:none;filter:brightness(1)} }
+@media(max-width:600px) { .night-ai-card {max-width:43%;font-size:11px;top:42px;padding:5px} }
+@media(prefers-reduced-motion:reduce) { .night-slap *,[data-night-arrived] {animation:none!important} }
+
+.night-bloom-miss {position:absolute;inset:35% 0 auto;text-align:center;z-index:20;color:#eedbff;font:italic 900 clamp(18px,3vw,38px)/1.2 sans-serif;text-shadow:0 3px 12px #000;pointer-events:none}
+.night-bloom-miss strong {font-size:2em;color:#fff1a8}
+[data-night-cloud='true'] .battle-field__middle {position:relative}
+[data-night-cloud='true'] .battle-field__middle::after {content:'';position:absolute;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse at 20% 30%,#72419e77,transparent 60%),radial-gradient(ellipse at 80% 65%,#4b267a88,transparent 65%);box-shadow:inset 0 0 60px #130b2599;border-radius:35%;animation:night-cloud 3s ease-in-out infinite alternate}
+@keyframes night-cloud {from{opacity:.5;transform:scale(.94)}to{opacity:1;transform:scale(1.03)}}
+[data-combat-paused='true'] [data-night-arrived],[data-combat-paused='true'] .battle-field__middle::after {animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){[data-night-cloud='true'] .battle-field__middle::after {animation:none}}
+
+.night-ability-face {width:150px;margin:10px auto;pointer-events:none}
+.night-ability-face .ability-holo-stage {width:150px}
+@media(max-width:600px){.night-ability-face,.night-ability-face .ability-holo-stage{width:110px}}
+
+.night-ability-face .trading-card-stage > .details-card.trading-card {box-sizing:border-box;width:100%;height:210px;aspect-ratio:63/88;min-height:0;padding:7px;overflow:hidden}
+.night-ability-face .trading-card__header {display:grid;gap:3px;align-content:start}
+.night-ability-face .trading-card__header h2 {position:static;width:auto;font:600 15px/1.1 Georgia,serif;letter-spacing:0;text-transform:none;margin:0;white-space:normal}
+.night-ability-cost {font:10px/1.2 monospace;color:#eacaff;background:#1e1136df;border-radius:4px;padding:3px}
+.night-ability-face .trading-card__body {margin-top:auto;min-height:0}
+.night-ability-face .trading-card__description {display:block;max-height:none;height:auto;overflow:visible;white-space:normal;margin:0;padding:5px;background:#0c1228ed;border-radius:4px;font:10px/1.25 monospace;-webkit-line-clamp:unset}
+@media(max-width:600px){.night-ability-face .trading-card-stage > .details-card.trading-card{height:154px;padding:4px}.night-ability-face .trading-card__header h2{font-size:12px}.night-ability-cost{font-size:8px}.night-ability-face .trading-card__description{font-size:8px;padding:3px}}
+
+/* Keep the boss and actual sequence visible on small screens; dialogue carries each full effect. */
+@media(max-width:600px),(max-height:500px){.night-ai-card .night-ability-face,.night-ai-card>p{display:none}.night-ai-card{max-width:43%;font-size:11px}}

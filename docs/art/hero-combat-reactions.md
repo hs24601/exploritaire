@@ -1,0 +1,15 @@
+# Hero combat reactions
+
+Generated with the built-in ImageGen tool on 2026-10-11, using the standing Hero atlas as the identity/style reference. Transparent source pixels are preserved; `tools/prepare-hero-combat.cjs` measures the nine silhouettes into explicit UV rectangles.
+
+Assets: `public/assets/deprecated/pixel/characters/battle/hero-flinch-atlas-v1.png` and `hero-down-atlas-v1.png`. Runtime definitions: `src/proto/heroCombatSprites.ts`. Five low views, elevated front/side/rear and true overhead are authored; elevated quarter views reuse the corresponding low quarter art. Mirroring covers opposite directions. Down uses a shorter ground-anchored body, with no extra standee rotation or idle articulation.
+
+Combat uses flinch for the active damage cue and down while HP is zero. Down wins over flinch. Restart/revival restores the ordinary idle/action pose. Existing card effects and other actors' procedural reactions remain intact.
+
+## Flinch prompt
+
+Use case: stylized-concept. Asset type: transparent pixel-art game sprite atlas for Hero, the female tricolor Australian Shepherd from the attached reference. Reference image is identity/style only. Generate a NEW flinch pose atlas, NOT detached body parts. Crisp pixel art, black/charcoal coat, tan cheek/leg/eyebrow markings, white blaze/chest/paws, floppy ears, fluffy tail, same cute proportions. Flinch when hit: recoiling crouch, ears back, eyes squeezed shut, paws braced, startled pained expression, no gore, no angry brows. EXACT regular 3 columns by 3 rows of nine complete dog sprites, one per equal cell, generous clear transparent gutters, no text/grid lines/shadow/background. Row 1: front, front-left quarter, left side. Row 2: rear-left quarter, rear, elevated front. Row 3: elevated left side, elevated rear, true overhead with nose pointing up. All sprites coherent scale, entire bodies visible, paws at bottom within each cell. Save final PNG into C:/dev/Exploritaire/public/assets/deprecated/pixel/characters/battle/hero-flinch-atlas-v1.png if possible.
+
+## Down prompt
+
+Use case: stylized-concept. Asset type: transparent pixel-art game sprite atlas for Hero, female tricolor Australian Shepherd from attached identity/style reference. Generate NEW down/unconscious pose atlas, NOT detached parts. Crisp pixel art same charcoal coat, tan cheeks/legs/brows, white blaze/chest/paws, floppy ears and fluffy tail, same cute proportions. Down at zero HP: lying collapsed gently on her side with legs resting out, head on ground, eyes closed, limp ears, recognizable separate from curled sleeping pose. No blood, gore, stars or effects. EXACT 3 columns by 3 rows of nine complete dogs, one per equal cell, generous transparent gutters, no text/grid/shadow/background. Row 1: front, front-left quarter, left side. Row 2: rear-left quarter, rear, elevated front. Row 3: elevated left side, elevated rear, true overhead with nose pointing up. Each full body visible including paws/tail, consistent body size across views. Gentle eyebrows, no anger.

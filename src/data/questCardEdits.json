@@ -1,0 +1,10 @@
+{
+  "tutorial:day01.tutorial:first-berry": {
+    "title": "First Fruits",
+    "text": "Play cards to snuffle through the bushes and collect as many manaberries as possible."
+  },
+  "tutorial:day01.tutorial:navigate-den": {
+    "title": "Find a way out",
+    "text": "Drag Hero's card to the berry patch."
+  }
+}
