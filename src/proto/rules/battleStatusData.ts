@@ -1,3 +1,4 @@
+import statusEdits from '../../data/protoStatusOverrides.json';
 import { applyAbilityOverrides } from './abilityOverrides';
 
 // Tutorial statuses and ability cards as data. Pure and free of battle.ts so the
@@ -15,14 +16,18 @@ import { applyAbilityOverrides } from './abilityOverrides';
 export const EMBER_RAGE = 'Ember Rage';
 
 export type StatusId =
-  | 'ember-rage' | 'duskscale' | 'deep-breath' | 'haste' | 'sap' | 'silence' | 'wild' | 'regen' | 'guard' | 'foresight' | 'rime'
+  | 'swift-wings' | 'firelit' | 'cir-burning'
+  | 'every-dog-has-her-day' | 'ember-rage' | 'duskscale' | 'deep-breath' | 'haste' | 'sap' | 'silence' | 'wild' | 'regen' | 'guard' | 'foresight' | 'rime'
   | 'dormant' | 'regrowth' | 'heavy-bark' | 'dry-bark' | 'stifling-sap'
-  | 'slow' | 'chill' | 'frozen' | 'soaked' | 'burn' | 'bleed' | 'exposed' | 'blind' | 'stun' | 'grip';
+  | 'slow' | 'chill' | 'frostbite' | 'frozen' | 'soaked' | 'burn' | 'bleed' | 'exposed' | 'blind' | 'stun' | 'grip' | 'weakened';
 
 /** turns: remaining turns (see STATUS_META.expires); stacks: Chill/Bleed/Burn amount; Haste: receipts left. */
 export type UnitStatus = { id: StatusId; turns?: number; stacks?: number };
 
 export type StatusMeta = {
+  /** Authored inspection copy; absent uses the contextual rules tooltip. */
+  description?: string;
+  blocksStagger?: boolean;
   name: string;
   glyph: string;
   /** Buffs help their owner; debuffs hurt it. Drives the icon styling. */
@@ -32,9 +37,13 @@ export type StatusMeta = {
 };
 
 export const STATUS_META: Record<StatusId, StatusMeta> = {
+  'swift-wings': { name: 'Swift Wings', glyph: '🪽', kind: 'buff' },
+  firelit: { name: 'Firelit', glyph: '☀', kind: 'debuff', expires: 'party-turn' },
+  'cir-burning': { name: 'Burning', glyph: '🔥', kind: 'debuff', expires: 'enemy-turn' },
+  'every-dog-has-her-day': { name: '4 Leaf Clover', glyph: '🍀', kind: 'buff' },
   'ember-rage': { name: EMBER_RAGE, glyph: '🌋', kind: 'buff' },
-  duskscale: { name: 'Duskscale Armor', glyph: '🐉', kind: 'buff' },
-  'deep-breath': { name: 'Deep Breath', glyph: '🌬️', kind: 'buff' },
+  duskscale: { blocksStagger: true, name: 'Duskscale Armor', glyph: '🐉', kind: 'buff' },
+  'deep-breath': { blocksStagger: true, name: 'Deep Breath', glyph: '🌬️', kind: 'buff' },
   haste: { name: 'Haste', glyph: '⚡', kind: 'buff', expires: 'enemy-turn' },
   sap: { name: 'Sapped', glyph: '🍯', kind: 'debuff', expires: 'party-turn' },
   silence: { name: 'Silenced', glyph: '🤐', kind: 'debuff', expires: 'party-turn' },
@@ -51,6 +60,7 @@ export const STATUS_META: Record<StatusId, StatusMeta> = {
   'stifling-sap': { name: 'Stifling Sap', glyph: '🍯', kind: 'buff' },
   slow: { name: 'Slowed', glyph: '🐌', kind: 'debuff', expires: 'enemy-turn' },
   chill: { name: 'Chill', glyph: '❄️', kind: 'debuff' },
+  frostbite: { name: 'Frostbite', glyph: '❄', kind: 'debuff' },
   frozen: { name: 'Frozen', glyph: '🧊', kind: 'debuff' },
   soaked: { name: 'Soaked', glyph: '💧', kind: 'debuff', expires: 'enemy-turn' },
   burn: { name: 'Burning', glyph: '🔥', kind: 'debuff', expires: 'enemy-turn' },
@@ -59,7 +69,13 @@ export const STATUS_META: Record<StatusId, StatusMeta> = {
   blind: { name: 'Blinded', glyph: '🌫️', kind: 'debuff' },
   stun: { name: 'Stunned', glyph: '💫', kind: 'debuff' },
   grip: { name: 'Held', glyph: '🪢', kind: 'debuff' },
+  // Banks' Hex cast (1006, 1012): its hits deal half damage, rounded up.
+  weakened: { name: 'Weakened', glyph: '🪶', kind: 'debuff', expires: 'enemy-turn' },
 };
+
+for (const [id, edit] of Object.entries(statusEdits)) {
+  if (id in STATUS_META) Object.assign(STATUS_META[id as StatusId], edit);
+}
 
 /** Tuning shared by rules, card copy and tooltips. */
 export const STATUS_TUNING = {
@@ -82,8 +98,10 @@ export const STATUS_TUNING = {
 } as const;
 
 /** Ability cards belong to one Kin and cost that Kin's AP (banked by cards its foundation receives). */
+export const FOUNDATION_SUMMON_SLOT = 'new-foundation';
 export type StatusSkill = {
-  actorId: 'hero' | 'mochi';
+  createsFoundation?: 'dem' | 'riv' | 'cir';
+  actorId: 'hero' | 'mochi' | 'cir';
   name: string;
   cost: number;
   damage: number;
@@ -103,6 +121,16 @@ export type StatusSkill = {
 
 const T = STATUS_TUNING;
 const BASE_STATUS_SKILLS = {
+  'cir-emerge': { actorId: 'hero', group: 'support', name: 'Cir · Emerge', cost: 0, damage: 0, stagger: 0, glyph: '🪽', target: 'ally', card: 'At 3 pips: leave the host and become a Fire/Air foundation. Host loses Cir’s bonuses.', description: 'Choose Cir’s living host. Preserve Cir’s HP and Wings; no AP refill. First receipt must be Fire/Air at any rank.' },
+  'summon-cir': { actorId: 'hero', group: 'support', name: 'Cir', cost: 1, damage: 0, stagger: 0, glyph: '🔥', target: 'ally',
+    card: 'Enemy: 0 AP, 3 Fire damage; Cir unavailable for 3 turns. Ally: 1 AP, dormant familiar. Awakens at 3 pips: receipts +1, Fire/Air +2.',
+    description: 'Enemy: 0 AP for 3 Fire damage, then all Cir expressions recover for three subsequent party-turn openings. Ally: 1 Hero AP to attach dormant Cir. Each host tableau receipt grants 1 pip, Fire/Air grants 2 total. At 3 pips, awaken permanently for this battle: Fire/Air affinity, remaining fiery shield and +1 Fire damage on Fire receipts. Release preserves HP, pips, Wings and shield; no healing or shield refill.' },
+  'cir-burn': { actorId: 'cir', group: 'attack', name: 'Burn', cost: 1, damage: 3, stagger: 0, glyph: '🔥', target: 'foe', card: '3 Fire damage. 25% chance of Burning for 3 enemy turns.', description: 'Deal 3 base Fire damage. 25% chance of Burning: whenever this creature receives a Fire tableau card, it takes 1 Fire damage. Refreshes without stacking. Lasts 3 enemy turns.' },
+  'cir-flare': { actorId: 'cir', group: 'attack', name: 'Flare', cost: 1, damage: 1, stagger: 0, glyph: '☀', target: 'foe', card: '1 Fire damage. Firelit: +10 percentage points crit chance and ×2 stagger from subsequent hits this turn.', description: 'Deal 1 base Fire damage, then apply Firelit until this party turn ends. Subsequent direct hits from all allies have +10 percentage points critical chance and double stagger buildup. Does not stack.' },
+  'cir-windstorm': { actorId: 'cir', group: 'attack', name: 'Windstorm', cost: 1, damage: 0, stagger: 1, glyph: '💨', target: 'foe', spendsAll: true, card: 'All AP: (AP × 2 + every Air tableau card) × Wings Air multiplier to all enemies.', description: 'Spend all Cir AP (minimum 1). Base Air damage to every enemy equals twice AP spent plus all Air cards in the tableau, including buried cards. Multiply by Swift Wings stacks, minimum ×1. Stock and foundations do not count.' },
+  'swift-wings': { actorId: 'cir', group: 'support', name: 'Swift Wings', cost: 1, damage: 0, stagger: 0, glyph: '🪽', target: 'self', card: 'Gain 1 Wing (max 4). Cost equals the new stack count. Each grants 15% evasion; Air damage × stacks (min ×1).', description: 'Next stack costs 1, 2, 3 or 4 AP. Maximum 4 stacks (60% evasion). Air receipts preserve Wings; at 3+ stacks Fire receipts also preserve them. Every other receipt removes one stack. No passive gain. Cir starts with one stack.' },
+  'meteor-launch': { actorId: 'cir', group: 'attack', name: 'Meteor · Ascend', cost: 0, damage: 0, stagger: 0, glyph: '☄', target: 'self', card: 'Requires 4 Wings. Consume Wings and leave combat to charge Meteor for 3 turns.', description: 'At 4 Swift Wings, commit Cir to Meteor for 0 AP. Consume her Wings and replace her creature foundation with an untargetable ability foundation. It accepts no tableau cards, gains one pip each subsequent party turn, and readies after three turns. Cannot be recalled while charging.' },
+  'meteor-impact': { actorId: 'cir', group: 'attack', name: 'Meteor', cost: 0, damage: 22, stagger: 0, glyph: '☄', target: 'foe', card: 'After 3 charging turns: 22 base Fire damage to all enemies. Exhaust Cir for this battle.', description: 'Drag the ready Meteor to any enemy. Deal 22 base Fire damage to every enemy and exhaust Cir for the rest of the battle.' },
   bite: { actorId: 'hero', group: 'attack', name: 'Bite', cost: 2, damage: 1, stagger: 0, glyph: '🎯', target: 'foe',
     card: `1 damage, +${T.biteBleed} Bleed. Exposed: tableau hits add Bleed.`,
     description: `Hero deals 1 damage and adds ${T.biteBleed} Bleed. The target is Exposed for 2 enemy turns: every tableau hit on it adds 1 more Bleed.` },
@@ -148,9 +176,12 @@ const BASE_STATUS_SKILLS = {
   mire: { actorId: 'mochi', group: 'support', name: 'Mire', cost: 2, damage: 0, stagger: 0, glyph: '🐌', target: 'foe',
     card: 'Slow a foe for 2 turns: it gains half Momentum, so Heavy Strikes come later.',
     description: `Mochi mires a foe for 2 enemy turns: Slow mirrors Haste and halves all Momentum it gains, rounded down (${T.enemyMomentumGain} becomes ${Math.floor(T.enemyMomentumGain / 2)}), so it reaches its ${T.heavyStrikeCost}-Momentum Heavy Strike half as often.` },
-  hold: { actorId: 'hero', group: 'support', name: 'Hold', cost: 6, damage: 0, stagger: 0, glyph: '✋', target: 'self',
-    card: 'Open a Hold slot: park one playable card to play on a later turn.',
-    description: 'Hero opens a Hold slot beside her foundation for the rest of the fight. Drag a card she could take right now into it to park it, then drag or tap it onto her foundation or an intent card on a later turn. One card at a time; parking is not a receipt.' },
+  'summon-riv': { actorId: 'hero', createsFoundation: 'riv', group: 'support', name: 'Summon: Riv', cost: 1, damage: 0, stagger: 0, glyph: 'R', target: 'self',
+    card: 'Create Riv’s foundation. Her first card can be any rank.',
+    description: 'Spend 1 Hero AP and place Riv in the adjacent new-foundation slot. Her empty foundation accepts any starter card; after that she follows normal rank matching. Once per fight. Placeholder: no artwork.' },
+  hold: { createsFoundation: 'dem', actorId: 'hero', group: 'support', name: 'Summon: Dem', cost: 6, damage: 0, stagger: 0, glyph: '🐻‍❄️', target: 'self',
+    card: 'Summon Dem beside Hero with an Ace foundation. Once per fight.',
+    description: 'Drag Dem to the adjacent new-foundation slot for 6 Hero AP. Dem starts at Ace and has their own foundation for tableau cards. Once per fight; no Hold slot is opened.' },
   wild: { actorId: 'mochi', group: 'support', name: 'Wild Card', cost: 1, damage: 0, stagger: 0, glyph: '🃏', target: 'ally',
     card: 'Ally: its next card can be any rank.',
     description: 'The next card played onto that foundation may be any rank, ignoring golf adjacency. Its value becomes the new foundation value.' },
@@ -159,3 +190,9 @@ const BASE_STATUS_SKILLS = {
 export const STATUS_SKILLS = applyAbilityOverrides(BASE_STATUS_SKILLS);
 export type StatusSkillId = keyof typeof STATUS_SKILLS;
 export const isStatusSkill = (id: string): id is StatusSkillId => id in STATUS_SKILLS;
+
+/** Foundation creators target a new slot; existing-foundation effects are reserved. */
+export const foundationSummon = (id: string): 'dem' | 'riv' | 'cir' | undefined => {
+  const skill = isStatusSkill(id) ? STATUS_SKILLS[id] : null;
+  return skill && 'createsFoundation' in skill ? skill.createsFoundation : undefined;
+};

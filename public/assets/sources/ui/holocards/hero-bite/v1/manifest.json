@@ -1,0 +1,24 @@
+{
+  "tool": "Built-in image_gen",
+  "date": "2026-11-05",
+  "referenceIdentityAndStyle": "public/assets/runtime/ui/holocards/layered/hero-watercolor-v5-ordinary-day.png",
+  "landscapeActionReference": "hero-bite-portrait.png",
+  "artGuidance": "ART.md: broad watercolor/gouache, grouped pigment washes, tricolor corgi-like Hero, amber eyes, opaque pale paint, short bobtail, separate subject and background",
+  "request": "Hero snapping Bite action with painted jaw action lines, portrait and landscape; no text or UI baked into artwork",
+  "assets": [
+    {
+      "file": "hero-bite-portrait.png",
+      "width": 1024,
+      "height": 1536,
+      "sha256": "d583215d563c626c9443f58de1c9ba2a4876ec85b54f63f10066a1da84a4f75f",
+      "alpha": "Original ImageGen transparency preserved byte-for-byte"
+    },
+    {
+      "file": "hero-bite-landscape.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "a6509645926f0e1e99277a0d93547da8e8d5ade27eac8a52b99f3e19e7bb4044",
+      "alpha": "Original ImageGen transparency preserved byte-for-byte"
+    }
+  ]
+}

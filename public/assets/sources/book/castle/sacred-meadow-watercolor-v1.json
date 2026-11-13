@@ -1,0 +1,16 @@
+{
+  "tool": "Built-in ImageGen",
+  "master": "sacred-meadow-watercolor-v1.png",
+  "runtime": "public/assets/runtime/book/castle/sacred-meadow-watercolor-v1.jpg",
+  "references": [
+    {
+      "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+      "role": "Direct watercolor style reference"
+    },
+    {
+      "attachment": "codex-clipboard-3ae70376-8f9e-41e6-a244-0a4346c7f995.png",
+      "role": "Atmosphere and material subject reference"
+    }
+  ],
+  "prompt": "Use case: stylized-concept. Asset type: a square 2×2 albedo swatch atlas for a walkable storybook forest ruin, sampled by a real-time shader. The first input, Hero sniffing luminous blue berries, is the actual primary style reference. Match its hand-painted watercolor and occasional soft opaque gouache accents: large loosely connected paint masses, wet edges, diluted pale gaps, irregular pooling, a few broken edge accents, varied marks with quiet areas. Do not depict the dog, berries, or the composition. The second input is the user's mossy ruin gameplay reference; take only its cool blue-green dusk atmosphere and worn forest ruin materials. Its 3D rendering, HUD, characters and composition must not override the watercolor style. Four equal square swatches, filled edge to edge, precisely divided at 50% x and 50% y, no gutters or printed borders. TOP LEFT: moss on rough earth seen straight down, large loosely merged celadon, olive, warm ochre and viridian washes with a few irregular gouache leaf dabs. TOP RIGHT: weathered slate ruin rock seen straight on, broad blue gray, mauve, warm limestone and muted ochre wash planes, selective broken fractures, some irregular moss blooms, zero regular brick grid. BOTTOM LEFT: warm umber and slate bark, broad broken vertical brush marks and gentle olive staining, loose pooled fissures. BOTTOM RIGHT: dark teal and smoky indigo water seen straight down, broad translucent blue-green wash islands and a few feathered horizontal milk-blue strokes. Each swatch is an all-over physical material painted at a similar broad scale, matte albedo with medium values, almost no perspective or cast shadows. No object, text, labels, seam ornament, cards, characters, baked glows, fine pixel detail or noisy paper overlay."
+}

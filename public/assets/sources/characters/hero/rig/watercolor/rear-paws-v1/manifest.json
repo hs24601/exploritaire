@@ -1,0 +1,370 @@
+{
+  "generator": "Built-in ImageGen",
+  "styleReference": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+  "generated": {
+    "rear": {
+      "file": "rear-source.png",
+      "sha256": "bd4924595d446084d27a31df2eb5ee21a15668bfc1f19f0806ec08a789e50933",
+      "prompt": "Use case: precise-object-edit. Edit image 1, Hero's registered transparent game sprite, for anatomically correct planted dog paws. Image 1 defines identity, exact pose, perspective, frame, original coloring and placement. Image 2, the actual Hero berry painting, is the style reference only for broad, loosely merging storybook watercolor and opaque cream fur. Keep the original square framing, head, ears, markings, torso, leg positions and original ground-contact row. Change only the bottom ends of the two hind paws. She is viewed directly from behind, facing into the scene. Her toes point directly away from us and are completely hidden by the backs of the paws. Paint two narrower, softly rounded, blunt cream heel silhouettes, like the smooth backs of two short white socks against the ground. Each heel has one smooth bottom contour. No scallops, toe clefts, nails, pads, dark U-shapes, or lobes on the camera-facing heel. Make this unmistakable. The lowest visible cream portions blend into the existing orange ankles with soft gray-cream watercolor shading. Keep the cream fur opaque and the surrounding canvas truly transparent. Isolated game cutout without ground, shadow, scene, border, letters, or guide marks.",
+      "editTarget": {
+        "atlas": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+        "rect": [
+          55,
+          1080,
+          183,
+          273
+        ],
+        "preparation": "2x crop centered on a 768 by 768 transparent canvas"
+      }
+    },
+    "quarter": {
+      "file": "quarter-source.png",
+      "sha256": "a173e15eabc4ff06efbb22be96c5bdaabc2b8401ef0123a1a28a3d3f6974a40c",
+      "prompt": "Use case: precise-object-edit. Edit image 1, Hero's registered transparent game sprite, for anatomically correct planted dog paws. Image 1 defines identity, exact pose, perspective, frame, original coloring and placement. Image 2, the actual Hero berry painting, is the style reference only for broad, loosely merging storybook watercolor and opaque cream fur. Keep the original square framing, head, ears, markings, torso, leg positions and original ground-contact row. Change only the camera-facing ends of the paws, especially the rightmost hind paw. She faces away toward the upper left. Toes on every planted paw point upper left with her head. The rear-facing lower/right edge of each paw reads as a smooth blunt round heel, with no scallops, clefts, pads or dark U-shapes. The rightmost paw is viewed almost directly from behind with the toes obscured. Preserve the exact number and placement of the feet. The lowest visible cream portions blend into the existing orange ankles with soft gray-cream watercolor shading. Keep the cream fur opaque and the surrounding canvas truly transparent. Isolated game cutout without ground, shadow, scene, border, letters, or guide marks.",
+      "editTarget": {
+        "atlas": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+        "rect": [
+          25,
+          812,
+          291,
+          256
+        ],
+        "preparation": "2x crop centered on a 768 by 768 transparent canvas"
+      }
+    },
+    "high-quarter": {
+      "file": "high-quarter-source.png",
+      "sha256": "c3c3e79ed0343740aaa4685e7801d051e46f66ccaedc77f259fc5e99211c37ea",
+      "prompt": "Use case: precise-object-edit. Edit image 1, Hero's registered transparent game sprite, for anatomically correct planted dog paws. Image 1 defines identity, exact pose, perspective, frame, original coloring and placement. Image 2, the actual Hero berry painting, is the style reference only for broad, loosely merging storybook watercolor and opaque cream fur. Keep the original square framing, head, ears, markings, torso, leg positions and original ground-contact row. Change only the camera-facing ends of the paws, especially the rightmost hind paw. She faces away toward the upper left from an elevated rear three-quarter angle. Toes on every planted paw point upper left with her head. The rear-facing lower/right edge of each paw reads as a smooth blunt round heel, with no scallops, clefts, pads or dark U-shapes. The rightmost paw is viewed almost directly from behind with the toes obscured. Preserve the exact number and placement of the feet. The lowest visible cream portions blend into the existing orange ankles with soft gray-cream watercolor shading. Keep the cream fur opaque and the surrounding canvas truly transparent. Isolated game cutout without ground, shadow, scene, border, letters, or guide marks.",
+      "editTarget": {
+        "atlas": "public/assets/runtime/characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+        "rect": [
+          41,
+          753,
+          258,
+          254
+        ],
+        "preparation": "2x crop centered on a 768 by 768 transparent canvas"
+      }
+    }
+  },
+  "packing": "Fit the generated heels to the existing standing paw contact rows and blend into the ankles. For the walking phases, map heel paint to each planted paw within its original alpha contour. UVs, canvas sizes, and bobtail layers retain their original registration.",
+  "heelSourceCrops": {
+    "rear-left": [
+      "rear",
+      [
+        352,
+        944,
+        499,
+        1059
+      ]
+    ],
+    "rear-right": [
+      "rear",
+      [
+        649,
+        944,
+        780,
+        1061
+      ]
+    ],
+    "quarter": [
+      "quarter",
+      [
+        804,
+        883,
+        946,
+        1016
+      ]
+    ],
+    "high-quarter": [
+      "high-quarter",
+      [
+        710,
+        911,
+        854,
+        1039
+      ]
+    ]
+  },
+  "atlases": {
+    "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png": {
+      "beforeSha256": "3c3c1210b65869b57ee751d16c8641da1ca0cbdc2e45b9ced63740fdf40051ee",
+      "afterSha256": "eea68e3893234d12fa85be4f607e5b5668f626e61661c9702aac8c4bfa111429",
+      "size": [
+        1122,
+        1402
+      ],
+      "regions": [
+        {
+          "rect": [
+            55,
+            1312,
+            111,
+            1353
+          ],
+          "heelSource": "rear-left"
+        },
+        {
+          "rect": [
+            150,
+            1313,
+            210,
+            1353
+          ],
+          "heelSource": "rear-right"
+        },
+        {
+          "rect": [
+            215,
+            1022,
+            276,
+            1063
+          ],
+          "heelSource": "quarter"
+        }
+      ]
+    },
+    "public/assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-directions-low-v1.png": {
+      "beforeSha256": "90ce0ae745fa2073b19a744ad63c6c060b1bf9a64e3e55df816a1f98f0ca6306",
+      "afterSha256": "864dcd5e7367634f8ed75bdeb09a41a36ca718e6fd126485ba1df410b6e6828f",
+      "size": [
+        1122,
+        1402
+      ],
+      "regions": [
+        {
+          "rect": [
+            55,
+            1313,
+            128,
+            1353
+          ],
+          "heelSource": "rear-left"
+        },
+        {
+          "rect": [
+            168,
+            1313,
+            238,
+            1353
+          ],
+          "heelSource": "rear-right"
+        },
+        {
+          "rect": [
+            239,
+            1021,
+            312,
+            1059
+          ],
+          "heelSource": "quarter"
+        }
+      ]
+    },
+    "public/assets/runtime/characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png": {
+      "beforeSha256": "d4110372aeae784b8c68418c81449b5df1c9f83cc2abaa564adbee437d5c0481",
+      "afterSha256": "604ffb02966281c00a90825f9df8b06fa918370bbab9928f0f546e848f863556",
+      "size": [
+        1024,
+        1536
+      ],
+      "regions": [
+        {
+          "rect": [
+            189,
+            968,
+            240,
+            1007
+          ],
+          "heelSource": "high-quarter"
+        }
+      ]
+    },
+    "public/assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-directions-high-v1.png": {
+      "beforeSha256": "f01780f856db02c4ef9121b0938a5990cdeea906a1acbcfc61997f57740d735a",
+      "afterSha256": "b507d8c5b1ed76434bfa0f5a94ca492eb44a3e5e3e3a1b8093a351e291be422a",
+      "size": [
+        1024,
+        1536
+      ],
+      "regions": [
+        {
+          "rect": [
+            219,
+            967,
+            272,
+            1007
+          ],
+          "heelSource": "high-quarter"
+        }
+      ]
+    },
+    "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-walking-low-body-v3.png": {
+      "beforeSha256": "dce338413e1afc58638bcee68ec6dbd1a737567200c3dddb1e6ac50761e4350e",
+      "afterSha256": "ae080f63a70acdf6a7d7f3a847fd2d02d7201fa231abed3bae693de1d8010d39",
+      "size": [
+        1512,
+        1460
+      ],
+      "regions": [
+        {
+          "rect": [
+            136,
+            1391,
+            196,
+            1436
+          ],
+          "heelSource": "rear-left"
+        },
+        {
+          "rect": [
+            543,
+            1396,
+            598,
+            1436
+          ],
+          "heelSource": "rear-right"
+        },
+        {
+          "rect": [
+            891,
+            1383,
+            937,
+            1407
+          ],
+          "heelSource": "rear-left"
+        },
+        {
+          "rect": [
+            1266,
+            1385,
+            1311,
+            1412
+          ],
+          "heelSource": "rear-left"
+        }
+      ]
+    },
+    "public/assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-walking-low-v1.png": {
+      "beforeSha256": "55cea2c794abfda1dc2595ef7d9e91603159e14611a6f16332f9b6a0c5f6943a",
+      "afterSha256": "acd69832b1ac1437921d8020dfe85d9ce8ef4219c00ec193ca98c835de9e2efc",
+      "size": [
+        1512,
+        1460
+      ],
+      "regions": [
+        {
+          "rect": [
+            146,
+            1393,
+            206,
+            1436
+          ],
+          "heelSource": "rear-left"
+        },
+        {
+          "rect": [
+            550,
+            1394,
+            613,
+            1436
+          ],
+          "heelSource": "rear-right"
+        },
+        {
+          "rect": [
+            897,
+            1378,
+            949,
+            1407
+          ],
+          "heelSource": "rear-left"
+        },
+        {
+          "rect": [
+            1276,
+            1380,
+            1328,
+            1410
+          ],
+          "heelSource": "rear-left"
+        }
+      ]
+    },
+    "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-walking-high-body-v3.png": {
+      "beforeSha256": "04c9b08c873789eacfd82a79175c40ec13550e0cb2920c5ceccb211878806e66",
+      "afterSha256": "6377758f30227045e55d90d6299291cea7267fb640aac9f1d231adb275aede14",
+      "size": [
+        1224,
+        2190
+      ],
+      "regions": [
+        {
+          "rect": [
+            126,
+            1764,
+            173,
+            1801
+          ],
+          "heelSource": "rear-left"
+        },
+        {
+          "rect": [
+            445,
+            1764,
+            491,
+            1801
+          ],
+          "heelSource": "rear-right"
+        },
+        {
+          "rect": [
+            1046,
+            1765,
+            1107,
+            1801
+          ],
+          "heelSource": "rear-right"
+        }
+      ]
+    },
+    "public/assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-walking-high-v1.png": {
+      "beforeSha256": "6f27bad0194f4332601df4eb60c83773451a3ba5d058f8f3948ba936d9880bcf",
+      "afterSha256": "83da807b0ad7edd8b9a5ab3021ccc2591a088a48288cc07b6d2b533db60c0914",
+      "size": [
+        1224,
+        2190
+      ],
+      "regions": [
+        {
+          "rect": [
+            111,
+            1761,
+            161,
+            1801
+          ],
+          "heelSource": "rear-left"
+        },
+        {
+          "rect": [
+            451,
+            1764,
+            502,
+            1801
+          ],
+          "heelSource": "rear-right"
+        },
+        {
+          "rect": [
+            1048,
+            1761,
+            1114,
+            1801
+          ],
+          "heelSource": "rear-right"
+        }
+      ]
+    }
+  }
+}

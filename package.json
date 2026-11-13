@@ -4,16 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run dev:doctor:fix && vite",
+    "dev": "vite --config vite.portals.config.ts",
     "dev:doctor": "node tools/dev-doctor.mjs",
     "dev:doctor:fix": "node tools/dev-doctor.mjs --fix",
     "smoke:preflight": "node tools/smoke-preflight.mjs",
     "smoke:megahand:ux": "node tools/megahand-ux-smoke.mjs",
-    "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && vite build",
-    "build:vercel": "vite build",
-    "test": "vitest run",
-    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.portals.json",
+    "build": "npm run typecheck && vite build --config vite.portals.config.ts",
+    "build:vercel": "vite build --config vite.portals.config.ts",
+    "test": "npm run test:portals",
+    "preview": "vite preview --config vite.portals.config.ts",
     "setup:hooks": "git config core.hooksPath .githooks",
     "balance:deck": "node tools/deck-balance.mjs",
     "art:sync": "node tools/sync-art.mjs",
@@ -22,7 +22,9 @@
     "prebuild": "node tools/sync-art.mjs --if-present && node tools/sprite-trims.mjs --if-present",
     "prebuild:vercel": "node tools/sync-art.mjs --if-present",
     "art:trims": "node tools/sprite-trims.mjs",
-    "art:trims:check": "node tools/sprite-trims.mjs --check"
+    "art:trims:check": "node tools/sprite-trims.mjs --check",
+    "test:portals": "vitest run src/book/worldStart.test.ts src/book/world1111Layout.test.ts src/book/worldTreeScene.test.ts src/book/worldWoodsPortalRoute.test.ts src/book/worldPortalGuard.test.ts src/book/worldFlurry.test.ts src/book/flurryPlay.test.ts src/book/flurryWorldEffects.test.ts src/book/flurrySnowfallState.test.ts src/sticker/flurryExpressions.test.ts src/sticker/worldFlurryInventory.test.ts src/book/castleMeadowCamera.test.ts src/book/castleMeadowNavigation.test.ts src/book/castlePlatformMotion.test.ts src/book/heightfieldRaycast.test.ts src/book/worldPaintedValley.test.ts src/book/worldRailBattle.test.ts src/proto/rules/snowflakeReward.test.ts",
+    "test:browser": "node tools/portals-start-check.cjs && node tools/grove-movement-controls-check.cjs && node tools/controller-zoom-check.cjs && node tools/controller-framing-check.cjs && node tools/painted-valley-check.cjs"
   },
   "dependencies": {
     "@pixi/react": "^8.0.5",
@@ -32,6 +34,8 @@
     "pixi.js": "^8.16.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "spessasynth_core": "4.4.7",
+    "spessasynth_lib": "4.4.5",
     "three": "^0.170.0"
   },
   "devDependencies": {

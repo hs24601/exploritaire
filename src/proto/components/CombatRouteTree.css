@@ -1,0 +1,25 @@
+.combat-route-tree { width:100%; min-width:0; text-align:left; color:#e9f4eb; }
+.combat-route-tree > p { margin:0 0 12px; color:#fff0bd; font:20px/1.3 Georgia,serif; }
+.combat-route-tree > p span { color:#aebeb4; font-size:16px; }
+.combat-route-tree__map { display:grid; grid-template-columns:68px minmax(0,1fr); gap:24px; align-items:center; padding:12px; border:1px solid #6f8d7a; border-radius:12px; background:radial-gradient(ellipse at 40% 50%,#314e42,#152a27 75%); }
+.combat-route-tree__origin { display:grid; justify-items:center; gap:5px; color:#e8d59b; font:16px Georgia,serif; }
+.combat-route-tree__origin span { display:grid; place-items:center; width:44px; height:44px; border:2px solid #c3aa71; border-radius:50%; background:#3d382b; font-size:28px; }
+.combat-route-tree__branches { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; position:relative; }
+.combat-route-tree__branches:before { content:''; position:absolute; top:50%; right:100%; width:24px; border-top:2px solid #829c86; }
+.combat-route-tree__node { min-width:0; min-height:70px; display:flex; align-items:center; gap:10px; padding:8px; border:1px solid #92a99b; border-radius:9px; background:#203b34; color:#f2f7ec; text-align:left; cursor:pointer; font:16px/1.2 Georgia,serif; }
+.combat-route-tree__node[aria-pressed='true'] { border:2px solid #f3d48f; background:#43503a; box-shadow:0 0 12px #e7cc7c55; }
+.combat-route-tree__node:focus-visible { outline:3px solid #91d9ee; outline-offset:2px; }
+.combat-route-tree__node b,.combat-route-tree__node small { display:block; font-size:16px; }
+.combat-route-tree__node small { color:#b8dfea; text-transform:capitalize; margin-top:4px; }
+.combat-route-tree__motif { display:grid; place-items:center; flex:none; width:40px; height:40px; border:1px solid #9dcbd8; border-radius:50%; background:#274c5d; color:#d4f7ff; font:26px Georgia,serif; }
+@media(max-width:700px) { .combat-route-tree__map { grid-template-columns:40px minmax(0,1fr); gap:12px; padding:8px; } .combat-route-tree__origin span { width:34px; height:34px; } .combat-route-tree__branches { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; } .combat-route-tree__branches:before { width:12px; } .combat-route-tree__node { min-height:62px; gap:5px; padding:5px; } .combat-route-tree__motif { width:30px; height:30px; font-size:20px; } }
+
+
+/* Destinations are direct actions and occupy only the space their labels need. */
+.combat-route-tree { width:fit-content; max-width:100%; justify-self:center; }
+.combat-route-tree__map { width:fit-content; max-width:100%; }
+.combat-route-tree__branches { grid-template-columns:max-content; justify-items:start; }
+.combat-route-tree__node { width:max-content; max-width:100%; }
+.combat-route-tree__node:hover:not(:disabled) { border-color:#f3d48f; background:#43503a; }
+.combat-route-tree__node:disabled { opacity:.5; cursor:not-allowed; }
+@media(max-width:700px) { .combat-route-tree__branches { grid-template-columns:max-content; } }

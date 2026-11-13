@@ -5,7 +5,7 @@ import { animateQuestTravel } from './questCardTravel';
 
 type JumboCard = { questOrigin?: {element:HTMLElement;bounds:DOMRect}; title: string; content: ReactNode; ratio?: number; action?: () => void; actionLabel?: string;
   actions?: { label: string; run: () => void }[] };
-const Context = createContext<{ open: (card: JumboCard) => void; close: () => void; dismiss: () => void } | null>(null);
+const Context = createContext<{ open: (card: JumboCard) => void; close: () => void; dismiss: () => void; isOpen: boolean } | null>(null);
 export const useCardJumbo = () => useContext(Context);
 
 /** Card backs and stock/receiving cards retain their printed face in jumbo. */
@@ -55,7 +55,7 @@ export function CardJumboProvider({ children }: { children: ReactNode }) {
       if(host.current?.querySelector('dialog[open]'))return;
       if(event.key==='Escape'){if(host.current?.querySelector('.trading-card-ability-view'))return;event.preventDefault();event.stopImmediatePropagation();close();}
       if(event.key==='Tab'){
-        const controls=Array.from(host.current?.querySelectorAll<HTMLElement>('button:not(:disabled),[tabindex="0"]')??[]).filter(control=>!control.closest('[inert]')&&getComputedStyle(control).visibility!=='hidden');
+        const controls=Array.from(host.current?.querySelectorAll<HTMLElement>('button:not(:disabled),select:not(:disabled),[tabindex="0"]')??[]).filter(control=>!control.closest('[inert]')&&getComputedStyle(control).visibility!=='hidden');
         const first=controls[0],last=controls[controls.length-1];
         if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
         else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
@@ -68,9 +68,12 @@ export function CardJumboProvider({ children }: { children: ReactNode }) {
       if(previousFocus.current?.isConnected)previousFocus.current.focus({preventScroll:true});
     };
   },[card]);
-  return <Context.Provider value={{open:next=>{previousFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setCard(next);},close,dismiss:()=>setCard(null)}}>
+  return <Context.Provider value={{open:next=>{previousFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setCard(next);},close,dismiss:()=>setCard(null),isOpen:Boolean(card)}}>
     {children}
-    {card&&createPortal(<div className="card-jumbo-backdrop" data-camera-ignore="true" onClick={event=>{if(event.target===event.currentTarget)close();}}>
+    {card&&createPortal(<div className="card-jumbo-backdrop" data-camera-ignore="true" onClick={event=>{
+      const target=event.target;
+      if(target===event.currentTarget||target instanceof Element&&target.hasAttribute('data-jumbo-empty-space'))close();
+    }}>
       <div ref={host} className="card-jumbo" role="dialog" aria-modal="true" aria-label={`${card.title} jumbo card`} style={{'--jumbo-ratio':card.ratio??63/88} as React.CSSProperties}>
         <button type="button" className="card-jumbo__close" aria-label="Close jumbo card" onClick={()=>close()}>×</button>
         <div className="card-jumbo__face" onClick={event=>{if((event.target as HTMLElement).closest('.proto-ordinary-day__actions button'))close();}}>{card.content}</div>

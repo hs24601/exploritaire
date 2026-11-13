@@ -1,0 +1,17 @@
+{
+  "width": 1254,
+  "height": 1254,
+  "transparent": 972759,
+  "partial": 599333,
+  "opaque": 424,
+  "paintBounds": [
+    176,
+    44,
+    1046,
+    1162
+  ],
+  "opaquePale": 158636,
+  "pale": 162923,
+  "sha256": "a4033f91923de64b14d947d69e8377158dac87ddd25203c81c0777d935357197",
+  "runtimeMatchesSource": true
+}

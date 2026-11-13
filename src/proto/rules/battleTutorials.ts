@@ -1,17 +1,31 @@
-import { apCap, createStaggerSandbox, cirFireHit, enemyTarget, foeAlive, recoverDisarmed, returnPlayerTurn, CIR_EXPRESSIONS, type BattleFoe, type BattleState } from './battle';
+import { moteEndTurn } from './lightMotes';
+import { thornsRetaliation } from './thornsReward';
+import { triggerPhoenix } from './phoenixReward';
+import { golemFarewell, golemUpkeep } from './iceAbilities';
+import { iceTier, themedGuard } from './iceRewards';
+import { openSnowflakeEnemyTurn } from './snowflakeReward';
+import { isAdjacentRank } from './setup';
+import { partyDamageTarget } from './partyDamage';
+import { enterKeruEncounter } from './keruLeadership';
+import { splitCard } from './splitCards';
+import { absorbTempHp, evadeCir } from './cirCompanion';
+import { newActor, apCap, takeTop, foundationCardsOf, createStaggerSandbox, cirFireHit, enemyTarget, foeAlive, recoverDisarmed, returnPlayerTurn, CIR_EXPRESSIONS, type BattleFoe, type BattleState } from './battle';
 import { STATUS_TUNING as T } from './battleStatusData';
 import { tutorialById, type StrikeProfile, type TutorialDef, type TutorialFoeDef, type TutorialScenarioId } from './battleTutorialScenarios';
-import { bleedFoe as bleed, chillFoe as chill, damageFoe, expireEnemyTurn, expirePartyTurn, hasStatus, outcome, patchActor, pushEvents, statusOf, foeMomentumGain, scaleMomentumGain, withStatus, withoutStatus } from './battleStatuses';
+import { bleedFoe as bleed, chillFoe as chill, damageFoe, weakenedHit, expireEnemyTurn, expirePartyTurn, hasStatus, outcome, patchActor, pushEvents, statusOf, foeMomentumGain, scaleMomentumGain, withStatus, withoutStatus } from './battleStatuses';
 import { stockCard } from './skirmish';
+import { isTruefourstar } from './battleSandboxScenarios';
+import { INVOKE_KERU } from './keruInvokeData';
+import { keruInvokeSetup, payKeruUpkeep, wardenAfterTurn, wardenIntent, type KeruInvokeState } from './keruInvoke';
 import type { Card } from '../protoState';
-import { advanceIntent, armorOwner, breathIntent, breathTurn, chokeIfBroken, dealIntent, intentEnemyPlayOne, intentOwnerSkips, intentPassiveAndFire, openPartyTurn, type BreathPhase, type IntentCard } from './battleDeadRun';
+import { advanceIntent, armorOwner, startCharging, breathIntent, breathTurn, chokeIfBroken, dealIntent, intentEnemyPlayOne, intentOwnerSkips, intentPassiveAndFire, openPartyTurn, type BreathPhase, type IntentCard } from './battleDeadRun';
 
 // Tutorial and focused combat-sandbox scenarios over the turn-based battle
 // rules: scenario setup, endless backfill and the rounds counter, tableau
 // receipt statuses, and the enemy turn with enemy Momentum and reactions.
 
 /** A paced enemy turn's next step; `skips` is fixed when the turn opens (a staggered owner skips the intent). */
-export type EnemyStep = { phase: 'strike' | 'breath' | 'play' | 'passive' | 'end'; foe: number; plays: number; skips: boolean };
+export type EnemyStep = { phase: 'strike' | 'breath' | 'play' | 'passive' | 'foundation' | 'end'; foe: number; plays: number; skips: boolean; foundationSkips?: string[] };
 
 export type TutorialRuntime = {
   id: TutorialScenarioId;
@@ -28,6 +42,12 @@ export type TutorialRuntime = {
   enemyStep?: EnemyStep;
   /** Dead-run fixes (rules/battleDeadRun.ts): the intent card, parked cards by Kin, and this turn's pity flip. */
   intent?: IntentCard;
+  /** Remaining permanent capacity of the enemy ability. */
+  intentCap?: number;
+  /** Positive ability progress already made this enemy turn. */
+  intentProgressThisTurn?: number;
+  /** Enemies that already skipped a turn and recover at the next party handoff. */
+  staggerSkipped?: string[];
   /** A readying, armored intent's lifecycle (battleDeadRun BreathPhase). */
   breath?: BreathPhase;
   holds?: Partial<Record<string, Card>>;
@@ -47,31 +67,38 @@ export function spawnTutorialFoe(def: TutorialDef, foe: TutorialFoeDef, wave: nu
   const staggerMax = Math.min(grow?.staggerCap ?? Infinity, foe.staggerMax + (grow?.staggerEvery ? Math.floor(step / grow.staggerEvery) : 0));
   const id = wave === 1 ? foe.key : `${foe.key}-${wave}`, rank = FOE_RANKS[slot % FOE_RANKS.length];
   return { ...template, id, name: foe.name, tutorialKey: foe.key, appearance: 'khad-root',
-    intent: 'attack', thorns: 0, ironbark: false, hp, timer: 0, stagger: 0, staggered: 0, staggerStage: 0, effects: [], statuses: foe.statuses ? [...foe.statuses] : [],
+    intent: 'attack', frostKit: foe.frostKit, frostArmor: 0, frostHits: 0, frostReceipts: 0, thorns: 0, ironbark: false, hp, timer: 0, stagger: 0, staggered: 0, staggerStage: 0, effects: [], statuses: foe.statuses ? [...foe.statuses] : [],
     momentum: foe.noMomentum ? undefined : 0, inflicts: foe.inflicts, fed: 0, eye: null, rank, foundationCards: [{ id: `${id}-opening`, rank }],
     disarmed: false, turnSpent: false, profile: { ...template.profile, maxHp: hp, damage, staggerMax } };
 }
 
 export function createTutorialScenario(id: TutorialScenarioId): BattleState {
   const def = tutorialById(id)!, base = createStaggerSandbox(), COLUMNS = def.columns ?? 7, seed = def.randomSeed ? base.seed : def.seed;
+  const spatial = id === '1001', rows = id === '1000' || spatial ? 3 : ROWS;
   const columns = def.deal ? def.deal.map((ranks, c) => ranks.map((rank, r) => ({ id: `tutorial-${id}-${c}-${r}`, rank })))
-    : Array.from({ length: COLUMNS }, (_, c) => Array.from({ length: ROWS }, (_, r) => stockCard(seed, c * ROWS + r)));
+    : Array.from({ length: COLUMNS }, (_, c) => Array.from({ length: rows }, (_, r) => stockCard(seed, c * rows + r)));
+  if(id==='1000')for(let c=0;c<columns.length;c++)columns[c]=columns[c].map(splitCard);
   const foes = def.foes.map((foe, slot) => spawnTutorialFoe(def, foe, 1, slot, base.foes[0]));
   // An armored caster starts with nothing on the table and casts its ability on its first turn.
   const deal = def.intentCard?.armored ? armorOwner : dealIntent;
-  return openPartyTurn(deal({ ...base, sandboxScenario: id, cir: { status: 'available' }, round: 1, seed, effectSeed: seed,
-    rules: { ...base.rules, columns: COLUMNS }, columns, stock: [], dealt: COLUMNS * ROWS, foes,
+  const state = openPartyTurn(deal({ ...base, sandboxScenario: id, cir: { status: 'available' }, round: 1, seed, effectSeed: seed,
+    rules: { ...base.rules, columns: COLUMNS, spatialLanes: spatial, dualRanks: id === '1000', elementSuits: def.elementSuits, ...(id==='1000' || spatial ? { infinifillRows: 3 } : {}) },
+    ...(def.elementSuits ? { elementPlay: 'ready' as const } : {}), columns, stock: [], dealt: COLUMNS * rows + (isTruefourstar(id) ? def.party!.length : 0) + (def.keru ? INVOKE_KERU.length : 0), foes,
+    // Each Keru's starter value is the next seeded card after Hero's opening.
+    ...(def.keru ? { keruInvoke: keruInvokeSetup(Object.fromEntries(INVOKE_KERU.map((keru, i) => [keru, stockCard(seed, COLUMNS * rows + def.party!.length + i).rank])) as KeruInvokeState['values'], def.keru) } : {}),
     tutorial: { id, cleared: 0, waves: Object.fromEntries(def.foes.map(foe => [foe.key, 1])) },
     momentum: { value: def.momentum ?? 0, earned: 0, spent: 0, sequence: 0, decayEnabled: def.decay ?? false },
-    party: base.party.filter(actor => !def.party || def.party.includes(actor.id as 'hero' | 'mochi')).map(actor => ({ ...actor, targetId: foes[0].id, charge: def.ap ?? 0, hp: def.partyHp ?? actor.maxHp, maxHp: def.partyHp ?? actor.maxHp,
-      statuses: [] })) }));
+    party: [...(id==='1002' ? [{...newActor('aldan-seed'),targetId:foes[0].id}] : []), ...(def.party ? def.party.map(id=>base.party.find(actor=>actor.id===id) ?? newActor(id)) : base.party).map(actor => ({ ...actor, targetId: foes[0].id, charge: def.ap ?? 0, hp: def.partyHp ?? actor.maxHp, maxHp: def.partyHp ?? actor.maxHp,
+      ...(id==='1002' ? {rank:0,foundationCards:[]} : isTruefourstar(id) ? (() => { const card = stockCard(seed, COLUMNS * rows + (def.party as readonly string[]).indexOf(actor.id)); return {rank:card.rank,foundationCards:[card]}; })() : {}), statuses: [] }))] }));
+  if (def.breathStart !== undefined) return startCharging(state, def.breathStart);
+  return id==='1002'?enterKeruEncounter(state):state;
 }
 
 /** Rounds completed in an endless scenario, or null when the scenario is finite. */
 export const tutorialRounds = (state: BattleState) => state.tutorial && tutorialById(state.tutorial.id)?.endless ? state.tutorial.cleared : null;
 
 export const tutorialStrike = (state: BattleState, actorId: string): StrikeProfile =>
-  tutorialById(state.tutorial?.id)?.strikes?.[actorId as 'hero' | 'mochi'] ?? { name: actorId === 'hero' ? 'Nip' : 'Claw', damage: 1, stagger: 1 };
+  actorId==='snow-golem' || state.tutorial?.id === '111' ? { name: 'Nip', damage: 1, stagger: 0 } : actorId==='aldan-seed' ? {name:'Seed pulse',damage:1,stagger:0} : tutorialById(state.tutorial?.id)?.strikes?.[actorId as 'hero' | 'mochi'] ?? { name: actorId === 'hero' ? 'Nip' : 'Claw', damage: 1, stagger: 1 };
 
 /** Endless scenarios replace each defeated foe at once; everyone keeps a living target. */
 export function settleTutorial(state: BattleState): BattleState {
@@ -162,7 +189,7 @@ function foeTurn(state: BattleState, foeId: string): BattleState {
   // A counted stun (a backfire) holds the stagger until its last turn, which is also the recovery.
   const counted = statusOf(foe, 'stun');
   if (counted?.turns) { set(unit => (counted.turns ?? 0) > 1 ? withStatus(unit, { ...counted, turns: (counted.turns ?? 0) - 1 }) : { ...withoutStatus(unit, 'stun'), stagger: 0, staggered: 0, staggerStage: 0 }); return next; }
-  if (foe.staggered > 0) { set(unit => ({ ...unit, stagger: 0, staggered: 0, staggerStage: 0 })); return next; }
+  if (foe.staggered > 0) return next;
   const dormant = statusOf(foe, 'dormant');
   if (dormant) { set(unit => (dormant.turns ?? 0) > 1 ? withStatus(unit, { ...dormant, turns: (dormant.turns ?? 0) - 1 }) : withoutStatus(unit, 'dormant')); return next; }
   if (hasStatus(foe, 'frozen') || hasStatus(foe, 'stun')) { set(unit => withoutStatus(unit, 'frozen', 'stun')); return next; }
@@ -173,7 +200,8 @@ function foeTurn(state: BattleState, foeId: string): BattleState {
   if (foe.momentum !== undefined) set(unit => ({ ...unit, momentum }));
   if (foe.profile.damage <= 0) return next;
   const name = heavy ? `${foe.name} · Heavy Strike` : foe.name;
-  const target = enemyTarget(next);
+  const intended=enemyTarget(next);
+  const target = intended && partyDamageTarget(next,intended.id);
   if (!target) return next;
   if (hasStatus(foe, 'blind')) {
     set(unit => withoutStatus(unit, 'blind'));
@@ -184,15 +212,19 @@ function foeTurn(state: BattleState, foeId: string): BattleState {
     next = patchActor(next, target.id, unit => withoutStatus(unit, 'guard'));
     return pushEvents(next, [{ kind: 'enemy-hit', sourceId: foeId, targetId: target.id, amount: 0, label: `${name} · Guarded` }]);
   }
-  const damage = foe.profile.damage * (heavy ? T.heavyStrikeMultiplier : 1), hp = Math.max(0, target.hp - damage);
+  const dodge = evadeCir(next, target); next = dodge.state;
+  if (dodge.evaded) return pushEvents(next, [{ kind: 'enemy-hit', sourceId: foeId, targetId: target.id, amount: 0, label: 'Swift Wings · Evaded' }]);
+  const damage = weakenedHit(foe, foe.profile.damage * (heavy ? T.heavyStrikeMultiplier : 1)), hurtTarget = absorbTempHp(target, damage), hp = hurtTarget.hp;
   next = patchActor(next, target.id, unit => {
-    const hurt = { ...unit, hp };
+    const hurt = { ...unit, ...hurtTarget };
     if (hp <= 0 || !foe!.inflicts) return hurt;
     return withStatus(hurt, foe!.inflicts === 'sap' ? { id: 'sap', turns: 2 } : { id: 'silence', turns: 1 });
   });
   next = pushEvents(next, [{ kind: 'enemy-hit', sourceId: foeId, targetId: target.id, amount: damage, label: name },
     ...(hp === 0 ? [{ kind: 'down' as const, sourceId: foeId, targetId: target.id }] : [])]);
-  next = { ...next, result: outcome(next) };
+  if (damage>0) next=thornsRetaliation(next,target,foeId);
+  next = triggerPhoenix(next);
+  next = golemFarewell({ ...next, result: outcome(next) });
   if (next.cir?.status === 'bound' && next.cir.actorId === 'hero' && target.id === 'hero') next = cirFireHit(next, foeId, CIR_EXPRESSIONS.hero.damage, 'Hearthflame', 'hero');
   return next;
 }
@@ -208,18 +240,35 @@ function regrow(state: BattleState, foeId: string): BattleState {
 /** Real seconds between the steps of a paced enemy turn, so each action can animate before the next. */
 export const ENEMY_STEP_SECONDS = { hold: 0.7, cast: 1, strike: 0.8, play: 0.75, passive: 0.6, fire: 1.1, end: 0.6 } as const;
 
-/** Enemy-turn setup shared by the instant and paced turns: party-turn statuses end, foes rearm. */
-const openEnemyTurn = (state: BattleState) => recoverDisarmed({ ...expirePartyTurn(state), foes: state.foes.map(foe => foe.turnSpent ? { ...foe, turnSpent: false } : foe) }, 'foes');
+/** Enemy-turn setup shared by the instant and paced turns: Keru upkeep is paid, party-turn statuses end, foes rearm. */
+const openEnemyTurn = (state: BattleState) => {
+  state = openSnowflakeEnemyTurn(state);
+  // 1012: Keru upkeep is paid as the party turn ends, so AP earned this turn counts.
+  const paid=golemUpkeep(payKeruUpkeep(state));
+  const armored={...paid,party:paid.party.map(actor=>actor.hp>0 && actor.iceRewards?.includes('ice-armor') ? {...actor,iceArmorRestored:false,iceArmor:Math.min([5,8,12,12][iceTier(actor,'ice-armor')],(actor.iceArmor ?? 0)+actor.charge*(iceTier(actor,'ice-armor')>=2?2:1))} : actor)};
+  const themed={...armored,party:armored.party.map(actor=>actor.hp>0?{...moteEndTurn(themedGuard(actor)),inciteHeat:actor.iceRewards?.includes('ember-cadence') && iceTier(actor,'ember-cadence')===3 ? Math.min(1,actor.inciteHeat ?? 0):0,rewardTurnMoves:0}:actor)};
+  const expired = expirePartyTurn(themed), recovered = new Set(expired.tutorial?.staggerSkipped ?? []);
+  const foes = expired.foes.map(foe => {
+    const unit = recovered.has(foe.id) && !hasStatus(foe, 'stun') ? { ...foe, stagger: 0, staggered: 0, staggerStage: 0 } : foe;
+    return unit.turnSpent ? { ...unit, turnSpent: false } : unit;
+  });
+  const ownerRecovered = recovered.has(expired.foes[0]?.id) && !foes[0]?.staggered;
+  const tutorial = expired.tutorial && { ...expired.tutorial, intentProgressThisTurn: 0,
+    staggerSkipped: foes.filter(foe => foe.staggered > 0 && !hasStatus(foe, 'stun')).map(foe => foe.id),
+    ...(ownerRecovered && expired.tutorial.intentCap === 0 ? { intent: undefined } : {}) };
+  return recoverDisarmed({ ...expired, tutorial, foes }, 'foes');
+};
 const foesAct = (state: BattleState) => {
   let next = state;
   for (const id of next.foes.map(foe => foe.id)) {
     if (next.result) break;
-    next = regrow(foeTurn(next, id), id);
+    next = wardenAfterTurn(regrow(foeTurn(next, id), id), id);
   }
   return next;
 };
 const closeEnemyTurn = (state: BattleState) => {
-  const next = settleTutorial(expireEnemyTurn(state));
+  const chilled={...state,party:state.party.map(actor=>({...actor,fossilTurns:Math.max(0,(actor.fossilTurns ?? 0)-1),thornsTurns:Math.max(0,(actor.thornsTurns ?? 0)-1)})),foes:state.foes.map(foe=>({...foe,frostArmor:foe.hp>0 && foe.frostKit==='armor' ? Math.min(2,(foe.frostArmor ?? 0)+2) : foe.frostArmor,rimeFrozen:false,iceVulnerable:Math.max(0,(foe.iceVulnerable ?? 0)-1),iceFrost:foe.iceFrost?.map(turns=>turns-1).filter(turns=>turns>0)}))};
+  const next = settleTutorial(expireEnemyTurn(chilled));
   return next.result ? { ...next, turn: 'party' as const, tutorial: next.tutorial && { ...next.tutorial, enemyClock: undefined, enemyStep: undefined } } : openPartyTurn(returnPlayerTurn(next));
 };
 
@@ -232,7 +281,29 @@ const closeEnemyTurn = (state: BattleState) => {
 export function beginTutorialEnemyTurn(state: BattleState): BattleState {
   if (!state.rules.pacedEnemyTurns || !state.tutorial) return tutorialEnemyTurn(state);
   const next = openEnemyTurn(state), seconds = tutorialById(state.tutorial.id)?.enemyTurnSeconds ?? ENEMY_STEP_SECONDS.hold;
-  return { ...next, turn: 'enemy', tutorial: { ...next.tutorial!, enemyClock: seconds, enemyStep: { phase: 'strike', foe: 0, plays: 0, skips: intentOwnerSkips(next.foes[0]) } } };
+  return { ...next, turn: 'enemy', tutorial: { ...next.tutorial!, enemyClock: seconds, enemyStep: { phase: 'strike', foe: 0, plays: 0, skips: intentOwnerSkips(next.foes[0]), foundationSkips: next.foes.filter(intentOwnerSkips).map(foe=>foe.id) } } };
+}
+
+/** 1012: the dragon takes an adjacent exposed card onto its own foundation and chips Hero. */
+export function dragonFoundationPlay(state: BattleState, foeIndex=0): BattleState | null {
+  if (!['1012','100','101','102','103','104','105'].includes(state.tutorial?.id ?? '') || state.result) return null;
+  const foe=state.foes[foeIndex], target=['100','101','102','103','104','105'].includes(state.tutorial?.id ?? '') ? enemyTarget(state) : state.party.find(actor=>actor.id==='hero' && actor.hp>0);
+  if (!foe || !foeAlive(foe) || foe.rimeFrozen || !target) return null;
+  const column=state.columns.findIndex(cards=>cards.length>0 && isAdjacentRank(cards[cards.length-1].rank,foe.rank) && !state.traps[cards[cards.length-1].id]);
+  if (column<0) return null;
+  const taken=takeTop(state,column)!;
+  const dodge=evadeCir(state,target); state=dodge.state;
+  const whiteout=foe.frostKit==='whiteout' && ((foe.frostReceipts ?? 0)+1)%4===0;
+  const damage=weakenedHit(foe,whiteout?2:1), absorbed=dodge.evaded ? target : absorbTempHp(target,damage);
+  const stacks=!dodge.evaded && target.iceRewards?.includes('rime-retort') ? (target.rimeRetort ?? 0)+1 : 0;
+  const tier=iceTier(target,'rime-retort'),froze=stacks>=[6,5,4,4][tier];
+  const hurt=stacks ? {...absorbed,rimeRetort:froze?0:stacks} : absorbed;
+  let next: BattleState={...state,columns:taken.columns,stock:taken.stock,dealt:taken.dealt,foes:state.foes.map(unit=>unit.id===foe.id?{...unit,frostReceipts:(unit.frostReceipts ?? 0)+1,rank:taken.card.rank,foundationCards:[...foundationCardsOf(unit),taken.card],...(froze?{rimeFrozen:true,...(tier===3?{hp:Math.max(0,unit.hp-2)}:{})}:{})}:unit),party:state.party.map(actor=>actor.id===target.id?hurt:actor)};
+  next=pushEvents(next,[{kind:'enemy-hit',sourceId:foe.id,targetId:target.id,amount:dodge.evaded?0:damage,chipDamage:!dodge.evaded,label:dodge.evaded?(target.lightMotes?.['gale-mote']?'Gale Mote · Evaded':'Whiteout · Evaded'):foe.name+(whiteout?' · Whiteout':' · Chip')},...(hurt.hp<=0?[{kind:'down' as const,sourceId:foe.id,targetId:target.id}]:[])]);
+  if (!dodge.evaded && damage>0) next=thornsRetaliation(next,target,foe.id);
+  next=triggerPhoenix(next);
+  next=golemFarewell(next);
+  return {...next,result:outcome(next)};
 }
 
 /** Advances a paced enemy turn by real seconds, one step each time its clock runs out. */
@@ -248,15 +319,15 @@ export function tickTutorialEnemyTurn(state: BattleState, dt: number): BattleSta
     case 'strike': {
       // One foe per step; a foe that does nothing visible (dormant, frozen, recovering) passes straight on.
       const foe = state.foes[step.foe];
-      if (!foe) return tickTutorialEnemyTurn(at(state, def?.readies ? 'breath' : acts ? 'play' : 'end', 0), 0);
-      const after = regrow(foeTurn(state, foe.id), foe.id), shown = after.nextEventId !== state.nextEventId;
+      if (!foe) { const next=at(state, ['100','101','102','103','104','105'].includes(state.tutorial?.id ?? '') ? 'foundation' : def?.readies ? 'breath' : acts ? 'play' : 'end', 0, 0); return tickTutorialEnemyTurn({...next,tutorial:{...next.tutorial!,enemyStep:{...next.tutorial!.enemyStep!,foe:0}}},0); }
+      const after = wardenAfterTurn(regrow(foeTurn(state, foe.id), foe.id), foe.id), shown = after.nextEventId !== state.nextEventId;
       const next = at(after, 'strike', shown ? ENEMY_STEP_SECONDS.strike : 0);
       return { ...next, tutorial: next.tutorial && next.tutorial.enemyStep ? { ...next.tutorial, enemyStep: { ...next.tutorial.enemyStep, foe: step.foe + 1 } } : next.tutorial };
     }
     case 'breath': {
       // Cast, wind up, unleash or re-armor; only a charging ability goes on to its plays.
       const turn = breathTurn(state);
-      return turn.plays && !step.skips ? at(turn.state, 'play', turn.acted ? ENEMY_STEP_SECONDS.cast : 0) : at(turn.state, 'end', turn.acted ? ENEMY_STEP_SECONDS.fire : 0);
+      return turn.plays && !step.skips ? at(turn.state, 'play', turn.acted ? ENEMY_STEP_SECONDS.cast : 0) : at(turn.state, state.tutorial?.id === '1012' && !step.skips && state.tutorial.breath !== 'readied' ? 'foundation' : 'end', turn.acted ? ENEMY_STEP_SECONDS.fire : 0, 0);
     }
     case 'play': {
       const played = step.plays < (def?.enemyPlays ?? 0) ? intentEnemyPlayOne(state) : null;
@@ -264,7 +335,17 @@ export function tickTutorialEnemyTurn(state: BattleState, dt: number): BattleSta
     }
     case 'passive': {
       const after = intentPassiveAndFire(state), fired = after.tutorial?.intent?.id !== state.tutorial!.intent?.id;
-      return at(after, 'end', fired ? ENEMY_STEP_SECONDS.fire : ENEMY_STEP_SECONDS.passive);
+      return at(after, state.tutorial?.id === '1012' && !step.skips ? 'foundation' : 'end', fired ? ENEMY_STEP_SECONDS.fire : ENEMY_STEP_SECONDS.passive, 0);
+    }
+    case 'foundation': {
+      const index=state.tutorial?.id==='1012' ? 0 : step.foe;
+      const foe=state.foes[index];
+      if (!foe) return tickTutorialEnemyTurn(at(state, 'end', 0), 0);
+      const played=step.plays < 100 && !step.foundationSkips?.includes(foe.id) ? dragonFoundationPlay(state,index) : null;
+      if (played) return at(played, 'foundation', ENEMY_STEP_SECONDS.play, step.plays + 1);
+      if (state.tutorial?.id==='1012') return tickTutorialEnemyTurn(at(state, 'end', 0), 0);
+      const next=at(state,'foundation',0,0);
+      return tickTutorialEnemyTurn({...next,tutorial:{...next.tutorial!,enemyStep:{...next.tutorial!.enemyStep!,foe:index+1}}},0);
     }
     case 'end': return closeEnemyTurn({ ...state, tutorial: { ...state.tutorial!, enemyClock: undefined, enemyStep: undefined } });
   }
@@ -272,17 +353,19 @@ export function tickTutorialEnemyTurn(state: BattleState, dt: number): BattleSta
 
 export function tutorialEnemyTurn(state: BattleState): BattleState {
   let next = openEnemyTurn(state);
-  const ownerSkips = intentOwnerSkips(next.foes[0]);
+  const ownerSkips = intentOwnerSkips(next.foes[0]), foundationSkips = new Set(next.foes.filter(intentOwnerSkips).map(foe=>foe.id));
   next = foesAct(next);
   const turn = breathTurn(next);
-  return closeEnemyTurn(turn.plays ? advanceIntent(turn.state, ownerSkips) : turn.state);
+  next = turn.plays ? advanceIntent(turn.state, ownerSkips) : turn.state;
+  if (state.tutorial?.breath !== 'readied' && ['1012','100','101','102','103','104','105'].includes(next.tutorial?.id ?? '')) { for (let f=0; f<next.foes.length; f++) { if (foundationSkips.has(next.foes[f].id)) continue; for (let i=0; i<100 && !next.result; i++) { const played=dragonFoundationPlay(next,f); if (!played) break; next=played; } } }
+  return closeEnemyTurn(next);
 }
 
 /** `glyph` and `damage` override the badge's icon and number (abilities such as Deep Breath). */
 export type TutorialIntent = { summary: string; detail: string; skips: boolean; heavy: boolean; glyph?: string; damage?: number };
 /** Intent copy for a tutorial foe: its next strike, whether it is Heavy, and why it might skip. An armored caster's ability lifecycle takes priority. */
 export function tutorialIntent(foe: BattleFoe, targetName: string | null, battle?: BattleState): TutorialIntent | null {
-  const breath = battle && battle.foes[0]?.id === foe.id ? breathIntent(battle) : null;
+  const breath = battle && battle.foes[0]?.id === foe.id ? breathIntent(battle) ?? wardenIntent(battle) : null;
   if (breath) return breath;
   if (foe.momentum === undefined) return null;
   const extras = `${foe.inflicts === 'sap' ? ' Its hit Saps the Kin it strikes.' : foe.inflicts === 'silence' ? ' Its hit Silences the Kin it strikes for your next turn.' : ''} It targets the Kin holding the most AP; ties use party order.`;
@@ -295,7 +378,7 @@ export function tutorialIntent(foe: BattleFoe, targetName: string | null, battle
   const grip = statusOf(foe, 'grip');
   if (grip) return skip(`Held · ${grip.turns} turn${grip.turns === 1 ? '' : 's'}`, `is held by Vice Grip for ${grip.turns} more enemy turn${grip.turns === 1 ? '' : 's'}: it cannot strike or bank Momentum.`);
   const heavy = heavyStrikeNext(foe), who = targetName ?? 'No target', gain = foeMomentumGain(foe);
-  const damage = foe.profile.damage * (heavy ? T.heavyStrikeMultiplier : 1);
+  const damage = weakenedHit(foe, foe.profile.damage * (heavy ? T.heavyStrikeMultiplier : 1));
   return { summary: heavy ? `Heavy · ${who}` : who, skips: false, heavy,
     detail: `${foe.name} intends ${heavy ? 'a Heavy Strike' : 'to strike'} on ${who} for ${damage} damage. It has ${foe.momentum} Momentum and banks ${gain} on its turn; at ${T.heavyStrikeCost} it spends them on a Heavy Strike (×${T.heavyStrikeMultiplier} damage).${extras}` };
 }

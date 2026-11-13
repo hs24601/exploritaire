@@ -1,0 +1,24 @@
+.bite-lenticular{position:absolute;inset:0;overflow:hidden;pointer-events:none;background:#08152b;--bite-view-angle:max(var(--art-shift-x,0),calc(-1 * var(--art-shift-x,0)))}
+.trading-card__art .bite-lenticular__sky{position:absolute;inset:-8%;width:116%;height:116%;max-width:none;object-fit:cover;filter:brightness(.72) saturate(.85);transform:translate(calc(var(--art-shift-x,0) * -3%),calc(var(--art-shift-y,0) * -3%))}
+.bite-lenticular__subject{position:absolute;inset:0;transform:translate(calc(var(--art-shift-x,0) * 1.2%),calc(var(--art-shift-y,0) * 1.2%))}
+.trading-card__art .bite-lenticular__frame{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;object-position:65% 50%;image-rendering:auto;pointer-events:none}
+/* Narrow angular transition bands mimic a multi-image flip, rather than a timed morph.
+   Cumulative layering keeps the subject solid while adjacent jaw states exchange. */
+.bite-lenticular__frame--closed{z-index:0;opacity:1}
+.bite-lenticular__frame--parted{z-index:1;opacity:clamp(0,calc((var(--bite-view-angle) - .2) * 20),1)}
+.bite-lenticular__frame--half{z-index:2;opacity:clamp(0,calc((var(--bite-view-angle) - .47) * 20),1)}
+.bite-lenticular__frame--open{z-index:3;opacity:clamp(0,calc((var(--bite-view-angle) - .74) * 20),1)}
+@media(prefers-reduced-motion:reduce){.bite-lenticular__sky,.bite-lenticular__subject{transform:none!important}.bite-lenticular__frame:not(.bite-lenticular__frame--closed){opacity:0!important}}
+[data-fx='low'] .bite-lenticular__frame:not(.bite-lenticular__frame--closed),[data-fx='off'] .bite-lenticular__frame:not(.bite-lenticular__frame--closed){opacity:0!important}
+.bite-lenticular__optics{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
+.bite-lenticular[data-optics-ready]>.bite-lenticular__optics{opacity:1}
+.bite-lenticular[data-optics-ready]>.bite-lenticular__sky,.bite-lenticular[data-optics-ready]>.bite-lenticular__subject{visibility:hidden}
+@media(prefers-reduced-motion:reduce){.bite-lenticular__optics{display:none}.bite-lenticular[data-optics-ready]>.bite-lenticular__sky,.bite-lenticular[data-optics-ready]>.bite-lenticular__subject{visibility:visible}}
+[data-fx='low'] .bite-lenticular__optics,[data-fx='off'] .bite-lenticular__optics{display:none}
+[data-fx='low'] .bite-lenticular>.bite-lenticular__sky,[data-fx='low'] .bite-lenticular>.bite-lenticular__subject,[data-fx='off'] .bite-lenticular>.bite-lenticular__sky,[data-fx='off'] .bite-lenticular>.bite-lenticular__subject{visibility:visible}
+.bite-optics-controls{margin:12px 0;padding:10px;border:1px solid #658576;border-radius:7px}
+.bite-optics-controls legend{color:#f3dba0;font:600 13px/1.3 Georgia,serif}
+.bite-optics-controls label{gap:8px}
+.bite-optics-controls small{display:block;color:#b8c9c2;font-size:11px}
+html[data-holographic-lenticular='false'] .bite-lenticular__optics{display:none}
+html[data-holographic-lenticular='false'] .bite-lenticular>.bite-lenticular__sky,html[data-holographic-lenticular='false'] .bite-lenticular>.bite-lenticular__subject{visibility:visible}

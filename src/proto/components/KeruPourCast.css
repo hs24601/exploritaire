@@ -1,0 +1,67 @@
+/* Keru pour and cast on the board (KeruPourCast.tsx). Above the hand overlay (60000), below the jumbo. Low effects and
+   reduced motion keep every cue static: no pip flight, a still cast trail. */
+.keru-board-layer { position: fixed; inset: 0; z-index: 60010; pointer-events: none; }
+.keru-board-layer > .ability-fan__target { pointer-events: none; }
+
+/* Pour source: Hero's AP meter itself. It only gains a grab cursor and a soft ring; nothing sits over the pips. */
+[data-keru-pour-source] { cursor: grab; touch-action: none; border-radius: 6px; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+[data-keru-pour-source]:hover, [data-keru-pour-source]:active { box-shadow: 0 0 0 2px #ffd76a88, 0 0 10px #ffd76a55; }
+/* The open hand's stand-in, laid exactly over the meter on the board below. */
+.keru-pour-source { position: fixed; z-index: 46; background: transparent; }
+
+/* The pour ghost trails below-right of the pointer, so the target and its label stay in view. */
+.keru-board-layer > .keru-feed-coin__ghost { width: 36px; height: 26px; min-width: 0; min-height: 0; translate: 10px 12px; font-size: 14px; }
+/* Live pour label over the target. */
+.keru-board-layer .keru-pour-preview { position: fixed; z-index: 3; bottom: auto; translate: -50% calc(-100% - 10px); display: grid; justify-items: center; gap: 2px; text-align: center; }
+.keru-board-layer .keru-pour-preview b { color: #ffe9a8; }
+.keru-board-layer .keru-pour-preview small { font-size: 16px; font-weight: 600; opacity: .9; }
+.keru-pour-preview .keru-rarity-progress__pips i { border-color: var(--rarity, #ffd76a); }
+.keru-pour-preview .keru-rarity-progress__pips i[data-on] { background: var(--rarity, #ffd76a); }
+/* One AP pip flying from Hero's meter into the target. */
+.keru-pour-fly { position: fixed; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 3px; background: linear-gradient(#ffd982, #d9902f); border: 1px solid #ffe7a8; box-shadow: 0 0 8px #ffd76a; animation: keru-pour-fly 400ms ease-in forwards; }
+@keyframes keru-pour-fly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.5); opacity: .2; } }
+
+/* Cast gem: a small tier-coloured gem in the bottom corner of a Keru card or square. Drag it to cast. */
+.keru-cast-gem { position: absolute; z-index: 7; left: 4px; bottom: 4px; display: grid; place-items: center; width: 30px; height: 30px; box-sizing: border-box; border-radius: 50% 50% 50% 8px; border: 2px solid var(--rarity, #b9bec6); background: radial-gradient(circle at 35% 30%, #fff8, color-mix(in srgb, var(--rarity, #b9bec6) 70%, #10141a) 55%, var(--rarity-deep, #5d636c)); box-shadow: 0 0 0 1px #000a, 0 0 8px color-mix(in srgb, var(--rarity, #b9bec6) 70%, transparent); font: 16px/1 system-ui, sans-serif; cursor: grab; touch-action: none; pointer-events: auto; -webkit-touch-callout: none; user-select: none; }
+.keru-cast-gem:focus-visible { outline: 3px solid #ffe19a; outline-offset: 2px; }
+.keru-cast-gem[data-blocked] { filter: grayscale(.8) brightness(.7); cursor: not-allowed; }
+.keru-square > .keru-cast-gem { left: 2px; bottom: 2px; width: 26px; height: 26px; font-size: 14px; }
+.keru-cast-gem__ghost { position: fixed; left: 0; bottom: auto; translate: -50% -50%; width: 36px; height: 36px; z-index: 2; }
+
+/* Cast targets: valid ones glow, invalid ones dim; the hovered one names the amount. */
+.keru-cast-target { position: fixed; box-sizing: border-box; border-radius: 16px; border: 2px solid transparent; background: #05070acc; padding: 0; }
+.keru-cast-target[data-valid] { background: #ffe28a10; border: 3px solid #ffe08a; box-shadow: 0 0 16px #ffe08a88, inset 0 0 12px #ffe08a44; animation: keru-cast-glow 1.2s ease-in-out infinite; pointer-events: auto; cursor: crosshair; }
+.keru-cast-target[data-over] { border-color: #fff1bb; background: #ffe28a33; }
+.keru-cast-target:focus-visible { outline: 3px solid #fff1bb; outline-offset: 2px; }
+.keru-cast-target__label { white-space: nowrap; }
+@keyframes keru-cast-glow { 0%, 100% { box-shadow: 0 0 10px #ffe08a66, inset 0 0 10px #ffe08a33; } 50% { box-shadow: 0 0 22px #ffe08acc, inset 0 0 14px #ffe08a55; } }
+.keru-cast-aim { position: fixed; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.keru-cast-aim line { stroke: #ffe08a; stroke-width: 3; stroke-dasharray: 8 6; stroke-linecap: round; filter: drop-shadow(0 0 3px #ffb43a); }
+.keru-cast-prompt { position: fixed; left: 50%; bottom: 96px; translate: -50% 0; display: flex; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid #ffe08a; border-radius: 10px; background: #151b20f5; color: #fff4d2; font: 600 16px/1.2 system-ui, sans-serif; pointer-events: auto; box-shadow: 0 6px 18px #000b; }
+.keru-cast-prompt > .ability-fan__cancel { position: static; transform: none; font-size: 16px; }
+/* Short trail from the gem to the target as a cast lands. */
+.keru-cast-trail { position: fixed; height: 4px; margin-top: -2px; transform-origin: 0 50%; rotate: var(--angle); border-radius: 2px; background: linear-gradient(90deg, transparent, #ffe08a); opacity: 0; animation: keru-cast-trail 460ms ease-out forwards; }
+.keru-cast-trail > i { position: absolute; right: -6px; top: -4px; width: 12px; height: 12px; border-radius: 50%; background: #fff6cc; box-shadow: 0 0 12px 4px #ffb43a; }
+.keru-cast-trail[data-keru="riv"], .keru-cast-trail[data-keru="dem"] { background: linear-gradient(90deg, transparent, #9cf59c); }
+@keyframes keru-cast-trail { 0% { opacity: 1; clip-path: inset(0 100% 0 0); } 60% { opacity: 1; clip-path: inset(0 0 0 0); } 100% { opacity: 0; clip-path: inset(0 0 0 0); } }
+
+/* Exhausted (tapped) Keru card in the hand: turned 90°, desaturated, labelled, for the rest of the battle. */
+.ability-fan__card[data-exhausted], .ability-fan__card[data-exhausted][data-inspected='true'] { transform: rotate(calc(var(--fan-angle, 0deg) + 90deg)) scale(.7); filter: grayscale(1) brightness(.62); }
+.keru-exhausted-chip { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%) rotate(-90deg); z-index: 8; padding: 4px 10px; border: 2px solid #d7d0c0; border-radius: 999px; background: #141a1cdd; color: #fff; font: 700 18px/1 system-ui, sans-serif; white-space: nowrap; pointer-events: none; }
+
+/* Tier-up flourish on a familiar square (the hand card has its own). */
+.keru-square[data-evolving] { animation: keru-evolve 850ms ease-out; }
+.keru-square[data-evolving]::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, #fff 0%, var(--rarity) 40%, transparent 70%); animation: keru-flash 850ms ease-out forwards; z-index: 5; }
+
+[data-fx="low"] .keru-pour-fly { display: none; }
+[data-fx="low"] .keru-cast-target[data-valid] { animation: none; }
+[data-fx="low"] .keru-cast-trail { animation: none; opacity: 1; }
+[data-fx="low"] .keru-cast-trail > i { box-shadow: none; }
+[data-fx="low"] .keru-square[data-evolving], [data-fx="low"] .keru-square[data-evolving]::after { animation: none; }
+[data-fx="low"] .keru-square[data-evolving]::after { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .keru-pour-fly { display: none; }
+  .keru-cast-target[data-valid], .keru-square[data-evolving] { animation: none; }
+  .keru-cast-trail { animation: none; opacity: 1; }
+  .keru-square[data-evolving]::after { animation: none; opacity: 0; }
+}

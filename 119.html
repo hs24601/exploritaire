@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" data-book-boot="loading"><head><script>location.replace("/book.html?page=119"+location.search.replace(/^\?/,"&")+location.hash)</script><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>119 · Building Bridges · Hero’s Journey</title><link rel="stylesheet" href="/src/proto/components/InkLoader.css"><style>
+#book-error{position:absolute;top:1rem;left:1rem;color:#f5e9cf}
+html[data-book-boot="loading"],html[data-book-boot="loading"] body{margin:0;background:#171d21}
+html[data-book-boot="loading"] #book-stage{position:fixed;inset:0}
+html[data-book-boot="loading"] #book-stage>:not(#book-error){visibility:hidden!important;pointer-events:none!important}
+</style></head>
+<body><div id="book-loading" class="ink-loader ink-loader--cover" data-media-loading="true"><div class="ink-loader__content">
+<!-- Early-boot copy of src/ui/heroLoaderSvg.ts; keep its crop and tail mask in sync. -->
+<span class="hero-loader__art ink-loader__hero"><svg viewBox="490 960 350 420" role="img" aria-label="Hero sitting with a gently wagging tail" xmlns="http://www.w3.org/2000/svg">
+<defs><clipPath id="book-load-hero-hero-pose"><rect x="490" y="960" width="350" height="420"/></clipPath><clipPath id="book-load-hero-tail"><path d="M527 1245 Q542 1235 560 1247 L574 1286 554 1310 527 1305Z"/></clipPath><mask id="book-load-hero-body" maskUnits="userSpaceOnUse" x="490" y="960" width="350" height="420"><rect x="490" y="960" width="350" height="420" fill="white"/><path d="M527 1245 Q542 1235 560 1247 L574 1286 554 1310 527 1305Z" fill="black"/></mask><image id="book-load-hero-pose" href="%BASE_URL%assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-sitting-low-v1.png" width="1338" height="1383"/></defs><g clip-path="url(#book-load-hero-hero-pose)"><g class="hero-loader__tail"><use href="#book-load-hero-pose" clip-path="url(#book-load-hero-tail)"/></g><use href="#book-load-hero-pose" mask="url(#book-load-hero-body)"/></g></svg></span>
+<svg class="ink-loader__bar" viewBox="0 0 600 56" role="progressbar" aria-label="Loading book assets" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><defs>
+<filter id="book-load-cloth" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".72 .36" numOctaves="3" seed="8"/><feDiffuseLighting lighting-color="#efe4ce" surfaceScale="2.4" diffuseConstant="1.1"><feDistantLight azimuth="45" elevation="55"/></feDiffuseLighting></filter>
+<filter id="book-load-bleed" x="-20%" y="-100%" width="140%" height="300%"><feTurbulence type="fractalNoise" baseFrequency=".035 .15" numOctaves="3" seed="12" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale="12" xChannelSelector="R" yChannelSelector="G"/></filter>
+<linearGradient id="book-load-ink" x2="1" y2=".3"><stop stop-color="#182f3d"/><stop offset=".55" stop-color="#305c69"/><stop offset="1" stop-color="#659491"/></linearGradient><clipPath id="book-load-bounds"><rect x="8" y="8" width="584" height="40" rx="4"/></clipPath></defs>
+<g clip-path="url(#book-load-bounds)"><path fill="#d9cbb1" d="M0 0h600v56H0z"/><path filter="url(#book-load-cloth)" opacity=".55" d="M0 0h600v56H0z"/><svg data-loader-fill x="8" width="0" height="56" overflow="hidden"><g filter="url(#book-load-bleed)"><rect x="-12" y="3" width="620" height="50" fill="url(#book-load-ink)"/></g><path filter="url(#book-load-cloth)" opacity=".22" d="M0 0h600v56H0z"/></svg></g><rect x="8.5" y="8.5" width="583" height="39" rx="4" fill="none" stroke="#ae9974" stroke-opacity=".6"/></svg>
+<div class="ink-loader__details"><span data-loader-status role="status">Loading artwork</span><span data-loader-count>0%</span></div></div></div><main id="book-stage" aria-label="The castle grounds" aria-busy="true">
+  <canvas tabindex="0" aria-label="Loading the castle grounds"></canvas>
+  <output id="fps-readout" aria-label="Rendering performance" hidden></output>
+  <p id="book-error" role="alert" hidden></p>
+</main>
+<script type="module" src="/src/book/castleWaterEntry.ts"></script>
+</body>
+</html>

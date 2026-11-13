@@ -1,0 +1,135 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-06",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/mochi-fast-swipes/v4/swipe-ready.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+    "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/layered/hero-watercolor-v6-organic-bobtail.png"
+  ],
+  "referenceRoles": [
+    "Mochi exact identity/registration",
+    "Actual Scratch light palette and soft brushwork",
+    "Actual approved Hero style baseline"
+  ],
+  "assets": [
+    {
+      "file": "swipe-left-windup.png",
+      "prompt": "Use case: precise-object-edit. Production transparent landscape 1536x1024 registered Fast Swipes lenticular frame. Image 1 is exact Mochi identity/canvas registration master; preserve her head position, eyes, nose, ears, chest, tail and camera exactly. Image 2 actual Scratch is the lighter palette and soft brushwork reference. Image 3 actual approved Hero is established style baseline. Mochi is a fluffy tortoiseshell CAT with yellow-green eyes, cream ruff, charcoal/orange markings and black toes. Paint with BIG diluted wet-on-wet cloudy washes, broad rounded soft dabs, pale apricot/cream/smoky slate; soft lost edges, minimal ink at face/toes, no gritty grain, fine hairs, serrations or texture overlay. Genuine transparent outside silhouette, substantially opaque pale fur, no scenery/text/border. Only action anatomy changes. Two natural forelegs: one active connected swiping foreleg joined visibly at shoulder below cheeks, the other tucked into chest. No arms above head, no phantom/duplicate paws in this body frame. Primary paw close beneath face, never detached. Distinct angle-exposed pose, NOT a translated duplicate; wrist rotates and arm foreshortening changes from frame to frame. FRAME 0: right foreleg (viewer-left shoulder) tucked with bent elbow, black paw near x=57%,y=60%, palm edge-on, short foreshortened arm preparing a leftward rake. Other paw tucked. Preserve master facial anchors and tail.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-669a5283-690c-4489-8385-40e8034b6ea8.png",
+      "sha256": "d7d068c0cb8165cc15acfe68dae43b2480acb85a1023087c0cba268c4d0c756f",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 765335,
+        "opaque": 750537
+      }
+    },
+    {
+      "file": "swipe-left-strike.png",
+      "prompt": "Use case: precise-object-edit. Production transparent landscape 1536x1024 registered Fast Swipes lenticular frame. Image 1 is exact Mochi identity/canvas registration master; preserve her head position, eyes, nose, ears, chest, tail and camera exactly. Image 2 actual Scratch is the lighter palette and soft brushwork reference. Image 3 actual approved Hero is established style baseline. Mochi is a fluffy tortoiseshell CAT with yellow-green eyes, cream ruff, charcoal/orange markings and black toes. Paint with BIG diluted wet-on-wet cloudy washes, broad rounded soft dabs, pale apricot/cream/smoky slate; soft lost edges, minimal ink at face/toes, no gritty grain, fine hairs, serrations or texture overlay. Genuine transparent outside silhouette, substantially opaque pale fur, no scenery/text/border. Only action anatomy changes. Two natural forelegs: one active connected swiping foreleg joined visibly at shoulder below cheeks, the other tucked into chest. No arms above head, no phantom/duplicate paws in this body frame. Primary paw close beneath face, never detached. Distinct angle-exposed pose, NOT a translated duplicate; wrist rotates and arm foreshortening changes from frame to frame. FRAME 1: right foreleg sweeps horizontally LEFT across chest, black paw at x=40%,y=64%. Extended sideways forearm in three-quarter view, toes turned left, modest paw size, thin cream/sage streak trailing RIGHT. Keep elbow joined below cheek.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-429f0a62-b36c-482c-8052-bc65d6281a4f.png",
+      "sha256": "c2c654e910d2b18bfaa7f84e59416f80e257026272ce7d5bae54cd1aed3b2675",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 723162,
+        "opaque": 768461
+      }
+    },
+    {
+      "file": "swipe-left-follow.png",
+      "prompt": "Use case: precise-object-edit. Production transparent landscape 1536x1024 registered Fast Swipes lenticular frame. Image 1 is exact Mochi identity/canvas registration master; preserve her head position, eyes, nose, ears, chest, tail and camera exactly. Image 2 actual Scratch is the lighter palette and soft brushwork reference. Image 3 actual approved Hero is established style baseline. Mochi is a fluffy tortoiseshell CAT with yellow-green eyes, cream ruff, charcoal/orange markings and black toes. Paint with BIG diluted wet-on-wet cloudy washes, broad rounded soft dabs, pale apricot/cream/smoky slate; soft lost edges, minimal ink at face/toes, no gritty grain, fine hairs, serrations or texture overlay. Genuine transparent outside silhouette, substantially opaque pale fur, no scenery/text/border. Only action anatomy changes. Two natural forelegs: one active connected swiping foreleg joined visibly at shoulder below cheeks, the other tucked into chest. No arms above head, no phantom/duplicate paws in this body frame. Primary paw close beneath face, never detached. Distinct angle-exposed pose, NOT a translated duplicate; wrist rotates and arm foreshortening changes from frame to frame. FRAME 2: right foreleg finishes leftward rake at x=32%,y=69%; wrist rolls showing curved black knuckles from side, elbow bent inward, arm recedes with smaller paw. Thin horizontal streak trails right; other foreleg begins gathering under chin.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-1d8a480c-0386-4555-a317-f6e5aae55c78.png",
+      "sha256": "42e7bc0ae5daf52d1730e906bc28989634bd543acd700ef9237b5d32a030dd48",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 694185,
+        "opaque": 775898
+      }
+    },
+    {
+      "file": "swipe-right-windup.png",
+      "prompt": "Use case: precise-object-edit. Production transparent landscape 1536x1024 registered Fast Swipes lenticular frame. Image 1 is exact Mochi identity/canvas registration master; preserve her head position, eyes, nose, ears, chest, tail and camera exactly. Image 2 actual Scratch is the lighter palette and soft brushwork reference. Image 3 actual approved Hero is established style baseline. Mochi is a fluffy tortoiseshell CAT with yellow-green eyes, cream ruff, charcoal/orange markings and black toes. Paint with BIG diluted wet-on-wet cloudy washes, broad rounded soft dabs, pale apricot/cream/smoky slate; soft lost edges, minimal ink at face/toes, no gritty grain, fine hairs, serrations or texture overlay. Genuine transparent outside silhouette, substantially opaque pale fur, no scenery/text/border. Only action anatomy changes. Two natural forelegs: one active connected swiping foreleg joined visibly at shoulder below cheeks, the other tucked into chest. No arms above head, no phantom/duplicate paws in this body frame. Primary paw close beneath face, never detached. Distinct angle-exposed pose, NOT a translated duplicate; wrist rotates and arm foreshortening changes from frame to frame. FRAME 3: opposite LEFT foreleg (viewer-right shoulder) tucked to x=55%,y=63%, short foreshortened arm and curled black toes facing camera, wrist different from frame0. Other foreleg tucked, ready to rake RIGHT.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-6350fcf5-67c2-4fea-9551-7fd96d2ed800.png",
+      "sha256": "9bfea2c28264926ae4caab4c408413bb3706c31ee115d0ec0dde1d9cfc6f6ffb",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 745736,
+        "opaque": 742566
+      }
+    },
+    {
+      "file": "swipe-right-strike.png",
+      "prompt": "Use case: precise-object-edit. Production transparent landscape 1536x1024 registered Fast Swipes lenticular frame. Image 1 is exact Mochi identity/canvas registration master; preserve her head position, eyes, nose, ears, chest, tail and camera exactly. Image 2 actual Scratch is the lighter palette and soft brushwork reference. Image 3 actual approved Hero is established style baseline. Mochi is a fluffy tortoiseshell CAT with yellow-green eyes, cream ruff, charcoal/orange markings and black toes. Paint with BIG diluted wet-on-wet cloudy washes, broad rounded soft dabs, pale apricot/cream/smoky slate; soft lost edges, minimal ink at face/toes, no gritty grain, fine hairs, serrations or texture overlay. Genuine transparent outside silhouette, substantially opaque pale fur, no scenery/text/border. Only action anatomy changes. Two natural forelegs: one active connected swiping foreleg joined visibly at shoulder below cheeks, the other tucked into chest. No arms above head, no phantom/duplicate paws in this body frame. Primary paw close beneath face, never detached. Distinct angle-exposed pose, NOT a translated duplicate; wrist rotates and arm foreshortening changes from frame to frame. FRAME 4: left foreleg swipes horizontally RIGHT below chin, black paw at x=74%,y=64%, strongly foreshortened slightly larger near-camera rounded knuckles, short thick forearm from viewer-right shoulder. Pale cream/sage horizontal streak trails LEFT.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-6f98b324-5096-4527-95fd-ce5dda76fa70.png",
+      "sha256": "798112a327119d12eb182c6ed2ddfed3b09be444990f9c90403f61621e6600bd",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 628470,
+        "opaque": 871142
+      }
+    },
+    {
+      "file": "swipe-right-follow.png",
+      "prompt": "Use case: precise-object-edit. Production transparent landscape 1536x1024 registered Fast Swipes lenticular frame. Image 1 is exact Mochi identity/canvas registration master; preserve her head position, eyes, nose, ears, chest, tail and camera exactly. Image 2 actual Scratch is the lighter palette and soft brushwork reference. Image 3 actual approved Hero is established style baseline. Mochi is a fluffy tortoiseshell CAT with yellow-green eyes, cream ruff, charcoal/orange markings and black toes. Paint with BIG diluted wet-on-wet cloudy washes, broad rounded soft dabs, pale apricot/cream/smoky slate; soft lost edges, minimal ink at face/toes, no gritty grain, fine hairs, serrations or texture overlay. Genuine transparent outside silhouette, substantially opaque pale fur, no scenery/text/border. Only action anatomy changes. Two natural forelegs: one active connected swiping foreleg joined visibly at shoulder below cheeks, the other tucked into chest. No arms above head, no phantom/duplicate paws in this body frame. Primary paw close beneath face, never detached. Distinct angle-exposed pose, NOT a translated duplicate; wrist rotates and arm foreshortening changes from frame to frame. FRAME 5: left foreleg completes rightward rake at x=80%,y=70%; paw recedes and turns edge-on with toes right/down, bent furry elbow naturally connected, reduced paw scale compared with frame4. Small thin stroke trails left. Other foreleg tucked, ready to repeat.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-9f488de9-1ee8-47c8-ac0d-4ce93e23e423.png",
+      "sha256": "5811b7cab22d46c365a8c1d7d4186a5303b98cb358e93dc09a55d03e6f0f9b3f",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 699545,
+        "opaque": 751400
+      }
+    },
+    {
+      "file": "phantom-far-atlas.png",
+      "prompt": "Use case: illustration-story. A production sprite ATLAS, one transparent landscape1536x1024 PNG divided into an EXACT 3 columns by 2 rows equal512x512 grid, no drawn grid or labels. Each cell contains ONE DISTINCT separately painted phantom of Mochi's CAT forearm ending in rounded black clawed toes; chest-end fades into horizontal soft watercolor motion streaks. No head/body, no human anatomy, no overhead arms, no duplicate stamp. The six cells depict one alternating swipe cycle left to right then next row: left gather, left strike, left follow, right gather, right strike, right follow. Different wrist silhouette, yaw, forearm perspective and FORESHORTENING in EACH cell. Horizontal positions within each cell change: x55%,35%,22%,45%,65%,78%, y55%; clear padding so no cell bleed. Gather paws are frontal/foreshortened short broad arms, strikes are three-quarter forward rakes, follows are edge-on receding smaller paws. Paint ORIGINAL six drawings, never copies/translated/mirrored versions. Image1 exact Mochi body identity/arm color reference, Image2 actual Scratch light palette/soft brush reference, Image3 actual approved Hero style baseline. BIG water-diluted wet washes, rounded soft dabs, cloudy apricot/cream/smoky slate forearm with BLACK toes, sparse cream/sage horizontal speed streaks. Broad soft blur in trails, readable knuckles. Genuinely transparent background and gutters, no paper, texture overlay, scenery, UI or text. Keep entire arm in each512x512 cell. Small distant thin forearms viewed mostly sideways, narrow paws and long hazy pale horizontal trails. Restrained smoky/slate marks. Each arm fills about65% cell width.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-35666036-d78c-4f4f-8a9d-73142ba865cd.png",
+      "sha256": "c17a7a0a7940b1af1a8f26416adb8729171e4dee2ba289c7dfd92fb4fbef4a5e",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 388847,
+        "opaque": 323022
+      }
+    },
+    {
+      "file": "phantom-middle-atlas.png",
+      "prompt": "Use case: illustration-story. A production sprite ATLAS, one transparent landscape1536x1024 PNG divided into an EXACT 3 columns by 2 rows equal512x512 grid, no drawn grid or labels. Each cell contains ONE DISTINCT separately painted phantom of Mochi's CAT forearm ending in rounded black clawed toes; chest-end fades into horizontal soft watercolor motion streaks. No head/body, no human anatomy, no overhead arms, no duplicate stamp. The six cells depict one alternating swipe cycle left to right then next row: left gather, left strike, left follow, right gather, right strike, right follow. Different wrist silhouette, yaw, forearm perspective and FORESHORTENING in EACH cell. Horizontal positions within each cell change: x55%,35%,22%,45%,65%,78%, y55%; clear padding so no cell bleed. Gather paws are frontal/foreshortened short broad arms, strikes are three-quarter forward rakes, follows are edge-on receding smaller paws. Paint ORIGINAL six drawings, never copies/translated/mirrored versions. Image1 exact Mochi body identity/arm color reference, Image2 actual Scratch light palette/soft brush reference, Image3 actual approved Hero style baseline. BIG water-diluted wet washes, rounded soft dabs, cloudy apricot/cream/smoky slate forearm with BLACK toes, sparse cream/sage horizontal speed streaks. Broad soft blur in trails, readable knuckles. Genuinely transparent background and gutters, no paper, texture overlay, scenery, UI or text. Keep entire arm in each512x512 cell. Mid-distance forearms with claw toes seen three-quarter, medium bent elbows and intermediate foreshortening. Each arm fills about75% cell width. Strokes sweep left in first row, right in second row.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-f9a5a87b-c163-4db0-b8e9-fe5c5ec25f42.png",
+      "sha256": "fb970b9358057fea209d759f96c086091ab7da8c19c01d486d0265f8c6205c0a",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 179690,
+        "opaque": 400923
+      }
+    },
+    {
+      "file": "phantom-near-atlas.png",
+      "prompt": "Use case: illustration-story. A production sprite ATLAS, one transparent landscape1536x1024 PNG divided into an EXACT 3 columns by 2 rows equal512x512 grid, no drawn grid or labels. Each cell contains ONE DISTINCT separately painted phantom of Mochi's CAT forearm ending in rounded black clawed toes; chest-end fades into horizontal soft watercolor motion streaks. No head/body, no human anatomy, no overhead arms, no duplicate stamp. The six cells depict one alternating swipe cycle left to right then next row: left gather, left strike, left follow, right gather, right strike, right follow. Different wrist silhouette, yaw, forearm perspective and FORESHORTENING in EACH cell. Horizontal positions within each cell change: x55%,35%,22%,45%,65%,78%, y55%; clear padding so no cell bleed. Gather paws are frontal/foreshortened short broad arms, strikes are three-quarter forward rakes, follows are edge-on receding smaller paws. Paint ORIGINAL six drawings, never copies/translated/mirrored versions. Image1 exact Mochi body identity/arm color reference, Image2 actual Scratch light palette/soft brush reference, Image3 actual approved Hero style baseline. BIG water-diluted wet washes, rounded soft dabs, cloudy apricot/cream/smoky slate forearm with BLACK toes, sparse cream/sage horizontal speed streaks. Broad soft blur in trails, readable knuckles. Genuinely transparent background and gutters, no paper, texture overlay, scenery, UI or text. Keep entire arm in each512x512 cell. Close but short strongly foreshortened paws, broad rounded black knuckles with cream claws and tortoiseshell ankles, pronounced changing wrist roll. Each arm fills about80% cell width; gather is a compact frontal paw, strike is broad oblique, follow is smaller receding profile. Cream/sage motion streaks behind.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-9ac694df-b79d-48cd-a272-b73c99072bf7.png",
+      "sha256": "5bec3e5591fac0852d4e9287173f1ad0587962780563964fb74ef5b149d91ab0",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 98264,
+        "opaque": 360947
+      }
+    }
+  ],
+  "sequence": "Six discrete alternating left/right poses; three phantom planes use distinct six-cell atlases with staggered angular gates. No continuous lateral limb translation.",
+  "alpha": "Original alpha retained. Body atlas is a deterministic packing derivative; individual masters and runtime frames remain byte identical.",
+  "packing": {
+    "file": "body-atlas.png",
+    "columns": 3,
+    "rows": 2,
+    "cellWidth": 768,
+    "cellHeight": 512,
+    "sha256": "dcd66a9673c9998188f7ea1a0800a42a41636e0bf5b2ac9709edefb631bf6f09",
+    "method": "Canvas drawImage downsample/pack only; no keying, recoloring or generated-content edits."
+  }
+}

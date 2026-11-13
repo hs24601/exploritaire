@@ -2615,6 +2615,9 @@ html.drag-perf-mode .target-swirl-sparkles {
 /* HD-2D style light across a cut-out (LightWash), masked to the sprite's pixels. */
 .proto-light-wash { position: absolute; inset: 0; pointer-events: none; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mix-blend-mode: screen; }
 .proto-light-wash--shade { mix-blend-mode: multiply; }
+/* Mobile keeps the sprite's normal environment lighting but omits the extra
+   masked/blended wash surfaces. Ground pools are one bounded 2D canvas. */
+.proto-map[data-lighting-path="mobile"] .proto-light-wash { display: none; }
 .proto-cell-grip { position: absolute; transform: translate(-50%, -50%); cursor: grab; touch-action: none; }
 .proto-table-stage--tilted .proto-map-world > .proto-cell-grip { transform: translate3d(-50%, -50%, 2px); }
 .proto-oversample { position: absolute; left: 0; top: 0; display: block; transform-origin: 0 0; }
@@ -3419,3 +3422,15 @@ html { -webkit-touch-callout:none; }
 
 /* A dragged tableau card keeps its slot and pointer capture while its ghost moves. */
 [data-tableau-drag-origin] { opacity:0 !important; transition:none !important; }
+
+.game-tooltip__title{display:block;font-size:1.12em;font-weight:600;margin-bottom:7px}.game-tooltip__details{white-space:pre-wrap}.game-tooltip__term{font:inherit;color:inherit;background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.game-tooltip__term:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.playing-card[data-split-card] .proto-card-header { display:none; }
+.proto-split-face { position:absolute; inset:0; pointer-events:none; background:linear-gradient(135deg,#315c5830 49.4%,#ddcf9b99 49.7%,#ddcf9b99 50.3%,#61483c30 50.6%); }
+.proto-split-primary,.proto-split-secondary { position:absolute; font-size:max(24px,calc(var(--classic-card-w) * .38)); line-height:1; color:#fff2d0; text-shadow:1px 2px 0 #101b1b; background:#142325ce; border:1px solid #a7b5a46b; border-radius:5px; padding:3px 5px; }
+.proto-split-primary { top:10%;left:9%; }.proto-split-secondary { bottom:10%;right:9%; }
+.playing-card[data-split-card][data-buried] .proto-split-primary,.playing-card[data-split-card][data-buried] .proto-split-secondary { top:4px; bottom:auto; font-size:clamp(16px,calc(var(--classic-card-w) * .26),22px); padding:2px 3px; }
+.playing-card[data-split-card][data-buried] .proto-split-secondary { right:5px; }.playing-card[data-split-card][data-buried] .proto-split-primary { left:5px; }
+.proto-split-face [data-chosen] { border-color:#ffe29b; box-shadow:0 0 10px #ffd269; }
+.proto-split-face:has([data-chosen]) > :not([data-chosen]) { opacity:.3; }
+.split-card-choice { position:fixed; z-index:71000; bottom:64px; left:50%; translate:-50% 0; display:flex; align-items:center; flex-wrap:wrap; justify-content:center; gap:10px; max-width:calc(100vw - 24px); padding:12px; border:2px solid #cbb784; border-radius:9px; background:#142b2af5; color:#f5ecd1; font:16px/1.2 system-ui; }
+.split-card-choice button { padding:9px 14px; border:1px solid #dbc38b; border-radius:6px; background:#30483e; color:#fff0c9; font:inherit; cursor:pointer; }

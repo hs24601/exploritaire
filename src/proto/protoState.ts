@@ -16,6 +16,10 @@ export type Card = {
   event?: import('./eventCards').TableauEvent;
   id: string;
   rank: number;
+  /** Authored affinity override. Dealt cards otherwise keep their seeded element. */
+  element?: 'ice';
+  /** Alternative tableau value; one value is chosen when the card is received. */
+  alternateRank?: number;
   questStep?: number;
   resource?: ForestResource;
   /** Temporary INSP pickup, separate from carried food/materials. */
@@ -124,6 +128,8 @@ export type FoundationPile = {
 export type FoundationSlot = FoundationPile | null;
 
 export type ProtoState = {
+  /** Durable personal Keru values/leader; encounter-local tap-in allowances are never saved here. */
+  keruExpedition?: import('./rules/keruLeadership').KeruExpedition;
   /** Per-day finite travel opportunities, keyed by absolute grid cell. */
   travelVisits?: Record<string, { day: number; crossed: boolean; searchOffered?: boolean }>;
   terrainCrossings?: Record<string, number>;

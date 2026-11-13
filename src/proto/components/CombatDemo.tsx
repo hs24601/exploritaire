@@ -1,3 +1,5 @@
+import {HeroLoading} from '../../ui/HeroLoader';
+import { floorSlot, floorLayout } from '../rules/verticalColumns';
 import { gameTime } from '../../gameTime';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createCombatClock } from '../combatClock';
@@ -15,11 +17,13 @@ import { SceneButton as CameraButton } from './SceneButton';
 import { BATTLE_TURN_PRIORITY, type BattleTeam } from '../battleTurnPriority';
 import { detectFxQuality } from '../atmosphere';
 import { cuesFor, freshEvents, type BattleScene } from '../rules/battleCues';
+import { rankLabel } from '../protoState';
 
-export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TURN_PRIORITY[0], battle, overlay, cameraShot}: {onClose: () => void; onRestart: () => void; onEscape?: () => void; firstTeam?: BattleTeam; battle?: BattleScene; overlay?: ReactNode; cameraShot?: CombatAuthoredShot}) {
+export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TURN_PRIORITY[0], attackingTeam, battle, overlay, cameraShot, protoGestures = false}: {protoGestures?: boolean; onClose: () => void; onRestart: () => void; onEscape?: () => void; firstTeam?: BattleTeam; attackingTeam?: BattleTeam; battle?: BattleScene; overlay?: ReactNode; cameraShot?: CombatAuthoredShot}) {
   const artStyle = useArtStyle();
   const host = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLElement>(null);
+  const foundationOverlay = useRef<HTMLDivElement>(null);
   const close = useRef(onClose); close.current = onClose;
   const [status, setStatus] = useState('Preparing arena…');
   const [elapsed, setElapsed] = useState(0);
@@ -31,9 +35,28 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
   const controls = useRef<{frame: (shot: CombatAuthoredShot) => void; select: (view: CombatCameraView) => void; toggleFreecam: () => void; replay: () => void; move: (key: string, held: boolean) => void; cue: () => object; refresh: () => void} | null>(null);
   // The battle panel's units and events: who stands, who fell, and what just happened.
   const battleRef = useRef(battle); battleRef.current = battle;
+  const attackingTeamRef = useRef(attackingTeam); attackingTeamRef.current = attackingTeam;
+  const followedTeam = useRef<BattleTeam | undefined>(undefined);
   // Events from before the arena opened are history, not cues to replay.
   const seenEvent = useRef(battle?.events[battle.events.length - 1]?.id ?? 0);
   const pendingCues = useRef<ReturnType<typeof cuesFor>>([]);
+  useEffect(() => {
+    const overlay = foundationOverlay.current;
+    if (!overlay || !battle?.verticalTableau) return;
+    const layout = overlay.closest('.proto-main-layout');
+    for (const [side, selector] of [['party', '[data-battle-actor="hero"]'], ['enemy', '[data-battle-target="khad-root"]']] as const) {
+      const slot = overlay.querySelector<HTMLElement>(`[data-foundation-overlay="${side}"]`);
+      const source = layout?.querySelector<HTMLElement>(`.proto-tableau-field--combat ${selector}`);
+      if (slot && source) {
+        const copy = source.cloneNode(true) as HTMLElement;
+        const bounds = source.getBoundingClientRect();
+        slot.style.width = bounds.width + 'px';
+        copy.style.width = bounds.width + 'px';
+        copy.style.height = bounds.height + 'px';
+        slot.replaceChildren(copy);
+      }
+    }
+  }, [battle]);
   useEffect(() => {
     if (!battle) return;
     const fresh = freshEvents(battle.events, seenEvent.current);
@@ -84,11 +107,12 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
     let canvasBounds = { left: 0, top: 0, width: 0, height: 0 };
     let arenaBounds = { left: 0, top: 0, width: 0, height: 0 };
     const textures: THREE.Texture[] = [];
+    let tableauCleanup = () => {};
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const quality = detectFxQuality();
     async function start() {
       try {
-        renderer = new THREE.WebGLRenderer({antialias: false, alpha: false});
+        renderer = new THREE.WebGLRenderer({antialias: Boolean(battleRef.current?.verticalTableau), alpha: false});
         renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
         const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(45, 1, .1, 100);
         // Baked procedural woods arrive as object URLs; everything else is an asset path.
@@ -115,7 +139,114 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
         layout.append(sharedSurface);
         sharedSurface.append(renderer.domElement);
         rig = createCombatDemoRig(scene, camera, assets, quality, Boolean(battleRef.current?.proceduralSlimeComparison), Boolean(battleRef.current?.khadRoot), treeVariants, Boolean(battleRef.current?.heroOrbit));
-        const cameraControls = createCombatCameraControls(camera, firstTeam);
+        // A live, non-interactive copy of 222's deal sits on the arena ground.
+        const tableau = new THREE.Group(); scene.add(tableau);
+        tableauCleanup = () => { tableau.children.slice().forEach(child => { const mesh = child as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>; mesh.geometry.dispose(); mesh.material.map?.dispose(); mesh.material.dispose(); }); scene.remove(tableau); };
+        // 223 Stepping Stones: Hero's reach ring and, while a card is hovered, the ring she would have after playing it.
+        const reachRing = (color: number, opacity: number) => { const ring = new THREE.Mesh(new THREE.RingGeometry(.94, 1, 96), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.visible = false; scene.add(ring); return ring; };
+        const standRing = reachRing(0xf2c76b, .7), ghostRing = reachRing(0xd8ecff, .45), enemyRing = reachRing(0xe689ae, .7);
+        const standDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 96), new THREE.MeshBasicMaterial({ color: 0xf2c76b, transparent: true, opacity: .07, depthWrite: false, side: THREE.DoubleSide })); standDisc.rotation.x = -Math.PI / 2; standDisc.visible = false; scene.add(standDisc);
+        const placeRing = (mesh: THREE.Mesh, spot?: { stand: [number, number]; radius: number }, height = .025) => { mesh.visible = Boolean(spot); if (spot) { mesh.position.set(spot.stand[0], height, spot.stand[1]); mesh.scale.setScalar(spot.radius); } };
+        const updateReachRings = () => { const stepping = battleRef.current?.verticalTableau?.stepping; placeRing(standRing, stepping); placeRing(standDisc, stepping, .02); placeRing(ghostRing, stepping?.ghost, .03); placeRing(enemyRing, stepping?.enemy, .03); };
+        const clearTableau = tableauCleanup;
+        tableauCleanup = () => { clearTableau(); [standRing, ghostRing, enemyRing, standDisc].forEach(mesh => { mesh.geometry.dispose(); (mesh.material as THREE.Material).dispose(); scene.remove(mesh); }); };
+        const cardCaptures = new Map<string, Promise<HTMLCanvasElement>>();
+        let captureQueue = Promise.resolve();
+        let tableauSignature = '';
+        let tableauRevision = 0;
+        const updateTableau = () => {
+          const data = battleRef.current?.verticalTableau;
+          const signature = JSON.stringify(data?.columns ?? null);
+          if (signature === tableauSignature) return;
+          tableauSignature = signature;
+          const revision = ++tableauRevision;
+          tableau.children.slice().forEach(child => {
+            tableau.remove(child);
+            const mesh = child as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+            mesh.geometry.dispose(); mesh.material.map?.dispose(); mesh.material.dispose();
+          });
+          // 223 moves reach every play, so its faces are captured lit once per rank and dimmed with the material instead.
+          const stepping = Boolean(data?.stepping);
+          data?.columns.slice(0, data.tiled ? data.columns.length : 10).forEach((column, index) => column.forEach((card, depth) => {
+            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 178;
+            const ctx = canvas.getContext('2d'); if (!ctx) return;
+            const lit = card.reachable || stepping;
+            ctx.fillStyle = lit ? '#46514a' : '#242c2b'; ctx.fillRect(0, 0, 128, 178);
+            ctx.strokeStyle = card.selected ? '#f5d879' : lit ? '#92917b' : '#46504b'; ctx.lineWidth = card.selected ? 7 : 3; ctx.strokeRect(2, 2, 124, 174);
+            ctx.fillStyle = '#101b20'; ctx.beginPath(); ctx.roundRect(33, 38, 62, 103, 12); ctx.fill();
+            ctx.strokeStyle = '#6b7270'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = lit ? '#f3e9c9' : '#777b70'; ctx.font = 'bold 60px Georgia'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(rankLabel(card.rank), 64, 91);
+            const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+            const geometry = new THREE.PlaneGeometry(data?.tiled ? floorLayout(data.tiled).width : 1.15, data?.tiled ? floorLayout(data.tiled).height : 1.6); geometry.rotateZ(-Math.PI / 2); geometry.rotateX(-Math.PI / 2);
+            const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: .01, side: THREE.DoubleSide }));
+            mesh.userData.cardId = card.id;
+            const side = index < 5 ? -1 : 1;
+            const [x,z] = data?.tiled ? floorSlot(index,data.tiled) : [-0.5 + (2 - index % 5) * 1.8125, side * (2.8 + (column.length - 1 - depth) * .75)];
+            mesh.position.set(x, data?.tiled ? .035 : .035 + depth * .008, z);
+            tableau.add(mesh);
+            const source = Array.from(field?.querySelectorAll<HTMLButtonElement>('[data-battle-card]') ?? []).find(node => node.dataset.battleCard === card.id);
+            if (!source) return;
+            if (stepping) mesh.material.color.setHex(card.reachable ? 0xffffff : 0x4a4a4a);
+            const key = stepping ? JSON.stringify([card.rank, source.dataset.buried]) : JSON.stringify([card.rank, card.reachable, card.selected, source.dataset.buried, source.disabled]);
+            let captured = cardCaptures.get(key);
+            // Only a lit, unmarked card is a clean face to reuse; others keep the drawn face until one appears.
+            if (!captured && stepping && (!card.reachable || source.disabled || source.hasAttribute('data-stepping-stand'))) return;
+            if (!captured) {
+              captured = captureQueue.then(async () => {
+                if (disposed) throw new Error('Arena closed');
+                const {default: capture} = await import('html2canvas');
+                // html2canvas misplaces text in the centered CSS grid. Capture the
+                // plaque without its glyph, then draw that glyph at the plaque's
+                // actual center using the browser's canvas text renderer.
+                const ink = source.querySelector<HTMLElement>('.proto-card-value-ink');
+                const sourceBounds = source.getBoundingClientRect();
+                const inkBounds = ink?.getBoundingClientRect();
+                const inkStyle = ink ? getComputedStyle(ink) : null;
+                // Snapshot these values before the asynchronous capture: the
+                // source node can be replaced or restyled while it is queued.
+                const fontSize = parseFloat(inkStyle?.fontSize || '') || Math.max(24, sourceBounds.width * .62);
+                const fontFamily = inkStyle?.fontFamily || "'Classic Pixel', monospace";
+                const fontWeight = inkStyle?.fontWeight || '700';
+                const canDrawRank = Boolean(inkBounds && sourceBounds.width && sourceBounds.height);
+                const rankX = inkBounds && sourceBounds.width ? Math.max(0, Math.min(sourceBounds.width, inkBounds.left - sourceBounds.left + inkBounds.width / 2)) : sourceBounds.width / 2;
+                const rankY = inkBounds && sourceBounds.height ? Math.max(0, Math.min(sourceBounds.height, inkBounds.top - sourceBounds.top + inkBounds.height / 2)) : sourceBounds.height / 2;
+                const face = await capture(source, {backgroundColor: null, scale: 3, logging: false, onclone: cloned => {
+                  const clonedCard = Array.from(cloned.querySelectorAll<HTMLElement>('[data-battle-card]')).find(node => node.dataset.battleCard === card.id);
+                  const clonedInk = clonedCard?.querySelector<HTMLElement>('.proto-card-value-ink');
+                  if (clonedInk && canDrawRank) { clonedInk.style.color = 'transparent'; clonedInk.style.textShadow = 'none'; }
+                }});
+                if (canDrawRank) {
+                  const context = face.getContext('2d');
+                  if (context) {
+                    const sx = face.width / sourceBounds.width, sy = face.height / sourceBounds.height;
+                    context.save(); context.scale(sx, sy);
+                    context.font = fontWeight + ' ' + fontSize + 'px ' + fontFamily;
+                    context.fillStyle = '#fff3d6'; context.textAlign = 'center'; context.textBaseline = 'middle';
+                    context.shadowColor = 'rgba(0,0,0,.65)'; context.shadowBlur = 1;
+                    context.fillText(rankLabel(card.rank), rankX, rankY);
+                    context.restore();
+                  }
+                }
+                return face;
+              });
+              captureQueue = captured.then(() => undefined, () => undefined);
+              cardCaptures.set(key, captured);
+              captured.catch(() => cardCaptures.delete(key));
+            }
+            void captured.then(face => {
+              if (disposed || revision !== tableauRevision || mesh.parent !== tableau) return;
+              const actual = new THREE.CanvasTexture(face); actual.colorSpace = THREE.SRGBColorSpace;
+              mesh.material.map?.dispose(); mesh.material.map = actual; mesh.material.needsUpdate = true; schedule();
+            }).catch(error => console.warn('Could not capture tableau card', error));
+          }));
+          tableau.updateMatrixWorld(true);
+          rig?.setTableauPeekBounds(tableau.children.length ? new THREE.Box3().setFromObject(tableau) : undefined);
+        };
+        // Read the live turn after loading; the enemy may have taken over meanwhile.
+        const openingTeam = attackingTeamRef.current ?? firstTeam;
+        selected = openingTeam; setCameraView(openingTeam);
+        followedTeam.current = attackingTeamRef.current;
+        const cameraControls = createCombatCameraControls(camera, openingTeam);
         const cameraAction = createCombatCameraAction();
         const basePosition = new THREE.Vector3();
         const cameraRight = new THREE.Vector3();
@@ -143,7 +274,8 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
               cameraAction.cue(cue, seconds, direction);
             }
           });
-          if (battleRef.current) { rig!.setWeedOptions(battleRef.current.weedOptions ?? {girth:1,sway:1}); rig!.setUnits(battleRef.current.units, seconds); }
+          updateTableau(); updateReachRings();
+          if (battleRef.current) { rig!.setSurge(Boolean(battleRef.current.darknessSurge)); rig!.setWeedOptions(battleRef.current.weedOptions ?? {girth:1,sway:1}); rig!.setUnits(battleRef.current.units, seconds); }
           rig!.setAmbushed(Boolean(battleRef.current?.ambushed));
           const action = cameraAction.sample(seconds, reduced);
           basePosition.copy(camera.position);
@@ -206,7 +338,8 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           const moving = paint(now);
           if (Math.floor(t * 10) !== lastTick) { lastTick = Math.floor(t * 10); setElapsed(t); }
           setStatus(actionStarted === null
-            ? moving ? 'Battlefield overview' : `${firstTeam === 'party' ? 'Player' : 'Enemy'} goes first`
+            ? attackingTeamRef.current ? moving ? 'Following attackers' : `${attackingTeamRef.current === 'party' ? 'Player' : 'Enemy'} turn`
+              : moving ? 'Battlefield overview' : `${firstTeam === 'party' ? 'Player' : 'Enemy'} goes first`
             : reduced ? 'Reduced motion · scene effects off' : demoPhase(t));
           // Keep the forest breeze live after the camera and battle cues settle.
           if (!reduced || (actionStarted !== null && t < COMBAT_DEMO_SECONDS) || moving || heldKeys.size || rig!.busy(combatClock.time)) schedule();
@@ -223,7 +356,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           const width = Math.max(...boxes.map(box=>box.right)) - left, height = Math.max(...boxes.map(box=>box.bottom)) - top;
           const parent = layout.getBoundingClientRect();
           Object.assign(sharedSurface.style,{left:`${left-parent.left}px`,top:`${top-parent.top}px`,width:`${width}px`,height:`${height}px`});
-          const density = layout.classList.contains('banks-rescue-cinema__stage') ? 1 : 2;
+          const density = layout.classList.contains('banks-rescue-cinema__stage') ? 1 : battleRef.current?.verticalTableau ? 1.5 : 2;
           renderer.setSize(Math.max(1,Math.round(width/density)),Math.max(1,Math.round(height/density)),false);
           canvasBounds = { left, top, width, height }; arenaBounds = arena;
           rig?.setMarkerViewport(width,height);
@@ -269,12 +402,13 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           cue() { const info = cameraControls.snapshot(); return { t: Number(displayedTime.toFixed(3)), p: info.position, target: info.target, fov: info.fov }; },
         };
         const pointerDown = (event: PointerEvent) => {
+          if (protoGestures && (event.pointerType === 'touch' || event.button === 0)) return;
           if (drag || ![0, 1, 2].includes(event.button) || !beginManual()) return;
           // touch-action already owns the gesture. Cancelling touch presses can
           // suppress subsequent compatibility clicks on the camera buttons.
           if (event.pointerType !== 'touch') event.preventDefault();
           arena.setPointerCapture(event.pointerId);
-          drag = {id: event.pointerId, x: event.clientX, y: event.clientY, pan: event.button !== 0 || event.shiftKey};
+          drag = {id: event.pointerId, x: event.clientX, y: event.clientY, pan: protoGestures ? event.button !== 1 : event.button !== 0 || event.shiftKey};
           arena.dataset.dragging = 'true';
         };
         const pointerMove = (event: PointerEvent) => {
@@ -299,30 +433,85 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
           cameraControls.dolly(THREE.MathUtils.clamp(pixels * .001, -.3, .3));
           lastReadout = -Infinity; paint(gameTime.now());
         };
+        // Match the map: one finger pans, two pan/pinch, three twist and tilt.
+        let touches: { x: number; y: number; distance: number; angles: Map<number, number>; count: number } | null = null;
+        const touchFrame = (list: TouchList) => {
+          const points = Array.from(list), x = points.reduce((sum, p) => sum + p.clientX, 0) / points.length, y = points.reduce((sum, p) => sum + p.clientY, 0) / points.length;
+          return { x, y, distance: points.length >= 2 ? Math.hypot(points[0].clientX - points[1].clientX, points[0].clientY - points[1].clientY) : 0, angles: new Map(points.map(p => [p.identifier, Math.atan2(p.clientY - y, p.clientX - x)])), count: points.length };
+        };
+        const touchStart = (event: TouchEvent) => { if (protoGestures && event.touches.length && beginManual()) touches = touchFrame(event.touches); };
+        const touchMove = (event: TouchEvent) => {
+          if (!protoGestures || !touches || !event.touches.length || !manualEnabled) return;
+          event.preventDefault();
+          const next = touchFrame(event.touches);
+          if (next.count === touches.count) {
+            const dx = next.x - touches.x, dy = next.y - touches.y;
+            if (next.count < 3) {
+              const units = cameraControls.snapshot().distance * 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.max(1, arena.clientHeight);
+              cameraControls.pan(-dx * units, -dy * units, 0);
+              if (next.count === 2 && touches.distance > 0 && next.distance > 0) cameraControls.dolly(Math.log(touches.distance / next.distance));
+            } else {
+              let sum = 0, count = 0;
+              next.angles.forEach((angle, id) => { const previous = touches!.angles.get(id); if (previous !== undefined) { sum += Math.atan2(Math.sin(angle - previous), Math.cos(angle - previous)); count++; } });
+              if (count) cameraControls.orbit(-sum / count, dy * .005);
+            }
+            lastReadout = -Infinity; paint(gameTime.now());
+          }
+          touches = next;
+        };
+        const touchEnd = (event: TouchEvent) => { touches = event.touches.length ? touchFrame(event.touches) : null; };
+        arena.addEventListener('touchstart', touchStart, {passive: true}); arena.addEventListener('touchmove', touchMove, {passive: false}); arena.addEventListener('touchend', touchEnd); arena.addEventListener('touchcancel', touchEnd);
+        // The same DOM card remains the source of truth for legality and receipt behavior.
+        const raycaster = new THREE.Raycaster(), clickPoint = new THREE.Vector2();
+        const clickCard = (event: MouseEvent) => {
+          if (event.button !== 0 || !battleRef.current?.verticalTableau || !canvasBounds.width || !canvasBounds.height) return;
+          clickPoint.set((event.clientX - canvasBounds.left) / canvasBounds.width * 2 - 1, 1 - (event.clientY - canvasBounds.top) / canvasBounds.height * 2);
+          camera.updateMatrixWorld();
+          raycaster.setFromCamera(clickPoint, camera);
+          const hit = raycaster.intersectObjects(tableau.children)[0];
+          const id = hit?.object.userData.cardId;
+          if (typeof id !== 'string') return;
+          const source = Array.from(field?.querySelectorAll<HTMLButtonElement>('[data-battle-card]') ?? []).find(card => card.dataset.battleCard === id);
+          source?.click();
+        };
         const contextMenu = (event: Event) => event.preventDefault();
         arena.addEventListener('pointerdown', pointerDown); arena.addEventListener('pointermove', pointerMove);
         arena.addEventListener('pointerup', pointerEnd); arena.addEventListener('pointercancel', pointerEnd); arena.addEventListener('lostpointercapture', pointerEnd);
+        arena.addEventListener('click', clickCard);
         arena.addEventListener('wheel', wheel, {passive: false}); arena.addEventListener('contextmenu', contextMenu);
         detachPointer = () => {
           arena.removeEventListener('pointerdown', pointerDown); arena.removeEventListener('pointermove', pointerMove);
           arena.removeEventListener('pointerup', pointerEnd); arena.removeEventListener('pointercancel', pointerEnd); arena.removeEventListener('lostpointercapture', pointerEnd);
+          arena.removeEventListener('click', clickCard);
           arena.removeEventListener('wheel', wheel); arena.removeEventListener('contextmenu', contextMenu);
+          arena.removeEventListener('touchstart', touchStart); arena.removeEventListener('touchmove', touchMove); arena.removeEventListener('touchend', touchEnd); arena.removeEventListener('touchcancel', touchEnd);
         };
         observer = new ResizeObserver(resize); observer.observe(host.current); observer.observe(layout); if (field) observer.observe(field); resize();
         setReady(true); schedule();
       } catch (error) { if (!disposed) setStatus(`Arena could not load: ${error instanceof Error ? error.message : 'WebGL unavailable'}`); }
     }
     void start();
-    return () => { disposed = true; controls.current = null; clearInput(); detachPointer(); gameTime.cancelAnimationFrame(frame); observer?.disconnect(); dropRegions.forEach(region => region.remove()); rig?.dispose(); textures.forEach(t => t.dispose()); renderer?.dispose(); renderer?.domElement.remove(); sharedSurface?.remove(); window.removeEventListener('keydown', key, true); window.removeEventListener('keyup', keyUp, true); window.removeEventListener('blur', clearInput); document.removeEventListener('visibilitychange', visibility); if (previous?.isConnected) previous.focus(); };
-  }, [firstTeam, artStyle]);
+    return () => { disposed = true; controls.current = null; clearInput(); detachPointer(); gameTime.cancelAnimationFrame(frame); observer?.disconnect(); dropRegions.forEach(region => region.remove()); rig?.dispose(); tableauCleanup(); textures.forEach(t => t.dispose()); renderer?.dispose(); renderer?.domElement.remove(); sharedSurface?.remove(); window.removeEventListener('keydown', key, true); window.removeEventListener('keyup', keyUp, true); window.removeEventListener('blur', clearInput); document.removeEventListener('visibilitychange', visibility); if (previous?.isConnected) previous.focus(); };
+  }, [firstTeam, artStyle, protoGestures]);
   const hadAuthoredShot = useRef(false);
   useEffect(() => {
     if (!ready) return;
     if (cameraShot) { controls.current?.frame(cameraShot); hadAuthoredShot.current = true; }
     else if (hadAuthoredShot.current) { controls.current?.select(firstTeam); hadAuthoredShot.current = false; }
   }, [cameraShot?.id, ready, artStyle]);
-  return <section data-authored-shot={cameraShot?.id} ref={dialog} className="combat-demo proto-map" aria-labelledby="combat-demo-title" tabIndex={-1} data-elapsed={elapsed.toFixed(1)} data-complete={elapsed >= COMBAT_DEMO_SECONDS || undefined} data-camera-view={cameraView} data-freecam-enabled={freecamEnabled}>
+  useEffect(() => {
+    if (!ready || !attackingTeam || attackingTeam === followedTeam.current) return;
+    followedTeam.current = attackingTeam;
+    // Reuse the orbital preset transition without rebuilding the arena or replaying cues.
+    controls.current?.select(attackingTeam);
+  }, [attackingTeam, ready, artStyle]);
+  return <section data-ready={ready || undefined} data-authored-shot={cameraShot?.id} ref={dialog} className="combat-demo proto-map" aria-labelledby="combat-demo-title" tabIndex={-1} data-elapsed={elapsed.toFixed(1)} data-complete={elapsed >= COMBAT_DEMO_SECONDS || undefined} data-camera-view={cameraView} data-freecam-enabled={freecamEnabled}>
     {overlay}
+    {!ready && !status.startsWith('Arena could not load:') && <HeroLoading className="combat-world-loading">{protoGestures?'Entering the woods…':status}</HeroLoading>}
+    {battle?.verticalTableau && <div ref={foundationOverlay} className="combat-demo__foundations battle-field" aria-hidden="true" inert>
+      <div className="combat-demo__foundation-overlay battle-enemy-unit" data-foundation-overlay="enemy" />
+      <div className="combat-demo__foundation-overlay battle-field__slot" data-foundation-overlay="party" />
+    </div>}
     <div ref={host} className="combat-demo__arena" aria-label="Combatants in a Three.js forest arena" />
     {status.startsWith('Arena could not load:') && <div role="alert" className="combat-demo__load-error">{status}</div>}
     <details className="combat-demo__tools"><summary>Camera controls</summary>
@@ -331,7 +520,7 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
       <div className="combat-demo__readout"><span>{status}</span><span>{elapsed.toFixed(1)} / 10s</span></div>
       <div className="combat-demo__camera-panel">
         <div className="combat-demo__views" role="group" aria-label="Camera angles">
-          {COMBAT_CAMERA_VIEWS.map(view => <CameraButton key={view.id} type="button" className="combat-demo__view" data-view={view.id} aria-pressed={view.id === 'freecam' ? freecamEnabled : cameraView === view.id} title={view.id === 'freecam' ? 'Toggle manual camera control: WASD pan, Q/E down/up, drag orbit, wheel distance' : view.description} disabled={!ready} onClick={() => { if (view.id === 'freecam') controls.current?.toggleFreecam(); else { setCameraView(view.id); controls.current?.select(view.id); } }}>
+          {COMBAT_CAMERA_VIEWS.map(view => <CameraButton key={view.id} type="button" className="combat-demo__view" data-view={view.id} aria-pressed={view.id === 'freecam' ? freecamEnabled : cameraView === view.id} title={view.id === 'freecam' ? (protoGestures ? 'Toggle manual camera control: right-drag to pan, middle-drag to orbit, wheel to zoom' : 'Toggle manual camera control: WASD pan, Q/E down/up, drag orbit, wheel distance') : view.description} disabled={!ready} onClick={() => { if (view.id === 'freecam') controls.current?.toggleFreecam(); else { setCameraView(view.id); controls.current?.select(view.id); } }}>
             <CameraAngleIcon view={view.id} /><span>{view.label}</span>
           </CameraButton>)}
         </div>
@@ -357,6 +546,10 @@ export function CombatDemo({onClose, onRestart, onEscape, firstTeam = BATTLE_TUR
       </div></details>
     </footer>
     </details>
+    <CameraButton type="button" className="combat-demo__copy-quick" aria-label="Copy camera data" disabled={!ready} onClick={async () => {
+      try { await navigator.clipboard.writeText(JSON.stringify(controls.current?.cue(), null, 2)); setCopyStatus('Camera data copied'); }
+      catch { setCopyStatus('Copy unavailable'); }
+    }}>{copyStatus === 'Copy camera cue' ? 'Copy camera data' : copyStatus}</CameraButton>
   </section>;
 }
 
@@ -372,5 +565,3 @@ function CameraAngleIcon({view}: {view: CombatCameraView}) {
     </>}
   </svg>;
 }
-
-

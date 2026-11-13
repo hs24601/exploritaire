@@ -1,0 +1,48 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-06",
+  "exactPrompts": "docs/art/scratch-light-holo-v1.json",
+  "assets": [
+    {
+      "file": "public/assets/runtime/ui/holocards/mochi-fast-swipes/v3/mochi-main.png",
+      "source": "public/assets/sources/ui/holocards/mochi-fast-swipes/v3/mochi-main.png",
+      "sha256": "9670f7225e756da7956c3bb34aa6a3a9fcc70bed1b5fad929dc60dcfcd3a8e87",
+      "width": 1536,
+      "height": 1024,
+      "transparent": 540062,
+      "nearOpaque": 911921,
+      "maxAlpha": 254
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/mochi-fast-swipes/v3/swipe-middle.png",
+      "source": "public/assets/sources/ui/holocards/mochi-fast-swipes/v3/swipe-middle.png",
+      "sha256": "131604bcc9fe699a3f232b80b3273ded03111bc4ec3ff915617a47923a144928",
+      "width": 1536,
+      "height": 1024,
+      "transparent": 886631,
+      "nearOpaque": 552115,
+      "maxAlpha": 254
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/mochi-fast-swipes/v3/swipe-far.png",
+      "source": "public/assets/sources/ui/holocards/mochi-fast-swipes/v3/swipe-far.png",
+      "sha256": "882b21cd2b8d04310f66291dd6098e4c7405d0f88be2b99b2c4fa50005e49f2e",
+      "width": 1536,
+      "height": 1024,
+      "transparent": 811603,
+      "nearOpaque": 552464,
+      "maxAlpha": 254
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/mochi-fast-swipes/v3/swipe-near.png",
+      "source": "public/assets/sources/ui/holocards/mochi-fast-swipes/v3/swipe-near.png",
+      "sha256": "0150a41e8cba7524c6af2cc520bea9f8c04ab13a939c8a03e4a360b6eb78ba64",
+      "width": 1536,
+      "height": 1024,
+      "transparent": 757884,
+      "nearOpaque": 663665,
+      "maxAlpha": 254
+    }
+  ],
+  "alpha": "Original generated alpha, byte-identical source/runtime"
+}

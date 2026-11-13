@@ -10,6 +10,8 @@
 .ability-fan__card[data-unavailable] { filter:grayscale(1); opacity:.7; cursor:help; }
 .ability-fan__card:focus-visible { outline:3px solid #a4edff; outline-offset:3px; }
 .ability-fan__cost { position:absolute; right:5px; top:5px; width:48px; height:48px; display:grid; place-items:center; padding:0; border:0; background:none; z-index:2; pointer-events:none; }
+/* S1005 Keru invoke cards: the stored tableau value, styled like a foundation value chip. */
+.ability-fan__stored-value { position:absolute; right:68px; top:11px; z-index:2; box-sizing:border-box; min-width:34px; height:34px; padding:0 5px; display:grid; place-items:center; border:1px solid #aa9670; border-radius:7px; background:linear-gradient(#1a272a,#10191e); box-shadow:0 2px 6px #000a; color:#fff2cc; font:22px/1 Georgia,serif; pointer-events:none; }
 .ability-fan__cost-value { grid-area:1 / 1; z-index:1; color:#fff5d7; font:bold 24px/1 Georgia,serif; -webkit-text-stroke:3px #17131b; paint-order:stroke fill; text-shadow:0 1px 3px #000; font-variant-numeric:tabular-nums; }
 .ability-fan__cost .momentum-icon { grid-area:1 / 1; width:48px; height:48px; margin:0; object-fit:contain; filter:drop-shadow(0 1px 3px #000a); }
 .ability-fan__name { padding-right:44px; min-height:38px; font:18px/1.2 Georgia,serif; }
@@ -107,7 +109,7 @@
 /* Ability faces share the actor holocard framework and its 63:88 proportions. */
 .ability-fan__card { height:auto; aspect-ratio:63 / 88; display:block; padding:0; border:0; background:none; }
 .ability-fan__card > .trading-card-stage { pointer-events:none; }
-.ability-fan__card .trading-card-stage > .details-card.trading-card { width:100%; height:100%; min-height:0; box-sizing:border-box; aspect-ratio:63 / 88; padding:9px; border-width:3px; border-radius:11px; transform:none; will-change:auto; }
+.ability-fan__card .trading-card-stage > .details-card.trading-card { width:100%; height:100%; min-height:0; box-sizing:border-box; aspect-ratio:63 / 88; padding:9px; border-width:3px; border-radius:11px; }
 .ability-fan__card .trading-card__header { align-items:flex-start; padding-right:40px; }
 .ability-fan__card .trading-card__header h2 { font:600 17px/1.1 Georgia,serif; text-transform:none; overflow-wrap:normal; }
 .ability-fan__card .trading-card__body { margin-top:auto; min-height:0; }
@@ -186,3 +188,102 @@
  .ability-fan__withdraw-party { right:calc(100% + 2px); top:50%; transform:translateY(-50%); flex-direction:column; }
  .ability-fan__withdraw-party > span { width:20px; height:20px; margin:0; }
 }
+
+/* Full-face foundation-anchored hands. Overflow gets a rear row, never covered rules. */
+.ability-fan.ability-fan--full-face { top:var(--hand-top)!important; overflow:visible; background:none; border-radius:0; }
+.ability-fan__scroll { position:relative; width:100%; height:100%; overflow:auto; overscroll-behavior:contain; touch-action:pan-x pan-y; scrollbar-width:none; -ms-overflow-style:none; }
+.ability-fan-overlay:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .ability-fan__card { transition:border-color .16s; transform:rotate(var(--fan-angle,0deg)); }
+.ability-fan-overlay:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .ability-fan--full-face .ability-fan__card:focus-visible,
+.ability-fan-overlay:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .ability-fan--full-face .ability-fan__card[data-inspected='true'] { transform:rotate(var(--fan-angle,0deg)); }
+.ability-fan-overlay * { scrollbar-width:none; -ms-overflow-style:none; }
+.ability-fan-overlay *::-webkit-scrollbar { display:none; width:0; height:0; }
+.ability-fan__rows { position:relative; min-width:100%; }
+.ability-fan--full-face .ability-fan__card { height:auto; min-height:0; padding:0; aspect-ratio:63/88; z-index:var(--fan-z,0); touch-action:pan-x; }
+.ability-fan--full-face .ability-fan__card[data-inspected='true'],.ability-fan--full-face .ability-fan__card:focus-visible { z-index:var(--fan-z,0); transform:translateY(-3px) rotate(var(--fan-angle,0deg)); }
+.ability-fan--full-face .ability-fan__card .trading-card__description { font:15px/1.2 Georgia,serif; }
+.ability-fan--full-face .ability-fan__card .trading-card__header h2 { font-size:17px; }
+.ability-fan--full-face .ability-fan__card .ability-fan__actor { font:14px/1.15 Georgia,serif; }
+.ability-fan--full-face .ability-fan__card[data-faux-card] { cursor:default; }
+.ability-fan--full-face .ability-fan__card[data-draft-card] { cursor:default; }
+.ability-fan--full-face .ability-fan__card { touch-action:none; -webkit-touch-callout:none; }
+.ability-fan-overlay[data-targeting] .ability-fan { visibility:hidden; pointer-events:none; }
+.ability-fan__target[data-potential-target] { border-style:dashed; }
+.ability-jumbo { width:100%; height:100%; }
+.card-jumbo .ability-jumbo .trading-card__body { margin-top:auto; flex:0 0 45%; min-height:45%; box-sizing:border-box; display:flex; flex-direction:column; justify-content:flex-start; overflow:visible; background:#0b1e33ef; border-radius:5px; padding:16px; }
+.ability-jumbo .trading-card__full-description { font:clamp(16px,2.3vh,24px)/1.4 Georgia,serif; }
+.ability-jumbo .trading-card__header h2 { font-size:clamp(20px,3vh,30px); padding-right:50px; }
+@media(max-width:899px) {
+ .ability-fan--full-face .ability-fan__card .trading-card__description { font-size:13px; }
+ .ability-fan--full-face .ability-fan__card .trading-card__header h2 { font-size:15px; }
+ .ability-fan--full-face .ability-fan__card .ability-fan__actor { font-size:12px; }
+}
+.ability-fan.ability-fan--full-face { z-index:10; }
+.ability-fan--full-face > h2 { top:-40px; z-index:60; pointer-events:none; }
+.ability-fan__scroll { scroll-padding:16px; max-height:calc(100dvh - 140px); }
+
+/* Scenario 1005: a compact, readable board reference stays visible in the hand and card inspection. */
+.invoke-tableau-reference { position:fixed; z-index:100; top:8px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:10px; padding:6px 10px; border:1px solid #c9b77c; border-radius:10px; background:#101d1bf5; color:#fff1c5; box-shadow:0 3px 12px #000a; pointer-events:none; }
+.invoke-tableau-reference__label { font:600 14px/1.1 Georgia,serif; white-space:nowrap; }
+.invoke-tableau-reference__label small { display:block; margin-top:3px; color:#dfc982; font:10px/1.1 sans-serif; }
+.invoke-tableau-reference__columns { display:flex; gap:4px; }
+.invoke-tableau-reference__column { display:flex; flex-direction:column; gap:2px; align-items:center; min-width:25px; font:12px/1.1 Georgia,serif; color:#b9c5bb; }
+.invoke-tableau-reference__column span { min-width:23px; text-align:center; }
+.invoke-tableau-reference__column [data-exposed] { border-radius:4px; background:#f2d992; color:#17231b; font-weight:bold; font-size:16px; }
+@media(max-width:600px), (max-height:600px) { .invoke-tableau-reference { gap:5px; padding:4px 6px; } .invoke-tableau-reference__label { font-size:11px; } .invoke-tableau-reference__column { min-width:20px; font-size:10px; } .invoke-tableau-reference__column span { min-width:19px; } .invoke-tableau-reference__column [data-exposed] { font-size:13px; } }
+
+.ability-fan-overlay:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .ability-fan__drag[data-drag-draft^='familiar-'] { opacity:.68; }
+.ability-fan__target[data-potential-target^='familiar-square:hero:']:not([data-blocked]) { border:2px solid #ffe39a; background:#ffe39a33; box-shadow:0 0 16px 4px #ffe39a99; }
+.ability-fan__target[data-potential-target^='familiar-square:hero:'][data-blocked] { border:2px dashed #bdab92; background:#24202bdd; box-shadow:0 0 0 1px #0009; }
+
+
+
+/* A selected rear card comes above both fans before inspection. */
+.ability-fan-overlay:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .ability-fan--full-face .ability-fan__card[data-raised] { z-index:200; }
+
+/* Hovered 1012 cards rise above the fan and expand around their center. */
+@media (hover:hover) and (pointer:fine) {
+ .ability-fan-overlay:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .ability-fan__scroll { overflow:visible; }
+ .ability-fan-overlay:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .ability-fan--full-face .ability-fan__card:hover { z-index:300; transform:rotate(var(--fan-angle,0deg)) scale(1.25); }
+}
+
+/* The target-sized drag token makes its visible footprint the hitbox. */
+.keru-drag-token { position:fixed; z-index:300; translate:-50% -50%; box-sizing:border-box; border:2px solid #ffe39a; border-radius:12px; background:#191827e8; box-shadow:0 4px 12px #000a,0 0 12px #ffe39a88; pointer-events:none; }
+.keru-drag-token__face { display:block; width:100%; height:100%; overflow:hidden; border-radius:9px; }
+.keru-drag-token__face img,.keru-drag-token__face svg { width:100%; height:100%; object-fit:cover; }
+.keru-drag-token__effect { position:absolute; left:calc(100% + 10px); top:50%; translate:0 -50%; width:max-content; max-width:min(260px,42vw); padding:7px 10px; border:1px solid #ecd28d; border-radius:8px; color:#fff2d1; background:#111b20f2; box-shadow:4px 5px 0 #0007,0 6px 15px #0009; font:600 16px/1.2 system-ui,sans-serif; }
+.keru-drag-token__effect b,.keru-drag-token__effect span { display:block; }
+.keru-drag-token__effect b { color:#ffe49f; }
+.keru-drag-token__effect[data-blocked] { border-color:#f77; color:#ffd5d5; }
+.ability-fan__target[data-potential-target] { overflow:visible; }
+
+.keru-drag-token__effect span + span { margin-top:4px; }
+.keru-drag-token__reason { color:#ffb8b8; }
+
+.reward-ability__element { position:absolute; top:8px; right:60px; z-index:3; pointer-events:none; }
+.reward-ability__element .element-glyph { width:28px; height:28px; }
+
+.reward-ability__element img { display:block; width:28px; height:28px; object-fit:contain; }
+
+.ability-fan-overlay--persistent{pointer-events:none;z-index:500}
+.ability-fan-overlay--persistent .ability-fan__backdrop,
+.ability-fan-overlay--persistent .ability-foundation,
+.ability-fan-overlay--persistent .ability-fan__gauge,
+.ability-fan-overlay--persistent .ability-fan__close,
+.ability-fan-overlay--persistent .keru-pour-source,
+.ability-fan-overlay--persistent .invoke-tableau-reference,
+.ability-fan-overlay--persistent .ability-fan>h2,
+.ability-fan-overlay--persistent .ability-fan__scroll>p{display:none}
+.ability-fan-overlay--persistent .ability-fan__scroll{overflow:visible;pointer-events:none}
+.ability-fan-overlay--persistent .ability-fan__card{pointer-events:auto}
+.ability-fan-overlay--persistent[data-targeting]{pointer-events:auto;z-index:60000}
+
+.bite-card-value{position:absolute;left:8px;top:48px;z-index:4;display:grid;place-items:center;min-width:28px;height:34px;padding:0 3px;border:1px solid #c9ad77;border-radius:6px;background:#152028;color:#fff1cf;font:24px/1 Georgia,serif;pointer-events:none}
+
+/* Persistent combat hands follow the foundation, overriding the modal hand top. */
+.ability-fan-overlay--persistent .ability-fan{top:var(--hand-top)!important;overflow:visible;background:none;max-height:none}
+.ability-fan-overlay--persistent .ability-fan__card{transform-origin:center}
+
+.bite-card-damage{position:absolute;right:8px;top:8px;z-index:4;padding:4px 6px;border:1px solid #c9ad77;border-radius:6px;background:#152028;color:#fff1cf;font:18px/1.2 Georgia,serif;white-space:nowrap;pointer-events:none}
+
+.ability-fan__card.fast-swipes-hand>.trading-card-stage{width:200%;height:200%;transform:scale(.5);transform-origin:top left}
+.ability-fan__card.fast-swipes-hand .trading-card-stage>.details-card.trading-card{width:100%;height:100%}

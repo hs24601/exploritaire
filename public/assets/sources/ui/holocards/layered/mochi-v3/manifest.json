@@ -1,0 +1,23 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-06",
+  "prompt": "Use case: style-transfer. Create the replacement main Mochi holocard subject for Exploritaire, genuinely transparent portrait 2:3. Reference1 is the edit target and Mochi identity/pose master. Reference2 is ACTUAL Scratch watercolor-v3 painting: PRIMARY palette and brushwork guide. Reference3 is actual new approved Hero key painting: match its light soft watercolor handling and comparable face readability. Preserve Mochi's existing pose, full body, raised front paw, four black rounded feet, natural long plume tail, head/ear/paw/canvas registration and recognizable asymmetric tortoiseshell markings. She is a fluffy adult long-haired tortoiseshell CAT with yellow-green eyes, cream chin, broad prominent poofy cream ruff framing cheeks neck shoulders and chest, tufted feline ears, black rounded paw ends only: tortoiseshell colors continue through ankles and bleed irregularly into toes, no black socks. Keep current face/eye-to-head proportions, do not enlarge eyes or turn her into a kitten. Make a DECISIVE PAINT METHOD CHANGE: small number of BIG WATER-DILUTED WET-ON-WET WASHES and broad rounded soft brush dabs. Merge fur and tail into large cloudy masses with feathered uneven pigment boundaries, controlled bleed and lost-and-found contours. Remove original's dense hard jagged fur, triangular serrations, sharp repeated tiny strokes and fine hair. NO gritty/embossed/granular texture, paper noise overlay, stippling or photoreal detail. Palette: diluted ochre/apricot/copper, creamy ivory, smoky slate-blue charcoal; lift dark masses and reduce blazing orange saturation while keeping dark tortoiseshell identity and black feet. Sparse broken ink accents only at eyes, nose, mouth and toes. Face remains clear and welcoming at card scale. Keep fur substantially opaque including cream areas, true transparent outside silhouette; no scenery, paper rectangle, ground/shadow, text, UI, border or watermark. No flames, magical tail, extra action paws, weapons or costume. This is her identity portrait, distinct from Fast Swipes ability artwork.",
+  "references": [
+    {
+      "file": "public/assets/runtime/ui/holocards/layered/mochi-watercolor-v2.png",
+      "role": "Edit target, Mochi identity, pose and registration"
+    },
+    {
+      "file": "public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+      "role": "Primary lighter palette and softer brushwork"
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/layered/hero-watercolor-v6-organic-bobtail.png",
+      "role": "Actual approved Hero painting, current style baseline"
+    }
+  ],
+  "runtime": "public/assets/runtime/ui/holocards/layered/mochi-watercolor-v3-light-washes.png",
+  "source": "mochi-watercolor-v3-light-washes.png",
+  "alpha": "Original generated alpha preserved; byte-identical source/runtime.",
+  "scope": "Main identity holocard subject, shared compact and jumbo paint views. Existing background stays separate. Fast Swipes remains its separately authored ability composition. Earlier masters retained."
+}

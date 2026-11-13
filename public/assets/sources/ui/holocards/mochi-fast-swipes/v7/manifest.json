@@ -1,0 +1,30 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-06",
+  "kind": "Single still pose repaint; no lenticular frames or effects",
+  "prompt": "Use case: illustration-story. Single production character painting for Mochi's Fast Swipes, portrait1024x1536, genuine transparent background. INPUT ROLES: Image1 supplied card crop is POSE/SILHOUETTE REFERENCE ONLY. Image2 is Mochi's approved tortoiseshell CAT identity reference. Image3 actual Scratch painting supplies lighter swatches and soft brushwork. Image4 actual approved Hero painting supplies the established storybook painting style baseline. Repaint MOCHI in the exact dynamic upright/rearing pose of Image1, preserve pose gesture rather than its species or rendering. Three-quarter side view facing LEFT: body rises vertically with chest arched back, head lifted and turned left, near foreleg bent upward with paw lifted high in front of face at upper-left, other foreleg reaches forward to left at chest height with a softly curled paw; two hindlegs folded/bent below her in an airborne poised leap, one lower foot extending downward, long natural fluffy plume tail curls outward behind her to viewer-right. Match reference's elegant S-shaped silhouette, head angle, forepaw heights and bent hindleg gesture. Entire head, paws, hindfeet and plume tail visible with comfortable transparent margins, centered and fills portrait. Anatomically attached CAT legs/paws, not human hands. Preserve Mochi: round fluffy feline face, triangular pink-lined ears, expressive yellow-green eyes, pink nose with dark underside, cream chin and poofy mane, charcoal/ochre tortoiseshell patches, colored ankles fading into BLACK rounded cat toes, retracted claws, natural fluffy tail. Confident focused playful expression. The pose reference must NOT import black smooth monster body, yellow rings, red eyes, long rabbit-like ears, purple neon outline, tower/skyscraper, moon, scenery or card UI/text. Art.md Light Scratch method: a small number of BIG water-diluted wet-on-wet washes and broad rounded soft brush dabs, merged cloudy fur masses, feathered uneven boundaries, controlled pigment bleed and lost-and-found contours; diluted apricot/ochre/copper, creamy ivory and smoky slate/blue-gray, lifted darks, substantially opaque pale fur. A few sparse broken ink accents only around eyes/nose/mouth/toes. No individual hairs, tiny serrations, gritty embossed grain, stippling, paper noise or texture overlay. SINGLE STILL PAINTING ONLY. Exactly four natural limbs. NO extra/phantom paws, animation frames, action trails, swooshes, lens stripes, holographic effects, magic, glow, rings, border, text, scenery, paper rectangle or ground shadow. Genuinely transparent outside silhouette.",
+  "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-c0da8f78-aa75-4c16-8508-2471ad95a824.png",
+  "references": [
+    {
+      "file": "pose-reference.png",
+      "role": "User supplied pose/silhouette only"
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/layered/mochi-watercolor-v3-light-washes.png",
+      "role": "Mochi identity"
+    },
+    {
+      "file": "public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+      "role": "Actual Scratch lighter palette/soft brushwork"
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/layered/hero-watercolor-v6-organic-bobtail.png",
+      "role": "Actual approved Hero style baseline"
+    }
+  ],
+  "file": "mochi-pose.png",
+  "runtime": "public/assets/runtime/ui/holocards/mochi-fast-swipes/v7/mochi-pose.png",
+  "alpha": "Original generated alpha; byte-identical source/runtime; no raster editing.",
+  "integration": "Active shared Fast Swipes painting in hand, foundation and jumbo; previous pose sequence and dedicated lens canvas removed from the art component."
+}
+

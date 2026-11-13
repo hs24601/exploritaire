@@ -1,0 +1,196 @@
+.musical-tableaus { position: relative; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: #040a17; color: #e1efea; isolation: isolate; }
+.musical-sky { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+.musical-tableaus__bar { flex: none; display: flex; align-items: center; gap: 18px; min-height: 48px; padding: 6px 16px; font: 16px/1.2 'Classic Pixel', monospace; }
+.musical-tableaus__bar h1 { margin: 0; font: inherit; font-size: 18px; color: #f3dba0; white-space: nowrap; }
+.musical-tableaus__figure { margin: 0; display: flex; align-items: center; gap: 10px; min-width: 0; white-space: nowrap; }
+.musical-tableaus__pips { display: inline-flex; gap: 5px; }
+.musical-tableaus__pips i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #f3dba0aa; }
+.musical-tableaus__pips i[data-lit] { background: #fff4d6; box-shadow: 0 0 6px #f3dba0; }
+.musical-tableaus__count { color: #b8c9c2; }
+.musical-tableaus__hint { margin: 0; color: #b8c9c2; white-space: nowrap; }
+.musical-tableaus__toggles { margin-left: auto; display: flex; gap: 8px; }
+.musical-tableaus__toggles button { min-height: 36px; border: 2px solid #658576; padding: 2px 10px; background: #1b3028; color: #f1e7cb; font: inherit; box-shadow: 0 2px 0 #030909; cursor: pointer; }
+.musical-tableaus__toggles button[aria-pressed='true'] { border-color: #c9a35a; }
+.musical-tableaus__toggles button:disabled { opacity: .5; cursor: default; }
+.musical-tableaus__audio-status{font:12px/1.3 sans-serif;color:#c9d6cd;max-width:220px}
+@media(max-width:1150px){.musical-tableaus__bar{flex-wrap:wrap;gap:8px 14px}.musical-tableaus__toggles{flex-wrap:wrap}.musical-tableaus__hint{white-space:normal}}
+@media(max-width:600px){.musical-tableaus__bar{padding:6px 8px;font-size:12px}.musical-tableaus__bar h1{font-size:14px}.musical-tableaus__figure{flex-wrap:wrap;gap:6px}.musical-tableaus__count{font-size:11px}.musical-tableaus__toggles{margin-left:0;gap:5px}.musical-tableaus__toggles button{font-size:12px;padding:2px 6px}.musical-tableaus__audio-status{max-width:none}}
+/* The sky shows through the sandbox chrome; cards and foundations stay opaque. */
+.musical-tableaus .combat-sandbox { flex: 1; min-height: 0; height: auto; background: transparent; }
+/* Matches CombatSandbox.css's camera-background selector, which would otherwise win and hide the sky. */
+.musical-tableaus .combat-sandbox__pane .battle-field, .musical-tableaus .combat-sandbox__pane .battle-field[data-camera-background='true'] { background: linear-gradient(#0a1a1f4d, #050c1166); }
+
+.musical-tableaus .battle-foundation__ap-label,.musical-tableaus .battle-foundation__status{display:none}
+
+/* Keep AP against HP; additional capacity grows downwards in compact rows. */
+.musical-tableaus .battle-foundation--unified .battle-foe__bars{align-self:start;align-content:start;justify-content:stretch;grid-template-columns:minmax(0,1fr);width:100%}
+.musical-tableaus .battle-foundation__ap{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:2px;align-self:start}
+.musical-tableaus .battle-foundation__ap-head{display:contents}
+.musical-tableaus .battle-foundation__ap-pips{order:-1;align-content:flex-start;align-items:flex-start;justify-content:flex-start;flex-wrap:wrap}
+
+.musical-tableaus [data-empty-foundation] .battle-foundation__value{visibility:hidden}
+.musical-tableaus .bite-foundation-label{position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);display:block;white-space:nowrap;font:12px/1.2 Georgia,serif;color:#ffe7a8;padding:2px 5px;background:#181320;border-radius:4px}
+.musical-tableaus .battle-foundation--unified .battle-foe__name:has(.bite-foundation-label){overflow:visible;height:auto}
+
+/* Music belongs to the existing gear menu, not the combat toolbar. */
+.musical-tableaus__settings{border-top:1px solid #658576;padding-top:12px;min-width:0;font:13px/1.4 sans-serif}
+.musical-tableaus__settings h2{font:inherit;font-weight:600;margin:0 0 10px;color:#f3dba0}
+.musical-tableaus__settings .musical-tableaus__toggles{margin:0;flex-wrap:wrap;gap:8px}
+.musical-tableaus__settings .musical-tableaus__toggles span{flex-basis:100%;overflow-wrap:anywhere}
+.musical-tableaus__settings [role="status"]{display:block;margin-top:10px;max-width:none}
+.musical-tableaus .battle-config__panel{box-sizing:border-box;width:min(360px,calc(100vw - 32px));min-width:0;max-height:70dvh;overflow-y:auto}
+
+.musical-tableaus__scene-info{display:grid;gap:10px;font:13px/1.4 sans-serif;min-width:0}
+.musical-tableaus__scene-info h1{margin:0;color:#f3dba0;font:600 16px/1.3 sans-serif}
+.musical-tableaus__scene-info .musical-tableaus__figure{flex-wrap:wrap;white-space:normal;gap:8px}
+.musical-tableaus__scene-info .musical-tableaus__hint{white-space:normal}
+
+/* Playing-card silhouette; the live holocard replaces the former emoji portrait. */
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] [data-foundation-mode].battle-field__foundation{position:relative;display:block;box-sizing:border-box;width:clamp(126px,18vw,176px);max-width:none;height:auto;min-height:0;aspect-ratio:88/63;padding:0;border:0;border-radius:8px;background:none;justify-self:center;overflow:visible}
+.musical-tableaus .battle-foundation__holocard{position:absolute;inset:0;display:block;width:100%;height:100%;border-radius:8px}
+.musical-tableaus [data-foundation-mode]>.battle-foe__bars{position:absolute;z-index:6;left:7px;right:7px;bottom:5px;display:grid;gap:2px;width:auto;pointer-events:none}
+.musical-tableaus [data-foundation-mode] .battle-bar{height:14px}
+.musical-tableaus [data-foundation-mode] .battle-bar__text{font-size:9px;line-height:12px}
+.musical-tableaus [data-foundation-mode] .battle-foundation__ap-pips i{width:9px;height:9px}
+/* Render compact holocard typography at a consistent half-scale. */
+.musical-tableaus .battle-foundation__holocard>.trading-card-stage{width:200%;height:200%;transform:scale(.5);transform-origin:top left}
+.musical-tableaus .battle-foundation__holocard>.trading-card-stage>.trading-card{box-sizing:border-box;width:100%;height:100%;min-height:0;padding:9px;border-width:3px;border-radius:12px;aspect-ratio:88/63}
+.musical-tableaus .battle-foundation__holocard .trading-card__header h2{font:600 20px/1.1 Georgia,serif;position:static;margin:0}
+.musical-tableaus .battle-foundation__holocard .ice-combat-card__copy{display:none}
+.musical-tableaus .battle-foundation__holocard .bite-card-value{font-size:32px}
+
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .battle-field__foundation{aspect-ratio:88/63;height:auto;min-height:0}
+/* Bite is free: no AP meter; put readable health beneath the card face. */
+.musical-tableaus [data-foundation-mode]>.battle-foe__bars{top:calc(100% + 8px);bottom:auto;left:0;right:0}
+.musical-tableaus [data-foundation-mode] .battle-bar{height:27px;border-width:2px}
+.musical-tableaus [data-foundation-mode] .battle-bar__text{font:700 16px/23px Georgia,serif;padding:0 5px}
+.musical-tableaus [data-foundation-mode].battle-field__foundation{margin-bottom:36px}
+.musical-tableaus .battle-foundation__holocard>.trading-card-stage>.trading-card{border-width:8px;border-color:var(--rarity);box-shadow:0 0 0 2px var(--rarity-deep),0 3px 8px #0008}
+.musical-tableaus .battle-foundation__holocard .trading-card__header h2{font:800 36px/1 Georgia,serif;letter-spacing:1px;text-shadow:0 2px 3px #000;background:#101820cc;padding:3px 6px;border-radius:4px}
+.musical-tableaus .battle-foundation__holocard :is(.bite-card-value,.bite-card-damage){top:auto;bottom:10px;min-width:48px;height:auto;display:grid;gap:2px;padding:5px 8px;border:2px solid var(--rarity);background:#101820ec;text-align:center;line-height:1;box-shadow:0 2px 4px #0008}
+.musical-tableaus .battle-foundation__holocard .bite-card-value{left:10px;right:auto}
+.musical-tableaus .battle-foundation__holocard .bite-card-damage{right:10px;left:auto}
+.musical-tableaus .battle-foundation__holocard :is(.bite-card-value,.bite-card-damage) small{font:700 14px/1 sans-serif;letter-spacing:1px;color:#e3d4aa}
+.musical-tableaus .battle-foundation__holocard :is(.bite-card-value,.bite-card-damage) b{font:800 44px/1 Georgia,serif;color:#fff4d8}
+/* Anchor the damage panel to the card, rather than the title row. */
+.musical-tableaus .battle-foundation__holocard .trading-card__header{position:static}
+.musical-tableaus .battle-foundation__holocard .trading-card__header h2{position:relative;z-index:5;display:inline-block}
+
+.musical-tableaus [data-foundation-mode] .battle-foundation__ap{display:flex;flex-direction:column;margin-top:3px}
+.musical-tableaus [data-foundation-mode] .battle-foundation__ap-pips{display:flex;gap:4px;min-height:12px}
+.musical-tableaus [data-foundation-mode] .battle-foundation__ap-pips i{width:11px;height:11px}
+.musical-tableaus [data-foundation-mode].battle-field__foundation{margin-bottom:64px}
+
+.musical-tableaus .foundation-support-label{font:700 18px Georgia,serif;letter-spacing:1px}
+.musical-tableaus .battle-foundation__holocard [data-object-id='mochi-fast-swipes'] .trading-card__header h2{font-size:26px;letter-spacing:.5px}
+
+/* Support foundations share the active foundation row; hands flank the whole group. */
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party']{grid-template-columns:repeat(var(--slots),clamp(126px,18vw,176px));gap:14px;justify-content:center;align-items:start}
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .battle-field__slot{position:relative;width:100%;min-width:0;display:flex;flex-direction:column;justify-content:flex-start}
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .keru-foundation-group{width:100%;min-width:0;min-height:calc(clamp(126px,18vw,176px) * 63 / 88 + 64px);display:flex;align-items:flex-end}
+/* Status trays participate in board fitting, so the footer cannot cover them. */
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .battle-party-buffs{position:static;top:auto;left:auto;width:100%;justify-content:center;min-height:44px;padding-bottom:5px}
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .battle-party-buffs:not(:has(button)){display:none}
+.musical-tableaus .combat-sandbox .battle-field:not([data-spatial-lanes]):not([data-vertical-columns]) .battle-field__middle{grid-template-rows:auto auto;gap:0;min-height:0}
+.musical-tableaus .combat-sandbox .battle-field__tableau{height:clamp(190px,25dvh,260px);min-height:0;place-items:end center;padding-bottom:54px;box-sizing:border-box}
+.musical-tableaus .battle-field__team[data-team='party'] [data-battle-slot='empty']{display:none}
+.musical-tableaus .foundation-support-label{position:absolute;right:12px;bottom:12px;padding:5px 8px;background:#101820ec;border:2px solid var(--rarity);color:#fff4d8}
+
+/* Support faces retain landscape proportions at 80% of the prime foundation. */
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] [data-foundation-mode='support'].battle-field__foundation{width:80%;margin-left:auto;margin-right:auto}
+.musical-tableaus .fast-swipes-buff{position:relative}
+.musical-tableaus .combat-sandbox .keru-foundation-group:has(>.prime-tableau-value){position:relative;width:100%;min-width:0}
+.musical-tableaus .prime-tableau-value{position:absolute;left:0;bottom:calc(100% + 9px);width:100%;min-height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;padding:3px 10px;border:2px solid #d4bd83;border-radius:9px 9px 5px 5px;background:linear-gradient(110deg,#17252c,#354348 48%,#17252c);box-shadow:inset 0 0 0 2px #101820,inset 0 0 0 3px #d4bd8344,0 3px 6px #0009;color:#fff1cf;pointer-events:none;z-index:8}
+.musical-tableaus .prime-tableau-value::before,.musical-tableaus .prime-tableau-value::after{content:'';position:absolute;top:50%;width:15%;height:1px;background:linear-gradient(90deg,transparent,#d4bd83)}
+.musical-tableaus .prime-tableau-value::before{left:5px}
+.musical-tableaus .prime-tableau-value::after{right:5px;rotate:180deg}
+.musical-tableaus .prime-tableau-value small{font:700 9px/1 Georgia,serif;letter-spacing:1px}
+.musical-tableaus .prime-tableau-value b{font:800 24px/1 Georgia,serif;text-shadow:0 2px 2px #000}
+.musical-tableaus .prime-tableau-value i{font:10px/1 Georgia,serif;color:#d4bd83}
+.musical-tableaus .battle-field .prime-tableau-value{pointer-events:auto;touch-action:none;user-select:none;cursor:grab}
+.musical-tableaus .prime-tableau-value[data-dragging]{cursor:grabbing;z-index:100;box-shadow:0 0 12px #ffe1a577,0 6px 12px #000a}
+.musical-tableaus .prime-tableau-value:disabled{cursor:default}
+.musical-tableaus .prime-tableau-value:focus-visible{outline:2px solid #8ef2d4;outline-offset:3px}
+/* The row budget also drives fitting when future layouts expose rows 3–5. */
+.musical-tableaus .combat-sandbox .battle-field__rack{--classic-card-w:min(var(--tableau-card-limit,10000px),calc((100cqw - 18px) / var(--rack-columns,7)),calc((100cqh - (var(--tableau-visible-rows,2) - 1) * var(--battle-peek) - 8px) * 63 / 88))}
+.musical-tableaus .fast-swipes-buff b{position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);padding:1px 4px;border:1px solid #b99b8d;border-radius:8px;background:#152225;color:#fff1cf;font:700 10px/1.2 Georgia,serif;white-space:nowrap}
+/* Only the thin upper rims of hidden third/fourth rows are suggested. */
+.musical-tableaus .tableau-card-tops{position:absolute;inset:0;pointer-events:none;z-index:0}
+.musical-tableaus .tableau-card-tops i{position:absolute;left:calc(var(--rear-edge)*1px);right:calc(var(--rear-edge)*1px);top:calc(var(--rear-edge)*-5px);height:7px;border:1px solid #9aab91;border-radius:5px 5px 0 0;background:linear-gradient(#637460,#26372f);box-shadow:0 -1px 2px #0005;opacity:calc(1 - var(--rear-edge)*.15)}
+/* Buffs belong to their kin's left edge, including smaller support faces. */
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .battle-party-buffs{justify-content:flex-start;width:clamp(126px,18vw,176px);margin-inline:auto}
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .battle-field__slot:has([data-foundation-mode='support']) .battle-party-buffs{width:calc(clamp(126px,18vw,176px) * .8);margin-inline:auto}
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .battle-field__foundation[data-ap-rows='1']{margin-bottom:49px}
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .keru-foundation-group[data-ap-rows='1']{min-height:calc(clamp(126px,18vw,176px) * 63 / 88 + 49px)}
+
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party']:has(.dig-reserve) {
+  grid-template-columns: repeat(var(--slots), clamp(126px, 18vw, 176px)) auto;
+}
+.dig-reserve {
+  display: flex;
+  gap: 8px;
+  max-width: 136px;
+  margin-top: 38px;
+  padding: 4px;
+  overflow-x: auto;
+}
+.dig-reserve__card {
+  display: grid;
+  flex: 0 0 60px;
+  place-content: center;
+  gap: 4px;
+  aspect-ratio: 63 / 88;
+  border: 1px solid #c5a46d;
+  border-radius: 8px;
+  color: #fff1cf;
+  background: radial-gradient(ellipse at 50% 28%, #6b503b, #283a32 62%, #172720);
+  box-shadow: 0 2px 4px #0c140eaa;
+  text-align: center;
+  font: 16px/1.2 Georgia, serif;
+}
+.dig-reserve__card strong { font-size: 30px; }
+.dig-reserve__card:enabled:hover,
+.dig-reserve__card:focus-visible { outline: 2px solid #ffe3a1; outline-offset: 1px; }
+.dig-reserve__card:disabled { opacity: .55; }
+.musical-tableaus .battle-field[data-dig-drag] [data-dig-target] {
+  outline: 2px solid #ffe3a1;
+  outline-offset: 1px;
+}
+.musical-tableaus .battle-field[data-target-drag='dig'] .battle-foe { outline: none; }
+.battle-target-ghost[data-dig-ghost] { --target-ghost-offset-y: 12px; }
+.battle-target-ghost[data-dig-ghost] > .trading-card-stage { width: 100%; height: 100%; }
+.battle-target-ghost[data-dig-ghost] * { pointer-events: none; }
+.dig-target-marker {
+  position: fixed;
+  z-index: 65001;
+  box-sizing: border-box;
+  border-radius: 5px;
+  outline: 2px solid #fff0b8;
+  box-shadow: 0 0 14px #ffcf77b3, 0 8px 15px #000b;
+  pointer-events: none;
+}
+.dig-target-marker__face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #192522;
+}
+.dig-target-marker__face .proto-card-rank { font-size: 16px; }
+.dig-target-marker > span {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  translate: -50% 0;
+  padding: 3px 7px;
+  border: 1px solid #ffe3a1;
+  border-radius: 5px;
+  background: #282016;
+  color: #fff3cc;
+  font: bold 16px/1.15 Georgia, serif;
+  white-space: nowrap;
+}
+
+@media (max-width: 540px) {
+  .dig-reserve { max-width: 68px; }
+}

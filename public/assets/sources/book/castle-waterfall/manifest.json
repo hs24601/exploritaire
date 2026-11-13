@@ -1,0 +1,21 @@
+{
+  "source": "public/assets/sources/book/castle-waterfall/original.glb",
+  "sha256": "40626c1e6d88546e63ea83cabbfee67fd00eadbf1ba36084eaec774580fd894d",
+  "mesh": "Object_74",
+  "material": "Shape_258",
+  "excludedMaterial": "Shape_259 (moat)",
+  "vertices": 51,
+  "triangles": 17,
+  "uvPreserved": true,
+  "asset": {
+    "extras": {
+      "author": "Garu (https://sketchfab.com/Garu.The.Ninja)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/super-mario-64-peachs-castle-exterior-38a87167983943048b918fcdd415f9bf",
+      "title": "Super Mario 64 - Peach's Castle Exterior"
+    },
+    "generator": "Sketchfab-14.1.0",
+    "version": "2.0"
+  },
+  "destination": "public/assets/runtime/book/castle/original-waterfall.json"
+}

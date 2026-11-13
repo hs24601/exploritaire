@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "asset": "wood-v1.png",
+  "tool": "Built-in image_gen",
+  "prompt": "Use case: stylized-concept. Asset type: transparent portrait trading-card WOOD element adornment overlay, a new sibling to nature-v3.png. Reference roles: image 1 nature-v3.png is the exact asymmetric card-edge layout/composition reference only; image 2 approved Hero v6 is the established Exploritaire watercolor style baseline only (do not include the dog); image 3 actual Scratch v3 painting supplies the lighter palette and soft wet brushwork only (do not include the cat). Primary request: paint NEW WOOD adornments, replacing nature ivy with warm weathered oak branches, curved wooden roots, gently split bark, a few curled wood shavings, small pale knots and one tiny muted sage bud. Not a leaf/vine nature reskin. Preserve image 1's portrait 63:88 composition and clear transparent center: main organic root/wood cluster along the bottom-left corner and left lower edge; smaller curved branch cluster along the upper-right edge; tiny trailing wood curl at the middle-right. Keep the upper-left and central 65% wide area empty for game ranks. Keep all isolated motifs comfortably inside the canvas without clipping. Use a small number of BIG WATER-DILUTED WET-ON-WET WASHES and broad rounded soft brush dabs, broad readable wood-grain gestures, feathered pigment boundaries, controlled bleed and lost-and-found edges. Palette diluted ochre, honey, apricot/copper wood, creamy ivory exposed grain, smoky slate shadows and very sparse muted sage. Wood shapes should have painted volume and readable chunky silhouettes at small card size. No dense etching, gritty grain, embossed texture, noisy paper filter, stippling, fine microtexture, photorealism or plastic 3D. Transparent background with real alpha, substantially opaque pale paint, absolutely no paper rectangle or card face. No lettering, numerals, suits, frame rules, logos, creatures, or extra motifs. Produce only the painted adornment artwork.",
+  "references": [
+    {
+      "path": "public/assets/runtime/ui/card-adornments/nature-v3.png",
+      "role": "Asymmetric edge layout",
+      "sha256": "794621ba42bea59685d9374923daab3d5b917abf7d084ba409486a0b9b5797b0"
+    },
+    {
+      "path": "public/assets/runtime/ui/holocards/layered/hero-watercolor-v6-organic-bobtail.png",
+      "role": "Approved watercolor style baseline",
+      "sha256": "aed6f560a41117514ac0004486f673d59d644101da4352c85b33a9a4ceb7d89b"
+    },
+    {
+      "path": "public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+      "role": "Lighter palette and soft wet brushwork",
+      "sha256": "713a9cfb194b8aa6d9a6a07363ba622a94d1a2e500030b39c7594473eb29dcfd"
+    }
+  ],
+  "alpha": "Preserved original generated alpha; byte-identical source and runtime copies.",
+  "review": {
+    "result": "Accepted after original-alpha and in-game review",
+    "transparency": "Center alpha 0; 69.84% fully transparent; 25.03% substantially opaque paint; reviewed on white, dark and checkerboard.",
+    "composition": "Wood roots and branches retain natural aspect, centered inside the standard 63:88 faces. Ranks and labels remain readable.",
+    "screenshots": [
+      "output/wood-adornment-alpha-review.png",
+      "output/119-wood-blueprint-adornments.png",
+      "output/119-close-camera-floor-guides.png"
+    ]
+  },
+  "dimensions": [
+    1060,
+    1484
+  ],
+  "pngColorType": 6,
+  "sha256": "16a3a104146d2bc088968792d46f769437bde58202327621529445294943abe9",
+  "byteIdentical": true
+}

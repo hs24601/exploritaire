@@ -1,0 +1,62 @@
+{
+  "generator": "Built-in ImageGen",
+  "assets": [
+    {
+      "file": "sticker-master.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "728a9edb32556e5e7a22105db18c89b5573107a87c4c45145f7ad5b3ce9b1943",
+      "references": [
+        {
+          "file": "subject-reference.png",
+          "role": "Subject, silhouette and expression"
+        },
+        {
+          "file": "foil-reference.png",
+          "role": "Pearlescent color palette only"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Approved Hero storybook watercolor style"
+        }
+      ],
+      "prompt": "Use case: style-transfer. Create one original die-cut snowflake mascot sticker for an interactive Exploritaire holographic sticker. Image 1 is the subject and pose reference: preserve its distinctive radial branching sky-blue snowflake silhouette, circular tips, centered playful one-eye wink, coral cheeks and open smile. Reinterpret the eyes in Scott Pilgrim indie comic styling: a big bold oval open eye with solid ink pupil and a simple ivory white accent, a compact angular ink wink and confident thick upper lid, witty asymmetry, simple graphic expression. Image 2 is the material palette reference only: pearly icy cyan, lavender and faint pink color travel along the sticker rim, with no copied words, banner, shapes, or graphics. Image 3, Hero snuffling berries, is the actual primary paint style reference: softly merging broad hand-painted storybook watercolor washes, irregular pigment pooling, broken brush edges and a few opaque gouache highlights; use its brushwork only, with no dog, forest or berries. Let the comic eye linework sit naturally on the painted ice. A thin pearl-white die-cut rim follows the entire branched silhouette. The pale ice stays opaque. Square straight-on centered view, entire silhouette in frame with even transparent margin. Genuine transparent surroundings and clean interior cutout holes where the tips form rings. No backdrop, no cast shadow, no lettering, no extra floating flakes, no lens ridges, and no baked bright sweeping glare; motion, refraction and layered flakes are applied in the game."
+    },
+    {
+      "file": "ice.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "65a51b753c020e74d1b862aaeca4ab632b3add19bc4a064908dcd89fcb14dc54",
+      "runtime": "public/assets/runtime/ui/stickers/snowflake-v1/ice.png",
+      "references": [
+        {
+          "file": "sticker-master.png",
+          "role": "Registered die-cut sticker master"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Watercolor inpainting style"
+        }
+      ],
+      "prompt": "Use case: precise-object-edit. Image 1 is the exact master of a watercolor die-cut snowflake sticker. Keep its original square canvas, scale, shape, transparent outside and all transparent ring holes, ring positions, pearl-white die-cut rim, paint colors and unedited pixels. Remove just the face (both eyes, coral cheeks, smiling mouth and tongue). Inpaint only the removed marks by continuing the adjacent cyan-blue and pale lavender watercolor washes across those small areas; no blank patch or seam. Image 2, Hero snuffling berries, is the actual style reference for inpainting only: broad merged watercolor washes, soft pigment pooling, no literal dog or landscape. Produce a matching clean ice body plate to accept a separate moving face in an interactive sticker. Keep the whole die-cut silhouette in exactly the same registration, fully on canvas, genuine transparent outside and ring holes; clean the tiny stray paint specks entirely outside the original silhouette. No facial features, text, backing, shadow, or additional flakes."
+    },
+    {
+      "file": "face.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "356a5a8f2248c4c38714185b443df2799188b7c40ff3089eb3fe2b15a0f9da98",
+      "runtime": "public/assets/runtime/ui/stickers/snowflake-v1/face.png",
+      "references": [
+        {
+          "file": "sticker-master.png",
+          "role": "Registered facial features and position"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Painted blush and ink style"
+        }
+      ],
+      "prompt": "Use case: precise-object-edit and background-extraction. Create the facial ink and blush layer from the exact snowflake sticker in image 1, with genuine transparent alpha everywhere else. Keep just five elements: the black and ivory open oval eye plus its two lashes, the angular black wink, both coral cheek dabs and the black open happy mouth with its coral tongue. Preserve the Scott Pilgrim indie-comic eye geometry and line weight exactly and keep the five features in the same spatial relationship, positions, dimensions, and scale as image 1. Do not recenter, enlarge, crop tightly, or spread out the marks: retain the original square canvas and its generous transparent margins, so this is a registered overlay. The facial marks occupy only the central 37% of canvas width and 26% of height. All space between the marks and around the marks is fully transparent. The ivory eye highlight and red tongue stay opaque. Image 2 is the actual Hero snuffling berries painting, style reference only for the soft hand-painted coral blush and opaque gouache ink details; no dog, environment, or colors copied. Remove all snowflake art, pale blue between and around the marks, outlines of the flake, shadows, background, and paper. Do not introduce any new features or styling."
+    }
+  ]
+}

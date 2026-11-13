@@ -1,0 +1,22 @@
+# Dem standing sprite sources
+
+Built-in ImageGen; 2026-10-25. Identity reference: `artifacts/dem-style-v3/dem-storybook-v3.png` (existing approved cream/blue storybook polar bear). They/them pronouns. Existing holocard artwork is preserved.
+
+The low source is the transparent extraction pass on the generated low sheet. The high source is the elevated six-view generation. The optional additional high extraction experiment was not selected. Source PNGs preserve generated alpha; runtime packing discards disconnected background pixels and keeps each connected bear silhouette and its antialiased edge. Cream body pigment remains opaque (alpha >=250).
+
+## Low generation prompt
+
+Create a production transparent PNG game sprite atlas for Dem, the SAME glacial polar bear as the reference image. Reference image role: character identity and watercolor brushwork, NOT its sitting pose. Dem stands naturally on ALL FOUR paws in every drawing, broad bear torso, thick short powerful legs, small round ears, long polar-bear muzzle, tiny natural stub tail, cream ivory fur, blue watercolor shadow stripes, large turquoise ice claws, blue faceted ice ridge growing from shoulders and upper back. Keep friendly composed reference face, blue eyes, painterly paper-grain brushwork, not photorealistic. LOW CAMERA / eye-level directional turntable. Layout: exactly 3 columns by 2 rows in a landscape 1536x1024 atlas, each cell 512x512 with generous transparent gutters. Row 1: front facing viewer; front-left three-quarter facing left; exact left-facing side profile. Row 2: rear-left three-quarter facing left away from viewer; exact rear facing away; leave bottom-right cell EMPTY transparent. Full body in each cell, consistent animal size, ground paws near bottom of cell, no clipping of ears or ice spikes. Every pose is the SAME neutral standing quadruped, no sitting, no rearing, no walking, no leaping. Four anatomically correct legs total, visible count depends on angle. No separate limbs, no extra heads, no labels, no grid, no shadows, no scenery. Real alpha transparency outside bear; opaque cream fur inside.
+
+## Low transparency pass
+
+Background extraction ONLY. Preserve these FIVE standing polar bear drawings and their positions, canvas 1536x1024. Remove ALL colored background, blue/cream gradient, black region, glow and ground shadows. Produce genuinely transparent PNG with alpha=0 immediately outside each animal silhouette, including gaps between legs. Keep opaque ivory fur and ice inside animal. Do not change any anatomy, colors, brushwork, pose or position. The bottom-right cell must be empty transparent. No new background or checkerboard. Same five full-body sprite drawings at exact original positions.
+
+## High generation prompt
+
+Create a transparent sprite sheet of Dem, the cream polar bear with blue ice claws and faceted blue shoulder/back ice ridge shown in the reference. Match their exact reference identity, blue eyes and loose watercolor storybook painting. Dem stands neutrally on FOUR planted paws, thick bear body, small round ears, tiny stub tail, long bear muzzle. This is the ELEVATED CAMERA turntable, camera looking DOWN at 55 degrees above horizontal. Exactly six separate full-body drawings in a strict 3 columns x 2 rows grid, each drawing completely inside its own cell with wide empty transparent margins. Landscape 1536x1024 PNG. Top row: elevated front toward viewer; elevated front-left three-quarter with nose LEFT; elevated exact left side. Bottom row: elevated rear-left three-quarter with nose LEFT away; elevated exact rear; TRUE BIRD'S-EYE vertically overhead bear, nose pointing UP, two shoulder paws and two hip paws tucked beside body, NO trailing legs. Consistent anatomy, four legs only, standing in every view, no sitting. No scenery, NO gradients, NO glow, NO shadow, NO colored backdrop, NO paper rectangle. TRUE ALPHA TRANSPARENCY immediately outside each silhouette, opaque cream bear fur inside. No text or grid lines. Use reference only for identity; make these new standing poses.
+
+## Integration
+
+Run `node tools/prepare-dem-standing.mjs` with Playwright Chromium available. It packs five low and six high cutouts into two 1536x1024 runtime sheets with wide transparent gutters and writes `src/proto/art/demStandingLayout.json`. All frames are one coherent painting, registered into head/torso/hind joints by `src/proto/demSprite.ts`.
+

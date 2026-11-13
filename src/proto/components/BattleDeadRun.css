@@ -3,6 +3,10 @@
 .battle-intent-slot__name { max-width:100%; color:#ffb9a6; font:bold 16px/1.05 monospace; text-align:center; overflow-wrap:anywhere; cursor:help; }
 .battle-intent-slot__card { position:relative; width:var(--classic-card-w); height:calc(var(--classic-card-w) * 88 / 63); }
 .battle-intent-slot__card button { width:var(--classic-card-w); border-radius:4px; border-color:#e0705c; }
+/* Disabled card buttons suppress pointer events in some browsers. Let the
+   inspectable foundation own hover/tap while its card cannot accept a play. */
+.battle-intent-slot__card button:disabled { pointer-events:none; }
+.combat-sandbox .battle-field__team[data-team='enemy'] > .battle-intent-slot { pointer-events:auto; }
 .battle-intent-slot__card .proto-card-rank { font-size:16px; }
 .battle-intent-slot[data-targetable='true'] { box-shadow:0 0 0 2px #ffd166, 0 0 12px #ffd16655; }
 .battle-intent-slot__pips { display:flex; gap:3px; width:calc(100% - 8px); }
@@ -36,3 +40,10 @@
 /* Readied: fully charged and waiting out its turn in the owner's hand. */
 .battle-intent-slot[data-readied='true'] { box-shadow:0 0 0 2px #ffb07a, 0 0 18px #ff7a4d88; }
 .battle-intent-slot__ready { color:#ffd0b0; font:bold 16px/1 monospace; }
+
+.battle-intent-slot[data-broken='true'] { transform:rotate(-8deg); border:1px solid #b76662; box-shadow:0 0 0 1px #b76662, 0 0 14px #b7666255; filter:saturate(.55); }
+.battle-intent-slot[data-broken='true'] .battle-intent-slot__card { opacity:.75; }
+.battle-intent-slot__broken { color:#ffb5a4; font:bold 12px/1 monospace; text-transform:uppercase; letter-spacing:.08em; }
+.battle-field__team[data-team='enemy'] > .battle-intent-slot[data-broken='true'] { animation:none; }
+
+.battle-field__team[data-team='enemy'][data-single-enemy] > .battle-intent-slot[data-broken='true'] { left:calc(50% + min(var(--slot-w,176px), 100%) / 2 + 24px); transform-origin:top left; }

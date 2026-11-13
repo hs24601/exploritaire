@@ -15,7 +15,10 @@ export const ABILITY_DESCRIPTION_MAX = 400;
 
 type Editable = { name: string; actorId: string; description: string; card?: string };
 /** Cards whose rules are tied to their owner (Cir, Withdraw, Sticky Paws) keep it; Cir is not editable at all. */
-export const abilityEdits = (id: string) => ({ text: !id.startsWith('cir'), owner: !id.startsWith('cir') && id !== 'withdraw' && id !== 'sticky-paws' });
+export const abilityEdits = (id: string) => {
+  const cir = id.startsWith('cir') || ['summon-cir', 'swift-wings', 'meteor-launch', 'meteor-impact'].includes(id);
+  return { text: !cir, owner: !cir && id !== 'withdraw' && id !== 'sticky-paws' };
+};
 
 /** Overrides replace the name, the owner (whose AP pays and whose radial shows it) and the card/rules text. */
 export function applyAbilityOverrides<T extends Record<string, Editable>>(base: T, overrides: AbilityOverrides = ABILITY_OVERRIDES): T {

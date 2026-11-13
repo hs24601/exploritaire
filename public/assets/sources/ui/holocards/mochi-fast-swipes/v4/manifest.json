@@ -1,0 +1,41 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-06",
+  "profile": "fast-swipes",
+  "references": [
+    {
+      "file": "public/assets/runtime/ui/holocards/mochi-fast-swipes/v3/mochi-main.png",
+      "role": "Registered identity/body master"
+    },
+    {
+      "file": "public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+      "role": "Actual lighter palette/soft wash reference"
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/layered/hero-watercolor-v6-organic-bobtail.png",
+      "role": "Actual approved Hero style baseline"
+    }
+  ],
+  "assets": [
+    {
+      "file": "swipe-ready.png",
+      "prompt": "Use case: precise-object-edit. Image1 is the exact registered Fast Swipes body/head master. Image2 actual Scratch and image3 actual approved Hero painting supply the required soft light watercolor method. Preserve Mochi's exact head, eyes, ears, smile, tail and body canvas registration, 1536x1024 landscape. Correct ONLY the primary connected foreground paw: move its visual center HALFWAY from its old lower-foreground location toward her face, so the black paw is tucked near x=65%,y=58% under her chin and right cheek, not at x=65%,y=78%. Shorten/bend the attached furry foreleg naturally at the shoulder; do not float an isolated paw. It is the ready/front-facing pose between rapid HORIZONTAL swipes, curled toes facing slightly toward camera. Keep a small soft cream/sage horizontal motion curve immediately under the paw, not a wide downward sweep. Only one main foreleg/paw, no duplicate limbs, no arms above head. Preserve fluffy tortoiseshell cat, poofy cream mane, yellow-green eyes, black rounded toes only with colored ankles. BIG diluted wet-on-wet washes and broad rounded soft dabs, merged cloudy fur, feathered contours; light apricot/ivory/smoky slate, no hard tiny serrations, grit or texture overlay. Substantially opaque cream fur and genuinely transparent surroundings, no background, text, UI or frame."
+    },
+    {
+      "file": "swipe-left.png",
+      "prompt": "Use case: precise-object-edit. Production registered lenticular animation frame for Fast Swipes. Image1 is the EXACT REGISTRATION/IDENTITY MASTER: preserve head, eyes, nose, ears, chest, body, tail, silhouette and canvas location. Image2 actual Scratch painting supplies light swatches and soft wet brushstrokes; Image3 actual approved Hero key painting is the established style baseline. Edit ONLY the main connected foreground foreleg/paw and its motion trail on Image1. A fluffy tortoiseshell cat Mochi, yellow-green eyes, cream poofy mane, black rounded toes with colored ankles. This is a rapid HORIZONTAL swiping action below her face, never a foreleg over the head. The paw must remain anatomically connected to her shoulder by one visible short furry foreleg; keep the paw close to her body and chin, not floating far toward the viewer. One main paw only, no extra afterimage paws (separate runtime layers supply those). Preserve the lighter diluted apricot/ivory/slate palette; large soft wet-on-wet cloudy masses and rounded dabs, feathered lost edges, only selective eye/nose/toe accents, NO dense fur, serrations, gritty grain, texture overlay or photorealism. Opaque pale fur and true transparent outside silhouette, no scenery, paper rectangle, ground shadow, UI/text/card border. Same 1536x1024 landscape3:2 canvas, exact head/body registration. FRAME LEFT STRIKE: the connected black swipe paw has swept horizontally LEFT across the chest and ends near x=40%,y=66% of canvas, just below the left cheek/chin line. The foreleg extends from Mochi's shoulder; preserve face at its original position. Tapered pale cream/sage motion strokes trail rightwards along a horizontal arc behind the paw."
+    },
+    {
+      "file": "swipe-recoil.png",
+      "prompt": "Use case: precise-object-edit. Production registered lenticular animation frame for Fast Swipes. Image1 is the EXACT REGISTRATION/IDENTITY MASTER: preserve head, eyes, nose, ears, chest, body, tail, silhouette and canvas location. Image2 actual Scratch painting supplies light swatches and soft wet brushstrokes; Image3 actual approved Hero key painting is the established style baseline. Edit ONLY the main connected foreground foreleg/paw and its motion trail on Image1. A fluffy tortoiseshell cat Mochi, yellow-green eyes, cream poofy mane, black rounded toes with colored ankles. This is a rapid HORIZONTAL swiping action below her face, never a foreleg over the head. The paw must remain anatomically connected to her shoulder by one visible short furry foreleg; keep the paw close to her body and chin, not floating far toward the viewer. One main paw only, no extra afterimage paws (separate runtime layers supply those). Preserve the lighter diluted apricot/ivory/slate palette; large soft wet-on-wet cloudy masses and rounded dabs, feathered lost edges, only selective eye/nose/toe accents, NO dense fur, serrations, gritty grain, texture overlay or photorealism. Opaque pale fur and true transparent outside silhouette, no scenery, paper rectangle, ground shadow, UI/text/card border. Same 1536x1024 landscape3:2 canvas, exact head/body registration. FRAME RECOIL: connected foreground paw drawn back tightly under her chin/ruff near x=56%,y=61%, bent furry elbow anatomically joined to body, curled black toes preparing another horizontal rake. Very short soft horizontal motion smear, no downward punch. Preserve face/head/body exactly."
+    },
+    {
+      "file": "swipe-right.png",
+      "prompt": "Use case: precise-object-edit. Production registered lenticular animation frame for Fast Swipes. Image1 is the EXACT REGISTRATION/IDENTITY MASTER: preserve head, eyes, nose, ears, chest, body, tail, silhouette and canvas location. Image2 actual Scratch painting supplies light swatches and soft wet brushstrokes; Image3 actual approved Hero key painting is the established style baseline. Edit ONLY the main connected foreground foreleg/paw and its motion trail on Image1. A fluffy tortoiseshell cat Mochi, yellow-green eyes, cream poofy mane, black rounded toes with colored ankles. This is a rapid HORIZONTAL swiping action below her face, never a foreleg over the head. The paw must remain anatomically connected to her shoulder by one visible short furry foreleg; keep the paw close to her body and chin, not floating far toward the viewer. One main paw only, no extra afterimage paws (separate runtime layers supply those). Preserve the lighter diluted apricot/ivory/slate palette; large soft wet-on-wet cloudy masses and rounded dabs, feathered lost edges, only selective eye/nose/toe accents, NO dense fur, serrations, gritty grain, texture overlay or photorealism. Opaque pale fur and true transparent outside silhouette, no scenery, paper rectangle, ground shadow, UI/text/card border. Same 1536x1024 landscape3:2 canvas, exact head/body registration. FRAME RIGHT STRIKE: connected black swipe paw reaches horizontally RIGHT close beneath her face near x=76%,y=65%, with a short attached foreleg, no excessive foreshortened arm. Long soft pale cream/sage horizontal motion strokes trail left along chest. Preserve face/head/body and tail exactly."
+    }
+  ],
+  "afterimages": "Separate v3 far/middle/near alpha assets, independently sampled/parallax transformed in the GPU profile and DOM fallback. Near plane placement moves from (-42%,46%) to (-22%,27%).",
+  "runtime": "public/assets/runtime/ui/holocards/mochi-fast-swipes/v4",
+  "alpha": "Original generated alpha, byte-identical source/runtime.",
+  "sequence": "ready,left,recoil,right repeated 3 times per absolute lateral center-to-edge sweep; no animation clock."
+}

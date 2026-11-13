@@ -1,0 +1,15 @@
+{
+  "generator": "Built-in image_gen",
+  "asset": "mochi-fast-swipes.png",
+  "size": [
+    1024,
+    1536
+  ],
+  "sha256": "53b60b88d8b0606e129fa341216839064a337c1538578811fa9e49d9ebf058db",
+  "alpha": "Original generated alpha retained; byte-identical source/runtime copies",
+  "references": {
+    "identity": "public/assets/runtime/ui/holocards/layered/mochi-watercolor-v2.png",
+    "brushwork": "public/assets/runtime/ui/holocards/layered/hero-watercolor-v5-ordinary-day.png"
+  },
+  "prompt": "Portrait 2:3 transparent holocard subject: long-haired tortoiseshell Mochi, charcoal/orange patches, yellow-green eyes, cream chin/ruff, black paws and natural fluffy tail. Twist forward with rapid alternating paw swipes and a few cream/pale-green painted action streaks. Broad merged watercolor/gouache washes, grouped fur, sparse contours, irregular lost/found edges. No clothing/flames/victim/blood, no fine fur or digital gloss. Contain ears and paws with breathing room; subject/action strokes only, no scenery, backing, shadow, typography, card frame, numbers or UI."
+}

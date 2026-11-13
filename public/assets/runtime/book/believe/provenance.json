@@ -1,0 +1,14 @@
+{
+  "source": "public/assets/sources/book/page23/demo-original.html",
+  "sha256": "0ffce0a87fa293d576d5d680cdc99173c91975b374d3983251cf295e25f03783",
+  "three": "0.180.0",
+  "originalFilmSeconds": 120,
+  "adaptations": [
+    "Local pinned imports",
+    "Manual preloaded one-shot clock",
+    "Render target for i-dot portal",
+    "Return camera override after original film",
+    "No audio-loop rescheduling"
+  ],
+  "builder": "tools/build-believe-film.cjs"
+}

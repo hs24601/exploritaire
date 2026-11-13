@@ -1,0 +1,8 @@
+{
+  "source": "dive/v1/cir-dive-master-v1.png",
+  "packedSource": "runtime/keru/cir/dive/v1/cir-dive-atlas-v1.png",
+  "frameIndex": 0,
+  "pose": "Gather",
+  "selection": "User-selected first frame for Cir entity card, 2026-10-27",
+  "processing": "Exact crop of packed frame; original paint and alpha retained. No regeneration."
+}

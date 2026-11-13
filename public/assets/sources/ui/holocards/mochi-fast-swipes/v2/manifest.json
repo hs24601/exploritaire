@@ -1,0 +1,41 @@
+{
+  "tool": "built-in image_gen",
+  "created": "2026-11-06",
+  "references": [
+    {
+      "path": "public/assets/runtime/ui/holocards/layered/hero-watercolor-v5-ordinary-day.png",
+      "role": "Actual Hero watercolor style reference"
+    },
+    {
+      "path": "public/assets/runtime/ui/holocards/layered/mochi-watercolor-v2.png",
+      "role": "Mochi identity"
+    },
+    {
+      "path": "user-action-reference.png",
+      "role": "User many-arm action motif; feline swipes replace heel palms"
+    }
+  ],
+  "assets": [
+    {
+      "file": "mochi-main.png",
+      "prompt": "Use case: illustration-story. Production transparent layered holocard game art, main character plate only. References: image 1 Hero painting is the ACTUAL STYLE reference: broad merged soft watercolor/gouache masses and pigment texture, grouped fur strokes, not photoreal detailed individual fur. Image 2 is Mochi IDENTITY only: fluffy tortoiseshell cat, asymmetric charcoal/copper/tawny, cream chin and huge poofy mane, yellow-green eyes, black rounded feet only with color continuing down ankles, natural plume tail. Image 3 is COMPOSITION/MOTION motif only: dynamic foreshortened many-arm rapid-strike fan. Replace heel palm pushes with sweeping feline claw swipes. Main plate: one Mochi, close head-and-chest three-quarter action pose, determined playful face prominent in upper center, one enormous foreground BLACK CAT PAW connected anatomically to her body by a visible furry foreleg, sweeping left-to-right diagonally across lower foreground with curled cat toes and subtle claws. Face at 50% x / 36% y; attached paw near 60% x / 70% y. The far foreleg may tuck behind ruff. Do NOT paint any duplicate extra swipe paws on this plate: those will be authored separately for parallax. Preserve room around the face for separate paw afterimages. Broad handsome painted action gesture, no human hands, palms, wristbands, sumo costume, machinery, scenery, UI, text, card border, shadows or background. Genuine transparent background with opaque cream fur and restrained painted cream/pale-green swipe trails attached to primary paw. Landscape 3:2 canvas suitable for 88:63 foundation and portrait card cropping; whole head ears and main attached swipe paw in frame."
+    },
+    {
+      "file": "swipe-middle.png",
+      "prompt": "Production game VFX cutout, stylized watercolor/gouache matching actual Hero painting (reference 1) and Mochi main art (reference 2). Reference 3 supplies many-arm motion motif ONLY. Generate ONE isolated Mochi feline swipe foreleg with jet-black rounded cat toes, subtle curved claws, tortoiseshell orange/charcoal fur at ankle, no black sock. NO human hand, NO heel-palm push. A dynamic sideways raking swipe with curled toes and long swept motion trails. Only one paw+foreleg afterimage, no character head/body/tail, no repeated paws. Enhanced directional blur, translucent paint echoes, tapered cream/pale-green motion streaks, visible pigment texture and broad merged washes, genuine transparent background, opaque paw core, no UI/text/border/scenery. Keep all trail tips within frame. Landscape canvas 3:2, isolated effect centered with generous transparent margin. Upper-left to lower-right diagonal rake, paw at 64% x 52% y, trail streaming back toward upper left; foreleg extends from left center. Medium-distance plane."
+    },
+    {
+      "file": "swipe-far.png",
+      "prompt": "Production game VFX cutout, stylized watercolor/gouache matching actual Hero painting (reference 1) and Mochi main art (reference 2). Reference 3 supplies many-arm motion motif ONLY. Generate ONE isolated Mochi feline swipe foreleg with jet-black rounded cat toes, subtle curved claws, tortoiseshell orange/charcoal fur at ankle, no black sock. NO human hand, NO heel-palm push. A dynamic sideways raking swipe with curled toes and long swept motion trails. Only one paw+foreleg afterimage, no character head/body/tail, no repeated paws. Enhanced directional blur, translucent paint echoes, tapered cream/pale-green motion streaks, visible pigment texture and broad merged washes, genuine transparent background, opaque paw core, no UI/text/border/scenery. Keep all trail tips within frame. Landscape canvas 3:2, isolated effect centered with generous transparent margin. Upper-right to lower-left diagonal rake, paw at 36% x 50% y, trail streaming toward upper right; foreleg extends from right center. Farthest plane, strongest painted motion smearing."
+    },
+    {
+      "file": "swipe-near.png",
+      "prompt": "Production game VFX cutout, stylized watercolor/gouache matching actual Hero painting (reference 1) and Mochi main art (reference 2). Reference 3 supplies many-arm motion motif ONLY. Generate ONE isolated Mochi feline swipe foreleg with jet-black rounded cat toes, subtle curved claws, tortoiseshell orange/charcoal fur at ankle, no black sock. NO human hand, NO heel-palm push. A dynamic sideways raking swipe with curled toes and long swept motion trails. Only one paw+foreleg afterimage, no character head/body/tail, no repeated paws. Enhanced directional blur, translucent paint echoes, tapered cream/pale-green motion streaks, visible pigment texture and broad merged washes, genuine transparent background, opaque paw core, no UI/text/border/scenery. Keep all trail tips within frame. Landscape canvas 3:2, isolated effect centered with generous transparent margin. Broad horizontal left-to-right sweeping claw rake, black paw foreshortened at 65% x 53% y, long arcing lower-left to upper-right trails. Nearest plane, largest paw, strong peripheral motion blur but readable black toes."
+    }
+  ],
+  "processing": "Byte-identical source/runtime copies. Original generated alpha preserved. Each paw is its own image element and parallax plane; no alpha color-keying.",
+  "dimensions": [
+    1536,
+    1024
+  ]
+}

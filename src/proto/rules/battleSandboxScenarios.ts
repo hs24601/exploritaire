@@ -23,7 +23,35 @@ export const COMBAT_SANDBOX_SCENARIOS = [
   { id: '022', name: '022: Deep Breath + Pity Flip', hp: 0, thorns: 0 },
   { id: '023', name: '023: Deep Breath + Hold', hp: 0, thorns: 0 },
   { id: '024', name: '024: All Three Fixes', hp: 0, thorns: 0 },
+  { id: '222', name: '222: Vertical Columns', hp: 999, thorns: 0 },
+  { id: '223', name: '223: Stepping Stones', hp: 999, thorns: 0 },
+  { id: '224', name: '224: Tiled Floor', hp: 999, thorns: 0 },
+  { id: '225', name: '225: Close Grid', hp: 999, thorns: 0 },
+  { id: '226', name: '226: Staggered Floor', hp: 999, thorns: 0 },
+  { id: '227', name: '227: Wide Floor', hp: 999, thorns: 0 },
+  { id: '228', name: '228: Clearing Floor', hp: 999, thorns: 0 },
   { id: '999', name: '999: Dark Tyrant', hp: 999, thorns: 0 },
+  { id: '1001', name: '1001: Layout Laboratory', hp: 0, thorns: 0 },
   { id: '1000', name: '1000: Dusk Dragon', hp: 0, thorns: 0 },
+  { id: '1002', name: '1002: team4star', hp: 0, thorns: 0 },
+  { id: '1004', name: '1004: truefourstar', hp: 0, thorns: 0 },
+  { id: '1005', name: '1005: Keru Invoke', hp: 0, thorns: 0 },
+  { id: '1006', name: '1006: Rarity Showcase', hp: 0, thorns: 0 },
+  { id: '1007', name: '1007: Opening Pull', hp: 0, thorns: 0 },
+  { id: '1008', name: '1008: Brace for Deep Breath', hp: 0, thorns: 0 },
+  { id: '1009', name: '1009: Break the Dragon', hp: 0, thorns: 0 },
+  { id: '1010', name: '1010: AP Engine', hp: 0, thorns: 0 },
+  { id: '1012', name: '1012: Keru Upkeep', hp: 0, thorns: 0 },
+  { id: '111', name: '111: partycomp', hp: 0, thorns: 0 },
+  { id: '100', name: '100: Mote of Darkness', hp: 0, thorns: 0 },
+  { id: '101', name: '101: Two Motes', hp: 0, thorns: 0 },
+  { id: '102', name: '102: Frost Sentry', hp: 0, thorns: 0 },
+  { id: '103', name: '103: Three Motes', hp: 0, thorns: 0 },
+  { id: '104', name: '104: Rime Pair', hp: 0, thorns: 0 },
+  { id: '105', name: '105: Frost Warden', hp: 0, thorns: 0 },
 ] as const;
 export type CombatSandboxScenarioId = typeof COMBAT_SANDBOX_SCENARIOS[number]['id'];
+/** 1004 truefourstar and its Keru Invoke copies (1005–1010, 1012) share their board and Hero foundation. */
+export const isTruefourstar = (id?: string) => id === '1004' || isKeruInvokeScenario(id);
+/** Hero's hand holds Keru invoke cards: 1005, the 1006–1009 rarity scenarios, 1010 AP Engine and 1012 Keru Upkeep. */
+export const isKeruInvokeScenario = (id?: string) => ['1005', '1006', '1007', '1008', '1009', '1010', '1012', '111', '100', '101', '102', '103', '104', '105'].includes(id ?? '');

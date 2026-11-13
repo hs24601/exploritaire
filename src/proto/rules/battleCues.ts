@@ -85,8 +85,12 @@ export const cueSeconds = (cue: BattleCue) => cue.delay + CUE_SECONDS[cue.kind =
 
 /** What the arena shows: every unit still on the field (fallen ones included) and the recent events to cue. */
 export type BattleScene = {
+  darknessSurge?: boolean;
   khadRoot?: boolean;
+  verticalTableau?: { columns: { id: string; rank: number; reachable: boolean; selected: boolean }[][]; foundations: { party: string; enemy: string }; tiled?: string; stepping?: { stand: [number,number]; radius: number; enemy?: { stand: [number,number]; radius: number }; ghost?: { stand: [number,number]; radius: number } } };
   sandboxSession?: string;
+  /** Changes on battle restart, independently of solver resets at turn handoff. */
+  battleSession?: string;
   weedOptions?: KhadWeedOptions;
   proceduralSlimeComparison?: boolean;
   /** Hero standing at the low camera tier uses the orbit v1 slice (docs/art/hero-orbit-v1.md). */
@@ -104,6 +108,7 @@ export const sceneOf = (battle: BattleState, aim?: { actorId: string; foeId: str
       const preview = aim && !battle.result ? previewAttack(battle, aim.actorId, actor.id) : null;
       const focused = Boolean(preview && aim?.foeId === actor.id);
       return { id: actor.id, team: 'party' as const, down: actor.hp <= 0,
+        ...(battle.experiment?.layout === 'position' ? { position: [actor.id==='dem'?-4:-3, (battle.experiment.position-2.5)*.8] as const } : {}),
         targeting: preview ? focused ? 'focused' as const : 'valid' as const : undefined,
         markers: { health: { current: actor.hp, max: actor.maxHp, preview: focused ? preview!.hp.after : undefined } } };
     }),

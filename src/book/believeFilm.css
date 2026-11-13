@@ -1,0 +1,5 @@
+.believe-page #book-stage > :not(#book-error),.believe-page #book-navigator,.believe-page #book-toolbar,.believe-page #book-loading { visibility:hidden; }
+.believe-page #book-loading {visibility:visible;background:#080a10 url('/assets/runtime/book/believe/poster.webp') center/cover no-repeat;}
+.believe-page #believe-film {position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2;background:#080a10;}
+.believe-page #book-error {position:fixed;z-index:30;visibility:visible;}
+.believe-page #book-loading {z-index:20;}

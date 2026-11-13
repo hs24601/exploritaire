@@ -9,3 +9,5 @@ Follow the user's current instructions when they change the project baseline. Pr
 Browser testing is approved for Exploritaire when a browser test is needed and it will not take mouse control away from the human user during the test (for example the desktop app's built-in browser pane or headless Playwright). This overrides the parent `C:\dev\AGENTS.md` browser restriction for this project only.
 
 Implement authorized work through completion without adding unnecessary confirmation steps. Report relevant changes, actual validation, and remaining limitations plainly.
+
+For image generation, read [art.md](./art.md) and follow its current authoring standard and ImageGen reference, prompting and visual review workflow. Use the specified Hero painting as an actual style reference, alongside any separate subject or pose references.

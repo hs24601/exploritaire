@@ -1,0 +1,395 @@
+{
+  "assets": [
+    {
+      "references": [
+        {
+          "path": "public/assets/runtime/ui/stickers/snowflake-v1/face.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "032140ba0fb802ab63ac370c0c7b09f3ba8ba78adc7b02f2fb9511e0c69759b8",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: NEUTRAL FRIENDLY, both oval eyes open and looking directly forward, small relaxed closed smile, soft coral cheek dabs. Exactly one face.",
+      "height": 1254,
+      "file": "neutral.png",
+      "frame": 0
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "63d017cd9cce7684e15f5c7e629e0253f01bb225df4c8e8a4bd64e0e1c4bae87",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: CURIOUS INTEREST: both eyes open, pupils glancing slightly upward to viewer right, one restrained raised brow, small intrigued smile. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "curious.png",
+      "frame": 1
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "3c089b7722a1f7af17d9cbb650bae493e3cea75c1a7f0a3257b0293409ae6c68",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: HAPPY: both eyes bright open looking forward, warm open smile with coral tongue, friendly blush. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "happy.png",
+      "frame": 2
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "ccb8df384f9b46a0e1661014f794ff3d1fe45bae3da58c2abc0f8f067f6db87c",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: SAD: both eyes open with gentle drooping upper lids, sympathetic inward brows, small downturned mouth, no tears. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "sad.png",
+      "frame": 3
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "4a7c352f0727fa599ac39392bf159b8bc35579e3fba09a01b1a8a1c04526da15",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: SURPRISED: both eyes wide and forward, raised simple brows, small round O mouth. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "surprised.png",
+      "frame": 4
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "f37815f327e7cf0a2bc5685933d49f65473cddf8ba2b3a124b22f8ae909e1d24",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: DELIGHTED LAUGH: joyful closed crescent eyes and broad open laughing mouth with coral tongue. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "delighted.png",
+      "frame": 5
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "8bac5a29b28e964f9e74eceb20dd10614a89794779fed7c31145d2dfdc548c56",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: WORRIED: both eyes glance slightly sideways, raised inward brows and small uncertain wavy mouth, tender not frightened. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "worried.png",
+      "frame": 6
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "86d4514bbc5b07457e1ce9928a49ff36bfa380dea313abc41f1f504f8ac0bb82",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: DETERMINED: both eyes forward with slightly angled confident upper lids and small resolute smile, never hostile. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "determined.png",
+      "frame": 7
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "8ed287010105e053fd2053f8b74279ae753d1172d2371ec7fa2c650eb481ae8a",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: SLEEPY: both lids lowered halfway, tiny relaxed open mouth, drowsy and content. Preserve feature anchors. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "sleepy.png",
+      "frame": 8
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "1f1da0ba5ac9430dd15fdfaa466027c79475ac55a04be2686537eef1ca7b18bf",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: CONTENT: both eyes closed in relaxed shallow happy arcs and small closed smile, resting peaceful expression. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "content.png",
+      "frame": 9
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "ae2a2216b2d94338b8ef98455659702f300c78818f9c42d31c811e1978a7214c",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: LEFT-EYE WINK (viewer left): left eye closed angular wink, right eye fully open and looking forward, playful open smile with tongue. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "wink-left.png",
+      "frame": 10
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "cd446599fa34b368cb4bfe6465d73ebeaad6e05ccab5b5db3e71200b79f0786b",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: RIGHT-EYE WINK (viewer right): right eye closed angular wink, left eye fully open and looking forward, playful open smile with tongue. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "wink-right.png",
+      "frame": 11
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "aa44eb669608403ce961308901141205f218af826bfddd329747cd7f514c380a",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: HALF BLINK TRANSITION: both oval eyes half closed with thick soft descending upper lids and visible lower pupil fragments. Keep neutral mouth and cheek dabs unchanged. This is a natural blink intermediate, not angry/sleepy. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "blink-half.png",
+      "frame": 12
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "70043da05b4775f4e8a573a87f99ff656e28544204db0c8187ba265420f89f8d",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: FULL BLINK TRANSITION: both eyes fully closed as soft shallow ink arcs at the original eye centers; eyes' whites and pupils absent. Keep neutral mouth and cheeks unchanged. This is a brief relaxed natural blink. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "blink-closed.png",
+      "frame": 13
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "ef359cef9988a8ccc734a366a0e1554b9c3656b208df9aea20c00306785f3cf9",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: LOOK VIEWER LEFT: both eyes fully open with pupils looking clearly left together; eye outlines, neutral mouth, cheeks and feature anchors unchanged. Do not move the entire eyes. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "look-left.png",
+      "frame": 14
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "faa76cd93aaa14d2f0b9e323fecc6d92c9d12117c5341ff4df1ac180dc5b9f11",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: LOOK VIEWER RIGHT: both eyes fully open with pupils looking clearly right together; eye outlines, neutral mouth, cheeks and feature anchors unchanged. Do not move entire eyes. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "look-right.png",
+      "frame": 15
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "acc754fc5209ef6718c22690987c50ccf36dfc2589078320d7477c23001889d4",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: LOOK UP: both eyes fully open with pupils looking clearly upward together; outlines, neutral mouth, cheeks and anchors unchanged. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "look-up.png",
+      "frame": 16
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "35f67944f725b2647452f298679e0f2a08f524787b218347a007e9960a6a8bf5",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: LOOK DOWN: both eyes fully open with pupils looking clearly downward together; outlines, neutral mouth, cheeks and anchors unchanged. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "look-down.png",
+      "frame": 17
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "051a72c580bfc4d806d48c18a830f6e9d856c092807290098daedddd2f0545f9",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: LOOK UP AND VIEWER LEFT: both open eyes with pupils looking clearly up-left together, not cross-eyed; keep outlines, neutral mouth, cheeks and all anchors unchanged. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "look-up-left.png",
+      "frame": 18
+    },
+    {
+      "references": [
+        {
+          "path": "public/assets/sources/ui/stickers/snowflake-expressions-v2/neutral.png",
+          "role": "Face identity and exact full-canvas registration"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Actual Hero watercolor paint style"
+        }
+      ],
+      "sha256": "dd9b18704b316eded73ec077daa7cb15a016b0819fa6ff216bb0872f014118ec",
+      "width": 1254,
+      "prompt": "Use case: identity-preserve. Asset: one registered transparent FACE-ONLY overlay for Flurry the snowflake sticker. Reference 1 is the exact existing face layer and registration target. Reference 2 is the required actual Hero painting, paint-medium reference ONLY, never copy dog/forest/berries. Keep Flurry's simple black and ivory indie-comic facial ink geometry, coral watercolor blush and hand-painted gouache edges, readable like reference1 with restrained highlights. Reuse the existing eyes' style; no glossy 3D eyes or new character identity. Square canvas same full-frame registration as reference1: eyes centered near normalized (0.385,0.425) and (0.615,0.425), cheeks near (0.325,0.525) and (0.665,0.525), mouth near (0.50,0.555). Facial ink occupies only central ~42% of canvas width and ~26% height. Keep original huge transparent margins, do NOT enlarge, recenter or tightly crop. Genuine alpha everywhere outside the facial marks, including between eyes/cheeks/mouth; ivory whites, tongue and blush marks opaque. Paint ONLY eyes, mouth, cheek dabs and restrained brows if needed. NO head, skin, snowflake, ice backing, blue wash behind features, sticker outline, shadows, background, labels or text. Expression: LOOK UP AND VIEWER RIGHT: both open eyes with pupils looking clearly up-right together, not cross-eyed; keep outlines, neutral mouth, cheeks and all anchors unchanged. Exactly one registered face, matching reference 1 scale and placement.",
+      "height": 1254,
+      "file": "look-up-right.png",
+      "frame": 19
+    }
+  ],
+  "version": 2,
+  "generator": "Built-in ImageGen",
+  "runtime": {
+    "frames": [
+      "neutral",
+      "curious",
+      "happy",
+      "sad",
+      "surprised",
+      "delighted",
+      "worried",
+      "determined",
+      "sleepy",
+      "content",
+      "wink-left",
+      "wink-right",
+      "blink-half",
+      "blink-closed",
+      "look-left",
+      "look-right",
+      "look-up",
+      "look-down",
+      "look-up-left",
+      "look-up-right"
+    ],
+    "rows": 5,
+    "columns": 4,
+    "file": "public/assets/runtime/ui/stickers/snowflake-expressions-v2/faces.png",
+    "tile": 384
+  },
+  "registration": "Original full square canvas retained. Atlas cells preserve normalized feature positions. No generated alpha replaced."
+}

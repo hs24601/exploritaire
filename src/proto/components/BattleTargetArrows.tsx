@@ -79,7 +79,9 @@ export function BattleTargetArrows({ battle }: { battle: BattleState }) {
       <div className="battle-target-badge" data-actor={arrow.actorId}>← {arrow.name}</div>
     </foreignObject>)}
     {arrows.filter(arrow=>arrow.enemy && arrow.badge).map(arrow=>{
-      const foe=battle.foes.find(unit=>unit.id===arrow.actorId)!;
+      // Layout arrows can survive one render when a scenario swaps the roster.
+      const foe=battle.foes.find(unit=>unit.id===arrow.actorId);
+      if (!foe) return null;
       return <foreignObject key={`intent-${arrow.actorId}`} className="battle-target-intent" x={Math.max(0,arrow.badgeX-100)} y={arrow.badgeY-14} width="200" height="32">
         <EnemyIntentBadge route foe={foe} target={victim?.name ?? null} targetId={victim?.id} enemyTurn={battle.turn==='enemy'} tutorialIntent={battle.tutorial?tutorialIntent(foe,victim?.name ?? null,battle):undefined}/>
       </foreignObject>;

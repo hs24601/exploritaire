@@ -1,0 +1,67 @@
+{
+  "generator": "Built-in ImageGen",
+  "prompt": "Use case: illustration-story, one isolated game sprite. Paint Hero, a small fluffy tricolor herding dog standing naturally, from directly behind with the camera looking down from 55 degrees above the horizontal, yaw exactly 180 degrees behind her direction of travel. Image 1 is Hero's approved berry painting and the actual STYLE reference: hand-painted storybook watercolor with softly merging diluted washes, broad varied pigments and loosely grouped markings. Image 2 is the current lower rear stance and identity reference: use the same paired ear shape, white collar chevron, smoky merle saddle, copper thighs, white socks and balanced standing posture. Image 3 is the actual elevated rear-three-quarter standing sprite, an elevation and proportional reference only; rotate its yaw until the two hind paws are symmetrical and the spine points straight into the frame. Image 4 is the elevated rear gait sprite, a perspective cue only; do not copy its stepping feet. Clearly show the TOP of her head and shoulders and a long visible top plane of the back. Nose tip may peek out at the far upper edge, with no eyes or facial expression visible. Rear hocks are short and foreshortened, with both planted hind feet appearing at the same level. Hind toes point directly away into depth, occluded by the ankles, with two small smooth rounded cream heels and no pads, scallops or toe creases facing us. Front feet can be naturally hidden. The rump ends in a short organic bobtail close against her coat. Avoid upright rear silhouette, pure overhead view, sitting posture, long tail, large rear feet, exaggerated head or digital fur detail. One fully contained centered silhouette on true transparent alpha, opaque pale fur, no floor, shadow, props, border, text, or scenery.",
+  "references": [
+    {
+      "role": "style",
+      "file": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
+    },
+    {
+      "role": "identity and neutral stance",
+      "atlas": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "rect": [
+        55,
+        1080,
+        183,
+        273
+      ]
+    },
+    {
+      "role": "elevation and proportions",
+      "atlas": "public/assets/runtime/characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "rect": [
+        41,
+        753,
+        258,
+        254
+      ]
+    },
+    {
+      "role": "elevated rear perspective",
+      "atlas": "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-walking-high-body-v3.png",
+      "rect": [
+        86,
+        1540,
+        134,
+        261
+      ]
+    }
+  ],
+  "poseReferencePreparation": "Each sprite rectangle was cropped and enlarged to 2x.",
+  "source": {
+    "file": "hero-standing-rear-high-source-v5.png",
+    "sha256": "22561dbde67f1f02f1909d4a850d6989cb0d05df9d12a9a037c9b8e1d476a8b5"
+  },
+  "runtime": {
+    "file": "public/assets/runtime/characters/hero/rig/watercolor/v5/hero-standing-rear-high-v5.png",
+    "sha256": "f452ec3962127c6dfb0381b32394f0eb569969b0955867b557b94106550eb16e",
+    "size": [
+      192,
+      270
+    ],
+    "sourceCrop": [
+      200,
+      70,
+      794,
+      1404
+    ],
+    "paintSize": [
+      132,
+      258
+    ],
+    "offset": [
+      30,
+      11
+    ]
+  }
+}

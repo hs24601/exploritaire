@@ -1,6 +1,7 @@
+import { FrostDemiSprite } from './FrostDemiSprite';
 import { ActorHoloCard } from './ActorHoloCard';
 import { gameTime } from '../../gameTime';
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ABILITIES, MAX_CHARGE, SPIRITS, nextBreakpoint, type Attack } from '../rules/battleAbilities';
 import type { AttackPreview, BattleActor, BattleEvent, BattleFoe, Trap } from '../rules/battle';
 import { apCap, staggerVulnerability, staggerThreshold } from '../rules/battle';
@@ -10,7 +11,14 @@ import './BattleUnits.css';
 import { HeroEmoji } from './HeroEmoji';
 import { MochiEmoji } from './MochiEmoji';
 import { BanksEmoji } from './BanksEmoji';
+import { heroEmojiImage } from '../heroEmojis';
+import { mochiEmojiImage } from '../mochiEmojis';
+import { banksEmojiImage } from '../banksEmojis';
+import { KeruExpression } from './KeruExpression';
+import { useKeruBoard } from './KeruPourCast';
 import { ACTOR_HOLO_ART } from '../art/actorCardArt';
+import { ElementGlyph } from './ElementSuits';
+import type { Element } from '../rules/elementSuits';
 
 const pct = (value: number, max: number) => `${Math.max(0, Math.min(100, (value / max) * 100))}%`;
 const EFFECT_ICON = { burn: '🔥', bleed: '🩸', stun:'Stunned ', grip:'Held ', exposed:'Exposed ' } as const;
@@ -20,18 +28,32 @@ const EFFECT_ICON = { burn: '🔥', bleed: '🩸', stun:'Stunned ', grip:'Held '
  * (HP, timer knocked back) shows as a fading band, a gain (stagger) as a
  * bright band.
  */
-function Bar({ kind, value, max, preview, label, children }: {
-  kind: 'hp' | 'stagger' | 'timer'; value: number; max: number; preview?: number; label: string; children?: ReactNode;
+function Bar({ kind, value, max, preview, label, children, tempHp = 0, events, unitId, turnKey }: {
+  kind: 'hp' | 'stagger' | 'timer'; value: number; max: number; preview?: number; label: string; children?: ReactNode; tempHp?: number; events?: readonly BattleEvent[]; unitId?: string; turnKey?: string;
 }) {
+  const [trail, setTrail] = useState(value);
+  const previous = useRef({ value, turnKey, seen: events?.[events.length-1]?.id ?? 0 });
+  useEffect(() => {
+    const old=previous.current, fresh=events?.filter(event=>event.id>old.seen && event.targetId===unitId) ?? [];
+    const chip=fresh.reduce((sum,event)=>sum+(event.chipDamage ? event.amount ?? 0 : 0),0);
+    if (turnKey !== old.turnKey) setTrail(value);
+    else if (value !== old.value) setTrail(current=>Math.min(max,Math.max(value,current + value-old.value + Math.min(chip,Math.max(0,old.value-value)))));
+    previous.current={value,turnKey,seen:events?.[events.length-1]?.id ?? 0};
+  },[value,max,events,unitId,turnKey]);
   const shown = preview ?? value;
   const low = Math.min(value, shown), high = Math.max(value, shown);
   return <span className="battle-bar" data-bar={kind} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.round(value)}>
-    <span className="battle-bar__fill" style={{ width: pct(low, max) }} />
+    <span className="battle-bar__fill" style={{ width: pct(low, max + tempHp) }} />
+    {kind==='hp' && <span className="battle-bar__chip-trail" aria-hidden="true" style={{left:pct(value,max+tempHp),width:pct(Math.max(0,trail-value),max+tempHp)}}/>}
+    {tempHp>0 && <span className="battle-bar__temp-hp" aria-label={`${tempHp} temporary HP`} style={{left:pct(value,max+tempHp),width:pct(tempHp,max+tempHp)}}/>}
     {preview !== undefined && high > low && <span className="battle-bar__preview" data-direction={shown < value ? 'loss' : 'gain'}
       style={{ left: pct(low, max), width: pct(high - low, max) }} />}
     {children && <span className="battle-bar__text">{children}</span>}
   </span>;
 }
+
+/** Only explicit misses count: zero damage can also mean a blocked attack. */
+const missedAttack=(event:BattleEvent)=>['enemy-hit','hit'].includes(event.kind) && /\b(?:miss(?:ed)?|evaded)\b/i.test(event.label ?? '');
 
 /** Floating numbers for fresh events on one unit. */
 function useFloaters(events: readonly BattleEvent[], unitId: string) {
@@ -47,7 +69,7 @@ function useFloaters(events: readonly BattleEvent[], unitId: string) {
     const fresh = events.filter((event) => event.id > seen.current);
     if (!fresh.length) return;
     seen.current = fresh[fresh.length - 1]!.id;
-    const mine = fresh.filter((event) => event.targetId === unitId && (event.amount || ['stagger', 'ko', 'down', 'take', 'snatch'].includes(event.kind)));
+    const mine = fresh.filter((event) => event.targetId === unitId && (event.amount || missedAttack(event) || ['stagger', 'ko', 'down', 'take', 'snatch'].includes(event.kind)));
     if (!mine.length) return;
     setFloaters((current) => [...current, ...mine].slice(-6));
     const timer = gameTime.setTimeout(() => {setFloaters((current) => current.filter((event) => !mine.includes(event)));timers.current.delete(timer);}, 1100);
@@ -58,15 +80,19 @@ function useFloaters(events: readonly BattleEvent[], unitId: string) {
 
 function Floaters({ events, unitId }: { events: readonly BattleEvent[]; unitId: string }) {
   const floaters = useFloaters(events, unitId);
-  return <span className="battle-floaters" aria-hidden="true">
-    {floaters.map((event, i) => <span key={event.id} className="battle-floater" data-kind={event.kind} style={{ '--i': i % 3 } as CSSProperties}>
+  return <span className="battle-floaters" aria-live="polite">
+    {floaters.map((event, i) => <span key={event.id} className="battle-floater" data-kind={event.kind} data-miss={missedAttack(event) || undefined} style={{ '--i': i % 3 } as CSSProperties}>
       {event.kind === 'stagger' ? 'BREAK!' : event.kind === 'ko' ? 'KO' : event.kind === 'down' ? 'DOWN' : event.kind === 'take' ? `ate ${rankLabel(Number(event.label))}`
-        : event.kind === 'snatch' ? 'Snatch +1' : event.kind === 'trap' ? `Trap -${event.amount}` : `-${event.amount}`}
+        : event.kind === 'snatch' ? 'Snatch +1' : missedAttack(event) ? '✦ Missed! ✦' : event.kind === 'trap' ? `Trap -${event.amount}` : event.kind === 'heal' ? `+${event.amount}${event.label?.endsWith('AP') ? ' AP' : ''}` : `-${event.amount}`}
     </span>)}
   </span>;
 }
 
-export function FoeCard({ foe, target, targetId, preview, focus, events, sprite, aiming, interaction, targeters, enemyTurn, duskwoodBark = false, statusIcons, tutorialIntent }: {
+export function FoeCard({ foe, target, targetId, preview, focus, events, sprite, aiming, interaction, targeters, enemyTurn, duskwoodBark = false, statusIcons, tutorialIntent, hideFoundationValue=false, numericRanks=false, turnKey, compactVitals=false }: {
+  compactVitals?: boolean;
+  turnKey?: string;
+  hideFoundationValue?: boolean;
+  numericRanks?: boolean;
   duskwoodBark?: boolean;
   /** Tutorial statuses and enemy Momentum, shown in the buff row. */
   statusIcons?: ReactNode;
@@ -123,21 +149,21 @@ export function FoeCard({ foe, target, targetId, preview, focus, events, sprite,
     data-preview={preview ? (focus ? 'focus' : 'faint') : undefined} disabled={!alive || !aiming}
     aria-label={`${foe.name}: ${foe.hp} of ${foe.profile.maxHp} HP${staggered ? ', staggered' : ''}. Intent: ${intent}${targeters?.length?`. Targeted by ${targeters.map(actor=>actor.name).join(' and ')}`:''}${preview ? `. ${preview.attack.name} would deal ${preview.damage}${preview.ko ? ' and defeat it' : ''}${preview.staggers ? ' and stagger it' : ''}` : ''}`}
     {...interaction}>
-    <span className="battle-foe__figure">{sprite}{staggered && targeters !== undefined && <span className="battle-stagger-halo" aria-hidden="true"><span className="battle-stagger-orbit"><i>✦</i><i>✧</i><i>✦</i></span></span>}<Floaters events={events} unitId={foe.id} /></span>
+    <span className="battle-foe__figure" data-dark-demi-figure={foe.darkDemi || undefined}>{foe.darkDemi?<FrostDemiSprite dark/>:sprite}{staggered && targeters !== undefined && <span className="battle-stagger-halo" aria-hidden="true"><span className="battle-stagger-orbit"><i>✦</i><i>✧</i><i>✦</i></span></span>}<Floaters events={events} unitId={foe.id} /></span>
     <span className="battle-foe__name">{foe.name}{foe.eye && foe.hp > 0 && targeters === undefined ? <span className="battle-foe__eye"> · eyes {rankLabel(foe.rank)}±1</span> : null}</span>
-    {alive ? <span className="battle-foe__bars">
-      <Bar kind="hp" value={foe.hp} max={foe.profile.maxHp} preview={show?.hp.after} label={`${foe.name} HP`}>
+    {alive || events.some(event=>event.targetId===foe.id && event.chipDamage) ? <span className="battle-foe__bars">
+      <Bar kind="hp" value={foe.hp} max={foe.profile.maxHp} preview={show?.hp.after} events={events} unitId={foe.id} turnKey={turnKey} label={`${foe.name} HP`}>
         {show ? `${foe.hp}→${show.hp.after}` : `${foe.hp}/${foe.profile.maxHp}`}
       </Bar>
       <Bar kind="stagger" value={targeters === undefined && staggered ? staggerThreshold(foe) : foe.stagger} max={staggerThreshold(foe)} preview={show && !show.vulnerable ? show.stagger.after : undefined} label={`${foe.name} stagger`} >
-        {targeters !== undefined ? `Stagger ${foe.stagger.toFixed(1)}/${staggerThreshold(foe)}` : null}
+        {targeters !== undefined ? compactVitals ? `${Number(foe.stagger.toFixed(1))}/${staggerThreshold(foe)}` : `Stagger ${foe.stagger.toFixed(1)}/${staggerThreshold(foe)}` : null}
       </Bar>
       {targeters === undefined && <Bar kind="timer" value={foe.timer} max={1} preview={show && !staggered ? show.timer.after : undefined} label={`${foe.name} attack timer`}>
         {staggered ? `⏸ ${foe.staggered.toFixed(1)}s · ×${staggerVulnerability(foe)}` : target ? `→ ${target}` : ''}
       </Bar>}
       
     </span> : <span className="battle-foe__defeated">Defeated</span>}
-    {targeters !== undefined && <FoundationValue rank={foe.rank} />}
+    {targeters !== undefined && !hideFoundationValue && <FoundationValue numericRanks={numericRanks} rank={foe.rank} />}
     {alive && <span className="battle-foe__chips">
       {staggered && targeters === undefined && <span className="battle-chip" data-chip="staggered">STAGGERED</span>}
       {preview?.ko && <span className="battle-chip" data-preview-chip="ko">KO</span>}
@@ -204,10 +230,10 @@ export function AbilityCard({ actor, attack, armed, dragging, interaction, disab
   </button>;
 }
 
-export function PartyVitals({ actor, count, events, targeted, preview }: { actor: BattleActor; count: number; events: readonly BattleEvent[]; targeted: boolean; preview?: number }) {
+export function PartyVitals({ actor, count, events, targeted, preview, turnKey }: { actor: BattleActor; count: number; events: readonly BattleEvent[]; targeted: boolean; preview?: number; turnKey?: string }) {
   return <span className="battle-vitals" data-targeted={targeted || undefined}>
     <span className="proto-foundation-count-token" aria-label={`Collected cards ${count}`}>▤{count}</span>
-    <Bar kind="hp" value={actor.hp} max={actor.maxHp} preview={preview} label={`${actor.name} HP`}>{actor.hp > 0 ? `${actor.hp}/${actor.maxHp}` : 'Unconscious'}</Bar>
+    <Bar kind="hp" value={actor.hp} max={actor.maxHp} preview={preview} events={events} unitId={actor.id} turnKey={turnKey} label={`${actor.name} HP`}>{actor.hp > 0 ? `${actor.hp}/${actor.maxHp}` : 'Unconscious'}</Bar>
     {actor.spirits.map((id) => SPIRITS[id] && <span key={id} className="battle-chip" data-spirit={id} title={`${SPIRITS[id].name}: ${SPIRITS[id].blurb}`}>{SPIRITS[id].glyph}{SPIRITS[id].name}</span>)}
     <Floaters events={events} unitId={actor.id} />
   </span>;
@@ -241,34 +267,75 @@ export function DisarmedBadge({name}:{name:string}) {
 }
 /** Each Kin's banked AP (pays for its own ability cards), shown in the foundation's meter slot. */
 function ApMeter({actor}:{actor:BattleActor}) {
+ const pipRows=useRef<HTMLSpanElement>(null);
  const cap=apCap(actor),ap=Math.min(Math.floor(actor.charge),cap);
- return <span className="battle-foundation__ap" role="meter" aria-label={`${actor.name} AP`} aria-valuemin={0} aria-valuemax={cap} aria-valuenow={ap}>
-  <b>AP {ap}</b><span className="battle-foundation__ap-pips" aria-hidden="true">{Array.from({length:cap},(_,i)=><i key={i} data-on={i<ap || undefined}/>)}</span>
+ // 1012 Keru Upkeep: what Hero's Keru will cost as the turn ends; red when this AP won't cover it.
+ const upkeep=actor.keruKit==='upkeep'?Object.values(actor.harness ?? {}).reduce<number>((sum,tier)=>sum+(tier ?? 0)+1,0):null;
+ // Slots: the label row (AP n/cap, then the upkeep chip) sits above its own pip row, so nothing lands on a pip.
+ // Keru rarity scenarios: Hero's meter is the pour source; drag from it onto a Keru (KeruPourCast).
+ const board=useKeruBoard(),pour=actor.id==='hero' && board?board.pourSource():{};
+ // 1012: the pips upkeep will take are marked reserved at the left end of the lit run;
+ // AP still missing shows as red empty pips, +N past the cap. A pour over a Keru previews the split at its next tier.
+ const split=actor.id==='hero' && upkeep!==null?board?.upkeepPreview ?? board?.upkeep ?? null:null,lit=split?split.ap:ap,owed=split?split.total:upkeep;
+ const pipKind=(i:number)=>!split?undefined:i<split.reserved?'reserved':i<split.ap?undefined:i<split.ap+split.short?'short':undefined;
+ const missing=split?split.short+split.overflow:0;
+ const pipNote=!split || !(split.reserved || missing)?undefined:[split.reserved?`${split.reserved} of your AP is reserved for upkeep`:'',missing?`${missing} AP short of paying every Keru (red pips)`:''].filter(Boolean).join('; ');
+ useEffect(()=>{const node=pipRows.current;if(!node)return;const measure=()=>{const rows=new Set([...node.querySelectorAll('i')].map(p=>p.offsetTop)).size;const foundation=node.closest<HTMLElement>('.battle-field__foundation'),group=node.closest<HTMLElement>('.keru-foundation-group');if(foundation)foundation.dataset.apRows=String(rows);if(group)group.dataset.apRows=String(rows);};measure();const observer=new ResizeObserver(measure);observer.observe(node);return()=>observer.disconnect();},[cap]);
+ if(cap===0)return null;
+ return <span {...pour} className="battle-foundation__ap" role="meter" aria-label={`${actor.name} AP`} aria-valuemin={0} aria-valuemax={cap} aria-valuenow={ap}>
+  <span className="battle-foundation__ap-head"><b className="battle-foundation__ap-label">AP {ap}/{cap}</b>{owed!==null && <span className="battle-foundation__upkeep" data-short={owed>lit || undefined} role="img" aria-label={`Upkeep ${owed} AP at the end of the turn${owed>lit?', more than Hero has':''}`} data-game-tooltip={`Upkeep ${owed} AP, paid at the end of the party turn${owed>lit?'. Hero has less than that, so some Keru will be dismissed.':'.'}`}>↻{owed}</span>}</span>
+  <span ref={pipRows} className="battle-foundation__ap-pips" data-preview={split && split===board?.upkeepPreview || undefined} {...(pipNote?{role:'img','aria-label':pipNote,'data-game-tooltip':pipNote}:{'aria-hidden':true})}>
+   {Array.from({length:cap},(_,i)=><Fragment key={i}>{split && i===(split.reserved ? 0 : split.ap) && (split.reserved || split.short)>0 && <b className="battle-foundation__ap-reserve-mark" data-short={!split.reserved || undefined} aria-hidden="true">↻</b>}<i data-on={i<lit || undefined} data-upkeep={pipKind(i)}/></Fragment>)}
+   {split && split.overflow>0 && <b className="battle-foundation__ap-overflow" aria-hidden="true">+{split.overflow}</b>}
+  </span>
  </span>;
 }
-function FoundationValue({rank}:{rank:number}) {return <span className="battle-foundation__value" aria-label={'Foundation card value '+(rank?rankLabel(rank):'empty')}>{rank?rankLabel(rank):'—'}</span>;}
+function FoundationValue({rank,wild=false,numericRanks=false}:{rank:number;wild?:boolean;numericRanks?:boolean}) {return <span className="battle-foundation__value" aria-label={'Foundation card value '+(wild?'wild starter':rank?(numericRanks?String(rank):rankLabel(rank)):'empty')}>{wild?'★':rank?(numericRanks?String(rank):rankLabel(rank)):'—'}</span>;}
 /** Local, bounded reactions; damage takes priority over a simultaneous attack/Thorns hit. */
-function useFoundationEmotion(actor:BattleActor,events:readonly BattleEvent[],paused:boolean,noLegalMoves:boolean) {
+function useFoundationEmotion(actor:BattleActor,events:readonly BattleEvent[],paused:boolean,noLegalMoves:boolean,hero1012=false,highlightActive=false,demiDefault=false) {
  const seen=useRef(events[events.length-1]?.id ?? 0);
  const remaining=useRef(0),activeSerial=useRef(0);
- const [reaction,setReaction]=useState<{emotion:'stars'|'upset'|'heartEyes';serial:number}|null>(null);
+ const [reaction,setReaction]=useState<{emotion:'stars'|'upset'|'heartEyes'|'happy';serial:number}|null>(null);
  useEffect(()=>{
   if(!events.length){seen.current=0;remaining.current=0;setReaction(null);return;}
   const fresh=events.filter(event=>event.id>seen.current);seen.current=events[events.length-1].id;
   const hurt=fresh.some(event=>event.targetId===actor.id && ['hit','enemy-hit','dot','down'].includes(event.kind) && ((event.amount ?? 0)>0 || event.kind==='down'));
+  const missed=fresh.some(event=>event.targetId===actor.id && missedAttack(event));
   const victory=fresh.some(event=>event.sourceId===actor.id && event.kind==='ko');
   const hit=fresh.some(event=>event.sourceId===actor.id && ['hit','stagger'].includes(event.kind));
-  if(hurt || victory || hit){remaining.current=1500;activeSerial.current=events[events.length-1].id;setReaction({emotion:hurt?'upset':victory?'heartEyes':'stars',serial:events[events.length-1].id});}
+  if(hurt || victory || hit || missed){remaining.current=1500;activeSerial.current=events[events.length-1].id;setReaction({emotion:hurt?'upset':victory?'heartEyes':missed?'happy':'stars',serial:events[events.length-1].id});}
  },[events,actor.id]);
  useEffect(()=>{
   if(!reaction || paused)return;
   const start=gameTime.now();const timer=gameTime.setTimeout(()=>{remaining.current=0;setReaction(null);},remaining.current);
   return()=>{gameTime.clearTimeout(timer);if(activeSerial.current===reaction.serial)remaining.current=Math.max(0,remaining.current-(gameTime.now()-start));};
  },[reaction,paused]);
- return actor.hp<=0?'sad':noLegalMoves?'upset':reaction?.emotion ?? 'happy';
+ return actor.hp<=0?'sad':reaction?.emotion ?? (hero1012 && highlightActive?'upsetWithSymbol':!hero1012 && noLegalMoves?'upset':hero1012 || demiDefault?'happy':'upset');
 }
-export function PlayerFoundationFace({actor,events,portraitRef,paused=false,noLegalMoves=false}:{actor:BattleActor;events:readonly BattleEvent[];portraitRef:(node:HTMLSpanElement|null)=>void;paused?:boolean;noLegalMoves?:boolean}) {
- const emotion=useFoundationEmotion(actor,events,paused,noLegalMoves);
- const face=actor.id==='hero'?<HeroEmoji emotion={emotion} label={actor.name+' · '+emotion}/>:actor.id==='mochi'?<MochiEmoji emotion={emotion} label={actor.name+' · '+emotion}/>:<BanksEmoji emotion={emotion} label={actor.name+' · '+emotion}/>;
- return <><span className="battle-foe__name">{actor.name}</span><span className="battle-foe__figure battle-field__actor-card" ref={portraitRef}><span className="battle-foundation__emoji" data-emotion={emotion}>{actor.controller==='npc'?<ActorHoloCard actorId={actor.id} name={actor.name} rank={rankLabel(actor.rank)}/>:face}</span><Floaters events={events} unitId={actor.id}/></span><span className="battle-foe__bars"><Bar kind="hp" value={actor.hp} max={actor.maxHp} label={actor.name+' HP'}>{actor.hp}/{actor.maxHp}</Bar>{actor.staggerMax?<Bar kind="stagger" value={actor.stagger??0} max={actor.staggerMax} label={actor.name+' stagger'}>{`Stagger ${actor.stagger??0}/${actor.staggerMax}`}</Bar>:<ApMeter actor={actor}/>}<span className="battle-foundation__status">{actor.hp<=0?'Down':actor.disarmed?'Disarmed':actor.rooted?'Snaring Khad Roots':actor.controller==='npc'?'NPC ally':actor.turnSpent?'Turn spent · Rearmed':'Ready'}</span></span><FoundationValue rank={actor.rank}/></>;
+export function PlayerFoundationFace({actor,holocard,biteDamage,demiExpressions=false,numericRanks=false,turnKey,leaderId,leader,events,portraitRef,paused=false,noLegalMoves=false,hero1012=false,highlightActive=false,element,elements=[]}: {actor:BattleActor;holocard?:ReactNode;biteDamage?:number;demiExpressions?:boolean;numericRanks?:boolean;turnKey?:string;leader?:BattleActor;leaderId?:import('../rules/keruLeadership').LeaderKeruId;events:readonly BattleEvent[];portraitRef:(node:HTMLSpanElement|null)=>void;paused?:boolean;noLegalMoves?:boolean;hero1012?:boolean;highlightActive?:boolean;element?:Element;elements?:Element[]}) {
+ const emotion=useFoundationEmotion(actor,events,paused,noLegalMoves,hero1012,highlightActive,demiExpressions && actor.id==='dem');
+ if(holocard)return <><span className="battle-foundation__holocard" ref={portraitRef}>{holocard}<Floaters events={events} unitId={actor.id}/></span><span className="battle-foe__bars"><Bar kind="hp" value={actor.hp} max={actor.maxHp} tempHp={actor.tempHp} label={`${actor.name} HP`}>{actor.hp}/{actor.maxHp}</Bar><ApMeter actor={actor}/></span></>;
+ if(actor.id==='aldan-seed' && leader) return <SupportKeruFace actor={leader} value={actor.rank} events={events} emotion={emotion} paused={paused} portraitRef={portraitRef} eventUnitId={actor.id} health={<>
+  <span className="battle-leader-hp" data-leader-hp={leader.id} data-game-tooltip="The active leader is protected: direct damage is received by the Aldan Seed."><Bar kind="hp" value={leader.hp} max={leader.maxHp} tempHp={leader.tempHp} label={`${leader.name} leader HP · protected by Aldan Seed`}>{leader.hp}/{leader.maxHp}</Bar></span>
+  <Bar kind="hp" value={actor.hp} max={actor.maxHp} tempHp={actor.tempHp} events={events} unitId={actor.id} turnKey={turnKey} label={`${actor.name} HP${actor.tempHp?` plus ${actor.tempHp} temporary HP`:''}`}>Seed {actor.hp}/{actor.maxHp}{actor.tempHp?` +${actor.tempHp}`:''}</Bar>
+  <ApMeter actor={actor}/>
+ </>}/>;
+ const portraitId=actor.id;
+ const face=actor.rescueCub?<FrostDemiSprite cub/>:portraitId==='snow-golem'?<span className="snow-golem-portrait" role="img" aria-label="Snow Golem">☃</span>:portraitId==='aldan-seed'?<img className="aldan-seed-mark" src="/assets/runtime/aldan/aldan-seed-watercolor-v1.png" alt="Aldan Seed · golden two-leaf sprout"/>:portraitId==='cir'?<KeruExpression keru="cir" emotion={emotion} label={actor.name+' · '+emotion}/>:portraitId==='riv'?<span className="battle-riv-placeholder" aria-label="Riv placeholder">R</span>:portraitId==='dem'?<KeruExpression keru="dem" demi={demiExpressions} emotion={emotion} label={actor.name+' · '+emotion}/>:portraitId==='hero'?<HeroEmoji emotion={emotion} label={actor.name+' · '+emotion}/>:portraitId==='mochi'?<MochiEmoji emotion={emotion} label={actor.name+' · '+emotion}/>:<BanksEmoji emotion={emotion} label={actor.name+' · '+emotion}/>;
+ const affinities=elements.length?elements:element?[element]:[];
+ return <><span className="battle-foe__name" data-element={element}>{affinities.map(e=><ElementGlyph key={e} element={e}/>)}{actor.name}{biteDamage!==undefined && <small className="bite-foundation-label">Bite · {biteDamage} damage · Free · No cooldown</small>}{leaderId && <small className="aldan-seed-leader">{leaderId.charAt(0).toUpperCase()+leaderId.slice(1)} · Leader</small>}</span>
+   <span className="battle-foe__figure battle-field__actor-card" ref={portraitRef}><span className="battle-foundation__emoji" data-emotion={emotion}>{actor.controller==='npc'?<ActorHoloCard actorId={actor.id} name={actor.name} rank={rankLabel(actor.rank)}/>:face}</span><Floaters events={events} unitId={actor.id}/></span>
+   <span className="battle-foe__bars">{leader && <span className="battle-leader-hp" data-leader-hp={leader.id} data-game-tooltip="The active leader is protected: direct damage is received by the Aldan Seed."><Bar kind="hp" value={leader.hp} max={leader.maxHp} label={`${leader.name} leader HP · protected by Aldan Seed`}>{leader.name} {leader.hp}/{leader.maxHp}</Bar></span>}<Bar kind="hp" value={actor.hp} max={actor.maxHp} tempHp={actor.tempHp} label={`${actor.name} HP${actor.tempHp?` plus ${actor.tempHp} temporary HP`:''}`}>{actor.id==='aldan-seed'?'Seed ':''}{actor.hp}/{actor.maxHp}{actor.tempHp?` +${actor.tempHp}`:''}</Bar>
+   {actor.staggerMax?<Bar kind="stagger" value={actor.stagger??0} max={actor.staggerMax} label={actor.name+' stagger'}>{`Stagger ${actor.stagger??0}/${actor.staggerMax}`}</Bar>:<ApMeter actor={actor}/>}<span className="battle-foundation__status">{actor.hp<=0?(actor.id==='aldan-seed'?'Seed destroyed':'Down'):actor.disarmed?'Disarmed':actor.rooted?'Snaring Khad Roots':actor.controller==='npc'?'NPC ally':actor.turnSpent?'Turn spent · Rearmed':'Ready'}</span></span>
+   <FoundationValue numericRanks={numericRanks} rank={actor.rank} wild={actor.id==='cir' && actor.rank===0 || actor.id==='riv' && !!actor.statuses?.some(status=>status.id==='wild')}/></>;
 }
+
+/** Personal tableau values are visible without creating another receipt foundation. */
+export function SupportKeruFace({actor,value,events,health,portraitRef,eventUnitId,emotion,paused=false}:{actor:BattleActor;value:number;events:readonly BattleEvent[];health?:ReactNode;portraitRef?:(node:HTMLSpanElement|null)=>void;eventUnitId?:string;emotion?:ReturnType<typeof useFoundationEmotion>;paused?:boolean}) {
+ const reaction=useFoundationEmotion(actor,events,paused,false);
+ const currentEmotion=actor.hp<=0?'sad':emotion ?? reaction;
+ const emoji=actor.id==='hero'?heroEmojiImage(currentEmotion):actor.id==='mochi'?mochiEmojiImage(currentEmotion):actor.id==='banks'?banksEmojiImage(currentEmotion):undefined;
+ const face=emoji?<img src={emoji} alt={actor.name}/>:actor.id==='cir' || actor.id==='dem'?<KeruExpression keru={actor.id} emotion={currentEmotion} label={actor.name+' · '+currentEmotion}/>:<span>{actor.name}</span>;
+ return <><strong className="battle-foe__name">{actor.name}</strong><span className="battle-field__actor-card" ref={portraitRef} data-keru-portrait={actor.id}>{face}</span><span className="battle-foe__bars">{health ?? <Bar kind="hp" value={actor.hp} max={actor.maxHp} label={actor.name+' HP'}>{actor.hp>0?actor.hp+'/'+actor.maxHp:'Down'}</Bar>}</span><span className="battle-foundation__value" aria-label={`${actor.name} tableau value ${rankLabel(value)}`}>{rankLabel(value)}</span><Floaters events={events} unitId={eventUnitId ?? actor.id}/></>;
+}
+

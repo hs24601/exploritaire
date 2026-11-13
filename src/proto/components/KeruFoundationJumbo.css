@@ -1,0 +1,27 @@
+.card-jumbo:has(.keru-foundation-jumbo){width:100vw;height:100dvh;transform:none;margin:0}
+.card-jumbo:has(.keru-foundation-jumbo)>.card-jumbo__close{right:18px;top:18px;z-index:100}
+.card-jumbo__face:has(>.keru-foundation-jumbo){aspect-ratio:auto;height:100%}
+.keru-foundation-jumbo{--main-w:min(54dvh,44vw,390px);--base-mini-w:clamp(80px,11dvh,105px);--mini-w:min(var(--base-mini-w),calc((var(--main-w)*88/63 - (var(--gallery-rows,3) - 1)*26px - 20px)/var(--gallery-rows,3)*63/88));--orbit-rx:min(35vw,420px);--orbit-ry:calc(var(--mini-w)*88/63 + 26px);position:relative;width:100%;height:100%;overflow:hidden;isolation:isolate;color:#f4e7ce;font:15px/1.4 Georgia,serif;background:radial-gradient(ellipse at center,#20323970,transparent 68%)}
+.keru-foundation-jumbo__main{position:absolute;width:var(--main-w);aspect-ratio:63/88;left:calc(50% - var(--main-w)/2);top:calc(50% - var(--main-w)*88/126);z-index:4;outline:none;filter:drop-shadow(0 12px 26px #0009)}
+.keru-foundation-jumbo__main>.trading-card-stage{width:100%;height:100%}
+.keru-foundation-jumbo__main:focus-visible{outline:2px solid #f1d58c;outline-offset:6px}
+.keru-foundation-jumbo__satellite{position:absolute;left:calc(50% + var(--orbit-x)*var(--orbit-rx) - var(--mini-w)/2);top:calc(50% + var(--orbit-y)*var(--orbit-ry) - var(--mini-w)*88/126);width:var(--mini-w);aspect-ratio:63/88;padding:0;border:0;background:none;color:#f3e7c9;cursor:pointer;z-index:3;transform:rotate(var(--orbit-rotation));transform-origin:center;touch-action:manipulation;filter:drop-shadow(0 5px 10px #0009)}
+.keru-foundation-jumbo__satellite:focus-visible{outline:2px solid #f0d38c;outline-offset:5px}
+.keru-foundation-jumbo__satellite:hover{z-index:6}
+.keru-foundation-jumbo__miniature{position:absolute;inset:0;display:block;pointer-events:none}
+.keru-foundation-jumbo__miniature>.trading-card-stage{width:200%;height:200%;transform:scale(.5);transform-origin:top left}
+.keru-foundation-jumbo__miniature .trading-card{width:100%;height:100%;min-height:0}
+.keru-foundation-jumbo .ice-combat-card__copy{display:none}
+.keru-foundation-jumbo__satellite-label{position:absolute;top:calc(100% + 6px);left:-15px;right:-15px;text-align:center;font:700 12px/1.15 Georgia,serif;text-shadow:0 2px 3px #000}
+.keru-foundation-jumbo__satellite-label small{display:block;color:#e9ce83;font-size:9px;margin-top:2px}
+.keru-foundation-jumbo__caption{position:absolute;bottom:12px;left:50%;translate:-50% 0;width:min(560px,82vw);text-align:center;padding:7px 12px;border:1px solid #c3ab7144;border-radius:10px;background:#0b151de8;font:14px/1.35 Georgia,serif;z-index:2;pointer-events:none}
+.keru-foundation-jumbo__caption p{margin:0}
+.keru-foundation-jumbo__caption small{font-size:10px;color:#b8c9c2}
+.keru-foundation-jumbo__sticker{margin-inline-start:8px;padding:2px 8px;border:1px solid #75a6b7;border-radius:5px;background:#1b394a;color:#e4f5fa;font:inherit;cursor:pointer;pointer-events:auto}
+.keru-foundation-jumbo__cost{padding:3px 5px;border:1px solid #d4bd83;background:#15252b;border-radius:6px;font:700 16px Georgia,serif}
+.keru-foundation-jumbo__main .trading-card__header h2{font-size:24px}
+.keru-foundation-jumbo__main :is(.bite-card-value,.bite-card-damage){display:grid;gap:3px;height:auto;text-align:center;line-height:1;padding:5px 7px}
+.keru-foundation-jumbo__main :is(.bite-card-value,.bite-card-damage) small{font:700 10px/1 sans-serif;letter-spacing:1px}
+.keru-foundation-jumbo__main :is(.bite-card-value,.bite-card-damage) b{font:800 26px/1 Georgia,serif}
+@media(max-width:600px){.keru-foundation-jumbo{--main-w:min(64vw,48dvh);--base-mini-w:min(16vw,9.5dvh);--orbit-rx:40.5vw;--orbit-ry:calc(var(--mini-w)*88/63 + 26px)}.keru-foundation-jumbo__caption{bottom:10px;font-size:12px;padding:6px 9px}.keru-foundation-jumbo__main .trading-card__header h2{font-size:20px}}
+@media(max-height:500px) and (min-width:600px){.keru-foundation-jumbo{--main-w:52dvh;--base-mini-w:max(44px,12.5dvh);--orbit-rx:35vw;--orbit-ry:calc(var(--mini-w)*88/63 + 22px)}.keru-foundation-jumbo__caption{bottom:5px;max-width:52vw;font-size:11px;padding:4px}.keru-foundation-jumbo__caption small{display:none}}

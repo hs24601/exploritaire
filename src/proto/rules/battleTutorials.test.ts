@@ -31,7 +31,10 @@ describe('tutorial scenarios', () => {
       // 018 opens locked on purpose (Focus Fire is the way in); random-deal ranges may open dead, which the pity flip covers.
       if (def.id !== '018' && !def.randomSeed) expect(state.columns.some(cards => eligibleActors(state, cards[cards.length - 1]).length > 0)).toBe(true);
       expect(state.foes.map(unit => unit.name)).toEqual(def.foes.map(entry => entry.name));
-      for (const id of def.skills) expect(canUseMomentumSkill(rich(state), id as never)).toBe(true);
+      for (const id of def.skills) {
+        const requiresCir=id==='cir-emerge' || id!=='summon-cir' && id in STATUS_SKILLS && STATUS_SKILLS[id as keyof typeof STATUS_SKILLS].actorId==='cir';
+        expect(canUseMomentumSkill(rich(state), id as never)).toBe(!requiresCir && !(def.id==='1002' && (id==='hold' || id==='summon-riv')));
+      }
       for (const insight of [def.insight.intent, def.insight.solve, def.insight.why]) expect(insight.length).toBeGreaterThan(0);
     }
   });
@@ -39,7 +42,7 @@ describe('tutorial scenarios', () => {
     const state = create('009');
     expect(state.momentum).toMatchObject({ value: 30, decayEnabled: false });
     expect(state.party.every(actor => actor.maxHp === 40)).toBe(true);
-    for (const id of Object.keys(STATUS_SKILLS)) expect(canUseMomentumSkill(state, id as never)).toBe(true);
+    for (const id of Object.keys(STATUS_SKILLS)) expect(canUseMomentumSkill(state, id as never)).toBe(id!=='summon-cir' && id!=='cir-emerge' && STATUS_SKILLS[id as keyof typeof STATUS_SKILLS].actorId!=='cir');
   });
   it('restricts abilities to the scenario hand', () => {
     expect(canUseMomentumSkill(rich(create('008')), 'bash')).toBe(false);

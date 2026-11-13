@@ -1,0 +1,139 @@
+{
+  "generator": "Built-in ImageGen",
+  "styleReference": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+  "visualFeedback": "User screenshot of the elevated rear three-quarter sprite with leftward splayed toes.",
+  "generated": {
+    "low": {
+      "file": "low-quarter-forward-paws-source.png",
+      "sha256": "422568e0ca28f6253f16771d1c0ffcf6990e72ecdaf46990c8fead9daa986c35",
+      "prompt": "Use case: precise-object-edit. In image 1, correct the three leftmost cream paws on this rear three-quarter game sprite. Image 1 is the registered edit target and pose/identity reference. Image 2 is Hero's approved berry painting, the style reference for loosely merging watercolor washes. Image 3 is the user's visual reference for the defect: the visible left paws are splayed toward screen-left. Anatomical correction: these paws extend mainly AWAY from the camera, toward the upper left into depth, parallel to Hero's head and spine. Under each ankle, show the compact smooth rounded back and side of the paw. Tuck the front of the paw under the ankle in projection, with only a very small toe tip or subtle line on the far upper-left edge, partially occluded by the ankle. Eliminate the leftward flared scalloped silhouette and all stripes across the camera-facing heel. Preserve same paw count, ankle positions, ground contact, camera, exact body, ears, fur and crop. Preserve the already rounded far-right hind paw. Keep the true transparent background and opaque cream paint. No scenery, text, outlines, pads or shadows on the ground.",
+      "editTarget": "../rear-paws-v1/quarter-source.png",
+      "heelSourceCrops": [
+        [
+          296,
+          838,
+          430,
+          928
+        ],
+        [
+          466,
+          848,
+          572,
+          920
+        ],
+        [
+          565,
+          922,
+          707,
+          1013
+        ]
+      ]
+    },
+    "high": {
+      "file": "high-quarter-forward-paws-source.png",
+      "sha256": "56f9cef26a9e03885f7499614c1c2d76679279b1508f869c4b61ef15461b03cb",
+      "prompt": "Use case: precise-object-edit. In image 1, correct the two leftmost cream paws on this rear three-quarter game sprite. Image 1 is the registered edit target and pose/identity reference. Image 2 is Hero's approved berry painting, the style reference for loosely merging watercolor washes. Image 3 is the user's visual reference for the defect: the visible left paws are splayed toward screen-left. Anatomical correction: these paws extend mainly AWAY from the camera, toward the upper left into depth, parallel to Hero's head and spine. Under each ankle, show the compact smooth rounded back and side of the paw. Tuck the front of the paw under the ankle in projection, with only a very small toe tip or subtle line on the far upper-left edge, partially occluded by the ankle. Eliminate the leftward flared scalloped silhouette and all stripes across the camera-facing heel. Preserve same paw count, ankle positions, ground contact, camera, exact body, ears, fur and crop. Preserve the already rounded far-right hind paw. Keep the true transparent background and opaque cream paint. No scenery, text, outlines, pads or shadows on the ground.",
+      "editTarget": "../rear-paws-v1/high-quarter-source.png",
+      "heelSourceCrops": [
+        [
+          263,
+          773,
+          400,
+          879
+        ],
+        [
+          442,
+          905,
+          592,
+          1009
+        ]
+      ]
+    }
+  },
+  "atlases": {
+    "public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png": {
+      "beforeSha256": "eea68e3893234d12fa85be4f607e5b5668f626e61661c9702aac8c4bfa111429",
+      "afterSha256": "a15c72e5d34e51950483f80fb0de129e0e9c2b4d64416f6fdccb2ffeccbc3809",
+      "patchRegions": [
+        [
+          51,
+          1011,
+          108,
+          1048
+        ],
+        [
+          115,
+          1010,
+          160,
+          1041
+        ],
+        [
+          140,
+          1037,
+          200,
+          1065
+        ]
+      ]
+    },
+    "public/assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-directions-low-v1.png": {
+      "beforeSha256": "864dcd5e7367634f8ed75bdeb09a41a36ca718e6fd126485ba1df410b6e6828f",
+      "afterSha256": "8e2412fad09d9ccdd179e4e58e81afeadf06844a49da9b7c36f4f09661be6cd2",
+      "patchRegions": [
+        [
+          52,
+          1017,
+          126,
+          1053
+        ],
+        [
+          131,
+          1011,
+          182,
+          1042
+        ],
+        [
+          167,
+          1038,
+          236,
+          1065
+        ]
+      ]
+    },
+    "public/assets/runtime/characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png": {
+      "beforeSha256": "604ffb02966281c00a90825f9df8b06fa918370bbab9928f0f546e848f863556",
+      "afterSha256": "ad11bbaf9687a1391528d61aa7b1b3acf400338238477bddd66b23579ecc9fb4",
+      "patchRegions": [
+        [
+          52,
+          932,
+          102,
+          964
+        ],
+        [
+          108,
+          967,
+          167,
+          1001
+        ]
+      ]
+    },
+    "public/assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-directions-high-v1.png": {
+      "beforeSha256": "b507d8c5b1ed76434bfa0f5a94ca492eb44a3e5e3e3a1b8093a351e291be422a",
+      "afterSha256": "e491c6eab4aec4fb2662e55a59d414593db831f52d1efca748671780dd152e1a",
+      "patchRegions": [
+        [
+          78,
+          936,
+          137,
+          970
+        ],
+        [
+          140,
+          970,
+          201,
+          1004
+        ]
+      ]
+    }
+  }
+}

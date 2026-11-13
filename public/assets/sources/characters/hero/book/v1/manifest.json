@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "generator": "built-in image_gen",
+  "purpose": "Independent Hero pose studies for the paper forest; source paintings unchanged",
+  "poses": [
+    {
+      "id": "hero-wonder-seated-v1",
+      "prompt": "Use case: illustration-story. Asset: one isolated full-body Hero painting for a forest pop-up book. Image 1 is the direct PAINTING STYLE reference: use its light translucent watercolor, softly merging washes, irregular pooling, broken brush edges, broad varied paint masses and a few loose gouache accents; no digital airbrush or repetitive sharp fur tiles. Image 2 is Hero IDENTITY only; its rendering style must not override image 1. Preserve this small female tricolor corgi-like dog: very large upright ears, compact long low body and short legs, rich charcoal/slate back, warm copper-golden-orange cheeks and legs, opaque creamy white forehead blaze/muzzle/chest/paw tips, amber eyes and gentle inquisitive tan brows. Short natural bobtail, no baked flame or elemental effect. Make the face softly painted with readable restrained features. True transparent background with clean alpha and opaque pale fur; no scene, ground, cast shadow, book, letters, labels, frame, paper rectangle or watermark. Complete ears, paws and tail fully inside the image with generous transparent margin. View at slightly elevated eye level in three-quarter view, suitable as a standing painted paper cutout. Pose: seated on her hindquarters, both front paws naturally planted, body turned slightly toward the viewer's right; head tilted upward and ears pricked with quiet wonder, mouth slightly open as if watching magical sparkles above the book. Do not paint the sparkles.",
+      "references": [
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\hero-watercolor-v5-ordinary-day.png"
+      ]
+    },
+    {
+      "id": "hero-careful-step-v1",
+      "prompt": "Use case: illustration-story. Asset: one isolated full-body Hero painting for a forest pop-up book. Image 1 is the direct PAINTING STYLE reference: use its light translucent watercolor, softly merging washes, irregular pooling, broken brush edges, broad varied paint masses and a few loose gouache accents; no digital airbrush or repetitive sharp fur tiles. Image 2 is Hero IDENTITY only; its rendering style must not override image 1. Preserve this small female tricolor corgi-like dog: very large upright ears, compact long low body and short legs, rich charcoal/slate back, warm copper-golden-orange cheeks and legs, opaque creamy white forehead blaze/muzzle/chest/paw tips, amber eyes and gentle inquisitive tan brows. Short natural bobtail, no baked flame or elemental effect. Make the face softly painted with readable restrained features. True transparent background with clean alpha and opaque pale fur; no scene, ground, cast shadow, book, letters, labels, frame, paper rectangle or watermark. Complete ears, paws and tail fully inside the image with generous transparent margin. View at slightly elevated eye level in three-quarter view, suitable as a standing painted paper cutout. Pose: an attentive, slow walking step toward the viewer's right, one front paw lifted delicately, nose extended slightly as she follows a trail of lights; body on all fours, curious relaxed expression. Do not paint the trail or lights.",
+      "references": [
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\hero-watercolor-v5-ordinary-day.png"
+      ]
+    },
+    {
+      "id": "hero-play-bow-v1",
+      "prompt": "Use case: illustration-story. Asset: one isolated full-body Hero painting for a forest pop-up book. Image 1 is the direct PAINTING STYLE reference: use its light translucent watercolor, softly merging washes, irregular pooling, broken brush edges, broad varied paint masses and a few loose gouache accents; no digital airbrush or repetitive sharp fur tiles. Image 2 is Hero IDENTITY only; its rendering style must not override image 1. Preserve this small female tricolor corgi-like dog: very large upright ears, compact long low body and short legs, rich charcoal/slate back, warm copper-golden-orange cheeks and legs, opaque creamy white forehead blaze/muzzle/chest/paw tips, amber eyes and gentle inquisitive tan brows. Short natural bobtail, no baked flame or elemental effect. Make the face softly painted with readable restrained features. True transparent background with clean alpha and opaque pale fur; no scene, ground, cast shadow, book, letters, labels, frame, paper rectangle or watermark. Complete ears, paws and tail fully inside the image with generous transparent margin. View at slightly elevated eye level in three-quarter view, suitable as a standing painted paper cutout. Pose: a playful bow toward the viewer's right with forelegs stretched forward, chest low and hindquarters raised, very large ears forward, soft happy curious face and small natural bobtail. Full coherent quadruped anatomy, no extra limbs.",
+      "references": [
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\hero-watercolor-v5-ordinary-day.png"
+      ]
+    },
+    {
+      "id": "hero-curled-rest-v1",
+      "prompt": "Use case: illustration-story. Asset: one isolated full-body Hero painting for a forest pop-up book. Image 1 is the direct PAINTING STYLE reference: use its light translucent watercolor, softly merging washes, irregular pooling, broken brush edges, broad varied paint masses and a few loose gouache accents; no digital airbrush or repetitive sharp fur tiles. Image 2 is Hero IDENTITY only; its rendering style must not override image 1. Preserve this small female tricolor corgi-like dog: very large upright ears, compact long low body and short legs, rich charcoal/slate back, warm copper-golden-orange cheeks and legs, opaque creamy white forehead blaze/muzzle/chest/paw tips, amber eyes and gentle inquisitive tan brows. Short natural bobtail, no baked flame or elemental effect. Make the face softly painted with readable restrained features. True transparent background with clean alpha and opaque pale fur; no scene, ground, cast shadow, book, letters, labels, frame, paper rectangle or watermark. Complete ears, paws and tail fully inside the image with generous transparent margin. View at slightly elevated eye level in three-quarter view, suitable as a standing painted paper cutout. Pose: peacefully curled on her side with paws comfortably tucked, short natural bobtail, ears relaxed and eyes gently closed, nose visible in three-quarter view. A complete compact sleeping silhouette to rest at the foot of a paper tree; no actual tree or ground.",
+      "references": [
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\hero-watercolor-v5-ordinary-day.png"
+      ]
+    }
+  ]
+}

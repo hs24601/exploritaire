@@ -1,0 +1,18 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-06",
+  "exactPrompts": "docs/art/scratch-light-holo-v1.json",
+  "assets": [
+    {
+      "file": "public/assets/runtime/ui/holocards/layered/hero-watercolor-v6-organic-bobtail.png",
+      "source": "public/assets/sources/ui/holocards/layered/hero-v6/hero-watercolor-v6-organic-bobtail.png",
+      "sha256": "aed6f560a41117514ac0004486f673d59d644101da4352c85b33a9a4ceb7d89b",
+      "width": 1025,
+      "height": 1534,
+      "transparent": 691124,
+      "nearOpaque": 839151,
+      "maxAlpha": 255
+    }
+  ],
+  "alpha": "Original generated alpha, byte-identical source/runtime"
+}

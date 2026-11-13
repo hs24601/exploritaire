@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [],
+  "files": [
+    "src/book/portals.ts",
+    "src/browserContextMenu.ts",
+    "src/browserPageTitle.ts",
+    "src/book/vendor/patch-oil-paint/brush.d.ts",
+    "src/book/vendor/patch-painted-valley/scene.d.ts",
+    "src/book/vendor/patch-soil-grass/grass.d.ts",
+    "src/book/vendor/patch-soil-grass/soil-shaders.d.ts",
+    "src/proto/momentumNumberFire.d.ts",
+    "src/vite-env.d.ts"
+  ],
+  "references": []
+}

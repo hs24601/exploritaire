@@ -1,3 +1,5 @@
+import { DEM_SPRITE_ASSETS } from './demSprite';
+import { DEM_COMBAT_ASSETS } from './demCombatSprites';
 import type { ArtStyle } from './artStyle';
 /** Shared by map rendering and its startup preload; expressions are required
  * before the sectional Hero can draw its first frame. */
@@ -13,8 +15,9 @@ export const HERO_EXPRESSION_ASSETS = {
 export const RETIRED_HERO_EFFECT_ASSETS = { heroFlameTail: 'runtime/characters/hero/rig/watercolor/v2/hero-flame-pieces-v2.png' } as const;
 /** Source keys are data: new actors add sheets without changing the renderer. */
 export const BATTLE_SPRITE_ASSETS: Readonly<Record<string,string>> = {
+  ...DEM_SPRITE_ASSETS, ...DEM_COMBAT_ASSETS,
   heroLow:'runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png',
-  heroHigh:'runtime/characters/hero/rig/watercolor/v3/hero-directions-high-body-v3.png',
+  heroHigh:'runtime/characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png',
   heroSittingLow:'runtime/characters/hero/rig/watercolor/v3/hero-sitting-low-body-v3.png',
   heroSittingHigh:'runtime/characters/hero/rig/watercolor/v3/hero-sitting-high-body-v3.png',
   heroWalkingLow:'runtime/characters/hero/rig/watercolor/v3/hero-walking-low-body-v3.png',
@@ -35,4 +38,6 @@ export const PIXEL_BATTLE_SPRITE_ASSETS: Record<string, string> = Object.fromEnt
 // Mochi's preserved Pixel sheets use v2 registration, unlike Hero's v1 sources.
 PIXEL_BATTLE_SPRITE_ASSETS.mochiLow = 'deprecated/pixel/characters/battle/mochi-directions-low-v2.png';
 PIXEL_BATTLE_SPRITE_ASSETS.mochiHigh = 'deprecated/pixel/characters/battle/mochi-directions-high-v2.png';
+// Dem has no pixel variant; keep their approved painted rig in either presentation.
+Object.assign(PIXEL_BATTLE_SPRITE_ASSETS, DEM_SPRITE_ASSETS, DEM_COMBAT_ASSETS);
 export const battleSpriteAssets = (style: ArtStyle) => style === 'paint' ? BATTLE_SPRITE_ASSETS : PIXEL_BATTLE_SPRITE_ASSETS;

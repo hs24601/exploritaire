@@ -1,0 +1,67 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-06",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/mochi-fast-swipes/v5/swipe-left-windup.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+    "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/layered/hero-watercolor-v6-organic-bobtail.png"
+  ],
+  "referenceRoles": [
+    "Mochi identity/registration; frames1–3 instead use new v6 rest as exact master",
+    "Actual Scratch light swatches/soft brushwork",
+    "Actual approved Hero painting style baseline"
+  ],
+  "registeredRestMaster": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-885ec702-a932-4142-9fb7-7c1faf054e5f.png",
+  "assets": [
+    {
+      "file": "swipe-rest.png",
+      "prompt": "Use case: precise-object-edit. Production transparent 1536x1024 landscape registered lenticular frame for Mochi Fast Swipes. Image1 is the exact Mochi identity/camera/body/head registration reference. Image2 actual Scratch painting provides light swatches and soft wet brushwork. Image3 actual approved Hero painting is established style baseline. Preserve Mochi's head, yellow-green eyes, nose, ears, torso, tortoiseshell markings and plume tail at exactly their reference positions. This is a CAT making a small brisk slap with only her anatomical RIGHT front paw (on VIEWER LEFT). Her LEFT front paw (on VIEWER RIGHT) must hang DOWN at x70%, y80%, relaxed and generally immobile in every frame, toes down, NOT raised in a boxing pose. Right arm visibly attached below viewer-left cheek at shoulder. One short feline foreleg doing a modest horizontal slap just below chin, not a giant punch at camera. Rounded soft BLACK toes, claws RETRACTED. Exactly two forelegs, no detached or phantom arms, no many-fists, spell circles, magic, auras, swooshes encircling her, wind ribbons or extra paw trails. One tiny thin broken directional drybrush mark is enough during contact. BIG dilute wet-on-wet soft cloudy washes, broad rounded dabs, creamy ivory/apricot/smoky slate, selective clear face accents; no dense sharp fur, gritty grain, texture overlays. Opaque pale fur, genuine transparent surroundings, NO background/scenery/UI/text/borders. Calm readable animal anatomy, playful focused cat face, no body/head motion. FRAME REST: right foreleg on viewer-left is bent naturally near chest, wrist relaxed, black paw at x46%,y66%, no motion marks. Opposite LEFT paw stays DOWN at x70%,y80% with a slim vertical foreleg, NOT curled up under the chin. Retain original face and canvas registration exactly.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-885ec702-a932-4142-9fb7-7c1faf054e5f.png",
+      "sha256": "d50c1b55c77d5a43fd37d7991d647387a93df0e201cab9654776bc27423a3c7b",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 731143,
+        "opaque": 789464
+      }
+    },
+    {
+      "file": "swipe-lift.png",
+      "prompt": "Use case: precise-object-edit. Production transparent 1536x1024 landscape registered lenticular frame for Mochi Fast Swipes. Image1 is the exact Mochi identity/camera/body/head registration reference. Image2 actual Scratch painting provides light swatches and soft wet brushwork. Image3 actual approved Hero painting is established style baseline. Preserve Mochi's head, yellow-green eyes, nose, ears, torso, tortoiseshell markings and plume tail at exactly their reference positions. This is a CAT making a small brisk slap with only her anatomical RIGHT front paw (on VIEWER LEFT). Her LEFT front paw (on VIEWER RIGHT) must hang DOWN at x70%, y80%, relaxed and generally immobile in every frame, toes down, NOT raised in a boxing pose. Right arm visibly attached below viewer-left cheek at shoulder. One short feline foreleg doing a modest horizontal slap just below chin, not a giant punch at camera. Rounded soft BLACK toes, claws RETRACTED. Exactly two forelegs, no detached or phantom arms, no many-fists, spell circles, magic, auras, swooshes encircling her, wind ribbons or extra paw trails. One tiny thin broken directional drybrush mark is enough during contact. BIG dilute wet-on-wet soft cloudy washes, broad rounded dabs, creamy ivory/apricot/smoky slate, selective clear face accents; no dense sharp fur, gritty grain, texture overlays. Opaque pale fur, genuine transparent surroundings, NO background/scenery/UI/text/borders. Calm readable animal anatomy, playful focused cat face, no body/head motion. FRAME LIFT: preserve the entire master including the hanging LEFT paw on viewer-right at x70%,y80% EXACTLY unchanged. Change ONLY the RIGHT foreleg on viewer-left: bend the elbow, lift the black paw near x45%,y57% below viewer-left cheek, toes tilted inward and relaxed, narrow side view, preparing a short CAT SLAP. Claws retracted. No motion trail or duplicate arm. Same head, body, tail and all canvas anchors.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-eca0d110-d269-4efc-a667-4b131cfb2fa5.png",
+      "sha256": "c0af18b10a8a16f2ac783eb7f0060f3f094a420850e1aeac318fe4ab1d50892c",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 733459,
+        "opaque": 790501
+      }
+    },
+    {
+      "file": "swipe-slap.png",
+      "prompt": "Use case: precise-object-edit. Production transparent 1536x1024 landscape registered lenticular frame for Mochi Fast Swipes. Image1 is the exact Mochi identity/camera/body/head registration reference. Image2 actual Scratch painting provides light swatches and soft wet brushwork. Image3 actual approved Hero painting is established style baseline. Preserve Mochi's head, yellow-green eyes, nose, ears, torso, tortoiseshell markings and plume tail at exactly their reference positions. This is a CAT making a small brisk slap with only her anatomical RIGHT front paw (on VIEWER LEFT). Her LEFT front paw (on VIEWER RIGHT) must hang DOWN at x70%, y80%, relaxed and generally immobile in every frame, toes down, NOT raised in a boxing pose. Right arm visibly attached below viewer-left cheek at shoulder. One short feline foreleg doing a modest horizontal slap just below chin, not a giant punch at camera. Rounded soft BLACK toes, claws RETRACTED. Exactly two forelegs, no detached or phantom arms, no many-fists, spell circles, magic, auras, swooshes encircling her, wind ribbons or extra paw trails. One tiny thin broken directional drybrush mark is enough during contact. BIG dilute wet-on-wet soft cloudy washes, broad rounded dabs, creamy ivory/apricot/smoky slate, selective clear face accents; no dense sharp fur, gritty grain, texture overlays. Opaque pale fur, genuine transparent surroundings, NO background/scenery/UI/text/borders. Calm readable animal anatomy, playful focused cat face, no body/head motion. FRAME SLAP CONTACT: preserve master head/body/tail and especially the hanging LEFT paw on viewer-right EXACTLY. Change ONLY the RIGHT foreleg from viewer-left shoulder: a short horizontal slap across the chest ending at x61%,y65%, paw rotated sideways, flattened black toes facing right with pads slightly visible, NOT a fist or punch. Modest changing foreshortening, short arm attached to viewer-left shoulder. Claws retracted. At most TWO short thin broken cream brush marks immediately behind paw to indicate speed. No arc encircling body, no magic, no extra paws.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-d5a7388a-7074-4a23-983a-f483593c16f8.png",
+      "sha256": "83a61a69306095efc82e221ad60eec40fe5a6c3f1a9b234b824de096560b7dba",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 722241,
+        "opaque": 798953
+      }
+    },
+    {
+      "file": "swipe-follow.png",
+      "prompt": "Use case: precise-object-edit. Production transparent 1536x1024 landscape registered lenticular frame for Mochi Fast Swipes. Image1 is the exact Mochi identity/camera/body/head registration reference. Image2 actual Scratch painting provides light swatches and soft wet brushwork. Image3 actual approved Hero painting is established style baseline. Preserve Mochi's head, yellow-green eyes, nose, ears, torso, tortoiseshell markings and plume tail at exactly their reference positions. This is a CAT making a small brisk slap with only her anatomical RIGHT front paw (on VIEWER LEFT). Her LEFT front paw (on VIEWER RIGHT) must hang DOWN at x70%, y80%, relaxed and generally immobile in every frame, toes down, NOT raised in a boxing pose. Right arm visibly attached below viewer-left cheek at shoulder. One short feline foreleg doing a modest horizontal slap just below chin, not a giant punch at camera. Rounded soft BLACK toes, claws RETRACTED. Exactly two forelegs, no detached or phantom arms, no many-fists, spell circles, magic, auras, swooshes encircling her, wind ribbons or extra paw trails. One tiny thin broken directional drybrush mark is enough during contact. BIG dilute wet-on-wet soft cloudy washes, broad rounded dabs, creamy ivory/apricot/smoky slate, selective clear face accents; no dense sharp fur, gritty grain, texture overlays. Opaque pale fur, genuine transparent surroundings, NO background/scenery/UI/text/borders. Calm readable animal anatomy, playful focused cat face, no body/head motion. FRAME FOLLOW-THROUGH: preserve the entire master including the hanging LEFT foreleg/paw on viewer-right at x70%,y80% EXACTLY. Change ONLY the anatomical RIGHT foreleg on viewer-left into the finish of that SAME slap, paw near x66%,y68%, wrist loosely turned down, toes relaxed and side-on, narrower receding paw. Connected arm remains short and naturally bent below chin. No raised opposite paw, no extra arms, no claws, no wind ribbons. Preserve all head/body/tail registration.",
+      "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1b2cc-a740-7af1-a553-b9bdd1d4f1be\\exec-9242227f-0488-46d1-96f8-5951e775951d.png",
+      "sha256": "df3981d83df66bc95eb8cf32324cb11c3e836fc7ba31d30c7fc04cc70307e6e9",
+      "analysis": {
+        "width": 1536,
+        "height": 1024,
+        "transparent": 533563,
+        "opaque": 798425
+      }
+    }
+  ],
+  "sequence": "rest,lift,slap,follow; three non-repeating signed-angle gates at -0.45,0.2,0.65 across full tilt range; right forepaw only (viewer left), opposite paw held down; no phantom planes, repeats, modulo or tweening.",
+  "alpha": "Original generated alpha; source/runtime copies byte-identical."
+}

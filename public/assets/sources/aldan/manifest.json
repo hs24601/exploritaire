@@ -1,0 +1,11 @@
+{
+  "asset": "Aldan Seed watercolor v1",
+  "tool": "built-in image_gen",
+  "runtime": "public/assets/runtime/aldan/aldan-seed-watercolor-v1.png",
+  "prompt": "Use case: stylized-concept. Asset type: transparent game foundation portrait, Aldan Seed for Exploritaire. Input image 1 is subject reference only: golden luminous sprout with exactly two pointed leaves, taller gently curved left leaf and shorter right leaf, slender joined golden stem. Images 2 and 3 are STYLE REFERENCES ONLY: approved Dem and Hero gouache/watercolor, do not include animals. Repaint the reference sprout as a standalone enchanted golden seedling in this broad chunky storybook painting medium. Broad visibly separate angular brush marks, softly irregular pigment edges, few clear ochre/amber value groups and luminous cream/golden highlights, subtle grain only within paint. Keep readable solid painted leaf silhouettes with a few expressive golden veins, not just hairline wire outlines. Capture quiet magical radiance with restrained small painted gold motes close to leaves. One centered entire sprout, portrait 4:5 composition with generous transparent padding, stem ends cleanly at bottom, no soil, no terrain, no roots needed. Genuine transparent alpha background, including gaps around leaves and stem. No forest, backdrop, bokeh, paper rectangle, ground shadow, typography, watermark, logo, border or card UI. No photographic realism, glossy 3D or airbrushed blending. Subject must read at small foundation portrait sizes.",
+  "references": [
+    "User-provided golden seedling reference (2026-10-27)",
+    "artifacts/dem-style-v3/dem-storybook-v3.png",
+    "public/assets/runtime/ui/holocards/layered/hero-watercolor-v5-ordinary-day.png"
+  ]
+}

@@ -32,3 +32,10 @@ samples/
 
 # Local screenshots and check output (Playwright, art reviews); kept on disk, never committed.
 artifacts/
+
+# Generated local test output, logs and caches are not world components.
+output/
+.cache/
+*.log
+vite.config.ts.timestamp-*.mjs
+vite.portals.config.ts.timestamp-*.mjs

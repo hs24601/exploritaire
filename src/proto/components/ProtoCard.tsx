@@ -12,6 +12,8 @@ import { cardResourceFace } from '../cardResourceFace';
 import type { TableauCardBackground } from '../biomeCardArt';
 import { BiomeCardBackground } from './BiomeCardBackground';
 import { EventCard } from './EventCard';
+import { ElementRankBackdrop } from './ElementRankBackdrop';
+import type { Element } from '../rules/elementSuits';
 
 /** Tableau faces match the foundation's standard playing-card proportions. */
 const CARD_ASPECT = 88 / 63;
@@ -48,10 +50,18 @@ export const ProtoCard = ({
   muted = false,
   selected = false,
   footerLabel,
+  natureAdornment = false,
+  fireAdornment = false,
+  waterAdornment = false,
+  airAdornment = false,
+  earthAdornment = false,
+  chaosAdornment = false,
   standardRankSize = false,
   buried = false,
+  allowBuriedPlay = false,
   lit = false,
   centerRank = false,
+  numericRanks = false,
   concealValue = false,
   style,
   jumbo = false,
@@ -71,16 +81,25 @@ export const ProtoCard = ({
   muted?: boolean;
   selected?: boolean;
   footerLabel?: React.ReactNode;
+  natureAdornment?: boolean;
+  fireAdornment?: boolean;
+  waterAdornment?: boolean;
+  airAdornment?: boolean;
+  earthAdornment?: boolean;
+  chaosAdornment?: boolean;
   standardRankSize?: boolean;
   /** Under another card, out of play: the card and its resource go to the
    * shared silhouette (rank still readable, dimmed) and take no input; when
    * it reaches the front, colour sweeps back in behind a slanted edge. */
   buried?: boolean;
+  /** A covered card can remain reachable in the two-deep combat prototype. */
+  allowBuriedPlay?: boolean;
   /** Surface receives the shared scene lighting variables. */
   lit?: boolean;
   /** Front tableau card: the value sits large in the middle of the face and
    * the corner index steps aside (buried cards keep it for the peek row). */
   centerRank?: boolean;
+  numericRanks?: boolean;
   /** Tactical combat holds remove values from ink and accessible card names. */
   concealValue?: boolean;
   style?: React.CSSProperties;
@@ -93,13 +112,16 @@ export const ProtoCard = ({
   onDiscard?: () => void;
   onDropActor?: (target: HTMLElement) => void;
 }) => {
+  const displayRank=(rank:number)=>numericRanks?String(rank):rankLabel(rank);
+  const valueElement: Element | undefined = natureAdornment ? 'nature' : fireAdornment ? 'fire' : waterAdornment ? 'water' : airAdornment ? 'air' : earthAdornment ? 'earth' : chaosAdornment ? 'chaos' : undefined;
   const viewer = useCardJumbo();
-  const drag = useTableauDrag(!disabled && !buried ? onDropActor : undefined);
+  const drag = useTableauDrag(!disabled && (!buried || allowBuriedPlay) ? onDropActor : undefined);
   if(card.event)return <EventCard card={card} disabled={disabled} buried={buried} style={style} cardRef={cardRef} onPlay={onClick?()=>onClick({} as React.MouseEvent<HTMLButtonElement>):undefined} onDiscard={onDiscard} actionLabel={actionLabel==='Play card'?'Play event':actionLabel} />;
   return (
   <PlayingCard
     {...drag}
     cardRef={cardRef}
+    data-split-card={card.alternateRank !== undefined || undefined}
     data-resource-node={card.inspirationResource ? 'inspiration' : card.resource}
     data-food-source={card.foodSource}
     data-mana-infused={cardIsManaInfused(card) || undefined}
@@ -109,13 +131,13 @@ export const ProtoCard = ({
     aria-pressed={selected || undefined}
     data-buried={buried || undefined}
     data-value-concealed={concealValue || undefined}
-    aria-label={concealValue ? 'Tableau card · value hidden during tactical pause' : undefined}
+    aria-label={concealValue ? 'Tableau card · value hidden during tactical pause' : card.alternateRank !== undefined ? `${displayRank(card.rank)} or ${displayRank(card.alternateRank)} · one card, choose one value` : undefined}
     onClick={event=>{
       if(jumbo)return;
       if(!viewer || !allowJumbo){if(!disabled)onClick?.(event);return;}
       const source=event.currentTarget;
-      viewer.open({title: `${rankLabel(card.rank)}${cardResourceFace(card) ? ` · ${cardResourceFace(card)?.label}` : ''}`,
-        ratio:56/74,content:<ProtoCard card={card} footerLabel={footerLabel} buried={buried} jumbo />,
+      viewer.open({title: `${displayRank(card.rank)}${cardResourceFace(card) ? ` · ${cardResourceFace(card)?.label}` : ''}`,
+        ratio:56/74,content:<ProtoCard card={card} footerLabel={footerLabel} natureAdornment={natureAdornment} fireAdornment={fireAdornment} waterAdornment={waterAdornment} airAdornment={airAdornment} earthAdornment={earthAdornment} chaosAdornment={chaosAdornment} buried={buried} numericRanks={numericRanks} centerRank={centerRank} jumbo />,
         action: !disabled&&onClick ? ()=>onClick({...event,currentTarget:source,detail:0}) : undefined,actionLabel});
     }}
     disabled={(!viewer || !allowJumbo) && disabled}
@@ -123,7 +145,7 @@ export const ProtoCard = ({
     aria-haspopup={!jumbo && allowJumbo ? 'dialog' : undefined}
     data-card-jumbo={jumbo || undefined}
     style={{...style, ...(!allowJumbo ? { background: 'transparent' } : {}), touchAction: onDropActor ? 'none' : style?.touchAction}}
-    className={`${cardBaseClassName} ${lit ? 'proto-lit-surface ' : ''}${buried ? 'proto-card--buried ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${
+    className={`${cardBaseClassName} ${natureAdornment ? 'proto-card--nature-adorned ' : ''}${fireAdornment ? 'proto-card--fire-adorned ' : ''}${waterAdornment ? 'proto-card--water-adorned ' : ''}${airAdornment ? 'proto-card--air-adorned ' : ''}${earthAdornment ? 'proto-card--earth-adorned ' : ''}${chaosAdornment ? 'proto-card--chaos-adorned ' : ''}${lit ? 'proto-lit-surface ' : ''}${buried ? 'proto-card--buried ' : ''}${transporting ? 'pointer-events-none opacity-0' : ''} ${
       disabled
         ? selected
           ? 'cursor-default border-[#8ef2d4]/25 bg-[#07100f] text-white/42'
@@ -140,9 +162,9 @@ export const ProtoCard = ({
     {!allowJumbo && <BiomeCardBackground background={background} cardId={card.id} buried={buried} />}
     {!buried && cardIsManaInfused(card) && <ManaGlow />}
     <CardVeil buried={buried} />
-    <div className="proto-card-header flex min-w-0 items-start justify-between gap-1">
+    <div hidden={card.alternateRank !== undefined} className="proto-card-header flex min-w-0 items-start justify-between gap-1">
       <div aria-hidden={centerRank || undefined} className={`proto-card-rank ${centerRank ? 'invisible ' : ''}font-semibold leading-none ${standardRankSize ? 'text-[calc(var(--classic-card-w)*0.34)]' : muted ? 'text-[calc(var(--classic-card-w)*0.27)]' : 'text-[calc(var(--classic-card-w)*0.4)]'}`}>
-        {concealValue ? null : rankLabel(card.rank)}
+        {concealValue ? null : valueElement ? <ElementRankBackdrop element={valueElement} size="compact">{displayRank(card.rank)}</ElementRankBackdrop> : displayRank(card.rank)}
       </div>
       {footerLabel ? (
         <div className="proto-card-icon -mt-0.5 shrink-0 font-sans text-[clamp(1rem,calc(var(--classic-card-w)*0.42),1.8rem)] leading-none drop-shadow-[0_0_5px_rgba(255,255,255,0.24)]">
@@ -151,7 +173,8 @@ export const ProtoCard = ({
         </div>
       ) : null}
     </div>
-    {centerRank && !concealValue ? <span className="proto-card-center-rank"><span className="proto-card-value-ink">{rankLabel(card.rank)}</span></span> : null}
+    {centerRank && card.alternateRank === undefined && !concealValue ? <span className="proto-card-center-rank"><span className="proto-card-value-ink">{valueElement ? <ElementRankBackdrop element={valueElement} size="large">{displayRank(card.rank)}</ElementRankBackdrop> : displayRank(card.rank)}</span></span> : null}
+    {card.alternateRank !== undefined && !concealValue && <span className="proto-split-face" aria-hidden="true"><span className="proto-split-primary" data-split-rank={card.rank}>{displayRank(card.rank)}</span><span className="proto-split-secondary" data-split-rank={card.alternateRank}>{displayRank(card.alternateRank)}</span></span>}
   </PlayingCard>
 );
 };

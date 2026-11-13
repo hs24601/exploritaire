@@ -1,0 +1,48 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-06",
+  "exactPrompts": "docs/art/scratch-light-holo-v1.json",
+  "assets": [
+    {
+      "file": "public/assets/runtime/ui/holocards/hero-bite/v2/bite-closed.png",
+      "source": "public/assets/sources/ui/holocards/hero-bite/v2/bite-closed.png",
+      "sha256": "f4d923b115cb3dbd2e342326120ccd1a708b4cac0c73a39d643e89a2f7ff09d5",
+      "width": 1536,
+      "height": 1024,
+      "transparent": 763492,
+      "nearOpaque": 776915,
+      "maxAlpha": 254
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/hero-bite/v2/bite-parted.png",
+      "source": "public/assets/sources/ui/holocards/hero-bite/v2/bite-parted.png",
+      "sha256": "11622475b089e3d3a49672399da1e38b9990d30998255c11ecba477a496335c4",
+      "width": 1536,
+      "height": 1024,
+      "transparent": 752734,
+      "nearOpaque": 777452,
+      "maxAlpha": 254
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/hero-bite/v2/bite-half.png",
+      "source": "public/assets/sources/ui/holocards/hero-bite/v2/bite-half.png",
+      "sha256": "c4373b3080218545896a530bae089bffef87df68b811117256f4a8ff78b7a7a1",
+      "width": 1536,
+      "height": 1024,
+      "transparent": 755619,
+      "nearOpaque": 781741,
+      "maxAlpha": 254
+    },
+    {
+      "file": "public/assets/runtime/ui/holocards/hero-bite/v2/bite-open.png",
+      "source": "public/assets/sources/ui/holocards/hero-bite/v2/bite-open.png",
+      "sha256": "e8a5e57f4e1c117683d01e8b8bd762719455013fc4eef2144a5f66786406a15d",
+      "width": 1536,
+      "height": 1024,
+      "transparent": 565105,
+      "nearOpaque": 792004,
+      "maxAlpha": 254
+    }
+  ],
+  "alpha": "Original generated alpha, byte-identical source/runtime"
+}

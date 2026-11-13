@@ -56,3 +56,11 @@
 .combat-demo__arena { position: relative; }
 .combat-demo__drop-target { position: absolute; pointer-events: none; }
 .combat-demo__drop-target[hidden] { display: none; }
+.combat-demo__copy-quick { position:absolute; left:170px; bottom:10px; z-index:4; max-width:calc(100% - 180px); padding:5px 8px; border:1px solid #7b9583; border-radius:4px; background:#142720f2; color:inherit; pointer-events:auto; font:inherit; cursor:pointer; }
+
+/* Scenario 222 foundations are screen-space UI, independent of the arena camera. */
+.combat-demo .combat-demo__foundations { position:absolute; inset:0; z-index:2; pointer-events:none; display:block; height:auto; min-height:0; padding:0; border:0; background:transparent; }
+.combat-demo .combat-demo__foundation-overlay { position:absolute; left:50%; transform:translateX(-50%); }
+.combat-demo .combat-demo__foundation-overlay[data-foundation-overlay='enemy'] { top:12px; bottom:auto; }
+.combat-demo .combat-demo__foundation-overlay[data-foundation-overlay='party'] { top:auto; bottom:0; }
+

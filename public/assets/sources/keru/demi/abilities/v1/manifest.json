@@ -1,0 +1,10 @@
+{
+  "generator": "built-in image_gen",
+  "styleReference": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+  "identityReference": "artifacts/dem-style-v3/dem-storybook-v3.png",
+  "outputs": {
+    "ice-armor-v1.png": "Transparent isolated storybook watercolor character illustration for an ability card: Demi the mature glacial polar bear braces powerfully behind overlapping translucent ice armor, protective and steadfast, face and paws readable. Image 1 is the primary style reference: loose hand-painted watercolor washes, softened expressive features; image 2 is identity reference for the white polar bear, blue markings and ice crystals only, do not copy its sharper style or pose. No scenery, other creatures, text, border or UI. True transparent background; opaque painted subject.",
+    "rime-retort-v1.png": "New standalone transparent character painting, not an edit or copy of image 2. Image 1 is the overriding and dominant style reference: emulate its loose storybook watercolor, translucent wet-on-wet washes, broad merged brush shapes and softly simplified eyes; visibly soften edges and leave quiet undetailed areas. Image 2 provides ONLY the identity of a mature white polar bear with blue ice coloration. Do not reproduce image 2's sharp triangular fur marks, crystalline facets, pose, glossy eyes or detailed black outlines. No text, scene, border, other animals or UI; opaque subject on true transparent background. Depict Demi standing firm and releasing a defensive burst of loose frost around their paws, readable head and paws, rime retaliation ability."
+  },
+  "review": "Initial draft: ice armor remains sharper than the Hero reference; retort softened. Alternate armor iteration included an unwanted blue haze and was not selected."
+}
