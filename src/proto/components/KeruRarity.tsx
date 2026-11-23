@@ -7,8 +7,8 @@ import { FEED_COSTS, INVOKE_BUFFS, KERU_CASTS, RARITY_NAMES, RARITY_TIERS, activ
 import { useFxQuality } from '../fxQuality';
 import { rankLabel } from '../protoState';
 import { ACTOR_HOLO_ART } from '../art/actorCardArt';
-import demSubject from '../../../artifacts/dem-style-v3/dem-storybook-v3.png';
-import demBackground from '../../../artifacts/dem-draft/dem-background-v1.png';
+import demSubject from '../art/keruDrafts/dem-style-v3/dem-storybook-v3.png';
+import demBackground from '../art/keruDrafts/dem-draft/dem-background-v1.png';
 import { AbilityCardFace, KeruAbilityArt } from './AbilityCardFace';
 import { ActorCardArt } from './DetailsCardViewer';
 import { KeruExpression } from './KeruExpression';

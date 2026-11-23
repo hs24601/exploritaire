@@ -4,8 +4,8 @@ import { foundationSummon, FOUNDATION_SUMMON_SLOT } from '../rules/battleStatusD
 import { canTapIn, leaderForCard, personalValue, tapInReason, type LeaderKeruId } from '../rules/keruLeadership';
 import { rankLabel } from '../protoState';
 import { windstormDamage } from '../rules/cirCompanion';
-import demSubject from '../../../artifacts/dem-style-v3/dem-storybook-v3.png';
-import demBackground from '../../../artifacts/dem-draft/dem-background-v1.png';
+import demSubject from '../art/keruDrafts/dem-style-v3/dem-storybook-v3.png';
+import demBackground from '../art/keruDrafts/dem-draft/dem-background-v1.png';
 import { cloneElement, useEffect, useLayoutEffect, useRef, useState, type RefObject, type CSSProperties } from 'react';
 import { useCardJumbo } from './CardJumbo';
 import { createPortal } from 'react-dom';

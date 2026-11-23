@@ -1,16 +1,16 @@
-import briSubject from '../../artifacts/keru-creatures-v2/bri-subject-v2.png';
-import demSubject from '../../artifacts/dem-style-v3/dem-storybook-v3.png';
-import demBackground from '../../artifacts/dem-draft/dem-background-v1.png';
+import briSubject from './art/keruDrafts/keru-creatures-v2/bri-subject-v2.png';
+import demSubject from './art/keruDrafts/dem-style-v3/dem-storybook-v3.png';
+import demBackground from './art/keruDrafts/dem-draft/dem-background-v1.png';
 import { CIR_ART } from './rules/battle';
-import briBackground from '../../artifacts/keru-drafts/bri-background-v1.png';
-import solSubject from '../../artifacts/keru-creatures-v2/sol-subject-v2.png';
-import solBackground from '../../artifacts/keru-drafts/sol-background-v1.png';
-import veySubject from '../../artifacts/keru-creatures-v2/vey-subject-v2.png';
-import veyBackground from '../../artifacts/keru-drafts/vey-background-v1.png';
-import fluxSubject from '../../artifacts/keru-creatures-v2/flux-subject-v2.png';
-import fluxBackground from '../../artifacts/keru-drafts/flux-background-v1.png';
-import axiSubject from '../../artifacts/keru-creatures-v2/axi-subject-v2.png';
-import axiBackground from '../../artifacts/keru-drafts/axi-background-v1.png';
+import briBackground from './art/keruDrafts/keru-drafts/bri-background-v1.png';
+import solSubject from './art/keruDrafts/keru-creatures-v2/sol-subject-v2.png';
+import solBackground from './art/keruDrafts/keru-drafts/sol-background-v1.png';
+import veySubject from './art/keruDrafts/keru-creatures-v2/vey-subject-v2.png';
+import veyBackground from './art/keruDrafts/keru-drafts/vey-background-v1.png';
+import fluxSubject from './art/keruDrafts/keru-creatures-v2/flux-subject-v2.png';
+import fluxBackground from './art/keruDrafts/keru-drafts/flux-background-v1.png';
+import axiSubject from './art/keruDrafts/keru-creatures-v2/axi-subject-v2.png';
+import axiBackground from './art/keruDrafts/keru-drafts/axi-background-v1.png';
 export type KeruDraftTarget = 'hero' | 'mochi' | 'enemy' | 'self' | 'all-enemies';
 export type KeruDraftExpression = { name: string; cost: number; text: string; rules: string };
 export type KeruDraft = {

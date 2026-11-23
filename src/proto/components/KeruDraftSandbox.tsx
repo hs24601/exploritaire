@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { KERU_DRAFTS, KERU_DRAFT_ART, KERU_ABILITIES, type KeruDraft } from '../keruDrafts';
-import demNatural from '../../../artifacts/dem-style-v3/dem-natural-v1.png';
+import demNatural from '../art/keruDrafts/dem-style-v3/dem-natural-v1.png';
 import { TradingCard } from './TradingCard';
 import { KeruAbilityArt } from './AbilityCardFace';
 import { HeroEmoji } from './HeroEmoji';
