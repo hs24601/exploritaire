@@ -1,0 +1,25 @@
+{
+  "asset": "fireball",
+  "version": 1,
+  "date": "2026-11-16",
+  "tool": "built-in image_gen",
+  "master": "fireball.png",
+  "runtime": "public/assets/runtime/spells/fireball/v1/fireball.png",
+  "prompt": "Use case: stylized-concept. Asset type: Exploritaire transparent spell effect cutout, Fireball v1. Image 1 is the fireball silhouette/composition reference only: preserve its rounded leading fire head at lower left and long tapered flame tail sweeping to upper right, with distinctive split flame tongues and two detached small embers. Image 2 is the actual approved Hero berry painting and the primary storybook watercolor STYLE reference, not subject. Image 3 is Scratch, supporting light palette and soft merged brushwork. Paint only a single fireball: creamy ivory/yellow hot core, diluted gold, apricot and copper-orange outer flames, tiny muted red accents. Use broad softly merging wet-on-wet watercolor washes, irregular pigment blooms and loose broken edges, a few gouache highlights; simplify into large readable masses. Preserve the reference's diagonal direction and recognizable tongue notches but avoid sharp vector contours, emoji gradients, photoreal fire, dense microtexture, hard black outlines and artificial glow halo. Entire flame and detached embers fully within canvas with generous transparent margins. Genuine transparent background with original alpha, no paper rectangle, scenery, text, card, border or shadow.",
+  "references": [
+    {
+      "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+      "role": "actual primary Hero berry painting style reference"
+    },
+    {
+      "path": "public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+      "role": "supporting lighter palette/soft merged brushwork"
+    },
+    {
+      "path": "fireball-reference.png",
+      "role": "user supplied silhouette/composition only; flat rendering style excluded"
+    }
+  ],
+  "review": "Reviewed generated original beside actual style references. Broad merged warm washes, legible silhouette, no baked text/card. Original alpha spans 0–254 Fireball and 0–253 hand icon; no color key or background removal. Full original and runtime are byte-identical. Runtime display review recorded in docs/art/woods-spells-v1.md.",
+  "sha256": "c3e7d9c3cf169e0590387b1180239049083f389d2cdbf9bc8afebb2a9205128e"
+}
