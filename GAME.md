@@ -1284,3 +1284,10 @@ These are current implementation defaults for iteration, not permanent game-desi
 
 
 - Combat sandbox status presentation (Eric, 2026-10-24): remove persistent Momentum gauge status/adjacent reserve, pace, sequence, readiness, overfill and freeze text. Keep the gauge value and Config decay control. Buffs/debuffs present as icons with custom hover/focus/touch callouts carrying their descriptive details, including Ember Trial phases and Gallows Bloom countdown. Reserve and fit the complete status/intent stack so icons remain fully visible.
+
+## Village slice (Eric, 2026-11-23)
+
+- `village.html` (`src/village/`) is a city-building riff with no pawns: the player plays themed golf surfaces directly (Forest = lumber with felling, Berry Patch = food on a 3x3 grid with ripening, Quarry = stone in face-down shafts where deeper rock pays more) and grows a village that shelters wandering kin, Dungeon Village 2 style (appeal, likes, side-by-side building combos, rank-ups).
+- Daylight is the only day limiter and is tied to receipts: tableau plays cost very little daylight, stock draws cost much more (balance pass in `docs/research/village-daylight-balance.md`, `tools/village-daylight-sim.ts`).
+- Look: polished, modern and bespoke (clean panels, hairlines, dense tables, Melvor-like information density) with material playing cards inside. It replaces the wood/felt/brass tabletop for this page. No legal-move highlights.
+- Validation: `node tools/village-layout-playwright.cjs <baseUrl>` plays each surface and runs the shared layout check at 1912x914, 1280x720 and Galaxy Z Fold 7 unfolded (884x1000) and folded cover (412x915).

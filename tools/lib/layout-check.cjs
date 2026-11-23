@@ -30,10 +30,18 @@ async function findLayoutDefects(page, root, { parts, cornerInset = 0, minFontSi
         if (corners.some(c => overlap(c, r))) defects.push(`${name(el)} covers a corner stud`);
       }
     }
+    // Compare only what is actually painted: clip each box to the scroll containers around it,
+    // so content scrolled under a fixed bar doesn't count as a collision.
+    const scrollers = [...items, host].filter(node => /(auto|scroll|hidden)/.test(getComputedStyle(node).overflowY + getComputedStyle(node).overflowX) && node !== host);
+    const shown = (el) => {
+      let r = box(el); r = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+      for (const s of scrollers) if (s !== el && s.contains(el)) { const c = box(s); r = { left: Math.max(r.left, c.left), top: Math.max(r.top, c.top), right: Math.min(r.right, c.right), bottom: Math.min(r.bottom, c.bottom) }; }
+      return r;
+    };
     for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
       const [a, b] = [items[i], items[j]];
       if (a.contains(b) || b.contains(a)) continue;
-      if (overlap(box(a), box(b))) defects.push(`${name(a)} overlaps ${name(b)}`);
+      if (overlap(shown(a), shown(b))) defects.push(`${name(a)} overlaps ${name(b)}`);
     }
     const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {

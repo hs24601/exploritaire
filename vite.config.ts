@@ -778,6 +778,7 @@ export default defineConfig({
         ux:         path.resolve(__dirname, 'ux.html'),
         exploritaire: path.resolve(__dirname, 'exploritaire.html'),
         hearth: path.resolve(__dirname, 'hearth.html'),
+        village: path.resolve(__dirname, 'village.html'),
       },
     },
   },
