@@ -23,9 +23,10 @@ export type TableauSolveControlsProps = {
   autoSolveLockedReason?: string;
   singleMoveTarget?: HTMLElement | null;
   controlShortcut?: boolean;
+  onHighlightHeldChange?: (held: boolean) => void;
 };
 
-export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disabled = false, hideStatus = false, highlight = false, onHighlightChange, guidance = false, onGuidanceChange, allowDivine = true, autoSolveLockedReason, tileBoundary, singleMoveTarget, controlShortcut = false }: TableauSolveControlsProps) => {
+export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disabled = false, hideStatus = false, highlight = false, onHighlightChange, guidance = false, onGuidanceChange, allowDivine = true, autoSolveLockedReason, tileBoundary, singleMoveTarget, controlShortcut = false, onHighlightHeldChange }: TableauSolveControlsProps) => {
   const [divine, setDivine] = useState(false);
   const [running, setRunning] = useState(false);
   const [tileRunning,setTileRunning]=useState(false);
@@ -35,15 +36,23 @@ export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disable
   useEffect(() => {
     if (!controlShortcut) return;
     const shortcut = (event: KeyboardEvent) => {
-      if ((event.code !== 'ControlRight' && event.code !== 'ControlLeft') || event.repeat || event.isComposing || event.altKey || event.metaKey || event.shiftKey || isTextEditingTarget(event.target) || gameTime.isPaused()) return;
+      if (event.code === 'ControlLeft') {
+        if (!event.repeat && !event.isComposing && !event.altKey && !event.metaKey && !event.shiftKey && !isTextEditingTarget(event.target) && !gameTime.isPaused()) onHighlightHeldChange?.(true);
+        return;
+      }
+      if (event.code !== 'ControlRight' || event.repeat || event.isComposing || event.altKey || event.metaKey || event.shiftKey || isTextEditingTarget(event.target) || gameTime.isPaused()) return;
       const button = singleMoveButton.current;
       if (!button || button.disabled) return;
       event.preventDefault();
       button.click();
     };
+    const release = (event: KeyboardEvent) => { if (event.code === 'ControlLeft') onHighlightHeldChange?.(false); };
+    const blur = () => onHighlightHeldChange?.(false);
     window.addEventListener('keydown', shortcut);
-    return () => window.removeEventListener('keydown', shortcut);
-  }, [controlShortcut]);
+    window.addEventListener('keyup', release);
+    window.addEventListener('blur', blur);
+    return () => { window.removeEventListener('keydown', shortcut); window.removeEventListener('keyup', release); window.removeEventListener('blur', blur); };
+  }, [controlShortcut, onHighlightHeldChange]);
   const callbacks = useRef({ onStep, onStart });
   callbacks.current = { onStep, onStart };
   const cancel = () => { if (timer.current) gameTime.clearTimeout(timer.current); timer.current = null; setRunning(false); setTileRunning(false); };
@@ -77,7 +86,7 @@ export const TableauSolveControls = ({ onStep, onStart, stepLimit = 256, disable
     // Allow React to commit the pause/mode changes before the first step.
     timer.current = gameTime.setTimeout(tick, 0);
   };
-  const singleMoveControl = <button ref={singleMoveButton} type="button" disabled={disabled || running} aria-keyshortcuts={controlShortcut ? 'Control' : undefined} title={controlShortcut ? 'Single solver move (either Ctrl key)' : undefined} onClick={() => start(1)}>Auto-M</button>;
+  const singleMoveControl = <button ref={singleMoveButton} type="button" disabled={disabled || running} aria-keyshortcuts={controlShortcut ? 'Control' : undefined} title={controlShortcut ? 'Single solver move (right Ctrl)' : undefined} onClick={() => start(1)}>Auto-M</button>;
   return <div className="proto-solve-controls" onPointerDown={(event) => event.stopPropagation()}>
     <div className="proto-solve-actions">
       {tileBoundary && <button type="button" disabled={disabled || Boolean(autoSolveLockedReason) || running&&!tileRunning} onClick={()=>running?cancel():start(stepLimit,true)}>{running&&tileRunning?'Stop':'Auto-S Tile'}</button>}

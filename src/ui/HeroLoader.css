@@ -1,0 +1,8 @@
+.hero-loader__art{display:block;width:96px;max-width:100%;margin-inline:auto;filter:drop-shadow(0 9px 12px #0003)}
+.hero-loader__art>svg{display:block;width:100%;height:auto;overflow:visible}
+/* Same rump anchor and progressive lateral bend as proto.html’s loader. */
+.hero-loader__tail{transform-box:view-box;transform-origin:560px 1294px;animation:hero-loader-wag .275s ease-in-out infinite}
+@keyframes hero-loader-wag{0%,100%{transform:skewX(-12deg) scaleX(.94)}25%,75%{transform:skewX(0deg) scaleX(1)}50%{transform:skewX(12deg) scaleX(.88)}}
+.hero-loading{display:grid;justify-items:center;align-content:center;gap:8px;min-height:160px;color:inherit;font:16px/1.35 Georgia,serif;text-align:center}
+html[data-global-paused="true"] .hero-loader__tail{animation-play-state:running!important}
+@media(prefers-reduced-motion:reduce){.hero-loader__tail{animation:none}}

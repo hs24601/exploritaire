@@ -1,0 +1,38 @@
+/* Four visual columns on each side of the foundations. */
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__board {
+ --vertical-card-w:clamp(44px,6vw,64px);
+ --vertical-foundation-w:clamp(120px,30vw,232px);
+ --vertical-column-gap:14px;
+ grid-template-columns:minmax(0,1fr) calc(var(--vertical-card-w) * 2.95) calc(var(--vertical-foundation-w) - var(--vertical-column-gap) * 2) calc(var(--vertical-card-w) * 2.95) minmax(0,1fr);
+ grid-template-rows:auto repeat(5,calc(var(--vertical-card-w) * 1.397)) auto;
+ height:max-content; min-height:0; gap:7px var(--vertical-column-gap); align-content:center;
+}
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__middle,
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__tableau,
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__rack { display:contents; }
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__column {
+ --classic-card-w:var(--vertical-card-w); grid-row:calc(var(--vertical-row) + 1); width:var(--vertical-card-w); height:calc(var(--vertical-card-w) * 1.397); min-width:0; overflow:visible; align-self:start;
+}
+.combat-sandbox .battle-field[data-vertical-columns] [data-vertical-side='left'] { grid-column:2; justify-self:end; }
+.combat-sandbox .battle-field[data-vertical-columns] [data-vertical-side='right'] { grid-column:4; justify-self:start; }
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__team[data-team='enemy'] { grid-area:1 / 2 / 2 / 5; width:100%; max-width:var(--vertical-foundation-w); justify-self:center; }
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__team[data-team='party'] { grid-area:7 / 2 / 8 / 5; width:100%; max-width:var(--vertical-foundation-w); justify-self:center; }
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__team { grid-template-columns:minmax(0,1fr); grid-auto-flow:row; grid-auto-columns:auto; justify-items:stretch; }
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__slot { width:100%; }
+.combat-sandbox .battle-field[data-vertical-columns] [data-battle-card][data-row-inaccessible] { opacity:.38; filter:brightness(.6) saturate(.35); }
+.combat-sandbox .battle-field[data-vertical-columns] [data-battle-card]:not([data-row-inaccessible]) .proto-card-veil { display:none; }
+.combat-sandbox .battle-field[data-vertical-columns] .battle-field__status,
+.combat-sandbox .battle-field[data-vertical-columns] .tableau-plan-legend { display:none; }
+.combat-sandbox .battle-field[data-vertical-columns] .battle-spills { grid-area:7 / 4 / 8 / 5; }
+@media(max-width:600px) {
+ .combat-sandbox .battle-field[data-vertical-columns] .battle-field__board { --vertical-column-gap:6px; }
+ .combat-sandbox .battle-field[data-vertical-columns] .battle-foe__name { white-space:normal; font-size:12px; }
+}
+/* 223 Stepping Stones: the ground Hero stands on. */
+.combat-sandbox .battle-field[data-vertical-columns] [data-battle-card][data-stepping-stand] { outline:3px solid #f2c76b; outline-offset:2px; border-radius:6px; }
+
+/* 224: one face per slot, in five rows of eight. */
+.combat-sandbox .battle-field[data-tiled-floor] .battle-field__board { --vertical-card-w:min(52px,calc((100% - (var(--tile-cols) - 1) * 4px) / var(--tile-cols)),calc(48vh / (var(--tile-rows) * 1.397))); grid-template-columns:repeat(var(--tile-cols),var(--vertical-card-w)); grid-template-rows:auto repeat(var(--tile-rows),calc(var(--vertical-card-w) * 1.397)) auto; justify-content:center; gap:4px; }
+.combat-sandbox .battle-field[data-tiled-floor] .battle-field__column { grid-column:var(--tile-column); justify-self:center; translate:var(--tile-shift) 0; }
+.combat-sandbox .battle-field[data-tiled-floor] .battle-field__team[data-team='enemy'] { grid-area:1 / 1 / 2 / -1; }
+.combat-sandbox .battle-field[data-tiled-floor] .battle-field__team[data-team='party'] { grid-area:calc(var(--tile-rows) + 2) / 1 / calc(var(--tile-rows) + 3) / -1; }

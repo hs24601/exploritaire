@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "page": 1110,
+  "revision": 3,
+  "paint": {
+    "enabled": true,
+    "size": 1.25,
+    "coverage": 1,
+    "relief": 0.16,
+    "variation": 0.16,
+    "palette": "autumn-wood",
+    "seed": 1110
+  },
+  "ground": {
+    "density": 0.75,
+    "height": 0.55,
+    "width": 0.075,
+    "curl": 1.1,
+    "wind": 0.22,
+    "moss": 0.62,
+    "wetness": 0.25
+  },
+  "field": {
+    "size": 64,
+    "growth": [],
+    "wet": []
+  },
+  "props": [],
+  "shots": [],
+  "atmosphere": {
+    "smokeWisps": false,
+    "smokeDensity": 0.6,
+    "buoyancy": 3,
+    "swirl": 0.35
+  }
+}

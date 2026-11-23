@@ -1,3 +1,6 @@
+import { validPageDocument } from './src/book/pageDocument';
+import {saveWorldStudio} from './tools/worldStudioStore';
+import { validBookDocument } from './src/book/sceneDocument';
 import { validateLayouts } from './src/proto/tableauLayouts';
 import { validateAuthoringEdit } from './src/proto/authoringValidation';
 import { defineConfig } from 'vite';
@@ -94,6 +97,22 @@ export default defineConfig({
       : {}),
   },
   plugins: [
+    {
+      name: 'portals-home',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const url = new URL(req.url ?? '/', 'http://localhost');
+          if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname === '/') {
+            res.statusCode = 302;
+            res.setHeader('Location', `/portals.html${url.search}`);
+            res.setHeader('Cache-Control', 'no-store');
+            res.end();
+            return;
+          }
+          next();
+        });
+      },
+    },
     { name: 'query-page-titles', transformIndexHtml: { order: 'pre', handler: () => [{ tag: 'script', attrs: { type: 'module', src: '/src/browserPageTitle.ts' }, injectTo: 'head' }] } },
     { name: 'game-context-menu', transformIndexHtml: { order: 'pre', handler: () => [{ tag: 'script', attrs: { type: 'module', src: '/src/browserContextMenu.ts' }, injectTo: 'head' }] } },
     {
@@ -130,6 +149,17 @@ export default defineConfig({
     react(),
     ...(DEV_HTTPS ? [basicSsl()] : []),
     {
+      name: 'musical-tableaus-redirect',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const url = req.url ?? '';
+          if (!/^\/musicaltableaus\.html(?:\?|$)/.test(url)) return next();
+          res.writeHead(308, { Location: url.replace('/musicaltableaus.html', '/117.html') });
+          res.end();
+        });
+      },
+    },
+    {
       name: 'light-blocker-save',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
@@ -142,6 +172,31 @@ export default defineConfig({
             return;
           }
           next();
+        });
+        server.middlewares.use('/__book-pages/load',(req,res)=>{if(req.method!=='GET'){res.statusCode=405;res.end('Method Not Allowed');return;}try{res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.end(fs.readFileSync(path.resolve(__dirname,'src/data/bookPages.json'),'utf8'));}catch(error){res.statusCode=500;res.end(String(error));}});
+        for(const studioPage of [1110,1111])server.middlewares.use(`/__world-studio${studioPage}`,(req,res)=>{
+          const file=path.resolve(__dirname,`src/data/worldStudio${studioPage}.json`);res.setHeader('Cache-Control','no-store');
+          if(req.method==='GET'){res.setHeader('Content-Type','application/json');res.end(fs.readFileSync(file,'utf8'));return;}
+          if(req.method!=='POST'){res.statusCode=405;res.end('Method Not Allowed');return;}
+          if(!req.headers['content-type']?.startsWith('application/json')){res.statusCode=415;res.end('Expected JSON');return;}
+          if(req.headers.origin&&!['http://'+req.headers.host,'https://'+req.headers.host].includes(req.headers.origin)){res.statusCode=403;res.end('Origin mismatch');return;}
+          let body='',large=false;req.on('data',chunk=>{body+=chunk;if(body.length>1048576&&!large){large=true;res.statusCode=413;res.end('Document too large');}});
+          req.on('end',()=>{if(large)return;try{const {document,baseRevision}=JSON.parse(body),saved=saveWorldStudio(file,document,baseRevision);res.setHeader('Content-Type','application/json');res.end(JSON.stringify(saved));}catch(error){res.statusCode=(error as {status?:number}).status??400;res.end(String(error));}});
+        });
+        server.middlewares.use('/__book-pages/save',(req,res)=>{
+          if(req.method!=='POST'){res.statusCode=405;res.end('Method Not Allowed');return;}
+          if(!req.headers['content-type']?.startsWith('application/json')){res.statusCode=415;res.end('Expected application/json');return;}
+          if(req.headers.origin&&!['http://'+req.headers.host,'https://'+req.headers.host].includes(req.headers.origin)){res.statusCode=403;res.end('Origin mismatch');return;}
+          let body='',large=false;req.on('data',chunk=>{if(large)return;body+=chunk;if(Buffer.byteLength(body)>2*1024*1024){large=true;res.statusCode=413;res.end('Page document too large');}});
+          req.on('end',()=>{if(large)return;try{const {document,baseRevision}=JSON.parse(body);if(!validPageDocument(document))throw Error('Invalid book page document');const file=path.resolve(__dirname,'src/data/bookPages.json');const current=JSON.parse(fs.readFileSync(file,'utf8'));if(baseRevision!==current.revision){res.statusCode=409;res.end('Pages changed on disk. Reload disk to review the latest version.');return;}document.revision=current.revision+1;fs.writeFileSync(file+'.tmp',JSON.stringify(document,null,2)+'\n','utf8');fs.renameSync(file+'.tmp',file);res.setHeader('Content-Type','application/json');res.end(JSON.stringify(document));}catch(error){res.statusCode=400;res.end(String(error));}});
+        });
+        server.middlewares.use('/__book-scenes/load',(req,res)=>{if(req.method!=='GET'){res.statusCode=405;res.end('Method Not Allowed');return;}try{res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.end(fs.readFileSync(path.resolve(__dirname,'src/data/bookScenes.json'),'utf8'));}catch(error){res.statusCode=500;res.end(String(error));}});
+        server.middlewares.use('/__book-scenes/save',(req,res)=>{
+          if(req.method!=='POST'){res.statusCode=405;res.end('Method Not Allowed');return;}
+          if(!req.headers['content-type']?.startsWith('application/json')){res.statusCode=415;res.end('Expected application/json');return;}
+          if(req.headers.origin && !['http://'+req.headers.host,'https://'+req.headers.host].includes(req.headers.origin)){res.statusCode=403;res.end('Origin mismatch');return;}
+          let body='',large=false;req.on('data',chunk=>{if(large)return;body+=chunk;if(Buffer.byteLength(body)>512*1024){large=true;res.statusCode=413;res.end('Scene document too large');}});
+          req.on('end',()=>{if(large)return;try{const {document,baseRevision}=JSON.parse(body);if(!validBookDocument(document))throw Error('Invalid book scene document');const file=path.resolve(__dirname,'src/data/bookScenes.json');const current=JSON.parse(fs.readFileSync(file,'utf8'));if(baseRevision!==current.revision){res.statusCode=409;res.end('The scene file changed on disk. Export your draft before reloading to review the latest version.');return;}document.revision=current.revision+1;fs.writeFileSync(file+'.tmp',JSON.stringify(document,null,2)+'\n','utf8');fs.renameSync(file+'.tmp',file);res.setHeader('Content-Type','application/json');res.end(JSON.stringify(document));}catch(error){res.statusCode=400;res.end(String(error));}});
         });
         server.middlewares.use('/__authoring/save', (req, res) => {
           if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
@@ -189,6 +244,25 @@ export default defineConfig({
           });
         });
         // ?combatAbilities editor: name/owner/description overrides keyed by stable ability id (null resets).
+        server.middlewares.use('/__proto-status/save', (req, res) => {
+          if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
+          let body = '', large = false;
+          req.on('data', chunk => { body += chunk; if (body.length > 8000 && !large) { large = true; res.statusCode = 413; res.end('Too large'); req.destroy(); } });
+          req.on('end', () => {
+            if (large) return;
+            try {
+              const { id, override } = JSON.parse(body);
+              const source = fs.readFileSync(path.resolve(__dirname, 'src/proto/rules/battleStatusData.ts'), 'utf8');
+              if (typeof id !== 'string' || !/^[a-z][a-z-]{0,39}$/.test(id) || !source.includes(id + ': {') && !source.includes("'" + id + "': {")) throw new Error('Unknown status');
+              if (override !== null && (!override || typeof override.name !== 'string' || !override.name.trim() || override.name.length > 80 || typeof override.glyph !== 'string' || !override.glyph.trim() || override.glyph.length > 40 || !['buff', 'debuff'].includes(override.kind) || ![undefined, 'party-turn', 'enemy-turn'].includes(override.expires) || typeof override.blocksStagger !== 'boolean' || (override.description !== undefined && (typeof override.description !== 'string' || override.description.length > 4000)))) throw new Error('Invalid status attributes');
+              const file = path.resolve(__dirname, 'src/data/protoStatusOverrides.json');
+              const edits = JSON.parse(fs.readFileSync(file, 'utf8'));
+              if (override === null) delete edits[id]; else edits[id] = { name: override.name.trim(), glyph: override.glyph.trim(), kind: override.kind, expires: override.expires ?? null, description: override.description?.trim() || undefined, blocksStagger: override.blocksStagger };
+              fs.writeFileSync(file + '.tmp', JSON.stringify(edits, null, 2) + '\n'); fs.renameSync(file + '.tmp', file);
+              res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(edits));
+            } catch (error) { res.statusCode = 400; res.end(String(error)); }
+          });
+        });
         server.middlewares.use('/__combat-abilities/save', (req, res) => {
           if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
           if (!req.headers['content-type']?.startsWith('application/json')) { res.statusCode = 415; res.end('Expected application/json'); return; }
@@ -765,6 +839,12 @@ export default defineConfig({
         kinhand:    path.resolve(__dirname, 'kinhand.html'),
         classic:    path.resolve(__dirname, 'classic.html'),
         proto: path.resolve(__dirname, 'proto.html'),
+        roam: path.resolve(__dirname, 'roam.html'),
+        aldan: path.resolve(__dirname, 'aldan.html'),
+        book: path.resolve(__dirname, 'book.html'),
+        portals: path.resolve(__dirname, 'portals.html'),
+        castleGrounds: path.resolve(__dirname, '118.html'),
+        castleMovingWater: path.resolve(__dirname, '119.html'),
         golfLegacy: path.resolve(__dirname, 'golf-legacy.html'),
         inverse:    path.resolve(__dirname, 'inverse.html'),
         city:       path.resolve(__dirname, 'city.html'),
@@ -774,11 +854,18 @@ export default defineConfig({
         auram:      path.resolve(__dirname, 'auram.html'),
         tooling:    path.resolve(__dirname, 'tooling.html'),
         watercolorLab: path.resolve(__dirname, 'tools/watercolor-lab.html'),
+        livePaintLab: path.resolve(__dirname, 'tools/live-paint-lab.html'),
+          paintTechniques: path.resolve(__dirname, 'tools/paint-techniques.html'),
         bushLab: path.resolve(__dirname, 'tools/bush-lab.html'),
         ux:         path.resolve(__dirname, 'ux.html'),
         exploritaire: path.resolve(__dirname, 'exploritaire.html'),
         hearth: path.resolve(__dirname, 'hearth.html'),
+        musicaltableaus: path.resolve(__dirname, '117.html'),
+        snowflakeSticker: path.resolve(__dirname, 'snowflake-sticker.html'),
+        grid3x3: path.resolve(__dirname, '3xgrid.html'),
+        handGrid: path.resolve(__dirname, '3sxgrid.html'),
       },
     },
   },
 });
+

@@ -1,0 +1,41 @@
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const { findLayoutDefects } = require('./lib/layout-check.cjs');
+(async () => {
+  fs.mkdirSync('output/forest-fog', { recursive: true });
+  const browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, hasTouch: true });
+    const errors = []; page.on('pageerror', e => errors.push(e.message));
+    page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+    await page.goto('http://127.0.0.1:5183/tools/live-paint-lab.html');
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.ready === 'true');
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'output/forest-fog/ground.png' });
+    await page.locator('#fog-controls summary').click();
+    assert.deepEqual(await findLayoutDefects(page, '#fog-settings', { parts: ':scope > label' }), []);
+    const canvas = page.locator('canvas');
+    const fogOn = await canvas.screenshot();
+    await page.locator('#fog-enabled').tap();
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.fog === 'false');
+    await page.waitForTimeout(150);
+    assert.notDeepEqual(await canvas.screenshot(), fogOn, 'Fog changes actual rendered scene pixels');
+    await page.locator('#fog-enabled').tap();
+    await page.locator('#fog-height').evaluate(el => { el.value = '8'; el.dispatchEvent(new Event('input')); });
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.fogHeight === '8');
+    await page.locator('#fog-density').evaluate(el => { el.value = '0.12'; el.dispatchEvent(new Event('input')); });
+    await page.locator('#fog-softness').evaluate(el => { el.value = '5'; el.dispatchEvent(new Event('input')); });
+    await page.screenshot({ path: 'output/forest-fog/controls.png' });
+    await page.locator('#fog-height').evaluate(el => { el.value = '4'; el.dispatchEvent(new Event('input')); });
+    await page.locator('#fog-density').evaluate(el => { el.value = '0.08'; el.dispatchEvent(new Event('input')); });
+    await page.locator('#fog-softness').evaluate(el => { el.value = '3'; el.dispatchEvent(new Event('input')); });
+    await page.locator('#fog-controls summary').click();
+    await page.locator('#flight').click();
+    await page.waitForFunction(() => Number(document.querySelector('canvas').dataset.camera.split(',')[1]) === 13);
+    await page.screenshot({ path: 'output/forest-fog/flight.png' });
+    assert.equal(await page.locator('#forest-error').isVisible(), false);
+    assert.deepEqual(errors, []);
+    console.log('PASS: dark height fog renders, touch toggle changes scene pixels, height/density/softness controls work, ground/flight capture and fog control layout; no WebGL errors.');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

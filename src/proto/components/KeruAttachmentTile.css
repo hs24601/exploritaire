@@ -1,0 +1,97 @@
+.keru-foundation-group { position:relative; width:100%; min-width:0; }
+@media(max-width:600px) {
+ .battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-foundation-group:has(.keru-squares) { width:calc(100% - 128px); margin-inline:auto; }
+}
+/* Keep attachments outside the host without compressing its face. */
+.keru-foundation-group > .keru-attachment-tile { position:absolute; right:calc(100% + 8px); top:0; }
+.battle-field:not([data-momentum]) .keru-foundation-group:not(:has(.battle-foundation--unified)) { display:contents; }
+/* Size follows the connected foundation, including responsive height changes. */
+.keru-attachment-tile {
+ width:var(--keru-tile-size,62px); height:var(--keru-tile-size,62px); aspect-ratio:1;
+ box-sizing:border-box; padding:4px; display:grid; place-items:center;
+ border:2px solid #b7a17b; border-bottom-width:3px; border-radius:14px;
+ background:linear-gradient(150deg,#292334,#16131e 75%);
+ box-shadow:inset 0 1px 0 #fff3d515,0 3px 6px #0005;
+ color:#fff0d0; cursor:grab; touch-action:none;
+}
+.keru-attachment-tile img { width:100%; height:100%; min-height:0; object-fit:contain; pointer-events:none; }
+.keru-attachment-tile:focus-visible { outline:3px solid #ffe3a0; outline-offset:3px; }
+.keru-attachment-tile:disabled { cursor:default; }
+
+/* Pip capacity is presentation scaffolding until familiar resource rules are authored. */
+.keru-attachment-tile__pips { position:absolute; inset:auto 6px 4px; display:flex; justify-content:center; gap:2px; pointer-events:none; }
+.keru-attachment-tile__pips > i { flex:1 1 0; min-width:0; max-width:6px; height:8px; box-sizing:border-box; border:1px solid #c9a86a; border-radius:2px; background:#1d1712; }
+.keru-attachment-tile__pips > i[data-on] { background:linear-gradient(#ffd982,#d9902f); border-color:#ffe7a8; }
+.keru-attachment-tile img { padding-bottom:8px; box-sizing:border-box; }
+.keru-familiar-slot { border-style:dashed; background:#302737cc; color:#ffe1a1; cursor:default; font-size:11px; align-content:center; gap:2px; }
+.keru-familiar-slot > span:first-child { font-size:24px; line-height:1; }
+
+/* Empty 1004 attachment scaffolds follow the foundation height. */
+.foundation-empty-tiles { position:absolute; top:0; bottom:0; display:grid; grid-template-rows:repeat(2,minmax(0,1fr)); gap:4px; aspect-ratio:1 / 2; pointer-events:none; }
+.foundation-empty-tiles--left { right:calc(100% + 8px); }
+.foundation-empty-tiles--right { left:calc(100% + 8px); }
+.foundation-empty-tiles > span { box-sizing:border-box; aspect-ratio:1; height:100%; border:2px solid #b7a17b; border-bottom-width:3px; border-radius:12px; background:linear-gradient(150deg,#292334,#16131e 75%); box-shadow:inset 0 1px 0 #fff3d515,0 3px 6px #0005; }
+.keru-foundation-group:has(> .keru-attachment-tile) .foundation-empty-tiles--left > span:first-child { visibility:hidden; }
+
+.foundation-empty-tiles > span { display:grid; place-items:center; overflow:hidden; }
+.foundation-empty-tiles > span > svg { width:100%; height:100%; transform:scale(1.3); }
+
+/* Keru scenarios (1005–1012): Hero's familiar squares hold her invoked Keru (KeruSquares). Rows grow
+   with the Keru count, so the columns stay within the foundation's height. */
+.keru-squares { grid-template-rows:repeat(var(--keru-rows,2),minmax(0,1fr)); aspect-ratio:1 / var(--keru-rows,2); }
+.keru-squares > span, .keru-squares > .keru-square { box-sizing:border-box; aspect-ratio:1; height:100%; min-height:0; border-radius:12px; }
+.keru-squares > span[data-empty] { opacity:.7; }
+.keru-square { position:relative; display:block; padding:0; overflow:hidden; pointer-events:auto; cursor:grab; touch-action:none; border:2px solid var(--rarity,#b7a17b); border-bottom-width:3px; background:#16131e; box-shadow:0 0 0 1px var(--rarity-deep,#5d4a2c),0 3px 6px #0005; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; }
+.keru-square[data-dragging] { opacity:.45; }
+.keru-square[data-starving] { box-shadow:0 0 0 2px #ff5a5a,0 3px 6px #0005; }
+.keru-square .keru-rarity-art, .keru-square > .ability-status-art, .keru-square > .battle-riv-placeholder { width:100%; height:100%; }
+.keru-square__value, .keru-square__upkeep { position:absolute; z-index:2; min-width:20px; height:20px; padding:0 3px; box-sizing:border-box; border-radius:10px; background:#1b1408; border:1px solid #ffd76a; color:#ffe9a8; font:700 16px/18px system-ui,sans-serif; text-align:center; pointer-events:none; }
+.keru-square__value { left:2px; top:2px; }
+.keru-square__upkeep { right:2px; bottom:2px; }
+.keru-square[data-starving] .keru-square__upkeep { border-color:#ff5a5a; background:#3a0e0e; color:#ffd6d6; }
+.keru-square__ghost-art { display:block; width:40px; height:40px; overflow:hidden; border-radius:8px; }
+
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-squares > span[data-empty] { visibility:hidden; }
+
+/* 1012 familiars have their own compact foundations and buff trays. */
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-squares { width:100px; height:auto; bottom:auto; display:grid; grid-template-rows:repeat(var(--keru-rows,2),auto); aspect-ratio:auto; gap:8px; }
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-squares > span[data-empty] { display:none; }
+.keru-mini-foundation { min-width:0; pointer-events:auto; display:grid; justify-items:center; gap:3px; }
+.keru-mini-foundation__card { width:100%; height:64px; box-sizing:border-box; display:flex; align-items:center; gap:5px; padding:4px; border:2px solid #b7a17b; border-bottom-width:3px; border-radius:11px; background:linear-gradient(150deg,#292334,#16131e 75%); box-shadow:inset 0 1px 0 #fff3d515,0 3px 6px #0005; color:#fff0d0; }
+.keru-mini-foundation__card > .keru-square { flex:none; width:50px; height:50px; border-radius:8px; }
+.keru-mini-foundation__card > b { min-width:0; font:600 13px/1 Georgia,serif; overflow-wrap:anywhere; }
+.keru-mini-foundation__buff.battle-buff-icon { width:26px; height:26px; padding:2px; font:700 14px/1 Georgia,serif; }
+@media(max-width:600px) {
+ .battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-foundation-group:has(.keru-squares) { width:calc(100% - 164px); }
+ .battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-squares { width:72px; }
+ .keru-mini-foundation__card { height:52px; gap:2px; padding:3px; }
+ .keru-mini-foundation__card > .keru-square { width:38px; height:38px; }
+ .keru-mini-foundation__card > b { font-size:10px; }
+}
+
+.keru-mini-foundation__card .keru-square > svg,.keru-mini-foundation__card .keru-square > img { width:100%; height:100%; object-fit:cover; display:block; }
+.keru-mini-foundation__card > b { overflow-wrap:normal; font-size:11px; letter-spacing:-.3px; }
+@media(max-width:600px) { .keru-mini-foundation__card > b { font-size:9px; letter-spacing:-.5px; } }
+
+/* Match the host foundation height; each buff remains beneath its own card. */
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-squares { height:100%; grid-template-rows:repeat(var(--keru-rows,2),100%); gap:36px; }
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-mini-foundation { grid-template-rows:100% auto; align-content:start; }
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-mini-foundation__card { height:100%; }
+
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .battle-foundation--unified .battle-foe__name { grid-column:2; justify-self:center; }
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-mini-foundation__card { position:relative; display:grid; grid-template-columns:45% minmax(0,1fr); gap:3px; }
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-mini-foundation__card > .keru-square { width:100%; height:100%; }
+.keru-mini-foundation__meters { min-width:0; display:grid; justify-items:center; gap:8px; font:600 11px/1 Georgia,serif; }
+.keru-mini-foundation__pips { display:flex; flex-wrap:wrap; justify-content:center; gap:3px; }
+.keru-mini-foundation__pips i { width:6px; height:6px; border:1px solid #b7a17b; border-radius:50%; }
+.keru-mini-foundation__spells { position:absolute; z-index:20; left:0; top:100%; width:200px; }
+.keru-mini-foundation__spells button { color:#fff0ce; background:#252032; border:1px solid #b7a17b; border-radius:8px; padding:8px; text-align:left; }
+@property --keru-hold-angle { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+.keru-hold-progress { position:absolute; z-index:5; inset:4px; border-radius:50%; background:conic-gradient(#ffe09a var(--keru-hold-angle),transparent 0deg); animation:keru-hold 2s linear forwards; pointer-events:none; mask:radial-gradient(transparent 60%,#000 63%); }
+@keyframes keru-hold { to { --keru-hold-angle:360deg; } }
+
+/* Familiar portraits fill the foundation, with the name pill over the art. */
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-mini-foundation__card { display:block; padding:0; overflow:visible; }
+.battle-field:is([data-scenario='1012'],[data-scenario='111'],[data-scenario='100'],[data-scenario='101'],[data-scenario='102'],[data-scenario='103'],[data-scenario='104'],[data-scenario='105']) .keru-mini-foundation__card > .keru-square { width:100%; height:100%; border-radius:9px; }
+.keru-mini-foundation__name { position:absolute; z-index:2; top:3px; left:50%; transform:translateX(-50%); box-sizing:border-box; max-width:95%; padding:2px 10px; border:1px solid #d5bf91; border-radius:999px; background:#171923; color:#fff0ce; font:600 15px/18px Georgia,serif; text-align:center; pointer-events:none; }
+@media(max-width:600px) { .keru-mini-foundation__name { font-size:12px; line-height:16px; padding:1px 6px; } }

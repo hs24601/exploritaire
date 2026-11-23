@@ -56,7 +56,10 @@ describe('one Cir, expressed through her target',()=>{
   expect(useMomentumSkill(exposed,'pounce').foes[0].hp).toBe(28);
  });
  it('Hearthflame retaliates after an attack, including a lethal hit, without adding stagger or currency',()=>{
-  const bound=useMomentumSkill(base(),'cir','hero'),next=withdrawPlayer(bound);
+  const bound=useMomentumSkill(base(),'cir','hero');
+  // Keep this retaliation fixture independent of encounter damage tuning.
+  bound.foes=bound.foes.map(foe=>({...foe,profile:{...foe.profile,damage:22}}));
+  const next=withdrawPlayer(bound);
   expect(next.party[0].hp).toBe(10);expect(next.foes[0]).toMatchObject({hp:35,stagger:0});
   expect(next.events[1]).toMatchObject({amount:1,sourceId:'hero'});
   expect(next.events.map(event=>event.label)).toEqual(['Ember Trial Sentinel','Hearthflame · Fire']);
@@ -75,18 +78,18 @@ describe('one Cir, expressed through her target',()=>{
   const staggered={...bound,foes:bound.foes.map(foe=>({...foe,staggered:20,staggerStage:1}))};
   expect(withdrawPlayer(staggered).foes[0]).toMatchObject({hp:36,staggered:0,staggerStage:0});
  });
- it('Hearthflame multiplies only Hero receipts and recall removes the multiplier',()=>{
+ it('Hearthflame and recall preserve exactly one Momentum per legal receipt',()=>{
   const receipt=(state:ReturnType<typeof createCombatSandboxScenario>,actorId='hero')=>{
    const rank=state.party.find(actor=>actor.id===actorId)!.rank%13+1;
    return playCard({...state,columns:[[{id:`receipt-${state.momentum!.earned}`,rank}]]},0,actorId);
   };
   let state=useMomentumSkill(base(),'cir','hero');
   for(let i=0;i<4;i++)state=receipt(state);
-  expect(state.momentum).toMatchObject({value:25,earned:25,spent:0,lastGain:1.25});
+  expect(state.momentum).toMatchObject({value:24,earned:24,spent:0,lastGain:1});
   state=receipt(state,'mochi');
-  expect(state.momentum).toMatchObject({value:26,earned:26,lastGain:1});
+  expect(state.momentum).toMatchObject({value:25,earned:25,lastGain:1});
   state=receipt(returnCirToDeck(state));
-  expect(state.momentum).toMatchObject({value:27,earned:27,lastGain:1});
+  expect(state.momentum).toMatchObject({value:26,earned:26,lastGain:1});
   const mochi=receipt(useMomentumSkill(base(),'cir','mochi'));
   expect(mochi.momentum).toMatchObject({value:21,earned:21,lastGain:1});
  });
@@ -108,3 +111,4 @@ describe('one Cir, expressed through her target',()=>{
   expect(returned.cir).toEqual({status:'bound',actorId:'mochi'});expect(canUseMomentumSkill(returned,'cir')).toBe(false);
  });
 });
+

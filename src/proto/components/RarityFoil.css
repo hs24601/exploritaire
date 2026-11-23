@@ -1,0 +1,19 @@
+/* Independently authored gradient finishes inspired by Simey's layered foil/glare
+   technique: https://poke-holo.simey.me/ . No source styles or textures copied. */
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity='common']{--rarity:#b9bec6;--rarity-deep:#5d636c;--rarity-foil:0;--rarity-glare:.06}
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity='rare']{--rarity:#4fa3ff;--rarity-deep:#1d4f99;--rarity-foil:.16;--rarity-glare:.12}
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity='epic']{--rarity:#b56cff;--rarity-deep:#5a2596;--rarity-foil:.24;--rarity-glare:.16}
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity='legendary']{--rarity:#ffb43a;--rarity-deep:#a4521a;--rarity-foil:.3;--rarity-glare:.21}
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity] .trading-card{border-color:var(--rarity);border-width:6px;box-shadow:0 0 0 2px var(--rarity-deep),0 2px 10px #0009}
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity] .trading-card__foil{opacity:calc(var(--rarity-foil) + var(--foil-active,0)*var(--rarity-foil)*.4);filter:none;mix-blend-mode:soft-light;background-image:repeating-linear-gradient(118deg,#184169 0%,#8df2e5 12%,#fbe9a0 24%,#be78df 36%,#184169 48%);background-size:320% 220%;background-position:var(--foil-x,50%) var(--foil-y,50%)}
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity] .trading-card__glare{opacity:calc(var(--rarity-glare) + var(--foil-active,0)*.13);background:radial-gradient(ellipse at var(--foil-x,50%) var(--foil-y,50%),#fff7dfcc,transparent 65%);mix-blend-mode:screen}
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity] .trading-card__foil::after{content:none}
+:is(.trading-card-stage,.keru-rarity-card):is([data-rarity='epic'],[data-rarity='legendary']) .trading-card__foil::before{content:'';position:absolute;inset:0;background:repeating-conic-gradient(from 23deg at var(--foil-x,50%) var(--foil-y,50%),#64c8ff 0deg,#d994f2 20deg,#fae5a8 42deg,#72e9c4 63deg,#64c8ff 90deg);mix-blend-mode:overlay;opacity:.7}
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity='legendary'] .trading-card__foil::after{content:'';position:absolute;inset:-10%;background-image:radial-gradient(ellipse,#fff9d9 0 1px,transparent 2px),radial-gradient(ellipse,#fff 0 1px,transparent 2px);background-size:23px 31px,41px 37px;background-position:var(--foil-x,50%) var(--foil-y,50%),20% 70%;mix-blend-mode:screen;opacity:.55;animation:legendary-star-luster 5s ease-in-out infinite alternate}
+:is(.trading-card-stage,.keru-rarity-card)[data-rarity='legendary'] .trading-card{box-shadow:0 0 0 2px var(--rarity-deep),0 0 13px #ffb43a55}
+/* The new shared finish replaces the old extra art overlays on rarity cards. */
+.keru-rarity-card[data-rarity] .keru-rarity-art__foil,.keru-rarity-card[data-rarity] .keru-rarity-art__shimmer{display:none}
+@keyframes legendary-star-luster{from{opacity:.3;transform:translate3d(-2px,0,0)}to{opacity:.7;transform:translate3d(2px,-2px,0)}}
+[data-combat-paused] :is(.trading-card-stage,.keru-rarity-card)[data-rarity] .trading-card__foil::after{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){:is(.trading-card-stage,.keru-rarity-card)[data-rarity] .trading-card__foil::after{animation:none;transform:none}}
+[data-fx='low'] :is(.trading-card-stage,.keru-rarity-card)[data-rarity] .trading-card__foil::after,.keru-rarity-card[data-fx='low'][data-rarity] .trading-card__foil::after{animation:none;transform:none}

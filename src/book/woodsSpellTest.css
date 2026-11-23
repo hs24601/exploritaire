@@ -1,0 +1,183 @@
+.woods-spells {position:fixed;inset:0;z-index:1500;pointer-events:none;color:#fff0d1;font:16px/1.35 Georgia,serif}
+.woods-spells [hidden]{display:none!important}
+.woods-spell-open #castle-ui{visibility:hidden}
+.woods-spell-open .portals-pause{z-index:2200}
+.woods-spell-open .portals-pause-button{z-index:1600}
+.woods-spell-toggle {position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));translate:-50% 0;width:76px;height:64px;padding:0;border:1px solid #b7a46a80;border-radius:12px;background:#0e1b20d9;pointer-events:auto;cursor:pointer}
+.woods-spell-toggle img{width:100%;height:100%;object-fit:contain}
+.woods-spell-toggle:hover{border-color:#ffe3a6;box-shadow:0 0 20px #edd59835}
+.woods-spell-overlay{position:absolute;inset:0;pointer-events:auto;isolation:isolate;touch-action:none}
+.woods-spell-heading{position:absolute;top:22px;left:24px;margin:0;font:24px/1.2 Georgia,serif;text-shadow:0 2px 8px #000;pointer-events:none}
+.woods-spell-instruction{position:absolute;top:57px;left:24px;max-width:min(700px,calc(100vw - 240px));margin:0;color:#c3cce0;font:16px/1.4 Georgia,serif;pointer-events:none}
+.woods-spell-close{position:absolute;right:80px;top:20px;min-height:44px;padding:8px 14px;border:1px solid #b4bbd264;border-radius:8px;background:#0c1524e8;color:#e3e9fa;font:16px Georgia,serif;cursor:pointer;z-index:8}
+.woods-spells button:focus-visible{outline:3px solid #ffdf9f;outline-offset:3px}
+.woods-spell-hand.ability-fan{background:none;overflow:visible;max-height:none;z-index:12;transform:translateX(-50%)}
+.woods-spell-progress{position:absolute;left:58%;top:58%;width:38%;text-align:center;margin:0;font:17px/1.4 Georgia;color:#d1dcf0;pointer-events:none}
+.woods-spell-choose-target{position:absolute;left:78%;translate:-50% 0;bottom:228px;min-height:44px;padding:10px 16px;border:1px solid #e4c47c80;border-radius:8px;background:#172439;color:#fff0d1;font:16px Georgia;z-index:12}
+.woods-spell-choose-target:disabled{opacity:.45;cursor:default}
+.woods-spell-power[data-ready=false]{border-color:#8f9caf;cursor:help}
+.woods-spell-hand .ability-fan__card,.woods-spell-power.ability-fan__card,.woods-spell-ghost.ability-fan__card{padding:10px;display:flex;flex-direction:column;gap:6px;background:linear-gradient(145deg,#334638,#122425 70%);border:2px solid #cdb67f;border-radius:12px;transform:rotate(var(--fan-angle,0deg));font:16px/1.2 Georgia,serif;touch-action:none}
+.woods-spells .ability-fan__name{padding:0;min-height:0;font:bold 19px/1.2 Georgia,serif}
+.woods-spells .ability-fan__effect{font:16px/1.2 Georgia,serif;flex:none}
+.woods-spell-card-note{color:#c9d2d6;font:14px/1.2 Georgia,serif;margin-top:auto}
+.woods-spell-art{position:relative;height:clamp(45px,9vh,95px);min-height:0;flex:none;display:grid;place-items:center;overflow:hidden;font:52px/1 Georgia;color:#e6eaff;pointer-events:none}
+.woods-spell-art img{position:absolute;inset:0;display:block;min-width:0;min-height:0;width:100%;height:100%;object-fit:contain}
+.woods-spell-hand .ability-fan__card:hover{transform:translateY(-14px) rotate(var(--fan-angle,0deg));border-color:#fff0b9;z-index:200!important}
+.woods-spell-target{position:absolute;border:0;border-radius:0;color:#f4e6d4;font:16px Georgia,serif;padding:0 8px 2px;display:flex;align-items:flex-end;justify-content:center;text-shadow:0 2px 5px #000;z-index:3;cursor:crosshair}
+.woods-spell-target,.woods-spell-target:hover,.woods-spell-target:focus-visible,.woods-spell-target:active,.woods-spell-target:disabled{background:transparent!important;border:0!important;box-shadow:none!important;outline:0!important}
+.woods-spell-target[data-eligible=false]{color:#a4aabd88}
+.woods-spell-stellar.stellar{position:absolute;inset:106px 44% 86px 12px;overflow:visible;background:none;z-index:2;pointer-events:none}
+.woods-spell-stellar .stellar-stage{inset:0;pointer-events:auto;touch-action:none}
+.woods-spell-stellar .stellar-board{transition:transform .65s cubic-bezier(.3,.7,.2,1)}
+.woods-spell-stellar .card[data-foundation=true] .front{background:linear-gradient(165deg,#1e2c5c,#080d22)}
+body.castle-world .woods-spell-constellation{position:absolute;inset:auto;left:57%;top:15%;width:40%;height:40%;pointer-events:none;z-index:1}
+.woods-spell-power.ability-fan__card{left:78%;top:auto;bottom:24px;width:138px;height:192px;transform:translateX(-50%);z-index:10;cursor:grab}
+.woods-spell-power .woods-spell-art{height:70px}
+.woods-spell-auto{position:absolute;left:calc(28% - 24px);bottom:24px;min-width:48px;min-height:48px;z-index:5;cursor:pointer}
+.woods-spell-status{position:absolute;left:50%;bottom:20px;translate:-50% 0;max-width:80vw;text-align:center;font:19px/1.3 Georgia;color:#ffe1a6;z-index:15;pointer-events:none}
+.woods-spells[data-phase=casting] .woods-spell-power{opacity:0;pointer-events:none}
+.woods-spell-ghost.ability-fan__card{position:fixed;width:130px!important;height:182px!important;transform:translate(-50%,-75%) rotate(-6deg);pointer-events:none;z-index:100;opacity:.96;transition:none;box-shadow:0 12px 32px #0008}
+.woods-spell-projectile{position:absolute;width:180px;height:130px;translate:-50% -50%;pointer-events:none;z-index:14}
+.woods-spell-projectile:not(img){display:grid;place-items:center;font:90px/1 Georgia;color:#e5efff;text-shadow:0 0 24px #95caff}
+.woods-spells[data-phase=flying] .woods-spell-stellar{opacity:.5;pointer-events:none}
+@media(max-width:700px){
+ .woods-spell-heading{font-size:20px;top:16px;left:14px}.woods-spell-close{top:12px;right:76px;font-size:14px;max-width:110px}
+ .woods-spell-instruction{top:54px;left:14px;max-width:calc(100vw - 28px);font-size:15px}
+ .woods-spell-stellar.stellar{inset:116px 8px 31% 8px}
+ body.castle-world .woods-spell-constellation{left:48%;top:63%;width:49%;height:20%}
+ .woods-spell-progress{left:48%;top:84%;width:49%;font-size:14px}
+ .woods-spell-choose-target{left:77%;bottom:20px;width:145px;padding:8px 10px;font-size:15px}
+ .woods-spell-power.ability-fan__card{left:24%;bottom:12px;width:112px;height:156px;padding:8px;gap:3px}
+ .woods-spell-power .woods-spell-art{height:40px}.woods-spells .ability-fan__effect{font-size:14px}.woods-spells .ability-fan__name{font-size:17px}.woods-spell-card-note{font-size:12px}
+ .woods-spell-hand .woods-spell-art{height:40px}
+ .woods-spell-auto{left:45%;bottom:16px}.woods-spell-status{bottom:16px;font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){.woods-spells *{animation:none!important;transition:none!important}}
+
+/* The whole dealt field shimmers while an ability is held or armed. */
+.woods-spells[data-phase=hand] .woods-spell-stellar.stellar{inset:106px 12% 48%}
+.woods-spells[data-phase=hand] .woods-spell-stellar .card .front{animation:woods-foundation-shimmer 2.2s ease-in-out infinite alternate}
+.woods-spells[data-phase=hand] .woods-spell-stellar .card.pickable{cursor:crosshair}
+@keyframes woods-foundation-shimmer{from{box-shadow:0 0 5px #a9cfff25;filter:brightness(1)}to{box-shadow:0 0 18px #a9cfff80;filter:brightness(1.45)}}
+@media(max-width:700px){.woods-spells[data-phase=hand] .woods-spell-stellar.stellar{inset:116px 8px 62%}}
+
+.woods-spells[data-phase=hand] .woods-spell-stellar .card.pickable .front{border-color:#b5d4ffa0}
+
+/* Keep pointer capture on the source while clearing the hand from the field. */
+.woods-spells[data-dragging-hand=true] .woods-spell-hand{opacity:0;pointer-events:none}
+.woods-spells[data-phase=hand] .woods-spell-ghost.ability-fan__card{width:var(--drag-width)!important;height:var(--drag-height)!important;transform:translate(-50%,-75%) scale(.25);transform-origin:50% 75%;opacity:.5;box-shadow:none}
+.woods-spells[data-phase=hand] .woods-spell-stellar .card[data-drop-target=true] .front{animation:none;filter:brightness(1.6);border-color:#bafaff;outline:3px solid #8af3ff;outline-offset:3px;box-shadow:0 0 24px #63e5ffb0,inset 0 0 16px #63e5ff35}
+
+.woods-spell-painted-art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.woods-spell-paint-flight{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:11}
+.woods-spells[data-paint-phase=complete] .woods-spell-power{box-shadow:0 0 22px #ffbd6438}
+
+body.castle-world .woods-spells[data-phase=casting] .woods-spell-constellation{left:20%;top:18%;width:60%;height:48%}
+.woods-spells[data-phase=casting] .woods-spell-heading,.woods-spells[data-phase=casting] .woods-spell-instruction{opacity:.7}
+
+.woods-spell-flurry{position:relative;display:block;height:100%;aspect-ratio:1;flex:none}
+.woods-spell-flurry-face{position:absolute;inset:0;background-size:400% 500%;background-repeat:no-repeat;pointer-events:none}
+
+/* Native hand buttons keep their stable hitboxes; the standard face owns optics. */
+.woods-spells .ability-fan__card[data-holo-host=true]{padding:0;display:block;gap:0;border:0;background:transparent}
+.woods-spells .woods-holo-card{width:100%;height:100%;font:16px/1.25 Georgia,serif;text-align:left}
+.woods-spells .woods-holo-card>.details-card.trading-card{box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:10px}
+.woods-spells .woods-holo-card .trading-card__header h2{font:bold 19px/1.1 Georgia,serif}
+.woods-spells .woods-holo-card .trading-card__description{font:16px/1.25 Georgia,serif;margin:0;color:#fff0d1}
+.woods-spells .woods-holo-card .trading-card__footer{font:13px/1.25 Georgia,serif;color:#d4dfdf;margin-top:8px}
+.woods-holo-subject{position:absolute;left:11%;top:12%;width:78%;aspect-ratio:1;display:block;transform:translate(calc(var(--art-shift-x,0)*1.2%),calc(var(--art-shift-y,0)*1.2%));transform-style:preserve-3d}
+.trading-card__art .woods-holo-subject>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.woods-holo-face{position:absolute;inset:0;display:block;background-repeat:no-repeat;pointer-events:none;translate:calc(var(--art-shift-x,0)*.35%) calc(var(--art-shift-y,0)*.35%)}
+.woods-holo-star{display:grid;place-items:center;font:100px Georgia;color:#fff4c9;text-shadow:0 0 20px #ddbd7777}
+@media(prefers-reduced-motion:reduce){.woods-holo-subject{transform:none!important}.woods-holo-face{translate:0 0}}
+[data-fx=low] .woods-holo-subject,[data-fx=off] .woods-holo-subject{transform:none!important}
+[data-fx=low] .woods-holo-face,[data-fx=off] .woods-holo-face{translate:0 0}
+@media(max-width:700px){.woods-spells .woods-holo-card>.details-card.trading-card{padding:7px}.woods-spells .woods-holo-card .trading-card__header h2{font-size:16px}.woods-spells .woods-holo-card .trading-card__description{font-size:13px}.woods-spells .woods-holo-card .trading-card__footer{font-size:11px}}
+
+.trading-card--frozen .woods-holo-subject{transform:none!important}.trading-card--frozen .woods-holo-face{translate:0 0}
+
+@media(max-width:700px){.woods-holo-subject{top:4%}}
+
+.woods-spell-entity-pin{position:absolute;left:20px;top:116px;width:150px;height:210px;z-index:13;pointer-events:auto;cursor:pointer;--fan-angle:0deg}
+.woods-spell-entity-pin:disabled{opacity:.85;cursor:default}
+.woods-spells[data-phase=hand] .woods-spell-stellar.stellar{inset:106px 16px 43% 190px}
+.woods-spell-stellar .stellar-stage{overflow:auto;overscroll-behavior:contain;scrollbar-color:#7c9cb780 #091124;touch-action:pan-x pan-y}
+.woods-spell-stellar[data-phase=pick] .card{touch-action:pan-x pan-y}
+.woods-spells[data-phase=hand] .woods-spell-stellar .stellar-board{transition:none}
+.woods-ice-ability-mark{position:absolute;right:12%;top:14%;font:36px Georgia;color:#d5f7ff;text-shadow:0 0 12px #82cfff;pointer-events:none}
+@media(max-width:700px){
+ .woods-spell-entity-pin{left:12px;top:112px;width:88px;height:123px}
+ .woods-spell-entity-pin .trading-card__description{display:none}
+ .woods-spell-entity-pin .trading-card__footer{font-size:10px}
+ .woods-spell-entity-pin .woods-holo-subject{top:15%}
+ .woods-spells[data-phase=hand] .woods-spell-stellar.stellar{inset:248px 8px 49% 8px}
+ .woods-spells[data-phase=charging] .woods-spell-stellar.stellar,.woods-spells[data-phase=flying] .woods-spell-stellar.stellar{inset:248px 8px 31% 8px}
+}
+
+@media(min-width:701px){.woods-spells[data-phase=charging] .woods-spell-stellar.stellar,.woods-spells[data-phase=flying] .woods-spell-stellar.stellar{left:190px}}
+
+@media(max-width:700px){.woods-spells[data-hand=abilities] .woods-spell-hand .trading-card__header h2{font-size:14px}}
+
+/* cardScale doubles geometry; preserve the same rank and backfill proportions. */
+.woods-spell-stellar .pip .r{font-size:116px}
+.woods-spell-stellar .peek{font-size:48px}
+.woods-spell-stellar .peek .chev{font-size:32px}
+.woods-spell-stellar .stocklabel{font-size:44px}
+.woods-spell-stellar .face,.woods-spell-stellar .card .inner{border-radius:20px}
+
+@media(max-width:700px){
+ .woods-spells[data-entity=flurry][data-hand=abilities] .woods-spell-hand .trading-card__body{min-height:0;gap:3px}
+ .woods-spells[data-entity=flurry][data-hand=abilities] .woods-spell-hand .trading-card__description{font-size:11px;line-height:1.15;padding:4px}
+ .woods-spells[data-entity=flurry][data-hand=abilities] .woods-spell-hand .trading-card__footer{font-size:10px;line-height:1.1;margin-top:4px}
+}
+
+/* Fit the complete 80-card field into the sky, keeping the entity and hand clear. */
+.woods-spells[data-phase=hand] .woods-spell-stellar.stellar{inset:106px 16px 240px 190px}
+.woods-spells[data-phase=hand][data-dragging-hand=true] .woods-spell-stellar.stellar{bottom:24px}
+.woods-spell-stellar .stellar-stage{overflow:hidden;touch-action:none}
+
+/* Scenery-window wash: tint the live sky without fading card ink or hit regions. */
+.woods-spell-stellar .card .front,.woods-spell-stellar .card .back{
+ background:radial-gradient(ellipse at 22% 18%,#c7d8ee18,transparent 63%),radial-gradient(ellipse at 82% 75%,#637e921a,transparent 68%),linear-gradient(115deg,#a5b9d410,#223a551c 48%,#c6c99c14);
+ box-shadow:inset 0 0 9px #10223a28,inset 0 0 1px #e2eaff45;
+}
+.woods-spell-stellar .card .front::before{background:none}
+.woods-spell-stellar .pip .r{background:#101923d9;border-radius:.18em .24em .2em .15em;padding:.08em .16em;min-width:1ch;text-align:center;color:#fff3d6;text-shadow:0 1px 2px #000;box-shadow:0 0 0 1px #e5d4a744}
+/* Keep collected ranks covered by the current foundation. */
+.woods-spell-stellar .card[data-foundation=true] .front{background:linear-gradient(165deg,#1e2c5c,#080d22)}
+@media(max-width:700px){
+ .woods-spells[data-phase=hand] .woods-spell-stellar.stellar{inset:248px 8px 200px}
+ .woods-spells[data-phase=hand][data-dragging-hand=true] .woods-spell-stellar.stellar{bottom:16px}
+}
+/* Reveal only the exposed lip of the first card in each backfill stack. */
+.woods-spell-stellar .card[data-backfill-front=false]{visibility:hidden;pointer-events:none}
+.woods-spell-stellar .card[data-peek=top]{clip-path:inset(0 0 calc(100% - var(--p)) 0)}
+.woods-spell-stellar .card[data-peek=bottom]{clip-path:inset(calc(100% - var(--p)) 0 0 0)}
+.woods-spell-stellar .card[data-peek=left]{clip-path:inset(0 calc(100% - var(--p)) 0 0)}
+.woods-spell-stellar .card[data-peek=right]{clip-path:inset(0 0 0 calc(100% - var(--p)))}
+.woods-spell-stellar .peek{font-size:44px;gap:5px;color:#c8dcef;text-shadow:0 1px 3px #000}
+.woods-spell-stellar .card[data-next] .peek{background:linear-gradient(180deg,#bed2ff24,#bed2ff0d)}
+/* Selected owner anchors its ability fan; preview returns it to the side rail. */
+.woods-spells[data-phase=hand][data-hand=abilities][data-preview=false] .woods-spell-entity-pin{
+ left:50%;top:auto;bottom:24px;translate:-50% 0;height:min(210px,28vh);width:auto;aspect-ratio:5/7;
+}
+.woods-spells[data-phase=charging] .woods-spell-stellar .stellar-stage { overflow: visible; pointer-events: none; }
+.woods-spells[data-phase=charging] .woods-spell-stellar .card:not(.gone):not([data-peek]) { pointer-events: auto; }
+.woods-spell-stellar .card[data-cast-foundation] { pointer-events: none !important; }
+.woods-spell-stellar .card[data-cast-foundation] .front { background: #111c3029; }
+.woods-spell-stellar .card[data-cast-foundation] .pip { inset: auto 0 4px; height: auto; }
+.woods-spell-stellar .card[data-cast-foundation] .pip .r { font-size: 36px; }
+
+.woods-spell-stellar .card.gone { visibility: hidden; }
+.woods-spell-stellar .card[data-cast-foundation] .pip { padding-bottom: 0; }
+
+
+.woods-spell-stellar .card[data-cast-foundation]::after { content: attr(data-cast-power) ' power'; position: absolute; left: 50%; top: 4px; transform: translateX(-50%); width: max-content; background: #101923e8; color: #fff3d6; border-radius: 6px; padding: 2px 7px; font-weight: 700; }
+
+/* Keep settled cards in their own slots as the backfill is promoted. */
+.woods-spells[data-phase=charging] .woods-spell-stellar .card { transition: none; }
+.woods-spells[data-phase=charging] .woods-spell-stellar .card[data-cast-foundation].fly .inner { animation: none; }
+.woods-spells[data-phase=charging] .woods-spell-stellar .card:not([data-cast-foundation]):not([data-peek]) .front {
+  background: linear-gradient(155deg, #161e2d, #111824);
+  box-shadow: none;
+}

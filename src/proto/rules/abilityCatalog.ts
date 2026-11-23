@@ -1,3 +1,5 @@
+import { foundationSummon } from './battleStatusData';
+import { CIR_SKILLS } from './cirCompanion';
 import { MOMENTUM_SKILLS, createCombatSandboxScenario, isCirMomentumSkill, skillOwner, type BattleState, type MomentumSkillId } from './battle';
 import { COMBAT_SANDBOX_SCENARIOS } from './battleSandboxScenarios';
 import { STATUS_META, STATUS_SKILLS, isStatusSkill, type StatusId } from './battleStatusData';
@@ -10,15 +12,24 @@ import { abilityEdits } from './abilityOverrides';
 
 /** Kin ability cards a scenario deals into its radials (Withdraw lives in the Momentum radial). */
 export function scenarioHand(battle: BattleState): MomentumSkillId[] {
+  if (battle.expeditionKeru?.length === 0) return [];
+  if (battle.sandboxScenario === '1002') return ['summon-cir', 'hold', 'summon-riv', ...(battle.cirCompanion?.form === 'meteor' ? ['meteor-impact' as const] : CIR_SKILLS.filter(id => id !== 'meteor-impact'))];
   const hand = tutorialById(battle.tutorial?.id)?.skills;
   if (hand) return [...hand];
   return (Object.keys(MOMENTUM_SKILLS) as MomentumSkillId[]).filter(id => id !== 'cir' && id !== 'withdraw' && !isStatusSkill(id)
     && (!battle.night || !isCirMomentumSkill(id)) && (isCirMomentumSkill(id) || ['005', '006', '007'].includes(battle.sandboxScenario ?? '')));
 }
 
-export type AbilityElement = 'physical' | 'fire' | 'frost' | 'water' | 'shock' | 'nature' | 'none';
+export type AbilityElement = 'physical' | 'air' | 'fire' | 'frost' | 'water' | 'shock' | 'nature' | 'none';
 /** Element, statuses applied and tags per card. A card missing here still appears (element "none"). */
 const TRAITS: Partial<Record<MomentumSkillId, { element: AbilityElement; applies?: StatusId[]; tags?: string[] }>> = {
+  'summon-cir': { element: 'fire', tags: ['Keru', 'Familiar', 'Summon', 'Temporary HP'] },
+  'cir-burn': { element: 'fire', applies: ['cir-burning'] },
+  'cir-flare': { element: 'fire', applies: ['firelit'] },
+  'cir-windstorm': { element: 'air', tags: ['All foes', 'Commits all AP'] },
+  'swift-wings': { element: 'air', applies: ['swift-wings'], tags: ['Variable cost', 'Evasion'] },
+  'meteor-launch': { element: 'fire', tags: ['Charge', 'Requires 4 Wings'] },
+  'meteor-impact': { element: 'fire', tags: ['All foes', 'Exhausts Cir'] },
   withdraw: { element: 'none', tags: ['Tableau', 'Ends turn'] },
   bash: { element: 'physical', tags: ['Stagger'] },
   pounce: { element: 'physical', tags: ['Damage', '×2 vs staggered'] },
@@ -47,7 +58,7 @@ const TRAITS: Partial<Record<MomentumSkillId, { element: AbilityElement; applies
 export type AbilityGroup = 'hero' | 'mochi' | 'cir' | 'team';
 export const GROUP_LABEL: Record<AbilityGroup, string> = { hero: 'Hero', mochi: 'Mochi', cir: 'Cir', team: 'Team' };
 export type AbilityEntry = {
-  id: MomentumSkillId; name: string; group: AbilityGroup; payer: 'hero' | 'mochi' | 'team';
+  id: MomentumSkillId; name: string; group: AbilityGroup; payer: 'hero' | 'mochi' | 'cir' | 'team';
   cost: number; costLabel: string; card: string; description: string; element: AbilityElement;
   statuses: string[]; tags: string[]; target: string; scenarios: { id: string; name: string }[];
   editable: { text: boolean; owner: boolean };
@@ -77,7 +88,7 @@ export function abilityCatalog(): AbilityEntry[] {
       id, name: skill.name, group, payer, cost: skill.cost, costLabel: `${skill.cost}${spendsAll ? '+' : ''} ${currency}`,
       card: status ? status.card : skill.description, description: skill.description, element: traits?.element ?? 'none',
       statuses: (traits?.applies ?? []).map(statusId => STATUS_META[statusId].name), tags: traits?.tags ?? [],
-      target: id === 'withdraw' ? 'Tableau' : status ? ({ foe: 'Foe', ally: 'Ally', self: 'Self', card: 'Tableau card' } as const)[status.target] : id === 'sticky-paws' ? 'Self' : id.startsWith('cir-') ? (id === 'cir-meteor' ? 'Foe' : 'Ally') : 'Foe',
+      target: foundationSummon(id) ? 'New foundation slot' : id === 'withdraw' ? 'Tableau' : status ? ({ foe: 'Foe', ally: 'Ally', self: 'Self', card: 'Tableau card' } as const)[status.target] : id === 'sticky-paws' ? 'Self' : id.startsWith('cir-') ? (id === 'cir-meteor' ? 'Foe' : 'Ally') : 'Foe',
       scenarios: COMBAT_SANDBOX_SCENARIOS.filter(scenario => dealt.get(scenario.id)?.has(id)).map(scenario => ({ id: scenario.id, name: scenario.name })),
       editable: abilityEdits(id),
     };

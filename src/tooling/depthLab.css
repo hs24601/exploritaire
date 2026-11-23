@@ -1,0 +1,18 @@
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: #d7d1bd; color: #f8eedc; font: 16px/1.3 system-ui,sans-serif; }
+#depth-stage { position: relative; height: 100%; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+canvas:active { cursor: grabbing; }
+#depth-controls { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 12px; border: 1px solid #a7a28877; border-radius: 8px; background: #17211deb; }
+label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+select,button,.depth-action { font: inherit; color: inherit; background: #2b3730; border: 1px solid #a7a28888; border-radius: 4px; padding: 5px; }
+.depth-action { cursor: pointer; text-decoration: none; }
+.depth-file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.depth-action:focus-within { outline: 2px solid #ffe5ac; outline-offset: 3px; }
+.depth-action:has(input:disabled) { opacity: .5; cursor: default; }
+input[type=range] { width: 70px; accent-color: #dfba76; }
+input[type=checkbox] { width: 18px; height: 18px; accent-color: #dfba76; }
+:focus-visible { outline: 2px solid #ffe5ac; outline-offset: 3px; }
+.depth-caption { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px); padding: 7px 12px; border-radius: 5px; background: #17211ddd; text-align: center; pointer-events: none; }
+#depth-error { position: absolute; top: 35%; left: 10%; right: 10%; padding: 16px; background: #492c26; }

@@ -1,0 +1,23 @@
+export type PaintCue={target:'page'|'region'|'control'|'flag';id?:string;action:'paint'|'sketch';durationMs:number};
+export type PagePaintSettings={initial:'sketch'|'painted';autoPaint:boolean;delay:number;duration:number};
+export const DEFAULT_PAGE_PAINT:PagePaintSettings={initial:'sketch',autoPaint:true,delay:.8,duration:2.6};
+export const validPaintCue=(v:unknown):v is PaintCue=>{const c=v as PaintCue;return !!c&&['page','region','control','flag'].includes(c.target)&&['paint','sketch'].includes(c.action)&&Number.isFinite(c.durationMs)&&c.durationMs>=0&&c.durationMs<=60000&&(c.target==='page'||typeof c.id==='string'&&/^[\w:-]{1,140}$/.test(c.id));};
+export const validPagePaint=(v:unknown):v is PagePaintSettings=>{const c=v as PagePaintSettings;return !!c&&['sketch','painted'].includes(c.initial)&&typeof c.autoPaint==='boolean'&&Number.isFinite(c.delay)&&c.delay>=0&&c.delay<=30&&Number.isFinite(c.duration)&&c.duration>=.1&&c.duration<=60;};
+type PaintItem={id:string;kind:string;paintState?:'inherit'|'sketch'|'painted';paintFlag?:string};
+type Track={value:number;from:number;target:number;start:number;duration:number;active:boolean};
+const track=(value:number):Track=>({value,from:value,target:value,start:0,duration:0,active:false});
+type Page={settings:PagePaintSettings;entered:boolean;base:Track;items:Map<string,{signature:string;item:PaintItem;track:Track}>};
+/** Session paint state is separate from authored initial state. Revisit preserves progress. */
+export class BookPaintTimeline{
+ clock=0;pages=new Map<number,Page>();flags=new Map<string,boolean>();
+ constructor(private changed:(page:number)=>void=()=>{}){}
+ private initial(item:PaintItem){return item.paintFlag?(this.flags.get(item.paintFlag)?1:0):item.paintState==='painted'?1:item.kind==='paint-region'||item.paintState==='sketch'?0:-1;}
+ configure(page:number,settings:PagePaintSettings,items:PaintItem[]){let state=this.pages.get(page);const reset=state&&JSON.stringify(state.settings)!==JSON.stringify(settings),entered=state?.entered??false;if(!state||reset){state={settings:{...settings},entered:false,base:track(settings.initial==='sketch'?0:1),items:state?.items??new Map()};this.pages.set(page,state);}const ids=new Set(items.map(i=>i.id));for(const id of state.items.keys())if(!ids.has(id))state.items.delete(id);for(const item of items){const signature=JSON.stringify([item.paintState,item.paintFlag,item.kind]),previous=state.items.get(item.id);state.items.set(item.id,{signature,item:{...item},track:previous?.signature===signature?previous.track:track(this.initial(item))});}if(reset&&entered)this.enter(page);}
+ private schedule(t:Track,target:number,duration:number,delay=0){t.from=Math.max(0,t.value);t.target=target;t.start=this.clock+delay;t.duration=duration;t.active=true;if(duration===0&&delay===0){t.value=target;t.active=false;}}
+ enter(page:number){const state=this.pages.get(page);if(!state||state.entered)return;state.entered=true;if(state.settings.initial==='sketch'&&state.settings.autoPaint)this.schedule(state.base,1,state.settings.duration,state.settings.delay);this.changed(page);}
+ replay(page:number){const state=this.pages.get(page);if(!state)return;state.entered=false;state.base=track(state.settings.initial==='sketch'?0:1);for(const entry of state.items.values())entry.track=track(this.initial(entry.item));this.enter(page);}
+ cue(page:number,cue:PaintCue){if(cue.target==='flag'){this.flag(cue.id!,cue.action==='paint',cue.durationMs);return true;}const state=this.pages.get(page),t=cue.target==='page'?state?.base:state?.items.get(cue.id!)?.track;if(!t)return false;this.schedule(t,cue.action==='paint'?1:0,cue.durationMs/1000);this.changed(page);return true;}
+ flag(name:string,value:boolean,durationMs=2600){this.flags.set(name,value);for(const [page,state] of this.pages){let touched=false;for(const entry of state.items.values())if(entry.item.paintFlag===name){this.schedule(entry.track,value?1:0,durationMs/1000);touched=true;}if(touched)this.changed(page);}}
+ update(dt:number,reduced=false,paused=false){if(paused)return;this.clock+=Math.max(0,dt);for(const [page,state]of this.pages){let finished=false;for(const t of[state.base,...Array.from(state.items.values(),e=>e.track)]){if(!t.active)continue;if(!reduced&&this.clock<t.start)continue;const u=reduced||!t.duration?1:Math.max(0,Math.min(1,(this.clock-t.start)/t.duration));t.value=t.from+(t.target-t.from)*u*u*(3-2*u);if(u===1){t.active=false;finished=true;}}if(finished)this.changed(page);}}
+ value(page:number,id?:string){const s=this.pages.get(page);return id?s?.items.get(id)?.track.value??-1:s?.base.value??1;}
+}

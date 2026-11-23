@@ -1,0 +1,21 @@
+const{chromium}=require('playwright'),assert=require('node:assert/strict');
+(async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
+ const context=await b.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
+ await p.goto('http://localhost:5183/book.html?page=01&Edit=true');await p.waitForFunction(()=>document.querySelector('canvas').dataset.ready==='true',null,{timeout:90000});
+ assert.equal(await p.locator('#book-page-editor').isVisible(),true);assert.equal(await p.locator('canvas').getAttribute('data-paper-profile'),'cold');
+ for(const key of ['text','prop','region']){const button=p.locator('button[data-page="'+key+'"]');assert.equal(await button.locator('svg').count(),1);assert((await button.getAttribute('title')).length>30);assert((await button.boundingBox()).width<=44);}
+ await p.getByRole('button',{name:'+ Paint region',exact:true}).click();assert.equal(await p.getByLabel('What to paint',{exact:true}).inputValue(),'wash');
+ const swatch=async()=>p.locator('.book-paint-swatch').evaluate(c=>{const a=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=0;i<a.length;i+=17)n=(n*31+a[i])>>>0;return n});
+ const first=await swatch();await p.getByLabel('Seed library',{exact:true}).selectOption('81724');assert.notEqual(await swatch(),first);
+ await p.getByLabel('Paint preset',{exact:true}).selectOption('live-wash');assert.equal(await p.getByLabel('Paint seed',{exact:true}).inputValue(),'exploritaire-wash-01');
+ await p.getByLabel('Paint palette',{exact:true}).selectOption('water');await p.getByLabel('Paint seed',{exact:true}).fill('book-repeatable-seed');await p.getByLabel('Paint seed',{exact:true}).dispatchEvent('change');const savedSwatch=await swatch();
+ for(const technique of ['ink-spread-sprite','radial-bloom','luminance-fill']){await p.getByLabel('Reveal technique',{exact:true}).selectOption(technique);await p.getByRole('button',{name:'Preview sketch',exact:true}).click();await p.getByRole('button',{name:'Preview paint',exact:true}).click();await p.waitForTimeout(200);}
+ await p.getByLabel('What to paint',{exact:true}).selectOption('artwork');assert.equal(await p.getByLabel('Paint palette',{exact:true}).isDisabled(),true);assert((await p.locator('.book-region-help').textContent()).includes('No painted artwork'));
+ await p.getByLabel('What to paint',{exact:true}).selectOption('wash');await p.screenshot({path:'output/book/region-paint-options-and-paper.png'});
+ const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('exploritaire.book-page-draft.v1'))),region=saved.pages.find(p=>p.page===1).controls.find(c=>c.kind==='paint-region');assert.equal(region.regionPaint.preset.seed,'book-repeatable-seed');assert.equal(region.regionPaint.technique,'luminance-fill');
+ const check=await p.request.post('http://localhost:5183/__book-pages/save',{data:{document:saved,baseRevision:-1}});assert.equal(check.status(),409,await check.text());
+ const second=await context.newPage();second.on('pageerror',e=>errors.push(e.message));await second.goto('http://localhost:5183/book.html?page=01&Edit=true');await second.waitForFunction(()=>document.querySelector('canvas').dataset.ready==='true',null,{timeout:90000});await second.locator('[data-control-id="'+region.id+'"]').click();const recovered=await second.locator('.book-paint-swatch').evaluate(c=>{const a=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=0;i<a.length;i+=17)n=(n*31+a[i])>>>0;return n});assert.equal(recovered,savedSwatch);
+ await second.getByRole('button',{name:'Close page editor',exact:true}).click();await second.screenshot({path:'output/book/paper-and-wash-preview.png'});
+ await p.setViewportSize({width:390,height:844});await p.waitForTimeout(300);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ assert.deepEqual(errors,[]);console.log('PASS Edit=true, compact icon tooltips, paint targets/presets/seeds, deterministic recovery, three reveal styles, save validation, mobile width, static paper shader without browser errors');
+ }finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});

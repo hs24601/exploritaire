@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>[hidden]{display:none!important} body{margin:0}</style>
+<title>Grid Tableau 3×3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=Alegreya:wght@700&display=swap">
+<style>
+/* Layout: felt table; deal starts as a flat field, then a 3x3 grid with peeking backfill stacks and a stock pile. */
+:root, :host {
+  --felt: #1e4638;
+  --felt-deep: #143328;
+  --wood: #5b3a22;
+  --wood-dark: #3a2414;
+  --brass: #d1a94e;
+  --brass-dark: #8a6a24;
+  --paper: #f4eddc;
+  --paper-edge: #d9ccb0;
+  --ink: #1f1c19;
+  --ink-red: #a3302a;
+  --text: #f1e8d4;
+  --text-dim: #c9bfa8;
+  --back-a: #6e2a24;
+  --back-b: #4a1b17;
+  --font-display: "Alegreya SC", Georgia, serif;
+  --font-body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --font-rank: "Alegreya", Georgia, serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--wood-dark);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  display: flex; flex-direction: column;
+  overflow-x: hidden;
+}
+.btn {
+  font: 500 16px var(--font-body);
+  color: var(--ink);
+  background: linear-gradient(180deg, #e7c46d, var(--brass));
+  border: 1px solid var(--brass-dark);
+  border-radius: 6px;
+  padding: 6px 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 2px 0 var(--wood-dark);
+  cursor: pointer;
+}
+.btn:active { transform: translateY(1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 0 var(--wood-dark); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn:focus-visible { outline: 3px solid var(--paper); outline-offset: 2px; }
+
+main {
+  flex: 1; min-height: 0;
+  display: flex; gap: 16px;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.stage {
+  position: relative; flex: 1; min-width: 0; min-height: 0;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 45% 40%, #2a5a48 0%, var(--felt) 45%, var(--felt-deep) 100%);
+  box-shadow: inset 0 0 0 10px var(--wood), inset 0 0 0 12px var(--wood-dark), inset 0 0 60px rgba(0,0,0,.55);
+  overflow: hidden;
+  touch-action: none;
+}
+.board { position: absolute; left: 0; top: 0; transform-origin: 0 0; transition: transform 500ms ease; }
+
+.slot {
+  position: absolute; border-radius: 9px;
+  border: 2px dashed rgba(241,232,212,.18);
+}
+.slot.found { border: 2px solid rgba(209,169,78,.55); box-shadow: 0 0 0 4px rgba(0,0,0,.15) inset; }
+.slot .lbl { position: absolute; inset: 0; display: grid; place-items: center; font: 500 20px var(--font-display); color: rgba(241,232,212,.28); }
+.slot.found .lbl { color: rgba(209,169,78,.6); }
+.stockwell { border-style: solid; border-color: rgba(241,232,212,.2); }
+.stocklabel { position: absolute; font: 500 20px var(--font-body); color: var(--text-dim); text-align: center; }
+
+.card {
+  position: absolute; left: 0; top: 0;
+  width: var(--w); height: var(--h);
+  transition: transform 320ms cubic-bezier(.2,.75,.25,1), opacity 300ms ease;
+  will-change: transform;
+  touch-action: none;
+  cursor: grab;
+  user-select: none; -webkit-user-select: none;
+}
+.card.dragging { transition: none; cursor: grabbing; }
+.card .inner {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 340ms ease, box-shadow 200ms;
+  border-radius: 9px;
+}
+.card.down .inner { transform: rotateY(180deg); }
+.card.dragging .inner { transform: scale(1.06) rotate(-2deg); }
+.card.fly .inner { animation: lift 360ms ease; }
+@keyframes lift { 0% { scale: 1; } 45% { scale: 1.1; } 100% { scale: 1; } }
+.card.wiggle .inner { animation: wiggle 300ms ease; }
+@keyframes wiggle { 0%,100% { translate: 0; } 25% { translate: -6px; } 75% { translate: 6px; } }
+.face {
+  position: absolute; inset: 0; border-radius: 9px;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+}
+.front {
+  background: linear-gradient(160deg, #fbf6ea, var(--paper) 60%, #e9dfc7);
+  border: 1px solid var(--paper-edge);
+  box-shadow: 0 2px 3px rgba(0,0,0,.45), 0 1px 0 #fff inset;
+  color: var(--ink);
+}
+.card.dragging .front { box-shadow: 0 14px 22px rgba(0,0,0,.5); }
+.back {
+  transform: rotateY(180deg);
+  border: 1px solid #2a0e0b;
+  background:
+    repeating-linear-gradient(45deg, rgba(209,169,78,.22) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-45deg, rgba(209,169,78,.22) 0 2px, transparent 2px 9px),
+    linear-gradient(160deg, var(--back-a), var(--back-b));
+  box-shadow: 0 2px 3px rgba(0,0,0,.45), inset 0 0 0 5px #f0e4c8, inset 0 0 0 6px #2a0e0b;
+}
+.idx { position: absolute; display: flex; flex-direction: column; align-items: center; line-height: 1; font: 700 22px var(--font-rank); }
+.idx small { font-size: 18px; margin-top: 2px; }
+.idx.tl { left: 6px; top: 6px; }
+.idx.br { right: 6px; bottom: 6px; transform: rotate(180deg); }
+.pip { position: absolute; inset: 0; display: grid; place-items: center; font: 700 46px var(--font-rank); }
+.pip .r { font-size: 52px; }
+.peek { display: none; position: absolute; align-items: center; justify-content: center; gap: 4px; font: 700 22px/1 var(--font-rank); border-radius: 8px; }
+.peek .s { font-size: 18px; }
+.peek .chev { display: none; font-size: 16px; color: var(--ink); }
+.card[data-peek] .idx, .card[data-peek] .pip { display: none; }
+.card[data-peek] .peek { display: flex; }
+.card[data-peek=top] .peek { left: 0; right: 0; top: 0; height: var(--p); }
+.card[data-peek=bottom] .peek { left: 0; right: 0; bottom: 0; height: var(--p); }
+.card[data-peek=left] .peek { left: 0; top: 0; bottom: 0; width: var(--p); flex-direction: column; justify-content: flex-start; padding-top: 10px; }
+.card[data-peek=right] .peek { right: 0; top: 0; bottom: 0; width: var(--p); flex-direction: column; justify-content: flex-start; padding-top: 10px; }
+.card[data-next] .front { border-color: var(--brass-dark); box-shadow: 0 0 0 3px var(--brass), 0 2px 4px rgba(0,0,0,.5); }
+.card[data-next] .peek { background: linear-gradient(180deg, #f6dc92, var(--brass)); }
+.card[data-next] .peek .chev { display: inline; }
+.card:not([data-next])[data-peek] .front { filter: brightness(.86) saturate(.85); }
+.card[data-peek] { cursor: default; }
+
+.card.gone { opacity: 0; pointer-events: none; }
+.card.pickable { cursor: pointer; }
+.card[data-pv=found] .front { box-shadow: 0 0 0 5px var(--brass), 0 4px 10px rgba(0,0,0,.5); }
+.card[data-pv=top] .front { box-shadow: 0 0 0 3px rgba(209,169,78,.75), 0 2px 3px rgba(0,0,0,.45); }
+.card[data-pv=back] .front { outline: 2px dashed var(--brass-dark); outline-offset: -6px; }
+.card[data-pv=off] .front { filter: brightness(.55) saturate(.7); }
+.toggle {
+  position: absolute; left: 24px; bottom: 22px; z-index: 4000;
+  display: flex; align-items: center; gap: 8px;
+  font: 500 17px var(--font-body); color: var(--text);
+  background: rgba(10,25,19,.55); padding: 6px 14px; border-radius: 999px; cursor: pointer;
+}
+.toggle input { width: 18px; height: 18px; accent-color: var(--brass); margin: 0; }
+.toggle:focus-within { outline: 3px solid var(--paper); outline-offset: 2px; }
+.found-shake { animation: fshake 320ms ease; }
+@keyframes fshake { 0%,100% { translate: 0; } 30% { translate: -5px; } 70% { translate: 5px; } }
+
+.banner {
+  position: absolute; left: 50%; top: 24px; translate: -50% 0;
+  display: flex; align-items: center; gap: 14px;
+  background: var(--paper); color: var(--ink);
+  border: 2px solid var(--brass-dark); border-radius: 10px;
+  padding: 10px 16px; font: 500 18px var(--font-body);
+  box-shadow: 0 8px 20px rgba(0,0,0,.45);
+  z-index: 5000;
+}
+#banner[hidden] { display: none; }
+.banner b { font-family: var(--font-display); }
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .card .inner { transition-duration: 1ms; }
+  .card.fly .inner, .card.wiggle .inner, .found-shake { animation: none; }
+}
+
+.hand-deal .card[data-peek=top] .peek,
+.hand-deal .card[data-peek=bottom] .peek { height: 28px; }
+.hand-deal .card[data-peek=left] .peek,
+.hand-deal .card[data-peek=right] .peek { width: 28px; }
+.hand-deal .slot.found:not(.awaiting-hand) .lbl { visibility: hidden; }
+
+.hand-deal .card.best-hand .front {
+  box-shadow: inset 0 0 0 2px #d1a94e, 0 0 10px rgba(255,214,113,.6);
+}
+.hand-deal .card.best-hand .front::after {
+  content: "✦";
+  position: absolute;
+  top: 27px;
+  left: 8px;
+  color: #936313;
+  font: 18px/1 Georgia, serif;
+  text-shadow: 0 0 6px #ffe7a4;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hand-deal .card.best-hand .front::after {
+    animation: hand-sparkle 1.8s ease-in-out infinite;
+  }
+  @keyframes hand-sparkle {
+    0%, 100% { opacity: .72; scale: .9; }
+    45% { opacity: 1; scale: 1.16; filter: drop-shadow(0 0 5px #ffc452); }
+  }
+}
+
+.combo {
+  --heat: 0;
+  position: absolute;
+  z-index: 5;
+  inset: var(--combo-y) auto auto var(--combo-x);
+  width: max-content;
+  translate: -100% 0;
+  rotate: calc(-4deg - var(--heat) * 24deg);
+  transform-origin: top right;
+  display: flex;
+  align-items: baseline;
+  gap: .3em;
+  padding: .1em .65em .25em;
+  border: 1px solid #bd924e;
+  border-top: .65em solid #4a301d;
+  background: linear-gradient(155deg, #102620, #254538 60%, #0d221b);
+  box-shadow: 0 4px 9px #091c17a6, inset 0 0 0 1px #ebbc5833;
+  color: hsl(calc(49deg - var(--heat) * 26deg) 95% 72%);
+  text-shadow: 0 2px 0 #18241c, 0 0 calc(4px + var(--heat) * 18px) currentColor;
+  font: italic 700 clamp(11px, 1.7vw, 18px) var(--font-display);
+  letter-spacing: .09em;
+  pointer-events: none;
+}
+.combo strong {
+  color: #fff4ce;
+  font: italic 700 clamp(26px, 4vw, 50px)/1 var(--font-rank);
+  letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums;
+}
+</style>
+</head>
+<body>
+<main>
+  <div class="stage hand-deal" id="stage">
+    <div class="board" id="board"></div>
+    <output id="combo" class="combo" aria-live="polite" aria-atomic="true" hidden>
+      <strong></strong><span>Combo</span>
+    </output>
+    <label class="toggle" for="chkInfinite"><input type="checkbox" id="chkInfinite" checked> Infinite backfill</label>
+    <div class="banner" id="banner" hidden><span id="bannerText"></span><button class="btn" id="bannerNew" type="button">New deal</button></div>
+  </div>
+</main>
+
+<script type="module">
+import { createWorldRailAutoPlay } from '/src/book/worldRailAutoPlay.ts';
+import { isTextEditingTarget } from '/src/proto/keyboardInput.ts';
+/** Shared 3xgrid deal/backfill rules and DOM adapter for the table and Combat Woods. */
+function mountGridTableau(options){
+ const abort=new AbortController(),timers=new Set();
+ const listen=(node,type,fn)=>node.addEventListener(type,fn,{signal:abort.signal});
+ const setTimeout=(fn,ms)=>{const id=globalThis.setTimeout(()=>{timers.delete(id);fn();},ms);timers.add(id);return id;};
+  const factor=options.cardScale ?? 1;
+  const W = 96*factor, H = 134*factor, G = 8*factor, P = 36*factor, STOCK_GAP = 48*factor;
+  const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  // Corners get a vertical stack (away from the centre row) and a side stack; edges get one.
+  const handDeal = options.handDeal === true;
+  const HAND_SIZE = 4;
+  const MIN_OPENING_CHAIN = 4;
+  const HAND_DEAL_ATTEMPTS = 12;
+  const BACKFILL_DEPTH = 2;
+  const BACKFILL_STEP = 28 * factor;
+  const SLOTS = [
+    { id: 'A1', r: 0, c: 0, v: 'top', s: 'left' },
+    { id: 'A2', r: 0, c: 1, v: 'top' },
+    { id: 'A3', r: 0, c: 2, v: 'top', s: 'right' },
+    { id: 'B1', r: 1, c: 0, s: 'left' },
+    { id: 'B3', r: 1, c: 2, s: 'right' },
+    { id: 'C1', r: 2, c: 0, v: 'bottom', s: 'left' },
+    { id: 'C2', r: 2, c: 1, v: 'bottom' },
+    { id: 'C3', r: 2, c: 2, v: 'bottom', s: 'right' },
+  ];
+  const CHEV = handDeal ? { top: '▾', bottom: '▴', left: '▸', right: '◂' } : { top: '▾', bottom: '▴', left: '▸', right: '◂' };
+
+  const DUMMY = { style: {}, set textContent(v) {}, get textContent() { return ''; }, set disabled(v) {} };
+  const $ = (id) => stage.getRootNode().querySelector('#'+id) || DUMMY;
+  const {stage,board}=options;
+  const scrollSurface=options.scrollable?document.createElement('div'):null;
+  if(scrollSurface){scrollSurface.className='grid-scroll-surface';Object.assign(scrollSurface.style,{position:'relative',overflow:'hidden'});stage.appendChild(scrollSurface);scrollSurface.appendChild(board);}
+  let fitPhase='';
+  board.style.setProperty('--w', W + 'px');
+  board.style.setProperty('--h', H + 'px');
+  board.style.setProperty('--p', P + 'px');
+
+  const FC = options.fieldColumns ?? 8, FR = options.fieldRows ?? 5;
+  const FW = FC * W + (FC - 1) * G, FH = FR * H + (FR - 1) * G;
+  const stockEnabled=options.stockEnabled!==false,stockWidth=stockEnabled?STOCK_GAP+W:0;
+  const backfillExtent = P + (BACKFILL_DEPTH - 1) * BACKFILL_STEP;
+  const gridWidth = 3 * W + 2 * G + 2 * backfillExtent;
+  const gridHeight = 3 * H + 2 * G + 2 * backfillExtent;
+  const handWidth = W + (HAND_SIZE - 1) * 36 * factor;
+  const tableWidth = Math.max(gridWidth, handWidth + 24 * factor);
+  const gridX = (tableWidth - gridWidth) / 2 + backfillExtent;
+  const FRAME = handDeal
+    ? { w: tableWidth, h: gridHeight + STOCK_GAP + H + 40 * factor }
+    : { w: FW + stockWidth, h: FH };
+  const M = P + 8*factor;
+  const PX = (FW - (2 * M + 3 * W + 2 * G)) / 2, PY = (FH - (2 * M + 3 * H + 2 * G)) / 2;
+  const foundRect = handDeal
+    ? { x: gridX + W + G, y: backfillExtent + H + G }
+    : { x: PX + M + W + G, y: PY + M + H + G };
+  const STOCK_PICK = { x: FW + STOCK_GAP, y: (FH - H) / 2 };
+  const STOCK_PLAY = { x: PX + 2 * M + 3 * W + 2 * G + STOCK_GAP, y: PY + M + H + G };
+  let stockXY = STOCK_PICK;
+
+  let mode = 'alt', wrap = true, infinite = true, genCount = 0;
+  let seed = 0, cards = {}, st = null, history = [], best = 0, scale = 1, els = {};
+  let unfoldedFrom=null;
+  let hintKey='',hintValue=null;
+  function knownSequence(slots,rank,memo){
+    let nodes=0;
+    function search(current,value,depth){
+      if (!depth || (!memo && ++nodes > 2000)) return {length:0,slot:null,path:[]};
+      // With no new draws, each unique top identifies its slot's queue position.
+      const key = memo && value + ':' + SLOTS.map(s => current[s.id].top).join(',');
+      if (memo?.has(key)) return memo.get(key);
+      let best={length:0,slot:null,path:[]};
+      for(const s of SLOTS){const sl=current[s.id];if(!sl.top||!legal(cards[sl.top].rank,value))continue;
+        const copy={...sl,v:[...sl.v],s:[...sl.s]},next=nextStack(s.id,copy),newRank=cards[sl.top].rank;
+        copy.top=next?copy[next].shift():null;if(next)copy.turn=next==='v'?'s':'v';
+        const tail=search({...current,[s.id]:copy},newRank,depth-1),length=1+tail.length;if(length>best.length)best={length,slot:s.id,path:[sl.top,...tail.path]};
+      }
+      memo?.set(key,best);
+      return best;
+    }
+    return search(slots,rank,memo ? Infinity : 12);
+  }
+
+  let handHintKey = '', handHints = new Set();
+  function bestHandCards() {
+    if (!handDeal || st.over || !st.stock.length) return new Set();
+    const key = JSON.stringify([st.stock, Object.values(st.slots), st.stock.map(id => cards[id].rank)]);
+    if (key === handHintKey) return handHints;
+    handHintKey = key;
+    handHints = new Set();
+    const memo = new Map(), scores = new Map();
+    let longest = 0;
+    for (const id of st.stock) {
+      const rank = cards[id].rank;
+      if (!scores.has(rank)) scores.set(rank, knownSequence(st.slots, rank, memo).length);
+      longest = Math.max(longest, scores.get(rank));
+    }
+    if (longest) {
+      for (const id of st.stock) {
+        if (scores.get(cards[id].rank) === longest) handHints.add(id);
+      }
+    }
+    return handHints;
+  }
+  /** Advisory only: inspect known cards, never refill or consume a receipt. */
+  function bestSequence(excludeFoundationId,preferredFoundationId){
+    const ids=st.phase==='pick'?st.field.filter(Boolean):[...st.found.slice(-1),...Object.values(st.slots).flatMap(s=>[s.top,...s.v,...s.s]).filter(Boolean)];
+    const key=JSON.stringify([st.phase,st.originIndex,excludeFoundationId,preferredFoundationId,ids.map(id=>[id,cards[id].rank]),st.phase==='play'?Object.values(st.slots).map(s=>[s.top,s.v,s.s,s.turn]):null]);
+    if(key===hintKey)return hintValue;hintKey=key;
+    let best={id:st.phase==='play'?(topFound()?.id ?? null):null,length:0,kind:'return'};
+    if(st.phase==='pick'){
+      const preferred=st.field.indexOf(preferredFoundationId),distance=i=>preferred<0?i:Math.hypot(i%FC-preferred%FC,(Math.floor(i/FC)-Math.floor(preferred/FC))*H/W);
+      const candidates=st.field.map((id,i)=>({id,i})).filter(({id,i})=>id&&id!==excludeFoundationId&&pickable(i)).sort((a,b)=>distance(a.i)-distance(b.i));
+      for(const {id,i}of candidates){const fp=footprint(i),path=knownSequence(fp.slots,cards[id].rank);if(path.length>best.length)best={id,length:path.length,kind:'foundation'};}
+    }
+    else if(!options.pathField&&topFound()){const path=knownSequence(st.slots,topFound().rank);if(path.slot)best={id:st.slots[path.slot].top,length:path.length,kind:'card'};}
+    hintValue=best;return best;
+  }
+
+  function rng(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+  function makeHandDeal(deck) {
+    const slots = {};
+    let at = SLOTS.length;
+    SLOTS.forEach((slot, i) => {
+      const sl = { top: deck[i].id, v: [], s: [], turn: 'v' };
+      for (const direction of ['v', 's']) {
+        if (!slot[direction]) continue;
+        sl[direction] = deck.slice(at, at + BACKFILL_DEPTH).map(card => card.id);
+        sl[direction + 'Capacity'] = BACKFILL_DEPTH;
+        at += BACKFILL_DEPTH;
+      }
+      slots[slot.id] = sl;
+    });
+    return {
+      phase: 'play', field: [], slots, found: [], out: [],
+      stock: deck.slice(at, at + HAND_SIZE).map(card => card.id), streak: 0, over: null,
+    };
+  }
+
+  function deal(newSeed) {
+    seed = newSeed;
+    handHintKey = '';
+    const rand = rng(seed);
+    const deck = [];
+    for (let su = 0; su < 4; su++) for (let r = 1; r <= 13; r++) deck.push({ id: 'c' + su + '_' + r, rank: r, suit: su });
+    function shuffle() {
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+    }
+
+    shuffle();
+    cards = Object.fromEntries(deck.map(card => [card.id, card]));
+    if (handDeal) {
+      let candidate = makeHandDeal(deck);
+      for (let attempt = 1; ; attempt++) {
+        const memo = new Map();
+        if (candidate.stock.some(id => knownSequence(candidate.slots, cards[id].rank, memo).length >= MIN_OPENING_CHAIN)) break;
+        if (attempt === HAND_DEAL_ATTEMPTS) {
+          // Preserve the opener and swap four consecutive ranks onto exposed slots.
+          const openerRank = cards[candidate.stock[0]].rank;
+          for (let i = 0; i < MIN_OPENING_CHAIN; i++) {
+            const rank = (openerRank + i) % 13 + 1;
+            const source = deck.findIndex(card => card.rank === rank);
+            [deck[i], deck[source]] = [deck[source], deck[i]];
+          }
+          candidate = makeHandDeal(deck);
+          break;
+        }
+        shuffle();
+        candidate = makeHandDeal(deck);
+      }
+      st = candidate;
+      history = [];
+      build();
+      render();
+      return;
+    }
+    const mask=Array.from({length:FC*FR},(_,i)=>options.fieldMask?.[i]!==false),needed=mask.filter(Boolean).length;
+    // Larger world fields keep a twelve-card stock; the standalone table retains its original deck/deal.
+    while(deck.length<needed+12){const c={id:'field-'+deck.length,rank:1+Math.floor(rand()*13),suit:0};deck.push(c);cards[c.id]=c;}
+    const ids = deck.map((c) => c.id);let at=0;
+    st = { phase: 'pick', field: mask.map(inside=>inside?ids[at++]:null), stock: stockEnabled?ids.slice(at):[], preview: null, streak: 0, over: null };
+    history = [];
+    build();
+    render();
+  }
+
+  const fieldAt = (r, c) => (r >= 0 && r < FR && c >= 0 && c < FC) ? st.field[r * FC + c] : null;
+  const pickable = (i) => { const r = Math.floor(i / FC), c = i % FC; return r > 0 && r < FR - 1 && c > 0 && c < FC - 1 && [-1,0,1].every(dr=>[-1,0,1].every(dc=>!!fieldAt(r+dr,c+dc))); };
+
+  // The foundation's 8 neighbours become the grid; each neighbour's stack is the line of field cards beyond it.
+  function footprint(i) {
+    const r = Math.floor(i / FC), c = i % FC;
+    const fp = { found: st.field[i], slots: {}, used: new Set([st.field[i]]) };
+    const line = (r0, c0, dr, dc) => { const out = []; for (let rr = r0, cc = c0; fieldAt(rr, cc); rr += dr, cc += dc) { out.push(fieldAt(rr, cc)); fp.used.add(fieldAt(rr, cc)); } return out; };
+    for (const s of SLOTS) {
+      const nr = r + s.r - 1, nc = c + s.c - 1;
+      const top = fieldAt(nr, nc); fp.used.add(top);
+      const v = s.v ? line(s.v === 'top' ? nr - 1 : nr + 1, nc, s.v === 'top' ? -1 : 1, 0) : [];
+      const sd = s.s ? line(nr, s.s === 'left' ? nc - 1 : nc + 1, 0, s.s === 'left' ? -1 : 1) : [];
+      fp.slots[s.id] = { top, v, s: sd, turn: 'v' };
+    }
+    return fp;
+  }
+
+  // Infinite backfill: every stack a slot owns always holds at least one card; new cards are random ranks.
+  function makeBackfillCard() {
+    const card = { id: 'g' + (++genCount), rank: 1 + Math.floor(Math.random() * 13), suit: 0 };
+    cards[card.id] = card;
+    board.appendChild(makeCard(card)).dataset.fresh = '1';
+    return card.id;
+  }
+
+  function refill() {
+    if (!infinite || st.phase !== 'play') return [];
+    const made = [];
+    for (const s of SLOTS) {
+      const sl = st.slots[s.id];
+      for (const k of ['v', 's']) {
+        if (!s[k]) continue;
+        const capacity=(handDeal||options.denseBackfill)?(sl[k+'Capacity']??1):1;
+        while(sl[k].length<capacity){
+          const id = makeBackfillCard();
+          sl[k].push(id);
+          made.push(id);
+        }
+      }
+    }
+    return made;
+  }
+
+  function confirmPick(i) {
+    if(options.paused?.() || options.onCard?.(cards[st.field[i]],'start')===false)return;
+    if(options.pathField){st={phase:'play',fieldIndex:i,field:st.field,stock:st.stock,slots:{},found:[st.field[i]],out:[],streak:0,over:null};render();return;}
+    const fp = footprint(i);
+    for(const sl of Object.values(fp.slots)){sl.vCapacity=Math.max(1,sl.v.length);sl.sCapacity=Math.max(1,sl.s.length);}
+    st = {
+      phase: 'play', originIndex:i, field: st.field, stock: st.stock, slots: fp.slots, found: [fp.found],
+      out: st.field.filter((id) => id&&!fp.used.has(id)), streak: 0, over: null,
+    };
+    history = [];
+    const born = refill();
+    checkOver();
+    const delay = {};
+    born.forEach((id) => { delay[id] = 260; });
+    for (const s of SLOTS) { const sl = st.slots[s.id]; delay[sl.top] = 80; sl.v.concat(sl.s).forEach((id, k) => { delay[id] = 180 + k * 40; }); }
+    render({ delay });
+  }
+
+  function nextStack(slot, sl) {
+    const hasV = sl.v.length > 0, hasS = sl.s.length > 0;
+    if (!hasV && !hasS) return null;
+    if (!hasV) return 's';
+    if (!hasS) return 'v';
+    if (mode === 'v') return 'v';
+    if (mode === 's') return 's';
+    if (mode === 'deep') return sl.v.length >= sl.s.length ? 'v' : 's';
+    return sl.turn;
+  }
+
+  const legal = (a, b) => { const d = Math.abs(a - b); return d === 1 || (wrap && d === 12); };
+  const topFound = () => cards[st.found[st.found.length - 1]];
+  const snapshot = () => JSON.parse(JSON.stringify(st));
+  const neighboringField=(a,b)=>a!==b&&Math.abs(Math.floor(a/FC)-Math.floor(b/FC))<=1&&Math.abs(a%FC-b%FC)<=1;
+  // Path field reach: the 3x3 ring around the foundation, or (anyReach) any field card.
+  const reachable=(index)=>options.anyReach?.()?index!==st.fieldIndex:neighboringField(st.fieldIndex,index);
+  function playField(index){
+    const id=st.field[index];if(!id||!reachable(index)||!legal(cards[id].rank,topFound().rank)||options.paused?.())return false;
+    if(options.onCard?.(cards[id],'play')===false)return false;
+    const old=st.fieldIndex,c={id:'g'+(++genCount),rank:1+Math.floor(Math.random()*13),suit:0};cards[c.id]=c;board.appendChild(makeCard(c));st.field[old]=c.id;st.fieldIndex=index;st.found.push(id);st.streak++;st.over=null;render();return true;
+  }
+
+  function sourceOf(id) {
+    if (st.phase !== 'play' || st.over) return null;
+    if(options.pathField){const index=st.field.indexOf(id);if(index>=0&&reachable(index))return {kind:'field',index};return st.stock[st.stock.length-1]===id?{kind:'stock'}:null;}
+    if (handDeal && st.stock.includes(id)) return { kind: 'hand' };
+    if (!topFound()) return null;
+    for (const s of SLOTS) if (st.slots[s.id].top === id) return { kind: 'slot', slot: s.id };
+    if (st.stock.length && st.stock[st.stock.length - 1] === id) return { kind: 'stock' };
+    return null;
+  }
+
+  function playSlot(slotId) {
+    const sl = st.slots[slotId];
+    const id = sl.top;
+    if (!id || !topFound() || !legal(cards[id].rank, topFound().rank)) return null;
+    if(options.paused?.() || options.onCard?.(cards[id],'play')===false)return null;
+    history.push(snapshot());
+    st.found.push(id);
+    const which = nextStack(slotId, sl);
+    let incoming = null;
+    if (which) {
+      incoming = sl[which].shift();
+      sl.top = incoming;
+      if (which === 'v' || which === 's') sl.turn = which === 'v' ? 's' : 'v';
+    } else sl.top = null;
+    st.streak++;
+    best = Math.max(best, st.streak);
+    const born = refill();
+    checkOver();
+    return { moved: id, incoming, born };
+  }
+
+  function recenterHandGrid(target) {
+    const field = new Map(Object.entries(st.parked ?? {}));
+    const key = (r, c) => r + ',' + c;
+    // Expand each visual stack into its logical cells before shifting the window.
+    function visitSlot(slot, visit) {
+      visit('top', 0, slot.r, slot.c);
+      for (let i = 0; i < BACKFILL_DEPTH; i++) {
+        if (slot.v) visit('v', i, slot.r + (slot.v === 'top' ? -1 : 1) * (i + 1), slot.c);
+        if (slot.s) visit('s', i, slot.r, slot.c + (slot.s === 'left' ? -1 : 1) * (i + 1));
+      }
+    }
+    let center;
+    for (const slot of SLOTS) {
+      const stack = st.slots[slot.id];
+      visitSlot(slot, (kind, i, r, c) => {
+        const id = kind === 'top' ? stack.top : stack[kind][i];
+        if (!id) return;
+        if (id === target) center = { r, c };
+        else field.set(key(r, c), id);
+      });
+    }
+    if (!center) return false;
+
+    const dr = center.r - 1, dc = center.c - 1;
+    st.found.push(target);
+    for (const slot of SLOTS) {
+      const stack = { top: null, v: [], s: [], turn: 'v' };
+      visitSlot(slot, (kind, i, r, c) => {
+        const position = key(r + dr, c + dc);
+        const id = field.get(position);
+        field.delete(position);
+        if (kind === 'top') stack.top = id ?? (infinite ? makeBackfillCard() : null);
+        else {
+          stack[kind + 'Capacity'] = BACKFILL_DEPTH;
+          if (id) stack[kind].push(id);
+        }
+      });
+      st.slots[slot.id] = stack;
+    }
+    st.parked = Object.fromEntries(Array.from(field, ([position, id]) => {
+      const [r, c] = position.split(',').map(Number);
+      return [key(r - dr, c - dc), id];
+    }));
+    refill();
+    return true;
+  }
+
+  function playHand(id, target) {
+    const index = st.stock.indexOf(id);
+    if (index < 0 || st.over || options.paused?.()) return null;
+    history.push(snapshot());
+    if (target && !recenterHandGrid(target)) {
+      history.pop();
+      return null;
+    }
+    st.stock.splice(index, 1);
+    st.found.push(id);
+    st.streak = 0;
+    checkOver();
+    return { moved: id };
+  }
+
+  function drawStock() {
+    if (!stockEnabled || !st.stock.length || st.over) return null;
+    history.push(snapshot());
+    const id = st.stock[st.stock.length-1];
+    if(options.paused?.() || options.onCard?.(cards[id],'stock')===false){history.pop();return null;}
+    st.stock.pop();
+    st.found.push(id);
+    if(options.pathField)st.field[st.fieldIndex]=id;
+    st.streak = 0;
+    if(options.stockReselect&&!options.pathField){reopen();return {moved:id};}
+    checkOver();
+    return { moved: id };
+  }
+
+  function checkOver() {
+    if(options.pathField){if(!st.stock.length&&!st.field.some((id,i)=>id&&reachable(i)&&legal(cards[id].rank,topFound().rank)))st.over='lose';return;}
+    const tops = SLOTS.map((s) => st.slots[s.id].top).filter(Boolean);
+    if (!tops.length) { st.over = 'win'; return; }
+    const f = topFound()?.rank;
+    if (!st.stock.length && !tops.some((id) => legal(cards[id].rank, f))) st.over = 'lose';
+  }
+
+  /** Reconstruct the current field, including the latest ranks and refill queues. */
+  function reopen(){
+    if(options.paused?.()||st.phase!=='play'||options.pathField||handDeal)return false;
+    unfoldedFrom=snapshot();const field=[...st.field],origin=st.originIndex,r=Math.floor(origin/FC),c=origin%FC;
+    const put=(row,col,id)=>{const i=row*FC+col;if(row>=0&&row<FR&&col>=0&&col<FC&&field[i]&&id)field[i]=id;};
+    put(r,c,st.found[st.found.length-1]);
+    for(const s of SLOTS){const sl=st.slots[s.id],row=r+s.r-1,col=c+s.c-1;put(row,col,sl.top);if(s.v)sl.v.forEach((id,i)=>put(row+(s.r===0?-1:1)*(i+1),col,id));if(s.s)sl.s.forEach((id,i)=>put(row,col+(s.c===0?-1:1)*(i+1),id));}
+    st={phase:'pick',field,stock:st.stock,preview:null,streak:0,over:null};build();render();return true;
+  }
+
+  function undo() {
+    if (!history.length) return;
+    st = history.pop();
+    render();
+  }
+
+  // ---------- layout ----------
+  function cell(r, c) {
+    return handDeal
+      ? { x: gridX + c * (W + G), y: backfillExtent + r * (H + G) }
+      : { x: PX + M + c * (W + G), y: PY + M + r * (H + G) };
+  }
+  const fieldXY = (i) => ({ x: (i % FC) * (W + G), y: Math.floor(i / FC) * (H + G) });
+
+  function build() {
+    board.innerHTML = '';
+    els = {};
+    board.style.width = FRAME.w + 'px';
+    board.style.height = FRAME.h + 'px';
+    if(stockEnabled){
+    const sEl = addSlot(stockXY, ''); sEl.classList.add('stockwell'); sEl.id = 'stockWell';
+    const lbl = document.createElement('div');
+    lbl.className = 'stocklabel'; lbl.id = 'stockLabel';
+    lbl.style.left = stockXY.x + 'px'; lbl.style.width = W + 'px'; lbl.style.top = (stockXY.y + H + 8) + 'px';
+    board.appendChild(lbl);
+    }
+    const fEl = addSlot(foundRect, handDeal ? 'Foundation' : ''); fEl.classList.add('found'); fEl.id = 'foundSlot';
+    for (const id in cards) board.appendChild(makeCard(cards[id]));
+    fit();
+  }
+
+  function addSlot(p, label) {
+    const d = document.createElement('div');
+    d.className = 'slot';
+    d.style.cssText = `left:${p.x}px;top:${p.y}px;width:${W}px;height:${H}px`;
+    if (label) d.innerHTML = `<span class="lbl">${label}</span>`;
+    board.appendChild(d);
+    return d;
+  }
+
+  function makeCard(c) {
+    const r = RANKS[c.rank];
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.dataset.id = c.id;
+    el.setAttribute('aria-label', 'Card ' + r);el.setAttribute('role','button');el.tabIndex=0;
+    el.innerHTML = `<div class="inner"><div class="face front">
+        <span class="idx tl">${r}</span>
+        <span class="idx br">${r}</span>
+        <span class="pip"><span class="r">${r}</span></span>
+        <span class="peek"><span>${r}</span><span class="chev"></span></span>
+      </div><div class="face back"></div></div>`;
+    els[c.id] = el;
+    return el;
+  }
+
+  function tilt(id) { let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) | 0; return ((Math.abs(h) % 9) - 4) * 0.9; }
+
+  function layout() {
+    const out = {};
+    stockXY = st.phase === 'play' && !options.pathField ? STOCK_PLAY : STOCK_PICK;
+    const well = $('stockWell'), lab = $('stockLabel');
+    well.style.left = stockXY.x + 'px'; well.style.top = stockXY.y + 'px';
+    lab.style.left = stockXY.x + 'px'; lab.style.top = (stockXY.y + H + 8) + 'px';
+    if (handDeal) {
+      st.stock.forEach((id, i) => {
+        const offset = i - (st.stock.length - 1) / 2;
+        out[id] = {
+          x: (FRAME.w - W) / 2 + offset * 36 * factor,
+          y: gridHeight + STOCK_GAP + offset ** 2 * factor,
+          z: 200 + i, rot: offset * 2.4,
+        };
+      });
+    } else st.stock.forEach((id, i) => { out[id] = { x: stockXY.x - Math.min(i, 12) * 0.5, y: stockXY.y - Math.min(i, 12) * 0.6, z: 200 + i, down: true }; });
+    if (st.phase === 'pick') {
+      const fp = st.preview != null ? footprint(st.preview) : null;
+      const role = (id) => {
+        if (!fp) return null;
+        if (id === fp.found) return 'found';
+        for (const s of SLOTS) { const sl = fp.slots[s.id]; if (sl.top === id) return 'top'; if (sl.v.includes(id) || sl.s.includes(id)) return 'back'; }
+        return 'off';
+      };
+      st.field.forEach((id, i) => { if(id)out[id] = { ...fieldXY(i), z: 100, pv: role(id), pick: pickable(i) }; });
+      return out;
+    }
+    if(options.pathField){st.field.forEach((id,i)=>{if(id)out[id]={...fieldXY(i),z:100,pick:reachable(i)};});return out;}
+    st.field.forEach((id, i) => { if (id&&st.out.includes(id)) out[id] = { ...fieldXY(i), z: 1, gone: true }; });
+    for (const s of SLOTS) {
+      const sl = st.slots[s.id], base = cell(s.r, s.c);
+      const nxt = nextStack(s.id, sl);
+      if (sl.top) out[sl.top] = { x: base.x, y: base.y, z: 100 };
+      sl.v.forEach((id, i) => {
+        const distance = P + (handDeal ? BACKFILL_STEP * i : 0);
+        out[id] = { x: base.x, y: base.y + (s.v === 'top' ? -distance : distance), z: 98 - i, peek: s.v, next: i === 0 && nxt === 'v' };
+      });
+      sl.s.forEach((id, i) => {
+        const distance = P + (handDeal ? BACKFILL_STEP * i : 0);
+        out[id] = { x: base.x + (s.s === 'left' ? -distance : distance), y: base.y, z: 98 - i, peek: s.s, next: i === 0 && nxt === 's' };
+      });
+    }
+    st.found.forEach((id, i) => { out[id] = { x: foundRect.x, y: foundRect.y, z: 300 + i, rot: i === 0 ? 0 : tilt(id) }; });
+    return out;
+  }
+
+  let lastLayout = {};
+  const combo = $('combo');
+  const comboNumber = combo.querySelector?.('strong');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  let displayedStreak = 0;
+  let comboImpact;
+
+  function renderCombo() {
+    if (!comboNumber || displayedStreak === st.streak) return;
+    const increased = st.streak > displayedStreak;
+    displayedStreak = st.streak;
+    comboImpact?.cancel();
+    combo.hidden = displayedStreak === 0;
+    comboNumber.textContent = displayedStreak + '×';
+    const heat = displayedStreak / (displayedStreak + 5);
+    combo.style.setProperty('--heat', heat);
+    if (increased && !reducedMotion.matches) {
+      comboImpact = combo.animate([
+        { transform: 'translateX(-6px) skewX(-12deg) scale(' + (1.06 + heat * .42) + ')' },
+        { transform: 'none' },
+      ], { duration: 200 + heat * 170, easing: 'cubic-bezier(.16,1,.3,1)' });
+    }
+  }
+
+  function render(opts = {}) {
+    renderCombo();
+    const L = layout();
+    lastLayout = L;
+    const recommended = bestHandCards();
+    if (handDeal) for (const [id, el] of Object.entries(els)) {
+      const isRecommended = recommended.has(id);
+      el.classList.toggle('best-hand', isRecommended);
+      el.setAttribute('aria-description', isRecommended ? 'Best sequence potential' : '');
+    }
+    // Reopening can leave collected/generated IDs outside the reconstructed
+    // field. They must not reappear at the board origin after build().
+    for(const id in els)if(!L[id])els[id].classList.add('gone');
+    for (const id in L) {
+      const p = L[id], el = els[id];
+      const fresh = !!el.dataset.fresh;
+      if (fresh) {
+        // New infinite-backfill card: place it without travel, then fade it in.
+        delete el.dataset.fresh;
+        el.style.transition = 'none';
+        el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+        el.classList.add('gone');
+        void el.offsetWidth;
+        el.style.transition = '';
+        setTimeout(() => el.classList.remove('gone'), ((opts.delay && opts.delay[id]) || 0) + 20);
+      }
+      el.style.transitionDelay = (opts.delay && opts.delay[id]) ? opts.delay[id] + 'ms' : '0ms';
+      el.style.transform = `translate(${p.x}px, ${p.y}px)` + (p.rot ? ` rotate(${p.rot}deg)` : '');
+      el.style.zIndex = p.z;
+      el.classList.toggle('down', !!p.down);
+      if (!fresh) el.classList.toggle('gone', !!p.gone);
+      el.classList.toggle('pickable', !!p.pick);
+      if (p.pv) el.dataset.pv = p.pv; else delete el.dataset.pv;
+      if (p.peek) el.dataset.peek = p.peek; else delete el.dataset.peek;
+      if (p.next) { el.dataset.next = ''; el.querySelector('.chev').textContent = CHEV[p.peek]; } else delete el.dataset.next;
+    }
+    fit();
+    $('foundSlot').hidden = st.phase === 'pick';
+    if (handDeal) $('foundSlot').classList.toggle('awaiting-hand', !topFound());
+    const lbl = $('stockLabel');
+    if (lbl) lbl.textContent = st.stock.length ? 'Stock · ' + st.stock.length : 'Stock empty';
+    const b = $('banner');
+    if (st.phase === 'play' && st.over) {
+      b.hidden = false;
+      $('bannerText').innerHTML = st.over === 'win'
+        ? `<b>Grid cleared.</b> ${st.stock.length} ${handDeal ? 'hand' : 'stock'} card${st.stock.length === 1 ? '' : 's'} to spare.`
+        : `<b>No plays left.</b> ${options.pathField?st.field.filter(Boolean).length:SLOTS.reduce((n, s) => { const sl = st.slots[s.id]; return n + (sl.top ? 1 : 0) + sl.v.length + sl.s.length; }, 0)} cards remain.`;
+    } else b.hidden = true;
+    for(const id in els){const el=els[id],src=sourceOf(id);el.tabIndex=st.phase==='pick'?(pickable(st.field.indexOf(id))?0:-1):(src?0:-1);el.setAttribute('aria-disabled',String(st.phase==='pick'?!pickable(st.field.indexOf(id)):!src));}
+    publish();
+  }
+
+  function fly(id) {
+    const el = els[id];
+    el.classList.remove('fly'); void el.offsetWidth; el.classList.add('fly');
+    setTimeout(() => el.classList.remove('fly'), 400);
+  }
+  function wiggle(id) {
+    const el = els[id];
+    el.classList.remove('wiggle'); void el.offsetWidth; el.classList.add('wiggle');
+    setTimeout(() => el.classList.remove('wiggle'), 320);
+  }
+  function shakeFoundation() {
+    const f = els[st.found[st.found.length - 1]];
+    if (!f) return;
+    f.classList.remove('found-shake'); void f.offsetWidth; f.classList.add('found-shake');
+    setTimeout(() => f.classList.remove('found-shake'), 340);
+  }
+
+  function act(src, id, target) {
+    if(src.kind==='field')return playField(src.index);
+    let res = null;
+    if (src.kind === 'slot') res = playSlot(src.slot);
+    else if (src.kind === 'hand') res = playHand(id, target);
+    else res = drawStock();
+    if (!res) return false;
+    const delay = {};
+    if (res.incoming) delay[res.incoming] = 170;
+    (res.born || []).forEach((id) => { delay[id] = 320; });
+    render({ delay });
+    fly(res.moved);
+    return true;
+  }
+
+  function fit() {
+    const box = st && st.phase === 'play' && !options.pathField && !handDeal
+      ? { x: PX, y: PY, w: 2 * M + 3 * W + 2 * G + stockWidth, h: 2 * M + 3 * H + 2 * G }
+      : { x: 0, y: 0, w: FRAME.w, h: FRAME.h };
+    const r = options.scrollable?{width:stage.clientWidth,height:stage.clientHeight}:stage.getBoundingClientRect();
+    const pad = (options.padding ?? 56)*factor;
+    scale = Math.min((r.width - pad * 2) / box.w, (r.height - pad * 2) / box.h, options.maxScale ?? 1.35);
+    scale = Math.max(scale, typeof options.minScale==='function'?options.minScale():options.minScale??0.3);
+    const ox = (options.scrollable?Math.max(pad,(r.width-box.w*scale)/2):(r.width-box.w*scale)/2)-box.x*scale;
+    const oy = (options.scrollable?Math.max(pad,(r.height-box.h*scale)/2):(r.height-box.h*scale)/2)-box.y*scale;
+    if(scrollSurface){board.style.width='0px';board.style.height='0px';scrollSurface.style.width=Math.max(r.width,box.w*scale+pad*2)+'px';scrollSurface.style.height=Math.max(r.height,box.h*scale+pad*2)+'px';if(fitPhase!==st.phase){stage.scrollLeft=0;stage.scrollTop=0;fitPhase=st.phase;}}
+    board.style.transform = `translate(${ox}px, ${oy}px) scale(${scale})`;
+    if (handDeal && comboNumber) {
+      const gridRight = ox + (gridX - backfillExtent + gridWidth) * scale;
+      combo.style.setProperty('--combo-x', Math.min(r.width - 20, gridRight + backfillExtent * scale) + 'px');
+      combo.style.setProperty('--combo-y', (oy + gridHeight * scale + 5) + 'px');
+    }
+    publish();
+  }
+  function publish(){options.onRender?.({phase:st.phase,foundation:st.phase==='play'?topFound():null,rect:{...foundRect,width:W,height:H},scale,layout:lastLayout,cards,state:st});}
+  const observer=new ResizeObserver(fit);observer.observe(stage);
+
+  // ---------- input: pointer events cover mouse, touch and pen ----------
+  let drag = null;
+  listen(board,'pointerdown', (e) => {
+    if (e.button > 0 || options.paused?.()) return;
+    const el = e.target.closest('.card');
+    if (!el) return;
+    const id = el.dataset.id, src = sourceOf(id);
+    if (!src) return;
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    drag = { id, el, src, pid: e.pointerId, sx: e.clientX, sy: e.clientY, base: lastLayout[id], moved: false };
+  });
+  listen(board,'pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    const dx = (e.clientX - drag.sx) / scale, dy = (e.clientY - drag.sy) / scale;
+    if (!drag.moved && Math.hypot(dx, dy) * scale < 6) return;
+    if (!drag.moved) { drag.moved = true; drag.el.classList.add('dragging'); drag.el.style.zIndex = 1000; drag.el.style.transitionDelay = '0ms'; }
+    drag.dx = dx; drag.dy = dy;
+    drag.el.style.transform = `translate(${drag.base.x + dx}px, ${drag.base.y + dy}px)`;
+  });
+  function endDrag(e, cancelled) {
+    if (!drag || e.pointerId !== drag.pid) return;
+    const d = drag; drag = null;
+    d.el.classList.remove('dragging');
+    if (!d.moved) {
+      if (cancelled) return;
+      if (!act(d.src, d.id)) { wiggle(d.id); if (d.src.kind === 'slot') shakeFoundation(); }
+      return;
+    }
+    if (!cancelled && d.src.kind === 'hand') {
+      const hit = document.elementsFromPoint(e.clientX, e.clientY)
+        .map(el => el.closest('.card, #foundSlot'))
+        .find(el => el && el !== d.el && board.contains(el) && !el.classList.contains('gone'));
+      const target = hit?.dataset.id;
+      if (target && !st.stock.includes(target) && !st.found.includes(target) && act(d.src, d.id, target)) return;
+      if ((hit?.id === 'foundSlot' || st.found.includes(target)) && act(d.src, d.id)) return;
+    }
+    const cx = d.base.x + d.dx + W / 2, cy = d.base.y + d.dy + H / 2;
+    const over = !cancelled && cx > foundRect.x - 24 && cx < foundRect.x + W + 24 && cy > foundRect.y - 24 && cy < foundRect.y + H + 24;
+    if (over && act(d.src, d.id)) return;
+    if (over) shakeFoundation();
+    render();
+  }
+  function pickIndex(e) {
+    const el = e.target.closest && e.target.closest('.card');
+    if (!el) return -1;
+    const i = st.field.indexOf(el.dataset.id);
+    return i >= 0 && pickable(i) ? i : -1;
+  }
+  listen(board,'pointerover', (e) => {
+    if (st.phase !== 'pick' || e.pointerType !== 'mouse') return;
+    const i = pickIndex(e);
+    if (i >= 0 && i !== st.preview) { st.preview = i; render(); }
+  });
+  listen(stage,'pointerleave', (e) => {
+    if (st.phase === 'pick' && e.pointerType === 'mouse' && st.preview != null) { st.preview = null; render(); }
+  });
+  listen(board,'pointerup', (e) => {
+    if(options.paused?.())return endDrag(e,true);
+    if (st.phase !== 'pick') return endDrag(e, false);
+    const i = pickIndex(e);
+    if (i < 0) return;
+    if (options.singleClickPick || st.preview === i) confirmPick(i);
+    else { st.preview = i; render(); }
+  });
+  listen(board,'pointercancel', (e) => endDrag(e, true));
+
+  // ---------- controls ----------
+  const auto = createWorldRailAutoPlay(() => {
+    if (document.hidden || drag || st.over || options.paused?.()) return 'complete';
+    // Use the recommended opener once. Subsequent hand cards are manual resets.
+    const opener = !topFound() && bestHandCards().values().next().value;
+    const hint = opener ? { id: opener, kind: 'hand' } : bestSequence();
+    if (hint.kind !== 'hand' && hint.kind !== 'card') return 'complete';
+    const source = sourceOf(hint.id);
+    return source && act(source, hint.id) ? 'played' : 'complete';
+  }, .42);
+
+  let autoFrame = null;
+  let lastAutoTime = 0;
+  function tickAuto(now) {
+    autoFrame = null;
+    auto.update(Math.min((now - lastAutoTime) / 1000, .1));
+    lastAutoTime = now;
+    if (auto.mode !== 'idle') autoFrame = requestAnimationFrame(tickAuto);
+  }
+  function stopAuto() {
+    auto.stop();
+    if (autoFrame !== null) cancelAnimationFrame(autoFrame);
+    autoFrame = null;
+  }
+
+  if (handDeal) {
+    const isControl = e => e.code === 'ControlLeft' || e.code === 'ControlRight';
+    listen(window, 'keydown', e => {
+      if (!isControl(e) || e.repeat || e.isComposing || e.altKey || e.metaKey || e.shiftKey ||
+          isTextEditingTarget(e.target) || document.hidden || drag || options.paused?.()) return;
+      auto.press(e.code);
+      if (autoFrame === null && auto.mode !== 'idle') {
+        lastAutoTime = performance.now();
+        autoFrame = requestAnimationFrame(tickAuto);
+      }
+    });
+    listen(window, 'keyup', e => { if (isControl(e)) auto.release(e.code); });
+    listen(window, 'blur', stopAuto);
+    listen(window, 'pagehide', stopAuto);
+    listen(document, 'visibilitychange', () => { if (document.hidden) stopAuto(); });
+  }
+  const newSeed = () => Math.floor(Math.random() * 9000) + 1000;
+  $('bannerNew').onclick = () => { stopAuto(); deal(options.seed ?? newSeed()); };
+  $('chkInfinite').onchange = (e) => {
+    infinite = e.target.checked;
+    if (st.phase === 'play' && !st.over) { const born = refill(); const delay = {}; born.forEach((id) => { delay[id] = 60; }); checkOver(); render({ delay }); }
+  };
+
+  deal(options.seed ?? newSeed());
+
+  listen(board,'keydown',e=>{
+    if(!['Enter',' '].includes(e.key)||options.paused?.())return;
+    const el=e.target.closest('.card');if(!el)return;e.preventDefault();
+    if(st.phase==='pick'){const i=st.field.indexOf(el.dataset.id);if(i>=0&&pickable(i))confirmPick(i);}
+    else {const src=sourceOf(el.dataset.id);if(src)act(src,el.dataset.id);}
+  });
+  return {get state(){return st;},get cards(){return cards;},
+    bestSequence,
+    bestPath(){return st.phase==='play'&&!options.pathField&&topFound()?knownSequence(st.slots,topFound().rank).path:[];},
+    preview(id){if(st.phase!=='pick'||id!=null&&options.paused?.())return false;const index=id==null?null:st.field.indexOf(id);if(index!==null&&(index<0||!pickable(index)))return false;if(st.preview!==index){st.preview=index;render();}return true;},
+    reopen,
+    cancelReopen(){if(!unfoldedFrom||st.phase!=='pick')return false;st=unfoldedFrom;unfoldedFrom=null;build();render();return true;},
+    /** Re-check reach and the end state after an option such as anyReach changes. */
+    refresh(){if(st.phase==='play'){st.over=null;checkOver();render();}},
+    activate(id){if(options.paused?.())return false;if(st.phase==='pick'){const i=st.field.indexOf(id);if(i<0||!pickable(i))return false;confirmPick(i);return st.phase==='play';}if(options.pathField){if(st.stock[st.stock.length-1]===id)return !!drawStock()&&(render(),true);return playField(st.field.indexOf(id));}const src=sourceOf(id);return src?act(src,id):false;},
+    autoStep(draw=false){
+      if(st.phase!=='play'||st.over||options.paused?.())return false;
+      if(options.pathField&&options.anyReach?.()){const next=st.field.findIndex((id,i)=>id&&reachable(i)&&legal(cards[id].rank,topFound().rank));return next>=0?playField(next):draw&&st.stock.length?!!drawStock()&&(render(),true):false;}
+      if(options.pathField){
+        let nodes=0;
+        function knownPath(index,rank,seen,depth){
+          if(!depth||++nodes>2000)return {length:0,index:-1};let best={length:0,index:-1};const row=Math.floor(index/FC),col=index%FC;
+          for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+            const r=row+dr,c=col+dc,next=r*FC+c,id=st.field[next];if((!dr&&!dc)||r<0||r>=FR||c<0||c>=FC||!id||seen.has(next)||!legal(rank,cards[id].rank))continue;
+            const visited=new Set(seen);visited.add(next);const length=1+knownPath(next,cards[id].rank,visited,depth-1).length;if(length>best.length)best={length,index:next};
+          }return best;
+        }
+        const next=knownPath(st.fieldIndex,topFound().rank,new Set([st.fieldIndex]),12).index;
+        return next>=0?playField(next):draw&&st.stock.length?!!drawStock()&&(render(),true):false;
+      }
+      const hint=bestSequence();
+      return hint.kind==='card'?act(sourceOf(hint.id),hint.id):draw&&st.stock.length?act({kind:handDeal?'hand':'stock'},st.stock[st.stock.length-1]):false;
+    },
+    setFoundationRank(rank){if(st.phase==='play'&&topFound()&&topFound().rank!==rank){cards[topFound().id].rank=rank;const el=els[topFound().id];el.querySelectorAll('.idx,.r,.peek>span:first-child').forEach(n=>n.textContent=RANKS[rank]);render();}},
+    dispose(){comboImpact?.cancel();stopAuto();abort.abort();observer.disconnect();timers.forEach(clearTimeout);board.replaceChildren();scrollSurface?.replaceWith(board);}
+  };
+
+}
+
+
+mountGridTableau({handDeal:true,stockEnabled:false,stage:document.getElementById("stage"),board:document.getElementById("board")});
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Hero world combat v1
+
+Superseded by [focus v2](./hero-world-combat-v2.md): the v1 dark eye outlines/brows looked menacing. V2 keeps these action poses with softer natural eyes. V1 assets and generation history remain archived.
+
+Four built-in ImageGen atlases provide 176 poses: focused ready, careful combat approach, pre-lunge bow and leap. Each has four exposures for five low and five elevated yaw views plus overhead, with mirroring for the opposite half orbit. Runtime sheets are 1536×1152 with 192 px cells, in `public/assets/runtime/characters/hero/world-combat/v1/`.
+
+The actual Hero berry painting was supplied as the watercolor style reference, with the existing low/high navigation paintings as identity/camera references. Facial refinements use the corrected serious-ready sheet as an expression reference and preserve body pose, markings, registration and opaque cream fur. Masters, initial studies, exact initial/correction prompts and SHA256 digests are saved under `public/assets/sources/characters/hero/world-combat/v1/` and [the packing record](./hero-world-combat-v1-packing.json). No color-keying or procedural face replacement is used.
+
+The world director switches to focused poses within 14 m of a living Khadroot, retaining awareness until 18 m to avoid boundary flicker. Standing alternates alert readiness with occasional chest-low/rump-high anticipatory bows; motion immediately selects the combat approach gait, and jumps use the focused leap. These stances never launch an attack. Ordinary sitting/prone/rolling/yawning idles are suppressed, including their loading fallback. Reduced motion holds the serious ready pose. Defeat or leaving range restores normal exploration. All four combat textures warm before the first world frame, within the existing four-atlas GPU limit.
+
+The serious-ready atlas stays resident as one of those four slots and supplies the loading fallback for other combat clips. Returning through a portal cannot briefly restore a smiling exploration sprite while a threat clip reloads. Exact generation/correction prompts are also preserved in `generation.json` beside the selected masters. Regenerate runtime packing with `tools/pack-hero-world-exploration.ps1 -Generation artifacts/hero-combat-generation.json -Family world-combat/v1`, then run `node tools/calibrate-hero-world-scale.cjs`.
+
+Body scale uses the calibrated serious-ready exposure for every combat clip/view, retaining natural crouch/bow/leap shape instead of resizing each phase. The shared sprite preview exposes all four clips and copyable pose telemetry: `/tools/hero-world-exploration.html`. This is the portals/world navigation rig; the separate tableau combat rendering is unchanged.
+
+Validation covers all 187 exploration/combat clip-view scale entries, frame addressing, threat idle exclusion and movement/air/reduced-motion transitions. The focused browser preview loaded all four atlases at the calibrated sizes and kept the resident count bounded at four. Full scene readiness timed out in the combined follow-up run; no full-scene combat-playthrough verification is claimed.

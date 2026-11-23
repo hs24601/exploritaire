@@ -48,7 +48,7 @@ export const drawTableLight = (
     context.fillRect(0, 0, width, height);
 
     // Edge vignette pulls focus to the lit middle of the table after dark.
-    if (nightness > 0.05) {
+    if (frame.skyLight && nightness > 0.05) {
       const vignette = context.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.3, width / 2, height / 2, Math.hypot(width, height) * 0.6);
       vignette.addColorStop(0, rgba(frame.skyTint, 0));
       vignette.addColorStop(1, rgba({ r: 0, g: 0, b: 6 }, 0.32 * nightness));
@@ -57,7 +57,7 @@ export const drawTableLight = (
     }
 
     // Sun wash: warm light falling across the table from the sun's side.
-    if (frame.daylight > 0) {
+    if (frame.skyLight && frame.daylight > 0) {
       const sun = toScreen(frame.source);
       const length = Math.max(1, Math.hypot(sun.x - width / 2, sun.y - height / 2));
       const reach = Math.hypot(width, height) * 0.75;
@@ -86,7 +86,7 @@ export const drawTableLight = (
   };
   const paintGlobal = () => {
     if (!cache) { drawGlobal(); return; }
-    const key=JSON.stringify([size,camera,frame.hour,frame.globalLights,outputContext.canvas.width,outputContext.canvas.height]);
+    const key=JSON.stringify([size,camera,frame,outputContext.canvas.width,outputContext.canvas.height]);
     if(cache.key!==key){
       cache.key=key;cache.canvas.width=outputContext.canvas.width;cache.canvas.height=outputContext.canvas.height;
       const cached=cache.canvas.getContext('2d')!;

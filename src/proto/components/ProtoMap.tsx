@@ -1,3 +1,4 @@
+import { FrostDemiSprite } from './FrostDemiSprite';
 import { DenQuestDiscovery } from './DenQuestDiscovery';
 import { ScenarioCameraDetails } from './ScenarioCameraDetails';
 import { ActorDragGhost } from './ActorDragGhost';
@@ -103,6 +104,9 @@ import { VolumetricAtmosphere } from './VolumetricAtmosphere';
 import { DustMotes } from './DustMotes';
 import { AirParticles } from './AirParticles';
 import { GroundLightCanvas } from './GroundLightCanvas';
+import { MobileLightCanvas } from './MobileLightCanvas';
+import { mapHasSkyLight, useDarknessStrength, useMapLightingRenderer } from '../mapLightingRenderer';
+import { MapLightingControls } from './MapLightingControls';
 import { TableGridCanvas } from './TableGridCanvas';
 import { subscribeVisualLight } from '../visualLightClock';
 import type { AtmosphereCanopy } from '../volumetricAtmosphere';
@@ -236,7 +240,13 @@ const finiteWorldPoint = (point: { x: number; y: number } | undefined, fallback 
   y: finiteCoordinate(point?.y, fallback.y),
 });
 
+export type MapSignal = { id: string; position: {x:number;y:number}; kind: 'frost'|'void'|'dark-demi'|'cub'; label: string; followActorId?: string };
 type ProtoMapProps = {
+  mapSignals?: readonly MapSignal[];
+  /** Returning false interrupts free walking at this cell (an encounter boundary). */
+  onRoamStep?: (actorId: string, position: {x:number;y:number}) => boolean;
+  /** Unscripted map: walking needs no cards, stamina or automatic camera. */
+  freeRoam?: boolean;
   /** Scene-owned pins; removing an ID restores ordinary hover/focus/tap reveal. */
   persistentTileLabelIds?: readonly string[];
   storyMood?: StoryMood;
@@ -264,6 +274,8 @@ type ProtoMapProps = {
   onTravelPaint?: (progress:number) => void;
   onTravelCheckpoint?: (progress:number) => boolean;
   inactive?: boolean;
+  /** Keep camera geometry measurable behind a full-screen encounter. */
+  retainLayoutWhenInactive?: boolean;
   storyCard?: React.ReactNode;
   biomeTiles: ProtoBiomeTile[];
   actors: ProtoWorldActor[];
@@ -309,10 +321,11 @@ type ProtoMapProps = {
 const ROUTE_PREVIEW_ENABLED = false;
 
 export const ProtoMap = ({
+  freeRoam = false, mapSignals = [], onRoamStep,
   cameraDirectorDisabled, storyMood, peripheralDarkness, departureCamera, persistentTileLabelIds = [],
   onEditCell, onEditContextMenu, editCell,
   journey, travelStamina = 24, travelStaminaMax = 24, initialCenter, objective, onConfirmTravel, onFinishTravel, onTravelCheckpoint, onTravelPaint, travelAllowed,
-  inactive = false,
+  inactive = false, retainLayoutWhenInactive = false,
   biomeTiles: sourceBiomeTiles,
   actors,
   actorOrigins,
@@ -376,8 +389,8 @@ export const ProtoMap = ({
     window.addEventListener('blur', cancelTravelControl);
     return () => window.removeEventListener('blur', cancelTravelControl);
   }, []);
-  const [followTravelingActor, setFollowTravelingActor] = useState(true);
-  const [cinematicTravel, setCinematicTravel] = useState(true);
+  const [followTravelingActor, setFollowTravelingActor] = useState(!freeRoam);
+  const [cinematicTravel, setCinematicTravel] = useState(!freeRoam);
   const [closeup, setCloseup] = useState<ActorCloseup | null>(null);
   const closeupRef = useRef(closeup);
   closeupRef.current = closeup;
@@ -385,6 +398,10 @@ export const ProtoMap = ({
   // tilted camera's edge scenery can keep clear of it.
   // Effects tier (fxQuality.ts): live, so a slow device can step down mid-session.
   const fxQuality = useFxQuality();
+  const lightingRenderer = useMapLightingRenderer();
+  const darknessStrength = useDarknessStrength();
+  const mobileLighting = lightingRenderer === 'mobile';
+  const fullLighting = lightingRenderer === 'full';
   useEffect(startFxGovernor, []);
   const [useVolume] = useState(() => new URLSearchParams(window.location.search).get('atmosphere') !== 'off');
   // Label ink bounds only shape the route and flat spills while that label is
@@ -405,7 +422,7 @@ export const ProtoMap = ({
   }, []);
   const [viewportHeight, setViewportHeight] = useState(720);
   const [viewportWidth, setViewportWidth] = useState(1280);
-  const [rasterScale, setRasterScale] = useState(() => standeeRasterScale(window.devicePixelRatio, STANDEE_OVERSAMPLE));
+  const [rasterScale, setRasterScale] = useState(() => standeeRasterScale(window.devicePixelRatio, mobileLighting ? 2 : STANDEE_OVERSAMPLE));
   // The camera eases between Flat and Tilt (CSS transitions on the table and
   // its light). The table stays oversized ("staged") until it has settled
   // flat, and pieces swap between standees and printed tokens halfway through,
@@ -736,7 +753,7 @@ export const ProtoMap = ({
   useEffect(() => {
     const authored = departureTrip.current?.path === travel?.path ? departureTrip.current?.camera : undefined;
     if (travel && closeup && !authored) closeupTripOverride.current = travel.path;
-    if (!travel || !tilted || !authored && (!followTravelingActor || closeup || closeupTripOverride.current === travel.path)) return;
+    if (freeRoam || !travel || !tilted || !authored && (!followTravelingActor || closeup || closeupTripOverride.current === travel.path)) return;
     if (authored) stopCameraPlayback();
     const initialView = camera.getLiveCamera();
     const initialShot = { ...shotFromCamera(initialView, tilted, getCameraTilt(initialView).angle), framing: (initialView.aimY ?? 0) / Math.max(1, viewportHeight) };
@@ -807,7 +824,7 @@ export const ProtoMap = ({
       toolbar?.removeEventListener('click', cancel);
       window.removeEventListener('keydown', key);
     };
-  }, [travel?.actorId, tilted, followTravelingActor, cinematicTravel, closeup, Boolean(travelTableau), viewportWidth, viewportHeight, camera.getLiveCamera, camera.setCameraFrame, camera.syncCamera]);
+  }, [freeRoam, travel?.actorId, tilted, followTravelingActor, cinematicTravel, closeup, Boolean(travelTableau), viewportWidth, viewportHeight, camera.getLiveCamera, camera.setCameraFrame, camera.syncCamera]);
   // Move only the actor and its attached pieces on the compositor frame. Heavy
   // world lighting/scenery can consume snapshots without quantizing the gait.
   const paintTravelActor = useCallback(() => {
@@ -816,6 +833,11 @@ export const ProtoMap = ({
     const { actorId, position, heading } = pose;
     const ids = Object.keys(journeyRef.current?.memberRanks ?? { [actorId]: 0 });
     const selector = ids.map(id => `[data-travel-actor="${id}"], [data-cell-grip="actor-${id}"], [data-actor-name-owner="${id}"]`).join(',');
+    viewport.querySelectorAll<HTMLElement>('[data-follow-actor="'+actorId+'"]').forEach(el => {
+      el.style.left = 'calc(50% + '+(position.x + 16)+'px)';
+      el.style.top = 'calc(50% + '+(position.y + 8)+'px)';
+      el.dataset.actorX = String(position.x + 16); el.dataset.actorY = String(position.y + 8);
+    });
     viewport.querySelectorAll<HTMLElement>(selector).forEach(el => {
       el.style.left = `calc(50% + ${position.x}px)`;
       el.style.top = `calc(50% + ${position.y}px)`;
@@ -842,13 +864,13 @@ export const ProtoMap = ({
     if (!viewport) return undefined;
     const update = () => {
       if (viewport.clientHeight && viewport.clientWidth) { setViewportHeight(viewport.clientHeight); setViewportWidth(viewport.clientWidth); }
-      setRasterScale(standeeRasterScale(window.devicePixelRatio, STANDEE_OVERSAMPLE));
+      setRasterScale(standeeRasterScale(window.devicePixelRatio, mobileLighting ? 2 : STANDEE_OVERSAMPLE));
     };
     const observer = new ResizeObserver(update);
     observer.observe(viewport);
     window.addEventListener('resize', update);
     return () => { observer.disconnect(); window.removeEventListener('resize', update); };
-  }, []);
+  }, [mobileLighting]);
 
   const exitCloseup = useCallback((restore = true) => {
     const saved = closeupRef.current;
@@ -882,7 +904,7 @@ export const ProtoMap = ({
     return () => { gameTime.cancelAnimationFrame(frame); window.removeEventListener('keydown', key); };
   }, [closeup, inactive, selectedActorId, exitCloseup, camera.getLiveCamera, camera.setCameraFrame]);
   useEffect(() => { if (closeup && !tilted) { exitCloseup(false); camera.setCameraState(closeup.camera); } }, [tilted, closeup, exitCloseup, camera.setCameraState]);
-  useMapCameraDirector({ enabled: !cameraDirectorDisabled, viewport: camera.containerRef, getCamera: camera.getLiveCamera, setFrame: camera.setCameraFrame, sync: camera.syncCamera, tilted, pitch: live => getCameraTilt(live).angle, setTilted: onTiltedChange, begin: () => exitCloseup(false), paused: Boolean(journey?.paused) });
+  useMapCameraDirector({ enabled: !freeRoam && !cameraDirectorDisabled, viewport: camera.containerRef, getCamera: camera.getLiveCamera, setFrame: camera.setCameraFrame, sync: camera.syncCamera, tilted, pitch: live => getCameraTilt(live).angle, setTilted: onTiltedChange, begin: () => exitCloseup(false), paused: Boolean(journey?.paused) });
   /** Eases the spin back to 0° the short way round. */
   const unspin = () => camera.spinTo(Math.round((camera.getLiveCamera().yaw ?? 0) / 360) * 360);
   const resetProtoCamera = () => {
@@ -1093,7 +1115,7 @@ export const ProtoMap = ({
     };
     biomeTiles.forEach((tile) => {
       const area = getBiomeWorldFootprint(tile);
-      const cost = tile.flags?.includes('unexplored') ? 1 : tile.unlocked === false || !tile.passage && (tile.tileType === 'impassable-mountain' || tile.flags?.includes('impassable')) || tile.flags?.includes('danger') && tile.id !== arrival.biomeId ? Infinity : 1 + Math.min(100, traversalProfile(tile, origin.traversalAffinity).difficulty) * .000000001;
+      const cost = tile.flags?.includes('unexplored') ? 1 : tile.unlocked === false || !tile.passage && (tile.tileType === 'impassable-mountain' || tile.flags?.includes('impassable')) || !freeRoam && tile.flags?.includes('danger') && tile.id !== arrival.biomeId ? Infinity : 1 + Math.min(100, traversalProfile(tile, origin.traversalAffinity).difficulty) * .000000001;
       for (let column = 0; column < Math.round(area.width / CLASSICPLUS_GRID_SIZE); column += 1)
         for (let row = 0; row < Math.round(area.height / CLASSICPLUS_GRID_SIZE); row += 1)
           mark(area.first.column + column, area.first.row + row, cost);
@@ -1140,12 +1162,12 @@ export const ProtoMap = ({
   }, [journey?.blocked,travel]);
   const confirmTravel = () => { if(pendingTravel)launchTravel(pendingTravel); };
   function launchTravel(plan: TravelPlan) {
-    if (plan.estimate > travelStamina || travelAllowed && !travelAllowed(plan)) {setRouteBlocked(true);return;}
+    if (!freeRoam && (plan.estimate > travelStamina || travelAllowed && !travelAllowed(plan))) {setRouteBlocked(true);return;}
     setEditingTravelRoute(false); setTravelControls([]); setRouteEditError('');
     const trip = { actorId: plan.actorId, label: actorOrigins.find(a => a.id === plan.actorId)?.label ?? 'Actor', path: plan.path, progress: 0, arrival: plan.arrival };
     travelingActorRef.current = plan.actorId;
     liveTravel.current = trip;
-    if (matchesDeparture(departureCamera, trip.actorId, trip.path) || followTravelingActor && cinematicTravel) {
+    if (!freeRoam && (matchesDeparture(departureCamera, trip.actorId, trip.path) || followTravelingActor && cinematicTravel)) {
       exitCloseup(false);
       closeupTripOverride.current = null;
       onTiltedChange?.(true);
@@ -1166,7 +1188,7 @@ export const ProtoMap = ({
     if (!journey || travelingActorRef.current) return;
     const trip = { actorId: journey.actorId, label: actorOrigins.find(a => a.id === journey.actorId)?.label ?? 'Actor', path: journey.path, progress: 0, arrival: journey.arrival };
     travelingActorRef.current = journey.actorId; liveTravel.current = trip;
-    if (matchesDeparture(departureCamera, trip.actorId, trip.path) || followTravelingActor && cinematicTravel) { exitCloseup(false); closeupTripOverride.current = null; onTiltedChange?.(true); }
+    if (!freeRoam && (matchesDeparture(departureCamera, trip.actorId, trip.path) || followTravelingActor && cinematicTravel)) { exitCloseup(false); closeupTripOverride.current = null; onTiltedChange?.(true); }
     setPendingTravel(null); setTravel(trip);
   }, [journey?.path]);
 
@@ -1220,7 +1242,7 @@ export const ProtoMap = ({
     let travelVelocity = 0;
     let lastScene = startedAt;
     const tick = (now: number) => {
-      const earned = journeyRef.current?.blocked?.progress ?? (journeyRef.current?.paused ? previousProgress : journeyRef.current?.progress ?? 0);
+      const earned = journeyRef.current?.blocked?.progress ?? (journeyRef.current?.paused ? previousProgress : journeyRef.current?.progress ?? (freeRoam ? 1 : 0));
       const totalCost=Math.max(.001,pathTime(travel.path));
       const motion=advanceTravelBuffer(previousProgress*totalCost,travelVelocity,earned*totalCost,now-lastTime,Boolean(journeyRef.current?.paused));
       travelVelocity=motion.speed;
@@ -1244,8 +1266,10 @@ export const ProtoMap = ({
       travelFrames.current.forEach(listener => listener(now));
       // Follow every intervening route leg when a slow frame skips a corner;
       // a straight chord would discover tiles the actor never approached.
+      let stoppedAt: {x:number;y:number} | undefined;
       const notifyEntry = (from: {x:number;y:number}, to: {x:number;y:number}) => {
         const tileAt = (point: {x:number;y:number}) => biomeTiles.find(tile => { const area = getBiomeWorldFootprint(tile); return point.x >= area.left && point.x < area.right && point.y >= area.top && point.y < area.bottom; });
+        if (freeRoam && TABLE_GRID.reference(TABLE_GRID.atWorld(from)) !== TABLE_GRID.reference(TABLE_GRID.atWorld(to)) && onRoamStep?.(travel.actorId, TABLE_GRID.center(TABLE_GRID.atWorld(to))) === false) stoppedAt = TABLE_GRID.center(TABLE_GRID.atWorld(to));
         const entered = tileAt(to); if (entered && entered.id !== tileAt(from)?.id) onEnterTile?.(travel.actorId, entered.id);
       };
       const remaining = remainingPath(travel.path, previousProgress);
@@ -1254,12 +1278,19 @@ export const ProtoMap = ({
         const cost = Math.hypot(remaining[i].x - remaining[i - 1].x, remaining[i].y - remaining[i - 1].y) * remaining[i].pace;
         if (cost > elapsed) {
           notifyEntry(remaining[i - 1], current);
+          if (stoppedAt) break;
           if (!journeyRef.current) onActorExplore?.(travel.actorId, remaining[i - 1], current);
           break;
         }
         notifyEntry(remaining[i - 1], remaining[i]);
+        if (stoppedAt) break;
         if (!journeyRef.current) onActorExplore?.(travel.actorId, remaining[i - 1], remaining[i]);
         elapsed -= cost;
+      }
+      if (stoppedAt) {
+        travelingActorRef.current = null; liveTravel.current = null; travelPose.current = null; setTravel(null);
+        onDropActorToTable(travel.actorId, stoppedAt);
+        return;
       }
       previousProgress = progress;
       // Expensive lighting snapshots are independent of movement frames.
@@ -1430,7 +1461,7 @@ export const ProtoMap = ({
   useEffect(() => {
     const canvas = lightCanvasRef.current;
     const viewport = camera.containerRef.current;
-    if (!upright || !canvas || !viewport || boundedGroundLight && airReady) return undefined;
+    if (!fullLighting || !upright || !canvas || !viewport || boundedGroundLight && airReady) return undefined;
     globalLightCache.current ??= { canvas:document.createElement('canvas'),key:'' };
     const frame = getVisualTableLighting(timeOfDay);
     const sources = lightSources.map((source) => ({
@@ -1497,7 +1528,7 @@ export const ProtoMap = ({
       unfollow();
       stopAnimation?.();
     };
-  }, [globalLights, lightSources, timeOfDay, staged, upright, boundedGroundLight, airReady, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale, camera.getLiveCamera, camera.onCameraFrame]);
+  }, [darknessStrength, fullLighting, globalLights, lightSources, timeOfDay, staged, upright, boundedGroundLight, airReady, camera.cameraState.x, camera.cameraState.y, camera.cameraState.scale, camera.getLiveCamera, camera.onCameraFrame]);
 
   const biomeAtClientPoint = (clientX: number, clientY: number) => {
     const cell = TABLE_GRID.atWorld(worldPointFromClient(clientX, clientY));
@@ -1509,6 +1540,7 @@ export const ProtoMap = ({
   };
 
   const resolveDropDestination = (actorId: string, clientX: number, clientY: number) => {
+    if (freeRoam) return { point: TABLE_GRID.snap(worldPointFromClient(clientX, clientY)), arrival: {} };
     // Raised art can cover several neighbouring cells. Actor placement is
     // decided on the table plane, never by the scenery's screen hit box.
     const destinationTile = biomeAtClientPoint(clientX, clientY);
@@ -1732,7 +1764,7 @@ export const ProtoMap = ({
     const lit = standeeLighting(timeOfDay, position, size, lightSources, facingYaw);
     const onError = () => setFailedSprites((list) => list.includes(sprite) ? list : [...list, sprite]);
     return {
-      shadows: volume ? <PropVolumeShadows sprite={sprite} position={position} shadows={shadowBudget(lit.shadows, fxQuality)} size={size} owner={owner} flip={flip} /> : <SpriteStandeeShadows sprite={sprite} position={position} shadows={shadowBudget(lit.shadows, fxQuality)} size={size} owner={owner} yaw={facingYaw} actorId={actorId} flip={flip} />,
+      shadows: volume ? <PropVolumeShadows sprite={sprite} position={position} shadows={shadowBudget(lit.shadows, mobileLighting ? 'low' : fxQuality)} size={size} owner={owner} flip={flip} /> : <SpriteStandeeShadows sprite={sprite} position={position} shadows={shadowBudget(lit.shadows, mobileLighting ? 'low' : fxQuality)} size={size} owner={owner} yaw={facingYaw} actorId={actorId} flip={flip} />,
       silhouette: volume ? <PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} monochrome flip={flip} fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} size={size} />} /> : <SilhouetteRelief sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} yaw={facingYaw}
         fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} size={size} />} />,
       art: volume ? <TileDiscoveryArt relief tileId={discoveryTileId ?? []}><PropVolumeArt sprite={sprite} width={size} height={size} lighting={lit} hours={timeOfDay} position={position} camera={volumeCamera} flip={flip} fallback={<SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} />} /></TileDiscoveryArt> : <SpriteStandeeArt sprite={sprite} lighting={lit} onError={onError} size={size} flip={flip} occupants={occupants} discoveryTileId={discoveryTileId} />,
@@ -1832,10 +1864,10 @@ export const ProtoMap = ({
     <TravelWorldContext.Provider value={{host:travelWorldHost,upright,progress:travel?.progress??0,actorPosition:()=>travelPose.current?.position??travelPosition??{x:0,y:0},onCameraFrame:camera.onCameraFrame,
       solids:biomeTiles.filter(tile=>!tile.flags?.includes('unexplored')&&(tile.tileType==='impassable-mountain'||(!tile.tileType&&!tile.road))).map(tile=>{const r=getBiomeWorldFootprint(tile);return {left:r.x-r.width/2,top:r.y-r.height/2,right:r.x+r.width/2,bottom:r.y+r.height/2};}),
       project:point=>{const live=camera.getLiveCamera(),plane=rotateVector({x:live.x+point.x*live.scale,y:live.y+point.y*live.scale},live.yaw??0),screen=tilted?projectTilt(plane,getCameraTilt(live)):plane;return{x:viewportWidth/2+screen.x,y:viewportHeight/2+screen.y};}}}>
-    <section data-opening-cards={openingCardDeal ? 'pending' : undefined} data-story-cinematic={Boolean(storyMood)} hidden={inactive} data-actor-closeup={Boolean(closeup)} data-camera-view={upright ? 'immersive' : 'tabletop'} className="proto-map relative min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/22 bg-[#050807] font-mono">
+    <section data-lighting-mode={lightingRenderer} data-darkness-strength={darknessStrength} data-lighting-path={lightingRenderer === 'off' ? 'off' : mobileLighting ? 'mobile' : 'desktop'} data-opening-cards={openingCardDeal ? 'pending' : undefined} data-story-cinematic={Boolean(storyMood)} hidden={inactive && !retainLayoutWhenInactive} style={inactive && retainLayoutWhenInactive ? {visibility:'hidden',pointerEvents:'none'} : undefined} data-actor-closeup={Boolean(closeup)} data-camera-view={upright ? 'immersive' : 'tabletop'} className="proto-map relative min-h-0 overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/22 bg-[#050807] font-mono">
       <OpeningCardDeal enabled={openingCardDeal} />
-      {storyMood && globalLights && <div className="day-cinema-grade" data-story-mood={storyMood} aria-hidden="true" />}
-      <PeripheralDarkness config={peripheralDarkness} enabled={globalLights} />
+      {fullLighting && storyMood && globalLights && <div className="day-cinema-grade" data-story-mood={storyMood} aria-hidden="true" />}
+      <PeripheralDarkness config={peripheralDarkness} enabled={globalLights && lightingRenderer !== 'off'} />
       {actorCard}
       {typeof settings === 'function' ? settings(<div className="art-settings__section" aria-label="Travel controls"><span>Stamina · {travelStamina.toFixed(1)} / {travelStaminaMax}</span>        <label className="art-settings__toggle"><input type="checkbox" checked={followTravelingActor} onChange={event => setFollowTravelingActor(event.target.checked)} />Follow traveling actor</label>
         <label className="art-settings__toggle"><input type="checkbox" checked={cinematicTravel} onChange={event => {
@@ -1917,7 +1949,8 @@ export const ProtoMap = ({
           <div className="proto-map-zoom" aria-live="polite">{closeup ? 'Close-up ' + (camera.cameraState.scale / closeup.camera.scale).toFixed(1) + '×' : 'Zoom ' + Math.round((camera.cameraState.scale / CLASSICPLUS_ZOOM_REFERENCE_SCALE) * 100) + '%'}</div>
         </div>
       <div className="proto-map-toolbar" role="group" aria-label="Map camera controls">
-        <ScenarioCameraDetails compact />
+        {!freeRoam && <ScenarioCameraDetails compact />}
+        <MapLightingControls />
         <button type="button" className="proto-map-camera-button" aria-pressed={tilted} aria-label={tilted ? 'Flat camera view' : 'Tilt camera view'} title={tilted ? 'Flat camera view · O' : 'Tilt camera view · O'} onClick={() => { if (closeup) exitCloseup(false); onTiltedChange?.(!tilted); }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={tilted ? 'M4 4h16v16H4z M4 12h16 M12 4v16' : 'M3 17l5-10h8l5 10z M6 12h12 M12 7v10'} /></svg></button>
         {/* Turn the table 45° (Q / E); a double-click turns it back to 0°. */}
         <button type="button" className="proto-map-camera-button" disabled={inactive} aria-label="Turn table left" title="Turn table left (Q) · double-click to straighten" onClick={() => camera.spinStep(-45)} onDoubleClick={unspin}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 2 8 M4 4v6h6" /></svg></button>
@@ -2050,7 +2083,9 @@ export const ProtoMap = ({
         </div>
         {/* Keep the changing light texture in the ground's flat compositor.
             It must never sort against physical scenery's projected depth. */}
-        {boundedGroundLight && airReady && upright ? <GroundLightCanvas hours={timeOfDay} lights={lightSources} occluders={BLOCKED_REGIONS}
+        {lightingRenderer === 'off' ? null : mobileLighting ? <MobileLightCanvas hours={timeOfDay} lights={lightSources} occluders={BLOCKED_REGIONS}
+          active={!inactive} view={{width:viewportWidth,height:viewportHeight}} getCamera={camera.getLiveCamera} getTilt={getAtmosphereTilt} onCameraFrame={camera.onCameraFrame}/>
+        : boundedGroundLight && airReady && upright ? <GroundLightCanvas hours={timeOfDay} lights={lightSources} occluders={BLOCKED_REGIONS}
           view={{width:viewportWidth,height:viewportHeight}} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} onCameraFrame={camera.onCameraFrame} onUnavailable={groundLightUnavailable}/>
         : <div aria-hidden="true" className="proto-table-light proto-ground-light pointer-events-none absolute z-0" style={{ inset: staged ? '-100%' : 0, transform: stageTransform, transition: tilted && airReady || !staged ? 'none' : undefined }}>
           {upright ? <canvas ref={lightCanvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0" /> : null}
@@ -2096,6 +2131,13 @@ export const ProtoMap = ({
             onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
             className="proto-table-lamp absolute z-10 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full"
             style={{ left: 'calc(50% + ' + light.position.x + 'px)', top: 'calc(50% + ' + light.position.y + 'px)', ...faceCameraFlat, ...standee() }}>🕯️</div>)}
+          {mapSignals.map(signal => <div key={signal.id} className={'rescue-map-signal rescue-map-signal--'+signal.kind}
+            data-rescue-signal={signal.id} data-follow-actor={signal.followActorId}
+            data-board-piece={signal.kind==='cub'?'actor':undefined} data-actor-id={signal.kind==='cub'?signal.id:undefined}
+            data-actor-x={signal.kind==='cub'?signal.position.x:undefined} data-actor-y={signal.kind==='cub'?signal.position.y:undefined}
+            data-actor-width={signal.kind==='cub'?27:undefined} data-actor-height={signal.kind==='cub'?34:undefined} aria-label={signal.label} title={signal.label} style={{position:'absolute',left:'calc(50% + '+signal.position.x+'px)',top:'calc(50% + '+signal.position.y+'px)',pointerEvents:'none',zIndex:47,width:signal.kind==='dark-demi'?83:signal.kind==='cub'?27:20,height:signal.kind==='dark-demi'?116:signal.kind==='cub'?34:24,filter:signal.kind==='cub'?'brightness('+standeeLighting(timeOfDay,signal.position,28,lightSources).brightness+')':undefined,transform:'translate(-50%,-100%)',...standee({width:signal.kind==='dark-demi'?83:signal.kind==='cub'?27:20,height:signal.kind==='dark-demi'?116:signal.kind==='cub'?34:24})}}>
+            {signal.kind==='dark-demi'?<FrostDemiSprite dark/>:signal.kind==='cub'?<FrostDemiSprite cub/>:signal.kind==='frost'?<><span>❄</span><i>✧</i><i>❅</i><i>·</i></>:<span>◈</span>}
+          </div>)}
           {questCards.filter(placement => placement.questIndex >= 0).map(placement => <TableQuestCard key={placement.questIndex} placement={placement} title={questTitles[placement.questIndex]} text={questTexts[placement.questIndex]} rewardLabel={questRewardLabels[placement.questIndex]} inspirationReward={questRewardLabels[placement.questIndex] ? 0 : undefined} redeemed={placement.questIndex < questClaims} onRedeem={() => onRedeemQuest?.(placement.questIndex)} timeOfDay={timeOfDay} lights={lightSources} cameraScale={camera.cameraState.scale} toWorld={worldPointFromClient}
             onMove={(position,tilt)=>onMoveQuest?.(placement.questIndex,position,tilt)}
             solids={[
@@ -2205,7 +2247,7 @@ export const ProtoMap = ({
                     : tile.tileType === 'impassable-mountain' ? null : !tile.tileType && !upright ? <span className="absolute inset-0" style={{filter:tile.danger ? "url(#combat-scenery-tint)" : undefined}}><BiomeTopDownArt tileId={tile.id} terrain={tile.terrain} danger={tile.danger} exploration={explored} width={footprint.width} height={footprint.height} /></span> : null}
                   </TileDiscoveryArt>
                 </button>, groundWorld)}
-                {!upright && <span aria-hidden="true" className="proto-table-air--flat pointer-events-none absolute" style={{ left: '50%', top: '50%' }}><LightFireflies lights={lightSources.filter(light => light.id === `biome-light-${tile.id}`)} quality={fxQuality} flat /></span>}
+                {fullLighting && !upright && <span aria-hidden="true" className="proto-table-air--flat pointer-events-none absolute" style={{ left: '50%', top: '50%' }}><LightFireflies lights={lightSources.filter(light => light.id === `biome-light-${tile.id}`)} quality={fxQuality} flat /></span>}
                 {!unexplored && !tile.tileType && !tile.road && tile.terrain !== 'water' && tile.unlocked !== false && <TileSpillArt discoveryTileIds={[tile.id]} raised={upright} hours={timeOfDay} lights={lightSources} danger={tile.danger} decals={woodsRoughage(tile.id, worldFootprint)} />}
                 {upright && !unexplored && tableScenery[tile.id] && tile.unlocked !== false ? <BiomeEdgeScenery
                   tileId={tile.id}
@@ -2493,7 +2535,7 @@ export const ProtoMap = ({
               }}
               aria-label={`${actor.label} actor token${cuddling ? ', cuddling in the den' : sleeping ? ', sleeping in her den' : ''}`}
             >
-              {sharedCompanion || paintedInterior ? null : directional ? <Oversample persistent width={overheadHero ? 26 : SPRITE_STANDEE_SIZE} height={overheadHero ? 26 : SPRITE_STANDEE_SIZE} factor={oversample}><TableActorSprite actorId={actor.id === 'banks' ? 'banks' : actor.id === 'mochi' ? 'mochi' : 'hero'} overhead={overheadHero} position={actorPosition} pose={sitting ? 'sitting' : 'walking'} heading={poseHeading} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} getWorldPose={travel?.actorId === actor.id ? getTravelPose : undefined} brightness={upright ? standeeLighting(timeOfDay, actorPosition, SPRITE_STANDEE_SIZE, lightSources, yaw).brightness : 1} fallback={overheadHero ? <img src={`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/hero-standing-topdown.png`} alt="" draggable={false} /> : cutOut?.art} /></Oversample> : overheadHero ? <img style={{ imageRendering: artStyle === 'paint' && actor.id === 'hero' && !cuddling ? 'auto' : 'pixelated' }} src={actorSprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/${sleeping ? sleepingArtName(actor, actorPosition) : actor.id}-${sleeping ? 'sleeping' : sitting ? 'sitting' : 'standing'}-topdown.png`, artStyle)} alt="" draggable={false} /> : cutOut ? <Oversample width={SPRITE_STANDEE_SIZE} height={SPRITE_STANDEE_SIZE} factor={oversample}>{cutOut.art}</Oversample> : <BoardObjectLabel text={actor.label} minFontSize={16} maxFontSize={16} />}
+              {sharedCompanion || paintedInterior ? null : directional ? <Oversample persistent width={overheadHero ? 26 : SPRITE_STANDEE_SIZE} height={overheadHero ? 26 : SPRITE_STANDEE_SIZE} factor={oversample}><TableActorSprite actorId={actor.id === 'banks' ? 'banks' : actor.id === 'mochi' ? 'mochi' : 'hero'} overhead={overheadHero} position={actorPosition} pose={sitting ? 'sitting' : 'walking'} heading={poseHeading} getCamera={camera.getLiveCamera} getTilt={getCameraTilt} getWorldPose={travel?.actorId === actor.id ? getTravelPose : undefined} brightness={standeeLighting(timeOfDay, actorPosition, SPRITE_STANDEE_SIZE, lightSources, yaw).brightness} fallback={overheadHero ? <img src={`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/hero-standing-topdown.png`} alt="" draggable={false} /> : cutOut?.art} /></Oversample> : overheadHero ? <img style={{ imageRendering: artStyle === 'paint' && actor.id === 'hero' && !cuddling ? 'auto' : 'pixelated' }} src={actorSprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/${sleeping ? sleepingArtName(actor, actorPosition) : actor.id}-${sleeping ? 'sleeping' : sitting ? 'sitting' : 'standing'}-topdown.png`, artStyle)} alt="" draggable={false} /> : cutOut ? <Oversample width={SPRITE_STANDEE_SIZE} height={SPRITE_STANDEE_SIZE} factor={oversample}>{cutOut.art}</Oversample> : <BoardObjectLabel text={actor.label} minFontSize={16} maxFontSize={16} />}
               {!sharedCompanion && !paintedInterior && !directional && overheadHero && sleeping && <span style={{position:'absolute',inset:0,pointerEvents:'none'}}><RestBobtail sprite={actorSprite(`${import.meta.env.BASE_URL}assets/deprecated/pixel/characters/${sleepingArtName(actor, actorPosition)}-sleeping-topdown.png`,artStyle)!} /></span>}
             </div>
             </React.Fragment>
@@ -2588,7 +2630,7 @@ export const ProtoMap = ({
         {/* Immersion, on its own copy of the tilted plane so nothing in it dips
             under the light wash: light hangs in the air around lamps, fireflies drift
             over the woods and pond, the water fizzes. Tilted only. */}
-        {airReady ? <div aria-hidden="true" className="proto-table-light proto-table-air pointer-events-none absolute z-40" style={{ inset: '-100%', transform: stageTransform, transition: 'none', ['--table-tilt' as string]: `${tiltAngle}deg` }}><AtmosphereInAir
+        {fullLighting && mapHasSkyLight() && airReady ? <div aria-hidden="true" className="proto-table-light proto-table-air pointer-events-none absolute z-40" style={{ inset: '-100%', transform: stageTransform, transition: 'none', ['--table-tilt' as string]: `${tiltAngle}deg` }}><AtmosphereInAir
           getCamera={camera.getLiveCamera} getTilt={getCameraTilt} onCameraFrame={camera.onCameraFrame}
           frame={getVisualTableLighting(timeOfDay)}
           lights={lightSources}
@@ -2599,13 +2641,13 @@ export const ProtoMap = ({
           tilt={tilt}
           particles={!tilt}
         /></div> : null}
-        {airReady && tilt ? <AirParticles frame={getVisualTableLighting(timeOfDay)} lights={lightSources} areas={atmosphereAreas} quality={fxQuality}
+        {fullLighting && mapHasSkyLight() && airReady && tilt ? <AirParticles frame={getVisualTableLighting(timeOfDay)} lights={lightSources} areas={atmosphereAreas} quality={fxQuality}
           camera={camera.cameraState} tilt={tilt} getTilt={getCameraTilt} view={{ width:viewportWidth,height:viewportHeight }} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} /> : null}
-        {airReady && tilt ? <DustMotes frame={getVisualTableLighting(timeOfDay)} quality={fxQuality} camera={camera.cameraState}
+        {fullLighting && mapHasSkyLight() && airReady && tilt ? <DustMotes frame={getVisualTableLighting(timeOfDay)} quality={fxQuality} camera={camera.cameraState}
           tilt={tilt} getTilt={getCameraTilt} view={{ width:viewportWidth,height:viewportHeight }} getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame} /> : null}
         {/* Darkness is continuous through camera transitions; airReady gates
             decorative air effects only, never the visibility mask. */}
-        {useVolume ? <VolumetricAtmosphere active={globalLights && !inactive} overhead={!tilted} lowQuality={fxQuality === 'low'}
+        {fullLighting && (useVolume ? <VolumetricAtmosphere active={globalLights && !inactive} overhead={!tilted} lowQuality={fxQuality === 'low'}
           frame={getVisualTableLighting(timeOfDay)} lights={lightSources}
           scene={{ canopies:tilted ? atmosphereCanopies : [],patches:atmosphereAreas,
             relief:tilted ? [] : biomeTiles.filter(tile => tile.unlocked !== false && !tile.flags?.includes('unexplored') && (tile.tileType === 'impassable-mountain' || !tile.tileType && tile.terrain === 'woods')).map(tile => ({
@@ -2613,7 +2655,7 @@ export const ProtoMap = ({
             concealed:biomeTiles.filter(tile => tile.unlocked === false || tile.flags?.includes('unexplored')).map(getBiomeWorldFootprint) }}
           tilt={getAtmosphereTilt(camera.cameraState)} getTilt={getAtmosphereTilt} view={{ width:viewportWidth,height:viewportHeight }}
           getCamera={camera.getLiveCamera} onCameraFrame={camera.onCameraFrame}
-        /> : airReady ? <LightShafts frame={getVisualTableLighting(timeOfDay)} quality={fxQuality} camera={camera.cameraState} view={{ width: viewportWidth, height: viewportHeight }} /> : null}
+        /> : airReady ? <LightShafts frame={getVisualTableLighting(timeOfDay)} quality={fxQuality} camera={camera.cameraState} view={{ width: viewportWidth, height: viewportHeight }} /> : null)}
         {staged ? <div aria-hidden="true" className={`proto-table-horizon${tilted ? ' proto-table-horizon--shown' : ''}`} /> : null}
         <OffscreenWaypoints />
       </div>

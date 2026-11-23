@@ -1,0 +1,8 @@
+{
+  "name": "exploritaire-depth-authoring",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@xenova/transformers": "2.17.2"
+  }
+}

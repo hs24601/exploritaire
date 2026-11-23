@@ -189,3 +189,7 @@ fieldset.battle-controls { min-width: 0; margin: 0; padding: 0; border: 0; }
 .battle-field__foundation[data-preview='focus'] { outline: 3px solid #ffd86b; outline-offset: 3px; }
 
 .battle-field__status-actions { display:contents; }
+
+/* Center the enemy itself; its ability card does not occupy an enemy slot. */
+.battle-field__team[data-team='enemy'][data-single-enemy] { position:relative; grid-template-columns:minmax(0,var(--slot-w,176px)); justify-content:center; }
+.battle-field__team[data-team='enemy'][data-single-enemy] > .battle-intent-slot { position:absolute; left:calc(50% + min(var(--slot-w,176px), 100%) / 2 + 8px); bottom:0; }

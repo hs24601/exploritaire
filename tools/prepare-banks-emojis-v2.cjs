@@ -1,6 +1,8 @@
 // Measure complete heads and detached symbols before deterministic atlas packing.
 const fs=require('node:fs'),{chromium}=require('playwright');
-const names=['happy','blush','heartEyes','sad','stars','upset','upsetWithSymbol','behind','fighting'];
+const names=process.argv.includes('--frontal')
+ ? ['happy','sad','upset','upsetWithSymbol','stars','heartEyes','blush','neutral','fighting']
+ : ['happy','blush','heartEyes','sad','stars','upset','upsetWithSymbol','behind','fighting'];
 const version=process.argv[3]||'v2';
 if(!/^v\d+$/.test(version))throw Error('Expected version such as v3');
 const directory=`public/assets/runtime/characters/banks/expressions/emojis/watercolor/${version}`;

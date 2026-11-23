@@ -32,6 +32,8 @@
     "pixi.js": "^8.16.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "spessasynth_core": "4.4.7",
+    "spessasynth_lib": "4.4.5",
     "three": "^0.170.0"
   },
   "devDependencies": {

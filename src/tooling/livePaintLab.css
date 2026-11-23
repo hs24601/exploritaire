@@ -1,0 +1,15 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; background: #17211d; color: #f8eedc; font: 16px/1.3 system-ui, sans-serif; }
+#paint-stage { position: relative; width: 100%; height: 100%; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.paint-labels { position: absolute; inset: 16px 24px auto; display: flex; justify-content: space-around; pointer-events: none; text-shadow: 0 1px 4px #000; }
+.paint-labels span { padding: 4px 12px; border-radius: 4px; background: #17211dcc; }
+#paint-controls { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 12px; background: #17211deb; border: 1px solid #a7a28877; border-radius: 8px; }
+label { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+select, button { font: inherit; color: inherit; border: 1px solid #a7a28888; border-radius: 4px; padding: 5px; background: #2b3730; }
+input[type=range] { width: 72px; accent-color: #dfba76; }
+input[type=checkbox] { width: 18px; height: 18px; accent-color: #dfba76; }
+output { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid #ffe5ac; outline-offset: 3px; }
+#performance { min-width: 115px; }
+#paint-error { position: absolute; top: 40%; left: 10%; right: 10%; padding: 16px; background: #492c26; }

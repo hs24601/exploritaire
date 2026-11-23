@@ -1,0 +1,63 @@
+{
+  "generator": "built-in image_gen",
+  "styleReference": "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+  "identityReference": "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png",
+  "selected": [
+    {
+      "id": "mochi-wonder-seated-v1",
+      "prompt": "Use case: illustration-story. Asset: one isolated full-body Mochi painting for a forest pop-up book. Reference 1 is the DIRECT PAINTING STYLE reference only: light translucent storybook watercolor, softly merging washes, irregular pooling and broken brush edges, broad varied pigment masses and a few loose gouache accents, restrained softly painted facial features. Reference 2 is Mochi IDENTITY only and its sharp detailed rendering must not override reference 1. Mochi is a small female long-haired tortoiseshell CAT, charcoal/black and warm copper-orange patches, soft cream chin/chest ruff, charcoal forehead/face, pink nose top with dark underside, green-gold eyes, pointed tufted ears, black paws, a very long fluffy natural cat tail. Cat anatomy and proportions, not a dog, no white dog blaze. Gentle lively personality. No vines or elemental effects. Entire ears, paws and tail inside image with generous transparent margins. TRUE TRANSPARENT BACKGROUND alpha 0 outside the cat, opaque pale fur. No atmosphere, aura, halo, brown wash, drop shadow, floor, scene, foliage, props, book, labels or watermark. Paint belongs inside the cat silhouette only. Three-quarter view near eye level, suitable as a cut paper painting. Pose: sitting upright with both black front paws planted together and long fluffy tail curved around her side, looking upward toward magical lights with alert ears and a small content smile.",
+      "references": [
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
+      ],
+      "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-0011a455-238b-45c4-a09a-d5c83e45c798.png",
+      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-wonder-seated-v1.png",
+      "source": "public/assets/sources/characters/mochi/book/v1/mochi-wonder-seated-v1.png"
+    },
+    {
+      "id": "mochi-careful-step-v1",
+      "prompt": "Use case: illustration-story. Asset: one isolated full-body Mochi painting for a forest pop-up book. Reference 1 is the DIRECT PAINTING STYLE reference only: light translucent storybook watercolor, softly merging washes, irregular pooling and broken brush edges, broad varied pigment masses and a few loose gouache accents, restrained softly painted facial features. Reference 2 is Mochi IDENTITY only and its sharp detailed rendering must not override reference 1. Mochi is a small female long-haired tortoiseshell CAT, charcoal/black and warm copper-orange patches, soft cream chin/chest ruff, charcoal forehead/face, pink nose top with dark underside, green-gold eyes, pointed tufted ears, black paws, a very long fluffy natural cat tail. Cat anatomy and proportions, not a dog, no white dog blaze. Gentle lively personality. No vines or elemental effects. Entire ears, paws and tail inside image with generous transparent margins. TRUE TRANSPARENT BACKGROUND alpha 0 outside the cat, opaque pale fur. No atmosphere, aura, halo, brown wash, drop shadow, floor, scene, foliage, props, book, labels or watermark. Paint belongs inside the cat silhouette only. Three-quarter view near eye level, suitable as a cut paper painting. Pose: walking carefully toward the viewer's right, one front paw lifted, body low and elongated like a real cat, ears curious, long fluffy tail raised into a gentle curve, nose exploring ahead.",
+      "references": [
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
+      ],
+      "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-d1081077-178d-486d-8f6d-c373cda6bb1d.png",
+      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-careful-step-v1.png",
+      "source": "public/assets/sources/characters/mochi/book/v1/mochi-careful-step-v1.png"
+    },
+    {
+      "id": "mochi-play-stretch-v1",
+      "prompt": "Use case: illustration-story. Asset: one isolated full-body Mochi painting for a forest pop-up book. Reference 1 is the DIRECT PAINTING STYLE reference only: light translucent storybook watercolor, softly merging washes, irregular pooling and broken brush edges, broad varied pigment masses and a few loose gouache accents, restrained softly painted facial features. Reference 2 is Mochi IDENTITY only and its sharp detailed rendering must not override reference 1. Mochi is a small female long-haired tortoiseshell CAT, charcoal/black and warm copper-orange patches, soft cream chin/chest ruff, charcoal forehead/face, pink nose top with dark underside, green-gold eyes, pointed tufted ears, black paws, a very long fluffy natural cat tail. Cat anatomy and proportions, not a dog, no white dog blaze. Gentle lively personality. No vines or elemental effects. Entire ears, paws and tail inside image with generous transparent margins. TRUE TRANSPARENT BACKGROUND alpha 0 outside the cat, opaque pale fur. No atmosphere, aura, halo, brown wash, drop shadow, floor, scene, foliage, props, book, labels or watermark. Paint belongs inside the cat silhouette only. Three-quarter view near eye level, suitable as a cut paper painting. Pose: a happy cat's play stretch, front legs stretched forward and chest lowered, hindquarters lifted, long fluffy tail softly curved upward, eyes warmly curious and small relaxed smile. Complete paws and body.",
+      "references": [
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
+      ],
+      "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-16b0cc25-b6f9-43c2-8ce6-4347d16d7c87.png",
+      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-play-stretch-v1.png",
+      "source": "public/assets/sources/characters/mochi/book/v1/mochi-play-stretch-v1.png"
+    },
+    {
+      "id": "mochi-curled-rest-v1",
+      "prompt": "Use case: illustration-story. Asset: one isolated full-body Mochi painting for a forest pop-up book. Reference 1 is the DIRECT PAINTING STYLE reference only: light translucent storybook watercolor, softly merging washes, irregular pooling and broken brush edges, broad varied pigment masses and a few loose gouache accents, restrained softly painted facial features. Reference 2 is Mochi IDENTITY only and its sharp detailed rendering must not override reference 1. Mochi is a small female long-haired tortoiseshell CAT, charcoal/black and warm copper-orange patches, soft cream chin/chest ruff, charcoal forehead/face, pink nose top with dark underside, green-gold eyes, pointed tufted ears, black paws, a very long fluffy natural cat tail. Cat anatomy and proportions, not a dog, no white dog blaze. Gentle lively personality. No vines or elemental effects. Entire ears, paws and tail inside image with generous transparent margins. TRUE TRANSPARENT BACKGROUND alpha 0 outside the cat, opaque pale fur. No atmosphere, aura, halo, brown wash, drop shadow, floor, scene, foliage, props, book, labels or watermark. Paint belongs inside the cat silhouette only. Three-quarter view near eye level, suitable as a cut paper painting. Pose: curled into a peaceful sleeping oval, eyes closed, head resting on her black front paws, fluffy natural tail curved around her body, ears relaxed, a gentle content expression.",
+      "references": [
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
+      ],
+      "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-45005d52-9dba-45a3-a748-6742e097c214.png",
+      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-curled-rest-v1.png",
+      "source": "public/assets/sources/characters/mochi/book/v1/mochi-curled-rest-v1.png"
+    },
+    {
+      "id": "mochi-happy-perch-v1",
+      "prompt": "Use case: illustration-story. Asset: one isolated full-body Mochi painting for a forest pop-up book. Reference 1 is the DIRECT PAINTING STYLE reference only: light translucent storybook watercolor, softly merging washes, irregular pooling and broken brush edges, broad varied pigment masses and a few loose gouache accents, restrained softly painted facial features. Reference 2 is Mochi IDENTITY only and its sharp detailed rendering must not override reference 1. Mochi is a small female long-haired tortoiseshell CAT, charcoal/black and warm copper-orange patches, soft cream chin/chest ruff, charcoal forehead/face, pink nose top with dark underside, green-gold eyes, pointed tufted ears, black paws, a very long fluffy natural cat tail. Cat anatomy and proportions, not a dog, no white dog blaze. Gentle lively personality. No vines or elemental effects. Entire ears, paws and tail inside image with generous transparent margins. TRUE TRANSPARENT BACKGROUND alpha 0 outside the cat, opaque pale fur. No atmosphere, aura, halo, brown wash, drop shadow, floor, scene, foliage, props, book, labels or watermark. Paint belongs inside the cat silhouette only. Three-quarter view near eye level, suitable as a cut paper painting. Pose: lounging happily across an INVISIBLE horizontal branch, body horizontal, front black paws dangling gently below her chest, hind paws tucked under her body and long fluffy tail curling downward to the left. Head lifted and turned toward the viewer, eyes softly smiling, relaxed ears, a small happy closed-mouth smile. Show a stable horizontal belly support line so this cutout can be mounted on a separate paper tree branch. Draw the CAT ONLY, absolutely no branch or tree or background.",
+      "references": [
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
+        "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
+      ],
+      "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-ec4b04e1-e00d-4767-b758-e95b7014bea3.png",
+      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-happy-perch-v1.png",
+      "source": "public/assets/sources/characters/mochi/book/v1/mochi-happy-perch-v1.png"
+    }
+  ],
+  "notes": "Five separate Mochi paintings. Natural tortoiseshell cat, black paws, long tail; no baked tree or magic. The happy perch is mounted with the existing pine in one shared V-fold. Generated source PNGs and alpha are preserved byte-for-byte."
+}

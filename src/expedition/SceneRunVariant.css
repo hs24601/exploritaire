@@ -1,0 +1,217 @@
+/* A single shared game stage. Combat and its branching itinerary share one stage; no exploration simulation. */
+.scene-run { height:100dvh; width:100%; display:grid; grid-template-rows:52px minmax(0,1fr) 44px; overflow:hidden; background:#111a18; color:#e3e9dc; font:16px/1.35 Georgia,serif; }
+.scene-run button { font:inherit; color:inherit; cursor:pointer; }
+.scene-run button:disabled { opacity:.4; cursor:default; }
+.scene-run button:focus-visible { outline:2px solid #f0d695; outline-offset:3px; }
+.scene-run__bar { display:flex; align-items:center; gap:24px; padding:4px 20px; }
+.scene-run__bar > span:first-child { flex:1; }
+.scene-run .scene-run__rope { position:relative; z-index:200001; min-height:44px; padding:6px 2px; border:0; border-bottom:1px solid #b1b8a280; background:#111a18; white-space:nowrap; }
+.scene-run__rope span { padding-left:8px; }
+.scene-run__stage { min-height:0; min-width:0; position:relative; }
+.scene-run__foot { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:4px 20px; color:#aebbad; }
+.scene-home { height:100%; padding:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:18px; max-width:720px; margin:auto; }
+.scene-home__stored { color:#aebbad; }
+.scene-home > button { margin-top:10px; }
+/* Managed battles retain the native foundations, tableau, abilities and controls. */
+.scene-combat.combat-sandbox { display:block; padding:0 12px; width:100%; height:100%; background:transparent; }
+.scene-combat > .proto-tableau-field { display:block; height:100%; width:100%; max-width:none; min-height:0; }
+.scene-combat .battle-field { border:0; border-radius:0; background:transparent; padding:4px; gap:4px; }
+.scene-combat.combat-sandbox .battle-field__board { position:relative; inset:auto; height:100%; min-height:0; transform:none; overflow:visible; grid-template-rows:auto minmax(0,1fr) auto; gap:6px; padding:0; }
+.scene-combat.combat-sandbox .battle-field__board:has(.battle-party-buffs button) { grid-template-rows:auto minmax(0,1fr) auto; }
+.scene-combat.combat-sandbox .battle-field__team[data-team=enemy] { height:auto; min-height:0; padding:0; align-content:center; }
+.scene-combat.combat-sandbox .battle-field:not([data-spatial-lanes]):not([data-vertical-columns]) .battle-field__middle { height:100%; min-height:0; grid-template-rows:minmax(0,1fr) auto; }
+.scene-combat.combat-sandbox .battle-field__tableau { --battle-peek:20px; min-height:0; height:100%; }
+.scene-combat.combat-sandbox .battle-field__rack { --classic-card-w:min(96px,calc((100cqw - 28px) / 8),calc((100cqh - 3 * var(--battle-peek) - 8px) * 63 / 88)); grid-template-columns:repeat(8,var(--classic-card-w)); justify-content:center; }
+.scene-combat.combat-sandbox :is(.battle-foe__name,.battle-bar__text,.battle-foundation__status,.battle-ap__label,.battle-foundation__ap) { font-size:16px!important; line-height:18px; }
+.scene-combat.combat-sandbox .battle-bar[data-bar=hp] { height:22px; }
+.scene-combat.combat-sandbox .battle-field__team[data-team=party] { grid-auto-columns:minmax(0,100%); grid-template-columns:none; position:relative; min-height:0; }
+.scene-combat.combat-sandbox .battle-field__team[data-team=party] .battle-field__foundation { width:232px; height:104px; min-height:104px; --foundation-holocard-height:100px; margin:auto; }
+.scene-combat.combat-sandbox .battle-field .keru-foundation-group { width:232px; max-width:100%; margin:auto; }
+.scene-combat .foundation-empty-tiles,.scene-combat .battle-field__team[data-team=party] > .momentum-engine,.scene-combat .battle-field__status-text,.scene-combat .battle-rounds,.scene-combat .battle-momentum-overlay,.scene-combat .battle-foundation__status,.scene-combat .battle-enemy-intent,.scene-combat .battle-target-badge { display:none; }
+.scene-combat.combat-sandbox .battle-enemy-unit { gap:3px; }
+.scene-combat.combat-sandbox :is(.battle-party-buffs,.battle-enemy-buffs):not(:has(button)) { display:none; }
+.scene-combat.combat-sandbox .battle-party-buffs { position:absolute; left:calc(50% + 135px); top:24px; height:44px; min-height:44px; padding:0; }
+.scene-combat .battle-party-buffs .keru-upkeep { display:flex; line-height:0; height:44px; min-height:44px; padding:0; }
+.scene-combat.combat-sandbox .battle-field__team[data-team=party] > .battle-field__slot { position:static; }
+.scene-combat.combat-sandbox .battle-field__solver-dock { display:flex; justify-content:space-between; align-items:center; width:100%; gap:6px; }
+.scene-combat.combat-sandbox .battle-field__solver-actions { flex:0 1 auto; }
+.scene-combat.combat-sandbox .battle-field__turn-actions { flex:0 0 auto; gap:6px; }
+.scene-combat.combat-sandbox .battle-field__solver-dock button { font:16px/1.25 Georgia,serif; min-height:44px; padding:8px 10px; }
+.scene-combat.combat-sandbox .battle-field__rack [data-buried] .proto-card-rank { font-size:16px; line-height:18px; padding:0 2px; }
+.scene-combat.combat-sandbox .battle-field__rack [data-buried] .proto-card-header { top:1px; left:2px; right:2px; }
+.scene-combat.combat-sandbox .battle-field__rack .proto-card-center-rank { font-size:max(24px,calc(var(--classic-card-w) * .5)); }
+.aldan-combat-turn { font:16px/1.3 Georgia,serif; color:#b9c9af; }
+/* Finite work scenes use the existing tableau fitting and printed cards. */
+/* The shared reward fan floats on the stage; it does not get a dashboard frame. */
+body:has(.scene-run) .expedition-rewards.combat-scenario-complete { inset:70px 0 160px; width:min(850px,calc(100vw - 24px)); height:calc(100dvh - 230px); max-height:none; padding:0; border:0; border-radius:0; background:none; box-shadow:none; overflow:visible; z-index:2000; pointer-events:none; display:flex; flex-direction:column; justify-content:center; gap:10px; }
+body:has(.scene-run) .expedition-rewards > * { pointer-events:auto; }
+body:has(.scene-run) .expedition-rewards [hidden] { display:none!important; }
+body:has(.scene-run) .expedition-rewards p { margin:0; font:16px/1.35 Georgia,serif; }
+body:has(.scene-run) .expedition-reward-title { color:#efd69d; }
+body:has(.scene-run) .expedition-rewards .ice-reward { margin:0; display:grid; gap:8px; }
+body:has(.scene-run) .expedition-rewards .ice-reward__fan { overflow:visible; padding:14px 8px; }
+body:has(.scene-run) .expedition-rewards .ice-reward__card { flex-basis:min(210px,calc((100dvh - 330px)*.716)); width:min(210px,calc((100dvh - 330px)*.716)); }
+body:has(.scene-run) .expedition-rewards .ice-reward__pages { display:none; }
+body:has(.scene-run) .expedition-rewards .ice-reward__summary { display:none; }
+body:has(.scene-run) .reward-inspection { inset:54px 0 44px; background:#111a18; }
+body:has(.scene-run) .reward-inspection__panel { overflow:hidden; max-height:100%; }
+body:has(.scene-run) .reward-inspection__card { width:min(78vw,calc((100dvh - 265px)*.716)); }
+body:has(.scene-run) .ability-fan-overlay > .ability-fan__close { top:58px!important; right:10px!important; left:auto!important; transform:none!important; min-height:44px; font-size:16px; }
+body:has(.scene-run) .invoke-tableau-reference { top:58px; left:8px; transform:none; max-width:calc(100vw - 120px); }
+body:has(.scene-run) .invoke-tableau-reference__label { display:none; }
+body:has(.scene-run) .keru-deck-description,body:has(.scene-run) .keru-deck-description b { font-size:16px; }
+@media(max-width:700px) {
+ .scene-run { grid-template-rows:86px minmax(0,1fr) 44px; }
+ .scene-run__bar { flex-wrap:wrap; gap:0 12px; padding:4px 12px; align-content:center; }
+ .scene-run__bar > span:first-child { flex-basis:calc(100% - 150px); }
+ .scene-run__foot { padding:4px 12px; }
+ .scene-run__foot > span:nth-child(2) { display:none; }
+ .scene-combat.combat-sandbox { padding:0 6px; }
+ .scene-combat .battle-field__header { display:none; }
+ .scene-combat .battle-field { grid-template-rows:minmax(0,1fr) auto; }
+ .scene-combat.combat-sandbox .battle-field__tableau { --battle-peek:18px; }
+ .scene-combat.combat-sandbox .battle-party-buffs { left:calc(50% - 100px); top:110px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=party]:has(.battle-party-buffs button) { min-height:156px; }
+ .scene-combat.combat-sandbox .battle-field__solver-dock button { padding:8px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy]:not([data-single-enemy]) .battle-foe { grid-template-columns:minmax(0,1fr) 24px; grid-template-areas:'name name' 'bars value'; grid-template-rows:36px minmax(0,1fr); padding:5px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy]:not([data-single-enemy]) .battle-foe__figure { display:none; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy]:not([data-single-enemy]) .battle-foe__name { white-space:normal; line-height:18px; overflow:visible; }
+ body:has(.scene-run) .expedition-rewards.combat-scenario-complete { inset:106px 0 190px; height:calc(100dvh - 296px); }
+ body:has(.scene-run) .expedition-rewards .ice-reward__fan { justify-content:center; }
+ body:has(.scene-run) .expedition-rewards .ice-reward__pages { display:flex; justify-content:center; align-items:center; gap:16px; }
+ body:has(.scene-run) .expedition-rewards .ice-reward__card { display:none; flex-basis:min(240px,calc((100dvh - 405px)*.716)); width:min(240px,calc((100dvh - 405px)*.716)); }
+ body:has(.scene-run) .expedition-rewards .ice-reward__card[data-current] { display:flex; }
+ body:has(.scene-run) .reward-inspection { inset:88px 0 44px; }
+ body:has(.scene-run) .reward-inspection__card { width:min(78vw,calc((100dvh - 300px)*.716)); }
+}
+@media(max-height:500px) and (min-width:701px) {
+ .scene-run { grid-template-rows:44px minmax(0,1fr) 32px; }
+ .scene-run__foot { font-size:16px; }
+ .scene-run__foot > span:nth-child(2) { display:none; }
+ .scene-combat .battle-field__header { display:none; }
+ .scene-combat .battle-field { grid-template-rows:minmax(0,1fr) auto; }
+ .scene-combat.combat-sandbox .battle-field__board { grid-template-columns:150px minmax(0,1fr) 200px; grid-template-rows:minmax(0,1fr)!important; gap:10px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy] { grid-column:1; grid-row:1; grid-template-columns:minmax(0,1fr); }
+ .scene-combat.combat-sandbox .battle-field__middle { grid-column:2; grid-row:1; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=party] { grid-column:3; grid-row:1; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=party] .battle-field__foundation,.scene-combat.combat-sandbox .battle-field .keru-foundation-group { width:196px; }
+ .scene-combat.combat-sandbox .battle-party-buffs { left:0; top:116px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy] .battle-foe { width:145px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy]:not([data-single-enemy]) .battle-foe { grid-template-columns:minmax(0,1fr) 24px; grid-template-areas:'name name' 'bars value'; grid-template-rows:36px minmax(0,1fr); padding:5px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy]:not([data-single-enemy]) .battle-foe__figure { display:none; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy]:not([data-single-enemy]) .battle-foe__name { white-space:normal; line-height:18px; }
+ body:has(.scene-run) .expedition-rewards.combat-scenario-complete { inset:52px 0 55px; height:calc(100dvh - 107px); gap:2px; }
+ body:has(.scene-run) .expedition-rewards .ice-reward { gap:0; }
+ body:has(.scene-run) .expedition-rewards .ice-reward__card { flex-basis:min(150px,calc((100dvh - 200px)*.716)); width:min(150px,calc((100dvh - 200px)*.716)); }
+ body:has(.scene-run) .reward-inspection { inset:44px 0 32px; }
+ body:has(.scene-run) .reward-inspection__panel { grid-template-columns:auto minmax(0,280px); grid-template-rows:1fr auto; gap:10px 24px; }
+ body:has(.scene-run) .reward-inspection__card { grid-row:1 / 3; width:calc((100dvh - 105px)*.716); }
+}
+@media(prefers-reduced-motion:reduce) { .scene-run * { transition-duration:.01ms!important; animation-duration:.01ms!important; } }
+/* Global extraction stays reachable when the shared card jumbo makes #root inert. */
+.scene-run__rope-space { width:120px; flex:0 0 120px; }
+.scene-escape { position:fixed; top:4px; right:20px; z-index:200001; min-height:44px; padding:6px 2px; border:0; border-bottom:1px solid #b1b8a280; color:#e3e9dc; background:#111a18; font:16px/1.35 Georgia,serif; cursor:pointer; }
+.scene-escape:focus-visible { outline:2px solid #f0d695; outline-offset:2px; }
+@media(max-width:700px) { .scene-escape { right:12px; } .scene-run__rope-space { flex-basis:120px; } }
+/* Counter the sandbox camera's three-row rule when its header is omitted. */
+.scene-combat .battle-field[data-reward-active] .battle-field__team[data-team=party] { transform:none; }
+body:has(.scene-run) .expedition-rewards .ice-reward { display:flex; flex-direction:column; }
+body:has(.scene-run) .expedition-rewards .ice-reward__card { display:flex; }
+@media(max-width:700px) {
+ .scene-combat.combat-sandbox .battle-field[data-camera-background] { grid-template-rows:minmax(0,1fr) auto; }
+ body:has(.scene-run) .expedition-rewards .ice-reward__card { display:none; }
+ body:has(.scene-run) .expedition-rewards .ice-reward__card[data-current] { display:flex; }
+}
+@media(max-height:500px) and (min-width:701px) {
+ .scene-combat.combat-sandbox .battle-field[data-camera-background] { grid-template-rows:minmax(0,1fr) auto; }
+ .scene-combat.combat-sandbox .battle-field__board { grid-template-columns:150px minmax(0,1fr) 232px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=party] .battle-field__foundation,.scene-combat.combat-sandbox .battle-field .keru-foundation-group { width:232px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy] .battle-foe { grid-template-columns:minmax(0,1fr) 28px; grid-template-areas:'name name' 'bars value'; grid-template-rows:36px minmax(0,1fr); padding:5px; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy] .battle-foe__figure { display:none; }
+ .scene-combat.combat-sandbox .battle-field__team[data-team=enemy] .battle-foe__name { white-space:normal; line-height:18px; }
+}
+@media(max-height:500px) and (min-width:701px) {
+ body:has(.scene-run .scene-combat) .expedition-rewards.combat-scenario-complete { box-sizing:border-box; padding-right:248px; }
+}
+@media(max-height:500px) and (min-width:701px) {
+ body:has(.scene-run) .expedition-rewards .ice-reward__card { flex-basis:min(162px,calc((100dvh - 170px)*.716)); width:min(162px,calc((100dvh - 170px)*.716)); }
+}
+@media(max-width:700px) { .scene-home { gap:12px; } .scene-home > svg { width:60px; height:60px; flex-shrink:0; } }
+/* FTL-like branching combat itinerary. Lines are history/options, not a world. */
+.scene-run__path-toggle { min-height:40px; padding:5px 8px; border:0; border-bottom:1px solid #78918b77; background:transparent; }
+.scene-run[data-map-open] .scene-combat { visibility:hidden; pointer-events:none; }
+.combat-path { position:absolute; inset:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; padding:12px 24px; gap:8px; }
+.combat-path__heading { display:flex; align-items:baseline; gap:24px; }
+.combat-path__heading h1 { margin:0; font:normal 26px/1.25 Georgia,serif; color:#efd69d; }
+.combat-path__heading p,.combat-path__legend { margin:0; font:16px/1.35 Georgia,serif; color:#aebbad; }
+.combat-path__chart { position:relative; min-height:0; min-width:0; }
+.combat-path__links { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.combat-path__links line { stroke:#a6b8b2; opacity:.13; stroke-width:1; vector-effect:non-scaling-stroke; }
+.combat-path__links line[data-eligible] { stroke:#b0d8ce; opacity:.7; stroke-dasharray:3 5; }
+.combat-path__links line[data-traversed] { stroke:#f1cf86; opacity:.95; stroke-width:2; }
+.combat-path__links--portrait { display:none; }
+.scene-run .combat-path__node { position:absolute; left:var(--node-x); top:var(--node-y); transform:translate(-50%,-50%); width:44px; height:44px; padding:0; border:0; border-radius:50%; display:grid; place-items:center; background:transparent; opacity:1; }
+.combat-path__point { width:8px; height:8px; border-radius:50%; background:#60716d; color:#17201d; line-height:22px; font-size:16px; }
+.combat-path__node[data-visited] .combat-path__point { width:23px; height:23px; background:#e8c989; }
+.combat-path__node[data-current] .combat-path__point { outline:1px solid #fff1bd; outline-offset:5px; width:24px; height:24px; background:#e8c989; }
+.combat-path__node[data-eligible] .combat-path__point { width:17px; height:17px; border:1px solid #d8f1e7; background:#4d8b7b; box-shadow:0 0 0 5px #679f9020; }
+.combat-path__node:enabled:hover .combat-path__point { background:#c5ead9; box-shadow:0 0 0 8px #a1dfbf22; }
+.combat-path__label { position:absolute; left:42px; top:0; width:190px; display:grid; gap:3px; text-align:left; pointer-events:none; color:#b1c7bc; font:16px/1.2 Georgia,serif; }
+.combat-path__label strong { color:#f2ddb1; font-weight:normal; font-size:19px; }
+.combat-path__node[data-last] .combat-path__label { left:auto; right:42px; text-align:right; }
+.combat-path__legend { display:flex; justify-content:center; gap:24px; }
+.light-mote-art { width:100%; height:100%; object-fit:contain; }
+.scene-combat .battle-buff-icon b { font-size:16px; line-height:18px; }
+body:has(.scene-run) .reward-inspection__card { width:min(76vw,calc((100dvh - 310px)*.716)); }
+@media(max-width:700px) {
+ .scene-run { grid-template-rows:72px minmax(0,1fr) 44px; }
+ .scene-run__bar { display:grid; grid-template-columns:minmax(0,1fr) 120px; grid-template-rows:30px 30px; gap:0 8px; padding:4px 12px; }
+ .scene-run__bar > span:first-child { grid-column:1; grid-row:1; }
+ .scene-run__path-toggle { grid-column:1; grid-row:2; justify-self:start; min-height:30px; padding:2px 0; }
+ .scene-run__rope-space { grid-column:2; grid-row:1 / 3; }
+ .combat-path { padding:6px 10px; gap:6px; }
+ .combat-path__heading { display:grid; gap:4px; }
+ .combat-path__heading h1 { font-size:24px; }
+ .combat-path__links { display:none; }
+ .combat-path__links--portrait { display:block; }
+ .scene-run .combat-path__node { left:var(--node-y); top:var(--node-x); }
+ .combat-path__label { left:50%; top:37px; transform:translateX(-50%); width:100px; gap:3px; text-align:center; }
+ .combat-path__label strong { font-size:16px; }
+ .combat-path__label > span { line-height:18px; }
+ .combat-path__node[data-last] .combat-path__label { left:50%; right:auto; top:auto; bottom:36px; text-align:center; }
+ .combat-path__legend { gap:12px; flex-wrap:wrap; }
+ body:has(.scene-run) .reward-inspection__card { width:min(76vw,calc((100dvh - 370px)*.716)); }
+ body:has(.scene-run) .reward-inspection { inset:74px 0 44px; }
+ body:has(.scene-run) .expedition-rewards.combat-scenario-complete { inset:86px 0 190px; height:calc(100dvh - 276px); }
+ .scene-home { gap:10px; padding:10px 18px; }
+}
+@media(max-height:500px) and (min-width:701px) {
+ .combat-path { padding:4px 20px; gap:2px; }
+ .combat-path__heading h1 { font-size:22px; }
+ .combat-path__heading p { font-size:16px; }
+ .combat-path__label { width:145px; gap:1px; top:-10px; }
+ .combat-path__label strong { font-size:16px; }
+ .combat-path__label > span { font-size:16px; line-height:18px; }
+ .combat-path__legend { gap:20px; }
+ body:has(.scene-run) .reward-inspection__card { width:calc((100dvh - 105px)*.716); }
+}
+.scene-home h1 { margin:0; font:normal 26px/1.2 Georgia,serif; color:#efd69d; }
+.scene-home p { margin:0; }
+.combat-path__choices { display:none; }
+.combat-path__node:not([data-eligible]) { pointer-events:none; }
+.combat-path__node[data-eligible] .combat-path__point { width:24px; height:24px; line-height:22px; color:#edf7e7; }
+@media(max-width:700px) {
+ .combat-path { grid-template-rows:auto minmax(130px,1fr) auto auto; }
+ .combat-path__label { display:none; }
+ .combat-path__choices { display:grid; }
+ .scene-run .combat-path__choices button { display:grid; grid-template-columns:22px minmax(0,1fr); gap:9px; align-items:center; text-align:left; min-height:52px; padding:5px 0; border:0; border-bottom:1px solid #819b852b; background:transparent; }
+ .combat-path__choices button > span:first-child { color:#efd69d; }
+ .combat-path__choices button > span:last-child { display:grid; gap:2px; }
+ .combat-path__choices strong { color:#f0d8a8; font-size:16px; font-weight:normal; }
+ .combat-path__choices button > span:last-child > span { color:#b0c1b4; font:16px/1.2 Georgia,serif; }
+ .combat-path__legend { font-size:16px; gap:12px; }
+}
+.scene-run .combat-path__node:disabled { opacity:1; }
+@media(max-height:500px) and (min-width:701px) { .combat-path__label { width:200px; } }
+.scene-home > button { min-height:44px; padding:8px 16px; border:1px solid #78927d; border-radius:4px; background:#24392e; }
+@media(max-height:500px) and (min-width:701px) { .combat-path__label { top:-22px; } }

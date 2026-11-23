@@ -26,6 +26,7 @@ function DraftPreview({ draft }: { draft: KeruDraft }) {
       <label><input type="checkbox" checked={showSubject} onChange={e => setShowSubject(e.target.checked)} />Character</label>
       <label><input type="checkbox" checked={showBackground} onChange={e => setShowBackground(e.target.checked)} />Watercolor background</label>
       {draft.id === 'dem' && <label><input type="checkbox" checked={natural} onChange={e => setNatural(e.target.checked)} />Natural Dem study</label>}
+      {draft.id === 'cir' && <a href={`${import.meta.env.BASE_URL}proto.html?cirsbx`}>Preview meteor dive</a>}
     </div>
     <section className="keru-abilities-grid" aria-label={draft.name + ' distinct abilities'}>
       {abilities.map(({ id, effect, target, kind }) => <article className="keru-ability-option" key={id} data-ability={draft.id + '-' + id}>

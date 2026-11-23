@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { selectKhadFace, type KhadFace, type KhadWeedOptions } from './khadSpriteFaces';
+import {paintKhadroot} from './khadMixedPaint';
 
 export const THORN_WHIP_SECONDS = .62;
 export function sampleThornWhip(age: number) {
@@ -25,6 +26,7 @@ export function createKhadWeed(height = 2.5) {
   const thorn = new THREE.MeshStandardMaterial({color:0xc65d70,emissive:0x612435,emissiveIntensity:.4,roughness:1,flatShading:true});
   const seam = new THREE.MeshBasicMaterial({color:0xf34b65});
   const leaf = new THREE.MeshStandardMaterial({color:0x35443a,roughness:1,flatShading:true});
+  const paint=paintKhadroot([bark,thorn,seam,leaf]);
   const cylinder=new THREE.CylinderGeometry(1,1,1,7), cone=new THREE.ConeGeometry(1,1,5), leafGeometry=new THREE.SphereGeometry(1,5,3);
   const up=new THREE.Vector3(0,1,0), direction=new THREE.Vector3();
   const stems: {joint:THREE.Group;wood:THREE.Mesh;crack:THREE.Mesh;hooks:THREE.Group[];index:number;chain:number}[]=[];
@@ -95,6 +97,6 @@ export function createKhadWeed(height = 2.5) {
       card.visible=true;camera.getWorldQuaternion(card.quaternion);
       root.userData.spriteFace={...face,count,whipWorldSpace:attackActive};
     },
-    dispose(){[cylinder,cone,leafGeometry,bark,thorn,seam,leaf,sporeMaterial,targetTexture,cardGeometry,cardMaterial].forEach(r=>r.dispose());}
+    dispose(){paint.dispose();[cylinder,cone,leafGeometry,bark,thorn,seam,leaf,sporeMaterial,targetTexture,cardGeometry,cardMaterial].forEach(r=>r.dispose());}
   };
 }

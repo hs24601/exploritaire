@@ -1,3 +1,6 @@
+import type {CardRarity} from '../cardRarity';
+import {HoloLenticularCoating} from './HoloLenticularCoating';
+import './RarityFoil.css';
 import { gameTime } from '../../gameTime';
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
@@ -24,28 +27,35 @@ const jumboChips = (section: TradingCardSection): TradingCardChip[] => section.c
   label: `${section.label}: ${section.details ?? 'Not yet configured'}`,
 }];
 export type TradingCardProps = {
-  id: string; title: ReactNode; titleId?: string; badge?: ReactNode; badgeLabel?: string; headerAction?: ReactNode;
-  art: ReactNode; description?: string; descriptionPreview?: ReactNode; descriptionId?: string;
+  id: string; rarity?:CardRarity; title: ReactNode; titleId?: string; badge?: ReactNode; badgeLabel?: string; headerAction?: ReactNode;
+  art: ReactNode; description?: string; descriptionPreview?: ReactNode; descriptionId?: string; descriptionTooltip?: boolean;
   cornerAdornment?: ReactNode;
+  /** Art-first cards keep rules in their surrounding inspection UI. */
+  hideBody?: boolean;
   sections?: TradingCardSection[]; footer?: ReactNode; belowCard?: ReactNode; finish?: 'diagonal-holo' | 'plain';
   state?: 'compact' | 'jumbo' | 'foundation';
   /** A parent card control owns input (for example the combat ability fan). */
   interactive?: boolean;
   /** Read motion from the owning ability control without adding nested input. */
   motionFromParent?: boolean;
+  lenticular?: boolean;
+  /** Freeze presentation while a native host pauses its game clock. */
+  paused?: boolean;
   className?: string;
 };
 
 /** Modular face: art, title, description, sections and footer remain real DOM slots.
  * Foil sits above the art but below the copy; pointer input never reaches the camera. */
-export function TradingCard({ id, title, titleId, badge, badgeLabel, headerAction, art, description, descriptionPreview,
-  descriptionId, sections = [], footer, belowCard, cornerAdornment, finish = 'diagonal-holo', state = 'compact', interactive = true, motionFromParent = false, className = '' }: TradingCardProps) {
+export function TradingCard({ id, rarity, title, titleId, badge, badgeLabel, headerAction, art, description, descriptionPreview,
+  descriptionId, descriptionTooltip = true, sections = [], footer, belowCard, cornerAdornment, hideBody=false, finish = 'diagonal-holo', state = 'compact', interactive = true, motionFromParent = false, lenticular = true, paused = false, className = '' }: TradingCardProps) {
   const jumboViewer = useCardJumbo();
   const openJumbo = (source:HTMLElement) => {
     const foundation=source.closest<HTMLButtonElement>('button[data-targetable="true"]');
-    jumboViewer?.open({title:typeof title==='string'?title:'Card',content:<TradingCard id={id} title={title} badge={badge} badgeLabel={badgeLabel} art={art} description={description} sections={sections} footer={footer} belowCard={belowCard} finish={finish} state="jumbo" />,
+    jumboViewer?.open({title:typeof title==='string'?title:'Card',content:<TradingCard id={id} rarity={rarity} title={title} badge={badge} badgeLabel={badgeLabel} art={art} description={description} sections={sections} footer={footer} belowCard={belowCard} hideBody={hideBody} finish={finish} lenticular={lenticular} state="jumbo" />,
       action:foundation?()=>foundation.click():undefined,actionLabel:'Choose foundation'});
   };
+  // Inspection pauses combat, but the physical jumbo card must still follow the viewer.
+  const motionClock = state === 'jumbo' ? {now:()=>performance.now(),requestAnimationFrame:(callback:FrameRequestCallback)=>window.requestAnimationFrame(callback),cancelAnimationFrame:(id:number)=>window.cancelAnimationFrame(id)} : gameTime;
   const face = useRef<HTMLElement>(null);
   const [selectedMove, setSelectedMove] = useState<string | null>(null);
   const abilityClose = useRef<HTMLButtonElement>(null);
@@ -65,7 +75,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
   useEffect(()=>{const clear=()=>{drag.current=null;setMoving(null);};window.addEventListener('blur',clear);return()=>window.removeEventListener('blur',clear);},[]);
   const move = catalogue.find(entry => entry.name === selectedMove);
   const [moving,setMoving]=useState<{name:string;x:number;y:number}|null>(null);
-  const frozen = !!move;
+  const frozen = !!move || paused;
   const closeAbility = () => setSelectedMove(null);
   useEffect(() => { if (!selectedMove) abilitySource.current?.focus({ preventScroll: true }); }, [selectedMove]);
   useEffect(() => {
@@ -92,7 +102,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     const update = () => { reducedMotion.current = media.matches; };
     update(); media.addEventListener('change', update);
     return () => {
-      gameTime.cancelAnimationFrame(frame.current);
+      motionClock.cancelAnimationFrame(frame.current);
       // Effect replay can cancel a frame after a sensor has already queued it.
       // Release the handle so subsequent readings can restart the spring.
       frame.current = 0;
@@ -116,7 +126,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
   };
   const animate = () => {
     if (frame.current) { trace(); return; }
-    let previous = gameTime.now();
+    let previous = motionClock.now();
     const tick = (now: number) => {
       const dt = Math.min((now - previous) / 1000, 1 / 30);
       previous = now;
@@ -131,10 +141,10 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
       const el = face.current;
       if (!el) { frame.current = 0; return; }
       paint(motion.current);
-      frame.current = settled ? 0 : gameTime.requestAnimationFrame(tick);
+      frame.current = settled ? 0 : motionClock.requestAnimationFrame(tick);
       trace();
     };
-    frame.current = gameTime.requestAnimationFrame(tick);
+    frame.current = motionClock.requestAnimationFrame(tick);
     trace();
   };
   const interact = (event: PointerEvent<HTMLDivElement>) => {
@@ -153,8 +163,8 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
   };
   const reset = () => {
     pointerActive.current = false;
-    if (state === 'foundation' || frozen) {
-      gameTime.cancelAnimationFrame(frame.current); frame.current = 0;
+    if (frozen) {
+      motionClock.cancelAnimationFrame(frame.current); frame.current = 0;
       deviceTilt.current = null;
       target.current = motion.current = { x: 50, y: 50, lift: 0 };
       velocity.current = { x: 0, y: 0, lift: 0 };
@@ -171,6 +181,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     const host = face.current?.parentElement?.parentElement;
     if (!host) return;
     const follow = (event: globalThis.PointerEvent) => {
+      if(event.type==='pointerdown')requestHoloDeviceTilt();
       if (reducedMotion.current || frozen) return;
       const rect = host.getBoundingClientRect();
       pointerActive.current = true;
@@ -204,12 +215,12 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     };
   }, [motionFromParent, frozen]);
   useEffect(() => { if (frozen) reset(); }, [frozen]);
-  useHoloDeviceTilt(interactive && state !== 'foundation' && !frozen && finish === 'diagonal-holo', `${id}:${state}`, tilt => {
+  useHoloDeviceTilt((interactive || motionFromParent || state === 'foundation') && !frozen && finish === 'diagonal-holo', `${id}:${state}`, tilt => {
     deviceTilt.current = tilt;
     if (!tilt && (document.hidden || reducedMotion.current)) {
       // Stop immediately while hidden/static; don't leave a spring queued for
       // the first frame after the page or motion preference resumes.
-      gameTime.cancelAnimationFrame(frame.current); frame.current = 0;
+      motionClock.cancelAnimationFrame(frame.current); frame.current = 0;
       pointerActive.current = false;
       target.current = motion.current = { x: 50, y: 50, lift: 0 };
       velocity.current = { x: 0, y: 0, lift: 0 };
@@ -219,7 +230,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
     }
     if (!pointerActive.current) reset();
   }, GYRO_LOG_ENABLED ? sensor => { debug.current.sensor = sensor; trace(); } : undefined);
-  return <div className={`trading-card-stage ${className}${move ? ' trading-card-stage--ability-open' : ''}`}
+  return <div data-rarity={rarity} className={`trading-card-stage ${className}${move ? ' trading-card-stage--ability-open' : ''}`}
     tabIndex={state === 'foundation' ? 0 : undefined} role={state === 'foundation' ? 'button' : undefined} aria-haspopup={state === 'foundation' ? 'dialog' : undefined}
     onClick={event=>{if(state==='foundation'&&!event.currentTarget.closest('.proto-exploration-actor')){
       // Let an armed tableau choice reach its foundation's gameplay handler.
@@ -231,12 +242,13 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
       const target=event.currentTarget.closest<HTMLButtonElement>('button[data-targetable="true"]');
       if(target)target.click();else openJumbo(event.currentTarget);
     }}}
-    onPointerMove={interact} onPointerDown={event => { if (interactive && state !== 'foundation') requestHoloDeviceTilt(); interact(event); }} onPointerLeave={reset} onPointerCancel={reset}
+    onPointerMove={interact} onPointerDown={event => { if (interactive || motionFromParent || state === 'foundation') requestHoloDeviceTilt(); interact(event); }} onPointerLeave={reset} onPointerCancel={reset}
     onPointerUp={event => { if (event.pointerType === 'touch') reset(); }}>
     {moving && createPortal(<div className="loadout-drag-label" style={{left:moving.x+12,top:moving.y+12}} aria-hidden="true">{moving.name}</div>,document.body)}
     {!!catalogue.length && <aside inert={frozen} className="trading-card__available trading-card__abilities" data-loadout-tray="available" data-loadout-actor={id} aria-label="Available abilities"><h3>Available abilities</h3><p>Drag to assign or remove. Drop on an assigned ability to replace it. {moves.length}/4 assigned.</p>{available.map(entry=><button type="button" key={entry.name} data-loadout-move={entry.name} {...transferProps(entry.name)} title="Drag to assign or Shift+Enter" onClick={e=>{e.stopPropagation();if(drag.current?.moved){drag.current=null;return;}abilitySource.current=e.currentTarget;setSelectedMove(entry.name);}}>{entry.name}</button>)}{!available.length&&<p>All abilities assigned</p>}</aside>}
     <article ref={face} inert={frozen} className={`details-card trading-card trading-card--${finish} trading-card--${state}${frozen ? ' trading-card--frozen' : ''}`} data-object-id={id} data-card-state={state}>
     <div className="trading-card__art">{art}</div>
+    {finish==='diagonal-holo'&&lenticular&&<HoloLenticularCoating dedicatedBite={id==='hero-bite'||id==='mochi-fast-swipes'}/>}
     <div className="trading-card__foil" aria-hidden="true" />
     <div className="trading-card__glare" aria-hidden="true" />
     {cornerAdornment}
@@ -244,10 +256,10 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
       <h2 id={titleId}>{title}</h2>
       {headerAction ?? (badge && <span className="trading-card__badge" role="img" aria-label={badgeLabel}>{badge}</span>)}
     </header>
-    <div className="trading-card__body" data-card-layer="overlay">
+    {!hideBody && <div className="trading-card__body" data-card-layer="overlay">
       {description && (state === 'jumbo' ? <section className="trading-card__full-description" data-card-layer="description" aria-label="Description">
         <h3>Description</h3><p id={descriptionId}>{description}</p>
-      </section> : <p id={descriptionId} className="trading-card__description" title={description}
+      </section> : <p id={descriptionId} className="trading-card__description" title={descriptionTooltip ? description : undefined}
         tabIndex={interactive?0:undefined} aria-label={description}>{descriptionPreview ?? description}</p>)}
       {!!catalogue.length && <div data-loadout-tray="assigned" data-loadout-actor={id} className="trading-card__abilities" data-card-layer="abilities" role="group" aria-label={`${typeof title === 'string' ? title : 'Actor'} abilities`}>
         {!moves.length && <p>Drop abilities here</p>}{moves.map(entry => <button type="button" key={entry.name} data-loadout-move={entry.name} {...transferProps(entry.name)} title="Drag to remove or press Delete" aria-pressed={selectedMove === entry.name}
@@ -263,7 +275,7 @@ export function TradingCard({ id, title, titleId, badge, badgeLabel, headerActio
         </section>)}
       </div>}
       {footer && <footer className="trading-card__footer">{footer}</footer>}
-    </div>
+    </div>}
     </article>
     {state === 'jumbo' && (!!sections.length || belowCard) && <div className="trading-card__below" inert={frozen}
       onPointerMove={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()}>

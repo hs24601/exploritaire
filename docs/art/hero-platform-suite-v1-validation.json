@@ -1,0 +1,233 @@
+{
+  "clips": [
+    {
+      "id": "idle",
+      "source": {
+        "file": "idle-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 885024
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "sit",
+      "source": {
+        "file": "sit-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 996415
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "walk",
+      "source": {
+        "file": "walk-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 930613
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "run",
+      "source": {
+        "file": "run-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 957741
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "crouch",
+      "source": {
+        "file": "crouch-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1025897
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "crawl",
+      "source": {
+        "file": "crawl-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 969580
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "jump",
+      "source": {
+        "file": "jump-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1038219
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "fall-land",
+      "source": {
+        "file": "fall-land-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 996002
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "hurdle",
+      "source": {
+        "file": "hurdle-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1051821
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "ledge-hang",
+      "source": {
+        "file": "ledge-hang-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1183796
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "ledge-climb",
+      "source": {
+        "file": "ledge-climb-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1175395
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "wall-slide-jump",
+      "source": {
+        "file": "wall-slide-jump-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1032783
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "brake-turn",
+      "source": {
+        "file": "brake-turn-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 975615
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "hurt",
+      "source": {
+        "file": "hurt-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 978595
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "defeat",
+      "source": {
+        "file": "defeat-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1027095
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "interact",
+      "source": {
+        "file": "interact-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 969073
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "celebrate",
+      "source": {
+        "file": "celebrate-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1002659
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "swim",
+      "source": {
+        "file": "swim-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1069925
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    },
+    {
+      "id": "sit-stand",
+      "source": {
+        "file": "sit-stand-source.png",
+        "width": 1774,
+        "height": 887,
+        "alpha0": 1012754
+      },
+      "validation": {
+        "edgeFrames": []
+      }
+    }
+  ],
+  "frameCount": 152
+}

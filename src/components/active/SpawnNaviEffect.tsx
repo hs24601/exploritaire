@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import type { CSSProperties } from 'react';
+import {NAVI_APPEARANCE as navi} from './naviAppearance';
 
 type Props = {
   className?: string;
@@ -55,8 +56,8 @@ export const SpawnNaviEffect = memo(function SpawnNaviEffect({ className }: Prop
           transform: translate(-50%, -50%);
           border-radius: 50%;
           border: solid 1px #f6edd1;
-          background: radial-gradient(circle, #ffffff 35%, #f6edd1 100%);
-          box-shadow: 0 0 12px 6px #e8c8a1, 0 0 36px 16px hotpink;
+          background: radial-gradient(circle, ${navi.core} 35%, ${navi.cream} 100%);
+          box-shadow: 0 0 12px 6px ${navi.halo}, 0 0 36px 16px ${navi.glow};
           animation: navi-bounce 1.5s ease-in-out infinite;
         }
         .navi-wing-container {
@@ -94,14 +95,14 @@ export const SpawnNaviEffect = memo(function SpawnNaviEffect({ className }: Prop
           bottom: 50%;
           width: 72px;
           height: 97px;
-          background: radial-gradient(ellipse at bottom, #ffffff 25%, #3d966e 100%);
+          background: radial-gradient(ellipse at bottom, ${navi.core} 25%, ${navi.wing} 100%);
         }
         .navi-wing-bottom {
           border-radius: 45%;
           top: 50%;
           width: 64px;
           height: 72px;
-          background: radial-gradient(ellipse at top, #ffffff 25%, #3d966e 100%);
+          background: radial-gradient(ellipse at top, ${navi.core} 25%, ${navi.wing} 100%);
         }
         .navi-wing-side-left .navi-wing {
           right: calc(50% + 11px);

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>[hidden]{display:none!important} body{margin:0}</style>
+<title>Grid Tableau 3×3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=Alegreya:wght@700&display=swap">
+<link rel="stylesheet" href="/src/book/gridTableau.css">
+</head>
+<body>
+<main>
+  <div class="stage" id="stage">
+    <div class="board" id="board"></div>
+    <div class="team-controls"><span id="teamStatus" aria-live="polite"></span><button class="btn" id="endTeamTurn" type="button">End turn</button><button class="btn" id="newTeamDeal" type="button">New deal</button><label class="toggle" for="chkInfinite"><input type="checkbox" id="chkInfinite" checked> Infinite backfill</label></div>
+    <div class="banner" id="banner" hidden><span id="bannerText"></span><button class="btn" id="bannerNew" type="button">New deal</button></div>
+  </div>
+</main>
+
+<script type="module">
+import {mountGridTableau} from "/src/book/gridTableau.js";
+mountGridTableau({teamHand:true,stockEnabled:false,padding:24,minScale:0.1,stage:document.getElementById("stage"),board:document.getElementById("board")});
+</script>
+</body>
+</html>

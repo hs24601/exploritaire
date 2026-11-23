@@ -1,0 +1,20 @@
+import {afterEach,it,expect,vi} from 'vitest';
+import * as THREE from 'three';
+import {MeadowPortalEnd} from './castleMeadowPortal';
+import {WORLD_1111_LAYOUT} from './world1111Layout';
+import {treeGround,treeWalkable} from './worldTreeScene';
+afterEach(()=>vi.unstubAllGlobals());
+it('keeps paired card thresholds fixed and maps through them without immediate recrossing',()=>{
+ vi.stubGlobal('document',{createElement:()=>({width:0,height:0,getContext:()=>({fillRect(){},strokeRect(){},fillText(){}})})});
+ const source=new MeadowPortalEnd(new THREE.Scene(),{...WORLD_1111_LAYOUT.portal,y:treeGround(8,71)},false,true,false,'Sacred Forest Meadow');
+ const destination=new MeadowPortalEnd(new THREE.Scene(),{x:-.45,y:0,z:20.25,yaw:Math.PI},false,true,false,'World Tree Grove');
+ const matrix=source.group.matrixWorld.clone();for(const time of [0,1,50,1000])source.update(time,4,74,false);
+ expect(source.group.matrixWorld.equals(matrix)).toBe(true);expect(source.group.children.some(o=>o instanceof THREE.Light)).toBe(false);
+ const near=source.point(.66);expect(treeWalkable(near.x,near.z)).toBe(true);
+ expect(source.canCross({...near,y:source.door.y,vx:0,vz:0},true)).toBe(true);
+ expect(source.canCross({...near,y:source.door.y,vx:source.normal.x,vz:source.normal.z},false)).toBe(false);
+ const point=new THREE.Vector3(near.x,source.door.y+1,near.z).applyMatrix4(source.mapTo(destination,new THREE.Matrix4()));
+ expect(destination.distance(point.x,point.z)).toBeCloseTo(-.66,6);expect(point.y).toBeCloseTo(1,6);
+ const exit=source.point(1.8);expect(treeWalkable(exit.x,exit.z)).toBe(true);expect(source.canCross({...exit,y:source.door.y,vx:source.normal.x,vz:source.normal.z},false)).toBe(false);
+ expect(source.contains(new THREE.Vector3(8,source.door.y+3,71))).toBe(true);expect(source.contains(new THREE.Vector3(8,source.door.y+.1,71))).toBe(false);
+});

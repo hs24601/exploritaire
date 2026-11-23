@@ -81,6 +81,7 @@
 .battle-chip[data-chip='fed'] { background: #5a2a14; color: #ffd8a8; }
 .battle-floater[data-kind='take'] { color: #e7b6ff; font-size: 18px; }
 .battle-floater[data-kind='snatch'] { color: #9ef0c4; font-size: 18px; }
+.battle-floater[data-kind='heal'] { color: #8ff5a0; }
 .battle-floater[data-kind='trap'] { color: #ffb347; }
 
 /* Marks over a table card: eyes (with a draining bar) and traps. */
@@ -109,3 +110,51 @@
 .battle-buff-icon svg { width:30px; height:30px; overflow:visible; }
 .battle-buff-icon[data-suppressed='true'] { border-color:#ffca7c; background:#3c3122; }
 .battle-buff-icon:focus-visible { outline:2px solid #ffe19a; outline-offset:3px; }
+.battle-bar__temp-hp { position:absolute; top:0; bottom:0; background:linear-gradient(0deg,#c83817,#ff9b28 50%,#ffe68b); border-left:2px solid #fff4c0; box-shadow:inset 0 0 5px #fff5ab; clip-path:polygon(0 0,12% 20%,25% 0,40% 25%,55% 0,70% 18%,85% 0,100% 12%,100% 100%,0 100%); }
+.cir-release { align-self:center; font:16px/1.2 Georgia,serif; color:#ffe5ab; background:#25382d; border:1px solid #b99b8d; border-radius:6px; padding:5px 8px; cursor:pointer; }
+.cir-meteor-foundation { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:#ffe5ab; font:16px/1.2 Georgia,serif; }
+.cir-meteor-foundation img { width:100%; height:55%; object-fit:contain; }
+.combat-sandbox [data-battle-slot='cir'] .battle-foundation--unified .battle-foe__name { font-size:16px; line-height:20px; }
+.combat-sandbox [data-battle-slot='cir'] .battle-foundation--unified .battle-bar__text,
+.combat-sandbox .battle-bar:has(.battle-bar__temp-hp) .battle-bar__text { font-size:16px; line-height:20px; padding:0 2px; }
+.combat-sandbox [data-battle-slot='cir'] .battle-foundation--unified .battle-bar,
+.combat-sandbox .battle-foundation--unified .battle-bar:has(.battle-bar__temp-hp) { height:22px; }
+.combat-sandbox [data-battle-slot='cir'] .battle-foundation__status { font-size:16px; line-height:20px; }
+.combat-sandbox [data-battle-slot='cir'] .battle-field__foundation.battle-foundation--unified { height:116px; min-height:116px; }
+.combat-sandbox [data-buff='cir-companion'] { position:absolute; top:0; left:0; }
+.combat-sandbox .battle-field__team[data-team='party'] [data-battle-slot='cir-meteor'] .battle-field__foundation.cir-meteor-foundation { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; height:164px; min-height:164px; font-size:16px; line-height:20px; }
+.combat-sandbox .battle-field__team[data-team='party'] .battle-summon-slot { align-self:end; }
+.combat-sandbox .battle-field__team[data-team='party'][data-momentum='true'] { align-items:end; }
+.combat-sandbox .cir-meteor-foundation img { height:75px; width:100%; object-fit:contain; }
+/* Keep the floating control away from Cir's receiving surface on tight screens. */
+@media(max-width:600px), (max-height:500px) {
+ .combat-sandbox:has([data-battle-slot='cir'],[data-battle-slot='cir-meteor'],[data-foundation-summon-slot]) .battle-momentum-overlay { top:164px; bottom:auto; width:64px; }
+ .combat-sandbox:has([data-battle-slot='cir'],[data-battle-slot='cir-meteor'],[data-foundation-summon-slot]) .battle-momentum-overlay .momentum-engine__chamber { width:64px; height:64px; }
+ .combat-sandbox:has([data-battle-slot='cir'],[data-battle-slot='cir-meteor'],[data-foundation-summon-slot]) .battle-momentum-overlay .momentum-engine__value { font-size:24px; }
+}
+@media(max-height:500px) {
+ .combat-sandbox:has([data-battle-slot='cir'],[data-battle-slot='cir-meteor'],[data-foundation-summon-slot]) .battle-momentum-overlay { top:124px; }
+}
+.aldan-seed-mark { display:block; width:100%; height:100%; object-fit:contain; }
+.battle-support-slot { max-width:100px; align-self:flex-end; }
+.battle-support-keru { position:relative; display:grid; gap:5px; width:100%; padding:8px; border:1px solid #b7a17b; border-radius:12px; background:#211d28; color:#fff0d0; font:inherit; font-size:11px; cursor:pointer; }
+.battle-support-keru > .battle-field__actor-card { display:block; width:64px; height:64px; margin:auto; }
+.battle-support-keru .battle-field__actor-card svg { width:100%; height:100%; }
+.battle-support-keru .battle-bar { width:100%; }
+.aldan-seed-leader { display:block; font-size:11px; color:#e4d095; }
+.keru-tap-in { margin-top:5px; padding:5px 8px; border:1px solid #b7a17b; border-radius:7px; background:#302737; color:#ffe1a1; font:inherit; font-size:11px; cursor:pointer; }
+.keru-tap-in:disabled { opacity:.45; cursor:default; }
+.keru-tap-status { font-size:11px; color:#e4d095; }
+.battle-leader-hp { display:block; min-width:0; }
+.battle-leader-hp .battle-bar__fill { background:linear-gradient(#79cfb1,#358c83); }
+.combat-sandbox .battle-foundation--unified:has([data-leader-hp]) { height:148px; min-height:148px; }
+.combat-sandbox .battle-foundation--unified:has([data-leader-hp]) .battle-bar[data-bar='hp'] { height:20px; }
+.combat-sandbox .battle-foundation--unified:has([data-leader-hp]) .battle-bar__text { font-size:12px; line-height:16px; }
+
+/* Chip damage is already applied; the amber segment catches up at turn handoff. */
+.battle-bar__chip-trail { position:absolute; top:0; bottom:0; background:linear-gradient(#fff09a,#ff9c36 55%,#e45229); box-shadow:0 0 7px #ffb34d; transition:width .9s cubic-bezier(.2,.7,.2,1), left .12s linear; pointer-events:none; }
+@media (prefers-reduced-motion: reduce) { .battle-bar__chip-trail { transition:none; } }
+.battle-intent-slot__pips i[data-frosted] { background:#a6e8ff; border-color:#efffff; box-shadow:0 0 6px #a6e8ff; }
+
+.battle-floater[data-miss] { color:#dcffff; font:italic 700 24px Georgia,serif; letter-spacing:.06em; text-shadow:0 0 8px #58dcff, 1px 2px 2px #102c43, -1px -1px 0 #183743; }
+.battle-party-buffs{justify-content:flex-start}

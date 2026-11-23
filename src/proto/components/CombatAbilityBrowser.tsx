@@ -8,7 +8,7 @@ import './CombatAbilityBrowser.css';
 // ability card, straight from the live ability data.
 
 const FLASH_KEY = 'combat-abilities-flash';
-const ELEMENT_GLYPH: Record<string, string> = { physical: '🐾', fire: '🔥', frost: '❄️', water: '💧', shock: '🌩️', nature: '🌿', none: '◇' };
+const ELEMENT_GLYPH: Record<string, string> = { physical: '🐾', air: '💨', fire: '🔥', frost: '❄️', water: '💧', shock: '🌩️', nature: '🌿', none: '◇' };
 const glyphFor = (status: string) => Object.values(STATUS_META).find(meta => meta.name === status)?.glyph ?? '•';
 const actorName = (group: string) => GROUP_LABEL[group as AbilityGroup] ?? group;
 
@@ -39,7 +39,7 @@ function Editor({ entry, all, onDone }: { entry: AbilityEntry; all: AbilityEntry
     <label>Owner{entry.editable.owner
       ? <select value={owner} onChange={event => setOwner(event.target.value as AbilityOwner)}>{ABILITY_OWNERS.map(id => <option key={id} value={id}>{actorName(id)}</option>)}</select>
       : <span className="ability-browser__fixed">{actorName(entry.payer)} (fixed by its rules)</span>}</label>
-    <label>Description<textarea value={description} maxLength={ABILITY_DESCRIPTION_MAX} rows={3} onChange={event => setDescription(event.target.value)} required /></label>
+    <p>Link terms with [[status:burn|Burn]] or [[ability:bash|Bash]].</p><label>Description<textarea value={description} maxLength={ABILITY_DESCRIPTION_MAX} rows={3} onChange={event => setDescription(event.target.value)} required /></label>
     {error && <p className="ability-browser__error" role="alert">{error}</p>}
     <div className="ability-browser__editor-actions">
       <button type="submit" disabled={busy}>Save</button>
@@ -101,9 +101,8 @@ export function CombatAbilityBrowser() {
       <label className="ability-browser__search"><span>Search</span>
         <input type="search" value={filter.query} placeholder="Name, Kin, effect, element, cost or text" onChange={event => setFilter(current => ({ ...current, query: event.target.value }))} /></label>
       <Chips label="Kin" values={facets.actors} selected={filter.actors} render={actorName} onToggle={toggle('actors')} />
-      <Chips label="Effect" values={facets.effects} selected={filter.effects} onToggle={toggle('effects')} />
       <Chips label="Element" values={facets.elements} selected={filter.elements} render={value => `${ELEMENT_GLYPH[value]} ${value[0].toUpperCase()}${value.slice(1)}`} onToggle={toggle('elements')} />
-      <Chips label="Cost" values={facets.costs} selected={filter.costs} onToggle={toggle('costs')} />
+      <details className="ability-browser__advanced"><summary>More filters {filter.effects.length+filter.costs.length>0 && <span>· {filter.effects.length+filter.costs.length} active</span>}</summary><div><Chips label="Effect" values={facets.effects} selected={filter.effects} onToggle={toggle('effects')} /><Chips label="Cost" values={facets.costs} selected={filter.costs} onToggle={toggle('costs')} /></div></details>
       <div className="ability-browser__count" role="status">{results.length} of {entries.length} abilities{filtered ? <button type="button" onClick={() => setFilter(EMPTY_FILTER)}>Clear filters</button> : null}</div>
     </section>
     {flash && <p className="ability-browser__flash" role="status">{flash} · <button type="button" onClick={() => setFlash(null)}>Dismiss</button></p>}

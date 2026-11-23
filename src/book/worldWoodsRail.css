@@ -1,0 +1,51 @@
+/* Only card faces paint a surface: the full backing remains transparent. */
+.world-woods-rail-preview{position:fixed;inset:0;z-index:40;pointer-events:none;color:#f4e8cc;font:16px/1.25 Georgia,serif;background:transparent;isolation:isolate;--world-rail-card-width:82px}
+.world-woods-rail-preview[hidden]{display:none}
+.world-rail-preview-foundation{position:fixed;top:32%;width:208px;padding:12px;border:1px solid #b8a675;border-radius:12px;background:#191827;box-sizing:border-box;pointer-events:none}
+.world-rail-preview-foundation--party{left:18px}.world-rail-preview-foundation--enemy{right:18px;top:27%}
+.world-rail-foundation-target{display:flex;align-items:center;gap:8px;width:100%;border:0;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;pointer-events:auto;border-radius:6px}
+.world-rail-foundation-target:disabled{opacity:1;color:inherit;cursor:default}.world-rail-foundation-target[data-eligible]{outline:3px solid #8fe3cc;outline-offset:8px;cursor:pointer}
+.world-rail-foundation-target>img{width:48px;height:62px;object-fit:contain}.world-rail-foundation-target>div{display:grid;gap:5px;min-width:0;flex:1}
+.world-rail-foundation-target strong{font-weight:500;overflow-wrap:anywhere}.world-rail-foundation-target meter{width:100%;height:12px;accent-color:#cb5862}
+.world-rail-preview-rank{display:grid;place-content:center;min-width:32px;height:65px;border:1px solid #b8a675;border-radius:6px;font-size:25px;font-weight:400}
+.world-rail-ap{display:grid;gap:4px}.world-rail-pips{display:grid;grid-template-columns:repeat(6,10px);gap:3px}
+.world-rail-pips i{height:10px;border:1px solid #aa9568;border-radius:2px;background:#232733;box-sizing:border-box}.world-rail-pips i[data-on]{background:#ebd08b;box-shadow:0 0 4px #efd89b66}
+.world-rail-preview-tableau{position:fixed;left:50%;bottom:94px;transform:translateX(-50%);width:calc(var(--world-rail-card-width) * 6 + 40px);height:calc(var(--world-rail-card-width) * 88 / 63 + 54px);display:grid;grid-template-columns:repeat(6,var(--world-rail-card-width));gap:8px;align-items:end;justify-content:center;pointer-events:none;background:transparent}
+.world-rail-preview-column{position:relative;height:100%;width:var(--world-rail-card-width)}
+.world-woods-rail-preview .world-rail-preview-card{position:absolute;left:0;width:100%;height:auto;aspect-ratio:63/88;box-sizing:border-box;border:1px solid #aa9568;border-radius:7px;padding:5px 8px;background:#f0e4c8;color:#243c37;display:flex;flex-direction:column;font:16px Georgia,serif;text-align:left;pointer-events:auto}
+.world-rail-preview-card b{font:36px Georgia,serif;align-self:center;margin-top:8px}
+.world-woods-rail-preview .world-rail-preview-card:disabled{opacity:1;background:#c9bea5;color:#243c37}.world-woods-rail-preview .world-rail-preview-card[data-legal]{outline:1px solid #8fd6b3;box-shadow:0 0 8px #8fd6b344;cursor:pointer}
+.world-woods-rail-preview .world-rail-preview-card[aria-pressed=true]{outline:3px solid #a8f2df;transform:translateY(-7px)}
+.world-rail-controls{position:fixed;bottom:39px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;justify-content:center;pointer-events:none;background:transparent}
+.world-rail-controls button{font:16px Georgia,serif;padding:6px 12px;min-height:36px;border:1px solid #aa9568;border-radius:5px;color:#f2e5c6;background:#16292b;pointer-events:auto;white-space:nowrap}.world-rail-controls button:disabled{opacity:.5}
+.world-rail-preview-hint{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);margin:0;max-width:calc(100vw - 32px);text-align:center;color:#eee3c6;text-shadow:0 2px 4px #000;font:16px/1.25 Georgia,serif;pointer-events:none}
+.world-rail-card-flight{box-sizing:border-box;position:fixed;z-index:1000;pointer-events:none;border:1px solid #aa9568;border-radius:7px;background:#f0e4c8;color:#243c37;display:grid;place-content:center;font:32px Georgia,serif}
+.world-rail-empty{color:#e4d4af;font:16px Georgia,serif;text-shadow:0 1px 3px #000}.flurry-unstick{min-height:44px;padding:8px 14px;font:16px Georgia,serif;background:#163842;color:#def7ff;border:1px solid #84c9dd;border-radius:6px;z-index:2}
+.world-rail-keru{position:fixed;left:18px;top:calc(32% + 150px);bottom:100px;width:310px;max-width:calc(100vw - 36px);overflow:auto;pointer-events:auto;padding:12px;border:1px solid #b8a675;border-radius:8px;background:#191827;box-sizing:border-box;font-size:16px}
+.world-rail-keru p{margin:0 0 8px}.world-rail-keru details{border-top:1px solid #aa956866;padding:8px 0}.world-rail-keru summary{cursor:pointer}.world-rail-keru details>div{display:flex;flex-wrap:wrap;gap:6px}.world-rail-keru button,.world-rail-controls select{font:16px Georgia,serif;color:#f2e5c6;background:#16292b;border:1px solid #aa9568;border-radius:4px;min-height:36px;padding:6px;pointer-events:auto}.world-rail-keru button:disabled{opacity:.5}
+/* Scope disclosure content: book.css's tools popovers absolutely position
+   every details p, which made familiar descriptions cover their actions. */
+.world-woods-rail-preview .world-rail-keru{left:50%;top:auto;bottom:96px;transform:translateX(-50%);width:360px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 176px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;z-index:3;padding:12px;line-height:1.4}
+.world-rail-keru>header{position:sticky;top:-12px;z-index:1;background:#191827;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding-block:4px}
+.world-rail-keru h2{font:20px Georgia,serif;margin:0}.world-rail-keru>header button{width:36px;min-width:36px;font-size:22px;padding:0}
+.world-woods-rail-preview .world-rail-keru p{position:static;inset:auto;width:auto;max-width:100%;padding:0;margin:10px 0;background:transparent;border:0;border-radius:0;line-height:1.45;overflow-wrap:anywhere}
+.world-rail-keru summary{display:list-item;list-style:disclosure-closed;padding:10px 8px;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
+.world-rail-keru details[open]>summary{list-style:disclosure-open}.world-rail-keru details{min-width:0;padding:8px 0}
+.world-woods-rail-preview .world-rail-keru-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.world-rail-keru-actions>button{min-width:0;min-height:44px;width:100%;height:auto;white-space:normal;overflow-wrap:anywhere;text-align:center;line-height:1.3;padding:8px}
+.world-rail-controls .world-rail-auto,.world-rail-controls .world-rail-familiars{display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:3px;touch-action:none}
+.world-rail-controls .world-rail-move{min-width:64px;min-height:44px}.world-rail-controls .world-rail-move[aria-pressed=true]{opacity:1;border-color:#a6edda;background:#31534d}
+.world-rail-auto span{font:28px Georgia,serif}.world-rail-auto[data-auto-mode=sequence]{border-color:#a6edda;box-shadow:0 0 0 2px #a6edda55}.world-rail-auto[data-auto-mode=continuous]{background:#31534d;border-color:#c5f3bf;box-shadow:0 0 8px #9ce0bd88}
+.world-rail-flurry-icon{position:relative;display:block;width:36px;height:36px;pointer-events:none}.world-rail-flurry-icon>img,.world-rail-flurry-icon>span{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background-repeat:no-repeat}
+@media(max-width:1100px){.world-woods-rail-preview{--world-rail-card-width:calc((100vw - 440px) / 6)}.world-rail-preview-foundation{width:180px}.world-rail-preview-tableau{grid-template-columns:repeat(6,var(--world-rail-card-width))}.world-rail-preview-column,.world-woods-rail-preview .world-rail-preview-card{width:100%}.world-rail-foundation-target>img{width:34px}.world-rail-pips{grid-template-columns:repeat(6,8px);gap:2px}}
+@media(max-width:700px){.world-woods-rail-preview{--world-rail-card-width:calc((100vw - 44px) / 6)}.world-rail-preview-foundation{width:calc(50% - 18px);max-width:220px;top:100px;padding:8px}.world-rail-preview-foundation--party{left:10px}.world-rail-preview-foundation--enemy{right:10px}.world-rail-foundation-target{gap:4px}.world-rail-foundation-target>img{display:none}.world-rail-preview-tableau{width:calc(100vw - 24px);bottom:125px;gap:4px}.world-rail-controls{width:calc(100vw - 20px);flex-wrap:wrap;bottom:56px;gap:4px}.world-rail-controls button{padding:6px 8px;min-height:44px}.world-rail-preview-hint{bottom:8px;max-width:calc(100vw - 24px)}}
+@media(max-height:500px){.world-rail-preview-foundation{top:70px}.world-rail-preview-tableau{bottom:90px}.world-rail-controls{bottom:38px}}
+
+.world-grid-confirmation[hidden] { display:none; }
+.world-grid-confirmation { position:fixed;inset:0;pointer-events:none;z-index:15; }
+.world-grid-confirmation button { position:absolute;transform:translate(-50%,-50%);width:44px;height:44px;border:2px solid #e5c67b;border-radius:50%;background:#183e33;color:#fff3cd;font-size:25px;cursor:pointer;pointer-events:auto;box-shadow:0 2px 12px #0009; }
+.world-grid-confirmation button:last-child { background:#542e32; }
+.world-grid-confirmation button:focus-visible { outline:3px solid white;outline-offset:3px; }
+.world-grid-confirmation i { position:absolute;height:2px;background:#e5c67b;transform-origin:0 50%; }
+.world-rail-navi{display:flex;align-items:center;gap:7px;min-height:44px;padding:0 9px;border:1px solid #8b8057;border-radius:5px;background:#142924;color:#eee0b5;font:16px Georgia,serif;cursor:pointer;touch-action:manipulation;pointer-events:auto}
+.world-rail-navi input{width:18px;height:18px;accent-color:#b4e9bc;cursor:pointer}

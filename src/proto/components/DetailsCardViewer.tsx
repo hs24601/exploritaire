@@ -226,18 +226,18 @@ export function DetailsCardViewer({ objects, anchor, timeOfDay, lights, position
 }
 
 /** Actor portrait: the actor's sprite when it has one (and it loads), otherwise a code-native placeholder. */
-export function ActorCardArt({ sprite, label }: { sprite?: string; label: string }) {
+export function ActorCardArt({ sprite, label, aboveBackground }: { sprite?: string; label: string; aboveBackground?: ReactNode }) {
   const artStyle = useArtStyle();
   const [failedSprite, setFailedSprite] = useState<string | null>(null);
   const layers = artStyle === 'paint' && sprite && ACTOR_HOLO_LAYERS[sprite];
-  if (layers) return <LayeredCardArt {...layers} label={label} motifs={sprite === ACTOR_HOLO_ART.hero} />;
-  if (artStyle === 'paint' && sprite === ACTOR_HOLO_ART.mochi && sprite !== failedSprite) return <div className="actor-motif-flat">
+  if (layers) return <LayeredCardArt {...layers} label={label} aboveBackground={aboveBackground} />;
+  if (artStyle === 'paint' && sprite === ACTOR_HOLO_ART.mochi && sprite !== failedSprite) return <><div className="actor-motif-flat">
     <img className="details-card__sprite" src={sprite} alt={`${label} portrait`} draggable={false} onError={() => setFailedSprite(sprite)} />
-  </div>;
+  </div>{aboveBackground}</>;
   if (sprite && sprite !== failedSprite) {
-    return <img className="details-card__sprite" src={sprite} alt={`${label} portrait`} draggable={false} onError={() => setFailedSprite(sprite)} />;
+    return <><img className="details-card__sprite" src={sprite} alt={`${label} portrait`} draggable={false} onError={() => setFailedSprite(sprite)} />{aboveBackground}</>;
   }
-  return <svg viewBox="0 0 240 160" role="img" aria-label="Hero portrait placeholder" shapeRendering="crispEdges">
+  return <><svg viewBox="0 0 240 160" role="img" aria-label="Hero portrait placeholder" shapeRendering="crispEdges">
     <path fill="#142923" d="M0 0h240v160H0z" />
     <path fill="#214334" d="M0 20h30v100H0zm40-20h24v120H40zm128 0h24v120h-24zm42 20h30v100h-30z" />
     <path fill="#0a1717" d="M0 130h240v30H0z" />
@@ -250,5 +250,5 @@ export function ActorCardArt({ sprite, label }: { sprite?: string; label: string
     <path fill="#e7b455" d="M159 104h28v6h-28z" />
     <path fill="#896944" d="M169 110h8v18h-8z" />
     <path fill="#243839" stroke="#b38b40" strokeWidth="4" d="M58 92h29v32l-15 15-14-15z" />
-  </svg>;
+  </svg>{aboveBackground}</>;
 }

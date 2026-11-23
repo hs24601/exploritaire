@@ -1,0 +1,32 @@
+/* Elemental suits (combatsbx 1002): card and foundation glyphs, and the team's element-play pip. */
+[data-element="earth"] { --element: #c8955a; }
+[data-element="air"] { --element: #a8eadb; }
+[data-element="fire"] { --element: #ff7a3d; }
+[data-element="water"] { --element: #4fa8ff; }
+[data-element="chaos"] { --element: #c28aff; }
+[data-element="nature"] { --element: #79cf72; }
+.element-glyph {
+ position:relative; z-index:2; display:inline-grid; place-items:center; box-sizing:border-box; min-width:1.45em; height:1.45em;
+ width:1.45em; font-size:max(16px, .7em); line-height:1; color:#fff;
+}
+.element-glyph img { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; filter:drop-shadow(0 1px 1px #05080bcc); }
+.battle-foe__name .element-glyph { margin-right:6px; font-size:16px; vertical-align:-3px; }
+.element-charge { display:inline-flex; align-items:center; gap:6px; min-height:36px; box-sizing:border-box; padding:4px 10px 4px 7px;
+ border:1px solid #d5bf9166; border-radius:999px; background:#171923; color:#9a927f; font:600 16px/1 Georgia,serif; white-space:nowrap; cursor:default; }
+.element-charge__pip { width:18px; height:18px; border-radius:50%; box-sizing:border-box; border:2px solid #8a826f; background:transparent; }
+.element-charge[data-ready] { color:#fff0ce; border-color:#d5bf91; }
+.element-charge[data-ready] .element-charge__pip { border-color:#fff4d5;
+ background:conic-gradient(#ff7a3d 0 60deg,#79cf72 0 120deg,#a8eadb 0 180deg,#4fa8ff 0 240deg,#c28aff 0 300deg,#c8955a 0); box-shadow:0 0 8px #ffe27a99; }
+
+/* Authored unequal clusters spill beyond the face without owning input. */
+.proto-card--nature-adorned, .proto-card--fire-adorned,
+.proto-card--water-adorned, .proto-card--air-adorned,
+.proto-card--earth-adorned, .proto-card--chaos-adorned { overflow:visible; }
+.painted-card-adornment {
+ position:absolute; inset:-6%; width:112%; height:112%; max-width:none;
+ object-fit:fill; z-index:1; pointer-events:none; user-select:none;
+}
+/* Bring the heavier lower-left clusters into the upper-right peek strip while covered. */
+[data-buried="true"] > .painted-card-adornment {
+ transform:scale(-1, -1);
+}

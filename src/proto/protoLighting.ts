@@ -1,5 +1,6 @@
 import { crossesObstacle } from './worldPathfinding';
 import { globalLightsEnabled } from './globalLighting';
+import { getDarknessStrength, getMapLightingRenderer, mapHasSkyLight } from './mapLightingRenderer';
 import type { FxQuality } from './atmosphere';
 // Table light engine. Pure math shared by rendering (canvas overlay, object
 // shadows) and game logic (how lit is this object or tile?). Rendering may add
@@ -96,7 +97,8 @@ export const DARKEST_HOUR = 0;
 
 export const getTableLighting = (hours: number) => {
   const hour = ((hours % 24) + 24) % 24;
-  const daylight = Math.max(0, Math.sin((hour - 6) * Math.PI / 12));
+  const skyLight = mapHasSkyLight();
+  const daylight = skyLight ? Math.max(0, Math.sin((hour - 6) * Math.PI / 12)) : 0;
   const night = daylight === 0;
   const angle = (hour - (night ? 18 : 6)) * Math.PI / 12;
   // Peaks while the sun is low: golden hour and dusk read as their own moods.
@@ -105,6 +107,7 @@ export const getTableLighting = (hours: number) => {
   return {
     hour,
     globalLights: true,
+    skyLight,
     daylight,
     twilight,
     phase: daylight > 0.65 ? 'Day' : daylight > 0 ? 'Twilight' : 'Night',
@@ -113,8 +116,8 @@ export const getTableLighting = (hours: number) => {
     /** Opacity of the sky overlay on the table. */
     darkness: 0.34 + nightness * 0.32,
     /** Ambient light on the table, 0–1, before local lights. */
-    ambient: AMBIENT_FLOOR + daylight * 0.24,
-    skyTint: night ? NIGHT_SKY : mixRgb(DAY_SKY, DUSK_SKY, twilight),
+    ambient: skyLight ? AMBIENT_FLOOR + daylight * 0.24 : 0,
+    skyTint: skyLight ? night ? NIGHT_SKY : mixRgb(DAY_SKY, DUSK_SKY, twilight) : { r: 0, g: 0, b: 0 },
     sunColor: mixRgb(NOON_SUN, LOW_SUN, twilight),
   };
 };
@@ -125,7 +128,12 @@ export type TableLightFrame = ReturnType<typeof getTableLighting>;
  * continue to use getTableLighting and are independent of this preference. */
 export const getVisualTableLighting = (hours: number): TableLightFrame => {
   const frame = getTableLighting(hours);
-  return globalLightsEnabled() ? frame : { ...frame, globalLights: false,
+  // The former darkness is the new control's 15% point. Optical depth keeps
+  // local pools intact while reducing transmitted ambient light consistently.
+  const depth = getDarknessStrength() / 15;
+  return globalLightsEnabled() && getMapLightingRenderer() !== 'off' ? { ...frame,
+    darkness: 1 - Math.pow(1 - frame.darkness, depth), ambient: Math.pow(frame.ambient, depth),
+  } : { ...frame, globalLights: false,
     daylight: 1, twilight: 0, ambient: 1, darkness: 0, skyTint: DAY_SKY };
 };
 
@@ -268,6 +276,7 @@ export const lightFlicker = (light: TableLight, timeMs: number) => {
 /** 2.5D projection onto a 2D table: elevated pieces cast away from each light.
  * Clamp grazing-angle shadows so they remain useful within the board viewport. */
 export const tableObjectShadow = (hours: number, position: { x: number; y: number }, elevation = 8, lights: readonly TableLight[] = [], frameYaw = 0) => {
+  if (getMapLightingRenderer() === 'off') return 'none';
   const frame = getVisualTableLighting(hours);
   // A piece turned to face a spun camera draws its shadow in its own frame.
   const turn = (x: number, y: number) => {
@@ -288,7 +297,7 @@ export const tableObjectShadow = (hours: number, position: { x: number; y: numbe
     'inset 0 -3px 1px rgba(0,0,0,0.3)',
     '0 3px 1px rgba(0,0,0,0.45)',
     // Low sun casts longer, stronger shadows.
-    ...(frame.globalLights ? [project(frame.source, frame.altitude, 0.22 + frame.daylight * 0.2 + frame.twilight * 0.18)] : []),
+    ...(frame.globalLights && frame.skyLight ? [project(frame.source, frame.altitude, 0.22 + frame.daylight * 0.2 + frame.twilight * 0.18)] : []),
   ];
   for (const light of lights) {
     const reach = lightFalloff(Math.hypot(position.x - light.position.x, position.y - light.position.y), light.radius ?? DEFAULT_LIGHT_RADIUS);
@@ -338,6 +347,7 @@ export const standeeLighting = (
   lights: readonly TableLight[] = [],
   yaw = 0,
 ): StandeeLighting => {
+  if (getMapLightingRenderer() === 'off') return { brightness: 1, warmth: 0, lightColor: { r: 255, g: 255, b: 255 }, rim: null, shadows: [] };
   const lit = standeeLightingInWorld(hours, position, standeeHeight, lights);
   if (!yaw) return lit;
   const r = (yaw * Math.PI) / 180;
@@ -368,7 +378,7 @@ const standeeLightingInWorld = (
       opacity: clamp01(opacity),
     };
   };
-  const shadows = frame.globalLights ? [cast('sky', frame.source, frame.altitude, 0.2 + frame.daylight * 0.16 + frame.twilight * 0.14)] : [];
+  const shadows = frame.globalLights && frame.skyLight ? [cast('sky', frame.source, frame.altitude, 0.2 + frame.daylight * 0.16 + frame.twilight * 0.14)] : [];
   let rim: StandeeLighting['rim'] = null;
   let rimReach = 0;
   for (const light of lights) {
@@ -385,7 +395,7 @@ const standeeLightingInWorld = (
   }
   const dominant = lights.find((light) => light.id === sample.dominantLightId);
   return {
-    brightness: frame.globalLights ? 0.35 + 0.75 * sample.total : 1,
+    brightness: frame.globalLights ? Math.min(1.1, 1 - frame.darkness + 1.1 * (1 - (1 - frame.ambient) * (1 - sample.local))) : 1,
     warmth: clamp01(sample.local * (1 - frame.daylight * 0.7)),
     lightColor: dominant ? hexToRgb(dominant.color ?? DEFAULT_LIGHT_COLOR) : frame.sunColor,
     rim,

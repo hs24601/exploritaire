@@ -7,6 +7,8 @@ import { detectFxQuality } from '../atmosphere';
 import './MomentumAbilityFlight.css';
 import './FoodCollectionFx.css';
 
+const battleSource=(id:string,owner:string,field:HTMLElement|null)=>
+ field?.querySelector(`[data-battle-actor="aldan-seed"][data-active-leader="${owner}"]`) || id==='summon-cir' && field?.querySelector('[data-battle-actor="aldan-seed"]') ? 'aldan-seed' : owner;
 export type AbilityCast={id:MomentumSkillId;targetId:string;card:HTMLElement;origin:DOMRect};
 export function MomentumAbilityFlight({cast,fieldRef,paused,onImpact,onComplete}:{cast:AbilityCast;fieldRef:RefObject<HTMLElement|null>;paused:boolean;onImpact:()=>void;onComplete:()=>void}) {
   const root=useRef<HTMLDivElement>(null),animations=useRef(new Set<Animation>()),held=useRef(new Set<Animation>());
@@ -23,7 +25,7 @@ export function MomentumAbilityFlight({cast,fieldRef,paused,onImpact,onComplete}
       // StrictMode may dispose the first setup immediately; no impact may
       // commit until this mounted instance survives that cleanup boundary.
       await Promise.resolve();if(cancelled)return;
-      const skill=MOMENTUM_SKILLS[cast.id],source=field?.querySelector<HTMLElement>(isCirMomentumSkill(cast.id)?'.momentum-engine__chamber':`[data-battle-actor="${skill.actorId}"] .battle-field__actor-card`),target=field?.querySelector<HTMLElement>(cast.targetId.startsWith('card:')?`[data-battle-card="${cast.targetId.slice(5)}"]`:`[data-battle-target="${cast.targetId}"]`);
+      const skill=MOMENTUM_SKILLS[cast.id],source=field?.querySelector<HTMLElement>(cast.id==='meteor-impact'?'.cir-meteor-foundation':isCirMomentumSkill(cast.id)?'.momentum-engine__chamber':`[data-battle-actor="${battleSource(cast.id,skill.actorId,field)}"] .battle-field__actor-card`),target=field?.querySelector<HTMLElement>(cast.targetId.startsWith('card:')?`[data-battle-card="${cast.targetId.slice(5)}"]`:`[data-battle-target="${cast.targetId}"]`);
       if(!source || !target){callbacks.current.onComplete();return;}
       const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
       const shell=document.createElement('div');shell.className='ability-cast__shell';host.append(shell);

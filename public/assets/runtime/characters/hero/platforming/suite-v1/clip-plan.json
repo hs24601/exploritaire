@@ -1,0 +1,154 @@
+[
+  {
+    "id": "idle",
+    "name": "Standing idle",
+    "loop": true,
+    "fps": 8,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "sit",
+    "name": "Seated idle",
+    "loop": true,
+    "fps": 8,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "walk",
+    "name": "Walk",
+    "loop": true,
+    "fps": 12,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "run",
+    "name": "Run / gallop",
+    "loop": true,
+    "fps": 16,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "crouch",
+    "name": "Crouch transition",
+    "loop": false,
+    "fps": 12,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "crawl",
+    "name": "Crawl",
+    "loop": true,
+    "fps": 12,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "jump",
+    "name": "Jump takeoff to apex",
+    "loop": false,
+    "fps": 14,
+    "anchor": "hip",
+    "frameCount": 8
+  },
+  {
+    "id": "fall-land",
+    "name": "Fall and land",
+    "loop": false,
+    "fps": 14,
+    "anchor": "hip",
+    "frameCount": 8
+  },
+  {
+    "id": "hurdle",
+    "name": "Hurdle / vault",
+    "loop": false,
+    "fps": 14,
+    "anchor": "hip",
+    "frameCount": 8
+  },
+  {
+    "id": "ledge-hang",
+    "name": "Ledge hang",
+    "loop": true,
+    "fps": 8,
+    "anchor": "grip",
+    "frameCount": 8
+  },
+  {
+    "id": "ledge-climb",
+    "name": "Ledge climb / mantle",
+    "loop": false,
+    "fps": 8,
+    "anchor": "grip",
+    "frameCount": 8
+  },
+  {
+    "id": "wall-slide-jump",
+    "name": "Wall slide and wall jump",
+    "loop": false,
+    "fps": 12,
+    "anchor": "hip",
+    "frameCount": 8
+  },
+  {
+    "id": "brake-turn",
+    "name": "Brake and turn",
+    "loop": false,
+    "fps": 12,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "hurt",
+    "name": "Hurt and recover",
+    "loop": false,
+    "fps": 12,
+    "anchor": "hip",
+    "frameCount": 8
+  },
+  {
+    "id": "defeat",
+    "name": "Tumble and down",
+    "loop": false,
+    "fps": 10,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "interact",
+    "name": "Sniff and bark interaction",
+    "loop": false,
+    "fps": 10,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "celebrate",
+    "name": "Celebrate",
+    "loop": false,
+    "fps": 12,
+    "anchor": "feet",
+    "frameCount": 8
+  },
+  {
+    "id": "swim",
+    "name": "Swim / paddle",
+    "loop": true,
+    "fps": 12,
+    "anchor": "hip",
+    "frameCount": 8
+  },
+  {
+    "id": "sit-stand",
+    "name": "Sit to stand",
+    "loop": false,
+    "fps": 12,
+    "anchor": "feet",
+    "frameCount": 8
+  }
+]

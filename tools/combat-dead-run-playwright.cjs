@@ -69,12 +69,13 @@ async function dragTop(page, column, target) {
         await page.screenshot({ path: `${OUT}/${tag}-board.png` });
         failures.push(...await checkBoard(page, tag, width, height));
         const columns = await page.locator('.battle-field__rack > .battle-field__column').count();
-        if (columns !== 6) failures.push(`${tag}: ${columns} tableau columns`);
+        if (columns !== (id === '1000' ? 18 : 6)) failures.push(`${tag}: ${columns} tableau columns`);
         if (await page.locator('[data-battle-slot="mochi"]').count()) failures.push(`${tag}: Mochi is in the party`);
         const intent = page.locator('.battle-intent-slot');
         // 1000's Dusk Dragon casts Deep Breath on its first turn, so the board opens without it.
         if ((await intent.count()) !== (['019', '1000'].includes(id) ? 0 : 1)) failures.push(`${tag}: intent card count`);
-        if ((await page.locator('.battle-pity-button').count()) !== (['022', '024', '1000'].includes(id) ? 1 : 0)) failures.push(`${tag}: pity button count`);
+        if (await page.locator('.battle-pity-button').count()) failures.push(`${tag}: legacy pity button remains`);
+        if ((await page.locator('button[data-status="every-dog-has-her-day"] b').textContent()) !== '3') failures.push(`${tag}: Hero’s stock-flip charges`);
         if ((await page.locator('.battle-hold-slot').count()) !== (['023', '024'].includes(id) ? 1 : 0)) failures.push(`${tag}: hold slot count`);
         if ((await page.locator('[data-battle-slot="empty"]').count()) !== (id === '1000' ? 0 : 1)) failures.push(`${tag}: empty foundation count`);
 
@@ -117,10 +118,10 @@ async function dragTop(page, column, target) {
           await page.keyboard.press('Escape');
           await page.locator('.ability-fan').waitFor({ state: 'detached' }).catch(() => failures.push(`${tag}: radial did not close`));
           await page.locator('.battle-withdraw-button').click();
-          await page.locator('.ability-fan__target[data-skill-target="withdraw-row:1"]').click();
+
           await page.waitForTimeout(400);
           if (await page.locator('.battle-field').getAttribute('data-team-turn') !== 'enemy') failures.push(`${tag}: Withdraw did not hand off`);
-          if (!(await page.locator('.tableau-plan[data-plan-by="party"]').count())) failures.push(`${tag}: no Withdraw row marker`);
+          if (!(await page.locator(id==='1000' ? '.battle-spatial-lane[data-pending-redeal]' : '.tableau-plan[data-plan-by="party"]').count())) failures.push(`${tag}: no Withdraw row marker`);
           await page.waitForTimeout(1600);
           await page.screenshot({ path: `${OUT}/${tag}-withdraw-plan.png` });
           failures.push(...await checkBoard(page, `${tag} withdraw`, width, height));

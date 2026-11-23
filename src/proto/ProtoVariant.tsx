@@ -49,7 +49,7 @@ import { AbilityTray } from './components/AbilityTray';
 import { availableMovesFor } from './rules/battleAbilities';
 import { ActorPlaytestEditor, DEFAULT_ACTOR_DESCRIPTION } from './components/ActorPlaytestEditor';
 import { ArtSettings } from './components/ArtSettings';
-import { useGlobalLights, setGlobalLightsEnabled, globalLightsUnavailable } from './globalLighting';
+import { useGlobalLights, setGlobalLightsEnabled } from './globalLighting';
 import { setFxPreference, useFxPreference, useFxQuality, type FxPreference } from './fxQuality';
 
 import { ACTOR_HOLO_ART } from './art/actorCardArt';
@@ -289,6 +289,7 @@ export const ProtoVariant = ({ authoring = false }: { authoring?: boolean } = {}
   const fxPreference = useFxPreference(), fxQuality = useFxQuality();
   // Guidance highlights every playable tableau card; off by default.
   const [moveGuidance, setMoveGuidance] = useState(false);
+  const [moveGuidanceHeld, setMoveGuidanceHeld] = useState(false);
   const [lightReadoutVisible, setLightReadoutVisible] = useState(false);
   const lighting = getTableLighting(tableHours);
   // Each later day uses the same midnight opening.
@@ -1954,7 +1955,7 @@ const selectBiome = (biomeId: string) => {
   };
   const mapSettings = (travelControls?: React.ReactNode) => (<div className="proto-settings-host" data-editor-safe="true">{editorToggle}<ArtSettings>{travelControls}
                   <label className="art-settings__toggle"><input type="checkbox" checked={mapTravelTest} onChange={event => { setMapTravelTest(event.target.checked); setMobilePanel('map'); }} />Map tableau (test)</label>
-                  <label className="art-settings__toggle" title={globalLightsUnavailable() ? 'Global lighting is disabled on mobile devices.' : 'Apply global day/night lighting and haze. Uncheck for a bright view; local lights remain independent.'}><input type="checkbox" checked={globalLights} disabled={globalLightsUnavailable()} onChange={(event) => setGlobalLightsEnabled(event.target.checked)} />Global lights</label>
+                  <label className="art-settings__toggle" title='Apply global day/night lighting and haze. Uncheck for a bright view; local lights remain independent.'><input type="checkbox" checked={globalLights} onChange={(event) => setGlobalLightsEnabled(event.target.checked)} />Global lights</label>
                   <label className="art-settings__toggle" title="Auto picks Low on phones and steps down after sustained slow frames.">Effects <select aria-label="Effects quality" value={fxPreference} onChange={event => setFxPreference(event.target.value as FxPreference)}><option value="auto">Auto ({fxQuality === 'low' ? 'Low' : 'High'})</option><option value="high">High</option><option value="low">Low</option></select></label>
                   <div className="art-settings__section" aria-label="Lighting controls">
                   <span>Day {state.day} · {lighting.phase} · {String(Math.floor(lighting.hour)).padStart(2, '0')}:{String(Math.floor((lighting.hour % 1) * 60)).padStart(2, '0')}</span>
@@ -2038,7 +2039,7 @@ const selectBiome = (biomeId: string) => {
               {state.journey ? (mapTravelActive ? null : travelTableau) : !state.selectedBiomeId && !combatDemoOpen ? (<>
                 <div className="proto-main-tableau min-h-0 rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))]" aria-label="Empty tableau" style={{gridArea:"1 / 1 / -1 / -1"}} />
               </>) : dangerSelected || combatDemoOpen ? (
-                <BattleTableauField hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} onSceneChange={setBattleScene}
+                <BattleTableauField keruExpedition={state.keruExpedition} onKeruExpeditionChange={saved=>setState(prev=>JSON.stringify(prev.keruExpedition)===JSON.stringify(saved)?prev:{...prev,keruExpedition:saved})} hours={tableHours} lights={tableLights} active={combatDemoOpen} onWatch={watchBattleScene} onSceneChange={setBattleScene}
                   heroInspiration={state.actorInspiration[0]} onRedraw={(actorId) => { if (actorId === 'hero') setState((prev) => ({ ...prev, actorInspiration: prev.actorInspiration.map((value, index) => index === 0 ? Math.max(0, value - REDRAW_INSPIRATION_COST) : value) })); }} />
               ) : pondSelected ? (
                 <PondField pond={state.pond} angler={pondAngler?.label ?? null} tired={Boolean(pondAngler) && !canSpendInspiration(state.inspiration, POND_MISS_INSPIRATION)}
@@ -2048,7 +2049,7 @@ const selectBiome = (biomeId: string) => {
               <div inert={!!foundQuest} className="proto-main-tableau proto-main-tableau--solver grid min-h-0 grid-cols-1 items-center gap-[clamp(0.35rem,0.9vmin,0.6rem)] overflow-hidden rounded-[calc(var(--classic-radius)*1.3)] border border-[#8ef2d4]/18 bg-[linear-gradient(180deg,rgba(14,22,20,0.44),rgba(9,12,14,0.28))] p-[clamp(0.45rem,1.2vmin,0.75rem)]">
                 <div className="proto-tableau-heading">
                   {isDenRest(state) && <div className="proto-rest-status" role="status" aria-label="Den rest status"><span>Hero’s Den · Rest</span><span>INSP {state.inspiration}/{state.maxInspiration}</span><span>{state.tableau.every(column => !column.length) ? 'Perfect rest' : !state.stock.length && !hasNormalPlayerTableauMove(state) ? 'Rest finished' : `${state.tableau.reduce((sum, column) => sum + column.length, 0)} left`}</span>{state.ordinaryDay?.bedtime && !state.ordinaryDay.complete && <button type="button" disabled={Boolean(cardTransport)} onClick={finishResting}>Finish resting</button>}</div>}
-                  <TableauSolveControls disabled={!!foundQuest || !state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} guidance={moveGuidance} onGuidanceChange={setMoveGuidance} />
+                  <TableauSolveControls controlShortcut onHighlightHeldChange={setMoveGuidanceHeld} disabled={!!foundQuest || !state.worldActors.some((actor) => actor.location === 'foundation' && actor.biomeId === state.selectedBiomeId)} key={state.selectedBiomeId ?? 'main'} onStep={solveMainStep} onStart={startSolver} guidance={moveGuidance} onGuidanceChange={setMoveGuidance} />
                 </div>
                 <TableauPlayArea biome={fieldBiome} rig={fieldRig} hours={tableHours} immersive={false} columns={isDenRest(state)?REST_COLUMNS:TABLEAU_COLUMNS} rows={isDenRest(state)?REST_ROWS:Math.max(1,...tableState.tableau.map(c=>c.length))}>
                 <div className={`proto-tableau-stage${cameraTilted ? ' proto-tableau-stage--tilted' : ''}`}>
@@ -2108,7 +2109,7 @@ const selectBiome = (biomeId: string) => {
                                 if(targetIndexes.includes(index))playColumnToFoundation(columnIndex,index);
                               } : undefined}
                               transporting={transporting}
-                              active={utility ? utilityCost !== null : (moveGuidance && (playable || encounterReady)) || choosingTarget}
+                              active={utility ? utilityCost !== null : ((moveGuidance || moveGuidanceHeld) && (playable || encounterReady)) || choosingTarget}
                               mobilityTarget={mobilityTarget}
                               muted={!isTopCard && !utility}
                               buried={!isTopCard}

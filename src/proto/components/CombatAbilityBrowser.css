@@ -46,3 +46,10 @@
 .ability-browser__editor-actions { display:flex; flex-wrap:wrap; gap:8px; }
 .ability-browser__editor-actions button[type='submit'] { border-color:#d8bf7b; background:#4b4027; color:#fff0bd; }
 .ability-browser__error { margin:0; color:#ffb4a8; }
+.ability-browser__advanced summary { color:#d6e2da; cursor:pointer; padding:5px 0; font-size:16px; }
+.ability-browser__advanced summary span { color:#ffe3ad; }
+.ability-browser__advanced > div { display:grid; gap:10px; padding:8px 0 3px; }
+.proto-editor .ability-browser { background:radial-gradient(ellipse at 85% 0%,#243c30 0,transparent 38%),#101d1b; font-family:system-ui,sans-serif; }
+.proto-editor .ability-browser__controls,.proto-editor .ability-browser__card { border-color:#304840; border-radius:14px; background:#14241f; box-shadow:none; }
+.proto-editor .ability-browser__eyebrow,.proto-editor .ability-browser__chips-label { color:#b9cda9; }
+.proto-editor .ability-browser__chip { font-family:system-ui,sans-serif; font-size:14px; }

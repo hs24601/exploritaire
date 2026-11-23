@@ -7,6 +7,10 @@ const receipt=(s:ReturnType<typeof base>,actorId='hero')=>{
  return playCard(next,0,actorId);
 };
 describe('shared Momentum and Withdraw',()=>{
+ it('adds one without rounding away an existing fractional reserve',()=>{
+  const s=base();s.momentum={...s.momentum!,value:.123456,earned:.123456};
+  const next=receipt(s);expect(next.momentum?.value).toBe(s.momentum.value+1);expect(next.momentum?.earned).toBe(s.momentum.earned+1);expect(next.momentum?.lastGain).toBe(1);
+ });
  it('earns a fixed point shared by both actors, independently of damage and AP',()=>{
   let s=base();s=receipt(s);s=receipt(s,'mochi');s=receipt(s);
   expect(s.momentum).toMatchObject({value:3,earned:3,spent:0,sequence:3,lastActorId:'hero'});

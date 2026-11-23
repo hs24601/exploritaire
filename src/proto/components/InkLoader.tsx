@@ -1,3 +1,4 @@
+import {HeroLoaderArt} from '../../ui/HeroLoader';
 import { useId } from 'react';
 import './InkLoader.css';
 
@@ -7,21 +8,7 @@ export function InkLoader({ done, total, cover = false }: { done: number; total:
   const fraction = Math.max(0, Math.min(1, done / Math.max(1, total)));
   return <div className={cover ? 'ink-loader ink-loader--cover' : 'ink-loader'} data-media-loading="true">
     <div className="ink-loader__content">
-      <svg className="ink-loader__hero" viewBox="490 960 350 420" role="img" aria-label="Hero sitting with a gently wagging tail">
-        <defs>
-          <clipPath id={`${id}-hero-pose`}><rect x="490" y="960" width="350" height="420" /></clipPath>
-          <clipPath id={`${id}-tail`}><path d="M527 1245 Q542 1235 560 1247 L574 1286 554 1310 527 1305Z" /></clipPath>
-          <mask id={`${id}-body`} maskUnits="userSpaceOnUse" x="490" y="960" width="350" height="420">
-            <rect x="490" y="960" width="350" height="420" fill="white" />
-            <path d="M527 1245 Q542 1235 560 1247 L574 1286 554 1310 527 1305Z" fill="black" />
-          </mask>
-          <image id={`${id}-pose`} href={`${import.meta.env.BASE_URL}assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-sitting-low-v1.png`} width="1338" height="1383" />
-        </defs>
-        <g clipPath={`url(#${id}-hero-pose)`}>
-          <g className="ink-loader__tail"><use href={`#${id}-pose`} clipPath={`url(#${id}-tail)`} /></g>
-          <use href={`#${id}-pose`} mask={`url(#${id}-body)`} />
-        </g>
-      </svg>
+      <HeroLoaderArt className="ink-loader__hero"/>
       <p className="ink-loader__title" role="status">Finding Hero so we can assemble...</p>
       <svg className="ink-loader__bar" viewBox="0 0 600 56" role="progressbar"
         aria-label="Loading game assets" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}

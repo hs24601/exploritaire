@@ -19,7 +19,8 @@ export function tintKhadGround(material: THREE.MeshLambertMaterial) {
 }
 
 /** Small canvas-authored brush atlas: stable world decoration, never game resources. */
-export function createTableauGroundCover(root: THREE.Group, pixel: boolean, palette: 'woodland' | 'dirt' = 'woodland', preset: PaintPreset | false = DEFAULT_PAINT, khadTint = false) {
+export type GroundCoverRegion = { minX: number; maxX: number; minZ: number; maxZ: number; islands?: number; grassScale?: number; grass?: boolean };
+export function createTableauGroundCover(root: THREE.Group, pixel: boolean, palette: 'woodland' | 'dirt' = 'woodland', preset: PaintPreset | false = DEFAULT_PAINT, khadTint = false, region?: GroundCoverRegion) {
   let seed = 81723;
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const textures: THREE.Texture[] = [];
@@ -72,10 +73,18 @@ export function createTableauGroundCover(root: THREE.Group, pixel: boolean, pale
     }
   });
   function patch(mat: THREE.Material, x: number, z: number, width: number, depth: number, y: number) {
+    if (region) {
+      width = Math.min(width, region.maxX - region.minX); depth = Math.min(depth, region.maxZ - region.minZ);
+      x = THREE.MathUtils.clamp(x, region.minX + width / 2, region.maxX - width / 2);
+      z = THREE.MathUtils.clamp(z, region.minZ + depth / 2, region.maxZ - depth / 2);
+    }
     const mesh = new THREE.Mesh(geometry, mat); mesh.rotation.x = -Math.PI / 2;
     mesh.position.set(x, y, z); mesh.scale.set(width, depth, 1); group.add(mesh);
   }
   function tuft(x: number, z: number, size: number, y = 0) {
+    if (region?.grass === false) return;
+    size *= region?.grassScale ?? 1;
+    if (region && (x - size < region.minX || x + size > region.maxX || z - size < region.minZ || z + size > region.maxZ)) return;
     for (let i = 0; i < 2; i++) {
       const mesh = new THREE.Mesh(geometry, grass);
       mesh.position.set(x, y + size * .47, z); mesh.scale.set(size * 1.5, size, 1);
@@ -83,12 +92,14 @@ export function createTableauGroundCover(root: THREE.Group, pixel: boolean, pale
     }
   }
   // Low contrast islands instead of uniformly distributed rectangular flecks.
-  for (let i = 0; i < 38; i++) {
-    const x = (random() - .5) * 17, z = -12 + random() * 27;
-    patch(wash, x, z, 3 + random() * 3, 2 + random() * 3, .018);
+  for (let i = 0; i < (region?.islands ?? 38); i++) {
+    const x = region ? region.minX + random() * (region.maxX - region.minX) : (random() - .5) * 17;
+    const z = region ? region.minZ + random() * (region.maxZ - region.minZ) : -12 + random() * 27;
+    patch(wash, x, z, (region ? .7 : 3) + random() * (region ? 1.1 : 3), (region ? .6 : 2) + random() * (region ? 1 : 3), .018);
     if ((palette !== 'dirt' || i % 5 === 0) && (Math.abs(x) > 1.8 || z < -5 || z > 3)) tuft(x, z, .65 + random() * .6);
   }
   return {
+    surfaces: {wash,shadow,grass},
     plant(x: number, z: number, width: number, y: number) {
       patch(wash, x, z, width * 1.5, width, y + .024);
       patch(shadow, x, z, width * .9, width * .48, y + .03);

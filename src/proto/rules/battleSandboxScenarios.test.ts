@@ -35,17 +35,17 @@ describe('combat training scenarios',()=>{
   expect(tickBattle(s,100)).toBe(s);expect(verifyEveryPath(s)).toBeGreaterThan(0);
  });
  it('002 reflects one damage onto the actual attacker on every hit, including defeat',()=>{
-  let s=createCombatSandboxScenario('002');expect(s.foes[0]).toMatchObject({hp:4,thorns:1});
+  let s=createCombatSandboxScenario('002');const startingHP=s.party.reduce((sum,a)=>sum+a.hp,0);expect(s.foes[0]).toMatchObject({hp:4,thorns:1});
   for(let i=0;i<4;i++){
    const m=moves(s).find(m=>m.actorId===(i%2?'mochi':'hero')) ?? moves(s)[0],before=s.party.find(a=>a.id===m.actorId)!;s=playCard(s,m.column,m.actorId);
    expect(s.party.find(a=>a.id===m.actorId)!.hp).toBe(before.hp-1);
    expect(s.events.filter(e=>e.kind==='enemy-hit' && e.label==='Thorns')).toHaveLength(i+1);
   }
-  expect(s.result).toBe('won');expect(s.foes[0].hp).toBe(0);expect(s.party.reduce((sum,a)=>sum+a.hp,0)).toBe(18);
+  expect(s.result).toBe('won');expect(s.foes[0].hp).toBe(0);expect(s.party.reduce((sum,a)=>sum+a.hp,0)).toBe(startingHP-4);
  });
  it('Thorns applies to direct abilities once per attack, without reflection recursion',()=>{
   let s=createCombatSandboxScenario('002');s={...s,maxAP:true};const n=applyAttack(s,'hero:Nip','khad-root');
-  expect(n.party[0].hp).toBe(11);expect(n.party[1].hp).toBe(10);expect(n.events.filter(e=>e.label==='Thorns')).toHaveLength(1);
+  expect(n.party[0].hp).toBe(s.party[0].hp-1);expect(n.party[1].hp).toBe(s.party[1].hp);expect(n.events.filter(e=>e.label==='Thorns')).toHaveLength(1);
   expect(cuesFor(n.events).some(cue=>cue.kind==='attack' && cue.actorId==='khad-root')).toBe(false);
  });
  it('003 permits an early END TURN and retains its authored Withdraw deal',()=>{

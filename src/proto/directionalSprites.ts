@@ -8,14 +8,15 @@ const wrap = (angle: number) => Math.atan2(Math.sin(angle), Math.cos(angle));
  * Direction is relative to the actor's heading, never to the actor's team or screen position.
  * Elevated art and a world-aligned overhead frame cover the full upper camera hemisphere.
  */
-export function selectSpriteView(heading: number, viewYaw: number, elevation: number, previous?: SpriteView): SpriteView {
+export function selectSpriteView(heading: number, viewYaw: number, elevation: number, previous?: SpriteView, highThreshold = 40 * Math.PI / 180): SpriteView {
   const relative = wrap(viewYaw - heading), magnitude = Math.abs(relative);
   let direction = Math.min(4, Math.round(magnitude / (TAU / 8)));
   if (previous && Math.abs(magnitude - previous.direction * Math.PI / 4) < Math.PI / 8 + .055) direction = previous.direction;
-  let tier: SpriteView['elevation'] = elevation > 72 * Math.PI / 180 ? 'top' : elevation > 40 * Math.PI / 180 ? 'high' : 'low';
+  const elevationHysteresis = 4 * Math.PI / 180;
+  let tier: SpriteView['elevation'] = elevation > 72 * Math.PI / 180 ? 'top' : elevation > highThreshold ? 'high' : 'low';
   if (previous?.elevation === 'top' && elevation > 68 * Math.PI / 180) tier = 'top';
-  else if (previous?.elevation === 'high' && elevation > 36 * Math.PI / 180 && elevation < 76 * Math.PI / 180) tier = 'high';
-  else if (previous?.elevation === 'low' && elevation < 44 * Math.PI / 180) tier = 'low';
+  else if (previous?.elevation === 'high' && elevation > highThreshold - elevationHysteresis && elevation < 76 * Math.PI / 180) tier = 'high';
+  else if (previous?.elevation === 'low' && elevation < highThreshold + elevationHysteresis) tier = 'low';
   return { direction, elevation: tier, flip: tier === 'top' || direction === 0 || direction === 4 ? 1 : relative >= 0 ? 1 : -1 };
 }
 

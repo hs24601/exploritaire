@@ -31,7 +31,7 @@ const smooth = (from: number, to: number, v: number) => {
 
 /** Crossfade the visual sky at the horizon. Gameplay retains its original clock. */
 export const atmosphereSky = (frame: TableLightFrame) => {
-  const sun = frame.globalLights === false ? 0 : smooth(5.75, 6.5, frame.hour) * (1 - smooth(17.5, 18.25, frame.hour));
+  const sun = frame.globalLights === false || !frame.skyLight ? 0 : smooth(5.75, 6.5, frame.hour) * (1 - smooth(17.5, 18.25, frame.hour));
   const daylightFrame = getTableLighting(Math.max(6.01, Math.min(17.99, frame.hour)));
   const moonFrame = getTableLighting(frame.hour < 12 ? Math.min(5.99,frame.hour) : Math.max(18.01,frame.hour));
   const moonColor = { r: 154, g: 183, b: 255 };
@@ -44,7 +44,7 @@ export const atmosphereSky = (frame: TableLightFrame) => {
   // clock's instantaneous sun/moon switch. The handover passes through overhead.
   const slope = (axis:'x'|'y') => daylightFrame.source[axis]/Math.max(110,daylightFrame.altitude)*sun
     +moonFrame.source[axis]/Math.max(110,moonFrame.altitude)*(1-sun);
-  return { sun, color, strength: frame.globalLights === false ? 0 : (0.33 + 0.67 * daylightFrame.twilight) * sun + 0.025 * (1 - sun),
+  return { sun, color, strength: frame.globalLights === false || !frame.skyLight ? 0 : (0.33 + 0.67 * daylightFrame.twilight) * sun + 0.025 * (1 - sun),
     slope: { x:slope('x'),y:slope('y') },
     night: 1 - smooth(0, 0.32, frame.daylight),
     mist: 0.25 + (1 - frame.daylight) * 0.5 };

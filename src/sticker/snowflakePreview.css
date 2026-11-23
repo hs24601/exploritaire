@@ -1,0 +1,29 @@
+:root {
+  color-scheme: dark;
+  color: #e9f4ff;
+  background: #071220 radial-gradient(ellipse at 50% 42%, #233d59, #071220 65%) fixed;
+  font: 16px/1.5 system-ui, sans-serif;
+}
+
+body { margin: 0; }
+
+.snowflake-preview {
+  --stage-size: min(72vw, 30rem, 54svh);
+  box-sizing: border-box;
+  min-block-size: 100svh;
+  position: relative;
+  overflow: clip;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.snowflake-preview h1 { margin: 0; font-size: clamp(1.5rem, 4vw, 2.25rem); line-height: 1.15; }
+.snowflake-preview p { margin: 4px 0 0; color: #b9cfe6; }
+.snowflake-preview__stage { position: relative; isolation: isolate; inline-size: var(--stage-size); }
+.snowflake-preview__copy {
+  position: absolute;
+  top: calc(50% + var(--stage-size) * .63);
+  left: 12px;
+  right: 12px;
+}

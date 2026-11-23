@@ -15,6 +15,15 @@
 .scenario-notes__panel p { margin:0 0 10px; }
 .scenario-notes__panel ol { margin:0; padding-left:22px; list-style:decimal; }
 .scenario-notes__panel li { margin:0 0 10px; padding-left:4px; }
+/* A compared option's pros and cons (1001 layout lab), replacing the three note pages. */
+.scenario-notes__option { margin:0; }
+.scenario-notes__option h3 { margin:0 0 4px; color:#fff0bd; font:600 17px/1.25 Georgia,serif; }
+.scenario-notes__option h3 span { color:#d8bf7b; font-weight:400; }
+.scenario-notes__option h4 { margin:6px 0 2px; color:#cfdcd2; font:600 16px/1.3 Georgia,serif; }
+.scenario-notes__option ul { margin:0; padding-left:20px; }
+.scenario-notes__option ul[data-kind='pros'] { list-style:'+  '; }
+.scenario-notes__option ul[data-kind='cons'] { list-style:'−  '; }
+.scenario-notes__option li { margin:0 0 4px; }
 .scenario-notes button:focus-visible, .scenario-notes__panel:focus-visible { outline:3px solid #91d9ee; outline-offset:-3px; }
 /* Narrower desktop boards leave less room right of the tableau. */
 @media (max-width:1500px) { .scenario-notes { --scenario-notes-w:300px; } }

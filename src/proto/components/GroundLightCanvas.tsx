@@ -1,5 +1,6 @@
 import { gameTime } from '../../gameTime';
 import { useEffect, useRef } from 'react';
+import { useDarknessStrength } from '../mapLightingRenderer';
 import type { CameraState } from '../../hooks/useCameraControls';
 import { getVisualTableLighting, type TableLight, type LightOccluder } from '../protoLighting';
 import { useGlobalLights } from '../globalLighting';
@@ -20,6 +21,7 @@ type Props = {
  * intermediate surface enormous near the camera. The same finite plane now
  * costs at most 512×320 output pixels, regardless of zoom or camera descent. */
 export function GroundLightCanvas(props:Props) {
+  const darknessStrength = useDarknessStrength();
   const globalLights=useGlobalLights();
   const canvas=useRef<HTMLCanvasElement>(null),input=useRef(props);input.current=props;
   const redraw=useRef<()=>void>(()=>{});
@@ -37,7 +39,7 @@ export function GroundLightCanvas(props:Props) {
     const fragment=compile(gl.FRAGMENT_SHADER,`precision highp float;
       uniform sampler2D wash; uniform vec2 view, raster, plane;
       uniform vec3 tilt; uniform float aim;
-      uniform vec4 liveCamera, washCamera;
+      uniform vec4 liveCamera, washCamera, unlit;
       vec2 turn(vec2 p,float angle){float c=cos(angle),s=sin(angle);return vec2(c*p.x-s*p.y,s*p.x+c*p.y);}
       void main(){
         vec2 screen=(gl_FragCoord.xy/raster-.5)*view; screen.y=-screen.y-aim;
@@ -49,7 +51,7 @@ export function GroundLightCanvas(props:Props) {
         // light pools stays throttled; their ground anchors do not lag behind.
         vec2 world=(turn(p,-liveCamera.w)-liveCamera.xy)/liveCamera.z;
         vec2 uv=turn(world*washCamera.z+washCamera.xy,washCamera.w)/plane+.5;
-        if(any(lessThan(uv,vec2(0.)))||any(greaterThan(uv,vec2(1.))))discard;
+        if(any(lessThan(uv,vec2(0.)))||any(greaterThan(uv,vec2(1.)))){gl_FragColor=unlit;return;}
         gl_FragColor=texture2D(wash,uv);
       }`);
     if(!vertex||!fragment){if(vertex)gl.deleteShader(vertex);if(fragment)gl.deleteShader(fragment);props.onUnavailable();return;}
@@ -63,7 +65,7 @@ export function GroundLightCanvas(props:Props) {
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     // Canvas pixels arrive premultiplied, matching the browser compositor.
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
-    const uniforms=Object.fromEntries(['wash','view','raster','plane','tilt','aim','liveCamera','washCamera'].map(name=>[name,gl.getUniformLocation(program,name)]));
+    const uniforms=Object.fromEntries(['wash','view','raster','plane','tilt','aim','liveCamera','washCamera','unlit'].map(name=>[name,gl.getUniformLocation(program,name)]));
     const source=document.createElement('canvas'),ctx=source.getContext('2d')!;
     const cache:GlobalLightCache={canvas:document.createElement('canvas'),key:''};
     const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -90,6 +92,8 @@ export function GroundLightCanvas(props:Props) {
       gl.viewport(0,0,w,h);gl.useProgram(program);gl.bindTexture(gl.TEXTURE_2D,texture);
       if(repaint)gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);
       gl.uniform1i(uniforms.wash,0);gl.uniform2f(uniforms.view,width,height);gl.uniform2f(uniforms.raster,w,h);gl.uniform2f(uniforms.plane,plane.width,plane.height);
+      const frame=getVisualTableLighting(current.hours);
+      gl.uniform4f(uniforms.unlit,frame.skyTint.r/255*frame.darkness,frame.skyTint.g/255*frame.darkness,frame.skyTint.b/255*frame.darkness,frame.darkness);
       const angle=tilt.angle*Math.PI/180;gl.uniform3f(uniforms.tilt,Math.cos(angle),Math.sin(angle),tilt.perspective);gl.uniform1f(uniforms.aim,tilt.aimY??0);
       for(const [name,camera] of [['liveCamera',live],['washCamera',painted!]] as const)
         gl.uniform4f(uniforms[name],camera.x,camera.y,camera.scale,(camera.yaw??0)*Math.PI/180);
@@ -102,6 +106,6 @@ export function GroundLightCanvas(props:Props) {
     return()=>{stopped=true;gameTime.clearTimeout(timer);redraw.current=()=>{};unsubscribe();clock();surface.removeEventListener('webglcontextlost',lost);
       gl.deleteTexture(texture);gl.deleteBuffer(buffer);gl.deleteProgram(program);};
   },[props.getCamera,props.getTilt,props.onCameraFrame,props.onUnavailable]);
-  useEffect(()=>{redraw.current();},[globalLights,props.hours,props.lights,props.view.width,props.view.height]);
+  useEffect(()=>{redraw.current();},[darknessStrength,globalLights,props.hours,props.lights,props.view.width,props.view.height]);
   return <canvas ref={canvas} aria-hidden="true" data-ground-light="bounded" className="pointer-events-none absolute inset-0 z-0" style={{width:'100%',height:'100%'}}/>;
 }

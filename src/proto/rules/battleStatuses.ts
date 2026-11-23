@@ -1,6 +1,11 @@
+import {gritFromEvents} from './grit';
+import {hasSnowflake} from './snowflakeReward';
+import { moteOnHit } from './lightMotes';
+import { canUseCir, useCir, cirSkillCost, cirInvokeCost } from './cirCompanion';
+import { canUseKeruAbilities } from './keruLeadership';
 import { indominableAfterDamage } from './indominable';
-import { AP_CAP, actorAP, defaultStrike, drawCard, tableauWidth, foeAlive, actorAlive, setActorTarget, spendAP, type BattleActor, type BattleEvent, type BattleFoe, type BattleState } from './battle';
-import { STATUS_META, STATUS_SKILLS, STATUS_TUNING as T, type StatusId, type StatusSkillId, type UnitStatus } from './battleStatusData';
+import { newActor, AP_CAP, actorAP, defaultStrike, drawCard, tableauWidth, foeAlive, actorAlive, setActorTarget, spendAP, type BattleActor, type BattleEvent, type BattleFoe, type BattleState } from './battle';
+import { foundationSummon, FOUNDATION_SUMMON_SLOT, STATUS_META, STATUS_SKILLS, STATUS_TUNING as T, type StatusId, type StatusSkillId, type UnitStatus } from './battleStatusData';
 import { tutorialById } from './battleTutorialScenarios';
 
 // Tutorial statuses as tableau mechanics. Pure: no React or DOM.
@@ -20,12 +25,23 @@ const patchFoe = (state: BattleState, id: string, patch: (foe: BattleFoe) => Bat
 export const patchActor = (state: BattleState, id: string, patch: (actor: BattleActor) => BattleActor): BattleState =>
   ({ ...state, party: state.party.map(actor => actor.id === id ? patch(actor) : actor) });
 
-export const pushEvents = (state: BattleState, events: Omit<BattleEvent, 'id'>[]): BattleState => events.length ? {
-  ...state, events: [...state.events, ...events.map((event, i) => ({ ...event, id: state.nextEventId + i }))].slice(-12),
-  nextEventId: state.nextEventId + events.length } : state;
+export const pushEvents = (state: BattleState, events: Omit<BattleEvent, 'id'>[]): BattleState => {
+  if (!events.length) return state;
+  let next = state;
+  const party = gritFromEvents(state, events, (foeId, kinId) => {
+    if (hasSnowflake(state, kinId, 'Grit')) next = chillFoe(next, foeId, 1, true);
+  });
+  return {
+    ...next, party, events: [...state.events, ...events.map((event, i) => ({ ...event, id: state.nextEventId + i }))].slice(-12),
+    nextEventId: state.nextEventId + events.length,
+  };
+};
 
 export const outcome = (state: BattleState): BattleState['result'] =>
-  state.foes.length && state.foes.every(foe => foe.hp <= 0) ? 'won' : state.party.length && state.party.every(actor => actor.hp <= 0) ? 'lost' : null;
+  state.party.some(actor => actor.id === 'aldan-seed' && actor.hp <= 0) ? 'lost' : state.foes.length && state.foes.every(foe => foe.hp <= 0) ? 'won' : state.party.length && state.party.every(actor => actor.hp <= 0) ? 'lost' : null;
+
+/** Banks' Hex: a Weakened foe's hits deal half damage, rounded up. */
+export const weakenedHit = (foe: BattleFoe | undefined, damage: number) => foe && hasStatus(foe, 'weakened') ? Math.ceil(damage / 2) : damage;
 
 /** Direct HP loss from statuses and reactions: no stagger, receipts or Momentum. */
 export const damageFoe = (state: BattleState, foeId: string, amount: number, label: string, kind: 'hit' | 'dot' = 'hit', sourceId?: string): BattleState => {
@@ -36,15 +52,16 @@ export const damageFoe = (state: BattleState, foeId: string, amount: number, lab
   const events: Omit<BattleEvent, 'id'>[] = [{ kind, targetId: foeId, sourceId, amount, label }];
   if (hp === 0) events.push({ kind: 'ko', targetId: foeId, sourceId });
   const withHits = pushEvents(next, events);
-  return { ...withHits, result: outcome(withHits) };
+  const resolved = { ...withHits, result: outcome(withHits) };
+  return kind === 'hit' ? moteOnHit(resolved, sourceId, foeId, amount) : resolved;
 };
 
 /** Chill stacks cut enemy Momentum gain; enough stacks, or any Chill while Soaked, Freeze it. */
-export const chillFoe = (state: BattleState, foeId: string, stacks = 1): BattleState => patchFoe(state, foeId, foe => {
+export const chillFoe = (state: BattleState, foeId: string, stacks = 1, appliedDuringEnemyTurn = false): BattleState => patchFoe(state, foeId, foe => {
   if (!foeAlive(foe) || hasStatus(foe, 'frozen')) return foe;
   if (hasStatus(foe, 'soaked')) return withStatus(withoutStatus(foe, 'soaked', 'chill'), { id: 'frozen' });
   const total = (statusOf(foe, 'chill')?.stacks ?? 0) + stacks;
-  return total >= T.chillToFreeze ? withStatus(withoutStatus(foe, 'chill'), { id: 'frozen' }) : withStatus(foe, { id: 'chill', stacks: total });
+  return total >= T.chillToFreeze ? withStatus(withoutStatus(foe, 'chill'), { id: 'frozen' }) : withStatus(foe, { id: 'chill', stacks: total, ...(appliedDuringEnemyTurn || statusOf(foe, 'chill')?.turns ? { turns: 1 } : {}) });
 });
 
 export const bleedFoe = (state: BattleState, foeId: string, stacks: number): BattleState => patchFoe(state, foeId, foe =>
@@ -82,7 +99,7 @@ export const tutorialAllowsSkill = (state: BattleState, id: string) => {
 };
 
 export const statusSkillTargets = (state: BattleState, id: StatusSkillId) =>
-  (STATUS_SKILLS[id].target === 'card' ? [] : STATUS_SKILLS[id].target === 'foe' ? state.foes : STATUS_SKILLS[id].target === 'self' ? state.party.filter(actor => actor.id === STATUS_SKILLS[id].actorId)
+  (id === 'summon-cir' ? [...state.foes, ...state.party.filter(a => a.id !== 'cir' && a.controller !== 'npc'), ...state.party.filter(a => a.id !== 'cir' && a.controller !== 'npc').map(a => ({ ...a, id: `familiar:${a.id}`, name: `${a.name} · Familiar` }))] : id === 'cir-emerge' ? state.party.filter(a => a.id === state.cirCompanion?.host) : STATUS_SKILLS[id].target === 'card' ? [] : STATUS_SKILLS[id].target === 'foe' ? state.foes : STATUS_SKILLS[id].target === 'self' ? state.party.filter(actor => actor.id === STATUS_SKILLS[id].actorId)
     : state.party.filter(actor => actor.controller !== 'npc')).filter(unit => unit.hp > 0);
 
 /** Every tableau card sharing the picked card's rank (Focus Fire). */
@@ -113,22 +130,30 @@ function burnRank(state: BattleState, target: string, caster: string): BattleSta
 }
 
 export const canUseStatusSkill = (state: BattleState, id: StatusSkillId, targetId?: string): boolean => {
+  if (!canUseKeruAbilities(state, STATUS_SKILLS[id].actorId)) return false;
+  // These collected Keru remain inspectable placeholders until their target effects are authored.
+  if (state.sandboxScenario === '1002' && (id === 'hold' || id === 'summon-riv')) return false;
   const skill = STATUS_SKILLS[id];
+  if (id === 'summon-cir' || id === 'cir-emerge' || skill.actorId === 'cir') return canUseCir(state, id, targetId) && !abilitySlotSpent(state);
   if (!state.tutorial || !tutorialAllowsSkill(state, id) || state.turn !== 'party' || state.result || abilitySlotSpent(state)) return false;
   const caster = state.party.find(actor => actor.id === skill.actorId);
   if (!caster || !actorAlive(caster) || caster.disarmed || caster.turnSpent || isSilenced(state, caster.id)) return false;
   if (actorAP(state, caster.id) < skill.cost) return false;
   // Ember Rage: once per turn, and while raging Hero has only her chip hits.
   if (isRaging(state, caster.id)) return false;
-  // Hold opens its slot once; the slot then lasts the fight.
-  if (id === 'hold' && state.tutorial.holdsOpen?.includes(caster.id)) return false;
+  // The temporary Hold card is now Summon: Dem; a summoned or downed Dem prevents recasting.
+  const summon = foundationSummon(id);
+  if (summon && state.party.some(actor => actor.id === summon)) return false;
+  if (summon) return targetId === undefined || targetId === FOUNDATION_SUMMON_SLOT;
   if (skill.target === 'card') return targetId ? focusFireCards(state, targetId).length > 0 : state.columns.some(cards => cards.length > 0);
   const targets = statusSkillTargets(state, id);
   return targetId ? targets.some(unit => unit.id === targetId) : targets.length > 0;
 };
 
 /** AP this card would spend now: Vice Grip commits every whole AP its owner holds. */
-export const statusSkillCost = (state: BattleState, id: StatusSkillId) => {
+export const statusSkillCost = (state: BattleState, id: StatusSkillId, target?: string | null) => {
+  if (id === 'summon-cir') return cirInvokeCost(state, target);
+  if (id === 'cir-emerge' || STATUS_SKILLS[id].actorId === 'cir') return cirSkillCost(state, id);
   const skill: { cost: number; spendsAll?: boolean; actorId: string } = STATUS_SKILLS[id];
   const held = actorAP(state, skill.actorId);
   return skill.spendsAll && Number.isFinite(held) ? Math.max(skill.cost, held) : skill.cost;
@@ -139,6 +164,7 @@ const strike = (state: BattleState, actorId: string, targetId: string, damage: n
 
 export const useStatusSkill = (state: BattleState, id: StatusSkillId, targetId?: string): BattleState => {
   if (!targetId || !canUseStatusSkill(state, id, targetId)) return state;
+  if (id === 'summon-cir' || id === 'cir-emerge' || STATUS_SKILLS[id].actorId === 'cir') return useCir(state, id, targetId);
   const skill = STATUS_SKILLS[id], cost = statusSkillCost(state, id), caster: string = skill.actorId;
   let next = spendAP(state, skill.actorId, cost);
   // Any other Hero ability releases her hold.
@@ -186,13 +212,20 @@ export const useStatusSkill = (state: BattleState, id: StatusSkillId, targetId?:
     case 'regen': next = patchActor(next, targetId, actor => withStatus(actor, { id: 'regen', turns: 2 })); break;
     case 'guard': next = patchActor(next, targetId, actor => withStatus(actor, { id: 'guard' })); break;
     case 'foresight': next = patchActor(next, targetId, actor => withStatus(actor, { id: 'foresight', turns: 2 })); break;
-    case 'hold': next = { ...next, tutorial: { ...next.tutorial!, holdsOpen: [...(next.tutorial!.holdsOpen ?? []), caster] } }; break;
+    case 'hold': case 'summon-riv': {
+      const summoned = foundationSummon(id)!;
+      const saved = state.sandboxScenario === '1002' ? state.keruSelection?.reserves[summoned] : undefined;
+      const summonedActor = saved ?? { ...newActor(summoned), ...(summoned === 'riv' ? { foundationCards: [], statuses: [{ id: 'wild' as const }] } : {}), targetId: next.foes.find(foeAlive)?.id };
+      next = { ...next, party: [...next.party, summonedActor] };
+      break;
+    }
   }
   return { ...next, started: true, result: outcome(next) };
 };
 
 /** Statuses that last "this turn" end, and party-turn countdowns advance. */
 export const expirePartyTurn = (state: BattleState): BattleState => ({ ...state,
+  foes: state.foes.map(foe => withoutStatus(foe, 'firelit')),
   tutorial: state.tutorial && { ...state.tutorial, lastReceiver: undefined, abilitiesThisTurn: 0 },
   party: state.party.map(actor => {
     // Ember Rage fades at the end of the turn and AP above the normal cap burns off.
@@ -203,7 +236,10 @@ export const expirePartyTurn = (state: BattleState): BattleState => ({ ...state,
 /** After the foes act: enemy-turn countdowns advance and Chill thaws by one stack. */
 export const expireEnemyTurn = (state: BattleState): BattleState => ({ ...state, foes: state.foes.map(foe => {
   const next = countDown(foe, 'enemy-turn'), chill = statusOf(next, 'chill');
-  return !chill ? next : (chill.stacks ?? 0) > 1 ? withStatus(next, { ...chill, stacks: (chill.stacks ?? 0) - 1 }) : withoutStatus(next, 'chill');
+  if (!chill) return next;
+  // Retaliatory Chill arrives after the attacker has banked Momentum.
+  if (chill.turns) return withStatus(next, { id: 'chill', stacks: chill.stacks });
+  return (chill.stacks ?? 0) > 1 ? withStatus(next, { ...chill, stacks: (chill.stacks ?? 0) - 1 }) : withoutStatus(next, 'chill');
 }) });
 
 function countDown<U extends Unit>(unit: U, phase: 'party-turn' | 'enemy-turn'): U {
@@ -231,3 +267,4 @@ export const foeMomentumGain = (foe: BattleFoe) => {
   if (hasStatus(foe, 'frozen') || hasStatus(foe, 'stun') || hasStatus(foe, 'grip') || foe.staggered > 0) return 0;
   return scaleMomentumGain(foe, Math.max(0, T.enemyMomentumGain - (statusOf(foe, 'chill')?.stacks ?? 0)));
 };
+

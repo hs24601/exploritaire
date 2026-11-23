@@ -1,0 +1,7 @@
+.glacial-lance-art { position:absolute; inset:0; overflow:hidden; pointer-events:none; background:#20435e; }
+.glacial-lance-art img { position:absolute; inset:0; width:100%; height:100%; max-width:none; object-fit:cover; }
+.glacial-lance-art__background { filter:brightness(.65) saturate(.8); transform:translate(calc(var(--art-shift-x,0) * -3px),calc(var(--art-shift-y,0) * -3px)) scale(1.08); }
+.glacial-lance-art__rear { opacity:.8; transform:translate(calc(var(--art-shift-x,0) * 4px),calc(var(--art-shift-y,0) * 4px)) scale(1.08); }
+.glacial-lance-art__dewi { object-fit:contain !important; transform:translate(calc(var(--art-shift-x,0) * 8px),calc(var(--art-shift-y,0) * 8px)) scale(1.34); }
+.glacial-lance-art__front { opacity:.75; transform:translate(calc(var(--art-shift-x,0) * 15px),calc(var(--art-shift-y,0) * 13px)) scale(1.08); }
+@media(prefers-reduced-motion:reduce) { .glacial-lance-art__background,.glacial-lance-art__rear,.glacial-lance-art__front { transform:none; } .glacial-lance-art__dewi { transform:scale(1.34); } }

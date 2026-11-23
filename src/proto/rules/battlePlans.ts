@@ -19,6 +19,7 @@ export function tableauPlans(state: BattleState): TableauPlan[] {
   if (state.result) return [];
   const plans: TableauPlan[] = [];
   const redeal = state.pendingRedeal;
+  if (redeal && state.rules.spatialLanes) return [{ id: 'party-withdraw', by: 'party', target: { kind: 'cards', ids: state.columns.flatMap(cards=>cards.slice(1).map(card=>card.id)) }, label: 'Withdraw · party lanes', detail: 'The enemy acts first. Your next turn refreshes the shared frontier and party rear; the dragon rear stays intact.' }];
   if (redeal) plans.push(redeal.row === undefined
     ? { id: 'party-withdraw', by: 'party', target: { kind: 'tableau' }, label: 'Withdraw · new tableau',
       detail: 'Your Withdraw: the enemy acts on this board first, then your next turn opens on a fresh tableau.' }

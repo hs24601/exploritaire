@@ -1,0 +1,28 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
+const {findLayoutDefects}=require('./lib/layout-check.cjs');
+(async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
+ const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&/shader|VALIDATE_STATUS/i.test(m.text()))errors.push(m.text());});
+ await page.addInitScript(()=>localStorage.setItem('exploritaire.world1111.flurry',JSON.stringify({version:1,reward:{kinId:'hero',memory:{x:.5,y:.3,enhancement:'kin'}}})));
+ await page.goto('http://127.0.0.1:5178/artifacts/world-rail-preview.html',{waitUntil:'domcontentloaded',timeout:20000});
+ await page.waitForFunction(()=>window.__worldRail?.state&&window.__worldRail.companion,null,{timeout:45000});
+ await page.waitForSelector('[data-rail-card]');assert.equal(await page.locator('.battle-field,.world-woods-battle,.combat-sandbox').count(),0);
+ const first=await page.evaluate(()=>({phase:__worldRail.world.scene.phase,rank:__worldRail.state.party[0].rank,ap:__worldRail.state.party[0].charge,started:__worldRail.state.started}));assert(first.started);assert.equal(first.phase,'active');
+ const card=page.locator('[data-column="0"][data-exposed]');await card.focus();await page.keyboard.press('Enter');
+ const target=page.locator('[data-rail-actor="hero"]');assert.equal(await target.getAttribute('data-eligible'),'true');await target.focus();await page.keyboard.press('Enter');
+ await page.waitForFunction(ap=>__worldRail.state.party[0].charge===ap+1,first.ap);assert.equal(await page.evaluate(()=>__worldRail.state.party[0].rank),3);
+ assert.equal(await page.locator('.world-rail-pips i[data-on]').count(),first.ap+1);
+ const background=await page.locator('.world-rail-preview-tableau').evaluate(e=>({background:getComputedStyle(e).backgroundColor,image:getComputedStyle(e).backgroundImage}));assert.equal(background.background,'rgba(0, 0, 0, 0)');assert.equal(background.image,'none');
+ await page.evaluate(()=>{__worldRail.pause(true);__worldRail.advance(1);});assert.equal(await card.isDisabled(),true);await page.evaluate(()=>__worldRail.pause(false));
+ await page.evaluate(()=>__worldRail.advance(10));
+ const snow=await page.evaluate(()=>__worldRail.companion.diagnostics);assert(snow.visible);assert.equal(snow.size,.21);assert(snow.snow[0].settled>0);
+ const sides=await page.evaluate(()=>{const root=__worldRail.companion.root;return{face:root.children[1].material.side,body:root.children[0].material.side,normalY:new root.position.constructor(0,0,1).applyQuaternion(root.quaternion).y};});assert.equal(sides.face,0);assert.equal(sides.body,2);assert(Math.abs(sides.normalY)<.00001);
+ await page.screenshot({path:'artifacts/world-rail-live.png'});
+ const parts='.world-rail-preview-foundation,.world-rail-preview-tableau,.world-rail-controls,.world-rail-preview-hint';
+ const layout1280=await findLayoutDefects(page,'.world-woods-rail-preview',{parts});
+ await page.evaluate(()=>__worldRail.reward.open());await page.getByRole('button',{name:'Unstick Flurry',exact:true}).click();
+ assert.equal(await page.evaluate(()=>__worldRail.state.snowflakeReward),'available');await page.getByRole('button',{name:'Return to world',exact:true}).click();await page.evaluate(()=>__worldRail.render());assert.equal(await page.evaluate(()=>__worldRail.companion.root.visible),false);
+ await page.evaluate(()=>__worldRail.reward.open());await page.getByRole('button',{name:'Place on Hero',exact:true}).click();const placement=page.getByRole('button',{name:/Choose a spot on Hero/});await placement.focus();await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await page.getByRole('button',{name:'Yes',exact:true}).click();await page.getByRole('button',{name:'Close sticker reward'}).click();await page.evaluate(()=>__worldRail.render());assert.equal(await page.evaluate(()=>__worldRail.companion.root.visible),true);
+ await page.evaluate(()=>__worldRail.advance(2));await page.setViewportSize({width:1912,height:914});await page.evaluate(()=>__worldRail.render());const layout1912=await findLayoutDefects(page,'.world-woods-rail-preview',{parts});await page.screenshot({path:'artifacts/world-rail-live-wide.png'});
+ const zoom=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:3});await zoom.goto('http://127.0.0.1:5178/artifacts/world-rail-preview.html',{waitUntil:'domcontentloaded'});await zoom.waitForFunction(()=>window.__worldRail?.state);await zoom.locator('.world-rail-preview-foundation--party').screenshot({path:'artifacts/world-rail-pips-3x.png'});await zoom.locator('.world-rail-preview-tableau').screenshot({path:'artifacts/world-rail-cards-3x.png'});await zoom.close();
+ fs.writeFileSync('artifacts/world-rail-live-check.json',JSON.stringify({first,keyboardReceipt:true,apPips:true,background,snow,sides,unstickReplace:true,layout1280,layout1912,errors},null,2));console.log(JSON.stringify({keyboardReceipt:true,apPips:true,unstickReplace:true,snow:snow.snow,layout1280,layout1912,errors}));assert.deepEqual(errors,[]);
+ }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

@@ -2,17 +2,30 @@ import { describe, expect, it } from 'vitest';
 import { canUseMomentumSkill, createCombatSandboxScenario, createPlayableSandboxScenario, endPlayerTurn, playCard, tableauWidth, tickBattle, useMomentumSkill, withdrawPlayer, type BattleState } from './battle';
 import { advanceIntent, intentEnemyPlayOne, canPityFlip, hasHoldSlot, hasPityDraw, heldCard, heldReceivers, holdCard, INTENT_RECEIVER, openPartyTurn, pityFlip, playHeld, playOnIntent, tableauReceivers } from './battleDeadRun';
 import { DEEP_BREATH } from './battleTutorialScenarios';
+import { anyLegalPlay } from './battleDeadRun';
 import type { Card } from '../protoState';
 
 const card = (id: string, rank: number): Card => ({ id, rank });
 /** Six authored columns with the given exposed ranks (buried cards are Kings). */
 const table = (state: BattleState, tops: number[]): BattleState => ({ ...state,
-  columns: tops.map((rank, c) => [card(`k${c}a`, 13), card(`k${c}b`, 13), card(`k${c}c`, 13), card(`top${c}`, rank)]) });
+  columns: tops.map((rank, c) => state.rules.spatialLanes ? [card(`k${c}a`, 13), card(`top${c}`, rank), card(`rear${c}`, rank)] : [card(`k${c}a`, 13), card(`k${c}b`, 13), card(`k${c}c`, 13), card(`top${c}`, rank)]) });
 const withIntent = (state: BattleState, rank: number, pips = 0): BattleState => ({ ...state, tutorial: { ...state.tutorial!, intent: { id: 'intent-test', rank, pips, fired: 0, cards: [] } } });
 const charging = (state: BattleState): BattleState => ({ ...state, tutorial: { ...state.tutorial!, breath: 'charging' } });
 const hero = (state: BattleState) => state.party.find(actor => actor.id === 'hero')!;
 
 describe('dead-run scenarios', () => {
+  it('counts S1002 ability-only plays as legal and resolves them without a party foundation move',()=>{
+    const initial=createCombatSandboxScenario('1002');
+    const state:BattleState={...initial,columns:[[{id:'only-ability',rank:7}]],tutorial:{...initial.tutorial!,breath:'charging',intent:{id:'counterplay',rank:6,pips:2,fired:0,cards:[]}}};
+    expect(tableauReceivers(state,state.columns[0][0],false)).toEqual([INTENT_RECEIVER]);
+    expect(anyLegalPlay(state)).toBe(true);
+    const next=playOnIntent(state,0);
+    expect(next.tutorial?.intent).toMatchObject({rank:7,pips:1,cards:[{id:'only-ability',rank:7}]});
+    expect(next.party).toEqual(state.party);
+    expect(next.momentum?.value).toBe((state.momentum?.value ?? 0)+1);
+    for(const breath of ['readied','inhaled'] as const)expect(tableauReceivers({...state,tutorial:{...state.tutorial!,breath}},state.columns[0][0],false)).toEqual([]);
+    expect(tableauReceivers({...state,turn:'enemy'},state.columns[0][0],false)).toEqual([]);
+  });
   it('019–024 put Hero alone on six columns with their own fixes', () => {
     const fixes = { '019': [false, false, false], '020': [true, false, false], '021': [true, false, false], '022': [true, true, false], '023': [true, false, true], '024': [true, true, true] } as const;
     for (const [id, [intent, pity, hold]] of Object.entries(fixes)) {
@@ -22,7 +35,7 @@ describe('dead-run scenarios', () => {
       expect(state.columns).toHaveLength(6);
       expect(Boolean(state.tutorial?.intent)).toBe(intent);
       expect(state.tutorial?.intent?.pips ?? 0).toBe(0);
-      expect([hasPityDraw(state), hasHoldSlot(state)]).toEqual([pity, hold]);
+      expect([hasPityDraw(state), hasHoldSlot(state)]).toEqual([true, hold]);
       // Every opening has a legal play, so no scenario starts on a pity flip.
       expect(state.columns.some(cards => tableauReceivers(state, cards[cards.length - 1], false).length > 0)).toBe(true);
     }
@@ -41,12 +54,12 @@ describe('dead-run scenarios', () => {
     expect(playOnIntent(base, 1)).toBe(base);
   });
 
-  it('the enemy plays up to two matching cards, adds a passive pip and fires at full pips', () => {
+  it('Deep Breath limits card and passive progress to one pip and fires at full pips', () => {
     const base = withIntent(table(createCombatSandboxScenario('020'), [5, 4, 3, 13, 13, 13]), 6, 0);
     const turn = advanceIntent(base, false);
-    // 5 onto 6, then 4 onto 5: two plays, then the passive pip.
-    expect(turn.tutorial!.intent).toMatchObject({ pips: 3, rank: 4 });
-    expect(turn.tutorial!.intent!.cards.map(c => c.id)).toEqual(['top0', 'top1']);
+    // The card play uses the turn allowance, so passive progress waits.
+    expect(turn.tutorial!.intent).toMatchObject({ pips: 1, rank: 5 });
+    expect(turn.tutorial!.intent!.cards.map(c => c.id)).toEqual(['top0']);
     const fire = advanceIntent(withIntent(table(createCombatSandboxScenario('020'), [13, 13, 13, 13, 13, 13]), 6, DEEP_BREATH.pips - 1), false);
     expect(hero(fire).hp).toBe(hero(base).hp - DEEP_BREATH.damage);
     expect(fire.tutorial!.intent).toMatchObject({ pips: 0, fired: 1 });
@@ -61,21 +74,31 @@ describe('dead-run scenarios', () => {
     expect(hero(after).hp).toBe(hero(base).hp);
   });
 
-  it('the pity flip is offered only when a turn opens dead, once, and is not a receipt', () => {
+  it('Every Dog Has Her Day spends three charges without receipts or turn recharge', () => {
     const start = createCombatSandboxScenario('022');
-    expect(canPityFlip(start)).toBe(false);
-    const dead = openPartyTurn(withIntent(table(start, [9, 9, 9, 9, 9, 9]), 12));
-    expect(canPityFlip(dead)).toBe(true);
-    const flipped = pityFlip(dead);
-    expect(flipped).not.toBe(dead);
-    expect(hero(flipped).rank).toBe(hero(flipped).foundationCards!.slice(-1)[0].rank);
-    expect(hero(flipped).foundationCards!.length).toBe(hero(dead).foundationCards!.length + 1);
-    expect(hero(flipped).charge).toBe(hero(dead).charge);
-    expect(flipped.momentum!.value).toBe(dead.momentum!.value);
-    expect(canPityFlip(flipped)).toBe(false);
-    expect(pityFlip(flipped)).toBe(flipped);
-    // Without the fix, no flip is ever offered.
-    expect(canPityFlip(openPartyTurn(withIntent(table(createCombatSandboxScenario('020'), [9, 9, 9, 9, 9, 9]), 12)))).toBe(false);
+    const charges = (state: BattleState) => hero(state).statuses?.find(status => status.id === 'every-dog-has-her-day')?.stacks ?? 0;
+    expect(charges(start)).toBe(3);
+    expect(canPityFlip(start)).toBe(true);
+    let state = start;
+    for (let left = 2; left >= 0; left--) {
+      const before = state;
+      state = pityFlip(state);
+      expect(charges(state)).toBe(left);
+      expect(hero(state).foundationCards!.length).toBe(hero(before).foundationCards!.length + 1);
+      expect(hero(state).rank).toBe(hero(state).foundationCards!.slice(-1)[0].rank);
+      expect(hero(state).charge).toBe(hero(before).charge);
+      expect(state.momentum!.value).toBe(before.momentum!.value);
+      expect(state.foes).toEqual(before.foes);
+    }
+    expect(hero(state).statuses?.some(status => status.id === 'every-dog-has-her-day')).toBe(false);
+    expect(canPityFlip(state)).toBe(false);
+    expect(pityFlip(state)).toBe(state);
+    expect(charges(openPartyTurn(state))).toBe(0);
+    expect(charges(endPlayerTurn(state))).toBe(0);
+    expect(charges(createCombatSandboxScenario('022'))).toBe(3);
+    expect(canPityFlip({ ...start, turn: 'enemy' })).toBe(false);
+    expect(canPityFlip({ ...start, party: start.party.map(actor => ({ ...actor, hp: 0 })) })).toBe(false);
+    expect(canPityFlip(createCombatSandboxScenario('020'))).toBe(true);
   });
 
   it('the hold parks one playable card, keeps it across turns and plays it later', () => {
@@ -119,22 +142,37 @@ describe('dead-run scenarios', () => {
     let next = endPlayerTurn(s);
     for (let i = 0; i < 20 && next.turn === 'enemy'; i++) { next = tickBattle(next, 2); steps.push(next); }
     const cards = steps.map(step => step.tutorial!.intent!.cards.length), pips = steps.map(step => step.tutorial!.intent!.pips);
-    // Strike (the dragon has none), the ability step, the 5 then the 4 one step apart, the pip step (no passive pip), then the party turn.
-    expect(cards).toEqual([0, 0, 1, 2, 2, 2]);
-    expect(pips).toEqual([0, 0, 1, 2, 2, 2]);
-    expect(steps.map(step => step.turn)).toEqual(['enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'party']);
+    // Strike, ability step, one card, passive step, and handoff.
+    expect(cards).toEqual([0, 0, 1, 1, 1]);
+    expect(pips).toEqual([0, 0, 1, 1, 1]);
+    expect(steps.map(step => step.turn)).toEqual(['enemy', 'enemy', 'enemy', 'enemy', 'party']);
   });
 
-  it('in 1000 the 6-AP Hold card opens Hero’s hold slot once, for the rest of the fight', () => {
+  it('in 1000 the 6-AP Summon: Dem card adds a friendly Ace foundation once per fight', () => {
     const start = createCombatSandboxScenario('1000');
-    expect(canUseMomentumSkill(start, 'hold', 'hero')).toBe(false);
+    expect(canUseMomentumSkill(start, 'hold', 'new-foundation')).toBe(false);
     const rich: BattleState = { ...start, party: start.party.map(actor => ({ ...actor, charge: 6 })) };
-    expect(canUseMomentumSkill(rich, 'hold', 'hero')).toBe(true);
-    const open = useMomentumSkill(rich, 'hold', 'hero');
-    expect(hasHoldSlot(open, 'hero')).toBe(true);
+    expect(canUseMomentumSkill(rich, 'hold', 'new-foundation')).toBe(true);
+    const open = useMomentumSkill(rich, 'hold', 'new-foundation');
+    expect(hasHoldSlot(open, 'hero')).toBe(false);
+    const dem = open.party.find(actor => actor.id === 'dem')!;
+    expect(open.party.map(actor => actor.id)).toEqual(['hero', 'dem']);
+    expect(dem.name).toBe('Dem');
+    expect(dem.rank).toBe(1);
+    expect(dem.foundationCards?.map(card => card.rank)).toEqual([1]);
+    expect(dem.hp).toBe(dem.maxHp);
+    expect(dem.targetId).toBe(open.foes[0].id);
+    const withTwo = table(open, [2, 9, 9, 9, 9, 9]);
+    expect(tableauReceivers(withTwo, withTwo.columns[0][withTwo.columns[0].length - 1])).toContain('dem');
+    const played = playCard(withTwo, 0, 'dem');
+    expect(played.party.find(actor => actor.id === 'dem')?.rank).toBe(2);
+    expect(played.party.find(actor => actor.id === 'dem')?.charge).toBe(1);
     expect(hero(open).charge).toBe(0);
-    expect(canUseMomentumSkill({ ...open, party: open.party.map(actor => ({ ...actor, charge: 6 })) }, 'hold', 'hero')).toBe(false);
-    expect(hasHoldSlot(endPlayerTurn(open), 'hero')).toBe(true);
+    expect(canUseMomentumSkill({ ...open, party: open.party.map(actor => ({ ...actor, charge: 6 })) }, 'hold', 'new-foundation')).toBe(false);
+    expect(endPlayerTurn(open).party.some(actor => actor.id === 'dem')).toBe(true);
+    const downed = { ...open, party: open.party.map(actor => ({ ...actor, hp: actor.id === 'dem' ? 0 : actor.hp, charge: 6 })) };
+    expect(canUseMomentumSkill(downed, 'hold', 'new-foundation')).toBe(false);
+    expect(createCombatSandboxScenario('1000').party.some(actor => actor.id === 'dem')).toBe(false);
   });
 
   it('every playable scenario steps its enemy turn; tests and tools can still resolve it at once', () => {
@@ -196,28 +234,14 @@ describe('dead-run scenarios', () => {
     expect(dragon(breathed).statuses?.map(status => status.id)).toEqual(['duskscale']);
   });
 
-  it('breaking the dragon while it charges backfires Deep Breath: 55 to the dragon, stage III, a two-turn stun, then it re-arms', () => {
+  it('keeps the charging dragon immune to stagger while still taking damage', () => {
     const cast = endPlayerTurn(createCombatSandboxScenario('1000'));
-    let s: BattleState = { ...cast, foes: cast.foes.map(foe => ({ ...foe, stagger: 5 })) };
-    const before = s.foes[0].hp;
-    s = playCard({ ...s, columns: s.columns.map((cards, c) => c === 0 ? [...cards.slice(0, -1), card('break', hero(s).rank % 13 + 1)] : cards) }, 0, 'hero');
-    expect(s.tutorial?.breath).toBe('choked');expect(s.tutorial?.intent).toBeUndefined();
-    // The breaking Nip (1) plus the flat 55 backfire; the party is untouched.
-    expect(s.foes[0]).toMatchObject({ hp: before - 1 - 55, staggerStage: 3 });
-    expect(s.foes[0].staggered).toBeGreaterThan(0);expect(s.foes[0].statuses).toContainEqual({ id: 'stun', turns: 2 });
-    expect(hero(s).hp).toBe(hero(cast).hp);
-    const first = endPlayerTurn(s);
-    expect(first.foes[0].staggered).toBeGreaterThan(0);expect(first.foes[0].staggerStage).toBe(3);expect(first.tutorial?.breath).toBe('choked');
-    const second = endPlayerTurn(first);
-    expect(second.foes[0].staggered).toBe(0);expect(second.tutorial?.breath).toBe('armored');
-    expect(second.foes[0].statuses?.map(status => status.id)).toEqual(['duskscale']);
-    expect(endPlayerTurn(second).tutorial?.breath).toBe('charging');
+    const state: BattleState = { ...cast, foes: cast.foes.map(foe => ({ ...foe, stagger: 5 })) };
+    const next = playCard({ ...state, columns: state.columns.map((cards, c) => c === 0 ? [...cards.slice(0, -1), card('hit', hero(state).rank % 13 + 1)] : cards) }, 0, 'hero');
+    expect(next.tutorial?.breath).toBe('charging');
+    expect(next.foes[0].stagger).toBe(5);
+    expect(next.foes[0].staggered).toBe(0);
+    expect(next.foes[0].hp).toBe(state.foes[0].hp - 1);
   });
 
-  it('a backfire that brings the dragon to 0 wins the fight', () => {
-    const cast = endPlayerTurn(createCombatSandboxScenario('1000'));
-    let s: BattleState = { ...cast, foes: cast.foes.map(foe => ({ ...foe, stagger: 5, hp: 40 })) };
-    s = playCard({ ...s, columns: s.columns.map((cards, c) => c === 0 ? [...cards.slice(0, -1), card('break', hero(s).rank % 13 + 1)] : cards) }, 0, 'hero');
-    expect(s.foes[0].hp).toBe(0);expect(s.result).toBe('won');
-  });
 });

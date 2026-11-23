@@ -1,3 +1,6 @@
+import { CirDiveSandbox } from './components/CirDiveSandbox';
+import { ProtoEditor } from './components/ProtoEditor';
+import { ActorEntityEditor } from './components/ActorEntityEditor';
 import { MomentumDesignSandbox } from './components/MomentumDesignSandbox';
 import { ActorMotifSandbox } from './components/ActorMotifSandbox';
 import { DemDraftSandbox } from './components/DemDraftSandbox';
@@ -31,10 +34,13 @@ const isHeroFurSandbox = new URLSearchParams(window.location.search).has('herosb
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
 
+    {new URLSearchParams(window.location.search).has('cirsbx') ? <CirDiveSandbox /> : <>
     <GameTooltip />
     {HOLD_LOG_ENABLED ? <HoldLogOverlay /> : null}
     {GYRO_LOG_ENABLED ? <GyroDiagnostics /> : null}
-    {new URLSearchParams(window.location.search).has('combatAbilities') ? <CombatAbilityBrowser /> : new URLSearchParams(window.location.search).has('motifsbx') ? <ActorMotifSandbox /> : new URLSearchParams(window.location.search).has('kerusbx') ? <KeruDraftSandbox /> : new URLSearchParams(window.location.search).has('demsbx') ? <DemDraftSandbox /> : new URLSearchParams(window.location.search).has('momentumsbx') ? <MomentumDesignSandbox /> : new URLSearchParams(window.location.search).has('khad-combat') ? <KhadCombatSandbox /> : isHeroFurSandbox ? <HeroFurSandbox /> : isKhadCompare ? <MediaReady><CardJumboProvider><KhadCompare /></CardJumboProvider></MediaReady> : isBushSandbox ? <BushSandbox /> : isWoodsSandbox ? <WoodsSandbox /> : isCombatSandbox ? <CardJumboProvider><CombatSandbox /></CardJumboProvider> : isHearthExploration ? <ExploreGolfVariant /> : <MediaReady><CardJumboProvider><ProtoVariant /></CardJumboProvider></MediaReady>}
+    {new URLSearchParams(window.location.search).has('ProtoEditor') ? <ProtoEditor /> : new URLSearchParams(window.location.search).has('actorEditor') ? <ActorEntityEditor /> : new URLSearchParams(window.location.search).has('combatAbilities') ? <CombatAbilityBrowser /> : new URLSearchParams(window.location.search).has('motifsbx') ? <ActorMotifSandbox /> : new URLSearchParams(window.location.search).has('kerusbx') ? <KeruDraftSandbox /> : new URLSearchParams(window.location.search).has('demsbx') ? <DemDraftSandbox /> : new URLSearchParams(window.location.search).has('momentumsbx') ? <MomentumDesignSandbox /> : new URLSearchParams(window.location.search).has('khad-combat') ? <KhadCombatSandbox /> : isHeroFurSandbox ? <HeroFurSandbox /> : isKhadCompare ? <MediaReady><CardJumboProvider><KhadCompare /></CardJumboProvider></MediaReady> : isBushSandbox ? <BushSandbox /> : isWoodsSandbox ? <WoodsSandbox /> : isCombatSandbox ? <CardJumboProvider><CombatSandbox /></CardJumboProvider> : isHearthExploration ? <ExploreGolfVariant /> : <MediaReady><CardJumboProvider><ProtoVariant /></CardJumboProvider></MediaReady>}
+    </>}
   </React.StrictMode>,
 );
+
 

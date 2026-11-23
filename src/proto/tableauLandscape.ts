@@ -31,6 +31,7 @@ export const BERRY_TABLEAU_PROPS: readonly LandscapeProp[] = [
 
 /** Shared landscape for combat and all ordinary tableau scenes. */
 export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Texture, woods = true, combat = false, options: TableauLandscapeOptions = {}) {
+  let darknessSurge=false;
   const resources: (THREE.BufferGeometry | THREE.Material)[] = [];
   const geometry = <T extends THREE.BufferGeometry>(g: T) => { resources.push(g); return g; };
   const material = <T extends THREE.Material>(m: T) => { resources.push(m);
@@ -72,6 +73,7 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
   const stars = new THREE.Points(starGeometry, material(new THREE.PointsMaterial({color: 0xcbdfff, size: 1.5, sizeAttenuation: false, fog: false, transparent: true, opacity: .82, depthWrite: false})));
   stars.visible = woods; root.add(stars);
   const ground = new THREE.Mesh(geometry(new THREE.PlaneGeometry(70, 70)), material(new THREE.MeshLambertMaterial({color: options.groundColor ?? 0x283a36})));
+  ground.userData.worldTerrain=true;
   if (options.khadGroundTint) tintKhadGround(ground.material);
   ground.rotation.x = -Math.PI / 2; root.add(ground);
   const hemisphere = new THREE.HemisphereLight(0xb8d9e9, 0x293724, woods ? 1.2 : 2); root.add(hemisphere);
@@ -82,7 +84,7 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
     const terrain = geometry(new THREE.PlaneGeometry(120, 120, 48, 48)); terrain.rotateX(-Math.PI / 2);
     const positions = terrain.getAttribute('position');
     for (let i = 0; i < positions.count; i++) positions.setY(i, hill(positions.getX(i), positions.getZ(i)) - .02);
-    terrain.computeVertexNormals(); root.add(new THREE.Mesh(terrain, material(new THREE.MeshLambertMaterial({color: 0x182b2c}))));
+    terrain.computeVertexNormals();const hillMesh=new THREE.Mesh(terrain, material(new THREE.MeshLambertMaterial({color: 0x182b2c})));hillMesh.userData.worldTerrain=true;root.add(hillMesh);
   }
   const square = geometry(new THREE.PlaneGeometry(1, 1));
   const groundCover = options.groundCover ? createTableauGroundCover(root, options.groundCover.pixel, options.groundCover.palette, undefined, options.khadGroundTint) : undefined;
@@ -118,6 +120,7 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
     }
     if (!mat.userData.actorPeek) { actorPeek.attach(mat); mat.userData.actorPeek = true; }
     const mesh = new THREE.Mesh(square, mat);
+    mesh.userData.worldTree=true;
     mesh.scale.set(height * image.width / image.height, height, 1);
     mesh.position.y = height / 2 - height * (image.height - bottom - 1) / image.height;
     const anchor = new THREE.Group(); anchor.position.set(x, hill(x, z), z); anchor.add(mesh); root.add(anchor);
@@ -169,7 +172,7 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
   for (const extra of options.extraProps ?? []) trees.push(billboard(extra.texture, extra.x, extra.z, extra.height, extra.tint, { mana: extra.manaFruit, painted: extra.paintedFruit }));
   const impulses: { start: number; strengths: number[] }[] = [];
   const projected = new THREE.Vector3();
-  return { glow, lights: { hemisphere, moon }, setFruitVisible(available: boolean, illuminated = true) {
+  return { setSurge(value:boolean){darknessSurge=value;}, setTableauPeekBounds: (bounds?: THREE.Box3) => actorPeek.setTableauBounds(bounds), glow, lights: { hemisphere, moon }, setFruitVisible(available: boolean, illuminated = true) {
     // Comparison props follow the live state directly; the sparse bush keeps its extra lit fruit.
     fruitMeshes.forEach((fruit, index) => { fruit.visible = available || Boolean(options.manaFruit && index > 0 && index < extraFruit); });
     fruitHalos.forEach((halo, index) => { halo.visible = (available && illuminated) || Boolean(options.manaFruit && index > 0 && index < extraHalos); });
@@ -184,8 +187,8 @@ export function createTableauLandscape(scene: THREE.Scene, texture: THREE.Textur
     if (impulses.length > 8) impulses.shift();
   }, sampleActorLight: createActorEnvironmentLight(hemisphere, moon, glow), update(camera: THREE.Camera, seconds = 0, reduced = false, actors: readonly THREE.Object3D[] = []) {
     fruitHalos.forEach(halo => { ((halo as THREE.Mesh).material as THREE.ShaderMaterial).uniforms.berryTime.value = reduced ? 0 : seconds; });
-    hemisphere.intensity = globalLightsEnabled() ? (woods ? 1.2 : 2) : 2;
-    moon.intensity = globalLightsEnabled() ? (woods ? 1.4 : 2) : 0;
+    hemisphere.intensity = globalLightsEnabled() ? (woods ? 1.2 : 2) * (darknessSurge?.4:1) : 2;
+    moon.intensity = globalLightsEnabled() ? (woods ? 1.4 : 2) * (darknessSurge?.55:1) : 0;
     actorPeek.update(camera, actors);
     sky.position.copy(camera.position); stars.position.copy(camera.position);
     while (impulses.length && seconds - impulses[0].start > 2) impulses.shift();
