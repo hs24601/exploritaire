@@ -19,7 +19,8 @@ interface Props {
   showYield?: boolean;
 }
 
-/** A physical playing card: cream face, rank in the corners, the surface's resource in the middle. */
+/** A physical playing card: cream face, rank in the corners, the surface's resource in the middle.
+ *  Forest cards are bark with the rank cut into a pale blaze; the foundation shows sawn end grain. */
 export function PlayingCard({ card, surface, style, className = '', showYield }: Props) {
   if (card.hidden) {
     return (
@@ -30,7 +31,8 @@ export function PlayingCard({ card, surface, style, className = '', showYield }:
   }
   const label = rankLabel(card.rank);
   return (
-    <div className={`vg-card is-${surface}${card.unripe ? ' is-unripe' : ''} ${className}`} style={style}
+    <div className={`vg-card is-${surface}${card.unripe ? ' is-unripe' : ''} ${className}`}
+      style={surface === 'forest' ? { ...style, '--bark-x': `${(card.id * 37) % 100}%` } as CSSProperties : style}
       aria-label={`${label}${card.unripe ? ', unripe' : ''}`} data-rank={card.rank}>
       <span className="vg-card-rank">{label}</span>
       <Icon name={GLYPH[surface]} className="vg-card-glyph" size={28} />

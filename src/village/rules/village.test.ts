@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DAYLIGHT } from './daylight';
 import { migrate, newGame, reduce, type Action, type GameState } from './game';
-import { canPlay, draw, legalPlays, play, rng, runEnd } from './golf';
+import { type Pile, type Rank, type Run, canPlay, draw, heldLumber, legalPlays, play, rng, runEnd } from './golf';
 import { FEATURES, GATE, MAP_COLS, MAP_ROWS, fogged, neighboursOf, tileIndex } from './map';
 import { planner } from './players';
 import { SURFACES } from './surfaces';
@@ -13,11 +13,11 @@ import {
 const last = <T,>(xs: T[]): T | undefined => xs[xs.length - 1];
 
 describe('golf surfaces', () => {
-  it('forest deals 7 trees of 5 with one card on the foundation', () => {
+  it('forest deals 8 columns of 4 (4 trees) with one card on the foundation', () => {
     const run = SURFACES.forest.deal(1);
-    expect(run.piles.map(p => p.cards.length)).toEqual([5, 5, 5, 5, 5, 5, 5]);
+    expect(run.piles.map(p => p.cards.length)).toEqual([4, 4, 4, 4, 4, 4, 4, 4]);
     expect(run.foundation).toHaveLength(1);
-    expect(run.stock).toHaveLength(52 - 35 - 1);
+    expect(run.stock).toHaveLength(52 - 32 - 1);
   });
 
   it('only plays a card one rank away, King and Ace connect', () => {
@@ -30,12 +30,33 @@ describe('golf surfaces', () => {
     }
   });
 
-  it('felling a whole tree pays the bundle', () => {
-    let run = SURFACES.forest.deal(5);
-    run = { ...run, piles: [{ cards: [{ id: 99, rank: 5, yield: 1 }] }, ...run.piles.slice(1)], foundation: [{ id: 98, rank: 4, yield: 1 }] };
-    const after = play(run, 0);
-    expect(after.felled).toBe(1);
-    expect(after.earned).toBe(1 + run.fellBonus);
+  it('a forest column pays only when finished, and finishing both columns fells the tree', () => {
+    const run = SURFACES.forest.deal(5);
+    expect(run.piles).toHaveLength(8);
+    expect(run.piles.map(p => p.tree)).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
+    const col = (ranks: number[], held = 0): Pile => ({ cards: ranks.map((r, k) => ({ id: 200 + r * 10 + k, rank: r as Rank, yield: 1 })), tree: 0, held });
+    // Column 0 has two logs (5 under 6), column 1 one log (7).
+    let r: Run = { ...run, piles: [col([5, 6]), { ...col([7]), tree: 0 }, ...run.piles.slice(2)], foundation: [{ id: 98, rank: 5, yield: 1 }] };
+    r = play(r, 0); // cut the 6: held, not paid
+    expect(r.earned).toBe(0);
+    expect(r.piles[0].held).toBe(1);
+    r = play(r, 0); // cut the 5: column finished, pays both logs, tree still standing
+    expect(r.earned).toBe(2);
+    expect(r.felled).toBe(0);
+    r = { ...r, foundation: [...r.foundation, { id: 97, rank: 6, yield: 1 }] };
+    r = play(r, 1); // the other column: tree falls
+    expect(r.felled).toBe(1);
+    expect(r.earned).toBe(3 + run.fellBonus);
+  });
+
+  it('a half-cut column pays nothing if the run ends', () => {
+    let r = SURFACES.forest.deal(5);
+    const pile = r.piles[0];
+    const t = pile.cards[pile.cards.length - 1].rank;
+    r = { ...r, foundation: [{ id: 99, rank: ((t % 13) + 1) as 1, yield: 1 }] };
+    const after = play(r, 0);
+    expect(after.earned).toBe(0);
+    expect(heldLumber(after)).toBe(1);
   });
 
   it('picking a berry ripens the neighbours, and unripe berries cannot be played', () => {
@@ -237,8 +258,9 @@ describe('building on the map', () => {
       g = reduce(g, { type: 'open', surface: 'forest' });
       const run = g.active!.run;
       const i = legalPlays(run)[0];
-      // Leave one card in the pile so this play fells it.
-      const piles = run.piles.map((p, k) => (k === i ? { ...p, cards: p.cards.slice(-1) } : p));
+      // Leave one card in the column and clear its partner, so this play fells the tree.
+      const tree = run.piles[i].tree;
+      const piles = run.piles.map((p, k) => (k === i ? { ...p, cards: p.cards.slice(-1) } : p.tree === tree ? { ...p, cards: [] } : p));
       g = { ...g, active: { ...g.active!, run: { ...run, piles } } };
       return reduce(g, { type: 'play', pile: i });
     };

@@ -2,7 +2,7 @@
 // Cards are dragged (or tapped) onto the foundation. No legal-move highlights.
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { canPlay, foundationTop, top, type Run } from '../rules/golf';
-import type { SurfaceId } from '../rules/surfaces';
+import { FOREST_DEPTH, QUARRY_DEPTH, type SurfaceId } from '../rules/surfaces';
 import { durationLabel } from '../rules/daylight';
 import { useDrag } from './drag';
 import { PlayingCard } from './PlayingCard';
@@ -10,6 +10,11 @@ import { PlayingCard } from './PlayingCard';
 const RATIO = 1.4;
 const FAN = 0.3;
 const GAP = typeof window !== 'undefined' && window.innerWidth < 520 ? 6 : 12;
+/** Forest: the two columns of a tree sit close, like one trunk; trees are spaced apart. */
+const TRUNK_GAP = 3;
+const TREE_GAP = Math.round(GAP * 1.5);
+/** Height of the stump label under each tree. */
+const STUMP_H = 30;
 
 interface Props {
   surface: SurfaceId;
@@ -39,16 +44,22 @@ function cardLayout(layout: Props['layout'], piles: number, depth: number, w: nu
   const clamp = (x: number) => Math.max(40, Math.min(132, Math.floor(x)));
   const cols = layout === 'grid' ? 3 : piles;
   const tall = layout === 'grid' ? 3 * RATIO + 0.24 : RATIO * (1 + (depth - 1) * FAN);
-  const rowGaps = (layout === 'grid' ? 2 : 0) * GAP;
+  const rowGaps = (layout === 'grid' ? 2 : 0) * GAP + (layout === 'columns' ? STUMP_H : 0);
   const gridCap = layout === 'grid' ? 0.72 : 1;
+  const gaps = layout === 'columns' ? (cols / 2) * TRUNK_GAP + (cols / 2 - 1) * TREE_GAP : (cols - 1) * GAP;
   // Stacked: play row under the tableau.
-  const stackW = (w - (cols - 1) * GAP) / cols * gridCap;
-  const stackH = (h - rowGaps - GAP - 18) / (tall + RATIO);
+  const stackW = (w - gaps) / cols * gridCap;
+  // Small cards fan by a fixed 26px (see `step`), so their height budget is linear, not proportional.
+  const fanFloor = (avail: number, perCard: number) => {
+    const cw = avail / perCard;
+    return layout === 'grid' || cw * RATIO * FAN >= 26 ? cw : (avail - (depth - 1) * 26) / (perCard - RATIO * (depth - 1) * FAN);
+  };
+  const stackH = fanFloor(h - rowGaps - GAP - 18, tall + RATIO);
   const stacked = Math.min(stackW, stackH);
   // Side: play row is a column to the right (stock over foundation, then stats).
   const statsW = 110;
-  const sideW = (w - statsW - (cols + 1) * GAP) / (cols + 1);
-  const sideH = Math.min((h - rowGaps - 8) / tall, (h - 18 - 3 * GAP - 76) / (2 * RATIO));
+  const sideW = (w - statsW - gaps - 2 * GAP) / (cols + 1);
+  const sideH = Math.min(fanFloor(h - rowGaps - 8, tall), (h - 18 - 3 * GAP - 76) / (2 * RATIO));
   const side = Math.min(sideW, sideH);
   return side > stacked * 1.08 ? { cw: clamp(side), side: true } : { cw: clamp(stacked), side: false };
 }
@@ -64,10 +75,12 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
     return () => clearTimeout(t);
   }, [shake]);
 
-  const maxDepth = layout === 'grid' ? 4 : 5;
+  const maxDepth = layout === 'grid' ? 4 : layout === 'columns' ? FOREST_DEPTH : QUARRY_DEPTH;
   const { cw: w, side } = cardLayout(layout, run.piles.length, maxDepth, box.w, box.h);
   const h = Math.round(w * RATIO);
   const size: CSSProperties = { width: w, height: h };
+  // Fan step: at least enough to show each covered card's rank (16px text) on small cards.
+  const step = Math.max(h * FAN, 26);
   const base = foundationTop(run);
 
   const tryPlay = (i: number) => (canPlay(run, i) ? onPlay(i) : setShake(i));
@@ -84,7 +97,7 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
     const pile = run.piles[i];
     const isGrid = layout === 'grid';
     const lifted = dragging?.kind === 'card' && dragging.id === i;
-    const height = isGrid ? h : h + Math.max(0, maxDepth - 1) * h * FAN;
+    const height = isGrid ? h : h + Math.max(0, maxDepth - 1) * step;
     return (
       <div key={i} className={`vg-pile${isGrid ? ' is-bush' : ''}`} style={{ width: w, height }}>
         {pile.cards.length === 0 && <div className="vg-slot" style={size} />}
@@ -103,8 +116,8 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
             // Shafts read top-down: the surface card sits highest and on top; deeper rock peeks out below.
             const depth = maxDepth - 1 - k;
             const style: CSSProperties = layout === 'shafts'
-              ? { ...size, top: depth * h * FAN, zIndex: maxDepth - depth }
-              : { ...size, top: k * h * FAN };
+              ? { ...size, top: depth * step, zIndex: maxDepth - depth }
+              : { ...size, top: k * step };
             return (
               <div key={c.id} className={`vg-pile-card${isTop ? ' vg-pile-top' : ''}${isTop && shake === i ? ' is-shake' : ''}${isTop && lifted ? ' is-lifted' : ''}`}
                 style={style} onPointerDown={isTop ? press(i) : undefined}>
@@ -117,13 +130,29 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
     );
   };
 
+  // Forest: pair adjacent columns into trees, with a stump label for lumber cut but not yet paid.
+  const trees: number[][] = [];
+  if (layout === 'columns') run.piles.forEach((p, i) => { const t = p.tree ?? i; (trees[t] ??= []).push(i); });
+  const treeView = (cols: number[], t: number) => {
+    const held = cols.reduce((n, i) => n + (run.piles[i].cards.length ? run.piles[i].held ?? 0 : 0), 0);
+    const standing = cols.filter(i => run.piles[i].cards.length > 0).length;
+    const label = standing === 0 ? 'Felled' : held > 0 ? `${held} cut` : standing < cols.length ? 'Half' : '';
+    return (
+      <div key={t} className={`vg-tree${standing === 0 ? ' is-felled' : ''}`} style={{ gap: TRUNK_GAP }}>
+        <div className="vg-tree-cols" style={{ gap: TRUNK_GAP }}>{cols.map(i => pileView(i))}</div>
+        <span className={`vg-stump${held > 0 ? ' is-held' : ''}${label ? '' : ' is-empty'}`} style={{ height: STUMP_H - 6 }}
+          title={held > 0 ? 'Cut but not yet paid: finish the column to bank it' : undefined}>{label}</span>
+      </div>
+    );
+  };
+
   const overFoundation = over?.drop === 'foundation';
   return (
     <div className={`vg-board is-${layout}${side ? ' is-side' : ''}`} ref={ref}>
       {w > 0 && (
         <>
-          <div className="vg-tableau" style={layout === 'grid' ? { gap: GAP, gridTemplateColumns: `repeat(3, ${w}px)` } : { gap: GAP }}>
-            {run.piles.map((_, i) => pileView(i))}
+          <div className="vg-tableau" style={layout === 'grid' ? { gap: GAP, gridTemplateColumns: `repeat(3, ${w}px)` } : { gap: layout === 'columns' ? TREE_GAP : GAP }}>
+            {layout === 'columns' ? trees.map(treeView) : run.piles.map((_, i) => pileView(i))}
           </div>
           <div className="vg-playrow">
             <button type="button" className="vg-stock" style={size} onClick={onDraw} disabled={!canDraw}
@@ -133,7 +162,7 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
               <span className="vg-stock-cost">{drawCost ? `+${durationLabel(drawCost)}` : 'free'}</span>
             </button>
             <div className={`vg-foundation${overFoundation ? ' is-over' : ''}`} data-drop="foundation" style={size}>
-              {base && <PlayingCard key={base.id} card={base} surface={surface} style={size} className="is-landed" />}
+              {base && <PlayingCard key={base.id} card={base} surface={surface} style={size} className="is-landed is-foundation" />}
             </div>
             <div className="vg-runstats">
               <div><span className="vg-k">Played</span><span className="vg-v">{run.receipts}</span></div>

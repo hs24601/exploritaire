@@ -21,6 +21,10 @@ export interface Pile {
   cards: Card[];
   /** Grid surfaces: orthogonal neighbours by pile index. */
   neighbours?: number[];
+  /** Forest: the tree this column belongs to. Two adjacent columns make one tree. */
+  tree?: number;
+  /** Forest: lumber cut from this column but not yet paid (it pays when the column is finished). */
+  held?: number;
 }
 
 export interface Run {
@@ -37,9 +41,9 @@ export interface Run {
   /** Current streak of tableau plays since the last stock draw. */
   chain: number;
   bestChain: number;
-  /** Piles emptied this run (forest felling). */
+  /** Piles emptied this run, or trees felled in the forest. */
   felled: number;
-  /** Forest: emptying a pile pays this many extra units. */
+  /** Forest: felling a whole tree (both its columns) pays this many extra units. */
   fellBonus: number;
 }
 
@@ -90,6 +94,11 @@ export function legalPlays(run: Run): number[] {
   return out;
 }
 
+/** Forest: lumber cut from unfinished columns, lost if the run ends before they're finished. */
+export function heldLumber(run: Run): number {
+  return run.piles.reduce((n, p) => n + (p.cards.length ? p.held ?? 0 : 0), 0);
+}
+
 export function tableauLeft(run: Run): number {
   return run.piles.reduce((n, p) => n + p.cards.length, 0);
 }
@@ -116,15 +125,32 @@ export function play(run: Run, pileIndex: number): Run {
     const t = top(piles[n]);
     if (t?.unripe) piles[n].cards[piles[n].cards.length - 1] = { ...t, unripe: false };
   }
-  const felledNow = pile.cards.length === 0 ? 1 : 0;
-  const bonus = felledNow * run.fellBonus;
+  let gain = card.yield;
+  let bonus = 0;
+  let felledNow = 0;
+  if (pile.tree !== undefined) {
+    // Forest: a column pays nothing until it's finished; finishing both columns of a tree fells it.
+    const held = (pile.held ?? 0) + card.yield;
+    gain = 0;
+    if (pile.cards.length === 0) {
+      gain = held;
+      pile.held = 0;
+      const standing = piles.some((p, i) => i !== pileIndex && p.tree === pile.tree && p.cards.length > 0);
+      if (!standing) { felledNow = 1; bonus = run.fellBonus; }
+    } else {
+      pile.held = held;
+    }
+  } else if (pile.cards.length === 0) {
+    felledNow = 1;
+    bonus = run.fellBonus;
+  }
   const chain = run.chain + 1;
   return {
     ...run,
     piles,
     foundation: [...run.foundation, card],
     receipts: run.receipts + 1,
-    earned: run.earned + card.yield + bonus,
+    earned: run.earned + gain + bonus,
     bonus: run.bonus + bonus,
     chain,
     bestChain: Math.max(run.bestChain, chain),

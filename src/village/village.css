@@ -232,6 +232,47 @@ ul { padding: 0; list-style: none; }
 .vg-card.is-back.is-quarry { --back: #2c3949; }
 .vg-card-yield { position: absolute; right: 5%; top: 4%; padding: 0 5px; border-radius: 5px; background: var(--ink); color: var(--card); font-weight: 800; font-size: 16px; line-height: 1.25; }
 .vg-card.is-back .vg-card-yield { top: auto; bottom: 4%; background: rgba(0, 0, 0, 0.35); color: #dfe6ef; }
+/* Forest: bark faces, rank on a pale axe blaze, sawn end grain on the foundation. */
+.vg-card.is-forest:not(.is-back) {
+  --bark: #5b3c26; color: #3b2614; border-color: #2e1d11;
+  background:
+    radial-gradient(ellipse 16% 7% at 64% 70%, #24160c 0 35%, #4a311f 55%, transparent 75%),
+    repeating-linear-gradient(90deg, transparent 0 6%, rgba(22, 12, 5, 0.5) 6% 8.5%, transparent 8.5% 14%, rgba(255, 228, 186, 0.09) 14% 16%, transparent 16% 22%, rgba(22, 12, 5, 0.38) 22% 23.5%, transparent 23.5% 31%) var(--bark-x, 0) 0 / 100% 100%,
+    repeating-linear-gradient(180deg, transparent 0 18%, rgba(22, 12, 5, 0.22) 18% 19.5%, transparent 19.5% 34%),
+    linear-gradient(90deg, #45301f, #6c4b31 28%, var(--bark) 52%, #76553a 78%, #48311f);
+  box-shadow: 0 1px 0 rgba(255, 225, 180, 0.18) inset, 0 2px 0 #24170d, 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+.vg-card.is-forest .vg-card-glyph { display: none; }
+.vg-card.is-forest:not(.is-back) .vg-card-rank {
+  left: 5%; top: 3%; padding: 0.12em 0.22em 0.16em; color: #3b2614;
+  background: radial-gradient(ellipse at 45% 40%, #f4e2bf 0 50%, #e5c897 72%, #c99f6c 100%);
+  border-radius: 46% 54% 50% 50% / 56% 50% 50% 44%;
+  box-shadow: inset 0 0 0 1px rgba(90, 56, 28, 0.45), 0 0 0 2px rgba(28, 16, 7, 0.4);
+}
+.vg-card.is-forest.is-foundation {
+  border-color: #8c6236;
+  background:
+    radial-gradient(circle at 48% 60%, #b98a56 0 3%, transparent 3.5%),
+    repeating-radial-gradient(circle at 48% 60%, #ecd3a5 0 5%, #d2ab76 5% 6%, #e7cb98 6% 9.5%, #c99d66 9.5% 10.5%),
+    #e2c592;
+  box-shadow: 0 0 0 3px #4a311f inset, 0 2px 0 #6b4a2e, 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+.vg-card.is-forest.is-foundation .vg-card-rank { background: none; box-shadow: none; color: #3b2614; text-shadow: 0 1px 0 rgba(255, 240, 210, 0.6); }
+.vg-card.is-back.is-forest {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 7%, rgba(10, 5, 2, 0.5) 7% 9.5%, transparent 9.5% 17%, rgba(255, 228, 186, 0.06) 17% 19%, transparent 19% 27%),
+    linear-gradient(90deg, #2c1d12, #47301f 35%, #3a2717 65%, #2a1b10);
+  border-color: rgba(255, 220, 170, 0.16);
+}
+.vg-tree { position: relative; display: flex; flex-direction: column; align-items: center; }
+.vg-tree-cols { position: relative; display: flex; }
+/* The trunk shows in the seam between a tree's two columns and runs down to the stump. */
+.vg-tree-cols::before { content: ''; position: absolute; left: 22%; right: 22%; top: 8px; bottom: -6px; border-radius: 6px; background: linear-gradient(90deg, #2a1b10, #3e2a1a 50%, #2a1b10); }
+.vg-tree.is-felled .vg-tree-cols::before { opacity: 0.35; }
+.vg-stump { position: relative; display: grid; place-items: center; min-width: 60%; padding: 0 10px; border-radius: 999px; background: #2b2118; border: 1px solid #4b3a29; color: var(--muted); font-size: 16px; font-weight: 700; line-height: 1; white-space: nowrap; }
+.vg-stump.is-empty { visibility: hidden; }
+.vg-stump.is-held { color: var(--lumber); }
+.vg-tree.is-felled .vg-stump { color: var(--good); }
 .vg-card.is-landed { animation: vg-land 180ms ease-out; }
 @keyframes vg-land { from { transform: translateY(-10px) scale(1.04); } }
 .vg-ghost { position: fixed; z-index: 50; pointer-events: none; transform: rotate(-3deg); filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5)); }

@@ -93,7 +93,9 @@ The rank stays code-drawn in the corner. These are the centre art and the card b
 | `card-glyph-berry-unripe-v1.png` | 96 × 96 | The same berries in pale green |
 | `card-glyph-stone-v1.png` | 96 × 96 | Chunk of grey-blue stone |
 | `card-glyph-ore-v1.png` | 96 × 96 | Stone with a glinting vein, for the deepest quarry rows |
-| `card-back-forest-v1.png` | 180 × 252 | Deep green back with a subtle leaf or wood-grain pattern. It must stay dark enough that white stock-count text reads on it |
+| `card-back-forest-v1.png` | 180 × 252 | Dark bark back (the forest stock). It must stay dark enough that white stock-count text reads on it |
+| `card-face-bark-v1.png` | 180 × 252 | Forest card face (2026-11-24 rework): vertical bark with fissures and a knot, no rank. The rank sits on a code-drawn pale blaze at the top-left, so keep the top 30% fairly even |
+| `card-face-endgrain-v1.png` | 180 × 252 | Forest foundation: sawn end grain with growth rings, centre a little below middle, light enough for dark rank text |
 | `card-back-berries-v1.png` | 180 × 252 | Plum back with a vine pattern |
 | `card-back-quarry-v1.png` | 180 × 252 | Slate back with a strata pattern (it doubles as the face-down rock in the shafts) |
 

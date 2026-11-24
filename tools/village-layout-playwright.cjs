@@ -41,7 +41,7 @@ function midSave() {
 const PARTS = [
   '.vg-top', '.vg-brand', '.vg-day', '.vg-stores', '.vg-store', '.vg-top-actions', '.vg-drawer', '.vg-bar', '.vg-sheet', '.vg-float', '.vg-panes', '.vg-pane-tab',
   '.vg-build-row', '.vg-kin', '.vg-section', '.vg-rules li', '.vg-card-panel', '.vg-map', '.vg-chip-label', '.vg-node',
-  '.vg-location', '.vg-felt', '.vg-output', '.vg-table', '.vg-costs', '.vg-btn', '.vg-tableau', '.vg-playrow', '.vg-runstats', '.vg-stock', '.vg-foundation',
+  '.vg-location', '.vg-felt', '.vg-output', '.vg-table', '.vg-costs', '.vg-btn', '.vg-tableau', '.vg-playrow', '.vg-runstats', '.vg-stock', '.vg-foundation', '.vg-stump',
 ].join(', ');
 
 async function check(page, label, defects, root = '.vg-app') {

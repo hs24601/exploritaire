@@ -54,3 +54,21 @@ Each surface gives about 100–115 units a day, so building costs are set in the
 
 - If days feel too short: draw 12 min. If chains feel unrewarded: play 1 min.
 - An escalating draw cost (15, 15, 20, 25...) would make leaving early sharper. It isn't in yet, because one flat number is easier to read.
+
+## Forest rework: trees of two columns (2026-11-24)
+
+Eric's rule change: the forest is now **8 columns of 4**, and each two adjacent columns are one tree (4 trees). A column pays its lumber **only when it's finished** (1 per log). Finishing both columns of a tree fells it for **+2** (+5 at Old Oaks). Lumber cut from a half-finished column is lost if you leave or the run ends, though Forestry XP is kept. Banks (+2) and the Woodshed (+1) now pay per felled tree, i.e. per finished pair.
+
+Sim with the same bots (`npx vite-node tools/village-daylight-sim.ts 400`, wrap on, deal is free now):
+
+| Forest | Plays | Draws | Earned | Cleared | Min/unit |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| casual | 30.4 | 17.6 | 33.7 | 40% | 10.3 |
+| planner | 29.9 | 18.1 | 32.9 | 28% | 10.5 |
+
+One 14 h day on the forest alone: **81 units/day** if you play each deal out, **65** if you walk off early. Before the change it was 111 to 115. Berries (101 to 120) and Quarry (114 to 128) are unchanged.
+
+What this means:
+
+- **Leaving early is now a loss in the forest**, which is the point of the rule: you commit to finishing columns. It's the only surface where staying beats leaving.
+- **The forest earns about 25% less per day** at +2 a tree. Raising the fell bonus closes the gap: +4 gives 94 a day, +5 gives 101, +6 gives 108. If lumber feels slow in play, +5 (with Old Oaks at +8) is the parity setting.
